@@ -1,0 +1,181 @@
+\ProvidesPackage{opencv}
+
+\lstset{ %
+language=Python,                % choose the language of the code
+%basicstyle=\footnotesize,       % the size of the fonts that are used for the code
+%numbers=left,                   % where to put the line-numbers
+%numberstyle=\footnotesize,      % the size of the fonts that are used for the line-numbers
+%stepnumber=2,                   % the step between two line-numbers. If it's 1 each line will be numbered
+%numbersep=5pt,                  % how far the line-numbers are from the code
+%backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+showspaces=false,               % show spaces adding particular underscores
+showstringspaces=false,         % underline spaces within strings
+showtabs=false,                 % show tabs within strings adding particular underscores
+%frame=single,	                % adds a frame around the code
+%tabsize=2,	                    % sets default tabsize to 2 spaces
+%captionpos=b,                   % sets the caption-position to bottom
+%breaklines=true,                % sets automatic line breaking
+%breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+%escapeinside={\%*}{*)}          % if you want to add a comment within your code
+}
+
+\newcommand{\cvclass}[1]{
+\ifthenelse{\equal{\targetlang}{cpp}}
+{
+\subsection{cv::#1}
+%\addcontentsline{toc}{subsection}{#1} 
+\index{cv...!#1}
+}
+{
+\subsection{#1}
+%\addcontentsline{toc}{subsection}{#1} 
+\index{cv...!#1}
+}
+}
+
+\newcommand{\cvfunc}[1]{
+\subsection{#1}
+%\addcontentsline{toc}{subsection}{#1} 
+\index{cv...!#1}
+}
+
+\newcommand{\cvstruct}[1]{
+\subsection{#1}
+%\addcontentsline{toc}{subsection}{#1} 
+\index{cv...!#1}
+}
+
+\newcommand{\cvmacro}[1]{
+\subsection{#1}
+%\addcontentsline{toc}{subsection}{#1} 
+\index{cv...!#1}
+}
+
+\newcommand{\cvarg}[2]{
+\item[\texttt{#1}] #2
+}
+
+\newcommand{\cvFunc}[2]{
+\ifthenelse{\equal{\targetlang}{c}}
+{\subsection{cv#1}\index{cv#1}\label{cfunc.#1}}
+{\ifthenelse{\equal{\targetlang}{cpp}}
+{\subsection{cv::#2}\index{cv::#2}\label{cppfunc.#2}}
+{\subsection{cv.#1}\index{cv.#1}\label{pyfunc.#1}}}}
+
+\newcommand{\cvCPyFunc}[1]{\cvFunc{#1}{}}
+\newcommand{\cvCppFunc}[1]{\cvFunc{}{#1}}
+
+\newcommand{\cvCross}[2]{
+\ifthenelse{\equal{\targetlang}{c}}
+{\hyperref[cfunc.#1]{cv#1}}
+{\ifthenelse{\equal{\targetlang}{cpp}}
+{\hyperref[cppfunc.#2]{cv::#2}}
+{\hyperref[pyfunc.#1]{cv.#1}}}}
+
+\newcommand{\cvCPyCross}[1]{\cvCross{#1}{}}
+\newcommand{\cvCppCross}[1]{\cvCross{}{#1}}
+
+\newcommand{\cvdefC}[1]{
+\ifthenelse{\equal{\targetlang}{c}}{
+\begin{shaded}
+\begin{alltt}
+\setlength{\parindent}{1in}
+#1
+\end{alltt}
+\end{shaded}
+}{}
+}
+
+\newcommand{\cvdefCpp}[1]{
+\ifthenelse{\equal{\targetlang}{cpp}}{
+\begin{shaded}
+\begin{alltt}
+\setlength{\parindent}{1in}
+#1
+\end{alltt}
+\end{shaded}
+}{}
+}
+
+\newcommand{\cvdefPy}[1]{
+\ifthenelse{\equal{\targetlang}{python}}{
+\begin{shaded}
+\begin{alltt}
+\setlength{\parindent}{1in}
+#1
+\end{alltt}
+\end{shaded}
+}{}
+}
+
+\newcommand{\cvC}[1]{
+\ifthenelse{\equal{\targetlang}{c}}{#1}{}
+}
+
+\newcommand{\cvCpp}[1]{
+\ifthenelse{\equal{\targetlang}{cpp}}{#1}{}
+}
+
+\newcommand{\cvPy}[1]{
+\ifthenelse{\equal{\targetlang}{python}}{#1}{}}
+
+\newcommand{\cvCPy}[1]{
+\ifthenelse{\equal{\targetlang}{c}\or\equal{\targetlang}{python}}{#1}{}
+}
+
+\newcommand{\cvcode}[1]{
+\begin{shaded}
+\begin{alltt}
+\setlength{\parindent}{1in}
+#1
+\end{alltt}
+\end{shaded}
+}
+
+%\newcommand{\cross}[1]{#1 (page \pageref{#1})}
+\newcommand{\cross}[1]{ \hyperref[#1]{#1} }
+
+\newcommand{\matTT}[9]{
+\[
+\left|\begin{array}{ccc}
+ #1 & #2 & #3\\
+ #4 & #5 & #6\\
+ #7 & #8 & #9
+\end{array}\right|
+\]
+}
+
+\newcommand{\fork}[4]{
+  \left\{
+  \begin{array}{l l}
+  #1 & \mbox{#2}\\
+  #3 & \mbox{#4}\\
+  \end{array} \right.}
+\newcommand{\forkthree}[6]{
+  \left\{
+  \begin{array}{l l}
+  #1 & \mbox{#2}\\
+  #3 & \mbox{#4}\\
+  #5 & \mbox{#6}\\
+  \end{array} \right.}
+
+\newcommand{\vecthree}[3]{
+\begin{bmatrix}
+ #1\\
+ #2\\
+ #3
+\end{bmatrix}
+}
+
+\newcommand{\vecthreethree}[9]{
+\begin{bmatrix}
+ #1 & #2 & #3\\
+ #4 & #5 & #6\\
+ #7 & #8 & #9
+\end{bmatrix}
+}
+
+% allow special plastex handling
+\newif\ifplastex
+\plastexfalse
+

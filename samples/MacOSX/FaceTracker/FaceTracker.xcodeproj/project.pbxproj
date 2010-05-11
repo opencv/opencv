@@ -1,0 +1,262 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4D7DBE8E0C04A90C00D8835D /* FaceTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* FaceTracker.cpp */; };
+		4D95C9BE0C0577B200983E4D /* OpenCV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D06E1E00C039982004AF23F /* OpenCV.framework */; };
+		4D95C9D80C0577BD00983E4D /* OpenCV.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4D06E1E00C039982004AF23F /* OpenCV.framework */; };
+		4DBF87310C05731500880673 /* haarcascade_frontalface_alt2.xml in Resources */ = {isa = PBXBuildFile; fileRef = 4DBF87300C05731500880673 /* haarcascade_frontalface_alt2.xml */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4D7DBE8F0C04A93300D8835D /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				4D95C9D80C0577BD00983E4D /* OpenCV.framework in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		08FB7796FE84155DC02AAC07 /* FaceTracker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FaceTracker.cpp; sourceTree = "<group>"; };
+		4D06E1E00C039982004AF23F /* OpenCV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenCV.framework; path = ../../../OpenCV.framework; sourceTree = SOURCE_ROOT; };
+		4D4CDBCC0C0630060001A8A2 /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		4D7DBE570C04A8FF00D8835D /* FaceTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FaceTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D7DBE590C04A8FF00D8835D /* FaceTracker-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "FaceTracker-Info.plist"; sourceTree = "<group>"; };
+		4DBF87300C05731500880673 /* haarcascade_frontalface_alt2.xml */ = {isa = PBXFileReference; fileEncoding = 5; lastKnownFileType = text.xml; name = haarcascade_frontalface_alt2.xml; path = ../../../data/haarcascades/haarcascade_frontalface_alt2.xml; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4D7DBE550C04A8FF00D8835D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D95C9BE0C0577B200983E4D /* OpenCV.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* FrameworkTest */ = {
+			isa = PBXGroup;
+			children = (
+				4D4CDBCC0C0630060001A8A2 /* README.txt */,
+				08FB7795FE84155DC02AAC07 /* Source */,
+				4DBF872C0C0572BC00880673 /* Resources */,
+				4D9D40B00C04AC1600EEFFD0 /* Frameworks */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+			);
+			name = FrameworkTest;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				08FB7796FE84155DC02AAC07 /* FaceTracker.cpp */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4D7DBE570C04A8FF00D8835D /* FaceTracker.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4D9D40B00C04AC1600EEFFD0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				4D06E1E00C039982004AF23F /* OpenCV.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		4DBF872C0C0572BC00880673 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				4DBF87300C05731500880673 /* haarcascade_frontalface_alt2.xml */,
+				4D7DBE590C04A8FF00D8835D /* FaceTracker-Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4D7DBE560C04A8FF00D8835D /* FaceTracker */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4D7DBE5A0C04A8FF00D8835D /* Build configuration list for PBXNativeTarget "FaceTracker" */;
+			buildPhases = (
+				4D7DBE530C04A8FF00D8835D /* Resources */,
+				4D7DBE540C04A8FF00D8835D /* Sources */,
+				4D7DBE550C04A8FF00D8835D /* Frameworks */,
+				4D7DBE8F0C04A93300D8835D /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FaceTracker;
+			productName = FaceTracker;
+			productReference = 4D7DBE570C04A8FF00D8835D /* FaceTracker.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "FaceTracker" */;
+			hasScannedForEncodings = 1;
+			mainGroup = 08FB7794FE84155DC02AAC07 /* FrameworkTest */;
+			projectDirPath = "";
+			targets = (
+				4D7DBE560C04A8FF00D8835D /* FaceTracker */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4D7DBE530C04A8FF00D8835D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4DBF87310C05731500880673 /* haarcascade_frontalface_alt2.xml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4D7DBE540C04A8FF00D8835D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D7DBE8E0C04A90C00D8835D /* FaceTracker.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB923608733DC60010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PREBINDING = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Debug;
+		};
+		1DEB923708733DC60010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PREBINDING = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Release;
+		};
+		4D7DBE5B0C04A8FF00D8835D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(FRAMEWORK_SEARCH_PATHS_QUOTED_1)",
+					"$(FRAMEWORK_SEARCH_PATHS_QUOTED_2)",
+				);
+				FRAMEWORK_SEARCH_PATHS_QUOTED_1 = "\"$(SRCROOT)/../opencv\"";
+				FRAMEWORK_SEARCH_PATHS_QUOTED_2 = "\"$(SRCROOT)/../../..\"";
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INFOPLIST_FILE = "FaceTracker-Info.plist";
+				INSTALL_PATH = "$(HOME)/Applications";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = FaceTracker;
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		4D7DBE5C0C04A8FF00D8835D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(FRAMEWORK_SEARCH_PATHS_QUOTED_1)",
+					"$(FRAMEWORK_SEARCH_PATHS_QUOTED_2)",
+				);
+				FRAMEWORK_SEARCH_PATHS_QUOTED_1 = "\"$(SRCROOT)/../opencv\"";
+				FRAMEWORK_SEARCH_PATHS_QUOTED_2 = "\"$(SRCROOT)/../../..\"";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INFOPLIST_FILE = "FaceTracker-Info.plist";
+				INSTALL_PATH = "$(HOME)/Applications";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = FaceTracker;
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "FaceTracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB923608733DC60010E9CD /* Debug */,
+				1DEB923708733DC60010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4D7DBE5A0C04A8FF00D8835D /* Build configuration list for PBXNativeTarget "FaceTracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4D7DBE5B0C04A8FF00D8835D /* Debug */,
+				4D7DBE5C0C04A8FF00D8835D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}

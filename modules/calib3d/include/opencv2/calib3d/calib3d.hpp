@@ -1,0 +1,697 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+#ifndef __OPENCV_CALIB3D_HPP__
+#define __OPENCV_CALIB3D_HPP__
+
+#include "opencv2/core/core.hpp"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/****************************************************************************************\
+*                      Camera Calibration, Pose Estimation and Stereo                    *
+\****************************************************************************************/
+
+typedef struct CvPOSITObject CvPOSITObject;
+
+/* Allocates and initializes CvPOSITObject structure before doing cvPOSIT */
+CVAPI(CvPOSITObject*)  cvCreatePOSITObject( CvPoint3D32f* points, int point_count );
+
+
+/* Runs POSIT (POSe from ITeration) algorithm for determining 3d position of
+   an object given its model and projection in a weak-perspective case */
+CVAPI(void)  cvPOSIT(  CvPOSITObject* posit_object, CvPoint2D32f* image_points,
+                       double focal_length, CvTermCriteria criteria,
+                       float* rotation_matrix, float* translation_vector);
+
+/* Releases CvPOSITObject structure */
+CVAPI(void)  cvReleasePOSITObject( CvPOSITObject**  posit_object );
+
+/* updates the number of RANSAC iterations */
+CVAPI(int) cvRANSACUpdateNumIters( double p, double err_prob,
+                                   int model_points, int max_iters );
+
+CVAPI(void) cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst );
+
+/* Calculates fundamental matrix given a set of corresponding points */
+#define CV_FM_7POINT 1
+#define CV_FM_8POINT 2
+#define CV_FM_LMEDS_ONLY  8
+#define CV_FM_RANSAC_ONLY 4
+#define CV_FM_LMEDS 8
+#define CV_FM_RANSAC 4
+CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
+                                 CvMat* fundamental_matrix,
+                                 int method CV_DEFAULT(CV_FM_RANSAC),
+                                 double param1 CV_DEFAULT(3.), double param2 CV_DEFAULT(0.99),
+                                 CvMat* status CV_DEFAULT(NULL) );
+
+/* For each input point on one of images
+   computes parameters of the corresponding
+   epipolar line on the other image */
+CVAPI(void) cvComputeCorrespondEpilines( const CvMat* points,
+                                         int which_image,
+                                         const CvMat* fundamental_matrix,
+                                         CvMat* correspondent_lines );
+
+/* Triangulation functions */
+
+CVAPI(void) cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2,
+                                CvMat* projPoints1, CvMat* projPoints2,
+                                CvMat* points4D);
+
+CVAPI(void) cvCorrectMatches(CvMat* F, CvMat* points1, CvMat* points2,
+                             CvMat* new_points1, CvMat* new_points2);
+
+/* Transforms the input image to compensate lens distortion */
+CVAPI(void) cvUndistort2( const CvArr* src, CvArr* dst,
+                          const CvMat* camera_matrix,
+                          const CvMat* distortion_coeffs,
+                          const CvMat* new_camera_matrix CV_DEFAULT(0) );
+
+/* Computes transformation map from intrinsic camera parameters
+   that can used by cvRemap */
+CVAPI(void) cvInitUndistortMap( const CvMat* camera_matrix,
+                                const CvMat* distortion_coeffs,
+                                CvArr* mapx, CvArr* mapy );
+
+/* Computes undistortion+rectification map for a head of stereo camera */
+CVAPI(void) cvInitUndistortRectifyMap( const CvMat* camera_matrix,
+                                       const CvMat* dist_coeffs,
+                                       const CvMat *R, const CvMat* new_camera_matrix,
+                                       CvArr* mapx, CvArr* mapy );
+
+/* Computes the original (undistorted) feature coordinates
+   from the observed (distorted) coordinates */
+CVAPI(void) cvUndistortPoints( const CvMat* src, CvMat* dst,
+                               const CvMat* camera_matrix,
+                               const CvMat* dist_coeffs,
+                               const CvMat* R CV_DEFAULT(0),
+                               const CvMat* P CV_DEFAULT(0));
+    
+/* Computes the optimal new camera matrix according to the free scaling parameter alpha:
+   alpha=0 - only valid pixels will be retained in the undistorted image
+   alpha=1 - all the source image pixels will be retained in the undistorted image
+*/
+CVAPI(void) cvGetOptimalNewCameraMatrix( const CvMat* camera_matrix,
+                                         const CvMat* dist_coeffs,
+                                         CvSize image_size, double alpha,
+                                         CvMat* new_camera_matrix,
+                                         CvSize new_imag_size CV_DEFAULT(cvSize(0,0)),
+                                         CvRect* valid_pixel_ROI CV_DEFAULT(0) );
+
+/* Converts rotation vector to rotation matrix or vice versa */
+CVAPI(int) cvRodrigues2( const CvMat* src, CvMat* dst,
+                         CvMat* jacobian CV_DEFAULT(0) );
+
+#define CV_LMEDS 4
+#define CV_RANSAC 8
+
+/* Finds perspective transformation between the object plane and image (view) plane */
+CVAPI(int) cvFindHomography( const CvMat* src_points,
+                             const CvMat* dst_points,
+                             CvMat* homography,
+                             int method CV_DEFAULT(0),
+                             double ransacReprojThreshold CV_DEFAULT(3),
+                             CvMat* mask CV_DEFAULT(0));
+
+/* Computes RQ decomposition for 3x3 matrices */
+CVAPI(void) cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
+                           CvMat *matrixQx CV_DEFAULT(NULL),
+                           CvMat *matrixQy CV_DEFAULT(NULL),
+                           CvMat *matrixQz CV_DEFAULT(NULL),
+                           CvPoint3D64f *eulerAngles CV_DEFAULT(NULL));
+
+/* Computes projection matrix decomposition */
+CVAPI(void) cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
+                                         CvMat *rotMatr, CvMat *posVect,
+                                         CvMat *rotMatrX CV_DEFAULT(NULL),
+                                         CvMat *rotMatrY CV_DEFAULT(NULL),
+                                         CvMat *rotMatrZ CV_DEFAULT(NULL),
+                                         CvPoint3D64f *eulerAngles CV_DEFAULT(NULL));
+
+/* Computes d(AB)/dA and d(AB)/dB */
+CVAPI(void) cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, CvMat* dABdB );
+
+/* Computes r3 = rodrigues(rodrigues(r2)*rodrigues(r1)),
+   t3 = rodrigues(r2)*t1 + t2 and the respective derivatives */
+CVAPI(void) cvComposeRT( const CvMat* _rvec1, const CvMat* _tvec1,
+                         const CvMat* _rvec2, const CvMat* _tvec2,
+                         CvMat* _rvec3, CvMat* _tvec3,
+                         CvMat* dr3dr1 CV_DEFAULT(0), CvMat* dr3dt1 CV_DEFAULT(0),
+                         CvMat* dr3dr2 CV_DEFAULT(0), CvMat* dr3dt2 CV_DEFAULT(0),
+                         CvMat* dt3dr1 CV_DEFAULT(0), CvMat* dt3dt1 CV_DEFAULT(0),
+                         CvMat* dt3dr2 CV_DEFAULT(0), CvMat* dt3dt2 CV_DEFAULT(0) );
+
+/* Projects object points to the view plane using
+   the specified extrinsic and intrinsic camera parameters */
+CVAPI(void) cvProjectPoints2( const CvMat* object_points, const CvMat* rotation_vector,
+                              const CvMat* translation_vector, const CvMat* camera_matrix,
+                              const CvMat* distortion_coeffs, CvMat* image_points,
+                              CvMat* dpdrot CV_DEFAULT(NULL), CvMat* dpdt CV_DEFAULT(NULL),
+                              CvMat* dpdf CV_DEFAULT(NULL), CvMat* dpdc CV_DEFAULT(NULL),
+                              CvMat* dpddist CV_DEFAULT(NULL),
+                              double aspect_ratio CV_DEFAULT(0));
+
+/* Finds extrinsic camera parameters from
+   a few known corresponding point pairs and intrinsic parameters */
+CVAPI(void) cvFindExtrinsicCameraParams2( const CvMat* object_points,
+                                          const CvMat* image_points,
+                                          const CvMat* camera_matrix,
+                                          const CvMat* distortion_coeffs,
+                                          CvMat* rotation_vector,
+                                          CvMat* translation_vector,
+                                          int use_extrinsic_guess CV_DEFAULT(0) );
+
+/* Computes initial estimate of the intrinsic camera parameters
+   in case of planar calibration target (e.g. chessboard) */
+CVAPI(void) cvInitIntrinsicParams2D( const CvMat* object_points,
+                                     const CvMat* image_points,
+                                     const CvMat* npoints, CvSize image_size,
+                                     CvMat* camera_matrix,
+                                     double aspect_ratio CV_DEFAULT(1.) );
+
+#define CV_CALIB_CB_ADAPTIVE_THRESH  1
+#define CV_CALIB_CB_NORMALIZE_IMAGE  2
+#define CV_CALIB_CB_FILTER_QUADS     4
+#define CV_CALIB_CB_FAST_CHECK       8
+
+// Performs a fast check if a chessboard is in the input image. This is a workaround to 
+// a problem of cvFindChessboardCorners being slow on images with no chessboard
+// - src: input image
+// - size: chessboard size
+// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called, 
+// 0 if there is no chessboard, -1 in case of error
+CVAPI(int) cvCheckChessboard(IplImage* src, CvSize size);
+    
+    /* Detects corners on a chessboard calibration pattern */
+CVAPI(int) cvFindChessboardCorners( const void* image, CvSize pattern_size,
+                                    CvPoint2D32f* corners,
+                                    int* corner_count CV_DEFAULT(NULL),
+                                    int flags CV_DEFAULT(CV_CALIB_CB_ADAPTIVE_THRESH+
+                                        CV_CALIB_CB_NORMALIZE_IMAGE) );
+
+/* Draws individual chessboard corners or the whole chessboard detected */
+CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
+                                     CvPoint2D32f* corners,
+                                     int count, int pattern_was_found );
+
+#define CV_CALIB_USE_INTRINSIC_GUESS  1
+#define CV_CALIB_FIX_ASPECT_RATIO     2
+#define CV_CALIB_FIX_PRINCIPAL_POINT  4
+#define CV_CALIB_ZERO_TANGENT_DIST    8
+#define CV_CALIB_FIX_FOCAL_LENGTH 16
+#define CV_CALIB_FIX_K1  32
+#define CV_CALIB_FIX_K2  64
+#define CV_CALIB_FIX_K3  128
+
+/* Finds intrinsic and extrinsic camera parameters
+   from a few views of known calibration pattern */
+CVAPI(double) cvCalibrateCamera2( const CvMat* object_points,
+                                const CvMat* image_points,
+                                const CvMat* point_counts,
+                                CvSize image_size,
+                                CvMat* camera_matrix,
+                                CvMat* distortion_coeffs,
+                                CvMat* rotation_vectors CV_DEFAULT(NULL),
+                                CvMat* translation_vectors CV_DEFAULT(NULL),
+                                int flags CV_DEFAULT(0) );
+
+/* Computes various useful characteristics of the camera from the data computed by
+   cvCalibrateCamera2 */
+CVAPI(void) cvCalibrationMatrixValues( const CvMat *camera_matrix,
+                                CvSize image_size,
+                                double aperture_width CV_DEFAULT(0),
+                                double aperture_height CV_DEFAULT(0),
+                                double *fovx CV_DEFAULT(NULL),
+                                double *fovy CV_DEFAULT(NULL),
+                                double *focal_length CV_DEFAULT(NULL),
+                                CvPoint2D64f *principal_point CV_DEFAULT(NULL),
+                                double *pixel_aspect_ratio CV_DEFAULT(NULL));
+
+#define CV_CALIB_FIX_INTRINSIC  256
+#define CV_CALIB_SAME_FOCAL_LENGTH 512
+
+/* Computes the transformation from one camera coordinate system to another one
+   from a few correspondent views of the same calibration target. Optionally, calibrates
+   both cameras */
+CVAPI(double) cvStereoCalibrate( const CvMat* object_points, const CvMat* image_points1,
+                               const CvMat* image_points2, const CvMat* npoints,
+                               CvMat* camera_matrix1, CvMat* dist_coeffs1,
+                               CvMat* camera_matrix2, CvMat* dist_coeffs2,
+                               CvSize image_size, CvMat* R, CvMat* T,
+                               CvMat* E CV_DEFAULT(0), CvMat* F CV_DEFAULT(0),
+                               CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
+                                   CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,1e-6)),
+                               int flags CV_DEFAULT(CV_CALIB_FIX_INTRINSIC));
+
+#define CV_CALIB_ZERO_DISPARITY 1024
+
+/* Computes 3D rotations (+ optional shift) for each camera coordinate system to make both
+   views parallel (=> to make all the epipolar lines horizontal or vertical) */
+CVAPI(void) cvStereoRectify( const CvMat* camera_matrix1, const CvMat* camera_matrix2,
+                             const CvMat* dist_coeffs1, const CvMat* dist_coeffs2,
+                             CvSize image_size, const CvMat* R, const CvMat* T,
+                             CvMat* R1, CvMat* R2, CvMat* P1, CvMat* P2,
+                             CvMat* Q CV_DEFAULT(0),
+                             int flags CV_DEFAULT(CV_CALIB_ZERO_DISPARITY),
+                             double alpha CV_DEFAULT(-1),
+                             CvSize new_image_size CV_DEFAULT(cvSize(0,0)),
+                             CvRect* valid_pix_ROI1 CV_DEFAULT(0),
+                             CvRect* valid_pix_ROI2 CV_DEFAULT(0));
+
+/* Computes rectification transformations for uncalibrated pair of images using a set
+   of point correspondences */
+CVAPI(int) cvStereoRectifyUncalibrated( const CvMat* points1, const CvMat* points2,
+                                        const CvMat* F, CvSize img_size,
+                                        CvMat* H1, CvMat* H2,
+                                        double threshold CV_DEFAULT(5));
+
+
+
+/* stereo correspondence parameters and functions */
+
+#define CV_STEREO_BM_NORMALIZED_RESPONSE  0
+#define CV_STEREO_BM_XSOBEL               1
+
+/* Block matching algorithm structure */
+typedef struct CvStereoBMState
+{
+    // pre-filtering (normalization of input images)
+    int preFilterType; // =CV_STEREO_BM_NORMALIZED_RESPONSE now
+    int preFilterSize; // averaging window size: ~5x5..21x21
+    int preFilterCap; // the output of pre-filtering is clipped by [-preFilterCap,preFilterCap]
+
+    // correspondence using Sum of Absolute Difference (SAD)
+    int SADWindowSize; // ~5x5..21x21
+    int minDisparity;  // minimum disparity (can be negative)
+    int numberOfDisparities; // maximum disparity - minimum disparity (> 0)
+
+    // post-filtering
+    int textureThreshold;  // the disparity is only computed for pixels
+                           // with textured enough neighborhood
+    int uniquenessRatio;   // accept the computed disparity d* only if
+                           // SAD(d) >= SAD(d*)*(1 + uniquenessRatio/100.)
+                           // for any d != d*+/-1 within the search range.
+    int speckleWindowSize; // disparity variation window
+    int speckleRange; // acceptable range of variation in window
+
+    int trySmallerWindows; // if 1, the results may be more accurate,
+                           // at the expense of slower processing 
+    CvRect roi1, roi2;
+    int disp12MaxDiff;
+
+    // temporary buffers
+    CvMat* preFilteredImg0;
+    CvMat* preFilteredImg1;
+    CvMat* slidingSumBuf;
+    CvMat* cost;
+    CvMat* disp;
+} CvStereoBMState;
+
+#define CV_STEREO_BM_BASIC 0
+#define CV_STEREO_BM_FISH_EYE 1
+#define CV_STEREO_BM_NARROW 2
+
+CVAPI(CvStereoBMState*) cvCreateStereoBMState(int preset CV_DEFAULT(CV_STEREO_BM_BASIC),
+                                              int numberOfDisparities CV_DEFAULT(0));
+
+CVAPI(void) cvReleaseStereoBMState( CvStereoBMState** state );
+
+CVAPI(void) cvFindStereoCorrespondenceBM( const CvArr* left, const CvArr* right,
+                                          CvArr* disparity, CvStereoBMState* state );
+    
+CVAPI(CvRect) cvGetValidDisparityROI( CvRect roi1, CvRect roi2, int minDisparity,
+                                      int numberOfDisparities, int SADWindowSize );
+    
+CVAPI(void) cvValidateDisparity( CvArr* disparity, const CvArr* cost,
+                                 int minDisparity, int numberOfDisparities,
+                                 int disp12MaxDiff CV_DEFAULT(1) );  
+
+/* Kolmogorov-Zabin stereo-correspondence algorithm (a.k.a. KZ1) */
+#define CV_STEREO_GC_OCCLUDED  SHRT_MAX
+
+typedef struct CvStereoGCState
+{
+    int Ithreshold;
+    int interactionRadius;
+    float K, lambda, lambda1, lambda2;
+    int occlusionCost;
+    int minDisparity;
+    int numberOfDisparities;
+    int maxIters;
+
+    CvMat* left;
+    CvMat* right;
+    CvMat* dispLeft;
+    CvMat* dispRight;
+    CvMat* ptrLeft;
+    CvMat* ptrRight;
+    CvMat* vtxBuf;
+    CvMat* edgeBuf;
+} CvStereoGCState;
+
+CVAPI(CvStereoGCState*) cvCreateStereoGCState( int numberOfDisparities, int maxIters );
+CVAPI(void) cvReleaseStereoGCState( CvStereoGCState** state );
+
+CVAPI(void) cvFindStereoCorrespondenceGC( const CvArr* left, const CvArr* right,
+                                          CvArr* disparityLeft, CvArr* disparityRight,
+                                          CvStereoGCState* state,
+                                          int useDisparityGuess CV_DEFAULT(0) );
+
+/* Reprojects the computed disparity image to the 3D space using the specified 4x4 matrix */
+CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
+                                   CvArr* _3dImage, const CvMat* Q,
+                                   int handleMissingValues CV_DEFAULT(0) );
+
+
+#ifdef __cplusplus
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+class CV_EXPORTS CvLevMarq
+{
+public:
+    CvLevMarq();
+    CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria=
+              cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
+              bool completeSymmFlag=false );
+    ~CvLevMarq();
+    void init( int nparams, int nerrs, CvTermCriteria criteria=
+              cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
+              bool completeSymmFlag=false );
+    bool update( const CvMat*& param, CvMat*& J, CvMat*& err );
+    bool updateAlt( const CvMat*& param, CvMat*& JtJ, CvMat*& JtErr, double*& errNorm );
+    
+    void clear();
+    void step();
+    enum { DONE=0, STARTED=1, CALC_J=2, CHECK_ERR=3 };
+    
+    cv::Ptr<CvMat> mask;
+    cv::Ptr<CvMat> prevParam;
+    cv::Ptr<CvMat> param;
+    cv::Ptr<CvMat> J;
+    cv::Ptr<CvMat> err;
+    cv::Ptr<CvMat> JtJ;
+    cv::Ptr<CvMat> JtJN;
+    cv::Ptr<CvMat> JtErr;
+    cv::Ptr<CvMat> JtJV;
+    cv::Ptr<CvMat> JtJW;
+    double prevErrNorm, errNorm;
+    int lambdaLg10;
+    CvTermCriteria criteria;
+    int state;
+    int iters;
+    bool completeSymmFlag;
+};
+
+namespace cv
+{
+    
+    CV_EXPORTS void undistortPoints( const Mat& src, vector<Point2f>& dst,
+                                 const Mat& cameraMatrix, const Mat& distCoeffs,
+                                 const Mat& R=Mat(), const Mat& P=Mat());
+CV_EXPORTS void undistortPoints( const Mat& src, Mat& dst,
+                                 const Mat& cameraMatrix, const Mat& distCoeffs,
+                                 const Mat& R=Mat(), const Mat& P=Mat());
+
+CV_EXPORTS void Rodrigues(const Mat& src, Mat& dst);
+CV_EXPORTS void Rodrigues(const Mat& src, Mat& dst, Mat& jacobian);
+
+enum { LMEDS=4, RANSAC=8 };
+
+CV_EXPORTS Mat findHomography( const Mat& srcPoints,
+                               const Mat& dstPoints,
+                               Mat& mask, int method=0,
+                               double ransacReprojThreshold=3 );
+
+CV_EXPORTS Mat findHomography( const Mat& srcPoints,
+                               const Mat& dstPoints,
+                               vector<uchar>& mask, int method=0,
+                               double ransacReprojThreshold=3 );
+
+CV_EXPORTS Mat findHomography( const Mat& srcPoints,
+                               const Mat& dstPoints,
+                               int method=0, double ransacReprojThreshold=3 );
+
+/* Computes RQ decomposition for 3x3 matrices */
+CV_EXPORTS void RQDecomp3x3( const Mat& M, Mat& R, Mat& Q );
+CV_EXPORTS Vec3d RQDecomp3x3( const Mat& M, Mat& R, Mat& Q,
+                              Mat& Qx, Mat& Qy, Mat& Qz );
+
+CV_EXPORTS void decomposeProjectionMatrix( const Mat& projMatrix, Mat& cameraMatrix,
+                                           Mat& rotMatrix, Mat& transVect );
+CV_EXPORTS void decomposeProjectionMatrix( const Mat& projMatrix, Mat& cameraMatrix,
+                                           Mat& rotMatrix, Mat& transVect,
+                                           Mat& rotMatrixX, Mat& rotMatrixY,
+                                           Mat& rotMatrixZ, Vec3d& eulerAngles );
+
+CV_EXPORTS void matMulDeriv( const Mat& A, const Mat& B, Mat& dABdA, Mat& dABdB );
+
+CV_EXPORTS void composeRT( const Mat& rvec1, const Mat& tvec1,
+                           const Mat& rvec2, const Mat& tvec2,
+                           Mat& rvec3, Mat& tvec3 );
+
+CV_EXPORTS void composeRT( const Mat& rvec1, const Mat& tvec1,
+                           const Mat& rvec2, const Mat& tvec2,
+                           Mat& rvec3, Mat& tvec3,
+                           Mat& dr3dr1, Mat& dr3dt1,
+                           Mat& dr3dr2, Mat& dr3dt2,
+                           Mat& dt3dr1, Mat& dt3dt1,
+                           Mat& dt3dr2, Mat& dt3dt2 );
+
+CV_EXPORTS void projectPoints( const Mat& objectPoints,
+                               const Mat& rvec, const Mat& tvec,
+                               const Mat& cameraMatrix,
+                               const Mat& distCoeffs,
+                               vector<Point2f>& imagePoints );
+
+CV_EXPORTS void projectPoints( const Mat& objectPoints,
+                               const Mat& rvec, const Mat& tvec,
+                               const Mat& cameraMatrix,
+                               const Mat& distCoeffs,
+                               vector<Point2f>& imagePoints,
+                               Mat& dpdrot, Mat& dpdt, Mat& dpdf,
+                               Mat& dpdc, Mat& dpddist,
+                               double aspectRatio=0 );
+
+CV_EXPORTS void solvePnP( const Mat& objectPoints,
+                          const Mat& imagePoints,
+                          const Mat& cameraMatrix,
+                          const Mat& distCoeffs,
+                          Mat& rvec, Mat& tvec,
+                          bool useExtrinsicGuess=false );
+
+CV_EXPORTS Mat initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints,
+                                   const vector<vector<Point2f> >& imagePoints,
+                                   Size imageSize, double aspectRatio=1. );
+
+enum { CALIB_CB_ADAPTIVE_THRESH = 1, CALIB_CB_NORMALIZE_IMAGE = 2,
+       CALIB_CB_FILTER_QUADS = 4, CALIB_CB_FAST_CHECK = 8 };
+
+CV_EXPORTS bool findChessboardCorners( const Mat& image, Size patternSize,
+                                       vector<Point2f>& corners,
+                                       int flags=CALIB_CB_ADAPTIVE_THRESH+
+                                            CALIB_CB_NORMALIZE_IMAGE );
+
+CV_EXPORTS void drawChessboardCorners( Mat& image, Size patternSize,
+                                       const Mat& corners,
+                                       bool patternWasFound );
+
+enum
+{
+    CALIB_USE_INTRINSIC_GUESS = 1,
+    CALIB_FIX_ASPECT_RATIO = 2,
+    CALIB_FIX_PRINCIPAL_POINT = 4,
+    CALIB_ZERO_TANGENT_DIST = 8,
+    CALIB_FIX_FOCAL_LENGTH = 16,
+    CALIB_FIX_K1 = 32,
+    CALIB_FIX_K2 = 64,
+    CALIB_FIX_K3 = 128,
+    // only for stereo
+    CALIB_FIX_INTRINSIC = 256,
+    CALIB_SAME_FOCAL_LENGTH = 512,
+    // for stereo rectification
+    CALIB_ZERO_DISPARITY = 1024
+};
+
+CV_EXPORTS double calibrateCamera( const vector<vector<Point3f> >& objectPoints,
+                                 const vector<vector<Point2f> >& imagePoints,
+                                 Size imageSize,
+                                 Mat& cameraMatrix, Mat& distCoeffs,
+                                 vector<Mat>& rvecs, vector<Mat>& tvecs,
+                                 int flags=0 );
+
+CV_EXPORTS void calibrationMatrixValues( const Mat& cameraMatrix,
+                                Size imageSize,
+                                double apertureWidth,
+                                double apertureHeight,
+                                double& fovx,
+                                double& fovy,
+                                double& focalLength,
+                                Point2d& principalPoint,
+                                double& aspectRatio );
+
+CV_EXPORTS double stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
+                                 const vector<vector<Point2f> >& imagePoints1,
+                                 const vector<vector<Point2f> >& imagePoints2,
+                                 Mat& cameraMatrix1, Mat& distCoeffs1,
+                                 Mat& cameraMatrix2, Mat& distCoeffs2,
+                                 Size imageSize, Mat& R, Mat& T,
+                                 Mat& E, Mat& F,
+                                 TermCriteria criteria = TermCriteria(TermCriteria::COUNT+
+                                    TermCriteria::EPS, 30, 1e-6),
+                                 int flags=CALIB_FIX_INTRINSIC );
+
+CV_EXPORTS void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+                               const Mat& cameraMatrix2, const Mat& distCoeffs2,
+                               Size imageSize, const Mat& R, const Mat& T,
+                               Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q,
+                               int flags=CALIB_ZERO_DISPARITY );
+
+CV_EXPORTS void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+                              const Mat& cameraMatrix2, const Mat& distCoeffs2,
+                              Size imageSize, const Mat& R, const Mat& T,
+                              Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q,
+                              double alpha, Size newImageSize=Size(),
+                              Rect* validPixROI1=0, Rect* validPixROI2=0,
+                              int flags=CALIB_ZERO_DISPARITY );
+
+CV_EXPORTS bool stereoRectifyUncalibrated( const Mat& points1,
+                                           const Mat& points2,
+                                           const Mat& F, Size imgSize,
+                                           Mat& H1, Mat& H2,
+                                           double threshold=5 );
+
+CV_EXPORTS void convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst );
+CV_EXPORTS void convertPointsHomogeneous( const Mat& src, vector<Point2f>& dst );
+
+enum
+{ 
+    FM_7POINT = 1, FM_8POINT = 2, FM_LMEDS = 4, FM_RANSAC = 8
+};
+
+CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
+                                   vector<uchar>& mask, int method=FM_RANSAC,
+                                   double param1=3., double param2=0.99 );
+
+CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
+                                   int method=FM_RANSAC,
+                                   double param1=3., double param2=0.99 );
+
+CV_EXPORTS void computeCorrespondEpilines( const Mat& points1,
+                                           int whichImage, const Mat& F,
+                                           vector<Vec3f>& lines );
+
+template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
+
+// Block matching stereo correspondence algorithm
+class CV_EXPORTS StereoBM
+{
+public:
+    enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1,
+        BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
+
+    StereoBM();
+    StereoBM(int preset, int ndisparities=0, int SADWindowSize=21);
+    void init(int preset, int ndisparities=0, int SADWindowSize=21);
+    void operator()( const Mat& left, const Mat& right, Mat& disparity, int disptype=CV_16S );
+
+    Ptr<CvStereoBMState> state;
+};
+
+
+class CV_EXPORTS StereoSGBM
+{
+public:
+    enum { DISP_SHIFT=4, DISP_SCALE = (1<<DISP_SHIFT) };
+
+    StereoSGBM();
+    StereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+               int P1=0, int P2=0, int disp12MaxDiff=0,
+               int preFilterCap=0, int uniquenessRatio=0,
+               int speckleWindowSize=0, int speckleRange=0,
+               bool fullDP=false);
+    virtual ~StereoSGBM();
+
+    virtual void operator()(const Mat& left, const Mat& right, Mat& disp);
+
+    int minDisparity;
+    int numberOfDisparities;
+    int SADWindowSize;
+    int preFilterCap;
+    int uniquenessRatio;
+    int P1, P2;
+    int speckleWindowSize;
+    int speckleRange;
+    int disp12MaxDiff;
+    bool fullDP;
+
+protected:
+    Mat buffer;
+};
+
+
+CV_EXPORTS void filterSpeckles( Mat& img, double newVal, int maxSpeckleSize, double maxDiff, Mat& buf );
+
+CV_EXPORTS Rect getValidDisparityROI( Rect roi1, Rect roi2,
+                                int minDisparity, int numberOfDisparities,
+                                int SADWindowSize );
+
+CV_EXPORTS void validateDisparity( Mat& disparity, const Mat& cost,
+                                   int minDisparity, int numberOfDisparities,
+                                   int disp12MaxDisp=1 );
+
+CV_EXPORTS void reprojectImageTo3D( const Mat& disparity,
+                                    Mat& _3dImage, const Mat& Q,
+                                    bool handleMissingValues=false );
+    
+}
+
+#endif
+
+#include "opencv2/calib3d/compat_c.h"
+
+#endif

@@ -1,0 +1,1086 @@
+\section{Motion Analysis and Object Tracking}
+
+\ifCPy
+
+\cvCPyFunc{Acc}
+Adds a frame to an accumulator.
+
+\cvdefC{
+void cvAcc( \par const CvArr* image,\par CvArr* sum,\par const CvArr* mask=NULL );
+}
+\cvdefPy{Acc(image,sum,mask=NULL)-> None}
+
+\begin{description}
+\cvarg{image}{Input image, 1- or 3-channel, 8-bit or 32-bit floating point. (each channel of multi-channel image is processed independently)}
+\cvarg{sum}{Accumulator with the same number of channels as input image, 32-bit or 64-bit floating-point}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function adds the whole image \texttt{image} or its selected region to the accumulator \texttt{sum}:
+
+\[ \texttt{sum}(x,y) \leftarrow \texttt{sum}(x,y) + \texttt{image}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+\cvCPyFunc{CalcGlobalOrientation}
+Calculates the global motion orientation of some selected region.
+
+\cvdefC{
+double cvCalcGlobalOrientation( \par const CvArr* orientation,\par const CvArr* mask,\par const CvArr* mhi,\par double timestamp,\par double duration );
+}\cvdefPy{CalcGlobalOrientation(orientation,mask,mhi,timestamp,duration)-> float}
+
+\begin{description}
+\cvarg{orientation}{Motion gradient orientation image; calculated by the function \cvCPyCross{CalcMotionGradient}}
+\cvarg{mask}{Mask image. It may be a conjunction of a valid gradient mask, obtained with \cvCPyCross{CalcMotionGradient} and the mask of the region, whose direction needs to be calculated}
+\cvarg{mhi}{Motion history image}
+\cvarg{timestamp}{Current time in milliseconds or other units, it is better to store time passed to \cvCPyCross{UpdateMotionHistory} before and reuse it here, because running \cvCPyCross{UpdateMotionHistory} and \cvCPyCross{CalcMotionGradient} on large images may take some time}
+\cvarg{duration}{Maximal duration of motion track in milliseconds, the same as \cvCPyCross{UpdateMotionHistory}}
+\end{description}
+
+The function calculates the general
+motion direction in the selected region and returns the angle between
+0 degrees  and 360 degrees . At first the function builds the orientation histogram
+and finds the basic orientation as a coordinate of the histogram
+maximum. After that the function calculates the shift relative to the
+basic orientation as a weighted sum of all of the orientation vectors: the more
+recent the motion, the greater the weight. The resultant angle is
+a circular sum of the basic orientation and the shift.
+
+\cvCPyFunc{CalcMotionGradient}
+Calculates the gradient orientation of a motion history image.
+
+\cvdefC{
+void cvCalcMotionGradient( \par const CvArr* mhi,\par CvArr* mask,\par CvArr* orientation,\par double delta1,\par double delta2,\par int apertureSize=3 );
+}\cvdefPy{CalcMotionGradient(mhi,mask,orientation,delta1,delta2,apertureSize=3)-> None}
+
+\begin{description}
+\cvarg{mhi}{Motion history image}
+\cvarg{mask}{Mask image; marks pixels where the motion gradient data is correct; output parameter}
+\cvarg{orientation}{Motion gradient orientation image; contains angles from 0 to ~360 degrees }
+\cvarg{delta1}{See below}
+\cvarg{delta2}{See below}
+\cvarg{apertureSize}{Aperture size of derivative operators used by the function: CV\_SCHARR, 1, 3, 5 or 7 (see \cvCPyCross{Sobel})}
+\end{description}
+
+The function calculates the derivatives $Dx$ and $Dy$ of \texttt{mhi} and then calculates gradient orientation as:
+
+\[
+\texttt{orientation}(x,y)=\arctan{\frac{Dy(x,y)}{Dx(x,y)}}
+\]
+
+where both $Dx(x,y)$ and $Dy(x,y)$ signs are taken into account (as in the \cvCPyCross{CartToPolar} function). After that \texttt{mask} is filled to indicate where the orientation is valid (see the \texttt{delta1} and \texttt{delta2} description).
+
+The function finds the minimum ($m(x,y)$) and maximum ($M(x,y)$) mhi values over each pixel $(x,y)$ neighborhood and assumes the gradient is valid only if
+\[
+\min(\texttt{delta1} , \texttt{delta2} ) \le M(x,y)-m(x,y) \le \max(\texttt{delta1} ,\texttt{delta2} ).
+\]
+
+\cvCPyFunc{CalcOpticalFlowBM}
+Calculates the optical flow for two images by using the block matching method.
+
+\cvdefC{
+void cvCalcOpticalFlowBM( \par const CvArr* prev,\par const CvArr* curr,\par CvSize blockSize,\par CvSize shiftSize,\par CvSize max\_range,\par int usePrevious,\par CvArr* velx,\par CvArr* vely );
+}\cvdefPy{CalcOpticalFlowBM(prev,curr,blockSize,shiftSize,max\_range,usePrevious,velx,vely)-> None}
+
+\begin{description}
+\cvarg{prev}{First image, 8-bit, single-channel}
+\cvarg{curr}{Second image, 8-bit, single-channel}
+\cvarg{blockSize}{Size of basic blocks that are compared}
+\cvarg{shiftSize}{Block coordinate increments}
+\cvarg{max\_range}{Size of the scanned neighborhood in pixels around the block}
+\cvarg{usePrevious}{Uses the previous (input) velocity field}
+\cvarg{velx}{Horizontal component of the optical flow of
+\[
+\left\lfloor \frac{\texttt{prev->width} - \texttt{blockSize.width}}{\texttt{shiftSize.width}} \right\rfloor
+\times
+\left\lfloor \frac{\texttt{prev->height} - \texttt{blockSize.height}}{\texttt{shiftSize.height}} \right\rfloor
+\]
+size, 32-bit floating-point, single-channel}
+\cvarg{vely}{Vertical component of the optical flow of the same size \texttt{velx}, 32-bit floating-point, single-channel}
+\end{description}
+
+The function calculates the optical
+flow for overlapped blocks $\texttt{blockSize.width} \times \texttt{blockSize.height}$ pixels each, thus the velocity
+fields are smaller than the original images. For every block in \texttt{prev} the functions tries to find a similar block in
+\texttt{curr} in some neighborhood of the original block or shifted by (velx(x0,y0),vely(x0,y0)) block as has been calculated by previous
+function call (if \texttt{usePrevious=1})
+
+\cvCPyFunc{CalcOpticalFlowHS}
+Calculates the optical flow for two images.
+
+\cvdefC{
+void cvCalcOpticalFlowHS( \par const CvArr* prev,\par const CvArr* curr,\par int usePrevious,\par CvArr* velx,\par CvArr* vely,\par double lambda,\par CvTermCriteria criteria );
+}\cvdefPy{CalcOpticalFlowHS(prev,curr,usePrevious,velx,vely,lambda,criteria)-> None}
+
+\begin{description}
+\cvarg{prev}{First image, 8-bit, single-channel}
+\cvarg{curr}{Second image, 8-bit, single-channel}
+\cvarg{usePrevious}{Uses the previous (input) velocity field}
+\cvarg{velx}{Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel}
+\cvarg{vely}{Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel}
+\cvarg{lambda}{Lagrangian multiplier}
+\cvarg{criteria}{Criteria of termination of velocity computing}
+\end{description}
+
+The function computes the flow for every pixel of the first input image using the Horn and Schunck algorithm
+\cite{Horn81}.
+
+\cvCPyFunc{CalcOpticalFlowLK}
+Calculates the optical flow for two images.
+
+\cvdefC{
+void cvCalcOpticalFlowLK( \par const CvArr* prev,\par const CvArr* curr,\par CvSize winSize,\par CvArr* velx,\par CvArr* vely );
+}\cvdefPy{CalcOpticalFlowLK(prev,curr,winSize,velx,vely)-> None}
+\begin{description}
+
+\cvarg{prev}{First image, 8-bit, single-channel}
+\cvarg{curr}{Second image, 8-bit, single-channel}
+\cvarg{winSize}{Size of the averaging window used for grouping pixels}
+\cvarg{velx}{Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel}
+\cvarg{vely}{Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel}
+\end{description}
+
+The function computes the flow for every pixel of the first input image using the Lucas and Kanade algorithm
+\cite{Lucas81}.
+
+\cvCPyFunc{CalcOpticalFlowPyrLK}
+Calculates the optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids.
+
+\cvdefC{
+void cvCalcOpticalFlowPyrLK( \par const CvArr* prev,\par const CvArr* curr,\par CvArr* prevPyr,\par CvArr* currPyr,\par const CvPoint2D32f* prevFeatures,\par CvPoint2D32f* currFeatures,\par int count,\par CvSize winSize,\par int level,\par char* status,\par float* track\_error,\par CvTermCriteria criteria,\par int flags );
+}
+\cvdefPy{CalcOpticalFlowPyrLK(  prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses = None) -> (currFeatures, status, track\_error)}
+
+\begin{description}
+\cvarg{prev}{First frame, at time \texttt{t}}
+\cvarg{curr}{Second frame, at time \texttt{t + dt} }
+\cvarg{prevPyr}{Buffer for the pyramid for the first frame. If the pointer is not \texttt{NULL} , the buffer must have a sufficient size to store the pyramid from level \texttt{1} to level \texttt{level} ; the total size of \texttt{(image\_width+8)*image\_height/3} bytes is sufficient}
+\cvarg{currPyr}{Similar to \texttt{prevPyr}, used for the second frame}
+\cvarg{prevFeatures}{Array of points for which the flow needs to be found}
+\cvarg{currFeatures}{Array of 2D points containing the calculated new positions of the input features in the second image}
+\ifC
+\cvarg{count}{Number of feature points}
+\fi
+\cvarg{winSize}{Size of the search window of each pyramid level}
+\cvarg{level}{Maximal pyramid level number. If \texttt{0} , pyramids are not used (single level), if \texttt{1} , two levels are used, etc}
+\cvarg{status}{Array. Every element of the array is set to \texttt{1} if the flow for the corresponding feature has been found, \texttt{0} otherwise}
+\cvarg{track\_error}{Array of double numbers containing the difference between patches around the original and moved points. Optional parameter; can be \texttt{NULL}}
+\cvarg{criteria}{Specifies when the iteration process of finding the flow for each point on each pyramid level should be stopped}
+\cvarg{flags}{Miscellaneous flags:
+\begin{description}
+  \cvarg{CV\_LKFLOWPyr\_A\_READY}{pyramid for the first frame is precalculated before the call}
+  \cvarg{CV\_LKFLOWPyr\_B\_READY}{ pyramid for the second frame is precalculated before the call}
+  \cvC{\cvarg{CV\_LKFLOW\_INITIAL\_GUESSES}{array B contains initial coordinates of features before the function call}}
+\end{description}}
+\cvPy{\cvarg{guesses}{optional array of estimated coordinates of features in second frame, with same length as \texttt{prevFeatures}}}
+\end{description}
+
+The function implements the sparse iterative version of the Lucas-Kanade optical flow in pyramids
+\cite{Bouguet00}
+. It calculates the coordinates of the feature points on the current video
+frame given their coordinates on the previous frame. The function finds
+the coordinates with sub-pixel accuracy.
+
+Both parameters \texttt{prevPyr} and \texttt{currPyr} comply with the
+following rules: if the image pointer is 0, the function allocates the
+buffer internally, calculates the pyramid, and releases the buffer after
+processing. Otherwise, the function calculates the pyramid and stores
+it in the buffer unless the flag \texttt{CV\_LKFLOWPyr\_A[B]\_READY}
+is set. The image should be large enough to fit the Gaussian pyramid
+data. After the function call both pyramids are calculated and the
+readiness flag for the corresponding image can be set in the next call
+(i.e., typically, for all the image pairs except the very first one
+\texttt{CV\_LKFLOWPyr\_A\_READY} is set).
+
+
+\cvCPyFunc{CamShift}
+Finds the object center, size, and orientation.
+
+\cvdefC{
+int cvCamShift( \par const CvArr* prob\_image,\par CvRect window,\par CvTermCriteria criteria,\par CvConnectedComp* comp,\par CvBox2D* box=NULL );
+}
+\cvdefPy{CamShift(prob\_image,window,criteria)-> (int, comp, box)}
+
+\begin{description}
+\cvarg{prob\_image}{Back projection of object histogram (see \cvCPyCross{CalcBackProject})}
+\cvarg{window}{Initial search window}
+\cvarg{criteria}{Criteria applied to determine when the window search should be finished}
+\cvarg{comp}{Resultant structure that contains the converged search window coordinates (\texttt{comp->rect} field) and the sum of all of the pixels inside the window (\texttt{comp->area} field)}
+\ifC % {
+\cvarg{box}{Circumscribed box for the object. If not \texttt{NULL}, it contains object size and orientation}
+\else % }{
+\cvarg{box}{Circumscribed box for the object.}
+\fi % }
+\end{description}
+
+The function implements the CAMSHIFT object tracking algrorithm
+\cite{Bradski98}.
+First, it finds an object center using \cvCPyCross{MeanShift} and, after that, calculates the object size and orientation. The function returns number of iterations made within \cvCPyCross{MeanShift}.
+
+The \texttt{CamShiftTracker} class declared in cv.hpp implements the color object tracker that uses the function.
+
+\ifC % {
+\subsection{CvConDensation}
+ConDenstation state.
+
+\begin{lstlisting}
+    typedef struct CvConDensation
+    {
+        int MP;     //Dimension of measurement vector
+        int DP;     // Dimension of state vector
+        float* DynamMatr;       // Matrix of the linear Dynamics system
+        float* State;           // Vector of State
+        int SamplesNum;         // Number of the Samples
+        float** flSamples;      // array of the Sample Vectors
+        float** flNewSamples;   // temporary array of the Sample Vectors
+        float* flConfidence;    // Confidence for each Sample
+        float* flCumulative;    // Cumulative confidence
+        float* Temp;            // Temporary vector
+        float* RandomSample;    // RandomVector to update sample set
+        CvRandState* RandS;     // Array of structures to generate random vectors
+    } CvConDensation;
+
+\end{lstlisting}
+The structure \texttt{CvConDensation} stores the CONditional DENSity propagATION tracker state. The information about the algorithm can be found at \url{http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/ISARD1/condensation.html}.
+
+\cvCPyFunc{CreateConDensation}
+Allocates the ConDensation filter structure.
+
+\cvdefC{
+CvConDensation* cvCreateConDensation( \par int dynam\_params,\par int measure\_params,\par int sample\_count );
+}
+
+\begin{description}
+\cvarg{dynam\_params}{Dimension of the state vector}
+\cvarg{measure\_params}{Dimension of the measurement vector}
+\cvarg{sample\_count}{Number of samples}
+\end{description}
+
+The function creates a \texttt{CvConDensation} structure and returns a pointer to the structure.
+
+\cvCPyFunc{ConDensInitSampleSet}
+Initializes the sample set for the ConDensation algorithm.
+
+\cvdefC{
+void cvConDensInitSampleSet( CvConDensation* condens, \par CvMat* lower\_bound, \par CvMat* upper\_bound );
+}
+
+\begin{description}
+\cvarg{condens}{Pointer to a structure to be initialized}
+\cvarg{lower\_bound}{Vector of the lower boundary for each dimension}
+\cvarg{upper\_bound}{Vector of the upper boundary for each dimension}
+\end{description}
+
+The function fills the samples arrays in the structure \texttt{condens} with values within the specified ranges.
+\fi
+
+\cvclass{CvKalman}\label{CvKalman}
+Kalman filter state.
+
+\ifC
+\begin{lstlisting}
+typedef struct CvKalman
+{
+    int MP;                     /* number of measurement vector dimensions */
+    int DP;                     /* number of state vector dimensions */
+    int CP;                     /* number of control vector dimensions */
+
+    /* backward compatibility fields */
+#if 1
+    float* PosterState;         /* =state_pre->data.fl */
+    float* PriorState;          /* =state_post->data.fl */
+    float* DynamMatr;           /* =transition_matrix->data.fl */
+    float* MeasurementMatr;     /* =measurement_matrix->data.fl */
+    float* MNCovariance;        /* =measurement_noise_cov->data.fl */
+    float* PNCovariance;        /* =process_noise_cov->data.fl */
+    float* KalmGainMatr;        /* =gain->data.fl */
+    float* PriorErrorCovariance;/* =error_cov_pre->data.fl */
+    float* PosterErrorCovariance;/* =error_cov_post->data.fl */
+    float* Temp1;               /* temp1->data.fl */
+    float* Temp2;               /* temp2->data.fl */
+#endif
+
+    CvMat* state_pre;           /* predicted state (x'(k)):
+                                    x(k)=A*x(k-1)+B*u(k) */
+    CvMat* state_post;          /* corrected state (x(k)):
+                                    x(k)=x'(k)+K(k)*(z(k)-H*x'(k)) */
+    CvMat* transition_matrix;   /* state transition matrix (A) */
+    CvMat* control_matrix;      /* control matrix (B)
+                                   (it is not used if there is no control)*/
+    CvMat* measurement_matrix;  /* measurement matrix (H) */
+    CvMat* process_noise_cov;   /* process noise covariance matrix (Q) */
+    CvMat* measurement_noise_cov; /* measurement noise covariance matrix (R) */
+    CvMat* error_cov_pre;       /* priori error estimate covariance matrix (P'(k)):
+                                    P'(k)=A*P(k-1)*At + Q*/
+    CvMat* gain;                /* Kalman gain matrix (K(k)):
+                                    K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)*/
+    CvMat* error_cov_post;      /* posteriori error estimate covariance matrix (P(k)):
+                                    P(k)=(I-K(k)*H)*P'(k) */
+    CvMat* temp1;               /* temporary matrices */
+    CvMat* temp2;
+    CvMat* temp3;
+    CvMat* temp4;
+    CvMat* temp5;
+}
+CvKalman;
+\end{lstlisting}
+\else
+\begin{description}
+\cvarg{MP}{number of measurement vector dimensions}
+\cvarg{DP}{number of state vector dimensions}
+\cvarg{CP}{number of control vector dimensions}
+\cvarg{state\_pre}{predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)}
+\cvarg{state\_post}{corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))}
+\cvarg{transition\_matrix}{state transition matrix (A)}
+\cvarg{control\_matrix}{control matrix (B) (it is not used if there is no control)}
+\cvarg{measurement\_matrix}{measurement matrix (H)}
+\cvarg{process\_noise\_cov}{process noise covariance matrix (Q)}
+\cvarg{measurement\_noise\_cov}{measurement noise covariance matrix (R)}
+\cvarg{error\_cov\_pre}{priori error estimate covariance matrix (P'(k)):  P'(k)=A*P(k-1)*At + Q}
+\cvarg{gain}{Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)}
+\cvarg{error\_cov\_post}{posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)}
+\end{description}
+\fi
+
+The structure \texttt{CvKalman} is used to keep the Kalman filter
+state. It is created by the \cvCPyCross{CreateKalman} function, updated
+by the \cvCPyCross{KalmanPredict} and \cvCPyCross{KalmanCorrect} functions
+\ifC
+and released by the \cvCPyCross{ReleaseKalman} function
+\fi
+. Normally, the
+structure is used for the standard Kalman filter (notation and the
+formulas below are borrowed from the excellent Kalman tutorial
+\cite{Welch95})
+
+\[
+\begin{array}{l}
+x_k=A \cdot x_{k-1}+B \cdot u_k+w_k\\
+z_k=H \cdot x_k+v_k
+\end{array}
+\]
+
+where:
+
+\[
+\begin{array}{l l}
+x_k\;(x_{k-1})& \text{state of the system at the moment \emph{k} (\emph{k-1})}\\
+z_k & \text{measurement of the system state at the moment \emph{k}}\\
+u_k & \text{external control applied at the moment \emph{k}}
+\end{array}
+\]
+
+$w_k$ and $v_k$ are normally-distributed process and measurement noise, respectively:
+
+\[
+\begin{array}{l}
+p(w) \sim N(0,Q)\\
+p(v) \sim N(0,R)
+\end{array}
+\]
+
+that is,
+
+$Q$ process noise covariance matrix, constant or variable,
+
+$R$ measurement noise covariance matrix, constant or variable
+
+In the case of the standard Kalman filter, all of the matrices: A, B, H, Q and R are initialized once after the \cvCPyCross{CvKalman} structure is allocated via \cvCPyCross{CreateKalman}. However, the same structure and the same functions may be used to simulate the extended Kalman filter by linearizing the extended Kalman filter equation in the current system state neighborhood, in this case A, B, H (and, probably, Q and R) should be updated on every step.
+
+\cvCPyFunc{CreateKalman}
+Allocates the Kalman filter structure.
+
+\cvdefC{
+CvKalman* cvCreateKalman( \par int dynam\_params,\par int measure\_params,\par int control\_params=0 );
+}
+
+\cvdefPy{CreateKalman(dynam\_params, measure\_params, control\_params=0) -> CvKalman}
+
+\begin{description}
+\cvarg{dynam\_params}{dimensionality of the state vector}
+\cvarg{measure\_params}{dimensionality of the measurement vector}
+\cvarg{control\_params}{dimensionality of the control vector}
+\end{description}
+
+The function allocates \cvCPyCross{CvKalman} and all its matrices and initializes them somehow.
+
+
+\cvCPyFunc{KalmanCorrect}
+Adjusts the model state.
+
+\cvdefC{const CvMat* cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement );}
+\cvdefPy{KalmanCorrect(kalman, measurement) -> cvmat}
+
+\begin{description}
+\ifC
+\cvarg{kalman}{Pointer to the structure to be updated}
+\else
+\cvarg{kalman}{Kalman filter object returned by \cvCPyCross{CreateKalman}}
+\fi
+\cvarg{measurement}{CvMat containing the measurement vector}
+\end{description}
+
+The function adjusts the stochastic model state on the basis of the given measurement of the model state:
+
+\[
+\begin{array}{l}
+K_k=P'_k \cdot H^T \cdot (H \cdot P'_k \cdot H^T+R)^{-1}\\
+x_k=x'_k+K_k \cdot (z_k-H \cdot x'_k)\\
+P_k=(I-K_k \cdot H) \cdot P'_k
+\end{array}
+\]
+
+where
+
+\begin{tabular}{l p{4 in}}
+\hline
+$z_k$ & given measurement (\texttt{mesurement} parameter)\\ \hline
+$K_k$ & Kalman "gain" matrix.\\ \hline
+\end{tabular}
+
+The function stores the adjusted state at \texttt{kalman->state\_post} and returns it on output.
+
+\ifC
+Example. Using Kalman filter to track a rotating point
+\begin{lstlisting}
+#include "cv.h"
+#include "highgui.h"
+#include <math.h>
+
+int main(int argc, char** argv)
+{
+    /* A matrix data */
+    const float A[] = { 1, 1, 0, 1 };
+
+    IplImage* img = cvCreateImage( cvSize(500,500), 8, 3 );
+    CvKalman* kalman = cvCreateKalman( 2, 1, 0 );
+    /* state is (phi, delta_phi) - angle and angle increment */
+    CvMat* state = cvCreateMat( 2, 1, CV_32FC1 );
+    CvMat* process_noise = cvCreateMat( 2, 1, CV_32FC1 );
+    /* only phi (angle) is measured */
+    CvMat* measurement = cvCreateMat( 1, 1, CV_32FC1 );
+    CvRandState rng;
+    int code = -1;
+
+    cvRandInit( &rng, 0, 1, -1, CV_RAND_UNI );
+
+    cvZero( measurement );
+    cvNamedWindow( "Kalman", 1 );
+
+    for(;;)
+    {
+        cvRandSetRange( &rng, 0, 0.1, 0 );
+        rng.disttype = CV_RAND_NORMAL;
+
+        cvRand( &rng, state );
+
+        memcpy( kalman->transition_matrix->data.fl, A, sizeof(A));
+        cvSetIdentity( kalman->measurement_matrix, cvRealScalar(1) );
+        cvSetIdentity( kalman->process_noise_cov, cvRealScalar(1e-5) );
+        cvSetIdentity( kalman->measurement_noise_cov, cvRealScalar(1e-1) );
+        cvSetIdentity( kalman->error_cov_post, cvRealScalar(1));
+        /* choose random initial state */
+        cvRand( &rng, kalman->state_post );
+
+        rng.disttype = CV_RAND_NORMAL;
+
+        for(;;)
+        {
+            #define calc_point(angle)                                      \
+                cvPoint( cvRound(img->width/2 + img->width/3*cos(angle)),  \
+                         cvRound(img->height/2 - img->width/3*sin(angle)))
+
+            float state_angle = state->data.fl[0];
+            CvPoint state_pt = calc_point(state_angle);
+
+            /* predict point position */
+            const CvMat* prediction = cvKalmanPredict( kalman, 0 );
+            float predict_angle = prediction->data.fl[0];
+            CvPoint predict_pt = calc_point(predict_angle);
+            float measurement_angle;
+            CvPoint measurement_pt;
+
+            cvRandSetRange( &rng,
+                            0,
+                            sqrt(kalman->measurement_noise_cov->data.fl[0]),
+                            0 );
+            cvRand( &rng, measurement );
+
+            /* generate measurement */
+            cvMatMulAdd( kalman->measurement_matrix, state, measurement, measurement );
+
+            measurement_angle = measurement->data.fl[0];
+            measurement_pt = calc_point(measurement_angle);
+
+            /* plot points */
+            #define draw_cross( center, color, d )                        \
+                cvLine( img, cvPoint( center.x - d, center.y - d ),       \
+                             cvPoint( center.x + d, center.y + d ),       \
+                             color, 1, 0 );                               \
+                cvLine( img, cvPoint( center.x + d, center.y - d ),       \
+                             cvPoint( center.x - d, center.y + d ),       \
+                             color, 1, 0 )
+
+            cvZero( img );
+            draw_cross( state_pt, CV_RGB(255,255,255), 3 );
+            draw_cross( measurement_pt, CV_RGB(255,0,0), 3 );
+            draw_cross( predict_pt, CV_RGB(0,255,0), 3 );
+            cvLine( img, state_pt, predict_pt, CV_RGB(255,255,0), 3, 0 );
+
+            /* adjust Kalman filter state */
+            cvKalmanCorrect( kalman, measurement );
+
+            cvRandSetRange( &rng,
+                            0,
+                            sqrt(kalman->process_noise_cov->data.fl[0]),
+                            0 );
+            cvRand( &rng, process_noise );
+            cvMatMulAdd( kalman->transition_matrix,
+                         state,
+                         process_noise,
+                         state );
+
+            cvShowImage( "Kalman", img );
+            code = cvWaitKey( 100 );
+
+            if( code > 0 ) /* break current simulation by pressing a key */
+                break;
+        }
+        if( code == 27 ) /* exit by ESCAPE */
+            break;
+    }
+
+    return 0;
+}
+\end{lstlisting}
+\fi
+
+\cvCPyFunc{KalmanPredict}
+Estimates the subsequent model state.
+
+\cvdefC{const CvMat* cvKalmanPredict( \par CvKalman* kalman, \par const CvMat* control=NULL);}
+\cvdefPy{KalmanPredict(kalman, control=None) -> cvmat}
+
+\begin{description}
+\ifC
+\cvarg{kalman}{Kalman filter state}
+\else
+\cvarg{kalman}{Kalman filter object returned by \cvCPyCross{CreateKalman}}
+\fi
+\cvarg{control}{Control vector $u_k$, should be NULL iff there is no external control (\texttt{control\_params} =0)}
+\end{description}
+
+The function estimates the subsequent stochastic model state by its current state and stores it at \texttt{kalman->state\_pre}:
+
+\[
+\begin{array}{l}
+x'_k=A \cdot x_{k-1}+B \cdot u_k\\
+P'_k=A \cdot P_{k-1}+A^T + Q
+\end{array}
+\]
+
+where
+
+\begin{tabular}{l p{5 in}}
+\hline
+$x'_k$ & is predicted state \texttt{kalman->state\_pre},\\ \hline
+$x_{k-1}$ & is corrected state on the previous step \texttt{kalman->state\_post}
+                (should be initialized somehow in the beginning, zero vector by default),\\ \hline
+$u_k$ & is external control (\texttt{control} parameter),\\ \hline
+$P'_k$ & is priori error covariance matrix \texttt{kalman->error\_cov\_pre}\\ \hline
+$P_{k-1}$ & is posteriori error covariance matrix on the previous step \texttt{kalman->error\_cov\_post}
+                (should be initialized somehow in the beginning, identity matrix by default),
+\end{tabular}
+
+The function returns the estimated state.
+
+\subsection{KalmanUpdateByMeasurement}
+
+Synonym for \cross{KalmanCorrect}
+
+\subsection{KalmanUpdateByTime}
+
+Synonym for \cross{KalmanPredict}
+
+\cvCPyFunc{MeanShift}
+Finds the object center on back projection.
+
+\cvdefC{
+int cvMeanShift( \par const CvArr* prob\_image,\par CvRect window,\par CvTermCriteria criteria,\par CvConnectedComp* comp );
+}\cvdefPy{MeanShift(prob\_image,window,criteria)-> comp}
+
+\begin{description}
+\cvarg{prob\_image}{Back projection of the object histogram (see \cvCPyCross{CalcBackProject})}
+\cvarg{window}{Initial search window}
+\cvarg{criteria}{Criteria applied to determine when the window search should be finished}
+\cvarg{comp}{Resultant structure that contains the converged search window coordinates (\texttt{comp->rect} field) and the sum of all of the pixels inside the window (\texttt{comp->area} field)}
+\end{description}
+
+The function iterates to find the object center
+given its back projection and initial position of search window. The
+iterations are made until the search window center moves by less than
+the given value and/or until the function has done the maximum number
+of iterations. The function returns the number of iterations made.
+
+\cvCPyFunc{MultiplyAcc}
+Adds the product of two input images to the accumulator.
+
+\cvdefC{
+void cvMultiplyAcc( \par const CvArr* image1,\par const CvArr* image2,\par CvArr* acc,\par const CvArr* mask=NULL );
+}
+\cvdefPy{MultiplyAcc(image1,image2,acc,mask=NULL)-> None}
+
+\begin{description}
+\cvarg{image1}{First input image, 1- or 3-channel, 8-bit or 32-bit floating point (each channel of multi-channel image is processed independently)}
+\cvarg{image2}{Second input image, the same format as the first one}
+\cvarg{acc}{Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function adds the product of 2 images or their selected regions to the accumulator \texttt{acc}:
+
+\[ \texttt{acc}(x,y) \leftarrow \texttt{acc}(x,y) + \texttt{image1}(x,y) \cdot \texttt{image2}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+\ifC % {
+\cvCPyFunc{ReleaseConDensation}
+Deallocates the ConDensation filter structure.
+
+\cvdefC{
+void cvReleaseConDensation( CvConDensation** condens );
+
+}
+\begin{description}
+\cvarg{condens}{Pointer to the pointer to the structure to be released}
+\end{description}
+
+The function releases the structure \texttt{condens}) and frees all memory previously allocated for the structure.
+
+\fi % }
+
+\ifC % {
+
+\cvCPyFunc{ReleaseKalman}
+Deallocates the Kalman filter structure.
+
+\cvdefC{
+void cvReleaseKalman( \par CvKalman** kalman );
+}
+
+\begin{description}
+\cvarg{kalman}{double pointer to the Kalman filter structure}
+\end{description}
+
+The function releases the structure \cvCPyCross{CvKalman} and all of the underlying matrices.
+
+\fi % }
+
+\cvCPyFunc{RunningAvg}
+Updates the running average.
+
+\cvdefC{
+void cvRunningAvg( \par const CvArr* image,\par CvArr* acc,\par double alpha,\par const CvArr* mask=NULL );
+}
+\cvdefPy{RunningAvg(image,acc,alpha,mask=NULL)-> None}
+
+\begin{description}
+\cvarg{image}{Input image, 1- or 3-channel, 8-bit or 32-bit floating point (each channel of multi-channel image is processed independently)}
+\cvarg{acc}{Accumulator with the same number of channels as input image, 32-bit or 64-bit floating-point}
+\cvarg{alpha}{Weight of input image}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function calculates the weighted sum of the input image
+\texttt{image} and the accumulator \texttt{acc} so that \texttt{acc}
+becomes a running average of frame sequence:
+
+\[ \texttt{acc}(x,y) \leftarrow (1-\alpha) \cdot \texttt{acc}(x,y) + \alpha \cdot \texttt{image}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+where $\alpha$ regulates the update speed (how fast the accumulator forgets about previous frames).
+
+
+\cvCPyFunc{SegmentMotion}
+Segments a whole motion into separate moving parts.
+
+\cvdefC{
+CvSeq* cvSegmentMotion( \par const CvArr* mhi,\par CvArr* seg\_mask,\par CvMemStorage* storage,\par double timestamp,\par double seg\_thresh );
+}\cvdefPy{SegmentMotion(mhi,seg\_mask,storage,timestamp,seg\_thresh)-> None}
+
+\begin{description}
+\cvarg{mhi}{Motion history image}
+\cvarg{seg\_mask}{Image where the mask found should be stored, single-channel, 32-bit floating-point}
+\cvarg{storage}{Memory storage that will contain a sequence of motion connected components}
+\cvarg{timestamp}{Current time in milliseconds or other units}
+\cvarg{seg\_thresh}{Segmentation threshold; recommended to be equal to the interval between motion history "steps" or greater}
+\end{description}
+
+The function finds all of the motion segments and
+marks them in \texttt{seg\_mask} with individual values (1,2,...). It
+also returns a sequence of \cvCPyCross{CvConnectedComp}
+structures, one for each motion component. After that the
+motion direction for every component can be calculated with
+\cvCPyCross{CalcGlobalOrientation} using the extracted mask of the particular
+component \cvCPyCross{Cmp}.
+
+\cvCPyFunc{SnakeImage}
+Changes the contour position to minimize its energy.
+
+\cvdefC{
+void cvSnakeImage( \par const IplImage* image,\par CvPoint* points,\par int length,\par float* alpha,\par float* beta,\par float* gamma,\par int coeff\_usage,\par CvSize win,\par CvTermCriteria criteria,\par int calc\_gradient=1 );
+}\cvdefPy{SnakeImage(image,points,alpha,beta,gamma,coeff\_usage,win,criteria,calc\_gradient=1)-> None}
+
+\begin{description}
+\cvarg{image}{The source image or external energy field}
+\cvarg{points}{Contour points (snake)}
+\ifC
+\cvarg{length}{Number of points in the contour}
+\fi
+\cvarg{alpha}{Weight[s] of continuity energy, single float or array of \texttt{length} floats, one for each contour point}
+\cvarg{beta}{Weight[s] of curvature energy, similar to \texttt{alpha}}
+\cvarg{gamma}{Weight[s] of image energy, similar to \texttt{alpha}}
+\cvarg{coeff\_usage}{Different uses of the previous three parameters:
+\begin{description}
+  \cvarg{CV\_VALUE}{indicates that each of \texttt{alpha, beta, gamma} is a pointer to a single value to be used for all points;}
+  \cvarg{CV\_ARRAY}{indicates that each of \texttt{alpha, beta, gamma} is a pointer to an array of coefficients different for all the points of the snake. All the arrays must have the size equal to the contour size.}
+\end{description}}
+\cvarg{win}{Size of neighborhood of every point used to search the minimum, both \texttt{win.width} and \texttt{win.height} must be odd}
+\cvarg{criteria}{Termination criteria}
+\cvarg{calc\_gradient}{Gradient flag; if not 0, the function calculates the gradient magnitude for every image pixel and consideres it as the energy field, otherwise the input image itself is considered}
+\end{description}
+
+The function updates the snake in order to minimize its
+total energy that is a sum of internal energy that depends on the contour
+shape (the smoother contour is, the smaller internal energy is) and
+external energy that depends on the energy field and reaches minimum at
+the local energy extremums that correspond to the image edges in the case
+of using an image gradient.
+
+The parameter \texttt{criteria.epsilon} is used to define the minimal
+number of points that must be moved during any iteration to keep the
+iteration process running.
+
+If at some iteration the number of moved points is less
+than \texttt{criteria.epsilon} or the function performed
+\texttt{criteria.max\_iter} iterations, the function terminates.
+
+\cvCPyFunc{SquareAcc}
+Adds the square of the source image to the accumulator.
+
+\cvdefC{
+void cvSquareAcc( \par const CvArr* image,\par CvArr* sqsum,\par const CvArr* mask=NULL );
+}\cvdefPy{SquareAcc(image,sqsum,mask=NULL)-> None}
+
+\begin{description}
+\cvarg{image}{Input image, 1- or 3-channel, 8-bit or 32-bit floating point (each channel of multi-channel image is processed independently)}
+\cvarg{sqsum}{Accumulator with the same number of channels as input image, 32-bit or 64-bit floating-point}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function adds the input image \texttt{image} or its selected region, raised to power 2, to the accumulator \texttt{sqsum}:
+
+\[ \texttt{sqsum}(x,y) \leftarrow \texttt{sqsum}(x,y) + \texttt{image}(x,y)^2 \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+\cvCPyFunc{UpdateMotionHistory}
+Updates the motion history image by a moving silhouette.
+
+\cvdefC{
+void cvUpdateMotionHistory( \par const CvArr* silhouette,\par CvArr* mhi,\par double timestamp,\par double duration );
+}\cvdefPy{UpdateMotionHistory(silhouette,mhi,timestamp,duration)-> None}
+
+\begin{description}
+\cvarg{silhouette}{Silhouette mask that has non-zero pixels where the motion occurs}
+\cvarg{mhi}{Motion history image, that is updated by the function (single-channel, 32-bit floating-point)}
+\cvarg{timestamp}{Current time in milliseconds or other units}
+\cvarg{duration}{Maximal duration of the motion track in the same units as \texttt{timestamp}}
+\end{description}
+
+The function updates the motion history image as following:
+
+\[
+\texttt{mhi}(x,y)=\forkthree
+{\texttt{timestamp}}{if $\texttt{silhouette}(x,y) \ne 0$}
+{0}{if $\texttt{silhouette}(x,y) = 0$ and $\texttt{mhi} < (\texttt{timestamp} - \texttt{duration})$}
+{\texttt{mhi}(x,y)}{otherwise}
+\]
+That is, MHI pixels where motion occurs are set to the current timestamp, while the pixels where motion happened far ago are cleared.
+
+\fi
+
+\ifCpp
+
+\cvCppFunc{accumulate}
+Adds image to the accumulator.
+
+\cvdefCpp{void accumulate( const Mat\& src, Mat\& dst, const Mat\& mask=Mat() );}
+\begin{description}
+\cvarg{src}{The input image, 1- or 3-channel, 8-bit or 32-bit floating point}
+\cvarg{dst}{The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function adds \texttt{src}, or some of its elements, to \texttt{dst}:
+
+\[ \texttt{dst}(x,y) \leftarrow \texttt{dst}(x,y) + \texttt{src}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+The function supports multi-channel images; each channel is processed independently.
+
+The functions \texttt{accumulate*} can be used, for example, to collect statistic of background of a scene, viewed by a still camera, for the further foreground-background segmentation.
+
+See also: \cvCppCross{accumulateSquare}, \cvCppCross{accumulateProduct}, \cvCppCross{accumulateWeighted}
+
+\cvCppFunc{accumulateSquare}
+Adds the square of the source image to the accumulator.
+
+\cvdefCpp{void accumulateSquare( const Mat\& src, Mat\& dst, \par const Mat\& mask=Mat() );}
+\begin{description}
+\cvarg{src}{The input image, 1- or 3-channel, 8-bit or 32-bit floating point}
+\cvarg{dst}{The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function adds the input image \texttt{src} or its selected region, raised to power 2, to the accumulator \texttt{dst}:
+
+\[ \texttt{dst}(x,y) \leftarrow \texttt{dst}(x,y) + \texttt{src}(x,y)^2 \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+The function supports multi-channel images; each channel is processed independently.
+
+See also: \cvCppCross{accumulateSquare}, \cvCppCross{accumulateProduct}, \cvCppCross{accumulateWeighted}
+
+\cvCppFunc{accumulateProduct}
+Adds the per-element product of two input images to the accumulator.
+
+\cvdefCpp{void accumulateProduct( const Mat\& src1, const Mat\& src2,\par
+                        Mat\& dst, const Mat\& mask=Mat() );}
+\begin{description}
+\cvarg{src1}{The first input image, 1- or 3-channel, 8-bit or 32-bit floating point}
+\cvarg{src2}{The second input image of the same type and the same size as \texttt{src1}}
+\cvarg{dst}{Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function adds the product of 2 images or their selected regions to the accumulator \texttt{dst}:
+
+\[ \texttt{dst}(x,y) \leftarrow \texttt{dst}(x,y) + \texttt{src1}(x,y) \cdot \texttt{src2}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+The function supports multi-channel images; each channel is processed independently.
+
+See also: \cvCppCross{accumulate}, \cvCppCross{accumulateSquare}, \cvCppCross{accumulateWeighted}
+
+\cvCppFunc{accumulateWeighted}
+Updates the running average.
+
+\cvdefCpp{void accumulateWeighted( const Mat\& src, Mat\& dst,\par
+                         double alpha, const Mat\& mask=Mat() );}
+\begin{description}
+\cvarg{src}{The input image, 1- or 3-channel, 8-bit or 32-bit floating point}
+\cvarg{dst}{The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point}
+\cvarg{alpha}{Weight of the input image}
+\cvarg{mask}{Optional operation mask}
+\end{description}
+
+The function calculates the weighted sum of the input image
+\texttt{src} and the accumulator \texttt{dst} so that \texttt{dst}
+becomes a running average of frame sequence:
+
+\[ \texttt{dst}(x,y) \leftarrow (1-\texttt{alpha}) \cdot \texttt{dst}(x,y) + \texttt{alpha} \cdot \texttt{src}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
+
+that is, \texttt{alpha} regulates the update speed (how fast the accumulator "forgets" about earlier images).
+The function supports multi-channel images; each channel is processed independently.
+
+See also: \cvCppCross{accumulate}, \cvCppCross{accumulateSquare}, \cvCppCross{accumulateProduct}
+
+\cvCppFunc{calcOpticalFlowPyrLK}
+Calculates the optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids
+
+\cvdefCpp{void calcOpticalFlowPyrLK( const Mat\& prevImg, const Mat\& nextImg,\par
+        const vector<Point2f>\& prevPts, vector<Point2f>\& nextPts,\par
+        vector<uchar>\& status, vector<float>\& err, \par
+        Size winSize=Size(15,15), int maxLevel=3,\par
+        TermCriteria criteria=TermCriteria(\par
+            TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),\par
+        double derivLambda=0.5, int flags=0 );}
+\begin{description}
+\cvarg{prevImg}{The first 8-bit single-channel or 3-channel input image}
+\cvarg{nextImg}{The second input image of the same size and the same type as \texttt{prevImg}}
+\cvarg{prevPts}{Vector of points for which the flow needs to be found}
+\cvarg{nextPts}{The output vector of points containing the calculated new positions of the input features in the second image}
+\cvarg{status}{The output status vector. Each element of the vector is set to 1 if the flow for the corresponding features has been found, 0 otherwise}
+\cvarg{err}{The output vector that will contain the difference between patches around the original and moved points}
+\cvarg{winSize}{Size of the search window at each pyramid level}
+\cvarg{maxLevel}{0-based maximal pyramid level number. If 0, pyramids are not used (single level), if 1, two levels are used etc.}
+\cvarg{criteria}{Specifies the termination criteria of the iterative search algorithm (after the specified maximum number of iterations \texttt{criteria.maxCount} or when the search window moves by less than \texttt{criteria.epsilon}}
+\cvarg{derivLambda}{The relative weight of the spatial image derivatives impact to the optical flow estimation. If \texttt{derivLambda=0}, only the image intensity is used, if \texttt{derivLambda=1}, only derivatives are used. Any other values between 0 and 1 means that both derivatives and the image intensity are used (in the corresponding proportions).}
+\cvarg{flags}{The operation flags:
+\begin{description}
+  \cvarg{OPTFLOW\_USE\_INITIAL\_FLOW}{use initial estimations stored in \texttt{nextPts}. If the flag is not set, then initially $\texttt{nextPts}\leftarrow\texttt{prevPts}$}
+\end{description}}
+\end{description}
+
+The function implements the sparse iterative version of the Lucas-Kanade optical flow in pyramids, see \cite{Bouguet00}.
+
+\cvCppFunc{calcOpticalFlowFarneback}
+Computes dense optical flow using Gunnar Farneback's algorithm
+
+\cvdefCpp{void calcOpticalFlowFarneback( const Mat\& prevImg, const Mat\& nextImg,\par
+                               Mat\& flow, double pyrScale, int levels, int winsize,\par
+                               int iterations, int polyN, double polySigma, int flags );}
+\begin{description}
+\cvarg{prevImg}{The first 8-bit single-channel input image}
+\cvarg{nextImg}{The second input image of the same size and the same type as \texttt{prevImg}}
+\cvarg{flow}{The computed flow image; will have the same size as \texttt{prevImg} and type \texttt{CV\_32FC2}}
+\cvarg{pyrScale}{Specifies the image scale (<1) to build the pyramids for each image. \texttt{pyrScale=0.5} means the classical pyramid, where each next layer is twice smaller than the previous}
+\cvarg{levels}{The number of pyramid layers, including the initial image. \texttt{levels=1} means that no extra layers are created and only the original images are used}
+\cvarg{winsize}{The averaging window size; The larger values increase the algorithm robustness to image noise and give more chances for fast motion detection, but yield more blurred motion field}
+\cvarg{iterations}{The number of iterations the algorithm does at each pyramid level}
+\cvarg{polyN}{Size of the pixel neighborhood used to find polynomial expansion in each pixel. The larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field. Typically, \texttt{polyN}=5 or 7}
+\cvarg{polySigma}{Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion. For \texttt{polyN=5} you can set \texttt{polySigma=1.1}, for \texttt{polyN=7} a good value would be \texttt{polySigma=1.5}}
+\cvarg{flags}{The operation flags; can be a combination of the following:
+\begin{description}
+    \cvarg{OPTFLOW\_USE\_INITIAL\_FLOW}{Use the input \texttt{flow} as the initial flow approximation}
+    \cvarg{OPTFLOW\_FARNEBACK\_GAUSSIAN}{Use a Gaussian $\texttt{winsize}\times\texttt{winsize}$ filter instead of box filter of the same size for optical flow estimation. Usually, this option gives more accurate flow than with a box filter, at the cost of lower speed (and normally \texttt{winsize} for a Gaussian window should be set to a larger value to achieve the same level of robustness)}
+\end{description}}
+\end{description}
+
+The function finds optical flow for each \texttt{prevImg} pixel using the alorithm so that
+
+\[\texttt{prevImg}(x,y) \sim \texttt{nextImg}(\texttt{flow}(x,y)[0], \texttt{flow}(x,y)[1])\]
+
+
+\cvCppFunc{updateMotionHistory}
+Updates the motion history image by a moving silhouette.
+
+\cvdefCpp{void updateMotionHistory( const Mat\& silhouette, Mat\& mhi,\par
+                          double timestamp, double duration );}
+\begin{description}
+\cvarg{silhouette}{Silhouette mask that has non-zero pixels where the motion occurs}
+\cvarg{mhi}{Motion history image, that is updated by the function (single-channel, 32-bit floating-point)}
+\cvarg{timestamp}{Current time in milliseconds or other units}
+\cvarg{duration}{Maximal duration of the motion track in the same units as \texttt{timestamp}}
+\end{description}
+
+The function updates the motion history image as following:
+
+\[
+\texttt{mhi}(x,y)=\forkthree
+{\texttt{timestamp}}{if $\texttt{silhouette}(x,y) \ne 0$}
+{0}{if $\texttt{silhouette}(x,y) = 0$ and $\texttt{mhi} < (\texttt{timestamp} - \texttt{duration})$}
+{\texttt{mhi}(x,y)}{otherwise}
+\]
+That is, MHI pixels where motion occurs are set to the current \texttt{timestamp}, while the pixels where motion happened last time a long time ago are cleared.
+
+The function, together with \cvCppCross{calcMotionGradient} and \cvCppCross{calcGlobalOrientation}, implements the motion templates technique, described in \cite{Davis97} and \cite{Bradski00}.
+See also the OpenCV sample \texttt{motempl.c} that demonstrates the use of all the motion template functions.
+
+\cvCppFunc{calcMotionGradient}
+Calculates the gradient orientation of a motion history image.
+
+\cvdefCpp{void calcMotionGradient( const Mat\& mhi, Mat\& mask,\par
+                         Mat\& orientation,\par
+                         double delta1, double delta2,\par
+                         int apertureSize=3 );}
+\begin{description}
+\cvarg{mhi}{Motion history single-channel floating-point image}
+\cvarg{mask}{The output mask image; will have the type \texttt{CV\_8UC1} and the same size as \texttt{mhi}. Its non-zero elements will mark pixels where the motion gradient data is correct}
+\cvarg{orientation}{The output motion gradient orientation image; will have the same type and the same size as \texttt{mhi}. Each pixel of it will the motion orientation in degrees, from 0 to 360.}
+\cvarg{delta1, delta2}{The minimal and maximal allowed difference between \texttt{mhi} values within a pixel neighorhood. That is, the function finds the minimum ($m(x,y)$) and maximum ($M(x,y)$) \texttt{mhi} values over $3 \times 3$ neighborhood of each pixel and marks the motion orientation at $(x, y)$ as valid only if
+\[
+\min(\texttt{delta1} , \texttt{delta2} ) \le M(x,y)-m(x,y) \le \max(\texttt{delta1} ,\texttt{delta2}).
+\]}
+\cvarg{apertureSize}{The aperture size of \cvCppCross{Sobel} operator}
+\end{description}
+
+The function calculates the gradient orientation at each pixel $(x, y)$ as:
+
+\[
+\texttt{orientation}(x,y)=\arctan{\frac{d\texttt{mhi}/dy}{d\texttt{mhi}/dx}}
+\]
+
+(in fact, \cvCppCross{fastArctan} and \cvCppCross{phase} are used, so that the computed angle is measured in degrees and covers the full range 0..360). Also, the \texttt{mask} is filled to indicate pixels where the computed angle is valid.
+
+\cvCppFunc{calcGlobalOrientation}
+Calculates the global motion orientation in some selected region.
+
+\cvdefCpp{double calcGlobalOrientation( const Mat\& orientation, const Mat\& mask,\par
+                              const Mat\& mhi, double timestamp,\par
+                              double duration );}
+\begin{description}
+\cvarg{orientation}{Motion gradient orientation image, calculated by the function \cvCppCross{calcMotionGradient}}
+\cvarg{mask}{Mask image. It may be a conjunction of a valid gradient mask, also calculated by \cvCppCross{calcMotionGradient}, and the mask of the region, whose direction needs to be calculated}
+\cvarg{mhi}{The motion history image, calculated by \cvCppCross{updateMotionHistory}}
+\cvarg{timestamp}{The timestamp passed to \cvCppCross{updateMotionHistory}}
+\cvarg{duration}{Maximal duration of motion track in milliseconds, passed to \cvCppCross{updateMotionHistory}}
+\end{description}
+
+The function calculates the average
+motion direction in the selected region and returns the angle between
+0 degrees  and 360 degrees. The average direction is computed from
+the weighted orientation histogram, where a recent motion has larger
+weight and the motion occurred in the past has smaller weight, as recorded in \texttt{mhi}.
+
+\cvCppFunc{CamShift}
+Finds the object center, size, and orientation
+
+\cvdefCpp{RotatedRect CamShift( const Mat\& probImage, Rect\& window,\par
+                      TermCriteria criteria );}
+\begin{description}
+\cvarg{probImage}{Back projection of the object histogram; see \cvCppCross{calcBackProject}}
+\cvarg{window}{Initial search window}
+\cvarg{criteria}{Stop criteria for the underlying \cvCppCross{meanShift}}
+\end{description}
+
+The function implements the CAMSHIFT object tracking algrorithm
+\cite{Bradski98}.
+First, it finds an object center using \cvCppCross{meanShift} and then adjust the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size and the orientation. The next position of the search window can be obtained with \texttt{RotatedRect::boundingRect()}.
+
+See the OpenCV sample \texttt{camshiftdemo.c} that tracks colored objects.
+
+\cvCppFunc{meanShift}
+Finds the object on a back projection image.
+
+\cvdefCpp{int meanShift( const Mat\& probImage, Rect\& window,\par
+               TermCriteria criteria );}
+\begin{description}
+\cvarg{probImage}{Back projection of the object histogram; see \cvCppCross{calcBackProject}}
+\cvarg{window}{Initial search window}
+\cvarg{criteria}{The stop criteria for the iterative search algorithm}
+\end{description}
+
+The function implements iterative object search algorithm. It takes the object back projection on input and the initial position. The mass center in \texttt{window} of the back projection image is computed and the search window center shifts to the mass center. The procedure is repeated until the specified number of iterations \texttt{criteria.maxCount} is done or until the window center shifts by less than \texttt{criteria.epsilon}. The algorithm is used inside \cvCppCross{CamShift} and, unlike \cvCppCross{CamShift}, the search window size or orientation do not change during the search. You can simply pass the output of \cvCppCross{calcBackProject} to this function, but better results can be obtained if you pre-filter the back projection and remove the noise (e.g. by retrieving connected components with \cvCppCross{findContours}, throwing away contours with small area (\cvCppCross{contourArea}) and rendering the  remaining contours with \cvCppCross{drawContours})
+
+
+\cvclass{KalmanFilter}
+Kalman filter class
+
+\begin{lstlisting}
+class KalmanFilter
+{
+public:
+    KalmanFilter();newline
+    KalmanFilter(int dynamParams, int measureParams, int controlParams=0);newline
+    void init(int dynamParams, int measureParams, int controlParams=0);newline
+    // predicts statePre from statePost
+    const Mat& predict(const Mat& control=Mat());newline
+    // corrects statePre based on the input measurement vector
+    // and stores the result to statePost. 
+    const Mat& correct(const Mat& measurement);newline
+
+    Mat statePre;           // predicted state (x'(k)):
+                            //    x(k)=A*x(k-1)+B*u(k)
+    Mat statePost;          // corrected state (x(k)):
+                            //    x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    Mat transitionMatrix;   // state transition matrix (A)
+    Mat controlMatrix;      // control matrix (B)
+                            //   (it is not used if there is no control)
+    Mat measurementMatrix;  // measurement matrix (H)
+    Mat processNoiseCov;    // process noise covariance matrix (Q)
+    Mat measurementNoiseCov;// measurement noise covariance matrix (R)
+    Mat errorCovPre;        // priori error estimate covariance matrix (P'(k)):
+                            //    P'(k)=A*P(k-1)*At + Q)*/
+    Mat gain;               // Kalman gain matrix (K(k)):
+                            //    K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
+    Mat errorCovPost;       // posteriori error estimate covariance matrix (P(k)):
+                            //    P(k)=(I-K(k)*H)*P'(k)
+    ...
+};
+\end{lstlisting}
+
+The class implements standard Kalman filter \url{http://en.wikipedia.org/wiki/Kalman_filter}. However, you can modify \texttt{transitionMatrix}, \texttt{controlMatrix} and \texttt{measurementMatrix} to get the extended Kalman filter functionality. See the OpenCV sample \texttt{kalman.c}
+
+\fi

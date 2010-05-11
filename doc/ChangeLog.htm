@@ -1,0 +1,709 @@
+<html>
+<head>
+<title>OpenCV ChangeLog</title>
+<style TYPE="text/css">
+<!--
+P.Blurb {
+    margin-top: -10pt;
+}
+-->
+</style>
+</head>
+
+<body>
+    
+<h2>2.1</h2>
+<p class="Blurb"><i>(April, 2010)</i></p>
+
+<pre>
+OpenCV 2.1 is basically a stabilized OpenCV 2.0, yet there are a few new features. 
+
+>>> General modifications
+
+  - SVN repository has been migrated from SourceForge to https://code.ros.org/svn/opencv.
+    The bug tracker has been moved to https://code.ros.org/trac/opencv/.
+    And we also have OpenCV twitter! http://twitter.com/opencvlibrary 
+
+  - The whole OpenCV is now using exceptions instead of the old libc-style mechanism.
+    That is, instead of checking error code with cvGetErrStatus() (which currently always returns 0)
+    you can now just call OpenCV functions inside C++ try-catch statements,
+    cv::Exception is now derived from std::exception.
+  
+  - OpenCV does not support autotools-based build scripts,
+    CMake (www.cmake.org) is the only way to build OpenCV on any OS.
+    See http://opencv.willowgarage.com/wiki/InstallGuide.
+    
+  - All the parallel loops in OpenCV have been converted from OpenMP
+    to Intel TBB (http://www.threadingbuildingblocks.org/). Thus parallel version of OpenCV
+    can now be built using MSVC 2008 Express Edition or using earlier than 4.2 versions of GCC.
+    
+  - SWIG-based Python wrappers are still included,
+    but they are not built by default and it's generally preferable to use the new wrappers.
+    The python samples have been rewritten by James Bowman to use the new-style Python wrappers,
+    which have been also created by James.
+    
+  - OpenCV can now be built and run in 64-bit mode on MacOSX 10.6 and Windows (see HighGUI and known problems below).
+    On Windows both MSVC 2008 and mingw64 are known to work.
+    
+  - In theory OpenCV is now able to determine the host CPU on-fly and make use of SSE/SSE2/... instructions,
+    if they are available. That is, it should be more safe to use WITH_SSE* flags in CMake.
+    However, if you want maximum portability, it's recommended to turn on just WITH_SSE and WITH_SSE2
+    and leave other SSE* turned off, as we found that using WITH_SSE3, WITH_SSSE3 and WITH_SSE4_1 can yield
+    the code incompatible with Intel's pre-Penryn or AMD chips.
+
+  - Experimental "static" OpenCV configuration in CMake was contributed by Jose Luis Blanco.
+    Pass "BUILD_SHARED_LIBS=OFF" to CMake to build OpenCV statically.   
+
+>>> New functionality, features:
+
+  - cxcore, cv, cvaux:
+  
+    * Grabcut (http://en.wikipedia.org/wiki/GrabCut) image segmentation algorithm has been implemented.
+      See opencv/samples/c/grabcut.cpp
+  
+    * new improved version of one-way descriptor is added. See opencv/samples/c/one_way_sample.cpp
+    
+    * modified version of H. Hirschmuller semi-global stereo matching algorithm that we call SGBM
+      (semi-global block matching) has been created. It is much faster than Kolmogorov's graph
+      cuts-based algorithm and yet it's usually better than the block matching StereoBM algorithm.
+      See opencv/samples/c/stereo_matching.cpp.
+      
+    * existing StereoBM stereo correspondence algorithm by K. Konolige was noticeably improved:
+      added the optional left-right consistency check and speckle filtering,
+      improved performance (by ~20%).
+      
+    * User can now control the image areas visible after the stereo rectification
+      (see the extended stereoRectify/cvStereoRectify), and also limit the region
+      where the disparity is computed (see CvStereoBMState::roi1, roi2; getValidDisparityROI).
+      
+    * Mixture-of-Gaussian based background subtraction algorithm has been rewritten for better performance
+      and better accuracy. Alternative C++ interface BackgroundSubtractor has been provided,
+      along with the possibility to use the trained background model to segment the foreground
+      without updating the model. See opencv/samples/c/bgfg_segm.cpp.    
+      
+  - highgui:
+    
+    * MacOSX: OpenCV now includes Cocoa and QTKit backends, in addition to Carbon and Quicktime.
+      Therefore you can build OpenCV as 64-bit library. Thanks to Andre Cohen and Nicolas Butko, which components 
+      
+      Note however that the backend are now in the alpha state, they can crash or leak memory,
+      so for anything more serious than quick experiments you may prefer to use Carbon and Quicktime.
+      To do that, pass USE_CARBON=ON and USE_QUICKTIME=ON to CMake and build OpenCV in 32-bit mode
+      (i.e. select i386 architecture in Xcode).
+      
+    * Windows. OpenCV can now be built in 64-bit mode with MSVC 2008 and also mingw64.
+      
+    * Fullscreen has been added (thanks to Yannick Verdie).
+      Call cvSetWindowProperty(window_name, CV_WINDOW_FULLSCREEN, 1) to make the particular window
+      to fill the whole screen. This feature is not supported in the Cocoa bindings yet.     
+     
+    * gstreamer backend has been improved a lot (thanks to Stefano Fabri)     
+
+>>> New tests:
+
+  - A few dozens of new tests have been written and many existing tests have been extended
+    to verify OpenCV correctness thoroughly. As a result, we brought the test coverage from
+    rather mediocre numbers to pretty impressive ones (especially for cxcore and cv)!
+    
+    Module                 OpenCV 2.0 coverage                 OpenCV 2.1
+                         (functions/conditions)          (functions/conditions)     
+    cxcore                      65/54                            91/73
+    cv                          52/46                            80/68
+    ml                          66/47                            73/52
+    highgui                     17/3                             54/27
+    cvaux                        0/0                              5/12
+
+  - Many new regression tests have been written in Python that check both OpenCV and the new-style bindings.
+
+  - The test data moved to the separate repository: https://code.ros.org/svn/opencv/trunk/opencv_extra/testdata.
+    And it is not included into the package, thus some tests from the cvtest and mltest will report about the missing data.
+    You can download the directory to your hard drive and run cvtest like:
+    ./cvtest -d <path_to_opencv_extra>/testdata/cv
+    ./mltest -d <path_to_opencv_extra>/testdata/ml  
+    
+  - The test engine has been improved:
+     added flags -tn, -seed, -r
+     the detailed information about failed tests is displayed right in the console.
+
+>>> Bug fixes:
+
+  - about 200 bugs have been fixed. For the list of closed and still open bugs, please look at
+    https://code.ros.org/trac/opencv/report and
+    http://sourceforge.net/tracker/?group_id=22870&atid=376677.    
+  
+>>> Known problems/limitations.
+
+  - there are some sporadic test failures on different platforms.
+    Most probably they are caused by some very special test cases
+    (that are usually generated randomly on each test run) and the test cases
+    are not properly handled by the functions or by the tests.
+    Some of the tests have been reproduced and reported here:
+    
+    https://code.ros.org/trac/opencv/ticket/29
+    https://code.ros.org/trac/opencv/ticket/113
+    https://code.ros.org/trac/opencv/ticket/114
+    
+  - the new Python bindings do not include interface for the new C++ functionality and MLL.
+    this is going to be addressed in some special intermediate OpenCV release
+  
+  - documentation is also incomplete at the moment and there are occasional formatting,
+    grammar and semantical errors.
+    We continue to improve it on a regular basis. Please, check the up-to-date online
+    documentation at:
+    
+    http://opencv.willowgarage.com/documentation/c/index.html (C)
+    http://opencv.willowgarage.com/documentation/cpp/index.html (C++)
+    http://opencv.willowgarage.com/documentation/python/index.html (Python)
+    
+  - please also check the list of open bugs at
+    https://code.ros.org/trac/opencv/report and
+    http://sourceforge.net/tracker/?group_id=22870&atid=376677. 
+  
+</pre>
+
+<hr><h2>2.0 beta</h2>
+<p class="Blurb"><i>(September, 2009)</i></p>
+
+<pre>
+>>> New functionality, features: <<<
+
+  - General:
+    * The brand-new C++ interface for most of OpenCV functionality
+      (cxcore, cv, highgui) has been introduced.
+      Generally it means that you will need to do less coding to achieve the same results;
+      it brings automatic memory management and many other advantages.
+      See the C++ Reference section in opencv/doc/opencv.pdf and opencv/include/opencv/*.hpp.
+      The previous interface is retained and still supported.
+
+    * The source directory structure has been reogranized; now all the external headers are placed
+      in the single directory on all platforms.
+
+    * The primary build system is CMake, http://www.cmake.org (2.6.x is the preferable version).
+        + In Windows package the project files for Visual Studio, makefiles for MSVC,
+          Borland C++ or MinGW are note supplied anymore; please, generate them using CMake.
+
+        + In MacOSX the users can generate project files for Xcode.
+
+        + In Linux and any other platform the users can generate project files for
+          cross-platform IDEs, such as Eclipse or Code Blocks,
+          or makefiles for building OpenCV from a command line.
+
+    * OpenCV repository has been converted to Subversion, hosted at SourceForge:
+      http://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary
+      where the very latest snapshot is at
+      http://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary/trunk,
+      and the more or less stable version can be found at
+      http://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary/tags/latest_tested_snapshot
+
+  - CXCORE, CV, CVAUX:
+
+    * CXCORE now uses Lapack (CLapack 3.1.1.1 in OpenCV 2.0) in its various linear algebra functions
+      (such as solve, invert, SVD, determinant, eigen etc.) and the corresponding old-style functions
+      (cvSolve, cvInvert etc.)
+
+    * Lots of new feature and object detectors and descriptors have been added
+      (there is no documentation on them yet), see cv.hpp and cvaux.hpp:
+
+      + FAST - the fast corner detector, submitted by Edward Rosten
+
+      + MSER - maximally stable extremal regions, submitted by Liu Liu 
+
+      + LDetector - fast circle-based feature detector by V. Lepetit (a.k.a. YAPE)
+
+      + Fern-based point classifier and the planar object detector -
+                       based on the works by M. Ozuysal and V. Lepetit
+
+      + One-way descriptor - a powerful PCA-based feature descriptor,
+        (S. Hinterstoisser, O. Kutter, N. Navab, P. Fua, and V. Lepetit,
+        "Real-Time Learning of Accurate Patch Rectification").
+        Contributed by Victor Eruhimov
+
+      + Spin Images 3D feature descriptor - based on the A. Johnson PhD thesis;
+        implemented by Anatoly Baksheev
+
+      + Self-similarity features - contributed by Rainer Leinhart
+
+      + HOG people and object detector - the reimplementation of Navneet Dalal framework
+        (http://pascal.inrialpes.fr/soft/olt/). Currently, only the detection part is ported,
+        but it is fully compatible with the original training code.
+        See cvaux.hpp and opencv/samples/c/peopledetect.cpp.
+
+      + Extended variant of the Haar feature-based object detector - implemented by Maria Dimashova.
+        It now supports Haar features and LBPs (local binary patterns);
+        other features can be more or less easily added
+
+      + Adaptive skin detector and the fuzzy meanshift tracker - contributed by Farhad Dadgostar,
+        see cvaux.hpp and opencv/samples/c/adaptiveskindetector.cpp
+
+    * The new traincascade application complementing the new-style HAAR+LBP object detector has been added.
+      See opencv/apps/traincascade.
+
+    * The powerful library for approximate nearest neighbor search FLANN by Marius Muja
+      is now shipped with OpenCV, and the OpenCV-style interface to the library
+      is included into cxcore. See cxcore.hpp and opencv/samples/c/find_obj.cpp
+
+    * The bundle adjustment engine has been contributed by PhaseSpace; see cvaux.hpp
+
+    * Added dense optical flow estimation function (based on the paper
+      "Two-Frame Motion Estimation Based on Polynomial Expansion" by G. Farnerback).
+      See cv::calcOpticalFlowFarneback and the C++ documentation
+
+    * Image warping operations (resize, remap, warpAffine, warpPerspective)
+      now all support bicubic and Lanczos interpolation.
+
+    * Most of the new linear and non-linear filtering operations (filter2D, sepFilter2D, erode, dilate ...)
+      support arbitrary border modes and can use the valid image pixels outside of the ROI
+      (i.e. the ROIs are not "isolated" anymore), see the C++ documentation.
+
+    * The data can now be saved to and loaded from GZIP-compressed XML/YML files, e.g.:
+      cvSave("a.xml.gz", my_huge_matrix);
+
+  - MLL:
+    * Added the Extremely Random Trees that train super-fast,
+      comparing to Boosting or Random Trees (by Maria Dimashova).
+
+    * The decision tree engine and based on it classes
+      (Decision Tree itself, Boost, Random Trees)
+      have been reworked and now:
+      + they consume much less memory (up to 200% savings)
+      + the training can be run in multiple threads (when OpenCV is built with OpenMP support)
+      + the boosting classification on numerical variables is especially
+        fast because of the specialized low-overhead branch.
+
+    * mltest has been added. While far from being complete,
+      it contains correctness tests for some of the MLL classes.
+
+  - HighGUI:
+    * [Linux] The support for stereo cameras (currently Videre only) has been added.
+      There is now uniform interface for capturing video from two-, three- ... n-head cameras.
+
+    * Images can now be compressed to or decompressed from buffers in the memory,
+      see the C++ HighGUI reference manual
+
+  - Documentation:
+    * The reference manual has been converted from HTML to LaTeX (by James Bowman and Caroline Pantofaru),
+      so there is now:
+      + opencv.pdf for reading offline
+      + and the online up-to-date documentation
+        (as the result of LaTeX->Sphinx->HTML conversion) available at
+        http://opencv.willowgarage.com/documentation/index.html
+
+  - Samples, misc.:
+    * Better eye detector has been contributed by Shiqi Yu,
+      see opencv/data/haarcascades/*[lefteye|righteye]*.xml
+    * sample LBP cascade for the frontal face detection
+      has been created by Maria Dimashova,
+      see opencv/data/lbpcascades/lbpcascade_frontalface.xml
+    * Several high-quality body parts and facial feature detectors
+      have been contributed by Modesto Castrillon-Santana,
+      see opencv/data/haarcascades/haarcascade_mcs*.xml
+
+>>> Optimization:
+    * Many of the basic functions and the image processing operations
+      (like arithmetic operations, geometric image transformations, filtering etc.)
+      have got SSE2 optimization, so they are several times faster.
+
+    - The model of IPP support has been changed. Now IPP is supposed to be
+      detected by CMake at the configuration stage and linked against OpenCV.
+      (In the beta it is not implemented yet though).
+
+    * PNG encoder performance improved by factor of 4 by tuning the parameters
+
+>>> Bug fixes: <<<
+    TBD
+    (see http://sourceforge.net/tracker/?group_id=22870&atid=376677 of the list
+    of the closed and still opened bugs).
+
+    Many thanks to everybody who submitted bug reports and/or provided the patches!
+
+>>> Known issues:
+    * configure+autotools based build is currently broken.
+      Please, use CMake.
+    * OpenCV bug tracker at SF still lists about 150 open bugs.
+      Some of them may be actually fixed already, and most of the remaining bugs
+      are going to be fixed by OpenCV 2.0 gold.
+    * IPP is not supported. As the new OpenCV includes a lot of SSE2 code,
+      it may be not such a serious problem, though.
+      The support (at least for most important functions that do not have
+      SSE2 optimization) will be returned in 2.0 gold.
+    * The documentation has been updated and improved a lot, but it still
+      needs quite a bit of work:
+        - some of the new functionality in cvaux is not described yet.
+        - the bibliography part is broken
+        - there are quite a few known bugs and typos there
+        - many of the hyperlinks are not working.
+    * The existing tests partly cover the new functionality
+      (via the old backward-compatibility OpenCV 1.x API), but the coverage is
+      not sufficient of course.
+    * The new-style Python interface is not included yet  
+
+    Many of the problems will be addressed in 2.0 gold.
+    If you have found some specific problem, please, put the record to the bug tracker:
+    http://sourceforge.net/tracker/?group_id=22870
+    Better if the bug reports will include a small code sample in C++/python +
+    all the necessary data files needed to reproduce the problem.
+</pre>
+    
+    
+<h2>2.0</h2>
+<p class="Blurb"><i>(September, 2009)</i></p>
+
+<pre>
+>>> New functionality, features:
+
+  - General:
+    * Installation package on Windows has been fixed,
+      MinGW is used for precompiled binaries
+      (see the release notes on the SourceForge site)
+      
+    * autotools-based build has been repaired
+
+  - MLL:
+    * The new-style class aliases (e.g. cv::SVM ~ CvSVM) and the train/predict methods,
+      taking cv::Mat in addition to CvMat, have been added. So now MLL can be used
+      more seamlesly with the rest of the restyled OpenCV.
+
+>>> Bug fixes:
+
+  - A _lot_ of bugs present in 2.0 beta have been fixed, see the OpenCV bug tracker
+    http://sourceforge.net/tracker/?group_id=22870&atid=376677
+    Thanks to everybody who submitted bug reports and/or patches!
+</pre>
+
+<hr><h2>2.0 beta</h2>
+<p class="Blurb"><i>(September, 2009)</i></p>
+
+<pre>
+>>> New functionality, features: <<<
+
+  - General:
+    * The brand-new C++ interface for most of OpenCV functionality
+      (cxcore, cv, highgui) has been introduced.
+      Generally it means that you will need to do less coding to achieve the same results;
+      it brings automatic memory management and many other advantages.
+      See the C++ Reference section in opencv/doc/opencv.pdf and opencv/include/opencv/*.hpp.
+      The previous interface is retained and still supported.
+      
+    * The source directory structure has been reogranized; now all the external headers are placed
+      in the single directory on all platforms.
+      
+    * The primary build system is CMake, http://www.cmake.org (2.6.x is the preferable version).
+        + In Windows package the project files for Visual Studio, makefiles for MSVC,
+          Borland C++ or MinGW are note supplied anymore; please, generate them using CMake.
+      
+        + In MacOSX the users can generate project files for Xcode.
+        
+        + In Linux and any other platform the users can generate project files for
+          cross-platform IDEs, such as Eclipse or Code Blocks,
+          or makefiles for building OpenCV from a command line.
+          
+    * OpenCV repository has been converted to Subversion, hosted at SourceForge:
+      http://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary
+      where the very latest snapshot is at
+      http://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary/trunk,
+      and the more or less stable version can be found at
+      http://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary/tags/latest_tested_snapshot
+      
+  - CXCORE, CV, CVAUX:
+  
+    * CXCORE now uses Lapack (CLapack 3.1.1.1 in OpenCV 2.0) in its various linear algebra functions
+      (such as solve, invert, SVD, determinant, eigen etc.) and the corresponding old-style functions
+      (cvSolve, cvInvert etc.)
+  
+    * Lots of new feature and object detectors and descriptors have been added
+      (there is no documentation on them yet), see cv.hpp and cvaux.hpp:
+      
+      + FAST - the fast corner detector, submitted by Edward Rosten
+      
+      + MSER - maximally stable extremal regions, submitted by Liu Liu 
+      
+      + LDetector - fast circle-based feature detector by V. Lepetit (a.k.a. YAPE)
+      
+      + Fern-based point classifier and the planar object detector -
+                       based on the works by M. Ozuysal and V. Lepetit
+                       
+      + One-way descriptor - a powerful PCA-based feature descriptor,
+        (S. Hinterstoisser, O. Kutter, N. Navab, P. Fua, and V. Lepetit,
+        "Real-Time Learning of Accurate Patch Rectification").
+        Contributed by Victor Eruhimov
+      
+      + Spin Images 3D feature descriptor - based on the A. Johnson PhD thesis;
+        implemented by Anatoly Baksheev
+      
+      + Self-similarity features - contributed by Rainer Leinhart
+      
+      + HOG people and object detector - the reimplementation of Navneet Dalal framework
+        (http://pascal.inrialpes.fr/soft/olt/). Currently, only the detection part is ported,
+        but it is fully compatible with the original training code.
+        See cvaux.hpp and opencv/samples/c/peopledetect.cpp.
+        
+      + Extended variant of the Haar feature-based object detector - implemented by Maria Dimashova.
+        It now supports Haar features and LBPs (local binary patterns);
+        other features can be more or less easily added
+        
+      + Adaptive skin detector and the fuzzy meanshift tracker - contributed by Farhad Dadgostar,
+        see cvaux.hpp and opencv/samples/c/adaptiveskindetector.cpp
+    
+    * The new traincascade application complementing the new-style HAAR+LBP object detector has been added.
+      See opencv/apps/traincascade.
+      
+    * The powerful library for approximate nearest neighbor search FLANN by Marius Muja
+      is now shipped with OpenCV, and the OpenCV-style interface to the library
+      is included into cxcore. See cxcore.hpp and opencv/samples/c/find_obj.cpp
+      
+    * The bundle adjustment engine has been contributed by PhaseSpace; see cvaux.hpp
+      
+    * Added dense optical flow estimation function (based on the paper
+      "Two-Frame Motion Estimation Based on Polynomial Expansion" by G. Farnerback).
+      See cv::calcOpticalFlowFarneback and the C++ documentation
+        
+    * Image warping operations (resize, remap, warpAffine, warpPerspective)
+      now all support bicubic and Lanczos interpolation.
+      
+    * Most of the new linear and non-linear filtering operations (filter2D, sepFilter2D, erode, dilate ...)
+      support arbitrary border modes and can use the valid image pixels outside of the ROI
+      (i.e. the ROIs are not "isolated" anymore), see the C++ documentation.
+      
+    * The data can now be saved to and loaded from GZIP-compressed XML/YML files, e.g.:
+      cvSave("a.xml.gz", my_huge_matrix);
+      
+  - MLL:
+    * Added the Extremely Random Trees that train super-fast,
+      comparing to Boosting or Random Trees (by Maria Dimashova).
+      
+    * The decision tree engine and based on it classes
+      (Decision Tree itself, Boost, Random Trees)
+      have been reworked and now:
+      + they consume much less memory (up to 200% savings)
+      + the training can be run in multiple threads (when OpenCV is built with OpenMP support)
+      + the boosting classification on numerical variables is especially
+        fast because of the specialized low-overhead branch.
+        
+    * mltest has been added. While far from being complete,
+      it contains correctness tests for some of the MLL classes.
+
+  - HighGUI:
+    * [Linux] The support for stereo cameras (currently Videre only) has been added.
+      There is now uniform interface for capturing video from two-, three- ... n-head cameras.
+      
+    * Images can now be compressed to or decompressed from buffers in the memory,
+      see the C++ HighGUI reference manual
+
+  - Documentation:
+    * The reference manual has been converted from HTML to LaTeX (by James Bowman and Caroline Pantofaru),
+      so there is now:
+      + opencv.pdf for reading offline
+      + and the online up-to-date documentation
+        (as the result of LaTeX->Sphinx->HTML conversion) available at
+        http://opencv.willowgarage.com/documentation/index.html
+        
+  - Samples, misc.:
+    * Better eye detector has been contributed by Shiqi Yu,
+      see opencv/data/haarcascades/*[lefteye|righteye]*.xml
+    * sample LBP cascade for the frontal face detection
+      has been created by Maria Dimashova,
+      see opencv/data/lbpcascades/lbpcascade_frontalface.xml
+    * Several high-quality body parts and facial feature detectors
+      have been contributed by Modesto Castrillon-Santana,
+      see opencv/data/haarcascades/haarcascade_mcs*.xml
+   
+>>> Optimization:
+    * Many of the basic functions and the image processing operations
+      (like arithmetic operations, geometric image transformations, filtering etc.)
+      have got SSE2 optimization, so they are several times faster.
+      
+    - The model of IPP support has been changed. Now IPP is supposed to be
+      detected by CMake at the configuration stage and linked against OpenCV.
+      (In the beta it is not implemented yet though).
+      
+    * PNG encoder performance improved by factor of 4 by tuning the parameters
+
+>>> Bug fixes: <<<
+    TBD
+    (see http://sourceforge.net/tracker/?group_id=22870&atid=376677 of the list
+    of the closed and still opened bugs).
+    
+    Many thanks to everybody who submitted bug reports and/or provided the patches!
+
+>>> Known issues:
+    * configure+autotools based build is currently broken.
+      Please, use CMake.
+    * OpenCV bug tracker at SF still lists about 150 open bugs.
+      Some of them may be actually fixed already, and most of the remaining bugs
+      are going to be fixed by OpenCV 2.0 gold.
+    * IPP is not supported. As the new OpenCV includes a lot of SSE2 code,
+      it may be not such a serious problem, though.
+      The support (at least for most important functions that do not have
+      SSE2 optimization) will be returned in 2.0 gold.
+    * The documentation has been updated and improved a lot, but it still
+      needs quite a bit of work:
+        - some of the new functionality in cvaux is not described yet.
+        - the bibliography part is broken
+        - there are quite a few known bugs and typos there
+        - many of the hyperlinks are not working.
+    * The existing tests partly cover the new functionality
+      (via the old backward-compatibility OpenCV 1.x API), but the coverage is
+      not sufficient of course.
+    * The new-style Python interface is not included yet  
+
+    Many of the problems will be addressed in 2.0 gold.
+    If you have found some specific problem, please, put the record to the bug tracker:
+    http://sourceforge.net/tracker/?group_id=22870
+    Better if the bug reports will include a small code sample in C++/python +
+    all the necessary data files needed to reproduce the problem.
+</pre>
+
+<hr><h2>1.1pre1</h2>
+<p class="Blurb"><i>(October, 2008)</i></p>
+
+<pre>
+
+>>> New functionality/features: <<<
+
+  - General:
+    * Octave bindings have been added. See interfaces/swig/octave (for now, Linux only)
+    * [Windows] OpenCV is now built with VS2005 with SSE2 and OpenMP support
+      included (if you want to rebuild OpenCV using Express or
+      Standard Edition of VS, use _make\opencv.vs2005.no_openmp.sln).
+    * [Windows] Python bindings have been updated to use Python 2.6
+    * [Windows] cvcam has been removed (as videoInput is now supported by highgui)
+
+  - CXCORE, CV, CVAUX:
+    * Speeded-up Robust Features (SURF), contributed by Liu Liu.
+      see samples/c/find_obj.cpp and the documentation opencvref_cv.htm
+    * Many improvements in camera calibration:
+      - Added stereo camera calibration: cvStereoCalibrate, cvStereoRectify etc.
+      - Single camera calibration now uses Levenberg-Marquardt method and supports
+        extra flags to switch on/off optimization of individual camera parameters
+      - The optional 3rd radial distortion parameter (k3*r^6) is now supported in
+        every calibration-related function
+    * 2 stereo correspondence algorithms:
+      - very fast block matching method by Kurt Konolige
+        (processes the Tsukuba stereo pair in <10ms on Core2Duo laptop)
+      - slow but more accurate graph-cut based algorithm by Kolmogorov and Zabin
+    * Better homography estimation algorithms (RANSAC and LMEDs)
+    * new C++ template image classes contributed by Daniel Filip (Google inc.).
+      see opencv/cxcore/include/cvwimage.h
+    * Fast approximate nearest neighbor search (by Xavier Delacour)
+    * Codebook method for background/foreground segmentation (by Gary Bradski)
+    * Sort function (contributed by Shiqi Yu)
+    * [OpenCV+IPP] Face Detection (cvHaarDetectObjects) now runs much faster
+      (up to 2x faster) when using IPP 5.3 or higher.
+    * Much faster (~4x faster) fixed-point variant of cvRemap has been added
+
+  - MLL:
+    * Python bindings for MLL have been added. There are no samples yet.
+
+  - HighGUI:
+    * [Windows, 32bit] Added support for videoInput library.
+      Hence, cvcam is [almost] not needed anymore
+    * [Windows, 32bit] FFMPEG can now be used for video decoding/encoding
+      via ffopencv*.dll
+    * [Linux] Added unicap support
+    * Improved internal video capturing and video encoding APIs
+
+  - Documentation:
+    * OpenCV book has been published (sold separately :) see docs/index.htm)
+
+  - New samples (opencv/samples):
+    * Many Octave samples
+    * find_obj.cpp (SURF), bgfg_codebook.cpp (Codebook BG/FG segmentation),
+      stereo_calib.cpp (Stereo calibration and stereo correspondence)
+
+>>> Bug fixes: <<<
+     Many thanks to everybody who submitted bug reports and/or provided the patches!
+
+    * added dma_unlisten to icvCloseCAM_DC1394 (thanks to Victor Benso)
+    * LMEDs algorithm for cvFindFundamentalMat estimation has been fixed
+    * Broken debug build of highgui in VS2005/2008 (SF #2056185, SF #1709435)
+    * cvFindChessboardCorners memory leak and incorrect size checks
+      (SF #1972896, SF #1910323)
+    * disabling GTK causes v4l runtime error (SF #2088102)
+    * cvsetmousecallback bug (SF #2053529)
+    * libhighgui needed deprecated "img_convert" replacement (SF #2011753)
+    * Segfault in createsamples caused by uninitialized variable (SF #1977989)
+    * Data Alignment Issue in bgfg_gaussmix (SF #1961755)
+    * libpng need to be updated (SF #1952793)
+    * cvCreateVideoWriter_Win32 - identifier not found (SF #1944254)
+    * Bug in cvmorph.cpp (SF #1908844)
+    * dilate (cvDilate) works bogus with default kernel (SF #1887130)
+    * CvEM non-default constructor declared but not defined (SF #1830346)
+    * cvFloodFill (in ver 1.0) Hangs (SF #1790565)
+    * double delete in CvImage (SF #1733437)
+    * cvFilter2D anchor default value is not working properly (SF #1713779)
+    * cvCvtColor - Bug? in converting HSV2RGB (SF #1676344)
+    * Invalid selection of the MKL-dll version in cvUseOptimized() (SF #1633017)
+    * ...
+
+>>> Known issues:
+    * Borland compiler is not supported (but might work) in this update.
+    * 64-bit Windows is not supported (but might work) in this update.
+    * SF bug tracker still contains over 50 records of open bugs.
+      Many of them will be addressed in the next update.
+</pre>
+
+<hr><h2>1.0</h2>
+<p class="Blurb"><i>(October, 2006)</i></p>
+
+<pre>
+>>> New functionality/features: <<<
+
+  - General:
+    * Windows installation package now includes precompiled Python module
+    * Borland C++ (v5.6+) makefiles re-added (see _make\make_all_bc.mak)
+
+  - CV:
+    * Inpainting was added, see samples/c/inpaint.cpp
+      (thanks to Alexander Kibkalo and Alexey Kalinichenko)
+
+  - MLL:
+    * Boosted tree classifiers added, see MLL reference manual
+
+  - HighGUI:
+    * Jpeg2000 and EXR support in highgui using JasPer and OpenEXR (thanks to Nils Hasler)
+      OpenEXR is not built-in to highgui on Windows by default. See
+      otherlibs/_graphics/readme.txt.
+    * >8-bit image input/output for PNG, Jpeg2000 and OpenEXR (thanks to Nils Hasler)
+    * Updated CMUcamera wrapper.
+    * Several V4L2 improvements and fixes
+  
+  - New samples (opencv/samples):
+    * Camera calibration sample: calibrate.cpp
+    * Inpainting sample: inpaint.cpp
+    * Letter recognition using the existing database with
+      random trees/boosted trees/neural nets: leter_recog.cpp
+    * A few new Python samples.
+
+  - Tests:
+    * Most old cv tests have been rewritten/converted to use cxts instead of trs.
+      TRS is not used by the tests anymore.
+    
+>>> Bug fixes: <<<
+     Many thanks to everybody who submitted bug reports and/or provided the patches!
+
+     * Incorrect normalization in cvFindFundamentalMat (SF #1550855)
+     * Occasional cvGetQuadrangleSubPix crashes (SF #1549168)
+     * Occasional cvCalcOpticalFlowPyrLK crashes
+     * Internal GCC 3.x error in cvFloor/cvCeil (SF #1546657)
+     * Several Python-related bugs (SF #1570109, SF #1572800, SF #1543593)
+     * Bugs in contour processing/rendering (SF #1550889, 
+     * x86-64 related bugs (SF #1526133, SF #1527997)
+     * OpenCV dispatcher tried to load old versions of IPP (pre 4.x)
+       that caused many failures (see SF #1555093, for example)
+     * Inaccurate results in some cases in cvFitEllipse, cvFitLine, cvHoughCircles.
+     * Severe bug in Bayesian classifier, broken regression tree in MLL
+     * Overflow in blurring filter
+     * cvSaveImage() modified saved images leading to potential problems in threaded apps.
+     * Numeric values in XML/YAML were emitted/parsed incorrectly
+       on some non-US locales in Linux
+     * VS2005 Express/Standard Editions could not build OpenCV
+       (due to missing OpenMP support)
+     * ...
+
+>>> Known issues:
+    * Certain tests may fail on IA64 (Itanium), e.g.
+      gaussian filter, fundamental matrix estimation, chessboard detector.
+...
+</pre>
+</body>
+</html>

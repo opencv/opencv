@@ -1,0 +1,12 @@
+Name: opencv
+Version: 1.0
+Date: 2008-03-15
+Author: Various Authors
+Maintainer: Xavier Delacour
+Title: OpenCV (Open Computer Vision Library) bindings
+Description: Bindings for OpenCV, a collection of over 500 functions implementing computer vision, image processing and general-purpose numeric algorithms. The library is compatible with IPL and utilizes Intel Integrated Performance Primitives for better performance. More info at http://sourceforge.net/projects/opencvlibrary.
+Depends: octave (>= 2.9.12)
+Autoload: yes
+SystemRequirements: swig, libcv-dev, libcvaux-dev, libhighgui-dev
+License: BSD
+Url: http://octave.sf.net

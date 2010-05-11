@@ -1,0 +1,17 @@
+
+INSTRUCTIONS TO BUILD WIN32 PACKAGES WITH CMAKE+CPACK
+------------------------------------------------------
+
+- Install NSIS.
+- Generate OpenCV solutions for MSVC using CMake as usual.
+- In cmake-gui: 
+	- Mark BUILD_PACKAGE
+	- Mark BUILD_EXAMPLES (If examples are desired to be shipped as binaries...)
+	- Unmark ENABLE_OPENMP, since this feature seems to have some issues yet...
+	- Mark INSTALL_*_EXAMPLES
+- Open the OpenCV solution and build ALL in Debug and Release.
+- Build PACKAGE, from the Release configuration. An NSIS installer package will be 
+  created with both release and debug LIBs and DLLs.
+
+  
+Jose Luis Blanco, 2009/JUL/29

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+LANGUAGES="${LANGUAGES:=c cpp py}"
+
+mkdir -p $LANGUAGES
+tput clear
+python latex.py ../online-opencv.tex $LANGUAGES || exit
+
+for D in $LANGUAGES
+do
+  echo $D
+  mkdir -p $D
+  cp conf.py $D
+  TEXINPUTS=$PWD: sphinx-build -w $D/sphinx.errors -D "lang=$D" -b html -d _build/doctrees/$D $D _build/html/$D
+done

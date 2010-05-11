@@ -1,0 +1,68 @@
+% verbdef.sty v0.2 -- Robin Fairbairns 2000/10/06
+\ProvidesPackage{verbdef}[2000/10/06 v0.2 define verbatim csnames]
+
+% This package provides a single command \verbdef
+%
+% Usage:  \verbdef\test|verbatim text|
+%         \verbdef*\testar{with visible spaces}
+%
+% \test (or \testar) above will be defined as robust commands that
+% expand to typeset their `verbatim text' argument in the usual
+% verbatim font (using the visible space symbol in the * case)
+%
+% The  verbatim text argument may be delimited in the same was as the
+% argument of a \verb command (see definition of \test above) or using
+% braces (see definition of \testar command above)
+%
+% Note: if the command you're defining with \verbdef is to be used in
+% a \section-type command, or a \caption, it's going to appear in the
+% table of contents, or list of whatevers; in this case you must
+% define the command *before* the \tableofcontents command (or
+% whatever).  I recommend defining the commands in the preamble of
+% your document.
+
+% This program may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.1
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.1 or later is part of all distributions of LaTeX 
+% version 1999/06/01 or later.
+%
+% This program consists of the file verbdef.sty
+
+\newif\ifverbdef@nostar
+\def\verbdef{\verbdef@nostarfalse
+  \@ifstar\@sverbdef\@verbdef}
+\def\@verbdef{\verbdef@nostartrue\@sverbdef}
+
+% set up robustness of the command to be defined, set conditions for
+% reading verbatim text
+\def\@sverbdef#1{\edef\verbdef@tempa{\expandafter\@gobble\string#1}%
+  \edef#1{\noexpand\protect
+    \expandafter\noexpand\csname\verbdef@tempa\space\endcsname}%
+  \begingroup
+    \verb@eol@error
+    \let\do\@makeother  \dospecials
+    \toks@{\verbatim@font\@noligs}%
+    \ifverbdef@nostar
+      \@vobeyspaces
+      \toks@\expandafter{\the\toks@\frenchspacing}%
+    \fi
+    \@verb@def}
+
+%
+\def\@verb@def#1{%
+  \ifnum`#1=`\{\relax
+    \catcode`\}\active
+    \lccode`\~`\}%
+  \else
+    \catcode`#1\active
+    \lccode`\~`#1%
+  \fi
+  \lowercase{%
+    \def\@tempa##1~{%
+      \expandafter\xdef\csname\verbdef@tempa\space\endcsname{%
+        {\the\toks@##1}}}}%
+  \afterassignment\endgroup
+  \@tempa}

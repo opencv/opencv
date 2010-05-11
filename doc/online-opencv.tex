@@ -1,0 +1,53 @@
+\documentclass[11pt]{book}
+\newcommand{\targetlang}{}
+
+\usepackage{myopencv}
+\usepackage{amsmath}
+\usepackage{ifthen}
+
+\def\genc{true}
+\def\genpy{false}
+\def\targetlang{cpp}
+
+\title{OpenCV Reference Manual}		% used by \maketitle
+\author{v2.0}		                % used by \maketitle
+\date{Nov 25, 2009}				% used by \maketitle
+
+\begin{document}
+\maketitle					% automatic title!
+
+\setcounter{tocdepth}{8}
+\tableofcontents
+
+%%% Chapters %%%
+\input{cxcore_introduction}
+
+\chapter{cxcore. The Core Functionality}
+\input{cxcore_basic_structures}
+\input{cxcore_array_operations}
+\input{cxcore_dynamic_structures}
+\input{cxcore_drawing_functions}
+\input{cxcore_persistence}
+\input{cxcore_clustering_search}
+\input{cxcore_utilities_system_functions}
+
+\chapter{cv. Image Processing and Computer Vision}
+\input{cv_image_filtering}
+\input{cv_image_warping}
+\input{cv_image_transform}
+\input{cv_histograms}
+\input{cv_feature_detection}
+\input{cv_motion_tracking}
+\input{cv_struct_shape_analysis}
+\input{cv_planar_subdivisions}
+\input{cv_object_detection}
+\input{cv_calibration_3d}
+
+\chapter{highgui. High-level GUI and Media IO}
+\input{HighGui}
+
+\chapter{ml. Machine Learning}
+\input{MachineLearning}
+%%%%%%%%%%%%%%%%
+
+\end{document}             % End of document.

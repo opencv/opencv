@@ -1,0 +1,1 @@
+define_opencv_module(video opencv_core opencv_imgproc)

@@ -1,0 +1,19 @@
+The OpenCV Wiki is here: http://opencv.willowgarage.com/
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+
+   introduction
+   cxcore._the_core_functionality
+   cv._image_processing_and_computer_vision
+   cvaux._extra_computer_vision_functionality
+   highgui._high-level_gui_and_media_io
+   ml._machine_learning
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`search`

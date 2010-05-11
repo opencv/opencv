@@ -1,0 +1,42 @@
+\chapter{FAQ}
+\section{First Section}
+\subsection{Initialization}
+
+\subsubsection*{CreateImage}
+\addcontentsline{toc}{subsubsection}{CreateImage} 
+
+Creates header and \textsf{allocates} data
+
+\begin{shaded}
+\begin{verbatim}
+IplImage* cvCreateImage( CvSize size,
+                         int depth,
+                         int channels );
+\end{verbatim}
+\end{shaded}
+
+\begin{description}
+\item[\texttt{size}] Image width and height
+\item[\texttt{depth}] Bit depth of image elements.  Can be one of:
+\begin{description}
+\item[IPL\_DEPTH\_8U] unsigned 8-bit integers
+\item[IPL\_DEPTH\_8S] signed 8-bit integers
+\item[IPL\_DEPTH\_16U] unsigned 16-bit integers
+\item[IPL\_DEPTH\_16S] signed 16-bit integers
+\item[IPL\_DEPTH\_32S] signed 32-bit integers
+\item[IPL\_DEPTH\_32F] single precision floating-point numbers
+\item[IPL\_DEPTH\_64F] double precision floating-point numbers
+\end{description}
+\item[\texttt{channels}] Number of channels per element(pixel). Can be 1, 2, 3 or 4. The channels are interleaved, for example the usual data layout of a color image is:
+\begin{lstlisting}
+b0 g0 r0 b1 g1 r1 ...
+\end{lstlisting}
+Although in general IPL image format can store non-interleaved images as well and some of OpenCV can process it, this function can create interleaved images only.
+
+\end{description}
+
+The function cvCreateImage creates the header and allocates data as in the method of~\cite{author_conf_year}.  This call is a shortened form of 
+\begin{lstlisting}
+header = cvCreateImageHeader(size,depth,channels);
+cvCreateData(header);
+\end{lstlisting}

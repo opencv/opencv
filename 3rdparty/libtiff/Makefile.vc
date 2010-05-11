@@ -1,0 +1,97 @@
+# $Id: Makefile.vc,v 1.1 2005-06-17 13:54:52 vp153 Exp $
+#
+# Copyright (C) 2004, Andrey Kiselev <dron@remotesensing.org>
+#
+# Permission to use, copy, modify, distribute, and sell this software and 
+# its documentation for any purpose is hereby granted without fee, provided
+# that (i) the above copyright notices and this permission notice appear in
+# all copies of the software and related documentation, and (ii) the names of
+# Sam Leffler and Silicon Graphics may not be used in any advertising or
+# publicity relating to the software without the specific, prior written
+# permission of Sam Leffler and Silicon Graphics.
+# 
+# THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+# EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+# WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+# 
+# IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+# ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+# OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+# LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+# OF THIS SOFTWARE.
+#
+# Makefile for MS Visual C and Watcom C compilers.
+#
+# To build:
+# C:\libtiff\libtiff> nmake /f makefile.vc all
+#
+
+!INCLUDE ..\nmake.opt
+
+INCL	= -I. $(JPEG_INCLUDE) $(ZLIB_INCLUDE)
+
+!IFDEF USE_WIN_CRT_LIB
+OBJ_SYSDEP_MODULE = tif_unix.obj
+!ELSE
+OBJ_SYSDEP_MODULE = tif_win32.obj
+!ENDIF
+
+OBJ	= \
+	tif_aux.obj \
+	tif_close.obj \
+	tif_codec.obj \
+	tif_color.obj \
+	tif_compress.obj \
+	tif_dir.obj \
+	tif_dirinfo.obj \
+	tif_dirread.obj \
+	tif_dirwrite.obj \
+	tif_dumpmode.obj \
+	tif_error.obj \
+	tif_extension.obj \
+	tif_fax3.obj \
+	tif_fax3sm.obj \
+	tif_getimage.obj \
+	tif_jpeg.obj \
+	tif_ojpeg.obj \
+	tif_flush.obj \
+	tif_luv.obj \
+	tif_lzw.obj \
+	tif_next.obj \
+	tif_open.obj \
+	tif_packbits.obj \
+	tif_pixarlog.obj \
+	tif_predict.obj \
+	tif_print.obj \
+	tif_read.obj \
+	tif_stream.obj \
+	tif_swab.obj \
+	tif_strip.obj \
+	tif_thunder.obj \
+	tif_tile.obj \
+	tif_version.obj \
+	tif_warning.obj \
+	tif_write.obj \
+	tif_zip.obj \
+	$(OBJ_SYSDEP_MODULE)
+
+all:	libtiff.lib $(DLLNAME)
+
+tif_config.h:
+	copy tif_config.h.vc tif_config.h
+
+tiffconf.h:
+	copy tiffconf.h.vc tiffconf.h
+
+libtiff.lib:	tif_config.h $(OBJ)
+	$(AR) /out:libtiff.lib $(OBJ) $(LIBS)
+
+$(DLLNAME):	tif_config.h $(OBJ)
+	$(LD) /debug /dll /def:libtiff.def /out:$(DLLNAME) \
+	/implib:libtiff_i.lib $(OBJ) $(LIBS)
+	
+clean:
+	-del *.obj *.lib *.dll *.exe
+
+

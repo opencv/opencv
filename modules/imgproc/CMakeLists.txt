@@ -1,0 +1,1 @@
+define_opencv_module(imgproc opencv_core)

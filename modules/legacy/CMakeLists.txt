@@ -1,0 +1,1 @@
+define_opencv_module(legacy opencv_core opencv_imgproc opencv_calib3d opencv_features2d opencv_highgui opencv_video)

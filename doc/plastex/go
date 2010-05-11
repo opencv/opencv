@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#cd .. && make && cd -
+mkdir -p _build/html/python
+mkdir -p _build/html/cpp
+
+if true
+then
+  rm -f *.rst
+  svn up
+  TEXINPUTS=../: python renderer.py c > a || exit
+  TEXINPUTS=$PWD: sphinx-build -b html -D 'html_title=OpenCV 2.0 C Reference' -d _build/doctrees . _build/html
+fi
+
+if true
+then
+  rm -f *.rst
+  svn up
+  cp python-introduction.rst introduction.rst
+  TEXINPUTS=../: python renderer.py py > a || exit
+  cp python-introduction.rst introduction.rst
+  TEXINPUTS=$PWD: sphinx-build -b html -D 'highlight_language=python' -D 'html_title=OpenCV 2.0 Python Reference' -d _build/doctrees . _build/html/python
+fi
+
+if true
+then
+  rm -f *.rst
+  svn up
+  TEXINPUTS=../: python renderer.py cpp > a || exit
+  TEXINPUTS=$PWD: sphinx-build -b html -D 'html_title=OpenCV 2.0 C++ Reference' -d _build/doctrees . _build/html/cpp
+fi

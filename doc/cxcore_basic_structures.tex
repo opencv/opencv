@@ -1,0 +1,3167 @@
+\section{Basic Structures}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                                    %
+%                                         C                                          %
+%                                                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ifCPy
+\label{CvPoint}\cvclass{CvPoint}
+2D point with integer coordinates (usually zero-based).
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvPoint
+{
+    int x; 
+    int y; 
+}
+CvPoint;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{x}{x-coordinate}
+\cvarg{y}{y-coordinate} 
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvPoint cvPoint( int x, int y );
+
+/* Conversion from CvPoint2D32f */
+inline CvPoint cvPointFrom32f( CvPoint2D32f point );
+\end{lstlisting}
+\else % }{
+2D point, represented as a tuple \texttt{(x, y)}, where x and y are integers.
+\fi % }
+
+\label{CvPoint2D32f}\cvclass{CvPoint2D32f}
+2D point with floating-point coordinates
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvPoint2D32f
+{
+    float x;
+    float y; 
+}
+CvPoint2D32f;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{x}{x-coordinate}
+\cvarg{y}{y-coordinate}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvPoint2D32f cvPoint2D32f( double x, double y );
+
+/* Conversion from CvPoint */
+inline CvPoint2D32f cvPointTo32f( CvPoint point );
+\end{lstlisting}
+\else % }{
+2D point, represented as a tuple \texttt{(x, y)}, where x and y are floats.
+\fi % }
+
+
+\label{CvPoint3D32f}\cvclass{CvPoint3D32f}
+3D point with floating-point coordinates
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvPoint3D32f
+{
+    float x; 
+    float y; 
+    float z; 
+}
+CvPoint3D32f;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{x}{x-coordinate}
+\cvarg{y}{y-coordinate}
+\cvarg{z}{z-coordinate}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvPoint3D32f cvPoint3D32f( double x, double y, double z );
+\end{lstlisting}
+\else % }{
+3D point, represented as a tuple \texttt{(x, y, z)}, where x, y and z are floats.
+\fi % }
+
+\label{CvPoint2D64f}\cvclass{CvPoint2D64f}
+2D point with double precision floating-point coordinates
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvPoint2D64f
+{
+    double x; 
+    double y; 
+}
+CvPoint2D64f;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{x}{x-coordinate}
+\cvarg{y}{y-coordinate}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvPoint2D64f cvPoint2D64f( double x, double y );
+
+/* Conversion from CvPoint */
+inline CvPoint2D64f cvPointTo64f( CvPoint point );
+\end{lstlisting}
+\else % }{
+2D point, represented as a tuple \texttt{(x, y)}, where x and y are floats.
+\fi % }
+
+\label{CvPoint3D64f}\cvclass{CvPoint3D64f}
+3D point with double precision floating-point coordinates
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvPoint3D64f
+{
+    double x; 
+    double y; 
+    double z; 
+}
+CvPoint3D64f;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{x}{x-coordinate}
+\cvarg{y}{y-coordinate}
+\cvarg{z}{z-coordinate}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvPoint3D64f cvPoint3D64f( double x, double y, double z );
+\end{lstlisting}
+\else % }{
+3D point, represented as a tuple \texttt{(x, y, z)}, where x, y and z are floats.
+\fi % }
+
+\label{CvSize}\cvclass{CvSize}
+Pixel-accurate size of a rectangle.
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvSize
+{
+    int width; 
+    int height; 
+}
+CvSize;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{width}{Width of the rectangle}
+\cvarg{height}{Height of the rectangle}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvSize cvSize( int width, int height );
+\end{lstlisting}
+\else % }{
+Size of a rectangle, represented as a tuple \texttt{(width, height)}, where width and height are integers.
+\fi % }
+
+\label{CvSize2D32f}\cvclass{CvSize2D32f}
+Sub-pixel accurate size of a rectangle.
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvSize2D32f
+{
+    float width; 
+    float height; 
+}
+CvSize2D32f;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{width}{Width of the rectangle}
+\cvarg{height}{Height of the rectangle}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvSize2D32f cvSize2D32f( double width, double height );
+\end{lstlisting}
+\else % }{
+Size of a rectangle, represented as a tuple \texttt{(width, height)}, where width and height are floats.
+\fi % }
+
+\label{CvRect}\cvclass{CvRect}
+Offset (usually the top-left corner) and size of a rectangle.
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvRect
+{
+    int x; 
+    int y; 
+    int width; 
+    int height; 
+}
+CvRect;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{x}{x-coordinate of the top-left corner}
+\cvarg{y}{y-coordinate of the top-left corner (bottom-left for Windows bitmaps)}
+\cvarg{width}{Width of the rectangle}
+\cvarg{height}{Height of the rectangle}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvRect cvRect( int x, int y, int width, int height );
+\end{lstlisting}
+\else % }{
+Rectangle, represented as a tuple \texttt{(x, y, width, height)}, where all are integers.
+\fi % }
+
+\label{CvScalar}\cvclass{CvScalar}
+A container for 1-,2-,3- or 4-tuples of doubles.
+
+\ifC % {
+\begin{lstlisting}
+typedef struct CvScalar
+{
+    double val[4];
+}
+CvScalar;
+\end{lstlisting}
+
+\begin{lstlisting}
+/* Constructor: 
+initializes val[0] with val0, val[1] with val1, etc. 
+*/
+inline CvScalar cvScalar( double val0, double val1=0,
+                          double val2=0, double val3=0 );
+/* Constructor: 
+initializes all of val[0]...val[3] with val0123 
+*/
+inline CvScalar cvScalarAll( double val0123 );
+
+/* Constructor: 
+initializes val[0] with val0, and all of val[1]...val[3] with zeros 
+*/
+inline CvScalar cvRealScalar( double val0 );
+\end{lstlisting}
+\else % }{
+
+CvScalar is always represented as a 4-tuple.
+
+\begin{lstlisting}
+>>> import cv
+>>> cv.Scalar(1, 2, 3, 4)
+(1.0, 2.0, 3.0, 4.0)
+>>> cv.ScalarAll(7)
+(7.0, 7.0, 7.0, 7.0)
+>>> cv.RealScalar(7)
+(7.0, 0.0, 0.0, 0.0)
+>>> cv.RGB(17, 110, 255)
+(255.0, 110.0, 17.0, 0.0)
+\end{lstlisting}
+\fi % }
+
+\label{CvTermCriteria}\cvclass{CvTermCriteria}
+Termination criteria for iterative algorithms.
+
+\ifC % {
+\begin{lstlisting}
+#define CV_TERMCRIT_ITER    1
+#define CV_TERMCRIT_NUMBER  CV_TERMCRIT_ITER
+#define CV_TERMCRIT_EPS     2
+
+typedef struct CvTermCriteria
+{
+    int    type;
+    int    max_iter; 
+    double epsilon; 
+}
+CvTermCriteria;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{type}{A combination of CV\_TERMCRIT\_ITER and CV\_TERMCRIT\_EPS}
+\cvarg{max\_iter}{Maximum number of iterations}
+\cvarg{epsilon}{Required accuracy}
+\end{description}
+
+\begin{lstlisting}
+/* Constructor */
+inline CvTermCriteria cvTermCriteria( int type, int max_iter, double epsilon );
+
+/* Check and transform a CvTermCriteria so that 
+   type=CV_TERMCRIT_ITER+CV_TERMCRIT_EPS
+   and both max_iter and epsilon are valid */
+CvTermCriteria cvCheckTermCriteria( CvTermCriteria criteria,
+                                    double default_eps,
+                                    int default_max_iters );
+\end{lstlisting}
+\else % }{
+Represented by a tuple \texttt{(type, max\_iter, epsilon)}.
+
+\begin{description}
+\cvarg{type}{\texttt{CV\_TERMCRIT\_ITER}, \texttt{CV\_TERMCRIT\_EPS} or \texttt{CV\_TERMCRIT\_ITER | CV\_TERMCRIT\_EPS}}
+\cvarg{max\_iter}{Maximum number of iterations}
+\cvarg{epsilon}{Required accuracy}
+\end{description}
+
+\begin{lstlisting}
+(cv.CV_TERMCRIT_ITER, 10, 0)                         # terminate after 10 iterations
+(cv.CV_TERMCRIT_EPS, 0, 0.01)                        # terminate when epsilon reaches 0.01
+(cv.CV_TERMCRIT_ITER | cv.CV_TERMCRIT_EPS, 10, 0.01) # terminate as soon as either condition is met
+\end{lstlisting}
+\fi % }
+
+\label{CvMat}\cvclass{CvMat}
+
+\ifC % {
+A multi-channel matrix.
+
+\begin{lstlisting}
+typedef struct CvMat
+{
+    int type; 
+    int step; 
+
+    int* refcount; 
+
+    union
+    {
+        uchar* ptr;
+        short* s;
+        int* i;
+        float* fl;
+        double* db;
+    } data; 
+
+#ifdef __cplusplus
+    union
+    {
+        int rows;
+        int height;
+    };
+
+    union
+    {
+        int cols;
+        int width;
+    };
+#else
+    int rows; 
+    int cols; 
+#endif
+
+} CvMat;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{type}{A CvMat signature (CV\_MAT\_MAGIC\_VAL) containing the type of elements and flags}
+\cvarg{step}{Full row length in bytes}
+\cvarg{refcount}{Underlying data reference counter}
+\cvarg{data}{Pointers to the actual matrix data}
+\cvarg{rows}{Number of rows}
+\cvarg{cols}{Number of columns}
+\end{description}
+
+Matrices are stored row by row. All of the rows are aligned by 4 bytes.
+\else % }{
+A multi-channel 2D matrix.  Created by
+\cross{CreateMat},
+\cross{LoadImageM},
+\cross{CreateMatHeader},
+\cross{fromarray}.
+
+\begin{description}
+\cvarg{type}{A CvMat signature containing the type of elements and flags, int}
+\cvarg{step}{Full row length in bytes, int}
+\cvarg{rows}{Number of rows, int}
+\cvarg{cols}{Number of columns, int}
+\cvarg{tostring() -> str}{Returns the contents of the CvMat as a single string.}
+\end{description}
+
+
+\fi % }
+
+
+\label{CvMatND}\cvclass{CvMatND}
+Multi-dimensional dense multi-channel array.
+
+\ifC
+\begin{lstlisting}
+typedef struct CvMatND
+{
+    int type; 
+    int dims;
+
+    int* refcount; 
+
+    union
+    {
+        uchar* ptr;
+        short* s;
+        int* i;
+        float* fl;
+        double* db;
+    } data; 
+
+    struct
+    {
+        int size;
+        int step;
+    }
+    dim[CV_MAX_DIM];
+
+} CvMatND;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{type}{A CvMatND signature (CV\_MATND\_MAGIC\_VAL), combining the type of elements and flags}
+\cvarg{dims}{The number of array dimensions}
+\cvarg{refcount}{Underlying data reference counter}
+\cvarg{data}{Pointers to the actual matrix data}
+\cvarg{dim}{For each dimension, the pair (number of elements, distance between elements in bytes)}
+\end{description}
+\fi
+
+\ifPy
+\begin{description}
+\cvarg{type}{A CvMatND signature combining the type of elements and flags, int}
+\cvarg{tostring() -> str}{Returns the contents of the CvMatND as a single string.}
+\end{description}
+\fi
+
+\ifC
+\label{CvSparseMat}\cvclass{CvSparseMat}
+Multi-dimensional sparse multi-channel array.
+
+\begin{lstlisting}
+typedef struct CvSparseMat
+{
+    int type;
+    int dims; 
+    int* refcount; 
+    struct CvSet* heap; 
+    void** hashtable; 
+    int hashsize;
+    int total; 
+    int valoffset; 
+    int idxoffset; 
+    int size[CV_MAX_DIM]; 
+
+} CvSparseMat;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{type}{A CvSparseMat signature (CV\_SPARSE\_MAT\_MAGIC\_VAL), combining the type of elements and flags.}
+\cvarg{dims}{Number of dimensions}
+\cvarg{refcount}{Underlying reference counter. Not used.}
+\cvarg{heap}{A pool of hash table nodes}
+\cvarg{hashtable}{The hash table. Each entry is a list of nodes.}
+\cvarg{hashsize}{Size of the hash table}
+\cvarg{total}{Total number of sparse array nodes}
+\cvarg{valoffset}{The value offset of the array nodes, in bytes}
+\cvarg{idxoffset}{The index offset of the array nodes, in bytes}
+\cvarg{size}{Array of dimension sizes}
+\end{description}
+
+\fi
+
+\label{IplImage}\cvclass{IplImage}
+\ifC
+IPL image header
+
+\begin{lstlisting}
+typedef struct _IplImage
+{
+    int  nSize;         
+    int  ID;            
+    int  nChannels;     
+    int  alphaChannel;  
+    int  depth;         
+    char colorModel[4]; 
+    char channelSeq[4]; 
+    int  dataOrder;     
+    int  origin;        
+    int  align;         
+    int  width;         
+    int  height;        
+    struct _IplROI *roi; 
+    struct _IplImage *maskROI; 
+    void  *imageId;     
+    struct _IplTileInfo *tileInfo; 
+    int  imageSize;                             
+    char *imageData;  
+    int  widthStep;   
+    int  BorderMode[4]; 
+    int  BorderConst[4]; 
+    char *imageDataOrigin; 
+}
+IplImage;
+\end{lstlisting}
+
+\begin{description}
+\cvarg{nSize}{\texttt{sizeof(IplImage)}}
+\cvarg{ID}{Version, always equals 0}
+\cvarg{nChannels}{Number of channels. Most OpenCV functions support 1-4 channels.}
+\cvarg{alphaChannel}{Ignored by OpenCV}
+\cvarg{depth}{Channel depth in bits + the optional sign bit (\texttt{IPL\_DEPTH\_SIGN}). The supported depths are:
+\begin{description}
+\cvarg{IPL\_DEPTH\_8U}{Unsigned 8-bit integer}
+\cvarg{IPL\_DEPTH\_8S}{Signed 8-bit integer}
+\cvarg{IPL\_DEPTH\_16U}{Unsigned 16-bit integer}
+\cvarg{IPL\_DEPTH\_16S}{Signed 16-bit integer}
+\cvarg{IPL\_DEPTH\_32S}{Signed 32-bit integer}
+\cvarg{IPL\_DEPTH\_32F}{Single-precision floating point}
+\cvarg{IPL\_DEPTH\_64F}{Double-precision floating point}
+\end{description}}
+\cvarg{colorModel}{Ignored by OpenCV. The OpenCV function \cross{CvtColor} requires the source and destination color spaces as parameters.}
+\cvarg{channelSeq}{Ignored by OpenCV}
+\cvarg{dataOrder}{0 = \texttt{IPL\_DATA\_ORDER\_PIXEL} - interleaved color channels, 1 - separate color channels. \cross{CreateImage} only creates images with interleaved channels. For example, the usual layout of a color image is: $ b_{00} g_{00} r_{00} b_{10} g_{10} r_{10} ...$}
+\cvarg{origin}{0 - top-left origin, 1 - bottom-left origin (Windows bitmap style)}
+\cvarg{align}{Alignment of image rows (4 or 8). OpenCV ignores this and uses widthStep instead.}
+\cvarg{width}{Image width in pixels}
+\cvarg{height}{Image height in pixels}
+\cvarg{roi}{Region Of Interest (ROI). If not NULL, only this image region will be processed.}
+\cvarg{maskROI}{Must be NULL in OpenCV}
+\cvarg{imageId}{Must be NULL in OpenCV}
+\cvarg{tileInfo}{Must be NULL in OpenCV}
+\cvarg{imageSize}{Image data size in bytes. For interleaved data, this equals $\texttt{image->height} \cdot \texttt{image->widthStep}$ }
+\cvarg{imageData}{A pointer to the aligned image data}
+\cvarg{widthStep}{The size of an aligned image row, in bytes}
+\cvarg{BorderMode}{Border completion mode, ignored by OpenCV}
+\cvarg{BorderConst}{Border completion mode, ignored by OpenCV}
+\cvarg{imageDataOrigin}{A pointer to the origin of the image data (not necessarily aligned). This is used for image deallocation.}
+\end{description}
+
+The \cross{IplImage} structure was inherited from the Intel Image Processing Library, in which the format is native. OpenCV only supports a subset of possible \cross{IplImage} formats, as outlined in the parameter list above.
+
+In addition to the above restrictions, OpenCV handles ROIs differently. OpenCV functions require that the image size or ROI size of all source and destination images match exactly. On the other hand, the Intel Image Processing Library processes the area of intersection between the source and destination images (or ROIs), allowing them to vary independently. 
+\fi
+
+\ifPy
+
+The \cross{IplImage} object was inherited from the Intel Image Processing
+Library, in which the format is native. OpenCV only supports a subset
+of possible \cross{IplImage} formats.
+
+\begin{description}
+\cvarg{nChannels}{Number of channels, int.}
+\cvarg{width}{Image width in pixels}
+\cvarg{height}{Image height in pixels}
+\cvarg{depth}{Pixel depth in bits. The supported depths are:
+\begin{description}
+\cvarg{IPL\_DEPTH\_8U}{Unsigned 8-bit integer}
+\cvarg{IPL\_DEPTH\_8S}{Signed 8-bit integer}
+\cvarg{IPL\_DEPTH\_16U}{Unsigned 16-bit integer}
+\cvarg{IPL\_DEPTH\_16S}{Signed 16-bit integer}
+\cvarg{IPL\_DEPTH\_32S}{Signed 32-bit integer}
+\cvarg{IPL\_DEPTH\_32F}{Single-precision floating point}
+\cvarg{IPL\_DEPTH\_64F}{Double-precision floating point}
+\end{description}}
+\cvarg{origin}{0 - top-left origin, 1 - bottom-left origin (Windows bitmap style)}
+\cvarg{tostring() -> str}{Returns the contents of the CvMatND as a single string.}
+\end{description}
+\fi
+
+\label{CvArr}\cvclass{CvArr}
+Arbitrary array
+
+\ifC
+\begin{lstlisting}
+typedef void CvArr;
+\end{lstlisting}
+
+The metatype \texttt{CvArr} is used \textit{only} as a function parameter to specify that the function accepts arrays of multiple types, such as IplImage*, CvMat* or even CvSeq* sometimes. The particular array type is determined at runtime by analyzing the first 4 bytes of the header.
+\fi
+
+\ifPy
+\texttt{CvArr} is used \textit{only} as a function parameter to specify that the parameter can be:
+\begin{itemize}
+\item{an \cross{IplImage}}
+\item{a \cross{CvMat}}
+\item{any other type that exports the \href{http://docs.scipy.org/doc/numpy/reference/arrays.interface.html}{array interface}}
+\end{itemize}
+\fi
+
+\fi
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                                    %
+%                                        C++                                         %
+%                                                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ifCpp
+\subsection{DataType}\label{DataType}
+Template "traits" class for other OpenCV primitive data types
+
+\begin{lstlisting}
+template<typename _Tp> class DataType
+{
+    // value_type is always a synonym for _Tp.
+    typedef _Tp value_type;
+    
+    // intermediate type used for operations on _Tp.
+    // it is int for uchar, signed char, unsigned short, signed short and int,
+    // float for float, double for double, ...
+    typedef <...> work_type;
+    // in the case of multi-channel data it is the data type of each channel
+    typedef <...> channel_type;
+    enum
+    {
+        // CV_8U ... CV_64F
+        depth = DataDepth<channel_type>::value,
+        // 1 ... 
+        channels = <...>,
+        // '1u', '4i', '3f', '2d' etc.
+        fmt=<...>,
+        // CV_8UC3, CV_32FC2 ...
+        type = CV_MAKETYPE(depth, channels)
+    };
+};
+\end{lstlisting}
+
+The template class \texttt{DataType} is descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of \texttt{unsigned char, bool, signed char, unsigned short, signed short, int, float, double} or a tuple of values of one of these types, where all the values in the tuple have the same type. If you are familiar with OpenCV \cross{CvMat}'s type notation, CV\_8U ... CV\_32FC3, CV\_64FC2 etc., then a primitive type can be defined as a type for which you can give a unique identifier in a form \texttt{CV\_<bit-depth>{U|S|F}C<number\_of\_channels>}. A universal OpenCV structure able to store a single instance of such primitive data type is \cross{Vec}. Multiple instances of such a type can be stored to a \texttt{std::vector}, \texttt{Mat}, \texttt{Mat\_}, \texttt{MatND}, \texttt{MatND\_}, \texttt{SparseMat}, \texttt{SparseMat\_} or any other container that is able to store \cross{Vec} instances.
+ 
+The class \texttt{DataType} is basically used to provide some description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It's not \texttt{DataType} itself that is used, but its specialized versions, such as:
+
+\begin{lstlisting}
+template<> class DataType<uchar>
+{
+    typedef uchar value_type;
+    typedef int work_type;
+    typedef uchar channel_type;
+    enum { channel_type = CV_8U, channels = 1, fmt='u', type = CV_8U };
+};
+...
+template<typename _Tp> DataType<std::complex<_Tp> >
+{
+    typedef std::complex<_Tp> value_type;
+    typedef std::complex<_Tp> work_type;
+    typedef _Tp channel_type;
+    // DataDepth is another helper trait class
+    enum { depth = DataDepth<_Tp>::value, channels=2,
+        fmt=(channels-1)*256+DataDepth<_Tp>::fmt,
+        type=CV_MAKETYPE(depth, channels) };
+};
+...
+\end{lstlisting}
+
+The main purpose of the classes is to convert compile-time type information to OpenCV-compatible data type identifier, for example:
+
+\begin{lstlisting}
+// allocates 30x40 floating-point matrix
+Mat A(30, 40, DataType<float>::type);
+
+Mat B = Mat_<std::complex<double> >(3, 3);
+// the statement below will print 6, 2 /* i.e. depth == CV_64F, channels == 2 */ 
+cout << B.depth() << ", " << B.channels() << endl; 
+\end{lstlisting}
+
+that is, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV (the matrix \texttt{B} intialization above compiles because OpenCV defines the proper specialized template class \texttt{DataType<complex<\_Tp> >}). Also, this mechanism is useful (and used in OpenCV this way) for generic algorithms implementations.
+
+\subsection{Point\_}
+Template class for 2D points
+
+\begin{lstlisting}
+template<typename _Tp> class Point_
+{
+public:
+    typedef _Tp value_type;
+    
+    Point_();
+    Point_(_Tp _x, _Tp _y);
+    Point_(const Point_& pt);
+    Point_(const CvPoint& pt);
+    Point_(const CvPoint2D32f& pt);
+    Point_(const Size_<_Tp>& sz);
+    Point_(const Vec<_Tp, 2>& v);
+    Point_& operator = (const Point_& pt);
+    template<typename _Tp2> operator Point_<_Tp2>() const;
+    operator CvPoint() const;
+    operator CvPoint2D32f() const;
+    operator Vec<_Tp, 2>() const;
+
+    // computes dot-product (this->x*pt.x + this->y*pt.y)
+    _Tp dot(const Point_& pt) const;
+    // computes dot-product using double-precision arithmetics
+    double ddot(const Point_& pt) const;
+    // returns true if the point is inside the rectangle "r".
+    bool inside(const Rect_<_Tp>& r) const;
+    
+    _Tp x, y;
+};
+\end{lstlisting}
+
+The class represents a 2D point, specified by its coordinates $x$ and $y$.
+Instance of the class is interchangeable with C structures \texttt{CvPoint} and \texttt{CvPoint2D32f}. There is also cast operator to convert point coordinates to the specified type. The conversion from floating-point coordinates to integer coordinates is done by rounding; in general case the conversion uses \hyperref[saturatecast]{saturate\_cast} operation on each of the coordinates. Besides the class members listed in the declaration above, the following operations on points are implemented:
+
+\begin{lstlisting}
+    pt1 = pt2 + pt3;
+    pt1 = pt2 - pt3;
+    pt1 = pt2 * a;
+    pt1 = a * pt2;
+    pt1 += pt2;
+    pt1 -= pt2;
+    pt1 *= a;
+    double value = norm(pt); // L2 norm
+    pt1 == pt2;
+    pt1 != pt2;
+\end{lstlisting}
+
+For user convenience, the following type aliases are defined:
+\begin{lstlisting}
+typedef Point_<int> Point2i;
+typedef Point2i Point;
+typedef Point_<float> Point2f;
+typedef Point_<double> Point2d;
+\end{lstlisting}
+
+Here is a short example:
+\begin{lstlisting}
+Point2f a(0.3f, 0.f), b(0.f, 0.4f);
+Point pt = (a + b)*10.f;
+cout << pt.x << ", " << pt.y << endl; 
+\end{lstlisting}
+
+\subsection{Point3\_}
+
+Template class for 3D points
+
+\begin{lstlisting}
+
+template<typename _Tp> class Point3_
+{
+public:
+    typedef _Tp value_type;
+    
+    Point3_();
+    Point3_(_Tp _x, _Tp _y, _Tp _z);
+    Point3_(const Point3_& pt);
+    explicit Point3_(const Point_<_Tp>& pt);
+    Point3_(const CvPoint3D32f& pt);
+    Point3_(const Vec<_Tp, 3>& v);
+    Point3_& operator = (const Point3_& pt);
+    template<typename _Tp2> operator Point3_<_Tp2>() const;
+    operator CvPoint3D32f() const;
+    operator Vec<_Tp, 3>() const;
+
+    _Tp dot(const Point3_& pt) const;
+    double ddot(const Point3_& pt) const;
+    
+    _Tp x, y, z;
+};
+\end{lstlisting}
+
+The class represents a 3D point, specified by its coordinates $x$, $y$ and $z$.
+Instance of the class is interchangeable with C structure \texttt{CvPoint2D32f}. Similarly to \texttt{Point\_}, the 3D points' coordinates can be converted to another type, and the vector arithmetic and comparison operations are also supported.
+
+The following type aliases are available:
+
+\begin{lstlisting}
+typedef Point3_<int> Point3i;
+typedef Point3_<float> Point3f;
+typedef Point3_<double> Point3d;
+\end{lstlisting}
+
+\subsection{Size\_}
+
+Template class for specfying image or rectangle size.
+
+\begin{lstlisting}
+template<typename _Tp> class Size_
+{
+public:
+    typedef _Tp value_type;
+    
+    Size_();
+    Size_(_Tp _width, _Tp _height);
+    Size_(const Size_& sz);
+    Size_(const CvSize& sz);
+    Size_(const CvSize2D32f& sz);
+    Size_(const Point_<_Tp>& pt);
+    Size_& operator = (const Size_& sz);
+    _Tp area() const;
+
+    operator Size_<int>() const;
+    operator Size_<float>() const;
+    operator Size_<double>() const;
+    operator CvSize() const;
+    operator CvSize2D32f() const;
+
+    _Tp width, height;
+};
+\end{lstlisting}
+
+The class \texttt{Size\_} is similar to \texttt{Point\_}, except that the two members are called \texttt{width} and \texttt{height} instead of \texttt{x} and \texttt{y}. The structure can be converted to and from the old OpenCV structures \cross{CvSize} and \cross{CvSize2D32f}. The same set of arithmetic and comparison operations as for \texttt{Point\_} is available. 
+
+OpenCV defines the following type aliases:
+
+\begin{lstlisting}
+typedef Size_<int> Size2i;
+typedef Size2i Size;
+typedef Size_<float> Size2f;
+\end{lstlisting}
+
+\subsection{Rect\_}
+
+Template class for 2D rectangles
+
+\begin{lstlisting}
+template<typename _Tp> class Rect_
+{
+public:
+    typedef _Tp value_type;
+    
+    Rect_();
+    Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
+    Rect_(const Rect_& r);
+    Rect_(const CvRect& r);
+    // (x, y) <- org, (width, height) <- sz
+    Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
+    // (x, y) <- min(pt1, pt2), (width, height) <- max(pt1, pt2) - (x, y)
+    Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
+    Rect_& operator = ( const Rect_& r );
+    // returns Point_<_Tp>(x, y)
+    Point_<_Tp> tl() const;
+    // returns Point_<_Tp>(x+width, y+height)
+    Point_<_Tp> br() const;
+    
+    // returns Size_<_Tp>(width, height)
+    Size_<_Tp> size() const;
+    // returns width*height
+    _Tp area() const;
+
+    operator Rect_<int>() const;
+    operator Rect_<float>() const;
+    operator Rect_<double>() const;
+    operator CvRect() const;
+
+    // x <= pt.x && pt.x < x + width &&
+    // y <= pt.y && pt.y < y + height ? true : false
+    bool contains(const Point_<_Tp>& pt) const;
+
+    _Tp x, y, width, height;
+};
+\end{lstlisting}
+
+The rectangle is described by the coordinates of the top-left corner (which is the default interpretation of \texttt{Rect\_::x} and \texttt{Rect\_::y} in OpenCV; though, in your algorithms you may count \texttt{x} and \texttt{y} from the bottom-left corner), the rectangle width and height.
+
+Another assumption OpenCV usually makes is that the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not, for example, the method \texttt{Rect\_::contains} returns true if
+\[
+      x \leq pt.x < x+width,
+      y \leq pt.y < y+height
+\]
+And virtually every loop over an image \cross{ROI} in OpenCV (where ROI is specified by \texttt{Rect\_<int>}) is implemented as:
+\begin{lstlisting}
+for(int y = roi.y; y < roi.y + rect.height; y++)
+    for(int x = roi.x; x < roi.x + rect.width; x++)
+    {
+        // ...
+    }
+\end{lstlisting}
+
+In addition to the class members, the following operations on rectangles are implemented:
+\begin{itemize}
+    \item $\texttt{rect} = \texttt{rect} \pm \texttt{point}$ (shifting rectangle by a certain offset)
+    \item $\texttt{rect} = \texttt{rect} \pm \texttt{size}$ (expanding or shrinking rectangle by a certain amount)
+    \item \texttt{rect += point, rect -= point, rect += size, rect -= size} (augmenting operations)
+    \item \texttt{rect = rect1 \& rect2} (rectangle intersection)
+    \item \texttt{rect = rect1 | rect2} (minimum area rectangle containing \texttt{rect2} and \texttt{rect3})
+    \item \texttt{rect \&= rect1, rect |= rect1} (and the corresponding augmenting operations)
+    \item \texttt{rect == rect1, rect != rect1} (rectangle comparison)
+\end{itemize}
+
+Example. Here is how the partial ordering on rectangles can be established (rect1 $\subseteq$ rect2):
+\begin{lstlisting}
+template<typename _Tp> inline bool
+operator <= (const Rect_<_Tp>& r1, const Rect_<_Tp>& r2)
+{
+    return (r1 & r2) == r1;
+}
+\end{lstlisting}
+
+For user convenience, the following type alias is available:
+\begin{lstlisting}
+typedef Rect_<int> Rect;
+\end{lstlisting}
+
+\subsection{RotatedRect}\label{RotatedRect}
+Possibly rotated rectangle
+
+\begin{lstlisting}
+class RotatedRect
+{
+public:
+    // constructors
+    RotatedRect();
+    RotatedRect(const Point2f& _center, const Size2f& _size, float _angle);
+    RotatedRect(const CvBox2D& box);
+    
+    // returns minimal up-right rectangle that contains the rotated rectangle
+    Rect boundingRect() const;
+    // backward conversion to CvBox2D
+    operator CvBox2D() const;
+    
+    // mass center of the rectangle
+    Point2f center;
+    // size
+    Size2f size;
+    // rotation angle in degrees
+    float angle;
+};
+\end{lstlisting}
+
+The class \texttt{RotatedRect} replaces the old \cross{CvBox2D} and fully compatible with it.
+
+\subsection{TermCriteria}\label{TermCriteria}
+
+Termination criteria for iterative algorithms
+
+\begin{lstlisting}
+class TermCriteria
+{
+public:
+    enum { COUNT=1, MAX_ITER=COUNT, EPS=2 };
+
+    // constructors
+    TermCriteria();
+    // type can be MAX_ITER, EPS or MAX_ITER+EPS.
+    // type = MAX_ITER means that only the number of iterations does matter;
+    // type = EPS means that only the required precision (epsilon) does matter
+    //    (though, most algorithms put some limit on the number of iterations anyway)
+    // type = MAX_ITER + EPS means that algorithm stops when
+    // either the specified number of iterations is made,
+    // or when the specified accuracy is achieved - whatever happens first.
+    TermCriteria(int _type, int _maxCount, double _epsilon);
+    TermCriteria(const CvTermCriteria& criteria);
+    operator CvTermCriteria() const;
+
+    int type;
+    int maxCount;
+    double epsilon;
+};
+\end{lstlisting}
+
+The class \texttt{TermCriteria} replaces the old \cross{CvTermCriteria} and fully compatible with it.
+
+
+\subsection{Vec}\label{Vec}
+Template class for short numerical vectors
+
+\begin{lstlisting}
+template<typename _Tp, int cn> class Vec
+{
+public:
+    typedef _Tp value_type;
+    enum { depth = DataDepth<_Tp>::value, channels = cn,
+           type = CV_MAKETYPE(depth, channels) };
+    
+    // default constructor: all elements are set to 0
+    Vec();
+    // constructors taking up to 10 first elements as parameters
+    Vec(_Tp v0);
+    Vec(_Tp v0, _Tp v1);
+    Vec(_Tp v0, _Tp v1, _Tp v2);
+    ...
+    Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4,
+        _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9);
+    Vec(const Vec<_Tp, cn>& v);
+    // constructs vector with all the components set to alpha.
+    static Vec all(_Tp alpha);
+    
+    // two variants of dot-product
+    _Tp dot(const Vec& v) const;
+    double ddot(const Vec& v) const;
+    
+    // cross-product; valid only when cn == 3.
+    Vec cross(const Vec& v) const;
+    
+    // element type conversion
+    template<typename T2> operator Vec<T2, cn>() const;
+    
+    // conversion to/from CvScalar (valid only when cn==4)
+    operator CvScalar() const;
+    
+    // element access
+    _Tp operator [](int i) const;
+    _Tp& operator[](int i);
+
+    _Tp val[cn];
+};
+\end{lstlisting}
+
+The class is the most universal representation of short numerical vectors or tuples. It is possible to convert \texttt{Vec<T,2>} to/from \texttt{Point\_}, \texttt{Vec<T,3>} to/from \texttt{Point3\_}, and \texttt{Vec<T,4>} to \cross{CvScalar}~. The elements of \texttt{Vec} are accessed using \texttt{operator[]}. All the expected vector operations are implemented too:
+
+\begin{itemize}
+    \item \texttt{v1 = $v2 \pm v3$, v1 = v2 * $\alpha$, v1 = $\alpha$ * v2} (plus the corresponding augmenting operations; note that these operations apply \hyperref[saturatecast]{saturate\_cast.3C.3E} to the each computed vector component)
+    \item \texttt{v1 == v2, v1 != v2}
+    \item \texttt{double n = norm(v1); // $L_2$-norm}
+\end{itemize}
+
+For user convenience, the following type aliases are introduced:
+\begin{lstlisting}
+typedef Vec<uchar, 2> Vec2b;
+typedef Vec<uchar, 3> Vec3b;
+typedef Vec<uchar, 4> Vec4b;
+
+typedef Vec<short, 2> Vec2s;
+typedef Vec<short, 3> Vec3s;
+typedef Vec<short, 4> Vec4s;
+
+typedef Vec<int, 2> Vec2i;
+typedef Vec<int, 3> Vec3i;
+typedef Vec<int, 4> Vec4i;
+
+typedef Vec<float, 2> Vec2f;
+typedef Vec<float, 3> Vec3f;
+typedef Vec<float, 4> Vec4f;
+typedef Vec<float, 6> Vec6f;
+
+typedef Vec<double, 2> Vec2d;
+typedef Vec<double, 3> Vec3d;
+typedef Vec<double, 4> Vec4d;
+typedef Vec<double, 6> Vec6d;
+\end{lstlisting}
+
+The class \texttt{Vec} can be used for declaring various numerical objects, e.g. \texttt{Vec<double,9>} can be used to store a 3x3 double-precision matrix. It is also very useful for declaring and processing multi-channel arrays, see \texttt{Mat\_} description.
+
+\subsection{Scalar\_}
+4-element vector
+
+\begin{lstlisting}
+template<typename _Tp> class Scalar_ : public Vec<_Tp, 4>
+{
+public:
+    Scalar_();
+    Scalar_(_Tp v0, _Tp v1, _Tp v2=0, _Tp v3=0);
+    Scalar_(const CvScalar& s);
+    Scalar_(_Tp v0);
+    static Scalar_<_Tp> all(_Tp v0);
+    operator CvScalar() const;
+
+    template<typename T2> operator Scalar_<T2>() const;
+
+    Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
+    template<typename T2> void convertTo(T2* buf, int channels, int unroll_to=0) const;
+};
+
+typedef Scalar_<double> Scalar;
+\end{lstlisting}
+
+The template class \texttt{Scalar\_} and it's double-precision instantiation \texttt{Scalar} represent 4-element vector. Being derived from \texttt{Vec<\_Tp, 4>}, they can be used as typical 4-element vectors, but in addition they can be converted to/from \texttt{CvScalar}. The type \texttt{Scalar} is widely used in OpenCV for passing pixel values and it is a drop-in replacement for \cross{CvScalar} that was used for the same purpose in the earlier versions of OpenCV.
+
+\subsection{Range}\label{Range}
+Specifies a continuous subsequence (a.k.a. slice) of a sequence.
+
+\begin{lstlisting}
+class Range
+{
+public:
+    Range();
+    Range(int _start, int _end);
+    Range(const CvSlice& slice);
+    int size() const;
+    bool empty() const;
+    static Range all();
+    operator CvSlice() const;
+
+    int start, end;
+};
+\end{lstlisting}
+
+The class is used to specify a row or column span in a matrix (\cross{Mat}), and for many other purposes. \texttt{Range(a,b)} is basically the same as \texttt{a:b} in Matlab or \texttt{a..b} in Python. As in Python, \texttt{start} is inclusive left boundary of the range, and \texttt{end} is exclusive right boundary of the range. Such a half-opened interval is usually denoted as $[start,end)$.
+
+The static method \texttt{Range::all()} returns some special variable that means "the whole sequence" or "the whole range", just like "\texttt{:}" in Matlab or "\texttt{...}" in Python. All the methods and functions in OpenCV that take \texttt{Range} support this special \texttt{Range::all()} value, but of course, in the case of your own custom processing you will probably have to check and handle it explicitly:
+\begin{lstlisting}
+void my_function(..., const Range& r, ....)
+{
+    if(r == Range::all()) {
+        // process all the data
+    }
+    else {
+        // process [r.start, r.end)
+    } 
+}
+\end{lstlisting}
+
+\subsection{Ptr}\label{Ptr}
+
+A template class for smart reference-counting pointers
+
+\begin{lstlisting}
+template<typename _Tp> class Ptr
+{
+public:
+    // default constructor
+    Ptr();
+    // constructor that wraps the object pointer
+    Ptr(_Tp* _obj);
+    // destructor: calls release()
+    ~Ptr();
+    // copy constructor; increments ptr's reference counter
+    Ptr(const Ptr& ptr);
+    // assignment operator; decrements own reference counter
+    // (with release()) and increments ptr's reference counter 
+    Ptr& operator = (const Ptr& ptr);
+    // increments reference counter
+    void addref();
+    // decrements reference counter; when it becomes 0,
+    // delete_obj() is called
+    void release();
+    // user-specified custom object deletion operation.
+    // by default, "delete obj;" is called
+    void delete_obj();
+    // returns true if obj == 0;
+    bool empty() const;
+
+    // provide access to the object fields and methods
+    _Tp* operator -> ();
+    const _Tp* operator -> () const;
+
+    // return the underlying object pointer;
+    // thanks to the methods, the Ptr<_Tp> can be
+    // used instead of _Tp*
+    operator _Tp* ();
+    operator const _Tp*() const;
+protected:
+    // the encapsulated object pointer
+    _Tp* obj;
+    // the associated reference counter
+    int* refcount;
+};
+\end{lstlisting}
+
+The class \texttt{Ptr<\_Tp>} is a template class that wraps pointers of the corresponding type. It is similar to \texttt{shared\_ptr} that is a part of Boost library (\url{http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm}) and also a part of the
+\href{http://en.wikipedia.org/wiki/C++0x}{C++0x} standard. 
+
+By using this class you can get the following capabilities:
+
+\begin{itemize}
+    \item default constructor, copy constructor and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets etc, copy constructor or assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may have been written in C. However, copy constructors and default constructors can simplify programming a lot; besides, they are often required (e.g. by STL containers). By wrapping a pointer to such a complex object \texttt{TObj} to \texttt{Ptr<TObj>} you will automatically get all of the necessary constructors and the assignment operator.
+    \item all the above-mentioned operations running very fast, regardless of the data size, i.e. as "O(1)" operations. Indeed, while some structures, like \texttt{std::vector} provide a copy constructor and an assignment operator, the operations may take considerable time if the data structures are big. But if the structures are put into \texttt{Ptr<>}, the overhead becomes small and independent of the data size.
+    \item automatic destruction, even for C structures. See the example below with \texttt{FILE*}.  
+    \item heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can only store objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class \texttt{base\_class\_t*} instead, but when you loose the automatic memory management. Again, by using \texttt{Ptr<base\_class\_t>()} instead of the raw pointers, you can solve the problem.
+\end{itemize}    
+
+The class \texttt{Ptr} treats the wrapped object as a black box, the reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is incapsulated in \texttt{Ptr::delete\_obj()} method, which is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls \texttt{delete obj;}.
+However, if the object is deallocated in a different way, then the specialized method should be created. For example, if you want to wrap \texttt{FILE}, the \texttt{delete\_obj} may be implemented as following:
+
+\begin{lstlisting}
+template<> inline void Ptr<FILE>::delete_obj()
+{
+    fclose(obj); // no need to clear the pointer afterwards,
+                 // it is done externally.
+}
+...
+
+// now use it:
+Ptr<FILE> f(fopen("myfile.txt", "r"));
+if(f.empty())
+    throw ...;
+fprintf(f, ....);
+...
+// the file will be closed automatically by the Ptr<FILE> destructor.
+\end{lstlisting}  
+
+\textbf{Note}: The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for \cross{Mat} and other C++ OpenCV classes that operate on the reference counters.
+
+\subsection{Mat}\label{Mat}
+
+OpenCV C++ matrix class.
+
+\begin{lstlisting}
+class CV_EXPORTS Mat
+{
+public:
+    // constructors
+    Mat();
+    // constructs matrix of the specified size and type
+    // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
+    Mat(int _rows, int _cols, int _type);
+    Mat(Size _size, int _type);
+    // constucts matrix and fills it with the specified value _s.
+    Mat(int _rows, int _cols, int _type, const Scalar& _s);
+    Mat(Size _size, int _type, const Scalar& _s);
+    // copy constructor
+    Mat(const Mat& m);
+    // constructor for matrix headers pointing to user-allocated data
+    Mat(int _rows, int _cols, int _type, void* _data, size_t _step=AUTO_STEP);
+    Mat(Size _size, int _type, void* _data, size_t _step=AUTO_STEP);
+    // creates a matrix header for a part of the bigger matrix
+    Mat(const Mat& m, const Range& rowRange, const Range& colRange);
+    Mat(const Mat& m, const Rect& roi);
+    // converts old-style CvMat to the new matrix; the data is not copied by default
+    Mat(const CvMat* m, bool copyData=false);
+    // converts old-style IplImage to the new matrix; the data is not copied by default
+    Mat(const IplImage* img, bool copyData=false);
+    // builds matrix from std::vector with or without copying the data
+    template<typename _Tp> explicit Mat(const vector<_Tp>& vec, bool copyData=false);
+    // helper constructor to compile matrix expressions
+    Mat(const MatExpr_Base& expr);
+    // destructor - calls release()
+    ~Mat();
+    // assignment operators
+    Mat& operator = (const Mat& m);
+    Mat& operator = (const MatExpr_Base& expr);
+
+    operator MatExpr_<Mat, Mat>() const;
+
+    // returns a new matrix header for the specified row
+    Mat row(int y) const;
+    // returns a new matrix header for the specified column
+    Mat col(int x) const;
+    // ... for the specified row span
+    Mat rowRange(int startrow, int endrow) const;
+    Mat rowRange(const Range& r) const;
+    // ... for the specified column span
+    Mat colRange(int startcol, int endcol) const;
+    Mat colRange(const Range& r) const;
+    // ... for the specified diagonal
+    // (d=0 - the main diagonal,
+    //  >0 - a diagonal from the lower half,
+    //  <0 - a diagonal from the upper half)
+    Mat diag(int d=0) const;
+    // constructs a square diagonal matrix which main diagonal is vector "d"
+    static Mat diag(const Mat& d);
+
+    // returns deep copy of the matrix, i.e. the data is copied
+    Mat clone() const;
+    // copies the matrix content to "m".
+    // It calls m.create(this->size(), this->type()).
+    void copyTo( Mat& m ) const;
+    // copies those matrix elements to "m" that are marked with non-zero mask elements.
+    void copyTo( Mat& m, const Mat& mask ) const;
+    // converts matrix to another datatype with optional scalng. See cvConvertScale.
+    void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
+
+    void assignTo( Mat& m, int type=-1 ) const;
+
+    // sets every matrix element to s
+    Mat& operator = (const Scalar& s);
+    // sets some of the matrix elements to s, according to the mask
+    Mat& setTo(const Scalar& s, const Mat& mask=Mat());
+    // creates alternative matrix header for the same data, with different
+    // number of channels and/or different number of rows. see cvReshape.
+    Mat reshape(int _cn, int _rows=0) const;
+
+    // matrix transposition by means of matrix expressions
+    MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_T_<Mat> >, Mat>
+    t() const;
+    // matrix inversion by means of matrix expressions
+    MatExpr_<MatExpr_Op2_<Mat, int, Mat, MatOp_Inv_<Mat> >, Mat>
+        inv(int method=DECOMP_LU) const;
+    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>
+    // per-element matrix multiplication by means of matrix expressions
+    mul(const Mat& m, double scale=1) const;
+    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>
+    mul(const MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_Scale_<Mat> >, Mat>& m, double scale=1) const;
+    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>    
+    mul(const MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_DivRS_<Mat> >, Mat>& m, double scale=1) const;
+
+    // computes cross-product of 2 3D vectors
+    Mat cross(const Mat& m) const;
+    // computes dot-product
+    double dot(const Mat& m) const;
+
+    // Matlab-style matrix initialization
+    static MatExpr_Initializer zeros(int rows, int cols, int type);
+    static MatExpr_Initializer zeros(Size size, int type);
+    static MatExpr_Initializer ones(int rows, int cols, int type);
+    static MatExpr_Initializer ones(Size size, int type);
+    static MatExpr_Initializer eye(int rows, int cols, int type);
+    static MatExpr_Initializer eye(Size size, int type);
+
+    // allocates new matrix data unless the matrix already has specified size and type.
+    // previous data is unreferenced if needed.
+    void create(int _rows, int _cols, int _type);
+    void create(Size _size, int _type);
+    // increases the reference counter; use with care to avoid memleaks
+    void addref();
+    // decreases reference counter;
+    // deallocate the data when reference counter reaches 0.
+    void release();
+
+    // locates matrix header within a parent matrix. See below
+    void locateROI( Size& wholeSize, Point& ofs ) const;
+    // moves/resizes the current matrix ROI inside the parent matrix.
+    Mat& adjustROI( int dtop, int dbottom, int dleft, int dright );
+    // extracts a rectangular sub-matrix
+    // (this is a generalized form of row, rowRange etc.)
+    Mat operator()( Range rowRange, Range colRange ) const;
+    Mat operator()( const Rect& roi ) const;
+
+    // converts header to CvMat; no data is copied
+    operator CvMat() const;
+    // converts header to IplImage; no data is copied
+    operator IplImage() const;
+
+    // returns true iff the matrix data is continuous
+    // (i.e. when there are no gaps between successive rows).
+    // similar to CV_IS_MAT_CONT(cvmat->type)
+    bool isContinuous() const;
+    // returns element size in bytes,
+    // similar to CV_ELEM_SIZE(cvmat->type)
+    size_t elemSize() const;
+    // returns the size of element channel in bytes.
+    size_t elemSize1() const;
+    // returns element type, similar to CV_MAT_TYPE(cvmat->type)
+    int type() const;
+    // returns element type, similar to CV_MAT_DEPTH(cvmat->type)
+    int depth() const;
+    // returns element type, similar to CV_MAT_CN(cvmat->type)
+    int channels() const;
+    // returns step/elemSize1()
+    size_t step1() const;
+    // returns matrix size:
+    // width == number of columns, height == number of rows
+    Size size() const;
+    // returns true if matrix data is NULL
+    bool empty() const;
+
+    // returns pointer to y-th row
+    uchar* ptr(int y=0);
+    const uchar* ptr(int y=0) const;
+
+    // template version of the above method
+    template<typename _Tp> _Tp* ptr(int y=0);
+    template<typename _Tp> const _Tp* ptr(int y=0) const;
+
+    // template methods for read-write or read-only element access.
+    // note that _Tp must match the actual matrix type -
+    // the functions do not do any on-fly type conversion
+    template<typename _Tp> _Tp& at(int y, int x);
+    template<typename _Tp> _Tp& at(Point pt);
+    template<typename _Tp> const _Tp& at(int y, int x) const;
+    template<typename _Tp> const _Tp& at(Point pt) const;
+
+    // template methods for iteration over matrix elements.
+    // the iterators take care of skipping gaps in the end of rows (if any)
+    template<typename _Tp> MatIterator_<_Tp> begin();
+    template<typename _Tp> MatIterator_<_Tp> end();
+    template<typename _Tp> MatConstIterator_<_Tp> begin() const;
+    template<typename _Tp> MatConstIterator_<_Tp> end() const;
+
+    enum { MAGIC_VAL=0x42FF0000, AUTO_STEP=0, CONTINUOUS_FLAG=CV_MAT_CONT_FLAG };
+
+    // includes several bit-fields:
+    //  * the magic signature
+    //  * continuity flag
+    //  * depth
+    //  * number of channels
+    int flags;
+    // the number of rows and columns
+    int rows, cols;
+    // a distance between successive rows in bytes; includes the gap if any
+    size_t step;
+    // pointer to the data
+    uchar* data;
+
+    // pointer to the reference counter;
+    // when matrix points to user-allocated data, the pointer is NULL
+    int* refcount;
+
+    // helper fields used in locateROI and adjustROI
+    uchar* datastart;
+    uchar* dataend;
+};
+\end{lstlisting}
+
+The class \texttt{Mat} represents a 2D numerical array that can act as a matrix (and further it's referred to as a matrix), image, optical flow map etc. It is very similar to \cross{CvMat} type from earlier versions of OpenCV, and similarly to \texttt{CvMat}, the matrix can be multi-channel, but it also fully supports \cross{ROI} mechanism, just like \cross{IplImage}.
+
+There are many different ways to create \texttt{Mat} object. Here are the some popular ones:
+\begin{itemize}
+\item using \texttt{create(nrows, ncols, type)} method or
+    the similar constructor \texttt{Mat(nrows, ncols, type[, fill\_value])} constructor.
+    A new matrix of the specified size and specifed type will be allocated.
+    \texttt{type} has the same meaning as in \cvCppCross{cvCreateMat} method,
+    e.g. \texttt{CV\_8UC1} means 8-bit single-channel matrix,
+    \texttt{CV\_32FC2} means 2-channel (i.e. complex) floating-point matrix etc:
+        
+\begin{lstlisting}
+// make 7x7 complex matrix filled with 1+3j.
+cv::Mat M(7,7,CV_32FC2,Scalar(1,3));
+// and now turn M to 100x60 15-channel 8-bit matrix.
+// The old content will be deallocated
+M.create(100,60,CV_8UC(15));
+\end{lstlisting}
+        
+    As noted in the introduction of this chapter, \texttt{create()}
+    will only allocate a new matrix when the current matrix dimensionality
+    or type are different from the specified.
+        
+\item by using a copy constructor or assignment operator, where on the right side it can
+      be a matrix or expression, see below. Again, as noted in the introduction,
+      matrix assignment is O(1) operation because it only copies the header
+      and increases the reference counter. \texttt{Mat::clone()} method can be used to get a full
+      (a.k.a. deep) copy of the matrix when you need it.
+          
+\item by constructing a header for a part of another matrix. It can be a single row, single column,
+      several rows, several columns, rectangular region in the matrix (called a minor in algebra) or
+      a diagonal. Such operations are also O(1), because the new header will reference the same data.
+      You can actually modify a part of the matrix using this feature, e.g.
+          
+\begin{lstlisting}
+// add 5-th row, multiplied by 3 to the 3rd row
+M.row(3) = M.row(3) + M.row(5)*3;
+
+// now copy 7-th column to the 1-st column
+// M.col(1) = M.col(7); // this will not work
+Mat M1 = M.col(1);
+M.col(7).copyTo(M1);
+
+// create new 320x240 image
+cv::Mat img(Size(320,240),CV_8UC3);
+// select a roi
+cv::Mat roi(img, Rect(10,10,100,100));
+// fill the ROI with (0,255,0) (which is green in RGB space);
+// the original 320x240 image will be modified
+roi = Scalar(0,255,0);
+\end{lstlisting}
+
+      Thanks to the additional \texttt{datastart} and \texttt{dataend} members, it is possible to
+      compute the relative sub-matrix position in the main \emph{"container"} matrix using \texttt{locateROI()}:
+      
+\begin{lstlisting}
+Mat A = Mat::eye(10, 10, CV_32S);
+// extracts A columns, 1 (inclusive) to 3 (exclusive).
+Mat B = A(Range::all(), Range(1, 3));
+// extracts B rows, 5 (inclusive) to 9 (exclusive).
+// that is, C ~ A(Range(5, 9), Range(1, 3))
+Mat C = B(Range(5, 9), Range::all());
+Size size; Point ofs;
+C.locateROI(size, ofs);
+// size will be (width=10,height=10) and the ofs will be (x=1, y=5)
+\end{lstlisting}
+          
+      As in the case of whole matrices, if you need a deep copy, use \texttt{clone()} method
+      of the extracted sub-matrices.
+          
+\item by making a header for user-allocated-data. It can be useful for
+    \begin{enumerate}
+        \item processing "foreign" data using OpenCV (e.g. when you implement
+        a DirectShow filter or a processing module for gstreamer etc.), e.g.
+            
+\begin{lstlisting}
+void process_video_frame(const unsigned char* pixels,
+                         int width, int height, int step)
+{
+    cv::Mat img(height, width, CV_8UC3, pixels, step);
+    cv::GaussianBlur(img, img, cv::Size(7,7), 1.5, 1.5);
+}
+\end{lstlisting}
+            
+        \item for quick initialization of small matrices and/or super-fast element access
+\begin{lstlisting}
+double m[3][3] = {{a, b, c}, {d, e, f}, {g, h, i}};
+cv::Mat M = cv::Mat(3, 3, CV_64F, m).inv();
+\end{lstlisting}
+        \end{enumerate}
+        
+        partial yet very common cases of this "user-allocated data" case are conversions
+        from \cross{CvMat} and \cross{IplImage} to \texttt{Mat}. For this purpose there are special constructors
+        taking pointers to \texttt{CvMat} or \texttt{IplImage} and the optional
+        flag indicating whether to copy the data or not.
+        
+        Backward conversion from \texttt{Mat} to \texttt{CvMat} or \texttt{IplImage} is provided via cast operators
+        \texttt{Mat::operator CvMat() const} an \texttt{Mat::operator IplImage()}.
+        The operators do \emph{not} copy the data.
+        
+\begin{lstlisting}
+IplImage* img = cvLoadImage("greatwave.jpg", 1);
+Mat mtx(img); // convert IplImage* -> cv::Mat
+CvMat oldmat = mtx; // convert cv::Mat -> CvMat
+CV_Assert(oldmat.cols == img->width && oldmat.rows == img->height &&
+    oldmat.data.ptr == (uchar*)img->imageData && oldmat.step == img->widthStep);
+\end{lstlisting}
+        
+\item by using MATLAB-style matrix initializers, \texttt{zeros(), ones(), eye()}, e.g.:
+
+\begin{lstlisting}
+// create a double-precision identity martix and add it to M.
+M += Mat::eye(M.rows, M.cols, CV_64F);
+\end{lstlisting}
+
+\item by using comma-separated initializer:
+\begin{lstlisting}
+// create 3x3 double-precision identity matrix
+Mat M = (Mat_<double>(3,3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
+\end{lstlisting}
+
+here we first call constructor of \texttt{Mat\_} class (that we describe further) with the proper matrix, and then we just put \texttt{<<} operator followed by comma-separated values that can be constants, variables, expressions etc. Also, note the extra parentheses that are needed to avoid compiler errors.
+        
+\end{itemize}
+
+Once matrix is created, it will be automatically managed by using reference-counting mechanism (unless the matrix header is built on top of user-allocated data, in which case you should handle the data by yourself).
+The matrix data will be deallocated when no one points to it; if you want to release the data pointed by a matrix header before the matrix destructor is called, use \texttt{Mat::release()}.
+
+The next important thing to learn about the matrix class is element access. Here is how the matrix is stored. The elements are stored in row-major order (row by row). The \texttt{Mat::data} member points to the first element of the first row, \texttt{Mat::rows} contains the number of matrix rows and \texttt{Mat::cols} -- the number of matrix columns. There is yet another member, called \texttt{Mat::step} that is used to actually compute address of a matrix element. The \texttt{Mat::step} is needed because the matrix can be a part of another matrix or because there can some padding space in the end of each row for a proper alignment.
+%\includegraphics[width=1.0\textwidth]{pics/roi.png}
+
+Given these parameters, address of the matrix element $M_{ij}$ is computed as following:
+
+
+\texttt{addr($M_{ij}$)=M.data + M.step*i + j*M.elemSize()}
+
+
+if you know the matrix element type, e.g. it is \texttt{float}, then you can use \texttt{at<>()} method:
+
+
+\texttt{addr($M_{ij}$)=\&M.at<float>(i,j)}
+
+(where \& is used to convert the reference returned by \texttt{at} to a pointer).
+if you need to process a whole row of matrix, the most efficient way is to get the pointer to the row first, and then just use plain C operator \texttt{[]}:
+
+\begin{lstlisting}
+// compute sum of positive matrix elements
+// (assuming that M is double-precision matrix)
+double sum=0;
+for(int i = 0; i < M.rows; i++)
+{
+    const double* Mi = M.ptr<double>(i);
+    for(int j = 0; j < M.cols; j++)
+        sum += std::max(Mi[j], 0.);
+}
+\end{lstlisting}
+
+Some operations, like the above one, do not actually depend on the matrix shape, they just process elements of a matrix one by one (or elements from multiple matrices that are sitting in the same place, e.g. matrix addition). Such operations are called element-wise and it makes sense to check whether all the input/output matrices are continuous, i.e. have no gaps in the end of each row, and if yes, process them as a single long row:
+
+\begin{lstlisting}
+// compute sum of positive matrix elements, optimized variant
+double sum=0;
+int cols = M.cols, rows = M.rows;
+if(M.isContinuous())
+{
+    cols *= rows;
+    rows = 1;
+}
+for(int i = 0; i < rows; i++)
+{
+    const double* Mi = M.ptr<double>(i);
+    for(int j = 0; j < cols; j++)
+        sum += std::max(Mi[j], 0.);
+}
+\end{lstlisting}
+in the case of continuous matrix the outer loop body will be executed just once, so the overhead will be smaller, which will be especially noticeable in the case of small matrices.
+
+Finally, there are STL-style iterators that are smart enough to skip gaps between successive rows:
+\begin{lstlisting}
+// compute sum of positive matrix elements, iterator-based variant
+double sum=0;
+MatConstIterator_<double> it = M.begin<double>(), it_end = M.end<double>();
+for(; it != it_end; ++it)
+    sum += std::max(*it, 0.);
+\end{lstlisting}
+
+The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including \texttt{std::sort()}.
+
+\subsection{Matrix Expressions}
+
+This is a list of implemented matrix operations that can be combined in arbitrary complex expressions
+(here \emph{A}, \emph{B} stand for matrices (\texttt{Mat}), \emph{s} for a scalar (\texttt{Scalar}),
+\emph{$\alpha$} for a real-valued scalar (\texttt{double})):
+
+\begin{itemize}
+    \item addition, subtraction, negation: $\texttt{A}\pm \texttt{B},\;\texttt{A}\pm \texttt{s},\;\texttt{s}\pm \texttt{A},\;-\texttt{A}$
+    \item scaling: \texttt{A*$\alpha$, A/$\alpha$}
+    \item per-element multiplication and division: \texttt{A.mul(B), A/B, $\alpha$/A}
+    \item matrix multiplication: \texttt{A*B}
+    \item transposition: \texttt{A.t() $\sim A^t$}
+    \item matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
+        \texttt{A.inv([method]) $\sim A^{-1}$}, \texttt{A.inv([method])*B $\sim X:\,AX=B$}
+    \item comparison: $\texttt{A}\gtreqqless \texttt{B},\;\texttt{A} \ne \texttt{B},\;\texttt{A}\gtreqqless \alpha,\; \texttt{A} \ne \alpha$.
+          The result of comparison is 8-bit single channel mask, which elements are set to 255
+          (if the particular element or pair of elements satisfy the condition) and 0 otherwise.
+    \item bitwise logical operations: \texttt{A \& B, A \& s, A | B, A | s, A \^ B, A \^ s, \textasciitilde A}
+    \item element-wise minimum and maximum: \texttt{min(A, B), min(A, $\alpha$), max(A, B), max(A, $\alpha$)}
+    \item element-wise absolute value: \texttt{abs(A)}
+    \item cross-product, dot-product: \texttt{A.cross(B), A.dot(B)}
+    \item any function of matrix or matrices and scalars that returns a matrix or a scalar, such as
+          \cvCppCross{norm}, \cvCppCross{mean}, \cvCppCross{sum}, \cvCppCross{countNonZero}, \cvCppCross{trace},
+          \cvCppCross{determinant}, \cvCppCross{repeat} etc.
+    \item matrix initializers (\texttt{eye(), zeros(), ones()}), matrix comma-separated initializers,
+          matrix constructors and operators that extract sub-matrices (see \cross{Mat} description).
+    \item \verb"Mat_<destination_type>()" constructors to cast the result to the proper type.
+\end{itemize}
+Note, however, that comma-separated initializers and probably some other operations may require additional explicit \texttt{Mat()} or \verb"Mat_<T>()" constuctor calls to resolve possible ambiguity.
+
+Below is the formal description of the \texttt{Mat} methods.
+
+\cvCppFunc{Mat::Mat}
+Various matrix constructors
+
+\cvdefCpp{
+(1) Mat::Mat();\newline
+(2) Mat::Mat(int rows, int cols, int type);\newline
+(3) Mat::Mat(Size size, int type);\newline
+(4) Mat::Mat(int rows, int cols, int type, const Scalar\& s);\newline
+(5) Mat::Mat(Size size, int type, const Scalar\& s);\newline
+(6) Mat::Mat(const Mat\& m);\newline
+(7) Mat::Mat(int rows, int cols, int type, void* data, size\_t step=AUTO\_STEP);\newline
+(8) Mat::Mat(Size size, int type, void* data, size\_t step=AUTO\_STEP);\newline
+(9) Mat::Mat(const Mat\& m, const Range\& rowRange, const Range\& colRange);\newline
+(10) Mat::Mat(const Mat\& m, const Rect\& roi);\newline
+(11) Mat::Mat(const CvMat* m, bool copyData=false);\newline
+(12) Mat::Mat(const IplImage* img, bool copyData=false);\newline
+(13) template<typename \_Tp> explicit Mat::Mat(const vector<\_Tp>\& vec, bool copyData=false);\newline
+(14) Mat::Mat(const MatExpr\_Base\& expr);
+}
+\begin{description}
+\cvarg{rows}{The number of matrix rows}
+\cvarg{cols}{The number of matrix columns}
+\cvarg{size}{The matrix size: \texttt{Size(cols, rows)}. Note that in the \texttt{Size()} constructor the number of rows and the number of columns go in the reverse order.}
+\cvarg{type}{The matrix type, use \texttt{CV\_8UC1, ..., CV\_64FC4} to create 1-4 channel matrices, or \texttt{CV\_8UC(n), ..., CV\_64FC(n)} to create multi-channel (up to \texttt{CV\_MAX\_CN} channels) matrices}
+\cvarg{s}{The optional value to initialize each matrix element with. To set all the matrix elements to the particular value after the construction, use the assignment operator \texttt{Mat::operator=(const Scalar\& value)}.}
+\cvarg{data}{Pointer to the user data. Matrix constructors that take \texttt{data} and \texttt{step} parameters do not allocate matrix data. Instead, they just initialize the matrix header that points to the specified data, i.e. no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, user should take care of it.}
+\cvarg{step}{The \texttt{data} buddy. This optional parameter specifies the number of bytes that each matrix row occupies. The value should include the padding bytes in the end of each row, if any. If the parameter is missing (set to \texttt{cv::AUTO\_STEP}), no padding is assumed and the actual step is calculated as \texttt{cols*elemSize()}, see \cross{Mat::elemSize}().}
+\cvarg{m}{The matrix that (in whole, a partly) is assigned to the constructed matrix. No data is copied by these constructors. Instead, the header pointing to \texttt{m} data, or its rectangular submatrix, is constructed and the associated with it reference counter, if any, is incremented. That is, by modifying the newly constructed matrix, you will also modify the corresponding elements of \texttt{m}.}
+\cvarg{img}{Pointer to the old-style \texttt{IplImage} image structure. By default, the data is shared between the original image and the new matrix, but when \texttt{copyData} is set, the full copy of the image data is created.}
+\cvarg{vec}{STL vector, which elements will form the matrix. The matrix will have a single column and the number of rows equal to the number of vector elements. Type of the matrix will match the type of vector elements. The constructor can handle arbitrary types, for which there is properly declared \cross{DataType}, i.e. the vector elements must be primitive numbers or uni-type numerical tuples of numbers. Mixed-type structures are not supported, of course. Note that the corresponding constructor is explicit, meaning that STL vectors are not automatically converted to \texttt{Mat} instances, you should write \texttt{Mat(vec)} explicitly. Another obvious note: unless you copied the data into the matrix (\texttt{copyData=true}), no new elements should be added to the vector, because it can potentially yield vector data reallocation, and thus the matrix data pointer will become invalid.}
+\cvarg{copyData}{Specifies, whether the underlying data of the STL vector, or the old-style \texttt{CvMat} or \texttt{IplImage} should be copied to (true) or shared with (false) the newly constructed matrix. When the data is copied, the allocated buffer will be managed using \texttt{Mat}'s reference counting mechanism. While when the data is shared, the reference counter will be NULL, and you should not deallocate the data until the matrix is not destructed.}
+\cvarg{rowRange}{The range of the \texttt{m}'s rows to take. As usual, the range start is inclusive and the range end is exclusive. Use \texttt{Range::all()} to take all the rows.}
+\cvarg{colRange}{The range of the \texttt{m}'s columns to take. Use \texttt{Range::all()} to take all the columns.}
+\cvarg{expr}{Matrix expression. See \cross{Matrix Expressions}.}
+\end{description}
+
+These are various constructors that form a matrix. As noticed in the
+\hyperref{AutomaticMemoryManagement2}{introduction}, often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is dereferenced, or be allocated with \cross{Mat::create}.
+
+\cvCppFunc{Mat::Mat}index{cv::Mat::\textasciitilde Mat}label{cppfunc.Mat::destructor}
+Matrix destructor
+
+\cvdefCpp{
+Mat::\textasciitilde Mat();
+}
+
+The matrix destructor calls \cross{Mat::release}.
+
+\cvCppFunc{Mat::operator =}
+Matrix assignment operators
+
+\cvdefCpp{
+Mat\& Mat::operator = (const Mat\& m);\newline
+Mat\& Mat::operator = (const MatExpr\_Base\& expr);\newline
+Mat\& operator = (const Scalar\& s);
+}
+\begin{description}
+\cvarg{m}{The assigned, right-hand-side matrix. Matrix assignment is O(1) operation, that is, no data is copied. Instead, the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is dereferenced via \cross{Mat::release}.}
+\cvarg{expr}{The assigned matrix expression object. As opposite to the first form of assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example, \texttt{C=A+B} is expanded to \texttt{cv::add(A, B, C)}, and \cvCppCross{add} will take care of automatic \texttt{C} reallocation.}
+\cvarg{s}{The scalar, assigned to each matrix element. The matrix size or type is not changed.}
+\end{description}
+
+These are the available assignment operators, and they all are very different, so, please, look at the operator parameters description. 
+
+\cvCppFunc{Mat::operator MatExpr}\index{cv::Mat::operator MatExpr\_}\label{cppfunc.Mat::operator MatExpr}
+Mat-to-MatExpr cast operator
+
+\cvdefCpp{
+Mat::operator MatExpr\_<Mat, Mat>() const;
+}
+
+The cast operator should not be called explicitly. It is used internally by the \cross{Matrix Expressions} engine.
+
+\cvCppFunc{Mat::row}
+Makes a matrix header for the specified matrix row
+
+\cvdefCpp{
+Mat Mat::row(int i) const;
+}
+\begin{description}
+\cvarg{i}{the 0-based row index}
+\end{description}
+
+The method makes a new header for the specified matrix row and returns it. This is O(1) operation, regardless of the matrix size. The underlying data of the new matrix will be shared with the original matrix. Here is the example of one of the classical basic matrix processing operations, axpy, used by LU and many other algorithms:
+
+\begin{lstlisting}
+inline void matrix_axpy(Mat& A, int i, int j, double alpha)
+{
+    A.row(i) += A.row(j)*alpha;
+}
+\end{lstlisting}
+
+\textbf{Important note}. In the current implementation the following code will not work as expected:
+\begin{lstlisting}
+Mat A;
+...
+A.row(i) = A.row(j); // will not work
+\end{lstlisting}
+
+This is because \texttt{A.row(i)} forms a temporary header, which is further assigned another header. Remember, each of these operations is O(1), i.e. no data is copied. Thus, the above assignment will have absolutely no effect, while you may have expected j-th row being copied to i-th row. To achieve that, you should either turn this simple assignment into an expression, or use \cross{Mat::copyTo} method:
+
+\begin{lstlisting}
+Mat A;
+...
+// works, but looks a bit obscure.
+A.row(i) = A.row(j) + 0;
+
+// this is a bit longer, but the recommended method.
+Mat Ai = A.row(i); M.row(j).copyTo(Ai);
+\end{lstlisting}
+
+
+\cvCppFunc{Mat::col}
+Makes a matrix header for the specified matrix column
+
+\cvdefCpp{
+Mat Mat::col(int j) const;
+}
+\begin{description}
+\cvarg{j}{the 0-based column index}
+\end{description}
+
+The method makes a new header for the specified matrix column and returns it. This is O(1) operation, regardless of the matrix size. The underlying data of the new matrix will be shared with the original matrix. See also \cross{Mat::row} description.
+
+
+\cvCppFunc{Mat::rowRange}
+Makes a matrix header for the specified row span
+
+\cvdefCpp{
+Mat Mat::rowRange(int startrow, int endrow) const;\newline
+Mat Mat::rowRange(const Range\& r) const;
+}
+\begin{description}
+\cvarg{startrow}{the 0-based start index of the row span}
+\cvarg{endrow}{the 0-based ending index of the row span}
+\cvarg{r}{The \cvCppCross{Range} structure containing both the start and the end indices}
+\end{description}
+
+The method makes a new header for the specified row span of the matrix. Similarly to \cvCppCross{Mat::row} and \cvCppCross{Mat::col}, this is O(1) operation.
+
+
+\cvCppFunc{Mat::colRange}
+Makes a matrix header for the specified row span
+
+\cvdefCpp{
+Mat Mat::colRange(int startcol, int endcol) const;\newline
+Mat Mat::colRange(const Range\& r) const;
+}
+\begin{description}
+\cvarg{startcol}{the 0-based start index of the column span}
+\cvarg{endcol}{the 0-based ending index of the column span}
+\cvarg{r}{The \cvCppCross{Range} structure containing both the start and the end indices}
+\end{description}
+
+The method makes a new header for the specified column span of the matrix. Similarly to \cvCppCross{Mat::row} and \cvCppCross{Mat::col}, this is O(1) operation.
+
+
+\cvCppFunc{Mat::diag}
+Extracts diagonal from a matrix, or creates a diagonal matrix.
+
+\cvdefCpp{
+Mat Mat::diag(int d) const;
+static Mat Mat::diag(const Mat\& matD);
+}
+\begin{description}
+\cvarg{d}{index of the diagonal, with the following meaning:}
+\begin{description}
+    \cvarg{d=0}{the main diagonal}
+    \cvarg{d>0}{a diagonal from the lower half, e.g. \texttt{d=1} means the diagonal immediately below the main one}
+    \cvarg{d<0}{a diagonal from the upper half, e.g. \texttt{d=1} means the diagonal immediately above the main one}
+\end{description}
+\cvarg{matD}{single-column matrix that will form the diagonal matrix.}
+\end{description}
+
+The method makes a new header for the specified matrix diagonal. The new matrix will be represented as a single-column matrix. Similarly to \cvCppCross{Mat::row} and \cvCppCross{Mat::col}, this is O(1) operation.
+
+
+\cvCppFunc{Mat::clone}
+Creates full copy of the matrix and the underlying data.
+
+\cvdefCpp{
+Mat Mat::clone() const;
+}
+
+The method creates full copy of the matrix. The original matrix \texttt{step} is not taken into the account, however. The matrix copy will be a continuous matrix occupying \texttt{cols*rows*elemSize()} bytes.
+
+
+\cvCppFunc{Mat::copyTo}
+Copies the matrix to another one.
+
+\cvdefCpp{
+void Mat::copyTo( Mat\& m ) const;
+void Mat::copyTo( Mat\& m, const Mat\& mask ) const;
+}
+\begin{description}
+\cvarg{m}{The destination matrix. If it does not have a proper size or type before the operation, it will be reallocated}
+\cvarg{mask}{The operation mask. Its non-zero elements indicate, which matrix elements need to be copied}
+\end{description}
+
+The method copies the matrix data to another matrix. Before copying the data, the method invokes
+
+\begin{lstlisting}
+m.create(this->size(), this->type);
+\end{lstlisting}
+
+so that the destination matrix is reallocated if needed. While \texttt{m.copyTo(m);} will work as expected, i.e. will have no effect, the function does not handle the case of a partial overlap between the source and the destination matrices. 
+
+When the operation mask is specified, and the \texttt{Mat::create} call shown above reallocated the matrix, the newly allocated matrix is initialized with all 0's before copying the data.
+
+
+\cvCppFunc{Mat::copyTo}
+Converts matrix to another datatype with optional scaling.
+
+\cvdefCpp{
+void Mat::convertTo( Mat\& m, int rtype, double alpha=1, double beta=0 ) const;
+}
+\begin{description}
+\cvarg{m}{The destination matrix. If it does not have a proper size or type before the operation, it will be reallocated}
+\cvarg{rtype}{The desired destination matrix type, or rather, the depth (since the number of channels will be the same with the source one). If \texttt{rtype} is negative, the destination matrix will have the same type as the source.}
+\cvarg{alpha}{The optional scale factor}
+\cvarg{beta}{The optional delta, added to the scaled values.}
+\end{description}
+
+The method converts source pixel values to the target datatype. \texttt{saturate\_cast<>} is applied in the end to avoid possible overflows:
+
+\[
+m(x,y) = saturate\_cast<rType>(\alpha (*this)(x,y) + \beta)
+\]
+
+\cvCppFunc{Mat::assignTo}
+Functional form of convertTo
+
+\cvdefCpp{
+void Mat::assignTo( Mat\& m, int type=-1 ) const;
+}
+\begin{description}
+\cvarg{m}{The destination matrix}
+\cvarg{type}{The desired destination matrix depth (or -1 if it should be the same as the source one).}
+\end{description}
+
+This is internal-use method called by the \cross{Matrix Expressions} engine.
+
+\cvCppFunc{Mat::setTo}
+Sets all or some of the matrix elements to the specified value.
+
+\cvdefCpp{
+Mat\& Mat::setTo(const Scalar\& s, const Mat\& mask=Mat());
+}
+\begin{description}
+\cvarg{s}{Assigned scalar, which is converted to the actual matrix type}
+\cvarg{mask}{The operation mask of the same size as \texttt{*this}}
+\end{description}
+
+This is the advanced variant of \texttt{Mat::operator=(const Scalar\& s)} operator.
+
+\cvCppFunc{reshape}
+Changes the matrix's shape and/or the number of channels without copying the data.
+
+\cvdefCpp{
+Mat Mat::reshape(int cn, int rows=0) const;
+}
+
+\begin{description}
+\cvarg{cn}{The new number of channels. If the parameter is 0, the number of channels remains the same.}
+\cvarg{rows}{The new number of rows. If the parameter is 0, the number of rows remains the same.}
+\end{description}
+
+The method makes a new matrix header for \texttt{*this} elements. The new matrix may have different size and/or different number of channels. Any combination is possible, as long as:
+\begin{enumerate}
+\item No extra elements is included into the new matrix and no elements are excluded. Consequently,
+     the product \texttt{rows*cols*channels()} must stay the same after the transformation.
+\item No data is copied, i.e. this is O(1) operation. Consequently, if you change the number of rows, or the operation changes elements' row indices in some other way, the matrix must be continuous. See \cvCppCross{Mat::isContinuous}.
+\end{enumerate}
+
+Here is some small example. Assuming, there is a set of 3D points that are stored as STL vector, and you want to represent the points as \texttt{3xN} matrix. Here is how it can be done:
+
+\begin{lstlisting}
+std::vector<cv::Point3f> vec;
+...
+
+Mat pointMat = Mat(vec). // convert vector to Mat, O(1) operation
+                  reshape(1). // make Nx3 1-channel matrix out of Nx1 3-channel.
+                              // Also, an O(1) operation
+                     t(); // finally, transpose the Nx3 matrix.
+                          // This involves copying of all the elements
+\end{lstlisting} 
+
+
+\cvCppFunc{Mat::t()}
+Transposes the matrix
+
+\cvdefCpp{
+MatExpr\_<MatExpr\_Op2\_<Mat, double, Mat, MatOp\_T\_<Mat> >, Mat>
+Mat::t() const;} 
+
+The method performs matrix transposition by means of matrix expressions.
+That is, the method returns a temporary "matrix transposition" object that can be further used as a part of more complex matrix expression or be assigned to a matrix:
+
+\begin{lstlisting}
+Mat A1 = A + Mat::eye(A.size(), A.type)*lambda;
+Mat C = A1.t()*A1; // compute (A + lambda*I)^t * (A + lamda*I)
+\end{lstlisting} 
+
+\cvCppFunc{Mat::inv}
+Inverses the matrix
+
+\cvdefCpp{
+MatExpr\_<MatExpr\_Op2\_<Mat, int, Mat, MatOp\_Inv\_<Mat> >, Mat>
+Mat::inv(int method=DECOMP\_LU) const;
+}
+
+\begin{description}
+\cvarg{method}{The matrix inversion method, one of}
+\begin{description}
+    \cvarg{DECOMP\_LU}{LU decomposition. The matrix must be non-singular}
+    \cvarg{DECOMP\_CHOLESKY}{Cholesky $LL^T$ decomposition, for symmetrical positively defined matrices only. About twice faster than LU on big matrices.}
+    \cvarg{DECOMP\_SVD}{SVD decomposition. The matrix can be a singular or even non-square, then the pseudo-inverse is computed}
+\end{description}
+\end{description}
+
+The method performs matrix inversion by means of matrix expressions, i.e. a temporary "matrix inversion" object is returned by the method, and can further be used as a part of more complex matrix expression or be assigned to a matrix.
+
+\cvCppFunc{Mat::mul}
+Performs element-wise multiplication or division of the two matrices
+
+\cvdefCpp{
+MatExpr\_<...MatOp\_MulDiv\_<>...>\newline
+Mat::mul(const Mat\& m, double scale=1) const;\newline
+MatExpr\_<...MatOp\_MulDiv\_<>...>\newline
+Mat::mul(const MatExpr\_<...MatOp\_Scale\_<>...>\& m, double scale=1) const;\newline
+MatExpr\_<...MatOp\_MulDiv\_<>...>\newline
+Mat::mul(const MatExpr\_<...MatOp\_DivRS\_<>...>\& m, double scale=1) const;
+}
+
+\begin{description}
+\cvarg{m}{Another matrix, of the same type and the same size as \texttt{*this}, or a scaled matrix, or a scalar divided by a matrix (i.e. a matrix where all the elements are scaled reciprocals of some other matrix)}
+\cvarg{scale}{The optional scale factor}
+\end{description}
+
+The method returns a temporary object encoding per-element matrix multiply or divide operation, with optional scale. Note that this is not a matrix multiplication, corresponding to the simpler "*" operator.
+
+Here is the example that will automatically invoke the third form of the method:
+
+\begin{lstlisting}
+Mat C = A.mul(5/B); // equivalent to divide(A, B, C, 5)
+\end{lstlisting}
+
+\cvCppFunc{Mat::cross}
+Computes cross-product of two 3-element vectors
+
+\cvdefCpp{
+Mat Mat::cross(const Mat\& m) const;
+}
+\begin{description}
+\cvarg{m}{Another cross-product operand}
+\end{description}
+
+The method computes cross-product of the two 3-element vectors. The vectors must be 3-elements floating-point vectors of the same shape and the same size. The result will be another 3-element vector of the same shape and the same type as operands.
+
+\cvCppFunc{Mat::dot}
+Computes dot-product of two vectors
+
+\cvdefCpp{
+double Mat::dot(const Mat\& m) const;
+}
+\begin{description}
+\cvarg{m}{Another dot-product operand.}
+\end{description}
+
+The method computes dot-product of the two matrices. If the matrices are not single-column or single-row vectors, the top-to-bottom left-to-right scan ordering is used to treat them as 1D vectors. The vectors must have the same size and the same type. If the matrices have more than one channel, the dot products from all the channels are summed together. 
+
+\cvCppFunc{Mat::zeros}
+Returns zero matrix of the specified size and type
+
+\cvdefCpp{
+static MatExpr\_Initializer Mat::zeros(int rows, int cols, int type);
+static MatExpr\_Initializer Mat::zeros(Size size, int type);
+}
+\begin{description}
+\cvarg{rows}{The number of rows}
+\cvarg{cols}{The number of columns}
+\cvarg{size}{Alternative matrix size specification: \texttt{Size(cols, rows)}}
+\cvarg{type}{The created matrix type}
+\end{description}
+
+The method returns Matlab-style zero matrix initializer. It can be used to quickly form a constant matrix and use it as a function parameter, as a part of matrix expression, or as a matrix initializer.
+
+\begin{lstlisting}
+Mat A;
+A = Mat::zeros(3, 3, CV_32F);
+\end{lstlisting}
+
+Note that in the above sample a new matrix will be allocated only if \texttt{A} is not 3x3 floating-point matrix, otherwise the existing matrix \texttt{A} will be filled with 0's.
+
+
+\cvCppFunc{Mat::ones}
+Returns matrix of all 1's of the specified size and type
+
+\cvdefCpp{
+static MatExpr\_Initializer Mat::ones(int rows, int cols, int type);
+static MatExpr\_Initializer Mat::ones(Size size, int type);
+}
+\begin{description}
+\cvarg{rows}{The number of rows}
+\cvarg{cols}{The number of columns}
+\cvarg{size}{Alternative matrix size specification: \texttt{Size(cols, rows)}}
+\cvarg{type}{The created matrix type}
+\end{description}
+
+The method returns Matlab-style ones' matrix initializer, similarly to \cvCppCross{Mat::zeros}. Note that using this method you can initialize a matrix with arbitrary value, using the following Matlab idiom:
+
+\begin{lstlisting}
+Mat A = Mat::ones(100, 100, CV_8U)*3; // make 100x100 matrix filled with 3.
+\end{lstlisting}
+
+The above operation will not form 100x100 matrix of ones and then multiply it by 3. Instead, it will just remember the scale factor (3 in this case) and use it when expanding the matrix initializer.
+
+\cvCppFunc{Mat::eye}
+Returns matrix of all 1's of the specified size and type
+
+\cvdefCpp{
+static MatExpr\_Initializer Mat::eye(int rows, int cols, int type);
+static MatExpr\_Initializer Mat::eye(Size size, int type);
+}
+\begin{description}
+\cvarg{rows}{The number of rows}
+\cvarg{cols}{The number of columns}
+\cvarg{size}{Alternative matrix size specification: \texttt{Size(cols, rows)}}
+\cvarg{type}{The created matrix type}
+\end{description}
+
+The method returns Matlab-style identity matrix initializer, similarly to \cvCppCross{Mat::zeros}. Note that using this method you can initialize a matrix with a scaled identity matrix, by multiplying the initializer by the needed scale factor:
+
+\begin{lstlisting}
+// make a 4x4 diagonal matrix with 0.1's on the diagonal.
+Mat A = Mat::eye(4, 4, CV_32F)*0.1;
+\end{lstlisting}
+
+and this is also done very efficiently in O(1) time.
+
+\cvCppFunc{Mat::create}
+Allocates new matrix data if needed.
+
+\cvdefCpp{
+void Mat::create(int rows, int cols, int type);
+void create(Size size, int type);
+}
+\begin{description}
+\cvarg{rows}{The new number of rows}
+\cvarg{cols}{The new number of columns}
+\cvarg{size}{Alternative new matrix size specification: \texttt{Size(cols, rows)}}
+\cvarg{type}{The new matrix type}
+\end{description}
+
+This is one of the key \texttt{Mat} methods. Most new-style OpenCV functions and methods that produce matrices call this method for each output matrix. The method algorithm is the following:
+
+\begin{enumerate}
+\item if the current matrix size and the type match the new ones, return immediately.
+\item otherwise, dereference the previous data by calling \cvCppCross{Mat::release}
+\item initialize the new header
+\item allocate the new data of \texttt{rows*cols*elemSize()} bytes
+\item allocate the new associated with the data reference counter and set it to 1.
+\end{enumerate}
+
+Such a scheme makes the memory management robust and efficient at the same time, and also saves quite a bit of typing for the user, i.e. usually there is no need to explicitly allocate output matrices.
+
+\cvCppFunc{Mat::addref}
+Increments the reference counter
+
+\cvdefCpp{
+void Mat::addref();
+}
+
+The method increments the reference counter, associated with the matrix data. If the matrix header points to an external data (see \cvCppCross{Mat::Mat}), the reference counter is NULL, and the method has no effect in this case. Normally, the method should not be called explicitly, to avoid memory leaks. It is called implicitly by the matrix assignment operator. The reference counter increment is the atomic operation on the platforms that support it, thus it is safe to operate on the same matrices asynchronously in different threads.
+
+
+\cvCppFunc{Mat::release}
+Decrements the reference counter and deallocates the matrix if needed
+
+\cvdefCpp{
+void Mat::release();
+}
+
+The method decrements the reference counter, associated with the matrix data. When the reference counter reaches 0, the matrix data is deallocated and the data and the reference counter pointers are set to NULL's. If the matrix header points to an external data (see \cvCppCross{Mat::Mat}), the reference counter is NULL, and the method has no effect in this case. 
+
+This method can be called manually to force the matrix data deallocation. But since this method is automatically called in the destructor, or by any other method that changes the data pointer, it is usually not needed. The reference counter decrement and check for 0 is the atomic operation on the platforms that support it, thus it is safe to operate on the same matrices asynchronously in different threads.
+
+\cvCppFunc{Mat::locateROI}
+Locates matrix header within a parent matrix
+
+\cvdefCpp{
+void Mat::locateROI( Size\& wholeSize, Point\& ofs ) const;
+}
+\begin{description}
+\cvarg{wholeSize}{The output parameter that will contain size of the whole matrix, which \texttt{*this} is a part of.}
+\cvarg{ofs}{The output parameter that will contain offset of \texttt{*this} inside the whole matrix}
+\end{description}
+
+After you extracted a submatrix from a matrix using \cvCppCross{Mat::row}, \cvCppCross{Mat::col}, \cvCppCross{Mat::rowRange}, \cvCppCross{Mat::colRange} etc., the result submatrix will point just to the part of the original big matrix. However, each submatrix contains some information (represented by \texttt{datastart} and \texttt{dataend} fields), using which it is possible to reconstruct the original matrix size and the position of the extracted submatrix within the original matrix. The method \texttt{locateROI} does exactly that.
+
+\cvCppFunc{Mat::adjustROI}
+Adjust submatrix size and position within the parent matrix
+
+\cvdefCpp{
+Mat\& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright );
+}
+\begin{description}
+\cvarg{dtop}{The shift of the top submatrix boundary upwards}
+\cvarg{dbottom}{The shift of the bottom submatrix boundary downwards}
+\cvarg{dleft}{The shift of the left submatrix boundary to the left}
+\cvarg{dright}{The shift of the right submatrix boundary to the right}
+\end{description}
+
+The method is complimentary to the \cvCppCross{Mat::locateROI}. Indeed, the typical use of these functions is to determine the submatrix position within the parent matrix and then shift the position somehow. Typically it can be needed for filtering operations, when pixels outside of the ROI should be taken into account. When all the method's parameters are positive, it means that the ROI needs to grow in all directions by the specified amount, i.e.
+
+\begin{lstlisting}
+A.adjustROI(2, 2, 2, 2);
+\end{lstlisting}
+
+increases the matrix size by 4 elements in each direction and shifts it by 2 elements to the left and 2 elements up, which brings in all the necessary pixels for the filtering with 5x5 kernel.
+
+It's user responsibility to make sure that adjustROI does not cross the parent matrix boundary. If it does, the function will signal an error.
+
+The function is used internally by the OpenCV filtering functions, like \cvCppCross{filter2D}, morphological operations etc.
+
+See also \cvCppCross{copyMakeBorder}.
+
+\cvCppFunc{Mat::operator()}
+Extracts a rectangular submatrix
+
+\cvdefCpp{
+Mat Mat::operator()( Range rowRange, Range colRange ) const;\newline
+Mat Mat::operator()( const Rect\& roi ) const;
+}
+\begin{description}
+\cvarg{rowRange}{The start and the end row of the extracted submatrix. The upper boundary is not included. To select all the rows, use \texttt{Range::all()}}
+\cvarg{colRange}{The start and the end column of the extracted submatrix. The upper boundary is not included. To select all the columns, use \texttt{Range::all()}}
+\cvarg{roi}{The extracted submatrix specified as a rectangle}
+\end{description}
+
+The operators make a new header for the specified submatrix of \texttt{*this}. They are the most generalized forms of \cvCppCross{Mat::row}, \cvCppCross{Mat::col}, \cvCppCross{Mat::rowRange} and \cvCppCross{Mat::colRange}. For example, \texttt{A(Range(0, 10), Range::all())} is equivalent to \texttt{A.rowRange(0, 10)}. Similarly to all of the above, the operators are O(1) operations, i.e. no matrix data is copied.
+
+\cvCppFunc{Mat::operator CvMat}
+Creates CvMat header for the matrix
+
+\cvdefCpp{
+Mat::operator CvMat() const;
+}
+
+The operator makes CvMat header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation, thus you should make sure than the original matrix is not deallocated while the \texttt{CvMat} header is used. The operator is useful for intermixing the new and the old OpenCV API's, e.g:
+
+\begin{lstlisting}
+Mat img(Size(320, 240), CV_8UC3);
+...
+
+CvMat cvimg = img;
+my_old_cv_func( &cvimg, ...);
+\end{lstlisting}
+
+where \texttt{my\_old\_cv\_func} is some functions written to work with OpenCV 1.x data structures.
+
+
+\cvCppFunc{Mat::operator IplImage}
+Creates IplImage header for the matrix
+
+\cvdefCpp{
+Mat::operator IplImage() const;
+}
+
+The operator makes IplImage header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the \texttt{IplImage} header is used. Similarly to \texttt{Mat::operator CvMat}, the operator is useful for intermixing the new and the old OpenCV API's.
+
+
+\cvCppFunc{Mat::isContinuous}
+Reports whether the matrix is continuous or not
+
+\cvdefCpp{
+bool Mat::isContinuous() const;
+}
+
+The method returns true if the matrix elements are stored continuously, i.e. without gaps in the end of each row, and false otherwise. Obviously, \texttt{1x1} or \texttt{1xN} matrices are always continuous. Matrices created with \cvCppCross{Mat::create} are always continuous, but if you extract a part of the matrix using \cvCppCross{Mat::col}, \cvCppCross{Mat::diag} etc. or constructed a matrix header for externally allocated data, such matrices may no longer have this property.
+
+The continuity flag is stored as a bit in \texttt{Mat::flags} field, and is computed automatically when you construct a matrix header, thus the continuity check is very fast operation, though it could be, in theory, done as following:
+
+\begin{lstlisting}
+// alternative implementation of Mat::isContinuous()
+bool myCheckMatContinuity(const Mat& m)
+{
+    //return (m.flags & Mat::CONTINUOUS_FLAG) != 0;
+    return m.rows == 1 || m.step == m.cols*m.elemSize();
+}
+\end{lstlisting}
+
+The method is used in a quite a few of OpenCV functions, and you are welcome to use it as well. The point is that element-wise operations (such as arithmetic and logical operations, math functions, alpha blending, color space transformations etc.) do not depend on the image geometry, and thus, if all the input and all the output arrays are continuous, the functions can process them as very long single-row vectors. Here is the example of how alpha-blending function can be implemented.
+
+\begin{lstlisting}
+template<typename T>
+void alphaBlendRGBA(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    const float alpha_scale = (float)std::numeric_limits<T>::max(),
+                inv_scale = 1.f/alpha_scale;
+    
+    CV_Assert( src1.type() == src2.type() &&
+               src1.type() == CV_MAKETYPE(DataType<T>::depth, 4) &&
+               src1.size() == src2.size());
+    Size size = src1.size();
+    dst.create(size, src1.type());
+    
+    // here is the idiom: check the arrays for continuity and,
+    // if this is the case,
+    // treat the arrays as 1D vectors
+    if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
+    {
+        size.width *= size.height;
+        size.height = 1;
+    }
+    size.width *= 4;
+    
+    for( int i = 0; i < size.height; i++ )
+    {
+        // when the arrays are continuous,
+        // the outer loop is executed only once
+        const T* ptr1 = src1.ptr<T>(i);
+        const T* ptr2 = src2.ptr<T>(i);
+        T* dptr = dst.ptr<T>(i);
+        
+        for( int j = 0; j < size.width; j += 4 )
+        {
+            float alpha = ptr1[j+3]*inv_scale, beta = ptr2[j+3]*inv_scale;
+            dptr[j] = saturate_cast<T>(ptr1[j]*alpha + ptr2[j]*beta);
+            dptr[j+1] = saturate_cast<T>(ptr1[j+1]*alpha + ptr2[j+1]*beta);
+            dptr[j+2] = saturate_cast<T>(ptr1[j+2]*alpha + ptr2[j+2]*beta);
+            dptr[j+3] = saturate_cast<T>((1 - (1-alpha)*(1-beta))*alpha_scale);
+        }
+    }
+}
+\end{lstlisting}
+
+This trick, while being very simple, can boost performance of a simple element-operation by 10-20 percents, especially if the image is rather small and the operation is quite simple.
+
+Also, note that we use another OpenCV idiom in this function - we call \cvCppCross{Mat::create} for the destination array instead of checking that it already has the proper size and type. And while the newly allocated arrays are always continuous, we still check the destination array, because \cvCppCross{create} does not always allocate a new matrix.
+
+\cvCppFunc{Mat::elemSize}
+Returns matrix element size in bytes
+
+\cvdefCpp{
+size\_t Mat::elemSize() const;
+}
+
+The method returns the matrix element size in bytes. For example, if the matrix type is \texttt{CV\_16SC3}, the method will return \texttt{3*sizeof(short)} or 6.
+
+\cvCppFunc{Mat::elemSize1}
+Returns size of each matrix element channel in bytes
+
+\cvdefCpp{
+size\_t Mat::elemSize1() const;
+}
+
+The method returns the matrix element channel size in bytes, that is, it ignores the number of channels. For example, if the matrix type is \texttt{CV\_16SC3}, the method will return \texttt{sizeof(short)} or 2.
+
+\cvCppFunc{Mat::type}
+Returns matrix element type
+
+\cvdefCpp{
+int Mat::type() const;
+}
+
+The method returns the matrix element type, an id, compatible with the \texttt{CvMat} type system, like \texttt{CV\_16SC3} or 16-bit signed 3-channel array etc.
+
+\cvCppFunc{Mat::depth}
+Returns matrix element depth
+
+\cvdefCpp{
+int Mat::depth() const;
+}
+
+The method returns the matrix element depth id, i.e. the type of each individual channel. For example, for 16-bit signed 3-channel array the method will return \texttt{CV\_16S}. The complete list of matrix types:
+\begin{itemize}
+\item \texttt{CV\_8U} - 8-bit unsigned integers (\texttt{0..255})
+\item \texttt{CV\_8S} - 8-bit signed integers (\texttt{-128..127})
+\item \texttt{CV\_16U} - 16-bit unsigned integers (\texttt{0..65535})
+\item \texttt{CV\_16S} - 16-bit signed integers (\texttt{-32768..32767})
+\item \texttt{CV\_32S} - 32-bit signed integers (\texttt{-2147483648..2147483647})
+\item \texttt{CV\_32F} - 32-bit floating-point numbers (\texttt{-FLT\_MAX..FLT\_MAX, INF, NAN})
+\item \texttt{CV\_64F} - 64-bit floating-point numbers (\texttt{-DBL\_MAX..DBL\_MAX, INF, NAN})
+\end{itemize}
+
+\cvCppFunc{Mat::channels}
+Returns matrix element depth
+
+\cvdefCpp{
+int Mat::channels() const;
+}
+
+The method returns the number of matrix channels.
+
+\cvCppFunc{Mat::step1}
+Returns normalized step
+
+\cvdefCpp{
+size\_t Mat::step1() const;
+}
+
+The method returns the matrix step, divided by \cvCppCross{Mat::elemSize1()}. It can be useful for fast access to arbitrary matrix element.
+
+\cvCppFunc{Mat::size}
+Returns the matrix size
+
+\cvdefCpp{
+Size Mat::size() const;
+}
+
+The method returns the matrix size: \texttt{Size(cols, rows)}.
+
+\cvCppFunc{Mat::empty}
+Returns true if matrix data is not allocated
+
+\cvdefCpp{
+bool Mat::empty() const;
+}
+
+The method returns true if and only if the matrix data is NULL pointer. The method has been introduced to improve matrix similarity with STL vector.
+
+\cvCppFunc{Mat::ptr}
+Return pointer to the specified matrix row
+
+\cvdefCpp{
+uchar* Mat::ptr(int i=0);\newline
+const uchar* Mat::ptr(int i=0) const;\newline
+template<typename \_Tp> \_Tp* Mat::ptr(int i=0);\newline
+template<typename \_Tp> const \_Tp* Mat::ptr(int i=0) const;
+}
+\begin{description}
+\cvarg{i}{The 0-based row index}
+\end{description}
+
+The methods return \texttt{uchar*} or typed pointer to the specified matrix row. See the sample in \cvCppCross{Mat::isContinuous}() on how to use these methods.
+
+\cvCppFunc{Mat::at}
+Return reference to the specified matrix element
+
+\cvdefCpp{
+template<typename \_Tp> \_Tp\& Mat::at(int i, int j);\newline
+template<typename \_Tp> \_Tp\& Mat::at(Point pt);\newline
+template<typename \_Tp> const \_Tp\& Mat::at(int i, int j) const;\newline
+template<typename \_Tp> const \_Tp\& Mat::at(Point pt) const;
+}
+\begin{description}
+\cvarg{i}{The 0-based row index}
+\cvarg{j}{The 0-based column index}
+\cvarg{pt}{The element position specified as \texttt{Point(j,i)}}
+\end{description}
+
+The template methods return reference to the specified matrix element. For the sake of higher performance the index range checks are only performed in Debug configuration.
+
+Here is the how you can, for example, create one of the standard poor-conditioned test matrices for various numerical algorithms using the \texttt{Mat::at} method:
+
+\begin{lstlisting}
+Mat H(100, 100, CV_64F);
+for(int i = 0; i < H.rows; i++)
+    for(int j = 0; j < H.cols; j++)
+        H.at<double>(i,j)=1./(i+j+1);
+\end{lstlisting}
+
+\cvCppFunc{Mat::begin}
+Return the matrix iterator, set to the first matrix element
+
+\cvdefCpp{
+template<typename \_Tp> MatIterator\_<\_Tp> Mat::begin();
+template<typename \_Tp> MatConstIterator\_<\_Tp> Mat::begin() const;
+}
+
+The methods return the matrix read-only or read-write iterators. The use of matrix iterators is very similar to the use of bi-directional STL iterators. Here is the alpha blending function rewritten using the matrix iterators:
+
+\begin{lstlisting}
+template<typename T>
+void alphaBlendRGBA(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    typedef Vec<T, 4> VT;
+    
+    const float alpha_scale = (float)std::numeric_limits<T>::max(),
+                inv_scale = 1.f/alpha_scale;
+    
+    CV_Assert( src1.type() == src2.type() &&
+               src1.type() == DataType<VT>::type &&
+               src1.size() == src2.size());
+    Size size = src1.size();
+    dst.create(size, src1.type());
+    
+    MatConstIterator_<VT> it1 = src1.begin<VT>(), it1_end = src1.end<VT>();
+    MatConstIterator_<VT> it2 = src2.begin<VT>();
+    MatIterator_<VT> dst_it = dst.begin<VT>();
+    
+    for( ; it1 != it1_end; ++it1, ++it2, ++dst_it )
+    {
+        VT pix1 = *it1, pix2 = *it2;
+        float alpha = pix1[3]*inv_scale, beta = pix2[3]*inv_scale;
+        *dst_it = VT(saturate_cast<T>(pix1[0]*alpha + pix2[0]*beta),
+                     saturate_cast<T>(pix1[1]*alpha + pix2[1]*beta),
+                     saturate_cast<T>(pix1[2]*alpha + pix2[2]*beta),
+                     saturate_cast<T>((1 - (1-alpha)*(1-beta))*alpha_scale));
+    }
+}
+\end{lstlisting}
+
+
+\cvCppFunc{Mat::end}
+Return the matrix iterator, set to the after-last matrix element
+
+\cvdefCpp{
+template<typename \_Tp> MatIterator\_<\_Tp> Mat::end();
+template<typename \_Tp> MatConstIterator\_<\_Tp> Mat::end() const;
+}
+
+The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
+
+
+\subsection{Mat\_}\label{MatT}
+Template matrix class derived from \cross{Mat}
+
+\begin{lstlisting}
+template<typename _Tp> class Mat_ : public Mat
+{
+public:
+    typedef _Tp value_type;
+    typedef typename DataType<_Tp>::channel_type channel_type;
+    typedef MatIterator_<_Tp> iterator;
+    typedef MatConstIterator_<_Tp> const_iterator;
+
+    Mat_();
+    // equivalent to Mat(_rows, _cols, DataType<_Tp>::type)
+    Mat_(int _rows, int _cols);
+    // other forms of the above constructor
+    Mat_(int _rows, int _cols, const _Tp& value);
+    explicit Mat_(Size _size);
+    Mat_(Size _size, const _Tp& value);
+    // copy/conversion contructor. If m is of different type, it's converted
+    Mat_(const Mat& m);
+    // copy constructor
+    Mat_(const Mat_& m);
+    // construct a matrix on top of user-allocated data.
+    // step is in bytes(!!!), regardless of the type
+    Mat_(int _rows, int _cols, _Tp* _data, size_t _step=AUTO_STEP);
+    // minor selection
+    Mat_(const Mat_& m, const Range& rowRange, const Range& colRange);
+    Mat_(const Mat_& m, const Rect& roi);
+    // to support complex matrix expressions
+    Mat_(const MatExpr_Base& expr);
+    // makes a matrix out of Vec or std::vector. The matrix will have a single column
+    template<int n> explicit Mat_(const Vec<_Tp, n>& vec);
+    Mat_(const vector<_Tp>& vec, bool copyData=false);
+
+    Mat_& operator = (const Mat& m);
+    Mat_& operator = (const Mat_& m);
+    // set all the elements to s.
+    Mat_& operator = (const _Tp& s);
+
+    // iterators; they are smart enough to skip gaps in the end of rows
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
+
+    // equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
+    void create(int _rows, int _cols);
+    void create(Size _size);
+    // cross-product
+    Mat_ cross(const Mat_& m) const;
+    // to support complex matrix expressions
+    Mat_& operator = (const MatExpr_Base& expr);
+    // data type conversion
+    template<typename T2> operator Mat_<T2>() const;
+    // overridden forms of Mat::row() etc.
+    Mat_ row(int y) const;
+    Mat_ col(int x) const;
+    Mat_ diag(int d=0) const;
+    Mat_ clone() const;
+
+    // transposition, inversion, per-element multiplication
+    MatExpr_<...> t() const;
+    MatExpr_<...> inv(int method=DECOMP_LU) const;
+
+    MatExpr_<...> mul(const Mat_& m, double scale=1) const;
+    MatExpr_<...> mul(const MatExpr_<...>& m, double scale=1) const;
+
+    // overridden forms of Mat::elemSize() etc.
+    size_t elemSize() const;
+    size_t elemSize1() const;
+    int type() const;
+    int depth() const;
+    int channels() const;
+    size_t step1() const;
+    // returns step()/sizeof(_Tp)
+    size_t stepT() const;
+
+    // overridden forms of Mat::zeros() etc. Data type is omitted, of course
+    static MatExpr_Initializer zeros(int rows, int cols);
+    static MatExpr_Initializer zeros(Size size);
+    static MatExpr_Initializer ones(int rows, int cols);
+    static MatExpr_Initializer ones(Size size);
+    static MatExpr_Initializer eye(int rows, int cols);
+    static MatExpr_Initializer eye(Size size);
+
+    // some more overriden methods
+    Mat_ reshape(int _rows) const;
+    Mat_& adjustROI( int dtop, int dbottom, int dleft, int dright );
+    Mat_ operator()( const Range& rowRange, const Range& colRange ) const;
+    Mat_ operator()( const Rect& roi ) const;
+
+    // more convenient forms of row and element access operators 
+    _Tp* operator [](int y);
+    const _Tp* operator [](int y) const;
+
+    _Tp& operator ()(int row, int col);
+    const _Tp& operator ()(int row, int col) const;
+    _Tp& operator ()(Point pt);
+    const _Tp& operator ()(Point pt) const;
+
+    // to support matrix expressions
+    operator MatExpr_<Mat_, Mat_>() const;
+    
+    // conversion to vector.
+    operator vector<_Tp>() const;
+};
+\end{lstlisting}
+
+The class \texttt{Mat\_<\_Tp>} is a "thin" template wrapper on top of \texttt{Mat} class. It does not have any extra data fields, nor it or \texttt{Mat} have any virtual methods and thus references or pointers to these two classes can be freely converted one to another. But do it with care, e.g.:
+
+\begin{lstlisting}
+// create 100x100 8-bit matrix
+Mat M(100,100,CV_8U);
+// this will compile fine. no any data conversion will be done.
+Mat_<float>& M1 = (Mat_<float>&)M;
+// the program will likely crash at the statement below
+M1(99,99) = 1.f;
+\end{lstlisting}
+
+While \texttt{Mat} is sufficient in most cases, \texttt{Mat\_} can be more convenient if you use a lot of element access operations and if you know matrix type at compile time. Note that \texttt{Mat::at<\_Tp>(int y, int x)} and \texttt{Mat\_<\_Tp>::operator ()(int y, int x)} do absolutely the same and run at the same speed, but the latter is certainly shorter:
+
+\begin{lstlisting}
+Mat_<double> M(20,20);
+for(int i = 0; i < M.rows; i++)
+    for(int j = 0; j < M.cols; j++)
+        M(i,j) = 1./(i+j+1);
+Mat E, V;
+eigen(M,E,V);
+cout << E.at<double>(0,0)/E.at<double>(M.rows-1,0);
+\end{lstlisting}
+
+\emph{How to use \texttt{Mat\_} for multi-channel images/matrices?}
+
+This is simple - just pass \texttt{Vec} as \texttt{Mat\_} parameter:
+\begin{lstlisting}
+// allocate 320x240 color image and fill it with green (in RGB space)
+Mat_<Vec3b> img(240, 320, Vec3b(0,255,0));
+// now draw a diagonal white line
+for(int i = 0; i < 100; i++)
+    img(i,i)=Vec3b(255,255,255);
+// and now scramble the 2nd (red) channel of each pixel
+for(int i = 0; i < img.rows; i++)
+    for(int j = 0; j < img.cols; j++)
+        img(i,j)[2] ^= (uchar)(i ^ j);
+\end{lstlisting}
+
+\subsection{MatND}\label{MatND}
+n-dimensional dense array
+
+\begin{lstlisting}
+class MatND
+{
+public:
+    // default constructor
+    MatND();
+    // constructs array with specific size and data type
+    MatND(int _ndims, const int* _sizes, int _type);
+    // constructs array and fills it with the specified value
+    MatND(int _ndims, const int* _sizes, int _type, const Scalar& _s);
+    // copy constructor. only the header is copied.
+    MatND(const MatND& m);
+    // sub-array selection. only the header is copied
+    MatND(const MatND& m, const Range* ranges);
+    // converts old-style nd array to MatND; optionally, copies the data
+    MatND(const CvMatND* m, bool copyData=false);
+    ~MatND();
+    MatND& operator = (const MatND& m);
+
+    // creates a complete copy of the matrix (all the data is copied)
+    MatND clone() const;
+    // sub-array selection; only the header is copied
+    MatND operator()(const Range* ranges) const;
+
+    // copies the data to another matrix.
+    // Calls m.create(this->size(), this->type()) prior to
+    // copying the data
+    void copyTo( MatND& m ) const;
+    // copies only the selected elements to another matrix.
+    void copyTo( MatND& m, const MatND& mask ) const;
+    // converts data to the specified data type.
+    // calls m.create(this->size(), rtype) prior to the conversion
+    void convertTo( MatND& m, int rtype, double alpha=1, double beta=0 ) const;
+
+    // assigns "s" to each array element. 
+    MatND& operator = (const Scalar& s);
+    // assigns "s" to the selected elements of array
+    // (or to all the elements if mask==MatND())
+    MatND& setTo(const Scalar& s, const MatND& mask=MatND());
+    // modifies geometry of array without copying the data
+    MatND reshape(int _newcn, int _newndims=0, const int* _newsz=0) const;
+
+    // allocates a new buffer for the data unless the current one already
+    // has the specified size and type.
+    void create(int _ndims, const int* _sizes, int _type);
+    // manually increment reference counter (use with care !!!)
+    void addref();
+    // decrements the reference counter. Dealloctes the data when
+    // the reference counter reaches zero.
+    void release();
+
+    // converts the matrix to 2D Mat or to the old-style CvMatND.
+    // In either case the data is not copied.
+    operator Mat() const;
+    operator CvMatND() const;
+    // returns true if the array data is stored continuously 
+    bool isContinuous() const;
+    // returns size of each element in bytes
+    size_t elemSize() const;
+    // returns size of each element channel in bytes
+    size_t elemSize1() const;
+    // returns OpenCV data type id (CV_8UC1, ... CV_64FC4,...)
+    int type() const;
+    // returns depth (CV_8U ... CV_64F)
+    int depth() const;
+    // returns the number of channels
+    int channels() const;
+    // step1() ~ step()/elemSize1()
+    size_t step1(int i) const;
+
+    // return pointer to the element (versions for 1D, 2D, 3D and generic nD cases)
+    uchar* ptr(int i0);
+    const uchar* ptr(int i0) const;
+    uchar* ptr(int i0, int i1);
+    const uchar* ptr(int i0, int i1) const;
+    uchar* ptr(int i0, int i1, int i2);
+    const uchar* ptr(int i0, int i1, int i2) const;
+    uchar* ptr(const int* idx);
+    const uchar* ptr(const int* idx) const;
+
+    // convenient template methods for element access.
+    // note that _Tp must match the actual matrix type -
+    // the functions do not do any on-fly type conversion
+    template<typename _Tp> _Tp& at(int i0);
+    template<typename _Tp> const _Tp& at(int i0) const;
+    template<typename _Tp> _Tp& at(int i0, int i1);
+    template<typename _Tp> const _Tp& at(int i0, int i1) const;
+    template<typename _Tp> _Tp& at(int i0, int i1, int i2);
+    template<typename _Tp> const _Tp& at(int i0, int i1, int i2) const;
+    template<typename _Tp> _Tp& at(const int* idx);
+    template<typename _Tp> const _Tp& at(const int* idx) const;
+
+    enum { MAGIC_VAL=0x42FE0000, AUTO_STEP=-1,
+        CONTINUOUS_FLAG=CV_MAT_CONT_FLAG, MAX_DIM=CV_MAX_DIM };
+
+    // combines data type, continuity flag, signature (magic value) 
+    int flags;
+    // the array dimensionality
+    int dims;
+
+    // data reference counter
+    int* refcount;
+    // pointer to the data
+    uchar* data;
+    // and its actual beginning and end
+    uchar* datastart;
+    uchar* dataend;
+
+    // step and size for each dimension, MAX_DIM at max
+    int size[MAX_DIM];
+    size_t step[MAX_DIM];
+};
+\end{lstlisting}
+
+The class \texttt{MatND} describes n-dimensional dense numerical single-channel or multi-channel array. This is a convenient representation for multi-dimensional histograms (when they are not very sparse, otherwise \texttt{SparseMat} will do better), voxel volumes, stacked motion fields etc. The data layout of matrix $M$ is defined by the array of \texttt{M.step[]}, so that the address of element $(i_0,...,i_{M.dims-1})$, where $0\leq i_k<M.size[k]$ is computed as:
+\[
+addr(M_{i_0,...,i_{M.dims-1}}) = M.data + M.step[0]*i_0 + M.step[1]*i_1 + ... + M.step[M.dims-1]*i_{M.dims-1}
+\]
+which is more general form of the respective formula for \cross{Mat}, wherein $\texttt{size[0]}\sim\texttt{rows}$,
+$\texttt{size[1]}\sim\texttt{cols}$, \texttt{step[0]} was simply called \texttt{step}, and \texttt{step[1]} was not stored at all but computed as \texttt{Mat::elemSize()}.
+
+In other aspects \texttt{MatND} is also very similar to \texttt{Mat}, with the following limitations and differences:
+\begin{itemize}
+    \item much less operations are implemented for \texttt{MatND}
+    \item currently, algebraic expressions with \texttt{MatND}'s are not supported
+    \item the \texttt{MatND} iterator is completely different from \texttt{Mat} and \texttt{Mat\_} iterators. The latter are per-element iterators, while the former is per-slice iterator, see below.
+\end{itemize}
+
+Here is how you can use \texttt{MatND} to compute NxNxN histogram of color 8bpp image (i.e. each channel value ranges from 0..255 and we quantize it to 0..N-1):
+
+\begin{lstlisting}
+void computeColorHist(const Mat& image, MatND& hist, int N)
+{
+    const int histSize[] = {N, N, N};
+    
+    // make sure that the histogram has proper size and type
+    hist.create(3, histSize, CV_32F);
+    
+    // and clear it
+    hist = Scalar(0);
+    
+    // the loop below assumes that the image
+    // is 8-bit 3-channel, so let's check it.
+    CV_Assert(image.type() == CV_8UC3);
+    MatConstIterator_<Vec3b> it = image.begin<Vec3b>(),
+                             it_end = image.end<Vec3b>();    
+    for( ; it != it_end; ++it )
+    {
+        const Vec3b& pix = *it;
+        
+        // we could have incremented the cells by 1.f/(image.rows*image.cols)
+        // instead of 1.f to make the histogram normalized.
+        hist.at<float>(pix[0]*N/256, pix[1]*N/256, pix[2]*N/256) += 1.f;
+    }
+}
+\end{lstlisting}
+
+And here is how you can iterate through \texttt{MatND} elements:
+
+\begin{lstlisting}
+void normalizeColorHist(MatND& hist)
+{
+#if 1    
+    // intialize iterator (the style is different from STL).
+    // after initialization the iterator will contain
+    // the number of slices or planes
+    // the iterator will go through
+    MatNDIterator it(hist);
+    double s = 0;
+    // iterate through the matrix. on each iteration
+    // it.planes[*] (of type Mat) will be set to the current plane.
+    for(int p = 0; p < it.nplanes; p++, ++it)
+        s += sum(it.planes[0])[0];
+    it = MatNDIterator(hist);
+    s = 1./s;
+    for(int p = 0; p < it.nplanes; p++, ++it)
+        it.planes[0] *= s;
+#elif 1
+    // this is a shorter implementation of the above
+    // using built-in operations on MatND
+    double s = sum(hist)[0];
+    hist.convertTo(hist, hist.type(), 1./s, 0);
+#else
+    // and this is even shorter one
+    // (assuming that the histogram elements are non-negative)
+    normalize(hist, hist, 1, 0, NORM_L1);
+#endif
+}
+\end{lstlisting}
+
+You can iterate though several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same), which is useful for binary and n-ary operations on such matrices. Just pass those matrices to \texttt{MatNDIterator}. Then, during the iteration \texttt{it.planes[0]}, \texttt{it.planes[1]}, ... will be the slices of the corresponding matrices.
+
+\subsection{MatND\_}
+Template class for n-dimensional dense array derived from \cross{MatND}.
+
+\begin{lstlisting}
+template<typename _Tp> class MatND_ : public MatND
+{
+public:
+    typedef _Tp value_type;
+    typedef typename DataType<_Tp>::channel_type channel_type;
+
+    // constructors, the same as in MatND, only the type is omitted
+    MatND_();
+    MatND_(int dims, const int* _sizes);
+    MatND_(int dims, const int* _sizes, const _Tp& _s);
+    MatND_(const MatND& m);
+    MatND_(const MatND_& m);
+    MatND_(const MatND_& m, const Range* ranges);
+    MatND_(const CvMatND* m, bool copyData=false);
+    MatND_& operator = (const MatND& m);
+    MatND_& operator = (const MatND_& m);
+    // different initialization function
+    // where we take _Tp instead of Scalar
+    MatND_& operator = (const _Tp& s);
+
+    // no special destructor is needed; use the one from MatND
+
+    void create(int dims, const int* _sizes);
+    template<typename T2> operator MatND_<T2>() const;
+    MatND_ clone() const;
+    MatND_ operator()(const Range* ranges) const;
+
+    size_t elemSize() const;
+    size_t elemSize1() const;
+    int type() const;
+    int depth() const;
+    int channels() const;
+    // step[i]/elemSize()
+    size_t stepT(int i) const;
+    size_t step1(int i) const;
+
+    // shorter alternatives for MatND::at<_Tp>.
+    _Tp& operator ()(const int* idx);
+    const _Tp& operator ()(const int* idx) const;
+    _Tp& operator ()(int idx0);
+    const _Tp& operator ()(int idx0) const;
+    _Tp& operator ()(int idx0, int idx1);
+    const _Tp& operator ()(int idx0, int idx1) const;
+    _Tp& operator ()(int idx0, int idx1, int idx2);
+    const _Tp& operator ()(int idx0, int idx1, int idx2) const;
+    _Tp& operator ()(int idx0, int idx1, int idx2);
+    const _Tp& operator ()(int idx0, int idx1, int idx2) const;
+};
+\end{lstlisting}
+
+\texttt{MatND\_} relates to \texttt{MatND}  almost like \texttt{Mat\_} to \texttt{Mat} - it provides a bit more convenient element access operations and adds no extra members of virtual methods to the base class, thus references/pointers to \texttt{MatND\_} and \texttt{MatND} can be easily converted one to another, e.g.
+
+\begin{lstlisting}
+// alternative variant of the above histogram accumulation loop
+...
+CV_Assert(hist.type() == CV_32FC1);
+MatND_<float>& _hist = (MatND_<float>&)hist;
+for( ; it != it_end; ++it )
+{
+    const Vec3b& pix = *it;
+    _hist(pix[0]*N/256, pix[1]*N/256, pix[2]*N/256) += 1.f;
+}
+...
+\end{lstlisting}
+
+\subsection{SparseMat}\label{SparseMat}
+Sparse n-dimensional array.
+
+\begin{lstlisting}
+class SparseMat
+{
+public:
+    typedef SparseMatIterator iterator;
+    typedef SparseMatConstIterator const_iterator;
+
+    // internal structure - sparse matrix header
+    struct Hdr
+    {
+        ...
+    };
+
+    // sparse matrix node - element of a hash table
+    struct Node
+    {
+        size_t hashval;
+        size_t next;
+        int idx[CV_MAX_DIM];
+    };
+
+    ////////// constructors and destructor //////////
+    // default constructor
+    SparseMat();
+    // creates matrix of the specified size and type
+    SparseMat(int dims, const int* _sizes, int _type);
+    // copy constructor
+    SparseMat(const SparseMat& m);
+    // converts dense 2d matrix to the sparse form,
+    // if try1d is true and matrix is a single-column matrix (Nx1),
+    // then the sparse matrix will be 1-dimensional.
+    SparseMat(const Mat& m, bool try1d=false);
+    // converts dense n-d matrix to the sparse form
+    SparseMat(const MatND& m);
+    // converts old-style sparse matrix to the new-style.
+    // all the data is copied, so that "m" can be safely
+    // deleted after the conversion
+    SparseMat(const CvSparseMat* m);
+    // destructor
+    ~SparseMat();
+    
+    ///////// assignment operations /////////// 
+    
+    // this is O(1) operation; no data is copied
+    SparseMat& operator = (const SparseMat& m);
+    // (equivalent to the corresponding constructor with try1d=false)
+    SparseMat& operator = (const Mat& m);
+    SparseMat& operator = (const MatND& m);
+
+    // creates full copy of the matrix
+    SparseMat clone() const;
+    
+    // copy all the data to the destination matrix.
+    // the destination will be reallocated if needed.
+    void copyTo( SparseMat& m ) const;
+    // converts 1D or 2D sparse matrix to dense 2D matrix.
+    // If the sparse matrix is 1D, then the result will
+    // be a single-column matrix.
+    void copyTo( Mat& m ) const;
+    // converts arbitrary sparse matrix to dense matrix.
+    // watch out the memory!
+    void copyTo( MatND& m ) const;
+    // multiplies all the matrix elements by the specified scalar
+    void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
+    // converts sparse matrix to dense matrix with optional type conversion and scaling.
+    // When rtype=-1, the destination element type will be the same
+    // as the sparse matrix element type.
+    // Otherwise rtype will specify the depth and
+    // the number of channels will remain the same is in the sparse matrix
+    void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo( MatND& m, int rtype, double alpha=1, double beta=0 ) const;
+
+    // not used now
+    void assignTo( SparseMat& m, int type=-1 ) const;
+
+    // reallocates sparse matrix. If it was already of the proper size and type,
+    // it is simply cleared with clear(), otherwise,
+    // the old matrix is released (using release()) and the new one is allocated.
+    void create(int dims, const int* _sizes, int _type);
+    // sets all the matrix elements to 0, which means clearing the hash table.
+    void clear();
+    // manually increases reference counter to the header.
+    void addref();
+    // decreses the header reference counter, when it reaches 0,
+    // the header and all the underlying data are deallocated.
+    void release();
+
+    // converts sparse matrix to the old-style representation.
+    // all the elements are copied.
+    operator CvSparseMat*() const;
+    // size of each element in bytes
+    // (the matrix nodes will be bigger because of
+    //  element indices and other SparseMat::Node elements).
+    size_t elemSize() const;
+    // elemSize()/channels()
+    size_t elemSize1() const;
+    
+    // the same is in Mat and MatND
+    int type() const;
+    int depth() const;
+    int channels() const;
+    
+    // returns the array of sizes and 0 if the matrix is not allocated
+    const int* size() const;
+    // returns i-th size (or 0)
+    int size(int i) const;
+    // returns the matrix dimensionality
+    int dims() const;
+    // returns the number of non-zero elements
+    size_t nzcount() const;
+    
+    // compute element hash value from the element indices:
+    // 1D case
+    size_t hash(int i0) const;
+    // 2D case
+    size_t hash(int i0, int i1) const;
+    // 3D case
+    size_t hash(int i0, int i1, int i2) const;
+    // n-D case
+    size_t hash(const int* idx) const;
+    
+    // low-level element-acccess functions,
+    // special variants for 1D, 2D, 3D cases and the generic one for n-D case.
+    //
+    // return pointer to the matrix element.
+    //  if the element is there (it's non-zero), the pointer to it is returned
+    //  if it's not there and createMissing=false, NULL pointer is returned
+    //  if it's not there and createMissing=true, then the new element
+    //    is created and initialized with 0. Pointer to it is returned
+    //  If the optional hashval pointer is not NULL, the element hash value is
+    //  not computed, but *hashval is taken instead.
+    uchar* ptr(int i0, bool createMissing, size_t* hashval=0);
+    uchar* ptr(int i0, int i1, bool createMissing, size_t* hashval=0);
+    uchar* ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0);
+    uchar* ptr(const int* idx, bool createMissing, size_t* hashval=0);
+
+    // higher-level element access functions:
+    // ref<_Tp>(i0,...[,hashval]) - equivalent to *(_Tp*)ptr(i0,...true[,hashval]).
+    //    always return valid reference to the element.
+    //    If it's did not exist, it is created.
+    // find<_Tp>(i0,...[,hashval]) - equivalent to (_const Tp*)ptr(i0,...false[,hashval]).
+    //    return pointer to the element or NULL pointer if the element is not there.
+    // value<_Tp>(i0,...[,hashval]) - equivalent to
+    //    { const _Tp* p = find<_Tp>(i0,...[,hashval]); return p ? *p : _Tp(); }
+    //    that is, 0 is returned when the element is not there.
+    // note that _Tp must match the actual matrix type -
+    // the functions do not do any on-fly type conversion
+    
+    // 1D case
+    template<typename _Tp> _Tp& ref(int i0, size_t* hashval=0);   
+    template<typename _Tp> _Tp value(int i0, size_t* hashval=0) const;
+    template<typename _Tp> const _Tp* find(int i0, size_t* hashval=0) const;
+
+    // 2D case
+    template<typename _Tp> _Tp& ref(int i0, int i1, size_t* hashval=0);   
+    template<typename _Tp> _Tp value(int i0, int i1, size_t* hashval=0) const;
+    template<typename _Tp> const _Tp* find(int i0, int i1, size_t* hashval=0) const;
+    
+    // 3D case
+    template<typename _Tp> _Tp& ref(int i0, int i1, int i2, size_t* hashval=0);
+    template<typename _Tp> _Tp value(int i0, int i1, int i2, size_t* hashval=0) const;
+    template<typename _Tp> const _Tp* find(int i0, int i1, int i2, size_t* hashval=0) const;
+
+    // n-D case
+    template<typename _Tp> _Tp& ref(const int* idx, size_t* hashval=0);
+    template<typename _Tp> _Tp value(const int* idx, size_t* hashval=0) const;
+    template<typename _Tp> const _Tp* find(const int* idx, size_t* hashval=0) const;
+
+    // erase the specified matrix element.
+    // When there is no such element, the methods do nothing
+    void erase(int i0, int i1, size_t* hashval=0);
+    void erase(int i0, int i1, int i2, size_t* hashval=0);
+    void erase(const int* idx, size_t* hashval=0);
+
+    // return the matrix iterators,
+    //   pointing to the first sparse matrix element,
+    SparseMatIterator begin();
+    SparseMatConstIterator begin() const;
+    //   ... or to the point after the last sparse matrix element
+    SparseMatIterator end();
+    SparseMatConstIterator end() const;
+    
+    // and the template forms of the above methods.
+    // _Tp must match the actual matrix type.
+    template<typename _Tp> SparseMatIterator_<_Tp> begin();
+    template<typename _Tp> SparseMatConstIterator_<_Tp> begin() const;
+    template<typename _Tp> SparseMatIterator_<_Tp> end();
+    template<typename _Tp> SparseMatConstIterator_<_Tp> end() const;
+
+    // return value stored in the sparse martix node
+    template<typename _Tp> _Tp& value(Node* n);
+    template<typename _Tp> const _Tp& value(const Node* n) const;
+    
+    ////////////// some internal-use methods ///////////////
+    ...
+
+    // pointer to the sparse matrix header
+    Hdr* hdr;
+};
+\end{lstlisting}
+
+The class \texttt{SparseMat} represents multi-dimensional sparse numerical arrays. Such a sparse array can store elements of any type that \cross{Mat} and \cross{MatND} can store. "Sparse" means that only non-zero elements are stored (though, as a result of operations on a sparse matrix, some of its stored elements can actually become 0. It's up to the user to detect such elements and delete them using \texttt{SparseMat::erase}). The non-zero elements are stored in a hash table that grows when it's filled enough, so that the search time is O(1) in average (regardless of whether element is there or not). Elements can be accessed using the following methods:
+
+\begin{enumerate}
+    \item query operations (\texttt{SparseMat::ptr} and the higher-level \texttt{SparseMat::ref}, \texttt{SparseMat::value} and \texttt{SparseMat::find}), e.g.:
+    \begin{lstlisting}
+    const int dims = 5;
+    int size[] = {10, 10, 10, 10, 10};
+    SparseMat sparse_mat(dims, size, CV_32F);
+    for(int i = 0; i < 1000; i++)
+    {
+        int idx[dims];
+        for(int k = 0; k < dims; k++)
+            idx[k] = rand()%sparse_mat.size(k);
+        sparse_mat.ref<float>(idx) += 1.f;
+    }
+    \end{lstlisting}
+    \item sparse matrix iterators. Like \cross{Mat} iterators and unlike \cross{MatND} iterators, the sparse matrix iterators are STL-style, that is, the iteration loop is familiar to C++ users:
+    \begin{lstlisting}
+    // prints elements of a sparse floating-point matrix
+    // and the sum of elements.
+    SparseMatConstIterator_<float>
+        it = sparse_mat.begin<float>(),
+        it_end = sparse_mat.end<float>();
+    double s = 0;
+    int dims = sparse_mat.dims();
+    for(; it != it_end; ++it)
+    {
+        // print element indices and the element value
+        const Node* n = it.node();
+        printf("(")
+        for(int i = 0; i < dims; i++)
+            printf("%3d%c", n->idx[i], i < dims-1 ? ',' : ')');
+        printf(": %f\n", *it);    
+        s += *it;
+    }
+    printf("Element sum is %g\n", s);
+    \end{lstlisting}
+    If you run this loop, you will notice that elements are enumerated in no any logical order (lexicographical etc.), they come in the same order as they stored in the hash table, i.e. semi-randomly. You may collect pointers to the nodes and sort them to get the proper ordering. Note, however, that pointers to the nodes may become invalid when you add more elements to the matrix; this is because of possible buffer reallocation.
+    \item a combination of the above 2 methods when you need to process 2 or more sparse matrices simultaneously, e.g. this is how you can compute unnormalized cross-correlation of the 2 floating-point sparse matrices:
+    \begin{lstlisting}
+    double cross_corr(const SparseMat& a, const SparseMat& b)
+    {
+        const SparseMat *_a = &a, *_b = &b;
+        // if b contains less elements than a,
+        // it's faster to iterate through b
+        if(_a->nzcount() > _b->nzcount())
+            std::swap(_a, _b);
+        SparseMatConstIterator_<float> it = _a->begin<float>(),
+                                       it_end = _a->end<float>();
+        double ccorr = 0;
+        for(; it != it_end; ++it)
+        {
+            // take the next element from the first matrix
+            float avalue = *it;
+            const Node* anode = it.node();
+            // and try to find element with the same index in the second matrix.
+            // since the hash value depends only on the element index,
+            // we reuse hashvalue stored in the node
+            float bvalue = _b->value<float>(anode->idx,&anode->hashval);
+            ccorr += avalue*bvalue;
+        }
+        return ccorr;
+    }
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{SparseMat\_}
+Template sparse n-dimensional array class derived from \cross{SparseMat}
+
+\begin{lstlisting}
+template<typename _Tp> class SparseMat_ : public SparseMat
+{
+public:
+    typedef SparseMatIterator_<_Tp> iterator;
+    typedef SparseMatConstIterator_<_Tp> const_iterator;
+
+    // constructors;
+    // the created matrix will have data type = DataType<_Tp>::type
+    SparseMat_();
+    SparseMat_(int dims, const int* _sizes);
+    SparseMat_(const SparseMat& m);
+    SparseMat_(const SparseMat_& m);
+    SparseMat_(const Mat& m);
+    SparseMat_(const MatND& m);
+    SparseMat_(const CvSparseMat* m);
+    // assignment operators; data type conversion is done when necessary
+    SparseMat_& operator = (const SparseMat& m);
+    SparseMat_& operator = (const SparseMat_& m);
+    SparseMat_& operator = (const Mat& m);
+    SparseMat_& operator = (const MatND& m);
+
+    // equivalent to the correspoding parent class methods
+    SparseMat_ clone() const;
+    void create(int dims, const int* _sizes);
+    operator CvSparseMat*() const;
+
+    // overriden methods that do extra checks for the data type
+    int type() const;
+    int depth() const;
+    int channels() const;
+    
+    // more convenient element access operations.
+    // ref() is retained (but <_Tp> specification is not need anymore);
+    // operator () is equivalent to SparseMat::value<_Tp>
+    _Tp& ref(int i0, size_t* hashval=0);
+    _Tp operator()(int i0, size_t* hashval=0) const;
+    _Tp& ref(int i0, int i1, size_t* hashval=0);
+    _Tp operator()(int i0, int i1, size_t* hashval=0) const;
+    _Tp& ref(int i0, int i1, int i2, size_t* hashval=0);
+    _Tp operator()(int i0, int i1, int i2, size_t* hashval=0) const;
+    _Tp& ref(const int* idx, size_t* hashval=0);
+    _Tp operator()(const int* idx, size_t* hashval=0) const;
+
+    // iterators
+    SparseMatIterator_<_Tp> begin();
+    SparseMatConstIterator_<_Tp> begin() const;
+    SparseMatIterator_<_Tp> end();
+    SparseMatConstIterator_<_Tp> end() const;
+};
+\end{lstlisting}
+
+\texttt{SparseMat\_} is a thin wrapper on top of \cross{SparseMat}, made in the same way as \texttt{Mat\_} and \texttt{MatND\_}.
+It simplifies notation of some operations, and that's it.
+\begin{lstlisting}
+int sz[] = {10, 20, 30};
+SparseMat_<double> M(3, sz);
+...
+M.ref(1, 2, 3) = M(4, 5, 6) + M(7, 8, 9);
+\end{lstlisting}
+\fi
