@@ -175,6 +175,9 @@ make & enjoy!
   There was a problem setting up the size when the input is a v4l2 device
   The workaround closes the camera and reopens it with the new definition
   Planning for future rewrite of this whole library (July/August 2010)
+
+15th patch: May 12, 2010, Filipe Almeida filipe.almeida@ist.utl.pt
+- Broken compile of library (include "_highgui.h")
 */
 
 /*M///////////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +221,7 @@ make & enjoy!
 //
 //M*/
 
-#include "_highgui.h"
+#include "highgui.h"
 
 #if !defined WIN32 && defined HAVE_CAMV4L && defined HAVE_CAMV4L2
 
