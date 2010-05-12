@@ -263,49 +263,6 @@ CV_INLINE void  cvProjectPointsSimple( int point_count, CvPoint3D64f* _object_po
 }
 
 
-CV_INLINE void cvUnDistortOnce( const CvArr* src, CvArr* dst,
-                                const float* intrinsic_matrix,
-                                const float* distortion_coeffs,
-                                int CV_UNREFERENCED(interpolate) )
-{
-    CvMat _a = cvMat( 3, 3, CV_32F, (void*)intrinsic_matrix );
-    CvMat _k = cvMat( 4, 1, CV_32F, (void*)distortion_coeffs );
-    cvUndistort2( src, dst, &_a, &_k, 0 );
-}
-
-
-/* the two functions below have quite hackerish implementations, use with care
-   (or, which is better, switch to cvUndistortInitMap and cvRemap instead */
-CV_INLINE void cvUnDistortInit( const CvArr* CV_UNREFERENCED(src),
-                                CvArr* undistortion_map,
-                                const float* A, const float* k,
-                                int CV_UNREFERENCED(interpolate) )
-{
-    union { uchar* ptr; float* fl; } data;
-    CvSize sz;
-    cvGetRawData( undistortion_map, &data.ptr, 0, &sz );
-    assert( sz.width >= 8 );
-    /* just save the intrinsic parameters to the map */
-    data.fl[0] = A[0]; data.fl[1] = A[4];
-    data.fl[2] = A[2]; data.fl[3] = A[5];
-    data.fl[4] = k[0]; data.fl[5] = k[1];
-    data.fl[6] = k[2]; data.fl[7] = k[3];
-}
-
-CV_INLINE void  cvUnDistort( const CvArr* src, CvArr* dst,
-                             const CvArr* undistortion_map,
-                             int CV_UNREFERENCED(interpolate) )
-{
-    union { uchar* ptr; float* fl; } data;
-    float a[] = {0,0,0,0,0,0,0,0,1};
-    CvSize sz;
-    cvGetRawData( undistortion_map, &data.ptr, 0, &sz );
-    assert( sz.width >= 8 );
-    a[0] = data.fl[0]; a[4] = data.fl[1];
-    a[2] = data.fl[2]; a[5] = data.fl[3];
-    cvUnDistortOnce( src, dst, a, data.fl + 4, 1 );
-}
-
 #define cvMake2DPoints cvConvertPointsHomogeneous
 #define cvMake3DPoints cvConvertPointsHomogeneous
 

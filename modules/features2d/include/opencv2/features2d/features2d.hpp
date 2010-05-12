@@ -46,6 +46,8 @@
 #include "opencv2/core/core.hpp"
 
 #ifdef __cplusplus
+#include <limits>
+
 extern "C" {
 #endif
 

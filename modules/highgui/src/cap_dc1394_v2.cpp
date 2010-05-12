@@ -47,7 +47,6 @@
 #include <stdint.h>
 #include <sys/select.h>
 #include <dc1394/dc1394.h>
-#include <cv.h>
 #include <stdlib.h>
 #include <string.h>
 

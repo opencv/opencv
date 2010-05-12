@@ -51,7 +51,6 @@
 // required to enable some functions used here...
 #define XINE_ENABLE_EXPERIMENTAL_FEATURES
 
-#include <cv.h>
 #include <cassert>
 
 extern "C"

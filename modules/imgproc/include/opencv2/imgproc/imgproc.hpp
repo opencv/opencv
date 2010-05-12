@@ -347,7 +347,7 @@ CV_EXPORTS void remap( const Mat& src, Mat& dst, const Mat& map1, const Mat& map
 
 CV_EXPORTS void convertMaps( const Mat& map1, const Mat& map2, Mat& dstmap1, Mat& dstmap2,
                              int dstmap1type, bool nninterpolation=false );
-
+                             
 CV_EXPORTS Mat getRotationMatrix2D( Point2f center, double angle, double scale );
 CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
 CV_EXPORTS Mat getAffineTransform( const Point2f src[], const Point2f dst[] );
@@ -388,12 +388,15 @@ CV_EXPORTS void undistort( const Mat& src, Mat& dst, const Mat& cameraMatrix,
 CV_EXPORTS void initUndistortRectifyMap( const Mat& cameraMatrix, const Mat& distCoeffs,
                            const Mat& R, const Mat& newCameraMatrix,
                            Size size, int m1type, Mat& map1, Mat& map2 );
-CV_EXPORTS Mat getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs,
-                                          Size imageSize, double alpha, Size newImgSize=Size(),
-                                          Rect* validPixROI=0);
 CV_EXPORTS Mat getDefaultNewCameraMatrix( const Mat& cameraMatrix, Size imgsize=Size(),
                                           bool centerPrincipalPoint=false );
 
+CV_EXPORTS void undistortPoints( const Mat& src, vector<Point2f>& dst,
+                                 const Mat& cameraMatrix, const Mat& distCoeffs,
+                                 const Mat& R=Mat(), const Mat& P=Mat());
+CV_EXPORTS void undistortPoints( const Mat& src, Mat& dst,
+                                 const Mat& cameraMatrix, const Mat& distCoeffs,
+                                 const Mat& R=Mat(), const Mat& P=Mat());
 
 template<> CV_EXPORTS void Ptr<CvHistogram>::delete_obj();
     

@@ -205,6 +205,32 @@ CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double maxRadius,
                          int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
+/* Transforms the input image to compensate lens distortion */
+CVAPI(void) cvUndistort2( const CvArr* src, CvArr* dst,
+                          const CvMat* camera_matrix,
+                          const CvMat* distortion_coeffs,
+                          const CvMat* new_camera_matrix CV_DEFAULT(0) );
+
+/* Computes transformation map from intrinsic camera parameters
+   that can used by cvRemap */
+CVAPI(void) cvInitUndistortMap( const CvMat* camera_matrix,
+                                const CvMat* distortion_coeffs,
+                                CvArr* mapx, CvArr* mapy );
+
+/* Computes undistortion+rectification map for a head of stereo camera */
+CVAPI(void) cvInitUndistortRectifyMap( const CvMat* camera_matrix,
+                                       const CvMat* dist_coeffs,
+                                       const CvMat *R, const CvMat* new_camera_matrix,
+                                       CvArr* mapx, CvArr* mapy );
+
+/* Computes the original (undistorted) feature coordinates
+   from the observed (distorted) coordinates */
+CVAPI(void) cvUndistortPoints( const CvMat* src, CvMat* dst,
+                               const CvMat* camera_matrix,
+                               const CvMat* dist_coeffs,
+                               const CvMat* R CV_DEFAULT(0),
+                               const CvMat* P CV_DEFAULT(0));
+
 /* creates structuring element used for morphological operations */
 CVAPI(IplConvKernel*)  cvCreateStructuringElementEx(
             int cols, int  rows, int  anchor_x, int  anchor_y,

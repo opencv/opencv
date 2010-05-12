@@ -104,31 +104,6 @@ CVAPI(void) cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2,
 CVAPI(void) cvCorrectMatches(CvMat* F, CvMat* points1, CvMat* points2,
                              CvMat* new_points1, CvMat* new_points2);
 
-/* Transforms the input image to compensate lens distortion */
-CVAPI(void) cvUndistort2( const CvArr* src, CvArr* dst,
-                          const CvMat* camera_matrix,
-                          const CvMat* distortion_coeffs,
-                          const CvMat* new_camera_matrix CV_DEFAULT(0) );
-
-/* Computes transformation map from intrinsic camera parameters
-   that can used by cvRemap */
-CVAPI(void) cvInitUndistortMap( const CvMat* camera_matrix,
-                                const CvMat* distortion_coeffs,
-                                CvArr* mapx, CvArr* mapy );
-
-/* Computes undistortion+rectification map for a head of stereo camera */
-CVAPI(void) cvInitUndistortRectifyMap( const CvMat* camera_matrix,
-                                       const CvMat* dist_coeffs,
-                                       const CvMat *R, const CvMat* new_camera_matrix,
-                                       CvArr* mapx, CvArr* mapy );
-
-/* Computes the original (undistorted) feature coordinates
-   from the observed (distorted) coordinates */
-CVAPI(void) cvUndistortPoints( const CvMat* src, CvMat* dst,
-                               const CvMat* camera_matrix,
-                               const CvMat* dist_coeffs,
-                               const CvMat* R CV_DEFAULT(0),
-                               const CvMat* P CV_DEFAULT(0));
     
 /* Computes the optimal new camera matrix according to the free scaling parameter alpha:
    alpha=0 - only valid pixels will be retained in the undistorted image
@@ -450,13 +425,6 @@ public:
 namespace cv
 {
     
-    CV_EXPORTS void undistortPoints( const Mat& src, vector<Point2f>& dst,
-                                 const Mat& cameraMatrix, const Mat& distCoeffs,
-                                 const Mat& R=Mat(), const Mat& P=Mat());
-CV_EXPORTS void undistortPoints( const Mat& src, Mat& dst,
-                                 const Mat& cameraMatrix, const Mat& distCoeffs,
-                                 const Mat& R=Mat(), const Mat& P=Mat());
-
 CV_EXPORTS void Rodrigues(const Mat& src, Mat& dst);
 CV_EXPORTS void Rodrigues(const Mat& src, Mat& dst, Mat& jacobian);
 
@@ -573,7 +541,7 @@ CV_EXPORTS void calibrationMatrixValues( const Mat& cameraMatrix,
                                 double& focalLength,
                                 Point2d& principalPoint,
                                 double& aspectRatio );
-
+                                
 CV_EXPORTS double stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
                                  const vector<vector<Point2f> >& imagePoints1,
                                  const vector<vector<Point2f> >& imagePoints2,
@@ -604,6 +572,10 @@ CV_EXPORTS bool stereoRectifyUncalibrated( const Mat& points1,
                                            const Mat& F, Size imgSize,
                                            Mat& H1, Mat& H2,
                                            double threshold=5 );
+
+CV_EXPORTS Mat getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs,
+                                          Size imageSize, double alpha, Size newImgSize=Size(),
+                                          Rect* validPixROI=0);
 
 CV_EXPORTS void convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst );
 CV_EXPORTS void convertPointsHomogeneous( const Mat& src, vector<Point2f>& dst );

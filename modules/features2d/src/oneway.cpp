@@ -9,6 +9,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include <stdio.h>
 
 namespace cv{
     
