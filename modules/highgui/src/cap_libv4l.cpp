@@ -222,6 +222,7 @@ make & enjoy!
 //M*/
 
 #include "highgui.h"
+#include "precomp.hpp"
 
 #if !defined WIN32 && defined HAVE_CAMV4L && defined HAVE_CAMV4L2
 
@@ -329,6 +330,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture );
 
 static int icvGrabFrameCAM_V4L( CvCaptureCAM_V4L* capture );
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int );
+CvCapture* cvCreateCameraCapture_V4L( int index );
 
 static double icvGetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id );
 static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, double value );
