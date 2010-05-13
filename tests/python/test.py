@@ -342,8 +342,7 @@ class FunctionTests(OpenCVTests):
                     self.assertEqual(m.type, t)
         self.assertRaises(cv.error, lambda: cv.CreateMat(0, 100, cv.CV_8SC4))
         self.assertRaises(cv.error, lambda: cv.CreateMat(100, 0, cv.CV_8SC4))
-        # Uncomment when ticket #100 is fixed
-        # self.assertRaises(cv.error, lambda: cv.CreateMat(100, 100, 666666))
+        self.assertRaises(cv.error, lambda: cv.cvmat())
 
     def test_DrawChessboardCorners(self):
         im = cv.CreateImage((512,512), cv.IPL_DEPTH_8U, 3)

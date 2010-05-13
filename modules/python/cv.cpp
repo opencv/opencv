@@ -380,7 +380,9 @@ static int is_iplimage(PyObject *o)
 static void cvmat_dealloc(PyObject *self)
 {
   cvmat_t *pc = (cvmat_t*)self;
-  Py_DECREF(pc->data);
+  if (pc->data) {
+    Py_DECREF(pc->data);
+  }
   cvFree(&pc->a);
   PyObject_Del(self);
 }
@@ -656,6 +658,12 @@ static PyTypeObject cvmat_Type = {
   sizeof(cvmat_t),                        /*basicsize*/
 };
 
+static int illegal_init(PyObject *self, PyObject *args, PyObject *kwds)
+{
+  PyErr_SetString(opencv_error, "Cannot create cvmat directly; use CreateMat() instead");
+  return -1;
+}
+
 static void cvmat_specials(void)
 {
   cvmat_Type.tp_dealloc = cvmat_dealloc;
@@ -663,6 +671,7 @@ static void cvmat_specials(void)
   cvmat_Type.tp_repr = cvmat_repr;
   cvmat_Type.tp_methods = cvmat_methods;
   cvmat_Type.tp_getset = cvmat_getseters;
+  cvmat_Type.tp_init = illegal_init;
 }
 
 static int is_cvmat(PyObject *o)
