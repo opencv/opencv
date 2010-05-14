@@ -244,6 +244,40 @@ class FunctionTests(OpenCVTests):
         vely = cv.CreateImage(vel_size, cv.IPL_DEPTH_32F, 1)
         cv.CalcOpticalFlowBM(a, b, (8,8), (1,1), (8,8), 0, velx, vely)
 
+    def test_CalcOpticalFlowPyrLK(self):
+        a = self.get_sample("samples/c/lena.jpg", 0)
+        map = cv.CreateMat(2, 3, cv.CV_32FC1)
+        cv.GetRotationMatrix2D((256, 256), 10, 1.0, map)
+        b = cv.CloneMat(a)
+        cv.WarpAffine(a, b, map)
+
+        eig_image = cv.CreateMat(a.rows, a.cols, cv.CV_32FC1)
+        temp_image = cv.CreateMat(a.rows, a.cols, cv.CV_32FC1)
+
+        prevPyr = cv.CreateMat(a.rows / 3, a.cols + 8, cv.CV_8UC1)
+        currPyr = cv.CreateMat(a.rows / 3, a.cols + 8, cv.CV_8UC1)
+        prevFeatures = cv.GoodFeaturesToTrack(a, eig_image, temp_image, 400, 0.01, 0.01)
+        (currFeatures, status, track_error) = cv.CalcOpticalFlowPyrLK(a,
+                                                                      b,
+                                                                      prevPyr,
+                                                                      currPyr,
+                                                                      prevFeatures,
+                                                                      (10, 10),
+                                                                      3,
+                                                                      (cv.CV_TERMCRIT_ITER|cv.CV_TERMCRIT_EPS,20, 0.03),
+                                                                      0)
+        if 1:  # enable visualization
+            print
+            print sum(status), "Points found in curr image"
+            for prev,this in zip(prevFeatures, currFeatures):
+                iprev = tuple([int(c) for c in prev])
+                ithis = tuple([int(c) for c in this])
+                cv.Circle(a, iprev, 3, 255)
+                cv.Circle(a, ithis, 3, 0)
+                cv.Line(a, iprev, ithis, 128)
+
+            self.snapL([a, b])
+
     def test_CartToPolar(self):
         x = cv.CreateMat(5, 5, cv.CV_32F)
         y = cv.CreateMat(5, 5, cv.CV_32F)
@@ -1969,6 +2003,7 @@ class NewTests(OpenCVTests):
     pass
 
 if __name__ == '__main__':
+    print "testing", cv.__version__
     random.seed(0)
     optlist, args = getopt.getopt(sys.argv[1:], 'l:rd')
     loops = 1
