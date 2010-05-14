@@ -917,6 +917,7 @@ endif()
 
 # Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${CMAKE_CURRENT_SOURCE_DIR}/include\" \"${CMAKE_CURRENT_SOURCE_DIR}/include/opencv\"")
+set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}\"")
 
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
 
@@ -928,6 +929,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINA
 # Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
 
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/include/opencv")
+set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
+
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/lib")
 
 #exec_program(${CMAKE_COMMAND} ARGS "-E make_directory \"${CMAKE_BINARY_DIR}/unix-install/\"")
@@ -947,6 +950,7 @@ if(WIN32)
     
     # This will expand to, for example, <program files>/OpenCV 1.1.0/include
     set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/include\" \"\${THIS_OPENCV_CONFIG_PATH}/include/opencv\"")
+	set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"${THIS_OPENCV_CONFIG_PATH}\"")
 
     # This will expand to, for example, <program files>/OpenCV 1.1.0/lib
     set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/lib\"")

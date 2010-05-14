@@ -56,6 +56,18 @@ foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
 	endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
 endforeach(__CVLIB)
 
+# ==============================================================
+#  Extra include directories, needed by OpenCV 2 new structure
+# ==============================================================
+if(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
+	SET(BASEDIR @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@)
+	foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
+		# We only need the "core",... part here: "opencv_core" -> "core"
+		STRING(REGEX REPLACE "opencv_(.*)" "\\1" MODNAME ${__CVLIB})
+		INCLUDE_DIRECTORIES("${BASEDIR}/modules/${MODNAME}/include")
+	endforeach(__CVLIB)
+endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
+
 # For OpenCV built as static libs, we need the user to link against 
 #  many more dependencies:
 IF (NOT @OPENCV_BUILD_SHARED_LIB@)
