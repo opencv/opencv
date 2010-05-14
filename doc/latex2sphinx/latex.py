@@ -26,7 +26,7 @@ def sl(s):
 
 import pythonapi
 
-python_api = pythonapi.reader("../../interfaces/python/api")
+python_api = pythonapi.reader("../../modules/python/api")
 
 
 class SphinxWriter:
