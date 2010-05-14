@@ -1998,6 +1998,18 @@ class DocumentFragmentTests(OpenCVTests):
         cv.ConvertScale(disparity_left, disparity_left_visual, -16)
         # self.snap(disparity_left_visual)
 
+    def test_calchist(self):
+        from calchist import hs_histogram
+        i1 = self.get_sample("samples/c/lena.jpg")
+        i2 = self.get_sample("doc/pics/building.jpg")
+        i3 = cv.CloneMat(i1)
+        cv.Flip(i3, i3, 1)
+        h1 = hs_histogram(i1)
+        h2 = hs_histogram(i2)
+        h3 = hs_histogram(i3)
+        self.assertEqual(self.hashimg(h1), self.hashimg(h3))
+        self.assertNotEqual(self.hashimg(h1), self.hashimg(h2))
+
 class NewTests(OpenCVTests):
 
     pass
