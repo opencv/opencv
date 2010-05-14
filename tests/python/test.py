@@ -266,7 +266,7 @@ class FunctionTests(OpenCVTests):
                                                                       3,
                                                                       (cv.CV_TERMCRIT_ITER|cv.CV_TERMCRIT_EPS,20, 0.03),
                                                                       0)
-        if 1:  # enable visualization
+        if 0:  # enable visualization
             print
             print sum(status), "Points found in curr image"
             for prev,this in zip(prevFeatures, currFeatures):
