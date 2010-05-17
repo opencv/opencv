@@ -249,7 +249,7 @@ public:
     {
         static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
         static const bool DEFAULT_IS_NORMALIZE = true;
-        static const int DESCRIPTOR_SIZE = -1;
+        static const int DESCRIPTOR_SIZE = 128;
         DescriptorParams() : magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE) {}
         DescriptorParams( double _magnification, bool _isNormalize ) :
                              magnification(_magnification), isNormalize(_isNormalize) {}
@@ -1534,6 +1534,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
     assert( mask.empty() || (mask.rows == descriptors_1.rows && mask.cols == descriptors_2.rows) );
 
+    assert( !descriptors_1.empty() && !descriptors_2.empty() );
     assert( descriptors_1.cols == descriptors_2.cols );
     assert( DataType<ValueType>::type == descriptors_1.type() );
     assert( DataType<ValueType>::type == descriptors_2.type() );
@@ -1861,27 +1862,6 @@ protected:
     Matcher matcher;
     vector<int> classIds;
 };
-
-// A factory function for creating an arbitrary descriptor matcher at runtime
-/*inline GenericDescriptorMatch* createDescriptorMatcher(std::string extractor = "SURF", std::string matcher = "BruteForce")
-{
-    GenericDescriptorMatch* descriptors = NULL;
-
-    if(matcher.compare("BruteForce") != 0)
-    {
-        // only one matcher exists now
-        return 0;
-    }
-
-    if(extractor.compare("SURF"))
-    {
-        descriptors = new DescriptorMatchVector<features_2d::SurfDescriptorExtractor, features_2d::BruteForceMatcher<features_2d::L2<float> > >();
-    }
-    else if(extractor.compare("OneWay"))
-    {
-        descriptors = new DescriptorMatchOneWay();
-    }
-}*/
 
 }
 

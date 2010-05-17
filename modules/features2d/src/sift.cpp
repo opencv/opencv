@@ -50,7 +50,7 @@
 #include<iostream>
 #include<limits>
 
-#define log2(a) log((a)) /CV_LOG2
+#define log2(a) (log((a))/CV_LOG2)
 
 /*
  * from sift.hpp of original code
@@ -2006,16 +2006,16 @@ SIFT::SIFT( const CommonParams& _commParams,
 
 inline KeyPoint vlKeypointToOcv( const VL::Sift::Keypoint& vlKeypoint, float angle )
 {
-    return KeyPoint(vlKeypoint.x, vlKeypoint.y, vlKeypoint.sigma/*??????? or s */, angle, 0, vlKeypoint.o, 0 );
+    return KeyPoint(vlKeypoint.x, vlKeypoint.y, vlKeypoint.sigma, angle, 0, vlKeypoint.o, 0 );
 }
 
 inline void ocvKeypointToVl( const KeyPoint& ocvKeypoint, const VL::Sift& vlSift,
-                                   VL::Sift::Keypoint& vlKeypoint, float& angle )
+                                   VL::Sift::Keypoint& vlKeypoint )
 {
     vlKeypoint = vlSift.getKeypoint(ocvKeypoint.pt.x, ocvKeypoint.pt.y, ocvKeypoint.size);
-    angle = ocvKeypoint.angle;
 }
 
+// detectors
 void SIFT::operator()(const Mat& img, const Mat& mask,
                       vector<KeyPoint>& keypoints) const
 {
@@ -2063,6 +2063,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     }
 }
 
+// descriptors
 void SIFT::operator()(const Mat& img, const Mat& mask,
                       vector<KeyPoint>& keypoints,
                       Mat& descriptors,
@@ -2091,8 +2092,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     for( int pi = 0 ; iter != keypoints.end(); ++iter, pi++ )
     {
         VL::Sift::Keypoint vlkpt;
-        float angle;
-        ocvKeypointToVl( *iter, vlsift, vlkpt, angle);
-        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, angle);
+        ocvKeypointToVl( *iter, vlsift, vlkpt );
+        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, iter->angle);
     }
 }
