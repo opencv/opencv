@@ -49,7 +49,7 @@
 
 #define CV_MAJOR_VERSION    2
 #define CV_MINOR_VERSION    1
-#define CV_SUBMINOR_VERSION 0
+#define CV_SUBMINOR_VERSION 1
 
 #define CVAUX_STR_EXP(__A)  #__A
 #define CVAUX_STR(__A)      CVAUX_STR_EXP(__A)
