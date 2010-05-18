@@ -663,6 +663,14 @@ endif()
 ################## LATEX ##################
 set(BUILD_LATEX_DOCS OFF CACHE BOOL "Build LaTeX OpenCV Documentation")
 
+################### DOXYGEN ###############
+
+find_package(Doxygen)
+
+if(DOXYGEN_FOUND)
+    set(BUILD_DOXYGEN_DOCS ON CACHE BOOL "Generate HTML docs using Doxygen")    
+endif()
+
 # ----------------------------------------------------------------------------
 #                   UPDATE CONFIG FILES & SCRIPTS:
 #
@@ -1190,10 +1198,17 @@ message(STATUS "    Use TBB:                   NO")
 endif()
 
 if(BUILD_LATEX_DOCS AND PDFLATEX_COMPILER)
-message(STATUS "    Build Documentation        1")
+message(STATUS "    Build PDF                  YES")
 else()
-message(STATUS "    Build Documentation        0")
+message(STATUS "    Build PDF                  NO")
 endif()
+
+if(BUILD_DOXYGEN_DOCS AND DOXYGEN_FOUND)
+message(STATUS "    Doxygen HTMLs              YES")
+else()
+message(STATUS "    Doxygen HTMLs              NO")
+endif()
+
 message(STATUS "")
 message(STATUS "    Install path:              ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "")
