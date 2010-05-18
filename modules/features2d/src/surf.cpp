@@ -352,8 +352,8 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
 
                             CvSURFPoint point = cvSURFPoint( cvPoint2D32f(center_j,center_i), 
                                                              CV_SIGN(trace_ptr[j]), sizes[layer], 0, val0 );
-                           
-                            /* Interpolate maxima location within the 3x3x3 neighbourhood  */
+
+							/* Interpolate maxima location within the 3x3x3 neighbourhood  */
                             int ds = sizes[layer]-sizes[layer-1];
                             int interp_ok = icvInterpolateKeypoint( N9, sampleStep, sampleStep, ds, &point );
 
@@ -430,7 +430,7 @@ struct SURFInvoker
         CvMat _angle = cvMat(1, max_ori_samples, CV_32F, angle);
         CvMat _patch = cvMat(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
         
-        int k, k1 = range.begin(), k2 = range.end();
+		int k, k1 = range.begin(), k2 = range.end();
         int maxSize = 0;
         
         for( k = k1; k < k2; k++ )
@@ -662,7 +662,6 @@ const float SURFInvoker::DESC_SIGMA = 3.3f;
     
 }
 
-
 CV_IMPL void
 cvExtractSURF( const CvArr* _img, const CvArr* _mask,
                CvSeq** _keypoints, CvSeq** _descriptors,
@@ -761,10 +760,11 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
         }
     }
     cvScale( &_DW, &_DW, 1./gs );
-
-    cv::parallel_for(cv::BlockedRange(0, N),
-                     cv::SURFInvoker(&params, keypoints, descriptors, img, sum,
-                                     apt, aptw, nangle0, &DW[0][0]));
+	
+	if ( N > 0 )
+		cv::parallel_for(cv::BlockedRange(0, N),
+						 cv::SURFInvoker(&params, keypoints, descriptors, img, sum,
+										 apt, aptw, nangle0, &DW[0][0]));
     //cv::SURFInvoker(&params, keypoints, descriptors, img, sum,
     //                apt, aptw, nangle0, &DW[0][0])(cv::BlockedRange(0, N));
     
