@@ -2058,7 +2058,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
               assert(0);
             }
 
-            keypoints.push_back( vlKeypointToOcv(*iter, angleVal) );
+            keypoints.push_back( vlKeypointToOcv(*iter, angleVal*180.0/CV_PI ) );
         }
     }
 }
@@ -2093,6 +2093,6 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     {
         VL::Sift::Keypoint vlkpt;
         ocvKeypointToVl( *iter, vlsift, vlkpt );
-        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, iter->angle);
+        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, iter->angle*CV_PI/180.0);
     }
 }
