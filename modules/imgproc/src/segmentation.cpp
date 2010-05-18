@@ -321,9 +321,9 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 {
     const int cn = 3;
     const int MAX_LEVELS = 8;
-    cv::Ptr<CvMat> src_pyramid[MAX_LEVELS+1];
-    cv::Ptr<CvMat> dst_pyramid[MAX_LEVELS+1];
-    cv::Ptr<CvMat> mask0;
+    cv::Mat src_pyramid[MAX_LEVELS+1];
+    cv::Mat dst_pyramid[MAX_LEVELS+1];
+    cv::Mat mask0;
     int i, j, level;
     //uchar* submask = 0;
 
@@ -336,19 +336,16 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     double sr2 = sr * sr;
     int isr2 = cvRound(sr2), isr22 = MAX(isr2,16);
     int tab[768];
-    CvMat sstub0, *src0;
-    CvMat dstub0, *dst0;
+    cv::Mat src0 = cv::cvarrToMat(srcarr);
+    cv::Mat dst0 = cv::cvarrToMat(dstarr);
 
-    src0 = cvGetMat( srcarr, &sstub0 );
-    dst0 = cvGetMat( dstarr, &dstub0 );
-
-    if( CV_MAT_TYPE(src0->type) != CV_8UC3 )
+    if( src0.type() != CV_8UC3 )
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
     
-    if( !CV_ARE_TYPES_EQ( src0, dst0 ))
+    if( src0.type() != dst0.type() )
         CV_Error( CV_StsUnmatchedFormats, "The input and output images must have the same type" );
 
-    if( !CV_ARE_SIZES_EQ( src0, dst0 ))
+    if( src0.size() != dst0.size() )
         CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
 
     if( (unsigned)max_level > (unsigned)MAX_LEVELS )
@@ -370,24 +367,24 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     dst_pyramid[0] = dst0;
     for( level = 1; level <= max_level; level++ )
     {
-        src_pyramid[level] = cvCreateMat( (src_pyramid[level-1]->rows+1)/2,
-                        (src_pyramid[level-1]->cols+1)/2, src_pyramid[level-1]->type );
-        dst_pyramid[level] = cvCreateMat( src_pyramid[level]->rows,
-                        src_pyramid[level]->cols, src_pyramid[level]->type );
-        cvPyrDown( src_pyramid[level-1], src_pyramid[level] );
+        src_pyramid[level].create( (src_pyramid[level-1].rows+1)/2,
+                        (src_pyramid[level-1].cols+1)/2, src_pyramid[level-1].type() );
+        dst_pyramid[level].create( src_pyramid[level].rows,
+                        src_pyramid[level].cols, src_pyramid[level].type() );
+        cv::pyrDown( src_pyramid[level-1], src_pyramid[level] );
         //CV_CALL( cvResize( src_pyramid[level-1], src_pyramid[level], CV_INTER_AREA ));
     }
 
-    mask0 = cvCreateMat( src0->rows, src0->cols, CV_8UC1 );
+    mask0.create(src0.rows, src0.cols, CV_8UC1);
     //CV_CALL( submask = (uchar*)cvAlloc( (sp+2)*(sp+2) ));
 
     // 2. apply meanshift, starting from the pyramid top (i.e. the smallest layer)
     for( level = max_level; level >= 0; level-- )
     {
-        CvMat* src = src_pyramid[level];
-        CvSize size = cvGetMatSize(src);
-        uchar* sptr = src->data.ptr;
-        int sstep = src->step;
+        cv::Mat src = src_pyramid[level];
+        cv::Size size = src.size();
+        uchar* sptr = src.data;
+        int sstep = src.step;
         uchar* mask = 0;
         int mstep = 0;
         uchar* dptr;
@@ -397,15 +394,15 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 
         if( level < max_level )
         {
-            CvSize size1 = cvGetMatSize(dst_pyramid[level+1]);
-            CvMat m = cvMat( size.height, size.width, CV_8UC1, mask0->data.ptr );
-            dstep = dst_pyramid[level+1]->step;
-            dptr = dst_pyramid[level+1]->data.ptr + dstep + cn;
+            cv::Size size1 = dst_pyramid[level+1].size();
+            cv::Mat m( size.height, size.width, CV_8UC1, mask0.data );
+            dstep = dst_pyramid[level+1].step;
+            dptr = dst_pyramid[level+1].data + dstep + cn;
             mstep = m.step;
-            mask = m.data.ptr + mstep;
+            mask = m.data + mstep;
             //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
-            cvPyrUp( dst_pyramid[level+1], dst_pyramid[level] );
-            cvZero( &m );
+            cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level] );
+            m.setTo(cv::Scalar::all(0));
 
             for( i = 1; i < size1.height-1; i++, dptr += dstep - (size1.width-2)*3, mask += mstep*2 )
             {
@@ -417,12 +414,12 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                 }
             }
 
-            cvDilate( &m, &m, 0, 1 );
-            mask = m.data.ptr;
+            cv::dilate( m, m, cv::Mat() );
+            mask = m.data;
         }
 
-        dptr = dst_pyramid[level]->data.ptr;
-        dstep = dst_pyramid[level]->step;
+        dptr = dst_pyramid[level].data;
+        dstep = dst_pyramid[level].step;
 
         for( i = 0; i < size.height; i++, sptr += sstep - size.width*3,
                                           dptr += dstep - size.width*3,
