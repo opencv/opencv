@@ -58,6 +58,7 @@ enum { WINDOW_AUTOSIZE=1 };
 
 CV_EXPORTS void namedWindow( const string& winname, int flags CV_DEFAULT(WINDOW_AUTOSIZE) );
 CV_EXPORTS void destroyWindow( const string& winname );
+CV_EXPORTS int startWindowThread();
 
 CV_EXPORTS void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS double getWindowProperty(const string& winname, int prop_id);//YV
@@ -74,6 +75,11 @@ CV_EXPORTS int createTrackbar( const string& trackbarname, const string& winname
 CV_EXPORTS int getTrackbarPos( const string& trackbarname, const string& winname );
 CV_EXPORTS void setTrackbarPos( const string& trackbarname, const string& winname, int pos );
 
+typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
+
+//! assigns callback for mouse events
+CV_EXPORTS void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
+    
 CV_EXPORTS Mat imread( const string& filename, int flags=1 );
 CV_EXPORTS bool imwrite( const string& filename, const Mat& img,
               const vector<int>& params=vector<int>());

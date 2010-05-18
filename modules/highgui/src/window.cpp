@@ -154,6 +154,16 @@ int getTrackbarPos( const string& trackbarName, const string& winName )
 {
 	return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
 }
+    
+void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param)
+{
+    cvSetMouseCallback(windowName.c_str(), onMouse, param);
+}
+    
+int startWindowThread()
+{
+    return cvStartWindowThread();
+}
 
 }
 
