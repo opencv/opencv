@@ -78,9 +78,9 @@ void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
 /****************************************************************************************\
 *                                SiftDescriptorExtractor                                  *
 \****************************************************************************************/
-SiftDescriptorExtractor::SiftDescriptorExtractor( double magnification, bool isNormalize,
-                                                  int nOctaves, int nOctaveLayers, int firstOctave )
-    : sift( magnification, isNormalize, nOctaves, nOctaveLayers, firstOctave )
+SiftDescriptorExtractor::SiftDescriptorExtractor( double magnification, bool isNormalize, bool recalculateAngles,
+                                                  int nOctaves, int nOctaveLayers, int firstOctave, int angleMode )
+    : sift( magnification, isNormalize, recalculateAngles, nOctaves, nOctaveLayers, firstOctave, angleMode )
 {}
 
 void SiftDescriptorExtractor::compute( const Mat& image,

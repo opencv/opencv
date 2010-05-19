@@ -14,8 +14,7 @@ inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
 
 void drawCorrespondences( const Mat& img1, const Mat& img2, const Mat& transfMtr,
                           const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
-                          const vector<int>& matches, const vector<double>& distances,
-                          float maxDist, Mat& drawImg )
+                          const vector<int>& matches, float maxDist, Mat& drawImg )
 {
     Scalar RED = CV_RGB(255, 0, 0);
     Scalar PINK = CV_RGB(255,130,230);
@@ -49,9 +48,8 @@ void drawCorrespondences( const Mat& img1, const Mat& img2, const Mat& transfMtr
     Mat vec1(3, 1, CV_32FC1), vec2;
     float err = 3;
     vector<int>::const_iterator mit = matches.begin();
-    vector<double>::const_iterator dit = distances.begin();
-    assert( matches.size() == distances.size() && matches.size() == keypoints1.size() );
-    for( int i1 = 0; mit < matches.end(); ++mit, ++dit, i1++ )
+    assert( matches.size() == keypoints1.size() );
+    for( int i1 = 0; mit < matches.end(); ++mit, i1++ )
     {
         Point2f pt1 = keypoints1[i1].pt, pt2 = keypoints2[*mit].pt;
         Point2f diff = applyHomography(transfMtr, pt1) - pt2;
@@ -63,12 +61,13 @@ void drawCorrespondences( const Mat& img1, const Mat& img2, const Mat& transfMtr
         }
         else
         {
-            if( *dit > maxDist )
+            /*if( *dit > maxDist )
             {
                 circle(drawImg, pt1, 3, PINK);
                 circle(drawImg, Point2f(pt2.x+img1.cols, pt2.y), 3, PINK);
             }
-            else
+            // TODO add key point filter
+            else*/
             {
                 circle(drawImg, pt1, 3, BLUE);
                 circle(drawImg, Point2f(pt2.x+img1.cols, pt2.y), 3, BLUE);
@@ -93,8 +92,7 @@ FeatureDetector* createDetector( const string& detectorType )
     else if( !detectorType.compare( "SIFT" ) )
     {
         fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD(),
-                                     SIFT::DetectorParams::FIRST_ANGLE);
+                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
     }
     else if( !detectorType.compare( "SURF" ) )
 	{
@@ -184,17 +182,16 @@ void iter( Ptr<FeatureDetector> detector, Ptr<DescriptorExtractor> descriptor,
 
     cout << "< Matching keypoints by descriptors... ";
     vector<int> matches;
-    vector<double> distances;
     Ptr<DescriptorMatcher> matcher = createDescMatcher();
     matcher->add( descs2 );
-    matcher->match( descs1, matches, &distances );
+    matcher->match( descs1, matches );
     cout << ">" << endl;
 
     // TODO time
 
     Mat drawImg;
     drawCorrespondences( img1, img2, transfMtr, keypoints1, keypoints2,
-                         matches, distances, maxDist, drawImg );
+                         matches, maxDist, drawImg );
     imshow( winName, drawImg);
 }
 

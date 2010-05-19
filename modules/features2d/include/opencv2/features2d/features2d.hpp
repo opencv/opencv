@@ -224,25 +224,26 @@ public:
         static const int DEFAULT_NOCTAVES = 4;
         static const int DEFAULT_NOCTAVE_LAYERS = 3;
         static const int DEFAULT_FIRST_OCTAVE = -1;
+        enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
+
         CommonParams() : nOctaves(DEFAULT_NOCTAVES), nOctaveLayers(DEFAULT_NOCTAVE_LAYERS),
-                         firstOctave(DEFAULT_FIRST_OCTAVE) {}
-        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave ) :
+                         firstOctave(DEFAULT_FIRST_OCTAVE), angleMode(FIRST_ANGLE) {}
+        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode ) :
                          nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers),
-                         firstOctave(_firstOctave) {}
+                         firstOctave(_firstOctave), angleMode(_angleMode) {}
         int nOctaves, nOctaveLayers, firstOctave;
+        int angleMode;
     };
 
     struct DetectorParams
     {
         static double GET_DEFAULT_THRESHOLD() { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
         static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
-        enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
-        DetectorParams() : threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD()),
-                           angleMode(FIRST_ANGLE) {}
-        DetectorParams( double _threshold, double _edgeThreshold, int _angleMode ) :
-                threshold(_threshold), edgeThreshold(_edgeThreshold), angleMode(_angleMode) {}
+
+        DetectorParams() : threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD()) {}
+        DetectorParams( double _threshold, double _edgeThreshold ) :
+                threshold(_threshold), edgeThreshold(_edgeThreshold) {}
         double threshold, edgeThreshold;
-        int angleMode;
     };
 
     struct DescriptorParams
@@ -250,24 +251,30 @@ public:
         static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
         static const bool DEFAULT_IS_NORMALIZE = true;
         static const int DESCRIPTOR_SIZE = 128;
-        DescriptorParams() : magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE) {}
-        DescriptorParams( double _magnification, bool _isNormalize ) :
-                             magnification(_magnification), isNormalize(_isNormalize) {}
+        DescriptorParams() : magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE),
+                             recalculateAngles(true) {}
+        DescriptorParams( double _magnification, bool _isNormalize, bool _recalculateAngles ) :
+                          magnification(_magnification), isNormalize(_isNormalize),
+                          recalculateAngles(_recalculateAngles) {}
         double magnification;
         bool isNormalize;
+        bool recalculateAngles;
     };
 
     SIFT();
     // sift-detector constructor
-    SIFT( double _threshold, double _edgeThreshold, int _angleMode=DetectorParams::FIRST_ANGLE,
+    SIFT( double _threshold, double _edgeThreshold,
           int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
           int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
-          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE );
+          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
+          int _angleMode=CommonParams::FIRST_ANGLE );
     // sift-descriptor constructor
     SIFT( double _magnification, bool _isNormalize=true,
+          bool _recalculateAngles = true,
           int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
           int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
-          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE );
+          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
+          int _angleMode=CommonParams::FIRST_ANGLE );
     SIFT( const CommonParams& _commParams,
           const DetectorParams& _detectorParams = DetectorParams(),
           const DescriptorParams& _descriptorParams = DescriptorParams() );
@@ -1231,10 +1238,10 @@ class CV_EXPORTS SiftFeatureDetector : public FeatureDetector
 public:
     SiftFeatureDetector( double threshold=SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
                          double edgeThreshold=SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD(),
-                         int angleMode=SIFT::DetectorParams::FIRST_ANGLE,
                          int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
                          int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-                         int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE );
+                         int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
+                         int angleMode=SIFT::CommonParams::FIRST_ANGLE );
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 
@@ -1291,10 +1298,11 @@ protected:
 class CV_EXPORTS SiftDescriptorExtractor : public DescriptorExtractor
 {
 public:
-    SiftDescriptorExtractor( double magnification, bool isNormalize=true,
+    SiftDescriptorExtractor( double magnification, bool isNormalize=true, bool recalculateAngles=true,
                              int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
                              int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-                             int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE );
+                             int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
+                             int angleMode=SIFT::CommonParams::FIRST_ANGLE );
 
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
 
@@ -1408,10 +1416,7 @@ public:
      * query         The query set of descriptors
      * matches       Indices of the closest matches from the training set
      */
-
-
-    // TODO: remove vector<double>* distances = 0 ???
-    void match( const Mat& query, vector<int>& matches, vector<double>* distances = 0 ) const;
+    void match( const Mat& query, vector<int>& matches ) const;
 
     /*
      * Find the best matches between two descriptor sets, with constraints
@@ -1479,15 +1484,10 @@ inline void DescriptorMatcher::add( const Mat& descriptors )
     }
 }
 
-inline void DescriptorMatcher::match( const Mat& query, vector<int>& matches, vector<double>* distances ) const
+inline void DescriptorMatcher::match( const Mat& query, vector<int>& matches ) const
 {
-    if( distances )
-        matchImpl( query, train, Mat(), matches, *distances );
-    else
-    {
-        vector<double> innDistances;
-        matchImpl( query, train, Mat(), matches, innDistances );
-    }
+    vector<double> innDistances;
+    matchImpl( query, train, Mat(), matches, innDistances );
 }
 
 inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,

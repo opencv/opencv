@@ -152,9 +152,9 @@ void StarFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<
 /*
     SiftFeatureDetector
 */
-SiftFeatureDetector::SiftFeatureDetector(double threshold, double edgeThreshold, int angleMode,
-                                         int nOctaves, int nOctaveLayers, int firstOctave) :
-    sift(threshold, edgeThreshold, angleMode, nOctaves, nOctaveLayers, firstOctave)
+SiftFeatureDetector::SiftFeatureDetector(double threshold, double edgeThreshold,
+                                         int nOctaves, int nOctaveLayers, int firstOctave, int angleMode) :
+    sift(threshold, edgeThreshold, nOctaves, nOctaveLayers, firstOctave, angleMode)
 {
 }
 

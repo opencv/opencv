@@ -47,8 +47,8 @@
 // MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 #include "precomp.hpp"
-#include<iostream>
-#include<limits>
+#include <iostream>
+#include <limits>
 
 #define log2(a) (log((a))/CV_LOG2)
 
@@ -1981,18 +1981,18 @@ using namespace cv;
 SIFT::SIFT()
 {}
 
-SIFT::SIFT( double _threshold, double _edgeThreshold, int _angleMode,
-            int _nOctaves, int _nOctaveLayers, int _firstOctave )
+SIFT::SIFT( double _threshold, double _edgeThreshold, int _nOctaves,
+            int _nOctaveLayers, int _firstOctave, int _angleMode )
 {
-    detectorParams = DetectorParams(_threshold, _edgeThreshold, _angleMode);
-    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave);
+    detectorParams = DetectorParams(_threshold, _edgeThreshold);
+    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave, _angleMode);
 }
 
-SIFT::SIFT( double _magnification, bool _isNormalize,
-            int _nOctaves, int _nOctaveLayers, int _firstOctave )
+SIFT::SIFT( double _magnification, bool _isNormalize, bool _recalculateAngles, int _nOctaves,
+            int _nOctaveLayers, int _firstOctave, int _angleMode )
 {
-    descriptorParams = DescriptorParams(_magnification, _isNormalize);
-    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave);
+    descriptorParams = DescriptorParams(_magnification, _isNormalize, _recalculateAngles);
+    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave, _angleMode);
 }
 
 SIFT::SIFT( const CommonParams& _commParams,
@@ -2013,6 +2013,31 @@ inline void ocvKeypointToVl( const KeyPoint& ocvKeypoint, const VL::Sift& vlSift
                                    VL::Sift::Keypoint& vlKeypoint )
 {
     vlKeypoint = vlSift.getKeypoint(ocvKeypoint.pt.x, ocvKeypoint.pt.y, ocvKeypoint.size);
+}
+
+float computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, int angleMode )
+{
+    float angleVal = -1;
+    VL::float_t angles[4];
+    int angleCount = sift.computeKeypointOrientations(angles, keypoint);
+    if( angleCount > 0 )
+    {
+        if( angleMode == SIFT::CommonParams::FIRST_ANGLE )
+        {
+            angleVal = angles[0];
+        }
+        else if( angleMode == SIFT::CommonParams::AVERAGE_ANGLE )
+        {
+            for( int i = 0; i < angleCount; i++ )
+                angleVal += angles[i];
+            angleVal /= angleCount;
+        }
+        else
+        {
+          assert(0);
+        }
+    }
+    return angleVal;
 }
 
 // detectors
@@ -2038,27 +2063,10 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
 
     for( VL::Sift::KeypointsConstIter iter = vlsift.keypointsBegin(); iter != vlsift.keypointsEnd(); ++iter )
     {
-        VL::float_t angles[4];
-        int angleCount = vlsift.computeKeypointOrientations(angles, *iter);
-        if( angleCount > 0 )
+        float angleVal = computeKeypointOrientations( vlsift, *iter, commParams.angleMode );
+        if( angleVal >= 0 )
         {
-            double angleVal = 0;
-            if( detectorParams.angleMode == DetectorParams::FIRST_ANGLE )
-            {
-                angleVal = angles[0];
-            }
-            else if( detectorParams.angleMode == DetectorParams::AVERAGE_ANGLE )
-            {
-                for( int i = 0; i < angleCount; i++ )
-                    angleVal += angles[i];
-                angleVal /= angleCount;
-            }
-            else
-            {
-              assert(0);
-            }
-
-            keypoints.push_back( vlKeypointToOcv(*iter, angleVal*180.0/CV_PI ) );
+            keypoints.push_back( vlKeypointToOcv(*iter, angleVal*180.0/CV_PI) );
         }
     }
 }
@@ -2093,6 +2101,13 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     {
         VL::Sift::Keypoint vlkpt;
         ocvKeypointToVl( *iter, vlsift, vlkpt );
-        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, iter->angle*CV_PI/180.0);
+        float angleVal = iter->angle*CV_PI/180.0;
+        if( descriptorParams.recalculateAngles )
+        {
+            float recalcAngleVal = computeKeypointOrientations( vlsift, vlkpt, commParams.angleMode );
+            if( recalcAngleVal >= 0 )
+                angleVal = recalcAngleVal;
+        }
+        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, angleVal);
     }
 }

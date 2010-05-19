@@ -437,7 +437,7 @@ struct SURFInvoker
             maxSize = std::max(maxSize, ((CvSURFPoint*)cvGetSeqElem( keypoints, k ))->size);
         
         maxSize = cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f);
-        Ptr<CvMat> winbuf = cvCreateMat( 1, maxSize*maxSize, CV_8U );
+        Ptr<CvMat> winbuf = cvCreateMat( 1, maxSize > 0 ? maxSize*maxSize : 1, CV_8U );
         
         for( k = k1; k < k2; k++ )
         {
