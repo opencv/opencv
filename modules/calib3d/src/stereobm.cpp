@@ -901,7 +901,7 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     if( state->speckleRange >= 0 && state->speckleWindowSize > 0 )
     {
         Mat buf(state->slidingSumBuf);
-        filterSpeckles(disp, FILTERED, state->speckleRange, state->speckleWindowSize, buf);
+        filterSpeckles(disp, FILTERED, state->speckleWindowSize, state->speckleRange, buf);
     }
 
     if (disp0.data != disp.data)
