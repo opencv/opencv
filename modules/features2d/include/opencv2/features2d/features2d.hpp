@@ -1298,7 +1298,8 @@ protected:
 class CV_EXPORTS SiftDescriptorExtractor : public DescriptorExtractor
 {
 public:
-    SiftDescriptorExtractor( double magnification, bool isNormalize=true, bool recalculateAngles=true,
+    SiftDescriptorExtractor( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(),
+                             bool isNormalize=true, bool recalculateAngles=true,
                              int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
                              int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
                              int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
@@ -1534,10 +1535,9 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
     assert( mask.empty() || (mask.rows == descriptors_1.rows && mask.cols == descriptors_2.rows) );
 
-    assert( !descriptors_1.empty() && !descriptors_2.empty() );
     assert( descriptors_1.cols == descriptors_2.cols );
-    assert( DataType<ValueType>::type == descriptors_1.type() );
-    assert( DataType<ValueType>::type == descriptors_2.type() );
+    assert( DataType<ValueType>::type == descriptors_1.type() ||  descriptors_1.empty() );
+    assert( DataType<ValueType>::type == descriptors_2.type() ||  descriptors_2.empty() );
 
     int dimension = descriptors_1.cols;
     matches.clear();
@@ -1822,7 +1822,7 @@ protected:
 \****************************************************************************************/
 
 /*
- *  An abstract class used for matching descriptors that can be described as vectors in a finite-dimensional space
+ *  A class used for matching descriptors that can be described as vectors in a finite-dimensional space
  */
 template<class Extractor, class Matcher>
 class CV_EXPORTS VectorDescriptorMatch : public GenericDescriptorMatch

@@ -260,85 +260,91 @@ void EllipticKeyPoint::calcProjection( const Mat_<double>& H, EllipticKeyPoint& 
 
 void calcEllipticKeyPointProjections( const vector<EllipticKeyPoint>& src, const Mat_<double>& H, vector<EllipticKeyPoint>& dst )
 {
-    assert( !src.empty() && !H.empty() && H.cols == 3 && H.rows == 3);
-    dst.resize(src.size());
-    vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
-    vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
-    for( ; srcIt != src.end(); ++srcIt, ++dstIt )
-        srcIt->calcProjection(H, *dstIt);
+    if( !src.empty() )
+    {
+        assert( !H.empty() && H.cols == 3 && H.rows == 3);
+        dst.resize(src.size());
+        vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
+        vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
+        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
+            srcIt->calcProjection(H, *dstIt);
+    }
 }
 
 void transformToEllipticKeyPoints( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst )
 {
-    assert( !src.empty() );
-    dst.resize(src.size());
-    for( size_t i = 0; i < src.size(); i++ )
+    if( !src.empty() )
     {
-        float rad = src[i].size;
-        assert( rad );
-        float fac = 1.f/(rad*rad);
-        dst[i] = EllipticKeyPoint( src[i].pt, Scalar(fac, 0, fac) );
+        dst.resize(src.size());
+        for( size_t i = 0; i < src.size(); i++ )
+        {
+            float rad = src[i].size;
+            assert( rad );
+            float fac = 1.f/(rad*rad);
+            dst[i] = EllipticKeyPoint( src[i].pt, Scalar(fac, 0, fac) );
+        }
     }
 }
 
 void transformToKeyPoints( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst )
 {
-    assert( !src.empty() );
-    dst.resize(src.size());
-    for( size_t i = 0; i < src.size(); i++ )
+    if( !src.empty() )
     {
-        Size_<float> axes = src[i].axes;
-        float rad = sqrt(axes.height*axes.width);
-        dst[i] = KeyPoint(src[i].center, rad );
+        dst.resize(src.size());
+        for( size_t i = 0; i < src.size(); i++ )
+        {
+            Size_<float> axes = src[i].axes;
+            float rad = sqrt(axes.height*axes.width);
+            dst[i] = KeyPoint(src[i].center, rad );
+        }
     }
 }
 
 void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H, vector<KeyPoint>& dst )
 {
-    assert( !src.empty() && !H.empty() && H.cols == 3 && H.rows == 3);
-    dst.resize(src.size());
-    vector<KeyPoint>::const_iterator srcIt = src.begin();
-    vector<KeyPoint>::iterator       dstIt = dst.begin();
-    for( ; srcIt != src.end(); ++srcIt, ++dstIt )
+    if(  !src.empty() )
     {
-        Point2f dstPt = applyHomography(H, srcIt->pt);
+        assert( !H.empty() && H.cols == 3 && H.rows == 3);
+        dst.resize(src.size());
+        vector<KeyPoint>::const_iterator srcIt = src.begin();
+        vector<KeyPoint>::iterator       dstIt = dst.begin();
+        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
+        {
+            Point2f dstPt = applyHomography(H, srcIt->pt);
 
-        Mat_<double> Aff; linearizeHomographyAt(H, srcIt->pt, Aff);
-        Mat_<double> eval; eigen(Aff, eval);
-        assert( eval.type()==CV_64FC1 && eval.cols==1 && eval.rows==2 );
-        float dstSize = srcIt->size * sqrt(eval(0,0) * eval(1,0)) /*scale from linearized homography matrix*/;
-        assert( dstSize );
-        assert( dstSize < 0.5 ); // TODO check for surf
+            float srcSize2 = srcIt->size * srcIt->size;
+            Mat_<double> invM; invert(EllipticKeyPoint::getSecondMomentsMatrix( Scalar(1./srcSize2, 0., 1./srcSize2)), invM);
+            Mat_<double> Aff; linearizeHomographyAt(H, srcIt->pt, Aff);
+            Mat_<double> dstM; invert(Aff*invM*Aff.t(), dstM);
+            Mat_<double> eval; eigen( dstM, eval );
+            assert( eval(0,0) && eval(1,0) );
+            float dstSize = pow(1./(eval(0,0)*eval(1,0)), 0.25);
 
-        // calculate new anngle
-        float srcAngleRad = srcIt->angle*CV_PI/180;
-        Point2f vec1(cos(srcAngleRad), sin(srcAngleRad)), vec2;
-        vec2 = applyHomography(H, vec1);
-        float w = 1.f/norm(vec2);
-        vec2 = vec2*w;
-        float dstAngleGrad = acos(vec2.x)*180.f/CV_PI; // 0..180
-        if( asin(vec2.y) < 0 ) // -pi/2 .. pi/2
-            dstAngleGrad += 180;
-        *dstIt = KeyPoint( dstPt, dstSize, dstAngleGrad, srcIt->response, srcIt->octave, srcIt->class_id );
+            // TODO: check angle projection
+            float srcAngleRad = srcIt->angle*CV_PI/180;
+            Point2f vec1(cos(srcAngleRad), sin(srcAngleRad)), vec2;
+            vec2.x = Aff(0,0)*vec1.x + Aff(0,1)*vec1.y;
+            vec2.y = Aff(1,0)*vec1.x + Aff(0,1)*vec1.y;
+            float dstAngleGrad = fastAtan2(vec2.y, vec2.x);
+
+            *dstIt = KeyPoint( dstPt, dstSize, dstAngleGrad, srcIt->response, srcIt->octave, srcIt->class_id );
+        }
     }
 }
 
-void filterKeyPointsByImageSize( vector<KeyPoint>& keypoints, const Size& imgSize, vector<int>& origIdxs )
+void filterKeyPointsByImageSize( vector<KeyPoint>& keypoints, const Size& imgSize )
 {
-    vector<KeyPoint> filtered;
-    filtered.reserve(keypoints.size());
-    Rect r(0, 0, imgSize.width, imgSize.height);
-    origIdxs.clear();
-    vector<KeyPoint>::const_iterator it = keypoints.begin();
-    for( int i = 0; it != keypoints.end(); ++it, i++ )
+    if( !keypoints.empty() )
     {
-        if( r.contains(it->pt) )
-        {
-            filtered.push_back(*it);
-            origIdxs.push_back(i);
-        }
+        vector<KeyPoint> filtered;
+        filtered.reserve(keypoints.size());
+        Rect r(0, 0, imgSize.width, imgSize.height);
+        vector<KeyPoint>::const_iterator it = keypoints.begin();
+        for( int i = 0; it != keypoints.end(); ++it, i++ )
+            if( r.contains(it->pt) )
+                filtered.push_back(*it);
+        keypoints.assign(filtered.begin(), filtered.end());
     }
-    keypoints.assign(filtered.begin(), filtered.end());
 }
 
 /*
@@ -347,7 +353,10 @@ void filterKeyPointsByImageSize( vector<KeyPoint>& keypoints, const Size& imgSiz
 void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2t, bool commonPart,
               SparseMat_<float>& overlaps )
 {
-    assert( !keypoints1.empty() && !keypoints2t.empty() );
+    overlaps.clear();
+    if( keypoints1.empty() || keypoints2t.empty() )
+        return;
+
     int size[] = { keypoints1.size(), keypoints2t.size() };
     overlaps.create( 2, size );
 
@@ -409,27 +418,27 @@ void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticK
 
 void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoints, const Size& imgSize )
 {
-    vector<EllipticKeyPoint> filtered;
-    filtered.reserve(keypoints.size());
-    vector<EllipticKeyPoint>::const_iterator it = keypoints.begin();
-    for( int i = 0; it != keypoints.end(); ++it, i++ )
+    if( !keypoints.empty() )
     {
-        if( it->center.x + it->boundingBox.width < imgSize.width &&
-            it->center.x - it->boundingBox.width > 0 &&
-            it->center.y + it->boundingBox.height < imgSize.height &&
-            it->center.y - it->boundingBox.height > 0 )
-            filtered.push_back(*it);
+        vector<EllipticKeyPoint> filtered;
+        filtered.reserve(keypoints.size());
+        vector<EllipticKeyPoint>::const_iterator it = keypoints.begin();
+        for( int i = 0; it != keypoints.end(); ++it, i++ )
+        {
+            if( it->center.x + it->boundingBox.width < imgSize.width &&
+                it->center.x - it->boundingBox.width > 0 &&
+                it->center.y + it->boundingBox.height < imgSize.height &&
+                it->center.y - it->boundingBox.height > 0 )
+                filtered.push_back(*it);
+        }
+        keypoints.assign(filtered.begin(), filtered.end());
     }
-    keypoints.assign(filtered.begin(), filtered.end());
 }
 
 void getEllipticKeyPointsInCommonPart( vector<EllipticKeyPoint>& keypoints1, vector<EllipticKeyPoint>& keypoints2,
                               vector<EllipticKeyPoint>& keypoints1t, vector<EllipticKeyPoint>& keypoints2t,
                               Size& imgSize1, const Size& imgSize2 )
 {
-    assert( !keypoints1.empty() && !keypoints2.empty() );
-    assert( keypoints1t.size() == keypoints1.size() && keypoints2t.size() == keypoints2.size() );
-
     filterEllipticKeyPointsByImageSize( keypoints1, imgSize1 );
     filterEllipticKeyPointsByImageSize( keypoints1t, imgSize2 );
     filterEllipticKeyPointsByImageSize( keypoints2, imgSize2 );
@@ -502,7 +511,7 @@ void calculateRepeatability( const vector<EllipticKeyPoint>& _keypoints1, const 
                 currOverlaps.erase(maxIdx[0], i2);
             correspondencesCount++;
         }
-        repeatability = minCount ? (float)(correspondencesCount*100)/minCount : 0;
+        repeatability = minCount ? (float)(correspondencesCount*100)/minCount : -1;
     }
     else
     {
@@ -531,12 +540,12 @@ void evaluateDetectors( const vector<EllipticKeyPoint>& keypoints1, const vector
 
 inline float recall( int correctMatchCount, int correspondenceCount )
 {
-    return correspondenceCount ? (float)correctMatchCount / (float)correspondenceCount : 0;
+    return correspondenceCount ? (float)correctMatchCount / (float)correspondenceCount : -1;
 }
 
 inline float precision( int correctMatchCount, int falseMatchCount )
 {
-    return correctMatchCount + falseMatchCount ? (float)correctMatchCount / (float)(correctMatchCount + falseMatchCount) : 0;
+    return correctMatchCount + falseMatchCount ? (float)correctMatchCount / (float)(correctMatchCount + falseMatchCount) : -1;
 }
 
 void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
@@ -816,6 +825,7 @@ public:
     {
         validQuality.resize(DATASETS_COUNT);
         calcQuality.resize(DATASETS_COUNT);
+        isSaveKeypoints.resize(DATASETS_COUNT);
     }
 
 protected:
@@ -834,9 +844,9 @@ protected:
     virtual void readResults( FileNode& fn, int datasetIdx, int caseIdx );
     virtual void writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const;
 
-    virtual void readDatasetRunParams( FileNode& fn, int datasetIdx ) = 0;
-    virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const = 0;
-    virtual void setDefaultDatasetRunParams( int datasetIdx ) = 0;
+    virtual void readDatasetRunParams( FileNode& fn, int datasetIdx );
+    virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const;
+    virtual void setDefaultDatasetRunParams( int datasetIdx );
 
     virtual FeatureDetector* createDetector( int datasetIdx ) = 0;
     void openToWriteKeypointsFile( FileStorage& fs, int datasetIdx );
@@ -858,6 +868,7 @@ protected:
     };
     vector<vector<Quality> > validQuality;
     vector<vector<Quality> > calcQuality;
+    vector<bool> isSaveKeypoints;
 };
 
 string DetectorQualityTest::getRunParamsFilename() const
@@ -916,22 +927,30 @@ void DetectorQualityTest::writeResults( FileStorage& fs, int datasetIdx, int cas
 #endif
 }
 
+void DetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
+{
+    isSaveKeypoints[datasetIdx] = (int)fn["isSaveKeypoints"] != 0;
+}
+
+void DetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
+{
+    fs << "isSaveKeypoints" << isSaveKeypoints[datasetIdx];
+}
+
+void DetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
+{
+    isSaveKeypoints[datasetIdx] = false;
+}
+
 void DetectorQualityTest::openToWriteKeypointsFile( FileStorage& fs, int datasetIdx )
 {
     string filename = string(ts->get_data_path()) + KEYPOINTS_DIR + algName + "_"+
-                      DATASET_NAMES[datasetIdx] + ".xml" ;
+                      DATASET_NAMES[datasetIdx] + ".xml.gz" ;
 
-    // open file to write keypoints if there is not yet
-    fs.open(filename, FileStorage::READ);
-    if( fs.isOpened() )
-        fs.release();
-    else
-    {
-        fs.open(filename, FileStorage::WRITE);
-        if( !fs.isOpened() )
-            ts->printf( CvTS::LOG, "keypoints can not be written in file %s because this file can not be opened\n",
-                        filename.c_str());
-    }
+    fs.open(filename, FileStorage::WRITE);
+    if( !fs.isOpened() )
+        ts->printf( CvTS::LOG, "keypoints can not be written in file %s because this file can not be opened\n",
+                    filename.c_str());
 }
 
 inline void writeKeypoints( FileStorage& fs, const vector<KeyPoint>& keypoints, int imgIdx )
@@ -960,7 +979,8 @@ void DetectorQualityTest::run( int )
     for(int di = 0; di < DATASETS_COUNT; di++ )
     {   
         FileStorage keypontsFS;
-        openToWriteKeypointsFile( keypontsFS, di );
+        if( isSaveKeypoints[di] )
+            openToWriteKeypointsFile( keypontsFS, di );
 
         vector<Mat> imgs, Hs;
         if( !readDataset( DATASET_NAMES[di], Hs, imgs ) )
@@ -1062,7 +1082,7 @@ int DetectorQualityTest::processResults( int datasetIdx, int caseIdx )
 class FastDetectorQualityTest : public DetectorQualityTest
 {
 public:
-    FastDetectorQualityTest() : DetectorQualityTest( "fast", "quality-fast-detector" )
+    FastDetectorQualityTest() : DetectorQualityTest( "fast", "quality-detector-fast" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
@@ -1086,17 +1106,21 @@ FeatureDetector* FastDetectorQualityTest::createDetector( int datasetIdx )
 
 void FastDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
+    DetectorQualityTest::readDatasetRunParams(fn, datasetIdx);
     runParams[datasetIdx].threshold = fn["threshold"];
-    runParams[datasetIdx].nonmaxSuppression = (int)fn["nonmaxSuppression"] ? true : false;}
+    runParams[datasetIdx].nonmaxSuppression = (int)fn["nonmaxSuppression"] ? true : false;
+}
 
 void FastDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    DetectorQualityTest::writeDatasetRunParams(fs, datasetIdx);
     fs << "threshold" << runParams[datasetIdx].threshold;
     fs << "nonmaxSuppression" << runParams[datasetIdx].nonmaxSuppression;
 }
 
 void FastDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
     runParams[datasetIdx].threshold = 1;
     runParams[datasetIdx].nonmaxSuppression = true;
 }
@@ -1144,6 +1168,7 @@ FeatureDetector* BaseGfttDetectorQualityTest::createDetector( int datasetIdx )
 
 void BaseGfttDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
+    DetectorQualityTest::readDatasetRunParams(fn, datasetIdx);
     runParams[datasetIdx].maxCorners = fn["maxCorners"];
     runParams[datasetIdx].qualityLevel = fn["qualityLevel"];
     runParams[datasetIdx].minDistance = fn["minDistance"];
@@ -1153,6 +1178,7 @@ void BaseGfttDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datase
 
 void BaseGfttDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    DetectorQualityTest::writeDatasetRunParams(fs, datasetIdx);
     fs << "maxCorners" << runParams[datasetIdx].maxCorners;
     fs << "qualityLevel" << runParams[datasetIdx].qualityLevel;
     fs << "minDistance" << runParams[datasetIdx].minDistance;
@@ -1162,6 +1188,7 @@ void BaseGfttDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int da
 
 void BaseGfttDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
     runParams[datasetIdx].maxCorners = 1500;
     runParams[datasetIdx].qualityLevel = 0.01;
     runParams[datasetIdx].minDistance = 2.0;
@@ -1172,7 +1199,7 @@ void BaseGfttDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 class GfttDetectorQualityTest : public BaseGfttDetectorQualityTest
 {
 public:
-    GfttDetectorQualityTest() : BaseGfttDetectorQualityTest( "gftt", "quality-gftt-detector" ) {}
+    GfttDetectorQualityTest() : BaseGfttDetectorQualityTest( "gftt", "quality-detector-gftt" ) {}
 };
 
 GfttDetectorQualityTest gfttDetectorQuality;
@@ -1180,7 +1207,7 @@ GfttDetectorQualityTest gfttDetectorQuality;
 class HarrisDetectorQualityTest : public BaseGfttDetectorQualityTest
 {
 public:
-    HarrisDetectorQualityTest() : BaseGfttDetectorQualityTest( "harris", "quality-harris-detector" )
+    HarrisDetectorQualityTest() : BaseGfttDetectorQualityTest( "harris", "quality-detector-harris" )
         { useHarrisDetector = true; }
 };
 
@@ -1190,7 +1217,7 @@ HarrisDetectorQualityTest harrisDetectorQuality;
 class MserDetectorQualityTest : public DetectorQualityTest
 {
 public:
-    MserDetectorQualityTest() : DetectorQualityTest( "mser", "quality-mser-detector" )
+    MserDetectorQualityTest() : DetectorQualityTest( "mser", "quality-detector-mser" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
@@ -1199,18 +1226,7 @@ protected:
     virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const;
     virtual void setDefaultDatasetRunParams( int datasetIdx );
 
-    struct RunParams
-    {
-        int delta;
-        int minArea;
-        int maxArea;
-        float maxVariation;
-        float minDiversity;
-        int maxEvolution;
-        double areaThreshold;
-        double minMargin;
-        int edgeBlurSize;
-    };
+    typedef CvMSERParams RunParams;
     vector<RunParams> runParams;
 };
 
@@ -1229,6 +1245,7 @@ FeatureDetector* MserDetectorQualityTest::createDetector( int datasetIdx )
 
 void MserDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
+    DetectorQualityTest::readDatasetRunParams(fn, datasetIdx);
     runParams[datasetIdx].delta = fn["delta"];
     runParams[datasetIdx].minArea = fn["minArea"];
     runParams[datasetIdx].maxArea = fn["maxArea"];
@@ -1242,6 +1259,7 @@ void MserDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx
 
 void MserDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    DetectorQualityTest::writeDatasetRunParams(fs, datasetIdx);
     fs << "delta" << runParams[datasetIdx].delta;
     fs << "minArea" << runParams[datasetIdx].minArea;
     fs << "maxArea" << runParams[datasetIdx].maxArea;
@@ -1255,6 +1273,7 @@ void MserDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datase
 
 void MserDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
     runParams[datasetIdx].delta = 5;
     runParams[datasetIdx].minArea = 60;
     runParams[datasetIdx].maxArea = 14400;
@@ -1272,7 +1291,7 @@ MserDetectorQualityTest mserDetectorQuality;
 class StarDetectorQualityTest : public DetectorQualityTest
 {
 public:
-    StarDetectorQualityTest() : DetectorQualityTest( "star", "quality-star-detector" )
+    StarDetectorQualityTest() : DetectorQualityTest( "star", "quality-detector-star" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
@@ -1303,6 +1322,7 @@ FeatureDetector* StarDetectorQualityTest::createDetector( int datasetIdx )
 
 void StarDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
+    DetectorQualityTest::readDatasetRunParams(fn, datasetIdx);
     runParams[datasetIdx].maxSize = fn["maxSize"];
     runParams[datasetIdx].responseThreshold = fn["responseThreshold"];
     runParams[datasetIdx].lineThresholdProjected = fn["lineThresholdProjected"];
@@ -1312,6 +1332,7 @@ void StarDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx
 
 void StarDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    DetectorQualityTest::writeDatasetRunParams(fs, datasetIdx);
     fs << "maxSize" << runParams[datasetIdx].maxSize;
     fs << "responseThreshold" << runParams[datasetIdx].responseThreshold;
     fs << "lineThresholdProjected" << runParams[datasetIdx].lineThresholdProjected;
@@ -1321,6 +1342,7 @@ void StarDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datase
 
 void StarDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
     runParams[datasetIdx].maxSize = 16;
     runParams[datasetIdx].responseThreshold = 30;
     runParams[datasetIdx].lineThresholdProjected = 10;
@@ -1334,7 +1356,7 @@ StarDetectorQualityTest starDetectorQuality;
 class SiftDetectorQualityTest : public DetectorQualityTest
 {
 public:
-    SiftDetectorQualityTest() : DetectorQualityTest( "sift", "quality-sift-detector" )
+    SiftDetectorQualityTest() : DetectorQualityTest( "sift", "quality-detector-sift" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
@@ -1356,34 +1378,37 @@ FeatureDetector* SiftDetectorQualityTest::createDetector( int datasetIdx )
 {
     return new SiftFeatureDetector( runParams[datasetIdx].detect.threshold,
                                     runParams[datasetIdx].detect.edgeThreshold,
-                                    runParams[datasetIdx].detect.angleMode,
                                     runParams[datasetIdx].comm.nOctaves,
                                     runParams[datasetIdx].comm.nOctaveLayers,
-                                    runParams[datasetIdx].comm.firstOctave );
+                                    runParams[datasetIdx].comm.firstOctave,
+                                    runParams[datasetIdx].comm.angleMode );
 }
 
 void SiftDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
+    DetectorQualityTest::readDatasetRunParams(fn, datasetIdx);
     runParams[datasetIdx].detect.threshold = fn["threshold"];
     runParams[datasetIdx].detect.edgeThreshold = fn["edgeThreshold"];
-    runParams[datasetIdx].detect.angleMode = fn["angleMode"];
     runParams[datasetIdx].comm.nOctaves = fn["nOctaves"];
     runParams[datasetIdx].comm.nOctaveLayers = fn["nOctaveLayers"];
     runParams[datasetIdx].comm.firstOctave = fn["firstOctave"];
+    runParams[datasetIdx].comm.angleMode = fn["angleMode"];
 }
 
 void SiftDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    DetectorQualityTest::writeDatasetRunParams(fs, datasetIdx);
     fs << "threshold" << runParams[datasetIdx].detect.threshold;
     fs << "edgeThreshold" << runParams[datasetIdx].detect.edgeThreshold;
-    fs << "angleMode" << runParams[datasetIdx].detect.angleMode;
     fs << "nOctaves" << runParams[datasetIdx].comm.nOctaves;
     fs << "nOctaveLayers" << runParams[datasetIdx].comm.nOctaveLayers;
     fs << "firstOctave" << runParams[datasetIdx].comm.firstOctave;
+    fs << "angleMode" << runParams[datasetIdx].comm.angleMode;
  }
 
 void SiftDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
     runParams[datasetIdx].detect = SIFT::DetectorParams();
     runParams[datasetIdx].comm = SIFT::CommonParams();
 }
@@ -1394,7 +1419,7 @@ SiftDetectorQualityTest siftDetectorQuality;
 class SurfDetectorQualityTest : public DetectorQualityTest
 {
 public:
-    SurfDetectorQualityTest() : DetectorQualityTest( "surf", "quality-surf-detector" )
+    SurfDetectorQualityTest() : DetectorQualityTest( "surf", "quality-detector-surf" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
@@ -1421,6 +1446,7 @@ FeatureDetector* SurfDetectorQualityTest::createDetector( int datasetIdx )
 
 void SurfDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
+    DetectorQualityTest::readDatasetRunParams(fn, datasetIdx);
     runParams[datasetIdx].hessianThreshold = fn["hessianThreshold"];
     runParams[datasetIdx].octaves = fn["octaves"];
     runParams[datasetIdx].octaveLayers = fn["octaveLayers"];
@@ -1428,6 +1454,7 @@ void SurfDetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx
 
 void SurfDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    DetectorQualityTest::writeDatasetRunParams(fs, datasetIdx);
     fs << "hessianThreshold" << runParams[datasetIdx].hessianThreshold;
     fs << "octaves" << runParams[datasetIdx].octaves;
     fs << "octaveLayers" << runParams[datasetIdx].octaveLayers;
@@ -1435,6 +1462,7 @@ void SurfDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datase
 
 void SurfDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
     runParams[datasetIdx].hessianThreshold = 400.;
     runParams[datasetIdx].octaves = 3;
     runParams[datasetIdx].octaveLayers = 4;
@@ -1564,32 +1592,10 @@ void DescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetI
 
 void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
-    commRunParams[datasetIdx].keypontsFilename = "surf_" + DATASET_NAMES[datasetIdx] + ".xml";
-    commRunParams[datasetIdx].projectKeypointsFrom1Image = false;
+    commRunParams[datasetIdx].keypontsFilename = "surf_" + DATASET_NAMES[datasetIdx] + ".xml.gz";
+    commRunParams[datasetIdx].projectKeypointsFrom1Image = true;
     commRunParams[datasetIdx].matchFilter = NO_MATCH_FILTER;
 }
-
-// if keyponts from first image are projected on second image using homography matrix
-void evaluateDescriptors( const vector<int>& origIdxs2,
-                          const vector<int>& matches1to2,
-                          int& correctMatchCount, int& falseMatchCount, int& correspondenceCount )
-{
-    assert( !origIdxs2.empty() > 0 && !matches1to2.empty() );
-    correspondenceCount = origIdxs2.size();
-    correctMatchCount = falseMatchCount = 0;
-    for( size_t i1 = 0; i1 < matches1to2.size(); i1++ )
-    {
-        size_t i2 = matches1to2[i1];
-        if( i2 > 0 )
-        {
-            if( origIdxs2[i2] == (int)i1 )
-                correctMatchCount++;
-            else
-                falseMatchCount++;
-        }
-    }
-}
-
 
 void DescriptorQualityTest::run( int )
 {
@@ -1617,42 +1623,32 @@ void DescriptorQualityTest::run( int )
 
             vector<KeyPoint> keypoints1; vector<EllipticKeyPoint> ekeypoints1;
             readKeypoints( keypontsFS, keypoints1, 0);
-            if( !commRunParams[di].projectKeypointsFrom1Image )
-                transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
-            else
-            {
-                assert(0);
-                // TODO debug!
-            }
+            transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
             for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
             {
                 progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
 
-                vector<KeyPoint> keypoints2; vector<EllipticKeyPoint> ekeypoints2;
-                vector<int> origIdxs2;
+                vector<KeyPoint> keypoints2;
+                vector<EllipticKeyPoint> ekeypoints2;
                 if( commRunParams[di].projectKeypointsFrom1Image )
                 {
+                    // TODO need to test function calcKeyPointProjections
                     calcKeyPointProjections( keypoints1, Hs[ci], keypoints2 );
-                    filterKeyPointsByImageSize( keypoints2,  imgs[ci+1].size(), origIdxs2 );
+                    filterKeyPointsByImageSize( keypoints2,  imgs[ci+1].size() );
                 }
                 else
-                {
                     readKeypoints( keypontsFS, keypoints2, ci+1 );
-                    transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
-                }
+                transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
+
                 Ptr<GenericDescriptorMatch> descMatch = createDescriptorMatch(di);
                 descMatch->add( imgs[ci+1], keypoints2 );
                 vector<int> matches1to2;
                 descMatch->match( imgs[0], keypoints1, matches1to2 );
 
                 // TODO if( commRunParams[di].matchFilter )
-
                 int correctMatchCount, falseMatchCount, correspCount;
-                if( commRunParams[di].projectKeypointsFrom1Image )
-                    evaluateDescriptors( origIdxs2, matches1to2, correctMatchCount, falseMatchCount, correspCount );
-                else
-                    evaluateDescriptors( ekeypoints1, ekeypoints2, matches1to2, imgs[0], imgs[ci+1], Hs[ci],
-                                         correctMatchCount, falseMatchCount, correspCount );
+                evaluateDescriptors( ekeypoints1, ekeypoints2, matches1to2, imgs[0], imgs[ci+1], Hs[ci],
+                                     correctMatchCount, falseMatchCount, correspCount );
                 calcQuality[di][ci].recall = recall( correctMatchCount, correspCount );
                 calcQuality[di][ci].precision = precision( correctMatchCount, falseMatchCount );
             }
@@ -1691,7 +1687,7 @@ int DescriptorQualityTest::processResults( int datasetIdx, int caseIdx )
 class SiftDescriptorQualityTest : public DescriptorQualityTest
 {
 public:
-    SiftDescriptorQualityTest() : DescriptorQualityTest( "sift", "quality-sift-descriptor" )
+    SiftDescriptorQualityTest() : DescriptorQualityTest( "sift", "quality-descriptor-sift" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
@@ -1702,22 +1698,21 @@ protected:
 
     struct RunParams
     {
-        double magnification;
-        bool isNormalize;
-        int nOctaves;
-        int nOctaveLayers;
-        int firstOctave;
+        SIFT::CommonParams comm;
+        SIFT::DescriptorParams desc;
     };
     vector<RunParams> runParams;
 };
 
 GenericDescriptorMatch* SiftDescriptorQualityTest::createDescriptorMatch( int datasetIdx )
 {
-    SiftDescriptorExtractor extractor( runParams[datasetIdx].magnification,
-                                       runParams[datasetIdx].isNormalize,
-                                       runParams[datasetIdx].nOctaves,
-                                       runParams[datasetIdx].nOctaveLayers,
-                                       runParams[datasetIdx].firstOctave );
+    SiftDescriptorExtractor extractor( runParams[datasetIdx].desc.magnification,
+                                       runParams[datasetIdx].desc.isNormalize,
+                                       runParams[datasetIdx].desc.recalculateAngles,
+                                       runParams[datasetIdx].comm.nOctaves,
+                                       runParams[datasetIdx].comm.nOctaveLayers,
+                                       runParams[datasetIdx].comm.firstOctave,
+                                       runParams[datasetIdx].comm.angleMode );
     BruteForceMatcher<L2<float> > matcher;
     return new VectorDescriptorMatch<SiftDescriptorExtractor, BruteForceMatcher<L2<float> > >(extractor, matcher);
 }
@@ -1725,31 +1720,32 @@ GenericDescriptorMatch* SiftDescriptorQualityTest::createDescriptorMatch( int da
 void SiftDescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
     DescriptorQualityTest::readDatasetRunParams( fn, datasetIdx);
-    runParams[datasetIdx].magnification = fn["magnification"];
-    runParams[datasetIdx].isNormalize = (int)fn["isNormalize"] != 0;
-    runParams[datasetIdx].nOctaves = fn["nOctaves"];
-    runParams[datasetIdx].nOctaveLayers = fn["nOctaveLayers"];
-    runParams[datasetIdx].firstOctave = fn["firstOctave"];
+    runParams[datasetIdx].desc.magnification = fn["magnification"];
+    runParams[datasetIdx].desc.isNormalize = (int)fn["isNormalize"] != 0;
+    runParams[datasetIdx].desc.recalculateAngles = (int)fn["recalculateAngles"] != 0;
+    runParams[datasetIdx].comm.nOctaves = fn["nOctaves"];
+    runParams[datasetIdx].comm.nOctaveLayers = fn["nOctaveLayers"];
+    runParams[datasetIdx].comm.firstOctave = fn["firstOctave"];
+    runParams[datasetIdx].comm.angleMode = fn["angleMode"];
 }
 
 void SiftDescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
     DescriptorQualityTest::writeDatasetRunParams( fs, datasetIdx );
-    fs << "magnification" << runParams[datasetIdx].magnification;
-    fs << "isNormalize" << runParams[datasetIdx].isNormalize;
-    fs << "nOctaves" << runParams[datasetIdx].nOctaves;
-    fs << "nOctaveLayers" << runParams[datasetIdx].nOctaveLayers;
-    fs << "firstOctave" << runParams[datasetIdx].firstOctave;
+    fs << "magnification" << runParams[datasetIdx].desc.magnification;
+    fs << "isNormalize" << runParams[datasetIdx].desc.isNormalize;
+    fs << "recalculateAngles" << runParams[datasetIdx].desc.recalculateAngles;
+    fs << "nOctaves" << runParams[datasetIdx].comm.nOctaves;
+    fs << "nOctaveLayers" << runParams[datasetIdx].comm.nOctaveLayers;
+    fs << "firstOctave" << runParams[datasetIdx].comm.firstOctave;
+    fs << "angleMode" << runParams[datasetIdx].comm.angleMode;
 }
 
 void SiftDescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
     DescriptorQualityTest::setDefaultDatasetRunParams( datasetIdx );
-    runParams[datasetIdx].magnification = SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION();
-    runParams[datasetIdx].isNormalize = SIFT::DescriptorParams::DEFAULT_IS_NORMALIZE;
-    runParams[datasetIdx].nOctaves = SIFT::CommonParams::DEFAULT_NOCTAVES;
-    runParams[datasetIdx].nOctaveLayers = SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS;
-    runParams[datasetIdx].firstOctave = SIFT::CommonParams::DEFAULT_FIRST_OCTAVE;
+    runParams[datasetIdx].desc = SIFT::DescriptorParams();
+    runParams[datasetIdx].comm = SIFT::CommonParams();
 }
 
 SiftDescriptorQualityTest siftDescriptorQuality;
@@ -1758,7 +1754,7 @@ SiftDescriptorQualityTest siftDescriptorQuality;
 class SurfDescriptorQualityTest : public DescriptorQualityTest
 {
 public:
-    SurfDescriptorQualityTest() : DescriptorQualityTest( "surf", "quality-surf-descriptor" )
+    SurfDescriptorQualityTest() : DescriptorQualityTest( "surf", "quality-descriptor-surf" )
     { runParams.resize(DATASETS_COUNT); }
 
 protected:
