@@ -406,7 +406,37 @@ It is not a new feature of OpenCV v2.x, it was there from very beginning. In the
 
 \section{Error handling}
 
-The modern error handling mechanism in OpenCV uses exceptions, as opposite to the manual stack unrolling used in previous versions. When OpenCV is built in DEBUG configuration, the error handler provokes memory access violation, so that the full call stack and context can be analyzed with debugger.
+The modern error handling mechanism in OpenCV uses exceptions, as opposite to the manual stack unrolling used in previous versions.
+
+If you to check some conditions in your code and raise an error if they are not satisfied, use \hyperref[CV Assert]{CV\_Assert}() or \hyperref[cppfunc.error]{CV\_Error}().
+
+\begin{lstlisting}
+CV_Assert(mymat.type() == CV_32FC1);
+...
+
+if( scaleValue < 0 || scaleValue > 1000 )
+   CV_Error(CV_StsOutOfRange, "The scale value is out of range");
+\end{lstlisting}
+
+There is also \hyperref[CV Assert]{CV\_DbgAssert} that yields no code in the Release configuration.
+
+To handle the errors, use the standard exception handling mechanism:
+
+\begin{lstlisting}
+try
+{
+    ...
+}
+catch( cv::Exception& e )
+{
+    const char* err_msg = e.what();
+    ...
+}
+\end{lstlisting}
+ 
+instead of \hyperref[Exception]{cv::Exception} you can write \texttt{std::exception}, since the former is derived from the latter.
+
+Then, obviously, to make it all work and do not worry about the object destruction, try not to use \texttt{IplImage*}, \texttt{CvMat*} and plain pointers in general. Use \hyperref[Mat]{cv::Mat}, \texttt{std::vector<>}, \hyperref[Ptr]{cv::Ptr} etc.
 
 \section{Threading and Reenterability}
 
