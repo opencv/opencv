@@ -1274,15 +1274,7 @@ void MserDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datase
 void MserDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
     DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
-    runParams[datasetIdx].delta = 5;
-    runParams[datasetIdx].minArea = 60;
-    runParams[datasetIdx].maxArea = 14400;
-    runParams[datasetIdx].maxVariation = 0.25f;
-    runParams[datasetIdx].minDiversity = 0.2;
-    runParams[datasetIdx].maxEvolution = 200;
-    runParams[datasetIdx].areaThreshold = 1.01;
-    runParams[datasetIdx].minMargin = 0.003;
-    runParams[datasetIdx].edgeBlurSize = 5;
+    runParams[datasetIdx] = cvMSERParams();
 }
 
 MserDetectorQualityTest mserDetectorQuality;
@@ -1300,14 +1292,7 @@ protected:
     virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const;
     virtual void setDefaultDatasetRunParams( int datasetIdx );
 
-    struct RunParams
-    {
-        int maxSize;
-        int responseThreshold;
-        int lineThresholdProjected;
-        int lineThresholdBinarized;
-        int suppressNonmaxSize;
-    };
+    typedef CvStarDetectorParams RunParams;
     vector<RunParams> runParams;
 };
 
@@ -1343,11 +1328,7 @@ void StarDetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datase
 void StarDetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
     DetectorQualityTest::setDefaultDatasetRunParams(datasetIdx);
-    runParams[datasetIdx].maxSize = 16;
-    runParams[datasetIdx].responseThreshold = 30;
-    runParams[datasetIdx].lineThresholdProjected = 10;
-    runParams[datasetIdx].lineThresholdBinarized = 8;
-    runParams[datasetIdx].suppressNonmaxSize = 5;
+    runParams[datasetIdx] = cvStarDetectorParams();
 }
 
 StarDetectorQualityTest starDetectorQuality;
