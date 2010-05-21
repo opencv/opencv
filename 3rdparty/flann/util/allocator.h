@@ -35,7 +35,7 @@
 #include <stdio.h>
 
 
-namespace flann
+namespace cvflann
 {
 
 /**

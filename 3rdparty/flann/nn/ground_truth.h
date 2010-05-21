@@ -34,7 +34,7 @@
 #include "matrix.h"
 #include "dist.h"
 
-namespace flann
+namespace cvflann
 {
 
 template <typename T>

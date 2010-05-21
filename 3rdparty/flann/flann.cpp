@@ -58,7 +58,7 @@ using namespace std;
 #endif
 
 
-namespace flann
+namespace cvflann
 {
 
 typedef ObjectFactory<IndexParams, flann_algorithm_t> ParamsFactory;
@@ -224,7 +224,7 @@ int hierarchicalClustering(const Matrix<float>& features, Matrix<float>& centers
 
 
 
-using namespace flann;
+using namespace cvflann;
 
 typedef NNIndex* NNIndexPtr;
 typedef Matrix<float>* MatrixPtr;

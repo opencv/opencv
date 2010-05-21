@@ -40,7 +40,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-namespace flann
+namespace cvflann
 {
 
 const float SEARCH_EPS = 0.001f;

@@ -39,7 +39,7 @@
 
 using namespace std;
 
-namespace flann
+namespace cvflann
 {
 
 class Logger

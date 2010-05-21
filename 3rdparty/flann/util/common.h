@@ -36,7 +36,7 @@
 
 #include <stdexcept>
 
-namespace flann
+namespace cvflann
 {
 class FLANNException : public std::runtime_error {
  public:

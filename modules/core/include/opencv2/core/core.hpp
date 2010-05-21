@@ -131,10 +131,9 @@ public:
 };
 
 
-/*!
-  \fn void error(const Exception& exc);
-  \brief Signals an error and raises the exception.
+//! Signals an error and raises the exception.
  
+/*!
   By default the function prints information about the error to stderr,
   then it either stops if setBreakOnError() had been called before or raises the exception.
   It is possible to alternate error processing by using redirectError().
@@ -143,10 +142,9 @@ public:
  */
 CV_EXPORTS void error( const Exception& exc );
 
+//! Sets/resets the break-on-error mode.
+
 /*!
-  \fn bool setBreakOnError(bool flag);
-  \brief Sets/resets the break-on-error mode.
- 
   When the break-on-error mode is set, the default error handler
   issues a hardware exception, which can make debugging more convenient.
  
@@ -158,11 +156,9 @@ typedef int (CV_CDECL *ErrorCallback)( int status, const char* func_name,
                                        const char* err_msg, const char* file_name,
                                        int line, void* userdata );
 
-/*!
-  \fn ErrorCallback redirectError( ErrorCallback errCallback,
-                                   void* userdata=0, void** prevUserdata=0);
-  \brief Sets the new error handler and the optional user data.
+//! Sets the new error handler and the optional user data.
 
+/*!
   The function sets the new error handler, called from cv::error().
   
   \param errCallback the new error handler. If NULL, the default error handler is used.
@@ -194,10 +190,9 @@ CV_EXPORTS void setNumThreads(int);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
-/*!
-  \fn int64 getTickCount();
-  \brief Returns the number of ticks.
+//! Returns the number of ticks.
 
+/*!
   The function returns the number of ticks since the certain event (e.g. when the machine was turned on).
   It can be used to initialize cv::RNG or to measure a function execution time by reading the tick count
   before and after the function call. The granularity of ticks depends on the hardware and OS used. Use
@@ -206,8 +201,7 @@ CV_EXPORTS int getThreadNum();
 CV_EXPORTS int64 getTickCount();
 
 /*!
-  \fn int64 getTickCount();
-  \brief Returns the number of ticks per seconds.
+  Returns the number of ticks per seconds.
 
   The function returns the number of ticks (as returned by cv::getTickCount()) per second.
   The following code computes the execution time in milliseconds:
@@ -221,8 +215,7 @@ CV_EXPORTS int64 getTickCount();
 CV_EXPORTS double getTickFrequency();
 
 /*!
-  \fn int64 getCPUTickCount();
-  \brief Returns the number of CPU ticks.
+  Returns the number of CPU ticks.
 
   On platforms where the feature is available, the function returns the number of CPU ticks
   since the certain event (normally, the system power-on moment). Using this function
@@ -232,8 +225,7 @@ CV_EXPORTS double getTickFrequency();
 CV_EXPORTS int64 getCPUTickCount();
 
 /*!
-  \fn bool checkHardwareSupport(int feature);
-  \brief Returns SSE etc. support status
+  Returns SSE etc. support status
   
   The function returns true if certain hardware features are available.
   Currently, the following features are recognized:
@@ -253,8 +245,7 @@ CV_EXPORTS int64 getCPUTickCount();
 CV_EXPORTS bool checkHardwareSupport(int feature);
 
 /*!
-  \fn void* fastMalloc(size_t bufSize);
-  \brief allocates memory buffer
+  Allocates memory buffer
   
   This is specialized OpenCV memory allocation function that returns properly aligned memory buffers.
   The usage is identical to malloc(). The allocated buffers must be freed with cv::fastFree().
@@ -266,8 +257,7 @@ CV_EXPORTS bool checkHardwareSupport(int feature);
 CV_EXPORTS void* fastMalloc(size_t bufSize);
 
 /*!
-  \fn void fastFree(void* ptr);
-  \brief frees the memory allocated with cv::fastMalloc
+  Frees the memory allocated with cv::fastMalloc
   
   This is the corresponding deallocation function for cv::fastMalloc().
   When ptr==NULL, the function has no effect.
@@ -285,8 +275,7 @@ template<typename _Tp> static inline void deallocate(_Tp* ptr, size_t)
 }
 
 /*!
-  \fn template<typename _Tp> inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp));
-  \brief aligns pointer by the certain number of bytes
+  Aligns pointer by the certain number of bytes
   
   This small inline function aligns the pointer by the certian number of bytes by shifting
   it forward by 0 or a positive offset.
@@ -297,8 +286,7 @@ template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_
 }
 
 /*!
-  \fn inline size_t alignSize(size_t sz, int n);
-  \brief aligns buffer size by the certain number of bytes
+  Aligns buffer size by the certain number of bytes
   
   This small inline function aligns a buffer size by the certian number of bytes by enlarging it.
 */
@@ -308,8 +296,7 @@ static inline size_t alignSize(size_t sz, int n)
 }
 
 /*!
-  \fn void setUseOptimized(bool flag);
-  \brief Turns on/off available optimization
+  Turns on/off available optimization
   
   The function turns on or off the optimized code in OpenCV. Some optimization can not be enabled
   or disabled, but, for example, most of SSE code in OpenCV can be temporarily turned on or off this way.
@@ -320,8 +307,7 @@ static inline size_t alignSize(size_t sz, int n)
 CV_EXPORTS void setUseOptimized(bool);
 
 /*!
-  \fn bool useOptimized();
-  \brief Returns the current optimization status
+  Returns the current optimization status
   
   The function returns the current optimization status, which is controlled by cv::setUseOptimized().
 */  
@@ -1693,43 +1679,68 @@ CV_EXPORTS void max(const Mat& a, const Mat& b, Mat& c);
 //! computes per-element maximum of array and a scalar (c = max(a, alpha))
 CV_EXPORTS void max(const Mat& a, double alpha, Mat& c);
 
-
+//! computes square root of each matrix element
 CV_EXPORTS void sqrt(const Mat& a, Mat& b);
+//! raises the input matrix elements to the specified power 
 CV_EXPORTS void pow(const Mat& a, double power, Mat& b);
+//! computes exponent of each matrix element
 CV_EXPORTS void exp(const Mat& a, Mat& b);
+//! computes natural logarithm of each matrix element
 CV_EXPORTS void log(const Mat& a, Mat& b);
+//! computes cube root of the argument
 CV_EXPORTS float cubeRoot(float val);
+//! computes the angle in degrees (0..360) of the vector (x,y)
 CV_EXPORTS float fastAtan2(float y, float x);
+//! converts polar coordinates to Cartesian
 CV_EXPORTS void polarToCart(const Mat& magnitude, const Mat& angle,
                             Mat& x, Mat& y, bool angleInDegrees=false);
+//! converts Cartesian coordinates to polar
 CV_EXPORTS void cartToPolar(const Mat& x, const Mat& y,
                             Mat& magnitude, Mat& angle,
                             bool angleInDegrees=false);
+//! computes angle (angle(i)) of each (x(i), y(i)) vector
 CV_EXPORTS void phase(const Mat& x, const Mat& y, Mat& angle,
-                            bool angleInDegrees=false);
+                      bool angleInDegrees=false);
+//! computes magnitude (magnitude(i)) of each (x(i), y(i)) vector
 CV_EXPORTS void magnitude(const Mat& x, const Mat& y, Mat& magnitude);
+//! checks that each matrix element is within the specified range.
 CV_EXPORTS bool checkRange(const Mat& a, bool quiet=true, Point* pt=0,
                            double minVal=-DBL_MAX, double maxVal=DBL_MAX);
-
+//! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS void gemm(const Mat& a, const Mat& b, double alpha,
                      const Mat& c, double gamma, Mat& d, int flags=0);
+//! multiplies matrix by its transposition from the left or from the right
 CV_EXPORTS void mulTransposed( const Mat& a, Mat& c, bool aTa,
                                const Mat& delta=Mat(),
                                double scale=1, int rtype=-1 );
+//! transposes the matrix
 CV_EXPORTS void transpose(const Mat& a, Mat& b);
+//! performs affine transformation of each element of multi-channel input matrix
 CV_EXPORTS void transform(const Mat& src, Mat& dst, const Mat& m );
+//! performs perspective transformation of each element of multi-channel input matrix
 CV_EXPORTS void perspectiveTransform(const Mat& src, Mat& dst, const Mat& m );
 
+//! extends the symmetrical matrix from the lower half or from the upper half 
 CV_EXPORTS void completeSymm(Mat& a, bool lowerToUpper=false);
+//! initializes scaled identity matrix
 CV_EXPORTS void setIdentity(Mat& c, const Scalar& s=Scalar(1));
+//! computes determinant of a square matrix
 CV_EXPORTS double determinant(const Mat& m);
+//! computes trace of a matrix
 CV_EXPORTS Scalar trace(const Mat& m);
+//! computes inverse or pseudo-inverse matrix
 CV_EXPORTS double invert(const Mat& a, Mat& c, int flags=DECOMP_LU);
+//! solves linear system or a least-square problem
 CV_EXPORTS bool solve(const Mat& a, const Mat& b, Mat& x, int flags=DECOMP_LU);
+//! sorts independently each matrix row or each matrix column
 CV_EXPORTS void sort(const Mat& a, Mat& b, int flags);
+//! sorts independently each matrix row or each matrix column
 CV_EXPORTS void sortIdx(const Mat& a, Mat& b, int flags);
+//! finds real roots of a cubic polynomial
 CV_EXPORTS int solveCubic(const Mat& coeffs, Mat& roots);
+//! finds real and complex roots of a polynomial
 CV_EXPORTS double solvePoly(const Mat& coeffs, Mat& roots, int maxIters=300);
+//! 
 CV_EXPORTS bool eigen(const Mat& a, Mat& eigenvalues, int lowindex=-1,
                       int highindex=-1);
 CV_EXPORTS bool eigen(const Mat& a, Mat& eigenvalues, Mat& eigenvectors,

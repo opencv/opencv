@@ -36,7 +36,7 @@
 
 using namespace std;
 
-namespace flann
+namespace cvflann
 {
 
 Logger logger;

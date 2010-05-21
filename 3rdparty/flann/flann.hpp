@@ -40,7 +40,7 @@
 
 #include "flann.h"
 
-namespace flann
+namespace cvflann
 {
 
 class NNIndex;

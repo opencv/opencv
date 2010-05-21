@@ -35,7 +35,7 @@
 #include "random.h"
 
 
-namespace flann
+namespace cvflann
 {
 /**
 * Class implementing a generic rectangular dataset.

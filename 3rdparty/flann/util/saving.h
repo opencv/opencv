@@ -35,7 +35,7 @@
 #include "nn_index.h"
 
 
-namespace flann
+namespace cvflann
 {
 
 /**

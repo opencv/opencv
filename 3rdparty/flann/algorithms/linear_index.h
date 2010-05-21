@@ -34,7 +34,7 @@
 #include "constants.h"
 #include "nn_index.h"
 
-namespace flann
+namespace cvflann
 {
 
 class LinearIndex : public NNIndex {

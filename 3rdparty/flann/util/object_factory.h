@@ -33,7 +33,7 @@
 
 #include <map>
 
-namespace flann
+namespace cvflann
 {
 
 template<typename BaseClass, typename DerivedClass>

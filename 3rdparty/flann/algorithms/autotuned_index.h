@@ -36,7 +36,7 @@
 #include "ground_truth.h"
 #include "index_testing.h"
 
-namespace flann
+namespace cvflann
 {
 
 class AutotunedIndex : public NNIndex

@@ -30,7 +30,7 @@
 
 #include "dist.h"
 
-namespace flann
+namespace cvflann
 {
 
 /** Global variable indicating the distance metric

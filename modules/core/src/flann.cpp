@@ -38,72 +38,72 @@
 namespace cv
 {
 
-namespace flann {
+namespace cvflann {
 
-::flann::Index* LinearIndexParams::createIndex(const Mat& dataset) const
+::cvflann::Index* LinearIndexParams::createIndex(const Mat& dataset) const
 {
 	CV_Assert(dataset.type() == CV_32F);
 	CV_Assert(dataset.isContinuous());
 
-	// TODO: fix ::flann::Matrix class so it can be constructed with a const float*
-	::flann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
+	// TODO: fix ::cvflann::Matrix class so it can be constructed with a const float*
+	::cvflann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
 
-	return new ::flann::Index(mat, ::flann::LinearIndexParams());
+	return new ::cvflann::Index(mat, ::cvflann::LinearIndexParams());
 }
 
-::flann::Index* KDTreeIndexParams::createIndex(const Mat& dataset) const
+::cvflann::Index* KDTreeIndexParams::createIndex(const Mat& dataset) const
 {
 	CV_Assert(dataset.type() == CV_32F);
 	CV_Assert(dataset.isContinuous());
 
-	// TODO: fix ::flann::Matrix class so it can be constructed with a const float*
-	::flann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
+	// TODO: fix ::cvflann::Matrix class so it can be constructed with a const float*
+	::cvflann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
 
-	return new ::flann::Index(mat, ::flann::KDTreeIndexParams(trees));
+	return new ::cvflann::Index(mat, ::cvflann::KDTreeIndexParams(trees));
 }
 
-::flann::Index* KMeansIndexParams::createIndex(const Mat& dataset) const
+::cvflann::Index* KMeansIndexParams::createIndex(const Mat& dataset) const
 {
 	CV_Assert(dataset.type() == CV_32F);
 	CV_Assert(dataset.isContinuous());
 
-	// TODO: fix ::flann::Matrix class so it can be constructed with a const float*
-	::flann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
+	// TODO: fix ::cvflann::Matrix class so it can be constructed with a const float*
+	::cvflann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
 
-	return new ::flann::Index(mat, ::flann::KMeansIndexParams(branching,iterations, (::flann_centers_init_t)centers_init, cb_index));
+	return new ::cvflann::Index(mat, ::cvflann::KMeansIndexParams(branching,iterations, (::flann_centers_init_t)centers_init, cb_index));
 }
 
-::flann::Index* CompositeIndexParams::createIndex(const Mat& dataset) const
+::cvflann::Index* CompositeIndexParams::createIndex(const Mat& dataset) const
 {
 	CV_Assert(dataset.type() == CV_32F);
 	CV_Assert(dataset.isContinuous());
 
-	// TODO: fix ::flann::Matrix class so it can be constructed with a const float*
-	::flann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
+	// TODO: fix ::cvflann::Matrix class so it can be constructed with a const float*
+	::cvflann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
 
-	return new ::flann::Index(mat, ::flann::CompositeIndexParams(trees, branching, iterations, (::flann_centers_init_t)centers_init, cb_index));
+	return new ::cvflann::Index(mat, ::cvflann::CompositeIndexParams(trees, branching, iterations, (::flann_centers_init_t)centers_init, cb_index));
 }
 
-::flann::Index* AutotunedIndexParams::createIndex(const Mat& dataset) const
+::cvflann::Index* AutotunedIndexParams::createIndex(const Mat& dataset) const
 {
 	CV_Assert(dataset.type() == CV_32F);
 	CV_Assert(dataset.isContinuous());
 
-	// TODO: fix ::flann::Matrix class so it can be constructed with a const float*
-	::flann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
+	// TODO: fix ::cvflann::Matrix class so it can be constructed with a const float*
+	::cvflann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
 
-	return new ::flann::Index(mat, ::flann::AutotunedIndexParams(target_precision, build_weight, memory_weight, sample_fraction));
+	return new ::cvflann::Index(mat, ::cvflann::AutotunedIndexParams(target_precision, build_weight, memory_weight, sample_fraction));
 }
 
-::flann::Index* SavedIndexParams::createIndex(const Mat& dataset) const
+::cvflann::Index* SavedIndexParams::createIndex(const Mat& dataset) const
 {
 	CV_Assert(dataset.type() == CV_32F);
 	CV_Assert(dataset.isContinuous());
 
-	// TODO: fix ::flann::Matrix class so it can be constructed with a const float*
-	::flann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
+	// TODO: fix ::cvflann::Matrix class so it can be constructed with a const float*
+	::cvflann::Matrix<float> mat(dataset.rows, dataset.cols, (float*)dataset.ptr<float>(0));
 
-	return new ::flann::Index(mat, ::flann::SavedIndexParams(filename));
+	return new ::cvflann::Index(mat, ::cvflann::SavedIndexParams(filename));
 }
 
 
@@ -121,11 +121,11 @@ Index::~Index()
 void Index::knnSearch(const vector<float>& query, vector<int>& indices, vector<float>& dists, int knn, const SearchParams& searchParams)
 {
 
-	::flann::Matrix<float> m_query(1, query.size(), (float*)&query[0]);
-	::flann::Matrix<int> m_indices(1, indices.size(), &indices[0]);
-	::flann::Matrix<float> m_dists(1, dists.size(), &dists[0]);
+	::cvflann::Matrix<float> m_query(1, query.size(), (float*)&query[0]);
+	::cvflann::Matrix<int> m_indices(1, indices.size(), &indices[0]);
+	::cvflann::Matrix<float> m_dists(1, dists.size(), &dists[0]);
 
-	nnIndex->knnSearch(m_query,m_indices,m_dists,knn,::flann::SearchParams(searchParams.checks));
+	nnIndex->knnSearch(m_query,m_indices,m_dists,knn,::cvflann::SearchParams(searchParams.checks));
 }
 
 
@@ -134,26 +134,26 @@ void Index::knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, con
 
 	CV_Assert(queries.type() == CV_32F);
 	CV_Assert(queries.isContinuous());
-	::flann::Matrix<float> m_queries(queries.rows, queries.cols, (float*)queries.ptr<float>(0));
+	::cvflann::Matrix<float> m_queries(queries.rows, queries.cols, (float*)queries.ptr<float>(0));
 
 	CV_Assert(indices.type() == CV_32S);
 	CV_Assert(indices.isContinuous());
-	::flann::Matrix<int> m_indices(indices.rows, indices.cols, (int*)indices.ptr<int>(0));
+	::cvflann::Matrix<int> m_indices(indices.rows, indices.cols, (int*)indices.ptr<int>(0));
 
 	CV_Assert(dists.type() == CV_32F);
 	CV_Assert(dists.isContinuous());
-	::flann::Matrix<float> m_dists(dists.rows, dists.cols, (float*)dists.ptr<float>(0));
+	::cvflann::Matrix<float> m_dists(dists.rows, dists.cols, (float*)dists.ptr<float>(0));
 
-	nnIndex->knnSearch(m_queries,m_indices,m_dists,knn,::flann::SearchParams(searchParams.checks));
+	nnIndex->knnSearch(m_queries,m_indices,m_dists,knn,::cvflann::SearchParams(searchParams.checks));
 }
 
 int Index::radiusSearch(const vector<float>& query, vector<int>& indices, vector<float>& dists, float radius, const SearchParams& searchParams)
 {
-	::flann::Matrix<float> m_query(1, query.size(), (float*)&query[0]);
-	::flann::Matrix<int> m_indices(1, indices.size(), &indices[0]);
-	::flann::Matrix<float> m_dists(1, dists.size(), &dists[0]);
+	::cvflann::Matrix<float> m_query(1, query.size(), (float*)&query[0]);
+	::cvflann::Matrix<int> m_indices(1, indices.size(), &indices[0]);
+	::cvflann::Matrix<float> m_dists(1, dists.size(), &dists[0]);
 
-	return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,::flann::SearchParams(searchParams.checks));
+	return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,::cvflann::SearchParams(searchParams.checks));
 }
 
 
@@ -161,17 +161,17 @@ int Index::radiusSearch(const Mat& query, Mat& indices, Mat& dists, float radius
 {
 	CV_Assert(query.type() == CV_32F);
 	CV_Assert(query.isContinuous());
-	::flann::Matrix<float> m_query(query.rows, query.cols, (float*)query.ptr<float>(0));
+	::cvflann::Matrix<float> m_query(query.rows, query.cols, (float*)query.ptr<float>(0));
 
 	CV_Assert(indices.type() == CV_32S);
 	CV_Assert(indices.isContinuous());
-	::flann::Matrix<int> m_indices(indices.rows, indices.cols, (int*)indices.ptr<int>(0));
+	::cvflann::Matrix<int> m_indices(indices.rows, indices.cols, (int*)indices.ptr<int>(0));
 
 	CV_Assert(dists.type() == CV_32F);
 	CV_Assert(dists.isContinuous());
-	::flann::Matrix<float> m_dists(dists.rows, dists.cols, (float*)dists.ptr<float>(0));
+	::cvflann::Matrix<float> m_dists(dists.rows, dists.cols, (float*)dists.ptr<float>(0));
 
-	return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,::flann::SearchParams(searchParams.checks));
+	return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,::cvflann::SearchParams(searchParams.checks));
 }
 
 
@@ -195,13 +195,13 @@ int hierarchicalClustering(const Mat& features, Mat& centers, const KMeansIndexP
 {
 	CV_Assert(features.type() == CV_32F);
 	CV_Assert(features.isContinuous());
-	::flann::Matrix<float> m_features(features.rows, features.cols, (float*)features.ptr<float>(0));
+	::cvflann::Matrix<float> m_features(features.rows, features.cols, (float*)features.ptr<float>(0));
 
 	CV_Assert(features.type() == CV_32F);
 	CV_Assert(features.isContinuous());
-	::flann::Matrix<float> m_centers(centers.rows, centers.cols, (float*)centers.ptr<float>(0));
+	::cvflann::Matrix<float> m_centers(centers.rows, centers.cols, (float*)centers.ptr<float>(0));
 
-	return ::flann::hierarchicalClustering(m_features, m_centers, ::flann::KMeansIndexParams(params.branching, params.iterations,
+	return ::cvflann::hierarchicalClustering(m_features, m_centers, ::cvflann::KMeansIndexParams(params.branching, params.iterations,
 			(::flann_centers_init_t)params.centers_init, params.cb_index));
 }
 

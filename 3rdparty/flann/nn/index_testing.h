@@ -38,7 +38,7 @@
 
 using namespace std;
 
-namespace flann
+namespace cvflann
 {
 
 void search_for_neighbors(NNIndex& index, const Matrix<float>& testset, Matrix<int>& result, Matrix<float>& dists, const SearchParams &searchParams, int skip = 0);

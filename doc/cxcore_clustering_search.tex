@@ -293,11 +293,11 @@ This section documents OpenCV's interface to the FLANN\footnote{http://people.cs
 contains a collection of algorithms optimized for fast nearest neighbor search in large datasets and for high dimensional features. More 
 information about FLANN can be found in \cite{muja_flann_2009}.
 
-\cvclass{flann::Index}
+\cvclass{cvflann::Index}
 The FLANN nearest neighbor index class.
 
 \begin{lstlisting}
-namespace flann
+namespace cvflann
 {
     class Index 
     {
@@ -335,7 +335,7 @@ namespace flann
 }
 \end{lstlisting}
 
-\cvCppFunc{flann::Index::Index}
+\cvCppFunc{cvflann::Index::Index}
 Constructs a nearest neighbor search index for a given dataset.
 
 \cvdefCpp{Index::Index(const Mat\& features, const IndexParams\& params);}
@@ -452,7 +452,7 @@ optimum parameters.}
 }
 \end{description}
 
-\cvCppFunc{flann::Index::knnSearch}
+\cvCppFunc{cvflann::Index::knnSearch}
 Performs a K-nearest neighbor search for a given query point using the index.
 \cvdefCpp{void Index::knnSearch(const vector<float>\& query, \par
 		vector<int>\& indices, \par
@@ -479,7 +479,7 @@ precision was also computed, in which case this parameter is ignored.}
 \end{description}
 \end{description}
 
-\cvCppFunc{flann::Index::knnSearch}
+\cvCppFunc{cvflann::Index::knnSearch}
 Performs a K-nearest neighbor search for multiple query points.
 
 \cvdefCpp{void Index::knnSearch(const Mat\& queries,\par
@@ -495,7 +495,7 @@ Performs a K-nearest neighbor search for multiple query points.
 \end{description}
 
 
-\cvCppFunc{flann::Index::radiusSearch}
+\cvCppFunc{cvflann::Index::radiusSearch}
 Performs a radius nearest neighbor search for a given query point.
 \cvdefCpp{int Index::radiusSearch(const vector<float>\& query, \par
 		  vector<int>\& indices, \par
@@ -511,7 +511,7 @@ Performs a radius nearest neighbor search for a given query point.
 \end{description}
 
 
-\cvCppFunc{flann::Index::radiusSearch}
+\cvCppFunc{cvflann::Index::radiusSearch}
 Performs a radius nearest neighbor search for multiple query points.
 \cvdefCpp{int Index::radiusSearch(const Mat\& query, \par
 		  Mat\& indices, \par
@@ -527,7 +527,7 @@ Performs a radius nearest neighbor search for multiple query points.
 \end{description}
 
 
-\cvCppFunc{flann::Index::save}
+\cvCppFunc{cvflann::Index::save}
 Saves the index to a file.
 \cvdefCpp{void Index::save(std::string filename);}
 \begin{description}
@@ -535,7 +535,7 @@ Saves the index to a file.
 \end{description}
 
 
-\cvCppFunc{flann::hierarchicalClustering}
+\cvCppFunc{cvflann::hierarchicalClustering}
 Clusters the given points by constructing a hierarchical k-means tree and choosing a cut in the tree that minimizes the cluster's variance.
 \cvdefCpp{int hierarchicalClustering(const Mat\& features, Mat\& centers,\par
                                       const KMeansIndexParams\& params);}

@@ -45,14 +45,14 @@
 
 #ifdef __cplusplus
 
-namespace flann
+namespace cvflann
 {
 	class Index;
 }
 
 namespace cv {
 
-namespace flann {
+namespace cvflann {
 
 /* Nearest neighbor index algorithms */
 enum flann_algorithm_t {
@@ -89,7 +89,7 @@ class CV_EXPORTS IndexFactory
 {
 public:
     virtual ~IndexFactory() {}
-	virtual ::flann::Index* createIndex(const Mat& dataset) const = 0;
+	virtual ::cvflann::Index* createIndex(const Mat& dataset) const = 0;
 };
 
 struct CV_EXPORTS IndexParams : public IndexFactory {
@@ -101,7 +101,7 @@ protected:
 struct CV_EXPORTS LinearIndexParams : public IndexParams {
 	LinearIndexParams() {};
 
-	::flann::Index* createIndex(const Mat& dataset) const;
+	::cvflann::Index* createIndex(const Mat& dataset) const;
 };
 
 
@@ -111,7 +111,7 @@ struct CV_EXPORTS KDTreeIndexParams : public IndexParams {
 
 	int trees;                 // number of randomized trees to use (for kdtree)
 
-	::flann::Index* createIndex(const Mat& dataset) const;
+	::cvflann::Index* createIndex(const Mat& dataset) const;
 };
 
 struct CV_EXPORTS KMeansIndexParams : public IndexParams {
@@ -127,7 +127,7 @@ struct CV_EXPORTS KMeansIndexParams : public IndexParams {
 	flann_centers_init_t centers_init;          // algorithm used for picking the initial cluster centers for kmeans tree
     float cb_index;            // cluster boundary index. Used when searching the kmeans tree
 
-    ::flann::Index* createIndex(const Mat& dataset) const;
+    ::cvflann::Index* createIndex(const Mat& dataset) const;
 };
 
 
@@ -146,7 +146,7 @@ struct CV_EXPORTS CompositeIndexParams : public IndexParams {
 	flann_centers_init_t centers_init;          // algorithm used for picking the initial cluster centers for kmeans tree
     float cb_index;            // cluster boundary index. Used when searching the kmeans tree
 
-    ::flann::Index* createIndex(const Mat& dataset) const;
+    ::cvflann::Index* createIndex(const Mat& dataset) const;
 };
 
 
@@ -163,7 +163,7 @@ struct CV_EXPORTS AutotunedIndexParams : public IndexParams {
 	float memory_weight;       // index memory weighting factor
     float sample_fraction;     // what fraction of the dataset to use for autotuning
 
-    ::flann::Index* createIndex(const Mat& dataset) const;
+    ::cvflann::Index* createIndex(const Mat& dataset) const;
 };
 
 
@@ -173,7 +173,7 @@ struct CV_EXPORTS SavedIndexParams : public IndexParams {
 
 	std::string filename;		// filename of the stored index
 
-	::flann::Index* createIndex(const Mat& dataset) const;
+	::cvflann::Index* createIndex(const Mat& dataset) const;
 };
 
 
@@ -187,7 +187,7 @@ struct CV_EXPORTS SearchParams {
 
 
 class CV_EXPORTS Index {
-	::flann::Index* nnIndex;
+	::cvflann::Index* nnIndex;
 
 public:
 	Index(const Mat& features, const IndexParams& params);

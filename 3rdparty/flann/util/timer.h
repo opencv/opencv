@@ -34,7 +34,7 @@
 #include <time.h>
 
 
-namespace flann
+namespace cvflann
 {
 
 /**

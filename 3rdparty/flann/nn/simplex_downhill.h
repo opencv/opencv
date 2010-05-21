@@ -31,7 +31,7 @@
 #ifndef SIMPLEX_DOWNHILL_H
 #define SIMPLEX_DOWNHILL_H
 
-namespace flann
+namespace cvflann
 {
 
 /**

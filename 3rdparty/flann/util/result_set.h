@@ -40,7 +40,7 @@
 using namespace std;
 
 
-namespace flann
+namespace cvflann
 {
 
 /* This record represents a branch point when finding neighbors in
