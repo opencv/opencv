@@ -1323,39 +1323,6 @@ protected:
     SURF surf;
 };
 
-/*template<typename T>
-class CV_EXPORTS CalonderDescriptorExtractor : public DescriptorExtractor
-{
-public:
-    CalonderDescriptorExtractor( const string& classifierFile )
-    {
-        classifier.read(classifierFile.c_str());
-    }
-
-    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
-    {
-        // Cannot compute descriptors for keypoints on the image border.
-        removeBorderKeypoints(keypoints, image.size(), BORDER_SIZE);
-
-        // TODO Check 16-byte aligned
-        descriptors.create( keypoints.size(), classifier.classes(), DataType<T>::type );
-        PatchGenerator patchGen;
-        RNG rng;
-
-        for( size_t i = 0; i < keypoints.size(); i++ )
-        {
-            Mat patch;
-            patchGen( image, keypoints[i].pt, patch, Size(PATCH_SIZE, PATCH_SIZE), rng );
-            IplImage ipl = patch;
-            classifier.getSignature( &ipl, descriptors.ptr<T>(i));
-        }
-    }
-
-protected:
-    static const int BORDER_SIZE = 16;
-    RTreeClassifier classifier;
-};*/
-
 /****************************************************************************************\
 *                                          Distance                                      *
 \****************************************************************************************/

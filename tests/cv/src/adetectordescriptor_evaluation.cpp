@@ -278,7 +278,7 @@ void transformToEllipticKeyPoints( const vector<KeyPoint>& src, vector<EllipticK
         dst.resize(src.size());
         for( size_t i = 0; i < src.size(); i++ )
         {
-            float rad = src[i].size;
+            float rad = src[i].size/2;
             assert( rad );
             float fac = 1.f/(rad*rad);
             dst[i] = EllipticKeyPoint( src[i].pt, Scalar(fac, 0, fac) );
@@ -295,7 +295,7 @@ void transformToKeyPoints( const vector<EllipticKeyPoint>& src, vector<KeyPoint>
         {
             Size_<float> axes = src[i].axes;
             float rad = sqrt(axes.height*axes.width);
-            dst[i] = KeyPoint(src[i].center, rad );
+            dst[i] = KeyPoint(src[i].center, 2*rad );
         }
     }
 }

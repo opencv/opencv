@@ -102,7 +102,7 @@ void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
     vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
     for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
     {
-        *keypoint_it = KeyPoint( *corner_it, 1.f );
+        *keypoint_it = KeyPoint( *corner_it, blockSize );
     }
 }
 
@@ -127,8 +127,9 @@ void MserFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<
     vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
     for( ; contour_it != msers.end(); ++contour_it, ++keypoint_it )
     {
+        // TODO check transformation from MSER region to KeyPoint
         RotatedRect rect = fitEllipse(Mat(*contour_it));
-        *keypoint_it = KeyPoint( rect.center, min(rect.size.height, rect.size.width), rect.angle);
+        *keypoint_it = KeyPoint( rect.center, sqrt(rect.size.height*rect.size.width), rect.angle);
     }
 }
 

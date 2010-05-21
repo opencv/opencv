@@ -2006,13 +2006,13 @@ SIFT::SIFT( const CommonParams& _commParams,
 
 inline KeyPoint vlKeypointToOcv( const VL::Sift::Keypoint& vlKeypoint, float angle )
 {
-    return KeyPoint(vlKeypoint.x, vlKeypoint.y, vlKeypoint.sigma, angle, 0, vlKeypoint.o, 0 );
+    return KeyPoint(vlKeypoint.x, vlKeypoint.y, 3*vlKeypoint.sigma, angle, 0, vlKeypoint.o, 0 );
 }
 
 inline void ocvKeypointToVl( const KeyPoint& ocvKeypoint, const VL::Sift& vlSift,
                                    VL::Sift::Keypoint& vlKeypoint )
 {
-    vlKeypoint = vlSift.getKeypoint(ocvKeypoint.pt.x, ocvKeypoint.pt.y, ocvKeypoint.size);
+    vlKeypoint = vlSift.getKeypoint(ocvKeypoint.pt.x, ocvKeypoint.pt.y, ocvKeypoint.size/3);
 }
 
 float computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, int angleMode )
