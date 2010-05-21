@@ -50,6 +50,7 @@
 #ifndef __OPENCV_IMGPROC_COMPAT_C_H__
 #define __OPENCV_IMGPROC_COMPAT_C_H__
 
+#include <math.h>
 #include <string.h>
 
 #ifdef __cplusplus
@@ -318,17 +319,17 @@ CV_INLINE  void  cvbReciprocal( const float* x, float* y, int len )
 
 CV_INLINE  void  cvbFastExp( const float* x, double* y, int len )
 {
-    CvMat mx = cvMat( 1, len, CV_32F, (void*)x );
-    CvMat my = cvMat( 1, len, CV_64F, y );
-    cvExp( &mx, &my );
+    int i;
+    for( i = 0; i < len; i++ )
+        y[i] = exp((double)x[i]);
 }
 
 
 CV_INLINE  void  cvbFastLog( const double* x, float* y, int len )
 {
-    CvMat mx = cvMat( 1, len, CV_64F, (void*)x );
-    CvMat my = cvMat( 1, len, CV_32F, y );
-    cvLog( &mx, &my );
+    int i;
+    for( i = 0; i < len; i++ )
+        y[i] = (float)log(x[i]);
 }
 
 
