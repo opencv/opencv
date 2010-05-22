@@ -136,7 +136,7 @@ mark_as_advanced(DOXYGEN_LANGUAGE)
 
 set(CMAKE_DOXYGEN_IMAGE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/pics")
 
-set(module_names core) # imgproc calib3d features2d objdetect video highgui ml legacy contrib)
+set(module_names core imgproc calib3d features2d objdetect video highgui ml legacy contrib)
 set(DOXYGEN_SOURCE_DIR)
 set(doxy_html_dep_list)
 
@@ -157,7 +157,7 @@ add_custom_target(${HTML_TARGET} ALL
 	${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile ${doxy_html_dep_list})
 
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/" DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html/" COMPONENT main)
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html" DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html" COMPONENT main)
 
 endif()
 
