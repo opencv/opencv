@@ -1474,6 +1474,13 @@ inline LineIterator LineIterator::operator ++(int)
     ++(*this);
     return it;
 }
+inline Point LineIterator::pos() const
+{
+    Point p;
+    p.y = (ptr - ptr0)/step;
+    p.x = ((ptr - ptr0) - p.y*step)/elemSize;
+    return p;
+}
 
 #if 0
   template<typename _Tp> inline VectorCommaInitializer_<_Tp>::

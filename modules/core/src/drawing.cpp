@@ -227,6 +227,10 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         minusStep = bt_pix;
         count = dx + dy + 1;
     }
+    
+    this->ptr0 = img.data;
+    this->step = (int)step;
+    this->elemSize = bt_pix;
 }
 
 static void
