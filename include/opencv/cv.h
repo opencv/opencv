@@ -43,6 +43,9 @@
 #ifndef __OPENCV_OLD_CV_H__
 #define __OPENCV_OLD_CV_H__
 
+#pragma warning("This is a deprecated opencv header provided for compatibility. Please \
+include a header from a corresponding opencv module")
+
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
