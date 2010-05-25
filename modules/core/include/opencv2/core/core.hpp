@@ -1108,7 +1108,7 @@ enum { DFT_INVERSE=1, DFT_SCALE=2, DFT_ROWS=4, DFT_COMPLEX_OUTPUT=16, DFT_REAL_O
      M.create(100,60,CV_8UC(15));
      \endcode
 
-     As noted in the introduction of this chapter, \texttt{create()}
+     As noted in the introduction of this chapter, Mat::create()
      will only allocate a new matrix when the current matrix dimensionality
      or type are different from the specified.
 
@@ -1243,7 +1243,8 @@ enum { DFT_INVERSE=1, DFT_SCALE=2, DFT_ROWS=4, DFT_COMPLEX_OUTPUT=16, DFT_REAL_O
    addr(M_{ij})=&M.at<float>(i,j)
 
    (where & is used to convert the reference returned by cv::Mat::at() to a pointer).
-   if you need to process a whole row of matrix, the most efficient way is to get the pointer to the row first, and then just use plain C operator \texttt{[]}:
+   if you need to process a whole row of matrix, the most efficient way is to get
+   the pointer to the row first, and then just use plain C operator []:
 
    \code
    // compute sum of positive matrix elements
@@ -1291,7 +1292,8 @@ enum { DFT_INVERSE=1, DFT_SCALE=2, DFT_ROWS=4, DFT_COMPLEX_OUTPUT=16, DFT_REAL_O
        sum += std::max(*it, 0.);
    \endcode
 
-   The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including \texttt{std::sort()}.
+   The matrix iterators are random-access iterators, so they can be passed
+   to any STL algorithm, including std::sort().
 */
 class CV_EXPORTS Mat
 {
@@ -2445,8 +2447,8 @@ class SparseMat;
  
  In other aspects cv::MatND is also very similar to cv::Mat, with the following limitations and differences:
  <ul>
- <li> much less operations are implemented for \texttt{MatND}
- <li> currently, algebraic expressions with \texttt{MatND}'s are not supported
+ <li> much less operations are implemented for cv::MatND
+ <li> currently, algebraic expressions with cv::MatND's are not supported
  <li> the cv::MatND iterator is completely different from cv::Mat_ and cv::SparseMat_ iterators.
       The latter are per-element iterators, while the former is per-slice iterator, see below.
  </ul>

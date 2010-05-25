@@ -353,22 +353,45 @@ CVAPI(CvSeq*) cvSegmentFGMask( CvArr *fgmask, int poly1Hull0 CV_DEFAULT(1),
 namespace cv
 {
 
+/*!
+ The Base Class for Background/Foreground Segmentation
+ 
+ The class is only used to define the common interface for
+ the whole family of background/foreground segmentation algorithms.
+*/
 class CV_EXPORTS BackgroundSubtractor
 {
 public:
+    //! the virtual destructor
     virtual ~BackgroundSubtractor();
+    //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
     virtual void operator()(const Mat& image, Mat& fgmask, double learningRate=0);
 };
 
 
+/*!
+ Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm
+ 
+ The class implements the following algorithm:
+ "An improved adaptive background mixture model for real-time tracking with shadow detection"
+ P. KadewTraKuPong and R. Bowden,
+ Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
+ http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+ 
+*/
 class CV_EXPORTS BackgroundSubtractorMOG : public BackgroundSubtractor
 {
 public:
+    //! the default constructor
     BackgroundSubtractorMOG();
+    //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
     BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0);
+    //! the destructor
     virtual ~BackgroundSubtractorMOG();
+    //! the update operator
     virtual void operator()(const Mat& image, Mat& fgmask, double learningRate=0);
     
+    //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
     
     Size frameSize;

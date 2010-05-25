@@ -1,3 +1,7 @@
+/*! \file tracking.hpp
+ \brief The Object and Feature Tracking
+ */
+
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -230,58 +234,74 @@ CVAPI(const CvMat*)  cvKalmanPredict( CvKalman* kalman,
    (corrects state of the system and internal matrices) */
 CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement );
 
+#define cvKalmanUpdateByTime  cvKalmanPredict
+#define cvKalmanUpdateByMeasurement cvKalmanCorrect
+    
 #ifdef __cplusplus
 }
 
 namespace cv
 {
     
+//! updates motion history image using the current silhouette
 CV_EXPORTS void updateMotionHistory( const Mat& silhouette, Mat& mhi,
                                      double timestamp, double duration );
 
+//! computes the motion gradient orientation image from the motion history image
 CV_EXPORTS void calcMotionGradient( const Mat& mhi, Mat& mask,
                                     Mat& orientation,
                                     double delta1, double delta2,
                                     int apertureSize=3 );
 
+//! computes the global orientation of the selected motion history image part
 CV_EXPORTS double calcGlobalOrientation( const Mat& orientation, const Mat& mask,
                                          const Mat& mhi, double timestamp,
                                          double duration );
 // TODO: need good API for cvSegmentMotion
 
+//! updates the object tracking window using CAMSHIFT algorithm
 CV_EXPORTS RotatedRect CamShift( const Mat& probImage, Rect& window,
                                  TermCriteria criteria );
 
+//! updates the object tracking window using meanshift algorithm
 CV_EXPORTS int meanShift( const Mat& probImage, Rect& window,
                           TermCriteria criteria );
 
+/*!
+ Kalman filter.
+ 
+ The class implements standard Kalman filter \url{http://en.wikipedia.org/wiki/Kalman_filter}.
+ However, you can modify KalmanFilter::transitionMatrix, KalmanFilter::controlMatrix and
+ KalmanFilter::measurementMatrix to get the extended Kalman filter functionality.
+*/
 class CV_EXPORTS KalmanFilter
 {
 public:
+    //! the default constructor
     KalmanFilter();
+    //! the full constructor taking the dimensionality of the state, of the measurement and of the control vector
     KalmanFilter(int dynamParams, int measureParams, int controlParams=0);
+    //! re-initializes Kalman filter. The previous content is destroyed.
     void init(int dynamParams, int measureParams, int controlParams=0);
 
+    //! computes predicted state
     const Mat& predict(const Mat& control=Mat());
+    //! updates the predicted state from the measurement
     const Mat& correct(const Mat& measurement);
 
-    Mat statePre;           // predicted state (x'(k)):
-                            //    x(k)=A*x(k-1)+B*u(k)
-    Mat statePost;          // corrected state (x(k)):
-                            //    x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
-    Mat transitionMatrix;   // state transition matrix (A)
-    Mat controlMatrix;      // control matrix (B)
-                            //   (it is not used if there is no control)
-    Mat measurementMatrix;  // measurement matrix (H)
-    Mat processNoiseCov;    // process noise covariance matrix (Q)
-    Mat measurementNoiseCov;// measurement noise covariance matrix (R)
-    Mat errorCovPre;        // priori error estimate covariance matrix (P'(k)):
-                            //    P'(k)=A*P(k-1)*At + Q)*/
-    Mat gain;               // Kalman gain matrix (K(k)):
-                            //    K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
-    Mat errorCovPost;       // posteriori error estimate covariance matrix (P(k)):
-                            //    P(k)=(I-K(k)*H)*P'(k)
-    Mat temp1;              // temporary matrices
+    Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
+    Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+    Mat transitionMatrix;   //!< state transition matrix (A)
+    Mat controlMatrix;      //!< control matrix (B) (not used if there is no control)
+    Mat measurementMatrix;  //!< measurement matrix (H)
+    Mat processNoiseCov;    //!< process noise covariance matrix (Q)
+    Mat measurementNoiseCov;//!< measurement noise covariance matrix (R)
+    Mat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
+    Mat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
+    Mat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+    
+    // temporary matrices
+    Mat temp1;
     Mat temp2;
     Mat temp3;
     Mat temp4;
@@ -289,12 +309,9 @@ public:
 };
 
 
-#define cvKalmanUpdateByTime  cvKalmanPredict
-#define cvKalmanUpdateByMeasurement cvKalmanCorrect
-
-
 enum { OPTFLOW_USE_INITIAL_FLOW=4, OPTFLOW_FARNEBACK_GAUSSIAN=256 };
 
+//! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
 CV_EXPORTS void calcOpticalFlowPyrLK( const Mat& prevImg, const Mat& nextImg,
                            const vector<Point2f>& prevPts, vector<Point2f>& nextPts,
                            vector<uchar>& status, vector<float>& err,
@@ -305,6 +322,7 @@ CV_EXPORTS void calcOpticalFlowPyrLK( const Mat& prevImg, const Mat& nextImg,
                            double derivLambda=0.5,
                            int flags=0 );
 
+//! computes dense optical flow using Farneback algorithm
 CV_EXPORTS void calcOpticalFlowFarneback( const Mat& prev0, const Mat& next0,
                            Mat& flow0, double pyr_scale, int levels, int winsize,
                            int iterations, int poly_n, double poly_sigma, int flags );
