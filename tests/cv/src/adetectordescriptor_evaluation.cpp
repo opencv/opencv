@@ -1557,7 +1557,7 @@ void DescriptorQualityTest::writeResults( FileStorage& fs, int datasetIdx, int c
     fs << PRECISION << calcQuality[datasetIdx][caseIdx].precision;
 }
 
-void DescriptorQualityTest::DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
+void DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
     commRunParams[datasetIdx].keypontsFilename = (string)fn[KEYPOINTS_FILENAME];
     commRunParams[datasetIdx].projectKeypointsFrom1Image = (int)fn[PROJECT_KEYPOINTS_FROM_1IMAGE] != 0;
