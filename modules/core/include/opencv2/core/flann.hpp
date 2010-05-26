@@ -52,7 +52,7 @@ namespace cvflann
 
 namespace cv {
 
-namespace cvflann {
+namespace flann {
 
 /* Nearest neighbor index algorithms */
 enum flann_algorithm_t {

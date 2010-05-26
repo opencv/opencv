@@ -54,12 +54,26 @@ int main(int argc, char** argv)
     printf("Reading the images...\n");
     IplImage* img1 = cvLoadImage(img1_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
     IplImage* img2 = cvLoadImage(img2_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
-
+    
     // extract keypoints from the first image
-    vector<KeyPoint> keypoints1;
     SURF surf_extractor(5.0e3);
+    vector<KeyPoint> keypoints1;
+#if 1
+    Mat _img1(img1);
+    vector<Point2f> corners;
+    
+    goodFeaturesToTrack(_img1, corners, 200, 0.01, 20);
+    for(size_t i = 0; i < corners.size(); i++)
+    {
+        KeyPoint p;
+        p.pt = corners[i];
+        keypoints1.push_back(p);
+    }
+#else
 //    printf("Extracting keypoints\n");
     surf_extractor(img1, Mat(), keypoints1);
+#endif
+    
     printf("Extracted %d keypoints...\n", (int)keypoints1.size());
 
     printf("Training one way descriptors...");

@@ -62,10 +62,6 @@
 
 #if defined(__cplusplus)
 #include "opencv2/core/internal.hpp"
-
-namespace cv {
-namespace flann = cvflann;
-}
 #endif //__cplusplus
 
 #endif __OPENCV_OLD_CV_H_

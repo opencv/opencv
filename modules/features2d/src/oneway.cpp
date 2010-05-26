@@ -149,7 +149,7 @@ namespace cv{
                               std::vector<int>& desc_idxs, std::vector<int>&  pose_idxs, std::vector<float>& distances,
                               CvMat* avg = 0, CvMat* eigenvalues = 0);
     
-    void FindOneWayDescriptor(cv::cvflann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low, int m_pose_count, IplImage* patch, int& desc_idx, int& pose_idx, float& distance,
+    void FindOneWayDescriptor(cv::flann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low, int m_pose_count, IplImage* patch, int& desc_idx, int& pose_idx, float& distance,
                               CvMat* avg = 0, CvMat* eigenvalues = 0);
     
     void FindOneWayDescriptorEx(int desc_count, const OneWayDescriptor* descriptors, IplImage* patch,
@@ -163,7 +163,7 @@ namespace cv{
                                 std::vector<float>& distances, std::vector<float>& scales,
                                 CvMat* avg, CvMat* eigenvectors);
     
-    void FindOneWayDescriptorEx(cv::cvflann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low, int m_pose_count, IplImage* patch,
+    void FindOneWayDescriptorEx(cv::flann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low, int m_pose_count, IplImage* patch,
                                 float scale_min, float scale_max, float scale_step,
                                 int& desc_idx, int& pose_idx, float& distance, float& scale,
                                 CvMat* avg, CvMat* eigenvectors);
@@ -800,7 +800,7 @@ namespace cv{
     
 #if defined(_KDTREE)
     
-    void FindOneWayDescriptor(cv::cvflann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low, int m_pose_count, IplImage* patch, int& desc_idx, int& pose_idx, float& distance,
+    void FindOneWayDescriptor(cv::flann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low, int m_pose_count, IplImage* patch, int& desc_idx, int& pose_idx, float& distance,
                               CvMat* avg, CvMat* eigenvectors)
     {
         desc_idx = -1;
@@ -875,7 +875,7 @@ namespace cv{
 			object_ptr[i] = pca_coeffs->data.fl[i];
 		}
         
-		m_pca_descriptors_tree->knnSearch(m_object, m_indices, m_dists, 1, cv::cvflann::SearchParams(-1) );
+		m_pca_descriptors_tree->knnSearch(m_object, m_indices, m_dists, 1, cv::flann::SearchParams(-1) );
         
 		desc_idx = ((int*)(m_indices.ptr<int>(0)))[0] / m_pose_count;
 		pose_idx = ((int*)(m_indices.ptr<int>(0)))[0] % m_pose_count;
@@ -1109,7 +1109,7 @@ namespace cv{
     }
     
 #if defined(_KDTREE)
-    void FindOneWayDescriptorEx(cv::cvflann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low,
+    void FindOneWayDescriptorEx(cv::flann::Index* m_pca_descriptors_tree, CvSize patch_size, int m_pca_dim_low,
                                 int m_pose_count, IplImage* patch,
                                 float scale_min, float scale_max, float scale_step,
                                 int& desc_idx, int& pose_idx, float& distance, float& scale,
@@ -1660,7 +1660,7 @@ namespace cv{
         //::cvflann::KDTreeIndexParams params;
         //params.trees = 1;
         //m_pca_descriptors_tree = new KDTree(pca_descriptors_mat);
-        m_pca_descriptors_tree = new cv::cvflann::Index(pca_descriptors_mat,cv::cvflann::KDTreeIndexParams(1));
+        m_pca_descriptors_tree = new cv::flann::Index(pca_descriptors_mat,cv::flann::KDTreeIndexParams(1));
         //cvReleaseMat(&m_pca_descriptors_matrix);
         //m_pca_descriptors_tree->buildIndex();
     }

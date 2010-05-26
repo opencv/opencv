@@ -138,8 +138,8 @@ flannFindPairs( const CvSeq*, const CvSeq* objectDescriptors,
     // find nearest neighbors using FLANN
     cv::Mat m_indices(objectDescriptors->total, 2, CV_32S);
     cv::Mat m_dists(objectDescriptors->total, 2, CV_32F);
-    cv::cvflann::Index flann_index(m_image, cv::cvflann::KDTreeIndexParams(4));  // using 4 randomized kdtrees
-    flann_index.knnSearch(m_object, m_indices, m_dists, 2, cv::cvflann::SearchParams(64) ); // maximum number of leafs checked
+    cv::flann::Index flann_index(m_image, cv::flann::KDTreeIndexParams(4));  // using 4 randomized kdtrees
+    flann_index.knnSearch(m_object, m_indices, m_dists, 2, cv::flann::SearchParams(64) ); // maximum number of leafs checked
 
     int* indices_ptr = m_indices.ptr<int>(0);
     float* dists_ptr = m_dists.ptr<float>(0);

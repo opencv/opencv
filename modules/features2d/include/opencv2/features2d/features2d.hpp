@@ -1077,7 +1077,7 @@ protected:
     CvMat* m_pca_hr_eigenvectors; // PCA eigenvectors for large patches
     OneWayDescriptor* m_pca_descriptors; // an array of PCA descriptors
 
-    cv::cvflann::Index* m_pca_descriptors_tree;
+    cv::flann::Index* m_pca_descriptors_tree;
     CvMat* m_pca_descriptors_matrix;
 
     CvAffinePose* m_poses; // array of poses

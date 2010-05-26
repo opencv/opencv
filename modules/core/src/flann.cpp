@@ -38,7 +38,7 @@
 namespace cv
 {
 
-namespace cvflann {
+namespace flann {
 
 ::cvflann::Index* LinearIndexParams::createIndex(const Mat& dataset) const
 {

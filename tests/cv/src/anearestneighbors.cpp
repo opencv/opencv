@@ -47,7 +47,7 @@
 #include <iostream>
 
 using namespace cv;
-using namespace cv::cvflann;
+using namespace cv::flann;
 
 //--------------------------------------------------------------------------------
 class NearestNeighborTest : public CvTest
