@@ -150,6 +150,13 @@ size_t KeyPointCollection::calcKeypointCount() const
     return *startIndices.rbegin() + points.rbegin()->size();
 }
 
+void KeyPointCollection::clear()
+{
+    images.clear();
+    points.clear();
+    startIndices.clear();
+}
+
 /*
  * GenericDescriptorMatch
  */
@@ -169,6 +176,10 @@ void GenericDescriptorMatch::classify( const Mat& image, vector<cv::KeyPoint>& p
         points[i].class_id = collection.getKeyPoint(keypointIndices[i]).class_id;
 };
 
+void GenericDescriptorMatch::clear()
+{
+    collection.clear();
+}
 /****************************************************************************************\
 *                                OneWayDescriptorMatch                                  *
 \****************************************************************************************/

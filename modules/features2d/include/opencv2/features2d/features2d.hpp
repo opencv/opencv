@@ -1559,6 +1559,9 @@ public:
     // Returns the keypoint by its global index
     KeyPoint getKeyPoint( int index ) const;
 
+    // Clears images, keypoints and startIndices
+    void clear();
+
     vector<Mat> images;
     vector<vector<KeyPoint> > points;
 
@@ -1599,6 +1602,8 @@ public:
     // class_ids    A vector to be filled with keypoint class_ids
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices ) = 0;
 
+    // Clears keypoints storing in collection
+    virtual void clear();
 protected:
     KeyPointCollection collection;
 };
