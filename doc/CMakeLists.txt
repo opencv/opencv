@@ -156,7 +156,7 @@ set(HTML_TARGET "DOXY_HTML" )
 add_custom_target(${HTML_TARGET} ALL
 	${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile ${doxy_html_dep_list})
-
+exec_program(mkdir ARGS "-p \"${CMAKE_CURRENT_BINARY_DIR}/html/\"")
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html" DESTINATION "${OPENCV_DOC_INSTALL_PATH}/html" COMPONENT main)
 
 endif()
