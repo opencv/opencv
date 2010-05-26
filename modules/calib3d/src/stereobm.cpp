@@ -492,8 +492,8 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
 
             if( 0 < mind && mind < ndisp - 1 )
             {
-                int p = sad[mind+1], n = sad[mind-1], d = p + n - 2*sad[mind];
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*128/d : 0) + 15) >> 4);
+                int p = sad[mind+1], n = sad[mind-1], d = p + n - 2*sad[mind] + std::abs(p - n);
+                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
             }
             else
                 dptr[y*dstep] = (short)((ndisp - mind - 1)*16);
@@ -662,8 +662,8 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             {
             sad[-1] = sad[1];
             sad[ndisp] = sad[ndisp-2];
-            int p = sad[mind+1], n = sad[mind-1], d = p + n - 2*sad[mind];
-            dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*128/d : 0) + 15) >> 4);
+            int p = sad[mind+1], n = sad[mind-1], d = p + n - 2*sad[mind] + std::abs(p - n);
+            dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
             costptr[y*coststep] = sad[mind];
             }
         }
