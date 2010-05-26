@@ -1397,7 +1397,7 @@ public:
      * matches       Indices of the closest matches from the training set
      */
     void match( const Mat& query, const Mat& mask,
-                vector<int>& matches, vector<double>* distances = 0 ) const;
+                vector<int>& matches ) const;
 
     /*
      * Find the best keypoint matches for small view changes.
@@ -1416,6 +1416,7 @@ public:
     /*void matchWindowed( const vector<KeyPoint>& keypoints_1, const Mat& descriptors_1,
                         const vector<KeyPoint>& keypoints_2, const Mat& descriptors_2,
                         float maxDeltaX, float maxDeltaY, vector<Match>& matches) const;*/
+    virtual void clear();
 
 protected:
     Mat train;
@@ -1458,15 +1459,15 @@ inline void DescriptorMatcher::match( const Mat& query, vector<int>& matches ) c
 }
 
 inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
-                                      vector<int>& matches, vector<double>* distances ) const
+                                      vector<int>& matches ) const
 {
-    if( distances )
-        matchImpl( query, train, mask, matches, *distances );
-    else
-    {
-        vector<double> innDistances;
-        matchImpl( query, train, mask, matches, innDistances );
-    }
+    vector<double> innDistances;
+    matchImpl( query, train, mask, matches, innDistances );
+}
+
+inline void DescriptorMatcher::clear()
+{
+    train.release();
 }
 
 /*
@@ -1828,10 +1829,16 @@ public:
         matcher.match( descriptors, keypointIndices );
     };
 
+    virtual void clear()
+    {
+        GenericDescriptorMatch::clear();
+        matcher.clear();
+    }
+
 protected:
     Extractor extractor;
     Matcher matcher;
-    vector<int> classIds;
+    //vector<int> classIds;
 };
 
 }
