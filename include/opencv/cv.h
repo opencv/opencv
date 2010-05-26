@@ -47,10 +47,6 @@
 #warning "This is a deprecated opencv header provided for compatibility. Please include a header from a corresponding opencv module"
 #endif
 
-#if !defined(CV_IMPL)
-#define CV_IMPL extern "C"
-#endif //CV_IMPL
-
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
@@ -60,4 +56,16 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 
-#endif
+#if !defined(CV_IMPL)
+#define CV_IMPL extern "C"
+#endif //CV_IMPL
+
+#if defined(__cplusplus)
+#include "opencv2/core/internal.hpp"
+#endif //__cplusplus
+
+namespace cv {
+namespace flann = cvflann;
+}
+
+#endif __OPENCV_OLD_CV_H_

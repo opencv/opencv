@@ -171,6 +171,9 @@ CVAPI(CvSeq*) cvGetStarKeypoints( const CvArr* img, CvMemStorage* storage,
 #ifdef __cplusplus
 }
 
+namespace cv
+{
+
 // CvAffinePose: defines a parameterized affine transformation of an image patch.
 // An image patch is rotated on angle phi (in degrees), then scaled lambda1 times
 // along horizontal and lambda2 times along vertical direction, and then rotated again
@@ -183,10 +186,6 @@ public:
     float lambda1;
     float lambda2;
 };
-
-
-namespace cv
-{
 
 class CV_EXPORTS KeyPoint
 {
