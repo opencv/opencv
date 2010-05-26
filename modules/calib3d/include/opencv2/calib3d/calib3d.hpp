@@ -624,17 +624,17 @@ enum
     FM_RANSAC = 8  //!< RANSAC algorithm
 };
 
-// finds fundamental matrix from a set of corresponding 2D points
+//! finds fundamental matrix from a set of corresponding 2D points
 CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
                                    vector<uchar>& mask, int method=FM_RANSAC,
                                    double param1=3., double param2=0.99 );
 
-// finds fundamental matrix from a set of corresponding 2D points
+//! finds fundamental matrix from a set of corresponding 2D points
 CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
                                    int method=FM_RANSAC,
                                    double param1=3., double param2=0.99 );
 
-// finds coordinates of epipolar lines corresponding the specified points
+//! finds coordinates of epipolar lines corresponding the specified points
 CV_EXPORTS void computeCorrespondEpilines( const Mat& points1,
                                            int whichImage, const Mat& F,
                                            vector<Vec3f>& lines );
