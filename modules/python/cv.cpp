@@ -92,11 +92,6 @@ typedef IplImage ROIplImage;
 typedef const CvMat ROCvMat;
 typedef PyObject PyCallableObject;
 
-struct cvmoments_t {
-  PyObject_HEAD
-  CvMoments a;
-};
-
 struct cvfont_t {
   PyObject_HEAD
   CvFont a;
@@ -958,21 +953,6 @@ static void memtrack_specials(void)
 {
   memtrack_Type.tp_dealloc = memtrack_dealloc;
   memtrack_Type.tp_as_buffer = &memtrack_as_buffer;
-}
-
-/************************************************************************/
-
-/* cvmoments */
-
-static PyTypeObject cvmoments_Type = {
-  PyObject_HEAD_INIT(&PyType_Type)
-  0,                                      /*size*/
-  MODULESTR".cvmoments",                          /*name*/
-  sizeof(cvmoments_t),                        /*basicsize*/
-};
-
-static void cvmoments_specials(void)
-{
 }
 
 /************************************************************************/
@@ -2058,17 +2038,6 @@ static int convert_to_floatPTRPTR(PyObject *o, float*** dst, const char *name = 
   return 1;
 }
 
-static int convert_to_CvMomentsPTR(PyObject *o, CvMoments** dst, const char *name = "no_name")
-{
-  if (PyType_IsSubtype(o->ob_type, &cvmoments_Type)) {
-    (*dst) = &(((cvmoments_t*)o)->a);
-    return 1;
-  } else {
-    (*dst) = (CvMoments*)NULL;
-    return failmsg("Expected CvMoments for argument '%s'", name);
-  }
-}
-
 static int convert_to_CvFontPTR(PyObject *o, CvFont** dst, const char *name = "no_name")
 {
   if (PyType_IsSubtype(o->ob_type, &cvfont_Type)) {
@@ -2543,13 +2512,6 @@ static PyObject *FROM_CvMatNDPTR(CvMatND *r)
 static PyObject *FROM_CvRNG(CvRNG r)
 {
   cvrng_t *m = PyObject_NEW(cvrng_t, &cvrng_Type);
-  m->a = r;
-  return (PyObject*)m;
-}
-
-static PyObject *FROM_CvMoments(CvMoments r)
-{
-  cvmoments_t *m = PyObject_NEW(cvmoments_t, &cvmoments_Type);
   m->a = r;
   return (PyObject*)m;
 }
@@ -3615,6 +3577,13 @@ static PyObject *temp_test(PyObject *self, PyObject *args)
   printf("count=%d\n", count);
 #endif
 
+#if 0
+  CvMat *src = cvCreateMat(512, 512, CV_8UC3);
+  CvMat *dst = cvCreateMat(512, 512, CV_8UC3);
+  cvPyrMeanShiftFiltering(src, dst, 5, 5);
+  return FROM_CvMat(src);
+#endif
+
   return PyFloat_FromDouble(0.0);
 }
 
@@ -3845,7 +3814,6 @@ void initcv()
   MKTYPE(cvmat);
   MKTYPE(cvmatnd);
   MKTYPE(cvmemstorage);
-  MKTYPE(cvmoments);
   MKTYPE(cvsubdiv2dedge);
   MKTYPE(cvrng);
   MKTYPE(cvseq);

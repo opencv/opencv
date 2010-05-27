@@ -698,6 +698,19 @@ class FunctionTests(OpenCVTests):
             r = cv.MinMaxLoc(scribble)
             self.assert_(r == (0, 255, tuple(reversed(lo)), tuple(reversed(hi))))
 
+    def xxx_test_PyrMeanShiftFiltering(self):   # XXX - ticket #306
+        if 0:
+            src = self.get_sample("samples/c/lena.jpg", cv.CV_LOAD_IMAGE_COLOR)
+            dst = cv.CloneMat(src)
+            cv.PyrMeanShiftFiltering(src, dst, 5, 5)
+            print src, dst
+            self.snap(src)
+        else:
+            r = cv.temp_test()
+            print r
+            print len(r.tostring())
+            self.snap(r)
+
     def test_Reshape(self):
         # 97 rows
         # 12 cols
@@ -1774,6 +1787,10 @@ class AreaTests(OpenCVTests):
     def test_moments(self):
         im = self.get_sample("samples/c/lena.jpg", 0)
         mo = cv.Moments(im)
+        for fld in ["m00", "m10", "m01", "m20", "m11", "m02", "m30", "m21", "m12", "m03", "mu20", "mu11", "mu02", "mu30", "mu21", "mu12", "mu03", "inv_sqrt_m00"]:
+            self.assert_(isinstance(getattr(mo, fld), float))
+            print getattr(mo, fld)
+
         orders = []
         for x_order in range(4):
           for y_order in range(4 - x_order):

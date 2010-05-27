@@ -346,7 +346,68 @@ for l in open("%s/defs" % sys.argv[1]):
 
 # gen_c[3] is the code, gen_c[4] initializers
 
-s = Template("""
+gensimple = Template("""
+/*
+  ${cvtype} is the OpenCV C struct
+  ${ourname}_t is the Python object
+*/
+
+struct ${ourname}_t {
+  PyObject_HEAD
+  ${cvtype} v;
+};
+
+static PyObject *${ourname}_repr(PyObject *self)
+{
+  ${ourname}_t *p = (${ourname}_t*)self;
+  char str[1000];
+  sprintf(str, "<${ourname} %p>", p);
+  return PyString_FromString(str);
+}
+
+${getset_funcs}
+
+static PyGetSetDef ${ourname}_getseters[] = {
+
+  ${getset_inits}
+  {NULL}  /* Sentinel */
+};
+
+static PyTypeObject ${ourname}_Type = {
+  PyObject_HEAD_INIT(&PyType_Type)
+  0,                                      /*size*/
+  MODULESTR".${ourname}",              /*name*/
+  sizeof(${ourname}_t),                /*basicsize*/
+};
+
+static void ${ourname}_specials(void)
+{
+  ${ourname}_Type.tp_repr = ${ourname}_repr;
+  ${ourname}_Type.tp_getset = ${ourname}_getseters;
+}
+
+static PyObject *FROM_${cvtype}(${cvtype} r)
+{
+  ${ourname}_t *m = PyObject_NEW(${ourname}_t, &${ourname}_Type);
+  m->v = r;
+  return (PyObject*)m;
+}
+
+static int convert_to_${cvtype}PTR(PyObject *o, ${cvtype}** dst, const char *name = "no_name")
+{
+  ${allownull}
+  if (PyType_IsSubtype(o->ob_type, &${ourname}_Type)) {
+    *dst = &(((${ourname}_t*)o)->v);
+    return 1;
+  } else {
+    (*dst) = (${cvtype}*)NULL;
+    return failmsg("Expected ${cvtype} for argument '%s'", name);
+  }
+}
+
+""")
+
+genptr = Template("""
 /*
   ${cvtype} is the OpenCV C struct
   ${ourname}_t is the Python object
@@ -368,7 +429,7 @@ static PyObject *${ourname}_repr(PyObject *self)
 {
   ${ourname}_t *p = (${ourname}_t*)self;
   char str[1000];
-  sprintf(str, "<${ourname} %p>", p->v);
+  sprintf(str, "<${ourname} %p>", p);
   return PyString_FromString(str);
 }
 
@@ -418,7 +479,7 @@ static int convert_to_${cvtype}PTR(PyObject *o, ${cvtype}** dst, const char *nam
 getset_func_template = Template("""
 static PyObject *${ourname}_get_${member}(${ourname}_t *p, void *closure)
 {
-  return ${rconverter}(p->v->${member});
+  return ${rconverter}(p->v${accessor}${member});
 }
 
 static int ${ourname}_set_${member}(${ourname}_t *p, PyObject *value, void *closure)
@@ -433,7 +494,7 @@ static int ${ourname}_set_${member}(${ourname}_t *p, PyObject *value, void *clos
     return -1;
   }
 
-  p->v->${member} = ${converter}(value);
+  p->v${accessor}${member} = ${converter}(value);
   return 0;
 }
 
@@ -494,6 +555,26 @@ objects = [
         "gain" : 'mr',
         "error_cov_post" : 'mr',
     }),
+    ( 'CvMoments', ['copy'], {
+        "m00" : 'f',
+        "m10" : 'f',
+        "m01" : 'f',
+        "m20" : 'f',
+        "m11" : 'f',
+        "m02" : 'f',
+        "m30" : 'f',
+        "m21" : 'f',
+        "m12" : 'f',
+        "m03" : 'f',
+        "mu20" : 'f',
+        "mu11" : 'f',
+        "mu02" : 'f',
+        "mu30" : 'f',
+        "mu21" : 'f',
+        "mu12" : 'f',
+        "mu03" : 'f',
+        "inv_sqrt_m00" : 'f',
+    }),
 ]
 
 checkers = {
@@ -528,7 +609,11 @@ for (t, flags, members) in objects:
     map = {'cvtype' : t,
            'ourname' : t.replace('Cv', '')}
     # gsf is all the generated code for the member accessors
-    gsf = "".join([getset_func_template.substitute(map, member = m, checker = checkers[t], converter = converters[t], rconverter = rconverters[t], typename = typenames[t]) for (m, t) in members.items()])
+    if 'copy' in flags:
+        a = '.'
+    else:
+        a = '->'
+    gsf = "".join([getset_func_template.substitute(map, accessor = a, member = m, checker = checkers[t], converter = converters[t], rconverter = rconverters[t], typename = typenames[t]) for (m, t) in members.items()])
     # gsi is the generated code for the initializer for each accessor
     gsi = "".join([getset_init_template.substitute(map, member = m) for (m, t) in members.items()])
     # s is the template that pulls everything together
@@ -536,7 +621,10 @@ for (t, flags, members) in objects:
         nullcode = """if (o == Py_None) { *dst = (%s*)NULL; return 1; }""" % map['cvtype']
     else:
         nullcode = ""
-    print >>gen_c[3], s.substitute(map, getset_funcs = gsf, getset_inits = gsi, allownull = nullcode)
+    if 'copy' in flags:
+        print >>gen_c[3], gensimple.substitute(map, getset_funcs = gsf, getset_inits = gsi, allownull = nullcode)
+    else:
+        print >>gen_c[3], genptr.substitute(map, getset_funcs = gsf, getset_inits = gsi, allownull = nullcode)
     print >>gen_c[4], "MKTYPE(%s);" % map['ourname']
 
 for f in gen_c:
