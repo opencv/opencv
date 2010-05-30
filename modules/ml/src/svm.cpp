@@ -317,7 +317,8 @@ void CvSVMKernel::calc_rbf( int vcount, int var_count, const float** vecs,
         results[j] = (Qfloat)(s*gamma);
     }
 
-    cvExp( &R, &R );
+    if( vcount > 0 )
+        cvExp( &R, &R );
 }
 
 
