@@ -261,7 +261,8 @@ void CvSVMKernel::calc_poly( int vcount, int var_count, const float** vecs,
 {
     CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
     calc_non_rbf_base( vcount, var_count, vecs, another, results, params->gamma, params->coef0 );
-    cvPow( &R, &R, params->degree );
+    if( vcount > 0 )
+        cvPow( &R, &R, params->degree );
 }
 
 
