@@ -90,25 +90,31 @@ CVAPI(void) cvExtractSURF( const CvArr* img, const CvArr* mask,
                            CvSeq** keypoints, CvSeq** descriptors,
                            CvMemStorage* storage, CvSURFParams params, int useProvidedKeyPts CV_DEFAULT(0)  );
 
+/*!
+ Maximal Stable Regions Parameters
+*/
 typedef struct CvMSERParams
 {
-    // delta, in the code, it compares (size_{i}-size_{i-delta})/size_{i-delta}
+    //! delta, in the code, it compares (size_{i}-size_{i-delta})/size_{i-delta}
     int delta;
-    // prune the area which bigger/smaller than max_area/min_area
+    //! prune the area which bigger than maxArea
     int maxArea;
+    //! prune the area which smaller than minArea
     int minArea;
-    // prune the area have simliar size to its children
+    //! prune the area have simliar size to its children
     float maxVariation;
-    // trace back to cut off mser with diversity < min_diversity
+    //! trace back to cut off mser with diversity < min_diversity
     float minDiversity;
-    /* the next few params for MSER of color image */
-    // for color image, the evolution steps
+    
+    /////// the next few params for MSER of color image
+    
+    //! for color image, the evolution steps
     int maxEvolution;
-    // the area threshold to cause re-initialize
+    //! the area threshold to cause re-initialize
     double areaThreshold;
-    // ignore too small margin
+    //! ignore too small margin
     double minMargin;
-    // the aperture size for edge blur
+    //! the aperture size for edge blur
     int edgeBlurSize;
 } CvMSERParams;
 
@@ -187,34 +193,56 @@ public:
     float lambda2;
 };
 
+/*!
+ The Keypoint Class
+ 
+ The class instance stores a keypoint, i.e. a point feature found by one of many available keypoint detectors, such as
+ Harris corner detector, cv::FAST, cv::StarDetector, cv::SURF, cv::SIFT, cv::LDetector etc.
+ 
+ The keypoint is characterized by the 2D position, scale
+ (proportional to the diameter of the neighborhood that needs to be taken into account),
+ orientation and some other parameters. The keypoint neighborhood is then analyzed by another algorithm that builds a descriptor
+ (usually represented as a feature vector). The keypoints representing the same object in different images can then be matched using
+ cv::KDTree or another method.
+*/
 class CV_EXPORTS KeyPoint
 {
-public:    
+public:
+    //! the default constructor
     KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
+    //! the full constructor
     KeyPoint(Point2f _pt, float _size, float _angle=-1,
             float _response=0, int _octave=0, int _class_id=-1)
             : pt(_pt), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
+    //! another form of the full constructor
     KeyPoint(float x, float y, float _size, float _angle=-1,
             float _response=0, int _octave=0, int _class_id=-1)
             : pt(x, y), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
+    //! converts vector of keypoints to vector of points
     static void convert(const std::vector<KeyPoint>& u, std::vector<Point2f>& v);
+    //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
     static void convert(const std::vector<Point2f>& u, std::vector<KeyPoint>& v,
                         float size=1, float response=1, int octave=0, int class_id=-1);
-
-    Point2f pt;
-    float size;
-    float angle;
-    float response;
-    int octave;
-    int class_id;
+    Point2f pt; //!< coordinates of the keypoints
+    float size; //!< diameter of the meaningfull keypoint neighborhood
+    float angle; //!< computed orientation of the keypoint (-1 if not applicable)
+    float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
+    int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
+    int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to) 
 };
 
+//! writes vector of keypoints to the file storage
 CV_EXPORTS void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
+//! reads vector of keypoints from the specified file storage node
 CV_EXPORTS void read(const FileNode& node, vector<KeyPoint>& keypoints);    
 
-
+/*!
+ SIFT implementation.
+ 
+ The class implements SIFT algorithm by D. Lowe.
+*/
 class CV_EXPORTS SIFT
 {
 public:
@@ -261,13 +289,13 @@ public:
     };
 
     SIFT();
-    // sift-detector constructor
+    //! sift-detector constructor
     SIFT( double _threshold, double _edgeThreshold,
           int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
           int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
           int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
           int _angleMode=CommonParams::FIRST_ANGLE );
-    // sift-descriptor constructor
+    //! sift-descriptor constructor
     SIFT( double _magnification, bool _isNormalize=true,
           bool _recalculateAngles = true,
           int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
@@ -278,9 +306,12 @@ public:
           const DetectorParams& _detectorParams = DetectorParams(),
           const DescriptorParams& _descriptorParams = DescriptorParams() );
 
+    //! returns the descriptor size in floats (128)
     int descriptorSize() const { return DescriptorParams::DESCRIPTOR_SIZE; }
+    //! finds the keypoints using SIFT algorithm
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints) const;
+    //! finds the keypoints and computes descriptors for them using SIFT algorithm. Optionally it can compute descriptors for the user-provided keypoints
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints,
                     Mat& descriptors,
@@ -291,51 +322,84 @@ protected:
     DescriptorParams descriptorParams;
 };
 
+    
+/*!
+ SURF implementation.
+ 
+ The class implements SURF algorithm by H. Bay et al.
+ */
 class CV_EXPORTS SURF : public CvSURFParams
 {
 public:
+    //! the default constructor
     SURF();
+    //! the full constructor taking all the necessary parameters
     SURF(double _hessianThreshold, int _nOctaves=4,
          int _nOctaveLayers=2, bool _extended=false);
 
+    //! returns the descriptor size in float's (64 or 128)
     int descriptorSize() const;
+    //! finds the keypoints using fast hessian detector used in SURF
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints) const;
+    //! finds the keypoints and computes their descriptors. Optionally it can compute descriptors for the user-provided keypoints
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints,
                     vector<float>& descriptors,
                     bool useProvidedKeypoints=false) const;
 };
 
-
+/*!
+ Maximal Stable Extremal Regions class.
+ 
+ The class implements MSER algorithm introduced by J. Matas.
+ Unlike SIFT, SURF and many other detectors in OpenCV, this is salient region detector,
+ not the salient point detector.
+ 
+ It returns the regions, each of those is encoded as a contour.
+*/
 class CV_EXPORTS MSER : public CvMSERParams
 {
 public:
+    //! the default constructor
     MSER();
+    //! the full constructor
     MSER( int _delta, int _min_area, int _max_area,
           float _max_variation, float _min_diversity,
           int _max_evolution, double _area_threshold,
           double _min_margin, int _edge_blur_size );
+    //! the operator that extracts the MSERs from the image or the specific part of it
     void operator()( const Mat& image, vector<vector<Point> >& msers, const Mat& mask ) const;
 };
 
-
+/*!
+ The "Star" Detector.
+ 
+ The class implements the keypoint detector introduced by K. Konolige.
+*/
 class CV_EXPORTS StarDetector : public CvStarDetectorParams
 {
 public:
+    //! the default constructor
     StarDetector();
+    //! the full constructor
     StarDetector(int _maxSize, int _responseThreshold,
                  int _lineThresholdProjected,
                  int _lineThresholdBinarized,
                  int _suppressNonmaxSize);
-
+    //! finds the keypoints in the image
     void operator()(const Mat& image, vector<KeyPoint>& keypoints) const;
 };
 
-// detect corners using FAST algorithm
-CV_EXPORTS void FAST( const Mat& image, vector<KeyPoint>& keypoints, int threshold, bool nonmax_supression=true );
+//! detects corners using FAST algorithm by E. Rosten
+CV_EXPORTS void FAST( const Mat& image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true );
 
-
+/*!
+ The Patch Generator class
+ 
+ 
+ 
+*/
 class CV_EXPORTS PatchGenerator
 {
 public:
