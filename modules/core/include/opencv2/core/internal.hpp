@@ -294,7 +294,9 @@ CV_INLINE IppiSize ippiSize(int width, int height)
     #define CV_BIG_UINT(n)  n##ULL
 #endif
 
+#ifndef CV_IMPL
 #define CV_IMPL CV_EXTERN_C
+#endif
 
 #define CV_DBG_BREAK() { volatile int* crashMe = 0; *crashMe = 0; }
 
