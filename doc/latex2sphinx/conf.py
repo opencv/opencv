@@ -200,3 +200,5 @@ pngmath_latex_preamble = '\usepackage{mymath}\usepackage{amsmath}\usepackage{bbm
 #        'http://docs.python.org/': None,
 #    }
 intersphinx_mapping = {}
+
+latex_elements = {'preamble': '\usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}'}
