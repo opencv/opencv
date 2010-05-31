@@ -1011,9 +1011,9 @@ public:
 The class is the most universal representation of short numerical vectors or tuples. It is possible to convert \texttt{Vec<T,2>} to/from \texttt{Point\_}, \texttt{Vec<T,3>} to/from \texttt{Point3\_}, and \texttt{Vec<T,4>} to \cross{CvScalar}~. The elements of \texttt{Vec} are accessed using \texttt{operator[]}. All the expected vector operations are implemented too:
 
 \begin{itemize}
-    \item \texttt{v1 = $v2 \pm v3$, v1 = v2 * $\alpha$, v1 = $\alpha$ * v2} (plus the corresponding augmenting operations; note that these operations apply \hyperref[saturatecast]{saturate\_cast.3C.3E} to the each computed vector component)
+    \item $\texttt{v1} = \texttt{v2} \pm \texttt{v3}$, $\texttt{v1} = \texttt{v2} * \alpha$, $\texttt{v1} = \alpha * \texttt{v2}$ (plus the corresponding augmenting operations; note that these operations apply \hyperref[saturatecast]{saturate\_cast.3C.3E} to the each computed vector component)
     \item \texttt{v1 == v2, v1 != v2}
-    \item \texttt{double n = norm(v1); // $L_2$-norm}
+    \item \texttt{norm(v1)} ($L_2$-norm)
 \end{itemize}
 
 For user convenience, the following type aliases are introduced:
@@ -1517,14 +1517,15 @@ The next important thing to learn about the matrix class is element access. Here
 
 Given these parameters, address of the matrix element $M_{ij}$ is computed as following:
 
-
-\texttt{addr($M_{ij}$)=M.data + M.step*i + j*M.elemSize()}
-
+\[
+\texttt{addr}(\texttt{M}_{ij})=\texttt{M.data + M.step*i + j*M.elemSize()}
+\]
 
 if you know the matrix element type, e.g. it is \texttt{float}, then you can use \texttt{at<>()} method:
 
-
-\texttt{addr($M_{ij}$)=\&M.at<float>(i,j)}
+\[
+\texttt{addr}(\texttt{M}_{ij})=\&\texttt{M.at<float>(i,j)}
+\]
 
 (where \& is used to convert the reference returned by \texttt{at} to a pointer).
 if you need to process a whole row of matrix, the most efficient way is to get the pointer to the row first, and then just use plain C operator \texttt{[]}:
@@ -1576,23 +1577,23 @@ The matrix iterators are random-access iterators, so they can be passed to any S
 
 This is a list of implemented matrix operations that can be combined in arbitrary complex expressions
 (here \emph{A}, \emph{B} stand for matrices (\texttt{Mat}), \emph{s} for a scalar (\texttt{Scalar}),
-\emph{$\alpha$} for a real-valued scalar (\texttt{double})):
+$\alpha$ for a real-valued scalar (\texttt{double})):
 
 \begin{itemize}
-    \item addition, subtraction, negation: $\texttt{A}\pm \texttt{B},\;\texttt{A}\pm \texttt{s},\;\texttt{s}\pm \texttt{A},\;-\texttt{A}$
-    \item scaling: \texttt{A*$\alpha$, A/$\alpha$}
-    \item per-element multiplication and division: \texttt{A.mul(B), A/B, $\alpha$/A}
-    \item matrix multiplication: \texttt{A*B}
-    \item transposition: \texttt{A.t() $\sim A^t$}
+    \item addition, subtraction, negation: $A \pm B,\;A \pm s,\;s \pm A,\;-A$
+    \item scaling: $A*\alpha$, $A*\alpha$
+    \item per-element multiplication and division: $A.mul(B), A/B, \alpha/A$
+    \item matrix multiplication: $A*B$
+    \item transposition: $A.t() \sim A^t$
     \item matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
-        \texttt{A.inv([method]) $\sim A^{-1}$}, \texttt{A.inv([method])*B $\sim X:\,AX=B$}
-    \item comparison: $\texttt{A}\gtreqqless \texttt{B},\;\texttt{A} \ne \texttt{B},\;\texttt{A}\gtreqqless \alpha,\; \texttt{A} \ne \alpha$.
+        $A.inv([method]) \sim A^{-1}, A.inv([method])*B \sim X:\,AX=B$
+    \item comparison: $A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha$.
           The result of comparison is 8-bit single channel mask, which elements are set to 255
           (if the particular element or pair of elements satisfy the condition) and 0 otherwise.
-    \item bitwise logical operations: \texttt{A \& B, A \& s, A | B, A | s, A \^ B, A \^ s, \textasciitilde A}
-    \item element-wise minimum and maximum: \texttt{min(A, B), min(A, $\alpha$), max(A, B), max(A, $\alpha$)}
-    \item element-wise absolute value: \texttt{abs(A)}
-    \item cross-product, dot-product: \texttt{A.cross(B), A.dot(B)}
+    \item bitwise logical operations: \texttt{A \& B, A \& s, A | B, A | s, A \textasciicircum{} B, A \textasciicircum{} s, \textasciitilde A}
+    \item element-wise minimum and maximum: $min(A, B), min(A, \alpha), max(A, B), max(A, \alpha)$
+    \item element-wise absolute value: $abs(A)$
+    \item cross-product, dot-product: $A.cross(B), A.dot(B)$
     \item any function of matrix or matrices and scalars that returns a matrix or a scalar, such as
           \cvCppCross{norm}, \cvCppCross{mean}, \cvCppCross{sum}, \cvCppCross{countNonZero}, \cvCppCross{trace},
           \cvCppCross{determinant}, \cvCppCross{repeat} etc.
@@ -1643,7 +1644,7 @@ Various matrix constructors
 These are various constructors that form a matrix. As noticed in the
 \hyperref{AutomaticMemoryManagement2}{introduction}, often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is dereferenced, or be allocated with \cross{Mat::create}.
 
-\cvCppFunc{Mat::Mat}index{cv::Mat::\textasciitilde Mat}label{cppfunc.Mat::destructor}
+\cvCppFunc{Mat::Mat}\index{cv::Mat::destructor}\label{cppfunc.Mat::destructor}
 Matrix destructor
 
 \cvdefCpp{

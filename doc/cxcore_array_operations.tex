@@ -3838,7 +3838,7 @@ MatExpr<...> abs(const MatExpr<...>\& src);}
 \begin{itemize}
     \item \texttt{C = abs(A-B)} is equivalent to \texttt{absdiff(A, B, C)} and
     \item \texttt{C = abs(A)} is equivalent to \texttt{absdiff(A, Scalar::all(0), C)}.
-    \item \texttt{C = Mat\_<Vec<uchar,\emph{n}> >(abs(A*$\alpha$ + $\beta$))} is equivalent to \texttt{convertScaleAbs(A, C, alpha, beta)}
+    \item \texttt{C = Mat\_<Vec<uchar,n> >(abs(A*alpha + beta))} is equivalent to \texttt{convertScaleAbs(A, C, alpha, beta)}
 \end{itemize}
 
 The output matrix will have the same size and the same type as the input one

@@ -1136,22 +1136,19 @@ Returns the structuring element of the specified size and shape for morphologica
 \cvdefCpp{Mat getStructuringElement(int shape, Size esize,\par Point anchor=Point(-1,-1));}
 
 \begin{description}
-\cvarg{shape}{The element shape, one of:
-    
+\cvarg{shape}{The element shape, one of:}
     \begin{itemize}
         \item \texttt{MORPH\_RECT} - rectangular structuring element
             \[E_{ij}=1\]
 
-        \item \texttt{MORPH\_ELLIPSE} - elliptic structuring element, i.e. a filled
-            ellipse inscribed into the rectangle
+        \item \texttt{MORPH\_ELLIPSE} - elliptic structuring element, i.e. a filled ellipse inscribed into the rectangle
             \texttt{Rect(0, 0, esize.width, 0.esize.height)}
 
         \item \texttt{MORPH\_CROSS} - cross-shaped structuring element:
             \[
             E_{ij} = \fork{1}{if i=\texttt{anchor.y} or j=\texttt{anchor.x}}{0}{otherwise}
             \]
-        
-    \end{itemize}}
+    \end{itemize}
 \cvarg{esize}{Size of the structuring element}
 \cvarg{anchor}{The anchor position within the element. The default value $(-1, -1)$ means that the anchor is at the center. Note that only the cross-shaped element's shape depends on the anchor position; in other cases the anchor just regulates by how much the result of the morphological operation is shifted}
 \end{description}

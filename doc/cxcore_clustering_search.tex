@@ -342,114 +342,90 @@ Constructs a nearest neighbor search index for a given dataset.
 \begin{description}
 \cvarg{features}{ Matrix of type CV\_32F containing the features(points) to index. The size of the matrix is num\_features x feature\_dimensionality.}
 \cvarg{params}{Structure containing the index parameters. The type of index that will be constructed depends on the type of this parameter.
-The possible parameter types are:
+The possible parameter types are:}
 
 \begin{description}
- \cvarg{LinearIndexParams}{When passing an object of this type, the index will perform a linear, brute-force search.
-   \cvcode{
-    struct LinearIndexParams : public IndexParams\newline
-  \{\newline
-  \};}
-  }
+\cvarg{LinearIndexParams}{When passing an object of this type, the index will perform a linear, brute-force search.}
+\begin{lstlisting}
+struct LinearIndexParams : public IndexParams
+{
+};
+\end{lstlisting}
 
-\cvarg{KDTreeIndexParams}{When passing an object of this type the index constructed will consist of a set 
-of randomized kd-trees which will be searched in parallel.
- \cvcode{
-  struct KDTreeIndexParams : public IndexParams\newline
-  \{\newline
-	KDTreeIndexParams( int trees = 4 );\newline
-  \};}
+\cvarg{KDTreeIndexParams}{When passing an object of this type the index constructed will consist of a set of randomized kd-trees which will be searched in parallel.}
+\begin{lstlisting}
+struct KDTreeIndexParams : public IndexParams
+{
+    KDTreeIndexParams( int trees = 4 );
+};
+\end{lstlisting}
 \begin{description}
 \cvarg{trees}{The number of parallel kd-trees to use. Good values are in the range [1..16]}
 \end{description}
-}
-\cvarg{KMeansIndexParams}{When passing an object of this type the index constructed will be a hierarchical k-means tree. 
-\cvcode{
-  struct KMeansIndexParams : public IndexParams\newline
-  \{\newline
-	    KMeansIndexParams( int branching = 32,\par
-			   int iterations = 11,\par
-			   flann\_centers\_init\_t centers\_init = CENTERS\_RANDOM,\par
-			   float cb\_index = 0.2 );\newline
-  \};}
+
+\cvarg{KMeansIndexParams}{When passing an object of this type the index constructed will be a hierarchical k-means tree.}
+\begin{lstlisting}
+struct KMeansIndexParams : public IndexParams
+{
+    KMeansIndexParams(
+        int branching = 32,
+        int iterations = 11,
+        flann_centers_init_t centers_init = CENTERS_RANDOM,
+        float cb_index = 0.2 );
+};
+\end{lstlisting}
 \begin{description}
 \cvarg{branching}{ The branching factor to use for the hierarchical k-means tree }
-\cvarg{iterations}{ The maximum number of iterations to use in the k-means clustering 
-		    stage when building the k-means tree. A value of -1 used here means
-		    that the k-means clustering should be iterated until convergence}
-\cvarg{centers\_init}{ The algorithm to use for selecting the initial
-		  centers when performing a k-means clustering step. The possible values are
-		  CENTERS\_RANDOM (picks the initial cluster centers randomly), CENTERS\_GONZALES (picks the
-		  initial centers using Gonzales' algorithm) and CENTERS\_KMEANSPP (picks the initial
-		centers using the algorithm suggested in \cite{arthur_kmeanspp_2007}) }
-\cvarg{cb\_index}{ This parameter (cluster boundary index) influences the
-		  way exploration is performed in the hierarchical kmeans tree. When \texttt{cb\_index} is zero
-		  the next kmeans domain to be explored is choosen to be the one with the closest center. 
-		  A value greater then zero also takes into account the size of the domain.}
+\cvarg{iterations}{ The maximum number of iterations to use in the k-means clustering stage when building the k-means tree. A value of -1 used here means that the k-means clustering should be iterated until convergence}
+\cvarg{centers\_init}{The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are \texttt{CENTERS\_RANDOM} (picks the initial cluster centers randomly), \texttt{CENTERS\_GONZALES} (picks the initial centers using Gonzales' algorithm) and \texttt{CENTERS\_KMEANSPP} (picks the initial centers using the algorithm suggested in \cite{arthur_kmeanspp_2007})}
+\cvarg{cb\_index}{This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When \texttt{cb\_index} is zero the next kmeans domain to be explored is choosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain.}
 \end{description}
-}
-\cvarg{CompositeIndexParams}{When using a parameters object of this type the index created combines the randomized kd-trees 
-	and the hierarchical k-means tree.
-\cvcode{
-  struct CompositeIndexParams : public IndexParams\newline 
-  \{\newline
-	    CompositeIndexParams( int trees = 4,\par
-			      int branching = 32,\par
-			      int iterations = 11,\par
-			      flann\_centers\_init\_t centers\_init = CENTERS\_RANDOM,\par 
-			      float cb\_index = 0.2 );\newline
-  \};}
-}
-\cvarg{AutotunedIndexParams}{When passing an object of this type the index created is automatically tuned to offer 
-the best performance, by choosing the optimal index type (randomized kd-trees, hierarchical kmeans, linear) and parameters for the
-dataset provided.
-\cvcode{
-  struct AutotunedIndexParams : public IndexParams\newline 
-  \{\newline
-	    AutotunedIndexParams( float target\_precision = 0.9,\par
-			      float build\_weight = 0.01,\par
-			      float memory\_weight = 0,\par
-			      float sample\_fraction = 0.1 );\newline
-  \};}
+
+\cvarg{CompositeIndexParams}{When using a parameters object of this type the index created combines the randomized kd-trees  and the hierarchical k-means tree.}
+\begin{lstlisting}
+struct CompositeIndexParams : public IndexParams
+{
+    CompositeIndexParams(
+        int trees = 4,
+        int branching = 32,
+        int iterations = 11,
+        flann_centers_init_t centers_init = CENTERS_RANDOM,
+        float cb_index = 0.2 );
+};
+\end{lstlisting}
+
+\cvarg{AutotunedIndexParams}{When passing an object of this type the index created is automatically tuned to offer  the best performance, by choosing the optimal index type (randomized kd-trees, hierarchical kmeans, linear) and parameters for the dataset provided.}
+\begin{lstlisting}
+struct AutotunedIndexParams : public IndexParams
+{
+    AutotunedIndexParams(
+        float target_precision = 0.9,
+        float build_weight = 0.01,
+        float memory_weight = 0,
+        float sample_fraction = 0.1 );
+};
+\end{lstlisting}
 \begin{description}
-\cvarg{target\_precision}{ Is a number between 0 and 1 specifying the
-percentage of the approximate nearest-neighbor searches that return the
-exact nearest-neighbor. Using a higher value for this parameter gives
-more accurate results, but the search takes longer. The optimum value
-usually depends on the application. }
+\cvarg{target\_precision}{ Is a number between 0 and 1 specifying the percentage of the approximate nearest-neighbor searches that return the exact nearest-neighbor. Using a higher value for this parameter gives more accurate results, but the search takes longer. The optimum value usually depends on the application. }
 
-\cvarg{build\_weight}{ Specifies the importance of the
-index build time raported to the nearest-neighbor search time. In some
-applications it's acceptable for the index build step to take a long time
-if the subsequent searches in the index can be performed very fast. In
-other applications it's required that the index be build as fast as
-possible even if that leads to slightly longer search times.}
+\cvarg{build\_weight}{ Specifies the importance of the index build time raported to the nearest-neighbor search time. In some applications it's acceptable for the index build step to take a long time if the subsequent searches in the index can be performed very fast. In other applications it's required that the index be build as fast as possible even if that leads to slightly longer search times.}
 
-\cvarg{memory\_weight}{Is used to specify the tradeoff between
-time (index build time and search time) and memory used by the index. A
-value less than 1 gives more importance to the time spent and a value
-greater than 1 gives more importance to the memory usage.}
+\cvarg{memory\_weight}{Is used to specify the tradeoff between time (index build time and search time) and memory used by the index. A value less than 1 gives more importance to the time spent and a value greater than 1 gives more importance to the memory usage.}
 
-\cvarg{sample\_fraction}{Is a number between 0 and 1 indicating what fraction
-of the dataset to use in the automatic parameter configuration algorithm. Running the 
-algorithm on the full dataset gives the most accurate results, but for
-very large datasets can take longer than desired. In such case using just a fraction of the
-data helps speeding up this algorithm while still giving good approximations of the
-optimum parameters.}
+\cvarg{sample\_fraction}{Is a number between 0 and 1 indicating what fraction of the dataset to use in the automatic parameter configuration algorithm. Running the algorithm on the full dataset gives the most accurate results, but for very large datasets can take longer than desired. In such case using just a fraction of the data helps speeding up this algorithm while still giving good approximations of the optimum parameters.}
 \end{description}
-}
- \cvarg{SavedIndexParams}{This object type is used for loading a previously saved index from the disk.
-\cvcode{
-  struct SavedIndexParams : public IndexParams\newline
-  \{\newline
-	   SavedIndexParams( std::string filename );\newline
-  \};}
+
+\cvarg{SavedIndexParams}{This object type is used for loading a previously saved index from the disk.}
+\begin{lstlisting}
+struct SavedIndexParams : public IndexParams
+{
+    SavedIndexParams( std::string filename );
+};
+\end{lstlisting}
 \begin{description}
 \cvarg{filename}{ The filename in which the index was saved. }
 \end{description}
-}
 \end{description}
-}
 \end{description}
 
 \cvCppFunc{cvflann::Index::knnSearch}
@@ -471,11 +447,7 @@ Performs a K-nearest neighbor search for a given query point using the index.
   };
 \end{lstlisting}
 \begin{description}
-\cvarg{checks}{ The number of times the tree(s) in the index should be recursively traversed. A
-higher value for this parameter would give better search precision, but
-also take more time. If automatic configuration was used when the
-index was created, the number of checks required to achieve the specified
-precision was also computed, in which case this parameter is ignored.}
+\cvarg{checks}{ The number of times the tree(s) in the index should be recursively traversed. A higher value for this parameter would give better search precision, but also take more time. If automatic configuration was used when the index was created, the number of checks required to achieve the specified precision was also computed, in which case this parameter is ignored.}
 \end{description}
 \end{description}
 
@@ -541,10 +513,7 @@ Clusters the given points by constructing a hierarchical k-means tree and choosi
                                       const KMeansIndexParams\& params);}
 \begin{description}
 \cvarg{features}{The points to be clustered}
-\cvarg{centers}{The centers of the clusters obtained. The number of rows in this matrix represents the number of clusters desired, 
-however, because of the way the cut in the hierarchical tree is choosen, the number of clusters computed will be
- the highest number of the form $(branching-1)*k+1$ that's lower than the number of clusters desired, where $branching$ is the tree's 
-branching factor (see description of the KMeansIndexParams).  }
+\cvarg{centers}{The centers of the clusters obtained. The number of rows in this matrix represents the number of clusters desired, however, because of the way the cut in the hierarchical tree is chosen, the number of clusters computed will be the highest number of the form \texttt{(branching-1)*k+1} that's lower than the number of clusters desired, where \texttt{branching} is the tree's branching factor (see description of the KMeansIndexParams).}
 \cvarg{params}{Parameters used in the construction of the hierarchical k-means tree}
 \end{description}
 The function returns the number of clusters computed.
