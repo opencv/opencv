@@ -50,10 +50,6 @@
 
 #include <vector>
 
-#ifdef HAVE_CONFIG_H
-    #include <cvconfig.h>
-#endif
-
 #if defined WIN32 || defined _WIN32
 #  ifndef WIN32
 #    define WIN32
