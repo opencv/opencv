@@ -87,10 +87,10 @@ void HOGDescriptor::setSVMDetector(const vector<float>& _svmDetector)
     CV_Assert( checkDetectorSize() );
 }
 
-bool HOGDescriptor::load(const String& filename, const String& objname)
+#define CV_TYPE_NAME_HOG_DESCRIPTOR "opencv-object-detector-hog"
+
+bool HOGDescriptor::read(FileNode& obj)
 {
-    FileStorage fs(filename, FileStorage::READ);
-    FileNode obj = !objname.empty() ? fs[objname] : fs.getFirstTopLevelNode();
     if( !obj.isMap() )
         return false;
     FileNodeIterator it = obj["winSize"].begin();
@@ -107,7 +107,7 @@ bool HOGDescriptor::load(const String& filename, const String& objname)
     obj["histogramNormType"] >> histogramNormType;
     obj["L2HysThreshold"] >> L2HysThreshold;
     obj["gammaCorrection"] >> gammaCorrection;
-
+    
     FileNode vecNode = obj["SVMDetector"];
     if( vecNode.isSeq() )
     {
@@ -116,27 +116,56 @@ bool HOGDescriptor::load(const String& filename, const String& objname)
     }
     return true;
 }
-
-void HOGDescriptor::save(const String& filename, const String& objName) const
+    
+void HOGDescriptor::write(FileStorage& fs, const String& objName) const
 {
-    FileStorage fs(filename, FileStorage::WRITE);
-    fs << (!objName.empty() ? objName : FileStorage::getDefaultObjectName(filename)) << "{";
-
-    fs  << "winSize" << winSize
-        << "blockSize" << blockSize
-        << "blockStride" << blockStride
-        << "cellSize" << cellSize
-        << "nbins" << nbins
-        << "derivAperture" << derivAperture
-        << "winSigma" << getWinSigma()
-        << "histogramNormType" << histogramNormType
-        << "L2HysThreshold" << L2HysThreshold
-        << "gammaCorrection" << gammaCorrection;
+    if( !objName.empty() )
+        fs << objName;
+    
+    fs << "{" CV_TYPE_NAME_HOG_DESCRIPTOR
+    << "winSize" << winSize
+    << "blockSize" << blockSize
+    << "blockStride" << blockStride
+    << "cellSize" << cellSize
+    << "nbins" << nbins
+    << "derivAperture" << derivAperture
+    << "winSigma" << getWinSigma()
+    << "histogramNormType" << histogramNormType
+    << "L2HysThreshold" << L2HysThreshold
+    << "gammaCorrection" << gammaCorrection;
     if( !svmDetector.empty() )
         fs << "SVMDetector" << "[:" << svmDetector << "]";
     fs << "}";
 }
+    
+bool HOGDescriptor::load(const String& filename, const String& objname)
+{
+    FileStorage fs(filename, FileStorage::READ);
+    FileNode obj = !objname.empty() ? fs[objname] : fs.getFirstTopLevelNode();
+    return read(obj);
+}
 
+void HOGDescriptor::save(const String& filename, const String& objName) const
+{
+    FileStorage fs(filename, FileStorage::WRITE);
+    write(fs, !objName.empty() ? objName : FileStorage::getDefaultObjectName(filename));
+}
+
+void HOGDescriptor::copyTo(HOGDescriptor& c) const
+{
+    c.winSize = winSize;
+    c.blockSize = blockSize;
+    c.blockStride = blockStride;
+    c.cellSize = cellSize;
+    c.nbins = nbins;
+    c.derivAperture = derivAperture;
+    c.winSigma = winSigma;
+    c.histogramNormType = histogramNormType;
+    c.L2HysThreshold = L2HysThreshold;
+    c.gammaCorrection = gammaCorrection;
+    c.svmDetector = svmDetector;
+}
+    
 void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                                     Size paddingTL, Size paddingBR) const
 {
@@ -870,6 +899,12 @@ void HOGDescriptor::detectMultiScale(
     groupRectangles(foundLocations, groupThreshold, 0.2);
 }
 
+    
+typedef RTTIImpl<HOGDescriptor> HOGRTTI;
+
+CvType hog_type( CV_TYPE_NAME_HOG_DESCRIPTOR, HOGRTTI::isInstance,
+                 HOGRTTI::release, HOGRTTI::read, HOGRTTI::write, HOGRTTI::clone);
+    
 vector<float> HOGDescriptor::getDefaultPeopleDetector()
 {
     static const float detector[] = {

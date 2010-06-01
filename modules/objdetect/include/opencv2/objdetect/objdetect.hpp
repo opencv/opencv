@@ -257,6 +257,11 @@ public:
         load(filename);
     }
     
+    HOGDescriptor(const HOGDescriptor& d)
+    {
+        d.copyTo(*this);
+    }
+    
     virtual ~HOGDescriptor() {}
     
     size_t getDescriptorSize() const;
@@ -265,8 +270,12 @@ public:
     
     virtual void setSVMDetector(const vector<float>& _svmdetector);
     
+    virtual bool read(FileNode& fn);
+    virtual void write(FileStorage& fs, const String& objname) const;
+    
     virtual bool load(const String& filename, const String& objname=String());
     virtual void save(const String& filename, const String& objname=String()) const;
+    virtual void copyTo(HOGDescriptor& c) const;
     
     virtual void compute(const Mat& img,
                          vector<float>& descriptors,

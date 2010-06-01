@@ -2622,6 +2622,51 @@ template<typename _Tp> inline bool operator != (const SeqIterator<_Tp>& a,
     return !(a == b);
 }
 
+
+template<typename _ClsName> struct CV_EXPORTS RTTIImpl
+{
+public:
+    static int isInstance(const void* ptr)
+    {
+        static _ClsName dummy;
+        return *(const void**)&dummy == *(const void**)ptr;
+    }
+    static void release(void** dbptr)
+    {
+        if(dbptr && *dbptr)
+        {
+            delete (_ClsName*)*dbptr;
+            *dbptr = 0;
+        }
+    }
+    static void* read(CvFileStorage* fs, CvFileNode* n)
+    {
+        FileNode fn(fs, n);
+        _ClsName* obj = new _ClsName;
+        if(obj->read(fn))
+            return obj;
+        delete obj;
+        return 0;
+    }
+    
+    static void write(CvFileStorage* _fs, const char* name, const void* ptr, CvAttrList)
+    {
+        if(ptr && _fs)
+        {
+            FileStorage fs(_fs);
+            fs.fs.addref();
+            ((const _ClsName*)ptr)->write(fs, string(name));
+        }
+    }
+    
+    static void* clone(const void* ptr)
+    {
+        if(!ptr)
+            return 0;
+        return new _ClsName(*(const _ClsName*)ptr);
+    }
+};
+    
 }
 
 #endif // __cplusplus
