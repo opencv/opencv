@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [[ $# > 0 ]] ; then
+if [ $# -gt 0 ] ; then
 	base=`basename $1 .c`
 	echo "compiling $base"
 	gcc -ggdb `pkg-config opencv --cflags --libs` $base.c -o $base 
