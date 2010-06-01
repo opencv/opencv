@@ -936,7 +936,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINA
 # -------------------------------------------------------------------------------------------
 # Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
 
-set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/include/opencv")
+set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/include/opencv" "${CMAKE_INSTALL_PREFIX}/include")
 set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
 
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/lib")
