@@ -528,9 +528,9 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
                     result = false;
             }
         }
+        return result;
     }
 
-    {
     double rcond=-1, s1=0, work1=0, *work=0, *s=0;
     float frcond=-1, fs1=0, fwork1=0, *fwork=0, *fs=0;
     integer m = src.rows, m_ = m, n = src.cols, mn = std::max(m,n),
@@ -715,7 +715,6 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
         transpose( xt, dst );
 
     return result;
-    }
 }
 
 
