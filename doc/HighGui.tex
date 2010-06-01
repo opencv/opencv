@@ -404,9 +404,10 @@ Gets video capturing properties.
 \cvdefC{double cvGetCaptureProperty( CvCapture* capture, int property\_id );}
 \cvdefPy{GetCaptureProperty(capture, property\_id)->double}
 
+% when updating the list below, remember to update it also in the cvSetCaptureProperty, cv::VideoCapture::get/set() functions docs
 \begin{description}
 \cvarg{capture}{video capturing structure.}
-\cvarg{property\_id}{Property identifier. Can be one of the following:
+\cvarg{property\_id}{Property identifier. Can be one of the following:}
 \begin{description}
 \cvarg{CV\_CAP\_PROP\_POS\_MSEC}{Film current position in milliseconds or video capture timestamp}
 \cvarg{CV\_CAP\_PROP\_POS\_FRAMES}{0-based index of the frame to be decoded/captured next}
@@ -416,11 +417,18 @@ Gets video capturing properties.
 \cvarg{CV\_CAP\_PROP\_FPS}{Frame rate}
 \cvarg{CV\_CAP\_PROP\_FOURCC}{4-character code of codec}
 \cvarg{CV\_CAP\_PROP\_FRAME\_COUNT}{Number of frames in the video file}
+\cvarg{CV\_CAP\_PROP\_FORMAT}{The format of the Mat objects returned by retrieve()}
+\cvarg{CV\_CAP\_PROP\_MODE}{A backend-specific value indicating the current capture mode}
 \cvarg{CV\_CAP\_PROP\_BRIGHTNESS}{Brightness of the image (only for cameras)}
 \cvarg{CV\_CAP\_PROP\_CONTRAST}{Contrast of the image (only for cameras)}
 \cvarg{CV\_CAP\_PROP\_SATURATION}{Saturation of the image (only for cameras)}
 \cvarg{CV\_CAP\_PROP\_HUE}{Hue of the image (only for cameras)}
-\end{description} }
+\cvarg{CV\_CAP\_PROP\_GAIN}{Gain of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_EXPOSURE}{Exposure (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_CONVERT\_RGB}{Boolean flags indicating whether images should be converted to RGB}
+\cvarg{CV\_CAP\_PROP\_WHITE\_BALANCE}{Currently unsupported}
+\cvarg{CV\_CAP\_PROP\_RECTIFICATION}{TOWRITE (note: only supported by DC1394 v 2.x backend currently)}
+\end{description}
 \end{description}
 
 The function \texttt{cvGetCaptureProperty} retrieves the specified property of the camera or video file.
@@ -482,10 +490,10 @@ Sets video capturing properties.
 \cvdefC{int cvSetCaptureProperty( \par CvCapture* capture, \par int property\_id, \par double value );}
 \cvdefPy{SetCaptureProperty(capture, property\_id,value)->None}
 
+% when updating the list below, remember to update it also in the cvGetCaptureProperty, cv::VideoCapture::get/set() functions docs
 \begin{description}
 \cvarg{capture}{video capturing structure.}
-\cvarg{property\_id}{property identifier. Can be one of the following:
-
+\cvarg{property\_id}{property identifier. Can be one of the following:}
 \begin{description}
 \cvarg{CV\_CAP\_PROP\_POS\_MSEC}{Film current position in milliseconds or video capture timestamp}
 \cvarg{CV\_CAP\_PROP\_POS\_FRAMES}{0-based index of the frame to be decoded/captured next}
@@ -494,12 +502,19 @@ Sets video capturing properties.
 \cvarg{CV\_CAP\_PROP\_FRAME\_HEIGHT}{Height of the frames in the video stream}
 \cvarg{CV\_CAP\_PROP\_FPS}{Frame rate}
 \cvarg{CV\_CAP\_PROP\_FOURCC}{4-character code of codec}
+\cvarg{CV\_CAP\_PROP\_FRAME\_COUNT}{Number of frames in the video file}
+\cvarg{CV\_CAP\_PROP\_FORMAT}{The format of the Mat objects returned by retrieve()}
+\cvarg{CV\_CAP\_PROP\_MODE}{A backend-specific value indicating the current capture mode}
 \cvarg{CV\_CAP\_PROP\_BRIGHTNESS}{Brightness of the image (only for cameras)}
 \cvarg{CV\_CAP\_PROP\_CONTRAST}{Contrast of the image (only for cameras)}
 \cvarg{CV\_CAP\_PROP\_SATURATION}{Saturation of the image (only for cameras)}
 \cvarg{CV\_CAP\_PROP\_HUE}{Hue of the image (only for cameras)}
-\end{description} }
-
+\cvarg{CV\_CAP\_PROP\_GAIN}{Gain of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_EXPOSURE}{Exposure (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_CONVERT\_RGB}{Boolean flags indicating whether images should be converted to RGB}
+\cvarg{CV\_CAP\_PROP\_WHITE\_BALANCE}{Currently unsupported}
+\cvarg{CV\_CAP\_PROP\_RECTIFICATION}{TOWRITE (note: only supported by DC1394 v 2.x backend currently)}
+\end{description}
 \cvarg{value}{value of the property.}
 \end{description}
 
@@ -817,6 +832,85 @@ int main(int, char**)
     return 0;
 }
 \end{lstlisting}
+
+\cvCppFunc{VideoCapture::VideoCapture}
+
+\cvdefCpp{
+VideoCapture::VideoCapture();\newline
+VideoCapture::VideoCapture(const string\& filename);\newline
+VideoCapture::VideoCapture(int device);
+}
+\begin{description}
+\cvarg{filename}{TOWRITE}
+\cvarg{device}{TOWRITE}
+\end{description}
+
+VideoCapture constructors.
+
+\cvCppFunc{VideoCapture::get}
+
+\cvdefCpp{double VideoCapture::get(int property\_id);}
+
+% when updating the list below, remember to update it also in the cvGet/SetCaptureProperty, cv::VideoCapture::set() functions docs
+\begin{description}
+\cvarg{property\_id}{Property identifier. Can be one of the following:}
+\begin{description}
+\cvarg{CV\_CAP\_PROP\_POS\_MSEC}{Film current position in milliseconds or video capture timestamp}
+\cvarg{CV\_CAP\_PROP\_POS\_FRAMES}{0-based index of the frame to be decoded/captured next}
+\cvarg{CV\_CAP\_PROP\_POS\_AVI\_RATIO}{Relative position of the video file (0 - start of the film, 1 - end of the film)}
+\cvarg{CV\_CAP\_PROP\_FRAME\_WIDTH}{Width of the frames in the video stream}
+\cvarg{CV\_CAP\_PROP\_FRAME\_HEIGHT}{Height of the frames in the video stream}
+\cvarg{CV\_CAP\_PROP\_FPS}{Frame rate}
+\cvarg{CV\_CAP\_PROP\_FOURCC}{4-character code of codec}
+\cvarg{CV\_CAP\_PROP\_FRAME\_COUNT}{Number of frames in the video file}
+\cvarg{CV\_CAP\_PROP\_FORMAT}{The format of the Mat objects returned by retrieve()}
+\cvarg{CV\_CAP\_PROP\_MODE}{A backend-specific value indicating the current capture mode}
+\cvarg{CV\_CAP\_PROP\_BRIGHTNESS}{Brightness of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_CONTRAST}{Contrast of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_SATURATION}{Saturation of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_HUE}{Hue of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_GAIN}{Gain of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_EXPOSURE}{Exposure (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_CONVERT\_RGB}{Boolean flags indicating whether images should be converted to RGB}
+\cvarg{CV\_CAP\_PROP\_WHITE\_BALANCE}{Currently unsupported}
+\cvarg{CV\_CAP\_PROP\_RECTIFICATION}{TOWRITE (note: only supported by DC1394 v 2.x backend currently)}
+\end{description}
+\end{description}
+
+Note that when querying a property which is unsupported by the backend used by the VideoCapture class, the value 0 is returned.
+
+\cvCppFunc{VideoCapture::set}
+
+\cvdefCpp{bool VideoCapture::set(int property\_id, double value);}
+
+% when updating the list below, remember to update it also in the cvGet/SetCaptureProperty, cv::VideoCapture::get() functions docs
+\begin{description}
+\cvarg{property\_id}{Property identifier. Can be one of the following:}
+\begin{description}
+\cvarg{CV\_CAP\_PROP\_POS\_MSEC}{Film current position in milliseconds or video capture timestamp}
+\cvarg{CV\_CAP\_PROP\_POS\_FRAMES}{0-based index of the frame to be decoded/captured next}
+\cvarg{CV\_CAP\_PROP\_POS\_AVI\_RATIO}{Relative position of the video file (0 - start of the film, 1 - end of the film)}
+\cvarg{CV\_CAP\_PROP\_FRAME\_WIDTH}{Width of the frames in the video stream}
+\cvarg{CV\_CAP\_PROP\_FRAME\_HEIGHT}{Height of the frames in the video stream}
+\cvarg{CV\_CAP\_PROP\_FPS}{Frame rate}
+\cvarg{CV\_CAP\_PROP\_FOURCC}{4-character code of codec}
+\cvarg{CV\_CAP\_PROP\_FRAME\_COUNT}{Number of frames in the video file}
+\cvarg{CV\_CAP\_PROP\_FORMAT}{The format of the Mat objects returned by retrieve()}
+\cvarg{CV\_CAP\_PROP\_MODE}{A backend-specific value indicating the current capture mode}
+\cvarg{CV\_CAP\_PROP\_BRIGHTNESS}{Brightness of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_CONTRAST}{Contrast of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_SATURATION}{Saturation of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_HUE}{Hue of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_GAIN}{Gain of the image (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_EXPOSURE}{Exposure (only for cameras)}
+\cvarg{CV\_CAP\_PROP\_CONVERT\_RGB}{Boolean flags indicating whether images should be converted to RGB}
+\cvarg{CV\_CAP\_PROP\_WHITE\_BALANCE}{Currently unsupported}
+\cvarg{CV\_CAP\_PROP\_RECTIFICATION}{TOWRITE (note: only supported by DC1394 v 2.x backend currently)}
+\end{description}
+\cvarg{value}{value of the property.}
+\end{description}
+
+Sets a property in the VideoCapture backend.
 
 
 \cvclass{VideoWriter}
