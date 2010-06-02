@@ -1462,6 +1462,9 @@ const string KEYPOINTS_FILENAME = "keypointsFilename";
 const string PROJECT_KEYPOINTS_FROM_1IMAGE = "projectKeypointsFrom1Image";
 const string MATCH_FILTER = "matchFilter";
 
+const string ONE_WAY_TRAIN_DIR = "detectors_descriptors_evaluation/one_way_train_images/";
+const string ONE_WAY_IMAGES_LIST = "one_way_train_images.txt";
+
 class DescriptorQualityTest : public BaseQualityTest
 {
 public:
@@ -1787,3 +1790,70 @@ void SurfDescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 }
 
 SurfDescriptorQualityTest surfDescriptorQuality;
+
+//--------------------------------- One Way descriptor test --------------------------------------------
+class OneWayDescriptorQualityTest : public DescriptorQualityTest
+{
+public:
+    OneWayDescriptorQualityTest() :
+        DescriptorQualityTest("one_way", "quality-descriptor-one-way")
+    {
+        runParams.resize(DATASETS_COUNT);
+    }
+
+protected:
+    virtual GenericDescriptorMatch* createDescriptorMatch(int datasetIdx);
+    virtual void readDatasetRunParams(FileNode& fn, int datasetIdx);
+    virtual void writeDatasetRunParams(FileStorage& fs, int datasetIdx) const;
+    virtual void setDefaultDatasetRunParams(int datasetIdx);
+
+    typedef OneWayDescriptorMatch::Params RunParams;
+    vector<RunParams> runParams;
+};
+
+GenericDescriptorMatch* OneWayDescriptorQualityTest::createDescriptorMatch(int datasetIdx)
+{
+    GenericDescriptorMatch* genericDescriptorMatch = new OneWayDescriptorMatch(runParams[datasetIdx]);
+    return genericDescriptorMatch;
+}
+
+void OneWayDescriptorQualityTest::readDatasetRunParams(FileNode& fn, int datasetIdx)
+{
+    DescriptorQualityTest::readDatasetRunParams(fn, datasetIdx);
+    runParams[datasetIdx].poseCount = fn["poseCount"];
+    int patchWidth = fn["patchWidth"];
+    int patchHeight = fn["patchHeight"];
+    runParams[datasetIdx].patchSize = Size(patchWidth, patchHeight);
+    runParams[datasetIdx].pcaFilename = string(ts->get_data_path()) + (string)fn["pcaFilename"];
+    runParams[datasetIdx].trainPath = string(ts->get_data_path()) + (string)fn["trainPath"];
+    runParams[datasetIdx].trainImagesList = (string)fn["trainImagesList"];
+    runParams[datasetIdx].minScale = fn["minScale"];
+    runParams[datasetIdx].maxScale = fn["maxScale"];
+    runParams[datasetIdx].stepScale = fn["stepScale"];
+}
+
+void OneWayDescriptorQualityTest::writeDatasetRunParams(FileStorage& fs, int datasetIdx) const
+{
+    DescriptorQualityTest::writeDatasetRunParams(fs, datasetIdx);
+    fs << "poseCount" << runParams[datasetIdx].poseCount;
+    fs << "patchWidth" << runParams[datasetIdx].patchSize.width;
+    fs << "patchHeight" << runParams[datasetIdx].patchSize.height;
+    fs << "pcaFilename" << runParams[datasetIdx].pcaFilename;
+    fs << "trainPath" << runParams[datasetIdx].trainPath;
+    fs << "trainImagesList" << runParams[datasetIdx].trainImagesList;
+    fs << "minScale" << runParams[datasetIdx].minScale;
+    fs << "maxScale" << runParams[datasetIdx].maxScale;
+    fs << "stepScale" << runParams[datasetIdx].stepScale;
+}
+
+void OneWayDescriptorQualityTest::setDefaultDatasetRunParams(int datasetIdx)
+{
+    DescriptorQualityTest::setDefaultDatasetRunParams(datasetIdx);
+    runParams[datasetIdx] = OneWayDescriptorMatch::Params();
+    runParams[datasetIdx].pcaFilename = string(ts->get_data_path()) + ONE_WAY_TRAIN_DIR + OneWayDescriptorBase::GetPCAFilename();
+    runParams[datasetIdx].trainPath = string(ts->get_data_path()) + ONE_WAY_TRAIN_DIR;
+    runParams[datasetIdx].trainImagesList = ONE_WAY_IMAGES_LIST;
+}
+
+OneWayDescriptorQualityTest oneWayDescriptorQuality;
+
