@@ -1461,6 +1461,7 @@ const string PRECISION = "precision";
 const string KEYPOINTS_FILENAME = "keypointsFilename";
 const string PROJECT_KEYPOINTS_FROM_1IMAGE = "projectKeypointsFrom1Image";
 const string MATCH_FILTER = "matchFilter";
+const string RUN_PARAMS_IS_IDENTICAL = "runParamsIsIdentical";
 
 const string ONE_WAY_TRAIN_DIR = "detectors_descriptors_evaluation/one_way_train_images/";
 const string ONE_WAY_IMAGES_LIST = "one_way_train_images.txt";
@@ -1514,6 +1515,7 @@ protected:
         string keypontsFilename;
         bool projectKeypointsFrom1Image;
         int matchFilter; // not used now
+        bool runParamsIsIdentical;
     };
     vector<CommonRunParams> commRunParams;
 };
@@ -1565,6 +1567,7 @@ void DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
     commRunParams[datasetIdx].keypontsFilename = (string)fn[KEYPOINTS_FILENAME];
     commRunParams[datasetIdx].projectKeypointsFrom1Image = (int)fn[PROJECT_KEYPOINTS_FROM_1IMAGE] != 0;
     commRunParams[datasetIdx].matchFilter = (int)fn[MATCH_FILTER];
+    commRunParams[datasetIdx].runParamsIsIdentical = (int)fn[RUN_PARAMS_IS_IDENTICAL];
 }
 
 void DescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
@@ -1572,6 +1575,7 @@ void DescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetI
     fs << KEYPOINTS_FILENAME << commRunParams[datasetIdx].keypontsFilename;
     fs << PROJECT_KEYPOINTS_FROM_1IMAGE << commRunParams[datasetIdx].projectKeypointsFrom1Image;
     fs << MATCH_FILTER << commRunParams[datasetIdx].matchFilter;
+    fs << RUN_PARAMS_IS_IDENTICAL << commRunParams[datasetIdx].runParamsIsIdentical;
 }
 
 void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
@@ -1579,12 +1583,15 @@ void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
     commRunParams[datasetIdx].keypontsFilename = "surf_" + DATASET_NAMES[datasetIdx] + ".xml.gz";
     commRunParams[datasetIdx].projectKeypointsFrom1Image = true;
     commRunParams[datasetIdx].matchFilter = NO_MATCH_FILTER;
+    commRunParams[datasetIdx].runParamsIsIdentical = true;
 }
 
 void DescriptorQualityTest::run( int )
 {
     readAllDatasetsRunParams();
     readResults();
+
+    Ptr<GenericDescriptorMatch> descMatch;
 
     int notReadDatasets = 0;
     int progress = 0, progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
@@ -1608,6 +1615,12 @@ void DescriptorQualityTest::run( int )
             vector<KeyPoint> keypoints1; vector<EllipticKeyPoint> ekeypoints1;
             readKeypoints( keypontsFS, keypoints1, 0);
             transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
+
+            if (!commRunParams[di].runParamsIsIdentical)
+            {
+                descMatch = createDescriptorMatch (di);
+            }
+
             for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
             {
                 progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
@@ -1624,7 +1637,6 @@ void DescriptorQualityTest::run( int )
                     readKeypoints( keypontsFS, keypoints2, ci+1 );
                 transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
 
-                Ptr<GenericDescriptorMatch> descMatch = createDescriptorMatch(di);
                 descMatch->add( imgs[ci+1], keypoints2 );
                 vector<int> matches1to2;
                 descMatch->match( imgs[0], keypoints1, matches1to2 );
@@ -1635,6 +1647,8 @@ void DescriptorQualityTest::run( int )
                                      correctMatchCount, falseMatchCount, correspCount );
                 calcQuality[di][ci].recall = recall( correctMatchCount, correspCount );
                 calcQuality[di][ci].precision = precision( correctMatchCount, falseMatchCount );
+
+                descMatch->clear ();
             }
         }
     }

@@ -204,7 +204,7 @@ void OneWayDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
 {
     if( base.empty() )
         base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
-                                           params.trainPath, params.trainImagesList);
+                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale);
 
     size_t trainFeatureCount = keypoints.size();
 
@@ -225,7 +225,7 @@ void OneWayDescriptorMatch::add( KeyPointCollection& keypoints )
 {
     if( base.empty() )
         base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
-                                           params.trainPath, params.trainImagesList);
+                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale);
 
     size_t trainFeatureCount = keypoints.calcKeypointCount();
 
@@ -273,6 +273,12 @@ void OneWayDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& points
         base->FindDescriptor(&_image, points[i].pt, descIdx, poseIdx, distance);
         points[i].class_id = collection.getKeyPoint(descIdx).class_id;
     }
+}
+
+void OneWayDescriptorMatch::clear ()
+{
+    GenericDescriptorMatch::clear();
+    base->clear ();
 }
 
 /****************************************************************************************\

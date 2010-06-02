@@ -1024,13 +1024,14 @@ public:
                          const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
-
     OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename, const string &train_path = string(), const string &images_list = string(),
-                         int pyr_levels = 1,
+                         float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
 
     virtual ~OneWayDescriptorBase();
+    void clear ();
+
 
     // Allocate: allocates memory for a given number of descriptors
     void Allocate(int train_feature_count);
@@ -1124,7 +1125,7 @@ public:
     // GeneratePCA: calculate and save PCA components and descriptors
     // - img_path: path to training PCA images directory
     // - images_list: filename with filenames of training PCA images
-    void GeneratePCA(const char* img_path, const char* images_list);
+    void GeneratePCA(const char* img_path, const char* images_list, int pose_count=500);
 
     // SetPCAHigh: sets the high resolution pca matrices (copied to internal structures)
     void SetPCAHigh(CvMat* avg, CvMat* eigenvectors);
@@ -1168,6 +1169,9 @@ protected:
     int m_pca_dim_low;
 
     int m_pyr_levels;
+    const float scale_min;
+    const float scale_max;
+    const float scale_step;
 };
 
 class CV_EXPORTS OneWayDescriptorObject : public OneWayDescriptorBase
@@ -1184,9 +1188,9 @@ public:
     OneWayDescriptorObject(CvSize patch_size, int pose_count, const char* train_path, const char* pca_config,
                            const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1);
 
-
     OneWayDescriptorObject(CvSize patch_size, int pose_count, const string &pca_filename,
-                           const string &train_path = string (), const string &images_list = string (), int pyr_levels = 1);
+                           const string &train_path = string (), const string &images_list = string (),
+                           float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1);
 
 
     virtual ~OneWayDescriptorObject();
@@ -1705,9 +1709,9 @@ public:
         static const int POSE_COUNT = 500;
         static const int PATCH_WIDTH = 24;
         static const int PATCH_HEIGHT = 24;
-        static float GET_MIN_SCALE() { return 1.f; }
-        static float GET_MAX_SCALE() { return 3.f; }
-        static float GET_STEP_SCALE() { return 1.15f; }
+        static float GET_MIN_SCALE() { return 0.7f; }
+        static float GET_MAX_SCALE() { return 1.5f; }
+        static float GET_STEP_SCALE() { return 1.2f; }
 
         Params( int _poseCount = POSE_COUNT,
                 Size _patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
@@ -1754,6 +1758,8 @@ public:
 
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
+
+    virtual void clear ();
 
 protected:
     Ptr<OneWayDescriptorBase> base;

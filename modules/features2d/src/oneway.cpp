@@ -1213,7 +1213,8 @@ namespace cv{
     OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const char* train_path,
                                                const char* pca_config, const char* pca_hr_config,
                                                const char* pca_desc_config, int pyr_levels,
-                                               int pca_dim_high, int pca_dim_low) : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low)
+                                               int pca_dim_high, int pca_dim_low)
+    : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low), scale_min (0.7f), scale_max(1.5f), scale_step (1.2f)
     {
         //	m_pca_descriptors_matrix = 0;
         m_patch_size = patch_size;
@@ -1270,8 +1271,10 @@ namespace cv{
     }
 
     OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename,
-                                               const string &train_path, const string &images_list, int pyr_levels,
-                                               int pca_dim_high, int pca_dim_low) : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low)
+                                               const string &train_path, const string &images_list, float _scale_min, float _scale_max,
+                                               float _scale_step, int pyr_levels,
+                                               int pca_dim_high, int pca_dim_low)
+    : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low), scale_min(_scale_min), scale_max(_scale_max), scale_step(_scale_step)
     {
         //  m_pca_descriptors_matrix = 0;
         m_patch_size = patch_size;
@@ -1341,6 +1344,20 @@ namespace cv{
 #endif
     }
     
+    void OneWayDescriptorBase::clear(){
+        delete []m_descriptors;
+        m_descriptors = 0;
+
+#if defined(_KDTREE)
+        //      if (m_pca_descriptors_matrix)
+        //              delete m_pca_descriptors_matrix;
+        cvReleaseMat(&m_pca_descriptors_matrix);
+        m_pca_descriptors_matrix = 0;
+        delete m_pca_descriptors_tree;
+        m_pca_descriptors_tree = 0;
+#endif
+    }
+
     void OneWayDescriptorBase::InitializePoses()
     {
         m_poses = new CvAffinePose[m_pose_count];
@@ -1423,25 +1440,25 @@ namespace cv{
 #if 0
         ::FindOneWayDescriptor(m_train_feature_count, m_descriptors, patch, desc_idx, pose_idx, distance, m_pca_avg, m_pca_eigenvectors);
 #else
-        float scale_min = 0.7f;
-        float scale_max = 2.0f;
-        float scale_step = 1.2f;
+        float min = scale_min;
+        float max = scale_max;
+        float step = scale_step;
         
         if (scale_ranges)
         {
-            scale_min = scale_ranges[0];
-            scale_max = scale_ranges[1];
+            min = scale_ranges[0];
+            max = scale_ranges[1];
         }
         
         float scale = 1.0f;
         
 #if !defined(_KDTREE)
         cv::FindOneWayDescriptorEx(m_train_feature_count, m_descriptors, patch,
-                                   scale_min, scale_max, scale_step, desc_idx, pose_idx, distance, scale,
+                                   min, max, step, desc_idx, pose_idx, distance, scale,
                                    m_pca_avg, m_pca_eigenvectors);
 #else
         cv::FindOneWayDescriptorEx(m_pca_descriptors_tree, m_descriptors[0].GetPatchSize(), m_descriptors[0].GetPCADimLow(), m_pose_count, patch,
-                                   scale_min, scale_max, scale_step, desc_idx, pose_idx, distance, scale,
+                                   min, max, step, desc_idx, pose_idx, distance, scale,
                                    m_pca_avg, m_pca_eigenvectors);
 #endif
         
@@ -1454,14 +1471,14 @@ namespace cv{
     void OneWayDescriptorBase::FindDescriptor(IplImage* patch, int n, std::vector<int>& desc_idxs, std::vector<int>& pose_idxs,
                                               std::vector<float>& distances, std::vector<float>& _scales, float* scale_ranges) const
     {
-        float scale_min = 0.7f;
-        float scale_max = 2.5f;
-        float scale_step = 1.2f;
+        float min = scale_min;
+        float max = scale_max;
+        float step = scale_step;
         
         if (scale_ranges)
         {
-            scale_min = scale_ranges[0];
-            scale_max = scale_ranges[1];
+            min = scale_ranges[0];
+            max = scale_ranges[1];
         }
         
         distances.resize(n);
@@ -1471,7 +1488,7 @@ namespace cv{
         /*float scales = 1.0f;*/
         
         cv::FindOneWayDescriptorEx(m_train_feature_count, m_descriptors, patch,
-                                   scale_min, scale_max, scale_step ,n, desc_idxs, pose_idxs, distances, _scales,
+                                   min, max, step ,n, desc_idxs, pose_idxs, distances, _scales,
                                    m_pca_avg, m_pca_eigenvectors);
         
     }
@@ -1719,7 +1736,7 @@ namespace cv{
         calcPCAFeatures(patches, fs, postfix, avg, eigenvectors);
     }
 
-    void OneWayDescriptorBase::GeneratePCA(const char* img_path, const char* images_list)
+    void OneWayDescriptorBase::GeneratePCA(const char* img_path, const char* images_list, int pose_count)
     {
         char pca_filename[1024];
         sprintf(pca_filename, "%s/%s", img_path, GetPCAFilename().c_str());
@@ -1729,7 +1746,6 @@ namespace cv{
         generatePCAFeatures(img_path, images_list, fs, "lr", cvSize(m_patch_size.width / 2, m_patch_size.height / 2),
                             &m_pca_avg, &m_pca_eigenvectors);
 
-        const int pose_count = 500;
         OneWayDescriptorBase descriptors(m_patch_size, pose_count);
         descriptors.SetPCAHigh(m_pca_hr_avg, m_pca_hr_eigenvectors);
         descriptors.SetPCALow(m_pca_avg, m_pca_eigenvectors);
@@ -1926,12 +1942,11 @@ namespace cv{
     }
     
     OneWayDescriptorObject::OneWayDescriptorObject(CvSize patch_size, int pose_count, const string &pca_filename,
-                                                   const string &train_path, const string &images_list, int pyr_levels) :
-    OneWayDescriptorBase(patch_size, pose_count, pca_filename, train_path, images_list, pyr_levels)
+                                                   const string &train_path, const string &images_list, float _scale_min, float _scale_max, float _scale_step, int pyr_levels) :
+    OneWayDescriptorBase(patch_size, pose_count, pca_filename, train_path, images_list, _scale_min, _scale_max, _scale_step, pyr_levels)
     {
         m_part_id = 0;
     }
-
 
     OneWayDescriptorObject::~OneWayDescriptorObject()
     {
