@@ -1030,7 +1030,7 @@ public:
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
 
-    ~OneWayDescriptorBase();
+    virtual ~OneWayDescriptorBase();
 
     // Allocate: allocates memory for a given number of descriptors
     void Allocate(int train_feature_count);
@@ -1189,7 +1189,7 @@ public:
                            const string &train_path = string (), const string &images_list = string (), int pyr_levels = 1);
 
 
-    ~OneWayDescriptorObject();
+    virtual ~OneWayDescriptorObject();
 
     // Allocate: allocates memory for a given number of features
     // - train_feature_count: the total number of features
