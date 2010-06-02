@@ -1024,6 +1024,12 @@ public:
                          const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
+
+    OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename, const string &train_path = string(), const string &images_list = string(),
+                         int pyr_levels = 1,
+                         int pca_dim_high = 100, int pca_dim_low = 100);
+
+
     ~OneWayDescriptorBase();
 
     // Allocate: allocates memory for a given number of descriptors
@@ -1111,6 +1117,15 @@ public:
     // - filename: output filename
     void SavePCADescriptors(const char* filename);
 
+    // SavePCADescriptors: saves PCA descriptors to a file storage
+    // - fs: output file storage
+    void SavePCADescriptors(CvFileStorage* fs);
+
+    // GeneratePCA: calculate and save PCA components and descriptors
+    // - img_path: path to training PCA images directory
+    // - images_list: filename with filenames of training PCA images
+    void GeneratePCA(const char* img_path, const char* images_list);
+
     // SetPCAHigh: sets the high resolution pca matrices (copied to internal structures)
     void SetPCAHigh(CvMat* avg, CvMat* eigenvectors);
 
@@ -1129,6 +1144,8 @@ public:
 
     void ConvertDescriptorsArrayToTree(); // Converting pca_descriptors array to KD tree
 
+    // GetPCAFilename: get default PCA filename
+    static string GetPCAFilename () { return "pca.yml"; }
 
 protected:
     CvSize m_patch_size; // patch size
@@ -1151,7 +1168,6 @@ protected:
     int m_pca_dim_low;
 
     int m_pyr_levels;
-
 };
 
 class CV_EXPORTS OneWayDescriptorObject : public OneWayDescriptorBase
@@ -1167,6 +1183,11 @@ public:
     // - pca_desc_config: the name of the file that contains descriptors of PCA components
     OneWayDescriptorObject(CvSize patch_size, int pose_count, const char* train_path, const char* pca_config,
                            const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1);
+
+
+    OneWayDescriptorObject(CvSize patch_size, int pose_count, const string &pca_filename,
+                           const string &train_path = string (), const string &images_list = string (), int pyr_levels = 1);
+
 
     ~OneWayDescriptorObject();
 
@@ -1690,19 +1711,20 @@ public:
 
         Params( int _poseCount = POSE_COUNT,
                 Size _patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
+                string _pcaFilename = string (),
                 string _trainPath = string(),
-                string _pcaConfig = string(), string _pcaHrConfig = string(),
-                string _pcaDescConfig = string(),
+                string _trainImagesList = string(),
                 float _minScale = GET_MIN_SCALE(), float _maxScale = GET_MAX_SCALE(),
                 float _stepScale = GET_STEP_SCALE() ) :
-        poseCount(_poseCount), patchSize(_patchSize), trainPath(_trainPath),
-        pcaConfig(_pcaConfig), pcaHrConfig(_pcaHrConfig), pcaDescConfig(_pcaDescConfig),
+        poseCount(_poseCount), patchSize(_patchSize), pcaFilename(_pcaFilename),
+        trainPath(_trainPath), trainImagesList(_trainImagesList),
         minScale(_minScale), maxScale(_maxScale), stepScale(_stepScale) {}
 
         int poseCount;
         Size patchSize;
+        string pcaFilename;
         string trainPath;
-        string pcaConfig, pcaHrConfig, pcaDescConfig;
+        string trainImagesList;
 
         float minScale, maxScale, stepScale;
     };

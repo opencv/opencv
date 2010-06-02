@@ -139,7 +139,14 @@ namespace cv{
         }*/
     }
     
-    void readPCAFeatures(const char* filename, CvMat** avg, CvMat** eigenvectors);
+    void readPCAFeatures(const char* filename, CvMat** avg, CvMat** eigenvectors, const char *postfix = "");
+    void savePCAFeatures(FileStorage &fs, const char* postfix, CvMat* avg, CvMat* eigenvectors);
+    void calcPCAFeatures(vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
+                         CvMat** eigenvectors);
+    void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size);
+    void generatePCAFeatures(const char* path, const char* img_filename, FileStorage& fs, const char* postfix,
+                             CvSize patch_size, CvMat** avg, CvMat** eigenvectors);
+    
     void eigenvector2image(CvMat* eigenvector, IplImage* img);
 
     void FindOneWayDescriptor(int desc_count, const OneWayDescriptor* descriptors, IplImage* patch, int& desc_idx, int& pose_idx, float& distance,
@@ -1261,7 +1268,49 @@ namespace cv{
         //    SavePCADescriptors("./pca_descriptors.yml");
         
     }
+
+    OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename,
+                                               const string &train_path, const string &images_list, int pyr_levels,
+                                               int pca_dim_high, int pca_dim_low) : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low)
+    {
+        //  m_pca_descriptors_matrix = 0;
+        m_patch_size = patch_size;
+        m_pose_count = pose_count;
+        m_pyr_levels = pyr_levels;
+        m_poses = 0;
+        m_transforms = 0;
+
+        m_pca_avg = 0;
+        m_pca_eigenvectors = 0;
+        m_pca_hr_avg = 0;
+        m_pca_hr_eigenvectors = 0;
+        m_pca_descriptors = 0;
+
+        m_descriptors = 0;
+
+        CvFileStorage* fs = cvOpenFileStorage(pca_filename.c_str(), NULL, CV_STORAGE_READ);
+        if (fs != 0)
+        {
+            cvReleaseFileStorage(&fs);
+
+            readPCAFeatures(pca_filename.c_str(), &m_pca_avg, &m_pca_eigenvectors, "_lr");
+            readPCAFeatures(pca_filename.c_str(), &m_pca_hr_avg, &m_pca_hr_eigenvectors, "_hr");
+            m_pca_descriptors = new OneWayDescriptor[m_pca_dim_high + 1];
+#if !defined(_GH_REGIONS)
+            LoadPCADescriptors(pca_filename.c_str());
+#endif //_GH_REGIONS
+        }
+        else
+        {
+            GeneratePCA(train_path.c_str(), images_list.c_str());
+            m_pca_descriptors = new OneWayDescriptor[m_pca_dim_high + 1];
+            char pca_default_filename[1024];
+            sprintf(pca_default_filename, "%s/%s", train_path.c_str(), GetPCAFilename().c_str());
+            LoadPCADescriptors(pca_default_filename);
+        }
+    }
     
+
     OneWayDescriptorBase::~OneWayDescriptorBase()
     {
         cvReleaseMat(&m_pca_avg);
@@ -1554,20 +1603,170 @@ namespace cv{
         
         return 1;
     }
-    
+
+
+    void savePCAFeatures(FileStorage &fs, const char* postfix, CvMat* avg, CvMat* eigenvectors)
+    {
+        char buf[1024];
+        sprintf(buf, "avg_%s", postfix);
+        fs.writeObj(buf, avg);
+        sprintf(buf, "eigenvectors_%s", postfix);
+        fs.writeObj(buf, eigenvectors);
+    }
+
+    void calcPCAFeatures(vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
+                         CvMat** eigenvectors)
+    {
+        int width = patches[0]->width;
+        int height = patches[0]->height;
+        int length = width * height;
+        int patch_count = (int)patches.size();
+
+        CvMat* data = cvCreateMat(patch_count, length, CV_32FC1);
+        *avg = cvCreateMat(1, length, CV_32FC1);
+        CvMat* eigenvalues = cvCreateMat(1, length, CV_32FC1);
+        *eigenvectors = cvCreateMat(length, length, CV_32FC1);
+
+        for (int i = 0; i < patch_count; i++)
+        {
+            float sum = cvSum(patches[i]).val[0];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    *((float*)(data->data.ptr + data->step * i) + y * width + x)
+                            = (float)(unsigned char)patches[i]->imageData[y * patches[i]->widthStep + x] / sum;
+                }
+            }
+        }
+
+        //printf("Calculating PCA...");
+        cvCalcPCA(data, *avg, eigenvalues, *eigenvectors, CV_PCA_DATA_AS_ROW);
+        //printf("done\n");
+
+        // save pca data
+        savePCAFeatures(fs, postfix, *avg, *eigenvectors);
+
+        cvReleaseMat(&data);
+        cvReleaseMat(&eigenvalues);
+    }
+
+    void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size)
+    {
+        char images_filename[1024];
+        sprintf(images_filename, "%s/%s", path, images_list);
+        FILE *pFile = fopen(images_filename, "r");
+        if (pFile == 0)
+        {
+            printf("Cannot open images list file %s\n", images_filename);
+            return;
+        }
+        while (!feof(pFile))
+        {
+            char imagename[1024];
+            if (fscanf(pFile, "%s", imagename) <= 0)
+            {
+                break;
+            }
+
+            char filename[1024];
+            sprintf(filename, "%s/%s", path, imagename);
+
+            //printf("Reading image %s...", filename);
+            IplImage* img = cvLoadImage(filename, CV_LOAD_IMAGE_GRAYSCALE);
+            //printf("done\n");
+
+            vector<KeyPoint> features;
+            SURF surf_extractor(1.0f);
+            //printf("Extracting SURF features...");
+            surf_extractor(img, Mat(), features);
+            //printf("done\n");
+
+            for (int j = 0; j < (int)features.size(); j++)
+            {
+                int patch_width = patch_size.width;
+                int patch_height = patch_size.height;
+
+                CvPoint center = features[j].pt;
+
+                CvRect roi = cvRect(center.x - patch_width / 2, center.y - patch_height / 2, patch_width, patch_height);
+                cvSetImageROI(img, roi);
+                roi = cvGetImageROI(img);
+                if (roi.width != patch_width || roi.height != patch_height)
+                {
+                    continue;
+                }
+
+                IplImage* patch = cvCreateImage(cvSize(patch_width, patch_height), IPL_DEPTH_8U, 1);
+                cvCopy(img, patch);
+                patches.push_back(patch);
+                cvResetImageROI(img);
+
+            }
+
+            //printf("Completed file, extracted %d features\n", (int)features.size());
+
+            cvReleaseImage(&img);
+        }
+        fclose(pFile);
+    }
+
+    void generatePCAFeatures(const char* path, const char* img_filename, FileStorage& fs, const char* postfix,
+                             CvSize patch_size, CvMat** avg, CvMat** eigenvectors)
+    {
+        vector<IplImage*> patches;
+        loadPCAFeatures(path, img_filename, patches, patch_size);
+        calcPCAFeatures(patches, fs, postfix, avg, eigenvectors);
+    }
+
+    void OneWayDescriptorBase::GeneratePCA(const char* img_path, const char* images_list)
+    {
+        char pca_filename[1024];
+        sprintf(pca_filename, "%s/%s", img_path, GetPCAFilename().c_str());
+        FileStorage fs = FileStorage(pca_filename, FileStorage::WRITE);
+
+        generatePCAFeatures(img_path, images_list, fs, "hr", m_patch_size, &m_pca_hr_avg, &m_pca_hr_eigenvectors);
+        generatePCAFeatures(img_path, images_list, fs, "lr", cvSize(m_patch_size.width / 2, m_patch_size.height / 2),
+                            &m_pca_avg, &m_pca_eigenvectors);
+
+        const int pose_count = 500;
+        OneWayDescriptorBase descriptors(m_patch_size, pose_count);
+        descriptors.SetPCAHigh(m_pca_hr_avg, m_pca_hr_eigenvectors);
+        descriptors.SetPCALow(m_pca_avg, m_pca_eigenvectors);
+
+        printf("Calculating %d PCA descriptors (you can grab a coffee, this will take a while)...\n",
+               descriptors.GetPCADimHigh());
+        descriptors.InitializePoseTransforms();
+        descriptors.CreatePCADescriptors();
+        descriptors.SavePCADescriptors(*fs);
+
+        fs.release();
+    }
+
     void OneWayDescriptorBase::SavePCADescriptors(const char* filename)
     {
         CvMemStorage* storage = cvCreateMemStorage();
         CvFileStorage* fs = cvOpenFileStorage(filename, storage, CV_STORAGE_WRITE);
-        
+
+	SavePCADescriptors (fs);        
+
+        cvReleaseMemStorage(&storage);
+        cvReleaseFileStorage(&fs);
+    }
+    
+    void OneWayDescriptorBase::SavePCADescriptors(CvFileStorage *fs)
+    {
         cvWriteInt(fs, "pca components number", m_pca_dim_high);
-        cvWriteComment(fs, "The first component is the average Vector, so the total number of components is <pca components number> + 1", 0);
+        cvWriteComment(
+                       fs,
+                       "The first component is the average Vector, so the total number of components is <pca components number> + 1",
+                       0);
         cvWriteInt(fs, "patch width", m_patch_size.width);
         cvWriteInt(fs, "patch height", m_patch_size.height);
-        
+
         // pack the affine transforms into a single CvMat and write them
         CvMat* poses = cvCreateMat(m_pose_count, 4, CV_32FC1);
-        for(int i = 0; i < m_pose_count; i++)
+        for (int i = 0; i < m_pose_count; i++)
         {
             cvmSet(poses, i, 0, m_poses[i].phi);
             cvmSet(poses, i, 1, m_poses[i].theta);
@@ -1576,18 +1775,16 @@ namespace cv{
         }
         cvWrite(fs, "affine poses", poses);
         cvReleaseMat(&poses);
-        
-        for(int i = 0; i < m_pca_dim_high + 1; i++)
+
+        for (int i = 0; i < m_pca_dim_high + 1; i++)
         {
             char buf[1024];
             sprintf(buf, "descriptor for pca component %d", i);
             m_pca_descriptors[i].Write(fs, buf);
         }
-        
-        cvReleaseMemStorage(&storage);
-        cvReleaseFileStorage(&fs);
     }
-    
+
+
     void OneWayDescriptorBase::Allocate(int train_feature_count)
     {
         m_train_feature_count = train_feature_count;
@@ -1728,6 +1925,14 @@ namespace cv{
         m_part_id = 0;
     }
     
+    OneWayDescriptorObject::OneWayDescriptorObject(CvSize patch_size, int pose_count, const string &pca_filename,
+                                                   const string &train_path, const string &images_list, int pyr_levels) :
+    OneWayDescriptorBase(patch_size, pose_count, pca_filename, train_path, images_list, pyr_levels)
+    {
+        m_part_id = 0;
+    }
+
+
     OneWayDescriptorObject::~OneWayDescriptorObject()
     {
         delete []m_part_id;
@@ -1771,24 +1976,27 @@ namespace cv{
         }
     }
     
-    void readPCAFeatures(const char* filename, CvMat** avg, CvMat** eigenvectors)
+    void readPCAFeatures(const char* filename, CvMat** avg, CvMat** eigenvectors, const char* postfix)
     {
         CvMemStorage* storage = cvCreateMemStorage();
         CvFileStorage* fs = cvOpenFileStorage(filename, storage, CV_STORAGE_READ);
-        if(!fs)
+        if (!fs)
         {
             printf("Cannot open file %s! Exiting!", filename);
             cvReleaseMemStorage(&storage);
         }
-        
-        CvFileNode* node = cvGetFileNodeByName(fs, 0, "avg");
+
+        char buf[1024];
+        sprintf(buf, "avg%s", postfix);
+        CvFileNode* node = cvGetFileNodeByName(fs, 0, buf);
         CvMat* _avg = (CvMat*)cvRead(fs, node);
-        node = cvGetFileNodeByName(fs, 0, "eigenvectors");
+        sprintf(buf, "eigenvectors%s", postfix);
+        node = cvGetFileNodeByName(fs, 0, buf);
         CvMat* _eigenvectors = (CvMat*)cvRead(fs, node);
-        
+
         *avg = cvCloneMat(_avg);
         *eigenvectors = cvCloneMat(_eigenvectors);
-        
+
         cvReleaseMat(&_avg);
         cvReleaseMat(&_eigenvectors);
         cvReleaseFileStorage(&fs);
