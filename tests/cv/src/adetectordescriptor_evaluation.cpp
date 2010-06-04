@@ -608,6 +608,7 @@ string DATASET_NAMES[DATASETS_COUNT] = { "bark", "bikes", "boat", "graf", "leuve
 string DEFAULT_PARAMS = "default";
 
 string IS_ACTIVE_PARAMS = "isActiveParams";
+string IS_SAVE_KEYPOINTS = "isSaveKeypoints";
 
 
 class BaseQualityTest : public CvTest
@@ -891,6 +892,9 @@ public:
         calcQuality.resize(DATASETS_COUNT);
         isSaveKeypoints.resize(DATASETS_COUNT);
         isActiveParams.resize(DATASETS_COUNT);
+
+        isSaveKeypointsDefault = false;
+        isActiveParamsDefault = false;
     }
 
 protected:
@@ -942,6 +946,9 @@ protected:
     vector<vector<Quality> > calcQuality;
     vector<bool> isSaveKeypoints;
     vector<bool> isActiveParams;
+
+    bool isSaveKeypointsDefault;
+    bool isActiveParamsDefault;
 };
 
 string DetectorQualityTest::getRunParamsFilename() const
@@ -1009,48 +1016,42 @@ void DetectorQualityTest::readDefaultRunParams (FileNode &fn)
 {
     if (! fn.empty() )
     {
+        isSaveKeypointsDefault = (int)fn[IS_SAVE_KEYPOINTS] != 0;
         defaultDetector->read (fn);
     }
 }
 
 void DetectorQualityTest::writeDefaultRunParams (FileStorage &fs) const
 {
+    fs << IS_SAVE_KEYPOINTS << isSaveKeypointsDefault;
     defaultDetector->write (fs);
 }
 
 void DetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
-    if (! fn.empty())
+    isActiveParams[datasetIdx] = (int)fn[IS_ACTIVE_PARAMS] != 0;
+    if (isActiveParams[datasetIdx])
     {
-        isSaveKeypoints[datasetIdx] = (int)fn["isSaveKeypoints"] != 0;
-        isActiveParams[datasetIdx] = (int)fn[IS_ACTIVE_PARAMS] != 0;
+        isSaveKeypoints[datasetIdx] = (int)fn[IS_SAVE_KEYPOINTS] != 0;
+        specificDetector->read (fn);
     }
     else
     {
         setDefaultDatasetRunParams(datasetIdx);
     }
-
-    if (isActiveParams[datasetIdx] && !fn.empty())
-    {
-        specificDetector->read (fn);
-    }
 }
 
 void DetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
-    fs << "isSaveKeypoints" << isSaveKeypoints[datasetIdx];
     fs << IS_ACTIVE_PARAMS << isActiveParams[datasetIdx];
-
-//    if (!defaultDetector.empty())
-//    {
-//        defaultDetector->write (fs);
-//    }
+    fs << IS_SAVE_KEYPOINTS << isSaveKeypoints[datasetIdx];
+    defaultDetector->write (fs);
 }
 
 void DetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
-    isSaveKeypoints[datasetIdx] = false;
-    isActiveParams[datasetIdx] = false;
+    isSaveKeypoints[datasetIdx] = isSaveKeypointsDefault;
+    isActiveParams[datasetIdx] = isActiveParamsDefault;
 }
 
 void DetectorQualityTest::openToWriteKeypointsFile( FileStorage& fs, int datasetIdx )
@@ -1085,7 +1086,7 @@ void DetectorQualityTest::readAlgorithm ()
     //TODO: use Factory Register when it will be implemented
     if (! algName.compare ("fast"))
     {
-        defaultDetector = new FastFeatureDetector();
+        defaultDetector = new FastFeatureDetector(50, true);
         specificDetector = new FastFeatureDetector();
     }
     else if (! algName.compare ("mser"))
@@ -1100,12 +1101,12 @@ void DetectorQualityTest::readAlgorithm ()
     }
     else if (! algName.compare ("sift"))
     {
-        defaultDetector = new SiftFeatureDetector();
+        defaultDetector = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(), 3);
         specificDetector = new SiftFeatureDetector();
     }
     else if (! algName.compare ("surf"))
     {
-        defaultDetector = new SurfFeatureDetector();
+        defaultDetector = new SurfFeatureDetector(1500);
         specificDetector = new SurfFeatureDetector();
     }
     else
@@ -1253,6 +1254,10 @@ public:
         validQuality.resize(DATASETS_COUNT);
         calcQuality.resize(DATASETS_COUNT);
         commRunParams.resize(DATASETS_COUNT);
+
+        commRunParamsDefault.projectKeypointsFrom1Image = true;
+        commRunParamsDefault.matchFilter = NO_MATCH_FILTER;
+        commRunParamsDefault.isActiveParams = false;
     }
 
 protected:
@@ -1303,6 +1308,8 @@ protected:
 
     Ptr<GenericDescriptorMatch> specificDescMatch;
     Ptr<GenericDescriptorMatch> defaultDescMatch;
+
+    CommonRunParams commRunParamsDefault;
 };
 
 string DescriptorQualityTest::getRunParamsFilename() const
@@ -1356,54 +1363,49 @@ void DescriptorQualityTest::readDefaultRunParams (FileNode &fn)
 {
     if (! fn.empty() )
     {
+        commRunParamsDefault.projectKeypointsFrom1Image = (int)fn[PROJECT_KEYPOINTS_FROM_1IMAGE] != 0;
+        commRunParamsDefault.matchFilter = (int)fn[MATCH_FILTER];
         defaultDescMatch->read (fn);
     }
 }
 
 void DescriptorQualityTest::writeDefaultRunParams (FileStorage &fs) const
 {
+    fs << PROJECT_KEYPOINTS_FROM_1IMAGE << commRunParamsDefault.projectKeypointsFrom1Image;
+    fs << MATCH_FILTER << commRunParamsDefault.matchFilter;
     defaultDescMatch->write (fs);
 }
 
 void DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
-    if (! fn.empty())
+    commRunParams[datasetIdx].isActiveParams = (int)fn[IS_ACTIVE_PARAMS];
+    if (commRunParams[datasetIdx].isActiveParams)
     {
         commRunParams[datasetIdx].keypontsFilename = (string)fn[KEYPOINTS_FILENAME];
         commRunParams[datasetIdx].projectKeypointsFrom1Image = (int)fn[PROJECT_KEYPOINTS_FROM_1IMAGE] != 0;
         commRunParams[datasetIdx].matchFilter = (int)fn[MATCH_FILTER];
-        commRunParams[datasetIdx].isActiveParams = (int)fn[IS_ACTIVE_PARAMS];
+        specificDescMatch->read (fn);
     }
     else
     {
         setDefaultDatasetRunParams(datasetIdx);
     }
-
-    if (commRunParams[datasetIdx].isActiveParams && !fn.empty())
-    {
-        specificDescMatch->read (fn);
-    }
 }
 
 void DescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
+    fs << IS_ACTIVE_PARAMS << commRunParams[datasetIdx].isActiveParams;
     fs << KEYPOINTS_FILENAME << commRunParams[datasetIdx].keypontsFilename;
     fs << PROJECT_KEYPOINTS_FROM_1IMAGE << commRunParams[datasetIdx].projectKeypointsFrom1Image;
     fs << MATCH_FILTER << commRunParams[datasetIdx].matchFilter;
-    fs << IS_ACTIVE_PARAMS << commRunParams[datasetIdx].isActiveParams;
 
-//    if (!defaultDescMatch.empty())
-//    {
-//        defaultDescMatch->write (fs);
-//    }
+    defaultDescMatch->write (fs);
 }
 
 void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
+    commRunParams[datasetIdx] = commRunParamsDefault;
     commRunParams[datasetIdx].keypontsFilename = "surf_" + DATASET_NAMES[datasetIdx] + ".xml.gz";
-    commRunParams[datasetIdx].projectKeypointsFrom1Image = true;
-    commRunParams[datasetIdx].matchFilter = NO_MATCH_FILTER;
-    commRunParams[datasetIdx].isActiveParams = false;
 }
 
 
@@ -1516,6 +1518,7 @@ public:
     }
 protected:
     virtual void processRunParamsFile ();
+    virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const;
 };
 
 void OneWayDescriptorQualityTest::processRunParamsFile ()
@@ -1548,6 +1551,14 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
 
     defaultDescMatch = match;
     writeAllDatasetsRunParams();
+}
+
+void OneWayDescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
+{
+    fs << IS_ACTIVE_PARAMS << commRunParams[datasetIdx].isActiveParams;
+    fs << KEYPOINTS_FILENAME << commRunParams[datasetIdx].keypontsFilename;
+    fs << PROJECT_KEYPOINTS_FROM_1IMAGE << commRunParams[datasetIdx].projectKeypointsFrom1Image;
+    fs << MATCH_FILTER << commRunParams[datasetIdx].matchFilter;
 }
 
 
