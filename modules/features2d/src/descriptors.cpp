@@ -91,6 +91,34 @@ void SiftDescriptorExtractor::compute( const Mat& image,
     sift(image, Mat(), keypoints, descriptors, useProvidedKeypoints);
 }
 
+void SiftDescriptorExtractor::read (const FileNode &fn)
+{
+    double magnification = fn["magnification"];
+    bool isNormalize = (int)fn["isNormalize"] != 0;
+    bool recalculateAngles = (int)fn["recalculateAngles"] != 0;
+    int nOctaves = fn["nOctaves"];
+    int nOctaveLayers = fn["nOctaveLayers"];
+    int firstOctave = fn["firstOctave"];
+    int angleMode = fn["angleMode"];
+
+    sift = SIFT( magnification, isNormalize, recalculateAngles, nOctaves, nOctaveLayers, firstOctave, angleMode );
+}
+
+void SiftDescriptorExtractor::write (FileStorage &fs) const
+{
+//    fs << "algorithm" << getAlgorithmName ();
+
+    SIFT::CommonParams commParams = sift.getCommonParams ();
+    SIFT::DescriptorParams descriptorParams = sift.getDescriptorParams ();
+    fs << "magnification" << descriptorParams.magnification;
+    fs << "isNormalize" << descriptorParams.isNormalize;
+    fs << "recalculateAngles" << descriptorParams.recalculateAngles;
+    fs << "nOctaves" << commParams.nOctaves;
+    fs << "nOctaveLayers" << commParams.nOctaveLayers;
+    fs << "firstOctave" << commParams.firstOctave;
+    fs << "angleMode" << commParams.angleMode;
+}
+
 /****************************************************************************************\
 *                                SurfDescriptorExtractor                                  *
 \****************************************************************************************/
@@ -112,6 +140,24 @@ void SurfDescriptorExtractor::compute( const Mat& image,
     descriptors.create(keypoints.size(), surf.descriptorSize(), CV_32FC1);
     assert( (int)_descriptors.size() == descriptors.rows * descriptors.cols );
     std::copy(_descriptors.begin(), _descriptors.end(), descriptors.begin<float>());
+}
+
+void SurfDescriptorExtractor::read( const FileNode &fn )
+{
+    int nOctaves = fn["nOctaves"];
+    int nOctaveLayers = fn["nOctaveLayers"];
+    bool extended = (int)fn["extended"] != 0;
+
+    surf = SURF( 0.0, nOctaves, nOctaveLayers, extended );
+}
+
+void SurfDescriptorExtractor::write( FileStorage &fs ) const
+{
+//    fs << "algorithm" << getAlgorithmName ();
+
+    fs << "nOctaves" << surf.nOctaves;
+    fs << "nOctaveLayers" << surf.nOctaveLayers;
+    fs << "extended" << surf.extended;
 }
 
 /****************************************************************************************\
@@ -194,18 +240,18 @@ OneWayDescriptorMatch::OneWayDescriptorMatch( const Params& _params)
 OneWayDescriptorMatch::~OneWayDescriptorMatch()
 {}
 
-void OneWayDescriptorMatch::initialize( const Params& _params)
+void OneWayDescriptorMatch::initialize( const Params& _params, OneWayDescriptorBase *_base)
 {
     base.release();
+    if (_base != 0)
+    {
+        base = _base;
+    }
     params = _params;
 }
 
 void OneWayDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
 {
-    if( base.empty() )
-        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
-                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale);
-
     size_t trainFeatureCount = keypoints.size();
 
     base->Allocate( trainFeatureCount );
@@ -223,10 +269,6 @@ void OneWayDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
 
 void OneWayDescriptorMatch::add( KeyPointCollection& keypoints )
 {
-    if( base.empty() )
-        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
-                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale);
-
     size_t trainFeatureCount = keypoints.calcKeypointCount();
 
     base->Allocate( trainFeatureCount );
@@ -260,6 +302,43 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
         base->FindDescriptor( &_image, points[i].pt, descIdx, poseIdx, distance );
         indices[i] = descIdx;
     }
+}
+
+void OneWayDescriptorMatch::read( const FileNode &fn )
+{
+    readParams (fn);
+
+    base = new OneWayDescriptorObject( params.patchSize, params.poseCount, string (), string (), string (),
+                                       params.minScale, params.maxScale, params.stepScale );
+    base->LoadPCAall (fn);
+}
+
+void OneWayDescriptorMatch::readParams ( const FileNode &fn )
+{
+    params.poseCount = fn["poseCount"];
+    int patchWidth = fn["patchWidth"];
+    int patchHeight = fn["patchHeight"];
+    params.patchSize = Size(patchWidth, patchHeight);
+    params.minScale = fn["minScale"];
+    params.maxScale = fn["maxScale"];
+    params.stepScale = fn["stepScale"];
+}
+
+void OneWayDescriptorMatch::write( FileStorage& fs ) const
+{
+//    fs << "algorithm" << getAlgorithmName ();
+    writeParams (fs);
+    base->SavePCAall (fs);
+}
+
+void OneWayDescriptorMatch::writeParams( FileStorage& fs ) const
+{
+    fs << "poseCount" << params.poseCount;
+    fs << "patchWidth" << params.patchSize.width;
+    fs << "patchHeight" << params.patchSize.height;
+    fs << "minScale" << params.minScale;
+    fs << "maxScale" << params.maxScale;
+    fs << "stepScale" << params.stepScale;
 }
 
 void OneWayDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& points )

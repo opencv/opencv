@@ -139,7 +139,8 @@ namespace cv{
         }*/
     }
     
-    void readPCAFeatures(const char* filename, CvMat** avg, CvMat** eigenvectors, const char *postfix = "");
+    void readPCAFeatures(const char *filename, CvMat** avg, CvMat** eigenvectors, const char *postfix = "");
+    void readPCAFeatures(const FileNode &fn, CvMat** avg, CvMat** eigenvectors, const char* postfix = "");
     void savePCAFeatures(FileStorage &fs, const char* postfix, CvMat* avg, CvMat* eigenvectors);
     void calcPCAFeatures(vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
                          CvMat** eigenvectors);
@@ -692,9 +693,9 @@ namespace cv{
         cvReleaseMat(&mat);
     }
     
-    int OneWayDescriptor::ReadByName(CvFileStorage* fs, CvFileNode* parent, const char* name)
+    int OneWayDescriptor::ReadByName(const FileNode &parent, const char* name)
     {
-        CvMat* mat = (CvMat*)cvReadByName(fs, parent, name);
+        CvMat* mat = reinterpret_cast<CvMat*> (parent[name].readObj ());
         if(!mat)
         {
             return 0;
@@ -715,6 +716,11 @@ namespace cv{
         
         cvReleaseMat(&mat);
         return 1;
+    }
+
+    int OneWayDescriptor::ReadByName(CvFileStorage* fs, CvFileNode* parent, const char* name)
+    {
+        return ReadByName (FileNode (fs, parent), name);
     }
     
     IplImage* OneWayDescriptor::GetPatch(int index)
@@ -1216,6 +1222,10 @@ namespace cv{
                                                int pca_dim_high, int pca_dim_low)
     : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low), scale_min (0.7f), scale_max(1.5f), scale_step (1.2f)
     {
+#if defined(_KDTREE)
+        m_pca_descriptors_matrix = 0;
+        m_pca_descriptors_tree = 0;
+#endif
         //	m_pca_descriptors_matrix = 0;
         m_patch_size = patch_size;
         m_pose_count = pose_count;
@@ -1276,7 +1286,10 @@ namespace cv{
                                                int pca_dim_high, int pca_dim_low)
     : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low), scale_min(_scale_min), scale_max(_scale_max), scale_step(_scale_step)
     {
-        //  m_pca_descriptors_matrix = 0;
+#if defined(_KDTREE)
+        m_pca_descriptors_matrix = 0;
+        m_pca_descriptors_tree = 0;
+#endif
         m_patch_size = patch_size;
         m_pose_count = pose_count;
         m_pyr_levels = pyr_levels;
@@ -1290,6 +1303,12 @@ namespace cv{
         m_pca_descriptors = 0;
 
         m_descriptors = 0;
+
+
+        if (pca_filename.length() == 0)
+        {
+            return;
+        }
 
         CvFileStorage* fs = cvOpenFileStorage(pca_filename.c_str(), NULL, CV_STORAGE_READ);
         if (fs != 0)
@@ -1312,7 +1331,27 @@ namespace cv{
             LoadPCADescriptors(pca_default_filename);
         }
     }
-    
+
+    void OneWayDescriptorBase::LoadPCAall (const FileNode &fn)
+    {
+//        m_pose_count = fn["pose_count"];
+//        int patch_width = fn["patch_width"];
+//        int patch_height = fn["patch_height"];
+//        m_patch_size = cvSize (patch_width, patch_height);
+//        m_pyr_levels = fn["pyr_levels"];
+//        m_pca_dim_high = fn["pca_dim_high"];
+//        m_pca_dim_low = fn["pca_dim_low"];
+//        scale_min = fn["scale_min"];
+//        scale_max = fn["scale_max"];
+//        scale_step = fn["scale_step"];
+
+        readPCAFeatures(fn, &m_pca_avg, &m_pca_eigenvectors, "_lr");
+        readPCAFeatures(fn, &m_pca_hr_avg, &m_pca_hr_eigenvectors, "_hr");
+        m_pca_descriptors = new OneWayDescriptor[m_pca_dim_high + 1];
+#if !defined(_GH_REGIONS)
+        LoadPCADescriptors(fn);
+#endif //_GH_REGIONS
+    }
 
     OneWayDescriptorBase::~OneWayDescriptorBase()
     {
@@ -1327,34 +1366,50 @@ namespace cv{
         }
         
         
-        delete []m_descriptors;
-        delete []m_poses;
+        if(m_descriptors)
+            delete []m_descriptors;
+
+        if(m_poses)
+            delete []m_poses;
         
-        for(int i = 0; i < m_pose_count; i++)
+        if (m_transforms)
         {
-            cvReleaseMat(&m_transforms[i]);
+            for(int i = 0; i < m_pose_count; i++)
+            {
+                cvReleaseMat(&m_transforms[i]);
+            }
+            delete []m_transforms;
         }
-        delete []m_transforms;
-        
 #if defined(_KDTREE)
-        //	if (m_pca_descriptors_matrix)
-        //		delete m_pca_descriptors_matrix;
-        cvReleaseMat(&m_pca_descriptors_matrix);
-        delete m_pca_descriptors_tree;
+        if (m_pca_descriptors_matrix)
+        {
+            cvReleaseMat(&m_pca_descriptors_matrix);
+        }
+        if (m_pca_descriptors_tree)
+        {
+            delete m_pca_descriptors_tree;
+        }
 #endif
     }
     
     void OneWayDescriptorBase::clear(){
-        delete []m_descriptors;
-        m_descriptors = 0;
+        if (m_descriptors)
+        {
+            delete []m_descriptors;
+            m_descriptors = 0;
+        }
 
 #if defined(_KDTREE)
-        //      if (m_pca_descriptors_matrix)
-        //              delete m_pca_descriptors_matrix;
-        cvReleaseMat(&m_pca_descriptors_matrix);
-        m_pca_descriptors_matrix = 0;
-        delete m_pca_descriptors_tree;
-        m_pca_descriptors_tree = 0;
+        if (m_pca_descriptors_matrix)
+        {
+            cvReleaseMat(&m_pca_descriptors_matrix);
+            m_pca_descriptors_matrix = 0;
+        }
+        if (m_pca_descriptors_tree)
+        {
+            delete m_pca_descriptors_tree;
+            m_pca_descriptors_tree = 0;
+        }
 #endif
     }
 
@@ -1545,79 +1600,75 @@ namespace cv{
     
     int OneWayDescriptorBase::LoadPCADescriptors(const char* filename)
     {
-        CvMemStorage* storage = cvCreateMemStorage();
-        CvFileStorage* fs = cvOpenFileStorage(filename, storage, CV_STORAGE_READ);
-        if(!fs)
+        FileStorage fs = FileStorage (filename, FileStorage::READ);
+        if(!fs.isOpened ())
         {
-            cvReleaseMemStorage(&storage);
             printf("File %s not found...\n", filename);
             return 0;
         }
+
+        LoadPCADescriptors (fs.root ());
+
+        printf("Successfully read %d pca components\n", m_pca_dim_high);
+        fs.release ();
         
+        return 1;
+    }
+
+    int OneWayDescriptorBase::LoadPCADescriptors(const FileNode &fn)
+    {
         // read affine poses
-        CvFileNode* node = cvGetFileNodeByName(fs, 0, "affine poses");
-        if(node != 0)
+//            FileNode* node = cvGetFileNodeByName(fs, 0, "affine poses");
+        CvMat* poses = reinterpret_cast<CvMat*> (fn["affine_poses"].readObj ());
+        if (poses == 0)
         {
-            CvMat* poses = (CvMat*)cvRead(fs, node);
-            //if(poses->rows != m_pose_count)
-            //{
-            //    printf("Inconsistency in the number of poses between the class instance and the file! Exiting...\n");
-            //    cvReleaseMat(&poses);
-            //    cvReleaseFileStorage(&fs);
-            //    cvReleaseMemStorage(&storage);
-            //}
-            
-            if(m_poses)
-            {
-                delete m_poses;
-            }
-            m_poses = new CvAffinePose[m_pose_count];
-            for(int i = 0; i < m_pose_count; i++)
-            {
-                m_poses[i].phi = (float)cvmGet(poses, i, 0);
-                m_poses[i].theta = (float)cvmGet(poses, i, 1);
-                m_poses[i].lambda1 = (float)cvmGet(poses, i, 2);
-                m_poses[i].lambda2 = (float)cvmGet(poses, i, 3);
-            }
-            cvReleaseMat(&poses);
-            
-            // now initialize pose transforms
-            InitializeTransformsFromPoses();
+            poses = reinterpret_cast<CvMat*> (fn["affine poses"].readObj ());
+            if (poses == 0)
+                return 0;
         }
-        else
+
+
+        if(m_poses)
         {
-            printf("Node \"affine poses\" not found...\n");
+            delete m_poses;
         }
-        
-        node = cvGetFileNodeByName(fs, 0, "pca components number");
-        if(node != 0)
+        m_poses = new CvAffinePose[m_pose_count];
+        for(int i = 0; i < m_pose_count; i++)
         {
-            
-            m_pca_dim_high = cvReadInt(node);
-            if(m_pca_descriptors)
+            m_poses[i].phi = (float)cvmGet(poses, i, 0);
+            m_poses[i].theta = (float)cvmGet(poses, i, 1);
+            m_poses[i].lambda1 = (float)cvmGet(poses, i, 2);
+            m_poses[i].lambda2 = (float)cvmGet(poses, i, 3);
+        }
+        cvReleaseMat(&poses);
+
+        // now initialize pose transforms
+        InitializeTransformsFromPoses();
+
+        m_pca_dim_high = (int) fn["pca_components_number"];
+        if (m_pca_dim_high == 0)
+        {
+            m_pca_dim_high = (int) fn["pca components number"];
+        }
+        if(m_pca_descriptors)
+        {
+            delete []m_pca_descriptors;
+        }
+        AllocatePCADescriptors();
+        for(int i = 0; i < m_pca_dim_high + 1; i++)
+        {
+            m_pca_descriptors[i].Allocate(m_pose_count, m_patch_size, 1);
+            m_pca_descriptors[i].SetTransforms(m_poses, m_transforms);
+            char buf[1024];
+            sprintf(buf, "descriptor_for_pca_component_%d", i);
+
+            if (! m_pca_descriptors[i].ReadByName(fn, buf))
             {
-                delete []m_pca_descriptors;
-            }
-            AllocatePCADescriptors();
-            for(int i = 0; i < m_pca_dim_high + 1; i++)
-            {
-                m_pca_descriptors[i].Allocate(m_pose_count, m_patch_size, 1);
-                m_pca_descriptors[i].SetTransforms(m_poses, m_transforms);
                 char buf[1024];
                 sprintf(buf, "descriptor for pca component %d", i);
-                m_pca_descriptors[i].ReadByName(fs, 0, buf);
+                m_pca_descriptors[i].ReadByName(fn, buf);
             }
         }
-        else
-        {
-            printf("Node \"pca components number\" not found...\n");
-        }
-        
-        cvReleaseFileStorage(&fs);
-        cvReleaseMemStorage(&storage);
-        
-        printf("Successfully read %d pca components\n", m_pca_dim_high);
-        
         return 1;
     }
 
@@ -1668,6 +1719,50 @@ namespace cv{
         cvReleaseMat(&eigenvalues);
     }
 
+    void extractPatches (IplImage *img, vector<IplImage*>& patches, CvSize patch_size)
+    {
+        vector<KeyPoint> features;
+        SURF surf_extractor(1.0f);
+        //printf("Extracting SURF features...");
+        surf_extractor(img, Mat(), features);
+        //printf("done\n");
+
+        for (int j = 0; j < (int)features.size(); j++)
+        {
+            int patch_width = patch_size.width;
+            int patch_height = patch_size.height;
+
+            CvPoint center = features[j].pt;
+
+            CvRect roi = cvRect(center.x - patch_width / 2, center.y - patch_height / 2, patch_width, patch_height);
+            cvSetImageROI(img, roi);
+            roi = cvGetImageROI(img);
+            if (roi.width != patch_width || roi.height != patch_height)
+            {
+                continue;
+            }
+
+            IplImage* patch = cvCreateImage(cvSize(patch_width, patch_height), IPL_DEPTH_8U, 1);
+            cvCopy(img, patch);
+            patches.push_back(patch);
+            cvResetImageROI(img);
+        }
+        //printf("Completed file, extracted %d features\n", (int)features.size());
+    }
+
+/*
+    void loadPCAFeatures(const FileNode &fn, vector<IplImage*>& patches, CvSize patch_size)
+    {
+        FileNodeIterator begin = fn.begin();
+        for (FileNodeIterator i = fn.begin(); i != fn.end(); i++)
+        {
+            IplImage *img = reinterpret_cast<IplImage*> ((*i).readObj());
+            extractPatches (img, patches, patch_size);
+            cvReleaseImage(&img);
+        }
+    }
+*/
+
     void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size)
     {
         char images_filename[1024];
@@ -1693,35 +1788,7 @@ namespace cv{
             IplImage* img = cvLoadImage(filename, CV_LOAD_IMAGE_GRAYSCALE);
             //printf("done\n");
 
-            vector<KeyPoint> features;
-            SURF surf_extractor(1.0f);
-            //printf("Extracting SURF features...");
-            surf_extractor(img, Mat(), features);
-            //printf("done\n");
-
-            for (int j = 0; j < (int)features.size(); j++)
-            {
-                int patch_width = patch_size.width;
-                int patch_height = patch_size.height;
-
-                CvPoint center = features[j].pt;
-
-                CvRect roi = cvRect(center.x - patch_width / 2, center.y - patch_height / 2, patch_width, patch_height);
-                cvSetImageROI(img, roi);
-                roi = cvGetImageROI(img);
-                if (roi.width != patch_width || roi.height != patch_height)
-                {
-                    continue;
-                }
-
-                IplImage* patch = cvCreateImage(cvSize(patch_width, patch_height), IPL_DEPTH_8U, 1);
-                cvCopy(img, patch);
-                patches.push_back(patch);
-                cvResetImageROI(img);
-
-            }
-
-            //printf("Completed file, extracted %d features\n", (int)features.size());
+            extractPatches (img, patches, patch_size);
 
             cvReleaseImage(&img);
         }
@@ -1735,6 +1802,35 @@ namespace cv{
         loadPCAFeatures(path, img_filename, patches, patch_size);
         calcPCAFeatures(patches, fs, postfix, avg, eigenvectors);
     }
+
+/*
+    void generatePCAFeatures(const FileNode &fn, const char* postfix,
+                             CvSize patch_size, CvMat** avg, CvMat** eigenvectors)
+    {
+        vector<IplImage*> patches;
+        loadPCAFeatures(fn, patches, patch_size);
+        calcPCAFeatures(patches, fs, postfix, avg, eigenvectors);
+    }
+
+
+    void OneWayDescriptorBase::GeneratePCA(const FileNode &fn, int pose_count)
+    {
+        generatePCAFeatures(fn, "hr", m_patch_size, &m_pca_hr_avg, &m_pca_hr_eigenvectors);
+        generatePCAFeatures(fn, "lr", cvSize(m_patch_size.width / 2, m_patch_size.height / 2),
+                            &m_pca_avg, &m_pca_eigenvectors);
+
+
+        OneWayDescriptorBase descriptors(m_patch_size, pose_count);
+        descriptors.SetPCAHigh(m_pca_hr_avg, m_pca_hr_eigenvectors);
+        descriptors.SetPCALow(m_pca_avg, m_pca_eigenvectors);
+
+        printf("Calculating %d PCA descriptors (you can grab a coffee, this will take a while)...\n",
+               descriptors.GetPCADimHigh());
+        descriptors.InitializePoseTransforms();
+        descriptors.CreatePCADescriptors();
+        descriptors.SavePCADescriptors(*fs);
+    }
+*/
 
     void OneWayDescriptorBase::GeneratePCA(const char* img_path, const char* images_list, int pose_count)
     {
@@ -1759,26 +1855,42 @@ namespace cv{
         fs.release();
     }
 
+    void OneWayDescriptorBase::SavePCAall (FileStorage &fs) const
+    {
+//        fs << "pose_count" << m_pose_count;
+//        fs << "patch_width" << m_patch_size.width;
+//        fs << "patch_height" << m_patch_size.height;
+//        fs << "scale_min" << scale_min;
+//        fs << "scale_max" << scale_max;
+//        fs << "scale_step" << scale_step;
+//        fs << "pyr_levels" << m_pyr_levels;
+//        fs << "pca_dim_low" << m_pca_dim_low;
+
+        savePCAFeatures(fs, "hr", m_pca_hr_avg, m_pca_hr_eigenvectors);
+        savePCAFeatures(fs, "lr", m_pca_avg, m_pca_eigenvectors);
+        SavePCADescriptors(*fs);
+    }
+
     void OneWayDescriptorBase::SavePCADescriptors(const char* filename)
     {
         CvMemStorage* storage = cvCreateMemStorage();
         CvFileStorage* fs = cvOpenFileStorage(filename, storage, CV_STORAGE_WRITE);
-
-	SavePCADescriptors (fs);        
-
+        
+        SavePCADescriptors (fs);
+        
         cvReleaseMemStorage(&storage);
         cvReleaseFileStorage(&fs);
     }
     
-    void OneWayDescriptorBase::SavePCADescriptors(CvFileStorage *fs)
+    void OneWayDescriptorBase::SavePCADescriptors(CvFileStorage *fs) const
     {
-        cvWriteInt(fs, "pca components number", m_pca_dim_high);
+        cvWriteInt(fs, "pca_components_number", m_pca_dim_high);
         cvWriteComment(
                        fs,
                        "The first component is the average Vector, so the total number of components is <pca components number> + 1",
                        0);
-        cvWriteInt(fs, "patch width", m_patch_size.width);
-        cvWriteInt(fs, "patch height", m_patch_size.height);
+        cvWriteInt(fs, "patch_width", m_patch_size.width);
+        cvWriteInt(fs, "patch_height", m_patch_size.height);
 
         // pack the affine transforms into a single CvMat and write them
         CvMat* poses = cvCreateMat(m_pose_count, 4, CV_32FC1);
@@ -1789,13 +1901,13 @@ namespace cv{
             cvmSet(poses, i, 2, m_poses[i].lambda1);
             cvmSet(poses, i, 3, m_poses[i].lambda2);
         }
-        cvWrite(fs, "affine poses", poses);
+        cvWrite(fs, "affine_poses", poses);
         cvReleaseMat(&poses);
 
         for (int i = 0; i < m_pca_dim_high + 1; i++)
         {
             char buf[1024];
-            sprintf(buf, "descriptor for pca component %d", i);
+            sprintf(buf, "descriptor_for_pca_component_%d", i);
             m_pca_descriptors[i].Write(fs, buf);
         }
     }
@@ -1950,7 +2062,8 @@ namespace cv{
 
     OneWayDescriptorObject::~OneWayDescriptorObject()
     {
-        delete []m_part_id;
+        if (m_part_id)
+            delete []m_part_id;
     }
     
     vector<KeyPoint> OneWayDescriptorObject::_GetLabeledFeatures() const
@@ -1990,31 +2103,35 @@ namespace cv{
             }
         }
     }
-    
+
     void readPCAFeatures(const char* filename, CvMat** avg, CvMat** eigenvectors, const char* postfix)
     {
-        CvMemStorage* storage = cvCreateMemStorage();
-        CvFileStorage* fs = cvOpenFileStorage(filename, storage, CV_STORAGE_READ);
-        if (!fs)
+        FileStorage fs = FileStorage(filename, FileStorage::READ);
+        if (!fs.isOpened ())
         {
             printf("Cannot open file %s! Exiting!", filename);
-            cvReleaseMemStorage(&storage);
         }
 
-        char buf[1024];
-        sprintf(buf, "avg%s", postfix);
-        CvFileNode* node = cvGetFileNodeByName(fs, 0, buf);
-        CvMat* _avg = (CvMat*)cvRead(fs, node);
-        sprintf(buf, "eigenvectors%s", postfix);
-        node = cvGetFileNodeByName(fs, 0, buf);
-        CvMat* _eigenvectors = (CvMat*)cvRead(fs, node);
+        readPCAFeatures (fs.root (), avg, eigenvectors, postfix);
+        fs.release ();
+    }
 
-        *avg = cvCloneMat(_avg);
-        *eigenvectors = cvCloneMat(_eigenvectors);
+    void readPCAFeatures(const FileNode &fn, CvMat** avg, CvMat** eigenvectors, const char* postfix)
+    {
+        std::string str = std::string ("avg") + postfix;
+        CvMat* _avg = reinterpret_cast<CvMat*> (fn[str].readObj());
+        if (_avg != 0)
+        {
+            *avg = cvCloneMat(_avg);
+            cvReleaseMat(&_avg);
+        }
 
-        cvReleaseMat(&_avg);
-        cvReleaseMat(&_eigenvectors);
-        cvReleaseFileStorage(&fs);
-        cvReleaseMemStorage(&storage);
+        str = std::string ("eigenvectors") + postfix;
+        CvMat* _eigenvectors = reinterpret_cast<CvMat*> (fn[str].readObj());
+        if (_eigenvectors != 0)
+        {
+            *eigenvectors = cvCloneMat(_eigenvectors);
+            cvReleaseMat(&_eigenvectors);
+        }
     }
 }

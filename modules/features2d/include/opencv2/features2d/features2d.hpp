@@ -316,6 +316,10 @@ public:
                     vector<KeyPoint>& keypoints,
                     Mat& descriptors,
                     bool useProvidedKeypoints=false) const;
+
+    CommonParams getCommonParams () const { return commParams; }
+    DetectorParams getDetectorParams () const { return detectorParams; }
+    DescriptorParams getDescriptorParams () const { return descriptorParams; }
 protected:
     CommonParams commParams;
     DetectorParams detectorParams;
@@ -969,6 +973,12 @@ public:
     // - return value: 1 if succeeded, 0 otherwise
     int ReadByName(CvFileStorage* fs, CvFileNode* parent, const char* name);
 
+    // ReadByName: reads a descriptor from a file node
+    // - parent: parent node
+    // - name: node name
+    // - return value: 1 if succeeded, 0 otherwise
+    int ReadByName(const FileNode &parent, const char* name);
+
     // Write: writes a descriptor into a file storage
     // - fs: file storage
     // - name: node name
@@ -1110,9 +1120,21 @@ public:
     void InitializeDescriptors(IplImage* train_image, const vector<cv::KeyPoint>& features,
                                const char* feature_label = "", int desc_start_idx = 0);
 
+    // SavePCAall: saves PCA components and descriptors to a file storage
+    // - fs: output file storage
+    void SavePCAall (FileStorage &fs) const;
+
+    // LoadPCAall: loads PCA components and descriptors from a file node
+    // - fn: input file node
+    void LoadPCAall (const FileNode &fn);
+
     // LoadPCADescriptors: loads PCA descriptors from a file
     // - filename: input filename
     int LoadPCADescriptors(const char* filename);
+
+    // LoadPCADescriptors: loads PCA descriptors from a file node
+    // - fn: input file node
+    int LoadPCADescriptors(const FileNode &fn);
 
     // SavePCADescriptors: saves PCA descriptors to a file
     // - filename: output filename
@@ -1120,7 +1142,7 @@ public:
 
     // SavePCADescriptors: saves PCA descriptors to a file storage
     // - fs: output file storage
-    void SavePCADescriptors(CvFileStorage* fs);
+    void SavePCADescriptors(CvFileStorage* fs) const;
 
     // GeneratePCA: calculate and save PCA components and descriptors
     // - img_path: path to training PCA images directory
@@ -1254,6 +1276,9 @@ public:
         detectImpl( image, mask, keypoints );
     }
 
+    virtual void read (const FileNode& fn) {};
+    virtual void write (FileStorage& fs) const {};
+
 protected:
     /*
      * Detect keypoints; detect() calls this. Must be implemented by the subclass.
@@ -1272,7 +1297,10 @@ protected:
 class CV_EXPORTS FastFeatureDetector : public FeatureDetector
 {
 public:
-    FastFeatureDetector( int _threshold, bool _nonmaxSuppression = true );
+    FastFeatureDetector( int _threshold = 1, bool _nonmaxSuppression = true );
+
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
 
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
@@ -1287,6 +1315,10 @@ class CV_EXPORTS GoodFeaturesToTrackDetector : public FeatureDetector
 public:
     GoodFeaturesToTrackDetector( int _maxCorners, double _qualityLevel, double _minDistance,
                                  int _blockSize=3, bool _useHarrisDetector=false, double _k=0.04 );
+
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 
@@ -1301,8 +1333,13 @@ protected:
 class CV_EXPORTS MserFeatureDetector : public FeatureDetector
 {
 public:
+    MserFeatureDetector( CvMSERParams params = cvMSERParams () );
     MserFeatureDetector( int delta, int minArea, int maxArea, float maxVariation, float minDiversity,
                          int maxEvolution, double areaThreshold, double minMargin, int edgeBlurSize );
+
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 
@@ -1314,6 +1351,9 @@ class CV_EXPORTS StarFeatureDetector : public FeatureDetector
 public:
     StarFeatureDetector( int maxSize=16, int responseThreshold=30, int lineThresholdProjected = 10,
                          int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
+
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
 
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
@@ -1330,6 +1370,10 @@ public:
                          int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
                          int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
                          int angleMode=SIFT::CommonParams::FIRST_ANGLE );
+
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 
@@ -1340,6 +1384,9 @@ class CV_EXPORTS SurfFeatureDetector : public FeatureDetector
 {
 public:
     SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3, int octaveLayers = 4 );
+
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
 
 protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
@@ -1375,6 +1422,9 @@ public:
      */
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
 
+    virtual void read (const FileNode &fn) {};
+    virtual void write (FileStorage &fs) const {};
+
 protected:
     /*
      * Remove keypoints within border_pixels of an image edge.
@@ -1394,6 +1444,8 @@ public:
                              int angleMode=SIFT::CommonParams::FIRST_ANGLE );
 
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void read (const FileNode &fn);
+    virtual void write (FileStorage &fs) const;
 
 protected:
     SIFT sift;
@@ -1406,6 +1458,8 @@ public:
                              int nOctaveLayers=2, bool extended=false );
 
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void read (const FileNode &fn);
+    virtual void write (FileStorage &fs) const;
 
 protected:
     SURF surf;
@@ -1693,6 +1747,10 @@ public:
 
     // Clears keypoints storing in collection
     virtual void clear();
+
+
+    virtual void read( const FileNode& fn ) {};
+    virtual void write( FileStorage& fs ) const {};
 protected:
     KeyPointCollection collection;
 };
@@ -1740,7 +1798,7 @@ public:
     virtual ~OneWayDescriptorMatch();
 
     // Sets one way descriptor parameters
-    void initialize( const Params& _params );
+    void initialize( const Params& _params, OneWayDescriptorBase *_base = 0 );
 
     // Calculates one way descriptors for a set of keypoints
     virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
@@ -1759,9 +1817,15 @@ public:
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
 
+    virtual void read (const FileNode &fn);
+    virtual void write (FileStorage& fs) const;
+    Params getParams () const {return params;}
+
     virtual void clear ();
 
 protected:
+    void readParams (const FileNode &fn);
+    void writeParams (FileStorage& fs) const;
     Ptr<OneWayDescriptorBase> base;
     Params params;
 };
@@ -1927,6 +1991,17 @@ public:
         matcher.clear();
     }
 
+    virtual void read (const FileNode& fn)
+    {
+        GenericDescriptorMatch::read(fn);
+        extractor.read (fn);
+    }
+
+    virtual void write (FileStorage& fs) const
+    {
+        GenericDescriptorMatch::write(fs);
+        extractor.write (fs);
+    }
 protected:
     Extractor extractor;
     Matcher matcher;

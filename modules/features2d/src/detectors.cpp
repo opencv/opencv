@@ -75,6 +75,18 @@ FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppressio
   : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression)
 {}
 
+void FastFeatureDetector::read (const FileNode& fn)
+{
+    threshold = fn["threshold"];
+    nonmaxSuppression = (int)fn["nonmaxSuppression"] ? true : false;
+}
+
+void FastFeatureDetector::write (FileStorage& fs) const
+{
+    fs << "threshold" << threshold;
+    fs << "nonmaxSuppression" << nonmaxSuppression;
+}
+
 void FastFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints) const
 {
     FAST( image, keypoints, threshold, nonmaxSuppression );
@@ -90,6 +102,26 @@ GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector( int _maxCorners, doubl
     : maxCorners(_maxCorners), qualityLevel(_qualityLevel), minDistance(_minDistance),
       blockSize(_blockSize), useHarrisDetector(_useHarrisDetector), k(_k)
 {}
+
+void GoodFeaturesToTrackDetector::read (const FileNode& fn)
+{
+    maxCorners = fn["maxCorners"];
+    qualityLevel = fn["qualityLevel"];
+    minDistance = fn["minDistance"];
+    blockSize = fn["blockSize"];
+    useHarrisDetector = (int) fn["useHarrisDetector"];
+    k = fn["k"];
+}
+
+void GoodFeaturesToTrackDetector::write (FileStorage& fs) const
+{
+    fs << "maxCorners" << maxCorners;
+    fs << "qualityLevel" << qualityLevel;
+    fs << "minDistance" << minDistance;
+    fs << "blockSize" << blockSize;
+    fs << "useHarrisDetector" << useHarrisDetector;
+    fs << "k" << k;
+}
 
 void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
                                               vector<KeyPoint>& keypoints ) const
@@ -116,6 +148,43 @@ MserFeatureDetector::MserFeatureDetector( int delta, int minArea, int maxArea,
   : mser( delta, minArea, maxArea, maxVariation, minDiversity,
           maxEvolution, areaThreshold, minMargin, edgeBlurSize )
 {}
+
+MserFeatureDetector::MserFeatureDetector( CvMSERParams params )
+  : mser( params.delta, params.minArea, params.maxArea, params.maxVariation, params.minDiversity,
+          params.maxEvolution, params.areaThreshold, params.minMargin, params.edgeBlurSize )
+{}
+
+void MserFeatureDetector::read (const FileNode& fn)
+{
+    int delta = fn["delta"];
+    int minArea = fn["minArea"];
+    int maxArea = fn["maxArea"];
+    float maxVariation = fn["maxVariation"];
+    float minDiversity = fn["minDiversity"];
+    int maxEvolution = fn["maxEvolution"];
+    double areaThreshold = fn["areaThreshold"];
+    double minMargin = fn["minMargin"];
+    int edgeBlurSize = fn["edgeBlurSize"];
+
+    mser = MSER( delta, minArea, maxArea, maxVariation, minDiversity,
+              maxEvolution, areaThreshold, minMargin, edgeBlurSize );
+}
+
+void MserFeatureDetector::write (FileStorage& fs) const
+{
+    //fs << "algorithm" << getAlgorithmName ();
+
+    fs << "delta" << mser.delta;
+    fs << "minArea" << mser.minArea;
+    fs << "maxArea" << mser.maxArea;
+    fs << "maxVariation" << mser.maxVariation;
+    fs << "minDiversity" << mser.minDiversity;
+    fs << "maxEvolution" << mser.maxEvolution;
+    fs << "areaThreshold" << mser.areaThreshold;
+    fs << "minMargin" << mser.minMargin;
+    fs << "edgeBlurSize" << mser.edgeBlurSize;
+}
+
 
 void MserFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
 {
@@ -144,6 +213,29 @@ StarFeatureDetector::StarFeatureDetector(int maxSize, int responseThreshold,
           lineThresholdBinarized, suppressNonmaxSize)
 {}
 
+void StarFeatureDetector::read (const FileNode& fn)
+{
+    int maxSize = fn["maxSize"];
+    int responseThreshold = fn["responseThreshold"];
+    int lineThresholdProjected = fn["lineThresholdProjected"];
+    int lineThresholdBinarized = fn["lineThresholdBinarized"];
+    int suppressNonmaxSize = fn["suppressNonmaxSize"];
+
+    star = StarDetector( maxSize, responseThreshold, lineThresholdProjected,
+              lineThresholdBinarized, suppressNonmaxSize);
+}
+
+void StarFeatureDetector::write (FileStorage& fs) const
+{
+    //fs << "algorithm" << getAlgorithmName ();
+
+    fs << "maxSize" << star.maxSize;
+    fs << "responseThreshold" << star.responseThreshold;
+    fs << "lineThresholdProjected" << star.lineThresholdProjected;
+    fs << "lineThresholdBinarized" << star.lineThresholdBinarized;
+    fs << "suppressNonmaxSize" << star.suppressNonmaxSize;
+}
+
 void StarFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints) const
 {
     star(image, keypoints);
@@ -159,6 +251,33 @@ SiftFeatureDetector::SiftFeatureDetector(double threshold, double edgeThreshold,
 {
 }
 
+void SiftFeatureDetector::read (const FileNode& fn)
+{
+    double threshold = fn["threshold"];
+    double edgeThreshold = fn["edgeThreshold"];
+    int nOctaves = fn["nOctaves"];
+    int nOctaveLayers = fn["nOctaveLayers"];
+    int firstOctave = fn["firstOctave"];
+    int angleMode = fn["angleMode"];
+
+    sift = SIFT(threshold, edgeThreshold, nOctaves, nOctaveLayers, firstOctave, angleMode);
+}
+
+void SiftFeatureDetector::write (FileStorage& fs) const
+{
+    //fs << "algorithm" << getAlgorithmName ();
+
+    SIFT::CommonParams commParams = sift.getCommonParams ();
+    SIFT::DetectorParams detectorParams = sift.getDetectorParams ();
+    fs << "threshold" << detectorParams.threshold;
+    fs << "edgeThreshold" << detectorParams.edgeThreshold;
+    fs << "nOctaves" << commParams.nOctaves;
+    fs << "nOctaveLayers" << commParams.nOctaveLayers;
+    fs << "firstOctave" << commParams.firstOctave;
+    fs << "angleMode" << commParams.angleMode;
+}
+
+
 void SiftFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
                                       vector<KeyPoint>& keypoints) const
 {
@@ -171,6 +290,24 @@ void SiftFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
 SurfFeatureDetector::SurfFeatureDetector( double hessianThreshold, int octaves, int octaveLayers)
     : surf(hessianThreshold, octaves, octaveLayers)
 {}
+
+void SurfFeatureDetector::read (const FileNode& fn)
+{
+    double hessianThreshold = fn["hessianThreshold"];
+    int octaves = fn["octaves"];
+    int octaveLayers = fn["octaveLayers"];
+
+    surf = SURF( hessianThreshold, octaves, octaveLayers );
+}
+
+void SurfFeatureDetector::write (FileStorage& fs) const
+{
+    //fs << "algorithm" << getAlgorithmName ();
+
+    fs << "hessianThreshold" << surf.hessianThreshold;
+    fs << "octaves" << surf.nOctaves;
+    fs << "octaveLayers" << surf.nOctaveLayers;
+}
 
 void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
                                       vector<KeyPoint>& keypoints) const
