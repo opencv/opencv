@@ -103,7 +103,7 @@ bool  BmpDecoder::readHeader()
             int clrused = m_strm.getDWord();
             m_strm.skip( size - 36 );
 
-            if( m_width > 0 && m_height > 0 &&
+            if( m_width > 0 && m_height != 0 &&
              (((m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
                 m_bpp == 24 || m_bpp == 32 ) && m_rle_code == BMP_RGB) ||
                (m_bpp == 16 && (m_rle_code == BMP_RGB || m_rle_code == BMP_BITFIELDS)) ||
@@ -143,7 +143,7 @@ bool  BmpDecoder::readHeader()
             m_bpp    = m_strm.getDWord() >> 16;
             m_rle_code = BMP_RGB;
 
-            if( m_width > 0 && m_height > 0 &&
+            if( m_width > 0 && m_height != 0 &&
                (m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
                 m_bpp == 24 || m_bpp == 32 ))
             {
@@ -168,6 +168,9 @@ bool  BmpDecoder::readHeader()
     }
 
     m_type = iscolor ? CV_8UC3 : CV_8UC1;
+    m_origin = m_height > 0 ? IPL_ORIGIN_BL : IPL_ORIGIN_TL;
+    m_height = std::abs(m_height);
+    
     if( !result )
     {
         m_offset = -1;
@@ -192,12 +195,14 @@ bool  BmpDecoder::readData( Mat& img )
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    data += (m_height - 1)*step;
-    step = -step;
+    if( m_origin == IPL_ORIGIN_BL )
+    {
+        data += (m_height - 1)*step;
+        step = -step;
+    }
 
     AutoBuffer<uchar> _src, _bgr;
-    if( (m_bpp != 24 || !color) )
-        _src.allocate(src_pitch + 32);
+    _src.allocate(src_pitch + 32);
 
     if( !color )
     {
