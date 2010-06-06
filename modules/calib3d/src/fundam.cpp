@@ -184,7 +184,8 @@ bool CvHomographyEstimator::refine( const CvMat* m1, const CvMat* m2, CvMat* mod
         {
             const double* h = _param->data.db;
             double Mx = M[i].x, My = M[i].y;
-            double ww = 1./(h[6]*Mx + h[7]*My + 1.);
+            double ww = h[6]*Mx + h[7]*My + 1.;
+            ww = fabs(ww) > DBL_EPSILON ? 1./ww : 0;
             double _xi = (h[0]*Mx + h[1]*My + h[2])*ww;
             double _yi = (h[3]*Mx + h[4]*My + h[5])*ww;
             double err[] = { _xi - m[i].x, _yi - m[i].y };
