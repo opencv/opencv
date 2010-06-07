@@ -65,16 +65,46 @@ foreach(h ${lib_hdr_names})
     list(APPEND highgui_ext_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/highgui/${h}")
 endforeach()
 
+#YV
 if(WIN32)
-    set(highgui_srcs ${highgui_srcs} src/window_w32.cpp src/cap_vfw.cpp src/cap_cmu.cpp src/cap_w32.cpp src/cap_dshow.cpp)
+
+    if (HAVE_QT)
+        
+         #SET(QT_USE_QTXML 1)
+		 INCLUDE(${QT_USE_FILE})
+		 SET(_MOC_HEADERS src/window_QT.h)
+		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
+		 
+		 set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES})
+		 set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES})
+		 
+    else()
+        set(highgui_srcs ${highgui_srcs} src/window_w32.cpp)
+    endif()
+
+    set(highgui_srcs ${highgui_srcs} src/cap_vfw.cpp src/cap_cmu.cpp src/cap_w32.cpp src/cap_dshow.cpp)
     if(HAVE_MIL)
         set(highgui_srcs ${highgui_srcs} src/cap_mil.cpp)
     endif()
 endif()
 
 if(UNIX)
-    if(HAVE_GTK)
-        set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
+
+    if (HAVE_QT)        
+    
+         #SET(QT_USE_QTXML 1)
+		 INCLUDE(${QT_USE_FILE})
+		 SET(_MOC_HEADERS src/window_QT.h)
+		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
+		 
+		 set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES})
+		 set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES})
+		 
+    else()
+    	if(HAVE_GTK)
+            set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
+    	endif()
+    	
     endif()
 
     if(HAVE_XINE)
@@ -145,18 +175,33 @@ if(UNIX)
     endforeach()
 endif()
 
+#YV
 if(APPLE)
     add_definitions(-DHAVE_QUICKTIME=1)
     if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
         add_definitions(-DHAVE_IMAGEIO=1)
     endif()
-    if(WITH_CARBON)
-        add_definitions(-DHAVE_CARBON=1)
-        set(highgui_srcs ${highgui_srcs} src/window_carbon.cpp)
+    
+    if (HAVE_QT)
+
+         #SET(QT_USE_QTXML 1)
+		 INCLUDE(${QT_USE_FILE})
+		 SET(_MOC_HEADERS src/window_QT.h)
+		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
+		 
+		 set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES})
+		 set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES})
+		         
     else()
-        add_definitions(-DHAVE_COCOA=1)
-        set(highgui_srcs ${highgui_srcs} src/window_cocoa.mm)
+        if(WITH_CARBON)
+            add_definitions(-DHAVE_CARBON=1)
+            set(highgui_srcs ${highgui_srcs} src/window_carbon.cpp)
+        else()
+            add_definitions(-DHAVE_COCOA=1)
+            set(highgui_srcs ${highgui_srcs} src/window_cocoa.mm)
+        endif()
     endif()
+    
 	if(WITH_QUICKTIME)
 		set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
 	else()

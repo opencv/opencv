@@ -491,6 +491,36 @@ if(BUILD_NEW_PYTHON_SUPPORT)
 
 
 endif()
+
+#YV
+############################### QT ################################
+set(HAVE_QT 0)
+set(HAVE_QT_OPENGL 0)
+set(AUTOSWITCH_QT 0)#uses to disable QT
+
+find_package(Qt4)# QUIET)
+if (QT4_FOUND AND AUTOSWITCH_QT)
+    set(WITH_QT ON CACHE BOOL "Build with QT Backend support")
+    set(HAVE_QT 1)
+    add_definitions(-DHAVE_QT=1)
+
+    if(UNIX)
+	    if (APPLE)
+		set(WITH_CARBON 0)
+		message(STATUS "QT detected, so Carbon and Cocoa disabled")
+		else()
+		set(HAVE_GTK 0)
+		set(HAVE_GTHREAD 0)
+		message(STATUS "QT detected, so GTK and GThread disabled")
+		endif()
+    endif()
+    
+    #if (QT_QTOPENGL_FOUND)
+    #    set(WITH_QT_OPENGL ON CACHE BOOL "add OpenGL extention to QT")
+    #    set(HAVE_QT_OPENGL 1)
+    #    add_definitions(-DOPENCV_GL=1)
+    #endif()
+endif()
     
 ############################### TBB ################################
 
@@ -1105,22 +1135,34 @@ message(STATUS "    Linker flags (Release):    ${CMAKE_SHARED_LINKER_FLAGS} ${CM
 message(STATUS "    Linker flags (Debug):      ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
 endif()
 
+#YV
 if(UNIX AND NOT APPLE)
-message(STATUS "")
-message(STATUS "  GUI: ")
-message(STATUS "    GTK+ 2.x:                  ${HAVE_GTK}")
-message(STATUS "    GThread:                   ${HAVE_GTHREAD}")
-message(STATUS "")
+	message(STATUS "")
+	message(STATUS "  GUI: ")
+		if (HAVE_QT)
+		message(STATUS "    QT 4.x:                    ${HAVE_QT}")
+		message(STATUS "    QT OpenGL support:         ${HAVE_QT_OPENGL}")
+		else()
+		message(STATUS "    GTK+ 2.x:                  ${HAVE_GTK}")
+		message(STATUS "    GThread:                   ${HAVE_GTHREAD}")
+		endif()
+	message(STATUS "")
 endif()
 
 if(APPLE)
-message(STATUS "")
-if(WITH_CARBON)
-message(STATUS "  GUI Back-end:                Carbon")
-else()
-message(STATUS "  GUI Back-end:                Cocoa")
-endif()
-message(STATUS "")
+	message(STATUS "")
+	if (HAVE_QT)
+	message(STATUS "  GUI: ")
+	message(STATUS "    QT 4.x:                    ${HAVE_QT}")
+	message(STATUS "    QT OpenGL support:         ${HAVE_QT_OPENGL}")
+	else()
+		if(WITH_CARBON)
+		message(STATUS "  GUI Back-end:                Carbon")
+		else()
+		message(STATUS "  GUI Back-end:                Cocoa")
+		endif()
+		message(STATUS "")
+	endif() 
 endif() 
 
 message(STATUS "  Image I/O: ")

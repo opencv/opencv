@@ -171,7 +171,7 @@ int startWindowThread()
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)   // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
-
+#elif defined (HAVE_QT) //YV see window_QT.cpp
 
 #else
 
