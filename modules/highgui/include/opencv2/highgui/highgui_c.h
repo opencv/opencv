@@ -202,8 +202,8 @@ CVAPI(int) cvWaitKey(int delay CV_DEFAULT(0));
 
 //YV
 #if defined (HAVE_QT)
-	//class CvWindow;
-	//class ViewPort;
+	class CvWindow;
+	class ViewPort;
 	struct CvTrackbar;
 
 	CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char *argv[]);
