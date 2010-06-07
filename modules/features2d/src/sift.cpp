@@ -2006,13 +2006,16 @@ SIFT::SIFT( const CommonParams& _commParams,
 
 inline KeyPoint vlKeypointToOcv( const VL::Sift::Keypoint& vlKeypoint, float angle )
 {
-    return KeyPoint(vlKeypoint.x, vlKeypoint.y, 3*vlKeypoint.sigma, angle, 0, vlKeypoint.o, 0 );
+    return KeyPoint( vlKeypoint.x, vlKeypoint.y,
+                     SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*vlKeypoint.sigma*5 /* 5==NBP+1 */,
+                     angle, 0, vlKeypoint.o, 0 );
 }
 
 inline void ocvKeypointToVl( const KeyPoint& ocvKeypoint, const VL::Sift& vlSift,
-                                   VL::Sift::Keypoint& vlKeypoint )
+                             VL::Sift::Keypoint& vlKeypoint, int magnification )
 {
-    vlKeypoint = vlSift.getKeypoint(ocvKeypoint.pt.x, ocvKeypoint.pt.y, ocvKeypoint.size/3);
+    vlKeypoint = vlSift.getKeypoint( ocvKeypoint.pt.x, ocvKeypoint.pt.y,
+                                     ocvKeypoint.size/(magnification*5) /* 5==NBP+1 */ );
 }
 
 float computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, int angleMode )
@@ -2100,7 +2103,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     for( int pi = 0 ; iter != keypoints.end(); ++iter, pi++ )
     {
         VL::Sift::Keypoint vlkpt;
-        ocvKeypointToVl( *iter, vlsift, vlkpt );
+        ocvKeypointToVl( *iter, vlsift, vlkpt, descriptorParams.magnification );
         float angleVal = iter->angle*CV_PI/180.0;
         if( descriptorParams.recalculateAngles )
         {
