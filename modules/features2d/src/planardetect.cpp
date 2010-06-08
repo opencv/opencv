@@ -853,7 +853,7 @@ void FernClassifier::train(const vector<Point2f>& points,
     for( i = 0; i < nsamples; i++ )
     {
         Point2f pt = points[i];
-        const Mat& src = labels.empty() ? *refimgs[i] : *refimgs[labels[i]];
+        const Mat& src = *refimgs[i];
         int classId = labels.empty() ? i : labels[i];
         if( verbose && (i+1)*progressBarSize/nsamples != i*progressBarSize/nsamples )
             putchar('.');

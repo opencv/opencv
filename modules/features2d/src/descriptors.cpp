@@ -549,15 +549,15 @@ void FernDescriptorMatch::trainFernClassifier()
         assert( params.filename.empty() );
 
         vector<Point2f> points;
-        vector<Ptr<Mat> > refimgs( collection.images.size() );
+        vector<Ptr<Mat> > refimgs;
         vector<int> labels;
         for( size_t imageIdx = 0; imageIdx < collection.images.size(); imageIdx++ )
         {
-            refimgs[imageIdx] = new Mat (collection.images[imageIdx]);
             for( size_t pointIdx = 0; pointIdx < collection.points[imageIdx].size(); pointIdx++ )
             {
+                refimgs.push_back(new Mat (collection.images[imageIdx]));
                 points.push_back(collection.points[imageIdx][pointIdx].pt);
-                labels.push_back(imageIdx);
+                labels.push_back(pointIdx);
             }
         }
 
@@ -572,7 +572,7 @@ void FernDescriptorMatch::calcBestProbAndMatchIdx( const Mat& image, const Point
 {
     (*classifier)( image, pt, signature);
 
-    bestProb = 0;
+    bestProb = -FLT_MAX;
     bestMatchIdx = -1;
     for( size_t ci = 0; ci < (size_t)classifier->getClassCount(); ci++ )
     {
