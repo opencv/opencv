@@ -541,7 +541,7 @@ void FernDescriptorMatch::trainFernClassifier()
         vector<int> labels;
         for( size_t imageIdx = 0; imageIdx < collection.images.size(); imageIdx++ )
         {
-            refimgs[imageIdx] = &collection.images[imageIdx];
+            refimgs[imageIdx] = new Mat (collection.images[imageIdx]);
             for( size_t pointIdx = 0; pointIdx < collection.points[imageIdx].size(); pointIdx++ )
             {
                 points.push_back(collection.points[imageIdx][pointIdx].pt);
