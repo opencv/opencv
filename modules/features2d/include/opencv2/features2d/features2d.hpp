@@ -1120,13 +1120,13 @@ public:
     void InitializeDescriptors(IplImage* train_image, const vector<cv::KeyPoint>& features,
                                const char* feature_label = "", int desc_start_idx = 0);
 
-    // SavePCAall: saves PCA components and descriptors to a file storage
-    // - fs: output file storage
-    void SavePCAall (FileStorage &fs) const;
-
-    // LoadPCAall: loads PCA components and descriptors from a file node
-    // - fn: input file node
-    void LoadPCAall (const FileNode &fn);
+    // Write: writes this object to a file storage
+    // - fs: output filestorage
+    void Write (FileStorage &fs) const;
+    
+    // Read: reads OneWayDescriptorBase object from a file node
+    // - fn: input file node    
+    void Read (const FileNode &fn);
 
     // LoadPCADescriptors: loads PCA descriptors from a file
     // - filename: input filename
@@ -1191,9 +1191,17 @@ protected:
     int m_pca_dim_low;
 
     int m_pyr_levels;
-    const float scale_min;
-    const float scale_max;
-    const float scale_step;
+    float scale_min;
+    float scale_max;
+    float scale_step;
+
+    // SavePCAall: saves PCA components and descriptors to a file storage
+    // - fs: output file storage
+    void SavePCAall (FileStorage &fs) const;
+
+    // LoadPCAall: loads PCA components and descriptors from a file node
+    // - fn: input file node
+    void LoadPCAall (const FileNode &fn);
 };
 
 class CV_EXPORTS OneWayDescriptorObject : public OneWayDescriptorBase
@@ -1748,9 +1756,12 @@ public:
     // Clears keypoints storing in collection
     virtual void clear();
 
-
+    // Reads match object from a file node
     virtual void read( const FileNode& fn ) {};
+    
+    // Writes match object to a file storage
     virtual void write( FileStorage& fs ) const {};
+    
 protected:
     KeyPointCollection collection;
 };
@@ -1817,15 +1828,16 @@ public:
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
 
-    virtual void read (const FileNode &fn);
-    virtual void write (FileStorage& fs) const;
-    Params getParams () const {return params;}
-
+    // Clears keypoints storing in collection and OneWayDescriptorBase
     virtual void clear ();
 
+    // Reads match object from a file node
+    virtual void read (const FileNode &fn);
+    
+    // Writes match object to a file storage
+    virtual void write (FileStorage& fs) const;
+
 protected:
-    void readParams (const FileNode &fn);
-    void writeParams (FileStorage& fs) const;
     Ptr<OneWayDescriptorBase> base;
     Params params;
 };
@@ -1882,6 +1894,12 @@ public:
 
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
+    virtual void clear ();
+
+    virtual void read( const FileNode &fn );
+    
+    virtual void write( FileStorage& fs ) const;
+    
 protected:
     void trainRTreeClassifier();
     Mat extractPatch( const Mat& image, const Point& pt, int patchSize ) const;
@@ -1937,6 +1955,12 @@ public:
 
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
+    virtual void clear ();
+
+    virtual void read( const FileNode &fn );
+
+    virtual void write( FileStorage& fs ) const;
+    
 protected:
     void trainFernClassifier();
     void calcBestProbAndMatchIdx( const Mat& image, const Point2f& pt,

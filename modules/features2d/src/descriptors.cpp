@@ -252,6 +252,10 @@ void OneWayDescriptorMatch::initialize( const Params& _params, OneWayDescriptorB
 
 void OneWayDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
 {
+    if( base.empty() )
+        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
+                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale);
+
     size_t trainFeatureCount = keypoints.size();
 
     base->Allocate( trainFeatureCount );
@@ -269,6 +273,10 @@ void OneWayDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
 
 void OneWayDescriptorMatch::add( KeyPointCollection& keypoints )
 {
+    if( base.empty() )
+        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
+                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale);
+
     size_t trainFeatureCount = keypoints.calcKeypointCount();
 
     base->Allocate( trainFeatureCount );
@@ -306,39 +314,15 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
 
 void OneWayDescriptorMatch::read( const FileNode &fn )
 {
-    readParams (fn);
-
     base = new OneWayDescriptorObject( params.patchSize, params.poseCount, string (), string (), string (),
                                        params.minScale, params.maxScale, params.stepScale );
-    base->LoadPCAall (fn);
+    base->Read (fn);
 }
 
-void OneWayDescriptorMatch::readParams ( const FileNode &fn )
-{
-    params.poseCount = fn["poseCount"];
-    int patchWidth = fn["patchWidth"];
-    int patchHeight = fn["patchHeight"];
-    params.patchSize = Size(patchWidth, patchHeight);
-    params.minScale = fn["minScale"];
-    params.maxScale = fn["maxScale"];
-    params.stepScale = fn["stepScale"];
-}
 
 void OneWayDescriptorMatch::write( FileStorage& fs ) const
 {
-//    fs << "algorithm" << getAlgorithmName ();
-    writeParams (fs);
-    base->SavePCAall (fs);
-}
-
-void OneWayDescriptorMatch::writeParams( FileStorage& fs ) const
-{
-    fs << "poseCount" << params.poseCount;
-    fs << "patchWidth" << params.patchSize.width;
-    fs << "patchHeight" << params.patchSize.height;
-    fs << "minScale" << params.minScale;
-    fs << "maxScale" << params.maxScale;
-    fs << "stepScale" << params.stepScale;
+    base->Write (fs);
 }
 
 void OneWayDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& points )
@@ -484,6 +468,34 @@ void CalonderDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& keyp
     }
 }
 
+void CalonderDescriptorMatch::clear ()
+{
+    GenericDescriptorMatch::clear();
+    classifier.release();
+}
+
+void CalonderDescriptorMatch::read( const FileNode &fn )
+{
+    params.numTrees = fn["numTrees"];
+    params.depth = fn["depth"];
+    params.views = fn["views"];
+    params.patchSize = fn["patchSize"];
+    params.reducedNumDim = (int) fn["reducedNumDim"];
+    params.numQuantBits = fn["numQuantBits"];
+    params.printStatus = (int) fn["printStatus"];
+}
+
+void CalonderDescriptorMatch::write( FileStorage& fs ) const
+{
+    fs << "numTrees" << params.numTrees;
+    fs << "depth" << params.depth;
+    fs << "views" << params.views;
+    fs << "patchSize" << params.patchSize;
+    fs << "reducedNumDim" << (int) params.reducedNumDim;
+    fs << "numQuantBits" << params.numQuantBits;
+    fs << "printStatus" << params.printStatus;
+}
+
 /****************************************************************************************\
 *                                  FernDescriptorMatch                                   *
 \****************************************************************************************/
@@ -596,4 +608,36 @@ void FernDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& keypoint
         calcBestProbAndMatchIdx( image, keypoints[pi].pt, bestProb, bestMatchIdx, signature );
         keypoints[pi].class_id = collection.getKeyPoint(bestMatchIdx).class_id;
     }
+}
+
+void FernDescriptorMatch::read( const FileNode &fn )
+{
+    params.nclasses = fn["nclasses"];
+    params.patchSize = fn["patchSize"];
+    params.signatureSize = fn["signatureSize"];
+    params.nstructs = fn["nstructs"];
+    params.structSize = fn["structSize"];
+    params.nviews = fn["nviews"];
+    params.compressionMethod = fn["compressionMethod"];
+
+    //classifier->read(fn);
+}
+
+void FernDescriptorMatch::write( FileStorage& fs ) const
+{
+    fs << "nclasses" << params.nclasses;
+    fs << "patchSize" << params.patchSize;
+    fs << "signatureSize" << params.signatureSize;
+    fs << "nstructs" << params.nstructs;
+    fs << "structSize" << params.structSize;
+    fs << "nviews" << params.nviews;
+    fs << "compressionMethod" << params.compressionMethod;
+
+//    classifier->write(fs);
+}
+
+void FernDescriptorMatch::clear ()
+{
+    GenericDescriptorMatch::clear();
+    classifier.release();
 }

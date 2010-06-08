@@ -1332,19 +1332,26 @@ namespace cv{
         }
     }
 
+    void OneWayDescriptorBase::Read (const FileNode &fn)
+    {
+        clear ();
+
+        m_pose_count = fn["poseCount"];
+        int patch_width = fn["patchWidth"];
+        int patch_height = fn["patchHeight"];
+        m_patch_size = cvSize (patch_width, patch_height);
+        m_pyr_levels = fn["pyrLevels"];
+        m_pca_dim_high = fn["pcaDimHigh"];
+        m_pca_dim_low = fn["pcaDimLow"];
+        scale_min = fn["minScale"];
+        scale_max = fn["maxScale"];
+        scale_step = fn["stepScale"];
+	
+	LoadPCAall (fn);
+    }
+
     void OneWayDescriptorBase::LoadPCAall (const FileNode &fn)
     {
-//        m_pose_count = fn["pose_count"];
-//        int patch_width = fn["patch_width"];
-//        int patch_height = fn["patch_height"];
-//        m_patch_size = cvSize (patch_width, patch_height);
-//        m_pyr_levels = fn["pyr_levels"];
-//        m_pca_dim_high = fn["pca_dim_high"];
-//        m_pca_dim_low = fn["pca_dim_low"];
-//        scale_min = fn["scale_min"];
-//        scale_max = fn["scale_max"];
-//        scale_step = fn["scale_step"];
-
         readPCAFeatures(fn, &m_pca_avg, &m_pca_eigenvectors, "_lr");
         readPCAFeatures(fn, &m_pca_hr_avg, &m_pca_hr_eigenvectors, "_hr");
         m_pca_descriptors = new OneWayDescriptor[m_pca_dim_high + 1];
@@ -1855,17 +1862,23 @@ namespace cv{
         fs.release();
     }
 
+    void OneWayDescriptorBase::Write (FileStorage &fs) const
+    {
+        fs << "poseCount" << m_pose_count;
+        fs << "patchWidth" << m_patch_size.width;
+        fs << "patchHeight" << m_patch_size.height;
+        fs << "minScale" << scale_min;
+        fs << "maxScale" << scale_max;
+        fs << "stepScale" << scale_step;
+        fs << "pyrLevels" << m_pyr_levels;
+        fs << "pcaDimHigh" << m_pca_dim_high;
+        fs << "pcaDimLow" << m_pca_dim_low;
+
+        SavePCAall (fs);
+    }
+
     void OneWayDescriptorBase::SavePCAall (FileStorage &fs) const
     {
-//        fs << "pose_count" << m_pose_count;
-//        fs << "patch_width" << m_patch_size.width;
-//        fs << "patch_height" << m_patch_size.height;
-//        fs << "scale_min" << scale_min;
-//        fs << "scale_max" << scale_max;
-//        fs << "scale_step" << scale_step;
-//        fs << "pyr_levels" << m_pyr_levels;
-//        fs << "pca_dim_low" << m_pca_dim_low;
-
         savePCAFeatures(fs, "hr", m_pca_hr_avg, m_pca_hr_eigenvectors);
         savePCAFeatures(fs, "lr", m_pca_avg, m_pca_eigenvectors);
         SavePCADescriptors(*fs);

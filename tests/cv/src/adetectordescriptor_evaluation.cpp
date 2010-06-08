@@ -1431,6 +1431,27 @@ void DescriptorQualityTest::readAlgorithm( )
         defaultDescMatch = new OneWayDescriptorMatch ();
         specificDescMatch = new OneWayDescriptorMatch ();
     }
+    else if (! algName.compare ("fern"))
+    {
+        FernDescriptorMatch::Params params;
+        params.nviews = 50;
+        params.signatureSize = 80;
+        params.nstructs = 20;
+        defaultDescMatch = new FernDescriptorMatch (params);
+        specificDescMatch = new FernDescriptorMatch ();
+    }
+    else if (! algName.compare ("calonder"))
+    {
+        CalonderDescriptorMatch::Params params;
+        params.numTrees = 20;
+        params.depth = 7;
+        params.views = 100;
+        params.reducedNumDim = 100;
+        params.patchSize = 20;
+
+        defaultDescMatch = new CalonderDescriptorMatch (params);
+        specificDescMatch = new CalonderDescriptorMatch ();
+    }
     else
     {
         ts->printf(CvTS::LOG, "Algorithm can not be read\n");
@@ -1528,12 +1549,13 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
     FileNode fn = fs.getFirstTopLevelNode();
     fn = fn[DEFAULT_PARAMS];
 
-    OneWayDescriptorMatch *match = new OneWayDescriptorMatch ();
-    match->read (fn);
-
     string pcaFilename = string(ts->get_data_path()) + (string)fn["pcaFilename"];
     string trainPath = string(ts->get_data_path()) + (string)fn["trainPath"];
     string trainImagesList = (string)fn["trainImagesList"];
+    int patch_width = fn["patchWidth"];
+    int patch_height = fn["patchHeight"];
+    Size patchSize = cvSize (patch_width, patch_height);
+    int poseCount = fn["poseCount"];
 
     if (trainImagesList.length () == 0 )
     {
@@ -1544,11 +1566,11 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
 
     readAllDatasetsRunParams();
 
-    OneWayDescriptorBase *base = new OneWayDescriptorBase(match->getParams().patchSize, match->getParams().poseCount, pcaFilename,
+    OneWayDescriptorBase *base = new OneWayDescriptorBase(patchSize, poseCount, pcaFilename,
                                                trainPath, trainImagesList);
 
-    match->initialize( match->getParams(), base );
-
+    OneWayDescriptorMatch *match = new OneWayDescriptorMatch ();
+    match->initialize( OneWayDescriptorMatch::Params (), base );
     defaultDescMatch = match;
     writeAllDatasetsRunParams();
 }
@@ -1563,3 +1585,6 @@ void OneWayDescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int da
 
 
 OneWayDescriptorQualityTest oneWayDescriptorQuality;
+
+DescriptorQualityTest fernDescriptorQualityTest( "fern", "quality-descriptor-fern");
+DescriptorQualityTest calonderDescriptorQualityTest( "calonder", "quality-descriptor-calonder");
