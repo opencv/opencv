@@ -1577,7 +1577,7 @@ protected:
      * The mask may be empty.
      */
     virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                            const Mat& mask, vector<int>& matches, vector<double>& distances ) const = 0;
+                            const Mat& mask, vector<int>& matches ) const = 0;
 
     static bool possibleMatch( const Mat& mask, int index_1, int index_2 )
     {
@@ -1605,15 +1605,13 @@ inline void DescriptorMatcher::add( const Mat& descriptors )
 
 inline void DescriptorMatcher::match( const Mat& query, vector<int>& matches ) const
 {
-    vector<double> innDistances;
-    matchImpl( query, train, Mat(), matches, innDistances );
+    matchImpl( query, train, Mat(), matches );
 }
 
 inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
                                       vector<int>& matches ) const
 {
-    vector<double> innDistances;
-    matchImpl( query, train, mask, matches, innDistances );
+    matchImpl( query, train, mask, matches );
 }
 
 inline void DescriptorMatcher::clear()
@@ -1638,15 +1636,14 @@ public:
 
 protected:
    virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                           const Mat& mask, vector<int>& matches, vector<double>& distances) const;
+                           const Mat& mask, vector<int>& matches ) const;
 
    Distance distance;
 };
 
 template<class Distance>
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                                             const Mat& mask, vector<int>& matches,
-                                             vector<double>& distances) const
+                                             const Mat& mask, vector<int>& matches ) const
 {
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
@@ -1682,10 +1679,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
         }
 
         if( matchIndex != -1 )
-        {
             matches.push_back( matchIndex );
-            distances.push_back( matchDistance );
-        }
     }
 }
 
