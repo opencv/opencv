@@ -1499,7 +1499,7 @@ struct CV_EXPORTS L2
             ResultType diff = a[i] - b[i];
             result += diff*diff;
         }
-        return result;
+        return sqrt(result);
     }
 };
 
@@ -1739,7 +1739,7 @@ public:
     // Matches test keypoints to the training set
     // image        The source image
     // points       Test keypoints from the source image
-    // class_ids    A vector to be filled with keypoint class_ids
+    // indices      A vector to be filled with keypoint class indices
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices ) = 0;
 
     // Clears keypoints storing in collection
