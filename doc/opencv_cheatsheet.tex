@@ -183,7 +183,7 @@
 
 \textbf{Create a matrix initialized with specified values}\\
 \> \texttt{double a = CV\_PI/3;} \\
-\> \texttt{Mat A22 = Mat(Mat\_<float>(2, 2) <<} \\
+\> \texttt{Mat A22 = (Mat\_<float>(2, 2) <<} \\
 \> \> \texttt{cos(a), -sin(a), sin(a), cos(a));} \\
 \> \texttt{float B22data[] = \{cos(a), -sin(a), sin(a), cos(a)\};} \\
 \> \texttt{Mat B22 = Mat(2, 2, CV\_32F, B22data).clone();}\\
@@ -199,7 +199,7 @@
 \> \texttt{Mat I(480, 640, CV\_32FC3, Idata);}\\
 \> \texttt{vector<Point> iptvec(10);}\\
 \> \texttt{Mat iP(iptvec); }\textit{// iP -- 10x1 CV\_32SC2 matrix}\\
-\> \texttt{CvMat* oldC0 = cvCreateImage(cvSize(320, 240), 16);}\\
+\> \texttt{IplImage* oldC0 = cvCreateImage(cvSize(320,240),16,1);}\\
 \> \texttt{Mat newC = cvarrToMat(oldC0);}\\
 \> \texttt{IplImage oldC1 = newC; CvMat oldC2 = newC;}\\
 
@@ -263,7 +263,7 @@
 \begin{tabbing}
 Exa\=mple 1. Smooth image ROI in-place\\
 \>\texttt{Mat imgroi = image(Rect(10, 20, 100, 100));}\\
-\>\texttt{GaussianBlur(imgroi, imgroi, 5, 5, 1.2, 1.2);}\\
+\>\texttt{GaussianBlur(imgroi, imgroi, Size(5, 5), 1.2, 1.2);}\\
 Example 2. Somewhere in a linear algebra algorithm \\
 \>\texttt{m.row(i) += m.row(j)*alpha;}\\
 Example 3. Copy image ROI to another image with conversion\\
@@ -291,20 +291,16 @@ other matrix operations, such as
 
 -- correspondingly, addition, subtraction, element-wise multiplication ... comparison of two matrices or a matrix and a scalar.
 
-% (a, a, a, 255)*(r, g, b, a)/255
-% 255 - (a, a, a, 255) = (255 - a, ..., 0)
-% (b, b, b, b)*(255 - a, 255 - a, 255 - a, 0)/255 = ((255 - a)*b/255, ...., (255 - a))
-
 \begin{tabbing}
 Exa\=mple. \href{http://en.wikipedia.org/wiki/Alpha_compositing}{Alpha compositing} function:\\
 \texttt{void alphaCompose(const Mat\& rgba1,}\\
 \> \texttt{const Mat\& rgba2, Mat\& rgba\_dest)}\\
 \texttt{\{ }\\
-\> \texttt{Mat a1(rgba1.size(), rgba1.type), ra1;}\\
-\> \texttt{Mat a2(rgba2.size(), rgba2.type);}\\
+\> \texttt{Mat a1(rgba1.size(), rgba1.type()), ra1;}\\
+\> \texttt{Mat a2(rgba2.size(), rgba2.type());}\\
 \> \texttt{int mixch[]=\{3, 0, 3, 1, 3, 2, 3, 3\};}\\
-\> \texttt{mixChannels(\&rgba1, \&a1, mixch, 4);}\\
-\> \texttt{mixChannels(\&rgba2, \&a2, mixch, 4);}\\
+\> \texttt{mixChannels(\&rgba1, 1, \&a1, 1, mixch, 4);}\\
+\> \texttt{mixChannels(\&rgba2, 1, \&a2, 1, mixch, 4);}\\
 \> \texttt{subtract(Scalar::all(255), a1, ra1);}\\
 \> \texttt{bitwise\_or(a1, Scalar(0,0,0,255), a1);}\\
 \> \texttt{bitwise\_or(a2, Scalar(0,0,0,255), a2);}\\
@@ -362,7 +358,7 @@ Exa\=mple. \href{http://en.wikipedia.org/wiki/Alpha_compositing}{Alpha compositi
 For some operations a more convenient \href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html#matrix-expressions}{algebraic notation} can be used, for example:
 \begin{tabbing}
 \texttt{Mat}\={} \texttt{delta = (J.t()*J + lambda*}\\
-\>\texttt{Mat::eye(J.cols, J.cols, J.type())}\\
+\>\texttt{Mat::eye(J.cols, J.cols, J.type()))}\\
 \>\texttt{.inv(CV\_SVD)*(J.t()*err);}
 \end{tabbing}
 implements the core of Levenberg-Marquardt optimization algorithm.
@@ -393,8 +389,8 @@ implements the core of Levenberg-Marquardt optimization algorithm.
 \begin{tabbing}
 Exa\=mple. Filter image in-place with a 3x3 high-pass filter\\
 \> (preserve negative responses by shifting the result by 128):\\
-\texttt{filter2D(image, image, image.depth(), Mat(Mat\_<float>(3,3)}\\
-\> \texttt{ << -1, -1, -1, -1, 9, -1, -1, -1, -1), Point(1,1), 128);}\\
+\texttt{filter2D(image, image, image.depth(), (Mat\_<float>(3,3)<<}\\
+\> \texttt{-1, -1, -1, -1, 9, -1, -1, -1, -1), Point(1,1), 128);}\\
 \end{tabbing}
 
 \subsection{Geometrical Transformations}
@@ -506,7 +502,7 @@ samples on what are the contours and how to use them.
 \texttt{CV\_Assert(tl.type() == FileNode::SEQ \&\& tl.size() == 3);}\\
 \texttt{double tl0 = (double)tl[0]; string tl1 = (string)tl[1];}\\
 
-\texttt{int m = (int)tl[2]["month"], d = (int)tl[2]["day"]};\\
+\texttt{int m = (int)tl[2]["month"], d = (int)tl[2]["day"];}\\
 \texttt{int year = (int)tl[2]["year"];}\\
 
 \texttt{FileNode tm = fs["mystruct"];}\\
