@@ -260,6 +260,17 @@
 
 \end{tabular}
 
+\begin{tabbing}
+Exa\=mple 1. Smooth image ROI in-place\\
+\>\texttt{Mat imgroi = image(Rect(10, 20, 100, 100));}\\
+\>\texttt{GaussianBlur(imgroi, imgroi, 5, 5, 1.2, 1.2);}\\
+Example 2. Somewhere in a linear algebra algorithm \\
+\>\texttt{m.row(i) += m.row(j)*alpha;}\\
+Example 3. Copy image ROI to another image with conversion\\
+\>\texttt{Rect r(1, 1, 10, 20);}\\
+\>\texttt{Mat dstroi = dst(Rect(0,10,r.width,r.height));}\\
+\>\texttt{src(r).convertTo(dstroi, dstroi.type(), 1, 0);}\\
+\end{tabbing}
 
 \section{Simple Matrix Operations}
 
