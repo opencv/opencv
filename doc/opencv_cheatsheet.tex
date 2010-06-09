@@ -204,9 +204,8 @@
 \> \texttt{IplImage oldC1 = newC; CvMat oldC2 = newC;}\\
 
 \textbf{... (with copying the data)}\\
-\> \texttt{Mat image\_copy = image.clone();}\\
-\> \texttt{Mat P(10, 1, CV\_32FC2, Scalar(1, 1));}\\
-\> \texttt{vector<Point2f> ptvec = Mat\_<Point2f>(P);}\\
+\> \texttt{Mat newC2 = cvarrToMat(oldC0).clone();}\\
+\> \texttt{vector<Point2f> ptvec = Mat\_<Point2f>(iP);}\\
 
 \>\\
 \textbf{Access matrix elements}\\
@@ -387,7 +386,7 @@ implements the core of Levenberg-Marquardt optimization algorithm.
 \end{tabular}
 
 \begin{tabbing}
-Exa\=mple. Filter image in-place with a 3x3 high-pass filter\\
+Exa\=mple. Filter image in-place with a 3x3 high-pass kernel\\
 \> (preserve negative responses by shifting the result by 128):\\
 \texttt{filter2D(image, image, image.depth(), (Mat\_<float>(3,3)<<}\\
 \> \texttt{-1, -1, -1, -1, 9, -1, -1, -1, -1), Point(1,1), 128);}\\
