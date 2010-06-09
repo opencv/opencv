@@ -1978,6 +1978,34 @@ Sift::computeKeypointDescriptor
 
 using namespace cv;
 
+SIFT::CommonParams::CommonParams() :
+        nOctaves(DEFAULT_NOCTAVES), nOctaveLayers(DEFAULT_NOCTAVE_LAYERS),
+        firstOctave(DEFAULT_FIRST_OCTAVE), angleMode(FIRST_ANGLE)
+{}
+
+SIFT::CommonParams::CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode ) :
+        nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers),
+        firstOctave(_firstOctave), angleMode(_angleMode)
+{}
+
+SIFT::DetectorParams::DetectorParams() :
+        threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD())
+{}
+
+SIFT::DetectorParams::DetectorParams( double _threshold, double _edgeThreshold ) :
+        threshold(_threshold), edgeThreshold(_edgeThreshold)
+{}
+
+SIFT::DescriptorParams::DescriptorParams() :
+        magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE),
+        recalculateAngles(true)
+{}
+
+SIFT::DescriptorParams::DescriptorParams( double _magnification, bool _isNormalize, bool _recalculateAngles ) :
+        magnification(_magnification), isNormalize(_isNormalize),
+        recalculateAngles(_recalculateAngles)
+{}
+
 SIFT::SIFT()
 {}
 

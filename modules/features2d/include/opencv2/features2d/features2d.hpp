@@ -253,11 +253,8 @@ public:
         static const int DEFAULT_FIRST_OCTAVE = -1;
         enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
 
-        CommonParams() : nOctaves(DEFAULT_NOCTAVES), nOctaveLayers(DEFAULT_NOCTAVE_LAYERS),
-                         firstOctave(DEFAULT_FIRST_OCTAVE), angleMode(FIRST_ANGLE) {}
-        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode ) :
-                         nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers),
-                         firstOctave(_firstOctave), angleMode(_angleMode) {}
+        CommonParams();
+        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode );
         int nOctaves, nOctaveLayers, firstOctave;
         int angleMode;
     };
@@ -267,9 +264,8 @@ public:
         static double GET_DEFAULT_THRESHOLD() { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
         static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
 
-        DetectorParams() : threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD()) {}
-        DetectorParams( double _threshold, double _edgeThreshold ) :
-                threshold(_threshold), edgeThreshold(_edgeThreshold) {}
+        DetectorParams();
+        DetectorParams( double _threshold, double _edgeThreshold );
         double threshold, edgeThreshold;
     };
 
@@ -278,11 +274,9 @@ public:
         static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
         static const bool DEFAULT_IS_NORMALIZE = true;
         static const int DESCRIPTOR_SIZE = 128;
-        DescriptorParams() : magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE),
-                             recalculateAngles(true) {}
-        DescriptorParams( double _magnification, bool _isNormalize, bool _recalculateAngles ) :
-                          magnification(_magnification), isNormalize(_isNormalize),
-                          recalculateAngles(_recalculateAngles) {}
+
+        DescriptorParams();
+        DescriptorParams( double _magnification, bool _isNormalize, bool _recalculateAngles );
         double magnification;
         bool isNormalize;
         bool recalculateAngles;
@@ -311,7 +305,8 @@ public:
     //! finds the keypoints using SIFT algorithm
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints) const;
-    //! finds the keypoints and computes descriptors for them using SIFT algorithm. Optionally it can compute descriptors for the user-provided keypoints
+    //! finds the keypoints and computes descriptors for them using SIFT algorithm.
+    //! Optionally it can compute descriptors for the user-provided keypoints
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints,
                     Mat& descriptors,
@@ -1284,8 +1279,8 @@ public:
         detectImpl( image, mask, keypoints );
     }
 
-    virtual void read (const FileNode& fn) {};
-    virtual void write (FileStorage& fs) const {};
+    virtual void read(const FileNode& fn) {};
+    virtual void write(FileStorage& fs) const {};
 
 protected:
     /*
