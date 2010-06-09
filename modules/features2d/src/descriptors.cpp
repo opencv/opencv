@@ -588,12 +588,15 @@ void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, 
 {
     trainFernClassifier();
 
-    float bestProb = 0;
     indices.resize( keypoints.size() );
     vector<float> signature( (size_t)classifier->getClassCount() );
 
     for( size_t pi = 0; pi < keypoints.size(); pi++ )
-        calcBestProbAndMatchIdx( image, keypoints[pi].pt, bestProb, indices[pi], signature );
+    {
+        //calcBestProbAndMatchIdx( image, keypoints[pi].pt, bestProb, indices[pi], signature );
+        //TODO: use octave and image pyramid
+        indices[pi] = (*classifier)(image, keypoints[pi].pt, signature);
+    }
 }
 
 void FernDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& keypoints )

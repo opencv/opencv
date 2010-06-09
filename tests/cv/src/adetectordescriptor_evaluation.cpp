@@ -1434,9 +1434,9 @@ void DescriptorQualityTest::readAlgorithm( )
     else if (! algName.compare ("fern"))
     {
         FernDescriptorMatch::Params params;
-        params.nviews = 50;
-        params.signatureSize = 80;
-        params.nstructs = 20;
+        params.nviews = 100;
+        params.signatureSize = INT_MAX;
+        params.nstructs = 50;
         defaultDescMatch = new FernDescriptorMatch (params);
         specificDescMatch = new FernDescriptorMatch ();
     }
