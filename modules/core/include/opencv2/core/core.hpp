@@ -1069,8 +1069,9 @@ template<typename M> class CV_EXPORTS MatOp_T_;
 typedef MatExpr_<MatExpr_Op4_<Size, int, Scalar,
     int, Mat, MatOp_Set_<Mat> >, Mat> MatExpr_Initializer;
 
-template<typename _Tp> class MatIterator_;
-template<typename _Tp> class MatConstIterator_;
+template<typename _Tp> class CV_EXPORTS MatIterator_;
+template<typename _Tp> class CV_EXPORTS MatConstIterator_;
+template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
 
 enum { MAGIC_MASK=0xFFFF0000, TYPE_MASK=0x00000FFF, DEPTH_MASK=7 };
 
@@ -1327,6 +1328,8 @@ public:
     template<typename _Tp> explicit Mat(const Point_<_Tp>& pt);
     //! builds matrix from a 3D point
     template<typename _Tp> explicit Mat(const Point3_<_Tp>& pt);
+    //! builds matrix from comma initializer
+    template<typename _Tp> explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
     //! helper constructor to compile matrix expressions
     Mat(const MatExpr_Base& expr);
     //! destructor - calls release()
@@ -2116,6 +2119,7 @@ public:
     template<int n> explicit Mat_(const Vec<_Tp, n>& vec);
     explicit Mat_(const Point_<_Tp>& pt);
     explicit Mat_(const Point3_<_Tp>& pt);
+    explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
     Mat_& operator = (const Mat& m);
     Mat_& operator = (const Mat_& m);
@@ -2349,7 +2353,7 @@ public:
     //! the operator that takes the next value and put it to the matrix
     template<typename T2> MatCommaInitializer_<_Tp>& operator , (T2 v);
     //! the conversion operator
-    operator Mat_<_Tp>() const;
+    //operator Mat_<_Tp>() const;
     //! another form of conversion operator
     Mat_<_Tp> operator *() const;
     void assignTo(Mat& m, int type=-1) const;

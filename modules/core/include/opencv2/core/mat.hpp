@@ -262,7 +262,14 @@ template<typename _Tp> inline Mat::Mat(const Point3_<_Tp>& pt)
     ((_Tp*)data)[1] = pt.y;
     ((_Tp*)data)[2] = pt.z;
 }
-    
+
+template<typename _Tp> inline Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
+    : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG),
+    rows(0), cols(0), step(0), data(0), refcount(0),
+    datastart(0), dataend(0)
+{
+    *this = *commaInitializer;
+}
     
 inline Mat::~Mat()
 {
@@ -637,6 +644,12 @@ template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point3_<_Tp>& pt)
 }
     
 
+template<typename _Tp> inline Mat_<_Tp>::Mat_(const MatCommaInitializer_<_Tp>& commaInitializer)
+: Mat(commaInitializer)
+{
+}
+    
+    
 template<typename _Tp> inline Mat_<_Tp>::Mat_(const vector<_Tp>& vec, bool copyData)
     : Mat(vec, copyData)
 {}
@@ -3705,12 +3718,6 @@ MatCommaInitializer_<_Tp>::operator , (T2 v)
     CV_DbgAssert( this->e.a1 < this->e.a1.m->end() );
     *this->e.a1 = _Tp(v); ++this->e.a1;
     return *this;
-}
-
-template<typename _Tp> inline MatCommaInitializer_<_Tp>::operator Mat_<_Tp>() const
-{
-    CV_DbgAssert( this->e.a1 == this->e.a1.m->end() );
-    return *this->e.a1.m;
 }
 
 template<typename _Tp> inline Mat_<_Tp> MatCommaInitializer_<_Tp>::operator *() const
