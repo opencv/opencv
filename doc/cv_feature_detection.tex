@@ -1063,38 +1063,6 @@ public:
 
 The class encapsulates all the parameters of MSER (see \url{http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions}) extraction algorithm. 
 
-\cvclass{SURF}
-Class for extracting Speeded Up Robust Features from an image.
-
-\begin{lstlisting}
-class SURF : public CvSURFParams
-{
-public:
-    // default constructor
-    SURF();
-    // constructor that initializes all the algorithm parameters
-    SURF(double _hessianThreshold, int _nOctaves=4,
-         int _nOctaveLayers=2, bool _extended=false);
-    // returns the number of elements in each descriptor (64 or 128)
-    int descriptorSize() const;
-    // detects keypoints using fast multi-scale Hessian detector
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints) const;
-    // detects keypoints and computes the SURF descriptors for them
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints,
-                    vector<float>& descriptors,
-                    bool useProvidedKeypoints=false) const;
-};
-\end{lstlisting}
-
-The class \texttt{SURF} implements Speeded Up Robust Features descriptor \cite{Bay06}.
-There is fast multi-scale Hessian keypoint detector that can be used to find the keypoints
-(which is the default option), but the descriptors can be also computed for the user-specified keypoints.
-The function can be used for object tracking and localization, image stitching etc. See the
-\texttt{find\_obj.cpp} demo in OpenCV samples directory.
-
-
 \cvclass{StarDetector}
 Implements Star keypoint detector
 
@@ -1128,5 +1096,852 @@ public:
 
 The class implements a modified version of CenSurE keypoint detector described in
 \cite{Agrawal08}
+
+\cvclass{SIFT}
+Class for extracting keypoints and computing descriptors using approach named Scale Invariant Feature Transform (SIFT).
+
+\begin{lstlisting}
+class CV_EXPORTS SIFT
+{
+public:
+    struct CommonParams
+    {
+        static const int DEFAULT_NOCTAVES = 4;
+        static const int DEFAULT_NOCTAVE_LAYERS = 3;
+        static const int DEFAULT_FIRST_OCTAVE = -1;
+        enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
+
+        CommonParams();
+        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, 
+					  int _angleMode );
+        int nOctaves, nOctaveLayers, firstOctave;
+        int angleMode;
+    };
+
+    struct DetectorParams
+    {
+        static double GET_DEFAULT_THRESHOLD() 
+          { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
+        static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
+
+        DetectorParams();
+        DetectorParams( double _threshold, double _edgeThreshold );
+        double threshold, edgeThreshold;
+    };
+
+    struct DescriptorParams
+    {
+        static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
+        static const bool DEFAULT_IS_NORMALIZE = true;
+        static const int DESCRIPTOR_SIZE = 128;
+
+        DescriptorParams();
+        DescriptorParams( double _magnification, bool _isNormalize, 
+						  bool _recalculateAngles );
+        double magnification;
+        bool isNormalize;
+        bool recalculateAngles;
+    };
+
+    SIFT();
+    //! sift-detector constructor
+    SIFT( double _threshold, double _edgeThreshold,
+          int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
+          int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
+          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
+          int _angleMode=CommonParams::FIRST_ANGLE );
+    //! sift-descriptor constructor
+    SIFT( double _magnification, bool _isNormalize=true,
+          bool _recalculateAngles = true,
+          int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
+          int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
+          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
+          int _angleMode=CommonParams::FIRST_ANGLE );
+    SIFT( const CommonParams& _commParams,
+          const DetectorParams& _detectorParams = DetectorParams(),
+          const DescriptorParams& _descriptorParams = DescriptorParams() );
+
+    //! returns the descriptor size in floats (128)
+    int descriptorSize() const { return DescriptorParams::DESCRIPTOR_SIZE; }
+    //! finds the keypoints using SIFT algorithm
+    void operator()(const Mat& img, const Mat& mask,
+                    vector<KeyPoint>& keypoints) const;
+    //! finds the keypoints and computes descriptors for them using SIFT algorithm. 
+    //! Optionally it can compute descriptors for the user-provided keypoints
+    void operator()(const Mat& img, const Mat& mask,
+                    vector<KeyPoint>& keypoints,
+                    Mat& descriptors,
+                    bool useProvidedKeypoints=false) const;
+
+    CommonParams getCommonParams () const { return commParams; }
+    DetectorParams getDetectorParams () const { return detectorParams; }
+    DescriptorParams getDescriptorParams () const { return descriptorParams; }
+protected:
+    ...
+};
+\end{lstlisting}
+
+\cvclass{SURF}
+Class for extracting Speeded Up Robust Features from an image.
+
+\begin{lstlisting}
+class SURF : public CvSURFParams
+{
+public:
+    // default constructor
+    SURF();
+    // constructor that initializes all the algorithm parameters
+    SURF(double _hessianThreshold, int _nOctaves=4,
+         int _nOctaveLayers=2, bool _extended=false);
+    // returns the number of elements in each descriptor (64 or 128)
+    int descriptorSize() const;
+    // detects keypoints using fast multi-scale Hessian detector
+    void operator()(const Mat& img, const Mat& mask,
+                    vector<KeyPoint>& keypoints) const;
+    // detects keypoints and computes the SURF descriptors for them
+    void operator()(const Mat& img, const Mat& mask,
+                    vector<KeyPoint>& keypoints,
+                    vector<float>& descriptors,
+                    bool useProvidedKeypoints=false) const;
+};
+\end{lstlisting}
+
+The class \texttt{SURF} implements Speeded Up Robust Features descriptor \cite{Bay06}.
+There is fast multi-scale Hessian keypoint detector that can be used to find the keypoints
+(which is the default option), but the descriptors can be also computed for the user-specified keypoints.
+The function can be used for object tracking and localization, image stitching etc. See the
+\texttt{find\_obj.cpp} demo in OpenCV samples directory.
+
+\subsection{Common Interfaces for Feature Detection and Descriptor Extraction}
+
+\cvclass{FeatureDetector}
+Abstract base class for 2D image feature detectors.
+
+\begin{lstlisting}
+class FeatureDetector
+{
+public:
+    void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                 const Mat& mask=Mat() ) const;
+                 
+    virtual void read( const FileNode& fn ) {};
+    virtual void write( FileStorage& fs ) const {};
+
+protected:
+    ...
+};
+\end{lstlisting}
+
+\cvCppFunc{FeatureDetector::detect}
+Detect keypoints in an image.
+
+\cvdefCpp{
+void detect( const Mat\& image, vector<KeyPoint>\& keypoints, const Mat\& mask=Mat() ) const;
+}
+
+\begin{description}
+\cvarg{image}{The image.}
+\cvarg{keypoints}{The detected keypoints.}
+\cvarg{mask}{Mask specifying where to look for keypoints (optional). Must be a char matrix with non-zero values in the region of interest.}
+\end{description}
+
+\cvCppFunc{FeatureDetector::read}
+Read feature detector from file node.
+
+\cvdefCpp{
+void read( const FileNode\& fn );
+}
+
+\begin{description}
+\cvarg{fn}{File node from which detector will be read.}
+\end{description}
+
+\cvCppFunc{FeatureDetector::write}
+Write feature detector to file storage.
+
+\cvdefCpp{
+void write( FileStorage\& fs ) const;
+}
+
+\begin{description}
+\cvarg{fs}{File storage in which detector will be written.}
+\end{description}
+
+\cvclass{FastFeatureDetector}
+Wrapping class for feature detection using \cvCppCross{FAST} method.
+
+\begin{lstlisting}
+class FastFeatureDetector : public FeatureDetector
+{
+public:
+    FastFeatureDetector( int _threshold = 1, bool _nonmaxSuppression = true );
+    
+	virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+    
+protected:
+	...
+};
+\end{lstlisting}
+
+\cvclass{GoodFeaturesToTrackDetector}
+Wrapping class for feature detection using \cvCppCross{goodFeaturesToTrack} method.
+
+\begin{lstlisting}
+class GoodFeaturesToTrackDetector : public FeatureDetector
+{
+public:
+    GoodFeaturesToTrackDetector( int _maxCorners, double _qualityLevel, 
+                                 double _minDistance, int _blockSize=3,
+                                 bool _useHarrisDetector=false, double _k=0.04 );
+                                 
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+    
+protected:
+	...
+}
+\end{lstlisting}
+
+\cvclass{MserFeatureDetector}
+Wrapping class for feature detection using \cvCppCross{MSER} class.
+
+\begin{lstlisting}
+class MserFeatureDetector : public FeatureDetector
+{
+public:
+    MserFeatureDetector( CvMSERParams params = cvMSERParams () );
+    MserFeatureDetector( int delta, int minArea, int maxArea, float maxVariation,
+                         float minDiversity, int maxEvolution, double areaThreshold,
+                         double minMargin, int edgeBlurSize );
+                         
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+    
+protected:
+	...
+}
+\end{lstlisting}
+
+\cvclass{StarFeatureDetector}
+Wrapping class for feature detection using \cvCppCross{StarDetector} class.
+
+\begin{lstlisting}
+class StarFeatureDetector : public FeatureDetector
+{
+public:
+    StarFeatureDetector( int maxSize=16, int responseThreshold=30, 
+				         int lineThresholdProjected = 10,
+                         int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
+    
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+    
+protected:
+	...
+}
+\end{lstlisting}
+
+\cvclass{SiftFeatureDetector}
+Wrapping class for feature detection using \cvCppCross{SIFT} class.
+
+\begin{lstlisting}
+class SiftFeatureDetector : public FeatureDetector
+{
+public:
+    SiftFeatureDetector( double threshold=SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
+		 double edgeThreshold=SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD(),
+		 int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
+		 int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
+		 int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
+		 int angleMode=SIFT::CommonParams::FIRST_ANGLE );
+    
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+    
+protected:
+	...
+}
+\end{lstlisting}
+
+\cvclass{SurfFeatureDetector}
+Wrapping class for feature detection using \cvCppCross{SURF} class.
+
+\begin{lstlisting}
+class SurfFeatureDetector : public FeatureDetector
+{
+public:
+    SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3,
+                         int octaveLayers = 4 );
+    
+    virtual void read (const FileNode& fn);
+    virtual void write (FileStorage& fs) const;
+    
+protected:
+	...
+}
+\end{lstlisting}
+
+\cvclass{DescriptorExtractor}
+Abstract base class for computing descriptors for image keypoints.
+
+\begin{lstlisting}
+class DescriptorExtractor
+{
+public:
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints,
+                          Mat& descriptors ) const = 0;
+
+    virtual void read (const FileNode &fn) {};
+    virtual void write (FileStorage &fs) const {};
+
+protected:
+    ...
+};
+\end{lstlisting}
+In this interface we assume a keypoint descriptor can be represented as a
+dense, fixed-dimensional vector of some basic type. Most descriptors used
+in practice follow this pattern, as it makes it very easy to compute
+distances between descriptors. Therefore we represent a collection of
+descriptors as a \cvCppCross{Mat}, where each row is one keypoint descriptor.
+
+\cvCppFunc{DescriptorExtractor::compute}
+Compute the descriptors for a set of keypoints in an image. Must be implemented by the subclass.
+
+\cvdefCpp{
+void compute( const Mat\& image, vector<KeyPoint>\& keypoints, Mat\& descriptors ) const;
+}
+
+\begin{description}
+\cvarg{image}{The image.}
+\cvarg{keypoints}{The keypoints. Keypoints for which a descriptor cannot be computed are removed.}
+\cvarg{descriptors}{The descriptors. Row i is the descriptor for keypoint i.}
+\end{description}
+
+\cvCppFunc{DescriptorExtractor::read}
+Read descriptor extractor from file node.
+
+\cvdefCpp{
+void read( const FileNode\& fn );
+}
+
+\begin{description}
+\cvarg{fn}{File node from which detector will be read.}
+\end{description}
+
+\cvCppFunc{DescriptorExtractor::write}
+Write descriptor extractor to file storage.
+
+\cvdefCpp{
+void write( FileStorage\& fs ) const;
+}
+
+\begin{description}
+\cvarg{fs}{File storage in which detector will be written.}
+\end{description}
+
+\cvclass{SiftDescriptorExtractor}
+Wrapping class for descriptors computing using \cvCppCross{SIFT} class.
+
+\begin{lstlisting}
+class SiftDescriptorExtractor : public DescriptorExtractor
+{
+public:
+    SiftDescriptorExtractor( 
+	     double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(),
+	     bool isNormalize=true, bool recalculateAngles=true,
+	     int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
+	     int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
+	     int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
+	     int angleMode=SIFT::CommonParams::FIRST_ANGLE );
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void read (const FileNode &fn);
+    virtual void write (FileStorage &fs) const;
+protected:
+    ...
+}
+\end{lstlisting}
+
+\cvclass{SurfDescriptorExtractor}
+Wrapping class for descriptors computing using \cvCppCross{SURF} class.
+
+\begin{lstlisting}
+class SurfDescriptorExtractor : public DescriptorExtractor
+{
+public:
+    SurfDescriptorExtractor( int nOctaves=4,
+                             int nOctaveLayers=2, bool extended=false );
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void read (const FileNode &fn);
+    virtual void write (FileStorage &fs) const;
+   
+protected:
+    ...
+}
+\end{lstlisting}
+
+\cvclass{DescriptorMatcher}
+Abstract base class for matching two sets of descriptors.
+
+\begin{lstlisting}
+class DescriptorMatcher
+{
+public:
+    void add( const Mat& descriptors );
+    // Index the descriptors training set.
+    void index();
+    void match( const Mat& query, vector<int>& matches ) const;
+	void match( const Mat& query, const Mat& mask,
+	            vector<int>& matches ) const;
+    virtual void clear();
+protected:
+   ...
+};
+\end{lstlisting} 
+
+\cvCppFunc{DescriptorMatcher::add}
+Add descriptors to the training set.
+
+\cvdefCpp{
+void add( const Mat\& descriptors );
+}
+
+\begin{description}
+\cvarg{descriptors}{Descriptors to add to the training set.}
+\end{description}
+
+\cvCppFunc{DescriptorMatcher::match}
+Find the best match for each descriptor from a query set. In one version 
+of this method the mask is used to describe which descriptors can be matched.
+\texttt{descriptors\_1[i]} can be matched with \texttt{descriptors\_2[j]} only if \texttt{mask.at<char>(i,j)} is non-zero.
+
+\cvdefCpp{
+void match( const Mat\& query, vector<int>\& matches ) const;
+}
+\cvdefCpp{
+void match( const Mat\& query, const Mat\& mask,
+            vector<int>\& matches ) const;
+}
+
+\begin{description}
+\cvarg{query}{The query set of descriptors.}
+\cvarg{matches}{Indices of the closest matches from the training set}
+\cvarg{mask}{Mask specifying permissible matches.}
+\end{description}
+
+\cvCppFunc{DescriptorMatcher::clear}
+Clear training keypoints.
+
+\cvdefCpp{
+void clear();
+}
+
+\cvclass{BruteForceMatcher}
+Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest
+descriptor in the second set by trying each one.
+
+\begin{lstlisting}
+template<class Distance>
+class BruteForceMatcher : public DescriptorMatcher
+{
+public:
+    BruteForceMatcher( Distance d = Distance() ) : distance(d) {}
+protected:
+    ...
+}
+\end{lstlisting}
+
+For efficiency, BruteForceMatcher is templated on the distance metric.
+For float descriptors, a common choice would be \texttt{L2<float>}. Class \texttt{L2} is defined as:
+\begin{lstlisting}
+template<typename T>
+struct Accumulator
+{
+    typedef T Type;
+};
+
+template<> struct Accumulator<unsigned char>  { typedef unsigned int Type; };
+template<> struct Accumulator<unsigned short> { typedef unsigned int Type; };
+template<> struct Accumulator<char>   { typedef int Type; };
+template<> struct Accumulator<short>  { typedef int Type; };
+
+/*
+ * Squared Euclidean distance functor
+ */
+template<class T>
+struct L2
+{
+    typedef T ValueType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    ResultType operator()( const T* a, const T* b, int size ) const;
+    {
+        ResultType result = ResultType();
+        for( int i = 0; i < size; i++ )
+        {
+            ResultType diff = a[i] - b[i];
+            result += diff*diff;
+        }
+        return sqrt(result);
+    }
+};
+\end{lstlisting}
+
+\cvclass{KeyPointCollection}
+A storage for sets of keypoints together with corresponding images and class IDs
+
+\begin{lstlisting}
+class KeyPointCollection
+{
+public:
+    // Adds keypoints from a single image to the storage.
+    // image    Source image
+    // points   A vector of keypoints
+    void add( const Mat& _image, const vector<KeyPoint>& _points );
+
+    // Returns the total number of keypoints in the collection
+    size_t calcKeypointCount() const;
+
+    // Returns the keypoint by its global index
+    KeyPoint getKeyPoint( int index ) const;
+
+    // Clears images, keypoints and startIndices
+    void clear();
+
+    vector<Mat> images;
+    vector<vector<KeyPoint> > points;
+
+    // global indices of the first points in each image,
+    // startIndices.size() = points.size()
+    vector<int> startIndices;
+};
+\end{lstlisting}
+
+\cvclass{GenericDescriptorMatch}
+Abstract interface for a keypoint descriptor.
+
+\begin{lstlisting}
+class GenericDescriptorMatch
+{
+public:
+    enum IndexType
+    {
+        NoIndex,
+        KDTreeIndex
+    };
+
+    GenericDescriptorMatch() {}
+    virtual ~GenericDescriptorMatch() {}
+
+    virtual void add( KeyPointCollection& keypoints );
+    virtual void add( const Mat& image, vector<KeyPoint>& points ) = 0;
+
+    virtual void classify( const Mat& image, vector<KeyPoint>& points );
+    virtual void match( const Mat& image, vector<KeyPoint>& points,
+                        vector<int>& indices ) = 0;
+    
+    virtual void clear();
+	virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+    
+protected:
+    KeyPointCollection collection;
+};
+
+\end{lstlisting}
+\cvCppFunc{GenericDescriptorMatch::add}
+Adds keypoints to the training set (descriptors are supposed to be calculated here).
+Keypoints can be passed using \cvCppCross{KeyPointCollection} (with with corresponding images) or as a vector of \cvCppCross{KeyPoint} from a single image.
+
+\cvdefCpp{
+void add( KeyPointCollection\& keypoints );
+}
+
+\begin{description}
+\cvarg{keypoints}{Keypoints collection with corresponding images.}
+\end{description}
+
+
+\cvdefCpp{
+void add( const Mat\& image, vector<KeyPoint>\& points );
+}
+
+\begin{description}
+\cvarg{image}{The source image.}
+\cvarg{points}{Test keypoints from the source image.}
+\end{description}
+
+\cvCppFunc{GenericDescriptorMatch::classify}
+Classifies test keypoints.
+
+\cvdefCpp{
+void classify( const Mat\& image, vector<KeyPoint>\& points );
+}
+
+\begin{description}
+\cvarg{image}{The source image.}
+\cvarg{points}{Test keypoints from the source image.}
+\end{description}
+
+\cvCppFunc{GenericDescriptorMatch::match}
+Matches test keypoints to the training set.
+
+\cvdefCpp{
+void match( const Mat\& image, vector<KeyPoint>\& points, vector<int>\& indices );
+}
+
+\begin{description}
+\cvarg{image}{The source image.}
+\cvarg{points}{Test keypoints from the source image.}
+\cvarg{indices}{A vector to be filled with keypoint class indices.}
+\end{description}
+
+\cvCppFunc{GenericDescriptorMatch::clear}
+Clears keypoints storing in collection
+
+\cvdefCpp{
+void clear();
+}
+
+\cvCppFunc{GenericDescriptorMatch::read}
+Reads match object from a file node
+    
+\cvdefCpp{
+void read( const FileNode\& fn );
+}
+
+\cvCppFunc{GenericDescriptorMatch::write}
+Writes match object to a file storage
+    
+\cvdefCpp{
+virtual void write( FileStorage\& fs ) const;
+}
+
+\cvclass{VectorDescriptorMatch}
+Class used for matching descriptors that can be described as vectors in a finite-dimensional space.
+
+\begin{lstlisting}
+template<class Extractor, class Matcher>
+class VectorDescriptorMatch : public GenericDescriptorMatch
+{
+public:
+    VectorDescriptorMatch( const Extractor& _extractor = Extractor(),
+                           const Matcher& _matcher = Matcher() );
+    ~VectorDescriptorMatch();
+
+	// Builds flann index
+    void index();
+
+	// Calculates descriptors for a set of keypoints from a single image
+    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
+
+    // Matches a set of keypoints with the training set
+    virtual void match( const Mat& image, vector<KeyPoint>& points, 
+                        vector<int>& keypointIndices );
+
+	// Clears object (i.e. storing keypoints)
+    virtual void clear();
+
+	// Reads object from file node
+    virtual void read (const FileNode& fn);
+    // Writes object to file storage
+    virtual void write (FileStorage& fs) const;
+protected:
+    Extractor extractor;
+    Matcher matcher;
+};
+\end{lstlisting}
+
+\cvclass{OneWayDescriptorMatch}
+Wrapping class for computing, matching and classification of descriptors using \cvCppCross{OneWayDescriptorBase} class.
+
+\begin{lstlisting}
+class OneWayDescriptorMatch : public GenericDescriptorMatch
+{
+public:
+    class Params
+    {
+    public:
+        static const int POSE_COUNT = 500;
+        static const int PATCH_WIDTH = 24;
+        static const int PATCH_HEIGHT = 24;
+        static float GET_MIN_SCALE() { return 0.7f; }
+        static float GET_MAX_SCALE() { return 1.5f; }
+        static float GET_STEP_SCALE() { return 1.2f; }
+
+        Params( int _poseCount = POSE_COUNT,
+                Size _patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
+                string _pcaFilename = string (),
+                string _trainPath = string(),
+                string _trainImagesList = string(),
+                float _minScale = GET_MIN_SCALE(), float _maxScale = GET_MAX_SCALE(),
+                float _stepScale = GET_STEP_SCALE() );
+
+        int poseCount;
+        Size patchSize;
+        string pcaFilename;
+        string trainPath;
+        string trainImagesList;
+
+        float minScale, maxScale, stepScale;
+    };
+
+    OneWayDescriptorMatch();
+
+    // Equivalent to calling PointMatchOneWay() followed by Initialize(_params)
+    OneWayDescriptorMatch( const Params& _params );
+    virtual ~OneWayDescriptorMatch();
+
+    // Sets one way descriptor parameters
+    void initialize( const Params& _params, OneWayDescriptorBase *_base = 0 );
+
+    // Calculates one way descriptors for a set of keypoints
+    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
+
+    // Calculates one way descriptors for a set of keypoints
+    virtual void add( KeyPointCollection& keypoints );
+
+    // Matches a set of keypoints from a single image of the training set.
+    // A rectangle with a center in a keypoint and size 
+    // (patch_width/2*scale, patch_height/2*scale) is cropped from the source image
+    // for each keypoint. scale is iterated from DescriptorOneWayParams::min_scale
+    // to DescriptorOneWayParams::max_scale. The minimum distance to each 
+    // training patch with all its affine poses is found over all scales.
+    // The class ID of a match is returned for each keypoint. The distance 
+    // is calculated over PCA components loaded with DescriptorOneWay::Initialize,
+    // kd tree is used for finding minimum distances.
+    virtual void match( const Mat& image, vector<KeyPoint>& points, 
+	                    vector<int>& indices );
+
+    // Classify a set of keypoints. The same as match, but returns point 
+    // classes rather than indices.
+    virtual void classify( const Mat& image, vector<KeyPoint>& points );
+
+    // Clears keypoints storing in collection and OneWayDescriptorBase
+    virtual void clear ();
+
+    // Reads match object from a file node
+    virtual void read (const FileNode &fn);
+    
+    // Writes match object to a file storage
+    virtual void write (FileStorage& fs) const;
+
+protected:
+    Ptr<OneWayDescriptorBase> base;
+    Params params;
+};
+\end{lstlisting}
+
+\cvclass{CalonderDescriptorMatch}
+Wrapping class for computing, matching and classification of descriptors using \cvCppCross{RTreeClassifier} class.
+
+\begin{lstlisting}
+class CV_EXPORTS CalonderDescriptorMatch : public GenericDescriptorMatch
+{
+public:
+    class Params
+    {
+    public:
+        static const int DEFAULT_NUM_TREES = 80;
+        static const int DEFAULT_DEPTH = 9;
+        static const int DEFAULT_VIEWS = 5000;
+        static const size_t DEFAULT_REDUCED_NUM_DIM = 176;
+        static const size_t DEFAULT_NUM_QUANT_BITS = 4;
+        static const int DEFAULT_PATCH_SIZE = PATCH_SIZE;
+
+        Params( const RNG& _rng = RNG(), 
+                const PatchGenerator& _patchGen = PatchGenerator(),
+                int _numTrees=DEFAULT_NUM_TREES,
+                int _depth=DEFAULT_DEPTH,
+                int _views=DEFAULT_VIEWS,
+                size_t _reducedNumDim=DEFAULT_REDUCED_NUM_DIM,
+                int _numQuantBits=DEFAULT_NUM_QUANT_BITS,
+                bool _printStatus=true,
+                int _patchSize=DEFAULT_PATCH_SIZE );
+        Params( const string& _filename );
+
+        RNG rng;
+        PatchGenerator patchGen;
+        int numTrees;
+        int depth;
+        int views;
+        int patchSize;
+        size_t reducedNumDim;
+        int numQuantBits;
+        bool printStatus;
+
+        string filename;
+    };
+
+    CalonderDescriptorMatch();
+    CalonderDescriptorMatch( const Params& _params );
+    virtual ~CalonderDescriptorMatch();
+    void initialize( const Params& _params );
+
+    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
+    virtual void match( const Mat& image, vector<KeyPoint>& keypoints, 
+                        vector<int>& indices );
+    virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
+
+    virtual void clear ();
+    virtual void read( const FileNode &fn );
+    virtual void write( FileStorage& fs ) const;
+    
+protected:
+	...
+};
+\end{lstlisting}
+
+\cvclass{FernDescriptorMatch}
+Wrapping class for computing, matching and classification of descriptors using \cvCppCross{FernClassifier} class.
+
+\begin{lstlisting}
+class FernDescriptorMatch : public GenericDescriptorMatch
+{
+public:
+    class Params
+    {
+    public:
+        Params( int _nclasses=0,
+                int _patchSize=FernClassifier::PATCH_SIZE,
+                int _signatureSize=FernClassifier::DEFAULT_SIGNATURE_SIZE,
+                int _nstructs=FernClassifier::DEFAULT_STRUCTS,
+                int _structSize=FernClassifier::DEFAULT_STRUCT_SIZE,
+                int _nviews=FernClassifier::DEFAULT_VIEWS,
+                int _compressionMethod=FernClassifier::COMPRESSION_NONE,
+                const PatchGenerator& patchGenerator=PatchGenerator() );
+
+        Params( const string& _filename );
+
+        int nclasses;
+        int patchSize;
+        int signatureSize;
+        int nstructs;
+        int structSize;
+        int nviews;
+        int compressionMethod;
+        PatchGenerator patchGenerator;
+
+        string filename;
+    };
+
+    FernDescriptorMatch();
+    FernDescriptorMatch( const Params& _params );
+    virtual ~FernDescriptorMatch();
+    void initialize( const Params& _params );
+
+    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
+    virtual void match( const Mat& image, vector<KeyPoint>& keypoints, 
+                        vector<int>& indices );
+    virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
+
+    virtual void clear ();
+    virtual void read( const FileNode &fn );
+    virtual void write( FileStorage& fs ) const;
+    
+protected:
+	...
+};
+\end{lstlisting}
 
 \fi
