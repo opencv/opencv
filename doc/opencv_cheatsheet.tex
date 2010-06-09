@@ -1,6 +1,10 @@
 %
 %    The OpenCV cheatsheet structure:
 %
+%    opencv data structures
+%        point, rect
+%        matrix
+%
 %    creating matrices
 %        from scratch
 %        from previously allocated data: plain arrays, vectors 
@@ -8,7 +12,7 @@
 %
 %    element access, iteration through matrix elements
 %
-%    copying & shuffling data
+%    copying & shuffling matrix data
 %        copying & converting the whole matrices
 %        extracting matrix parts & copying them
 %        split, merge & mixchannels
@@ -66,7 +70,6 @@
 \hypersetup{colorlinks=true, filecolor=black, linkcolor=black, urlcolor=blue, citecolor=black}
 \graphicspath{{./images/}}
 
-
 % This sets page margins to .5 inch if using letter paper, and to 1cm
 % if using A4 paper. (This probably isn't strictly necessary.)
 % If using another size paper, use default 1cm margins.
@@ -78,7 +81,7 @@
 	}
 
 % Turn off header and footer
-\pagestyle{empty}
+% \pagestyle{empty}
 
 % Redefine section commands to use less space
 \makeatletter
@@ -131,7 +134,7 @@
 \setlength{\columnsep}{2pt}
 
 \begin{center}
-     \Large{\textbf{OpenCV 2.1+ Cheat Sheet}} \\
+     \Large{\textbf{OpenCV 2.1 Cheat Sheet (C++)}} \\
 \end{center}
 \newlength{\MyLen}
 \settowidth{\MyLen}{\texttt{letterpaper}/\texttt{a4paper} \ }
@@ -144,6 +147,24 @@
 %\texttt{\href{http://www.ros.org/wiki/Stack}{stack}} & Collections of ROS packages that form a higher-level library. \\
 %\texttt{\href{http://www.ros.org/wiki/Stack Manifest}{stack manifest}}  & Description of a ROS stack.
 %\end{tabular}
+
+\emph{The OpenCV C++ reference manual is here: \url{http://opencv.willowgarage.com/documentation/cpp/}. Use \textbf{Quick Search} to find descriptions of the particular functions and classes}
+
+\section{Key OpenCV Classes}
+\begin{tabular}{@{}p{\the\MyLen}%
+                @{}p{\linewidth-\the\MyLen}@{}}
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Point}{Point\_}} & Template 2D point class \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Point3}{Point3\_}} & Template 3D point class \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Size}{Size\_}} & Template size (width, height) class \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Vec}{Vec}} & Template short vector class \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Scalar}{Scalar}} & 4-element vector \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Rect}{Rect}} & Rectangle \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Range}{Range}} & Integer value range \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat}{Mat}} & 2D dense array (used as both a matrix or an image)\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#MatND}{MatND}} & Multi-dimensional dense array \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#SparseMat}{SparseMat}} & Multi-dimensional sparse array \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Ptr}{Ptr}} & Template smart pointer class
+\end{tabular}
 
 \section{Matrix Basics}
 \begin{tabbing}
@@ -172,7 +193,7 @@
 \> \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-randn}{randn}(image, Scalar(128), Scalar(10)); }\textit{// Gaussian dist}\\
 
 \textbf{Convert matrix to/from other structures}\\
-\>(without copying the data)\\
+\>\textbf{(without copying the data)}\\
 \> \texttt{Mat image\_alias = image;}\\
 \> \texttt{float* Idata=new float[480*640*3];}\\
 \> \texttt{Mat I(480, 640, CV\_32FC3, Idata);}\\
@@ -210,30 +231,32 @@
 \section{Matrix Manipulations: Copying, Shuffling, Part Access}
 \begin{tabular}{@{}p{\the\MyLen}%
                 @{}p{\linewidth-\the\MyLen}@{}}
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::copyTo}{Mat::copyTo()}} & Copy matrix to another one \\
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::convertTo}{Mat::convertTo()}} & Scale and convert matrix to the specified data type \\
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::clone}{Mat::clone()}} & Make deep copy of a matrix \\
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::reshape}{Mat::reshape()}} & Change matrix dimensions and/or number of channels without copying data \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::copyTo}{src.copyTo(dst)}} & Copy matrix to another one \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::convertTo}{src.convertTo(dst,type,scale,shift)}} & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Scale and convert to another datatype \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::clone}{m.clone()}} & Make deep copy of a matrix \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::reshape}{m.reshape(nch,nrows)}} & Change matrix dimensions and/or number of channels without copying data \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::row}{Mat::row()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::rowRange}{Mat::rowRange()}} & Take a matrix row (row span) \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::row}{m.row(i)}},
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::col}{m.col(i)}} & Take a matrix row/column \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::col}{Mat::col()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::colRange}{Mat::colRange()}} & Take a matrix column (column span) \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::rowRange}{m.rowRange(Range(i1,i2))}}
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::colRange}{m.colRange(Range(j1,j2))}} & \ \ \ \ \ \ \ Take a matrix row/column span \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::diag}{Mat::diag()}} & Take a matrix diagonal/create a diagonal matrix \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::diag}{m.diag(i)}} & Take a matrix diagonal \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#index-1245}{Mat::operator ()()}} & Take a submatrix \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#index-1245}{m(Range(i1,i2),Range(j1,j2)), m(roi)}} & \ \ \ \ \ \ \ \ \ \ \ \ \ Take a submatrix \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::repeat}{Mat::repeat()}} & Make a bigger matrix by repeating a smaller one \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html\#Mat::repeat}{m.repeat(ny,nx)}} & Make a bigger matrix from a smaller one \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-flip}{flip()}} & Reverse the order of matrix rows and/or columns \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-flip}{flip(src,dst,dir)}} & Reverse the order of matrix rows and/or columns \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-split}{split()}} & Split multi-channel matrix into separate channels \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-split}{split(...)}} & Split multi-channel matrix into separate channels \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-merge}{merge()}} & Make a multi-channel matrix out of the separate channels \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-merge}{merge(...)}} & Make a multi-channel matrix out of the separate channels \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-mixchannels}{mixChannels()}} & Generalized form of split() and merge() \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-mixchannels}{mixChannels(...)}} & Generalized form of split() and merge() \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-randshuffle}{randShuffle()}} & Randomly shuffle matrix elements \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-randshuffle}{randShuffle(...)}} & Randomly shuffle matrix elements \\
 
 \end{tabular}
 
@@ -300,7 +323,7 @@ Exa\=mple. \href{http://en.wikipedia.org/wiki/Alpha_compositing}{Alpha compositi
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-carttopolar}{cartToPolar()}},
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-polarToCart}{polarToCart()}}
 
--- the classical math functions + conversion of Cartesian to polar coordinates and back.
+-- the classical math functions.
 
 \item
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/operations_on_arrays.html\#cv-scaleadd}{scaleAdd()}},
@@ -325,15 +348,13 @@ Exa\=mple. \href{http://en.wikipedia.org/wiki/Alpha_compositing}{Alpha compositi
 
 \end{itemize}
 
-For many of the basic operations the alternative algebraic notation can be used, for example:
+For some operations a more convenient \href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html#matrix-expressions}{algebraic notation} can be used, for example:
 \begin{tabbing}
 \texttt{Mat}\={} \texttt{delta = (J.t()*J + lambda*}\\
 \>\texttt{Mat::eye(J.cols, J.cols, J.type())}\\
 \>\texttt{.inv(CV\_SVD)*(J.t()*err);}
 \end{tabbing}
 implements the core of Levenberg-Marquardt optimization algorithm.
-Please, see the \href{http://opencv.willowgarage.com/documentation/cpp/basic_structures.html#matrix-expressions}{Matrix Expressions Reference} for details.
-
 
 \section{Image Processsing}
 
@@ -341,17 +362,18 @@ Please, see the \href{http://opencv.willowgarage.com/documentation/cpp/basic_str
 
 \begin{tabular}{@{}p{\the\MyLen}%
                 @{}p{\linewidth-\the\MyLen}@{}}
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-filter2d}{filter2D()}} & Apply a non-separable linear filter to the image \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-filter2d}{filter2D()}} & Non-separable linear filter \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-sepfilter2d}{sepFilter2D()}} & Apply a separable linear filter to the image \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-sepfilter2d}{sepFilter2D()}} & Separable linear filter \\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-blur}{boxFilter()}},  \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-gaussianblur}{GaussianBlur()}},
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-medianblur}{medianBlur()}}
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-medianblur}{medianBlur()}},
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-bilateralfilter}{bilateralFilter()}}
 & Smooth the image with one of the linear or non-linear filters \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-sobel}{Sobel()}},  \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-scharr}{Scharr()}},
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-laplacian}{Laplacian()}}
-& Compute the first, second, third or mixed spatial image derivatives. \texttt{Laplacian()} computes $\Delta I = \frac{\partial ^ 2 I}{\partial x^2} + \frac{\partial ^ 2 I}{\partial y^2}$  \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-sobel}{Sobel()}},  \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-scharr}{Scharr()}}
+& Compute the spatial image derivatives \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-laplacian}{Laplacian()}} & compute Laplacian: $\Delta I = \frac{\partial ^ 2 I}{\partial x^2} + \frac{\partial ^ 2 I}{\partial y^2}$  \\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-erode}{erode()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/image_filtering.html\#cv-dilate}{dilate()}} & Erode or dilate the image \\
 
@@ -370,13 +392,13 @@ Exa\=mple. Filter image in-place with a 3x3 high-pass filter\\
                 @{}p{\linewidth-\the\MyLen}@{}}
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-resize}{resize()}} & Resize image \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-getrectsubpix}{getRectSubPix()}} & Extract an image patch with bilinear interpolation \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-getrectsubpix}{getRectSubPix()}} & Extract an image patch \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-warpaffine}{warpAffine()}} & Warp image using an affine transformation (rotation, scaling, shearing, reflection)\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-warpaffine}{warpAffine()}} & Warp image affinely\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-warpperspective}{warpPerspective()}} & Warp image using a perspective transformation\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-warpperspective}{warpPerspective()}} & Warp image perspectively\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-remap}{remap()}} & Generic image warping using the pre-computed maps\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-remap}{remap()}} & Generic image warping\\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/geometric_image_transformations.html\#cv-convertmaps}{convertMaps()}} & Optimize maps for a faster remap() execution\\
 
@@ -394,20 +416,19 @@ Example. Decimate image by factor of $\sqrt{2}$:\\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#cvtColor}{cvtColor()}} & Convert image from one color space to another \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#threshold}{threshold()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#adaptivethreshold}{adaptivethreshold()}} & Convert grayscale image to binary image using a fixed or a variable (location-dependent) threshold \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#threshold}{threshold()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#adaptivethreshold}{adaptivethreshold()}} & Convert grayscale image to binary image using a fixed or a variable threshold \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#floodfill}{floodFill()}} & Find a connected component starting from the specified seed point by region growing technique \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#floodfill}{floodFill()}} & Find a connected component using region growing algorithm\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#floodfill}{integral()}} & Compute integral image, used further for to compute cumulative characteristics over rectangular regions in O(1) time \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#floodfill}{integral()}} & Compute integral image \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#distancetransform}{distanceTransform()}},
- & build a distance map or a discrete Voronoi diagram from binary image. \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#distancetransform}{distanceTransform()}}
+ & build distance map or discrete Voronoi diagram for a binary image. \\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#floodfill}{watershed()}},
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html\#grabcut}{grabCut()}}
- & marker-based image segmentation algorithms. See
- See \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/watershed.cpp}{watershed.cpp}} and \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/grabcut.c}{grabcut.cpp}}
- samples.
+ & marker-based image segmentation algorithms.
+ See the samples \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/watershed.cpp}{watershed.cpp}} and \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/grabcut.c}{grabcut.cpp}}.
 
 \end{tabular}
 
@@ -416,11 +437,11 @@ Example. Decimate image by factor of $\sqrt{2}$:\\
 \begin{tabular}{@{}p{\the\MyLen}%
                 @{}p{\linewidth-\the\MyLen}@{}}
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#calchist}{calcHist()}} & Compute a histogram from one or more images \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#calchist}{calcHist()}} & Compute image(s) histogram \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#calcbackproject}{calcBackProject()}} & Compute histogram back-projection (the posterior probability map) for the images \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#calcbackproject}{calcBackProject()}} & Back-project the histogram \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#equalizehist}{equalizeHist()}} & Normalize image brightness and contrast by equalizing the image histogram\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#equalizehist}{equalizeHist()}} & Normalize image brightness and contrast\\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/histograms.html\#comparehist}{compareHist()}} & Compare two histograms\\
 
@@ -441,7 +462,7 @@ samples on what are the contours and how to use them.
 
 \section{Data I/O}
 
-XML/YAML storages are collections (possibly nested) of scalar values, structures and heterogeneous lists.
+\href{http://opencv.willowgarage.com/documentation/cpp/xml_yaml_persistence.html\#filestorage}{XML/YAML storages} are collections (possibly nested) of scalar values, structures and heterogeneous lists.
 
 \begin{tabbing}
 \textbf{Wr}\=\textbf{iting data to YAML (or XML)}\\
@@ -498,7 +519,7 @@ XML/YAML storages are collections (possibly nested) of scalar values, structures
 \texttt{Mat image\_grayscale\_copy = imread("myimage.jpg", 0);}\\
 \end{tabbing}
 
-\emph{The following formats are supported: \textbf{BMP (.bmp), JPEG (.jpg, .jpeg), TIFF (.tif, .tiff), PNG (.png), PBM/PGM/PPM (.p?m), Sun Raster (.sr), JPEG 2000 (.jp2)}. Every format supports 8-bit, 1- or 3-channel images. Some formats (PNG, JPEG 2000) support 16 bits per channel.}
+\emph{The functions can read/write images in the following formats: \textbf{BMP (.bmp), JPEG (.jpg, .jpeg), TIFF (.tif, .tiff), PNG (.png), PBM/PGM/PPM (.p?m), Sun Raster (.sr), JPEG 2000 (.jp2)}. Every format supports 8-bit, 1- or 3-channel images. Some formats (PNG, JPEG 2000) support 16 bits per channel.}
 
 \begin{tabbing}
 \textbf{Re}\=\textbf{ading video from a file or from a camera}\\
@@ -516,17 +537,17 @@ XML/YAML storages are collections (possibly nested) of scalar values, structures
 \begin{tabular}{@{}p{\the\MyLen}%
                 @{}p{\linewidth-\the\MyLen}@{}}
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-namedwindow}{namedWindow()}} & Create window with the specified name \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-namedwindow}{namedWindow(winname,flags)}} & \ \ \ \ \ \ \ \ \ \ Create named highgui window \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-destroywindow}{destroyWindow()}} & Destroy the specified window \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-destroywindow}{destroyWindow(winname)}} & \ \ \ Destroy the specified window \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-imshow}{imshow()}} & Show image in the window \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-imshow}{imshow(winname, mtx)}} & Show image in the window \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-waitKey}{waitKey()}} & Wait for a key press during the specified time interval (or forever). Process events while waiting. \emph{Do not forget to call this function several times a second in your code.} \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-waitKey}{waitKey(delay)}} & Wait for a key press during the specified time interval (or forever). Process events while waiting. \emph{Do not forget to call this function several times a second in your code.} \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-createTrackbar}{createTrackbar()}} & Add trackbar (slider) to the specified window \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-createTrackbar}{createTrackbar(...)}} & Add trackbar (slider) to the specified window \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-setmousecallback}{setMouseCallback()}} & Set the callback on mouse clicks and movements in the specified window \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/user_interface.html\#cv-setmousecallback}{setMouseCallback(...)}} & \ \ Set the callback on mouse clicks and movements in the specified window \\
 
 \end{tabular}
 
@@ -537,38 +558,40 @@ See \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/camshif
 \begin{tabular}{@{}p{\the\MyLen}%
                 @{}p{\linewidth-\the\MyLen}@{}}
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-calibratecamera}{calibrateCamera()}} & Calibrate monocular camera from multiple known projections of a calibration pattern feature points collected from several views. \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-calibratecamera}{calibrateCamera()}} & Calibrate camera from several views of a calibration pattern. \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-findchessboardcorners}{findChessboardCorners()}} & \ \ \ \ \ \ Find feature points on the checkerboard calibration pattern with known geometry. \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-findchessboardcorners}{findChessboardCorners()}} & \ \ \ \ \ \ Find feature points on the checkerboard calibration pattern. \\
 
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-solvepnp}{solvePnP()}} & Find the object pose from the known projections of its feature points. \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-stereocalibrate}{stereoCalibrate()}} & Calibrate stereo camera using several stereo views of a calibration pattern. \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-stereocalibrate}{stereoCalibrate()}} & Calibrate stereo camera. \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-stereorectify}{stereoRectify()}} & Compute the rectification transforms for a stereo camera and the visible area on the rectified images. Camera must be calibrated first using stereoCalibrate().\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-stereorectify}{stereoRectify()}} & Compute the rectification transforms for a calibrated stereo camera.\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-initundistortrectifymap}{initUndistortRectifyMap()}} & \ \ \ \ \ \ Compute rectification map (for \texttt{remap()}) for each head of a stereo camera. Must be called twice, for each head, after \texttt{stereoRectify()}.\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-initundistortrectifymap}{initUndistortRectifyMap()}} & \ \ \ \ \ \ Compute rectification map (for \texttt{remap()}) for each stereo camera head.\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-StereoBM}{StereoBM}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-StereoSGBM}{StereoSGBM}} & The two primary stereo correspondence algorithms in OpenCV. They work on the rectified images.\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-StereoBM}{StereoBM}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-StereoSGBM}{StereoSGBM}} & The stereo correspondence engines to be run on rectified stereo pairs.\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-reprojectimageto3d}{reprojectImageTo3D()}} & Convert the disparity map, computed by \texttt{StereoBM::operator ()} or \texttt{StereoSGBM::operator ()} to the 3D point cloud.\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-reprojectimageto3d}{reprojectImageTo3D()}} & Convert disparity map to 3D point cloud.\\
+
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/camera_calibration_and_3d_reconstruction.html\#cv-findhomography}{findHomography()}} & Find best-fit perspective transformation between two 2D point sets. \\
 
 \end{tabular}
 
 To calibrate a camera, you can use \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/calibration.cpp}{calibration.cpp}} or
 \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/stereo\_calib.cpp}{stereo\_calib.cpp}} samples.
-To run stereo correspondence and optionally get the point clouds, you can use
+To get the disparity maps and the point clouds, use
 \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/stereo\_match.cpp}{stereo\_match.cpp}} sample.
 
 \section{Object Detection}
 
 \begin{tabular}{@{}p{\the\MyLen}%
                 @{}p{\linewidth-\the\MyLen}@{}}
-                \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/object_detection.html\#matchTemplate}{matchTemplate}} & Primitive Viola's Cascade of Boosted classifiers using Haar or LBP features. Detects objects by sliding a window and running the cascade on them. Suits for detecting faces, facial features and some other objects without diverse textures.\\
+                \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/object_detection.html\#matchTemplate}{matchTemplate}} & Compute proximity map for given template.\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/object_detection.html\#CascadeClassifier}{CascadeClassifier}} & Viola's Cascade of Boosted classifiers using Haar or LBP features. Detects objects by sliding a window and running the cascade on them. Suits for detecting faces, facial features and some other objects without diverse textures. See \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/facedetect.cpp}{facedetect.cpp}}\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/object_detection.html\#CascadeClassifier}{CascadeClassifier}} & Viola's Cascade of Boosted classifiers using Haar or LBP features. Suits for detecting faces, facial features and some other objects without diverse textures. See \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/facedetect.cpp}{facedetect.cpp}}\\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/object_detection.html\#HOGDescriptor}{HOGDescriptor}} & N. Dalal's object detector using Histogram-of-Oriented-Gradients (HOG) features. Detects objects by sliding a window and running SVM classifier on them. Suits for detecting people, cars and other objects with well-defined silhouettes. See \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/peopledetect.cpp}{peopledetect.cpp}}\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/object_detection.html\#HOGDescriptor}{HOGDescriptor}} & N. Dalal's object detector using Histogram-of-Oriented-Gradients (HOG) features. Suits for detecting people, cars and other objects with well-defined silhouettes. See \texttt{\href{https://code.ros.org/svn/opencv/trunk/opencv/samples/c/peopledetect.cpp}{peopledetect.cpp}}\\
 
 \end{tabular}
 
