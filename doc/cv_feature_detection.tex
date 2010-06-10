@@ -1236,7 +1236,7 @@ protected:
 Detect keypoints in an image.
 
 \cvdefCpp{
-void detect( const Mat\& image, vector<KeyPoint>\& keypoints, const Mat\& mask=Mat() ) const;
+void FeatureDetector::detect( const Mat\& image, vector<KeyPoint>\& keypoints, const Mat\& mask=Mat() ) const;
 }
 
 \begin{description}
@@ -1249,7 +1249,7 @@ void detect( const Mat\& image, vector<KeyPoint>\& keypoints, const Mat\& mask=M
 Read feature detector from file node.
 
 \cvdefCpp{
-void read( const FileNode\& fn );
+void FeatureDetector::read( const FileNode\& fn );
 }
 
 \begin{description}
@@ -1260,7 +1260,7 @@ void read( const FileNode\& fn );
 Write feature detector to file storage.
 
 \cvdefCpp{
-void write( FileStorage\& fs ) const;
+void FeatureDetector::write( FileStorage\& fs ) const;
 }
 
 \begin{description}
@@ -1276,7 +1276,7 @@ class FastFeatureDetector : public FeatureDetector
 public:
     FastFeatureDetector( int _threshold = 1, bool _nonmaxSuppression = true );
     
-	virtual void read (const FileNode& fn);
+    virtual void read (const FileNode& fn);
     virtual void write (FileStorage& fs) const;
     
 protected:
@@ -1331,7 +1331,7 @@ class StarFeatureDetector : public FeatureDetector
 {
 public:
     StarFeatureDetector( int maxSize=16, int responseThreshold=30, 
-				         int lineThresholdProjected = 10,
+			 int lineThresholdProjected = 10,
                          int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
     
     virtual void read (const FileNode& fn);
@@ -1409,7 +1409,7 @@ descriptors as a \cvCppCross{Mat}, where each row is one keypoint descriptor.
 Compute the descriptors for a set of keypoints in an image. Must be implemented by the subclass.
 
 \cvdefCpp{
-void compute( const Mat\& image, vector<KeyPoint>\& keypoints, Mat\& descriptors ) const;
+void DescriptorExtractor::compute( const Mat\& image, vector<KeyPoint>\& keypoints, Mat\& descriptors ) const;
 }
 
 \begin{description}
@@ -1422,7 +1422,7 @@ void compute( const Mat\& image, vector<KeyPoint>\& keypoints, Mat\& descriptors
 Read descriptor extractor from file node.
 
 \cvdefCpp{
-void read( const FileNode\& fn );
+void DescriptorExtractor::read( const FileNode\& fn );
 }
 
 \begin{description}
@@ -1433,7 +1433,7 @@ void read( const FileNode\& fn );
 Write descriptor extractor to file storage.
 
 \cvdefCpp{
-void write( FileStorage\& fs ) const;
+void DescriptorExtractor::write( FileStorage\& fs ) const;
 }
 
 \begin{description}
@@ -1454,7 +1454,9 @@ public:
 	     int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
 	     int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
 	     int angleMode=SIFT::CommonParams::FIRST_ANGLE );
+
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+
     virtual void read (const FileNode &fn);
     virtual void write (FileStorage &fs) const;
 protected:
@@ -1471,7 +1473,9 @@ class SurfDescriptorExtractor : public DescriptorExtractor
 public:
     SurfDescriptorExtractor( int nOctaves=4,
                              int nOctaveLayers=2, bool extended=false );
+
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+
     virtual void read (const FileNode &fn);
     virtual void write (FileStorage &fs) const;
    
@@ -1491,8 +1495,8 @@ public:
     // Index the descriptors training set.
     void index();
     void match( const Mat& query, vector<int>& matches ) const;
-	void match( const Mat& query, const Mat& mask,
-	            vector<int>& matches ) const;
+    void match( const Mat& query, const Mat& mask,
+	        vector<int>& matches ) const;
     virtual void clear();
 protected:
    ...
@@ -1503,7 +1507,7 @@ protected:
 Add descriptors to the training set.
 
 \cvdefCpp{
-void add( const Mat\& descriptors );
+void DescriptorMatcher::add( const Mat\& descriptors );
 }
 
 \begin{description}
@@ -1516,10 +1520,10 @@ of this method the mask is used to describe which descriptors can be matched.
 \texttt{descriptors\_1[i]} can be matched with \texttt{descriptors\_2[j]} only if \texttt{mask.at<char>(i,j)} is non-zero.
 
 \cvdefCpp{
-void match( const Mat\& query, vector<int>\& matches ) const;
+void DescriptorMatcher::match( const Mat\& query, vector<int>\& matches ) const;
 }
 \cvdefCpp{
-void match( const Mat\& query, const Mat\& mask,
+void DescriptorMatcher::match( const Mat\& query, const Mat\& mask,
             vector<int>\& matches ) const;
 }
 
@@ -1533,7 +1537,7 @@ void match( const Mat\& query, const Mat\& mask,
 Clear training keypoints.
 
 \cvdefCpp{
-void clear();
+void DescriptorMatcher::clear();
 }
 
 \cvclass{BruteForceMatcher}
@@ -1546,6 +1550,7 @@ class BruteForceMatcher : public DescriptorMatcher
 {
 public:
     BruteForceMatcher( Distance d = Distance() ) : distance(d) {}
+
 protected:
     ...
 }
@@ -1641,7 +1646,7 @@ public:
                         vector<int>& indices ) = 0;
     
     virtual void clear();
-	virtual void read( const FileNode& fn );
+    virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;
     
 protected:
@@ -1654,7 +1659,7 @@ Adds keypoints to the training set (descriptors are supposed to be calculated he
 Keypoints can be passed using \cvCppCross{KeyPointCollection} (with with corresponding images) or as a vector of \cvCppCross{KeyPoint} from a single image.
 
 \cvdefCpp{
-void add( KeyPointCollection\& keypoints );
+void GenericDescriptorMatch::add( KeyPointCollection\& keypoints );
 }
 
 \begin{description}
@@ -1663,7 +1668,7 @@ void add( KeyPointCollection\& keypoints );
 
 
 \cvdefCpp{
-void add( const Mat\& image, vector<KeyPoint>\& points );
+void GenericDescriptorMatch::add( const Mat\& image, vector<KeyPoint>\& points );
 }
 
 \begin{description}
@@ -1675,7 +1680,7 @@ void add( const Mat\& image, vector<KeyPoint>\& points );
 Classifies test keypoints.
 
 \cvdefCpp{
-void classify( const Mat\& image, vector<KeyPoint>\& points );
+void GenericDescriptorMatch::classify( const Mat\& image, vector<KeyPoint>\& points );
 }
 
 \begin{description}
@@ -1687,7 +1692,7 @@ void classify( const Mat\& image, vector<KeyPoint>\& points );
 Matches test keypoints to the training set.
 
 \cvdefCpp{
-void match( const Mat\& image, vector<KeyPoint>\& points, vector<int>\& indices );
+void GenericDescriptorMatch::match( const Mat\& image, vector<KeyPoint>\& points, vector<int>\& indices );
 }
 
 \begin{description}
@@ -1700,21 +1705,21 @@ void match( const Mat\& image, vector<KeyPoint>\& points, vector<int>\& indices 
 Clears keypoints storing in collection
 
 \cvdefCpp{
-void clear();
+void GenericDescriptorMatch::clear();
 }
 
 \cvCppFunc{GenericDescriptorMatch::read}
 Reads match object from a file node
     
 \cvdefCpp{
-void read( const FileNode\& fn );
+void GenericDescriptorMatch::read( const FileNode\& fn );
 }
 
 \cvCppFunc{GenericDescriptorMatch::write}
 Writes match object to a file storage
     
 \cvdefCpp{
-virtual void write( FileStorage\& fs ) const;
+void GenericDescriptorMatch::write( FileStorage\& fs ) const;
 }
 
 \cvclass{VectorDescriptorMatch}
@@ -1729,20 +1734,20 @@ public:
                            const Matcher& _matcher = Matcher() );
     ~VectorDescriptorMatch();
 
-	// Builds flann index
+    // Builds flann index
     void index();
 
-	// Calculates descriptors for a set of keypoints from a single image
+    // Calculates descriptors for a set of keypoints from a single image
     virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
 
     // Matches a set of keypoints with the training set
     virtual void match( const Mat& image, vector<KeyPoint>& points, 
                         vector<int>& keypointIndices );
 
-	// Clears object (i.e. storing keypoints)
+    // Clears object (i.e. storing keypoints)
     virtual void clear();
 
-	// Reads object from file node
+    // Reads object from file node
     virtual void read (const FileNode& fn);
     // Writes object to file storage
     virtual void write (FileStorage& fs) const;
