@@ -401,8 +401,10 @@ int main(int argc, char** argv)
                 fclose(f);
             }
             
-            imwrite(path, selectedObjFrame(r));
-            fprintf(fframes, "%s%04d.jpg", outbarename, frameIdx);
+            imwrite(path, selectedObjFrame(r&Rect(0,0,selectedObjFrame.cols,selectedObjFrame.rows)));
+            fprintf(fframes, "%s%04d.jpg (%.4f %.4f %.4f) (%.4f %.4f %.4f)", outbarename, frameIdx,
+                    rvec.at<double>(0,0), rvec.at<double>(1,0), rvec.at<double>(2,0),
+                    tvec.at<double>(0,0), tvec.at<double>(1,0), tvec.at<double>(2,0));
             for( int i = 0; i < 8; i++ )
                 fprintf(fframes, " (%.2f %.2f %.2f)", objpts[i].x, objpts[i].y, objpts[i].z);
             fprintf(fframes, "\n");
