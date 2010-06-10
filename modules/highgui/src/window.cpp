@@ -47,9 +47,10 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 {
 	switch(prop_id)
 	{
+		//change between fullscreen or not.
 		case CV_WND_PROP_FULLSCREEN://accept CV_WINDOW_NORMAL or CV_WINDOW_FULLSCREEN 
 		
-			if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bag argument
+			if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
 				break;
 		
 			#if   defined WIN32 || defined _WIN32 
@@ -57,6 +58,8 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 			#elif defined (HAVE_GTK)
 			cvChangeMode_GTK(name,prop_value);
 			#elif defined (HAVE_CARBON)
+			cvChangeMode_CARBON(name,prop_value);
+			#elif defined (HAVE_QT)
 			cvChangeMode_QT(name,prop_value);
 			#endif
 		break;
@@ -84,6 +87,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 			#elif defined (HAVE_GTK)
 				return cvGetMode_GTK(name);
 			#elif defined (HAVE_CARBON)
+				return cvGetMode_CARBON(name);
+			#elif defined (HAVE_QT)
 				return cvGetMode_QT(name);
             #else
                 return -1;
