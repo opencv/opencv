@@ -13,8 +13,8 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/modules/legacy/include"
     )
 
-set(traincascade_libs opencv_core opencv_ml opencv_imgproc opencv_objdetect opencv_highgui opencv_haartraining_engine)
-link_libraries(${traincascade_libs})
+set(traincascade_libs opencv_core opencv_ml opencv_imgproc
+    opencv_objdetect opencv_highgui opencv_haartraining_engine)
 
 set(traincascade_files traincascade.cpp
     cascadeclassifier.cpp cascadeclassifier.h
@@ -22,14 +22,15 @@ set(traincascade_files traincascade.cpp
     haarfeatures.cpp haarfeatures.h
     lbpfeatures.cpp lbpfeatures.h
     imagestorage.cpp imagestorage.h)
-    
-add_executable(traincascade ${traincascade_files})
 
-add_dependencies(traincascade ${traincascade_libs})
-set_target_properties(traincascade PROPERTIES
+set(the_target opencv_traincascade)    
+add_executable(${the_target} ${traincascade_files})
+
+add_dependencies(${the_target} ${traincascade_libs})
+set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
                       OUTPUT_NAME "opencv_traincascade")
 
-target_link_libraries(traincascade ${traincascade_libs})
+target_link_libraries(${the_target} ${traincascade_libs})
 
-install(TARGETS traincascade RUNTIME DESTINATION bin COMPONENT main)
+install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)

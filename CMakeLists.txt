@@ -1239,6 +1239,9 @@ else()
 message(STATUS "    Use TBB:                   NO")
 endif()
 
+message(STATUS "")
+message(STATUS "  Documentation: ")
+
 if(BUILD_LATEX_DOCS AND PDFLATEX_COMPILER)
 message(STATUS "    Build PDF                  YES")
 else()
