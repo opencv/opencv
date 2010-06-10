@@ -3170,7 +3170,8 @@ void cv::projectPoints( const Mat& opoints,
     CvMat _objectPoints = opoints, _imagePoints = Mat(ipoints);
     CvMat _rvec = rvec, _tvec = tvec, _cameraMatrix = cameraMatrix, _distCoeffs = distCoeffs;
     
-    cvProjectPoints2( &_objectPoints, &_rvec, &_tvec, &_cameraMatrix, &_distCoeffs,
+    cvProjectPoints2( &_objectPoints, &_rvec, &_tvec, &_cameraMatrix,
+                     distCoeffs.data ? &_distCoeffs : 0,
                      &_imagePoints, 0, 0, 0, 0, 0, 0 );
 }
 
@@ -3219,7 +3220,8 @@ void cv::solvePnP( const Mat& opoints, const Mat& ipoints,
     CvMat _cameraMatrix = cameraMatrix, _distCoeffs = distCoeffs;
     CvMat _rvec = rvec, _tvec = tvec;
     cvFindExtrinsicCameraParams2(&_objectPoints, &_imagePoints, &_cameraMatrix,
-                                 &_distCoeffs, &_rvec, &_tvec, useExtrinsicGuess );
+                                 distCoeffs.data ? &_distCoeffs : 0,
+                                 &_rvec, &_tvec, useExtrinsicGuess );
 }
 
 
