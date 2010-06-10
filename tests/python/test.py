@@ -464,6 +464,11 @@ class FunctionTests(OpenCVTests):
         scratch = cv.CreateImage((800,800), 8, 1)
         cv.SetZero(scratch)
         seq = cv.FindContours(scratch, storage, cv.CV_RETR_TREE, cv.CV_CHAIN_APPROX_SIMPLE)
+        x = len(seq)
+        if seq:
+            pass
+        for s in seq:
+            pass
 
         for trial in range(10):
             scratch = cv.CreateImage((800,800), 8, 1)
