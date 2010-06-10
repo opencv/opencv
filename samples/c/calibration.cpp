@@ -226,6 +226,8 @@ int main( int argc, char** argv )
     int mode = DETECTION;
     int undistort_image = 0;
     CvSize img_size = {0,0};
+    int cameraId = 0;
+    
     const char* live_capture_help = 
         "When the live video from camera is used as input, the following hot-keys may be used:\n"
             "  <ESC>, 'q' - quit the program\n"
@@ -318,7 +320,12 @@ int main( int argc, char** argv )
             out_filename = argv[++i];
         }
         else if( s[0] != '-' )
-            input_filename = s;
+        {
+			if( isdigit(s[0]) )
+				sscanf(s, "%d", &cameraId);
+			else
+				input_filename = s;
+		}
         else
             return fprintf( stderr, "Unknown option %s", s ), -1;
     }
@@ -336,7 +343,7 @@ int main( int argc, char** argv )
         mode = CAPTURING;
     }
     else
-        capture = cvCreateCameraCapture(0);
+        capture = cvCreateCameraCapture(cameraId);
 
     if( !capture && !f )
         return fprintf( stderr, "Could not initialize video capture\n" ), -2;
