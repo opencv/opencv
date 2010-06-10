@@ -29,8 +29,12 @@ if (BUILD_EXAMPLES)
     MACRO(MY_DEFINE_EXAMPLE name srcs)
         add_executable(${name} ${srcs})
         set_target_properties(${name} PROPERTIES PROJECT_LABEL "(EXAMPLE) ${name}")
-        add_dependencies(${name} opencv_core opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_features2d opencv_calib3d opencv_contrib)
-        target_link_libraries(${name} ${OPENCV_LINKER_LIBS} opencv_core opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_features2d opencv_calib3d opencv_contrib)
+        add_dependencies(${name} opencv_core opencv_imgproc
+            opencv_highgui opencv_ml opencv_video opencv_objdetect
+            opencv_features2d opencv_calib3d opencv_contrib)
+        target_link_libraries(${name} ${OPENCV_LINKER_LIBS} opencv_core
+            opencv_imgproc opencv_highgui opencv_ml opencv_video
+            opencv_objdetect opencv_features2d opencv_calib3d opencv_contrib)
 
         if(WIN32)
             install(TARGETS ${name}
@@ -38,6 +42,7 @@ if (BUILD_EXAMPLES)
         endif()
     ENDMACRO(MY_DEFINE_EXAMPLE)
     
+    MY_DEFINE_EXAMPLE(select3dobj  select3dobj.cpp)
     MY_DEFINE_EXAMPLE(connected_components  connected_components.cpp)
     MY_DEFINE_EXAMPLE(contours2  contours2.cpp)
     MY_DEFINE_EXAMPLE(keypoints_matching  keypoints_matching.cpp)
