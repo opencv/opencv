@@ -164,9 +164,11 @@ CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
 //Yannick Verdie 2010                                 
 double cvGetMode_W32(const char* name);
 double cvGetMode_GTK(const char* name);
+double cvGetMode_CARBON(const char* name);
 double cvGetMode_QT(const char* name);
 void cvChangeMode_W32(const char* name, double prop_value);
 void cvChangeMode_GTK(const char* name, double prop_value);
+void cvChangeMode_CARBON(const char* name, double prop_value);
 void cvChangeMode_QT(const char* name, double prop_value);
 
 /*namespace cv
