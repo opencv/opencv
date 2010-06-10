@@ -17,21 +17,20 @@ inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
     return Point2f( numeric_limits<double>::max(), numeric_limits<double>::max() );
 }
 
-Mat warpPerspectiveRand( const Mat& src, Mat& dst, RNG* rng )
+void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG* rng )
 {
-    Mat H(3, 3, CV_32FC1);
+    H.create(3, 3, CV_32FC1);
     H.at<float>(0,0) = rng->uniform( 0.8f, 1.2f);
     H.at<float>(0,1) = rng->uniform(-0.1f, 0.1f);
     H.at<float>(0,2) = rng->uniform(-0.1f, 0.1f)*src.cols;
     H.at<float>(1,0) = rng->uniform(-0.1f, 0.1f);
     H.at<float>(1,1) = rng->uniform( 0.8f, 1.2f);
-    H.at<float>(1,2) = rng->uniform(-0.1f, 0.3f)*src.rows;
+    H.at<float>(1,2) = rng->uniform(-0.1f, 0.1f)*src.rows;
     H.at<float>(2,0) = rng->uniform( -1e-4f, 1e-4f);
     H.at<float>(2,1) = rng->uniform( -1e-4f, 1e-4f);
-    H.at<float>(2,2) = rng->uniform( 0.8f, 1.1f);
+    H.at<float>(2,2) = rng->uniform( 0.8f, 1.2f);
 
     warpPerspective( src, dst, H, src.size() );
-    return H;
 }
 
 FeatureDetector* createDetector( const string& detectorType )
@@ -67,35 +66,48 @@ FeatureDetector* createDetector( const string& detectorType )
                                               3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
     }
     else
-        assert(0);
+    {
+        //CV_Error( CV_StsBadArg, "unsupported feature detector type");
+    }
     return fd;
 }
 
-GenericDescriptorMatch* createDescriptorMatch( const string& descriptorType )
+DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType )
 {
-    GenericDescriptorMatch* de = 0;
-    if( !descriptorType.compare( "SIFT" ) )
+    DescriptorExtractor* de = 0;
+    if( !descriptorExtractorType.compare( "SIFT" ) )
     {
-        SiftDescriptorExtractor extractor/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(),
+        de = new SiftDescriptorExtractor/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(),
                              bool isNormalize=true, bool recalculateAngles=true,
                              int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
                              int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
                              int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
                              int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/;
-        BruteForceMatcher<L2<float> > matcher;
-        de = new VectorDescriptorMatch<SiftDescriptorExtractor, BruteForceMatcher<L2<float> > >(extractor, matcher);
-
     }
-    else if( !descriptorType.compare( "SURF" ) )
+    else if( !descriptorExtractorType.compare( "SURF" ) )
     {
-        SurfDescriptorExtractor extractor/*( int nOctaves=4,
-                             int nOctaveLayers=2, bool extended=false )*/;
-        BruteForceMatcher<L2<float> > matcher;
-        de = new VectorDescriptorMatch<SurfDescriptorExtractor, BruteForceMatcher<L2<float> > >(extractor, matcher);
+        de = new SurfDescriptorExtractor/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/;
     }
     else
-        assert(0);
+    {
+        //CV_Error( CV_StsBadArg, "unsupported descriptor extractor type");
+    }
     return de;
+}
+
+DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType )
+{
+    DescriptorMatcher* dm = 0;
+    if( !descriptorMatcherType.compare( "BruteForce" ) )
+    {
+        dm = new BruteForceMatcher<L2<float> >();
+    }
+    else
+    {
+        //CV_Error( CV_StsBadArg, "unsupported descriptor matcher type");
+    }
+
+    return dm;
 }
 
 void drawCorrespondences( const Mat& img1, const Mat& img2,
@@ -149,8 +161,10 @@ void drawCorrespondences( const Mat& img1, const Mat& img2,
 
 const string winName = "correspondences";
 
-void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective, vector<KeyPoint>& keypoints1,
-                  Ptr<FeatureDetector>& detector, Ptr<GenericDescriptorMatch>& descriptor,
+void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
+                  const vector<KeyPoint>& keypoints1, const Mat& descriptors1,
+                  Ptr<FeatureDetector>& detector, Ptr<DescriptorExtractor>& descriptorExtractor,
+                  Ptr<DescriptorMatcher>& descriptorMatcher,
                   double ransacReprojThreshold = -1, RNG* rng = 0 )
 {
     assert( !img1.empty() );
@@ -158,31 +172,33 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective, vector<Key
     if( isWarpPerspective )
     {
         assert( rng );
-        H12 = warpPerspectiveRand(img1, img2, rng);
+        warpPerspectiveRand(img1, img2, H12, rng);
     }
     else
-        assert( !img2.empty() && img2.cols==img1.cols && img2.rows== img1.rows );
+        assert( !img2.empty() && img2.cols==img1.cols && img2.rows==img1.rows );
 
     cout << endl << "< Extracting keypoints from second image..." << endl;
     vector<KeyPoint> keypoints2;
     detector->detect( img2, keypoints2 );
     cout << keypoints2.size() << " >" << endl;
 
-    cout << "< Computing and matching descriptors..." << endl;
+    cout << "< Computing descriptors for keypoints from second image..." << endl;
+    Mat descriptors2;
+    descriptorExtractor->compute( img2, keypoints2, descriptors2 );
+    cout << " >" << endl;
+
+    cout << "< Matching descriptors..." << endl;
     vector<int> matches;
-    //if( keypoints1.size()>0 && keypoints2.size()>0 )
-    {
-        descriptor->clear();
-        descriptor->add( img2, keypoints2 );
-        descriptor->match( img1, keypoints1, matches );
-    }
+    descriptorMatcher->clear();
+    descriptorMatcher->add( descriptors2 );
+    descriptorMatcher->match( descriptors1, matches );
     cout << ">" << endl;
 
     if( !isWarpPerspective && ransacReprojThreshold >= 0 )
     {
         cout << "< Computing homography (RANSAC)..." << endl;
         vector<Point2f> points1(matches.size()), points2(matches.size());
-        for( int i = 0; i < matches.size(); i++ )
+        for( size_t i = 0; i < matches.size(); i++ )
         {
             points1[i] = keypoints1[i].pt;
             points2[i] = keypoints2[matches[i]].pt;
@@ -206,21 +222,22 @@ int main(int argc, char** argv)
         cout << "case2: both images are given. If ransacReprojThreshold>=0 then homography matrix are calculated" << endl;
         cout << argv[0] << " [detectorType] [descriptorType] [image1] [image2] [ransacReprojThreshold]" << endl;
         cout << endl << "Mathes are filtered using homography matrix in case1 and case2 (if ransacReprojThreshold>=0)" << endl;
-        return 0;
+        return -1;
     }
     bool isWarpPerspective = argc == 4;
     double ransacReprojThreshold = -1;
     if( !isWarpPerspective )
         ransacReprojThreshold = atof(argv[5]);
 
-    cout << "< Creating detector, descriptor..." << endl;
-    Ptr<FeatureDetector> detector = createDetector(argv[1]);
-    Ptr<GenericDescriptorMatch> descriptor = createDescriptorMatch(argv[2]);
+    cout << "< Creating detector, descriptor extractor and descriptor matcher ..." << endl;
+    Ptr<FeatureDetector> detector = createDetector( argv[1] );
+    Ptr<DescriptorExtractor> descriptorExtractor = createDescriptorExtractor( argv[2] );
+    Ptr<DescriptorMatcher> descriptorMatcher = createDescriptorMatcher( "BruteForce" );
     cout << ">" << endl;
-    if( detector.empty() || descriptor.empty() )
+    if( detector.empty() || descriptorExtractor.empty() || descriptorMatcher.empty()  )
     {
-		cout << "Can not create detector or descriptor or matcher of given types" << endl;
-		return 0;
+        cout << "Can not create detector or descriptor exstractor or descriptor matcher of given types" << endl;
+        return -1;
 	}
 		
     cout << "< Reading the images..." << endl;
@@ -231,7 +248,7 @@ int main(int argc, char** argv)
     if( img1.empty() || (!isWarpPerspective && img2.empty()) )
     {
         cout << "Can not read images" << endl;
-        return 0;
+        return -1;
     }
 
     cout << endl << "< Extracting keypoints from first image..." << endl;
@@ -239,9 +256,16 @@ int main(int argc, char** argv)
     detector->detect( img1, keypoints1 );
     cout << keypoints1.size() << " >" << endl;
 
+    cout << "< Computing descriptors for keypoints from first image..." << endl;
+    Mat descriptors1;
+    descriptorExtractor->compute( img1, keypoints1, descriptors1 );
+    cout << " >" << endl;
+
     namedWindow(winName, 1);
     RNG rng;
-    doIteration( img1, img2, isWarpPerspective, keypoints1, detector, descriptor, ransacReprojThreshold, &rng );
+    doIteration( img1, img2, isWarpPerspective, keypoints1, descriptors1,
+                 detector, descriptorExtractor, descriptorMatcher,
+                 ransacReprojThreshold, &rng );
     for(;;)
     {
         char c = (char)cvWaitKey(0);
@@ -252,8 +276,11 @@ int main(int argc, char** argv)
         }
         else if( isWarpPerspective )
         {
-            doIteration( img1, img2, isWarpPerspective, keypoints1, detector, descriptor, ransacReprojThreshold, &rng );
+            doIteration( img1, img2, isWarpPerspective, keypoints1, descriptors1,
+                         detector, descriptorExtractor, descriptorMatcher,
+                         ransacReprojThreshold, &rng );
         }
     }
     waitKey(0);
+    return 0;
 }
