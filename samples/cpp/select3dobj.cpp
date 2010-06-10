@@ -341,7 +341,8 @@ int main(int argc, char** argv)
             tempobj[6] = tempobj[2] + Point3f(0,0,Z);
             tempobj[7] = tempobj[3] + Point3f(0,0,Z);
             
-            projectPoints(Mat(tempobj), rvec, tvec, calibrated.cameraMatrix, Mat(), tempimg);
+            projectPoints(Mat(tempobj), rvec, tvec, calibrated.cameraMatrix,
+                          calibrated.distCoeffs, tempimg);
 
             if( npt == 0 && nobjpt == 0 )
                 nOutlinePt = 0;
