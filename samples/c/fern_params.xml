@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<opencv_storage>
+    <nclasses>0</nclasses>
+    <patchSize>31</patchSize>
+    <signatureSize>INT_MAX</signatureSize>
+    <nstructs>50</nstructs>
+    <structSize>9</structSize>
+    <nviews>1000</nviews>
+    <compressionMethod>0</compressionMethod>
+</opencv_storage>

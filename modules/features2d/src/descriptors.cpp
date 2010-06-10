@@ -226,6 +226,38 @@ void GenericDescriptorMatch::clear()
 {
     collection.clear();
 }
+
+GenericDescriptorMatch* GenericDescriptorMatch::CreateDescriptorMatch( const string &alg_name, const string &params_filename )
+{
+    GenericDescriptorMatch *descriptorMatch = 0;
+    if( ! alg_name.compare ("one_way") )
+    {
+        descriptorMatch = new OneWayDescriptorMatch ();
+    }
+    else if( ! alg_name.compare ("fern") )
+    {
+        FernDescriptorMatch::Params params;
+        params.signatureSize = INT_MAX;
+        descriptorMatch = new FernDescriptorMatch (params);
+    }
+    else if( ! alg_name.compare ("calonder") )
+    {
+        descriptorMatch = new CalonderDescriptorMatch ();
+    }
+
+    if( !params_filename.empty() && descriptorMatch != 0 )
+    {
+        FileStorage fs = FileStorage( params_filename, FileStorage::READ );
+        if( fs.isOpened() )
+        {
+            descriptorMatch->read( fs.root() );
+            fs.release();
+        }
+    }
+
+    return descriptorMatch;
+}
+
 /****************************************************************************************\
 *                                OneWayDescriptorMatch                                  *
 \****************************************************************************************/

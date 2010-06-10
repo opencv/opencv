@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<opencv_storage>
+    <numTrees>20</numTrees>
+    <depth>7</depth>
+    <views>1000</views>
+    <patchSize>20</patchSize>
+    <reducedNumDim>30</reducedNumDim>
+    <numQuantBits>4</numQuantBits>
+    <printStatus>1</printStatus>
+</opencv_storage>

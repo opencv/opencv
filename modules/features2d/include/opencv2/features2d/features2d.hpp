@@ -1751,6 +1751,8 @@ public:
     // Writes match object to a file storage
     virtual void write( FileStorage& fs ) const {};
     
+    static GenericDescriptorMatch* CreateDescriptorMatch( const string &alg_name, const string &params_filename = string () );
+
 protected:
     KeyPointCollection collection;
 };
