@@ -1212,7 +1212,15 @@ There is fast multi-scale Hessian keypoint detector that can be used to find the
 The function can be used for object tracking and localization, image stitching etc. See the
 \texttt{find\_obj.cpp} demo in OpenCV samples directory.
 
-\subsection{Common Interfaces for Feature Detection and Descriptor Extraction}
+\section{Common Interfaces for Feature Detection and Descriptor Extraction}
+Both detectors and descriptors in OpenCV have wrappers with common interface that enables to switch easily 
+between different algorithms solving the same problem. All objects that implement keypoint detectors inherit 
+FeatureDetector interface. Descriptors that are represented as vectors in a multidimensional space can be 
+computed with DescriptorExtractor interface. DescriptorMatcher interface can be used to find matches between 
+two sets of descriptors. GenericDescriptorMatch is a more generic interface for descriptors. It does not make any 
+assumptions about descriptor representation. Every descriptor with DescriptorExtractor interface has a wrapper with 
+GenericDescriptorMatch interface (see VectorDescriptorMatch). There are descriptors such as one way descriptor and 
+ferns that have GenericDescriptorMatch interface implemented, but do not support DescriptorExtractor.
 
 \cvclass{FeatureDetector}
 Abstract base class for 2D image feature detectors.
