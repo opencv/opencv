@@ -175,7 +175,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         warpPerspectiveRand(img1, img2, H12, rng);
     }
     else
-        assert( !img2.empty() && img2.cols==img1.cols && img2.rows==img1.rows );
+        assert( !img2.empty()/* && img2.cols==img1.cols && img2.rows==img1.rows*/ );
 
     cout << endl << "< Extracting keypoints from second image..." << endl;
     vector<KeyPoint> keypoints2;
