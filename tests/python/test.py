@@ -1789,7 +1789,8 @@ class AreaTests(OpenCVTests):
         mo = cv.Moments(im)
         for fld in ["m00", "m10", "m01", "m20", "m11", "m02", "m30", "m21", "m12", "m03", "mu20", "mu11", "mu02", "mu30", "mu21", "mu12", "mu03", "inv_sqrt_m00"]:
             self.assert_(isinstance(getattr(mo, fld), float))
-            print getattr(mo, fld)
+            x = getattr(mo, fld)
+            self.assert_(isinstance(x, float))
 
         orders = []
         for x_order in range(4):
