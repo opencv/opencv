@@ -27,26 +27,30 @@ if (BUILD_EXAMPLES)
     #      Define executable targets
     # ---------------------------------------------
     MACRO(MY_DEFINE_EXAMPLE name srcs)
-        add_executable(${name} ${srcs})
-        set_target_properties(${name} PROPERTIES PROJECT_LABEL "(EXAMPLE) ${name}")
-        add_dependencies(${name} opencv_core opencv_imgproc
-            opencv_highgui opencv_ml opencv_video opencv_objdetect
-            opencv_features2d opencv_calib3d opencv_contrib)
-        target_link_libraries(${name} ${OPENCV_LINKER_LIBS} opencv_core
-            opencv_imgproc opencv_highgui opencv_ml opencv_video
-            opencv_objdetect opencv_features2d opencv_calib3d opencv_contrib)
+        set(the_target "example_${name}")
+    	add_executable(${the_target} ${srcs})
+		set_target_properties(${the_target} PROPERTIES
+		    OUTPUT_NAME "${name}"
+		    PROJECT_LABEL "(EXAMPLE) ${name}")
+    	add_dependencies(${the_target} opencv_core opencv_imgproc opencv_highgui
+    	    opencv_ml opencv_video opencv_objdetect opencv_features2d
+    	    opencv_calib3d opencv_legacy opencv_contrib)
+    	target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core
+    	    opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect
+    	    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib)
 
         if(WIN32)
-            install(TARGETS ${name}
+            install(TARGETS ${the_target}
                 RUNTIME DESTINATION "samples/cpp" COMPONENT main)
         endif()
     ENDMACRO(MY_DEFINE_EXAMPLE)
     
-    MY_DEFINE_EXAMPLE(select3dobj  select3dobj.cpp)
-    MY_DEFINE_EXAMPLE(connected_components  connected_components.cpp)
-    MY_DEFINE_EXAMPLE(contours2  contours2.cpp)
-    MY_DEFINE_EXAMPLE(morphology2  morphology2.cpp)
-    MY_DEFINE_EXAMPLE(segment_objects  segment_objects.cpp)
+    file(GLOB cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+    
+    foreach(sample_filename ${cpp_samples})
+        get_filename_component(sample ${sample_filename} NAME_WE)
+        MY_DEFINE_EXAMPLE(${sample}  ${sample_filename})
+    endforeach()
 endif(BUILD_EXAMPLES)
 
 if (INSTALL_C_EXAMPLES AND NOT WIN32)
