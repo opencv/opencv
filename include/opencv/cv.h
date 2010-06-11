@@ -58,7 +58,7 @@
 #endif
 #define CV_WARNING(x) CV_MSG_PRAGMA("Warning: " #x)
 
-CV_WARNING("This is a deprecated opencv header provided for compatibility. Please include a header from a corresponding opencv module")
+//CV_WARNING("This is a deprecated opencv header provided for compatibility. Please include a header from a corresponding opencv module")
 
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
