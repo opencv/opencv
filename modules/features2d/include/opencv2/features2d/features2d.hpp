@@ -1397,6 +1397,7 @@ protected:
     SURF surf;
 };
 
+CV_EXPORTS FeatureDetector* createDetector( const string& detectorType );
 
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
@@ -1467,6 +1468,8 @@ public:
 protected:
     SURF surf;
 };
+
+DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType );
 
 /****************************************************************************************\
 *                                          Distance                                      *
@@ -1758,6 +1761,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     }
 }
 
+DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType );
 
 /****************************************************************************************\
 *                                GenericDescriptorMatch                                  *

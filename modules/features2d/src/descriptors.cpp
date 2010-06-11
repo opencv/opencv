@@ -42,9 +42,10 @@
 #include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
+namespace cv
+{
 
-CV_EXPORTS void cv::drawMatches( const Mat& img1, const Mat& img2,
+CV_EXPORTS void drawMatches( const Mat& img1, const Mat& img2,
                              const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
                              const vector<int>& matches, const vector<char>& mask, Mat& outImg,
                              const Scalar& matchColor, const Scalar& singlePointColor,
@@ -220,6 +221,45 @@ void SurfDescriptorExtractor::write( FileStorage &fs ) const
     fs << "nOctaveLayers" << surf.nOctaveLayers;
     fs << "extended" << surf.extended;
 }
+
+DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType )
+{
+    DescriptorExtractor* de = 0;
+    if( !descriptorExtractorType.compare( "SIFT" ) )
+    {
+        de = new SiftDescriptorExtractor/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(),
+                             bool isNormalize=true, bool recalculateAngles=true,
+                             int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
+                             int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
+                             int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
+                             int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/;
+    }
+    else if( !descriptorExtractorType.compare( "SURF" ) )
+    {
+        de = new SurfDescriptorExtractor/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/;
+    }
+    else
+    {
+        //CV_Error( CV_StsBadArg, "unsupported descriptor extractor type");
+    }
+    return de;
+}
+
+DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType )
+{
+    DescriptorMatcher* dm = 0;
+    if( !descriptorMatcherType.compare( "BruteForce" ) )
+    {
+        dm = new BruteForceMatcher<L2<float> >();
+    }
+    else
+    {
+        //CV_Error( CV_StsBadArg, "unsupported descriptor matcher type");
+    }
+
+    return dm;
+}
+
 
 /****************************************************************************************\
 *                                GenericDescriptorMatch                                  *
@@ -763,4 +803,6 @@ void FernDescriptorMatch::clear ()
 {
     GenericDescriptorMatch::clear();
     classifier.release();
+}
+
 }

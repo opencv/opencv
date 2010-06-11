@@ -42,8 +42,9 @@
 #include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 
+namespace cv
+{
 /*
     FeatureDetector
 */
@@ -313,4 +314,45 @@ void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
                                       vector<KeyPoint>& keypoints) const
 {
     surf(image, mask, keypoints);
+}
+
+FeatureDetector* createDetector( const string& detectorType )
+{
+    FeatureDetector* fd = 0;
+    if( !detectorType.compare( "FAST" ) )
+    {
+        fd = new FastFeatureDetector( 10/*threshold*/, true/*nonmax_suppression*/ );
+    }
+    else if( !detectorType.compare( "STAR" ) )
+    {
+        fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
+                                      8/*line_threshold_binarized*/, 5/*suppress_nonmax_size*/ );
+    }
+    else if( !detectorType.compare( "SIFT" ) )
+    {
+        fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
+                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
+    }
+    else if( !detectorType.compare( "SURF" ) )
+    {
+        fd = new SurfFeatureDetector( 100./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
+    }
+    else if( !detectorType.compare( "MSER" ) )
+    {
+        fd = new MserFeatureDetector( 5/*delta*/, 60/*min_area*/, 14400/*_max_area*/, 0.25f/*max_variation*/,
+                0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
+                5/*edge_blur_size*/ );
+    }
+    else if( !detectorType.compare( "GFTT" ) )
+    {
+        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
+                                              3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
+    }
+    else
+    {
+        //CV_Error( CV_StsBadArg, "unsupported feature detector type");
+    }
+    return fd;
+}
+
 }
