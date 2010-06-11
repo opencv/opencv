@@ -425,7 +425,7 @@ inline float precision( int correctMatchCount, int falseMatchCount )
 }
 
 void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
-                          vector< pair<DescriptorMatching, int> >& matches1to2,
+                          vector< pair<DMatch, int> >& matches1to2,
                           const Mat& img1, const Mat& img2, const Mat& H1to2,
                           int &correctMatchCount, int &falseMatchCount, vector<int> &matchStatuses, int& correspondenceCount )
 {
@@ -1385,7 +1385,7 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
     transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
 
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
-    vector< pair<DescriptorMatching, int> > allMatchings;
+    vector< pair<DMatch, int> > allMatchings;
     vector<int> allMatchStatuses;
     size_t matchingIndex = 0;
     int allCorrespCount = 0;
@@ -1405,11 +1405,11 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
             readKeypoints( keypontsFS, keypoints2, ci+1 );
         transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
         descMatch->add( imgs[ci+1], keypoints2 );
-        vector<DescriptorMatching> matchings1to2;
+        vector<DMatch> matchings1to2;
         descMatch->match( imgs[0], keypoints1, matchings1to2 );
-        vector< pair<DescriptorMatching, int> > matchings (matchings1to2.size());
+        vector< pair<DMatch, int> > matchings (matchings1to2.size());
         for( size_t i=0;i<matchings1to2.size();i++ )
-            matchings[i] = pair<DescriptorMatching, int>( matchings1to2[i], i);
+            matchings[i] = pair<DMatch, int>( matchings1to2[i], i);
 
         // TODO if( commRunParams[di].matchFilter )
         int correspCount;

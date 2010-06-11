@@ -1508,18 +1508,18 @@ struct CV_EXPORTS L2
 
 
 /****************************************************************************************\
-*                                  DescriptorMatching                                     *
+*                                  DMatch                                     *
 \****************************************************************************************/
 /*
  * Struct for matching: match index and distance between descriptors
  */
-struct DescriptorMatching
+struct DMatch
 {
     int index;
     float distance;
 
     //less is better
-    bool operator<( const DescriptorMatching &m) const
+    bool operator<( const DMatch &m) const
     {
         return distance < m.distance;
     }
@@ -1573,7 +1573,7 @@ public:
      * query         The query set of descriptors
      * matchings     Matchings of the closest matches from the training set
      */
-    void match( const Mat& query, vector<DescriptorMatching>& matchings ) const;
+    void match( const Mat& query, vector<DMatch>& matchings ) const;
 
     /*
      * Find the best matches between two descriptor sets, with constraints
@@ -1587,7 +1587,7 @@ public:
      * matchings     Matchings of the closest matches from the training set
      */
     void match( const Mat& query, const Mat& mask,
-                    vector<DescriptorMatching>& matchings ) const;
+                    vector<DMatch>& matchings ) const;
 
     /*
      * Find the best keypoint matches for small view changes.
@@ -1623,7 +1623,7 @@ protected:
      * The mask may be empty.
      */
     virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                            const Mat& mask, vector<DescriptorMatching>& matches ) const = 0;
+                            const Mat& mask, vector<DMatch>& matches ) const = 0;
 
     static bool possibleMatch( const Mat& mask, int index_1, int index_2 )
     {
@@ -1660,14 +1660,14 @@ inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
     matchImpl( query, train, mask, matches );
 }
 
-inline void DescriptorMatcher::match( const Mat& query, vector<DescriptorMatching>& matches ) const
+inline void DescriptorMatcher::match( const Mat& query, vector<DMatch>& matches ) const
 {
     matchImpl( query, train, Mat(), matches );
 }
 
 
 inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
-                                      vector<DescriptorMatching>& matches ) const
+                                      vector<DMatch>& matches ) const
 {
     matchImpl( query, train, mask, matches );
 }
@@ -1697,7 +1697,7 @@ protected:
                            const Mat& mask, vector<int>& matches ) const;
 
    virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                           const Mat& mask, vector<DescriptorMatching>& matches ) const;
+                           const Mat& mask, vector<DMatch>& matches ) const;
 
    Distance distance;
 };
@@ -1706,7 +1706,7 @@ template<class Distance>
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& mask, vector<int>& matches ) const
 {
-    vector<DescriptorMatching> matchings;
+    vector<DMatch> matchings;
     matchImpl( descriptors_1, descriptors_2, mask, matchings);
     matches.resize( matchings.size() );
     for( size_t i=0;i<matchings.size();i++)
@@ -1717,7 +1717,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
 template<class Distance>
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                                             const Mat& mask, vector<DescriptorMatching>& matches ) const
+                                             const Mat& mask, vector<DMatch>& matches ) const
 {
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
@@ -1753,7 +1753,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
         if( matchIndex != -1 )
         {
-            DescriptorMatching matching;
+            DMatch matching;
             matching.index = matchIndex;
             matching.distance = matchDistance;
             matches[i] = matching;
@@ -1830,7 +1830,7 @@ public:
     // image        The source image
     // points       Test keypoints from the source image
     // matchings    A vector to be filled with keypoint matchings
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings ) {};
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings ) {};
 
     // Clears keypoints storing in collection
     virtual void clear();
@@ -1906,7 +1906,7 @@ public:
     // loaded with DescriptorOneWay::Initialize, kd tree is used for finding minimum distances.
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings );
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings );
 
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
@@ -2036,7 +2036,7 @@ public:
 
     virtual void match( const Mat& image, vector<KeyPoint>& keypoints, vector<int>& indices );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings );
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings );
 
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
@@ -2094,7 +2094,7 @@ public:
         matcher.match( descriptors, keypointIndices );
     };
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings )
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings )
     {
         Mat descriptors;
         extractor.compute( image, points, descriptors );

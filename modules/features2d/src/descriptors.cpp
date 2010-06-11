@@ -433,7 +433,7 @@ void OneWayDescriptorMatch::add( KeyPointCollection& keypoints )
 
 void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices)
 {
-    vector<DescriptorMatching> matchings( points.size() );
+    vector<DMatch> matchings( points.size() );
     indices.resize(points.size());
 
     match( image, points, matchings );
@@ -442,7 +442,7 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
         indices[i] = matchings[i].index;
 }
 
-void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings )
+void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings )
 {
     matchings.resize( points.size() );
     IplImage _image = image;
@@ -450,7 +450,7 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
     {
         int poseIdx = -1;
 
-        DescriptorMatching matching;
+        DMatch matching;
         matching.index = -1;
         base->FindDescriptor( &_image, points[i].pt, matching.index, poseIdx, matching.distance );
         matchings[i] = matching;
@@ -744,7 +744,7 @@ void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, 
     }
 }
 
-void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<DescriptorMatching>& matchings )
+void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<DMatch>& matchings )
 {
     trainFernClassifier();
 
