@@ -44,6 +44,8 @@
 using namespace std;
 using namespace cv;
 
+//#define _KDTREE
+
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
 \****************************************************************************************/
@@ -332,15 +334,27 @@ void OneWayDescriptorMatch::add( KeyPointCollection& keypoints )
 
 void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices)
 {
+    vector<DescriptorMatching> matchings( points.size() );
     indices.resize(points.size());
+
+    match( image, points, matchings );
+
+    for( size_t i = 0; i < points.size(); i++ )
+        indices[i] = matchings[i].index;
+}
+
+void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings )
+{
+    matchings.resize( points.size() );
     IplImage _image = image;
     for( size_t i = 0; i < points.size(); i++ )
     {
-        int descIdx = -1;
         int poseIdx = -1;
-        float distance;
-        base->FindDescriptor( &_image, points[i].pt, descIdx, poseIdx, distance );
-        indices[i] = descIdx;
+
+        DescriptorMatching matching;
+        matching.index = -1;
+        base->FindDescriptor( &_image, points[i].pt, matching.index, poseIdx, matching.distance );
+        matchings[i] = matching;
     }
 }
 
@@ -628,6 +642,21 @@ void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, 
         //calcBestProbAndMatchIdx( image, keypoints[pi].pt, bestProb, indices[pi], signature );
         //TODO: use octave and image pyramid
         indices[pi] = (*classifier)(image, keypoints[pi].pt, signature);
+    }
+}
+
+void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<DescriptorMatching>& matchings )
+{
+    trainFernClassifier();
+
+    matchings.resize( keypoints.size() );
+    vector<float> signature( (size_t)classifier->getClassCount() );
+
+    for( size_t pi = 0; pi < keypoints.size(); pi++ )
+    {
+        calcBestProbAndMatchIdx( image, keypoints[pi].pt, matchings[pi].distance, matchings[pi].index, signature );
+        //matching[pi].distance is log of probability so we need to transform it
+        matchings[pi].distance = -matchings[pi].distance;
     }
 }
 

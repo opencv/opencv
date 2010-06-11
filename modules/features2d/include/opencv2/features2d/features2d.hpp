@@ -1503,6 +1503,25 @@ struct CV_EXPORTS L2
     }
 };
 
+
+/****************************************************************************************\
+*                                  DescriptorMatching                                     *
+\****************************************************************************************/
+/*
+ * Struct for matching: match index and distance between descriptors
+ */
+struct DescriptorMatching
+{
+    int index;
+    float distance;
+
+    //less is better
+    bool operator<( const DescriptorMatching &m) const
+    {
+        return distance < m.distance;
+    }
+};
+
 /****************************************************************************************\
 *                                  DescriptorMatcher                                     *
 \****************************************************************************************/
@@ -1546,6 +1565,28 @@ public:
                 vector<int>& matches ) const;
 
     /*
+     * Find the best match for each descriptor from a query set
+     *
+     * query         The query set of descriptors
+     * matchings     Matchings of the closest matches from the training set
+     */
+    void match( const Mat& query, vector<DescriptorMatching>& matchings ) const;
+
+    /*
+     * Find the best matches between two descriptor sets, with constraints
+     * on which pairs of descriptors can be matched.
+     *
+     * The mask describes which descriptors can be matched. descriptors_1[i]
+     * can be matched with descriptors_2[j] only if mask.at<char>(i,j) is non-zero.
+     *
+     * query         The query set of descriptors
+     * mask          Mask specifying permissible matches.
+     * matchings     Matchings of the closest matches from the training set
+     */
+    void match( const Mat& query, const Mat& mask,
+                    vector<DescriptorMatching>& matchings ) const;
+
+    /*
      * Find the best keypoint matches for small view changes.
      *
      * This function will only match descriptors whose keypoints have close enough
@@ -1573,6 +1614,13 @@ protected:
      */
     virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                             const Mat& mask, vector<int>& matches ) const = 0;
+
+    /*
+     * Find matches; match() calls this. Must be implemented by the subclass.
+     * The mask may be empty.
+     */
+    virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                            const Mat& mask, vector<DescriptorMatching>& matches ) const = 0;
 
     static bool possibleMatch( const Mat& mask, int index_1, int index_2 )
     {
@@ -1609,6 +1657,18 @@ inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
     matchImpl( query, train, mask, matches );
 }
 
+inline void DescriptorMatcher::match( const Mat& query, vector<DescriptorMatching>& matches ) const
+{
+    matchImpl( query, train, Mat(), matches );
+}
+
+
+inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
+                                      vector<DescriptorMatching>& matches ) const
+{
+    matchImpl( query, train, mask, matches );
+}
+
 inline void DescriptorMatcher::clear()
 {
     train.release();
@@ -1633,12 +1693,28 @@ protected:
    virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                            const Mat& mask, vector<int>& matches ) const;
 
+   virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                           const Mat& mask, vector<DescriptorMatching>& matches ) const;
+
    Distance distance;
 };
 
 template<class Distance>
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& mask, vector<int>& matches ) const
+{
+    vector<DescriptorMatching> matchings;
+    matchImpl( descriptors_1, descriptors_2, mask, matchings);
+    matches.resize( matchings.size() );
+    for( size_t i=0;i<matchings.size();i++)
+    {
+        matches[i] = matchings[i].index;
+    }
+}
+
+template<class Distance>
+void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                                             const Mat& mask, vector<DescriptorMatching>& matches ) const
 {
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
@@ -1650,8 +1726,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     assert( DataType<ValueType>::type == descriptors_2.type() ||  descriptors_2.empty() );
 
     int dimension = descriptors_1.cols;
-    matches.clear();
-    matches.reserve(descriptors_1.rows);
+    matches.resize(descriptors_1.rows);
 
     for( int i = 0; i < descriptors_1.rows; i++ )
     {
@@ -1674,7 +1749,12 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
         }
 
         if( matchIndex != -1 )
-            matches.push_back( matchIndex );
+        {
+            DescriptorMatching matching;
+            matching.index = matchIndex;
+            matching.distance = matchDistance;
+            matches[i] = matching;
+        }
     }
 }
 
@@ -1741,6 +1821,12 @@ public:
     // points       Test keypoints from the source image
     // indices      A vector to be filled with keypoint class indices
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices ) = 0;
+
+    // Matches test keypoints to the training set
+    // image        The source image
+    // points       Test keypoints from the source image
+    // matchings    A vector to be filled with keypoint matchings
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings ) {};
 
     // Clears keypoints storing in collection
     virtual void clear();
@@ -1815,6 +1901,8 @@ public:
     // The class ID of a match is returned for each keypoint. The distance is calculated over PCA components
     // loaded with DescriptorOneWay::Initialize, kd tree is used for finding minimum distances.
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices );
+
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings );
 
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
@@ -1944,6 +2032,8 @@ public:
 
     virtual void match( const Mat& image, vector<KeyPoint>& keypoints, vector<int>& indices );
 
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings );
+
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
     virtual void clear ();
@@ -1999,6 +2089,14 @@ public:
 
         matcher.match( descriptors, keypointIndices );
     };
+
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DescriptorMatching>& matchings )
+    {
+        Mat descriptors;
+        extractor.compute( image, points, descriptors );
+
+        matcher.match( descriptors, matchings );
+    }
 
     virtual void clear()
     {

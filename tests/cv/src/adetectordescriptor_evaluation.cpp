@@ -549,9 +549,9 @@ inline float precision( int correctMatchCount, int falseMatchCount )
 }
 
 void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
-                          const vector<int>& matches1to2,
+                          vector< pair<DescriptorMatching, int> >& matches1to2,
                           const Mat& img1, const Mat& img2, const Mat& H1to2,
-                          int& correctMatchCount, int& falseMatchCount, int& correspondenceCount )
+                          int &correctMatchCount, int &falseMatchCount, vector<int> &matchStatuses, int& correspondenceCount )
 {
     assert( !keypoints1.empty() && !keypoints2.empty() && !matches1to2.empty() );
     assert( keypoints1.size() == matches1to2.size() );
@@ -564,17 +564,27 @@ void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vect
                             repeatability, correspCount,
                             &thresholdedOverlapMask );
     correspondenceCount = thresholdedOverlapMask.nzcount();
-    correctMatchCount = falseMatchCount = 0;
+
+    matchStatuses.resize( matches1to2.size() );
+    correctMatchCount = 0;
+    falseMatchCount = 0;
+
+    //the nearest descriptors should be examined first
+    std::sort( matches1to2.begin(), matches1to2.end() );
+
     for( size_t i1 = 0; i1 < matches1to2.size(); i1++ )
     {
-        int i2 = matches1to2[i1];
+        int i2 = matches1to2[i1].first.index;
         if( i2 > 0 )
         {
-            if( thresholdedOverlapMask(i1, i2) )
+            matchStatuses[i2] = thresholdedOverlapMask(matches1to2[i1].second, i2);
+            if( matchStatuses[i2] )
                 correctMatchCount++;
             else
                 falseMatchCount++;
         }
+        else
+            matchStatuses[i2] = -1;
     }
 }
 
@@ -615,11 +625,16 @@ class BaseQualityTest : public CvTest
 {
 public:
     BaseQualityTest( const char* _algName, const char* _testName, const char* _testFuncs ) :
-            CvTest( _testName, _testFuncs ), algName(_algName) {}
+            CvTest( _testName, _testFuncs ), algName(_algName)
+    {
+        //TODO: change this
+        isWriteGraphicsData = true;
+    }
 
 protected:
     virtual string getRunParamsFilename() const = 0;
     virtual string getResultsFilename() const = 0;
+    virtual string getPlotPath() const = 0;
 
     virtual void validQualityClear( int datasetIdx ) = 0;
     virtual void calcQualityClear( int datasetIdx ) = 0;
@@ -650,9 +665,11 @@ protected:
 
     virtual void processResults();
     virtual int processResults( int datasetIdx, int caseIdx ) = 0;
+    void writeAllPlotData() const;
+    virtual void writePlotData( const string &filename, int datasetIdx ) const {};
 
     string algName;
-    bool isWriteParams, isWriteResults;
+    bool isWriteParams, isWriteResults, isWriteGraphicsData;
 };
 
 void BaseQualityTest::readAllDatasetsRunParams()
@@ -811,6 +828,8 @@ void BaseQualityTest::processResults()
 {
     if( isWriteParams )
         writeAllDatasetsRunParams();
+    if( isWriteGraphicsData )
+        writeAllPlotData();
 
     int res = CvTS::OK;
     if( isWriteResults )
@@ -836,6 +855,18 @@ void BaseQualityTest::processResults()
     if( res != CvTS::OK )
         ts->printf(CvTS::LOG, "BAD ACCURACY\n");
     ts->set_failed_test_info( res );
+}
+
+void BaseQualityTest::writeAllPlotData() const
+{
+    for( int di = 0; di < DATASETS_COUNT; di++ )
+    {
+        stringstream stream;
+        stream << getPlotPath() << algName << "_" << DATASET_NAMES[di] << ".csv";
+        string filename;
+        stream >> filename;
+        writePlotData( filename, di );
+    }
 }
 
 void BaseQualityTest::run ( int )
@@ -904,6 +935,7 @@ protected:
 
     virtual string getRunParamsFilename() const;
     virtual string getResultsFilename() const;
+    virtual string getPlotPath() const;
 
     virtual void validQualityClear( int datasetIdx );
     virtual void calcQualityClear( int datasetIdx );
@@ -959,6 +991,11 @@ string DetectorQualityTest::getRunParamsFilename() const
 string DetectorQualityTest::getResultsFilename() const
 {
     return string(ts->get_data_path()) + DETECTORS_DIR + algName + RES_POSTFIX;
+}
+
+string DetectorQualityTest::getPlotPath() const
+{
+    return string(ts->get_data_path()) + DETECTORS_DIR + "plots/";
 }
 
 void DetectorQualityTest::validQualityClear( int datasetIdx )
@@ -1253,6 +1290,7 @@ public:
     {
         validQuality.resize(DATASETS_COUNT);
         calcQuality.resize(DATASETS_COUNT);
+        calcDatasetQuality.resize(DATASETS_COUNT);
         commRunParams.resize(DATASETS_COUNT);
 
         commRunParamsDefault.projectKeypointsFrom1Image = true;
@@ -1267,6 +1305,7 @@ protected:
 
     virtual string getRunParamsFilename() const;
     virtual string getResultsFilename() const;
+    virtual string getPlotPath() const;
 
     virtual void validQualityClear( int datasetIdx );
     virtual void calcQualityClear( int datasetIdx );
@@ -1289,6 +1328,8 @@ protected:
 
     virtual int processResults( int datasetIdx, int caseIdx );
 
+    virtual void writePlotData( const string &filename, int di ) const;
+
     struct Quality
     {
         float recall;
@@ -1296,6 +1337,7 @@ protected:
     };
     vector<vector<Quality> > validQuality;
     vector<vector<Quality> > calcQuality;
+    vector<vector<Quality> > calcDatasetQuality;
 
     struct CommonRunParams
     {
@@ -1320,6 +1362,11 @@ string DescriptorQualityTest::getRunParamsFilename() const
 string DescriptorQualityTest::getResultsFilename() const
 {
     return string(ts->get_data_path()) + DESCRIPTORS_DIR + algName + RES_POSTFIX;
+}
+
+string DescriptorQualityTest::getPlotPath() const
+{
+    return string(ts->get_data_path()) + DESCRIPTORS_DIR + "plots/";
 }
 
 void DescriptorQualityTest::validQualityClear( int datasetIdx )
@@ -1408,6 +1455,16 @@ void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
     commRunParams[datasetIdx].keypontsFilename = "surf_" + DATASET_NAMES[datasetIdx] + ".xml.gz";
 }
 
+void DescriptorQualityTest::writePlotData( const string &filename, int di ) const
+{
+    FILE *file = fopen (filename.c_str(),"w");
+    size_t size = calcDatasetQuality[di].size();
+    for (size_t i=0;i<size;i++)
+    {
+        fprintf( file, "%f, %f\n", 1 - calcDatasetQuality[di][i].precision, calcDatasetQuality[di][i].recall);
+    }
+    fclose( file );
+}
 
 void DescriptorQualityTest::readAlgorithm( )
 {
@@ -1478,6 +1535,10 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
     transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
 
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
+    vector< pair<DescriptorMatching, int> > allMatchings;
+    vector<int> allMatchStatuses;
+    size_t matchingIndex = 0;
+    int allCorrespCount = 0;
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
         progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
@@ -1494,15 +1555,49 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
             readKeypoints( keypontsFS, keypoints2, ci+1 );
         transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
         descMatch->add( imgs[ci+1], keypoints2 );
-        vector<int> matches1to2;
-        descMatch->match( imgs[0], keypoints1, matches1to2 );
+        vector<DescriptorMatching> matchings1to2;
+        descMatch->match( imgs[0], keypoints1, matchings1to2 );
+        vector< pair<DescriptorMatching, int> > matchings (matchings1to2.size());
+        for( size_t i=0;i<matchings1to2.size();i++ )
+            matchings[i] = pair<DescriptorMatching, int>( matchings1to2[i], i);
+
         // TODO if( commRunParams[di].matchFilter )
-        int correctMatchCount, falseMatchCount, correspCount;
-        evaluateDescriptors( ekeypoints1, ekeypoints2, matches1to2, imgs[0], imgs[ci+1], Hs[ci],
-                             correctMatchCount, falseMatchCount, correspCount );
+        int correspCount;
+        int correctMatchCount = 0, falseMatchCount = 0;
+        vector<int> matchStatuses;
+        evaluateDescriptors( ekeypoints1, ekeypoints2, matchings, imgs[0], imgs[ci+1], Hs[ci],
+                             correctMatchCount, falseMatchCount, matchStatuses, correspCount );
+        for( size_t i=0;i<matchings.size();i++ )
+            matchings[i].second += matchingIndex;
+        matchingIndex += matchings.size();
+
+
+        allCorrespCount += correspCount;
+
+        //TODO: use merge
+        std::copy( matchings.begin(), matchings.end(), std::back_inserter( allMatchings ) );
+        std::copy( matchStatuses.begin(), matchStatuses.end(), std::back_inserter( allMatchStatuses ) );
+
+        printf ("%d %d %d \n", correctMatchCount, falseMatchCount, correspCount );
+
         calcQuality[di][ci].recall = recall( correctMatchCount, correspCount );
         calcQuality[di][ci].precision = precision( correctMatchCount, falseMatchCount );
         descMatch->clear ();
+    }
+
+    std::sort( allMatchings.begin(), allMatchings.end() );
+
+    calcDatasetQuality[di].resize( allMatchings.size() );
+    int correctMatchCount = 0, falseMatchCount = 0;
+    for( size_t i=0;i<allMatchings.size();i++)
+    {
+        if( allMatchStatuses[ allMatchings[i].second ] )
+            correctMatchCount++;
+        else
+            falseMatchCount++;
+
+        calcDatasetQuality[di][i].recall = recall( correctMatchCount, allCorrespCount );
+        calcDatasetQuality[di][i].precision = precision( correctMatchCount, falseMatchCount );
     }
 }
 
