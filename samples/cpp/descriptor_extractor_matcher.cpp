@@ -1,7 +1,8 @@
-#include <cv.h>
 #include <cvaux.h>
 #include <highgui.h>
+#include "opencv2/features2d/features2d.hpp"
 #include <iostream>
+
 
 using namespace cv;
 using namespace std;
@@ -110,55 +111,6 @@ DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType 
     return dm;
 }
 
-void drawCorrespondences( const Mat& img1, const Mat& img2,
-                          const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
-                          const vector<int>& matches, Mat& drawImg, const Mat& H12 = Mat() )
-{
-    Scalar RED =   CV_RGB(255, 0, 0); // red keypoint - point without corresponding point
-    Scalar GREEN = CV_RGB(0, 255, 0); // green keypoint - point having correct corresponding point
-    Scalar BLUE =  CV_RGB(0, 0, 255); // blue keypoint - point having incorrect corresponding point
-
-    Size size(img1.cols + img2.cols, MAX(img1.rows, img2.rows));
-    drawImg.create(size, CV_MAKETYPE(img1.depth(), 3));
-    Mat drawImg1 = drawImg(Rect(0, 0, img1.cols, img1.rows));
-    cvtColor(img1, drawImg1, CV_GRAY2RGB);
-    Mat drawImg2 = drawImg(Rect(img1.cols, 0, img2.cols, img2.rows));
-    cvtColor(img2, drawImg2, CV_GRAY2RGB);
-
-    // draw keypoints
-    for(vector<KeyPoint>::const_iterator it = keypoints1.begin(); it < keypoints1.end(); ++it )
-    {
-        circle(drawImg, it->pt, 3, RED);
-    }
-    for(vector<KeyPoint>::const_iterator it = keypoints2.begin(); it < keypoints2.end(); ++it )
-    {
-		Point p = it->pt;
-        circle(drawImg, Point2f(p.x+img1.cols, p.y), 3, RED);
-    }
-    
-    // draw matches
-    vector<int>::const_iterator mit = matches.begin();
-    assert( matches.size() == keypoints1.size() );
-    for( int i1 = 0; mit != matches.end(); ++mit, i1++ )
-    {
-        Point2f pt1 = keypoints1[i1].pt,
-                pt2 = keypoints2[*mit].pt,
-                dpt2 = Point2f( std::min(pt2.x+img1.cols, float(drawImg.cols-1)), pt2.y);
-        if( !H12.empty() )
-        {
-            if( norm(pt2 - applyHomography(H12, pt1)) > 3 )
-            {
-                circle(drawImg, pt1, 3, BLUE);
-                circle(drawImg, dpt2, 3, BLUE);
-                continue;
-            }
-        }
-        circle(drawImg, pt1, 3, GREEN);
-        circle(drawImg, dpt2, 3, GREEN);
-        line(drawImg, pt1, dpt2, GREEN);
-    }
-}
-
 const string winName = "correspondences";
 
 void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
@@ -208,7 +160,30 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     }
 
     Mat drawImg;
-    drawCorrespondences( img1, img2, keypoints1, keypoints2, matches, drawImg, H12 );
+    if( !H12.empty() )
+    {
+        vector<char> mask( matches.size(), 0 );
+        vector<int>::const_iterator mit = matches.begin();
+        for( size_t i1 = 0; mit != matches.end(); ++mit, i1++ )
+        {
+            Point2f pt1 = keypoints1[i1].pt,
+                    pt2 = keypoints2[*mit].pt;
+            if( norm(pt2 - applyHomography(H12, pt1)) < 4 ) // inlier
+                mask[i1] = 1;
+        }
+        // draw inliers
+        drawMatches( img1, img2, keypoints1, keypoints2, matches, mask, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255) );
+        // draw outliers
+        /*for( size_t i1 = 0; i1 < mask.size(); i1++ )
+            mask[i1] = !mask[i1];
+        drawMatches( img1, img2, keypoints1, keypoints2, matches, mask, drawImg, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0),
+                     DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );*/
+    }
+    else
+    {
+        drawMatches( img1, img2, keypoints1, keypoints2, matches, vector<char>(), drawImg, CV_RGB(0, 255, 0) );
+    }
+
     imshow( winName, drawImg );
 }
 
