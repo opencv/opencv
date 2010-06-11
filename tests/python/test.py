@@ -461,14 +461,16 @@ class FunctionTests(OpenCVTests):
         storage = cv.CreateMemStorage()
 
         # First run FindContours on a black image.
-        scratch = cv.CreateImage((800,800), 8, 1)
-        cv.SetZero(scratch)
-        seq = cv.FindContours(scratch, storage, cv.CV_RETR_TREE, cv.CV_CHAIN_APPROX_SIMPLE)
-        x = len(seq)
-        if seq:
-            pass
-        for s in seq:
-            pass
+        for mode in [cv.CV_RETR_EXTERNAL, cv.CV_RETR_LIST, cv.CV_RETR_CCOMP, cv.CV_RETR_TREE]:
+            for method in [cv.CV_CHAIN_CODE, cv.CV_CHAIN_APPROX_NONE, cv.CV_CHAIN_APPROX_SIMPLE, cv.CV_CHAIN_APPROX_TC89_L1, cv.CV_CHAIN_APPROX_TC89_KCOS, cv.CV_LINK_RUNS]:
+                scratch = cv.CreateImage((800,800), 8, 1)
+                cv.SetZero(scratch)
+                seq = cv.FindContours(scratch, storage, mode, method)
+                x = len(seq)
+                if seq:
+                    pass
+                for s in seq:
+                    pass
 
         for trial in range(10):
             scratch = cv.CreateImage((800,800), 8, 1)
