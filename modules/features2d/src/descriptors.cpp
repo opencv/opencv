@@ -44,7 +44,66 @@
 using namespace std;
 using namespace cv;
 
-//#define _KDTREE
+CV_EXPORTS void cv::drawMatches( const Mat& img1, const Mat& img2,
+                             const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+                             const vector<int>& matches, const vector<char>& mask, Mat& outImg,
+                             const Scalar& matchColor, const Scalar& singlePointColor,
+                             int flags )
+{
+    Size size( img1.cols + img2.cols, MAX(img1.rows, img2.rows) );
+    if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )
+    {
+        if( size.width > outImg.cols || size.height > outImg.rows )
+            CV_Error( CV_StsBadSize, "outImg has size less than need to draw img1 and img2 together" );
+    }
+    else
+    {
+        outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
+        Mat outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        cvtColor( img1, outImg1, CV_GRAY2RGB );
+        Mat outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
+        cvtColor( img2, outImg2, CV_GRAY2RGB );
+    }
+
+    RNG rng;
+    // draw keypoints
+    if( !(flags & DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS) )
+    {
+        bool isRandSinglePointColor = singlePointColor == Scalar::all(-1);
+        for( vector<KeyPoint>::const_iterator it = keypoints1.begin(); it < keypoints1.end(); ++it )
+        {
+            circle( outImg, it->pt, 3, isRandSinglePointColor ?
+                    Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256)) : singlePointColor );
+        }
+        for( vector<KeyPoint>::const_iterator it = keypoints2.begin(); it < keypoints2.end(); ++it )
+        {
+            Point p = it->pt;
+            circle( outImg, Point2f(p.x+img1.cols, p.y), 3, isRandSinglePointColor ?
+                    Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256)) : singlePointColor );
+        }
+     }
+
+    // draw matches
+    bool isRandMatchColor = matchColor == Scalar::all(-1);
+    if( matches.size() != keypoints1.size() )
+        CV_Error( CV_StsBadSize, "matches must have the same size as keypoints1" );
+    if( !mask.empty() && mask.size() != keypoints1.size() )
+        CV_Error( CV_StsBadSize, "mask must have the same size as keypoints1" );
+    vector<int>::const_iterator mit = matches.begin();
+    for( int i1 = 0; mit != matches.end(); ++mit, i1++ )
+    {
+        if( (mask.empty() || mask[i1] ) && *mit >= 0 )
+        {
+            Point2f pt1 = keypoints1[i1].pt,
+                    pt2 = keypoints2[*mit].pt,
+                    dpt2 = Point2f( std::min(pt2.x+img1.cols, float(outImg.cols-1)), pt2.y );
+            Scalar randColor( rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256) );
+            circle( outImg, pt1, 3, isRandMatchColor ? randColor : matchColor );
+            circle( outImg, dpt2, 3, isRandMatchColor ? randColor : matchColor );
+            line( outImg, pt1, dpt2, isRandMatchColor ? randColor : matchColor );
+        }
+    }
+}
 
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *

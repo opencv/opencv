@@ -2121,6 +2121,24 @@ protected:
     //vector<int> classIds;
 };
 
+struct CV_EXPORTS DrawMatchesFlags
+{
+    enum{ DEFAULT = 0, // Output image matrix will be created (Mat::create),
+                       // i.e. existing memory of output image will be reused.
+                       // Two source image, matches and single keypoints will be drawn.
+          DRAW_OVER_OUTIMG = 1, // Output image matrix will not be created (Mat::create).
+                                // Matches will be drawn on existing content of output image.
+          NOT_DRAW_SINGLE_POINTS = 2 // Single keypoints will not be drawn.
+        };
+};
+
+// Draws matches of keypints from two images on output image.
+CV_EXPORTS void drawMatches( const Mat& img1, const Mat& img2,
+                             const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+                             const vector<int>& matches, const vector<char>& mask, Mat& outImg,
+                             const Scalar& matchColor = Scalar::all(-1), const Scalar& singlePointColor = Scalar::all(-1),
+                             int flags = DrawMatchesFlags::DEFAULT );
+
 }
 
 #endif /* __cplusplus */
