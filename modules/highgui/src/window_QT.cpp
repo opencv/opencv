@@ -627,12 +627,12 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
     //QFile qss(PATH_QSLIDERCSS);
     //if (qss.open(QFile::ReadOnly))
     //{
-        //slider->setStyleSheet(QLatin1String(qss.readAll()));
-        //qss.close();
+    //    slider->setStyleSheet(QLatin1String(qss.readAll()));
+    //    qss.close();
     //}
     
 
-    //does not work if we change the style with a stylesheet, why ?
+    //this next line does not work if we change the style with a stylesheet, why ? (bug in QT ?)
     //slider->setTickPosition(QSlider::TicksBelow);
     label = new QPushButton;
     label->setFlat(true);
