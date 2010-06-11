@@ -42,12 +42,15 @@
 #include "cvtest.h"
 #include <limits>
 #include <cstdio>
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 using namespace cv;
 
-#define AFFINE_COVARIANT_VERSION
-
+/****************************************************************************************\
+*           Functions to evaluate affine covariant detectors and descriptors.            *
+\****************************************************************************************/
 inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
 {
     double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
@@ -78,123 +81,6 @@ inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat
         A.setTo(Scalar::all(numeric_limits<double>::max()));
 }
 
-#ifndef AFFINE_COVARIANT_VERSION
-/****************************************************************************************\
-*  1. Initial version of evaluating detectors. This version calculate repeatability      *
-*     for scale invariant detectors (circular regions)                                   *
-\****************************************************************************************/
-
-// Find the key points located in the part of the scene present in both images
-// and project keypoints2 on img1
-void getCircularKeyPointsInCommonPart( const Mat& img1, const Mat img2, const Mat& H12,
-                                       const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
-                                       vector<KeyPoint>& ckeypoints1, vector<KeyPoint>& ckeypoints2t )
-{
-    assert( !img1.empty() && !img2.empty() );
-    assert( !H12.empty() && H12.cols==3 && H12.rows==3 && H12.type()==CV_64FC1 );
-    ckeypoints1.clear();
-    ckeypoints2t.clear();
-
-    Rect r1(0, 0, img1.cols, img1.rows), r2(0, 0, img2.cols, img2.rows);
-    Mat H21; invert( H12, H21 );
-
-    for( vector<KeyPoint>::const_iterator it = keypoints1.begin();
-                 it != keypoints1.end(); ++it )
-    {
-        if( r2.contains(applyHomography(H12, it->pt)) )
-            ckeypoints1.push_back(*it);
-    }
-    for( vector<KeyPoint>::const_iterator it = keypoints2.begin();
-                 it != keypoints2.end(); ++it )
-    {
-        Point2f pt = applyHomography(H21, it->pt);
-        if( r1.contains(pt) )
-        {
-            KeyPoint kp = *it;
-            kp.pt = pt;
-            Mat_<double> A, eval;
-            linearizeHomographyAt(H21, it->pt, A);
-            eigen(A, eval);
-            assert( eval.type()==CV_64FC1 && eval.cols==1 && eval.rows==2 );
-            kp.size *= sqrt(eval(0,0) * eval(1,0)) /*scale from linearized homography matrix*/;
-            ckeypoints2t.push_back(kp);
-        }
-    }
-}
-
-// Locations p1 and p2 are repeated if ||p1 - H21*p2|| < 1.5 pixels.
-// Regions are repeated if Es < 0.4 (Es differs for scale invariant and affine invarian detectors).
-// For more details see "Scale&Affine Invariant Interest Point Detectors", Mikolajczyk, Schmid.
-void evaluateScaleInvDetectors( const Mat& img1, const Mat img2, const Mat& H12,
-                                const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
-                                int& repeatingLocationCount, float& repeatingLocationRltv,
-                                int& repeatingRegionCount, float& repeatingRegionRltv )
-{
-    const double locThreshold = 1.5,
-                 regThreshold = 0.4;
-    assert( !img1.empty() && !img2.empty() );
-    assert( !H12.empty() && H12.cols==3 && H12.rows==3 && H12.type()==CV_64FC1 );
-
-    Mat H21; invert( H12, H21 );
-
-    vector<KeyPoint> ckeypoints1, ckeypoints2t;
-    getCircularKeyPointsInCommonPart( img1, img2, H12, keypoints1, keypoints2, ckeypoints1, ckeypoints2t );
-
-    vector<KeyPoint> *smallKPSet = &ckeypoints1, *bigKPSet = &ckeypoints2t;
-    if( ckeypoints1.size() > ckeypoints2t.size() )
-    {
-        smallKPSet = &ckeypoints2t;
-        bigKPSet = &ckeypoints1;
-    }
-
-    if( smallKPSet->size() == 0 )
-    {
-        repeatingLocationCount = repeatingRegionCount = -1;
-        repeatingLocationRltv = repeatingRegionRltv = -1.f;
-    }
-    else
-    {
-        vector<bool> matchedMask( bigKPSet->size(), false);
-        repeatingLocationCount = repeatingRegionCount = 0;
-        for( vector<KeyPoint>::const_iterator skpIt = smallKPSet->begin(); skpIt != smallKPSet->end(); ++skpIt )
-        {
-            int nearestIdx = -1, bkpIdx = 0;
-            double minDist = numeric_limits<double>::max();
-            vector<KeyPoint>::const_iterator nearestBkp;
-            for( vector<KeyPoint>::const_iterator bkpIt = bigKPSet->begin(); bkpIt != bigKPSet->end(); ++bkpIt, bkpIdx++ )
-            {
-                if( !matchedMask[bkpIdx] )
-                {
-                    Point p1(cvRound(skpIt->pt.x), cvRound(skpIt->pt.y)),
-                          p2(cvRound(bkpIt->pt.x), cvRound(bkpIt->pt.y));
-                    double dist = norm(p1 - p2);
-                    if( dist < minDist )
-                    {
-                        nearestIdx = bkpIdx;
-                        minDist = dist;
-                        nearestBkp = bkpIt;
-                    }
-                }
-            }
-            if( minDist < locThreshold )
-            {
-                matchedMask[nearestIdx] = true;
-                repeatingLocationCount++;
-                double minRadius = min( skpIt->size, nearestBkp->size ),
-                       maxRadius = max( skpIt->size, nearestBkp->size );
-                double Es = abs(1 - (minRadius*minRadius)/(maxRadius*maxRadius));
-                if( Es < regThreshold )
-                    repeatingRegionCount++;
-            }
-        }
-        repeatingLocationRltv = smallKPSet->size() ? (float)repeatingLocationCount / smallKPSet->size() : 0;
-        repeatingRegionRltv = smallKPSet->size() ? (float)repeatingRegionCount / smallKPSet->size() : 0;
-    }
-}
-#else
-/****************************************************************************************\
-*  2. Functions to evaluate affine covariant detectors and descriptors.                  *
-\****************************************************************************************/
 class EllipticKeyPoint
 {
 public:
@@ -486,45 +372,35 @@ void calculateRepeatability( const vector<EllipticKeyPoint>& _keypoints1, const 
     if( !size || overlaps.nzcount() == 0 )
         return;
 
+    // threshold the overlaps
+    for( int y = 0; y < size[0]; y++ )
+    {
+        for( int x = 0; x < size[1]; x++ )
+        {
+            if ( overlaps(y,x) < overlapThreshold )
+                overlaps.erase(y,x);
+        }
+    }
     if( ifEvaluateDetectors )
     {
         // regions one-to-one matching
         correspondencesCount = 0;
-        SparseMat_<float> currOverlaps( 2, size );
-        for( int y = 0; y < size[0]; y++ )
-        {
-            for( int x = 0; x < size[1]; x++ )
-            {
-                float val = overlaps(y,x);
-                if ( val >= overlapThreshold )
-                    currOverlaps.ref(y,x) = val;
-            }
-        }
-        while( currOverlaps.nzcount() > 0 )
+       while( overlaps.nzcount() > 0 )
         {
             double maxOverlap = 0;
             int maxIdx[2];
-            minMaxLoc( currOverlaps, 0, &maxOverlap, 0, maxIdx );
+            minMaxLoc( overlaps, 0, &maxOverlap, 0, maxIdx );
             for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
-                currOverlaps.erase(i1, maxIdx[1]);
+                overlaps.erase(i1, maxIdx[1]);
             for( size_t i2 = 0; i2 < keypoints2t.size(); i2++ )
-                currOverlaps.erase(maxIdx[0], i2);
+                overlaps.erase(maxIdx[0], i2);
             correspondencesCount++;
         }
         repeatability = minCount ? (float)(correspondencesCount*100)/minCount : -1;
     }
     else
     {
-        thresholdedOverlapMask->create( 2, size );
-        for( int y = 0; y < size[0]; y++ )
-        {
-            for( int x = 0; x < size[1]; x++ )
-            {
-                float val = overlaps(y,x);
-                if ( val >= overlapThreshold )
-                    thresholdedOverlapMask->ref(y,x) = val;
-            }
-        }
+        overlaps.copyTo(*thresholdedOverlapMask);
     }
 }
 
@@ -588,7 +464,6 @@ void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vect
     }
 }
 
-#endif
 /****************************************************************************************\
 *                                  Detectors evaluation                                 *
 \****************************************************************************************/
@@ -603,15 +478,8 @@ const string KEYPOINTS_DIR = "detectors_descriptors_evaluation/keypoints_dataset
 const string PARAMS_POSTFIX = "_params.xml";
 const string RES_POSTFIX = "_res.xml";
 
-#ifndef AFFINE_COVARIANT_VERSION
-const string RLC = "repeating_locations_count";
-const string RLR = "repeating_locations_rltv";
-const string RRC = "repeating_regions_count";
-const string RRR = "repeating_regions_rltv";
-#else
 const string REPEAT = "repeatability";
 const string CORRESP_COUNT = "correspondence_count";
-#endif
 
 string DATASET_NAMES[DATASETS_COUNT] = { "bark", "bikes", "boat", "graf", "leuven", "trees", "ubc", "wall"};
 
@@ -666,7 +534,7 @@ protected:
     virtual void processResults();
     virtual int processResults( int datasetIdx, int caseIdx ) = 0;
     void writeAllPlotData() const;
-    virtual void writePlotData( const string &filename, int datasetIdx ) const {};
+    virtual void writePlotData( int datasetIdx ) const {};
 
     string algName;
     bool isWriteParams, isWriteResults, isWriteGraphicsData;
@@ -861,11 +729,7 @@ void BaseQualityTest::writeAllPlotData() const
 {
     for( int di = 0; di < DATASETS_COUNT; di++ )
     {
-        stringstream stream;
-        stream << getPlotPath() << algName << "_" << DATASET_NAMES[di] << ".csv";
-        string filename;
-        stream >> filename;
-        writePlotData( filename, di );
+        writePlotData( di );
     }
 }
 
@@ -952,9 +816,8 @@ protected:
     virtual void readDefaultRunParams( FileNode &fn );
     virtual void writeDefaultRunParams( FileStorage &fs ) const;
 
+    virtual void writePlotData( int di ) const;
 
-    Ptr<FeatureDetector> specificDetector;
-    Ptr<FeatureDetector> defaultDetector;
     void openToWriteKeypointsFile( FileStorage& fs, int datasetIdx );
 
     virtual void readAlgorithm( );
@@ -962,20 +825,17 @@ protected:
     virtual void runDatasetTest( const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress );
     virtual int processResults( int datasetIdx, int caseIdx );
 
+    Ptr<FeatureDetector> specificDetector;
+    Ptr<FeatureDetector> defaultDetector;
+
     struct Quality
     {
-#ifndef AFFINE_COVARIANT_VERSION
-        int repeatingLocationCount;
-        float repeatingLocationRltv;
-        int repeatingRegionCount;
-        float repeatingRegionRltv;
-#else
         float repeatability;
         int correspondenceCount;
-#endif
     };
     vector<vector<Quality> > validQuality;
     vector<vector<Quality> > calcQuality;
+
     vector<bool> isSaveKeypoints;
     vector<bool> isActiveParams;
 
@@ -1025,28 +885,14 @@ bool DetectorQualityTest::isCalcQualityEmpty( int datasetIdx ) const
 
 void DetectorQualityTest::readResults( FileNode& fn, int datasetIdx, int caseIdx )
 {
-#ifndef AFFINE_COVARIANT_VERSION
-    validQuality[datasetIdx][caseIdx].repeatingLocationCount = fn[RLC];
-    validQuality[datasetIdx][caseIdx].repeatingLocationRltv = fn[RLR];
-    validQuality[datasetIdx][caseIdx].repeatingRegionCount = fn[RRC];
-    validQuality[datasetIdx][caseIdx].repeatingRegionRltv = fn[RRR];
-#else
     validQuality[datasetIdx][caseIdx].repeatability = fn[REPEAT];
     validQuality[datasetIdx][caseIdx].correspondenceCount = fn[CORRESP_COUNT];
-#endif
 }
 
 void DetectorQualityTest::writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const
 {
-#ifndef AFFINE_COVARIANT_VERSION
-    fs << RLC << calcQuality[datasetIdx][caseIdx].repeatingLocationCount;
-    fs << RLR << calcQuality[datasetIdx][caseIdx].repeatingLocationRltv;
-    fs << RRC << calcQuality[datasetIdx][caseIdx].repeatingRegionCount;
-    fs << RRR << calcQuality[datasetIdx][caseIdx].repeatingRegionRltv;
-#else
     fs << REPEAT << calcQuality[datasetIdx][caseIdx].repeatability;
     fs << CORRESP_COUNT << calcQuality[datasetIdx][caseIdx].correspondenceCount;
-#endif
 }
 
 void DetectorQualityTest::readDefaultRunParams (FileNode &fn)
@@ -1089,6 +935,36 @@ void DetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
 {
     isSaveKeypoints[datasetIdx] = isSaveKeypointsDefault;
     isActiveParams[datasetIdx] = isActiveParamsDefault;
+}
+
+void DetectorQualityTest::writePlotData(int di ) const
+{
+    int imgXVals[] = { 2, 3, 4, 5, 6 }; // if scale, blur or light changes
+    int viewpointXVals[] = { 20, 30, 40, 50, 60 }; // if viewpoint changes
+    int jpegXVals[] = { 60, 80, 90, 95, 98 }; // if jpeg compression
+
+    int* xVals = 0;
+    if( !DATASET_NAMES[di].compare("ubc") )
+    {
+        xVals = jpegXVals;
+    }
+    else if( !DATASET_NAMES[di].compare("graf") || !DATASET_NAMES[di].compare("wall") )
+    {
+        xVals = viewpointXVals;
+    }
+    else
+        xVals = imgXVals;
+
+    stringstream rFilename, cFilename;
+    rFilename << getPlotPath() << algName << "_" << DATASET_NAMES[di]  << "_repeatability.csv";
+    cFilename << getPlotPath() << algName << "_" << DATASET_NAMES[di]  << "_correspondenceCount.csv";
+
+    ofstream rfile(rFilename.str().c_str()), cfile(cFilename.str().c_str());
+    for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
+    {
+        rfile << xVals[ci] << ", " << calcQuality[di][ci].repeatability << endl;
+        cfile << xVals[ci] << ", " << calcQuality[di][ci].correspondenceCount << endl;
+    }
 }
 
 void DetectorQualityTest::openToWriteKeypointsFile( FileStorage& fs, int datasetIdx )
@@ -1194,16 +1070,10 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
         vector<KeyPoint> keypoints2;
         detector->detect( imgs[ci+1], keypoints2 );
         writeKeypoints( keypontsFS, keypoints2, ci+1);
-#ifndef AFFINE_COVARIANT_VERSION
-        evaluateScaleInvDetectors( imgs[0], imgs[ci+1], Hs[ci], keypoints1, keypoints2,
-            calcQuality[di][ci].repeatingLocationCount, calcQuality[di][ci].repeatingLocationRltv,
-            calcQuality[di][ci].repeatingRegionCount, calcQuality[di][ci].repeatingRegionRltv );
-#else
         vector<EllipticKeyPoint> ekeypoints2;
         transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
         evaluateDetectors( ekeypoints1, ekeypoints2, imgs[0], imgs[ci], Hs[ci],
                            calcQuality[di][ci].repeatability, calcQuality[di][ci].correspondenceCount );
-#endif
     }
 }
 
@@ -1224,27 +1094,6 @@ int DetectorQualityTest::processResults( int datasetIdx, int caseIdx )
     bool isBadAccuracy;
     int countEps = 1;
     const float rltvEps = 0.001;
-#ifndef AFFINE_COVARIANT_VERSION
-    ts->printf(CvTS::LOG, "%s: calc=%d, valid=%d", RLC.c_str(), calc.repeatingLocationCount, valid.repeatingLocationCount );
-    isBadAccuracy = valid.repeatingLocationCount - calc.repeatingLocationCount > countEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? CvTS::FAIL_BAD_ACCURACY : res;
-
-    ts->printf(CvTS::LOG, "%s: calc=%f, valid=%f", RLR.c_str(), calc.repeatingLocationRltv, valid.repeatingLocationRltv );
-    isBadAccuracy = valid.repeatingLocationRltv - calc.repeatingLocationRltv > rltvEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? CvTS::FAIL_BAD_ACCURACY : res;
-
-    ts->printf(CvTS::LOG, "%s: calc=%d, valid=%d", RRC.c_str(), calc.repeatingRegionCount, valid.repeatingRegionCount );
-    isBadAccuracy = valid.repeatingRegionCount - calc.repeatingRegionCount > countEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? CvTS::FAIL_BAD_ACCURACY : res;
-
-    ts->printf(CvTS::LOG, "%s: calc=%f, valid=%f", RRR.c_str(), calc.repeatingRegionRltv, valid.repeatingRegionRltv );
-    isBadAccuracy = valid.repeatingRegionRltv - calc.repeatingRegionRltv > rltvEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? CvTS::FAIL_BAD_ACCURACY : res;
-#else
     ts->printf(CvTS::LOG, "%s: calc=%f, valid=%f", REPEAT.c_str(), calc.repeatability, valid.repeatability );
     isBadAccuracy = valid.repeatability - calc.repeatability > rltvEps;
     testLog( ts, isBadAccuracy );
@@ -1254,7 +1103,6 @@ int DetectorQualityTest::processResults( int datasetIdx, int caseIdx )
     isBadAccuracy = valid.correspondenceCount - calc.correspondenceCount > countEps;
     testLog( ts, isBadAccuracy );
     res = isBadAccuracy ? CvTS::FAIL_BAD_ACCURACY : res;
-#endif
     return res;
 }
 
@@ -1328,7 +1176,7 @@ protected:
 
     virtual int processResults( int datasetIdx, int caseIdx );
 
-    virtual void writePlotData( const string &filename, int di ) const;
+    virtual void writePlotData( int di ) const;
 
     struct Quality
     {
@@ -1455,9 +1303,11 @@ void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
     commRunParams[datasetIdx].keypontsFilename = "surf_" + DATASET_NAMES[datasetIdx] + ".xml.gz";
 }
 
-void DescriptorQualityTest::writePlotData( const string &filename, int di ) const
+void DescriptorQualityTest::writePlotData( int di ) const
 {
-    FILE *file = fopen (filename.c_str(),"w");
+    stringstream filename;
+    filename << getPlotPath() << algName << "_" << DATASET_NAMES[di] << ".csv";
+    FILE *file = fopen (filename.str().c_str(), "w");
     size_t size = calcDatasetQuality[di].size();
     for (size_t i=0;i<size;i++)
     {
