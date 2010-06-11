@@ -55,15 +55,13 @@ QMutex mutexKey;
 
 
 //end declaration
-
-CV_IMPL int cvChangeMode_QT(const char* name,int prop_value)
+void cvChangeMode_QT(const char* name, double prop_value)
 {
 	//CV_WINDOW_NORMAL or CV_WINDOW_FULLSCREEN 
-	
-	return 0;
+
 }
 
-CV_IMPL int cvGetMode_QT(const char* name)
+double cvGetMode_QT(const char* name)
 {
 	
 	return 0;
@@ -74,9 +72,10 @@ CV_IMPL int cvWaitKey( int arg )
 	
 	CV_FUNCNAME( "cvWaitKey" );
 
-    __BEGIN__;
-
     int result = -1;
+
+    __BEGIN__;
+    
     unsigned long delayms;//in milliseconds
     if (arg<=0)
         delayms = ULONG_MAX;
@@ -150,13 +149,14 @@ CV_IMPL CvWindow* icvFindWindowByName( const char* arg )
 		
 	CV_FUNCNAME( "icvFindWindowByName" );
 
+    QPointer<CvWindow> window = NULL;
+
     __BEGIN__;
     
     if( !arg )
         CV_Error( CV_StsNullPtr, "NULL name string" );
 
     QString name(arg);
-    QPointer<CvWindow> window = NULL;
     QPointer<CvWindow> w;
     foreach (QWidget *widget, QApplication::topLevelWidgets())
     {
@@ -177,6 +177,8 @@ CV_IMPL CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char
 
 	CV_FUNCNAME( "icvFindTrackbarByName" );
 
+    QPointer<CvTrackbar> result = NULL;
+    
     __BEGIN__;
 
     QPointer<CvWindow> w = icvFindWindowByName( name_window );
@@ -185,7 +187,6 @@ CV_IMPL CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char
         CV_Error( CV_StsNullPtr, "NULL window handler" );
 
     QString nameQt = QString(name_trackbar);
-    QPointer<CvTrackbar> result = NULL;
     QPointer<CvTrackbar> t;
 
     //for now, only trackbar are added so the Mutable cast is ok.
@@ -394,10 +395,10 @@ CV_IMPL int cvCreateTrackbar( const char* trackbar_name, const char* window_name
 CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name )
 {
 	CV_FUNCNAME( "cvGetTrackbarPos" );
-
-    __BEGIN__;
     
     int result = -1;
+    
+    __BEGIN__;
     
     QPointer<CvTrackbar> t = icvFindTrackbarByName(  trackbar_name, window_name );
 
@@ -621,12 +622,15 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
 
 
     //Change style of the Slider
-    QFile qss(PATH_QSLIDERCSS);
-    if (qss.open(QFile::ReadOnly))
-    {
-        slider->setStyleSheet(QLatin1String(qss.readAll()));
-        qss.close();
-    }
+    slider->setStyleSheet(str_Trackbar_css);
+    
+    //QFile qss(PATH_QSLIDERCSS);
+    //if (qss.open(QFile::ReadOnly))
+    //{
+        //slider->setStyleSheet(QLatin1String(qss.readAll()));
+        //qss.close();
+    //}
+    
 
     //does not work if we change the style with a stylesheet, why ?
     //slider->setTickPosition(QSlider::TicksBelow);

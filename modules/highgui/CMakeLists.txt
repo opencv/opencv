@@ -72,6 +72,7 @@ if(WIN32)
         
          #SET(QT_USE_QTXML 1)
 		 INCLUDE(${QT_USE_FILE})
+		 
 		 SET(_MOC_HEADERS src/window_QT.h)
 		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
 		 
@@ -94,6 +95,7 @@ if(UNIX)
     
          #SET(QT_USE_QTXML 1)
 		 INCLUDE(${QT_USE_FILE})
+		 
 		 SET(_MOC_HEADERS src/window_QT.h)
 		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
 		 
@@ -186,6 +188,7 @@ if(APPLE)
 
          #SET(QT_USE_QTXML 1)
 		 INCLUDE(${QT_USE_FILE})
+		 
 		 SET(_MOC_HEADERS src/window_QT.h)
 		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
 		 
