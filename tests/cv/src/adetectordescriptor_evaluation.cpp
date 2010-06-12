@@ -535,6 +535,7 @@ protected:
     virtual int processResults( int datasetIdx, int caseIdx ) = 0;
     void writeAllPlotData() const;
     virtual void writePlotData( int datasetIdx ) const {};
+    virtual void writeAveragePlotData() const {};
 
     string algName;
     bool isWriteParams, isWriteResults, isWriteGraphicsData;
@@ -731,6 +732,7 @@ void BaseQualityTest::writeAllPlotData() const
     {
         writePlotData( di );
     }
+    writeAveragePlotData();
 }
 
 void BaseQualityTest::run ( int )
@@ -817,6 +819,7 @@ protected:
     virtual void writeDefaultRunParams( FileStorage &fs ) const;
 
     virtual void writePlotData( int di ) const;
+    virtual void writeAveragePlotData() const;
 
     void openToWriteKeypointsFile( FileStorage& fs, int datasetIdx );
 
@@ -958,13 +961,33 @@ void DetectorQualityTest::writePlotData(int di ) const
     stringstream rFilename, cFilename;
     rFilename << getPlotPath() << algName << "_" << DATASET_NAMES[di]  << "_repeatability.csv";
     cFilename << getPlotPath() << algName << "_" << DATASET_NAMES[di]  << "_correspondenceCount.csv";
-
     ofstream rfile(rFilename.str().c_str()), cfile(cFilename.str().c_str());
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
         rfile << xVals[ci] << ", " << calcQuality[di][ci].repeatability << endl;
         cfile << xVals[ci] << ", " << calcQuality[di][ci].correspondenceCount << endl;
     }
+}
+
+void DetectorQualityTest::writeAveragePlotData() const
+{
+    stringstream rFilename, cFilename;
+    rFilename << getPlotPath() << algName << "_average_repeatability.csv";
+    cFilename << getPlotPath() << algName << "_average_correspondenceCount.csv";
+    ofstream rfile(rFilename.str().c_str()), cfile(cFilename.str().c_str());
+    float avRep = 0, avCorCount = 0;
+    for( int di = 0; di < DATASETS_COUNT; di++ )
+    {
+        for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
+        {
+            avRep += calcQuality[di][ci].repeatability;
+            avCorCount += calcQuality[di][ci].correspondenceCount;
+        }
+    }
+    avRep /= DATASETS_COUNT*TEST_CASE_COUNT;
+    avCorCount /= DATASETS_COUNT*TEST_CASE_COUNT;
+    rfile << algName << ", " << avRep << endl;
+    cfile << algName << ", " << cvRound(avCorCount) << endl;
 }
 
 void DetectorQualityTest::openToWriteKeypointsFile( FileStorage& fs, int datasetIdx )
