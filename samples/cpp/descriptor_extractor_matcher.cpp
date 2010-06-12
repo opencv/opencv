@@ -88,21 +88,21 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     Mat drawImg;
     if( !H12.empty() )
     {
-        vector<char> mask( matches.size(), 0 );
+        vector<char> matchesMask( matches.size(), 0 );
         vector<int>::const_iterator mit = matches.begin();
         for( size_t i1 = 0; mit != matches.end(); ++mit, i1++ )
         {
             Point2f pt1 = keypoints1[i1].pt,
                     pt2 = keypoints2[*mit].pt;
             if( norm(pt2 - applyHomography(H12, pt1)) < 4 ) // inlier
-                mask[i1] = 1;
+                matchesMask[i1] = 1;
         }
         // draw inliers
-        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, mask, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255) );
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, matchesMask, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255) );
         // draw outliers
-        /*for( size_t i1 = 0; i1 < mask.size(); i1++ )
-            mask[i1] = !mask[i1];
-        drawMatches( img1, img2, keypoints1, keypoints2, matches, mask, drawImg, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0),
+        /*for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
+            matchesMask[i1] = !matchesMask[i1];
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, matchesMask, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0),
                      DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );*/
     }
     else

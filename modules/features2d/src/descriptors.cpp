@@ -45,11 +45,11 @@ using namespace std;
 namespace cv
 {
 
-CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
-							 const Mat& img2,const vector<KeyPoint>& keypoints2,
-                             const vector<int>& matches, Mat& outImg, const vector<char>& mask,
-                             const Scalar& matchColor, const Scalar& singlePointColor,
-                             int flags )
+void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                  const Mat& img2,const vector<KeyPoint>& keypoints2,
+                  const vector<int>& matches, Mat& outImg, const vector<char>& matchesMask,
+                  const Scalar& matchColor, const Scalar& singlePointColor,
+                  int flags )
 {
     Size size( img1.cols + img2.cols, MAX(img1.rows, img2.rows) );
     if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )
@@ -88,12 +88,12 @@ CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1
     bool isRandMatchColor = matchColor == Scalar::all(-1);
     if( matches.size() != keypoints1.size() )
         CV_Error( CV_StsBadSize, "matches must have the same size as keypoints1" );
-    if( !mask.empty() && mask.size() != keypoints1.size() )
+    if( !matchesMask.empty() && matchesMask.size() != keypoints1.size() )
         CV_Error( CV_StsBadSize, "mask must have the same size as keypoints1" );
     vector<int>::const_iterator mit = matches.begin();
     for( int i1 = 0; mit != matches.end(); ++mit, i1++ )
     {
-        if( (mask.empty() || mask[i1] ) && *mit >= 0 )
+        if( (matchesMask.empty() || matchesMask[i1] ) && *mit >= 0 )
         {
             Point2f pt1 = keypoints1[i1].pt,
                     pt2 = keypoints2[*mit].pt,

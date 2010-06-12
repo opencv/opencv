@@ -1965,7 +1965,7 @@ Match is a line connecting two keypoints (circles).
 void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1, 
 		  const Mat\& img2, const vector<KeyPoint>\& keypoints2,
 		  const vector<int>\& matches, Mat\& outImg, 
-		  const vector<char>\& mask = vector<char>(),
+		  const vector<char>\& matchesMask = vector<char>(),
 		  const Scalar\& matchColor = Scalar::all(-1), 
 		  const Scalar\& singlePointColor = Scalar::all(-1),
 		  int flags = DrawMatchesFlags::DEFAULT );
@@ -1996,7 +1996,7 @@ void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,
 \end{description}
 
 \begin{description}
-\cvarg{mask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
+\cvarg{matchesMask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
 \end{description}
 
 \begin{description}
@@ -2015,7 +2015,7 @@ void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,
 struct DrawMatchesFlags
 {
     enum{ DEFAULT = 0, // Output image matrix will be created (Mat::create),
-                       // i.e. existing memory of output image will be reused. 
+                       // i.e. existing memory of output image may be reused. 
                        // Two source image, matches and single keypoints will be drawn.
           DRAW_OVER_OUTIMG = 1, // Output image matrix will not be created (Mat::create).
                                 // Matches will be drawn on existing content 
