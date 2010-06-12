@@ -66,7 +66,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 		
 		case CV_WND_PROP_AUTOSIZE:
 			#if defined (HAVE_QT)
-			//cvChangeSizeWindow_QT(name,prop_value);
+				cvSetPropWindow_QT(name,prop_value);
 			#endif
 		break;
 		
@@ -102,9 +102,9 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 				return -1;
 				
 			#if defined (HAVE_QT)
-			//cvGetSizeWindow_QT(name,prop_value);
+				return cvGetPropWindow_QT(name);
 			#else
-		    return -1;
+				return -1;
 		    #endif	
 		
 	    default:

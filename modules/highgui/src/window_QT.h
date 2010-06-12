@@ -100,6 +100,8 @@ public slots:
     void timeOut();
     void toggleFullScreen(QString name, double flags );
     double isFullScreen(QString name);
+    double getPropWindow(QString name);
+    void setPropWindow(QString name, double flags );
 };
 
 class CvTrackbar : public QHBoxLayout

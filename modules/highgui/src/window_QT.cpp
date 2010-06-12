@@ -53,7 +53,28 @@ QWaitCondition key_pressed;
 QMutex mutexKey;
 //end static and global
 
-//end declaration
+
+double cvGetPropWindow_QT(const char* name)
+{
+	double result = -1;
+    QMetaObject::invokeMethod(&guiMainThread,
+                              "getPropWindow",
+                              //Qt::DirectConnection,
+                              Qt::AutoConnection,
+                              Q_RETURN_ARG(double, result),
+                              Q_ARG(QString, QString(name)));
+    return result;
+}
+
+void cvSetPropWindow_QT(const char* name,double prop_value)
+{
+    QMetaObject::invokeMethod(&guiMainThread,
+						  "setPropWindow",
+						  Qt::AutoConnection,
+						  Q_ARG(QString, QString(name)),
+                          Q_ARG(double, prop_value));
+}
+
 void cvSetModeWindow_QT(const char* name, double prop_value)
 {
     QMetaObject::invokeMethod(&guiMainThread,
@@ -65,7 +86,7 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
 
 double cvGetModeWindow_QT(const char* name)
 {
-	double result;
+	double result = -1;
 
     QMetaObject::invokeMethod(&guiMainThread,
                               "isFullScreen",
@@ -405,6 +426,44 @@ GuiReceiver::GuiReceiver() : _bTimeOut(false)
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
+double GuiReceiver::getPropWindow(QString name)
+{
+	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+
+    if (!w)
+		return -1;
+			
+	return (double)w->flags;
+}
+
+void GuiReceiver::setPropWindow(QString name, double arg2 )
+{
+	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (!w)
+		return;
+	
+	int flags = (int) arg2;
+	
+	if (w->flags == flags)//nothing to do
+		return;
+		
+		
+	switch(flags)
+	{
+		case  CV_WINDOW_NORMAL:
+			w->layout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+			w->flags = flags;
+		break;
+		case  CV_WINDOW_AUTOSIZE:
+			w->layout->setSizeConstraint(QLayout::SetFixedSize);
+			w->flags = flags;
+		break;
+		default:;
+	}
+}
+
 double GuiReceiver::isFullScreen(QString name)
 {
 	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
@@ -602,16 +661,9 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
 
     QObject::connect( slider, SIGNAL( valueChanged( int ) ),this, SLOT( update( int ) ) );
 
-    //if I connect those two signals in not-multiThreads mode,
-    //the code crashes when we move the trackbar and then click on the button, ... why ?
-    //so I disable the button
+    QObject::connect( label, SIGNAL( clicked() ),this, SLOT( createDialog() ));
 
-    if (multiThreads)
-        QObject::connect( label, SIGNAL( clicked() ),this, SLOT( createDialog() ));
-    else
-        label->setEnabled(false);
-
-    label->setStyleSheet("QPushButton:disabled {color: black}");
+    //label->setStyleSheet("QPushButton:disabled {color: black}");
 
     addWidget(label);//name + value
     addWidget(slider);//slider
