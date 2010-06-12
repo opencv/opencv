@@ -369,11 +369,11 @@ icvSaveWindowPos( const char* name, CvRect rect )
     RegCloseKey(hkey);
 }
 
-double cvGetMode_W32(const char* name)//YV
+double cvGetModeWindow_W32(const char* name)//YV
 {
 	double result = -1;
 	
-	CV_FUNCNAME( "cvGetMode_W32" );
+	CV_FUNCNAME( "cvGetModeWindow_W32" );
 
     __BEGIN__;
 
@@ -393,9 +393,9 @@ double cvGetMode_W32(const char* name)//YV
 }
 
 #ifdef MONITOR_DEFAULTTONEAREST
-void cvChangeMode_W32( const char* name, double prop_value)//Yannick Verdie
+void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
 {
-	CV_FUNCNAME( "cvChangeMode_W32" );
+	CV_FUNCNAME( "cvSetModeWindow_W32" );
 
 	__BEGIN__;
 
@@ -457,7 +457,7 @@ void cvChangeMode_W32( const char* name, double prop_value)//Yannick Verdie
 	__END__;
 }
 #else
-void cvChangeMode_W32( const char*, double)
+void cvSetModeWindow_W32( const char*, double)
 {
 }
 #endif

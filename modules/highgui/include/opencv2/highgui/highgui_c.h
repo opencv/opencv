@@ -58,7 +58,9 @@ extern "C" {
 \****************************************************************************************/
 //YV
 //-----------New for QT
-//CVAPI(void) cvInformation(const char* name, const char* text, int delayms);
+CVAPI(void) cvInformation(const char* name, const char* text, int delayms);
+CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
+CVAPI(void) cvStopLoop();
 //----------------------
 
 
@@ -85,8 +87,6 @@ enum
 /* Set and Get Property of the window */
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
 CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
-
-CVAPI(void) cvInformation(const char* name, const char* text, int delayms);
 
 /* display image within window (highgui windows remember their content) */
 CVAPI(void) cvShowImage( const char* name, const CvArr* image );

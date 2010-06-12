@@ -54,18 +54,20 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 				break;
 		
 			#if   defined WIN32 || defined _WIN32 
-			cvChangeMode_W32(name,prop_value);
+			cvSetModeWindow_W32(name,prop_value);
 			#elif defined (HAVE_GTK)
-			cvChangeMode_GTK(name,prop_value);
+			cvSetModeWindow_GTK(name,prop_value);
 			#elif defined (HAVE_CARBON)
-			cvChangeMode_CARBON(name,prop_value);
+			cvSetModeWindow_CARBON(name,prop_value);
 			#elif defined (HAVE_QT)
-			cvChangeMode_QT(name,prop_value);
+			cvSetModeWindow_QT(name,prop_value);
 			#endif
 		break;
 		
 		case CV_WND_PROP_AUTOSIZE:
-		
+			#if defined (HAVE_QT)
+			//cvChangeSizeWindow_QT(name,prop_value);
+			#endif
 		break;
 		
 	default:;
@@ -83,13 +85,13 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 				return -1;
 				
 			#if   defined WIN32 || defined _WIN32 
-				return cvGetMode_W32(name);
+				return cvGetModeWindow_W32(name);
 			#elif defined (HAVE_GTK)
-				return cvGetMode_GTK(name);
+				return cvGetModeWindow_GTK(name);
 			#elif defined (HAVE_CARBON)
-				return cvGetMode_CARBON(name);
+				return cvGetModeWindow_CARBON(name);
 			#elif defined (HAVE_QT)
-				return cvGetMode_QT(name);
+				return cvGetModeWindow_QT(name);
             #else
                 return -1;
 			#endif
@@ -99,7 +101,11 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 			if (!name)//bad argument
 				return -1;
 				
+			#if defined (HAVE_QT)
+			//cvGetSizeWindow_QT(name,prop_value);
+			#else
 		    return -1;
+		    #endif	
 		
 	    default:
 		    return -1;

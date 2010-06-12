@@ -162,26 +162,14 @@ CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
 
 //Yannick Verdie 2010                                 
-double cvGetMode_W32(const char* name);
-double cvGetMode_GTK(const char* name);
-double cvGetMode_CARBON(const char* name);
-double cvGetMode_QT(const char* name);
-void cvChangeMode_W32(const char* name, double prop_value);
-void cvChangeMode_GTK(const char* name, double prop_value);
-void cvChangeMode_CARBON(const char* name, double prop_value);
-void cvChangeMode_QT(const char* name, double prop_value);
-
-//#if defined (HAVE_QT)
-	//class CvWindow;
-	//class ViewPort;
-	//struct CvTrackbar;
-	
-	////new functions available to the users
-	//#include "highgui_QT_extension.h"
-	////new functions hidden to the users
-	//CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_window );
-//#endif
-
+double cvGetModeWindow_W32(const char* name);
+double cvGetModeWindow_GTK(const char* name);
+double cvGetModeWindow_CARBON(const char* name);
+double cvGetModeWindow_QT(const char* name);
+void cvSetModeWindow_W32(const char* name, double prop_value);
+void cvSetModeWindow_GTK(const char* name, double prop_value);
+void cvSetModeWindow_CARBON(const char* name, double prop_value);
+void cvSetModeWindow_QT(const char* name, double prop_value);
 
 /*namespace cv
 {

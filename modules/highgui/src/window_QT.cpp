@@ -54,7 +54,7 @@ QMutex mutexKey;
 //end static and global
 
 //end declaration
-void cvChangeMode_QT(const char* name, double prop_value)
+void cvSetModeWindow_QT(const char* name, double prop_value)
 {
     QMetaObject::invokeMethod(&guiMainThread,
                               "toggleFullScreen",
@@ -63,7 +63,7 @@ void cvChangeMode_QT(const char* name, double prop_value)
                               Q_ARG(double, prop_value));
 }
 
-double cvGetMode_QT(const char* name)
+double cvGetModeWindow_QT(const char* name)
 {
 	double result;
 
@@ -146,14 +146,14 @@ CV_IMPL int cvWaitKey( int arg )
 }
 
 
-int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
     multiThreads = true;
     QFuture<int> future = QtConcurrent::run(pt2Func,argc,argv);
     return guiMainThread.start();
 }
 
-void cvStopLoop()
+CV_IMPL void cvStopLoop()
 {
     qApp->exit();
 }

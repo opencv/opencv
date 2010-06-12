@@ -569,11 +569,11 @@ static CvWindow* icvWindowByWidget( GtkWidget* widget )
     return window;
 }
 
-double cvGetMode_GTK(const char* name)//YV
+double cvGetModeWindow_GTK(const char* name)//YV
 {
 	double result = -1;
 	
-	CV_FUNCNAME( "cvGetMode_GTK" );
+	CV_FUNCNAME( "cvGetModeWindow_GTK" );
 
     __BEGIN__;
 
@@ -595,10 +595,10 @@ double cvGetMode_GTK(const char* name)//YV
 }
 
 
-void cvChangeMode_GTK( const char* name, double prop_value)//Yannick Verdie
+void cvSetModeWindow_GTK( const char* name, double prop_value)//Yannick Verdie
 {
 
-	CV_FUNCNAME( "cvChangeMode_GTK" );
+	CV_FUNCNAME( "cvSetModeWindow_GTK" );
 
     __BEGIN__;
 

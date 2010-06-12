@@ -757,11 +757,11 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
     return window_name;
 }
 
-double cvGetMode_CARBON(const char* name)//YV
+double cvGetModeWindow_CARBON(const char* name)//YV
 {
 	double result = -1;
 	
-	CV_FUNCNAME( "cvGetMode_QT" );
+	CV_FUNCNAME( "cvGetModeWindow_QT" );
 
     __BEGIN__;
 
@@ -780,12 +780,12 @@ double cvGetMode_CARBON(const char* name)//YV
     return result;   
 }
 
-void cvChangeMode_CARBON( const char* name, double prop_value)//Yannick Verdie
+void cvSetModeWindow_CARBON( const char* name, double prop_value)//Yannick Verdie
 {
 	OSStatus err = noErr;
 	
 	
-	CV_FUNCNAME( "cvChangeMode_QT" );
+	CV_FUNCNAME( "cvSetModeWindow_QT" );
 
     __BEGIN__;
 
