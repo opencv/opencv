@@ -13,8 +13,8 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	Mat img1 = imread(argv[1]);
-	Mat img2 = imread(argv[2]);
+	Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+	Mat img2 = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
 	if(img1.empty() || img2.empty())
 	{
 		printf("Can't read one of the images\n");
@@ -36,8 +36,8 @@ int main(int argc, char** argv)
 	// matching descriptors
 	BruteForceMatcher<L2<float> > matcher;
 	vector<int> matches;
-	matcher.add(descriptors1);
-	matcher.match(descriptors2, matches);
+	matcher.add(descriptors2);
+	matcher.match(descriptors1, matches);
 
 	// drawing the results
 	namedWindow("matches", 1);
