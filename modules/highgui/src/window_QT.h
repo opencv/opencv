@@ -37,6 +37,9 @@
 //the use of this software, even if advised of the possibility of such damage.
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
+#ifndef __OPENCV_HIGHGUI_QT_H__
+#define __OPENCV_HIGHGUI_QT_H__
+
 
 #include "precomp.hpp"
 
@@ -63,15 +66,15 @@
 #include <QLabel>
 #include <QIODevice>
 
-
-
 //Macro here
 #define CV_MODE_NORMAL   0
 #define CV_MODE_OPENGL   1
 //end macro
 
-//Here declare everything
-//need a .h to allow QT to use MOC (in order to use signal, slots, etc)
+class CvWindow;
+class ViewPort;
+//class CvTrackbar;
+
 
 class GuiReceiver : public QObject
 {
@@ -95,6 +98,8 @@ public slots:
     void displayInfo( QString name, QString text, int delayms );
     void refreshEvents();
     void timeOut();
+    void toggleFullScreen(QString name, double flags );
+    double isFullScreen(QString name);
 };
 
 class CvTrackbar : public QHBoxLayout
@@ -263,3 +268,5 @@ static const QString str_Trackbar_css = QString("")
 +										"border: 1px solid #aaa;"
 +										"border-radius: 4px;"
 +										"}";
+
+#endif

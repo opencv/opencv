@@ -53,29 +53,46 @@ QWaitCondition key_pressed;
 QMutex mutexKey;
 //end static and global
 
-
 //end declaration
 void cvChangeMode_QT(const char* name, double prop_value)
 {
-	//CV_WINDOW_NORMAL or CV_WINDOW_FULLSCREEN 
-
+    QMetaObject::invokeMethod(&guiMainThread,
+                              "toggleFullScreen",
+                              Qt::AutoConnection,
+                              Q_ARG(QString, QString(name)),
+                              Q_ARG(double, prop_value));
 }
 
 double cvGetMode_QT(const char* name)
 {
-	
-	return 0;
+	double result;
+
+    QMetaObject::invokeMethod(&guiMainThread,
+                              "isFullScreen",
+                              Qt::AutoConnection,
+                              Q_RETURN_ARG(double, result),
+                              Q_ARG(QString, QString(name)));
+    return result;
 }
+
+CV_IMPL void cvInformation(const char* name, const char* text, int delayms)
+{
+
+    QMetaObject::invokeMethod(&guiMainThread,
+                              "displayInfo",
+                              Qt::AutoConnection,
+                              //Qt::DirectConnection,
+                              Q_ARG(QString, QString(name)),
+                              Q_ARG(QString, QString(text)),
+                              Q_ARG(int, delayms));
+                         
+}
+
 
 CV_IMPL int cvWaitKey( int arg )
 {
-	
-	CV_FUNCNAME( "cvWaitKey" );
-
     int result = -1;
 
-    __BEGIN__;
-    
     unsigned long delayms;//in milliseconds
     if (arg<=0)
         delayms = ULONG_MAX;
@@ -124,21 +141,19 @@ CV_IMPL int cvWaitKey( int arg )
         }
         guiMainThread._bTimeOut = false;
     }
-    
-    __END__;
-    
+
     return result;
 }
 
 
-CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
     multiThreads = true;
     QFuture<int> future = QtConcurrent::run(pt2Func,argc,argv);
     return guiMainThread.start();
 }
 
-CV_IMPL void cvStopLoop()
+void cvStopLoop()
 {
     qApp->exit();
 }
@@ -146,12 +161,8 @@ CV_IMPL void cvStopLoop()
 
 CV_IMPL CvWindow* icvFindWindowByName( const char* arg )
 {
-		
-	CV_FUNCNAME( "icvFindWindowByName" );
 
     QPointer<CvWindow> window = NULL;
-
-    __BEGIN__;
     
     if( !arg )
         CV_Error( CV_StsNullPtr, "NULL name string" );
@@ -168,19 +179,14 @@ CV_IMPL CvWindow* icvFindWindowByName( const char* arg )
         }
     }
     
-    __END__;
     return window;
 }
 
-CV_IMPL CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_window )
+CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_window )
 {
-
-	CV_FUNCNAME( "icvFindTrackbarByName" );
 
     QPointer<CvTrackbar> result = NULL;
     
-    __BEGIN__;
-
     QPointer<CvWindow> w = icvFindWindowByName( name_window );
 
     if( !w )
@@ -200,16 +206,12 @@ CV_IMPL CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char
         }
     }
 
-    __END__;
     return result;
 }
 
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
-	CV_FUNCNAME( "cvNamedWindow" );
 
-    __BEGIN__;
-	
     if (multiThreads)
         QMetaObject::invokeMethod(&guiMainThread,
                                   "createWindow",
@@ -221,31 +223,13 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
                                   Q_ARG(int, flags));
     else
         guiMainThread.createWindow(QString(name),flags);
-        
-    __END__;
+
     return 1;//Dummy value
 }
 
-CV_IMPL void cvInformation(const char* name, const char* text, int delayms)
-{
-	CV_FUNCNAME( "cvInformation" );
-
-    __BEGIN__;
-    QMetaObject::invokeMethod(&guiMainThread,
-                              "displayInfo",
-                              Qt::AutoConnection,
-                              Q_ARG(QString, QString(name)),
-                              Q_ARG(QString, QString(text)),
-                              Q_ARG(int, delayms));
-                              
-    __END__;
-}
 
 CV_IMPL int icvInitSystem( int argc, char** argv )
 {
-	CV_FUNCNAME( "icvInitSystem" );
-
-    __BEGIN__;
     
     static int wasInitialized = 0;
 
@@ -258,15 +242,11 @@ CV_IMPL int icvInitSystem( int argc, char** argv )
         qDebug()<<"init done"<<endl;
     }
 
-	__END__;
     return 0;
 }
 
 CV_IMPL void cvDestroyWindow( const char* name )
 {
-	CV_FUNCNAME( "cvDestroyWindow" );
-
-    __BEGIN__;
     
     QMetaObject::invokeMethod(&guiMainThread,
                               "destroyWindow",
@@ -274,57 +254,40 @@ CV_IMPL void cvDestroyWindow( const char* name )
                               Qt::AutoConnection,
                               Q_ARG(QString, QString(name))
                               );
-                              
-     __END__;
 }
 
 
 CV_IMPL void cvDestroyAllWindows(void)
 {
-	CV_FUNCNAME( "cvDestroyAllWindows" );
 
-    __BEGIN__;
-    
     QMetaObject::invokeMethod(&guiMainThread,
                               "destroyAllWindow",
                               //Qt::BlockingQueuedConnection,
                               Qt::AutoConnection
                               );
-                              
-    __END__;
+
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* name )
 {
-	CV_FUNCNAME( "cvGetWindowHandle" );
-
-    __BEGIN__;
     if( !name )
         CV_Error( CV_StsNullPtr, "NULL name string" );
 
-    __END__;
     return (void*) icvFindWindowByName( name );
 }
 
 CV_IMPL const char* cvGetWindowName( void* window_handle )
 {
-	CV_FUNCNAME( "cvGetWindowName" );
-
-    __BEGIN__;
     
     if( !window_handle )
         CV_Error( CV_StsNullPtr, "NULL window handler" );
 
-
-	__END__;
     return ((CvWindow*)window_handle)->windowTitle().toLatin1().data();
 }
 
 CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 {   
-	CV_FUNCNAME( "cvMoveWindow" );
 
-    __BEGIN__;
     
     QMetaObject::invokeMethod(&guiMainThread,
                               "moveWindow",
@@ -334,16 +297,11 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
                               Q_ARG(int, x),
                               Q_ARG(int, y)
                               );
-                              
-     __END__;
+
 }
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
-
-	CV_FUNCNAME( "cvResizeWindow" );
-
-    __BEGIN__;
 
     QMetaObject::invokeMethod(&guiMainThread,
                               "resizeWindow",
@@ -353,14 +311,12 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
                               Q_ARG(int, width),
                               Q_ARG(int, height)
                               );
-                              
-    __END__;
 
 }
 
 CV_IMPL int cvCreateTrackbar2( const char* trackbar_name, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata )
 {
-	//TODO: implement the real one, not a wrapper
+    //TODO: implement the real one, not a wrapper
     return cvCreateTrackbar( trackbar_name, window_name, val, count, (CvTrackbarCallback)on_notify );
 }
 
@@ -371,9 +327,6 @@ CV_IMPL int cvStartWindowThread()
 
 CV_IMPL int cvCreateTrackbar( const char* trackbar_name, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
 {
-	CV_FUNCNAME( "cvCreateTrackbar" );
-
-    __BEGIN__;
     
     if (multiThreads)
         QMetaObject::invokeMethod(&guiMainThread,
@@ -388,76 +341,55 @@ CV_IMPL int cvCreateTrackbar( const char* trackbar_name, const char* window_name
     else
         guiMainThread.addSlider(QString(trackbar_name),QString(window_name),(void*)value,count,(void*)on_change);
 
-    __END__;
-	return 1;//demmy value
+    return 1;//demmy value
 }
 
 CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name )
 {
-	CV_FUNCNAME( "cvGetTrackbarPos" );
-    
     int result = -1;
-    
-    __BEGIN__;
-    
+   
     QPointer<CvTrackbar> t = icvFindTrackbarByName(  trackbar_name, window_name );
 
     if (t)
         result = t->slider->value();
- 
-    __END__;
+
     return result;
 }
 
 CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
 {
-	CV_FUNCNAME( "cvSetTrackbarPos" );
-
-    __BEGIN__;
     
     QPointer<CvTrackbar> t = icvFindTrackbarByName(  trackbar_name, window_name );
 
     if (t)
         t->slider->setValue(pos);
-        
-    __END__;
+
 }
 
 /* assign callback for mouse events */
 CV_IMPL void cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse,void* param )
-{
-	CV_FUNCNAME( "cvSetMouseCallback" );
-
-    __BEGIN__;
-    
+{    
     QPointer<CvWindow> w = icvFindWindowByName( window_name );
 
     if (!w)
         CV_Error(CV_StsNullPtr, "NULL window handler" );
 
     w->setMouseCallBack(on_mouse, param);
-    
-    __END__;
+
 }
 
 CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 {
-	CV_FUNCNAME( "cvShowImage" );
 
-    __BEGIN__;
-    //objects were created in GUI thread, so not using invoke method here should be fine
-    guiMainThread.showImage(QString(name), (void*) arr);
-
-    //    QMetaObject::invokeMethod(&guiMainThread,
-    //                              "showImage",
-    //                              //Qt::BlockingQueuedConnection,
-    //                              Qt::AutoConnection,
-    //                                    Q_ARG(QString, QString(name)),
-    //                                    Q_ARG(void*, (void*)arr)
-    //                              );
-    
-    __END__;
+	QMetaObject::invokeMethod(&guiMainThread,
+							  "showImage",
+							  //Qt::BlockingQueuedConnection,
+							  Qt::DirectConnection,
+							  Q_ARG(QString, QString(name)),
+							  Q_ARG(void*, (void*)arr)
+							  );
 }
+
 
 
 
@@ -471,6 +403,35 @@ GuiReceiver::GuiReceiver() : _bTimeOut(false)
 {  
     icvInitSystem(myargc,myargv );
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
+}
+
+double GuiReceiver::isFullScreen(QString name)
+{
+	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (!w)
+		return -1;
+		
+	if (w->isFullScreen())
+		return CV_WINDOW_FULLSCREEN;
+	else
+		return CV_WINDOW_NORMAL;
+}
+
+//accept CV_WINDOW_NORMAL or CV_WINDOW_FULLSCREEN
+void GuiReceiver::toggleFullScreen(QString name, double flags )
+{
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (!w)
+        return;
+    
+	if (w->isFullScreen() && flags == CV_WINDOW_NORMAL)
+		w->showNormal();
+	
+	if (!w->isFullScreen() && flags == CV_WINDOW_FULLSCREEN)
+		w->showFullScreen(); 
+
 }
 
 void GuiReceiver::createWindow( QString name, int flags )

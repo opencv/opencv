@@ -56,6 +56,12 @@ namespace cv
 
 enum { WINDOW_AUTOSIZE=1 };
 
+//YV
+//-----------New for QT
+//CV_EXPORTS void information(const string&  name,  const string& text, int delayms);
+//------------
+
+
 CV_EXPORTS void namedWindow( const string& winname, int flags CV_DEFAULT(WINDOW_AUTOSIZE) );
 CV_EXPORTS void destroyWindow( const string& winname );
 CV_EXPORTS int startWindowThread();

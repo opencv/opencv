@@ -59,6 +59,7 @@ set(highgui_srcs
 
 set(highgui_hdrs src/precomp.hpp src/utils.hpp)
 
+#YV
 set(lib_hdr_names highgui_c.h highgui.hpp)
 set(highgui_ext_hdrs)
 foreach(h ${lib_hdr_names})
@@ -73,7 +74,7 @@ if(WIN32)
          #SET(QT_USE_QTXML 1)
 		 INCLUDE(${QT_USE_FILE})
 		 
-		 SET(_MOC_HEADERS src/window_QT.h)
+		 SET(_MOC_HEADERS src/window_QT.h )
 		 QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
 		 
 		 set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES})

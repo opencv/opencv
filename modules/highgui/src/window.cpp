@@ -131,6 +131,13 @@ double getWindowProperty(const string& winname, int prop_id)
 	return  cvGetWindowProperty(winname.c_str(),prop_id);
 }
 
+/*
+void information(const string& name,  const string& text, int delayms)
+{
+	cvInformation(name.c_str(),text.c_str(), delayms);
+}
+* */
+
 void imshow( const string& winname, const Mat& img )
 {
     CvMat _img = img;

@@ -171,6 +171,18 @@ void cvChangeMode_GTK(const char* name, double prop_value);
 void cvChangeMode_CARBON(const char* name, double prop_value);
 void cvChangeMode_QT(const char* name, double prop_value);
 
+//#if defined (HAVE_QT)
+	//class CvWindow;
+	//class ViewPort;
+	//struct CvTrackbar;
+	
+	////new functions available to the users
+	//#include "highgui_QT_extension.h"
+	////new functions hidden to the users
+	//CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_window );
+//#endif
+
+
 /*namespace cv
 {
 

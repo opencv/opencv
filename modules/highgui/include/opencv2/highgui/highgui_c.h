@@ -56,6 +56,11 @@ extern "C" {
 /****************************************************************************************\
 *                                  Basic GUI functions                                   *
 \****************************************************************************************/
+//YV
+//-----------New for QT
+//CVAPI(void) cvInformation(const char* name, const char* text, int delayms);
+//----------------------
+
 
 /* this function is used to set some external parameters in case of X Window */
 CVAPI(int) cvInitSystem( int argc, char** argv );
@@ -76,9 +81,12 @@ enum
 	CV_WINDOW_FULLSCREEN   = 1
 };
 
+
 /* Set and Get Property of the window */
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
 CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
+
+CVAPI(void) cvInformation(const char* name, const char* text, int delayms);
 
 /* display image within window (highgui windows remember their content) */
 CVAPI(void) cvShowImage( const char* name, const CvArr* image );
@@ -200,17 +208,8 @@ CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0
 /* wait for key event infinitely (delay<=0) or for "delay" milliseconds */
 CVAPI(int) cvWaitKey(int delay CV_DEFAULT(0));
 
-//YV
-#if defined (HAVE_QT)
-	class CvWindow;
-	class ViewPort;
-	struct CvTrackbar;
+void cvInformation(const char* name, const char* text, int delay);
 
-	CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char *argv[]);
-	CVAPI(void) cvStopLoop();
-	CVAPI(void) cvInformation(const char* name, const char* text, int delay);
-	CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_window );
-#endif
 
 /****************************************************************************************\
 *                         Working with Video Files and Cameras                           *
