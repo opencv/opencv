@@ -1684,7 +1684,7 @@ inline void DescriptorMatcher::clear()
  * descriptor in the second set by trying each one.
  *
  * For efficiency, BruteForceMatcher is templated on the distance metric.
- * For float descriptors, a common choice would be features_2d::L2<float>.
+ * For float descriptors, a common choice would be cv::L2<float>.
  */
 template<class Distance>
 class CV_EXPORTS BruteForceMatcher : public DescriptorMatcher
