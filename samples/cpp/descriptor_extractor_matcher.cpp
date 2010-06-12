@@ -98,7 +98,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                 mask[i1] = 1;
         }
         // draw inliers
-        drawMatches( img1, img2, keypoints1, keypoints2, matches, mask, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255) );
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, mask, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255) );
         // draw outliers
         /*for( size_t i1 = 0; i1 < mask.size(); i1++ )
             mask[i1] = !mask[i1];
@@ -107,7 +107,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     }
     else
     {
-        drawMatches( img1, img2, keypoints1, keypoints2, matches, vector<char>(), drawImg, CV_RGB(0, 255, 0) );
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, vector<char>(), CV_RGB(0, 255, 0) );
     }
 
     imshow( winName, drawImg );

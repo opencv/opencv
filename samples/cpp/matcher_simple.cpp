@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 	// drawing the results
 	namedWindow("matches", 1);
 	Mat img_matches;
-	drawMatches(img1, img2, keypoints1, keypoints2, matches, vector<char>(), img_matches);
+	drawMatches(img1, keypoints1, img2, keypoints2, matches, img_matches);
 	imshow("matches", img_matches);
 	waitKey(0);
 

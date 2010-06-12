@@ -45,9 +45,9 @@ using namespace std;
 namespace cv
 {
 
-CV_EXPORTS void drawMatches( const Mat& img1, const Mat& img2,
-                             const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
-                             const vector<int>& matches, const vector<char>& mask, Mat& outImg,
+CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+							 const Mat& img2,const vector<KeyPoint>& keypoints2,
+                             const vector<int>& matches, Mat& outImg, const vector<char>& mask,
                              const Scalar& matchColor, const Scalar& singlePointColor,
                              int flags )
 {
