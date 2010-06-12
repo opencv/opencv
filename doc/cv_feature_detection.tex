@@ -1962,28 +1962,29 @@ This function draws matches of keypints from two images on output image.
 Match is a line connecting two keypoints (circles).
 
 \cvdefCpp{
-void drawMatches( const Mat\& img1, const Mat\& img2,
-		  const vector<KeyPoint>\& keypoints1, const vector<KeyPoint>\& keypoints2,
-		  const vector<int>\& matches, const vector<char>\& mask, Mat\& outImg,
+void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1, 
+		  const Mat\& img2, const vector<KeyPoint>\& keypoints2,
+		  const vector<int>\& matches, Mat\& outImg, 
+		  const vector<char>\& mask = vector<char>(),
 		  const Scalar\& matchColor = Scalar::all(-1), 
 		  const Scalar\& singlePointColor = Scalar::all(-1),
 		  int flags = DrawMatchesFlags::DEFAULT );
 }
 
 \begin{description}
-\cvarg{img1}{First sourse image.}
+\cvarg{img1}{First source image.}
 \end{description}
 
 \begin{description}
-\cvarg{img1}{Second sourse image.}
+\cvarg{keypoints1}{Keypoints from first source image.}
 \end{description}
 
 \begin{description}
-\cvarg{keypoints1}{Keypoints from first sourse image.}
+\cvarg{img1}{Second source image.}
 \end{description}
 
 \begin{description}
-\cvarg{keypoints2}{Keypoints from second sourse image.}
+\cvarg{keypoints2}{Keypoints from second source image.}
 \end{description}
 
 \begin{description}
@@ -1991,11 +1992,11 @@ void drawMatches( const Mat\& img1, const Mat\& img2,
 \end{description}
 
 \begin{description}
-\cvarg{mask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
+\cvarg{outImg}{Output image. Its content depends on \texttt{flags} value what is drawn in output image. See below possible \texttt{flags} bit values. }
 \end{description}
 
 \begin{description}
-\cvarg{outImg}{Output image. Its content depends on \texttt{flags} value what is drawn in output image. See below possible \texttt{flags} bit values. }
+\cvarg{mask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
 \end{description}
 
 \begin{description}
