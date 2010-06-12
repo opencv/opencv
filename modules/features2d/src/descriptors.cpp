@@ -47,9 +47,9 @@ namespace cv
 
 void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
                   const Mat& img2,const vector<KeyPoint>& keypoints2,
-                  const vector<int>& matches, Mat& outImg, const vector<char>& matchesMask,
+                  const vector<int>& matches, Mat& outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  int flags )
+                  const vector<char>& matchesMask, int flags )
 {
     Size size( img1.cols + img2.cols, MAX(img1.rows, img2.rows) );
     if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )

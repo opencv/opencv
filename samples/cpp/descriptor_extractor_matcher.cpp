@@ -1,4 +1,3 @@
-//#include <cvaux.h>
 #include <highgui.h>
 #include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
@@ -98,16 +97,16 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                 matchesMask[i1] = 1;
         }
         // draw inliers
-        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, matchesMask, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255) );
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask );
         // draw outliers
         /*for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
             matchesMask[i1] = !matchesMask[i1];
-        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, matchesMask, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0),
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0), matchesMask,
                      DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );*/
     }
     else
     {
-        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, vector<char>(), CV_RGB(0, 255, 0) );
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0) );
     }
 
     imshow( winName, drawImg );

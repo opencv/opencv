@@ -1962,12 +1962,12 @@ This function draws matches of keypints from two images on output image.
 Match is a line connecting two keypoints (circles).
 
 \cvdefCpp{
-void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1, 
+void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,
 		  const Mat\& img2, const vector<KeyPoint>\& keypoints2,
-		  const vector<int>\& matches, Mat\& outImg, 
-		  const vector<char>\& matchesMask = vector<char>(),
-		  const Scalar\& matchColor = Scalar::all(-1), 
-		  const Scalar\& singlePointColor = Scalar::all(-1),
+                  const vector<int>\& matches, Mat\& outImg,
+                  const Scalar\& matchColor = Scalar::all(-1), 
+	          const Scalar\& singlePointColor = Scalar::all(-1),
+                  const vector<char>\& matchesMask = vector<char>(), 
 		  int flags = DrawMatchesFlags::DEFAULT );
 }
 
@@ -1996,15 +1996,15 @@ void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,
 \end{description}
 
 \begin{description}
-\cvarg{matchesMask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
-\end{description}
-
-\begin{description}
 \cvarg{matchColor}{Color of matches (lines and connected keypoints). If \texttt{matchColor}==Scalar::all(-1) color will be generated randomly.}
 \end{description}
 
 \begin{description}
 \cvarg{singlePointColor}{Color of single keypoints (circles), i.e. keypoints not having the matches. If \texttt{singlePointColor}==Scalar::all(-1) color will be generated randomly.}
+\end{description}
+
+\begin{description}
+\cvarg{matchesMask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
 \end{description}
 
 \begin{description}

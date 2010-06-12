@@ -2139,9 +2139,9 @@ struct CV_EXPORTS DrawMatchesFlags
 // Draws matches of keypints from two images on output image.
 CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
 							 const Mat& img2, const vector<KeyPoint>& keypoints2,
-                             const vector<int>& matches, Mat& outImg, const vector<char>& matchesMask = vector<char>(),
+                             const vector<int>& matches, Mat& outImg,
                              const Scalar& matchColor = Scalar::all(-1), const Scalar& singlePointColor = Scalar::all(-1),
-                             int flags = DrawMatchesFlags::DEFAULT );
+                             const vector<char>& matchesMask = vector<char>(), int flags = DrawMatchesFlags::DEFAULT );
 
 }
 
