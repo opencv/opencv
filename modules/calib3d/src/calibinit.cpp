@@ -1909,6 +1909,8 @@ void drawChessboardCorners( Mat& image, Size patternSize,
                             const Mat& corners,
                             bool patternWasFound )
 {
+    if( corners.cols == 0 || corners.rows == 0 )
+        return;
     CvMat _image = image;
     CV_Assert((corners.cols == 1 || corners.rows == 1) &&
               corners.type() == CV_32FC2 && corners.isContinuous());
