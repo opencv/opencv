@@ -9,21 +9,28 @@
 using namespace cv;
 using namespace std;
 
-// example command line (for copy-n-paste):
-// calibration -w 6 -h 8 -s 2 -n 10 -o camera.yml -op -oe [<list_of_views.txt>]
+/* 
+ example command line (for copy-n-paste):
+   calibration -w 6 -h 8 -s 2 -o camera.yml -op -oe image_list.xml
 
-/* The list of views may look as following (discard the starting and ending ------ separators):
--------------------
-view000.png
-view001.png
-#view002.png
-view003.png
-view010.png
-one_extra_view.jpg
--------------------
-that is, the file will contain 6 lines, view002.png will not be used for calibration,
-other ones will be (those, in which the chessboard pattern will be found)
-*/
+ where image_list.xml is the standard OpenCV XML/YAML
+ file consisting of the list of strings, e.g.:
+ 
+<?xml version="1.0"?>
+<opencv_storage>
+<images>
+"view000.png"
+"view001.png"
+<!-- view002.png -->
+"view003.png"
+"view010.png"
+"one_extra_view.jpg"
+</images>
+</opencv_storage>
+
+ you can also use a video file or live camera input to calibrate the camera
+ 
+ */
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
@@ -170,24 +177,18 @@ void saveCameraParams( const string& filename,
     }
 }
 
-bool readStringList( const string& filename, vector<string>& l )
+static bool readStringList( const string& filename, vector<string>& l )
 {
     l.resize(0);
-    FILE* f = fopen(filename.c_str(), "rt");
-    if(!f)
+    FileStorage fs(filename, FileStorage::READ);
+    if( !fs.isOpened() )
         return false;
-    
-    for(;;)
-    {
-        char buf[1000];
-        if( !fgets( buf, sizeof(buf)-2, f ))
-            break;
-        char* ptr = strchr(buf, '\n');
-        if( ptr ) *ptr = '\0';
-        if( buf[0] != '\0' && buf[0] != '#' )
-            l.push_back(string(buf));
-    }
-    fclose(f);
+    FileNode n = fs.getFirstTopLevelNode();
+    if( n.type() != FileNode::SEQ )
+        return false;
+    FileNodeIterator it = n.begin(), it_end = n.end();
+    for( ; it != it_end; ++it )
+        l.push_back((string)*it);
     return true;
 }
 
@@ -347,13 +348,10 @@ int main( int argc, char** argv )
 
     if( inputFilename )
     {
-        capture.open(inputFilename);
-        if( !capture.isOpened() && !readStringList(inputFilename, imageList) )
-        {
-            fprintf( stderr, "The input file could not be opened\n" );
-            return -1;
-        }
-        mode = CAPTURING;
+        if( readStringList(inputFilename, imageList) )
+            mode = CAPTURING;
+        else    
+            capture.open(inputFilename);
     }
     else
         capture.open(cameraId);
@@ -461,6 +459,8 @@ int main( int argc, char** argv )
                 mode = CALIBRATED;
             else
                 mode = DETECTION;
+            if( !capture.isOpened() )
+                break;
         }
     }
     return 0;

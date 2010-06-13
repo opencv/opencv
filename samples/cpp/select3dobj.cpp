@@ -9,60 +9,53 @@
 
 using namespace cv;
 
-static void print_help()
+struct MouseEvent
 {
-    printf("Usage: select3dobj -w <board_width -h <board_height> [-s <square_size>]\n"
-           "\t-i <intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n");
-}
-
-struct CameraData
-{
-	Size imageSize;
-	Size boardSize;
-	double squareSize;
-	Mat distCoeffs;
-	Mat cameraMatrix;
-    vector<Point3f> objPoints;
+    MouseEvent() { event = -1; buttonState = 0; }
+    Point pt;
+    int event;
+    int buttonState;
 };
 
-Point mouseLoc;
-int mouseEvent = -1;
-int mouseButtonState = 0;
-
-static void onMouse(int event, int x, int y, int flags, void*)
+static void onMouse(int event, int x, int y, int flags, void* userdata)
 {
-    mouseEvent = event;
-    mouseLoc = Point(x,y);
-    mouseButtonState = flags;
+    MouseEvent* data = (MouseEvent*)userdata;
+    data->event = event;
+    data->pt = Point(x,y);
+    data->buttonState = flags;
 }
 
-static bool readCameraMatrix(const string& filename, CameraData& calibrated)
+static bool readCameraMatrix(const string& filename,
+                             Mat& cameraMatrix, Mat& distCoeffs,
+                             Size& calibratedImageSize )
 {
     FileStorage fs(filename, FileStorage::READ);
-    fs["image_width"] >> calibrated.imageSize.width;
-    fs["image_height"] >> calibrated.imageSize.height;
-    fs["board_width"] >> calibrated.boardSize.width;
-    fs["board_height"] >> calibrated.boardSize.height;
-    fs["square_size"] >> calibrated.squareSize;
-    fs["distortion_coefficients"] >> calibrated.distCoeffs;
-    if( calibrated.distCoeffs.type() != CV_64F )
-        calibrated.distCoeffs = Mat_<double>(calibrated.distCoeffs);
-    if( calibrated.cameraMatrix.type() != CV_64F )
-        calibrated.cameraMatrix = Mat_<double>(calibrated.cameraMatrix);
+    fs["image_width"] >> calibratedImageSize.width;
+    fs["image_height"] >> calibratedImageSize.height;
+    fs["distortion_coefficients"] >> distCoeffs;
+    fs["camera_matrix"] >> cameraMatrix;
     
-    fs["camera_matrix"] >> calibrated.cameraMatrix;
+    if( distCoeffs.type() != CV_64F )
+        distCoeffs = Mat_<double>(distCoeffs);
+    if( cameraMatrix.type() != CV_64F )
+        cameraMatrix = Mat_<double>(cameraMatrix);
     
-    calibrated.objPoints.resize(0);
-    
-    for( int i = 0; i < calibrated.boardSize.height; i++ )
-        for( int j = 0; j < calibrated.boardSize.width; j++ )
-            calibrated.objPoints.push_back(
-                Point3f(float(j*calibrated.squareSize),
-                        float(i*calibrated.squareSize), 0));
     return true;
 }
 
-static Point3f image2plane(Point2f imgpt, const Mat& R, const Mat& tvec, const Mat& cameraMatrix, double Z)
+static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners)
+{
+    corners.resize(0);
+    
+    for( int i = 0; i < boardSize.height; i++ )
+        for( int j = 0; j < boardSize.width; j++ )
+            corners.push_back(Point3f(float(j*squareSize),
+                                      float(i*squareSize), 0));
+}
+
+
+static Point3f image2plane(Point2f imgpt, const Mat& R, const Mat& tvec,
+                           const Mat& cameraMatrix, double Z)
 {
     Mat R1 = R.clone();
     R1.col(2) = R1.col(2)*Z + tvec;
@@ -71,27 +64,271 @@ static Point3f image2plane(Point2f imgpt, const Mat& R, const Mat& tvec, const M
     return Point3f(v(0,0)*iw, v(1,0)*iw, Z);
 }
 
+
+static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFrame, 
+                         const Mat& cameraMatrix, const Mat& rvec, const Mat& tvec,
+                         const vector<Point3f>& box, int nobjpt)
+{
+    selectedObjFrame = Mat::zeros(frame.size(), frame.type());
+    if( nobjpt == 0 )
+        return Rect();
+    vector<Point3f> objpt;
+    vector<Point2f> imgpt;
+    
+    objpt.push_back(box[0]);
+    if( nobjpt > 1 )
+        objpt.push_back(box[1]);
+    if( nobjpt > 2 )
+    {
+        objpt.push_back(box[2]);
+        objpt.push_back(objpt[2] - objpt[1] + objpt[0]);
+    }
+    if( nobjpt > 3 )
+        for( int i = 0; i < 4; i++ )
+            objpt.push_back(Point3f(objpt[i].x, objpt[i].y, box[3].z));
+    
+    projectPoints(Mat(objpt), rvec, tvec, cameraMatrix, Mat(), imgpt);
+    
+    if( shownFrame.data )
+    {
+        if( nobjpt == 1 )
+            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, CV_AA);
+        else if( nobjpt == 2 )
+        {
+            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, CV_AA);
+            circle(shownFrame, imgpt[1], 3, Scalar(0,255,0), -1, CV_AA);
+            line(shownFrame, imgpt[0], imgpt[1], Scalar(0,255,0), 3, CV_AA);
+        }
+        else if( nobjpt == 3 )
+            for( int i = 0; i < 4; i++ )
+            {
+                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
+                line(shownFrame, imgpt[i], imgpt[(i+1)%4], Scalar(0,255,0), 3, CV_AA);
+            }    
+        else
+            for( int i = 0; i < 8; i++ )
+            {
+                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
+                line(shownFrame, imgpt[i], imgpt[(i+1)%4 + (i/4)*4], Scalar(0,255,0), 3, CV_AA);
+                line(shownFrame, imgpt[i], imgpt[i%4], Scalar(0,255,0), 3, CV_AA);
+            }
+    }
+    
+    if( nobjpt <= 2 )
+        return Rect();
+    vector<Point> hull;
+    convexHull(Mat_<Point>(Mat(imgpt)), hull);
+    Mat selectedObjMask = Mat::zeros(frame.size(), CV_8U);
+    fillConvexPoly(selectedObjMask, &hull[0], hull.size(), Scalar::all(255), 8, 0);
+    frame.copyTo(selectedObjFrame, selectedObjMask);
+    return boundingRect(Mat(hull)) & Rect(Point(), frame.size());
+}
+
+
+static int select3DBox(const string& windowname, const string& selWinName, const Mat& frame,
+                       const Mat& cameraMatrix, const Mat& rvec, const Mat& tvec,
+                       vector<Point3f>& box)
+{
+    const float eps = 1e-3f;
+    MouseEvent mouse;
+    
+    setMouseCallback(windowname, onMouse, &mouse);
+    vector<Point3f> tempobj(8);
+    vector<Point2f> imgpt(4), tempimg(8);
+    vector<Point> temphull;
+    int nobjpt = 0;
+    Mat R, selectedObjMask, selectedObjFrame, shownFrame;
+    Rodrigues(rvec, R);
+    box.resize(4);
+    
+    for(;;)
+    {
+        float Z = 0.f;
+        bool dragging = (mouse.buttonState & CV_EVENT_FLAG_LBUTTON) != 0;
+        int npt = nobjpt;
+        
+        if( (mouse.event == CV_EVENT_LBUTTONDOWN ||
+             mouse.event == CV_EVENT_LBUTTONUP ||
+             dragging) && nobjpt < 4 )
+        {
+            Point2f m = mouse.pt;
+            
+            if( nobjpt < 2 )
+                imgpt[npt] = m;
+            else
+            {
+                tempobj.resize(1);
+                int nearestIdx = npt-1;
+                if( nobjpt == 3 )
+                {
+                    nearestIdx = 0;
+                    for( int i = 1; i < npt; i++ )
+                        if( norm(m - imgpt[i]) < norm(m - imgpt[nearestIdx]) )
+                            nearestIdx = i;
+                }
+                
+                if( npt == 2 )
+                {
+                    float dx = box[1].x - box[0].x, dy = box[1].y - box[0].y;
+                    float len = 1.f/std::sqrt(dx*dx+dy*dy);
+                    tempobj[0] = Point3f(dy*len + box[nearestIdx].x,
+                                         -dx*len + box[nearestIdx].y, 0.f);
+                }
+                else
+                    tempobj[0] = Point3f(box[nearestIdx].x, box[nearestIdx].y, 1.f);
+                
+                projectPoints(Mat(tempobj), rvec, tvec, cameraMatrix, Mat(), tempimg);
+                
+                Point2f a = imgpt[nearestIdx], b = tempimg[0], d1 = b - a, d2 = m - a;
+                float n1 = norm(d1), n2 = norm(d2);
+                if( n1*n2 < eps )
+                    imgpt[npt] = a;
+                else
+                {
+                    Z = d1.dot(d2)/(n1*n1);
+                    imgpt[npt] = d1*Z + a;
+                }
+            }
+            box[npt] = image2plane(imgpt[npt], R, tvec, cameraMatrix, npt<3 ? 0 : Z);
+            
+            if( (npt == 0 && mouse.event == CV_EVENT_LBUTTONDOWN) ||
+               (npt > 0 && norm(box[npt] - box[npt-1]) > eps &&
+                mouse.event == CV_EVENT_LBUTTONUP) )
+            {
+                nobjpt++;
+                if( nobjpt < 4 )
+                {
+                    imgpt[nobjpt] = imgpt[nobjpt-1];
+                    box[nobjpt] = box[nobjpt-1];
+                }
+            }
+            
+            // reset the event
+            mouse.event = -1;
+            //mouse.buttonState = 0;
+            npt++;
+        }
+        
+        frame.copyTo(shownFrame);
+        extract3DBox(frame, shownFrame, selectedObjFrame,
+                     cameraMatrix, rvec, tvec, box, npt);
+        imshow(windowname, shownFrame);
+        imshow(selWinName, selectedObjFrame);
+        
+        int c = waitKey(30);
+        if( (c & 255) == 27 )
+        {
+            nobjpt = 0;
+        }
+        if( c == 'q' || c == 'Q' || c == ' ' )
+        {
+            box.clear();
+            return c == ' ' ? -1 : -100;
+        }
+        if( c == '\r' || c == '\n' && nobjpt == 4 && box[3].z > 0 )
+            return 1;
+    }
+}
+
+
+static bool readModelViews( const string& filename, vector<Point3f>& box,
+                            vector<string>& imagelist,
+                            vector<Rect>& roiList, vector<Vec6f>& poseList )
+{
+    imagelist.resize(0);
+    roiList.resize(0);
+    poseList.resize(0);
+    box.resize(0);
+    
+    FileStorage fs(filename, FileStorage::READ);
+    if( !fs.isOpened() )
+        return false;
+    fs["box"] >> box;
+    
+    FileNode all = fs["views"];
+    if( all.type() != FileNode::SEQ )
+        return false;
+    FileNodeIterator it = all.begin(), it_end = all.end();
+    
+    for(; it != it_end; ++it)
+    {
+        FileNode n = *it;
+        imagelist.push_back((string)n["image"]);
+        FileNode nr = n["rect"];
+        roiList.push_back(Rect((int)nr[0], (int)nr[1], (int)nr[2], (int)nr[3]));
+        FileNode np = n["pose"];
+        poseList.push_back(Vec6f((float)np[0], (float)np[1], (float)np[2],
+                                 (float)np[3], (float)np[4], (float)np[5]));
+    }
+    
+    return true;
+}
+
+
+static bool writeModelViews(const string& filename, const vector<Point3f>& box,
+                            const vector<string>& imagelist,
+                            const vector<Rect>& roiList,
+                            const vector<Vec6f>& poseList)
+{
+    FileStorage fs(filename, FileStorage::WRITE);
+    if( !fs.isOpened() )
+        return false;
+    
+    fs << "box" << "[:";
+    fs << box << "]" << "views" << "[";
+    
+    size_t i, nviews = imagelist.size();
+    
+    CV_Assert( nviews == roiList.size() && nviews == poseList.size() );
+    
+    for( i = 0; i < nviews; i++ )
+    {
+        Rect r = roiList[i];
+        Vec6f p = poseList[i];
+        
+        fs << "{" << "image" << imagelist[i] <<
+            "roi" << "[:" << r.x << r.y << r.width << r.height << "]" <<
+            "pose" << "[:" << p[0] << p[1] << p[2] << p[3] << p[4] << p[5] << "]" << "}";
+    }
+    fs << "]";
+    
+    return true;
+}
+
+
+static bool readStringList( const string& filename, vector<string>& l )
+{
+    l.resize(0);
+    FileStorage fs(filename, FileStorage::READ);
+    if( !fs.isOpened() )
+        return false;
+    FileNode n = fs.getFirstTopLevelNode();
+    if( n.type() != FileNode::SEQ )
+        return false;
+    FileNodeIterator it = n.begin(), it_end = n.end();
+    for( ; it != it_end; ++it )
+        l.push_back((string)*it);
+    return true;
+}
+
+
 int main(int argc, char** argv)
 {
-    const char* imgFilename = 0;//"frame.jpg";
-    const float eps = 1e-3f;
+    const char* help = "Usage: select3dobj -w <board_width -h <board_height> [-s <square_size>]\n"
+           "\t-i <intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n";
     
     if(argc < 5)
     {
-        print_help();
+        puts(help);
         return 0;
     }
     const char* intrinsicsFilename = 0;
     const char* outprefix = 0;
-	const char* videoFilename = 0;
+	const char* inputName = 0;
 	int cameraId = 0;
 	Size boardSize;
-	double squareSize = 0;
-	bool paused = false;
-    vector<Point3f> objpts(4);
-    vector<Point2f> imgpts(4);
-    vector<Point2f> mousepts(4);
-    int nobjpt = 0;
+	double squareSize = 1;
+    vector<string> imageList;
     
     for( int i = 1; i < argc; i++ )
     {
@@ -104,7 +341,7 @@ int main(int argc, char** argv)
 			if(sscanf(argv[++i], "%d", &boardSize.width) != 1 || boardSize.width <= 0)
 			{
 				printf("Incorrect -w parameter (must be a positive integer)\n");
-				print_help();
+				puts(help);
 				return 0;
 			}
 		}
@@ -113,7 +350,7 @@ int main(int argc, char** argv)
 			if(sscanf(argv[++i], "%d", &boardSize.height) != 1 || boardSize.height <= 0)
 			{
 				printf("Incorrect -h parameter (must be a positive integer)\n");
-				print_help();
+				puts(help);
 				return 0;
 			}
 		}
@@ -122,7 +359,7 @@ int main(int argc, char** argv)
 			if(sscanf(argv[++i], "%lf", &squareSize) != 1 || squareSize <= 0)
 			{
 				printf("Incorrect -w parameter (must be a positive real number)\n");
-				print_help();
+				puts(help);
 				return 0;
 			}
 		}
@@ -131,45 +368,43 @@ int main(int argc, char** argv)
 			if( isdigit(argv[i][0]))
 				sscanf(argv[i], "%d", &cameraId);
 			else
-				videoFilename = argv[i];
+				inputName = argv[i];
 		}
 		else
 		{
 			printf("Incorrect option\n");
-			print_help();
+			puts(help);
 			return 0;
 		}
     }
     
 	if( !intrinsicsFilename || !outprefix ||
-		boardSize.width <= 0 || boardSize.height <= 0 ||
-		squareSize <= 0 )
+		boardSize.width <= 0 || boardSize.height <= 0 )
 	{
-		printf("One of required parameters are missing\n");
-		print_help();
+		printf("Some of the required parameters are missing\n");
+		puts(help);
 		return 0;
 	}
 	
-	CameraData calibrated;
-    readCameraMatrix(intrinsicsFilename, calibrated);
-	calibrated.boardSize = boardSize;
-	calibrated.squareSize = squareSize;
+    Mat cameraMatrix, distCoeffs;
+    Size calibratedImageSize;
+    readCameraMatrix(intrinsicsFilename, cameraMatrix, distCoeffs, calibratedImageSize );
     
-	VideoCapture cap;
-    if( !imgFilename )
+	VideoCapture capture;
+    if( inputName )
     {
-        if( videoFilename )
-            cap.open(videoFilename);
-        else
-            cap.open(0);
-            
-        if( !cap.isOpened() )
+        if( !readStringList(inputName, imageList) &&
+            !capture.open(inputName))
         {
-            printf("Can not initialize video capture\n");
-            print_help();
-            return 0;
+            fprintf( stderr, "The input file could not be opened\n" );
+            return -1;
         }
     }
+    else
+        capture.open(cameraId);
+    
+    if( !capture.isOpened() && imageList.empty() )
+        return fprintf( stderr, "Could not initialize video capture\n" ), -2;
     
     const char* outbarename = 0;
     {
@@ -189,230 +424,124 @@ int main(int argc, char** argv)
             outbarename = outprefix;
     }
 	
-	Mat frame0, frame, shownFrame, selectedObjMask, selectedObjFrame, mapxy, R, rvec, tvec;
-    vector<Point2f> boardCorners;
-    vector<Point3f> tempobj(8);
-    vector<Point2f> tempimg(8);
-    vector<Point> temphull(8);
+	Mat frame, shownFrame, selectedObjFrame, mapxy;
     
-	namedWindow("Video", 1);
+	namedWindow("View", 1);
     namedWindow("Selected Object", 1);
-    setMouseCallback("Video", onMouse, 0);
+    setMouseCallback("View", onMouse, 0);
     bool boardFound = false;
     
-    char path[1000];
-    sprintf(path, "%s_index.txt", outprefix);
-    FILE* fframes = fopen(path, "a+t");
-    if(!fframes)
-    {
-        printf("Can not open path for writing. Permission denied?\n");
-        return 0;
-    }
+    string indexFilename = format("%s_index.yml", outprefix);
+    
+    vector<string> capturedImgList;
+    vector<Rect> roiList;
+    vector<Vec6f> poseList;
+    vector<Point3f> box, boardPoints;
+    
+    readModelViews(indexFilename, box, capturedImgList, roiList, poseList);
+    calcChessboardCorners(boardSize, squareSize, boardPoints);
     int frameIdx = 0;
+    bool grabNext = !imageList.empty();
 	
-	for(;;)
+	for(int i = 0;;i++)
 	{
-        bool objselected = false;
-        int nOutlinePt = 0;
-        
-		if( !paused )
-		{
-			if( imgFilename )
-            {
-                frame0 = imread(string(imgFilename), 1);
-                paused = true;
-            }
-            else
-                cap >> frame0;
-			if( !frame0.data )
-				break;
-            if( !frame.data )
-            {
-                if( frame0.size() != calibrated.imageSize )
-                {
-                    // adjust the camera matrix for the new resolution
-                    calibrated.cameraMatrix.at<double>(0,0) *= frame.cols/calibrated.imageSize.width;
-                    calibrated.cameraMatrix.at<double>(0,2) *= frame.cols/calibrated.imageSize.width;
-                    calibrated.cameraMatrix.at<double>(1,1) *= frame.rows/calibrated.imageSize.height;
-                    calibrated.cameraMatrix.at<double>(1,2) *= frame.rows/calibrated.imageSize.height;
-                    calibrated.imageSize = frame0.size();
-                }
-                Mat dummy;
-                // initialize undistortion maps
-                initUndistortRectifyMap(calibrated.cameraMatrix, calibrated.distCoeffs, Mat(),
-                                        calibrated.cameraMatrix, calibrated.imageSize,
-                                        CV_32FC2, mapxy, dummy );
-                calibrated.distCoeffs = Mat::zeros(5, 1, CV_64F);
-                selectedObjMask = Mat::zeros(frame0.size(), CV_8U);
-                selectedObjFrame = frame0.clone();
-            }
-            remap(frame0, frame, mapxy, Mat(), INTER_LINEAR);
-            boardFound = findChessboardCorners(frame, calibrated.boardSize, boardCorners);
-            
-            if( boardFound )
-            {
-                solvePnP(Mat(calibrated.objPoints), Mat(boardCorners), calibrated.cameraMatrix,
-                         calibrated.distCoeffs, rvec, tvec, false);
-                Rodrigues(rvec, R);
-            }
-		}
-        frame.copyTo(shownFrame);
-        selectedObjFrame = Scalar::all(0);
-		
-		if( boardFound )
+        Mat frame0;
+        if( !imageList.empty() )
         {
-            float Z = 0.f;
-            bool dragging = (mouseButtonState & CV_EVENT_FLAG_LBUTTON) != 0;
-            int npt = nobjpt;
-            
-            drawChessboardCorners(shownFrame, calibrated.boardSize, Mat(boardCorners), true);
-            
-            if( (mouseEvent == CV_EVENT_LBUTTONDOWN ||
-                mouseEvent == CV_EVENT_LBUTTONUP ||
-                dragging) && nobjpt < 4 )
+            if( i < (int)imageList.size() )
+                frame0 = imread(string(imageList[i]), 1);
+        }
+        else
+            capture >> frame0;
+        if( !frame0.data )
+            break;
+        if( !frame.data )
+        {
+            if( frame0.size() != calibratedImageSize )
             {
-                // update object box
-                mousepts[npt] = mouseLoc;
-
-                /*if(!paused)
-                    imwrite("frame.jpg", frame0);*/
-                paused = true;
-                if( nobjpt < 2 )
-                    imgpts[npt] = mousepts[npt];
-                else
-                {
-                    tempobj.resize(1);
-                    int nearestIdx = npt-1;
-                    /*for( int i = 1; i < npt; i++ )
-                        if( norm(mousepts[npt] - mousepts[i]) < norm(mousepts[npt] - imgpts[nearestIdx]) )
-                            nearestIdx = i;*/
-                    
-                    if( npt == 2 )
-                    {
-                        float dx = objpts[1].x - objpts[0].x, dy = objpts[1].y - objpts[0].y;
-                        float len = 1.f/std::sqrt(dx*dx+dy*dy);
-                        tempobj[0] = Point3f(dy*len + objpts[nearestIdx].x, -dx*len + objpts[nearestIdx].y, 0.f);
-                    }
-                    else
-                        tempobj[0] = Point3f(objpts[nearestIdx].x, objpts[nearestIdx].y, 1.f);
-
-                    projectPoints(Mat(tempobj), rvec, tvec, calibrated.cameraMatrix,
-                                  calibrated.distCoeffs, tempimg);
-                    
-                    Point2f a = mousepts[nearestIdx], b = tempimg[0],
-                        m = mousepts[npt], d1 = b - a, d2 = m - a;
-                    float n1 = norm(d1), n2 = norm(d2);
-                    if( n1*n2 < eps )
-                        imgpts[npt] = a;
-                    else
-                    {
-                        Z = d1.dot(d2)/(n1*n1);
-                        imgpts[npt] = d1*Z + a;
-                    }
-                }
-                objpts[npt] = image2plane(imgpts[npt], R, tvec,
-                                          calibrated.cameraMatrix, npt<3 ? 0 : Z);
+                double sx = (double)frame0.cols/calibratedImageSize.width;
+                double sy = (double)frame0.rows/calibratedImageSize.height;
                 
-                if( (npt == 0 && mouseEvent == CV_EVENT_LBUTTONDOWN) ||
-                    (npt > 0 && norm(objpts[npt] - objpts[npt-1]) > eps &&
-                    mouseEvent == CV_EVENT_LBUTTONUP) )
+                // adjust the camera matrix for the new resolution
+                cameraMatrix.at<double>(0,0) *= sx;
+                cameraMatrix.at<double>(0,2) *= sx;
+                cameraMatrix.at<double>(1,1) *= sy;
+                cameraMatrix.at<double>(1,2) *= sy;
+            }
+            Mat dummy;
+            initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
+                                    cameraMatrix, frame0.size(),
+                                    CV_32FC2, mapxy, dummy );
+            distCoeffs = Mat::zeros(5, 1, CV_64F);
+        }
+        remap(frame0, frame, mapxy, Mat(), INTER_LINEAR);
+        vector<Point2f> foundBoardCorners;
+        boardFound = findChessboardCorners(frame, boardSize, foundBoardCorners);
+        
+        Mat rvec, tvec;
+        if( boardFound )
+            solvePnP(Mat(boardPoints), Mat(foundBoardCorners), cameraMatrix,
+                     distCoeffs, rvec, tvec, false);
+        
+        frame.copyTo(shownFrame);
+        drawChessboardCorners(shownFrame, boardSize, Mat(foundBoardCorners), boardFound);
+        selectedObjFrame = Mat::zeros(frame.size(), frame.type());
+		
+		if( boardFound && grabNext )
+        {
+            if( box.empty() )
+            {
+                int code = select3DBox("View", "Selected Object", frame,
+                                        cameraMatrix, rvec, tvec, box);
+                if( code == -100 )
+                    break;
+            }
+        
+            if( !box.empty() )
+            {
+                Rect r = extract3DBox(frame, shownFrame, selectedObjFrame,
+                                      cameraMatrix, rvec, tvec, box, 4);
+                if( r.area() )
                 {
-                    nobjpt++;
-                    if( nobjpt < 4 )
+                    const int maxFrameIdx = 10000;
+                    char path[1000];
+                    for(;frameIdx < maxFrameIdx;frameIdx++)
                     {
-                        imgpts[nobjpt] = imgpts[nobjpt-1];
-                        objpts[nobjpt] = objpts[nobjpt-1];
-                        mousepts[nobjpt] = mousepts[nobjpt-1];
+                        sprintf(path, "%s%04d.jpg", outprefix, frameIdx);
+                        FILE* f = fopen(path, "rb");
+                        if( !f )
+                            break;
+                        fclose(f);
                     }
-                }
-                
-                mouseEvent = -1; // reset the event
-            }
-            
-            // draw object box (or a part of it)
-            tempobj.resize(8);
-            tempobj[0] = objpts[0];
-            tempobj[1] = objpts[1];
-            tempobj[2] = objpts[2];
-            tempobj[3] = (objpts[2] - objpts[1]) + objpts[0];
-            Z = objpts[3].z;
-            tempobj[4] = tempobj[0] + Point3f(0,0,Z);
-            tempobj[5] = tempobj[1] + Point3f(0,0,Z);
-            tempobj[6] = tempobj[2] + Point3f(0,0,Z);
-            tempobj[7] = tempobj[3] + Point3f(0,0,Z);
-            
-            projectPoints(Mat(tempobj), rvec, tvec, calibrated.cameraMatrix,
-                          calibrated.distCoeffs, tempimg);
-
-            if( npt == 0 && nobjpt == 0 )
-                nOutlinePt = 0;
-            else if( npt == 0 )
-            {
-                nOutlinePt = 1;
-                circle(shownFrame, tempimg[0], 3, Scalar(0,255,0), -1, CV_AA);
-            }
-            else if( npt == 1 )
-            {
-                nOutlinePt = 2;
-                line(shownFrame, tempimg[0], tempimg[1], Scalar(0,255,0), 3, CV_AA);
-                circle(shownFrame, tempimg[0], 3, Scalar(0,255,0), -1, CV_AA);
-                circle(shownFrame, tempimg[1], 3, Scalar(0,255,0), -1, CV_AA);
-            }
-            else
-            {
-                nOutlinePt = npt == 2 ? 4 : 8;
-                for( int i = 0; i < nOutlinePt; i++ )
-                {
-                    circle(shownFrame, tempimg[i], 3, Scalar(0,255,0), -1, CV_AA);
-                    line(shownFrame, tempimg[i], tempimg[(i+1)%4 + (i/4)*4], Scalar(0,255,0), 3, CV_AA);
-                    line(shownFrame, tempimg[i], tempimg[i%4], Scalar(0,255,0), 3, CV_AA);
+                    if( frameIdx == maxFrameIdx )
+                    {
+                        printf("Can not save the image as %s<...>.jpg", outprefix);
+                        break;
+                    }
+                    imwrite(path, selectedObjFrame(r));
+                    
+                    capturedImgList.push_back(string(path));
+                    roiList.push_back(r);
+                    
+                    float p[6];
+                    Mat RV(3, 1, CV_32F, p), TV(3, 1, CV_32F, p+3);
+                    rvec.convertTo(RV, RV.type());
+                    tvec.convertTo(TV, TV.type());
+                    poseList.push_back(Vec6f(p[0], p[1], p[2], p[3], p[4], p[5]));
                 }
             }
-            
-            if( nOutlinePt > 2 )
-            {
-                convexHull(Mat_<Point>(Mat(tempimg).rowRange(0,nOutlinePt)), temphull);
-                selectedObjMask = Scalar::all(0);
-                fillConvexPoly(selectedObjMask, &temphull[0], temphull.size(),
-                               Scalar::all(255), 8, 0);
-                frame.copyTo(selectedObjFrame, selectedObjMask);
-                objselected = true;
-            }
+            grabNext = !imageList.empty();
         }
 
-        imshow("Video", shownFrame);
+        imshow("View", shownFrame);
         imshow("Selected Object", selectedObjFrame);
-		int c = waitKey(30);
-		if( (c & 255) == 27 )
-            nobjpt = 0;
-        if( c == ' ' )
-            paused = !paused;
+		int c = waitKey(imageList.empty() ? 30 : 300);
         if( c == 'q' || c == 'Q' )
             break;
-        if( (c == '\r' || c == '\n') && objselected && nOutlinePt == 8 )
-        {
-            Rect r = boundingRect(Mat(temphull));
-            
-            for(;;frameIdx++)
-            {
-                sprintf(path, "%s%04d.jpg", outprefix, frameIdx);
-                FILE* f = fopen(path, "rb");
-                if( !f )
-                    break;
-                fclose(f);
-            }
-            
-            imwrite(path, selectedObjFrame(r&Rect(0,0,selectedObjFrame.cols,selectedObjFrame.rows)));
-            fprintf(fframes, "%s%04d.jpg (%.4f %.4f %.4f) (%.4f %.4f %.4f)", outbarename, frameIdx,
-                    rvec.at<double>(0,0), rvec.at<double>(1,0), rvec.at<double>(2,0),
-                    tvec.at<double>(0,0), tvec.at<double>(1,0), tvec.at<double>(2,0));
-            for( int i = 0; i < 8; i++ )
-                fprintf(fframes, " (%.2f %.2f %.2f)", objpts[i].x, objpts[i].y, objpts[i].z);
-            fprintf(fframes, "\n");
-            frameIdx++;
-        }
+        if( c == '\r' || c == '\n' )
+            grabNext = true;
 	}
 
-    fclose(fframes);
+    writeModelViews(indexFilename, box, capturedImgList, roiList, poseList);
     return 0;
 }
