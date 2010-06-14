@@ -45,9 +45,9 @@
 
 //Static and global first
 static GuiReceiver guiMainThread;
+static int parameterSystemC = 1;
+static char* parameterSystemV[] = {""};
 static bool multiThreads = false;
-static const int myargc = 1;
-static char* myargv[] = {""};
 static int last_key = -1;
 QWaitCondition key_pressed;
 QMutex mutexKey;
@@ -166,7 +166,9 @@ CV_IMPL int cvWaitKey( int arg )
     return result;
 }
 
-
+//Yannick Verdie
+//This function is experimental and some functions (such as cvSet/getWindowProperty will not work)
+//We recommend not using this function for now
 CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
     multiThreads = true;
@@ -230,9 +232,25 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
     return result;
 }
 
+CV_IMPL int icvInitSystem()
+{
+    static int wasInitialized = 0;
+
+    // check initialization status
+    if( !wasInitialized)
+    {
+		new QApplication(parameterSystemC,parameterSystemV);
+
+        wasInitialized = 1;
+        qDebug()<<"init done"<<endl;
+    }
+
+    return 0;
+}
+
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
-
+    
     if (multiThreads)
         QMetaObject::invokeMethod(&guiMainThread,
                                   "createWindow",
@@ -246,24 +264,6 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         guiMainThread.createWindow(QString(name),flags);
 
     return 1;//Dummy value
-}
-
-
-CV_IMPL int icvInitSystem( int argc, char** argv )
-{
-    
-    static int wasInitialized = 0;
-
-    // check initialization status
-    if( !wasInitialized)
-    {
-        new QApplication(argc,argv);
-
-        wasInitialized = 1;
-        qDebug()<<"init done"<<endl;
-    }
-
-    return 0;
 }
 
 CV_IMPL void cvDestroyWindow( const char* name )
@@ -422,7 +422,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 
 GuiReceiver::GuiReceiver() : _bTimeOut(false)
 {  
-    icvInitSystem(myargc,myargv );
+    icvInitSystem();
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
@@ -723,7 +723,6 @@ CvWindow::CvWindow(QString arg, int arg2)
 
     last_key = 0;
     name = arg;
-    on_mouse = NULL;
     flags = arg2;
 
     setAttribute(Qt::WA_DeleteOnClose);//in other case, does not release memory
@@ -765,6 +764,13 @@ CvWindow::~CvWindow()
 
 }
 
+/*
+void CvWindow::startNavigate()
+{
+    cout<<"here"<<endl;
+    //myview->zoomIn();
+}*/
+
 void CvWindow::displayInfo(QString text,int delayms)
 {
     myview->startDisplayInfo(text, delayms);
@@ -777,10 +783,7 @@ void CvWindow::updateImage(void* arr)
 
 void CvWindow::setMouseCallBack(CvMouseCallback m, void* param)
 {
-    setMouseTracking (true);//receive mouse event everytime
-    myview->setMouseTracking (true);//receive mouse event everytime
-    on_mouse = m;
-    on_mouse_param = param;
+	myview->setMouseCallBack(m,param);
 }
 
 void CvWindow::addSlider(QString name, int* value, int count,CvTrackbarCallback on_change)
@@ -799,7 +802,136 @@ void CvWindow::keyPressEvent(QKeyEvent *event)
     QWidget::keyPressEvent(event);
 }
 
-void CvWindow::mousePressEvent(QMouseEvent *event)
+
+void CvWindow::readSettings()//not tested
+{
+    QSettings settings("Trolltech", "Application Example");
+    QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
+    QSize size = settings.value("size", QSize(400, 400)).toSize();
+    resize(size);
+    move(pos);
+}
+
+void CvWindow::writeSettings()//not tested
+{
+    QSettings settings("Trolltech", "Application Example");
+    settings.setValue("pos", pos());
+    settings.setValue("size", size());
+}
+
+//Here is ViewPort
+ViewPort::ViewPort(QWidget* arg, int arg2)
+{
+    mode = arg2;
+    centralWidget = arg,
+    setupViewport(centralWidget);
+    setUpdatesEnabled(true);
+    setObjectName(QString::fromUtf8("graphicsView"));
+    timerDisplay = new QTimer(this);
+    timerDisplay->setSingleShot(true);
+    connect(timerDisplay, SIGNAL(timeout()), this, SLOT(stopDisplayInfo()));
+    drawInfo = false;
+    previousFactor = 1;
+    previousCenter = QPointF(0,0);
+    previousDelta = QPointF(0,0);
+
+    if (mode == CV_MODE_OPENGL)
+    {
+#if defined(OPENCV_GL)
+        setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
+        initGL();
+#endif
+    }
+
+    image2Draw=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
+    cvZero(image2Draw);
+}
+
+ViewPort::~ViewPort()
+{
+    if (image2Draw)
+        cvReleaseImage(&image2Draw);
+
+}
+
+void ViewPort::startDisplayInfo(QString text, int delayms)
+{
+    if (timerDisplay->isActive())
+        stopDisplayInfo();
+
+    infoText = text;
+    timerDisplay->start(delayms);
+    drawInfo = true;
+}
+
+void ViewPort::stopDisplayInfo()
+{
+    timerDisplay->stop();
+    drawInfo = false;
+}
+
+inline bool ViewPort::isSameSize(IplImage* img1,IplImage* img2)
+{
+    return img1->width == img2->width && img1->height == img2->height;
+}
+
+void ViewPort::updateImage(void* arr)
+{
+    if (!arr)
+        CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
+
+    IplImage* tempImage = (IplImage*)arr;
+
+    if (!isSameSize(image2Draw,tempImage))
+    {
+        cvReleaseImage(&image2Draw);
+        image2Draw=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
+
+        updateGeometry();
+    }       
+
+    cvConvertImage(tempImage,image2Draw,CV_CVTIMG_SWAP_RB );
+    viewport()->update();
+}
+
+void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
+{
+	setMouseTracking (true);//receive mouse event everytime
+    on_mouse = m;
+    on_mouse_param = param;
+}
+
+void ViewPort::scaleView(qreal factor,QPointF center)
+ {
+     factor += previousFactor;
+     if (factor < 1 || factor > 100)
+         return;
+
+    center= (center-previousCenter)/previousFactor + previousCenter;//move to global coordinate
+    QPointF delta = QPointF(center-center*factor);
+
+    matrixWorld.reset ();
+    matrixWorld.translate(delta.x(),delta.y());//newCenter.x(),newCenter.y());
+    matrixWorld.scale(factor,factor);
+
+    previousCenter = center;
+    previousDelta = delta;
+    previousFactor = factor;
+
+    if (previousFactor>1)
+         setCursor(Qt::OpenHandCursor);
+        else
+         unsetCursor();
+
+    viewport()->update();
+}
+
+void ViewPort::wheelEvent(QWheelEvent *event)
+{
+    scaleView( -event->delta() / 480.0,event->pos());
+}
+
+void ViewPort::mousePressEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
@@ -845,10 +977,14 @@ void CvWindow::mousePressEvent(QMouseEvent *event)
     if (on_mouse)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
+
+    if (previousFactor>1)
+         setCursor(Qt::ClosedHandCursor);
+
     QWidget::mousePressEvent(event);
 }
 
-void CvWindow::mouseReleaseEvent(QMouseEvent *event)
+void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 {
 
     int cv_event = -1, flags = 0;
@@ -895,10 +1031,13 @@ void CvWindow::mouseReleaseEvent(QMouseEvent *event)
     if (on_mouse)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
+    if (previousFactor>1)
+         setCursor(Qt::OpenHandCursor);
+
     QWidget::mouseReleaseEvent(event);
 }
 
-void CvWindow::mouseDoubleClickEvent(QMouseEvent *event)
+void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
@@ -945,10 +1084,11 @@ void CvWindow::mouseDoubleClickEvent(QMouseEvent *event)
 
     QWidget::mouseDoubleClickEvent(event);
 }
-void CvWindow::mouseMoveEvent(QMouseEvent *event)
+void ViewPort::mouseMoveEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
+
 
     switch(event->modifiers())
     {
@@ -979,118 +1119,6 @@ void CvWindow::mouseMoveEvent(QMouseEvent *event)
 }
 
 
-
-void CvWindow::readSettings()//not tested
-{
-    QSettings settings("Trolltech", "Application Example");
-    QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
-    QSize size = settings.value("size", QSize(400, 400)).toSize();
-    resize(size);
-    move(pos);
-}
-
-void CvWindow::writeSettings()//not tested
-{
-    QSettings settings("Trolltech", "Application Example");
-    settings.setValue("pos", pos());
-    settings.setValue("size", size());
-}
-
-
-
-//Here is ViewPort
-ViewPort::ViewPort(QWidget* arg, int arg2)
-{
-    mode = arg2;
-    centralWidget = arg,
-    setupViewport(centralWidget);
-    setUpdatesEnabled(true);
-    setObjectName(QString::fromUtf8("graphicsView"));
-    timerDisplay = new QTimer(this);
-    timerDisplay->setSingleShot(true);
-    connect(timerDisplay, SIGNAL(timeout()), this, SLOT(stopDisplayInfo()));
-    drawInfo = false;
-
-    if (mode == CV_MODE_OPENGL)
-    {
-#if defined(OPENCV_GL)
-        setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
-        initGL();
-#endif
-    }
-
-    image2Draw=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
-    cvZero(image2Draw);
-}
-
-ViewPort::~ViewPort()
-{
-    if (image2Draw)
-        cvReleaseImage(&image2Draw);
-}
-
-void ViewPort::startDisplayInfo(QString text, int delayms)
-{
-    if (timerDisplay->isActive())
-        stopDisplayInfo();
-
-    infoText = text;
-    timerDisplay->start(delayms);
-    drawInfo = true;
-}
-
-void ViewPort::stopDisplayInfo()
-{
-    timerDisplay->stop();
-    drawInfo = false;
-}
-
-inline bool ViewPort::isSameSize(IplImage* img1,IplImage* img2)
-{
-    return img1->width == img2->width && img1->height == img2->height;
-}
-
-void ViewPort::updateImage(void* arr)
-{
-    if (!arr)
-        CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
-
-    IplImage* tempImage = (IplImage*)arr;
-
-    if (!isSameSize(image2Draw,tempImage))
-    {
-        cvReleaseImage(&image2Draw);
-        image2Draw=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
-
-        updateGeometry();
-    }       
-
-    cvConvertImage(tempImage,image2Draw,CV_CVTIMG_SWAP_RB );
-    viewport()->update();
-}
-
-//----- implemented to redirect event to the parent ------
-void ViewPort::mouseMoveEvent(QMouseEvent *event)
-{
-    event->ignore();
-}
-
-void ViewPort::mousePressEvent(QMouseEvent *event)
-{
-    event->ignore();
-}
-
-void ViewPort::mouseReleaseEvent(QMouseEvent *event)
-{
-    event->ignore();
-}
-
-void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    event->ignore();
-}
-//---------------------------------------------------------
-
 QSize ViewPort::sizeHint() const
 {
     if(image2Draw)
@@ -1103,11 +1131,13 @@ QSize ViewPort::sizeHint() const
 
 
 
+
 void ViewPort::paintEvent(QPaintEvent* event)
 {
-    QPainter painter(viewport());
+    QPainter myPainter(viewport());
+    myPainter.setWorldTransform(matrixWorld);
 
-    draw2D(&painter);
+    draw2D(&myPainter);
 
     if (mode == CV_MODE_OPENGL)
     {
@@ -1119,16 +1149,20 @@ void ViewPort::paintEvent(QPaintEvent* event)
     }
 
     if (drawInfo)
-        drawInstructions(&painter);
+    {
+        myPainter.setWorldMatrixEnabled (false );
+        drawInstructions(&myPainter);
+    }
 
     QGraphicsView::paintEvent(event);
 }
 
 void ViewPort::draw2D(QPainter *painter)
-{ 
+{
     QImage image((uchar*) image2Draw->imageData, image2Draw->width, image2Draw->height,QImage::Format_RGB888);
     painter->drawImage(0,0,image.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
 }
+
 
 void ViewPort::drawInstructions(QPainter *painter)
 {

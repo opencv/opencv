@@ -75,7 +75,6 @@ class CvWindow;
 class ViewPort;
 //class CvTrackbar;
 
-
 class GuiReceiver : public QObject
 {
     Q_OBJECT
@@ -84,6 +83,7 @@ public:
     GuiReceiver();
     int start();
     bool _bTimeOut;
+    
 private:
 
 
@@ -148,18 +148,11 @@ protected:
     void writeSettings();
 
     virtual void keyPressEvent(QKeyEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mouseDoubleClickEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
 
 private:
     QPointer<ViewPort> myview;
     
     int status;//0 normal, 1 fullscreen (YV)
-
-    CvMouseCallback on_mouse;
-    void* on_mouse_param;
 
 };
 
@@ -173,14 +166,24 @@ public:
     ~ViewPort();
     void updateImage(void* arr);
     void startDisplayInfo(QString text, int delayms);
+	void setMouseCallBack(CvMouseCallback m, void* param);
+
+    QTransform matrixWorld;
+    qreal scaleFactor;//for zoom int/out
 
 public slots:
-    void zoomIn() { scale(1.2, 1.2); }
-    void zoomOut() { scale(1 / 1.2, 1 / 1.2); }
-    void rotateLeft() { rotate(-10); }
-    void rotateRight() { rotate(10); }
+	//reference:
+	//http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
+    void scaleView(qreal scaleFactor, QPointF center);
 
 private:
+	QPointF previousCenter ;
+    qreal previousFactor;//for zoom int/out
+    QPointF previousDelta;
+
+	CvMouseCallback on_mouse;
+    void* on_mouse_param;
+
     int mode;
     IplImage* image2Draw;
     bool isSameSize(IplImage* img1,IplImage* img2);
@@ -192,6 +195,7 @@ private:
     //QImage* image;
 
     void paintEvent(QPaintEvent* paintEventInfo);
+    void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
