@@ -230,7 +230,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
             box.clear();
             return c == ' ' ? -1 : -100;
         }
-        if( c == '\r' || c == '\n' && nobjpt == 4 && box[3].z > 0 )
+        if( (c == '\r' || c == '\n') && nobjpt == 4 && box[3].z != 0 )
             return 1;
     }
 }
@@ -321,6 +321,13 @@ int main(int argc, char** argv)
 {
     const char* help = "Usage: select3dobj -w <board_width -h <board_height> [-s <square_size>]\n"
            "\t-i <intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n";
+    const char* screen_help =
+    "Actions: \n"
+    "\tSelect object as 3D box with the mouse. That's it\n"
+    "\tESC - Reset the selection\n"
+    "\tSPACE - Skip the frame; move to the next frame (not in video mode)\n"
+    "\tENTER - Confirm the selection. Grab next object in video mode.\n"
+    "\tq - Exit the program\n";
     
     if(argc < 5)
     {
@@ -448,6 +455,8 @@ int main(int argc, char** argv)
     int frameIdx = 0;
     bool grabNext = !imageList.empty();
 	
+    puts(screen_help);
+
 	for(int i = 0;;i++)
 	{
         Mat frame0;
@@ -540,7 +549,7 @@ int main(int argc, char** argv)
 
         imshow("View", shownFrame);
         imshow("Selected Object", selectedObjFrame);
-		int c = waitKey(imageList.empty() ? 30 : 300);
+		int c = waitKey(imageList.empty() && !box.empty() ? 30 : 300);
         if( c == 'q' || c == 'Q' )
             break;
         if( c == '\r' || c == '\n' )
