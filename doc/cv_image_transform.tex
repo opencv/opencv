@@ -1205,4 +1205,32 @@ can be found in OpenCV samples directory; see \texttt{watershed.cpp} demo.
 
 See also: \cvCppCross{findContours}
 
+\cvCppFunc{grabCut}
+Runs GrabCut algorithm
+
+\cvdefCpp{void grabCut(const Mat\& image, Mat\& mask, Rect rect,\par
+                       Mat\& bgdModel, Mat\& fgdModel,\par int iterCount, int mode );}
+\begin{description}
+\cvarg{image}{The input 8-bit 3-channel image.} 
+\cvarg{mask}{The input/output 8-bit single-channel mask. Its elements may have one of four values. The mask is initialize when \texttt{mode==GC\_INIT\_WITH\_RECT}}
+\begin{description}
+    \cvarg{GC\_BGD}{Certainly a background pixel}
+    \cvarg{GC\_FGD}{Certainly a foreground (object) pixel}
+    \cvarg{GC\_PR\_BGD}{Likely a background pixel}
+    \cvarg{GC\_PR\_BGD}{Likely a foreground pixel}
+\end{description}
+\cvarg{rect}{The ROI containing the segmented object. The pixels outside of the ROI are marked as "certainly a background". The parameter is only used when \texttt{mode==GC\_INIT\_WITH\_RECT}}
+\cvarg{bgdModel, fgdModel}{Temporary arrays used for segmentation. Do not modify them while you are processing the same image}
+\cvarg{iterCount}{The number of iterations the algorithm should do before returning the result. Note that the result can be refined with further calls with the \texttt{mode==GC\_INIT\_WITH\_MASK} or \texttt{mode==GC\_EVAL}}
+\cvarg{mode}{The operation mode}
+\begin{description}
+    \cvarg{GC\_INIT\_WITH\_RECT}{The function initializes the state and the mask using the provided rectangle. After that it runs \texttt{iterCount} iterations of the algorithm}
+    \cvarg{GC\_INIT\_WITH\_MASK}{The function initializes the state using the provided mask. Note that \texttt{GC\_INIT\_WITH\_RECT} and \texttt{GC\_INIT\_WITH\_MASK} can be combined, then all the pixels outside of the ROI are automatically initialized with \texttt{GC\_BGD}}.
+    \cvarg{GC\_EVAL}{The value means that algorithm should just resume.}
+\end{description}
+\end{description}
+
+The function implements the \href{http://en.wikipedia.org/wiki/GrabCut}{GrabCut} image segmentation algorithm.
+See the sample grabcut.cpp on how to use the function.
+
 \fi
