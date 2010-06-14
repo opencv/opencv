@@ -270,7 +270,7 @@ static Point3f triangulatePoint(const vector<Point2f>& ps,
 {
     Mat_<double> K(cameraMatrix);
     
-    if( ps.size() > 2 )
+    /*if( ps.size() > 2 )
     {
         Mat_<double> L(ps.size()*3, 4), U, evalues;
         Mat_<double> P(3,4), Rt(3,4), Rt_part1=Rt.colRange(0,3), Rt_part2=Rt.colRange(3,4);
@@ -296,7 +296,7 @@ static Point3f triangulatePoint(const vector<Point2f>& ps,
         double W = fabs(U(3,3)) > FLT_EPSILON ? 1./U(3,3) : 0;
         return Point3f((float)(U(3,0)*W), (float)(U(3,1)*W), (float)(U(3,2)*W));
     }
-    else
+    else*/
     {
         Mat_<float> iK = K.inv();
         Mat_<float> R1t = Mat_<float>(Rs[0]).t();
@@ -497,18 +497,10 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
                 
                 double e1 = norm(imgpts1[0] - keypoints1[i1].pt);
                 double e2 = norm(imgpts2[0] - keypoints2[i2].pt);
-                if( e1 + e2 > 10 )
+                if( e1 + e2 > 5 )
                     continue;
                 
                 pairsFound++;
-                //pts_k[0] = imgpts1[0];
-                //pts_k[1] = imgpts2[0];
-                //objpt = triangulatePoint(pts_k, Rs_k, ts_k, cameraMatrix);
-                //objpts[0] = objpt;
-                //projectPoints(Mat(objpts), Rs_k[0], ts_k[0], cameraMatrix, Mat(), imgpts1);
-                //projectPoints(Mat(objpts), Rs_k[1], ts_k[1], cameraMatrix, Mat(), imgpts2);
-                //double e1 = norm(imgpts1[0] - keypoints1[i1].pt);
-                //double e2 = norm(imgpts2[0] - keypoints2[i2].pt);
                 
                 //model.points.push_back(objpt);   
                 pairs[Pair2i(i1+dstart[i], i2+dstart[j])] = 1;

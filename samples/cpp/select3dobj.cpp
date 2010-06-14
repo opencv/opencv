@@ -67,7 +67,7 @@ static Point3f image2plane(Point2f imgpt, const Mat& R, const Mat& tvec,
 
 static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFrame, 
                          const Mat& cameraMatrix, const Mat& rvec, const Mat& tvec,
-                         const vector<Point3f>& box, int nobjpt)
+                         const vector<Point3f>& box, int nobjpt, bool runExtraSegmentation)
 {
     selectedObjFrame = Mat::zeros(frame.size(), frame.type());
     if( nobjpt == 0 )
@@ -120,8 +120,13 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
     convexHull(Mat_<Point>(Mat(imgpt)), hull);
     Mat selectedObjMask = Mat::zeros(frame.size(), CV_8U);
     fillConvexPoly(selectedObjMask, &hull[0], hull.size(), Scalar::all(255), 8, 0);
+    Rect roi = boundingRect(Mat(hull)) & Rect(Point(), frame.size());
+    
+    ///////////////// insert GrabCut here ////////////////////
+    //////////////////////////////////////////////////////////
+    
     frame.copyTo(selectedObjFrame, selectedObjMask);
-    return boundingRect(Mat(hull)) & Rect(Point(), frame.size());
+    return roi;
 }
 
 
@@ -211,7 +216,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
         
         frame.copyTo(shownFrame);
         extract3DBox(frame, shownFrame, selectedObjFrame,
-                     cameraMatrix, rvec, tvec, box, npt);
+                     cameraMatrix, rvec, tvec, box, npt, false);
         imshow(windowname, shownFrame);
         imshow(selWinName, selectedObjFrame);
         
@@ -500,7 +505,7 @@ int main(int argc, char** argv)
             if( !box.empty() )
             {
                 Rect r = extract3DBox(frame, shownFrame, selectedObjFrame,
-                                      cameraMatrix, rvec, tvec, box, 4);
+                                      cameraMatrix, rvec, tvec, box, 4, true);
                 if( r.area() )
                 {
                     const int maxFrameIdx = 10000;
