@@ -221,9 +221,10 @@ public:
             : pt(x, y), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
     //! converts vector of keypoints to vector of points
-    static void convert(const std::vector<KeyPoint>& u, std::vector<Point2f>& v);
+    static void convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,
+                        const std::vector<int>& keypointIndexes=std::vector<int>());
     //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
-    static void convert(const std::vector<Point2f>& u, std::vector<KeyPoint>& v,
+    static void convert(const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
                         float size=1, float response=1, int octave=0, int class_id=-1);
     Point2f pt; //!< coordinates of the keypoints
     float size; //!< diameter of the meaningfull keypoint neighborhood

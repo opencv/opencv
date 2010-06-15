@@ -76,23 +76,37 @@ void read(const FileNode& node, vector<KeyPoint>& keypoints)
 }
     
 
-void KeyPoint::convert(const std::vector<KeyPoint>& u, std::vector<Point2f>& v)
+void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,
+                       const vector<int>& keypointIndexes)
 {
-    size_t i, sz = u.size();
-    v.resize(sz);
-    
-    for( i = 0; i < sz; i++ )
-        v[i] = u[i].pt;
+    if( keypointIndexes.empty() )
+    {
+        points2f.resize( keypoints.size() );
+        for( size_t i = 0; i < keypoints.size(); i++ )
+            points2f[i] = keypoints[i].pt;
+    }
+    else
+    {
+        points2f.resize( keypointIndexes.size() );
+        for( size_t i = 0; i < keypointIndexes.size(); i++ )
+        {
+            int idx = keypointIndexes[i];
+            if( idx >= 0 )
+                points2f[i] = keypoints[idx].pt;
+            else
+            {
+                CV_Error( CV_StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
+                //points2f[i] = Point2f(-1, -1);
+            }
+        }
+    }
 }
     
-void KeyPoint::convert( const std::vector<Point2f>& u, std::vector<KeyPoint>& v,
+void KeyPoint::convert( const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
                         float size, float response, int octave, int class_id )
 {
-    size_t i, sz = u.size();
-    v.resize(sz);
-    
-    for( i = 0; i < sz; i++ )
-        v[i] = KeyPoint(u[i], size, -1, response, octave, class_id);
+    for( size_t i = 0; i < points2f.size(); i++ )
+        keypoints[i] = KeyPoint(points2f[i], size, -1, response, octave, class_id);
 }
 
 }

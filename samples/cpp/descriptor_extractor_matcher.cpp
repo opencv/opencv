@@ -5,20 +5,8 @@
 #include "opencv2/features2d/features2d.hpp"
 #include <iostream>
 
-
 using namespace cv;
 using namespace std;
-
-inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
-{
-    double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
-    if( z )
-    {
-        double w = 1./z;
-        return Point2f( (H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w, (H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w );
-    }
-    return Point2f( numeric_limits<double>::max(), numeric_limits<double>::max() );
-}
 
 void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG* rng )
 {
@@ -74,40 +62,36 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     if( !isWarpPerspective && ransacReprojThreshold >= 0 )
     {
         cout << "< Computing homography (RANSAC)..." << endl;
-        vector<Point2f> points1(matches.size()), points2(matches.size());
-        for( size_t i = 0; i < matches.size(); i++ )
-        {
-            points1[i] = keypoints1[i].pt;
-            points2[i] = keypoints2[matches[i]].pt;
-        }
+        vector<Point2f> points1; KeyPoint::convert(keypoints1, points1);
+        vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, matches);
         H12 = findHomography( Mat(points1), Mat(points2), CV_RANSAC, ransacReprojThreshold );
         cout << ">" << endl;
     }
 
     Mat drawImg;
-    if( !H12.empty() )
+    if( !H12.empty() ) // filter outliers
     {
         vector<char> matchesMask( matches.size(), 0 );
+        vector<Point2f> points1; KeyPoint::convert(keypoints1, points1);
+        vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, matches);
+        Mat points1t; perspectiveTransform(Mat(points1), points1t, H12);
         vector<int>::const_iterator mit = matches.begin();
-        for( size_t i1 = 0; mit != matches.end(); ++mit, i1++ )
+        for( size_t i1 = 0; i1 < points1.size(); i1++ )
         {
-            Point2f pt1 = keypoints1[i1].pt,
-                    pt2 = keypoints2[*mit].pt;
-            if( norm(pt2 - applyHomography(H12, pt1)) < 4 ) // inlier
+            if( norm(points2[i1] - points1t.at<Point2f>(i1,0)) < 4 ) // inlier
                 matchesMask[i1] = 1;
         }
         // draw inliers
         drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask );
-        // draw outliers
-        /*for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
+#if 0   // draw outliers
+        for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
             matchesMask[i1] = !matchesMask[i1];
         drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0), matchesMask,
-                     DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );*/
+                     DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS )
+#endif
     }
     else
-    {
-        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0) );
-    }
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg );
 
     imshow( winName, drawImg );
 }
