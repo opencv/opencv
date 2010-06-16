@@ -1573,9 +1573,9 @@ public:
      * Find the best match for each descriptor from a query set
      *
      * query         The query set of descriptors
-     * matchings     Matchings of the closest matches from the training set
+     * matches       DMatches of the closest matches from the training set
      */
-    void match( const Mat& query, vector<DMatch>& matchings ) const;
+    void match( const Mat& query, vector<DMatch>& matches ) const;
 
     /*
      * Find the best matches between two descriptor sets, with constraints
@@ -1586,10 +1586,36 @@ public:
      *
      * query         The query set of descriptors
      * mask          Mask specifying permissible matches.
-     * matchings     Matchings of the closest matches from the training set
+     * matches       DMatches of the closest matches from the training set
      */
     void match( const Mat& query, const Mat& mask,
-                    vector<DMatch>& matchings ) const;
+                    vector<DMatch>& matches ) const;
+
+    /*
+     * Find many matches for each descriptor from a query set
+     *
+     * query         The query set of descriptors
+     * matches       DMatches of the closest matches from the training set
+     * threshold     Distance threshold for descriptors matching
+     */
+    void match( const Mat& query, vector<vector<DMatch> >& matches, float threshold ) const;
+
+    /*
+      * Find many matches for each descriptor from a query set, with constraints
+      * on which pairs of descriptors can be matched.
+      *
+      * The mask describes which descriptors can be matched. descriptors_1[i]
+      * can be matched with descriptors_2[j] only if mask.at<char>(i,j) is non-zero.
+      *
+      * query         The query set of descriptors
+      * mask          Mask specifying permissible matches.
+      * matches       DMatches of the closest matches from the training set
+      * threshold     Distance threshold for descriptors matching
+      */
+    void match( const Mat& query, const Mat& mask,
+                    vector<vector<DMatch> >&  matches, float threshold ) const;
+
+
 
     /*
      * Find the best keypoint matches for small view changes.
@@ -1626,6 +1652,10 @@ protected:
      */
     virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                             const Mat& mask, vector<DMatch>& matches ) const = 0;
+
+    virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                            const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const = 0;
+
 
     static bool possibleMatch( const Mat& mask, int index_1, int index_2 )
     {
@@ -1674,6 +1704,18 @@ inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
     matchImpl( query, train, mask, matches );
 }
 
+inline void DescriptorMatcher::match( const Mat& query, vector<vector<DMatch> >& matches, float threshold ) const
+{
+    matchImpl( query, train, Mat(), matches, threshold );
+}
+
+inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
+                                      vector<vector<DMatch> >& matches, float threshold ) const
+{
+    matchImpl( query, train, mask, matches, threshold );
+}
+
+
 inline void DescriptorMatcher::clear()
 {
     train.release();
@@ -1700,6 +1742,9 @@ protected:
 
    virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                            const Mat& mask, vector<DMatch>& matches ) const;
+
+   virtual void matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                           const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const;
 
    Distance distance;
 };
@@ -1763,6 +1808,46 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
         }
     }
 }
+
+template<class Distance>
+void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                                             const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const
+{
+    typedef typename Distance::ValueType ValueType;
+    typedef typename Distance::ResultType DistanceType;
+
+    assert( mask.empty() || (mask.rows == descriptors_1.rows && mask.cols == descriptors_2.rows) );
+
+    assert( descriptors_1.cols == descriptors_2.cols ||  descriptors_1.empty() ||  descriptors_2.empty() );
+    assert( DataType<ValueType>::type == descriptors_1.type() ||  descriptors_1.empty() );
+    assert( DataType<ValueType>::type == descriptors_2.type() ||  descriptors_2.empty() );
+
+    int dimension = descriptors_1.cols;
+    matches.resize( descriptors_1.rows );
+
+    for( int i = 0; i < descriptors_1.rows; i++ )
+    {
+        const ValueType* d1 = descriptors_1.ptr<ValueType>(i);
+
+        for( int j = 0; j < descriptors_2.rows; j++ )
+        {
+            if( possibleMatch(mask, i, j) )
+            {
+                const ValueType* d2 = descriptors_2.ptr<ValueType>(j);
+                DistanceType curDistance = distance(d1, d2, dimension);
+                if( curDistance < threshold )
+                {
+                    DMatch match;
+                    match.distance = curDistance;
+                    match.indexQuery = i;
+                    match.indexTrain = j;
+                    matches[i].push_back( match );
+                }
+            }
+        }
+    }
+}
+
 
 DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType );
 
@@ -1834,6 +1919,8 @@ public:
     // points       Test keypoints from the source image
     // matches      A vector to be filled with keypoint matches
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches ) {};
+
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold ) {};
 
     // Clears keypoints storing in collection
     virtual void clear();
@@ -2039,7 +2126,9 @@ public:
 
     virtual void match( const Mat& image, vector<KeyPoint>& keypoints, vector<int>& indices );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches );
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches);
+
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold);
 
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
@@ -2103,6 +2192,14 @@ public:
         extractor.compute( image, points, descriptors );
 
         matcher.match( descriptors, matches );
+    }
+
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold )
+    {
+        Mat descriptors;
+        extractor.compute( image, points, descriptors );
+
+        matcher.match( descriptors, matches, threshold );
     }
 
     virtual void clear()

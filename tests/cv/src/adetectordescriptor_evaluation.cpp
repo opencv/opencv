@@ -1447,12 +1447,19 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
             readKeypoints( keypontsFS, keypoints2, ci+1 );
         transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
         descMatch->add( imgs[ci+1], keypoints2 );
-        vector<DMatch> matches1to2;
-        descMatch->match( imgs[0], keypoints1, matches1to2 );
-        vector<DMatchForEvaluation> matches ( matches1to2.size() );
+        vector<vector<DMatch> > matches1to2;
+        descMatch->match( imgs[0], keypoints1, matches1to2, std::numeric_limits<float>::max() );
+        vector<DMatchForEvaluation> matches;
         for( size_t i=0;i<matches1to2.size();i++)
         {
-            matches[i].match = matches1to2[i];
+            //TODO: use copy
+            for( size_t j=0;j<matches1to2[i].size();j++ )
+            {
+                DMatchForEvaluation match;
+                match.match = matches1to2[i][j];
+                matches.push_back( match );
+                //std::copy( matches1to2[i].begin(), matches1to2[i].end(), std::back_inserter( matches ) );
+            }
         }
 
         // TODO if( commRunParams[di].matchFilter )

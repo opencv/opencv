@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 
+//#define _KDTREE
+
 using namespace std;
 namespace cv
 {
@@ -439,21 +441,22 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
     match( image, points, matchings );
 
     for( size_t i = 0; i < points.size(); i++ )
-        indices[i] = matchings[i].index;
+        indices[i] = matchings[i].indexTrain;
 }
 
-void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings )
+void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches )
 {
-    matchings.resize( points.size() );
+    matches.resize( points.size() );
     IplImage _image = image;
     for( size_t i = 0; i < points.size(); i++ )
     {
         int poseIdx = -1;
 
-        DMatch matching;
-        matching.index = -1;
-        base->FindDescriptor( &_image, points[i].pt, matching.index, poseIdx, matching.distance );
-        matchings[i] = matching;
+        DMatch match;
+        match.indexQuery = i;
+        match.indexTrain = -1;
+        base->FindDescriptor( &_image, points[i].pt, match.indexTrain, poseIdx, match.distance );
+        matches[i] = match;
     }
 }
 
@@ -744,18 +747,45 @@ void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, 
     }
 }
 
-void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<DMatch>& matchings )
+void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<DMatch>& matches )
 {
     trainFernClassifier();
 
-    matchings.resize( keypoints.size() );
+    matches.resize( keypoints.size() );
     vector<float> signature( (size_t)classifier->getClassCount() );
 
     for( size_t pi = 0; pi < keypoints.size(); pi++ )
     {
-        calcBestProbAndMatchIdx( image, keypoints[pi].pt, matchings[pi].distance, matchings[pi].index, signature );
+        matches[pi].indexQuery = pi;
+        calcBestProbAndMatchIdx( image, keypoints[pi].pt, matches[pi].distance, matches[pi].indexTrain, signature );
         //matching[pi].distance is log of probability so we need to transform it
-        matchings[pi].distance = -matchings[pi].distance;
+        matches[pi].distance = -matches[pi].distance;
+    }
+}
+
+void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<vector<DMatch> >& matches, float threshold )
+{
+    trainFernClassifier();
+
+    matches.resize( keypoints.size() );
+    vector<float> signature( (size_t)classifier->getClassCount() );
+
+    for( size_t pi = 0; pi < keypoints.size(); pi++ )
+    {
+        (*classifier)( image, keypoints[pi].pt, signature);
+
+        DMatch match;
+        match.indexQuery = pi;
+
+        for( size_t ci = 0; ci < (size_t)classifier->getClassCount(); ci++ )
+        {
+            if( -signature[ci] < threshold )
+            {
+                match.distance = -signature[ci];
+                match.indexTrain = ci;
+                matches[pi].push_back( match );
+            }
+        }
     }
 }
 
