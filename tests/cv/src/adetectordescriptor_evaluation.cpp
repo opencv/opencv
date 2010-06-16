@@ -435,14 +435,13 @@ inline float precision( int correctMatchCount, int falseMatchCount )
 }
 
 
-struct DMatchForEvaluation
+struct DMatchForEvaluation : public DMatch
 {
-    DMatch match;
     int isCorrect;
 
-    bool operator<( const DMatchForEvaluation &m) const
+    DMatchForEvaluation( const DMatch &dm )
+    : DMatch( dm )
     {
-        return match < m.match;
     }
 };
 
@@ -469,18 +468,18 @@ void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vect
 
     for( size_t i = 0; i < matches1to2.size(); i++ )
     {
-        if( matches1to2[i].match.indexTrain > 0 )
-        {
-            matches1to2[i].isCorrect = thresholdedOverlapMask( matches1to2[i].match.indexQuery, matches1to2[i].match.indexTrain);
+        //if( matches1to2[i].match.indexTrain > 0 )
+        //{
+            matches1to2[i].isCorrect = thresholdedOverlapMask( matches1to2[i].indexQuery, matches1to2[i].indexTrain);
             if( matches1to2[i].isCorrect )
                 correctMatchCount++;
             else
                 falseMatchCount++;
-        }
-        else
-        {
-            matches1to2[i].isCorrect = -1;
-        }
+        //}
+        //else
+        //{
+        //    matches1to2[i].isCorrect = -1;
+        //}
     }
 }
 
@@ -551,9 +550,9 @@ protected:
     virtual void runDatasetTest( const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress ) {};
     void run( int );
 
-    virtual void processResults();
+    virtual void processResults( int datasetIdx );
     virtual int processResults( int datasetIdx, int caseIdx ) = 0;
-    void writeAllPlotData() const;
+    virtual void processResults();
     virtual void writePlotData( int datasetIdx ) const {};
     virtual void writeAveragePlotData() const {};
 
@@ -713,12 +712,19 @@ void BaseQualityTest::writeResults() const
         ts->printf(CvTS::LOG, "results were not written because file %s can not be opened\n", filename.c_str() );
 }
 
+void BaseQualityTest::processResults( int datasetIdx )
+{
+    if( isWriteGraphicsData )
+        writePlotData( datasetIdx );
+}
+
 void BaseQualityTest::processResults()
 {
     if( isWriteParams )
         writeAllDatasetsRunParams();
+
     if( isWriteGraphicsData )
-        writeAllPlotData();
+        writeAveragePlotData();
 
     int res = CvTS::OK;
     if( isWriteResults )
@@ -744,15 +750,6 @@ void BaseQualityTest::processResults()
     if( res != CvTS::OK )
         ts->printf(CvTS::LOG, "BAD ACCURACY\n");
     ts->set_failed_test_info( res );
-}
-
-void BaseQualityTest::writeAllPlotData() const
-{
-    for( int di = 0; di < DATASETS_COUNT; di++ )
-    {
-        writePlotData( di );
-    }
-    writeAveragePlotData();
 }
 
 void BaseQualityTest::run ( int )
@@ -786,6 +783,7 @@ void BaseQualityTest::run ( int )
         readDatasetRunParams(fn, di);
 
         runDatasetTest (imgs, Hs, di, progress);
+        processResults( di );
     }
     if( notReadDatasets == DATASETS_COUNT )
     {
@@ -1448,18 +1446,12 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
         descMatch->add( imgs[ci+1], keypoints2 );
         vector<vector<DMatch> > matches1to2;
+        //TODO: use more sophisticated strategy to choose threshold
         descMatch->match( imgs[0], keypoints1, matches1to2, std::numeric_limits<float>::max() );
         vector<DMatchForEvaluation> matches;
         for( size_t i=0;i<matches1to2.size();i++)
         {
-            //TODO: use copy
-            for( size_t j=0;j<matches1to2[i].size();j++ )
-            {
-                DMatchForEvaluation match;
-                match.match = matches1to2[i][j];
-                matches.push_back( match );
-                //std::copy( matches1to2[i].begin(), matches1to2[i].end(), std::back_inserter( matches ) );
-            }
+            std::copy( matches1to2[i].begin(), matches1to2[i].end(), std::back_inserter( matches ) );
         }
 
         // TODO if( commRunParams[di].matchFilter )
@@ -1471,18 +1463,19 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         allCorrespCount += correspCount;
         std::copy( matches.begin(), matches.end(), std::back_inserter( allMatches ) );
 
-	//TODO: remove after testing
-        //printf ("%d %d %d \n", correctMatchCount, falseMatchCount, correspCount );
-
-        calcQuality[di][ci].recall = recall( correctMatchCount, correspCount );
-        calcQuality[di][ci].precision = precision( correctMatchCount, falseMatchCount );
         descMatch->clear ();
     }
 
     std::sort( allMatches.begin(), allMatches.end() );
 
-    calcDatasetQuality[di].resize( allMatches.size() );
+    //calcDatasetQuality[di].resize( allMatches.size() );
+    calcDatasetQuality[di].clear();
     int correctMatchCount = 0, falseMatchCount = 0;
+    const float sparsePlotBound = 0.1;
+    const int npoints = 10000;
+    int step = allMatches.size() / npoints;
+    const float resultPrecision = 0.5;
+    bool isResultCalculated = false;
     for( size_t i=0;i<allMatches.size();i++)
     {
         if( allMatches[i].isCorrect )
@@ -1490,9 +1483,31 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         else
             falseMatchCount++;
 
-        calcDatasetQuality[di][i].recall = recall( correctMatchCount, allCorrespCount );
-        calcDatasetQuality[di][i].precision = precision( correctMatchCount, falseMatchCount );
+        if( precision( correctMatchCount, falseMatchCount ) >= sparsePlotBound || (i % step == 0) )
+        {
+            Quality quality;
+            quality.recall = recall( correctMatchCount, allCorrespCount );
+            quality.precision = precision( correctMatchCount, falseMatchCount );
+
+            calcDatasetQuality[di].push_back( quality );
+
+            if( !isResultCalculated && quality.precision < resultPrecision)
+            {
+                for(int ci=0;ci<TEST_CASE_COUNT;ci++)
+                {
+                    calcQuality[di][ci].recall = quality.recall;
+                    calcQuality[di][ci].precision = quality.precision;
+                }
+                isResultCalculated = true;
+            }
+        }
     }
+
+    Quality quality;
+    quality.recall = recall( correctMatchCount, allCorrespCount );
+    quality.precision = precision( correctMatchCount, falseMatchCount );
+
+    calcDatasetQuality[di].push_back( quality );
 }
 
 int DescriptorQualityTest::processResults( int datasetIdx, int caseIdx )
