@@ -418,63 +418,64 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 
 
 
+
 //----------OBJECT----------------
 
 GuiReceiver::GuiReceiver() : _bTimeOut(false)
-{  
+{
     icvInitSystem();
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
 double GuiReceiver::getPropWindow(QString name)
 {
-	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
 
     if (!w)
-		return -1;
-			
-	return (double)w->flags;
+        return -1;
+
+    return (double)w->flags;
 }
 
 void GuiReceiver::setPropWindow(QString name, double arg2 )
 {
-	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
     if (!w)
-		return;
-	
-	int flags = (int) arg2;
-	
-	if (w->flags == flags)//nothing to do
-		return;
-		
-		
-	switch(flags)
-	{
-		case  CV_WINDOW_NORMAL:
-			w->layout->setSizeConstraint(QLayout::SetMinAndMaxSize);
-			w->flags = flags;
-		break;
-		case  CV_WINDOW_AUTOSIZE:
-			w->layout->setSizeConstraint(QLayout::SetFixedSize);
-			w->flags = flags;
-		break;
-		default:;
-	}
+        return;
+
+    int flags = (int) arg2;
+
+    if (w->flags == flags)//nothing to do
+        return;
+
+
+    switch(flags)
+    {
+    case  CV_WINDOW_NORMAL:
+        w->layout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+        w->flags = flags;
+        break;
+    case  CV_WINDOW_AUTOSIZE:
+        w->layout->setSizeConstraint(QLayout::SetFixedSize);
+        w->flags = flags;
+        break;
+    default:;
+    }
 }
 
 double GuiReceiver::isFullScreen(QString name)
 {
-	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
     if (!w)
-		return -1;
-		
-	if (w->isFullScreen())
-		return CV_WINDOW_FULLSCREEN;
-	else
-		return CV_WINDOW_NORMAL;
+        return -1;
+
+    if (w->isFullScreen())
+        return CV_WINDOW_FULLSCREEN;
+    else
+        return CV_WINDOW_NORMAL;
 }
 
 //accept CV_WINDOW_NORMAL or CV_WINDOW_FULLSCREEN
@@ -484,12 +485,12 @@ void GuiReceiver::toggleFullScreen(QString name, double flags )
 
     if (!w)
         return;
-    
-	if (w->isFullScreen() && flags == CV_WINDOW_NORMAL)
-		w->showNormal();
-	
-	if (!w->isFullScreen() && flags == CV_WINDOW_FULLSCREEN)
-		w->showFullScreen(); 
+
+    if (w->isFullScreen() && flags == CV_WINDOW_NORMAL)
+        w->showNormal();
+
+    if (!w->isFullScreen() && flags == CV_WINDOW_FULLSCREEN)
+        w->showFullScreen();
 
 }
 
@@ -643,14 +644,14 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
 
     //Change style of the Slider
     slider->setStyleSheet(str_Trackbar_css);
-    
+
     //QFile qss(PATH_QSLIDERCSS);
     //if (qss.open(QFile::ReadOnly))
     //{
     //    slider->setStyleSheet(QLatin1String(qss.readAll()));
     //    qss.close();
     //}
-    
+
 
     //this next line does not work if we change the style with a stylesheet, why ? (bug in QT ?)
     //slider->setTickPosition(QSlider::TicksBelow);
@@ -764,13 +765,6 @@ CvWindow::~CvWindow()
 
 }
 
-/*
-void CvWindow::startNavigate()
-{
-    cout<<"here"<<endl;
-    //myview->zoomIn();
-}*/
-
 void CvWindow::displayInfo(QString text,int delayms)
 {
     myview->startDisplayInfo(text, delayms);
@@ -783,7 +777,7 @@ void CvWindow::updateImage(void* arr)
 
 void CvWindow::setMouseCallBack(CvMouseCallback m, void* param)
 {
-	myview->setMouseCallBack(m,param);
+    myview->setMouseCallBack(m,param);
 }
 
 void CvWindow::addSlider(QString name, int* value, int count,CvTrackbarCallback on_change)
@@ -834,6 +828,7 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
     previousFactor = 1;
     previousCenter = QPointF(0,0);
     previousDelta = QPointF(0,0);
+    positionGrabbing = QPointF(0,0);
 
     if (mode == CV_MODE_OPENGL)
     {
@@ -845,6 +840,11 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
 
     image2Draw=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
     cvZero(image2Draw);
+
+    setSceneRect(0,0,size().width(),size().height());
+    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->setInteractive(false);
 }
 
 ViewPort::~ViewPort()
@@ -852,6 +852,7 @@ ViewPort::~ViewPort()
     if (image2Draw)
         cvReleaseImage(&image2Draw);
 
+    delete timerDisplay;
 }
 
 void ViewPort::startDisplayInfo(QString text, int delayms)
@@ -888,7 +889,7 @@ void ViewPort::updateImage(void* arr)
         image2Draw=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
 
         updateGeometry();
-    }       
+    }
 
     cvConvertImage(tempImage,image2Draw,CV_CVTIMG_SWAP_RB );
     viewport()->update();
@@ -896,16 +897,34 @@ void ViewPort::updateImage(void* arr)
 
 void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 {
-	setMouseTracking (true);//receive mouse event everytime
+    setMouseTracking (true);//receive mouse event everytime
     on_mouse = m;
     on_mouse_param = param;
 }
 
+void ViewPort::controlImagePosition()
+{
+    qreal left, top, right, bottom;
+    matrixWorld.map(0,0,&left,&top);
+    if (left < 0)left = 0;
+    if (top < 0)top = 0;
+    if (left>0 || top > 0)
+       matrixWorld.translate(-left,-top);
+
+
+    QSize sizeImage = size();
+    matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
+    if (right > sizeImage.width()) right = sizeImage.width();
+    if (bottom > sizeImage.height()) bottom = sizeImage.height();
+    if (right < sizeImage.width() || bottom < sizeImage.height())
+        matrixWorld.translate(sizeImage.width()-right,sizeImage.height()-bottom);
+}
+
 void ViewPort::scaleView(qreal factor,QPointF center)
- {
-     factor += previousFactor;
-     if (factor < 1 || factor > 100)
-         return;
+{
+    factor += previousFactor;
+    if (factor < 1 || factor > 100)
+        return;
 
     center= (center-previousCenter)/previousFactor + previousCenter;//move to global coordinate
     QPointF delta = QPointF(center-center*factor);
@@ -914,21 +933,23 @@ void ViewPort::scaleView(qreal factor,QPointF center)
     matrixWorld.translate(delta.x(),delta.y());//newCenter.x(),newCenter.y());
     matrixWorld.scale(factor,factor);
 
+    //controlImagePosition();
+
     previousCenter = center;
-    previousDelta = delta;
+    //previousDelta = delta;
     previousFactor = factor;
 
     if (previousFactor>1)
-         setCursor(Qt::OpenHandCursor);
-        else
-         unsetCursor();
+        setCursor(Qt::OpenHandCursor);
+    else
+        unsetCursor();
 
     viewport()->update();
 }
 
 void ViewPort::wheelEvent(QWheelEvent *event)
 {
-    scaleView( -event->delta() / 480.0,event->pos());
+    scaleView( -event->delta() / 240.0,event->pos());
 }
 
 void ViewPort::mousePressEvent(QMouseEvent *event)
@@ -979,7 +1000,10 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
 
 
     if (previousFactor>1)
-         setCursor(Qt::ClosedHandCursor);
+    {
+        setCursor(Qt::ClosedHandCursor);
+        positionGrabbing = event->pos();
+    }
 
     QWidget::mousePressEvent(event);
 }
@@ -1032,7 +1056,7 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
     if (previousFactor>1)
-         setCursor(Qt::OpenHandCursor);
+        setCursor(Qt::OpenHandCursor);
 
     QWidget::mouseReleaseEvent(event);
 }
@@ -1115,6 +1139,17 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
     if (on_mouse)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
+
+    if (previousFactor>1 && event->buttons() == Qt::LeftButton)
+    {
+        QPointF dxy = (pt - positionGrabbing)/previousFactor;
+
+        positionGrabbing = event->pos();
+
+        matrixWorld.translate(dxy.x(),dxy.y());
+        controlImagePosition();
+        }
+
     QWidget::mouseMoveEvent(event);
 }
 
@@ -1183,6 +1218,18 @@ void ViewPort::drawInstructions(QPainter *painter)
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 #if defined(OPENCV_GL)//all this section -> not tested
 
 void ViewPort::initGL()
@@ -1246,3 +1293,4 @@ void ViewPort::draw3D()
 #endif
 
 #endif
+

@@ -172,15 +172,16 @@ public:
     qreal scaleFactor;//for zoom int/out
 
 public slots:
-	//reference:
-	//http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
+        //reference:
+        //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
+        //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
     void scaleView(qreal scaleFactor, QPointF center);
 
 private:
-	QPointF previousCenter ;
+    QPointF previousCenter ;
     qreal previousFactor;//for zoom int/out
     QPointF previousDelta;
-
+    QPointF positionGrabbing;
 	CvMouseCallback on_mouse;
     void* on_mouse_param;
 
@@ -202,6 +203,8 @@ private:
     void mouseDoubleClickEvent(QMouseEvent *event);
     void drawInstructions(QPainter *painter);
     void draw2D(QPainter *painter);
+    void controlImagePosition();
+
 
 #if defined(OPENCV_GL)
     void draw3D();
