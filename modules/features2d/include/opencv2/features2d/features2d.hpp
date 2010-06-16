@@ -1516,7 +1516,8 @@ struct CV_EXPORTS L2
  */
 struct DMatch
 {
-    int index;
+    int indexTrain;
+    int indexQuery;
     float distance;
 
     //less is better
@@ -1712,7 +1713,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     matches.resize( matchings.size() );
     for( size_t i=0;i<matchings.size();i++)
     {
-        matches[i] = matchings[i].index;
+        matches[i] = matchings[i].indexTrain;
     }
 }
 
@@ -1754,10 +1755,11 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
         if( matchIndex != -1 )
         {
-            DMatch matching;
-            matching.index = matchIndex;
-            matching.distance = matchDistance;
-            matches[i] = matching;
+            DMatch match;
+            match.indexTrain = matchIndex;
+            match.indexQuery = i;
+            match.distance = matchDistance;
+            matches[i] = match;
         }
     }
 }
@@ -1830,8 +1832,8 @@ public:
     // Matches test keypoints to the training set
     // image        The source image
     // points       Test keypoints from the source image
-    // matchings    A vector to be filled with keypoint matchings
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings ) {};
+    // matches      A vector to be filled with keypoint matches
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches ) {};
 
     // Clears keypoints storing in collection
     virtual void clear();
@@ -1907,7 +1909,7 @@ public:
     // loaded with DescriptorOneWay::Initialize, kd tree is used for finding minimum distances.
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings );
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches );
 
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
@@ -2037,7 +2039,7 @@ public:
 
     virtual void match( const Mat& image, vector<KeyPoint>& keypoints, vector<int>& indices );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings );
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches );
 
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
@@ -2095,12 +2097,12 @@ public:
         matcher.match( descriptors, keypointIndices );
     };
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matchings )
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches )
     {
         Mat descriptors;
         extractor.compute( image, points, descriptors );
 
-        matcher.match( descriptors, matchings );
+        matcher.match( descriptors, matches );
     }
 
     virtual void clear()

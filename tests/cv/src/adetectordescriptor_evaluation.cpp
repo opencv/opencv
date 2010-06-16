@@ -372,20 +372,21 @@ void calculateRepeatability( const vector<EllipticKeyPoint>& _keypoints1, const 
     if( !size || overlaps.nzcount() == 0 )
         return;
 
-    // threshold the overlaps
-    for( int y = 0; y < size[0]; y++ )
-    {
-        for( int x = 0; x < size[1]; x++ )
-        {
-            if ( overlaps(y,x) < overlapThreshold )
-                overlaps.erase(y,x);
-        }
-    }
     if( ifEvaluateDetectors )
     {
+        // threshold the overlaps
+        for( int y = 0; y < size[0]; y++ )
+        {
+            for( int x = 0; x < size[1]; x++ )
+            {
+                if ( overlaps(y,x) < overlapThreshold )
+                    overlaps.erase(y,x);
+            }
+        }
+    
         // regions one-to-one matching
         correspondencesCount = 0;
-       while( overlaps.nzcount() > 0 )
+        while( overlaps.nzcount() > 0 )
         {
             double maxOverlap = 0;
             int maxIdx[2];
@@ -400,7 +401,16 @@ void calculateRepeatability( const vector<EllipticKeyPoint>& _keypoints1, const 
     }
     else
     {
-        overlaps.copyTo(*thresholdedOverlapMask);
+        thresholdedOverlapMask->create( 2, size );
+        for( int y = 0; y < size[0]; y++ )
+        {
+            for( int x = 0; x < size[1]; x++ )
+            {
+                float val = overlaps(y,x);
+                if ( val >= overlapThreshold )
+                    thresholdedOverlapMask->ref(y,x) = val;
+            }
+        }
     }
 }
 
@@ -424,10 +434,23 @@ inline float precision( int correctMatchCount, int falseMatchCount )
     return correctMatchCount + falseMatchCount ? (float)correctMatchCount / (float)(correctMatchCount + falseMatchCount) : -1;
 }
 
+
+struct DMatchForEvaluation
+{
+    DMatch match;
+    int isCorrect;
+
+    bool operator<( const DMatchForEvaluation &m) const
+    {
+        return match < m.match;
+    }
+};
+
+
 void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
-                          vector< pair<DMatch, int> >& matches1to2,
+                          vector<DMatchForEvaluation>& matches1to2,
                           const Mat& img1, const Mat& img2, const Mat& H1to2,
-                          int &correctMatchCount, int &falseMatchCount, vector<int> &matchStatuses, int& correspondenceCount )
+                          int &correctMatchCount, int &falseMatchCount, int& correspondenceCount )
 {
     assert( !keypoints1.empty() && !keypoints2.empty() && !matches1to2.empty() );
     assert( keypoints1.size() == matches1to2.size() );
@@ -441,26 +464,23 @@ void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vect
                             &thresholdedOverlapMask );
     correspondenceCount = thresholdedOverlapMask.nzcount();
 
-    matchStatuses.resize( matches1to2.size() );
     correctMatchCount = 0;
     falseMatchCount = 0;
 
-    //the nearest descriptors should be examined first
-    std::sort( matches1to2.begin(), matches1to2.end() );
-
-    for( size_t i1 = 0; i1 < matches1to2.size(); i1++ )
+    for( size_t i = 0; i < matches1to2.size(); i++ )
     {
-        int i2 = matches1to2[i1].first.index;
-        if( i2 > 0 )
+        if( matches1to2[i].match.indexTrain > 0 )
         {
-            matchStatuses[i2] = thresholdedOverlapMask(matches1to2[i1].second, i2);
-            if( matchStatuses[i2] )
+            matches1to2[i].isCorrect = thresholdedOverlapMask( matches1to2[i].match.indexQuery, matches1to2[i].match.indexTrain);
+            if( matches1to2[i].isCorrect )
                 correctMatchCount++;
             else
                 falseMatchCount++;
         }
         else
-            matchStatuses[i2] = -1;
+        {
+            matches1to2[i].isCorrect = -1;
+        }
     }
 }
 
@@ -1408,9 +1428,8 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
     transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
 
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
-    vector< pair<DMatch, int> > allMatchings;
-    vector<int> allMatchStatuses;
-    size_t matchingIndex = 0;
+    vector<DMatchForEvaluation> allMatches;
+
     int allCorrespCount = 0;
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
@@ -1428,43 +1447,38 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
             readKeypoints( keypontsFS, keypoints2, ci+1 );
         transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
         descMatch->add( imgs[ci+1], keypoints2 );
-        vector<DMatch> matchings1to2;
-        descMatch->match( imgs[0], keypoints1, matchings1to2 );
-        vector< pair<DMatch, int> > matchings (matchings1to2.size());
-        for( size_t i=0;i<matchings1to2.size();i++ )
-            matchings[i] = pair<DMatch, int>( matchings1to2[i], i);
+        vector<DMatch> matches1to2;
+        descMatch->match( imgs[0], keypoints1, matches1to2 );
+        vector<DMatchForEvaluation> matches ( matches1to2.size() );
+        for( size_t i=0;i<matches1to2.size();i++)
+        {
+            matches[i].match = matches1to2[i];
+        }
 
         // TODO if( commRunParams[di].matchFilter )
         int correspCount;
         int correctMatchCount = 0, falseMatchCount = 0;
-        vector<int> matchStatuses;
-        evaluateDescriptors( ekeypoints1, ekeypoints2, matchings, imgs[0], imgs[ci+1], Hs[ci],
-                             correctMatchCount, falseMatchCount, matchStatuses, correspCount );
-        for( size_t i=0;i<matchings.size();i++ )
-            matchings[i].second += matchingIndex;
-        matchingIndex += matchings.size();
-
+        evaluateDescriptors( ekeypoints1, ekeypoints2, matches, imgs[0], imgs[ci+1], Hs[ci],
+                             correctMatchCount, falseMatchCount, correspCount );
 
         allCorrespCount += correspCount;
+        std::copy( matches.begin(), matches.end(), std::back_inserter( allMatches ) );
 
-        //TODO: use merge
-        std::copy( matchings.begin(), matchings.end(), std::back_inserter( allMatchings ) );
-        std::copy( matchStatuses.begin(), matchStatuses.end(), std::back_inserter( allMatchStatuses ) );
-
-        printf ("%d %d %d \n", correctMatchCount, falseMatchCount, correspCount );
+	//TODO: remove after testing
+        //printf ("%d %d %d \n", correctMatchCount, falseMatchCount, correspCount );
 
         calcQuality[di][ci].recall = recall( correctMatchCount, correspCount );
         calcQuality[di][ci].precision = precision( correctMatchCount, falseMatchCount );
         descMatch->clear ();
     }
 
-    std::sort( allMatchings.begin(), allMatchings.end() );
+    std::sort( allMatches.begin(), allMatches.end() );
 
-    calcDatasetQuality[di].resize( allMatchings.size() );
+    calcDatasetQuality[di].resize( allMatches.size() );
     int correctMatchCount = 0, falseMatchCount = 0;
-    for( size_t i=0;i<allMatchings.size();i++)
+    for( size_t i=0;i<allMatches.size();i++)
     {
-        if( allMatchStatuses[ allMatchings[i].second ] )
+        if( allMatches[i].isCorrect )
             correctMatchCount++;
         else
             falseMatchCount++;
