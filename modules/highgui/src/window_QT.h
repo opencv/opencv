@@ -173,11 +173,13 @@ public slots:
     //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
     //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
     void scaleView(qreal scaleFactor, QPointF center);
+    void resizeEvent ( QResizeEvent * );
 
 private:
     QPointF positionGrabbing;
     QRect   positionCorners;
     QTransform matrixWorld;
+    QTransform matrixWorld_inv;
     
 	CvMouseCallback on_mouse;
     void* on_mouse_param;
@@ -201,6 +203,7 @@ private:
     void drawInstructions(QPainter *painter);
     void draw2D(QPainter *painter);
     void controlImagePosition();
+    void drawOverview(QPainter *painter);
 
 
 #if defined(OPENCV_GL)

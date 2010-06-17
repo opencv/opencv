@@ -931,6 +931,9 @@ void ViewPort::controlImagePosition()
         bottom = sizeImage.height();
     }
     positionCorners.setBottomRight(QPoint(right,bottom));
+
+    //save also the inv matrix
+    matrixWorld_inv = matrixWorld.inverted();
 }
 
 void ViewPort::scaleView(qreal factor,QPointF center)
@@ -946,33 +949,12 @@ void ViewPort::scaleView(qreal factor,QPointF center)
 
     //inverse the transform
     int a, b;
-    matrixWorld.inverted().map(center.x(),center.y(),&a,&b);;
+    matrixWorld_inv.map(center.x(),center.y(),&a,&b);
 
     matrixWorld.translate(a-factor*a,b-factor*b);
     matrixWorld.scale(factor,factor);
 
     controlImagePosition();
-
-
-    /*
-    factor += previousFactor;
-    if (factor < 1 || factor > 100)
-        return;
-
-    center= (center-previousCenter)/previousFactor + previousCenter;//move to global coordinate
-    QPointF delta = QPointF(center-center*factor);
-
-    //matrixWorld.reset ();
-    matrixWorld.translate(delta.x(),delta.y());//newCenter.x(),newCenter.y());
-    matrixWorld.scale(factor,factor);
-
-    //controlImagePosition();
-
-    previousCenter = center;
-    //previousDelta = delta;
-    previousFactor = factor;
-
-    */
 
     if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
@@ -1031,7 +1013,11 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
     }
 
     if (on_mouse)
-        on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
+    {
+        int a, b;
+        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        on_mouse( cv_event, a, b, flags, on_mouse_param );
+    }
 
 
     if (matrixWorld.m11()>1)
@@ -1088,7 +1074,11 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
     }
 
     if (on_mouse)
-        on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
+    {
+        int a, b;
+        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        on_mouse( cv_event, a, b, flags, on_mouse_param );
+    }
 
     if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
@@ -1139,7 +1129,11 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
     }
 
     if (on_mouse)
-        on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
+    {
+        int a, b;
+        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        on_mouse( cv_event, a, b, flags, on_mouse_param );
+    }
 
     QWidget::mouseDoubleClickEvent(event);
 }
@@ -1172,7 +1166,11 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
     cv_event = CV_EVENT_MOUSEMOVE;
 
     if (on_mouse)
-        on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
+    {
+        int a, b;
+        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        on_mouse( cv_event, a, b, flags, on_mouse_param );
+    }
 
 
     if (matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
@@ -1199,6 +1197,12 @@ QSize ViewPort::sizeHint() const
     }
 }
 
+void ViewPort::resizeEvent ( QResizeEvent *event)
+{
+     controlImagePosition();
+     return QGraphicsView::resizeEvent(event);
+}
+
 
 
 
@@ -1209,15 +1213,24 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
     draw2D(&myPainter);
 
+#if defined(OPENCV_GL)
     if (mode == CV_MODE_OPENGL)
     {
-#if defined(OPENCV_GL)
         setGL(this->width(),this->height());
         draw3D();
         unsetGL();
+    }
 #endif
+
+    //in mode zoom/panning
+    if (matrixWorld.m11()>1)
+    {
+        //if (size()>QSize())
+        myPainter.setWorldMatrixEnabled (false );
+        drawOverview(&myPainter);
     }
 
+    //for information overlay
     if (drawInfo)
     {
         myPainter.setWorldMatrixEnabled (false );
@@ -1233,6 +1246,29 @@ void ViewPort::draw2D(QPainter *painter)
     painter->drawImage(0,0,image.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
 }
 
+void ViewPort::drawOverview(QPainter *painter)
+{
+    QSize viewSize = size();
+    viewSize.scale ( 100, 100,Qt::KeepAspectRatio );
+
+    const int margin = 5;
+
+    painter->setBrush(QBrush ( QColor(0, 0, 0, 127)));
+    painter->setPen(Qt::darkGreen);
+
+    painter->drawRect(QRect(width()-viewSize.width()-margin, 0,viewSize.width(),viewSize.height()));
+
+    qreal ratioSize = 1/matrixWorld.m11();
+    qreal ratioWindow = (qreal)(viewSize.height())/(qreal)(size().height());
+
+    painter->setBrush(QColor(0, 0, 0, 127));
+    painter->setPen(Qt::darkBlue);
+    painter->drawRect(QRectF(width()-viewSize.width()-positionCorners.left()*ratioSize*ratioWindow-margin,
+                             -positionCorners.top()*ratioSize*ratioWindow,
+                             (viewSize.width()-1)*ratioSize,
+                             (viewSize.height()-1)*ratioSize)
+                      );
+}
 
 void ViewPort::drawInstructions(QPainter *painter)
 {
