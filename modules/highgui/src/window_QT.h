@@ -168,20 +168,17 @@ public:
     void startDisplayInfo(QString text, int delayms);
 	void setMouseCallBack(CvMouseCallback m, void* param);
 
-    QTransform matrixWorld;
-    qreal scaleFactor;//for zoom int/out
-
 public slots:
-        //reference:
-        //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
-        //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
+    //reference:
+    //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
+    //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
     void scaleView(qreal scaleFactor, QPointF center);
 
 private:
-    QPointF previousCenter ;
-    qreal previousFactor;//for zoom int/out
-    QPointF previousDelta;
     QPointF positionGrabbing;
+    QRect   positionCorners;
+    QTransform matrixWorld;
+    
 	CvMouseCallback on_mouse;
     void* on_mouse_param;
 

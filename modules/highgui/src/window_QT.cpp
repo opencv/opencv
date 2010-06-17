@@ -825,10 +825,8 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
     timerDisplay->setSingleShot(true);
     connect(timerDisplay, SIGNAL(timeout()), this, SLOT(stopDisplayInfo()));
     drawInfo = false;
-    previousFactor = 1;
-    previousCenter = QPointF(0,0);
-    previousDelta = QPointF(0,0);
     positionGrabbing = QPointF(0,0);
+    positionCorners = QRect(0,0,size().width(),size().height());
 
     if (mode == CV_MODE_OPENGL)
     {
@@ -905,23 +903,58 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 void ViewPort::controlImagePosition()
 {
     qreal left, top, right, bottom;
-    matrixWorld.map(0,0,&left,&top);
-    if (left < 0)left = 0;
-    if (top < 0)top = 0;
-    if (left>0 || top > 0)
-       matrixWorld.translate(-left,-top);
 
+
+    matrixWorld.map(0,0,&left,&top);
+    if (left > 0)
+    {
+        matrixWorld.translate(-left,0);
+        left = 0;
+    }
+    if (top > 0)
+    {
+        matrixWorld.translate(0,-top);
+        top = 0;
+    }
+    positionCorners.setTopLeft(QPoint(left,top));
 
     QSize sizeImage = size();
     matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
-    if (right > sizeImage.width()) right = sizeImage.width();
-    if (bottom > sizeImage.height()) bottom = sizeImage.height();
-    if (right < sizeImage.width() || bottom < sizeImage.height())
-        matrixWorld.translate(sizeImage.width()-right,sizeImage.height()-bottom);
+    if (right < sizeImage.width())
+    {
+        matrixWorld.translate(sizeImage.width()-right,0);
+        right = sizeImage.width();
+    }
+    if (bottom < sizeImage.height())
+    {
+        matrixWorld.translate(0,sizeImage.height()-bottom);
+        bottom = sizeImage.height();
+    }
+    positionCorners.setBottomRight(QPoint(right,bottom));
 }
 
 void ViewPort::scaleView(qreal factor,QPointF center)
 {
+    factor/=5;//-0.1 <-> 0.1
+    factor+=1;//0.9 <-> 1.1
+
+    if (matrixWorld.m11()==1 && factor < 1)
+        return;
+
+    if (matrixWorld.m11()*factor<1)
+        factor = 1/matrixWorld.m11();
+
+    //inverse the transform
+    int a, b;
+    matrixWorld.inverted().map(center.x(),center.y(),&a,&b);;
+
+    matrixWorld.translate(a-factor*a,b-factor*b);
+    matrixWorld.scale(factor,factor);
+
+    controlImagePosition();
+
+
+    /*
     factor += previousFactor;
     if (factor < 1 || factor > 100)
         return;
@@ -929,7 +962,7 @@ void ViewPort::scaleView(qreal factor,QPointF center)
     center= (center-previousCenter)/previousFactor + previousCenter;//move to global coordinate
     QPointF delta = QPointF(center-center*factor);
 
-    matrixWorld.reset ();
+    //matrixWorld.reset ();
     matrixWorld.translate(delta.x(),delta.y());//newCenter.x(),newCenter.y());
     matrixWorld.scale(factor,factor);
 
@@ -939,7 +972,9 @@ void ViewPort::scaleView(qreal factor,QPointF center)
     //previousDelta = delta;
     previousFactor = factor;
 
-    if (previousFactor>1)
+    */
+
+    if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
     else
         unsetCursor();
@@ -999,7 +1034,7 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
 
-    if (previousFactor>1)
+    if (matrixWorld.m11()>1)
     {
         setCursor(Qt::ClosedHandCursor);
         positionGrabbing = event->pos();
@@ -1055,7 +1090,7 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
     if (on_mouse)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
-    if (previousFactor>1)
+    if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
 
     QWidget::mouseReleaseEvent(event);
@@ -1140,15 +1175,15 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
         on_mouse( cv_event, pt.x(), pt.y(), flags, on_mouse_param );
 
 
-    if (previousFactor>1 && event->buttons() == Qt::LeftButton)
+    if (matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
     {
-        QPointF dxy = (pt - positionGrabbing)/previousFactor;
+        QPointF dxy = (pt - positionGrabbing)/matrixWorld.m11();
 
         positionGrabbing = event->pos();
 
         matrixWorld.translate(dxy.x(),dxy.y());
         controlImagePosition();
-        }
+    }
 
     QWidget::mouseMoveEvent(event);
 }
@@ -1293,4 +1328,3 @@ void ViewPort::draw3D()
 #endif
 
 #endif
-
