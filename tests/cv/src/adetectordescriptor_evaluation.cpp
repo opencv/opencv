@@ -447,7 +447,7 @@ struct DMatchForEvaluation : public DMatch
 
 
 void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
-                          vector<DMatchForEvaluation>& matches1to2,
+                          const vector<vector<DMatch> >& matches1to2, vector<DMatchForEvaluation> &allMatches,
                           const Mat& img1, const Mat& img2, const Mat& H1to2,
                           int &correctMatchCount, int &falseMatchCount, int& correspondenceCount )
 {
@@ -468,18 +468,23 @@ void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vect
 
     for( size_t i = 0; i < matches1to2.size(); i++ )
     {
+        for( size_t j = 0;j < matches1to2[i].size(); j++ )
+        {
         //if( matches1to2[i].match.indexTrain > 0 )
         //{
-            matches1to2[i].isCorrect = thresholdedOverlapMask( matches1to2[i].indexQuery, matches1to2[i].indexTrain);
-            if( matches1to2[i].isCorrect )
+            DMatchForEvaluation match = matches1to2[i][j];
+            match.isCorrect = thresholdedOverlapMask( match.indexQuery, match.indexTrain);
+            if( match.isCorrect )
                 correctMatchCount++;
             else
                 falseMatchCount++;
+            allMatches.push_back( match );
         //}
         //else
         //{
         //    matches1to2[i].isCorrect = -1;
         //}
+        }
     }
 }
 
@@ -1448,20 +1453,14 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         vector<vector<DMatch> > matches1to2;
         //TODO: use more sophisticated strategy to choose threshold
         descMatch->match( imgs[0], keypoints1, matches1to2, std::numeric_limits<float>::max() );
-        vector<DMatchForEvaluation> matches;
-        for( size_t i=0;i<matches1to2.size();i++)
-        {
-            std::copy( matches1to2[i].begin(), matches1to2[i].end(), std::back_inserter( matches ) );
-        }
 
         // TODO if( commRunParams[di].matchFilter )
         int correspCount;
         int correctMatchCount = 0, falseMatchCount = 0;
-        evaluateDescriptors( ekeypoints1, ekeypoints2, matches, imgs[0], imgs[ci+1], Hs[ci],
+        evaluateDescriptors( ekeypoints1, ekeypoints2, matches1to2, allMatches, imgs[0], imgs[ci+1], Hs[ci],
                              correctMatchCount, falseMatchCount, correspCount );
 
         allCorrespCount += correspCount;
-        std::copy( matches.begin(), matches.end(), std::back_inserter( allMatches ) );
 
         descMatch->clear ();
     }
