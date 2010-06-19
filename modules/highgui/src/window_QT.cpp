@@ -144,9 +144,8 @@ CV_IMPL int cvWaitKey( int arg )
         timer.setSingleShot(true);
 
         if (arg>0)
-            timer.start(arg);//delayms);
+            timer.start(arg);
 
-        //QTimer::singleShot(delayms, &guiMainThread, SLOT(timeOut()));
         while(!guiMainThread._bTimeOut)
         {
             qApp->processEvents(QEventLoop::AllEvents);
@@ -157,6 +156,7 @@ CV_IMPL int cvWaitKey( int arg )
                 result = last_key;
                 last_key = -1;
                 timer.stop();
+                //printf("keypressed\n");
             }
             mutexKey.unlock();
 
@@ -724,8 +724,6 @@ CvTrackbar::~CvTrackbar()
 CvWindow::CvWindow(QString arg, int arg2)
 {
     moveToThread(qApp->instance()->thread());
-
-    last_key = 0;
     name = arg;
     flags = arg2;
 
@@ -826,12 +824,11 @@ void CvWindow::keyPressEvent(QKeyEvent *event)
         goodKey = true;
     }
 
-    //control plus Z, plus +, and plus - are used for zoom functions
+    //control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
     if (event->modifiers() != Qt::ControlModifier && goodKey)
     {
         mutexKey.lock();
         last_key = key;
-
         //last_key = event->nativeVirtualKey ();
         mutexKey.unlock();
         key_pressed.wakeAll();
@@ -874,7 +871,7 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
     drawInfo = false;
     positionGrabbing = QPointF(0,0);
     positionCorners = QRect(0,0,size().width(),size().height());
-
+    on_mouse = NULL;
 
 
 
@@ -1115,6 +1112,8 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
     {
         int a, b;
         matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        a*=float(image2Draw->width)/float(width());
+        b*=float(image2Draw->height)/float(height());
         on_mouse( cv_event, a, b, flags, on_mouse_param );
     }
 
@@ -1176,6 +1175,8 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
     {
         int a, b;
         matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        a*=float(image2Draw->width)/float(width());
+        b*=float(image2Draw->height)/float(height());
         on_mouse( cv_event, a, b, flags, on_mouse_param );
     }
 
@@ -1231,6 +1232,8 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
     {
         int a, b;
         matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        a*=float(image2Draw->width)/float(width());
+        b*=float(image2Draw->height)/float(height());
         on_mouse( cv_event, a, b, flags, on_mouse_param );
     }
 
@@ -1263,11 +1266,26 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
     }
 
     cv_event = CV_EVENT_MOUSEMOVE;
+    switch(event->buttons())
+    {
+    case Qt::LeftButton:
+        flags |= CV_EVENT_FLAG_LBUTTON;
+        break;
+    case Qt::RightButton:
+        flags |= CV_EVENT_FLAG_RBUTTON;
+        break;
+    case Qt::MidButton:
+        flags |= CV_EVENT_FLAG_MBUTTON;
+        break;
+    default:;
+    }
 
     if (on_mouse)
     {
         int a, b;
         matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
+        a*=float(image2Draw->width)/float(width());
+        b*=float(image2Draw->height)/float(height());
         on_mouse( cv_event, a, b, flags, on_mouse_param );
     }
 
