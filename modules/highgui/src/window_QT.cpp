@@ -630,7 +630,6 @@ int GuiReceiver::start()
 
 CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTrackbarCallback on_change )
 {
-    //moveToThread(qApp->instance()->thread());
     setObjectName(trackbar_name);
     parent = arg;
     trackbar_name = name;
@@ -638,7 +637,6 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
 
     callback = on_change;
     slider = new QSlider(Qt::Horizontal);
-    //slider->setObjectName(trackbar_name);
     slider->setFocusPolicy(Qt::StrongFocus);
     slider->setMinimum(0);
     slider->setMaximum(count);
@@ -742,10 +740,27 @@ CvWindow::CvWindow(QString arg, int arg2)
     myview = new ViewPort(this, CV_MODE_NORMAL);
     myview->setAlignment(Qt::AlignHCenter);
 
+
+    shortcutZ = new QShortcut(Qt::CTRL + Qt::Key_P, this);
+    QObject::connect( shortcutZ, SIGNAL( activated ()),myview, SLOT( resetZoom( ) ));
+    shortcutPlus = new QShortcut(QKeySequence(QKeySequence::ZoomIn), this);
+    QObject::connect( shortcutPlus, SIGNAL( activated ()),myview, SLOT( ZoomIn() ));
+    shortcutMinus = new QShortcut(QKeySequence(QKeySequence::ZoomOut), this);
+    QObject::connect(shortcutMinus, SIGNAL( activated ()),myview, SLOT( ZoomOut() ));
+    shortcutLeft = new QShortcut(Qt::CTRL + Qt::Key_Left, this);
+    QObject::connect( shortcutLeft, SIGNAL( activated ()),myview, SLOT( siftWindowOnLeft() ));
+    shortcutRight = new QShortcut(Qt::CTRL + Qt::Key_Right, this);
+    QObject::connect( shortcutRight, SIGNAL( activated ()),myview, SLOT( siftWindowOnRight() ));
+    shortcutUp = new QShortcut(Qt::CTRL + Qt::Key_Up, this);
+    QObject::connect(shortcutUp, SIGNAL( activated ()),myview, SLOT( siftWindowOnUp() ));
+    shortcutDown = new QShortcut(Qt::CTRL + Qt::Key_Down, this);
+    QObject::connect(shortcutDown, SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
+
     layout = new QBoxLayout(QBoxLayout::TopToBottom);
     layout->setSpacing(5);
     layout->setObjectName(QString::fromUtf8("boxLayout"));
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setMargin(0);
     layout->addWidget(myview);
 
     if (flags == CV_WINDOW_AUTOSIZE)
@@ -792,12 +807,37 @@ void CvWindow::addSlider(QString name, int* value, int count,CvTrackbarCallback 
     layout->insertLayout(layout->count()-1,t);
 }
 
+//Need more test here !
 void CvWindow::keyPressEvent(QKeyEvent *event)
 {
-    mutexKey.lock();
-    last_key = (int)event->text().toLocal8Bit().at(0);
-    mutexKey.unlock();
-    key_pressed.wakeAll();
+    //see http://doc.trolltech.com/4.6/qt.html#Key-enum
+    int key = event->key();
+    bool goodKey = false;
+
+    if (key>=20 && key<=255 )
+    {
+        key = (int)event->text().toLocal8Bit().at(0);
+        goodKey = true;
+    }
+
+    if (key == Qt::Key_Escape)
+    {
+        key = 27;
+        goodKey = true;
+    }
+
+    //control plus Z, plus +, and plus - are used for zoom functions
+    if (event->modifiers() != Qt::ControlModifier && goodKey)
+    {
+        mutexKey.lock();
+        last_key = key;
+
+        //last_key = event->nativeVirtualKey ();
+        mutexKey.unlock();
+        key_pressed.wakeAll();
+        //event->accept();
+    }
+
     QWidget::keyPressEvent(event);
 }
 
@@ -823,8 +863,10 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
 {
     mode = arg2;
     centralWidget = arg,
+
     setupViewport(centralWidget);
-    setUpdatesEnabled(true);
+    setContentsMargins(0,0,0,0);
+
     setObjectName(QString::fromUtf8("graphicsView"));
     timerDisplay = new QTimer(this);
     timerDisplay->setSingleShot(true);
@@ -833,21 +875,20 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
     positionGrabbing = QPointF(0,0);
     positionCorners = QRect(0,0,size().width(),size().height());
 
+
+
+
+#if defined(OPENCV_GL)
     if (mode == CV_MODE_OPENGL)
     {
-#if defined(OPENCV_GL)
         setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
         initGL();
-#endif
     }
+#endif
 
     image2Draw=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
     cvZero(image2Draw);
-
-    setSceneRect(0,0,size().width(),size().height());
-    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    this->setInteractive(false);
+    setInteractive(false);
 }
 
 ViewPort::~ViewPort()
@@ -856,6 +897,51 @@ ViewPort::~ViewPort()
         cvReleaseImage(&image2Draw);
 
     delete timerDisplay;
+}
+
+void ViewPort::resetZoom()
+{
+   matrixWorld.reset();
+   controlImagePosition();
+}
+
+void ViewPort::ZoomIn()
+{
+    scaleView( 0.5,QPointF(size().width()/2,size().height()/2));
+}
+
+void ViewPort::ZoomOut()
+{
+    scaleView( -0.5,QPointF(size().width()/2,size().height()/2));
+}
+
+
+//Note: move 2 percent of the window
+void  ViewPort::siftWindowOnLeft()
+{
+    float delta = 2*width()/(100.0*matrixWorld.m11());
+    moveView(QPointF(delta,0));
+}
+
+//Note: move 2 percent of the window
+void  ViewPort::siftWindowOnRight()
+{
+    float delta = -2*width()/(100.0*matrixWorld.m11());
+    moveView(QPointF(delta,0));
+}
+
+//Note: move 2 percent of the window
+void  ViewPort::siftWindowOnUp()
+{
+    float delta = 2*height()/(100.0*matrixWorld.m11());
+    moveView(QPointF(0,delta));
+}
+
+//Note: move 2 percent of the window
+void  ViewPort::siftWindowOnDown()
+{
+    float delta = -2*height()/(100.0*matrixWorld.m11());
+    moveView(QPointF(0,delta));
 }
 
 void ViewPort::startDisplayInfo(QString text, int delayms)
@@ -939,8 +1025,18 @@ void ViewPort::controlImagePosition()
 
     //save also the inv matrix
     matrixWorld_inv = matrixWorld.inverted();
+
+
+    viewport()->update();
 }
 
+void ViewPort::moveView(QPointF delta)
+{
+    matrixWorld.translate(delta.x(),delta.y());
+    controlImagePosition();
+}
+
+//factor is -0.5 (zoom out) or 0.5 (zoom in)
 void ViewPort::scaleView(qreal factor,QPointF center)
 {
     factor/=5;//-0.1 <-> 0.1
@@ -965,8 +1061,6 @@ void ViewPort::scaleView(qreal factor,QPointF center)
         setCursor(Qt::OpenHandCursor);
     else
         unsetCursor();
-
-    viewport()->update();
 }
 
 void ViewPort::wheelEvent(QWheelEvent *event)
@@ -1184,8 +1278,7 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 
         positionGrabbing = event->pos();
 
-        matrixWorld.translate(dxy.x(),dxy.y());
-        controlImagePosition();
+        moveView(dxy);
     }
 
     QWidget::mouseMoveEvent(event);
@@ -1204,8 +1297,8 @@ QSize ViewPort::sizeHint() const
 
 void ViewPort::resizeEvent ( QResizeEvent *event)
 {
-     controlImagePosition();
-     return QGraphicsView::resizeEvent(event);
+    controlImagePosition();
+    return QGraphicsView::resizeEvent(event);
 }
 
 
@@ -1258,7 +1351,7 @@ void ViewPort::drawOverview(QPainter *painter)
 
     const int margin = 5;
 
-    painter->setBrush(QBrush ( QColor(0, 0, 0, 127)));
+    painter->setBrush(QColor(0, 0, 0, 127));
     painter->setPen(Qt::darkGreen);
 
     painter->drawRect(QRect(width()-viewSize.width()-margin, 0,viewSize.width(),viewSize.height()));
@@ -1266,7 +1359,6 @@ void ViewPort::drawOverview(QPainter *painter)
     qreal ratioSize = 1/matrixWorld.m11();
     qreal ratioWindow = (qreal)(viewSize.height())/(qreal)(size().height());
 
-    painter->setBrush(QColor(0, 0, 0, 127));
     painter->setPen(Qt::darkBlue);
     painter->drawRect(QRectF(width()-viewSize.width()-positionCorners.left()*ratioSize*ratioWindow-margin,
                              -positionCorners.top()*ratioSize*ratioWindow,
