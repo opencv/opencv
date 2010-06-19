@@ -110,6 +110,11 @@ CV_IMPL void cvInformation(const char* name, const char* text, int delayms)
 }
 
 
+CV_IMPL int cvInitSystem( int, char** )
+{
+	return 0;
+}
+
 CV_IMPL int cvWaitKey( int arg )
 {
     int result = -1;
