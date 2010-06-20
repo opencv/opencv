@@ -135,11 +135,6 @@ double getWindowProperty(const string& winname, int prop_id)
 	return  cvGetWindowProperty(winname.c_str(),prop_id);
 }
 
-void displayOverlay(const string& name,  const string& text, int delayms)
-{
-	cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
-}
-
 void imshow( const string& winname, const Mat& img )
 {
     CvMat _img = img;
@@ -179,6 +174,23 @@ int startWindowThread()
     return cvStartWindowThread();
 }
 
+#if defined (HAVE_QT)
+void displayOverlay(const string& name,  const string& text, int delayms)
+{
+	cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
+}
+
+int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+{
+	return cvStartLoop(pt2Func, argc, argv);
+}
+
+void stopLoop()
+{
+	cvStopLoop();
+}
+#endif
+
 }
 
 #if   defined WIN32 || defined _WIN32         // see window_w32.cpp
@@ -210,6 +222,12 @@ CV_IMPL int cvNamedWindow( const char*, int )
     CV_NO_GUI_ERROR("cvNamedWindow");
     return -1;
 }    
+
+CV_IMPL int cvDisplayOverlay(const char* name, const char* text, int delayms)
+{
+    CV_NO_GUI_ERROR("cvNamedWindow");
+    return -1;
+}   
 
 CV_IMPL void cvDestroyWindow( const char* )
 {

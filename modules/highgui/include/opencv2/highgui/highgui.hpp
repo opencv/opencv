@@ -56,19 +56,19 @@ namespace cv
 
 enum { WINDOW_AUTOSIZE=1 };
 
-//YV
-//-----------New for QT
-//CV_EXPORTS void information(const string&  name,  const string& text, int delayms);
-//------------
-
-
 CV_EXPORTS void namedWindow( const string& winname, int flags CV_DEFAULT(WINDOW_AUTOSIZE) );
 CV_EXPORTS void destroyWindow( const string& winname );
 CV_EXPORTS int startWindowThread();
 
 CV_EXPORTS void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS double getWindowProperty(const string& winname, int prop_id);//YV
+
+
+//Only for QT
 CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
+CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
+CV_EXPORTS  void stopLoop();
+
 
 CV_EXPORTS void imshow( const string& winname, const Mat& mat );
 

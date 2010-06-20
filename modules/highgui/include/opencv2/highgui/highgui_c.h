@@ -208,9 +208,6 @@ CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0
 /* wait for key event infinitely (delay<=0) or for "delay" milliseconds */
 CVAPI(int) cvWaitKey(int delay CV_DEFAULT(0));
 
-void cvInformation(const char* name, const char* text, int delay);
-
-
 /****************************************************************************************\
 *                         Working with Video Files and Cameras                           *
 \****************************************************************************************/
