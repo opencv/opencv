@@ -96,7 +96,7 @@ double cvGetModeWindow_QT(const char* name)
     return result;
 }
 
-CV_IMPL void cvInformation(const char* name, const char* text, int delayms)
+CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
 
     QMetaObject::invokeMethod(&guiMainThread,

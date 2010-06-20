@@ -58,7 +58,7 @@ extern "C" {
 \****************************************************************************************/
 //YV
 //-----------New for QT
-CVAPI(void) cvInformation(const char* name, const char* text, int delayms);
+CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms);
 CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 CVAPI(void) cvStopLoop();
 //----------------------

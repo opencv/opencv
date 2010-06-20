@@ -125,24 +125,20 @@ void destroyWindow( const string& winname )
     cvDestroyWindow( winname.c_str() );
 }
 
-//YV
 void setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
 	cvSetWindowProperty( winname.c_str(),prop_id,prop_value);
 }
 
-//YV
 double getWindowProperty(const string& winname, int prop_id)
 {
 	return  cvGetWindowProperty(winname.c_str(),prop_id);
 }
 
-/*
-void information(const string& name,  const string& text, int delayms)
+void displayOverlay(const string& name,  const string& text, int delayms)
 {
-	cvInformation(name.c_str(),text.c_str(), delayms);
+	cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
 }
-* */
 
 void imshow( const string& winname, const Mat& img )
 {

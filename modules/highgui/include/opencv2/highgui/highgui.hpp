@@ -68,6 +68,7 @@ CV_EXPORTS int startWindowThread();
 
 CV_EXPORTS void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS double getWindowProperty(const string& winname, int prop_id);//YV
+CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
 
 CV_EXPORTS void imshow( const string& winname, const Mat& mat );
 
