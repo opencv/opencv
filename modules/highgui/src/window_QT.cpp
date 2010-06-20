@@ -780,7 +780,15 @@ CvWindow::~CvWindow()
 
         delete layout;
     }
+    
 
+    delete shortcutZ;
+    delete shortcutPlus;
+    delete shortcutMinus;
+    delete shortcutLeft;
+    delete shortcutRight;
+    delete shortcutUp;
+    delete shortcutDown;
 }
 
 void CvWindow::displayInfo(QString text,int delayms)

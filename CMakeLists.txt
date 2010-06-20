@@ -496,7 +496,7 @@ endif()
 ############################### QT ################################
 set(HAVE_QT 0)
 set(HAVE_QT_OPENGL 0)
-set(AUTOSWITCH_QT 1)#uses to disable QT
+set(AUTOSWITCH_QT 0)#uses to disable QT
 
 find_package(Qt4)# QUIET)
 if (QT4_FOUND AND AUTOSWITCH_QT)
