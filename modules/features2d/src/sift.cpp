@@ -2032,18 +2032,18 @@ SIFT::SIFT( const CommonParams& _commParams,
     descriptorParams = _descriptorParams;
 }
 
-inline KeyPoint vlKeypointToOcv( const VL::Sift::Keypoint& vlKeypoint, float angle )
+inline KeyPoint vlKeypointToOcv( const VL::Sift& vlSift, const VL::Sift::Keypoint& vlKeypoint, float angle )
 {
-    return KeyPoint( vlKeypoint.x, vlKeypoint.y,
-                     SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*vlKeypoint.sigma*5 /* 5==NBP+1 */,
-                     angle, 0, vlKeypoint.o, 0 );
+    float size = SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*vlKeypoint.sigma*4 /*4==NBP*/
+                 / vlSift.getOctaveSamplingPeriod(vlKeypoint.o);
+    return KeyPoint( vlKeypoint.x, vlKeypoint.y, size, angle, 0, vlKeypoint.o, 0 );
 }
 
-inline void ocvKeypointToVl( const KeyPoint& ocvKeypoint, const VL::Sift& vlSift,
+inline void ocvKeypointToVl( const VL::Sift& vlSift, const KeyPoint& ocvKeypoint,
                              VL::Sift::Keypoint& vlKeypoint, int magnification )
 {
-    vlKeypoint = vlSift.getKeypoint( ocvKeypoint.pt.x, ocvKeypoint.pt.y,
-                                     ocvKeypoint.size/(magnification*5) /* 5==NBP+1 */ );
+    float sigma = ocvKeypoint.size*vlSift.getOctaveSamplingPeriod(ocvKeypoint.octave) / (magnification*4) /*4==NBP*/;
+    vlKeypoint = vlSift.getKeypoint( ocvKeypoint.pt.x, ocvKeypoint.pt.y, sigma);
 }
 
 float computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, int angleMode )
@@ -2097,7 +2097,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
         float angleVal = computeKeypointOrientations( vlsift, *iter, commParams.angleMode );
         if( angleVal >= 0 )
         {
-            keypoints.push_back( vlKeypointToOcv(*iter, angleVal*180.0/CV_PI) );
+            keypoints.push_back( vlKeypointToOcv(vlsift, *iter, angleVal*180.0/CV_PI) );
         }
     }
 }
@@ -2131,7 +2131,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     for( int pi = 0 ; iter != keypoints.end(); ++iter, pi++ )
     {
         VL::Sift::Keypoint vlkpt;
-        ocvKeypointToVl( *iter, vlsift, vlkpt, descriptorParams.magnification );
+        ocvKeypointToVl( vlsift, *iter, vlkpt, descriptorParams.magnification );
         float angleVal = iter->angle*CV_PI/180.0;
         if( descriptorParams.recalculateAngles )
         {
