@@ -109,6 +109,18 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
                          
 }
 
+CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
+{
+
+    QMetaObject::invokeMethod(&guiMainThread,
+                              "displayStatusBar",
+                              Qt::AutoConnection,
+                              //Qt::DirectConnection,
+                              Q_ARG(QString, QString(name)),
+                              Q_ARG(QString, QString(text)),
+                              Q_ARG(int, delayms));
+}
+
 
 CV_IMPL int cvInitSystem( int, char** )
 {
@@ -223,9 +235,10 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
     QString nameQt = QString(name_trackbar);
     QPointer<CvTrackbar> t;
 
-    //for now, only trackbar are added so the Mutable cast is ok.
-    for (int i = 0; i < w->layout->layout()->count()-1; ++i)
+	//Warning   ----  , asume the location 0 is myview and max-1 the status bar
+    for (int i = 1; i < w->layout->layout()->count()-2; ++i)
     {
+
         t = (CvTrackbar*) w->layout->layout()->itemAt(i);
         if (t->trackbar_name==nameQt)
         {
@@ -534,6 +547,14 @@ void GuiReceiver::displayInfo( QString name, QString text, int delayms )
         w->displayInfo(text,delayms);
 }
 
+void GuiReceiver::displayStatusBar( QString name, QString text, int delayms )
+{
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (w && delayms > 0)
+        w->displayStatusBar(text,delayms);
+}
+
 void GuiReceiver::showImage(QString name, void* arr)
 {
     //qDebug()<<"inshowimage"<<endl;
@@ -721,6 +742,21 @@ CvTrackbar::~CvTrackbar()
     delete label;
 }
 
+CustomLayout::CustomLayout()
+{
+
+}
+
+int CustomLayout::heightForWidth ( int w ) const
+{
+    return w/2;
+
+}
+bool CustomLayout::hasHeightForWidth () const
+{
+    return true;
+}
+
 CvWindow::CvWindow(QString arg, int arg2)
 {
     moveToThread(qApp->instance()->thread());
@@ -735,7 +771,7 @@ CvWindow::CvWindow(QString arg, int arg2)
     resize(400,300);
 
     //CV_MODE_NORMAL or CV_MODE_OPENGL
-    myview = new ViewPort(this, CV_MODE_NORMAL);
+    myview = new ViewPort(this, CV_MODE_NORMAL,false);//parent, mode_display, keep_aspect_ratio
     myview->setAlignment(Qt::AlignHCenter);
 
 
@@ -755,17 +791,30 @@ CvWindow::CvWindow(QString arg, int arg2)
     QObject::connect(shortcutDown, SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
 
     layout = new QBoxLayout(QBoxLayout::TopToBottom);
-    layout->setSpacing(5);
+    //layout = new CustomLayout;
     layout->setObjectName(QString::fromUtf8("boxLayout"));
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
     layout->setMargin(0);
-    layout->addWidget(myview);
+    layout->addWidget(myview,Qt::AlignCenter);
 
     if (flags == CV_WINDOW_AUTOSIZE)
         layout->setSizeConstraint(QLayout::SetFixedSize);
 
-    setLayout(layout);
 
+    //now status bar
+    myBar = new QStatusBar;
+    myBar->setSizeGripEnabled(false);
+    myBar->setMaximumHeight(20);
+    myBar_msg = new QLabel;
+    myBar_msg->setFrameStyle(QFrame::Raised);
+    myBar_msg->setAlignment(Qt::AlignHCenter);
+    //myBar_msg->setWordWrap(true);
+    myBar->addWidget(myBar_msg);
+    layout->addWidget(myBar,Qt::AlignCenter);
+
+
+    setLayout(layout);
     show();
 }
 
@@ -780,7 +829,10 @@ CvWindow::~CvWindow()
 
         delete layout;
     }
-    
+
+    delete myBar;
+    delete myBar_msg;
+
 
     delete shortcutZ;
     delete shortcutPlus;
@@ -794,6 +846,11 @@ CvWindow::~CvWindow()
 void CvWindow::displayInfo(QString text,int delayms)
 {
     myview->startDisplayInfo(text, delayms);
+}
+
+void CvWindow::displayStatusBar(QString text,int delayms)
+{
+    myBar->showMessage(text,delayms);
 }
 
 void CvWindow::updateImage(void* arr)
@@ -810,7 +867,7 @@ void CvWindow::addSlider(QString name, int* value, int count,CvTrackbarCallback 
 {
     QPointer<CvTrackbar> t = new CvTrackbar(this,name,value, count, on_change);
     t->setAlignment(Qt::AlignHCenter);
-    layout->insertLayout(layout->count()-1,t);
+    layout->insertLayout(layout->count()-1,t);//max-1 means add trackbar between myview and statusbar
 }
 
 //Need more test here !
@@ -864,10 +921,15 @@ void CvWindow::writeSettings()//not tested
 }
 
 //Here is ViewPort
-ViewPort::ViewPort(QWidget* arg, int arg2)
+ViewPort::ViewPort(CvWindow* arg, int arg2, bool arg3)
 {
-    mode = arg2;
     centralWidget = arg,
+    mode = arg2;
+    keepRatio = arg3;
+
+    modeRatio = Qt::IgnoreAspectRatio;
+    if (keepRatio)
+        modeRatio = Qt::KeepAspectRatio;
 
     setupViewport(centralWidget);
     setContentsMargins(0,0,0,0);
@@ -880,7 +942,8 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
     positionGrabbing = QPointF(0,0);
     positionCorners = QRect(0,0,size().width(),size().height());
     on_mouse = NULL;
-
+    deltaOffset = QPoint(0,0);
+    mouseCoordinate = QPoint(-1,-1);
 
 
 #if defined(OPENCV_GL)
@@ -891,23 +954,25 @@ ViewPort::ViewPort(QWidget* arg, int arg2)
     }
 #endif
 
-    image2Draw=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
-    cvZero(image2Draw);
+    image2Draw_ipl=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
+    cvZero(image2Draw_ipl);
+
     setInteractive(false);
+    setMouseTracking (true);//receive mouse event everytime
 }
 
 ViewPort::~ViewPort()
 {
-    if (image2Draw)
-        cvReleaseImage(&image2Draw);
+    if (image2Draw_ipl)
+        cvReleaseImage(&image2Draw_ipl);
 
     delete timerDisplay;
 }
 
 void ViewPort::resetZoom()
 {
-   matrixWorld.reset();
-   controlImagePosition();
+    matrixWorld.reset();
+    controlImagePosition();
 }
 
 void ViewPort::ZoomIn()
@@ -919,7 +984,6 @@ void ViewPort::ZoomOut()
 {
     scaleView( -0.5,QPointF(size().width()/2,size().height()/2));
 }
-
 
 //Note: move 2 percent of the window
 void  ViewPort::siftWindowOnLeft()
@@ -977,21 +1041,24 @@ void ViewPort::updateImage(void* arr)
 
     IplImage* tempImage = (IplImage*)arr;
 
-    if (!isSameSize(image2Draw,tempImage))
+    if (!isSameSize(image2Draw_ipl,tempImage))
     {
-        cvReleaseImage(&image2Draw);
-        image2Draw=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
+        cvReleaseImage(&image2Draw_ipl);
+        image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
 
+        ratioX=float(image2Draw_ipl->width)/float(width());
+        ratioY=float(image2Draw_ipl->height)/float(height());
+        //centralWidget->myBar_msg->setMaximumWidth(width());
         updateGeometry();
     }
 
-    cvConvertImage(tempImage,image2Draw,CV_CVTIMG_SWAP_RB );
+    cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
+
     viewport()->update();
 }
 
 void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 {
-    setMouseTracking (true);//receive mouse event everytime
     on_mouse = m;
     on_mouse_param = param;
 }
@@ -1000,8 +1067,9 @@ void ViewPort::controlImagePosition()
 {
     qreal left, top, right, bottom;
 
-
+    //after check top-left, bottom right corner to avoid getting "out" during zoom/panning
     matrixWorld.map(0,0,&left,&top);
+
     if (left > 0)
     {
         matrixWorld.translate(-left,0);
@@ -1012,7 +1080,7 @@ void ViewPort::controlImagePosition()
         matrixWorld.translate(0,-top);
         top = 0;
     }
-    positionCorners.setTopLeft(QPoint(left,top));
+    //-------
 
     QSize sizeImage = size();
     matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
@@ -1026,11 +1094,28 @@ void ViewPort::controlImagePosition()
         matrixWorld.translate(0,sizeImage.height()-bottom);
         bottom = sizeImage.height();
     }
-    positionCorners.setBottomRight(QPoint(right,bottom));
 
+    /*
+    if (keepRatio)
+    {
+        cout<<"here"<<endl;
+        QSize t1(image2Draw_ipl->width, image2Draw_ipl->height);
+        QSize delta(width(),height());
+        t1.scale(delta.width(), delta.height(), Qt::KeepAspectRatio);
+        delta = (delta - t1)/2;
+        //left += delta.width();
+        //right += delta.width();
+        //top += delta.height();
+        //bottom += delta.height();
+        matrixWorld.translate(delta.width(),delta.height());
+    }
+*/
+
+    //save corner position
+    positionCorners.setTopLeft(QPoint(left,top));
+    positionCorners.setBottomRight(QPoint(right,bottom));
     //save also the inv matrix
     matrixWorld_inv = matrixWorld.inverted();
-
 
     viewport()->update();
 }
@@ -1062,6 +1147,9 @@ void ViewPort::scaleView(qreal factor,QPointF center)
 
     controlImagePosition();
 
+    //display new zoom
+    centralWidget->displayStatusBar(tr("Zoom: %1%").arg(matrixWorld.m11()*100),1000);
+
     if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
     else
@@ -1076,7 +1164,7 @@ void ViewPort::wheelEvent(QWheelEvent *event)
 void ViewPort::mousePressEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos();
+    QPoint pt = event->pos()+deltaOffset;
 
 
     switch(event->modifiers())
@@ -1116,15 +1204,13 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
     default:;
     }
 
-    if (on_mouse)
-    {
-        int a, b;
-        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
-        a*=float(image2Draw->width)/float(width());
-        b*=float(image2Draw->height)/float(height());
-        on_mouse( cv_event, a, b, flags, on_mouse_param );
-    }
+    //to convert mouse coordinate
+    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
+    mouseCoordinate.rx()*=ratioX;
+    mouseCoordinate.ry()*=ratioY;
 
+    if (on_mouse)
+        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
 
     if (matrixWorld.m11()>1)
     {
@@ -1139,7 +1225,7 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 {
 
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos();
+    QPoint pt = event->pos()+deltaOffset;
 
 
     switch(event->modifiers())
@@ -1179,14 +1265,13 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
     default:;
     }
 
+    //to convert mouse coordinate
+    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
+    mouseCoordinate.rx()*=ratioX;
+    mouseCoordinate.ry()*=ratioY;
     if (on_mouse)
-    {
-        int a, b;
-        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
-        a*=float(image2Draw->width)/float(width());
-        b*=float(image2Draw->height)/float(height());
-        on_mouse( cv_event, a, b, flags, on_mouse_param );
-    }
+        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
+
 
     if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
@@ -1197,7 +1282,7 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos();
+    QPoint pt = event->pos()+deltaOffset;
 
     switch(event->modifiers())
     {
@@ -1236,22 +1321,21 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
     default:;
     }
 
+    //to convert mouse coordinate
+    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
+    mouseCoordinate.rx()*=ratioX;
+    mouseCoordinate.ry()*=ratioY;
     if (on_mouse)
-    {
-        int a, b;
-        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
-        a*=float(image2Draw->width)/float(width());
-        b*=float(image2Draw->height)/float(height());
-        on_mouse( cv_event, a, b, flags, on_mouse_param );
-    }
+        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
+
 
     QWidget::mouseDoubleClickEvent(event);
 }
+
 void ViewPort::mouseMoveEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos();
-
+    QPoint pt = event->pos()-deltaOffset;
 
     switch(event->modifiers())
     {
@@ -1288,14 +1372,14 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
     default:;
     }
 
+    //to convert mouse coordinate
+    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
+    mouseCoordinate.rx()*=ratioX;
+    mouseCoordinate.ry()*=ratioY;
+    
     if (on_mouse)
-    {
-        int a, b;
-        matrixWorld_inv.map(pt.x(),pt.y(),&a,&b);
-        a*=float(image2Draw->width)/float(width());
-        b*=float(image2Draw->height)/float(height());
-        on_mouse( cv_event, a, b, flags, on_mouse_param );
-    }
+        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
+
 
 
     if (matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
@@ -1306,24 +1390,40 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 
         moveView(dxy);
     }
+    
+    //I update the statusbar here because if the user does a cvWaitkey(0) (like with inpaint.cpp)
+    //the status bar will be repaint only when a click occurs.
+    viewport()->update();
 
     QWidget::mouseMoveEvent(event);
 }
 
-
 QSize ViewPort::sizeHint() const
 {
-    if(image2Draw)
+    //return QSize(width(),width()/2);
+    if(image2Draw_ipl)
     {
-        return QSize(image2Draw->width,image2Draw->height);
+        return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
     } else {
         return QGraphicsView::sizeHint();
     }
 }
 
+QPoint ViewPort::computeOffset()
+{
+    QSizeF t1(image2Draw_ipl->width, image2Draw_ipl->height);
+    QSizeF t2(width(),height());
+    t1.scale(t2.width(), t2.height(), Qt::KeepAspectRatio);
+    t2 = (t2 - t1)/2.0;
+    return QPoint(t2.width(),t2.height());
+}
+
 void ViewPort::resizeEvent ( QResizeEvent *event)
 {
     controlImagePosition();
+    ratioX=float(image2Draw_ipl->width)/float(width());
+    ratioY=float(image2Draw_ipl->height)/float(height());
+
     return QGraphicsView::resizeEvent(event);
 }
 
@@ -1354,6 +1454,13 @@ void ViewPort::paintEvent(QPaintEvent* event)
         drawOverview(&myPainter);
     }
 
+    //for statusbar
+    if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0 &&
+        mouseCoordinate.x()<image2Draw_ipl->width && mouseCoordinate.y()<image2Draw_ipl->height)
+    {
+        drawStatusBar();
+    }
+
     //for information overlay
     if (drawInfo)
     {
@@ -1366,8 +1473,21 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
 void ViewPort::draw2D(QPainter *painter)
 {
-    QImage image((uchar*) image2Draw->imageData, image2Draw->width, image2Draw->height,QImage::Format_RGB888);
-    painter->drawImage(0,0,image.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+    image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
+    painter->drawImage(deltaOffset.x(),deltaOffset.y(),image2Draw_qt.scaled(this->width(),this->height(),modeRatio,Qt::SmoothTransformation));
+}
+
+void ViewPort::drawStatusBar()
+{
+    //CvScalar value = cvGet2D(image2Draw_ipl,mouseCoordinate.y(),mouseCoordinate.x());
+    QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
+    centralWidget->myBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
+                                      .arg(mouseCoordinate.x())
+                                      .arg(mouseCoordinate.y())+
+                                      tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
+                                      tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
+                                      tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+                                      );
 }
 
 void ViewPort::drawOverview(QPainter *painter)

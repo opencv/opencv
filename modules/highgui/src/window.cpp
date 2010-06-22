@@ -175,6 +175,11 @@ int startWindowThread()
 }
 
 #if defined (HAVE_QT)
+void displayStatusBar(const string& name,  const string& text, int delayms)
+{
+	cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
+}
+
 void displayOverlay(const string& name,  const string& text, int delayms)
 {
 	cvDisplayOverlay(name.c_str(),text.c_str(), delayms);

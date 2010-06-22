@@ -66,6 +66,7 @@
 #include <QLabel>
 #include <QIODevice>
 #include <QShortcut>
+#include <QStatusBar>
 
 //Macro here
 #define CV_MODE_NORMAL   0
@@ -97,6 +98,7 @@ public slots:
     void resizeWindow(QString name, int width, int height);
     void showImage(QString name, void* arr);
     void displayInfo( QString name, QString text, int delayms );
+    void displayStatusBar( QString name, QString text, int delayms );
     void refreshEvents();
     void timeOut();
     void toggleFullScreen(QString name, double flags );
@@ -129,6 +131,15 @@ private:
     int* dataSlider;
 };
 
+class CustomLayout : public QVBoxLayout
+{
+    Q_OBJECT
+    public:
+    CustomLayout();
+    int heightForWidth ( int w ) const;
+    bool hasHeightForWidth () const;
+};
+
 class CvWindow : public QWidget
 {
     Q_OBJECT
@@ -139,10 +150,14 @@ public:
     void setMouseCallBack(CvMouseCallback m, void* param);
     void updateImage(void* arr);
     void displayInfo(QString text, int delayms );
+    void displayStatusBar(QString text, int delayms );
 
-    QPointer<QBoxLayout> layout;
     QString name;
     int flags;
+    QPointer<QBoxLayout> layout;
+    QPointer<QStatusBar> myBar;
+    QPointer<QLabel> myBar_msg;
+    //QPointer<CustomLayout> layout;
 
 protected:
     void readSettings();
@@ -169,11 +184,14 @@ class ViewPort : public QGraphicsView
 {
     Q_OBJECT
 public:
-    ViewPort(QWidget* centralWidget, int mode = CV_MODE_NORMAL);
+    ViewPort(CvWindow* centralWidget, int mode = CV_MODE_NORMAL, bool keepRatio = true);
     ~ViewPort();
     void updateImage(void* arr);
     void startDisplayInfo(QString text, int delayms);
     void setMouseCallBack(CvMouseCallback m, void* param);
+
+    IplImage* image2Draw_ipl;
+    QImage image2Draw_qt;
 
 public slots:
     //reference:
@@ -191,22 +209,25 @@ public slots:
     void resizeEvent ( QResizeEvent * );
 
 private:
-    QGraphicsScene *myScene;
-
+    Qt::AspectRatioMode modeRatio;
+    QPoint deltaOffset;
+    QPoint computeOffset();
+    QPoint mouseCoordinate;
     QPointF positionGrabbing;
     QRect   positionCorners;
     QTransform matrixWorld;
     QTransform matrixWorld_inv;
+    float ratioX, ratioY;
 
     CvMouseCallback on_mouse;
     void* on_mouse_param;
 
     int mode;
-    IplImage* image2Draw;
+    bool keepRatio;
 
     bool isSameSize(IplImage* img1,IplImage* img2);
     QSize sizeHint() const;
-    QPointer<QWidget> centralWidget;
+    QPointer<CvWindow> centralWidget;
     QPointer<QTimer> timerDisplay;
     bool drawInfo;
     QString infoText;
@@ -221,6 +242,7 @@ private:
     void drawInstructions(QPainter *painter);
     void drawOverview(QPainter *painter);
     void draw2D(QPainter *painter);
+    void drawStatusBar();
     void controlImagePosition();
 
 #if defined(OPENCV_GL)
