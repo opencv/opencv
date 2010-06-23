@@ -500,7 +500,7 @@ class SphinxWriter:
             type = type.replace('*', '')
             translate = {
                 "ints" : "sequence of int",
-                "floats" : "sequence of int",
+                "floats" : "sequence of float",
                 "IplImages" : "sequence of :class:`IplImage`",
                 "double" : "float",
                 "int" : "int",
