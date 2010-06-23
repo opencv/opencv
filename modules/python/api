@@ -1499,6 +1499,15 @@ KalmanCorrect ROCvMat*
 KalmanPredict ROCvMat*
   CvKalman* kalman
   CvMat control NULL
+SnakeImage points
+  IplImage image
+  CvPoints points
+  floats alpha
+  floats beta
+  floats gamma
+  CvSize win
+  CvTermCriteria criteria
+  int calc_gradient 1
 
 # Optical Flow
 CalcOpticalFlowLK

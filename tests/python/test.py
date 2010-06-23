@@ -770,6 +770,26 @@ class FunctionTests(OpenCVTests):
                                 expected = 0.0
                             self.assertEqual(M[rj,cj], expected)
 
+    def test_SnakeImage(self):
+        src = self.get_sample("samples/c/lena.jpg", 0)
+        pts = [ (512-i,i) for i in range(0, 512, 8) ]
+
+        # Make sure that weight arguments get validated
+        self.assertRaises(TypeError, lambda: cv.SnakeImage(cv.GetImage(src), pts, [1,2], .01, .01, (7,7), (cv.CV_TERMCRIT_ITER, 100, 0.1)))
+
+        # Smoke by making sure that points are changed by call
+        r = cv.SnakeImage(cv.GetImage(src), pts, .01, .01, .01, (7,7), (cv.CV_TERMCRIT_ITER, 100, 0.1))
+        if 0:
+            cv.PolyLine(src, [ r ], 0, 255)
+            self.snap(src)
+        self.assertEqual(len(r), len(pts))
+        self.assertNotEqual(r, pts)
+
+        # Ensure that list of weights is same as scalar weight
+        w = [.01] * len(pts)
+        r2 = cv.SnakeImage(cv.GetImage(src), pts, w, w, w, (7,7), (cv.CV_TERMCRIT_ITER, 100, 0.1))
+        self.assertEqual(r, r2)
+
     def test_Sum(self):
         for r in range(1,11):
             for c in range(1, 11):

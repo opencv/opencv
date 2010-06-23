@@ -1812,16 +1812,24 @@ struct floats {
 };
 static int convert_to_floats(PyObject *o, floats *dst, const char *name = "no_name")
 {
-  PyObject *fi = PySequence_Fast(o, name);
-  if (fi == NULL)
-    return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
-  dst->f = new float[dst->count];
-  for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
-    PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
-    dst->f[i] = (float)PyFloat_AsDouble(item);
+  if (PySequence_Check(o)) {
+    PyObject *fi = PySequence_Fast(o, name);
+    if (fi == NULL)
+      return 0;
+    dst->count = PySequence_Fast_GET_SIZE(fi);
+    dst->f = new float[dst->count];
+    for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
+      PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
+      dst->f[i] = (float)PyFloat_AsDouble(item);
+    }
+    Py_DECREF(fi);
+  } else if (PyNumber_Check(o)) {
+    dst->count = 1;
+    dst->f = new float[1];
+    dst->f[0] = PyFloat_AsDouble(o);
+  } else {
+    return failmsg("Expected list of floats, or float for argument '%s'", name);
   }
-  Py_DECREF(fi);
   return 1;
 }
 
@@ -2550,6 +2558,16 @@ static PyObject *FROM_CvSubdiv2DEdge(CvSubdiv2DEdge r)
   m->container = Py_None; // XXX
   Py_INCREF(m->container);
   return (PyObject*)m;
+}
+
+static PyObject *FROM_CvPoints(CvPoints src)
+{
+  PyObject *pr;
+  pr = PyList_New(src.count);
+  for (int i = 0; i < src.count; i++) {
+    PyList_SetItem(pr, i, FROM_CvPoint(src.p[i]));
+  }
+  return pr;
 }
 
 /************************************************************************/
@@ -3763,6 +3781,17 @@ static int zero = 0;
 #define constCvMat const CvMat
 #define FROM_constCvMatPTR(x) FROM_CvMatPTR((CvMat*)x)
 
+#define cvSnakeImage(image, points, length, a, b, g, win, criteria, calc_gradient) \
+  do { \
+    int coeff_usage; \
+    if ((alpha.count == 1) && (beta.count == 1) && (gamma.count == 1)) \
+      coeff_usage = CV_VALUE; \
+    else if ((length == alpha.count) && (alpha.count == beta.count) && (beta.count == gamma.count)) \
+      coeff_usage = CV_ARRAY; \
+    else \
+      return (PyObject*)failmsg("SnakeImage weights invalid"); \
+    cvSnakeImage(image, points, length, a, b, g, coeff_usage, win, criteria, calc_gradient); \
+  } while (0)
 
 #include "generated0.i"
 
