@@ -209,7 +209,7 @@ void SelfSimDescriptor::compute(const Mat& img, vector<float>& descriptors, Size
 		    for( x = 0 ; x < ssd.cols; x++ )
             {
                 int index = mappingMaskPtr[x];
-                feature[index] = std::max(feature[index], ssdPtr[x]);
+                feature[index] = std::min(feature[index], ssdPtr[x]);
 		    }
 	    }
 
