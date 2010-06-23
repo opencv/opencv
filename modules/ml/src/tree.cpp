@@ -252,8 +252,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                   "floating-point vector containing as many elements as "
                   "the total number of samples in the training data matrix" );
    
-  
-    CV_CALL( var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type ));
+    if( _var_type )
+        CV_CALL( var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type ));
 
     CV_CALL( var_type = cvCreateMat( 1, var_count+2, CV_32SC1 ));
    
@@ -266,8 +266,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     // step 0. calc the number of categorical vars
     for( vi = 0; vi < var_count; vi++ )
     {
-        var_type->data.i[vi] = var_type0->data.ptr[vi] == CV_VAR_CATEGORICAL ?
-            cat_var_count++ : ord_var_count--;
+        char vt = var_type0 ? var_type0->data.ptr[vi] : CV_VAR_ORDERED;
+        var_type->data.i[vi] = vt == CV_VAR_CATEGORICAL ? cat_var_count++ : ord_var_count--;
     }
 
     ord_var_count = ~ord_var_count;
