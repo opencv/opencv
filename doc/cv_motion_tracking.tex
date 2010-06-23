@@ -724,22 +724,30 @@ Changes the contour position to minimize its energy.
 
 \cvdefC{
 void cvSnakeImage( \par const IplImage* image,\par CvPoint* points,\par int length,\par float* alpha,\par float* beta,\par float* gamma,\par int coeff\_usage,\par CvSize win,\par CvTermCriteria criteria,\par int calc\_gradient=1 );
-}\cvdefPy{SnakeImage(image,points,alpha,beta,gamma,coeff\_usage,win,criteria,calc\_gradient=1)-> None}
+}
+
+\cvdefPy{SnakeImage(image,points,alpha,beta,gamma,win,criteria,calc\_gradient=1)-> new_points}
 
 \begin{description}
 \cvarg{image}{The source image or external energy field}
 \cvarg{points}{Contour points (snake)}
 \ifC
 \cvarg{length}{Number of points in the contour}
+\cvarg{alpha}{Weight[s] of continuity energy, single float or
+array of \texttt{length} floats, one for each contour point}
+\else
+\cvarg{alpha}{Weight[s] of continuity energy, single float or
+a list of floats, one for each contour point}
 \fi
-\cvarg{alpha}{Weight[s] of continuity energy, single float or array of \texttt{length} floats, one for each contour point}
 \cvarg{beta}{Weight[s] of curvature energy, similar to \texttt{alpha}}
 \cvarg{gamma}{Weight[s] of image energy, similar to \texttt{alpha}}
+\ifC
 \cvarg{coeff\_usage}{Different uses of the previous three parameters:
 \begin{description}
   \cvarg{CV\_VALUE}{indicates that each of \texttt{alpha, beta, gamma} is a pointer to a single value to be used for all points;}
   \cvarg{CV\_ARRAY}{indicates that each of \texttt{alpha, beta, gamma} is a pointer to an array of coefficients different for all the points of the snake. All the arrays must have the size equal to the contour size.}
 \end{description}}
+\fi
 \cvarg{win}{Size of neighborhood of every point used to search the minimum, both \texttt{win.width} and \texttt{win.height} must be odd}
 \cvarg{criteria}{Termination criteria}
 \cvarg{calc\_gradient}{Gradient flag; if not 0, the function calculates the gradient magnitude for every image pixel and consideres it as the energy field, otherwise the input image itself is considered}
@@ -759,6 +767,10 @@ iteration process running.
 If at some iteration the number of moved points is less
 than \texttt{criteria.epsilon} or the function performed
 \texttt{criteria.max\_iter} iterations, the function terminates.
+
+\ifPy
+The function returns the updated list of points.
+\fi
 
 \cvCPyFunc{SquareAcc}
 Adds the square of the source image to the accumulator.
