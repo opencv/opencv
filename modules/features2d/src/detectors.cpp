@@ -335,7 +335,7 @@ FeatureDetector* createDetector( const string& detectorType )
     }
     else if( !detectorType.compare( "SURF" ) )
     {
-        fd = new SurfFeatureDetector( 100./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
+        fd = new SurfFeatureDetector( 400./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
     }
     else if( !detectorType.compare( "MSER" ) )
     {

@@ -2034,15 +2034,14 @@ SIFT::SIFT( const CommonParams& _commParams,
 
 inline KeyPoint vlKeypointToOcv( const VL::Sift& vlSift, const VL::Sift::Keypoint& vlKeypoint, float angle )
 {
-    float size = SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*vlKeypoint.sigma*4 /*4==NBP*/
-                 / vlSift.getOctaveSamplingPeriod(vlKeypoint.o);
+    float size = vlKeypoint.sigma*SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4;// 4==NBP
     return KeyPoint( vlKeypoint.x, vlKeypoint.y, size, angle, 0, vlKeypoint.o, 0 );
 }
 
 inline void ocvKeypointToVl( const VL::Sift& vlSift, const KeyPoint& ocvKeypoint,
                              VL::Sift::Keypoint& vlKeypoint, int magnification )
 {
-    float sigma = ocvKeypoint.size*vlSift.getOctaveSamplingPeriod(ocvKeypoint.octave) / (magnification*4) /*4==NBP*/;
+    float sigma = ocvKeypoint.size/(SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4);// 4==NBP
     vlKeypoint = vlSift.getKeypoint( ocvKeypoint.pt.x, ocvKeypoint.pt.y, sigma);
 }
 
