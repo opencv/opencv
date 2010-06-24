@@ -107,7 +107,7 @@ protected:
 
 CvCaptureCAM_PvAPI::CvCaptureCAM_PvAPI()
 {
-
+	monocrome=false;
 }
 void CvCaptureCAM_PvAPI::Sleep(unsigned int time)
 {
@@ -255,6 +255,7 @@ IplImage* CvCaptureCAM_PvAPI::retrieveFrame(int)
     if (PvCaptureWaitForFrameDone(Camera.Handle, &(Camera.Frame), 1000) == ePvErrSuccess) {
 		if (!monocrome)
 			cvMerge(grayframe,grayframe,grayframe,NULL,frame); 
+		printf("Frame ok\n");	
 		return frame;
 	}		
 	else return NULL;		
