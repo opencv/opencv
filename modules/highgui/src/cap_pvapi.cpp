@@ -183,7 +183,7 @@ bool CvCaptureCAM_PvAPI::open( int index )
         PvAttrUint32Get(Camera.Handle, "TotalBytesPerFrame", &frameSize);
         PvAttrUint32Get(Camera.Handle, "Width", &frameWidth);
         PvAttrUint32Get(Camera.Handle, "Height", &frameHeight);
-        //PvAttrEnumGet(Camera.Handle, "pixelFormat", pixelFormat,256,NULL);
+        PvAttrEnumGet(Camera.Handle, "PixelFormat", pixelFormat,256,NULL);
         maxSize = 8228;
         PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
         if (PvCaptureAdjustPacketSize(Camera.Handle,maxSize)!=ePvErrSuccess)
@@ -191,16 +191,16 @@ bool CvCaptureCAM_PvAPI::open( int index )
         //printf ("Pixel Format %s  %d %d\n ", pixelFormat,frameWidth,frameHeight);
         if (strncmp(pixelFormat, "Mono8",NULL)==0) {
 				grayframe = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 1);
-			    grayframe->widthStep = (int)frameWidth;
-			    frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 3);
+				grayframe->widthStep = (int)frameWidth;
+				frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 3);
 				frame->widthStep = (int)frameWidth*3;		 
 				Camera.Frame.ImageBufferSize = frameSize;
 				Camera.Frame.ImageBuffer = grayframe->imageData;   
 		}	    
 		else if (strncmp(pixelFormat, "Mono16",NULL)==0) {
 				grayframe = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_16U, 1);
-			    grayframe->widthStep = (int)frameWidth;	
-			    frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_16U, 3);
+				grayframe->widthStep = (int)frameWidth;	
+				frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_16U, 3);
 				frame->widthStep = (int)frameWidth*3;
 				Camera.Frame.ImageBufferSize = frameSize;
 				Camera.Frame.ImageBuffer = grayframe->imageData;
