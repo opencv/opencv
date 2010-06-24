@@ -149,7 +149,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     __BEGIN__;
 
-    int sample_all = 0, r_type = 0, cv_n;
+    int sample_all = 0, r_type, cv_n;
     int total_c_count = 0;
     int tree_block_size, temp_block_size, max_split_size, nv_size, cv_size = 0;
     int ds_step, dv_step, ms_step = 0, mv_step = 0; // {data|mask}{sample|var}_step
@@ -252,11 +252,11 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                   "floating-point vector containing as many elements as "
                   "the total number of samples in the training data matrix" );
    
+    r_type = CV_VAR_CATEGORICAL;
     if( _var_type )
         CV_CALL( var_type0 = cvPreprocessVarType( _var_type, var_idx, var_count, &r_type ));
 
     CV_CALL( var_type = cvCreateMat( 1, var_count+2, CV_32SC1 ));
-   
     
     cat_var_count = 0;
     ord_var_count = -1;
