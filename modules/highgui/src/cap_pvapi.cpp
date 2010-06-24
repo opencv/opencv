@@ -254,8 +254,7 @@ IplImage* CvCaptureCAM_PvAPI::retrieveFrame(int)
 
     if (PvCaptureWaitForFrameDone(Camera.Handle, &(Camera.Frame), 1000) == ePvErrSuccess) {
 		if (!monocrome)
-			cvMerge(grayframe,grayframe,grayframe,NULL,frame); 
-		printf("Frame ok\n");	
+			cvMerge(grayframe,grayframe,grayframe,NULL,frame); 	
 		return frame;
 	}		
 	else return NULL;		
