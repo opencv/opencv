@@ -52,9 +52,13 @@
 
 #if defined(_x64) || defined (__x86_64) || defined (_WIN64)
 #define _x64 1
+#elif defined(_x86) || defined(__i386) || defined (_WIN32)
+#define _x86 1
 #endif
 
 #include <PvApi.h>
+#include <unistd.h>
+//#include <arpa/inet.h>
 
 #define MAX_CAMERAS 10
 
@@ -81,16 +85,21 @@ public:
     }
 
 protected:
+	virtual void Sleep(unsigned int time);
+
     typedef struct
     {
         unsigned long   UID;
         tPvHandle       Handle;
         tPvFrame        Frame;
 
+
     } tCamera;
     IplImage *frame;
+    IplImage *grayframe;
     tCamera Camera;
     tPvErr          Errcode;
+    bool monocrome;
 
 
 };
@@ -100,61 +109,109 @@ CvCaptureCAM_PvAPI::CvCaptureCAM_PvAPI()
 {
 
 }
-
+void CvCaptureCAM_PvAPI::Sleep(unsigned int time)
+{
+    struct timespec t,r;
+    
+    t.tv_sec    = time / 1000;
+    t.tv_nsec   = (time % 1000) * 1000000;    
+    
+    while(nanosleep(&t,&r)==-1)
+        t = r;
+}
 void CvCaptureCAM_PvAPI::close()
 {
-
-    // Stop the acquisition & free the camera
-    PvCommandRun(Camera.Handle, "AcquisitionStop");
-
-    PvCaptureEnd(Camera.Handle);
-    PvCameraClose(Camera.Handle);
-
-    cvReleaseImage(&frame);
+	// Stop the acquisition & free the camera
+	PvCommandRun(Camera.Handle, "AcquisitionStop");
+	PvCaptureEnd(Camera.Handle);
+	PvCameraClose(Camera.Handle);	
 }
 
 // Initialize camera input
 bool CvCaptureCAM_PvAPI::open( int index )
 {
+    tPvCameraInfo cameraList[MAX_CAMERAS];
+    
+    tPvCameraInfo  camInfo;
+    tPvIpSettings ipSettings;
 
-    tPvCameraInfo cameraInfo[MAX_CAMERAS];
+ 
     if (PvInitialize())
         return false;
         
-    usleep(250000);
-    
+    Sleep(1000);
+
     //close();
-    int numCameras = PvCameraList(cameraInfo, MAX_CAMERAS, NULL);
+    
+    int numCameras=PvCameraList(cameraList, MAX_CAMERAS, NULL);
+
     if (numCameras <= 0 || index >= numCameras)
         return false;
 
-    Camera.UID = cameraInfo[index].UniqueId;
+    Camera.UID = cameraList[index].UniqueId;    
+
+    if (!PvCameraInfo(Camera.UID,&camInfo) && !PvCameraIpSettingsGet(Camera.UID,&ipSettings)) {
+		/*
+		struct in_addr addr;
+		addr.s_addr = ipSettings.CurrentIpAddress;
+		printf("Current address:\t%s\n",inet_ntoa(addr));
+		addr.s_addr = ipSettings.CurrentIpSubnet;
+		printf("Current subnet:\t\t%s\n",inet_ntoa(addr));
+		addr.s_addr = ipSettings.CurrentIpGateway;
+		printf("Current gateway:\t%s\n",inet_ntoa(addr));
+		*/
+	}	
+	else {
+		fprintf(stderr,"ERROR: could not retrieve camera IP settings.\n");
+		return false;
+	}	
+
+
     if (PvCameraOpen(Camera.UID, ePvAccessMaster, &(Camera.Handle))==ePvErrSuccess)
     {
     
-
         //Set Pixel Format to BRG24 to follow conventions 
-        Errcode = PvAttrEnumSet(Camera.Handle, "PixelFormat", "Bgr24");
+        /*Errcode = PvAttrEnumSet(Camera.Handle, "PixelFormat", "Bgr24");
         if (Errcode != ePvErrSuccess)
         {
             fprintf(stderr, "PvAPI: couldn't set PixelFormat to Bgr24\n");
             return NULL;
         }
-
-        tPvUint32 frameWidth, frameHeight, frameSize;
-
+        */
+        tPvUint32 frameWidth, frameHeight, frameSize, maxSize;
+		char pixelFormat[256];
         PvAttrUint32Get(Camera.Handle, "TotalBytesPerFrame", &frameSize);
         PvAttrUint32Get(Camera.Handle, "Width", &frameWidth);
         PvAttrUint32Get(Camera.Handle, "Height", &frameHeight);
-        
-
-        // Create an image (24 bits RGB Color image)
-        frame = cvCreateImage(cvSize(frameWidth, frameHeight), IPL_DEPTH_8U, 3);
-        frame->widthStep = frameWidth*3;
-
-        Camera.Frame.ImageBufferSize = frameSize;
-        Camera.Frame.ImageBuffer = frame->imageData;
-
+        //PvAttrEnumGet(Camera.Handle, "pixelFormat", pixelFormat,256,NULL);
+        maxSize = 8228;
+        PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
+        PvCaptureAdjustPacketSize(Camera.Handle,maxSize);
+        //printf ("Pixel Format %s  %d %d\n ", pixelFormat,frameWidth,frameHeight);
+        if (strncmp(pixelFormat, "Mono8",NULL)==0) {
+				grayframe = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 1);
+			    grayframe->widthStep = (int)frameWidth;
+			    frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 3);
+				frame->widthStep = (int)frameWidth*3;		 
+				Camera.Frame.ImageBufferSize = frameSize;
+				Camera.Frame.ImageBuffer = grayframe->imageData;   
+		}	    
+		else if (strncmp(pixelFormat, "Mono16",NULL)==0) {
+				grayframe = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_16U, 1);
+			    grayframe->widthStep = (int)frameWidth;	
+			    frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_16U, 3);
+				frame->widthStep = (int)frameWidth*3;
+				Camera.Frame.ImageBufferSize = frameSize;
+				Camera.Frame.ImageBuffer = grayframe->imageData;
+		}	  
+		else if	(strncmp(pixelFormat, "Bgr24",NULL)==0) {
+				frame = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 3);
+				frame->widthStep = (int)frameWidth*3;
+				Camera.Frame.ImageBufferSize = frameSize;
+				Camera.Frame.ImageBuffer = frame->imageData;
+		}		
+		else
+				return false;
         // Start the camera
         PvCaptureStart(Camera.Handle);
 
@@ -179,21 +236,27 @@ bool CvCaptureCAM_PvAPI::open( int index )
         
         return true;
     }
+    fprintf(stderr,"Error cannot open camera\n");
     return false;
 
 }
 
 bool CvCaptureCAM_PvAPI::grabFrame()
 {
-    return PvCaptureQueueFrame(Camera.Handle, &(Camera.Frame), NULL) == ePvErrSuccess;
+	//if(Camera.Frame.Status != ePvErrUnplugged && Camera.Frame.Status != ePvErrCancelled)
+	return PvCaptureQueueFrame(Camera.Handle, &(Camera.Frame), NULL) == ePvErrSuccess;
 }
 
 
 IplImage* CvCaptureCAM_PvAPI::retrieveFrame(int)
 {
 
-    return (PvCaptureWaitForFrameDone(Camera.Handle, &(Camera.Frame), 1000) == ePvErrSuccess) 
-	? frame : NULL;
+    if (PvCaptureWaitForFrameDone(Camera.Handle, &(Camera.Frame), 1000) == ePvErrSuccess) {
+		if (!monocrome)
+			cvMerge(grayframe,grayframe,grayframe,NULL,frame); 
+		return frame;
+	}		
+	else return NULL;		
 }
 
 double CvCaptureCAM_PvAPI::getProperty( int property_id )
@@ -224,6 +287,15 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         PvAttrUint32Set(Camera.Handle, "Heigth", (tPvUint32)value);
         break;
     */
+    case CV_CAP_PROP_MONOCROME:
+		char pixelFormat[256];
+        PvAttrEnumGet(Camera.Handle, "PixelFormat", pixelFormat,256,NULL);
+        if ((strncmp(pixelFormat, "Mono8",NULL)==0) || strncmp(pixelFormat, "Mono16",NULL)==0) {
+			monocrome=true;
+			break;
+		}	
+		else
+			return false;
     default:
         return false;
     }

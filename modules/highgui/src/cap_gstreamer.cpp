@@ -325,7 +325,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     bool stream=false;
     char *uri=NULL;
 	//const char *sourcetypes[] = {"dv1394src", "v4lsrc", "v4l2src", "filesrc"};
-	//printf("entered capturecreator %s\n", sourcetypes[type]);
+	//printf("entered capturecreator %d\n", type);
     if  (type == CV_CAP_GSTREAMER_FILE) {	
 		if (!gst_uri_is_valid(filename)) {
 			uri=realpath(filename,NULL);
@@ -346,8 +346,12 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 		}	
 		uridecodebin = gst_element_factory_make ("uridecodebin", NULL);
 		g_object_set(G_OBJECT(uridecodebin),"uri",uri, NULL);
-	}
-	if(!uridecodebin) {
+		if(!uridecodebin) {
+			close();
+			return false;
+		}		
+	}	
+	else {
 		close();
 		return false;
 	}	
@@ -595,10 +599,6 @@ void CvCapture_GStreamer::close()
 	}
 	if(buffer)
 		gst_buffer_unref(buffer);
-
-	if(frame)
-		cvReleaseImage(&frame);
-
 }
 
 double CvCapture_GStreamer::getProperty( int propId )
