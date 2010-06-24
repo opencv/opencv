@@ -186,7 +186,8 @@ bool CvCaptureCAM_PvAPI::open( int index )
         //PvAttrEnumGet(Camera.Handle, "pixelFormat", pixelFormat,256,NULL);
         maxSize = 8228;
         PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
-        PvCaptureAdjustPacketSize(Camera.Handle,maxSize);
+        if (PvCaptureAdjustPacketSize(Camera.Handle,maxSize)!=ePvErrSuccess)
+			return false;
         //printf ("Pixel Format %s  %d %d\n ", pixelFormat,frameWidth,frameHeight);
         if (strncmp(pixelFormat, "Mono8",NULL)==0) {
 				grayframe = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 1);
