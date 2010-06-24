@@ -127,7 +127,7 @@ void saveCameraParams( const string& filename,
     fs << "image_height" << imageSize.height;
     fs << "board_width" << boardSize.width;
     fs << "board_height" << boardSize.height;
-    fs << "squareSize" << squareSize;
+    fs << "square_size" << squareSize;
     
     if( flags & CV_CALIB_FIX_ASPECT_RATIO )
         fs << "aspectRatio" << aspectRatio;
