@@ -436,7 +436,6 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 
 
 
-
 //----------OBJECT----------------
 
 GuiReceiver::GuiReceiver() : _bTimeOut(false)
@@ -797,10 +796,10 @@ CvWindow::CvWindow(QString arg, int arg2)
     layout->setSpacing(0);
     layout->setMargin(0);
     layout->addWidget(myview,Qt::AlignCenter);
+    //layout->addStretch(0);
 
     if (flags == CV_WINDOW_AUTOSIZE)
         layout->setSizeConstraint(QLayout::SetFixedSize);
-
 
     //now status bar
     myBar = new QStatusBar;
@@ -933,6 +932,8 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, bool arg3)
 
     setupViewport(centralWidget);
     setContentsMargins(0,0,0,0);
+    //this->setFrameStyle(0);
+    //this->setFrameShape(QFrame::Box);
 
     setObjectName(QString::fromUtf8("graphicsView"));
     timerDisplay = new QTimer(this);
@@ -1048,7 +1049,10 @@ void ViewPort::updateImage(void* arr)
 
         ratioX=float(image2Draw_ipl->width)/float(width());
         ratioY=float(image2Draw_ipl->height)/float(height());
-        //centralWidget->myBar_msg->setMaximumWidth(width());
+
+        if (keepRatio)
+            deltaOffset = computeOffset();
+
         updateGeometry();
     }
 
@@ -1061,6 +1065,16 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 {
     on_mouse = m;
     on_mouse_param = param;
+}
+
+int ViewPort::heightForWidth(int w) const
+{
+    return w*float(image2Draw_ipl->height)/float(image2Draw_ipl->width);
+}
+
+bool ViewPort::hasHeightForWidth() const
+{
+    return true;
 }
 
 void ViewPort::controlImagePosition()
@@ -1094,22 +1108,6 @@ void ViewPort::controlImagePosition()
         matrixWorld.translate(0,sizeImage.height()-bottom);
         bottom = sizeImage.height();
     }
-
-    /*
-    if (keepRatio)
-    {
-        cout<<"here"<<endl;
-        QSize t1(image2Draw_ipl->width, image2Draw_ipl->height);
-        QSize delta(width(),height());
-        t1.scale(delta.width(), delta.height(), Qt::KeepAspectRatio);
-        delta = (delta - t1)/2;
-        //left += delta.width();
-        //right += delta.width();
-        //top += delta.height();
-        //bottom += delta.height();
-        matrixWorld.translate(delta.width(),delta.height());
-    }
-*/
 
     //save corner position
     positionCorners.setTopLeft(QPoint(left,top));
@@ -1164,53 +1162,11 @@ void ViewPort::wheelEvent(QWheelEvent *event)
 void ViewPort::mousePressEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos()+deltaOffset;
+    QPoint pt = event->pos();
 
-
-    switch(event->modifiers())
-    {
-    case Qt::ShiftModifier:
-        flags = CV_EVENT_FLAG_SHIFTKEY;
-        break;
-    case Qt::ControlModifier:
-        flags = CV_EVENT_FLAG_CTRLKEY;
-        break;
-    case Qt::AltModifier:
-        flags = CV_EVENT_FLAG_ALTKEY;
-        break;
-    case Qt::NoModifier	:
-        break;
-    case Qt::MetaModifier:
-        break;
-    case Qt::KeypadModifier:
-        break;
-    default:;
-    }
-
-    switch(event->button())
-    {
-    case Qt::LeftButton:
-        cv_event = CV_EVENT_LBUTTONDOWN;
-        flags |= CV_EVENT_FLAG_LBUTTON;
-        break;
-    case Qt::RightButton:
-        cv_event = CV_EVENT_RBUTTONDOWN;
-        flags |= CV_EVENT_FLAG_RBUTTON;
-        break;
-    case Qt::MidButton:
-        cv_event = CV_EVENT_MBUTTONDOWN;
-        flags |= CV_EVENT_FLAG_MBUTTON;
-        break;
-    default:;
-    }
-
-    //to convert mouse coordinate
-    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
-    mouseCoordinate.rx()*=ratioX;
-    mouseCoordinate.ry()*=ratioY;
-
-    if (on_mouse)
-        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
+    //icvmouseHandler: pass parameters for cv_event, flags
+    icvmouseHandler(event, mouse_down, cv_event, flags);
+    icvmouseProcessing(QPointF(pt), cv_event, flags);
 
     if (matrixWorld.m11()>1)
     {
@@ -1225,53 +1181,11 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 {
 
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos()+deltaOffset;
+    QPoint pt = event->pos();
 
-
-    switch(event->modifiers())
-    {
-    case Qt::ShiftModifier:
-        flags = CV_EVENT_FLAG_SHIFTKEY;
-        break;
-    case Qt::ControlModifier:
-        flags = CV_EVENT_FLAG_CTRLKEY;
-        break;
-    case Qt::AltModifier:
-        flags = CV_EVENT_FLAG_ALTKEY;
-        break;
-    case Qt::NoModifier	:
-        break;
-    case Qt::MetaModifier:
-        break;
-    case Qt::KeypadModifier:
-        break;
-    default:;
-    }
-
-    switch(event->button())
-    {
-    case Qt::LeftButton:
-        cv_event = CV_EVENT_LBUTTONUP;
-        flags |= CV_EVENT_FLAG_LBUTTON;
-        break;
-    case Qt::RightButton:
-        cv_event = CV_EVENT_RBUTTONUP;
-        flags |= CV_EVENT_FLAG_RBUTTON;
-        break;
-    case Qt::MidButton:
-        cv_event = CV_EVENT_MBUTTONUP;
-        flags |= CV_EVENT_FLAG_MBUTTON;
-        break;
-    default:;
-    }
-
-    //to convert mouse coordinate
-    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
-    mouseCoordinate.rx()*=ratioX;
-    mouseCoordinate.ry()*=ratioY;
-    if (on_mouse)
-        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
-
+    //icvmouseHandler: pass parameters for cv_event, flags
+    icvmouseHandler(event, mouse_up, cv_event, flags);
+    icvmouseProcessing(QPointF(pt), cv_event, flags);
 
     if (matrixWorld.m11()>1)
         setCursor(Qt::OpenHandCursor);
@@ -1282,52 +1196,11 @@ void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos()+deltaOffset;
+    QPoint pt = event->pos();
 
-    switch(event->modifiers())
-    {
-    case Qt::ShiftModifier:
-        flags = CV_EVENT_FLAG_SHIFTKEY;
-        break;
-    case Qt::ControlModifier:
-        flags = CV_EVENT_FLAG_CTRLKEY;
-        break;
-    case Qt::AltModifier:
-        flags = CV_EVENT_FLAG_ALTKEY;
-        break;
-    case Qt::NoModifier	:
-        break;
-    case Qt::MetaModifier:
-        break;
-    case Qt::KeypadModifier:
-        break;
-    default:;
-    }
-
-    switch(event->button())
-    {
-    case Qt::LeftButton:
-        cv_event = CV_EVENT_LBUTTONDBLCLK;
-        flags |= CV_EVENT_FLAG_LBUTTON;
-        break;
-    case Qt::RightButton:
-        cv_event = CV_EVENT_RBUTTONDBLCLK;
-        flags |= CV_EVENT_FLAG_RBUTTON;
-        break;
-    case Qt::MidButton:
-        cv_event = CV_EVENT_MBUTTONDBLCLK;
-        flags |= CV_EVENT_FLAG_MBUTTON;
-        break;
-    default:;
-    }
-
-    //to convert mouse coordinate
-    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
-    mouseCoordinate.rx()*=ratioX;
-    mouseCoordinate.ry()*=ratioY;
-    if (on_mouse)
-        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
-
+    //icvmouseHandler: pass parameters for cv_event, flags
+    icvmouseHandler(event, mouse_dbclick, cv_event, flags);
+    icvmouseProcessing(QPointF(pt), cv_event, flags);
 
     QWidget::mouseDoubleClickEvent(event);
 }
@@ -1335,51 +1208,11 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 void ViewPort::mouseMoveEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
-    QPoint pt = event->pos()-deltaOffset;
+    QPoint pt = event->pos();
 
-    switch(event->modifiers())
-    {
-    case Qt::ShiftModifier:
-        flags = CV_EVENT_FLAG_SHIFTKEY;
-        break;
-    case Qt::ControlModifier:
-        flags = CV_EVENT_FLAG_CTRLKEY;
-        break;
-    case Qt::AltModifier:
-        flags = CV_EVENT_FLAG_ALTKEY;
-        break;
-    case Qt::NoModifier	:
-        break;
-    case Qt::MetaModifier:
-        break;
-    case Qt::KeypadModifier:
-        break;
-    default:;
-    }
-
-    cv_event = CV_EVENT_MOUSEMOVE;
-    switch(event->buttons())
-    {
-    case Qt::LeftButton:
-        flags |= CV_EVENT_FLAG_LBUTTON;
-        break;
-    case Qt::RightButton:
-        flags |= CV_EVENT_FLAG_RBUTTON;
-        break;
-    case Qt::MidButton:
-        flags |= CV_EVENT_FLAG_MBUTTON;
-        break;
-    default:;
-    }
-
-    //to convert mouse coordinate
-    matrixWorld_inv.map(pt.x(),pt.y(),&mouseCoordinate.rx(),&mouseCoordinate.ry());
-    mouseCoordinate.rx()*=ratioX;
-    mouseCoordinate.ry()*=ratioY;
-    
-    if (on_mouse)
-        on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
-
+    //icvmouseHandler: pass parameters for cv_event, flags
+    icvmouseHandler(event, mouse_move, cv_event, flags);
+    icvmouseProcessing(QPointF(pt), cv_event, flags);
 
 
     if (matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
@@ -1390,17 +1223,71 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 
         moveView(dxy);
     }
-    
+
     //I update the statusbar here because if the user does a cvWaitkey(0) (like with inpaint.cpp)
-    //the status bar will be repaint only when a click occurs.
+    //the status bar will only be repaint when a click occurs.
     viewport()->update();
 
     QWidget::mouseMoveEvent(event);
 }
 
+//up, down, dclick, move
+void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags)
+{
+
+    switch(event->modifiers())
+    {
+    case Qt::ShiftModifier:
+	flags = CV_EVENT_FLAG_SHIFTKEY;
+	break;
+    case Qt::ControlModifier:
+	flags = CV_EVENT_FLAG_CTRLKEY;
+	break;
+    case Qt::AltModifier:
+	flags = CV_EVENT_FLAG_ALTKEY;
+	break;
+    case Qt::NoModifier	:
+	break;
+    case Qt::MetaModifier:
+	break;
+    case Qt::KeypadModifier:
+	break;
+    default:;
+    }
+
+    switch(event->button())
+    {
+    case Qt::LeftButton:
+	cv_event = tableMouseButtons[category][0];
+	flags |= CV_EVENT_FLAG_LBUTTON;
+	break;
+    case Qt::RightButton:
+	cv_event = tableMouseButtons[category][1];
+	flags |= CV_EVENT_FLAG_RBUTTON;
+	break;
+    case Qt::MidButton:
+	cv_event = tableMouseButtons[category][2];
+	flags |= CV_EVENT_FLAG_MBUTTON;
+	break;
+    default:;
+    }
+}
+
+void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
+{
+    //to convert mouse coordinate
+    qreal pfx, pfy;
+    matrixWorld_inv.map(pt.x(),pt.y(),&pfx,&pfy);
+    mouseCoordinate.rx()=floor((pfx-deltaOffset.x())*ratioX);
+    mouseCoordinate.ry()=floor((pfy-deltaOffset.y())*ratioY);
+
+    if (on_mouse)
+	on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
+
+}
+
 QSize ViewPort::sizeHint() const
 {
-    //return QSize(width(),width()/2);
     if(image2Draw_ipl)
     {
         return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
@@ -1424,10 +1311,11 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
     ratioX=float(image2Draw_ipl->width)/float(width());
     ratioY=float(image2Draw_ipl->height)/float(height());
 
+    if(keepRatio)
+        deltaOffset = computeOffset();
+
     return QGraphicsView::resizeEvent(event);
 }
-
-
 
 
 void ViewPort::paintEvent(QPaintEvent* event)
@@ -1479,11 +1367,12 @@ void ViewPort::draw2D(QPainter *painter)
 
 void ViewPort::drawStatusBar()
 {
+    //centralWidget->myBar_msg->setMaximumWidth(width());
     //CvScalar value = cvGet2D(image2Draw_ipl,mouseCoordinate.y(),mouseCoordinate.x());
     QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
     centralWidget->myBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
-                                      .arg(mouseCoordinate.x())
-                                      .arg(mouseCoordinate.y())+
+				      .arg(mouseCoordinate.x())
+				      .arg(mouseCoordinate.y())+
                                       tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
                                       tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
                                       tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])

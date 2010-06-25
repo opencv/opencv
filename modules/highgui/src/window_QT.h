@@ -180,6 +180,15 @@ private:
 
 
 
+enum type_mouse_event {mouse_up = 0, mouse_down = 1, mouse_dbclick = 2, mouse_move = 3};
+
+static const int tableMouseButtons[][3]={
+    {CV_EVENT_LBUTTONUP,CV_EVENT_RBUTTONUP,CV_EVENT_MBUTTONUP},		    	//mouse_up
+    {CV_EVENT_LBUTTONDOWN,CV_EVENT_RBUTTONDOWN,CV_EVENT_MBUTTONDOWN},		//mouse_down
+    {CV_EVENT_LBUTTONDBLCLK,CV_EVENT_RBUTTONDBLCLK,CV_EVENT_MBUTTONDBLCLK},	//mouse_dbclick
+    {CV_EVENT_MOUSEMOVE,CV_EVENT_MOUSEMOVE,CV_EVENT_MOUSEMOVE}		    	//mouse_move
+};
+
 class ViewPort : public QGraphicsView
 {
     Q_OBJECT
@@ -207,6 +216,8 @@ public slots:
     void siftWindowOnUp() ;
     void siftWindowOnDown();
     void resizeEvent ( QResizeEvent * );
+    int heightForWidth(int w) const;
+    bool hasHeightForWidth() const;
 
 private:
     Qt::AspectRatioMode modeRatio;
@@ -244,6 +255,8 @@ private:
     void draw2D(QPainter *painter);
     void drawStatusBar();
     void controlImagePosition();
+    void icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags);
+    void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
 #if defined(OPENCV_GL)
     void draw3D();
@@ -255,6 +268,7 @@ private:
 private slots:
     void stopDisplayInfo();
 };
+
 
 
 //here css for trackbar

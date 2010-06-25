@@ -498,9 +498,19 @@ set(HAVE_QT 0)
 set(HAVE_QT_OPENGL 0)
 set(AUTOSWITCH_QT 0)#uses to disable QT
 
+#set the booleans
 find_package(Qt4)# QUIET)
 if (QT4_FOUND AND AUTOSWITCH_QT)
     set(WITH_QT ON CACHE BOOL "Build with QT Backend support")
+    find_package (OPENGL QUIET)
+    if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
+    set(WITH_QT_OPENGL ON CACHE BOOL "Add OpenGL extention to QT")
+    endif()
+endif()
+    
+    
+#test if QT Bool is true
+if (WITH_QT)
     set(HAVE_QT 1)
     add_definitions(-DHAVE_QT=1)
 
@@ -515,11 +525,11 @@ if (QT4_FOUND AND AUTOSWITCH_QT)
 		endif()
     endif()
     
-    #if (QT_QTOPENGL_FOUND)
-    #    set(WITH_QT_OPENGL ON CACHE BOOL "add OpenGL extention to QT")
-    #    set(HAVE_QT_OPENGL 1)
-    #    add_definitions(-DOPENCV_GL=1)
-    #endif()
+    if (WITH_QT_OPENGL)
+    message(STATUS "OpenGL for QT enable")
+        set(HAVE_QT_OPENGL 1)
+        add_definitions(-DOPENCV_GL=1)
+    endif()
 endif()
     
 ############################### TBB ################################
