@@ -185,7 +185,7 @@ bool CvCaptureCAM_PvAPI::open( int index )
         PvAttrUint32Get(Camera.Handle, "Height", &frameHeight);
         PvAttrEnumGet(Camera.Handle, "PixelFormat", pixelFormat,256,NULL);
         maxSize = 8228;
-        PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
+        //PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
         if (PvCaptureAdjustPacketSize(Camera.Handle,maxSize)!=ePvErrSuccess)
 			return false;
         //printf ("Pixel Format %s  %d %d\n ", pixelFormat,frameWidth,frameHeight);
@@ -272,6 +272,9 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
     case CV_CAP_PROP_FRAME_HEIGHT:
         PvAttrUint32Get(Camera.Handle, "Height", &nTemp);
         return (double)nTemp;
+    case CV_CAP_PROP_EXPOSURE:
+		PvAttrUint32Get(Camera.Handle,"ExposureValue",&nTemp);
+		return (double)nTemp;
     }
     return -1.0;
 }
@@ -289,12 +292,21 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         break;
     */
     case CV_CAP_PROP_MONOCROME:
-		char pixelFormat[256];
-        PvAttrEnumGet(Camera.Handle, "PixelFormat", pixelFormat,256,NULL);
-        if ((strncmp(pixelFormat, "Mono8",NULL)==0) || strncmp(pixelFormat, "Mono16",NULL)==0) {
-			monocrome=true;
+        if (value==1) {
+			char pixelFormat[256];
+			PvAttrEnumGet(Camera.Handle, "PixelFormat", pixelFormat,256,NULL);
+			if ((strncmp(pixelFormat, "Mono8",NULL)==0) || strncmp(pixelFormat, "Mono16",NULL)==0) {
+				monocrome=true;
+			}	
+			else
+				return false;
+		}
+		else
+			monocrome=false;
+		break;	
+	case CV_CAP_PROP_EXPOSURE:
+		if (PvAttrUint32Set(Camera.Handle,"ExposureValue",(tPvUint32)value)==ePvErrSuccess)
 			break;
-		}	
 		else
 			return false;
     default:
