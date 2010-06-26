@@ -44,7 +44,9 @@
 #include "precomp.hpp"
 
 #if defined(OPENCV_GL)
-#include <QGLWidget>
+ #include <QtOpenGL>
+ //#include <GL/glu.h>
+//#include <QGLWidget>
 #endif
 
 #include <QAbstractEventDispatcher>

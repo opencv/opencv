@@ -72,6 +72,10 @@ if(WIN32)
     if (HAVE_QT)
         
          #SET(QT_USE_QTXML 1)
+         if (HAVE_QT_OPENGL)
+			set( QT_USE_QTOPENGL TRUE )
+			set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
+         endif()
 		 INCLUDE(${QT_USE_FILE})
 		 
 		 SET(_MOC_HEADERS src/window_QT.h )
@@ -95,6 +99,10 @@ if(UNIX)
     if (HAVE_QT)        
     
          #SET(QT_USE_QTXML 1)
+         if (HAVE_QT_OPENGL)
+			set( QT_USE_QTOPENGL TRUE )
+			set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
+         endif()
 		 INCLUDE(${QT_USE_FILE})
 		 
 		 SET(_MOC_HEADERS src/window_QT.h)
@@ -188,6 +196,10 @@ if(APPLE)
     if (HAVE_QT)
 
          #SET(QT_USE_QTXML 1)
+         if (HAVE_QT_OPENGL)
+			set( QT_USE_QTOPENGL TRUE )
+			set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
+         endif()
 		 INCLUDE(${QT_USE_FILE})
 		 
 		 SET(_MOC_HEADERS src/window_QT.h)
