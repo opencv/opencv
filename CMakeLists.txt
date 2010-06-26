@@ -504,14 +504,7 @@ if (QT4_FOUND AND AUTOSWITCH_QT)
     set(WITH_QT ON CACHE BOOL "Build with QT Backend support")
     find_package (OpenGL QUIET)
     if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-    
-		#GLU is not mandatory but we used gluPerspective in setGL so, we need it for now.
-		if (OPENGL_GLU_FOUND)
 			set(WITH_QT_OPENGL ON CACHE BOOL "Add OpenGL extention to QT")
-		else()
-		    message(STATUS "OpenGL found but not GLU, please install it")
-		endif()
-		
     endif()
 endif()
     
@@ -535,7 +528,7 @@ if (WITH_QT)
     endif()
     
     if (WITH_QT_OPENGL)
-    message(STATUS "OpenGL for QT enable (with GLU)")
+    message(STATUS "OpenGL for QT enable")
         set(HAVE_QT_OPENGL 1)
         add_definitions(-DOPENCV_GL=1)
     endif()

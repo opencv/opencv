@@ -48,7 +48,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 	switch(prop_id)
 	{
 		//change between fullscreen or not.
-		case CV_WND_PROP_FULLSCREEN://accept CV_WINDOW_NORMAL or CV_WINDOW_FULLSCREEN 
+		case CV_WND_PROP_FULLSCREEN:
 		
 			if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
 				break;
@@ -67,6 +67,12 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 		case CV_WND_PROP_AUTOSIZE:
 			#if defined (HAVE_QT)
 				cvSetPropWindow_QT(name,prop_value);
+			#endif
+		break;
+		
+		case CV_WND_PROP_ASPECTRATIO:
+			#if defined (HAVE_QT)
+				cvSetRatioWindow_QT(name,prop_value);
 			#endif
 		break;
 		
@@ -106,6 +112,14 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 			#else
 				return -1;
 		    #endif	
+		    
+		case CV_WND_PROP_ASPECTRATIO:
+			#if defined (HAVE_QT)
+				return cvGetRatioWindow_QT(name);
+			#else
+				return -1;
+		    #endif	
+		break;
 		
 	    default:
 		    return -1;

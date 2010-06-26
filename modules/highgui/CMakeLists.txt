@@ -70,11 +70,8 @@ endforeach()
 if(WIN32)
 
     if (HAVE_QT)
-        
-         #SET(QT_USE_QTXML 1)
          if (HAVE_QT_OPENGL)
 			set( QT_USE_QTOPENGL TRUE )
-			set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
          endif()
 		 INCLUDE(${QT_USE_FILE})
 		 
@@ -97,11 +94,9 @@ endif()
 if(UNIX)
 
     if (HAVE_QT)        
-    
-         #SET(QT_USE_QTXML 1)
          if (HAVE_QT_OPENGL)
 			set( QT_USE_QTOPENGL TRUE )
-			set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
+			#set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
          endif()
 		 INCLUDE(${QT_USE_FILE})
 		 
@@ -194,11 +189,8 @@ if(APPLE)
     endif()
     
     if (HAVE_QT)
-
-         #SET(QT_USE_QTXML 1)
          if (HAVE_QT_OPENGL)
 			set( QT_USE_QTOPENGL TRUE )
-			set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENGL_LIBRARIES})
          endif()
 		 INCLUDE(${QT_USE_FILE})
 		 

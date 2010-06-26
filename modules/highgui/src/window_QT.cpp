@@ -53,6 +53,26 @@ QWaitCondition key_pressed;
 QMutex mutexKey;
 //end static and global
 
+double cvGetRatioWindow_QT(const char* name)
+{
+	double result = -1;
+    QMetaObject::invokeMethod(&guiMainThread,
+                              "getRatioWindow",
+                              //Qt::DirectConnection,
+                              Qt::AutoConnection,
+                              Q_RETURN_ARG(double, result),
+                              Q_ARG(QString, QString(name)));
+    return result;
+}
+
+void cvSetRatioWindow_QT(const char* name,double prop_value)
+{
+    QMetaObject::invokeMethod(&guiMainThread,
+						  "setRatioWindow",
+						  Qt::AutoConnection,
+						  Q_ARG(QString, QString(name)),
+                          Q_ARG(double, prop_value));
+}
 
 double cvGetPropWindow_QT(const char* name)
 {
@@ -444,6 +464,35 @@ GuiReceiver::GuiReceiver() : _bTimeOut(false)
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
+double GuiReceiver::getRatioWindow(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+
+    if (!w)
+        return -1;
+
+    return (double)w->getView()->getRatio();
+}
+
+void GuiReceiver::setRatioWindow(QString name, double arg2 )
+{
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (!w)
+        return;
+
+    int flags = (int) arg2;
+
+    if (w->getView()->getRatio() == flags)//nothing to do
+        return;
+
+	//if valid flags
+	if (flags == CV_WINDOW_FREERATIO || flags == CV_WINDOW_KEEPRATIO)
+		w->getView()->setRatio(flags);
+
+}
+
 double GuiReceiver::getPropWindow(QString name)
 {
     QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
@@ -741,21 +790,6 @@ CvTrackbar::~CvTrackbar()
     delete label;
 }
 
-CustomLayout::CustomLayout()
-{
-
-}
-
-int CustomLayout::heightForWidth ( int w ) const
-{
-    return w/2;
-
-}
-bool CustomLayout::hasHeightForWidth () const
-{
-    return true;
-}
-
 CvWindow::CvWindow(QString arg, int arg2)
 {
     moveToThread(qApp->instance()->thread());
@@ -770,7 +804,7 @@ CvWindow::CvWindow(QString arg, int arg2)
     resize(400,300);
 
     //CV_MODE_NORMAL or CV_MODE_OPENGL
-    myview = new ViewPort(this, CV_MODE_NORMAL,false);//parent, mode_display, keep_aspect_ratio
+    myview = new ViewPort(this, CV_MODE_NORMAL,CV_WINDOW_KEEPRATIO);//parent, mode_display, keep_aspect_ratio
     myview->setAlignment(Qt::AlignHCenter);
 
 
@@ -817,6 +851,8 @@ CvWindow::CvWindow(QString arg, int arg2)
     show();
 }
 
+
+
 CvWindow::~CvWindow()
 {
     QLayoutItem *child;
@@ -840,6 +876,11 @@ CvWindow::~CvWindow()
     delete shortcutRight;
     delete shortcutUp;
     delete shortcutDown;
+}
+
+ViewPort* CvWindow::getView()
+{
+	return myview;
 }
 
 void CvWindow::displayInfo(QString text,int delayms)
@@ -920,20 +961,14 @@ void CvWindow::writeSettings()//not tested
 }
 
 //Here is ViewPort
-ViewPort::ViewPort(CvWindow* arg, int arg2, bool arg3)
+ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 {
     centralWidget = arg,
     mode = arg2;
     keepRatio = arg3;
 
-    modeRatio = Qt::IgnoreAspectRatio;
-    if (keepRatio)
-        modeRatio = Qt::KeepAspectRatio;
-
     setupViewport(centralWidget);
     setContentsMargins(0,0,0,0);
-    //this->setFrameStyle(0);
-    //this->setFrameShape(QFrame::Box);
 
     setObjectName(QString::fromUtf8("graphicsView"));
     timerDisplay = new QTimer(this);
@@ -943,7 +978,6 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, bool arg3)
     positionGrabbing = QPointF(0,0);
     positionCorners = QRect(0,0,size().width(),size().height());
     on_mouse = NULL;
-    deltaOffset = QPoint(0,0);
     mouseCoordinate = QPoint(-1,-1);
 
 
@@ -968,6 +1002,18 @@ ViewPort::~ViewPort()
         cvReleaseImage(&image2Draw_ipl);
 
     delete timerDisplay;
+}
+
+void ViewPort::setRatio(int flags)
+{
+	keepRatio = flags;
+    updateGeometry();
+    viewport()->update();
+}
+
+int ViewPort::getRatio()
+{
+	return keepRatio;
 }
 
 void ViewPort::resetZoom()
@@ -1050,9 +1096,6 @@ void ViewPort::updateImage(void* arr)
         ratioX=float(image2Draw_ipl->width)/float(width());
         ratioY=float(image2Draw_ipl->height)/float(height());
 
-        if (keepRatio)
-            deltaOffset = computeOffset();
-
         updateGeometry();
     }
 
@@ -1065,16 +1108,6 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 {
     on_mouse = m;
     on_mouse_param = param;
-}
-
-int ViewPort::heightForWidth(int w) const
-{
-    return w*float(image2Draw_ipl->height)/float(image2Draw_ipl->width);
-}
-
-bool ViewPort::hasHeightForWidth() const
-{
-    return true;
 }
 
 void ViewPort::controlImagePosition()
@@ -1278,8 +1311,8 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
     //to convert mouse coordinate
     qreal pfx, pfy;
     matrixWorld_inv.map(pt.x(),pt.y(),&pfx,&pfy);
-    mouseCoordinate.rx()=floor((pfx-deltaOffset.x())*ratioX);
-    mouseCoordinate.ry()=floor((pfy-deltaOffset.y())*ratioY);
+    mouseCoordinate.rx()=floor(pfx*ratioX);
+    mouseCoordinate.ry()=floor(pfy*ratioY);
 
     if (on_mouse)
 	on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
@@ -1296,23 +1329,31 @@ QSize ViewPort::sizeHint() const
     }
 }
 
-QPoint ViewPort::computeOffset()
-{
-    QSizeF t1(image2Draw_ipl->width, image2Draw_ipl->height);
-    QSizeF t2(width(),height());
-    t1.scale(t2.width(), t2.height(), Qt::KeepAspectRatio);
-    t2 = (t2 - t1)/2.0;
-    return QPoint(t2.width(),t2.height());
-}
-
 void ViewPort::resizeEvent ( QResizeEvent *event)
 {
+
     controlImagePosition();
     ratioX=float(image2Draw_ipl->width)/float(width());
     ratioY=float(image2Draw_ipl->height)/float(height());
 
-    if(keepRatio)
-        deltaOffset = computeOffset();
+    if(keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
+    {
+		QSize newSize = QSize(image2Draw_ipl->width,image2Draw_ipl->height);
+		newSize.scale(event->size(),Qt::KeepAspectRatio);
+	
+		//imageWidth/imageHeight = newWidth/newHeight +/- epsilon
+		//ratioX = ratioY +/- epsilon
+		//||ratioX - ratioY|| = epsilon
+		if (fabs(ratioX - ratioY)*100> ratioX)//avoid infinity loop / epsilon = 1% of ratioX
+		{
+		    resize(newSize);
+	
+		    //move to the middle
+		    //newSize get the delta offset to place the picture in the middle of its parent
+		    newSize= (event->size()-newSize)/2;
+		    move(newSize.width(),newSize.height());
+		}
+    }
 
     return QGraphicsView::resizeEvent(event);
 }
@@ -1325,8 +1366,9 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
     draw2D(&myPainter);
 
+
 #if defined(OPENCV_GL)
-    if (mode == CV_MODE_OPENGL)
+    if (mode == CV_MODE_OPENGL && false)//disable it for now
     {
         setGL(this->width(),this->height());
         draw3D();
@@ -1362,7 +1404,7 @@ void ViewPort::paintEvent(QPaintEvent* event)
 void ViewPort::draw2D(QPainter *painter)
 {
     image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
-    painter->drawImage(deltaOffset.x(),deltaOffset.y(),image2Draw_qt.scaled(this->width(),this->height(),modeRatio,Qt::SmoothTransformation));
+    painter->drawImage(0,0,image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
 }
 
 void ViewPort::drawStatusBar()
@@ -1444,12 +1486,28 @@ void ViewPort::initGL()
     glEnable( GL_DEPTH_TEST );
 }
 
+//from http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/gluperspective
+//do not want to link glu
+void ViewPort::icvgluPerspective(GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar)
+{
+   GLdouble xmin, xmax, ymin, ymax;
+
+   ymax = zNear * tan(fovy * M_PI / 360.0);
+   ymin = -ymax;
+   xmin = ymin * aspect;
+   xmax = ymax * aspect;
+
+
+   glFrustum(xmin, xmax, ymin, ymax, zNear, zFar);
+}
+
+
 void ViewPort::setGL(int width, int height)
 {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    gluPerspective(45, float(width) / float(height), 0.01, 1000);
+    icvgluPerspective(45, float(width) / float(height), 0.01, 1000);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();

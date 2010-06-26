@@ -177,6 +177,8 @@ double cvGetModeWindow_QT(const char* name);
 void cvSetModeWindow_QT(const char* name, double prop_value);
 double cvGetPropWindow_QT(const char* name);
 void cvSetPropWindow_QT(const char* name,double prop_value);
+double cvGetRatioWindow_QT(const char* name);
+void cvSetRatioWindow_QT(const char* name,double prop_value);
 #endif
 
 /*namespace cv

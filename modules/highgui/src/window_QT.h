@@ -107,6 +107,8 @@ public slots:
     double isFullScreen(QString name);
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
+    double getRatioWindow(QString name);
+	void setRatioWindow(QString name, double arg2 );
 };
 
 class CvTrackbar : public QHBoxLayout
@@ -133,15 +135,6 @@ private:
     int* dataSlider;
 };
 
-class CustomLayout : public QVBoxLayout
-{
-    Q_OBJECT
-    public:
-    CustomLayout();
-    int heightForWidth ( int w ) const;
-    bool hasHeightForWidth () const;
-};
-
 class CvWindow : public QWidget
 {
     Q_OBJECT
@@ -153,6 +146,7 @@ public:
     void updateImage(void* arr);
     void displayInfo(QString text, int delayms );
     void displayStatusBar(QString text, int delayms );
+    ViewPort* getView();
 
     QString name;
     int flags;
@@ -195,7 +189,7 @@ class ViewPort : public QGraphicsView
 {
     Q_OBJECT
 public:
-    ViewPort(CvWindow* centralWidget, int mode = CV_MODE_NORMAL, bool keepRatio = true);
+    ViewPort(CvWindow* centralWidget, int mode = CV_MODE_NORMAL, int keepRatio = CV_WINDOW_KEEPRATIO);
     ~ViewPort();
     void updateImage(void* arr);
     void startDisplayInfo(QString text, int delayms);
@@ -203,6 +197,9 @@ public:
 
     IplImage* image2Draw_ipl;
     QImage image2Draw_qt;
+    void setRatio(int flags);
+	int getRatio();
+
 
 public slots:
     //reference:
@@ -218,11 +215,8 @@ public slots:
     void siftWindowOnUp() ;
     void siftWindowOnDown();
     void resizeEvent ( QResizeEvent * );
-    int heightForWidth(int w) const;
-    bool hasHeightForWidth() const;
 
 private:
-    Qt::AspectRatioMode modeRatio;
     QPoint deltaOffset;
     QPoint computeOffset();
     QPoint mouseCoordinate;
@@ -236,7 +230,7 @@ private:
     void* on_mouse_param;
 
     int mode;
-    bool keepRatio;
+    int keepRatio;
 
     bool isSameSize(IplImage* img1,IplImage* img2);
     QSize sizeHint() const;
@@ -265,13 +259,12 @@ private:
     void unsetGL();
     void initGL();
     void setGL(int width, int height);
+    void icvgluPerspective(GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar);
 #endif
 
 private slots:
     void stopDisplayInfo();
 };
-
-
 
 //here css for trackbar
 /* from http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet */
