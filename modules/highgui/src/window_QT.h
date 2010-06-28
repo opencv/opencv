@@ -197,6 +197,7 @@ public:
 
     IplImage* image2Draw_ipl;
     QImage image2Draw_qt;
+    int nbChannelOriginImage;
     void setRatio(int flags);
 	int getRatio();
 
@@ -247,7 +248,8 @@ private:
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void drawInstructions(QPainter *painter);
-    void drawOverview(QPainter *painter);
+    void drawViewOverview(QPainter *painter);
+    void drawImgRegion(QPainter *painter);
     void draw2D(QPainter *painter);
     void drawStatusBar();
     void controlImagePosition();

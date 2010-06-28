@@ -51,6 +51,8 @@ static bool multiThreads = false;
 static int last_key = -1;
 QWaitCondition key_pressed;
 QMutex mutexKey;
+
+static const unsigned int threshold_zoom_img_region = 15;//the minimum zoom value to start displaying the values' grid
 //end static and global
 
 double cvGetRatioWindow_QT(const char* name)
@@ -966,10 +968,10 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
     centralWidget = arg,
     mode = arg2;
     keepRatio = arg3;
-
+    
     setupViewport(centralWidget);
     setContentsMargins(0,0,0,0);
-
+    
     setObjectName(QString::fromUtf8("graphicsView"));
     timerDisplay = new QTimer(this);
     timerDisplay->setSingleShot(true);
@@ -979,19 +981,20 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
     positionCorners = QRect(0,0,size().width(),size().height());
     on_mouse = NULL;
     mouseCoordinate = QPoint(-1,-1);
-
-
+    
+    
 #if defined(OPENCV_GL)
     if (mode == CV_MODE_OPENGL)
     {
-        setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
-        initGL();
+	setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
+	initGL();
     }
 #endif
-
+    
     image2Draw_ipl=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
+    nbChannelOriginImage = 0;
     cvZero(image2Draw_ipl);
-
+    
     setInteractive(false);
     setMouseTracking (true);//receive mouse event everytime
 }
@@ -999,21 +1002,21 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 ViewPort::~ViewPort()
 {
     if (image2Draw_ipl)
-        cvReleaseImage(&image2Draw_ipl);
-
+	cvReleaseImage(&image2Draw_ipl);
+    
     delete timerDisplay;
 }
 
 void ViewPort::setRatio(int flags)
 {
-	keepRatio = flags;
+    keepRatio = flags;
     updateGeometry();
     viewport()->update();
 }
 
 int ViewPort::getRatio()
 {
-	return keepRatio;
+    return keepRatio;
 }
 
 void ViewPort::resetZoom()
@@ -1063,8 +1066,8 @@ void  ViewPort::siftWindowOnDown()
 void ViewPort::startDisplayInfo(QString text, int delayms)
 {
     if (timerDisplay->isActive())
-        stopDisplayInfo();
-
+	stopDisplayInfo();
+    
     infoText = text;
     timerDisplay->start(delayms);
     drawInfo = true;
@@ -1084,23 +1087,21 @@ inline bool ViewPort::isSameSize(IplImage* img1,IplImage* img2)
 void ViewPort::updateImage(void* arr)
 {
     if (!arr)
-        CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
-
+	CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
+    
     IplImage* tempImage = (IplImage*)arr;
-
+    
     if (!isSameSize(image2Draw_ipl,tempImage))
     {
-        cvReleaseImage(&image2Draw_ipl);
-        image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
-
-        ratioX=float(image2Draw_ipl->width)/float(width());
-        ratioY=float(image2Draw_ipl->height)/float(height());
-
-        updateGeometry();
+	cvReleaseImage(&image2Draw_ipl);
+	image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
+	
+	nbChannelOriginImage = tempImage->nChannels;
+	updateGeometry();
     }
-
+    
     cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
-
+    
     viewport()->update();
 }
 
@@ -1113,41 +1114,41 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 void ViewPort::controlImagePosition()
 {
     qreal left, top, right, bottom;
-
+    
     //after check top-left, bottom right corner to avoid getting "out" during zoom/panning
     matrixWorld.map(0,0,&left,&top);
-
+    
     if (left > 0)
     {
-        matrixWorld.translate(-left,0);
-        left = 0;
+	matrixWorld.translate(-left,0);
+	left = 0;
     }
     if (top > 0)
     {
-        matrixWorld.translate(0,-top);
-        top = 0;
+	matrixWorld.translate(0,-top);
+	top = 0;
     }
     //-------
-
+    
     QSize sizeImage = size();
     matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
     if (right < sizeImage.width())
     {
-        matrixWorld.translate(sizeImage.width()-right,0);
-        right = sizeImage.width();
+	matrixWorld.translate(sizeImage.width()-right,0);
+	right = sizeImage.width();
     }
     if (bottom < sizeImage.height())
     {
-        matrixWorld.translate(0,sizeImage.height()-bottom);
-        bottom = sizeImage.height();
+	matrixWorld.translate(0,sizeImage.height()-bottom);
+	bottom = sizeImage.height();
     }
-
+    
     //save corner position
     positionCorners.setTopLeft(QPoint(left,top));
     positionCorners.setBottomRight(QPoint(right,bottom));
     //save also the inv matrix
     matrixWorld_inv = matrixWorld.inverted();
-
+    
     viewport()->update();
 }
 
@@ -1162,29 +1163,35 @@ void ViewPort::scaleView(qreal factor,QPointF center)
 {
     factor/=5;//-0.1 <-> 0.1
     factor+=1;//0.9 <-> 1.1
-
+    
+    //limit zoom out ---
     if (matrixWorld.m11()==1 && factor < 1)
-        return;
-
+	return;
+    
     if (matrixWorld.m11()*factor<1)
-        factor = 1/matrixWorld.m11();
-
+	factor = 1/matrixWorld.m11();
+    
+    
+    //limit zoom int ---
+    if (matrixWorld.m11()>100 && factor > 1)
+	return;
+    
     //inverse the transform
     int a, b;
     matrixWorld_inv.map(center.x(),center.y(),&a,&b);
-
+    
     matrixWorld.translate(a-factor*a,b-factor*b);
     matrixWorld.scale(factor,factor);
-
+    
     controlImagePosition();
-
+    
     //display new zoom
     centralWidget->displayStatusBar(tr("Zoom: %1%").arg(matrixWorld.m11()*100),1000);
-
+    
     if (matrixWorld.m11()>1)
-        setCursor(Qt::OpenHandCursor);
+	setCursor(Qt::OpenHandCursor);
     else
-        unsetCursor();
+	unsetCursor();
 }
 
 void ViewPort::wheelEvent(QWheelEvent *event)
@@ -1196,33 +1203,33 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-
+    
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_down, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-
+    
     if (matrixWorld.m11()>1)
     {
-        setCursor(Qt::ClosedHandCursor);
-        positionGrabbing = event->pos();
+	setCursor(Qt::ClosedHandCursor);
+	positionGrabbing = event->pos();
     }
-
+    
     QWidget::mousePressEvent(event);
 }
 
 void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 {
-
+    
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-
+    
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_up, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-
+    
     if (matrixWorld.m11()>1)
-        setCursor(Qt::OpenHandCursor);
-
+	setCursor(Qt::OpenHandCursor);
+    
     QWidget::mouseReleaseEvent(event);
 }
 
@@ -1230,11 +1237,11 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-
+    
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_dbclick, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-
+    
     QWidget::mouseDoubleClickEvent(event);
 }
 
@@ -1242,32 +1249,32 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-
+    
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_move, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-
-
+    
+    
     if (matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
     {
-        QPointF dxy = (pt - positionGrabbing)/matrixWorld.m11();
-
-        positionGrabbing = event->pos();
-
-        moveView(dxy);
+	QPointF dxy = (pt - positionGrabbing)/matrixWorld.m11();
+	
+	positionGrabbing = event->pos();
+	
+	moveView(dxy);
     }
-
+    
     //I update the statusbar here because if the user does a cvWaitkey(0) (like with inpaint.cpp)
     //the status bar will only be repaint when a click occurs.
     viewport()->update();
-
+    
     QWidget::mouseMoveEvent(event);
 }
 
 //up, down, dclick, move
 void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags)
 {
-
+    
     switch(event->modifiers())
     {
     case Qt::ShiftModifier:
@@ -1287,7 +1294,7 @@ void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, in
 	break;
     default:;
     }
-
+    
     switch(event->button())
     {
     case Qt::LeftButton:
@@ -1311,155 +1318,251 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
     //to convert mouse coordinate
     qreal pfx, pfy;
     matrixWorld_inv.map(pt.x(),pt.y(),&pfx,&pfy);
-    mouseCoordinate.rx()=floor(pfx*ratioX);
-    mouseCoordinate.ry()=floor(pfy*ratioY);
-
+    mouseCoordinate.rx()=floor(pfx);
+    mouseCoordinate.ry()=floor(pfy);
+    
     if (on_mouse)
 	on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
-
+    
 }
 
 QSize ViewPort::sizeHint() const
 {
     if(image2Draw_ipl)
     {
-        return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
+	return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
     } else {
-        return QGraphicsView::sizeHint();
+	return QGraphicsView::sizeHint();
     }
 }
 
 void ViewPort::resizeEvent ( QResizeEvent *event)
 {
-
+    
     controlImagePosition();
-    ratioX=float(image2Draw_ipl->width)/float(width());
-    ratioY=float(image2Draw_ipl->height)/float(height());
-
+    //ratioX=float(image2Draw_ipl->width)/float(width());
+    //ratioY=float(image2Draw_ipl->height)/float(height());
+    ratioX=width()/float(image2Draw_ipl->width);
+    ratioY=height()/float(image2Draw_ipl->height);
+    
     if(keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
     {
-		QSize newSize = QSize(image2Draw_ipl->width,image2Draw_ipl->height);
-		newSize.scale(event->size(),Qt::KeepAspectRatio);
+	QSize newSize = QSize(image2Draw_ipl->width,image2Draw_ipl->height);
+	newSize.scale(event->size(),Qt::KeepAspectRatio);
 	
-		//imageWidth/imageHeight = newWidth/newHeight +/- epsilon
-		//ratioX = ratioY +/- epsilon
-		//||ratioX - ratioY|| = epsilon
-		if (fabs(ratioX - ratioY)*100> ratioX)//avoid infinity loop / epsilon = 1% of ratioX
-		{
-		    resize(newSize);
-	
-		    //move to the middle
-		    //newSize get the delta offset to place the picture in the middle of its parent
-		    newSize= (event->size()-newSize)/2;
-		    move(newSize.width(),newSize.height());
-		}
+	//imageWidth/imageHeight = newWidth/newHeight +/- epsilon
+	//ratioX = ratioY +/- epsilon
+	//||ratioX - ratioY|| = epsilon
+	if (fabs(ratioX - ratioY)*100> ratioX)//avoid infinity loop / epsilon = 1% of ratioX
+	{
+	    resize(newSize);
+	    
+	    //move to the middle
+	    //newSize get the delta offset to place the picture in the middle of its parent
+	    newSize= (event->size()-newSize)/2;
+	    move(newSize.width(),newSize.height());
+	}
     }
-
+    
     return QGraphicsView::resizeEvent(event);
 }
-
 
 void ViewPort::paintEvent(QPaintEvent* event)
 {
     QPainter myPainter(viewport());
     myPainter.setWorldTransform(matrixWorld);
-
+    
     draw2D(&myPainter);
-
-
+    
+    
 #if defined(OPENCV_GL)
     if (mode == CV_MODE_OPENGL && false)//disable it for now
     {
-        setGL(this->width(),this->height());
-        draw3D();
-        unsetGL();
+	setGL(this->width(),this->height());
+	draw3D();
+	unsetGL();
     }
 #endif
-
+    
     //in mode zoom/panning
     if (matrixWorld.m11()>1)
     {
-        //if (size()>QSize())
-        myPainter.setWorldMatrixEnabled (false );
-        drawOverview(&myPainter);
+	
+	myPainter.setWorldMatrixEnabled (false );
+	
+	if (matrixWorld.m11()>=threshold_zoom_img_region)
+	    drawImgRegion(&myPainter);
+	
+	drawViewOverview(&myPainter);
+	
     }
-
+    
     //for statusbar
-    if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0 &&
-        mouseCoordinate.x()<image2Draw_ipl->width && mouseCoordinate.y()<image2Draw_ipl->height)
-    {
-        drawStatusBar();
-    }
-
+    drawStatusBar();
+    
     //for information overlay
     if (drawInfo)
     {
-        myPainter.setWorldMatrixEnabled (false );
-        drawInstructions(&myPainter);
+	myPainter.setWorldMatrixEnabled (false );
+	drawInstructions(&myPainter);
     }
-
+    
     QGraphicsView::paintEvent(event);
 }
 
 void ViewPort::draw2D(QPainter *painter)
 {
     image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
+    // painter->drawImage(0,0,image2Draw_qt.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
     painter->drawImage(0,0,image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+    
 }
+
+
 
 void ViewPort::drawStatusBar()
 {
-    //centralWidget->myBar_msg->setMaximumWidth(width());
-    //CvScalar value = cvGet2D(image2Draw_ipl,mouseCoordinate.y(),mouseCoordinate.x());
-    QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
-    centralWidget->myBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
-				      .arg(mouseCoordinate.x())
-				      .arg(mouseCoordinate.y())+
-                                      tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-                                      tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-                                      tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
-                                      );
+    if (mouseCoordinate.x()>=0 &&
+	mouseCoordinate.y()>=0 &&
+	mouseCoordinate.x()<image2Draw_ipl->width &&
+	mouseCoordinate.y()<image2Draw_ipl->height)
+    {
+	QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
+	
+	if (nbChannelOriginImage==3)
+	{
+	    centralWidget->myBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
+					      .arg(mouseCoordinate.x())
+					      .arg(mouseCoordinate.y())+
+					      tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
+					      tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
+					      tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+					      );
+	}else{
+	    //all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
+	    centralWidget->myBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
+					      .arg(mouseCoordinate.x())
+					      .arg(mouseCoordinate.y())+
+					      tr("<font color='grey'>grey:%3 </font>").arg(qRed(rgbValue))
+					      );
+	}
+    }
 }
 
-void ViewPort::drawOverview(QPainter *painter)
+void ViewPort::drawImgRegion(QPainter *painter)
+{
+    qreal offsetX = matrixWorld.dx()/matrixWorld.m11();
+    offsetX = offsetX - floor(offsetX);
+    qreal offsetY = matrixWorld.dy()/matrixWorld.m11();
+    offsetY = offsetY - floor(offsetY);
+    
+    QSize view = size();
+    QVarLengthArray<QLineF, 30> linesX;
+    for (qreal x = offsetX*matrixWorld.m11(); x < view.width(); x += matrixWorld.m11() )
+    	linesX.append(QLineF(x, 0, x, view.height()));
+    
+    QVarLengthArray<QLineF, 30> linesY;
+    for (qreal y = offsetY*matrixWorld.m11(); y < view.height(); y += matrixWorld.m11() )
+	linesY.append(QLineF(0, y, view.width(), y));
+    
+    
+    QFont f = painter->font();
+    f.setPointSize(threshold_zoom_img_region/3+(matrixWorld.m11()-threshold_zoom_img_region)/6);
+    //f.setStretch(0);
+    painter->setFont(f);
+    QString val;
+    QRgb rgbValue;
+    
+    QPointF point1;//sorry, I do not know how to name it
+    QPointF point2;//idem
+    
+    
+    for (int j=-1;j<view.height()/matrixWorld.m11();j++)
+	for (int i=-1;i<view.width()/matrixWorld.m11();i++)
+	{
+	point1.setX((i+offsetX)*matrixWorld.m11());
+	point1.setY((j+offsetY)*matrixWorld.m11());
+	
+	matrixWorld_inv.map(point1.x(),point1.y(),&point2.rx(),&point2.ry());
+	
+	if (point2.x() >= 0 && point2.y() >= 0)
+	    rgbValue = image2Draw_qt.pixel(QPoint(point2.x(),point2.y()));
+	else
+	    rgbValue = qRgb(0,0,0);
+	
+	const int margin = 1; 
+	if (nbChannelOriginImage==3)
+	{
+	    val = tr("%1").arg(qRed(rgbValue));
+	    painter->setPen(QPen(Qt::red, 1));
+	    painter->drawText(QRect(point1.x(),point1.y()+margin,matrixWorld.m11(),matrixWorld.m11()/3),
+			      Qt::AlignCenter, val);
+	    
+	    val = tr("%1").arg(qGreen(rgbValue));
+	    painter->setPen(QPen(Qt::green, 1));
+	    painter->drawText(QRect(point1.x(),point1.y()+matrixWorld.m11()/3+margin,matrixWorld.m11(),matrixWorld.m11()/3),
+			      Qt::AlignCenter, val);
+	    
+	    val = tr("%1").arg(qBlue(rgbValue));
+	    painter->setPen(QPen(Qt::blue, 1));
+	    painter->drawText(QRect(point1.x(),point1.y()+2*matrixWorld.m11()/3+margin,matrixWorld.m11(),matrixWorld.m11()/3),
+			      Qt::AlignCenter, val);
+	    
+	}
+	else
+	{
+	    
+	    val = tr("%1").arg(qRed(rgbValue));
+	    painter->drawText(QRect(point1.x(),point1.y(),matrixWorld.m11(),matrixWorld.m11()),
+			      Qt::AlignCenter, val);
+	}
+    }
+    
+    painter->setPen(QPen(Qt::black, 1));
+    painter->drawLines(linesX.data(), linesX.size());
+    painter->drawLines(linesY.data(), linesY.size());
+    
+}
+
+void ViewPort::drawViewOverview(QPainter *painter)
 {
     QSize viewSize = size();
     viewSize.scale ( 100, 100,Qt::KeepAspectRatio );
-
+    
     const int margin = 5;
-
+    
+    //draw the image's location
     painter->setBrush(QColor(0, 0, 0, 127));
     painter->setPen(Qt::darkGreen);
-
     painter->drawRect(QRect(width()-viewSize.width()-margin, 0,viewSize.width(),viewSize.height()));
-
+    
+    //daw the view's location inside the image
     qreal ratioSize = 1/matrixWorld.m11();
     qreal ratioWindow = (qreal)(viewSize.height())/(qreal)(size().height());
-
     painter->setPen(Qt::darkBlue);
     painter->drawRect(QRectF(width()-viewSize.width()-positionCorners.left()*ratioSize*ratioWindow-margin,
-                             -positionCorners.top()*ratioSize*ratioWindow,
-                             (viewSize.width()-1)*ratioSize,
-                             (viewSize.height()-1)*ratioSize)
-                      );
+			     -positionCorners.top()*ratioSize*ratioWindow,
+			     (viewSize.width()-1)*ratioSize,
+			     (viewSize.height()-1)*ratioSize)
+		      );
 }
 
 void ViewPort::drawInstructions(QPainter *painter)
 {
     QFontMetrics metrics = QFontMetrics(font());
     int border = qMax(4, metrics.leading());
-
+    
     QRect rect = metrics.boundingRect(0, 0, width() - 2*border, int(height()*0.125),
-                                      Qt::AlignCenter | Qt::TextWordWrap, infoText);
+				      Qt::AlignCenter | Qt::TextWordWrap, infoText);
     painter->setRenderHint(QPainter::TextAntialiasing);
     painter->fillRect(QRect(0, 0, width(), rect.height() + 2*border),
-                      QColor(0, 0, 0, 127));
+		      QColor(0, 0, 0, 127));
     painter->setPen(Qt::white);
     painter->fillRect(QRect(0, 0, width(), rect.height() + 2*border),
-                      QColor(0, 0, 0, 127));
+		      QColor(0, 0, 0, 127));
     painter->drawText((width() - rect.width())/2, border,
-                      rect.width(), rect.height(),
-                      Qt::AlignCenter | Qt::TextWordWrap, infoText);
+		      rect.width(), rect.height(),
+		      Qt::AlignCenter | Qt::TextWordWrap, infoText);
 }
 
 
@@ -1490,15 +1593,15 @@ void ViewPort::initGL()
 //do not want to link glu
 void ViewPort::icvgluPerspective(GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar)
 {
-   GLdouble xmin, xmax, ymin, ymax;
-
-   ymax = zNear * tan(fovy * M_PI / 360.0);
-   ymin = -ymax;
-   xmin = ymin * aspect;
-   xmax = ymax * aspect;
-
-
-   glFrustum(xmin, xmax, ymin, ymax, zNear, zFar);
+    GLdouble xmin, xmax, ymin, ymax;
+    
+    ymax = zNear * tan(fovy * M_PI / 360.0);
+    ymin = -ymax;
+    xmin = ymin * aspect;
+    xmax = ymax * aspect;
+    
+    
+    glFrustum(xmin, xmax, ymin, ymax, zNear, zFar);
 }
 
 
@@ -1524,31 +1627,31 @@ void ViewPort::draw3D()
 {
     //draw scene here
     glLoadIdentity();
-
+    
     glTranslated(0.0, 0.0, -1.0);
     // QVector3D p = convert(positionMouse);
     //glTranslated(p.x(),p.y(),p.z());
-
+    
     glRotatef( 55, 1, 0, 0 );
     glRotatef( 45, 0, 1, 0 );
     glRotatef( 0, 0, 0, 1 );
-
+    
     static const int coords[6][4][3] = {
-        { { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
-        { { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
-        { { +1, -1, +1 }, { +1, -1, -1 }, { +1, +1, -1 }, { +1, +1, +1 } },
-        { { -1, -1, -1 }, { -1, -1, +1 }, { -1, +1, +1 }, { -1, +1, -1 } },
-        { { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
-        { { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
+	{ { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
+	{ { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
+	{ { +1, -1, +1 }, { +1, -1, -1 }, { +1, +1, -1 }, { +1, +1, +1 } },
+	{ { -1, -1, -1 }, { -1, -1, +1 }, { -1, +1, +1 }, { -1, +1, -1 } },
+	{ { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
+	{ { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
     };
-
+    
     for (int i = 0; i < 6; ++i) {
-        glColor3ub( i*20, 100+i*10, i*42 );
-        glBegin(GL_QUADS);
-        for (int j = 0; j < 4; ++j) {
-            glVertex3d(0.2 * coords[i][j][0], 0.2 * coords[i][j][1], 0.2 * coords[i][j][2]);
-        }
-        glEnd();
+	glColor3ub( i*20, 100+i*10, i*42 );
+	glBegin(GL_QUADS);
+	for (int j = 0; j < 4; ++j) {
+	    glVertex3d(0.2 * coords[i][j][0], 0.2 * coords[i][j][1], 0.2 * coords[i][j][2]);
+	}
+	glEnd();
     }
 }
 #endif
