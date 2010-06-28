@@ -346,6 +346,11 @@ FeatureDetector* createDetector( const string& detectorType )
     else if( !detectorType.compare( "GFTT" ) )
     {
         fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
+                                              3/*int _blockSize*/, false/*useHarrisDetector*/, 0.04/*k*/ );
+    }
+    else if( !detectorType.compare( "HARRIS" ) )
+    {
+        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
                                               3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
     }
     else

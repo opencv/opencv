@@ -1507,6 +1507,27 @@ struct CV_EXPORTS L2
     }
 };
 
+/*
+ * Manhattan distance (city block distance) functor
+ */
+template<class T>
+struct CV_EXPORTS L1
+{
+    typedef T ValueType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    ResultType operator()( const T* a, const T* b, int size ) const
+    {
+        ResultType result = ResultType();
+        for( int i = 0; i < size; i++ )
+        {
+            ResultType diff = a[i] - b[i];
+            result += fabs( diff );
+        }
+        return result;
+    }
+};
+
 
 /****************************************************************************************\
 *                                  DMatch                                     *
@@ -1755,6 +1776,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 {
     vector<DMatch> matchings;
     matchImpl( descriptors_1, descriptors_2, mask, matchings);
+    matches.clear();
     matches.resize( matchings.size() );
     for( size_t i=0;i<matchings.size();i++)
     {
@@ -1776,6 +1798,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     assert( DataType<ValueType>::type == descriptors_2.type() ||  descriptors_2.empty() );
 
     int dimension = descriptors_1.cols;
+    matches.clear();
     matches.resize(descriptors_1.rows);
 
     for( int i = 0; i < descriptors_1.rows; i++ )
@@ -1823,6 +1846,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     assert( DataType<ValueType>::type == descriptors_2.type() ||  descriptors_2.empty() );
 
     int dimension = descriptors_1.cols;
+    matches.clear();
     matches.resize( descriptors_1.rows );
 
     for( int i = 0; i < descriptors_1.rows; i++ )
@@ -1930,8 +1954,6 @@ public:
     
     // Writes match object to a file storage
     virtual void write( FileStorage& fs ) const {};
-    
-    static GenericDescriptorMatch* CreateDescriptorMatch( const string &alg_name, const string &params_filename = string () );
 
 protected:
     KeyPointCollection collection;
@@ -1997,6 +2019,8 @@ public:
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& indices );
 
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches );
+
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold);
 
     // Classify a set of keypoints. The same as match, but returns point classes rather than indices
     virtual void classify( const Mat& image, vector<KeyPoint>& points );
@@ -2146,6 +2170,7 @@ protected:
     Params params;
 };
 
+GenericDescriptorMatch* createDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
 /****************************************************************************************\
 *                                VectorDescriptorMatch                                   *
 \****************************************************************************************/
@@ -2159,7 +2184,7 @@ class CV_EXPORTS VectorDescriptorMatch : public GenericDescriptorMatch
 public:
     using GenericDescriptorMatch::add;
 
-    VectorDescriptorMatch( const Extractor& _extractor = Extractor(), const Matcher& _matcher = Matcher() ) :
+    VectorDescriptorMatch( Extractor *_extractor = 0, Matcher * _matcher = 0 ) :
                            extractor(_extractor), matcher(_matcher) {}
 
     ~VectorDescriptorMatch() {}
@@ -2171,8 +2196,8 @@ public:
     virtual void add( const Mat& image, vector<KeyPoint>& keypoints )
     {
         Mat descriptors;
-        extractor.compute( image, keypoints, descriptors );
-        matcher.add( descriptors );
+        extractor->compute( image, keypoints, descriptors );
+        matcher->add( descriptors );
 
         collection.add( Mat(), keypoints );
     };
@@ -2181,47 +2206,47 @@ public:
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& keypointIndices )
     {
         Mat descriptors;
-        extractor.compute( image, points, descriptors );
+        extractor->compute( image, points, descriptors );
 
-        matcher.match( descriptors, keypointIndices );
+        matcher->match( descriptors, keypointIndices );
     };
 
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches )
     {
         Mat descriptors;
-        extractor.compute( image, points, descriptors );
+        extractor->compute( image, points, descriptors );
 
-        matcher.match( descriptors, matches );
+        matcher->match( descriptors, matches );
     }
 
     virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold )
     {
         Mat descriptors;
-        extractor.compute( image, points, descriptors );
+        extractor->compute( image, points, descriptors );
 
-        matcher.match( descriptors, matches, threshold );
+        matcher->match( descriptors, matches, threshold );
     }
 
     virtual void clear()
     {
         GenericDescriptorMatch::clear();
-        matcher.clear();
+        matcher->clear();
     }
 
     virtual void read (const FileNode& fn)
     {
         GenericDescriptorMatch::read(fn);
-        extractor.read (fn);
+        extractor->read (fn);
     }
 
     virtual void write (FileStorage& fs) const
     {
         GenericDescriptorMatch::write(fs);
-        extractor.write (fs);
+        extractor->write (fs);
     }
 protected:
-    Extractor extractor;
-    Matcher matcher;
+    Ptr<Extractor> extractor;
+    Ptr<Matcher> matcher;
     //vector<int> classIds;
 };
 

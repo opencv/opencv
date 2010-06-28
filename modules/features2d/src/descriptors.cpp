@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <stdio.h>
 
 //#define _KDTREE
 
@@ -254,6 +255,10 @@ DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType 
     {
         dm = new BruteForceMatcher<L2<float> >();
     }
+    else if ( !descriptorMatcherType.compare( "BruteForce-L1" ) )
+    {
+        dm = new BruteForceMatcher<L1<float> >();
+    }
     else
     {
         //CV_Error( CV_StsBadArg, "unsupported descriptor matcher type");
@@ -330,27 +335,27 @@ void GenericDescriptorMatch::clear()
     collection.clear();
 }
 
-GenericDescriptorMatch* GenericDescriptorMatch::CreateDescriptorMatch( const string &alg_name, const string &params_filename )
+GenericDescriptorMatch* createDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
 {
     GenericDescriptorMatch *descriptorMatch = 0;
-    if( ! alg_name.compare ("one_way") )
+    if( ! genericDescritptorMatchType.compare ("ONEWAY") )
     {
         descriptorMatch = new OneWayDescriptorMatch ();
     }
-    else if( ! alg_name.compare ("fern") )
+    else if( ! genericDescritptorMatchType.compare ("FERN") )
     {
         FernDescriptorMatch::Params params;
-        params.signatureSize = INT_MAX;
+        params.signatureSize = numeric_limits<int>::max();
         descriptorMatch = new FernDescriptorMatch (params);
     }
-    else if( ! alg_name.compare ("calonder") )
+    else if( ! genericDescritptorMatchType.compare ("CALONDER") )
     {
         descriptorMatch = new CalonderDescriptorMatch ();
     }
 
-    if( !params_filename.empty() && descriptorMatch != 0 )
+    if( !paramsFilename.empty() && descriptorMatch != 0 )
     {
-        FileStorage fs = FileStorage( params_filename, FileStorage::READ );
+        FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
         if( fs.isOpened() )
         {
             descriptorMatch->read( fs.root() );
@@ -459,6 +464,76 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
         matches[i] = match;
     }
 }
+
+void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold )
+{
+    matches.clear();
+    matches.resize( points.size() );
+    IplImage _image = image;
+
+
+    vector<DMatch> dmatches;
+    match( image, points, dmatches );
+    for( size_t i=0;i<matches.size();i++ )
+    {
+        matches[i].push_back( dmatches[i] );
+    }
+
+
+    /*
+    printf("Start matching %d points\n", points.size());
+    //std::cout << "Start matching " << points.size() << "points\n";
+    assert(collection.images.size() == 1);
+    int n = collection.points[0].size();
+
+    printf("n = %d\n", n);
+    for( size_t i = 0; i < points.size(); i++ )
+    {
+        //printf("Matching %d\n", i);
+        //int poseIdx = -1;
+
+        DMatch match;
+        match.indexQuery = i;
+        match.indexTrain = -1;
+
+
+        CvPoint pt = points[i].pt;
+        CvRect roi = cvRect(cvRound(pt.x - 24/4),
+                            cvRound(pt.y - 24/4),
+                            24/2, 24/2);
+        cvSetImageROI(&_image, roi);
+
+        std::vector<int> desc_idxs;
+        std::vector<int> pose_idxs;
+        std::vector<float> distances;
+        std::vector<float> _scales;
+
+
+        base->FindDescriptor(&_image, n, desc_idxs, pose_idxs, distances, _scales);
+        cvResetImageROI(&_image);
+
+        for( int j=0;j<n;j++ )
+        {
+            match.indexTrain = desc_idxs[j];
+            match.distance = distances[j];
+            matches[i].push_back( match );
+        }
+
+        //sort( matches[i].begin(), matches[i].end(), compareIndexTrain );
+        //for( int j=0;j<n;j++ )
+        //{
+            //printf( "%d %f;  ",matches[i][j].indexTrain, matches[i][j].distance);
+        //}
+        //printf("\n\n\n");
+
+
+
+        //base->FindDescriptor( &_image, 100, points[i].pt, match.indexTrain, poseIdx, match.distance );
+        //matches[i].push_back( match );
+    }
+    */
+}
+
 
 void OneWayDescriptorMatch::read( const FileNode &fn )
 {
