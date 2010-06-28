@@ -40,7 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <stdio.h>
 
 //#define _KDTREE
 
@@ -335,7 +334,7 @@ void GenericDescriptorMatch::clear()
     collection.clear();
 }
 
-GenericDescriptorMatch* createDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
+GenericDescriptorMatch* createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
 {
     GenericDescriptorMatch *descriptorMatch = 0;
     if( ! genericDescritptorMatchType.compare ("ONEWAY") )

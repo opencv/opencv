@@ -1470,7 +1470,7 @@ protected:
     SURF surf;
 };
 
-DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType );
+CV_EXPORTS DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType );
 
 /****************************************************************************************\
 *                                          Distance                                      *
@@ -1873,7 +1873,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 }
 
 
-DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType );
+CV_EXPORTS DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType );
 
 /****************************************************************************************\
 *                                GenericDescriptorMatch                                  *
@@ -2170,7 +2170,7 @@ protected:
     Params params;
 };
 
-GenericDescriptorMatch* createDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
+CV_EXPORTS GenericDescriptorMatch* createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
 /****************************************************************************************\
 *                                VectorDescriptorMatch                                   *
 \****************************************************************************************/

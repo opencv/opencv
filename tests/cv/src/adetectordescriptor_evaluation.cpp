@@ -1325,8 +1325,8 @@ void DescriptorQualityTest::writePlotData( int di ) const
 
 void DescriptorQualityTest::readAlgorithm( )
 {
-    defaultDescMatch = createDescriptorMatch( algName );
-    specificDescMatch = createDescriptorMatch( algName );
+    defaultDescMatch = createGenericDescriptorMatch( algName );
+    specificDescMatch = createGenericDescriptorMatch( algName );
 
     if( defaultDescMatch == 0 )
     {
