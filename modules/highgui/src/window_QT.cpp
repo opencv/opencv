@@ -810,20 +810,22 @@ CvWindow::CvWindow(QString arg, int arg2)
     myview->setAlignment(Qt::AlignHCenter);
 
 
-    shortcutZ = new QShortcut(Qt::CTRL + Qt::Key_P, this);
-    QObject::connect( shortcutZ, SIGNAL( activated ()),myview, SLOT( resetZoom( ) ));
-    shortcutPlus = new QShortcut(QKeySequence(QKeySequence::ZoomIn), this);
-    QObject::connect( shortcutPlus, SIGNAL( activated ()),myview, SLOT( ZoomIn() ));
-    shortcutMinus = new QShortcut(QKeySequence(QKeySequence::ZoomOut), this);
-    QObject::connect(shortcutMinus, SIGNAL( activated ()),myview, SLOT( ZoomOut() ));
-    shortcutLeft = new QShortcut(Qt::CTRL + Qt::Key_Left, this);
-    QObject::connect( shortcutLeft, SIGNAL( activated ()),myview, SLOT( siftWindowOnLeft() ));
-    shortcutRight = new QShortcut(Qt::CTRL + Qt::Key_Right, this);
-    QObject::connect( shortcutRight, SIGNAL( activated ()),myview, SLOT( siftWindowOnRight() ));
-    shortcutUp = new QShortcut(Qt::CTRL + Qt::Key_Up, this);
-    QObject::connect(shortcutUp, SIGNAL( activated ()),myview, SLOT( siftWindowOnUp() ));
-    shortcutDown = new QShortcut(Qt::CTRL + Qt::Key_Down, this);
-    QObject::connect(shortcutDown, SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
+    shortcut_r_Zoom = new QShortcut(Qt::CTRL + Qt::Key_P, this);
+    QObject::connect( shortcut_r_Zoom, SIGNAL( activated ()),myview, SLOT( resetZoom( ) ));
+    shortcut_imgRegion = new QShortcut(Qt::CTRL + Qt::Key_O, this);
+    QObject::connect( shortcut_imgRegion, SIGNAL( activated ()),myview, SLOT( imgRegion( ) ));
+    shortcut_Plus = new QShortcut(QKeySequence(QKeySequence::ZoomIn), this);
+    QObject::connect( shortcut_Plus, SIGNAL( activated ()),myview, SLOT( ZoomIn() ));
+    shortcut_Minus = new QShortcut(QKeySequence(QKeySequence::ZoomOut), this);
+    QObject::connect(shortcut_Minus, SIGNAL( activated ()),myview, SLOT( ZoomOut() ));
+    shortcut_Left = new QShortcut(Qt::CTRL + Qt::Key_Left, this);
+    QObject::connect( shortcut_Left, SIGNAL( activated ()),myview, SLOT( siftWindowOnLeft() ));
+    shortcut_Right = new QShortcut(Qt::CTRL + Qt::Key_Right, this);
+    QObject::connect( shortcut_Right, SIGNAL( activated ()),myview, SLOT( siftWindowOnRight() ));
+    shortcut_Up = new QShortcut(Qt::CTRL + Qt::Key_Up, this);
+    QObject::connect(shortcut_Up, SIGNAL( activated ()),myview, SLOT( siftWindowOnUp() ));
+    shortcut_Down = new QShortcut(Qt::CTRL + Qt::Key_Down, this);
+    QObject::connect(shortcut_Down, SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
 
     layout = new QBoxLayout(QBoxLayout::TopToBottom);
     //layout = new CustomLayout;
@@ -871,13 +873,14 @@ CvWindow::~CvWindow()
     delete myBar_msg;
 
 
-    delete shortcutZ;
-    delete shortcutPlus;
-    delete shortcutMinus;
-    delete shortcutLeft;
-    delete shortcutRight;
-    delete shortcutUp;
-    delete shortcutDown;
+    delete shortcut_r_Zoom;
+    delete shortcut_imgRegion;
+    delete shortcut_Plus;
+    delete shortcut_Minus;
+    delete shortcut_Left;
+    delete shortcut_Right;
+    delete shortcut_Up;
+    delete shortcut_Down;
 }
 
 ViewPort* CvWindow::getView()
@@ -1025,14 +1028,19 @@ void ViewPort::resetZoom()
     controlImagePosition();
 }
 
+void ViewPort::imgRegion( )
+{
+	scaleView(threshold_zoom_img_region/matrixWorld.m11(), QPointF(size().width()/2,size().height()/2),false);//false = do not process the 1st param 
+}
+
 void ViewPort::ZoomIn()
 {
-    scaleView( 0.5,QPointF(size().width()/2,size().height()/2));
+    scaleView( 0.5,QPointF(size().width()/2,size().height()/2),true);
 }
 
 void ViewPort::ZoomOut()
 {
-    scaleView( -0.5,QPointF(size().width()/2,size().height()/2));
+    scaleView( -0.5,QPointF(size().width()/2,size().height()/2),true);
 }
 
 //Note: move 2 percent of the window
@@ -1159,10 +1167,13 @@ void ViewPort::moveView(QPointF delta)
 }
 
 //factor is -0.5 (zoom out) or 0.5 (zoom in)
-void ViewPort::scaleView(qreal factor,QPointF center)
+void ViewPort::scaleView(qreal factor,QPointF center,bool process_factor)
 {
-    factor/=5;//-0.1 <-> 0.1
-    factor+=1;//0.9 <-> 1.1
+	if (process_factor)
+	{
+		factor/=5;//-0.1 <-> 0.1
+		factor+=1;//0.9 <-> 1.1
+	}
     
     //limit zoom out ---
     if (matrixWorld.m11()==1 && factor < 1)
@@ -1196,7 +1207,7 @@ void ViewPort::scaleView(qreal factor,QPointF center)
 
 void ViewPort::wheelEvent(QWheelEvent *event)
 {
-    scaleView( -event->delta() / 240.0,event->pos());
+    scaleView( -event->delta() / 240.0,event->pos(),true);//true means process the 1st parameter
 }
 
 void ViewPort::mousePressEvent(QMouseEvent *event)

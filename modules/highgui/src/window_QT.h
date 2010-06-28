@@ -165,13 +165,14 @@ private:
     QPointer<ViewPort> myview;
 
     int status;//0 normal, 1 fullscreen (YV)
-    QPointer<QShortcut> shortcutZ;
-    QPointer<QShortcut> shortcutPlus;
-    QPointer<QShortcut> shortcutMinus;
-    QPointer<QShortcut> shortcutLeft;
-    QPointer<QShortcut> shortcutRight;
-    QPointer<QShortcut> shortcutUp;
-    QPointer<QShortcut> shortcutDown;
+    QPointer<QShortcut> shortcut_r_Zoom;
+    QPointer<QShortcut> shortcut_imgRegion;
+    QPointer<QShortcut> shortcut_Plus;
+    QPointer<QShortcut> shortcut_Minus;
+    QPointer<QShortcut> shortcut_Left;
+    QPointer<QShortcut> shortcut_Right;
+    QPointer<QShortcut> shortcut_Up;
+    QPointer<QShortcut> shortcut_Down;
 };
 
 
@@ -206,7 +207,8 @@ public slots:
     //reference:
     //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
     //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
-    void scaleView(qreal scaleFactor, QPointF center);
+    void scaleView(qreal scaleFactor, QPointF center, bool process1stParam);
+    void imgRegion( );
     void moveView(QPointF delta);
     void resetZoom();
     void ZoomIn();
