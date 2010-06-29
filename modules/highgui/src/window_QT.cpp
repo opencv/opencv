@@ -42,6 +42,7 @@
 #ifdef HAVE_QT
 
 #include <window_QT.h>
+#include <QVarLengthArray>
 
 //Static and global first
 static GuiReceiver guiMainThread;
