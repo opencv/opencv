@@ -496,7 +496,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
                 dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
             }
             else
-                dptr[y*dstep] = (short)((ndisp - mind - 1)*16);
+                dptr[y*dstep] = (short)((ndisp - mind - 1 + mindisp)*16);
             costptr[y*coststep] = sad[mind];
         }
     }
