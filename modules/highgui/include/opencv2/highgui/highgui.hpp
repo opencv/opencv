@@ -67,6 +67,8 @@ CV_EXPORTS double getWindowProperty(const string& winname, int prop_id);//YV
 //Only for QT
 CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
 CV_EXPORTS void displayStatusBar(const string& winname, const string& text, int delayms);
+CV_EXPORTS void saveWindowParameters(const string& windowName);
+CV_EXPORTS void loadWindowParameters(const string& windowName);
 CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 CV_EXPORTS  void stopLoop();
 

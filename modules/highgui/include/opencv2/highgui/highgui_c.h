@@ -60,6 +60,8 @@ extern "C" {
 //-----------New for QT
 CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms);
 CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms);
+CVAPI(void) cvSaveWindowParameters(const char* name);
+CVAPI(void) cvLoadWindowParameters(const char* name);
 CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 CVAPI(void) cvStopLoop();
 //----------------------

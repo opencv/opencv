@@ -42,7 +42,6 @@
 #ifdef HAVE_QT
 
 #include <window_QT.h>
-#include <QVarLengthArray>
 
 //Static and global first
 static GuiReceiver guiMainThread;
@@ -130,6 +129,22 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
                               Q_ARG(QString, QString(text)),
                               Q_ARG(int, delayms));
                          
+}
+
+CV_IMPL void cvSaveWindowParameters(const char* name)
+{
+    QMetaObject::invokeMethod(&guiMainThread,
+			      "saveWindowParameters",
+			      Qt::AutoConnection,
+			      Q_ARG(QString, QString(name)));
+}
+
+CV_IMPL void cvLoadWindowParameters(const char* name)
+{
+    QMetaObject::invokeMethod(&guiMainThread,
+			      "loadWindowParameters",
+			      Qt::AutoConnection,
+			      Q_ARG(QString, QString(name)));
 }
 
 CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
@@ -235,7 +250,7 @@ CV_IMPL CvWindow* icvFindWindowByName( const char* arg )
     foreach (QWidget *widget, QApplication::topLevelWidgets())
     {
         w = (CvWindow*) widget;
-        if (w->name==name)
+        if (w->param_name==name)
         {
             window = w;
             break;
@@ -249,7 +264,7 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
 {
 
     QPointer<CvTrackbar> result = NULL;
-    
+
     QPointer<CvWindow> w = icvFindWindowByName( name_window );
 
     if( !w )
@@ -258,8 +273,9 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
     QString nameQt = QString(name_trackbar);
     QPointer<CvTrackbar> t;
 
-	//Warning   ----  , asume the location 0 is myview and max-1 the status bar
-    for (int i = 1; i < w->layout->layout()->count()-2; ++i)
+    //Warning   ----  , asume the location 0 is myview and max-1 the status bar
+    //done three times in the code, in loadtrackbars, savetrackbar and in findtrackbar
+    for (int i = 1; i < w->layout->layout()->count()-1; ++i)
     {
 
         t = (CvTrackbar*) w->layout->layout()->itemAt(i);
@@ -467,6 +483,22 @@ GuiReceiver::GuiReceiver() : _bTimeOut(false)
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
+void GuiReceiver::saveWindowParameters(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (w)
+	w->writeSettings();
+}
+
+void GuiReceiver::loadWindowParameters(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+
+    if (w)
+	w->readSettings();
+}
+
 double GuiReceiver::getRatioWindow(QString name)
 {
     QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
@@ -504,7 +536,7 @@ double GuiReceiver::getPropWindow(QString name)
     if (!w)
         return -1;
 
-    return (double)w->flags;
+    return (double)w->param_flags;
 }
 
 void GuiReceiver::setPropWindow(QString name, double arg2 )
@@ -516,7 +548,7 @@ void GuiReceiver::setPropWindow(QString name, double arg2 )
 
     int flags = (int) arg2;
 
-    if (w->flags == flags)//nothing to do
+    if (w->param_flags == flags)//nothing to do
         return;
 
 
@@ -524,11 +556,11 @@ void GuiReceiver::setPropWindow(QString name, double arg2 )
     {
     case  CV_WINDOW_NORMAL:
         w->layout->setSizeConstraint(QLayout::SetMinAndMaxSize);
-        w->flags = flags;
+        w->param_flags = flags;
         break;
     case  CV_WINDOW_AUTOSIZE:
         w->layout->setSizeConstraint(QLayout::SetFixedSize);
-        w->flags = flags;
+        w->param_flags = flags;
         break;
     default:;
     }
@@ -757,16 +789,16 @@ void CvTrackbar::createDialog()
     int max = slider->maximum();
 
     int i = QInputDialog::getInt(this->parentWidget(),
-                                 tr("Slider %1").arg(trackbar_name),
-                                 tr("New value:"),
-                                 value,
-                                 min,
-                                 max,
-                                 step,
-                                 &ok);
+				 tr("Slider %1").arg(trackbar_name),
+				 tr("New value:"),
+				 value,
+				 min,
+				 max,
+				 step,
+				 &ok);
 
     if (ok)
-        slider->setValue(i);
+	slider->setValue(i);
 
 }
 
@@ -776,7 +808,7 @@ void CvTrackbar::update(int myvalue)
 
     *dataSlider = myvalue;
     if (callback)
-        callback(myvalue);
+	callback(myvalue);
 }
 
 void CvTrackbar::setLabel(int myvalue)
@@ -796,13 +828,13 @@ CvTrackbar::~CvTrackbar()
 CvWindow::CvWindow(QString arg, int arg2)
 {
     moveToThread(qApp->instance()->thread());
-    name = arg;
-    flags = arg2;
+    param_name = arg;
+    param_flags = arg2;
 
     setAttribute(Qt::WA_DeleteOnClose);//in other case, does not release memory
     setContentsMargins(0,0,0,0);
-    setWindowTitle(name);
-    setObjectName(name);
+    setWindowTitle(param_name);
+    setObjectName(param_name);
 
     resize(400,300);
 
@@ -811,22 +843,20 @@ CvWindow::CvWindow(QString arg, int arg2)
     myview->setAlignment(Qt::AlignHCenter);
 
 
-    shortcut_r_Zoom = new QShortcut(Qt::CTRL + Qt::Key_P, this);
-    QObject::connect( shortcut_r_Zoom, SIGNAL( activated ()),myview, SLOT( resetZoom( ) ));
-    shortcut_imgRegion = new QShortcut(Qt::CTRL + Qt::Key_O, this);
-    QObject::connect( shortcut_imgRegion, SIGNAL( activated ()),myview, SLOT( imgRegion( ) ));
-    shortcut_Plus = new QShortcut(QKeySequence(QKeySequence::ZoomIn), this);
-    QObject::connect( shortcut_Plus, SIGNAL( activated ()),myview, SLOT( ZoomIn() ));
-    shortcut_Minus = new QShortcut(QKeySequence(QKeySequence::ZoomOut), this);
-    QObject::connect(shortcut_Minus, SIGNAL( activated ()),myview, SLOT( ZoomOut() ));
-    shortcut_Left = new QShortcut(Qt::CTRL + Qt::Key_Left, this);
-    QObject::connect( shortcut_Left, SIGNAL( activated ()),myview, SLOT( siftWindowOnLeft() ));
-    shortcut_Right = new QShortcut(Qt::CTRL + Qt::Key_Right, this);
-    QObject::connect( shortcut_Right, SIGNAL( activated ()),myview, SLOT( siftWindowOnRight() ));
-    shortcut_Up = new QShortcut(Qt::CTRL + Qt::Key_Up, this);
-    QObject::connect(shortcut_Up, SIGNAL( activated ()),myview, SLOT( siftWindowOnUp() ));
-    shortcut_Down = new QShortcut(Qt::CTRL + Qt::Key_Down, this);
-    QObject::connect(shortcut_Down, SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
+    shortcutZ = new QShortcut(Qt::CTRL + Qt::Key_P, this);
+    QObject::connect( shortcutZ, SIGNAL( activated ()),myview, SLOT( resetZoom( ) ));
+    shortcutPlus = new QShortcut(QKeySequence(QKeySequence::ZoomIn), this);
+    QObject::connect( shortcutPlus, SIGNAL( activated ()),myview, SLOT( ZoomIn() ));
+    shortcutMinus = new QShortcut(QKeySequence(QKeySequence::ZoomOut), this);
+    QObject::connect(shortcutMinus, SIGNAL( activated ()),myview, SLOT( ZoomOut() ));
+    shortcutLeft = new QShortcut(Qt::CTRL + Qt::Key_Left, this);
+    QObject::connect( shortcutLeft, SIGNAL( activated ()),myview, SLOT( siftWindowOnLeft() ));
+    shortcutRight = new QShortcut(Qt::CTRL + Qt::Key_Right, this);
+    QObject::connect( shortcutRight, SIGNAL( activated ()),myview, SLOT( siftWindowOnRight() ));
+    shortcutUp = new QShortcut(Qt::CTRL + Qt::Key_Up, this);
+    QObject::connect(shortcutUp, SIGNAL( activated ()),myview, SLOT( siftWindowOnUp() ));
+    shortcutDown = new QShortcut(Qt::CTRL + Qt::Key_Down, this);
+    QObject::connect(shortcutDown, SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
 
     layout = new QBoxLayout(QBoxLayout::TopToBottom);
     //layout = new CustomLayout;
@@ -837,8 +867,8 @@ CvWindow::CvWindow(QString arg, int arg2)
     layout->addWidget(myview,Qt::AlignCenter);
     //layout->addStretch(0);
 
-    if (flags == CV_WINDOW_AUTOSIZE)
-        layout->setSizeConstraint(QLayout::SetFixedSize);
+    if (param_flags == CV_WINDOW_AUTOSIZE)
+	layout->setSizeConstraint(QLayout::SetFixedSize);
 
     //now status bar
     myBar = new QStatusBar;
@@ -864,29 +894,28 @@ CvWindow::~CvWindow()
 
     if (layout)
     {
-        while ((child = layout->takeAt(0)) != 0)
-            delete child;
+	while ((child = layout->takeAt(0)) != 0)
+	    delete child;
 
-        delete layout;
+	delete layout;
     }
 
     delete myBar;
     delete myBar_msg;
 
 
-    delete shortcut_r_Zoom;
-    delete shortcut_imgRegion;
-    delete shortcut_Plus;
-    delete shortcut_Minus;
-    delete shortcut_Left;
-    delete shortcut_Right;
-    delete shortcut_Up;
-    delete shortcut_Down;
+    delete shortcutZ;
+    delete shortcutPlus;
+    delete shortcutMinus;
+    delete shortcutLeft;
+    delete shortcutRight;
+    delete shortcutUp;
+    delete shortcutDown;
 }
 
 ViewPort* CvWindow::getView()
 {
-	return myview;
+    return myview;
 }
 
 void CvWindow::displayInfo(QString text,int delayms)
@@ -925,57 +954,132 @@ void CvWindow::keyPressEvent(QKeyEvent *event)
 
     if (key>=20 && key<=255 )
     {
-        key = (int)event->text().toLocal8Bit().at(0);
-        goodKey = true;
+	key = (int)event->text().toLocal8Bit().at(0);
+	goodKey = true;
     }
 
     if (key == Qt::Key_Escape)
     {
-        key = 27;
-        goodKey = true;
+	key = 27;
+	goodKey = true;
     }
 
     //control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
     if (event->modifiers() != Qt::ControlModifier && goodKey)
     {
-        mutexKey.lock();
-        last_key = key;
-        //last_key = event->nativeVirtualKey ();
-        mutexKey.unlock();
-        key_pressed.wakeAll();
-        //event->accept();
+	mutexKey.lock();
+	last_key = key;
+	//last_key = event->nativeVirtualKey ();
+	mutexKey.unlock();
+	key_pressed.wakeAll();
+	//event->accept();
     }
 
     QWidget::keyPressEvent(event);
 }
 
 
-void CvWindow::readSettings()//not tested
+void CvWindow::readSettings()
 {
-    QSettings settings("Trolltech", "Application Example");
+	//organisation and application's name
+    QSettings settings("OpenCV2", QFileInfo(QApplication::applicationFilePath()).fileName());
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(400, 400)).toSize();
+    param_name = settings.value("name_window",param_name).toString();
+
+    param_flags = settings.value("mode_resize",param_flags).toInt();
+    qreal m11 = settings.value("matrix_view.m11",myview->param_matrixWorld.m11()).toReal();
+    qreal m12 = settings.value("matrix_view.m12",myview->param_matrixWorld.m12()).toReal();
+    qreal m13 = settings.value("matrix_view.m13",myview->param_matrixWorld.m13()).toReal();
+    qreal m21 = settings.value("matrix_view.m21",myview->param_matrixWorld.m21()).toReal();
+    qreal m22 = settings.value("matrix_view.m22",myview->param_matrixWorld.m22()).toReal();
+    qreal m23 = settings.value("matrix_view.m23",myview->param_matrixWorld.m23()).toReal();
+    qreal m31 = settings.value("matrix_view.m31",myview->param_matrixWorld.m31()).toReal();
+    qreal m32 = settings.value("matrix_view.m32",myview->param_matrixWorld.m32()).toReal();
+    qreal m33 = settings.value("matrix_view.m33",myview->param_matrixWorld.m33()).toReal();
+    myview->param_matrixWorld = QTransform(m11,m12,m13,m21,m22,m23,m31,m32,m33);
+
+    //trackbar here
+    icvLoadTrackbars(&settings);
+
     resize(size);
     move(pos);
 }
 
-void CvWindow::writeSettings()//not tested
+void CvWindow::writeSettings()
 {
-    QSettings settings("Trolltech", "Application Example");
+	//organisation and application's name
+    QSettings settings("OpenCV2", QFileInfo(QApplication::applicationFilePath()).fileName());
+    settings.setValue("name_window",param_name);
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue("mode_resize",param_flags);
+    settings.setValue("view_aspectRatio",myview->param_keepRatio);
+
+    settings.setValue("matrix_view.m11",myview->param_matrixWorld.m11());
+    settings.setValue("matrix_view.m12",myview->param_matrixWorld.m12());
+    settings.setValue("matrix_view.m13",myview->param_matrixWorld.m13());
+    settings.setValue("matrix_view.m21",myview->param_matrixWorld.m21());
+    settings.setValue("matrix_view.m22",myview->param_matrixWorld.m22());
+    settings.setValue("matrix_view.m23",myview->param_matrixWorld.m23());
+    settings.setValue("matrix_view.m31",myview->param_matrixWorld.m31());
+    settings.setValue("matrix_view.m32",myview->param_matrixWorld.m32());
+    settings.setValue("matrix_view.m33",myview->param_matrixWorld.m33());
+
+    icvSaveTrackbars(&settings);
 }
+
+void CvWindow::icvLoadTrackbars(QSettings *settings)
+{
+    int size = settings->beginReadArray("trackbars");
+    QPointer<CvTrackbar> t;
+    //Warning   ----  , asume the location 0 is myview and max-1 the status bar
+    //done three times in the code, in loadtrackbars, savetrackbar and in findtrackbar
+
+    //trackbar are saved in the same order, so no need to use icvFindTrackbarByName
+    if (layout->layout()->count()-2 == size)//if not the same number, the window saved and loaded is not the same (nb trackbar not equal)
+	    for (int i = 0; i < size; ++i)
+	    {
+			settings->setArrayIndex(i);
+			t = (CvTrackbar*)  layout->layout()->itemAt(i+1);//+1 because index 0 is myview (see Warning)
+		
+			if (t->trackbar_name == settings->value("name").toString())
+			{
+			    t->slider->setValue(settings->value("value").toInt());
+			}
+	    }
+    settings->endArray();
+
+}
+
+void CvWindow::icvSaveTrackbars(QSettings *settings)
+{
+    QPointer<CvTrackbar> t;
+
+    //Warning   ----  , asume the location 0 is myview and max-1 the status bar
+    //done three times in the code, in loadtrackbars, savetrackbar and in findtrackbar
+    settings->beginWriteArray("trackbars");
+    for (int i = 0; i < layout->layout()->count()-2; ++i) {
+	t = (CvTrackbar*)  layout->layout()->itemAt(i+1);//+1 because index 0 is myview (see Warning)
+	settings->setArrayIndex(i);
+	settings->setValue("name", t->trackbar_name);
+	settings->setValue("value", t->slider->value());
+    }
+    settings->endArray();
+}
+
+
 
 //Here is ViewPort
 ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 {
     centralWidget = arg,
-    mode = arg2;
-    keepRatio = arg3;
-    
+    mode_display = arg2;
+    param_keepRatio = arg3;
+
     setupViewport(centralWidget);
     setContentsMargins(0,0,0,0);
-    
+
     setObjectName(QString::fromUtf8("graphicsView"));
     timerDisplay = new QTimer(this);
     timerDisplay->setSingleShot(true);
@@ -985,20 +1089,20 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
     positionCorners = QRect(0,0,size().width(),size().height());
     on_mouse = NULL;
     mouseCoordinate = QPoint(-1,-1);
-    
-    
+
+
 #if defined(OPENCV_GL)
-    if (mode == CV_MODE_OPENGL)
+    if ( mode_display == CV_MODE_OPENGL)
     {
 	setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
 	initGL();
     }
 #endif
-    
+
     image2Draw_ipl=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
     nbChannelOriginImage = 0;
     cvZero(image2Draw_ipl);
-    
+
     setInteractive(false);
     setMouseTracking (true);//receive mouse event everytime
 }
@@ -1007,68 +1111,63 @@ ViewPort::~ViewPort()
 {
     if (image2Draw_ipl)
 	cvReleaseImage(&image2Draw_ipl);
-    
+
     delete timerDisplay;
 }
 
 void ViewPort::setRatio(int flags)
 {
-    keepRatio = flags;
+    param_keepRatio = flags;
     updateGeometry();
     viewport()->update();
 }
 
 int ViewPort::getRatio()
 {
-    return keepRatio;
+    return param_keepRatio;
 }
 
 void ViewPort::resetZoom()
 {
-    matrixWorld.reset();
+    param_matrixWorld.reset();
     controlImagePosition();
-}
-
-void ViewPort::imgRegion( )
-{
-	scaleView(threshold_zoom_img_region/matrixWorld.m11(), QPointF(size().width()/2,size().height()/2),false);//false = do not process the 1st param 
 }
 
 void ViewPort::ZoomIn()
 {
-    scaleView( 0.5,QPointF(size().width()/2,size().height()/2),true);
+    scaleView( 0.5,QPointF(size().width()/2,size().height()/2));
 }
 
 void ViewPort::ZoomOut()
 {
-    scaleView( -0.5,QPointF(size().width()/2,size().height()/2),true);
+    scaleView( -0.5,QPointF(size().width()/2,size().height()/2));
 }
 
 //Note: move 2 percent of the window
 void  ViewPort::siftWindowOnLeft()
 {
-    float delta = 2*width()/(100.0*matrixWorld.m11());
+    float delta = 2*width()/(100.0*param_matrixWorld.m11());
     moveView(QPointF(delta,0));
 }
 
 //Note: move 2 percent of the window
 void  ViewPort::siftWindowOnRight()
 {
-    float delta = -2*width()/(100.0*matrixWorld.m11());
+    float delta = -2*width()/(100.0*param_matrixWorld.m11());
     moveView(QPointF(delta,0));
 }
 
 //Note: move 2 percent of the window
 void  ViewPort::siftWindowOnUp()
 {
-    float delta = 2*height()/(100.0*matrixWorld.m11());
+    float delta = 2*height()/(100.0*param_matrixWorld.m11());
     moveView(QPointF(0,delta));
 }
 
 //Note: move 2 percent of the window
 void  ViewPort::siftWindowOnDown()
 {
-    float delta = -2*height()/(100.0*matrixWorld.m11());
+    float delta = -2*height()/(100.0*param_matrixWorld.m11());
     moveView(QPointF(0,delta));
 }
 
@@ -1076,7 +1175,7 @@ void ViewPort::startDisplayInfo(QString text, int delayms)
 {
     if (timerDisplay->isActive())
 	stopDisplayInfo();
-    
+
     infoText = text;
     timerDisplay->start(delayms);
     drawInfo = true;
@@ -1097,20 +1196,20 @@ void ViewPort::updateImage(void* arr)
 {
     if (!arr)
 	CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
-    
+
     IplImage* tempImage = (IplImage*)arr;
-    
+
     if (!isSameSize(image2Draw_ipl,tempImage))
     {
 	cvReleaseImage(&image2Draw_ipl);
 	image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
-	
+
 	nbChannelOriginImage = tempImage->nChannels;
 	updateGeometry();
     }
-    
+
     cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
-    
+
     viewport()->update();
 }
 
@@ -1123,84 +1222,81 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 void ViewPort::controlImagePosition()
 {
     qreal left, top, right, bottom;
-    
+
     //after check top-left, bottom right corner to avoid getting "out" during zoom/panning
-    matrixWorld.map(0,0,&left,&top);
-    
+    param_matrixWorld.map(0,0,&left,&top);
+
     if (left > 0)
     {
-	matrixWorld.translate(-left,0);
+	param_matrixWorld.translate(-left,0);
 	left = 0;
     }
     if (top > 0)
     {
-	matrixWorld.translate(0,-top);
+	param_matrixWorld.translate(0,-top);
 	top = 0;
     }
     //-------
-    
+
     QSize sizeImage = size();
-    matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
+    param_matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
     if (right < sizeImage.width())
     {
-	matrixWorld.translate(sizeImage.width()-right,0);
+	param_matrixWorld.translate(sizeImage.width()-right,0);
 	right = sizeImage.width();
     }
     if (bottom < sizeImage.height())
     {
-	matrixWorld.translate(0,sizeImage.height()-bottom);
+	param_matrixWorld.translate(0,sizeImage.height()-bottom);
 	bottom = sizeImage.height();
     }
-    
+
     //save corner position
     positionCorners.setTopLeft(QPoint(left,top));
     positionCorners.setBottomRight(QPoint(right,bottom));
     //save also the inv matrix
-    matrixWorld_inv = matrixWorld.inverted();
-    
+    matrixWorld_inv = param_matrixWorld.inverted();
+
     viewport()->update();
 }
 
 void ViewPort::moveView(QPointF delta)
 {
-    matrixWorld.translate(delta.x(),delta.y());
+    param_matrixWorld.translate(delta.x(),delta.y());
     controlImagePosition();
 }
 
 //factor is -0.5 (zoom out) or 0.5 (zoom in)
-void ViewPort::scaleView(qreal factor,QPointF center,bool process_factor)
+void ViewPort::scaleView(qreal factor,QPointF center)
 {
-	if (process_factor)
-	{
-		factor/=5;//-0.1 <-> 0.1
-		factor+=1;//0.9 <-> 1.1
-	}
-    
+    factor/=5;//-0.1 <-> 0.1
+    factor+=1;//0.9 <-> 1.1
+
     //limit zoom out ---
-    if (matrixWorld.m11()==1 && factor < 1)
+    if (param_matrixWorld.m11()==1 && factor < 1)
 	return;
-    
-    if (matrixWorld.m11()*factor<1)
-	factor = 1/matrixWorld.m11();
-    
-    
+
+    if (param_matrixWorld.m11()*factor<1)
+	factor = 1/param_matrixWorld.m11();
+
+
     //limit zoom int ---
-    if (matrixWorld.m11()>100 && factor > 1)
+    if (param_matrixWorld.m11()>100 && factor > 1)
 	return;
-    
+
     //inverse the transform
     int a, b;
     matrixWorld_inv.map(center.x(),center.y(),&a,&b);
-    
-    matrixWorld.translate(a-factor*a,b-factor*b);
-    matrixWorld.scale(factor,factor);
-    
+
+    param_matrixWorld.translate(a-factor*a,b-factor*b);
+    param_matrixWorld.scale(factor,factor);
+
     controlImagePosition();
-    
+
     //display new zoom
-    centralWidget->displayStatusBar(tr("Zoom: %1%").arg(matrixWorld.m11()*100),1000);
-    
-    if (matrixWorld.m11()>1)
+    centralWidget->displayStatusBar(tr("Zoom: %1%").arg(param_matrixWorld.m11()*100),1000);
+
+    if (param_matrixWorld.m11()>1)
 	setCursor(Qt::OpenHandCursor);
     else
 	unsetCursor();
@@ -1208,40 +1304,40 @@ void ViewPort::scaleView(qreal factor,QPointF center,bool process_factor)
 
 void ViewPort::wheelEvent(QWheelEvent *event)
 {
-    scaleView( -event->delta() / 240.0,event->pos(),true);//true means process the 1st parameter
+    scaleView( -event->delta() / 240.0,event->pos());
 }
 
 void ViewPort::mousePressEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-    
+
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_down, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-    
-    if (matrixWorld.m11()>1)
+
+    if (param_matrixWorld.m11()>1)
     {
 	setCursor(Qt::ClosedHandCursor);
 	positionGrabbing = event->pos();
     }
-    
+
     QWidget::mousePressEvent(event);
 }
 
 void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 {
-    
+
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-    
+
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_up, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-    
-    if (matrixWorld.m11()>1)
+
+    if (param_matrixWorld.m11()>1)
 	setCursor(Qt::OpenHandCursor);
-    
+
     QWidget::mouseReleaseEvent(event);
 }
 
@@ -1249,11 +1345,11 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-    
+
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_dbclick, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-    
+
     QWidget::mouseDoubleClickEvent(event);
 }
 
@@ -1261,32 +1357,32 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 {
     int cv_event = -1, flags = 0;
     QPoint pt = event->pos();
-    
+
     //icvmouseHandler: pass parameters for cv_event, flags
     icvmouseHandler(event, mouse_move, cv_event, flags);
     icvmouseProcessing(QPointF(pt), cv_event, flags);
-    
-    
-    if (matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
+
+
+    if (param_matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
     {
-	QPointF dxy = (pt - positionGrabbing)/matrixWorld.m11();
-	
+	QPointF dxy = (pt - positionGrabbing)/param_matrixWorld.m11();
+
 	positionGrabbing = event->pos();
-	
+
 	moveView(dxy);
     }
-    
+
     //I update the statusbar here because if the user does a cvWaitkey(0) (like with inpaint.cpp)
     //the status bar will only be repaint when a click occurs.
     viewport()->update();
-    
+
     QWidget::mouseMoveEvent(event);
 }
 
 //up, down, dclick, move
 void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags)
 {
-    
+
     switch(event->modifiers())
     {
     case Qt::ShiftModifier:
@@ -1306,7 +1402,7 @@ void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, in
 	break;
     default:;
     }
-    
+
     switch(event->button())
     {
     case Qt::LeftButton:
@@ -1332,10 +1428,10 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
     matrixWorld_inv.map(pt.x(),pt.y(),&pfx,&pfy);
     mouseCoordinate.rx()=floor(pfx);
     mouseCoordinate.ry()=floor(pfy);
-    
+
     if (on_mouse)
 	on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
-    
+
 }
 
 QSize ViewPort::sizeHint() const
@@ -1350,75 +1446,75 @@ QSize ViewPort::sizeHint() const
 
 void ViewPort::resizeEvent ( QResizeEvent *event)
 {
-    
+
     controlImagePosition();
     //ratioX=float(image2Draw_ipl->width)/float(width());
     //ratioY=float(image2Draw_ipl->height)/float(height());
     ratioX=width()/float(image2Draw_ipl->width);
     ratioY=height()/float(image2Draw_ipl->height);
-    
-    if(keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
+
+    if(param_keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
     {
 	QSize newSize = QSize(image2Draw_ipl->width,image2Draw_ipl->height);
 	newSize.scale(event->size(),Qt::KeepAspectRatio);
-	
+
 	//imageWidth/imageHeight = newWidth/newHeight +/- epsilon
 	//ratioX = ratioY +/- epsilon
 	//||ratioX - ratioY|| = epsilon
 	if (fabs(ratioX - ratioY)*100> ratioX)//avoid infinity loop / epsilon = 1% of ratioX
 	{
 	    resize(newSize);
-	    
+
 	    //move to the middle
 	    //newSize get the delta offset to place the picture in the middle of its parent
 	    newSize= (event->size()-newSize)/2;
 	    move(newSize.width(),newSize.height());
 	}
     }
-    
+
     return QGraphicsView::resizeEvent(event);
 }
 
 void ViewPort::paintEvent(QPaintEvent* event)
 {
     QPainter myPainter(viewport());
-    myPainter.setWorldTransform(matrixWorld);
-    
+    myPainter.setWorldTransform(param_matrixWorld);
+
     draw2D(&myPainter);
-    
-    
+
+
 #if defined(OPENCV_GL)
-    if (mode == CV_MODE_OPENGL && false)//disable it for now
+    if ( mode_display == CV_MODE_OPENGL && false)//disable it for now
     {
 	setGL(this->width(),this->height());
 	draw3D();
 	unsetGL();
     }
 #endif
-    
+
     //in mode zoom/panning
-    if (matrixWorld.m11()>1)
+    if (param_matrixWorld.m11()>1)
     {
-	
+
 	myPainter.setWorldMatrixEnabled (false );
-	
-	if (matrixWorld.m11()>=threshold_zoom_img_region)
+
+	if (param_matrixWorld.m11()>=threshold_zoom_img_region)
 	    drawImgRegion(&myPainter);
-	
+
 	drawViewOverview(&myPainter);
-	
+
     }
-    
+
     //for statusbar
     drawStatusBar();
-    
+
     //for information overlay
     if (drawInfo)
     {
 	myPainter.setWorldMatrixEnabled (false );
 	drawInstructions(&myPainter);
     }
-    
+
     QGraphicsView::paintEvent(event);
 }
 
@@ -1427,7 +1523,7 @@ void ViewPort::draw2D(QPainter *painter)
     image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
     // painter->drawImage(0,0,image2Draw_qt.scaled(this->width(),this->height(),Qt::KeepAspectRatio));
     painter->drawImage(0,0,image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
-    
+
 }
 
 
@@ -1440,7 +1536,7 @@ void ViewPort::drawStatusBar()
 	mouseCoordinate.y()<image2Draw_ipl->height)
     {
 	QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
-	
+
 	if (nbChannelOriginImage==3)
 	{
 	    centralWidget->myBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
@@ -1463,93 +1559,92 @@ void ViewPort::drawStatusBar()
 
 void ViewPort::drawImgRegion(QPainter *painter)
 {
-    qreal offsetX = matrixWorld.dx()/matrixWorld.m11();
+    qreal offsetX = param_matrixWorld.dx()/param_matrixWorld.m11();
     offsetX = offsetX - floor(offsetX);
-    qreal offsetY = matrixWorld.dy()/matrixWorld.m11();
+    qreal offsetY = param_matrixWorld.dy()/param_matrixWorld.m11();
     offsetY = offsetY - floor(offsetY);
-    
+
     QSize view = size();
     QVarLengthArray<QLineF, 30> linesX;
-    for (qreal x = offsetX*matrixWorld.m11(); x < view.width(); x += matrixWorld.m11() )
-    	linesX.append(QLineF(x, 0, x, view.height()));
-    
+    for (qreal x = offsetX*param_matrixWorld.m11(); x < view.width(); x += param_matrixWorld.m11() )
+	linesX.append(QLineF(x, 0, x, view.height()));
+
     QVarLengthArray<QLineF, 30> linesY;
-    for (qreal y = offsetY*matrixWorld.m11(); y < view.height(); y += matrixWorld.m11() )
+    for (qreal y = offsetY*param_matrixWorld.m11(); y < view.height(); y += param_matrixWorld.m11() )
 	linesY.append(QLineF(0, y, view.width(), y));
-    
-    
+
+
     QFont f = painter->font();
-    f.setPointSize(threshold_zoom_img_region/3+(matrixWorld.m11()-threshold_zoom_img_region)/6);
+    f.setPixelSize(6+(param_matrixWorld.m11()-threshold_zoom_img_region)/5);
     //f.setStretch(0);
     painter->setFont(f);
     QString val;
     QRgb rgbValue;
-    
+
     QPointF point1;//sorry, I do not know how to name it
     QPointF point2;//idem
-    
-    
-    for (int j=-1;j<view.height()/matrixWorld.m11();j++)
-	for (int i=-1;i<view.width()/matrixWorld.m11();i++)
+
+
+    for (int j=-1;j<view.height()/param_matrixWorld.m11();j++)
+	for (int i=-1;i<view.width()/param_matrixWorld.m11();i++)
 	{
-	point1.setX((i+offsetX)*matrixWorld.m11());
-	point1.setY((j+offsetY)*matrixWorld.m11());
-	
+	point1.setX((i+offsetX)*param_matrixWorld.m11());
+	point1.setY((j+offsetY)*param_matrixWorld.m11());
+
 	matrixWorld_inv.map(point1.x(),point1.y(),&point2.rx(),&point2.ry());
-	
+
 	if (point2.x() >= 0 && point2.y() >= 0)
 	    rgbValue = image2Draw_qt.pixel(QPoint(point2.x(),point2.y()));
 	else
 	    rgbValue = qRgb(0,0,0);
-	
-	const int margin = 1; 
+
 	if (nbChannelOriginImage==3)
 	{
 	    val = tr("%1").arg(qRed(rgbValue));
 	    painter->setPen(QPen(Qt::red, 1));
-	    painter->drawText(QRect(point1.x(),point1.y()+margin,matrixWorld.m11(),matrixWorld.m11()/3),
+	    painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/3),
 			      Qt::AlignCenter, val);
-	    
+
 	    val = tr("%1").arg(qGreen(rgbValue));
 	    painter->setPen(QPen(Qt::green, 1));
-	    painter->drawText(QRect(point1.x(),point1.y()+matrixWorld.m11()/3+margin,matrixWorld.m11(),matrixWorld.m11()/3),
+	    painter->drawText(QRect(point1.x(),point1.y()+param_matrixWorld.m11()/3,param_matrixWorld.m11(),param_matrixWorld.m11()/3),
 			      Qt::AlignCenter, val);
-	    
+
 	    val = tr("%1").arg(qBlue(rgbValue));
 	    painter->setPen(QPen(Qt::blue, 1));
-	    painter->drawText(QRect(point1.x(),point1.y()+2*matrixWorld.m11()/3+margin,matrixWorld.m11(),matrixWorld.m11()/3),
+	    painter->drawText(QRect(point1.x(),point1.y()+2*param_matrixWorld.m11()/3,param_matrixWorld.m11(),param_matrixWorld.m11()/3),
 			      Qt::AlignCenter, val);
-	    
+
 	}
 	else
 	{
-	    
+
 	    val = tr("%1").arg(qRed(rgbValue));
-	    painter->drawText(QRect(point1.x(),point1.y(),matrixWorld.m11(),matrixWorld.m11()),
+	    painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()),
 			      Qt::AlignCenter, val);
 	}
     }
-    
+
     painter->setPen(QPen(Qt::black, 1));
     painter->drawLines(linesX.data(), linesX.size());
     painter->drawLines(linesY.data(), linesY.size());
-    
+
 }
 
 void ViewPort::drawViewOverview(QPainter *painter)
 {
     QSize viewSize = size();
     viewSize.scale ( 100, 100,Qt::KeepAspectRatio );
-    
+
     const int margin = 5;
-    
+
     //draw the image's location
     painter->setBrush(QColor(0, 0, 0, 127));
     painter->setPen(Qt::darkGreen);
     painter->drawRect(QRect(width()-viewSize.width()-margin, 0,viewSize.width(),viewSize.height()));
-    
+
     //daw the view's location inside the image
-    qreal ratioSize = 1/matrixWorld.m11();
+    qreal ratioSize = 1/param_matrixWorld.m11();
     qreal ratioWindow = (qreal)(viewSize.height())/(qreal)(size().height());
     painter->setPen(Qt::darkBlue);
     painter->drawRect(QRectF(width()-viewSize.width()-positionCorners.left()*ratioSize*ratioWindow-margin,
@@ -1563,7 +1658,7 @@ void ViewPort::drawInstructions(QPainter *painter)
 {
     QFontMetrics metrics = QFontMetrics(font());
     int border = qMax(4, metrics.leading());
-    
+
     QRect rect = metrics.boundingRect(0, 0, width() - 2*border, int(height()*0.125),
 				      Qt::AlignCenter | Qt::TextWordWrap, infoText);
     painter->setRenderHint(QPainter::TextAntialiasing);
@@ -1606,13 +1701,13 @@ void ViewPort::initGL()
 void ViewPort::icvgluPerspective(GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar)
 {
     GLdouble xmin, xmax, ymin, ymax;
-    
+
     ymax = zNear * tan(fovy * M_PI / 360.0);
     ymin = -ymax;
     xmin = ymin * aspect;
     xmax = ymax * aspect;
-    
-    
+
+
     glFrustum(xmin, xmax, ymin, ymax, zNear, zFar);
 }
 
@@ -1639,15 +1734,15 @@ void ViewPort::draw3D()
 {
     //draw scene here
     glLoadIdentity();
-    
+
     glTranslated(0.0, 0.0, -1.0);
     // QVector3D p = convert(positionMouse);
     //glTranslated(p.x(),p.y(),p.z());
-    
+
     glRotatef( 55, 1, 0, 0 );
     glRotatef( 45, 0, 1, 0 );
     glRotatef( 0, 0, 0, 1 );
-    
+
     static const int coords[6][4][3] = {
 	{ { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
 	{ { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
@@ -1656,7 +1751,7 @@ void ViewPort::draw3D()
 	{ { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
 	{ { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
     };
-    
+
     for (int i = 0; i < 6; ++i) {
 	glColor3ub( i*20, 100+i*10, i*42 );
 	glBegin(GL_QUADS);

@@ -69,6 +69,7 @@
 #include <QIODevice>
 #include <QShortcut>
 #include <QStatusBar>
+#include <QVarLengthArray>
 
 //Macro here
 #define CV_MODE_NORMAL   0
@@ -108,7 +109,9 @@ public slots:
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
     double getRatioWindow(QString name);
-	void setRatioWindow(QString name, double arg2 );
+    void setRatioWindow(QString name, double arg2 );
+    void saveWindowParameters(QString name);
+    void loadWindowParameters(QString name);
 };
 
 class CvTrackbar : public QHBoxLayout
@@ -133,6 +136,7 @@ private:
     CvTrackbarCallback callback;
     QPointer<CvWindow> parent;
     int* dataSlider;
+
 };
 
 class CvWindow : public QWidget
@@ -146,34 +150,36 @@ public:
     void updateImage(void* arr);
     void displayInfo(QString text, int delayms );
     void displayStatusBar(QString text, int delayms );
+    void readSettings();
+    void writeSettings();
     ViewPort* getView();
 
-    QString name;
-    int flags;
     QPointer<QBoxLayout> layout;
     QPointer<QStatusBar> myBar;
     QPointer<QLabel> myBar_msg;
-    //QPointer<CustomLayout> layout;
+
+    //parameters (will be save/load)
+    QString param_name;
+    int param_flags;
+
 
 protected:
-    void readSettings();
-    void writeSettings();
-
     virtual void keyPressEvent(QKeyEvent *event);
 
 private:
     QPointer<ViewPort> myview;
+    QPointer<QShortcut> shortcutZ;
+    QPointer<QShortcut> shortcutPlus;
+    QPointer<QShortcut> shortcutMinus;
+    QPointer<QShortcut> shortcutLeft;
+    QPointer<QShortcut> shortcutRight;
+    QPointer<QShortcut> shortcutUp;
+    QPointer<QShortcut> shortcutDown;
 
-    int status;//0 normal, 1 fullscreen (YV)
-    QPointer<QShortcut> shortcut_r_Zoom;
-    QPointer<QShortcut> shortcut_imgRegion;
-    QPointer<QShortcut> shortcut_Plus;
-    QPointer<QShortcut> shortcut_Minus;
-    QPointer<QShortcut> shortcut_Left;
-    QPointer<QShortcut> shortcut_Right;
-    QPointer<QShortcut> shortcut_Up;
-    QPointer<QShortcut> shortcut_Down;
+    void icvLoadTrackbars(QSettings *settings);
+    void icvSaveTrackbars(QSettings *settings);
 };
+
 
 
 
@@ -186,6 +192,7 @@ static const int tableMouseButtons[][3]={
     {CV_EVENT_MOUSEMOVE,CV_EVENT_MOUSEMOVE,CV_EVENT_MOUSEMOVE}		    	//mouse_move
 };
 
+
 class ViewPort : public QGraphicsView
 {
     Q_OBJECT
@@ -195,20 +202,24 @@ public:
     void updateImage(void* arr);
     void startDisplayInfo(QString text, int delayms);
     void setMouseCallBack(CvMouseCallback m, void* param);
+    int getRatio();
+    void setRatio(int arg);
+
+    //parameters (will be save/load)
+    QTransform param_matrixWorld;
+
+    int param_keepRatio;
 
     IplImage* image2Draw_ipl;
     QImage image2Draw_qt;
+    int mode_display;//opengl or native
     int nbChannelOriginImage;
-    void setRatio(int flags);
-	int getRatio();
-
 
 public slots:
     //reference:
     //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
     //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
-    void scaleView(qreal scaleFactor, QPointF center, bool process1stParam);
-    void imgRegion( );
+    void scaleView(qreal scaleFactor, QPointF center);
     void moveView(QPointF delta);
     void resetZoom();
     void ZoomIn();
@@ -220,20 +231,13 @@ public slots:
     void resizeEvent ( QResizeEvent * );
 
 private:
-    QPoint deltaOffset;
-    QPoint computeOffset();
     QPoint mouseCoordinate;
     QPointF positionGrabbing;
-    QRect   positionCorners;
-    QTransform matrixWorld;
+    QRect  positionCorners;
     QTransform matrixWorld_inv;
     float ratioX, ratioY;
-
     CvMouseCallback on_mouse;
     void* on_mouse_param;
-
-    int mode;
-    int keepRatio;
 
     bool isSameSize(IplImage* img1,IplImage* img2);
     QSize sizeHint() const;
@@ -270,64 +274,66 @@ private slots:
     void stopDisplayInfo();
 };
 
+
+
 //here css for trackbar
 /* from http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet */
 static const QString str_Trackbar_css = QString("")
-+										"QSlider::groove:horizontal {"
-+										"border: 1px solid #bbb;"
-+										"background: white;"
-+										"height: 10px;"
-+										"border-radius: 4px;"
-+										"}"
+					+										"QSlider::groove:horizontal {"
+					+										"border: 1px solid #bbb;"
+					+										"background: white;"
+					+										"height: 10px;"
+					+										"border-radius: 4px;"
+					+										"}"
 
-+										"QSlider::sub-page:horizontal {"
-+										"background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
-+										"stop: 0 #66e, stop: 1 #bbf);"
-+										"background: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 1,"
-+										"stop: 0 #bbf, stop: 1 #55f);"
-+										"border: 1px solid #777;"
-+										"height: 10px;"
-+										"border-radius: 4px;"
-+										"}"
+					+										"QSlider::sub-page:horizontal {"
+					+										"background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
+					+										"stop: 0 #66e, stop: 1 #bbf);"
+					+										"background: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 1,"
+					+										"stop: 0 #bbf, stop: 1 #55f);"
+					+										"border: 1px solid #777;"
+					+										"height: 10px;"
+					+										"border-radius: 4px;"
+					+										"}"
 
-+										"QSlider::add-page:horizontal {"
-+										"background: #fff;"
-+										"border: 1px solid #777;"
-+										"height: 10px;"
-+										"border-radius: 4px;"
-+										"}"
+					+										"QSlider::add-page:horizontal {"
+					+										"background: #fff;"
+					+										"border: 1px solid #777;"
+					+										"height: 10px;"
+					+										"border-radius: 4px;"
+					+										"}"
 
-+										"QSlider::handle:horizontal {"
-+										"background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
-+										"stop:0 #eee, stop:1 #ccc);"
-+										"border: 1px solid #777;"
-+										"width: 13px;"
-+										"margin-top: -2px;"
-+										"margin-bottom: -2px;"
-+										"border-radius: 4px;"
-+										"}"
+					+										"QSlider::handle:horizontal {"
+					+										"background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+					+										"stop:0 #eee, stop:1 #ccc);"
+					+										"border: 1px solid #777;"
+					+										"width: 13px;"
+					+										"margin-top: -2px;"
+					+										"margin-bottom: -2px;"
+					+										"border-radius: 4px;"
+					+										"}"
 
-+										"QSlider::handle:horizontal:hover {"
-+										"background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
-+										"stop:0 #fff, stop:1 #ddd);"
-+										"border: 1px solid #444;"
-+										"border-radius: 4px;"
-+										"}"
+					+										"QSlider::handle:horizontal:hover {"
+					+										"background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+					+										"stop:0 #fff, stop:1 #ddd);"
+					+										"border: 1px solid #444;"
+					+										"border-radius: 4px;"
+					+										"}"
 
-+										"QSlider::sub-page:horizontal:disabled {"
-+										"background: #bbb;"
-+										"border-color: #999;"
-+										"}"
+					+										"QSlider::sub-page:horizontal:disabled {"
+					+										"background: #bbb;"
+					+										"border-color: #999;"
+					+										"}"
 
-+										"QSlider::add-page:horizontal:disabled {"
-+										"background: #eee;"
-+										"border-color: #999;"
-+										"}"
+					+										"QSlider::add-page:horizontal:disabled {"
+					+										"background: #eee;"
+					+										"border-color: #999;"
+					+										"}"
 
-+										"QSlider::handle:horizontal:disabled {"
-+										"background: #eee;"
-+										"border: 1px solid #aaa;"
-+										"border-radius: 4px;"
-+										"}";
+					+										"QSlider::handle:horizontal:disabled {"
+					+										"background: #eee;"
+					+										"border: 1px solid #aaa;"
+					+										"border-radius: 4px;"
+					+										"}";
 
 #endif
