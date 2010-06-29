@@ -78,15 +78,51 @@ using std::string;
 template<typename _Tp> class CV_EXPORTS Size_;
 template<typename _Tp> class CV_EXPORTS Point_;
 template<typename _Tp> class CV_EXPORTS Rect_;
-
+template<typename _Tp, int cn> class CV_EXPORTS Vec;
+template<typename _Tp, int m, int n> class CV_EXPORTS Matx;
+    
 typedef std::string String;
 typedef std::basic_string<wchar_t> WString;
 
+class Mat;
+class MatND;
+template<typename M> class CV_EXPORTS MatExpr_Base_;
+typedef MatExpr_Base_<Mat> MatExpr_Base;
+template<typename E, typename M> class MatExpr_;
+template<typename A1, typename M, typename Op> class MatExpr_Op1_;
+template<typename A1, typename A2, typename M, typename Op> class MatExpr_Op2_;
+template<typename A1, typename A2, typename A3, typename M, typename Op> class MatExpr_Op3_;
+template<typename A1, typename A2, typename A3, typename A4,
+typename M, typename Op> class MatExpr_Op4_;
+template<typename A1, typename A2, typename A3, typename A4,
+typename A5, typename M, typename Op> class MatExpr_Op5_;
+template<typename M> class CV_EXPORTS MatOp_DivRS_;
+template<typename M> class CV_EXPORTS MatOp_Inv_;
+template<typename M> class CV_EXPORTS MatOp_MulDiv_;
+template<typename M> class CV_EXPORTS MatOp_Repeat_;
+template<typename M> class CV_EXPORTS MatOp_Set_;
+template<typename M> class CV_EXPORTS MatOp_Scale_;
+template<typename M> class CV_EXPORTS MatOp_T_;
+
+template<typename _Tp> class CV_EXPORTS MatIterator_;
+template<typename _Tp> class CV_EXPORTS MatConstIterator_;
+template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
+    
 CV_EXPORTS string fromUtf16(const WString& str);
 CV_EXPORTS WString toUtf16(const string& str);
 
 CV_EXPORTS string format( const char* fmt, ... );
 
+    
+// matrix decomposition types
+enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
+enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32};
+enum { CMP_EQ=0, CMP_GT=1, CMP_GE=2, CMP_LT=3, CMP_LE=4, CMP_NE=5 };
+enum { GEMM_1_T=1, GEMM_2_T=2, GEMM_3_T=4 };
+enum { DFT_INVERSE=1, DFT_SCALE=2, DFT_ROWS=4, DFT_COMPLEX_OUTPUT=16, DFT_REAL_OUTPUT=32,
+    DCT_INVERSE = DFT_INVERSE, DCT_ROWS=DFT_ROWS };
+
+    
 /*!
  The standard OpenCV exception class.
  Instances of the class are thrown by various functions and methods in the case of critical errors.
@@ -404,6 +440,7 @@ public:
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7); //!< 8-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8); //!< 9-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9); //!< 10-element vector constructor
+    explicit Vec(const _Tp* values);
 
     Vec(const Vec<_Tp, cn>& v);
     static Vec all(_Tp alpha);
@@ -421,10 +458,14 @@ public:
     template<typename T2> operator Vec<T2, cn>() const;
     //! conversion to 4-element CvScalar.
     operator CvScalar() const;
+    
+    Matx<_Tp, 1, cn> t() const;
 
     /*! element access */
     const _Tp& operator [](int i) const;
     _Tp& operator[](int i);
+    const _Tp& operator ()(int i) const;
+    _Tp& operator ()(int i);
 
     _Tp val[cn]; //< vector elements
 };
@@ -461,6 +502,158 @@ typedef Vec<double, 4> Vec4d;
 typedef Vec<double, 6> Vec6d;
 
 
+////////////////////////////// Small Matrix ///////////////////////////
+    
+/*!
+ A short numerical vector.
+ 
+ This template class represents short numerical vectors (of 1, 2, 3, 4 ... elements)
+ on which you can perform basic arithmetical operations, access individual elements using [] operator etc.
+ The vectors are allocated on stack, as opposite to std::valarray, std::vector, cv::Mat etc.,
+ which elements are dynamically allocated in the heap.
+ 
+ The template takes 2 parameters:
+ -# _Tp element type
+ -# cn the number of elements
+ 
+ In addition to the universal notation like Vec<float, 3>, you can use shorter aliases
+ for the most popular specialized variants of Vec, e.g. Vec3f ~ Vec<float, 3>. 
+ */
+    
+struct CV_EXPORTS Matx_AddOp {};
+struct CV_EXPORTS Matx_SubOp {};
+struct CV_EXPORTS Matx_ScaleOp {};
+struct CV_EXPORTS Matx_MulOp {};
+struct CV_EXPORTS Matx_MatMulOp {};
+struct CV_EXPORTS Matx_TOp {};
+    
+template<typename _Tp, int m, int n> class CV_EXPORTS Matx : public Vec<_Tp, m*n>
+{
+public:
+    typedef _Tp value_type;
+    typedef Vec<_Tp, m*n> base_type;
+    typedef Vec<_Tp, MIN(m, n)> diag_type;
+    typedef Matx<_Tp, m, n> mat_type;
+    enum { depth = DataDepth<_Tp>::value, rows = m, cols = n, channels = rows*cols,
+           type = CV_MAKETYPE(depth, channels) };
+    
+    //! default constructor
+    Matx();
+    
+    Matx(_Tp v0); //!< 1x1 matrix
+    Matx(_Tp v0, _Tp v1); //!< 1x2 or 2x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2); //!< 1x3 or 3x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3); //!< 1x4, 2x2 or 4x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4); //!< 1x5 or 5x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5); //!< 1x6, 2x3, 3x2 or 6x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6); //!< 1x7 or 7x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7); //!< 1x8, 2x4, 4x2 or 8x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8); //!< 1x9, 3x3 or 9x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9); //!< 1x10, 2x5 or 5x2 or 10x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
+         _Tp v8, _Tp v9, _Tp v10, _Tp v11); //!< 1x12, 2x6, 3x4, 4x3, 6x2 or 12x1 matrix
+    Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
+         _Tp v8, _Tp v9, _Tp v10, _Tp v11,
+         _Tp v12, _Tp v13, _Tp v14, _Tp v15); //!< 1x16, 4x4 or 16x1 matrix
+    explicit Matx(const _Tp* vals); //!< initialize from a plain array
+    
+    Matx(const base_type& v);
+    static Matx all(_Tp alpha);
+    static Matx zeros();
+    static Matx ones();
+    static Matx eye();
+    static Matx diag(const Vec<_Tp, MIN(m,n)>& d);
+    static Matx randu(_Tp a, _Tp b);
+    static Matx randn(_Tp m, _Tp sigma);
+    
+    //! convertion to another data type
+    template<typename T2> operator Matx<T2, m, n>() const;
+    
+    //! change the matrix shape
+    template<int m1, int n1> Matx<_Tp, m1, n1> reshape() const;
+    
+    //! extract part of the matrix
+    template<int m1, int n1> Matx<_Tp, m1, n1> minor(int i, int j) const;
+    
+    //! extract the matrix row
+    Matx<_Tp, 1, n> row(int i) const;
+    
+    //! extract the matrix column
+    Vec<_Tp, m> col(int i) const;
+    
+    //! extract the matrix diagonal
+    Vec<_Tp, MIN(m,n)> diag() const;
+    
+    //! transpose the matrix
+    Matx<_Tp, n, m> t() const;
+    
+    //! invert matrix the matrix
+    Matx<_Tp, n, m> inv(int method=DECOMP_LU) const;
+    
+    //! solve linear system
+    template<int l> Matx<_Tp, n, l> solve(const Matx<_Tp, m, l>& rhs, int flags=DECOMP_LU) const;
+    Vec<_Tp, n> solve(const Vec<_Tp, m>& rhs, int method) const;
+    
+    //! multiply two matrices element-wise
+    Matx<_Tp, m, n> mul(const Matx<_Tp, m, n>& a) const;
+    
+    //! element access
+    const _Tp& operator ()(int i, int j) const;
+    _Tp& operator ()(int i, int j);
+    
+    //! 1D element access
+    const _Tp& operator ()(int i) const;
+    _Tp& operator ()(int i);
+    
+    Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_AddOp);
+    Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_SubOp);
+    template<typename _T2> Matx(const Matx<_Tp, m, n>& a, _T2 alpha, Matx_ScaleOp);
+    Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_MulOp);
+    template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
+    Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
+};
+
+    
+typedef Matx<float, 1, 2> Matx12f;
+typedef Matx<double, 1, 2> Matx12d;
+typedef Matx<float, 1, 3> Matx13f;
+typedef Matx<double, 1, 3> Matx13d;
+typedef Matx<float, 1, 4> Matx14f;
+typedef Matx<double, 1, 4> Matx14d;
+typedef Matx<float, 1, 6> Matx16f;
+typedef Matx<double, 1, 6> Matx16d;
+    
+typedef Matx<float, 2, 1> Matx21f;
+typedef Matx<double, 2, 1> Matx21d;
+typedef Matx<float, 3, 1> Matx31f;
+typedef Matx<double, 3, 1> Matx31d;
+typedef Matx<float, 4, 1> Matx41f;
+typedef Matx<double, 4, 1> Matx41d;
+typedef Matx<float, 6, 1> Matx61f;
+typedef Matx<double, 6, 1> Matx61d;
+
+typedef Matx<float, 2, 2> Matx22f;
+typedef Matx<double, 2, 2> Matx22d;
+typedef Matx<float, 2, 3> Matx23f;
+typedef Matx<double, 2, 3> Matx23d;
+typedef Matx<float, 3, 2> Matx32f;
+typedef Matx<double, 3, 2> Matx32d;
+    
+typedef Matx<float, 3, 3> Matx33f;
+typedef Matx<double, 3, 3> Matx33d;
+    
+typedef Matx<float, 3, 4> Matx34f;
+typedef Matx<double, 3, 4> Matx34d;
+typedef Matx<float, 4, 3> Matx43f;
+typedef Matx<double, 4, 3> Matx43d;
+    
+typedef Matx<float, 4, 4> Matx44f;
+typedef Matx<double, 4, 4> Matx44d;
+typedef Matx<float, 6, 6> Matx66f;
+typedef Matx<double, 6, 6> Matx66d;    
+    
 //////////////////////////////// Complex //////////////////////////////
 
 /*!
@@ -767,7 +960,7 @@ public:
    is that each of them is basically a tuple of numbers of the same type. Each "scalar" can be represented
    by the depth id (CV_8U ... CV_64F) and the number of channels.
    OpenCV matrices, 2D or nD, dense or sparse, can store "scalars",
-   as long as the number of channels does not exceed CV_MAX_CN (currently set to 32).
+   as long as the number of channels does not exceed CV_CN_MAX.
 */
 template<typename _Tp> class DataType
 {
@@ -1046,44 +1239,12 @@ protected:
 
 //////////////////////////////// Mat ////////////////////////////////
 
-class Mat;
-class MatND;
-template<typename M> class CV_EXPORTS MatExpr_Base_;
-typedef MatExpr_Base_<Mat> MatExpr_Base;
-template<typename E, typename M> class MatExpr_;
-template<typename A1, typename M, typename Op> class MatExpr_Op1_;
-template<typename A1, typename A2, typename M, typename Op> class MatExpr_Op2_;
-template<typename A1, typename A2, typename A3, typename M, typename Op> class MatExpr_Op3_;
-template<typename A1, typename A2, typename A3, typename A4,
-        typename M, typename Op> class MatExpr_Op4_;
-template<typename A1, typename A2, typename A3, typename A4,
-        typename A5, typename M, typename Op> class MatExpr_Op5_;
-template<typename M> class CV_EXPORTS MatOp_DivRS_;
-template<typename M> class CV_EXPORTS MatOp_Inv_;
-template<typename M> class CV_EXPORTS MatOp_MulDiv_;
-template<typename M> class CV_EXPORTS MatOp_Repeat_;
-template<typename M> class CV_EXPORTS MatOp_Set_;
-template<typename M> class CV_EXPORTS MatOp_Scale_;
-template<typename M> class CV_EXPORTS MatOp_T_;
-
 typedef MatExpr_<MatExpr_Op4_<Size, int, Scalar,
     int, Mat, MatOp_Set_<Mat> >, Mat> MatExpr_Initializer;
-
-template<typename _Tp> class CV_EXPORTS MatIterator_;
-template<typename _Tp> class CV_EXPORTS MatConstIterator_;
-template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
-
+    
 enum { MAGIC_MASK=0xFFFF0000, TYPE_MASK=0x00000FFF, DEPTH_MASK=7 };
 
 static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
-
-// matrix decomposition types
-enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
-enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32};
-enum { CMP_EQ=0, CMP_GT=1, CMP_GE=2, CMP_LT=3, CMP_LE=4, CMP_NE=5 };
-enum { GEMM_1_T=1, GEMM_2_T=2, GEMM_3_T=4 };
-enum { DFT_INVERSE=1, DFT_SCALE=2, DFT_ROWS=4, DFT_COMPLEX_OUTPUT=16, DFT_REAL_OUTPUT=32,
-    DCT_INVERSE = DFT_INVERSE, DCT_ROWS=DFT_ROWS };
 
 /*!
    The matrix class.
@@ -1322,8 +1483,12 @@ public:
     Mat(const IplImage* img, bool copyData=false);
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit Mat(const vector<_Tp>& vec, bool copyData=false);
-    //! builds matrix from cv::Vec; the data is copied
-    template<typename _Tp, int n> explicit Mat(const Vec<_Tp, n>& vec);
+    //! builds matrix from cv::Vec; the data is copied by default
+    template<typename _Tp, int n> explicit Mat(const Vec<_Tp, n>& vec,
+                                               bool copyData=true);
+    //! builds matrix from cv::Matx; the data is copied by default
+    template<typename _Tp, int m, int n> explicit Mat(const Matx<_Tp, m, n>& mtx,
+                                                      bool copyData=true);
     //! builds matrix from a 2D point
     template<typename _Tp> explicit Mat(const Point_<_Tp>& pt);
     //! builds matrix from a 3D point
@@ -2116,7 +2281,8 @@ public:
     Mat_(const MatExpr_Base& expr);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
     explicit Mat_(const vector<_Tp>& vec, bool copyData=false);
-    template<int n> explicit Mat_(const Vec<_Tp, n>& vec);
+    template<int n> explicit Mat_(const Vec<_Tp, n>& vec, bool copyData=true);
+    template<int m, int n> explicit Mat_(const Matx<_Tp, m, n>& mtx, bool copyData=true);
     explicit Mat_(const Point_<_Tp>& pt);
     explicit Mat_(const Point3_<_Tp>& pt);
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
@@ -2359,20 +2525,29 @@ public:
     void assignTo(Mat& m, int type=-1) const;
 };
 
-#if 0
-template<typename _Tp> class VectorCommaInitializer_
+
+template<typename _Tp, int n> class CV_EXPORTS VecCommaInitializer
 {
 public:
-    VectorCommaInitializer_(vector<_Tp>* _vec);
-    template<typename T2> VectorCommaInitializer_<_Tp>& operator , (T2 val);
-    operator vector<_Tp>() const;
-    vector<_Tp> operator *() const;
+    VecCommaInitializer(Vec<_Tp, n>* _vec);
+    template<typename T2> VecCommaInitializer<_Tp, n>& operator , (T2 val);
+    Vec<_Tp, n> operator *() const;
 
-    vector<_Tp>* vec;
+    Vec<_Tp, n>* vec;
     int idx;
 };
-#endif
-
+    
+    
+template<typename _Tp, int m, int n> class CV_EXPORTS MatxCommaInitializer :
+    public VecCommaInitializer<_Tp, m*n>
+{
+public:
+    MatxCommaInitializer(Matx<_Tp, m, n>* _mtx);
+    template<typename T2> MatxCommaInitializer<_Tp, m, n>& operator , (T2 val);
+    Matx<_Tp, m, n> operator *() const;
+};
+    
+    
 /*!
  Automatically Allocated Buffer Class
  
@@ -3917,7 +4092,7 @@ public:
     SeqIterator<_Tp> end() const;
     //! returns the number of elements in the sequence
     size_t size() const;
-    //! returns the type of sequence elements (CV_8UC1 ... CV_64FC(CV_MAX_CN) ...)
+    //! returns the type of sequence elements (CV_8UC1 ... CV_64FC(CV_CN_MAX) ...)
     int type() const;
     //! returns the depth of sequence elements (CV_8U ... CV_64F)
     int depth() const;

@@ -2344,7 +2344,7 @@ SparseMat::Hdr::Hdr( int _dims, const int* _sizes, int _type )
 
     dims = _dims;
     valueOffset = (int)alignSize(sizeof(SparseMat::Node) +
-        sizeof(int)*(dims - CV_MAX_DIM), CV_ELEM_SIZE1(_type));
+        sizeof(int)*std::max(dims - CV_MAX_DIM, 0), CV_ELEM_SIZE1(_type));
     nodeSize = alignSize(valueOffset +
         CV_ELEM_SIZE(_type), (int)sizeof(size_t));
    

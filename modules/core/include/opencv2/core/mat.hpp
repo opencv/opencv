@@ -231,13 +231,39 @@ template<typename _Tp> inline Mat::Mat(const vector<_Tp>& vec, bool copyData)
 }
     
     
-template<typename _Tp, int n> inline Mat::Mat(const Vec<_Tp, n>& vec)
+template<typename _Tp, int n> inline Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG),
     rows(0), cols(0), step(0), data(0), refcount(0),
     datastart(0), dataend(0)
 {
-    create(n, 1, DataType<_Tp>::type);
-    memcpy(data, &vec[0], n*sizeof(_Tp));
+    if( !copyData )
+    {
+        rows = n;
+        cols = 1;
+        step = sizeof(_Tp);
+        data = datastart = (uchar*)vec.val;
+        dataend = datastart + rows*step;
+    }
+    else
+        Mat(n, 1, DataType<_Tp>::type, vec.val).copyTo(*this);
+}
+
+
+template<typename _Tp, int m, int n> inline Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
+    : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG),
+    rows(0), cols(0), step(0), data(0), refcount(0),
+    datastart(0), dataend(0)
+{
+    if( !copyData )
+    {
+        rows = m;
+        cols = n;
+        step = sizeof(_Tp);
+        data = datastart = (uchar*)M.val;
+        dataend = datastart + rows*step;
+    }
+    else
+        Mat(m, n, DataType<_Tp>::type, (uchar*)M.val).copyTo(*this);    
 }
 
     
@@ -619,13 +645,17 @@ template<typename _Tp> inline Mat_<_Tp>::Mat_(const Mat_& m, const Range& rowRan
 template<typename _Tp> inline Mat_<_Tp>::Mat_(const Mat_& m, const Rect& roi)
     : Mat(m, roi) {}
 
-template<typename _Tp> template<int n> inline Mat_<_Tp>::Mat_(const Vec<_Tp, n>& vec)
-    : Mat(n, 1, DataType<_Tp>::type)
+template<typename _Tp> template<int n> inline
+    Mat_<_Tp>::Mat_(const Vec<_Tp, n>& vec, bool copyData)
+    : Mat(vec, copyData)
 {
-    _Tp* d = (_Tp*)data;
-    for( int i = 0; i < n; i++ )
-        d[i] = vec[i];
 }
+
+template<typename _Tp> template<int m, int n> inline
+    Mat_<_Tp>::Mat_(const Matx<_Tp,m,n>& M, bool copyData)
+    : Mat(M, copyData)
+{
+}    
     
 template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point_<_Tp>& pt)
     : Mat(2, 1, DataType<_Tp>::type)

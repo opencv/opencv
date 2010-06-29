@@ -57,7 +57,162 @@
 
 namespace cv
 {
+ 
+/****************************************************************************************\
+*                     LU & Cholesky implementation for small matrices                    *
+\****************************************************************************************/
+    
+template<typename _Tp> static inline int LUImpl(_Tp* A, int m, _Tp* b, int n)
+{
+    int i, j, k, p = 1;
+    
+    for( i = 0; i < m; i++ )
+    {
+        k = i;
+        
+        for( j = i+1; j < m; j++ )
+            if( std::abs(A[j*m + i]) > std::abs(A[k*m + i]) )
+                k = j;
+        
+        if( std::abs(A[k*m + i]) < std::numeric_limits<_Tp>::epsilon() )
+            return 0;
+        
+        if( k != i )
+        {
+            for( j = i; j < m; j++ )
+                std::swap(A[i*m + j], A[k*m + j]);
+            if( b )
+                for( j = 0; j < n; j++ )
+                    std::swap(b[i*n + j], b[k*n + j]);
+            p = -p;
+        }
+        
+        _Tp d = -1/A[i*m + i];
+        
+        for( j = i+1; j < m; j++ )
+        {
+            _Tp alpha = A[j*m + i]*d;
+            
+            for( k = i+1; k < m; k++ )
+                A[j*m + k] += alpha*A[i*m + k];
+            
+            if( b )
+                for( k = 0; k < n; k++ )
+                    b[j*n + k] += alpha*b[i*n + k];
+        }
+        
+        A[i*m + i] = -d;
+    }
+    
+    if( b )
+    {
+        for( i = m-1; i >= 0; i-- )
+            for( j = 0; j < n; j++ )
+            {
+                _Tp s = b[i*n + j];
+                for( k = i+1; k < m; k++ )
+                    s -= A[i*m + k]*b[k*n + j];
+                b[i*n + j] = s*A[i*m + i];
+            }
+    }
+    
+    return p;
+}
 
+    
+int LU(float* A, int m, float* b, int n)
+{
+    return LUImpl(A, m, b, n);
+}
+
+    
+int LU(double* A, int m, double* b, int n)
+{
+    return LUImpl(A, m, b, n);
+}
+   
+
+template<typename _Tp> static inline bool CholImpl(_Tp* A, int m, _Tp* b, int n)
+{
+    _Tp* L = A;
+    int i, j, k;
+    double s;
+    
+    for( i = 0; i < m; i++ )
+    {
+        for( j = 0; j < i; j++ )
+        {
+            s = A[i*m + j];
+            for( k = 0; k < j; k++ )
+                s -= L[i*m + k]*L[j*m + k];
+            L[i*m + j] = (_Tp)(s*L[j*m + j]);
+        }
+        s = A[i*m + i];
+        for( k = 0; k < j; k++ )
+        {
+            double t = L[i*m + k];
+            s -= t*t;
+        }
+        if( s < std::numeric_limits<_Tp>::epsilon() )
+            return 0;
+        L[i*m + i] = (_Tp)(1./std::sqrt(s));
+    }
+    
+    if( !b )
+        return false;
+    
+    // LLt x = b
+    // 1: L y = b
+    // 2. Lt x = y
+    
+    /*
+     [ L00             ]  y0   b0
+     [ L10 L11         ]  y1 = b1
+     [ L20 L21 L22     ]  y2   b2
+     [ L30 L31 L32 L33 ]  y3   b3
+     
+     [ L00 L10 L20 L30 ]  x0   y0
+     [     L11 L21 L31 ]  x1 = y1
+     [         L22 L32 ]  x2   y2
+     [             L33 ]  x3   y3
+    */
+    
+    for( i = 0; i < m; i++ )
+    {
+        for( j = 0; j < n; j++ )
+        {
+            s = b[i*n + j];
+            for( k = 0; k < i; k++ )
+                s -= L[i*m + k]*b[k*n + j];
+            b[i*n + j] = (_Tp)(s*L[i*m + i]);
+        }
+    }
+    
+    for( i = m-1; i >= 0; i-- )
+    {
+        for( j = 0; j < n; j++ )
+        {
+            s = b[i*n + j];
+            for( k = m-1; k > i; k-- )
+                s -= L[k*m + i]*b[k*n + j];
+            b[i*n + j] = (_Tp)(s*L[i*m + i]);
+        }
+    }
+    
+    return true;
+}
+    
+    
+bool Cholesky(float* A, int m, float* b, int n)
+{
+    return CholImpl(A, m, b, n);
+}
+    
+bool Cholesky(double* A, int m, double* b, int n)
+{
+    return CholImpl(A, m, b, n);
+}
+    
 /****************************************************************************************\
 *                                 Determinant of the matrix                              *
 \****************************************************************************************/

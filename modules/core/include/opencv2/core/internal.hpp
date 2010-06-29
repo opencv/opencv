@@ -663,7 +663,7 @@ CvFuncTable;
 
 typedef struct CvBigFuncTable
 {
-    void*   fn_2d[CV_DEPTH_MAX*CV_CN_MAX];
+    void*   fn_2d[CV_DEPTH_MAX*4];
 }
 CvBigFuncTable;
 

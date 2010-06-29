@@ -518,7 +518,7 @@ IplConvKernelFP;
 *                                  Matrix type (CvMat)                                   *
 \****************************************************************************************/
 
-#define CV_CN_MAX     64
+#define CV_CN_MAX     1024
 #define CV_CN_SHIFT   3
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
 
