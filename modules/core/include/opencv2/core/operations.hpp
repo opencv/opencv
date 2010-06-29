@@ -734,7 +734,7 @@ Matx<_Tp, m1, n1> Matx<_Tp, m, n>::reshape() const
 
 template<typename _Tp, int m, int n>
 template<int m1, int n1> inline
-Matx<_Tp, m1, n1> Matx<_Tp, m, n>::minor(int i, int j) const
+Matx<_Tp, m1, n1> Matx<_Tp, m, n>::get_minor(int i, int j) const
 {
     CV_DbgAssert(0 <= i && i+m1 <= m && 0 <= j && j+n1 <= n);
     Matx<_Tp, m1, n1> s;

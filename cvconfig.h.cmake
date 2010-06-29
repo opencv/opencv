@@ -156,3 +156,6 @@
 
 /* Intel Threading Building Blocks */
 #cmakedefine  HAVE_TBB
+
+/* Eigen2 Matrix & Linear Algebra Library */
+#cmakedefine  HAVE_EIGEN2

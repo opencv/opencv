@@ -566,7 +566,7 @@ public:
     static Matx eye();
     static Matx diag(const Vec<_Tp, MIN(m,n)>& d);
     static Matx randu(_Tp a, _Tp b);
-    static Matx randn(_Tp m, _Tp sigma);
+    static Matx randn(_Tp a, _Tp b);
     
     //! convertion to another data type
     template<typename T2> operator Matx<T2, m, n>() const;
@@ -575,7 +575,7 @@ public:
     template<int m1, int n1> Matx<_Tp, m1, n1> reshape() const;
     
     //! extract part of the matrix
-    template<int m1, int n1> Matx<_Tp, m1, n1> minor(int i, int j) const;
+    template<int m1, int n1> Matx<_Tp, m1, n1> get_minor(int i, int j) const;
     
     //! extract the matrix row
     Matx<_Tp, 1, n> row(int i) const;

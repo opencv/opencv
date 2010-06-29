@@ -280,6 +280,7 @@ if(APPLE)
 endif()
 
 set(WITH_TBB OFF CACHE BOOL "Include TBB support")
+set(WITH_EIGEN2 OFF CACHE BOOL "Include Eigen2 support")
 
 # ===================================================
 # Macros that checks if module have been installed.
@@ -347,7 +348,7 @@ if(UNIX)
     
     if(WITH_PVAPI)
       find_path(PVAPI_INCLUDE_PATH "PvApi.h"
-                PATHS "/usr/include" "/usr/local/include"
+                PATHS "/usr/local/include" "/usr/include"
                 DOC "The path to PvAPI header")
       if(PVAPI_INCLUDE_PATH)
         set(HAVE_PVAPI 1)
@@ -557,8 +558,8 @@ if (WITH_TBB)
     endif()        
     if (APPLE)
         set(TBB_DEFAULT_INCLUDE_DIRS
-          "/usr/include"
-          "/usr/local/include")  
+          "/usr/local/include"
+          "/usr/include")  
     endif() 
     if (WIN32)
         set(TBB_DEFAULT_INCLUDE_DIRS
@@ -621,6 +622,19 @@ if (WITH_TBB)
                 include_directories("${TBB_INCLUDE_DIR}")
             endif()
         endif()
+    endif()
+endif()
+
+
+############################## Eigen2 ##############################
+
+if(WITH_EIGEN2)
+	find_path(EIGEN2_INCLUDE_PATH "Eigen/Core"
+            PATHS "/usr/local/include/eigen2" "/opt/include/eigen2" "/usr/include/eigen2"
+            DOC "The path to Eigen2 headers")
+    if(EIGEN2_INCLUDE_PATH)
+        include_directories(${EIGEN2_INCLUDE_PATH})
+        set(HAVE_EIGEN2 1)
     endif()
 endif()
 
@@ -1249,6 +1263,12 @@ if(HAVE_TBB)
 message(STATUS "    Use TBB:                   YES")
 else()
 message(STATUS "    Use TBB:                   NO")
+endif()
+
+if(HAVE_EIGEN2)
+message(STATUS "    Use Eigen2:                YES")
+else()
+message(STATUS "    Use Eigen2:                NO")
 endif()
 
 message(STATUS "")
