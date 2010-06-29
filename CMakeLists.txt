@@ -280,7 +280,7 @@ if(APPLE)
 endif()
 
 set(WITH_TBB OFF CACHE BOOL "Include TBB support")
-set(WITH_EIGEN2 OFF CACHE BOOL "Include Eigen2 support")
+set(WITH_EIGEN2 ON CACHE BOOL "Include Eigen2 support")
 
 # ===================================================
 # Macros that checks if module have been installed.
