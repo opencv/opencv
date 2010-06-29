@@ -40,12 +40,16 @@
 //
 //M*/
 
-#ifndef _CXCORE_INTERNAL_H_
-#define _CXCORE_INTERNAL_H_
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
 #if defined _MSC_VER && _MSC_VER >= 1200
     // disable warnings related to inline functions
     #pragma warning( disable: 4251 4711 4710 4514 )
+#endif
+
+#ifdef HAVE_CONFIG_H 
+#include <cvconfig.h> 
 #endif
 
 #include "opencv2/core/core.hpp"

@@ -38,11 +38,15 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_LEGACY_PRECOMP_H__
-#define __OPENCV_LEGACY_PRECOMP_H__
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
 #if _MSC_VER >= 1200
-#pragma warning( disable: 4251 4710 4711 4514 4996 ) /* function AAA selected for automatic inline expansion */
+#pragma warning( disable: 4251 4710 4711 4514 4996 )
+#endif
+
+#ifdef HAVE_CONFIG_H 
+#include <cvconfig.h> 
 #endif
 
 #include "opencv2/legacy/legacy.hpp"
