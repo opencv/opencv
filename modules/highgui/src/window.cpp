@@ -160,16 +160,6 @@ int waitKey(int delay)
     return cvWaitKey(delay);
 }
 
-void saveWindowParameters(const string& windowName)
-{
-	cvSaveWindowParameters(windowName.c_str());
-}
-
-void loadWindowParameters(const string& windowName)
-{
-	cvLoadWindowParameters(windowName.c_str());
-}
-
 int createTrackbar(const string& trackbarName, const string& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)
@@ -218,6 +208,17 @@ void stopLoop()
 {
 	cvStopLoop();
 }
+
+void saveWindowParameters(const string& windowName)
+{
+	cvSaveWindowParameters(windowName.c_str());
+}
+
+void loadWindowParameters(const string& windowName)
+{
+	cvLoadWindowParameters(windowName.c_str());
+}
+
 #endif
 
 }
