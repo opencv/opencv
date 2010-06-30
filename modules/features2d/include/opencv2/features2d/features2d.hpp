@@ -1872,6 +1872,9 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     }
 }
 
+template<>
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                                             const Mat& mask, vector<int>& matches ) const;
 
 CV_EXPORTS DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType );
 

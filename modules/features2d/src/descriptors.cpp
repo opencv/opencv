@@ -41,6 +41,10 @@
 
 #include "precomp.hpp"
 
+#ifdef HAVE_EIGEN2
+#include <Eigen/Array>
+#endif
+
 //#define _KDTREE
 
 using namespace std;
@@ -264,6 +268,47 @@ DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType 
     }
 
     return dm;
+}
+
+
+template<>
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
+                                             const Mat& mask, vector<int>& matches ) const
+{
+    matches.clear();
+    matches.reserve( descriptors_1.rows );
+#if (defined _DEBUG || !defined HAVE_EIGEN2)
+    Mat norms;
+    cv::reduce( descriptors_2.mul( descriptors_2 ), norms, 1, 0);
+    norms = norms.t();
+    Mat desc_2t = descriptors_2.t();
+    for( int i=0;i<descriptors_1.rows;i++ )
+    {
+        Mat distances = (-2)*descriptors_1.row(i)*desc_2t;
+        distances += norms;
+        Point minLoc;
+        minMaxLoc ( distances, 0, 0, &minLoc );
+        matches.push_back( minLoc.x );
+    }
+
+#else
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc1;
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc2;
+    cv2eigen( descriptors_1, desc1);
+    cv2eigen( descriptors_2, desc2 );
+
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> norms = desc2.rowwise().squaredNorm().transpose();
+    for( int i=0;i<descriptors_1.rows;i++ )
+    {
+        //TODO: it doesn't work in Debug due to assert in lazyAssign
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> distances = (-2)*desc1.row(i)*desc2.transpose();
+
+        distances += norms;
+        int idx;
+        distances.minCoeff(&idx);
+        matches.push_back( idx );
+    }
+#endif
 }
 
 
