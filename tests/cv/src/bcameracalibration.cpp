@@ -330,7 +330,7 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     //}
 }
 
-CV_CameraCalibrationBadArgTest camera_calibration_bad_arg_test;
+//CV_CameraCalibrationBadArgTest camera_calibration_bad_arg_test;
 
 
 class CV_Rodrigues2BadArgTest : public CvBadArgTest
