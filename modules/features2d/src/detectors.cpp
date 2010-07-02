@@ -55,7 +55,7 @@ struct MaskPredicate
     MaskPredicate& operator=(const MaskPredicate&) {}
     bool operator() (const KeyPoint& key_pt) const
     {
-      return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) != 0;
+      return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) == 0;
     }
 
     const Mat& mask;
