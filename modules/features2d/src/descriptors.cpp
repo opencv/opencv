@@ -277,6 +277,7 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const M
 {
     matches.clear();
     matches.reserve( descriptors_1.rows );
+//TODO: remove _DEBUG if bag 416 fixed
 #if (defined _DEBUG || !defined HAVE_EIGEN2)
     Mat norms;
     cv::reduce( descriptors_2.mul( descriptors_2 ), norms, 1, 0);
@@ -292,20 +293,25 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const M
     }
 
 #else
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc1;
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc1t;
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc2;
-    cv2eigen( descriptors_1, desc1);
+    cv2eigen( descriptors_1.t(), desc1t);
     cv2eigen( descriptors_2, desc2 );
 
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> norms = desc2.rowwise().squaredNorm().transpose();
+    //Eigen::Matrix<float, Eigen::Dynamic, 1> norms = desc2.rowwise().squaredNorm();
+    Eigen::Matrix<float, Eigen::Dynamic, 1> norms = desc2.rowwise().squaredNorm() / 2;
     for( int i=0;i<descriptors_1.rows;i++ )
     {
-        //TODO: it doesn't work in Debug due to assert in lazyAssign
-        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> distances = (-2)*desc1.row(i)*desc2.transpose();
+        //Eigen::Matrix<float, Eigen::Dynamic, 1> distances = (-2) * (desc2*desc1t.col(i));
+        Eigen::Matrix<float, Eigen::Dynamic, 1> distances = desc2*desc1t.col(i);
 
-        distances += norms;
+        //distances += norms;
+        distances -= norms;
+
         int idx;
-        distances.minCoeff(&idx);
+
+        //distances.minCoeff(&idx);
+        distances.maxCoeff(&idx);
         matches.push_back( idx );
     }
 #endif
