@@ -518,7 +518,7 @@ IplConvKernelFP;
 *                                  Matrix type (CvMat)                                   *
 \****************************************************************************************/
 
-#define CV_CN_MAX     1024
+#define CV_CN_MAX     512
 #define CV_CN_SHIFT   3
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
 
@@ -1428,7 +1428,7 @@ typedef CvContour CvPoint2DSeq;
 #define CV_IS_SET(set) \
     ((set) != NULL && (((CvSeq*)(set))->flags & CV_MAGIC_MASK) == CV_SET_MAGIC_VAL)
 
-#define CV_SEQ_ELTYPE_BITS           9
+#define CV_SEQ_ELTYPE_BITS           12
 #define CV_SEQ_ELTYPE_MASK           ((1 << CV_SEQ_ELTYPE_BITS) - 1)
 
 #define CV_SEQ_ELTYPE_POINT          CV_32SC2  /* (x,y) */
@@ -1443,7 +1443,7 @@ typedef CvContour CvPoint2DSeq;
 #define CV_SEQ_ELTYPE_CONNECTED_COMP 0  /* connected component  */
 #define CV_SEQ_ELTYPE_POINT3D        CV_32FC3  /* (x,y,z)  */
 
-#define CV_SEQ_KIND_BITS        3
+#define CV_SEQ_KIND_BITS        2
 #define CV_SEQ_KIND_MASK        (((1 << CV_SEQ_KIND_BITS) - 1)<<CV_SEQ_ELTYPE_BITS)
 
 /* types of sequences */
@@ -1452,16 +1452,16 @@ typedef CvContour CvPoint2DSeq;
 #define CV_SEQ_KIND_BIN_TREE    (2 << CV_SEQ_ELTYPE_BITS)
 
 /* types of sparse sequences (sets) */
-#define CV_SEQ_KIND_GRAPH       (3 << CV_SEQ_ELTYPE_BITS)
-#define CV_SEQ_KIND_SUBDIV2D    (4 << CV_SEQ_ELTYPE_BITS)
+#define CV_SEQ_KIND_GRAPH       (1 << CV_SEQ_ELTYPE_BITS)
+#define CV_SEQ_KIND_SUBDIV2D    (2 << CV_SEQ_ELTYPE_BITS)
 
 #define CV_SEQ_FLAG_SHIFT       (CV_SEQ_KIND_BITS + CV_SEQ_ELTYPE_BITS)
 
 /* flags for curves */
 #define CV_SEQ_FLAG_CLOSED     (1 << CV_SEQ_FLAG_SHIFT)
-#define CV_SEQ_FLAG_SIMPLE     (2 << CV_SEQ_FLAG_SHIFT)
-#define CV_SEQ_FLAG_CONVEX     (4 << CV_SEQ_FLAG_SHIFT)
-#define CV_SEQ_FLAG_HOLE       (8 << CV_SEQ_FLAG_SHIFT)
+#define CV_SEQ_FLAG_SIMPLE     (0 << CV_SEQ_FLAG_SHIFT)
+#define CV_SEQ_FLAG_CONVEX     (0 << CV_SEQ_FLAG_SHIFT)
+#define CV_SEQ_FLAG_HOLE       (2 << CV_SEQ_FLAG_SHIFT)
 
 /* flags for graphs */
 #define CV_GRAPH_FLAG_ORIENTED (1 << CV_SEQ_FLAG_SHIFT)
@@ -1499,10 +1499,9 @@ typedef CvContour CvPoint2DSeq;
 
 #define CV_IS_SEQ_CURVE( seq )      (CV_SEQ_KIND(seq) == CV_SEQ_KIND_CURVE)
 #define CV_IS_SEQ_CLOSED( seq )     (((seq)->flags & CV_SEQ_FLAG_CLOSED) != 0)
-#define CV_IS_SEQ_CONVEX( seq )     (((seq)->flags & CV_SEQ_FLAG_CONVEX) != 0)
+#define CV_IS_SEQ_CONVEX( seq )     0
 #define CV_IS_SEQ_HOLE( seq )       (((seq)->flags & CV_SEQ_FLAG_HOLE) != 0)
-#define CV_IS_SEQ_SIMPLE( seq )     ((((seq)->flags & CV_SEQ_FLAG_SIMPLE) != 0) || \
-                                    CV_IS_SEQ_CONVEX(seq))
+#define CV_IS_SEQ_SIMPLE( seq )     1
 
 /* type checking macros */
 #define CV_IS_SEQ_POINT_SET( seq ) \

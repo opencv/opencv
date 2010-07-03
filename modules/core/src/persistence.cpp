@@ -3937,10 +3937,22 @@ icvWriteSeq( CvFileStorage* fs, const char* name,
     if( level >= 0 )
         cvWriteInt( fs, "level", level );
 
-    sprintf( buf, "%08x", seq->flags );
-    cvWriteString( fs, "flags", buf, 1 );
-    cvWriteInt( fs, "count", seq->total );
     dt = icvGetFormat( seq, "dt", &attr, 0, dt_buf );
+    
+    strcpy(buf, "");    
+    if( CV_IS_SEQ_CLOSED(seq) )
+        strcat(buf, " closed");
+    if( CV_IS_SEQ_HOLE(seq) )
+        strcat(buf, " hole");
+    if( CV_IS_SEQ_CURVE(seq) )
+        strcat(buf, " curve");
+    if( CV_SEQ_ELTYPE(seq) == 0 && seq->elem_size != 1 )
+        strcat(buf, " untyped");
+    
+    cvWriteString( fs, "flags", buf + (buf[0] ? 1 : 0), 1 );
+    
+    cvWriteInt( fs, "count", seq->total );
+    
     cvWriteString( fs, "dt", dt, 0 );
 
     icvWriteHeaderData( fs, seq, &attr, sizeof(CvSeq) );
@@ -4021,9 +4033,49 @@ icvReadSeq( CvFileStorage* fs, CvFileNode* node )
     if( !flags_str || total == -1 || !dt )
         CV_Error( CV_StsError, "Some of essential sequence attributes are absent" );
 
-    flags = (int)strtol( flags_str, &endptr, 16 );
-    if( endptr == flags_str || (flags & CV_MAGIC_MASK) != CV_SEQ_MAGIC_VAL )
-        CV_Error( CV_StsError, "The sequence flags are invalid" );
+    flags = CV_SEQ_MAGIC_VAL;
+    
+    if( isdigit(flags_str[0]) )
+    {
+        const int OLD_SEQ_ELTYPE_BITS = 9;
+        const int OLD_SEQ_ELTYPE_MASK = (1 << OLD_SEQ_ELTYPE_BITS) - 1;
+        const int OLD_SEQ_KIND_BITS = 3;
+        const int OLD_SEQ_KIND_MASK = ((1 << OLD_SEQ_KIND_BITS) - 1) << OLD_SEQ_ELTYPE_BITS;
+        const int OLD_SEQ_KIND_CURVE = 1 << OLD_SEQ_ELTYPE_BITS;
+        const int OLD_SEQ_FLAG_SHIFT = OLD_SEQ_KIND_BITS + OLD_SEQ_ELTYPE_BITS;
+        const int OLD_SEQ_FLAG_CLOSED = 1 << OLD_SEQ_FLAG_SHIFT;
+        const int OLD_SEQ_FLAG_HOLE = 8 << OLD_SEQ_FLAG_SHIFT;
+        
+        int flags0 = (int)strtol( flags_str, &endptr, 16 );
+        if( endptr == flags_str || (flags0 & CV_MAGIC_MASK) != CV_SEQ_MAGIC_VAL )
+            CV_Error( CV_StsError, "The sequence flags are invalid" );
+        if( (flags0 & OLD_SEQ_KIND_MASK) == OLD_SEQ_KIND_CURVE )
+            flags |= CV_SEQ_KIND_CURVE;
+        if( flags0 & OLD_SEQ_FLAG_CLOSED )
+            flags |= CV_SEQ_FLAG_CLOSED;
+        if( flags0 & OLD_SEQ_FLAG_HOLE )
+            flags |= CV_SEQ_FLAG_HOLE;
+        flags |= flags0 & OLD_SEQ_ELTYPE_MASK;
+    }
+    else
+    {
+        if( strstr(flags_str, "curve") )
+            flags |= CV_SEQ_KIND_CURVE;
+        if( strstr(flags_str, "closed") )
+            flags |= CV_SEQ_FLAG_CLOSED;
+        if( strstr(flags_str, "hole") )
+            flags |= CV_SEQ_FLAG_HOLE;
+        if( !strstr(flags_str, "untyped") )
+        {
+            try
+            {
+                flags |= icvDecodeSimpleFormat(dt);
+            }
+            catch(...)
+            {
+            }
+        }
+    }
 
     header_dt = cvReadStringByName( fs, node, "header_dt", 0 );
     header_node = cvGetFileNodeByName( fs, node, "header_user_data" );
@@ -4217,8 +4269,7 @@ icvWriteGraph( CvFileStorage* fs, const char* name,
     // write header
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_GRAPH );
 
-    sprintf( buf, "%08x", graph->flags );
-    cvWriteString( fs, "flags", buf, 1 );
+    cvWriteString(fs, "flags", CV_IS_GRAPH_ORIENTED(graph) ? "oriented" : "", 1);
 
     cvWriteInt( fs, "vertex_count", vtx_count );
     vtx_dt = icvGetFormat( (CvSeq*)graph, "vertex_dt",
@@ -4349,12 +4400,28 @@ icvReadGraph( CvFileStorage* fs, CvFileNode* node )
     edge_count = cvReadIntByName( fs, node, "edge_count", -1 );
 
     if( !flags_str || vtx_count == -1 || edge_count == -1 || !edge_dt )
-        CV_Error( CV_StsError, "Some of essential sequence attributes are absent" );
+        CV_Error( CV_StsError, "Some of essential graph attributes are absent" );
 
-    flags = (int)strtol( flags_str, &endptr, 16 );
-    if( endptr == flags_str ||
-        (flags & (CV_SEQ_KIND_MASK|CV_MAGIC_MASK)) != (CV_GRAPH|CV_SET_MAGIC_VAL))
-        CV_Error( CV_StsError, "Invalid graph signature" );
+    flags = CV_SET_MAGIC_VAL + CV_GRAPH;
+    
+    if( isxdigit(flags_str[0]) )
+    {
+        const int OLD_SEQ_ELTYPE_BITS = 9;
+        const int OLD_SEQ_KIND_BITS = 3;
+        const int OLD_SEQ_FLAG_SHIFT = OLD_SEQ_KIND_BITS + OLD_SEQ_ELTYPE_BITS;
+        const int OLD_GRAPH_FLAG_ORIENTED = 1 << OLD_SEQ_FLAG_SHIFT;
+        
+        int flags0 = (int)strtol( flags_str, &endptr, 16 );
+        if( endptr == flags_str || (flags0 & CV_MAGIC_MASK) != CV_SET_MAGIC_VAL )
+            CV_Error( CV_StsError, "The sequence flags are invalid" );
+        if( flags0 & OLD_GRAPH_FLAG_ORIENTED )
+            flags |= CV_GRAPH_FLAG_ORIENTED;
+    }
+    else
+    {
+        if( strstr(flags_str, "oriented") )
+            flags |= CV_GRAPH_FLAG_ORIENTED;
+    }
 
     header_dt = cvReadStringByName( fs, node, "header_dt", 0 );
     header_node = cvGetFileNodeByName( fs, node, "header_user_data" );
