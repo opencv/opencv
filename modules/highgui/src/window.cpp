@@ -253,7 +253,7 @@ CV_IMPL int cvNamedWindow( const char*, int )
     return -1;
 }    
 
-CV_IMPL int cvDisplayOverlay(const char* name, const char* text, int delayms)
+CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
     return -1;
