@@ -33,6 +33,11 @@ if(WITH_JASPER)
 	endif()
 endif()
 
+if(WITH_OPENEXR AND OPENEXR_FOUND)
+	add_definitions(-DHAVE_OPENEXR)
+	include_directories(${OPENEXR_INCLUDE_PATHS})
+endif()
+
 if(use_3rdparty)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")
 endif()
@@ -282,7 +287,7 @@ endif(MSVC)
 add_dependencies(${the_target} opencv_core opencv_imgproc)
 
 # Add the required libraries for linking:
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core opencv_imgproc ${JPEG_LIBRARIES} ${PNG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES} ${HIGHGUI_LIBRARIES})
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core opencv_imgproc ${JPEG_LIBRARIES} ${PNG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES} ${HIGHGUI_LIBRARIES} ${OPENEXR_LIBRARIES})
 
 if(WITH_JASPER AND NOT JASPER_FOUND)
 	add_dependencies(${the_target} libjasper)

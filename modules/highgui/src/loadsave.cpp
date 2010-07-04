@@ -175,7 +175,7 @@ struct ImageCodecInitializer
         decoders.push_back( new Jpeg2KDecoder );
         encoders.push_back( new Jpeg2KEncoder );
     #endif
-    #ifdef HAVE_ILMIMF
+    #ifdef HAVE_OPENEXR
         decoders.push_back( new ExrDecoder );
         encoders.push_back( new ExrEncoder );
     #endif

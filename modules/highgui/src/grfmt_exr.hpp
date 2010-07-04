@@ -43,7 +43,7 @@
 #ifndef _GRFMT_EXR_H_
 #define _GRFMT_EXR_H_
 
-#ifdef HAVE_ILMIMF
+#ifdef HAVE_OPENEXR
 
 #include <ImfChromaticities.h>
 #include <ImfInputFile.h>
@@ -87,6 +87,10 @@ protected:
     const Channel  *m_green;
     const Channel  *m_blue;
     Chromaticities  m_chroma;
+    int             m_bit_depth;
+    bool            m_native_depth;
+    bool            m_iscolor;
+    bool            m_isfloat;
 };
 
 
@@ -97,7 +101,7 @@ public:
     ~ExrEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const Vector<int>& params );
+    bool  write( const Mat& img, const vector<int>& params );
     ImageEncoder newEncoder() const;
 };
 

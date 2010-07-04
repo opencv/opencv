@@ -42,14 +42,14 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_ILMIMF
+#ifdef HAVE_OPENEXR
 
-#include <OpenEXR/ImfHeader.h>
-#include <OpenEXR/ImfInputFile.h>
-#include <OpenEXR/ImfOutputFile.h>
-#include <OpenEXR/ImfChannelList.h>
-#include <OpenEXR/ImfStandardAttributes.h>
-#include <OpenEXR/half.h>
+#include <ImfHeader.h>
+#include <ImfInputFile.h>
+#include <ImfOutputFile.h>
+#include <ImfChannelList.h>
+#include <ImfStandardAttributes.h>
+#include <half.h>
 #include "grfmt_exr.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -65,8 +65,6 @@
 #define HALF ((Imf::PixelType)1)
 #undef FLOAT
 #define FLOAT ((Imf::PixelType)2)
-#undef uint
-#define uint unsigned
 
 #endif
 
@@ -78,7 +76,7 @@ namespace cv
 ExrDecoder::ExrDecoder()
 {
     m_signature = "\x76\x2f\x31\x01";
-    m_file = new InputFile( filename );
+    m_file = 0;
     m_red = m_green = m_blue = 0;
 }
 
@@ -102,6 +100,8 @@ bool  ExrDecoder::readHeader()
 {
     bool result = false;
 
+    m_file = new InputFile( m_filename.c_str() );
+    
     if( !m_file ) // probably paranoid
         return false;
 
@@ -166,7 +166,7 @@ bool  ExrDecoder::readHeader()
     }
 
     if( !result )
-        Close();
+        close();
 
     return result;
 }
@@ -342,10 +342,10 @@ bool  ExrDecoder::readData( Mat& img )
                 }
                 else
                 {
-                    uint *ui = (uint *)buffer;
+                    unsigned *ui = (unsigned *)buffer;
                     for( x = 0; x < m_width * 3; x++)
                     {
-                        uint t = ui[x];
+                        unsigned t = ui[x];
                         out[x] = CV_CAST_8U(t);
                     }
                 }
@@ -369,7 +369,7 @@ bool  ExrDecoder::readData( Mat& img )
     if( chromatorgb )
         ChromaToBGR( (float *)data, m_height, step / xstep );
 
-    Close();
+    close();
 
     return result;
 }
@@ -393,7 +393,7 @@ void  ExrDecoder::UpSample( uchar *data, int xstep, int ystep, int xsample, int 
                     else if( m_type == FLOAT )
                         ((float *)data)[(yre + i) * ystep + (xre + n) * xstep] = ((float *)data)[y * ystep + x * xstep];
                     else
-                        ((uint *)data)[(yre + i) * ystep + (xre + n) * xstep] = ((uint *)data)[y * ystep + x * xstep];
+                        ((unsigned *)data)[(yre + i) * ystep + (xre + n) * xstep] = ((unsigned *)data)[y * ystep + x * xstep];
                 }
             }
         }
@@ -413,7 +413,7 @@ void  ExrDecoder::UpSampleX( float *data, int xstep, int xsample )
             if( m_type == FLOAT )
                 ((float *)data)[(xre + n) * xstep] = ((float *)data)[x * xstep];
             else
-                ((uint *)data)[(xre + n) * xstep] = ((uint *)data)[x * xstep];
+                ((unsigned *)data)[(xre + n) * xstep] = ((unsigned *)data)[x * xstep];
         }
     }
 }
@@ -435,7 +435,7 @@ void  ExrDecoder::UpSampleY( uchar *data, int xstep, int ystep, int ysample )
                 else if( m_type == FLOAT )
                     ((float *)data)[(yre + i) * ystep + x * xstep] = ((float *)data)[y * ystep + x * xstep];
                 else
-                    ((uint *)data)[(yre + i) * ystep + x * xstep] = ((uint *)data)[y * ystep + x * xstep];
+                    ((unsigned *)data)[(yre + i) * ystep + x * xstep] = ((unsigned *)data)[y * ystep + x * xstep];
             }
         }
     }
@@ -446,11 +446,9 @@ void  ExrDecoder::UpSampleY( uchar *data, int xstep, int ystep, int ysample )
  */
 void  ExrDecoder::ChromaToBGR( float *data, int numlines, int step )
 {
-    int x, y, t;
-    
-    for( y = 0; y < numlines; y++ )
+    for( int y = 0; y < numlines; y++ )
     {
-        for( x = 0; x < m_width; x++ )
+        for( int x = 0; x < m_width; x++ )
         {
             double b, Y, r;
             if( !m_native_depth )
@@ -467,9 +465,9 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int step )
             }
             else
             {
-                b = ((uint *)data)[y * step + x * 3];
-                Y = ((uint *)data)[y * step + x * 3 + 1];
-                r = ((uint *)data)[y * step + x * 3 + 2];
+                b = ((unsigned *)data)[y * step + x * 3];
+                Y = ((unsigned *)data)[y * step + x * 3 + 1];
+                r = ((unsigned *)data)[y * step + x * 3 + 2];
             }
             r = (r + 1) * Y;
             b = (b + 1) * Y;
@@ -493,11 +491,11 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int step )
             else
             {
                 int t = cvRound(b);
-                ((uint *)data)[y * step + x * 3] = (uint)MAX(t,0);
+                ((unsigned *)data)[y * step + x * 3] = (unsigned)MAX(t,0);
                 t = cvRound(Y);
-                ((uint *)data)[y * step + x * 3 + 1] = (uint)MAX(t,0);
+                ((unsigned *)data)[y * step + x * 3 + 1] = (unsigned)MAX(t,0);
                 t = cvRound(r);
-                ((uint *)data)[y * step + x * 3 + 2] = (uint)MAX(t,0);
+                ((unsigned *)data)[y * step + x * 3 + 2] = (unsigned)MAX(t,0);
             }
         }
     }
@@ -527,7 +525,7 @@ void  ExrDecoder::RGBToGray( float *in, float *out )
     {
         if( m_native_depth )
         {
-            uint *ui = (uint *)in;
+            unsigned *ui = (unsigned *)in;
             for( int i = 0; i < m_width * 3; i++ )
                 ui[i] -= 0x80000000;
             int *si = (int *)in;
@@ -536,13 +534,19 @@ void  ExrDecoder::RGBToGray( float *in, float *out )
         }
         else // how to best convert float to uchar?
         {
-            uint *ui = (uint *)in;
+            unsigned *ui = (unsigned *)in;
             for( int i = 0, n = 0; i < m_width; i++, n += 3 )
                 ((uchar *)out)[i] = uchar((ui[n] * m_chroma.blue[0] + ui[n + 1] * m_chroma.green[0] + ui[n + 2] * m_chroma.red[0]) * (256.0 / 4294967296.0));
         }
     }
 }
 
+    
+ImageDecoder ExrDecoder::newDecoder() const
+{
+    return new ExrDecoder;
+} 
+    
 /////////////////////// ExrEncoder ///////////////////
 
 
@@ -564,7 +568,7 @@ bool  ExrEncoder::isFormatSupported( int depth ) const
 
 
 // TODO scale appropriately
-bool  ExrEncoder::write( const Mat& img, const Vector<int>& )
+bool  ExrEncoder::write( const Mat& img, const vector<int>& )
 {
     int width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
@@ -613,7 +617,7 @@ bool  ExrEncoder::write( const Mat& img, const Vector<int>& )
     }
     else if( depth > 16 || type == UINT )
     {
-        buffer = (char *)new uint[width * channels];
+        buffer = (char *)new unsigned[width * channels];
         bufferstep = 0;
         size = 4;
     }
@@ -659,7 +663,7 @@ bool  ExrEncoder::write( const Mat& img, const Vector<int>& )
         {
             if(type == UINT)
             {
-                uint *buf = (uint *)buffer; // FIXME 64-bit problems
+                unsigned *buf = (unsigned*)buffer; // FIXME 64-bit problems
 
                 if( depth <= 8 )
                 {
@@ -676,7 +680,7 @@ bool  ExrEncoder::write( const Mat& img, const Vector<int>& )
                 {
                     int *sd = (int *)data; // FIXME 64-bit problems
                     for(int i = 0; i < width * channels; i++)
-                        buf[i] = (uint) sd[i] + offset;
+                        buf[i] = (unsigned) sd[i] + offset;
                 }
             }
             else
@@ -712,6 +716,12 @@ bool  ExrEncoder::write( const Mat& img, const Vector<int>& )
     return result;
 }
 
+
+ImageEncoder ExrEncoder::newEncoder() const
+{
+    return new ExrEncoder;
+}    
+    
 }
 
 #endif
