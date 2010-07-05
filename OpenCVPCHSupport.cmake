@@ -19,23 +19,23 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
         ARGS 	${CMAKE_CXX_COMPILER_ARG1} -dumpversion
         OUTPUT_VARIABLE gcc_compiler_version)
     #MESSAGE("GCC Version: ${gcc_compiler_version}")
-    IF(gcc_compiler_version MATCHES "4\\.[0-9]\\.[0-9]")
+    IF(gcc_compiler_version MATCHES "4\\.[0,2-9]\\.[0-9]")
         SET(PCHSupport_FOUND TRUE)
-    ELSE(gcc_compiler_version MATCHES "4\\.[0-9]\\.[0-9]")
+    ELSE()
         IF(gcc_compiler_version MATCHES "3\\.4\\.[0-9]")
             SET(PCHSupport_FOUND TRUE)
-        ENDIF(gcc_compiler_version MATCHES "3\\.4\\.[0-9]")
-    ENDIF(gcc_compiler_version MATCHES "4\\.[0-9]\\.[0-9]")
+        ENDIF()
+    ENDIF()
 
 	SET(_PCH_include_prefix "-I")
 
-ELSE(CMAKE_COMPILER_IS_GNUCXX)
+ELSE()
 	IF(WIN32)
 		SET(PCHSupport_FOUND TRUE) # for experimental msvc support
 		SET(_PCH_include_prefix "/I")
-	ELSE(WIN32)
+	ELSE()
 		SET(PCHSupport_FOUND FALSE)
-	ENDIF(WIN32)
+	ENDIF()
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 
@@ -52,9 +52,9 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
     	LIST(APPEND ${_out_compile_flags} "${${_out_compile_flags}} -fPIC")
     ENDIF()
 
-  ELSE(CMAKE_COMPILER_IS_GNUCXX)
+  ELSE()
     ## TODO ... ? or does it work out of the box
-  ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+  ENDIF()
 
   GET_DIRECTORY_PROPERTY(DIRINC INCLUDE_DIRECTORIES )
   FOREACH(item ${DIRINC})
