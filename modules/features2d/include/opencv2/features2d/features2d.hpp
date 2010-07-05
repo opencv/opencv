@@ -1280,8 +1280,8 @@ public:
         detectImpl( image, mask, keypoints );
     }
 
-    virtual void read(const FileNode& fn) {};
-    virtual void write(FileStorage& fs) const {};
+    virtual void read(const FileNode&) {};
+    virtual void write(FileStorage&) const {};
 
 protected:
     /*
@@ -1427,8 +1427,8 @@ public:
      */
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
 
-    virtual void read (const FileNode &fn) {};
-    virtual void write (FileStorage &fs) const {};
+    virtual void read (const FileNode&) {};
+    virtual void write (FileStorage&) const {};
 
 protected:
     /*
@@ -1770,7 +1770,7 @@ protected:
    Distance distance;
 };
 
-template<class Distance>
+template<class Distance> inline
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& mask, vector<int>& matches ) const
 {
@@ -1784,7 +1784,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     }
 }
 
-template<class Distance>
+template<class Distance> inline
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& mask, vector<DMatch>& matches ) const
 {
@@ -1832,7 +1832,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
     }
 }
 
-template<class Distance>
+template<class Distance> inline
 void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const
 {
@@ -1945,18 +1945,18 @@ public:
     // image        The source image
     // points       Test keypoints from the source image
     // matches      A vector to be filled with keypoint matches
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches ) {};
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold ) {};
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold );
 
     // Clears keypoints storing in collection
     virtual void clear();
 
     // Reads match object from a file node
-    virtual void read( const FileNode& fn ) {};
+    virtual void read( const FileNode& ) {};
     
     // Writes match object to a file storage
-    virtual void write( FileStorage& fs ) const {};
+    virtual void write( FileStorage& ) const {};
 
 protected:
     KeyPointCollection collection;

@@ -656,7 +656,7 @@ inline Matx<_Tp,m,n>::Matx(const _Tp* vals)
 
         
 template<typename _Tp, int m, int n>
-    inline Matx<_Tp,m,n>::Matx(const Matx<_Tp,m,n>::base_type& v)
+    inline Matx<_Tp,m,n>::Matx(const Vec<_Tp,m*n>& v)
 : base_type(v)
 {
 }

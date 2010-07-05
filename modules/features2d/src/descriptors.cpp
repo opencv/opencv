@@ -364,6 +364,15 @@ void KeyPointCollection::clear()
 /*
  * GenericDescriptorMatch
  */
+
+void GenericDescriptorMatch::match( const Mat&, vector<KeyPoint>&, vector<DMatch>& )
+{
+}
+
+void GenericDescriptorMatch::match( const Mat&, vector<KeyPoint>&, vector<vector<DMatch> >&, float )
+{
+}
+
 void GenericDescriptorMatch::add( KeyPointCollection& collection )
 {
     for( size_t i = 0; i < collection.images.size(); i++ )
