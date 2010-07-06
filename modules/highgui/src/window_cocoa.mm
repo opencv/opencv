@@ -491,8 +491,8 @@ CV_IMPL int cvWaitKey (int maxWait)
 {
 	//cout << "cvWaitKey" << endl; 
     int returnCode = -1;
-	double start = [[NSDate date] timeIntervalSince1970];
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
+	double start = [[NSDate date] timeIntervalSince1970];
 
 	while(true) {
 		if(([[NSDate date] timeIntervalSince1970] - start) * 1000 >= maxWait && maxWait>0)
@@ -686,7 +686,7 @@ CV_IMPL int cvWaitKey (int maxWait)
 	cvimage = cvCreateMat(arrMat->rows, arrMat->cols, CV_8UC3);
 	cvConvertImage(arrMat, cvimage, CV_CVTIMG_SWAP_RB);
 	
-	CGColorSpaceRef colorspace = NULL;
+	/*CGColorSpaceRef colorspace = NULL;
     CGDataProviderRef provider = NULL;
 	int width = cvimage->width;
     int height = cvimage->height;
@@ -703,15 +703,40 @@ CV_IMPL int cvWaitKey (int maxWait)
 	NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithCGImage:imageRef]; 
 	if(image) {
 		[image release];
+	}*/
+	
+	NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+				pixelsWide:cvimage->width
+				pixelsHigh:cvimage->height
+				bitsPerSample:8
+				samplesPerPixel:3
+				hasAlpha:NO
+				isPlanar:NO
+				colorSpaceName:NSDeviceRGBColorSpace
+				bytesPerRow:(cvimage->width * 4)
+				bitsPerPixel:32];
+	
+	int	pixelCount = cvimage->width * cvimage->height;
+	unsigned char *src = cvimage->data.ptr;
+	unsigned char *dst = [bitmap bitmapData];
+	
+	for( int i = 0; i < pixelCount; i++ )
+	{
+		dst[i * 4 + 0] = src[i * 3 + 0];
+		dst[i * 4 + 1] = src[i * 3 + 1];
+		dst[i * 4 + 2] = src[i * 3 + 2];
 	}
 	
+    if( image )
+        [image release]; 
+    
 	image = [[NSImage alloc] init];
 	[image addRepresentation:bitmap];
-	[bitmap release]; 
+	[bitmap release];
 	
-	CGColorSpaceRelease(colorspace); 
+	/*CGColorSpaceRelease(colorspace); 
     CGDataProviderRelease(provider);
-	CGImageRelease(imageRef);
+	CGImageRelease(imageRef);*/
 	cvReleaseMat(&cvimage);
 	[localpool drain]; 
 	
