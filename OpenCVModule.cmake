@@ -53,6 +53,7 @@ macro(define_opencv_module name)
 	    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
 	    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
+	    INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 	    )
 
 	# Add the required libraries for linking:
