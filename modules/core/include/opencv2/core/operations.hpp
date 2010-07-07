@@ -2005,14 +2005,14 @@ Scalar_<_Tp> operator / (const Scalar_<_Tp>& a, _Tp alpha)
                         saturate_cast<_Tp>(a.val[3] / alpha));
 }    
 
-template<> static inline
+template<typename _Tp> static inline
 Scalar_<float> operator / (const Scalar_<float>& a, float alpha)
 {
     float s = 1/alpha;
     return Scalar_<float>(a.val[0]*s, a.val[1]*s, a.val[2]*s, a.val[3]*s);
 }        
 
-template<> static inline
+template<typename _Tp> static inline
 Scalar_<double> operator / (const Scalar_<double>& a, double alpha)
 {
     double s = 1/alpha;
