@@ -45,8 +45,7 @@
 
 #if defined(OPENCV_GL)
  #include <QtOpenGL>
- //#include <GL/glu.h>
-//#include <QGLWidget>
+ #include <QGLWidget>
 #endif
 
 #include <QAbstractEventDispatcher>
@@ -70,11 +69,28 @@
 #include <QShortcut>
 #include <QStatusBar>
 #include <QVarLengthArray>
+#include <QFileInfo>
+#include <QDate>
+#include <QFileDialog>
 
-//Macro here
-#define CV_MODE_NORMAL   0
-#define CV_MODE_OPENGL   1
-//end macro
+//start enum
+enum {CV_MODE_NORMAL= 0, CV_MODE_OPENGL = 1};
+
+//we can change the keyboard shortcuts from here !
+enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
+		shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
+		shortcut_save_img		= Qt::CTRL + Qt::Key_S,
+		shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
+		shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
+		shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
+		shortcut_panning_left 	= Qt::CTRL + Qt::Key_Left,
+		shortcut_panning_right 	= Qt::CTRL + Qt::Key_Right,
+		shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
+		shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
+	};
+//end enum
+
+typedef void (CV_CDECL *CvOpenGLCallback)(void* userdata);
 
 class CvWindow;
 class ViewPort;
@@ -112,6 +128,8 @@ public slots:
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
+    void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata);
+
 };
 
 class CvTrackbar : public QHBoxLayout
@@ -152,6 +170,7 @@ public:
     void displayStatusBar(QString text, int delayms );
     void readSettings();
     void writeSettings();
+    void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata);
     ViewPort* getView();
 
     QPointer<QBoxLayout> layout;
@@ -168,13 +187,16 @@ protected:
 
 private:
     QPointer<ViewPort> myview;
-    QPointer<QShortcut> shortcutZ;
-    QPointer<QShortcut> shortcutPlus;
-    QPointer<QShortcut> shortcutMinus;
-    QPointer<QShortcut> shortcutLeft;
-    QPointer<QShortcut> shortcutRight;
-    QPointer<QShortcut> shortcutUp;
-    QPointer<QShortcut> shortcutDown;
+    QPointer<QShortcut> shortcut_Z;
+    QPointer<QShortcut> shortcut_S;
+    QPointer<QShortcut> shortcut_P;
+    QPointer<QShortcut> shortcut_X;
+    QPointer<QShortcut> shortcut_Plus;
+    QPointer<QShortcut> shortcut_Minus;
+    QPointer<QShortcut> shortcut_Left;
+    QPointer<QShortcut> shortcut_Right;
+    QPointer<QShortcut> shortcut_Up;
+    QPointer<QShortcut> shortcut_Down;
 
     void icvLoadTrackbars(QSettings *settings);
     void icvSaveTrackbars(QSettings *settings);
@@ -202,6 +224,7 @@ public:
     void updateImage(void* arr);
     void startDisplayInfo(QString text, int delayms);
     void setMouseCallBack(CvMouseCallback m, void* param);
+    void setOpenGLCallback(CvOpenGLCallback func,void* userdata);
     int getRatio();
     void setRatio(int arg);
 
@@ -212,6 +235,7 @@ public:
 
     IplImage* image2Draw_ipl;
     QImage image2Draw_qt;
+    QImage image2Draw_qt_resized;
     int mode_display;//opengl or native
     int nbChannelOriginImage;
 
@@ -220,6 +244,7 @@ public slots:
     //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
     //http://doc.qt.nokia.com/4.6/gestures-imagegestures-imagewidget-cpp.html
     void scaleView(qreal scaleFactor, QPointF center);
+    void imgRegion();
     void moveView(QPointF delta);
     void resetZoom();
     void ZoomIn();
@@ -229,6 +254,7 @@ public slots:
     void siftWindowOnUp() ;
     void siftWindowOnDown();
     void resizeEvent ( QResizeEvent * );
+    void saveView();
 
 private:
     QPoint mouseCoordinate;
@@ -236,8 +262,14 @@ private:
     QRect  positionCorners;
     QTransform matrixWorld_inv;
     float ratioX, ratioY;
+    
+    //for mouse callback
     CvMouseCallback on_mouse;
     void* on_mouse_param;
+    
+    //for opengl callback
+    CvOpenGLCallback on_openGL;
+	void* on_openGL_param;
 
     bool isSameSize(IplImage* img1,IplImage* img2);
     QSize sizeHint() const;
