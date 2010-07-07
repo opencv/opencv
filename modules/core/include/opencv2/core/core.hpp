@@ -448,6 +448,9 @@ public:
     _Tp dot(const Vec& v) const;
     //! dot product computed in double-precision arithmetics
     double ddot(const Vec& v) const;
+    //! per-element multiplication
+    Vec mul(const Vec<_Tp, cn>& v) const;
+    
     /*!
       cross product of the two 3D vectors.
     
@@ -924,6 +927,8 @@ public:
     Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
     //! another helper conversion method. \see cvScalarToRawData
     template<typename T2> void convertTo(T2* buf, int channels, int unroll_to=0) const;
+    
+    Scalar_<_Tp> conj() const;
 };
 
 typedef Scalar_<double> Scalar;

@@ -321,6 +321,14 @@ template<typename _Tp, int cn> inline double Vec<_Tp, cn>::ddot(const Vec<_Tp, c
 }
 
     
+template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::mul(const Vec<_Tp, cn>& v) const
+{
+    Vec<_Tp, cn> w;
+    for( int i = 0; i < cn; i++ ) w.val[i] = saturate_cast<_Tp>(val[i]*v.val[i]);
+    return w;
+}
+
+    
 template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>& v) const
 {
     CV_Error(CV_StsError, "for arbitrary-size vector there is no cross-product defined");
@@ -438,6 +446,25 @@ operator * (_Tp alpha, const Vec<_Tp, cn>& a)
 {
     return a * alpha;
 }
+    
+
+template<typename _Tp> static inline Vec<_Tp, 4>
+operator * (const Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
+{
+    return Vec<_Tp, 4>(saturate_cast<_Tp>(a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3]),
+                       saturate_cast<_Tp>(a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2]),
+                       saturate_cast<_Tp>(a[0]*b[2] - a[1]*b[3] + a[2]*b[0] - a[3]*b[1]),
+                       saturate_cast<_Tp>(a[0]*b[3] + a[1]*b[2] - a[2]*b[1] - a[3]*b[0]));
+}
+
+    
+template<typename _Tp> static inline Vec<_Tp, 4>&
+operator *= (Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
+{
+    a = a*b;
+    return a;
+}
+    
 
 template<typename _Tp, int cn> static inline Vec<_Tp, cn>
 operator - (const Vec<_Tp, cn>& a)
@@ -971,6 +998,41 @@ Vec<_Tp, m> operator * (const Matx<_Tp, m, n>& a, const Vec<_Tp, n>& b)
 }        
 
     
+template<typename _Tp> static inline
+Point_<_Tp> operator * (const Matx<_Tp, 2, 2>& a, const Point_<_Tp>& b)
+{
+    return Point_<_Tp>(a*Vec<_Tp,2>(b));
+}
+
+    
+template<typename _Tp> static inline
+Point3_<_Tp> operator * (const Matx<_Tp, 3, 3>& a, const Point3_<_Tp>& b)
+{
+    return Point3_<_Tp>(a*Vec<_Tp,3>(b));
+}    
+
+
+template<typename _Tp> static inline
+Point3_<_Tp> operator * (const Matx<_Tp, 3, 3>& a, const Point_<_Tp>& b)
+{
+    return Point3_<_Tp>(a*Vec<_Tp,3>(b.x, b.y, 1));
+}    
+
+    
+template<typename _Tp> static inline
+Vec<_Tp, 4> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
+{
+    return a*Vec<_Tp,4>(b.x, b.y, b.z, 1);
+}    
+
+    
+template<typename _Tp> static inline
+Scalar operator * (const Matx<_Tp, 4, 4>& a, const Scalar& b)
+{
+    return Scalar(a*Vec<_Tp,4>(b));
+}    
+    
+
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> Matx<_Tp, m, n>::mul(const Matx<_Tp, m, n>& a) const
 {
@@ -1909,6 +1971,81 @@ template<typename _Tp> static inline Scalar_<_Tp> operator - (const Scalar_<_Tp>
                       saturate_cast<_Tp>(-a.val[2]), saturate_cast<_Tp>(-a.val[3]));
 }
 
+    
+template<typename _Tp> static inline Scalar_<_Tp>
+operator * (const Scalar_<_Tp>& a, const Scalar_<_Tp>& b)
+{
+    return Scalar_<_Tp>(saturate_cast<_Tp>(a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3]),
+                        saturate_cast<_Tp>(a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2]),
+                        saturate_cast<_Tp>(a[0]*b[2] - a[1]*b[3] + a[2]*b[0] - a[3]*b[1]),
+                        saturate_cast<_Tp>(a[0]*b[3] + a[1]*b[2] - a[2]*b[1] - a[3]*b[0]));
+}
+    
+template<typename _Tp> static inline Scalar_<_Tp>&
+operator *= (Scalar_<_Tp>& a, const Scalar_<_Tp>& b)
+{
+    a = a*b;
+    return a;
+}    
+    
+template<typename _Tp> inline Scalar_<_Tp> Scalar_<_Tp>::conj() const
+{
+    return Scalar_<_Tp>(saturate_cast<_Tp>(this->val[0]),
+                        saturate_cast<_Tp>(-this->val[1]),
+                        saturate_cast<_Tp>(-this->val[2]),
+                        saturate_cast<_Tp>(-this->val[3]));
+}
+
+template<typename _Tp> static inline
+Scalar_<_Tp> operator / (const Scalar_<_Tp>& a, _Tp alpha)
+{
+    return Scalar_<_Tp>(saturate_cast<_Tp>(a.val[0] / alpha),
+                        saturate_cast<_Tp>(a.val[1] / alpha),
+                        saturate_cast<_Tp>(a.val[2] / alpha),
+                        saturate_cast<_Tp>(a.val[3] / alpha));
+}    
+
+template<> static inline
+Scalar_<float> operator / (const Scalar_<float>& a, float alpha)
+{
+    float s = 1/alpha;
+    return Scalar_<float>(a.val[0]*s, a.val[1]*s, a.val[2]*s, a.val[3]*s);
+}        
+
+template<> static inline
+Scalar_<double> operator / (const Scalar_<double>& a, double alpha)
+{
+    double s = 1/alpha;
+    return Scalar_<double>(a.val[0]*s, a.val[1]*s, a.val[2]*s, a.val[3]*s);
+}            
+    
+template<typename _Tp> static inline
+Scalar_<_Tp>& operator /= (Scalar_<_Tp>& a, _Tp alpha)
+{
+    a = a/alpha;
+    return a;
+}
+    
+template<typename _Tp> static inline
+Scalar_<_Tp> operator / (_Tp a, const Scalar_<_Tp>& b)
+{
+    _Tp s = a/(b[0]*b[0] + b[1]*b[1] + b[2]*b[2] + b[3]*b[3]);
+    return b.conj()*s;
+}    
+    
+template<typename _Tp> static inline
+Scalar_<_Tp> operator / (const Scalar_<_Tp>& a, const Scalar_<_Tp>& b)
+{
+    return a*((_Tp)1/b);
+}
+
+template<typename _Tp> static inline
+Scalar_<_Tp>& operator /= (Scalar_<_Tp>& a, const Scalar_<_Tp>& b)
+{
+    a = a/b;
+    return a;
+}
+    
 //////////////////////////////// Range /////////////////////////////////
 
 inline Range::Range() : start(0), end(0) {}
