@@ -1268,6 +1268,8 @@ protected:
 class CV_EXPORTS FeatureDetector
 {
 public:
+    virtual ~FeatureDetector() {}
+    
     /*
      * Detect keypoints in an image.
      *
@@ -1279,9 +1281,9 @@ public:
     {
         detectImpl( image, mask, keypoints );
     }
-
-    virtual void read(const FileNode&) {};
-    virtual void write(FileStorage&) const {};
+    
+    virtual void read(const FileNode&) {}
+    virtual void write(FileStorage&) const {}
 
 protected:
     /*
@@ -1416,6 +1418,7 @@ CV_EXPORTS FeatureDetector* createDetector( const string& detectorType );
 class CV_EXPORTS DescriptorExtractor
 {
 public:
+    virtual ~DescriptorExtractor() {}
     /*
      * Compute the descriptors for a set of keypoints in an image.
      *
