@@ -502,7 +502,7 @@ endif()
 ############################### QT ################################
 set(HAVE_QT 0)
 set(HAVE_QT_OPENGL 0)
-set(AUTOSWITCH_QT 0)#uses to disable QT
+set(AUTOSWITCH_QT 1)#uses to disable QT
 
 #set the booleans
 find_package(Qt4)# QUIET)
@@ -522,19 +522,18 @@ if (WITH_QT)
 
     if(UNIX)
 	    if (APPLE)
-		set(WITH_CARBON 0)
+		set(WITH_CARBON OFF CACHE BOOL "Use Carbon for UI instead of Cocoa" FORCE)
 		message(STATUS "QT detected, so Carbon and Cocoa disabled")
 		else()
-		set(WITH_GTK 0)
+		set(WITH_GTK OFF CACHE BOOL "Include GTK support" FORCE)
 		set(HAVE_GTK 0)
-		set(WITH_GTHREAD 0)
 		set(HAVE_GTHREAD 0)
 		message(STATUS "QT detected, so GTK and GThread disabled")
 		endif()
     endif()
     
     if (WITH_QT_OPENGL)
-    message(STATUS "OpenGL for QT enable")
+    message(STATUS "OpenGL for QT enabled")
         set(HAVE_QT_OPENGL 1)
         add_definitions(-DOPENCV_GL=1)
     endif()
