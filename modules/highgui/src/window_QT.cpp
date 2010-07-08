@@ -811,7 +811,13 @@ void CvTrackbar::createDialog()
     int min = slider->minimum();
     int max = slider->maximum();
 
-    int i = QInputDialog::getInt(this->parentWidget(),
+    int i =
+#if QT_VERSION >= 0x040500    
+    QInputDialog::getInt
+#else
+    QInputDialog::getInteger
+#endif
+                (this->parentWidget(),
 				 tr("Slider %1").arg(trackbar_name),
 				 tr("New value:"),
 				 value,
@@ -1031,15 +1037,15 @@ void CvWindow::readSettings()
     myview->param_keepRatio = settings.value("view_aspectRatio",myview->param_keepRatio).toInt();
 
     param_flags = settings.value("mode_resize",param_flags).toInt();
-    qreal m11 = settings.value("matrix_view.m11",myview->param_matrixWorld.m11()).toReal();
-    qreal m12 = settings.value("matrix_view.m12",myview->param_matrixWorld.m12()).toReal();
-    qreal m13 = settings.value("matrix_view.m13",myview->param_matrixWorld.m13()).toReal();
-    qreal m21 = settings.value("matrix_view.m21",myview->param_matrixWorld.m21()).toReal();
-    qreal m22 = settings.value("matrix_view.m22",myview->param_matrixWorld.m22()).toReal();
-    qreal m23 = settings.value("matrix_view.m23",myview->param_matrixWorld.m23()).toReal();
-    qreal m31 = settings.value("matrix_view.m31",myview->param_matrixWorld.m31()).toReal();
-    qreal m32 = settings.value("matrix_view.m32",myview->param_matrixWorld.m32()).toReal();
-    qreal m33 = settings.value("matrix_view.m33",myview->param_matrixWorld.m33()).toReal();
+    qreal m11 = settings.value("matrix_view.m11",myview->param_matrixWorld.m11()).toDouble();
+    qreal m12 = settings.value("matrix_view.m12",myview->param_matrixWorld.m12()).toDouble();
+    qreal m13 = settings.value("matrix_view.m13",myview->param_matrixWorld.m13()).toDouble();
+    qreal m21 = settings.value("matrix_view.m21",myview->param_matrixWorld.m21()).toDouble();
+    qreal m22 = settings.value("matrix_view.m22",myview->param_matrixWorld.m22()).toDouble();
+    qreal m23 = settings.value("matrix_view.m23",myview->param_matrixWorld.m23()).toDouble();
+    qreal m31 = settings.value("matrix_view.m31",myview->param_matrixWorld.m31()).toDouble();
+    qreal m32 = settings.value("matrix_view.m32",myview->param_matrixWorld.m32()).toDouble();
+    qreal m33 = settings.value("matrix_view.m33",myview->param_matrixWorld.m33()).toDouble();
     myview->param_matrixWorld = QTransform(m11,m12,m13,m21,m22,m23,m31,m32,m33);
 
     //trackbar here
