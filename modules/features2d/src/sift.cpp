@@ -2088,7 +2088,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
                     commParams.firstOctave, -1, commParams.nOctaveLayers+1);
 
     vlsift.detectKeypoints(detectorParams.threshold, detectorParams.edgeThreshold);
-    int d = std::abs(vlsift.keypointsBegin()-vlsift.keypointsEnd());
+    int d = std::abs(int(vlsift.keypointsBegin()-vlsift.keypointsEnd()));
     keypoints.reserve(d);
 
     for( VL::Sift::KeypointsConstIter iter = vlsift.keypointsBegin(); iter != vlsift.keypointsEnd(); ++iter )
