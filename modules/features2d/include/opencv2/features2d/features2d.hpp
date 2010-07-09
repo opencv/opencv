@@ -1560,6 +1560,7 @@ struct DMatch
 class CV_EXPORTS DescriptorMatcher
 {
 public:
+    virtual ~DescriptorMatcher() {}
     /*
      * Add descriptors to the training set
      * descriptors Descriptors to add to the training set
@@ -1806,7 +1807,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
     for( int i = 0; i < descriptors_1.rows; i++ )
     {
-        const ValueType* d1 = descriptors_1.ptr<ValueType>(i);
+        const ValueType* d1 = (const ValueType*)(descriptors_1.data + descriptors_1.step*i);
         int matchIndex = -1;
         DistanceType matchDistance = std::numeric_limits<DistanceType>::max();
 
@@ -1814,7 +1815,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
         {
             if( possibleMatch(mask, i, j) )
             {
-                const ValueType* d2 = descriptors_2.ptr<ValueType>(j);
+                const ValueType* d2 = (const ValueType*)(descriptors_2.data + descriptors_2.step*j);
                 DistanceType curDistance = distance(d1, d2, dimension);
                 if( curDistance < matchDistance )
                 {
@@ -1854,13 +1855,13 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
     for( int i = 0; i < descriptors_1.rows; i++ )
     {
-        const ValueType* d1 = descriptors_1.ptr<ValueType>(i);
+        const ValueType* d1 = (const ValueType*)(descriptors_1.data + descriptors_1.step*i);
 
         for( int j = 0; j < descriptors_2.rows; j++ )
         {
             if( possibleMatch(mask, i, j) )
             {
-                const ValueType* d2 = descriptors_2.ptr<ValueType>(j);
+                const ValueType* d2 = (const ValueType*)(descriptors_2.data + descriptors_2.step*j);
                 DistanceType curDistance = distance(d1, d2, dimension);
                 if( curDistance < threshold )
                 {

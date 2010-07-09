@@ -75,6 +75,11 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
     sum.setTo(Scalar(0));
     max.setTo(Scalar(-DBL_MAX));
     min.setTo(Scalar(DBL_MAX));
+    
+    const Mat_<Type>& src_ = src;
+    Mat_<double>& sum_ = (Mat_<double>&)sum;
+    Mat_<double>& min_ = (Mat_<double>&)min;
+    Mat_<double>& max_ = (Mat_<double>&)max;
 
     if( dim == 0 )
     {
@@ -82,9 +87,9 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
         {
             for( int ci = 0; ci < src.cols; ci++ )
             {
-                sum.at<double>(0, ci) += src.at<Type>(ri, ci);
-                max.at<double>(0, ci) = std::max( max.at<double>(0, ci), (double)src.at<Type>(ri, ci) );
-                min.at<double>(0, ci) = std::min( min.at<double>(0, ci), (double)src.at<Type>(ri, ci) );
+                sum_(0, ci) += src_(ri, ci);
+                max_(0, ci) = std::max( max_(0, ci), (double)src_(ri, ci) );
+                min_(0, ci) = std::min( min_(0, ci), (double)src_(ri, ci) );
             }
         }
     }
@@ -94,9 +99,9 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
         {
             for( int ri = 0; ri < src.rows; ri++ )
             {
-                sum.at<double>(ri, 0) += src.at<Type>(ri, ci);
-                max.at<double>(ri, 0) = std::max( max.at<double>(ri, 0), (double)src.at<Type>(ri, ci) );
-                min.at<double>(ri, 0) = std::min( min.at<double>(ri, 0), (double)src.at<Type>(ri, ci) );
+                sum_(ri, 0) += src_(ri, ci);
+                max_(ri, 0) = std::max( max_(ri, 0), (double)src_(ri, ci) );
+                min_(ri, 0) = std::min( min_(ri, 0), (double)src_(ri, ci) );
             }
         }
     }

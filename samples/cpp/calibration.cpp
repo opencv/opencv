@@ -171,7 +171,8 @@ void saveCameraParams( const string& filename,
         for( size_t i = 0; i < imagePoints.size(); i++ )
         {
             Mat r = imagePtMat.row(i).reshape(2, imagePtMat.cols);
-            Mat(imagePoints[i]).copyTo(r);
+            Mat imgpti(imagePoints[i]);
+            imgpti.copyTo(r);
         }
         fs << "image_points" << imagePtMat;
     }

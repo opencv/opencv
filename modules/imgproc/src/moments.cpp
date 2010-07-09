@@ -205,7 +205,7 @@ static void momentsInTile( const cv::Mat& img, double* moments )
 
     for( y = 0; y < size.height; y++ )
     {
-		const T* ptr = img.ptr<T>(y);
+		const T* ptr = (const T*)(img.data + y*img.step);
 		WT x0 = 0, x1 = 0, x2 = 0;
 		MT x3 = 0;
 		
