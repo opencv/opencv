@@ -311,7 +311,7 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-CV_MomentsTest img_moments_test;
+//CV_MomentsTest img_moments_test;
 
 
 // Hu invariants

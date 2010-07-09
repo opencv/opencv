@@ -766,7 +766,7 @@ protected:
 
 };
 
-CV_StereoGCTest stereoGC;
+//CV_StereoGCTest stereoGC;
 
 //----------------------------------- StereoSGBM test -----------------------------------------------------
 
