@@ -216,6 +216,6 @@ _exit_:
         ts->set_failed_test_info( code );
 }
 
-CV_POSITTest posit_test;
+//CV_POSITTest posit_test;
 
 /* End of file. */

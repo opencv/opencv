@@ -2420,7 +2420,7 @@ void CxCore_DetTest::prepare_to_validation( int )
     *((CvScalar*)(test_mat[REF_OUTPUT][0].data.db)) = cvRealScalar(cvTsLU(&test_mat[TEMP][0], 0, 0));
 }
 
-CxCore_DetTest det_test;
+//CxCore_DetTest det_test;
 
 
 

@@ -761,7 +761,7 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-CV_RodriguesTest rodrigues_test;
+//CV_RodriguesTest rodrigues_test;
 
 
 /********************************** fundamental matrix *********************************/
@@ -1093,7 +1093,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
 }
 
 
-CV_FundamentalMatTest fmatrix_test;
+//CV_FundamentalMatTest fmatrix_test;
 
 
 /********************************** convert homogeneous *********************************/

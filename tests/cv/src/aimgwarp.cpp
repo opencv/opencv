@@ -426,7 +426,7 @@ void CV_ResizeTest::prepare_to_validation( int /*test_case_idx*/ )
     cvReleaseMat( &y_idx );
 }
 
-CV_ResizeTest warp_resize_test;
+//CV_ResizeTest warp_resize_test;
 
 
 /////////////////////////
