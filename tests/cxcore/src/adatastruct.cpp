@@ -2045,7 +2045,7 @@ void CxCore_GraphTest::run( int )
     __END__;
 }
 
-CxCore_GraphTest graph_test;
+//CxCore_GraphTest graph_test;
 
 
 
