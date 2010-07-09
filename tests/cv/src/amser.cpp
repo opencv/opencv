@@ -198,4 +198,4 @@ void CV_MserTest::run(int)
 	cvReleaseImage(&img);
 }
 
-CV_MserTest mser_test;
+//CV_MserTest mser_test;
