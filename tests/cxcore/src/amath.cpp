@@ -1150,7 +1150,7 @@ void CxCore_DotProductTest::prepare_to_validation( int )
         cvRealScalar(cvTsCrossCorr( &test_mat[INPUT][0], &test_mat[INPUT][1] ));
 }
 
-CxCore_DotProductTest dotproduct_test;
+//CxCore_DotProductTest dotproduct_test;
 
 
 ///////// crossproduct //////////

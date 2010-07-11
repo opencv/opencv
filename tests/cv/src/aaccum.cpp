@@ -295,5 +295,5 @@ void CV_RunningAvgTest::prepare_to_validation( int )
     cvTsCopy( temp, dst, mask );
 }
 
-CV_RunningAvgTest runavg_test;
+//CV_RunningAvgTest runavg_test;
 

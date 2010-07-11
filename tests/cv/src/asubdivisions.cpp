@@ -293,7 +293,7 @@ _exit_:
     return code;
 }
 
-CV_SubdivTest subdiv_test;
+//CV_SubdivTest subdiv_test;
 
 /* End of file. */
 

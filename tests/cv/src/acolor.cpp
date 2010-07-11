@@ -809,7 +809,7 @@ void CV_ColorHSVTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
 }
 
 
-CV_ColorHSVTest color_hsv_test;
+//CV_ColorHSVTest color_hsv_test;
 
 
 

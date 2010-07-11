@@ -618,7 +618,7 @@ void CV_FilterTest::prepare_to_validation( int test_case_idx )
     cvTsConvolve2D( &test_mat[TEMP][0], &test_mat[REF_OUTPUT][0], &test_mat[INPUT][1], anchor );
 }
 
-CV_FilterTest filter;
+//CV_FilterTest filter;
 
 
 ////////////////////////
