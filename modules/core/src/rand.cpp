@@ -426,46 +426,29 @@ Randn_( Mat& _arr, uint64* state, const void* _param )
 {
     const int RAND_BUF_SIZE = 96;
     float buffer[RAND_BUF_SIZE];
+    int pidx[RAND_BUF_SIZE];    
     const PT* param = (const PT*)_param;
     Size size = getContinuousSize(_arr, _arr.channels());
+    
+    int i, n = std::min(size.width, RAND_BUF_SIZE);
+    for( i = 0; i < 12; i++ )
+        pidx[i] = i;
+    for( ; i < n; i++ )
+        pidx[i] = pidx[i - 12];
 
     for( int y = 0; y < size.height; y++ )
     {
         T* arr = (T*)(_arr.data + _arr.step*y);
-        int i, j, len = RAND_BUF_SIZE;
+        int len = RAND_BUF_SIZE;
         for( i = 0; i < size.width; i += RAND_BUF_SIZE )
         {
-            int k = 3;
-            const PT* p = param;
-
             if( i + len > size.width )
                 len = size.width - i;
 
             Randn_0_1_32f_C1R( buffer, len, state );
 
-            for( j = 0; j <= len - 4; j += 4 )
-            {
-                PT f0, f1;
-
-                f0 = buffer[j]*p[j+12] + p[j];
-                f1 = buffer[j+1]*p[j+13] + p[j+1];
-                arr[i+j] = saturate_cast<T>(f0);
-                arr[i+j+1] = saturate_cast<T>(f1);
-
-                f0 = buffer[j+2]*p[j+14] + p[j+2];
-                f1 = buffer[j+3]*p[j+15] + p[j+3];
-                arr[i+j+2] = saturate_cast<T>(f0);
-                arr[i+j+3] = saturate_cast<T>(f1);
-
-                if( --k == 0 )
-                {
-                    k = 3;
-                    p -= 12;
-                }
-            }
-
-            for( ; j < len; j++ )
-                arr[i+j] = saturate_cast<T>(buffer[j]*p[j+12] + p[j]);
+            for( int j = 0; j < len; j++ )
+                arr[i+j] = saturate_cast<T>(buffer[j]*param[pidx[j]+12] + param[pidx[j]]);
         }
     }
 }
