@@ -230,6 +230,8 @@ CV_IMPL int cvWaitKey( int arg )
         if (arg>0)
             timer.start(arg);
 
+		//QMutex dummy;
+
         while(!guiMainThread._bTimeOut)
         {
             qApp->processEvents(QEventLoop::AllEvents);
@@ -245,9 +247,25 @@ CV_IMPL int cvWaitKey( int arg )
             mutexKey.unlock();
 
             if (result!=-1)
+            {
                 break;
+			}
             else
+            {
+				/*
+				 * //will not work, I broke the event loop !!!!
+				dummy.lock();
+				QWaitCondition waitCondition;
+				waitCondition.wait(&dummy, 2);
+				*/
+			
+            #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+				sleep(2);
+            #else
                 usleep(2);//to decrease CPU usage
+            #endif
+            
+			}
         }
         guiMainThread._bTimeOut = false;
     }
