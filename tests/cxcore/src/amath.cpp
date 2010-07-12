@@ -1048,7 +1048,7 @@ double CxCore_MatrixTestImpl::get_success_error_level( int test_case_idx, int i,
 {
     int input_depth = CV_MAT_DEPTH(cvGetElemType( test_array[INPUT][0] ));
     double input_precision = input_depth < CV_32F ? 0 : input_depth == CV_32F ?
-                            5e-5 : 5e-11;
+                            5e-5 : 1e-10;
     double output_precision = CvArrTest::get_success_error_level( test_case_idx, i, j );
     return MAX(input_precision, output_precision);
 }
@@ -1150,7 +1150,7 @@ void CxCore_DotProductTest::prepare_to_validation( int )
         cvRealScalar(cvTsCrossCorr( &test_mat[INPUT][0], &test_mat[INPUT][1] ));
 }
 
-//CxCore_DotProductTest dotproduct_test;
+CxCore_DotProductTest dotproduct_test;
 
 
 ///////// crossproduct //////////
