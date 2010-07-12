@@ -1654,14 +1654,14 @@ void ViewPort::paintEvent(QPaintEvent* event)
 #if defined(OPENCV_GL)
     if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
     {
-	myPainter.beginNativePainting();
+	//myPainter.beginNativePainting();
 
 	setGL(width(),height());
 	on_openGL_draw3D(on_openGL_param);
 	//draw3D();
 	unsetGL();
 	
-	myPainter.endNativePainting();
+	//myPainter.endNativePainting();
     }
 #endif
 

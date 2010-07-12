@@ -74,7 +74,7 @@ enum {	CV_STYLE_NORMAL			= 0,//QFont::StyleNormal,
 
 //for color cvScalar(blue_component, green_component, red\_component[, alpha_component])
 //and alpha= 0 <-> 0xFF (not transparent <-> transparent)
-CVAPI(CvFont) cvFont_Qt(const char* nameFont, int pointSize CV_DEFAULT(-1), CvScalar color = cvScalarAll(0), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
+CVAPI(CvFont) cvFont_Qt(const char* nameFont, int pointSize CV_DEFAULT(-1), CvScalar color CV_DEFAULT(cvScalarAll(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
 
 CVAPI(void) cvAddText( CvArr* img, const char* text, CvPoint org, CvFont *arg2);
 
