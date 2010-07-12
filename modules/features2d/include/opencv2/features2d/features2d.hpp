@@ -1400,7 +1400,7 @@ protected:
     SURF surf;
 };
 
-CV_EXPORTS FeatureDetector* createDetector( const string& detectorType );
+CV_EXPORTS Ptr<FeatureDetector> createDetector( const string& detectorType );
 
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
@@ -1473,7 +1473,7 @@ protected:
     SURF surf;
 };
 
-CV_EXPORTS DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType );
+CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );
 
 /****************************************************************************************\
 *                                          Distance                                      *
@@ -1880,7 +1880,7 @@ template<>
 void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& mask, vector<int>& matches ) const;
 
-CV_EXPORTS DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType );
+CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
 
 /****************************************************************************************\
 *                                GenericDescriptorMatch                                  *
@@ -2177,7 +2177,7 @@ protected:
     Params params;
 };
 
-CV_EXPORTS GenericDescriptorMatch* createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
+CV_EXPORTS Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
 /****************************************************************************************\
 *                                VectorDescriptorMatch                                   *
 \****************************************************************************************/
@@ -2185,14 +2185,13 @@ CV_EXPORTS GenericDescriptorMatch* createGenericDescriptorMatch( const string& g
 /*
  *  A class used for matching descriptors that can be described as vectors in a finite-dimensional space
  */
-template<class Extractor, class Matcher>
 class CV_EXPORTS VectorDescriptorMatch : public GenericDescriptorMatch
 {
 public:
     using GenericDescriptorMatch::add;
 
-    VectorDescriptorMatch( Extractor *_extractor = 0, Matcher * _matcher = 0 ) :
-                           extractor(_extractor), matcher(_matcher) {}
+    VectorDescriptorMatch( DescriptorExtractor *_extractor = 0, DescriptorMatcher * _matcher = 0 ) :
+                           extractor( _extractor ), matcher( _matcher ) {}
 
     ~VectorDescriptorMatch() {}
 
@@ -2252,8 +2251,8 @@ public:
         extractor->write (fs);
     }
 protected:
-    Ptr<Extractor> extractor;
-    Ptr<Matcher> matcher;
+    Ptr<DescriptorExtractor> extractor;
+    Ptr<DescriptorMatcher> matcher;
     //vector<int> classIds;
 };
 

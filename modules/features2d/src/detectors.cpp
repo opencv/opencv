@@ -316,7 +316,7 @@ void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
     surf(image, mask, keypoints);
 }
 
-FeatureDetector* createDetector( const string& detectorType )
+Ptr<FeatureDetector> createDetector( const string& detectorType )
 {
     FeatureDetector* fd = 0;
     if( !detectorType.compare( "FAST" ) )

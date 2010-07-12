@@ -1332,8 +1332,8 @@ void DescriptorQualityTest::readAlgorithm( )
     {
         DescriptorExtractor *extractor = createDescriptorExtractor( algName );
         DescriptorMatcher *matcher = createDescriptorMatcher( matcherName );
-        defaultDescMatch = new VectorDescriptorMatch<DescriptorExtractor, DescriptorMatcher >( extractor, matcher );
-        specificDescMatch = new VectorDescriptorMatch<DescriptorExtractor, DescriptorMatcher >( extractor, matcher );
+        defaultDescMatch = new VectorDescriptorMatch( extractor, matcher );
+        specificDescMatch = new VectorDescriptorMatch( extractor, matcher );
 
         if( extractor == 0 || matcher == 0 )
         {

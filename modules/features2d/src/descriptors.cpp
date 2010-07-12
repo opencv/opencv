@@ -228,7 +228,7 @@ void SurfDescriptorExtractor::write( FileStorage &fs ) const
     fs << "extended" << surf.extended;
 }
 
-DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtractorType )
+Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType )
 {
     DescriptorExtractor* de = 0;
     if( !descriptorExtractorType.compare( "SIFT" ) )
@@ -251,7 +251,7 @@ DescriptorExtractor* createDescriptorExtractor( const string& descriptorExtracto
     return de;
 }
 
-DescriptorMatcher* createDescriptorMatcher( const string& descriptorMatcherType )
+Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType )
 {
     DescriptorMatcher* dm = 0;
     if( !descriptorMatcherType.compare( "BruteForce" ) )
@@ -394,7 +394,7 @@ void GenericDescriptorMatch::clear()
     collection.clear();
 }
 
-GenericDescriptorMatch* createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
+Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
 {
     GenericDescriptorMatch *descriptorMatch = 0;
     if( ! genericDescritptorMatchType.compare ("ONEWAY") )
