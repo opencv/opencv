@@ -51,9 +51,43 @@ static bool multiThreads = false;
 static int last_key = -1;
 QWaitCondition key_pressed;
 QMutex mutexKey;
-
 static const unsigned int threshold_zoom_img_region = 15;//the minimum zoom value to start displaying the values' grid
 //end static and global
+
+
+
+CV_IMPL CvFont cvFont_Qt(const char* nameFont, int pointSize,CvScalar color,int weight,int style, int spacing)
+{
+
+	/*
+	//nameFont   <- only Qt
+	//CvScalar color   <- only Qt (blue_component, green_component, red\_component[, alpha_component])
+    int         font_face;//<- style in Qt
+    const int*  ascii;
+    const int*  greek;
+    const int*  cyrillic;
+    float       hscale, vscale;
+    float       shear;
+    int         thickness;//<- weight in Qt
+    float       dx;//spacing letter in Qt (0 default) in pixel
+    int         line_type;//<- pointSize in Qt
+	*/
+	CvFont f = {nameFont,color,style,NULL,NULL,NULL,0,0,0,weight,spacing,pointSize};
+    return f;
+}
+
+
+
+CV_IMPL void cvAddText( CvArr* img, const char* text, CvPoint org, CvFont* font)
+{
+    QMetaObject::invokeMethod(&guiMainThread,
+						  "putText",
+						  Qt::AutoConnection,
+						  Q_ARG(void*, (void*) img),
+						  Q_ARG(QString,QString(text)),
+						  Q_ARG(QPoint, QPoint(org.x,org.y)),
+						  Q_ARG(void*,(void*) font));
+}
 
 double cvGetRatioWindow_QT(const char* name)
 {
@@ -299,10 +333,10 @@ CV_IMPL int icvInitSystem()
 		new QApplication(parameterSystemC,parameterSystemV);
 
         wasInitialized = 1;
-        qDebug()<<"init done"<<endl;
+        qDebug()<<"init done";
         
         #if defined(OPENCV_GL)//OK tested !
-		qDebug()<<"opengl support available"<<endl;
+		qDebug()<<"opengl support available";
 		#endif
     }
 
@@ -484,12 +518,6 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 }
 
 
-
-
-
-
-
-
 //----------OBJECT----------------
 
 GuiReceiver::GuiReceiver() : _bTimeOut(false)
@@ -498,12 +526,43 @@ GuiReceiver::GuiReceiver() : _bTimeOut(false)
     qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
+void GuiReceiver::putText(void* arg1, QString text, QPoint org, void* arg2)
+{
+	CV_Assert(arg1);
+	
+	IplImage* img = (IplImage*)arg1;
+		
+	//for now, only support QImage::Format_RGB888
+	if (img->depth !=IPL_DEPTH_8U || img->nChannels != 3)
+		return;
+		
+	CvFont* font = (CvFont*)arg2;
+	
+	
+	
+	QImage qimg((uchar*) img->imageData, img->width, img->height,QImage::Format_RGB888);
+	QPainter qp(&qimg);
+	if (font)
+	{
+		QFont f(font->nameFont, font->line_type/*PointSize*/, font->thickness/*weight*/);
+		f.setStyle((QFont::Style)font->font_face/*style*/);
+		f.setLetterSpacing ( QFont::AbsoluteSpacing, font->dx/*spacing*/ );
+		//cvScalar(blue_component, green_component, red\_component[, alpha_component])
+		//Qt map non-transparent to 0xFF and transparent to 0
+		//OpenCV scalar is the reverse, so 255-font->color.val[3]
+		qp.setPen(QColor(font->color.val[2],font->color.val[1],font->color.val[0],255-font->color.val[3]));
+		qp.setFont ( f );
+	}
+	qp.drawText (org, text );
+	qp.end();
+}
+
 void GuiReceiver::saveWindowParameters(QString name)
 {
     QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
     if (w)
-	w->writeSettings();
+		w->writeSettings();
 }
 
 void GuiReceiver::loadWindowParameters(QString name)
@@ -511,7 +570,7 @@ void GuiReceiver::loadWindowParameters(QString name)
     QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
     if (w)
-	w->readSettings();
+		w->readSettings();
 }
 
 double GuiReceiver::getRatioWindow(QString name)
@@ -623,13 +682,6 @@ void GuiReceiver::createWindow( QString name, int flags )
 
     //QPointer<CvWindow> w1 =
     new CvWindow(name, flags);
-}
-
-void GuiReceiver::refreshEvents()
-{
-    QAbstractEventDispatcher::instance(qApp->instance()->thread())->processEvents(QEventLoop::AllEvents);
-    //qDebug()<<"refresh ?"<<endl;
-    //qApp->processEvents(QEventLoop::AllEvents);
 }
 
 void GuiReceiver::timeOut()
@@ -805,7 +857,7 @@ void CvTrackbar::createDialog()
 
     bool ok= false;
 
-    //crash if I access the value directly to give them to QInputDialog, so do a copy first.
+    //crash if I access the values directly and give them to QInputDialog, so do a copy first.
     int value = slider->value();
     int step = slider->singleStep();
     int min = slider->minimum();
@@ -1142,15 +1194,14 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
     positionCorners = QRect(0,0,size().width(),size().height());
     on_mouse = NULL;
     mouseCoordinate = QPoint(-1,-1);
-    on_openGL = NULL;
+    on_openGL_draw3D = NULL;
 
 
 #if defined(OPENCV_GL)
     if ( mode_display == CV_MODE_OPENGL)
     {
-		QGLWidget* wGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
-		setViewport(wGL);
-	
+		//QGLWidget* wGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
+		setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
 		initGL();
     }
 #endif
@@ -1192,16 +1243,30 @@ void ViewPort::saveView()
 		
 		// Save it..
 		if (QString::compare(extension, "png", Qt::CaseInsensitive) == 0)
+		{
 			image2Draw_qt_resized.save(fileName, "PNG");
+			return;
+		}
 		
 		if (QString::compare(extension, "jpg", Qt::CaseInsensitive) == 0)
+		{
 			image2Draw_qt_resized.save(fileName, "JPG");
+			return;
+		}
 			
 		if (QString::compare(extension, "bmp", Qt::CaseInsensitive) == 0)
+		{
 			image2Draw_qt_resized.save(fileName, "BMP");
+			return;
+		}
 			
 		if (QString::compare(extension, "jpeg", Qt::CaseInsensitive) == 0)
+		{
 			image2Draw_qt_resized.save(fileName, "JPEG");
+			return;
+		}
+		
+		qDebug()<<"file extension not recognized, please choose between JPG, JPEG, BMP or PNG";
 	}
 }
 
@@ -1289,10 +1354,11 @@ inline bool ViewPort::isSameSize(IplImage* img1,IplImage* img2)
 
 void ViewPort::updateImage(void* arr)
 {
-    if (!arr)
-	CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
-
-    IplImage* tempImage = (IplImage*)arr;
+    //if (!arr)
+	//CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
+	CV_Assert(arr);
+	
+    IplImage* tempImage = (IplImage*)arr;		
 
     if (!isSameSize(image2Draw_ipl,tempImage))
     {
@@ -1319,7 +1385,7 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 
 void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata)
 {
-	 on_openGL = func;
+	 on_openGL_draw3D = func;
 	 on_openGL_param = userdata;
  }
  
@@ -1469,11 +1535,9 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 
     if (param_matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
     {
-	QPointF dxy = (pt - positionGrabbing)/param_matrixWorld.m11();
-
-	positionGrabbing = event->pos();
-
-	moveView(dxy);
+		QPointF dxy = (pt - positionGrabbing)/param_matrixWorld.m11();
+		positionGrabbing = event->pos();
+		moveView(dxy);
     }
 
     //I update the statusbar here because if the user does a cvWaitkey(0) (like with inpaint.cpp)
@@ -1553,8 +1617,6 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
 	image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 	
     controlImagePosition();
-    //ratioX=float(image2Draw_ipl->width)/float(width());
-    //ratioY=float(image2Draw_ipl->height)/float(height());
     ratioX=width()/float(image2Draw_ipl->width);
     ratioY=height()/float(image2Draw_ipl->height);
 
@@ -1590,11 +1652,16 @@ void ViewPort::paintEvent(QPaintEvent* event)
     draw2D(&myPainter);
 
 #if defined(OPENCV_GL)
-    if ( mode_display == CV_MODE_OPENGL && on_openGL)
+    if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
     {
+	myPainter.beginNativePainting();
+
 	setGL(width(),height());
-	draw3D();
+	on_openGL_draw3D(on_openGL_param);
+	//draw3D();
 	unsetGL();
+	
+	myPainter.endNativePainting();
     }
 #endif
 
@@ -1841,8 +1908,8 @@ void ViewPort::draw3D()
     //draw scene here
     glLoadIdentity();
 
-    glTranslated(0.0, 0.0, -1.0);
-    // QVector3D p = convert(positionMouse);
+    glTranslated(10.0, 10.0, -1.0);
+    // QVector3D p = convert(mouseCoordinate);
     //glTranslated(p.x(),p.y(),p.z());
 
     glRotatef( 55, 1, 0, 0 );
@@ -1859,12 +1926,12 @@ void ViewPort::draw3D()
     };
 
     for (int i = 0; i < 6; ++i) {
-	glColor3ub( i*20, 100+i*10, i*42 );
-	glBegin(GL_QUADS);
-	for (int j = 0; j < 4; ++j) {
-	    glVertex3d(0.2 * coords[i][j][0], 0.2 * coords[i][j][1], 0.2 * coords[i][j][2]);
-	}
-	glEnd();
+		glColor3ub( i*20, 100+i*10, i*42 );
+		glBegin(GL_QUADS);
+		for (int j = 0; j < 4; ++j) {
+			glVertex3d(0.2 * coords[i][j][0], 0.2 * coords[i][j][1], 0.2 * coords[i][j][2]);
+		}
+		glEnd();
     }
 }
 #endif

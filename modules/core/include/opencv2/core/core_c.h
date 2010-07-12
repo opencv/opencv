@@ -1370,18 +1370,21 @@ CVAPI(int)  cvInitLineIterator( const CvArr* image, CvPoint pt1, CvPoint pt2,
 
 #define CV_FONT_VECTOR0    CV_FONT_HERSHEY_SIMPLEX
 
+
 /* Font structure */
 typedef struct CvFont
 {
-    int         font_face; /* =CV_FONT_* */
-    const int*  ascii; /* font data and metrics */
+	const char* nameFont;		//Qt:nameFont
+	CvScalar color;				//Qt:ColorFont -> cvScalar(blue_component, green_component, red\_component[, alpha_component])
+    int         font_face; 		//Qt: bool italic         /* =CV_FONT_* */
+    const int*  ascii; 			/* font data and metrics */
     const int*  greek;
     const int*  cyrillic;
     float       hscale, vscale;
-    float       shear; /* slope coefficient: 0 - normal, >0 - italic */
-    int         thickness; /* letters thickness */
-    float       dx; /* horizontal interval between letters */
-    int         line_type;
+    float       shear; 			/* slope coefficient: 0 - normal, >0 - italic */
+    int         thickness; 		//Qt: weight               /* letters thickness */
+    float       dx; 			/* horizontal interval between letters */
+    int         line_type;		//Qt: PointSize
 }
 CvFont;
 
@@ -1407,6 +1410,8 @@ CVAPI(void)  cvPutText( CvArr* img, const char* text, CvPoint org,
 /* Calculates bounding box of text stroke (useful for alignment) */
 CVAPI(void)  cvGetTextSize( const char* text_string, const CvFont* font,
                             CvSize* text_size, int* baseline );
+
+
 
 /* Unpacks color value, if arrtype is CV_8UC?, <color> is treated as
    packed color value, otherwise the first channels (depending on arrtype)

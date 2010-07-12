@@ -170,7 +170,6 @@ void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
 void cvSetModeWindow_CARBON(const char* name, double prop_value);
 
-
 //for QT
 #if defined (HAVE_QT)
 double cvGetModeWindow_QT(const char* name);

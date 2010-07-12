@@ -510,7 +510,7 @@ if (QT4_FOUND AND AUTOSWITCH_QT)
     set(WITH_QT ON CACHE BOOL "Build with QT Backend support")
     find_package (OpenGL QUIET)
     if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-			set(WITH_QT_OPENGL ON CACHE BOOL "Add OpenGL extention to QT")
+			set(WITH_QT_OPENGL ON CACHE BOOL "Add OpenGL extension to QT")
     endif()
 endif()
     

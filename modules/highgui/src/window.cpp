@@ -189,9 +189,21 @@ int startWindowThread()
 }
 
 #if defined (HAVE_QT)
+
+void addText( const Mat& img, const string& text, Point org, CvFont font)
+{
+	CvMat _img = img;
+	cvAddText( &_img, text.c_str(), CvPoint(org),&font);
+}
+
 void displayStatusBar(const string& name,  const string& text, int delayms)
 {
 	cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
+}
+
+void createOpenGLCallback(const string& name,  OpenGLCallback callback, void* param)
+{
+	cvCreateOpenGLCallback(name.c_str(),callback, param);
 }
 
 void displayOverlay(const string& name,  const string& text, int delayms)

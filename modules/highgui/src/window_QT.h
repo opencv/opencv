@@ -88,13 +88,11 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
 		shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
 		shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
 	};
-//end enum
 
-typedef void (CV_CDECL *CvOpenGLCallback)(void* userdata);
+//end enum
 
 class CvWindow;
 class ViewPort;
-//class CvTrackbar;
 
 class GuiReceiver : public QObject
 {
@@ -118,7 +116,6 @@ public slots:
     void showImage(QString name, void* arr);
     void displayInfo( QString name, QString text, int delayms );
     void displayStatusBar( QString name, QString text, int delayms );
-    void refreshEvents();
     void timeOut();
     void toggleFullScreen(QString name, double flags );
     double isFullScreen(QString name);
@@ -129,6 +126,7 @@ public slots:
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
     void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata);
+    void putText(void* arg1, QString text, QPoint org, void* font);
 
 };
 
@@ -268,7 +266,7 @@ private:
     void* on_mouse_param;
     
     //for opengl callback
-    CvOpenGLCallback on_openGL;
+    CvOpenGLCallback on_openGL_draw3D;
 	void* on_openGL_param;
 
     bool isSameSize(IplImage* img1,IplImage* img2);

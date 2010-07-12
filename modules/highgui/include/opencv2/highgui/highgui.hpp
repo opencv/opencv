@@ -64,14 +64,21 @@ CV_EXPORTS void setWindowProperty(const string& winname, int prop_id, double pro
 CV_EXPORTS double getWindowProperty(const string& winname, int prop_id);//YV
 
 
-//Only for QT
+//Only for Qt
+//------------------------
+CV_EXPORTS void addText( const Mat& img, const char* text, Point org, CvFont font);
+
 CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
 CV_EXPORTS void displayStatusBar(const string& winname, const string& text, int delayms);
+
+typedef void (CV_CDECL *OpenGLCallback)(void* userdata);
+CV_EXPORTS void createOpenGLCallback(const string& winname, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(0));
+
 CV_EXPORTS void saveWindowParameters(const string& windowName);
 CV_EXPORTS void loadWindowParameters(const string& windowName);
 CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 CV_EXPORTS  void stopLoop();
-
+//-------------------------
 
 CV_EXPORTS void imshow( const string& winname, const Mat& mat );
 
