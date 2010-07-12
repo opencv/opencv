@@ -53,14 +53,14 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 			if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
 				break;
 		
-			#if   defined WIN32 || defined _WIN32 
+			#if defined (HAVE_QT)
+			cvSetModeWindow_QT(name,prop_value);
+			#elif defined WIN32 || defined _WIN32 
 			cvSetModeWindow_W32(name,prop_value);
 			#elif defined (HAVE_GTK)
 			cvSetModeWindow_GTK(name,prop_value);
 			#elif defined (HAVE_CARBON)
 			cvSetModeWindow_CARBON(name,prop_value);
-			#elif defined (HAVE_QT)
-			cvSetModeWindow_QT(name,prop_value);
 			#endif
 		break;
 		
@@ -89,16 +89,16 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 		
 			if (!name)//bad argument
 				return -1;
-				
-			#if   defined WIN32 || defined _WIN32 
+			
+            #if defined (HAVE_QT)
+				return cvGetModeWindow_QT(name);
+            #elif defined WIN32 || defined _WIN32 
 				return cvGetModeWindow_W32(name);
 			#elif defined (HAVE_GTK)
 				return cvGetModeWindow_GTK(name);
 			#elif defined (HAVE_CARBON)
 				return cvGetModeWindow_CARBON(name);
-			#elif defined (HAVE_QT)
-				return cvGetModeWindow_QT(name);
-            #else
+			#else
                 return -1;
 			#endif
 		

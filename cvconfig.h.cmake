@@ -159,3 +159,9 @@
 
 /* Eigen2 Matrix & Linear Algebra Library */
 #cmakedefine  HAVE_EIGEN2
+
+/* Qt bindings */
+#cmakedefine  HAVE_QT
+
+/* Qt bindings use OpenGL */
+#cmakedefine  HAVE_HAVE_QT_OPENGL
