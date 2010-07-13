@@ -229,79 +229,86 @@ double determinant( const Mat& mat )
     size_t step = mat.step;
     const uchar* m = mat.data;
 
-    CV_Assert( mat.rows == mat.cols );
+    CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
 
     #define Mf(y, x) ((float*)(m + y*step))[x]
     #define Md(y, x) ((double*)(m + y*step))[x]
 
-    if( type == CV_32F )
+    if( rows <= 10 )
     {
-        if( rows == 2 )
-            result = det2(Mf);
-        else if( rows == 3 )
-            result = det3(Mf);
-        else if( rows == 1 )
-            result = Mf(0,0);
-        else
+        if( type == CV_32F )
         {
-            integer i, n = rows, *ipiv, info=0;
-            int bufSize = n*n*sizeof(float) + (n+1)*sizeof(ipiv[0]), sign=0;
-            AutoBuffer<uchar> buffer(bufSize);
-
-            Mat a(n, n, CV_32F, (uchar*)buffer);
-            mat.copyTo(a);
-
-            ipiv = (integer*)cvAlignPtr(a.data + a.step*a.rows, sizeof(integer));
-            sgetrf_(&n, &n, (float*)a.data, &n, ipiv, &info);
-            assert(info >= 0);
-
-            if( info == 0 )
+            if( rows == 2 )
+                result = det2(Mf);
+            else if( rows == 3 )
+                result = det3(Mf);
+            else if( rows == 1 )
+                result = Mf(0,0);
+            else
             {
-                result = 1;
-                for( i = 0; i < n; i++ )
+                size_t bufSize = rows*rows*sizeof(float);
+                AutoBuffer<uchar> buffer(bufSize);
+                Mat a(rows, rows, CV_32F, (uchar*)buffer);
+                mat.copyTo(a);
+                
+                result = LU((float*)a.data, rows, 0, 0);
+                if( result )
                 {
-                    result *= ((float*)a.data)[i*(n+1)];
-                    sign ^= ipiv[i] != i+1;
+                    for( int i = 0; i < rows; i++ )
+                        result *= ((const float*)(a.data + a.step*i))[i];
+                    result = 1./result;
                 }
-                result *= sign ? -1 : 1;
             }
         }
-    }
-    else if( type == CV_64F )
-    {
-        if( rows == 2 )
-            result = det2(Md);
-        else if( rows == 3 )
-            result = det3(Md);
-        else if( rows == 1 )
-            result = Md(0,0);
         else
         {
-            integer i, n = rows, *ipiv, info=0;
-            int bufSize = n*n*sizeof(double) + (n+1)*sizeof(ipiv[0]), sign=0;
-            AutoBuffer<uchar> buffer(bufSize);
-
-            Mat a(n, n, CV_64F, (uchar*)buffer);
-            mat.copyTo(a);
-            ipiv = (integer*)cvAlignPtr(a.data + a.step*a.rows, sizeof(integer));
-
-            dgetrf_(&n, &n, (double*)a.data, &n, ipiv, &info);
-            assert(info >= 0);
-
-            if( info == 0 )
+            if( rows == 2 )
+                result = det2(Md);
+            else if( rows == 3 )
+                result = det3(Md);
+            else if( rows == 1 )
+                result = Md(0,0);
+            else
             {
-                result = 1;
-                for( i = 0; i < n; i++ )
+                size_t bufSize = rows*rows*sizeof(double);
+                AutoBuffer<uchar> buffer(bufSize);
+                Mat a(rows, rows, CV_64F, (uchar*)buffer);
+                mat.copyTo(a);
+                
+                result = LU((double*)a.data, rows, 0, 0);
+                if( result )
                 {
-                    result *= ((double*)a.data)[i*(n+1)];
-                    sign ^= ipiv[i] != i+1;
+                    for( int i = 0; i < rows; i++ )
+                        result *= ((const double*)(a.data + a.step*i))[i];
+                    result = 1./result;
                 }
-                result *= sign ? -1 : 1;
             }
         }
     }
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+    {
+        integer i, n = rows, *ipiv, info=0, sign = 0;
+        size_t bufSize = n*n*sizeof(double) + (n+1)*sizeof(ipiv[0]);
+        AutoBuffer<uchar> buffer(bufSize);
+
+        Mat a(n, n, CV_64F, (uchar*)buffer);
+        mat.convertTo(a, CV_64F);
+
+        ipiv = (integer*)cvAlignPtr(a.data + a.step*a.rows, sizeof(integer));
+        dgetrf_(&n, &n, (double*)a.data, &n, ipiv, &info);
+        assert(info >= 0);
+
+        if( info == 0 )
+        {
+            result = 1;
+            for( i = 0; i < n; i++ )
+            {
+                result *= ((double*)a.data)[i*(n+1)];
+                sign ^= ipiv[i] != i+1;
+            }
+            result *= sign ? -1 : 1;
+        }
+    }
 
     #undef Mf
     #undef Md
@@ -341,193 +348,216 @@ double invert( const Mat& src, Mat& dst, int method )
     CV_Assert( src.rows == src.cols && (type == CV_32F || type == CV_64F));
     dst.create( src.rows, src.cols, type );
 
-    if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
+    if( src.rows <= 3 )
     {
-        if( src.rows <= 3 )
+        uchar* srcdata = src.data;
+        uchar* dstdata = dst.data;
+        size_t srcstep = src.step;
+        size_t dststep = dst.step;
+
+        if( src.rows == 2 )
         {
-            uchar* srcdata = src.data;
-            uchar* dstdata = dst.data;
-            size_t srcstep = src.step;
-            size_t dststep = dst.step;
-
-            if( src.rows == 2 )
+            if( type == CV_32FC1 )
             {
-                if( type == CV_32FC1 )
+                double d = det2(Sf);
+                if( d != 0. )
                 {
-                    double d = det2(Sf);
-                    if( d != 0. )
-                    {
-                        double t0, t1;
-                        result = d;
-                        d = 1./d;
-                        t0 = Sf(0,0)*d;
-                        t1 = Sf(1,1)*d;
-                        Df(1,1) = (float)t0;
-                        Df(0,0) = (float)t1;
-                        t0 = -Sf(0,1)*d;
-                        t1 = -Sf(1,0)*d;
-                        Df(0,1) = (float)t0;
-                        Df(1,0) = (float)t1;
-                    }
-                }
-                else
-                {
-                    double d = det2(Sd);
-                    if( d != 0. )
-                    {
-                        double t0, t1;
-                        result = d;
-                        d = 1./d;
-                        t0 = Sd(0,0)*d;
-                        t1 = Sd(1,1)*d;
-                        Dd(1,1) = t0;
-                        Dd(0,0) = t1;
-                        t0 = -Sd(0,1)*d;
-                        t1 = -Sd(1,0)*d;
-                        Dd(0,1) = t0;
-                        Dd(1,0) = t1;
-                    }
-                }
-            }
-            else if( src.rows == 3 )
-            {
-                if( type == CV_32FC1 )
-                {
-                    double d = det3(Sf);
-                    if( d != 0. )
-                    {
-                        float t[9];
-                        result = d;
-                        d = 1./d;
-
-                        t[0] = (float)((Sf(1,1) * Sf(2,2) - Sf(1,2) * Sf(2,1)) * d);
-                        t[1] = (float)((Sf(0,2) * Sf(2,1) - Sf(0,1) * Sf(2,2)) * d);
-                        t[2] = (float)((Sf(0,1) * Sf(1,2) - Sf(0,2) * Sf(1,1)) * d);
-                                      
-                        t[3] = (float)((Sf(1,2) * Sf(2,0) - Sf(1,0) * Sf(2,2)) * d);
-                        t[4] = (float)((Sf(0,0) * Sf(2,2) - Sf(0,2) * Sf(2,0)) * d);
-                        t[5] = (float)((Sf(0,2) * Sf(1,0) - Sf(0,0) * Sf(1,2)) * d);
-                                      
-                        t[6] = (float)((Sf(1,0) * Sf(2,1) - Sf(1,1) * Sf(2,0)) * d);
-                        t[7] = (float)((Sf(0,1) * Sf(2,0) - Sf(0,0) * Sf(2,1)) * d);
-                        t[8] = (float)((Sf(0,0) * Sf(1,1) - Sf(0,1) * Sf(1,0)) * d);
-
-                        Df(0,0) = t[0]; Df(0,1) = t[1]; Df(0,2) = t[2];
-                        Df(1,0) = t[3]; Df(1,1) = t[4]; Df(1,2) = t[5];
-                        Df(2,0) = t[6]; Df(2,1) = t[7]; Df(2,2) = t[8];
-                    }
-                }
-                else
-                {
-                    double d = det3(Sd);
-                    if( d != 0. )
-                    {
-                        double t[9];
-                        result = d;
-                        d = 1./d;
-
-                        t[0] = (Sd(1,1) * Sd(2,2) - Sd(1,2) * Sd(2,1)) * d;
-                        t[1] = (Sd(0,2) * Sd(2,1) - Sd(0,1) * Sd(2,2)) * d;
-                        t[2] = (Sd(0,1) * Sd(1,2) - Sd(0,2) * Sd(1,1)) * d;
-                               
-                        t[3] = (Sd(1,2) * Sd(2,0) - Sd(1,0) * Sd(2,2)) * d;
-                        t[4] = (Sd(0,0) * Sd(2,2) - Sd(0,2) * Sd(2,0)) * d;
-                        t[5] = (Sd(0,2) * Sd(1,0) - Sd(0,0) * Sd(1,2)) * d;
-                               
-                        t[6] = (Sd(1,0) * Sd(2,1) - Sd(1,1) * Sd(2,0)) * d;
-                        t[7] = (Sd(0,1) * Sd(2,0) - Sd(0,0) * Sd(2,1)) * d;
-                        t[8] = (Sd(0,0) * Sd(1,1) - Sd(0,1) * Sd(1,0)) * d;
-
-                        Dd(0,0) = t[0]; Dd(0,1) = t[1]; Dd(0,2) = t[2];
-                        Dd(1,0) = t[3]; Dd(1,1) = t[4]; Dd(1,2) = t[5];
-                        Dd(2,0) = t[6]; Dd(2,1) = t[7]; Dd(2,2) = t[8];
-                    }
+                    double t0, t1;
+                    result = d;
+                    d = 1./d;
+                    t0 = Sf(0,0)*d;
+                    t1 = Sf(1,1)*d;
+                    Df(1,1) = (float)t0;
+                    Df(0,0) = (float)t1;
+                    t0 = -Sf(0,1)*d;
+                    t1 = -Sf(1,0)*d;
+                    Df(0,1) = (float)t0;
+                    Df(1,0) = (float)t1;
                 }
             }
             else
             {
-                assert( src.rows == 1 );
-
-                if( type == CV_32FC1 )
+                double d = det2(Sd);
+                if( d != 0. )
                 {
-                    double d = Sf(0,0);
-                    if( d != 0. )
-                    {
-                        result = d;
-                        Df(0,0) = (float)(1./d);
-                    }
-                }
-                else
-                {
-                    double d = Sd(0,0);
-                    if( d != 0. )
-                    {
-                        result = d;
-                        Dd(0,0) = 1./d;
-                    }
+                    double t0, t1;
+                    result = d;
+                    d = 1./d;
+                    t0 = Sd(0,0)*d;
+                    t1 = Sd(1,1)*d;
+                    Dd(1,1) = t0;
+                    Dd(0,0) = t1;
+                    t0 = -Sd(0,1)*d;
+                    t1 = -Sd(1,0)*d;
+                    Dd(0,1) = t0;
+                    Dd(1,0) = t1;
                 }
             }
-            return result;
         }
+        else if( src.rows == 3 )
+        {
+            if( type == CV_32FC1 )
+            {
+                double d = det3(Sf);
+                if( d != 0. )
+                {
+                    float t[9];
+                    result = d;
+                    d = 1./d;
 
-        src.copyTo(dst);
-        integer n = dst.cols, lwork=-1, elem_size = CV_ELEM_SIZE(type),
-            lda = (int)(dst.step/elem_size), piv1=0, info=0;    
-            
+                    t[0] = (float)((Sf(1,1) * Sf(2,2) - Sf(1,2) * Sf(2,1)) * d);
+                    t[1] = (float)((Sf(0,2) * Sf(2,1) - Sf(0,1) * Sf(2,2)) * d);
+                    t[2] = (float)((Sf(0,1) * Sf(1,2) - Sf(0,2) * Sf(1,1)) * d);
+                                  
+                    t[3] = (float)((Sf(1,2) * Sf(2,0) - Sf(1,0) * Sf(2,2)) * d);
+                    t[4] = (float)((Sf(0,0) * Sf(2,2) - Sf(0,2) * Sf(2,0)) * d);
+                    t[5] = (float)((Sf(0,2) * Sf(1,0) - Sf(0,0) * Sf(1,2)) * d);
+                                  
+                    t[6] = (float)((Sf(1,0) * Sf(2,1) - Sf(1,1) * Sf(2,0)) * d);
+                    t[7] = (float)((Sf(0,1) * Sf(2,0) - Sf(0,0) * Sf(2,1)) * d);
+                    t[8] = (float)((Sf(0,0) * Sf(1,1) - Sf(0,1) * Sf(1,0)) * d);
+
+                    Df(0,0) = t[0]; Df(0,1) = t[1]; Df(0,2) = t[2];
+                    Df(1,0) = t[3]; Df(1,1) = t[4]; Df(1,2) = t[5];
+                    Df(2,0) = t[6]; Df(2,1) = t[7]; Df(2,2) = t[8];
+                }
+            }
+            else
+            {
+                double d = det3(Sd);
+                if( d != 0. )
+                {
+                    double t[9];
+                    result = d;
+                    d = 1./d;
+
+                    t[0] = (Sd(1,1) * Sd(2,2) - Sd(1,2) * Sd(2,1)) * d;
+                    t[1] = (Sd(0,2) * Sd(2,1) - Sd(0,1) * Sd(2,2)) * d;
+                    t[2] = (Sd(0,1) * Sd(1,2) - Sd(0,2) * Sd(1,1)) * d;
+                           
+                    t[3] = (Sd(1,2) * Sd(2,0) - Sd(1,0) * Sd(2,2)) * d;
+                    t[4] = (Sd(0,0) * Sd(2,2) - Sd(0,2) * Sd(2,0)) * d;
+                    t[5] = (Sd(0,2) * Sd(1,0) - Sd(0,0) * Sd(1,2)) * d;
+                           
+                    t[6] = (Sd(1,0) * Sd(2,1) - Sd(1,1) * Sd(2,0)) * d;
+                    t[7] = (Sd(0,1) * Sd(2,0) - Sd(0,0) * Sd(2,1)) * d;
+                    t[8] = (Sd(0,0) * Sd(1,1) - Sd(0,1) * Sd(1,0)) * d;
+
+                    Dd(0,0) = t[0]; Dd(0,1) = t[1]; Dd(0,2) = t[2];
+                    Dd(1,0) = t[3]; Dd(1,1) = t[4]; Dd(1,2) = t[5];
+                    Dd(2,0) = t[6]; Dd(2,1) = t[7]; Dd(2,2) = t[8];
+                }
+            }
+        }
+        else
+        {
+            assert( src.rows == 1 );
+
+            if( type == CV_32FC1 )
+            {
+                double d = Sf(0,0);
+                if( d != 0. )
+                {
+                    result = d;
+                    Df(0,0) = (float)(1./d);
+                }
+            }
+            else
+            {
+                double d = Sd(0,0);
+                if( d != 0. )
+                {
+                    result = d;
+                    Dd(0,0) = 1./d;
+                }
+            }
+        }
+        return result;
+    }
+
+    if( dst.cols <= 10 )
+    {
+        int n = dst.cols, elem_size = CV_ELEM_SIZE(type);
+        AutoBuffer<uchar> buf(n*n*2*elem_size);
+        Mat src1(n, n, type, (uchar*)buf);
+        Mat dst1(n, n, type, dst.isContinuous() ? dst.data : src1.data + n*n*elem_size);
+        src.copyTo(src1);
+        setIdentity(dst1);
+        
+        if( method == DECOMP_LU && type == CV_32F )
+            result = LU((float*)src1.data, n, (float*)dst1.data, n);
+        else if( method == DECOMP_LU && type == CV_64F )
+            result = LU((double*)src1.data, n, (double*)dst1.data, n);
+        else if( method == DECOMP_LU && type == CV_32F )
+            result = Cholesky((float*)src1.data, n, (float*)dst1.data, n);
+        else
+            result = Cholesky((double*)src1.data, n, (double*)dst1.data, n);
+        dst1.copyTo(dst);
+        result = std::abs(result);
+    }
+    else
+    {
+        integer n = dst.cols, lwork=-1, lda = n, piv1=0, info=0;
+        int t_size = type == CV_32F ? n*n*sizeof(double) : 0;
+        int buf_size = t_size;
+        AutoBuffer<uchar> buf;
+        
         if( method == DECOMP_LU )
         {
-            int buf_size = (int)(n*sizeof(integer));
-            AutoBuffer<uchar> buf;
-            uchar* buffer;
+            double work1 = 0;
+            dgetri_(&n, (double*)dst.data, &lda, &piv1, &work1, &lwork, &info);
+            lwork = cvRound(work1);
 
-            if( type == CV_32F )
-            {
-                real work1 = 0;
-                sgetri_(&n, (float*)dst.data, &lda, &piv1, &work1, &lwork, &info);
-                lwork = cvRound(work1);
-            }
-            else
-            {
-                double work1 = 0;
-                dgetri_(&n, (double*)dst.data, &lda, &piv1, &work1, &lwork, &info);
-                lwork = cvRound(work1);
-            }
-
-            buf_size += (int)((lwork + 1)*elem_size);
+            buf_size += (int)(n*sizeof(integer) + (lwork + 1)*sizeof(double));
             buf.allocate(buf_size);
-            buffer = (uchar*)buf;
+            uchar* buffer = (uchar*)buf;
+            
+            Mat arr = dst;
+            if( type == CV_32F )
+            {
+                arr = Mat(n, n, CV_64F, buffer);
+                src.convertTo(arr, CV_64F);
+                buffer += t_size;
+            }
+            else
+            {
+                src.copyTo(arr);
+                lda = arr.step/sizeof(double);
+            }
 
-            if( type == CV_32F )
-            {
-                sgetrf_(&n, &n, (float*)dst.data, &lda, (integer*)buffer, &info);
-                if(info==0)
-                    sgetri_(&n, (float*)dst.data, &lda, (integer*)buffer,
-                        (float*)(buffer + n*sizeof(integer)), &lwork, &info);
-            }
-            else
-            {
-                dgetrf_(&n, &n, (double*)dst.data, &lda, (integer*)buffer, &info);
-                if(info==0)
-                    dgetri_(&n, (double*)dst.data, &lda, (integer*)buffer,
-                        (double*)cvAlignPtr(buffer + n*sizeof(integer), elem_size), &lwork, &info);
-            }
+            dgetrf_(&n, &n, (double*)arr.data, &lda, (integer*)buffer, &info);
+            if(info==0)
+                dgetri_(&n, (double*)arr.data, &lda, (integer*)buffer,
+                    (double*)cvAlignPtr(buffer + n*sizeof(integer), sizeof(double)),
+                    &lwork, &info);
+            if(info==0 && arr.data != dst.data)
+                arr.convertTo(dst, dst.type());
         }
-        else if( method == CV_CHOLESKY )
+        else if( method == DECOMP_CHOLESKY )
         {
-            char L[] = {'L', '\0'};
+            Mat arr = dst;
             if( type == CV_32F )
             {
-                spotrf_(L, &n, (float*)dst.data, &lda, &info);
-                if(info==0)
-                    spotri_(L, &n, (float*)dst.data, &lda, &info);
+                buf.allocate(buf_size);
+                arr = Mat(n, n, CV_64F, (uchar*)buf);
+                src.convertTo(arr, CV_64F);
             }
             else
             {
-                dpotrf_(L, &n, (double*)dst.data, &lda, &info);
-                if(info==0)
-                    dpotri_(L, &n, (double*)dst.data, &lda, &info);
+                src.copyTo(arr);
+                lda = arr.step/sizeof(double);
             }
-            completeSymm(dst);
+            
+            char L[] = {'L', '\0'};
+            dpotrf_(L, &n, (double*)arr.data, &lda, &info);
+            if(info==0)
+                dpotri_(L, &n, (double*)arr.data, &lda, &info);
+            if(info==0)
+            {
+                completeSymm(arr);
+                if( arr.data != dst.data )
+                    arr.convertTo(dst, dst.type());
+            }
         }
         result = info == 0;
     }

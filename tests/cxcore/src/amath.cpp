@@ -2420,7 +2420,7 @@ void CxCore_DetTest::prepare_to_validation( int )
     *((CvScalar*)(test_mat[REF_OUTPUT][0].data.db)) = cvRealScalar(cvTsLU(&test_mat[TEMP][0], 0, 0));
 }
 
-//CxCore_DetTest det_test;
+CxCore_DetTest det_test;
 
 
 
@@ -2475,8 +2475,8 @@ void CxCore_InvertTest::get_test_array_types_and_sizes( int test_case_idx, CvSiz
         if( bits & 4 )
         {
             sizes[INPUT][0] = cvSize(min_size, min_size);
-            if( bits & 8 )
-                method = CV_SVD_SYM;
+            if( bits & 16 )
+                method = CV_CHOLESKY;
         }
     }
     else
@@ -2536,7 +2536,7 @@ int CxCore_InvertTest::prepare_test_case( int test_case_idx )
     {
         cvTsFloodWithZeros( &test_mat[INPUT][0], ts->get_rng() );
 
-        if( method == CV_SVD_SYM )
+        if( method == CV_CHOLESKY )
         {
             cvTsGEMM( &test_mat[INPUT][0], &test_mat[INPUT][0], 1.,
                       0, 0., &test_mat[TEMP][0], CV_GEMM_B_T );
