@@ -2274,13 +2274,13 @@ void CxCore_GraphScanTest::run( int )
                 if( !vtx_mask || vtx_mask->cols < graph->active_count )
                 {
                     cvReleaseMat( &vtx_mask );
-                    CV_CALL( vtx_mask = cvCreateMat( 1, graph->active_count, CV_8UC1 ));
+                    CV_CALL( vtx_mask = cvCreateMat( 1, MAX(graph->active_count, 1), CV_8UC1 ));
                 }
 
                 if( !edge_mask || edge_mask->cols < graph->edges->active_count )
                 {
                     cvReleaseMat( &edge_mask );
-                    CV_CALL( edge_mask = cvCreateMat( 1, graph->edges->active_count, CV_8UC1 ));
+                    CV_CALL( edge_mask = cvCreateMat( 1, MAX(graph->edges->active_count, 1), CV_8UC1 ));
                 }
 
                 cvZero( vtx_mask );
