@@ -2008,7 +2008,10 @@ void CxCore_GraphTest::run( int )
     {
         struct_idx = iter = -1;
         t = cvTsRandReal(rng)*(max_log_storage_block_size - min_log_storage_block_size) + min_log_storage_block_size;
-        storage = cvCreateMemStorage( cvRound( exp(t * CV_LOG2) ) );
+        int block_size = cvRound( exp(t * CV_LOG2) );
+        block_size = MAX(block_size, sizeof(CvGraph) + sizeof(CvMemBlock));
+        
+        storage = cvCreateMemStorage(block_size);
 
         for( i = 0; i < struct_count; i++ )
         {
@@ -2045,7 +2048,7 @@ void CxCore_GraphTest::run( int )
     __END__;
 }
 
-//CxCore_GraphTest graph_test;
+CxCore_GraphTest graph_test;
 
 
 
@@ -2330,6 +2333,6 @@ void CxCore_GraphScanTest::run( int )
     cvReleaseMat( &edge_mask );
 }
 
-//CxCore_GraphScanTest graphscan_test;
+CxCore_GraphScanTest graphscan_test;
 
 /* End of file. */
