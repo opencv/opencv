@@ -254,12 +254,13 @@ IplImage* CvCaptureCAM_PvAPI::retrieveFrame(int)
 {
 
     if (PvCaptureWaitForFrameDone(Camera.Handle, &(Camera.Frame), 1000) == ePvErrSuccess) {
-		if (!monocrome)
+		if (!monocrome) {
 			cvMerge(grayframe,grayframe,grayframe,NULL,frame); 
 			return frame;	
+		}	
 		return grayframe;
-	}		
-	else return NULL;		
+    }		
+    else return NULL;		
 }
 
 double CvCaptureCAM_PvAPI::getProperty( int property_id )
