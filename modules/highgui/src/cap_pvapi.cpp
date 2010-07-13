@@ -136,8 +136,9 @@ bool CvCaptureCAM_PvAPI::open( int index )
     tPvIpSettings ipSettings;
 
  
-    if (PvInitialize())
-        return false;
+    if (PvInitialize()) {
+    }
+        //return false;
         
     Sleep(1000);
 
@@ -178,7 +179,8 @@ bool CvCaptureCAM_PvAPI::open( int index )
             return NULL;
         }
         */
-        tPvUint32 frameWidth, frameHeight, frameSize, maxSize;
+        tPvUint32 frameWidth, frameHeight, frameSize;
+        unsigned long maxSize;
 		char pixelFormat[256];
         PvAttrUint32Get(Camera.Handle, "TotalBytesPerFrame", &frameSize);
         PvAttrUint32Get(Camera.Handle, "Width", &frameWidth);
@@ -188,7 +190,6 @@ bool CvCaptureCAM_PvAPI::open( int index )
         //PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
         if (PvCaptureAdjustPacketSize(Camera.Handle,maxSize)!=ePvErrSuccess)
 			return false;
-        //printf ("Pixel Format %s  %d %d\n ", pixelFormat,frameWidth,frameHeight);
         if (strncmp(pixelFormat, "Mono8",NULL)==0) {
 				grayframe = cvCreateImage(cvSize((int)frameWidth, (int)frameHeight), IPL_DEPTH_8U, 1);
 				grayframe->widthStep = (int)frameWidth;
@@ -255,7 +256,7 @@ IplImage* CvCaptureCAM_PvAPI::retrieveFrame(int)
     if (PvCaptureWaitForFrameDone(Camera.Handle, &(Camera.Frame), 1000) == ePvErrSuccess) {
 		if (!monocrome)
 			cvMerge(grayframe,grayframe,grayframe,NULL,frame); 	
-		return frame;
+		return grayframe;
 	}		
 	else return NULL;		
 }
