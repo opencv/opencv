@@ -2618,7 +2618,7 @@ void CxCore_InvertTest::prepare_to_validation( int )
     cvTsSetIdentity( &test_mat[REF_OUTPUT][0], cvScalarAll(1.) );
 }
 
-CxCore_InvertTest invert_test;
+//CxCore_InvertTest invert_test;
 
 
 ///////////////// solve /////////////////////

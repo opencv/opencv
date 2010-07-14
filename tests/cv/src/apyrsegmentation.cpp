@@ -194,6 +194,6 @@ _exit_:
         ts->set_failed_test_info( code );
 }
 
-CV_PyrSegmentationTest pyr_segmentation_test;
+//CV_PyrSegmentationTest pyr_segmentation_test;
 
 /* End of file. */
