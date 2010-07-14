@@ -10,9 +10,11 @@ using namespace cv;
 using namespace std;
 
 /* 
- example command line (for copy-n-paste):
-   calibration -w 6 -h 8 -s 2 -o camera.yml -op -oe image_list.xml
-
+example command line when 3 cameras are connected. 
+   tri_calibration  -w 4 -h 5 -s 0.025 -o camera_left.yml -op -oe
+ 
+ example command line for a list of stored images(for copy-n-paste):
+   tri_calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml
  where image_list.xml is the standard OpenCV XML/YAML
  file consisting of the list of strings, e.g.:
  
@@ -402,7 +404,7 @@ int main( int argc, char** argv )
 
         // improve the found corners' coordinate accuracy
         cvtColor(view, viewGray, CV_BGR2GRAY);
-        cornerSubPix( viewGray, pointbuf, Size(11,11),
+        if(found) cornerSubPix( viewGray, pointbuf, Size(11,11),
             Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
 
         if( mode == CAPTURING && found &&
@@ -413,16 +415,21 @@ int main( int argc, char** argv )
             blink = capture.isOpened();
         }
 
-        drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
+        if(found) drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
 
         string msg = mode == CAPTURING ? "100/100" :
             mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
         int baseLine = 0;
         Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);        
-        Point textOrigin(view.cols - textSize.width - 10, view.rows - baseLine - 10);
+        Point textOrigin(view.cols - 2*textSize.width - 10, view.rows - 2*baseLine - 10);
 
         if( mode == CAPTURING )
-            msg = format( "%d/%d", (int)imagePoints.size(), nframes );
+        {
+			if(undistortImage)
+            	msg = format( "%d/%d Undist", (int)imagePoints.size(), nframes );
+            else
+            	msg = format( "%d/%d", (int)imagePoints.size(), nframes );
+		}
 
         putText( view, msg, textOrigin, 1, 1,
                  mode != CALIBRATED ? Scalar(0,0,255) : Scalar(0,255,0));
