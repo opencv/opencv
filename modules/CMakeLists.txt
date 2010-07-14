@@ -22,3 +22,6 @@ endif()
 add_subdirectory(video)
 add_subdirectory(haartraining)
 add_subdirectory(traincascade)
+
+
+#add_subdirectory(gpu)
