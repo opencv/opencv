@@ -5,10 +5,14 @@ if (CUDA_FOUND)
     include_directories(${CUDA_INCLUDE_DIRS})
     link_directories(${CUDA_LIBRARIES})
 
+    #message ("CUDA_LIBRARIES = ${CUDA_LIBRARIES}")
+    #message ("CUDA_INCLUDE_DIRS = ${CUDA_INCLUDE_DIRS}")
+    #message ("CUDA_TARGET_LINK = ${CUDA_TARGET_LINK}")
+
+
 	#CUDA_GENERATED_OUTPUT_DIR (Default CMAKE_CURRENT_BINARY_DIR)
 
 	#====================================================================================
-
 	
 	set(name "gpu")	
 	set(DEPS "opencv_core")
@@ -30,7 +34,7 @@ if (CUDA_FOUND)
 
 	file(GLOB lib_srcs "src/*.cpp")
 	file(GLOB lib_int_hdrs "src/*.h*")
-	file(GLOB lib_cuda "cuda/*.cu")
+        file(GLOB lib_cuda "cuda/*.cu")
 	file(GLOB lib_cuda_hdrs "cuda/*.h*")	
 	source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 	source_group("Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
@@ -38,11 +42,17 @@ if (CUDA_FOUND)
 	file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")		
 	source_group("Include" FILES ${lib_hdrs})
 
+        if (UNIX OR APPLE)
+            set (CUDA_NVCC_FLAGS "-Xcompiler;-fPIC")
+        endif()
+
 	CUDA_COMPILE(cuda_objs ${lib_cuda})
+        #message ("lib cuda : ${cuda_objs}")
 	#CUDA_BUILD_CLEAN_TARGET()
 		
 	set(the_target "opencv_${name}")
-	add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${cuda_objs})
+        #message ("cuda_add_library : ${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs}")
+        add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${cuda_objs})
 
 	if(PCHSupport_FOUND)
 		set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
@@ -71,7 +81,8 @@ if (CUDA_FOUND)
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
-	# Add the required libraries for linking:
+        # Add the required libraries for linking:
+        #message (" ++++ target_link_libraries = ${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} ${CUDA_LIBRARIES}")
 	target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} ${CUDA_LIBRARIES})
 
 	if(MSVC)
