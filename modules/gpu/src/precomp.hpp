@@ -55,7 +55,11 @@
 
 #include "cuda_shared.hpp"
 
-#include "cuda_runtime.h"
+#if _MSC_VER >= 1200
+#pragma warning (disable : 4100 4211 4201 4408)
+#endif
+
+#include "cuda_runtime_api.h"
 
 
 #define cudaSafeCall(err)  __cudaSafeCall(err, __FILE__, __LINE__)

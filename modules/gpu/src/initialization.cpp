@@ -64,26 +64,14 @@ CV_EXPORTS void cv::gpu::setDevice(int device)
     cudaSafeCall( cudaSetDevice( device ) );
 }
 
-CV_EXPORTS int cv::gpu::getComputeCapability(int device)
-{    
-    cudaDeviceProp prop;
+CV_EXPORTS void cv::gpu::getComputeCapability(int device, int* major, int* minor)
+{
+    cudaDeviceProp prop;    
     cudaSafeCall( cudaGetDeviceProperties( &prop, device) );
 
-    if (prop.major == 2)
-        return CV_GPU_CC_20;
-
-    if (prop.major == 1)
-        switch (prop.minor)
-        {
-        case 0: return CV_GPU_CC_10;
-        case 1: return CV_GPU_CC_11;
-        case 2: return CV_GPU_CC_12;
-        case 3: return CV_GPU_CC_13;        
-        }
-    
-    return -1;
+    *major = prop.major;
+    *minor = prop.minor;
 }
-
 
 CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
 {

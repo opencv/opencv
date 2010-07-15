@@ -49,7 +49,8 @@ using namespace cv::gpu;
 StereoBM_GPU::StereoBM_GPU() : preset(BASIC_PRESET), ndisp(64)  {}
 StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_) : preset(preset_), ndisp(ndisparities_) 
 {
-    CV_Assert(ndisp <= std::numeric_limits<unsigned char>::max());
+    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
+    CV_Assert(ndisp <= max_supported_ndisp);
 }
   
 void StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity) const

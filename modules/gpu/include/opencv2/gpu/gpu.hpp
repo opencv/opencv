@@ -56,9 +56,7 @@ namespace cv
         CV_EXPORTS string getDeviceName(int device);
         CV_EXPORTS void setDevice(int device);        
 
-        enum { CV_GPU_CC_10, CV_GPU_CC_11, CV_GPU_CC_12, CV_GPU_CC_13, CV_GPU_CC_20 };
-
-        CV_EXPORTS int getComputeCapability(int device);
+        CV_EXPORTS void getComputeCapability(int device, int* major, int* minor);
         CV_EXPORTS int getNumberOfSMs(int device);
  
         //////////////////////////////// GpuMat ////////////////////////////////

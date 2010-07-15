@@ -42,10 +42,6 @@
 
 #include "cuda_shared.hpp"
 
-using namespace cv::gpu;
-
-#define cudaSafeCall
-
 #define ROWSperTHREAD 21     // the number of rows a thread will process
 #define BLOCK_W 128          // the thread block width (464)
 #define N_DISPARITIES 8
@@ -218,7 +214,7 @@ __device__ void InitColSSD(int x_tex, int y_tex, int im_pitch, unsigned char* im
     col_ssd[7 * SHARED_MEM_SIZE] = diffa[7];
 }
 
-extern "C" __global__ void stereoKernel(uchar *left, uchar *right, size_t img_step, uchar* disp, size_t disp_pitch, int maxdisp)
+extern "C" __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t img_step, unsigned char* disp, size_t disp_pitch, int maxdisp)
 {
     extern __shared__ unsigned int col_ssd_cache[];
     unsigned int *col_ssd = col_ssd_cache + BLOCK_W + threadIdx.x;    
@@ -231,7 +227,7 @@ extern "C" __global__ void stereoKernel(uchar *left, uchar *right, size_t img_st
     //int Y = blockIdx.y * ROWSperTHREAD + RADIUS;
 
     unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
-    uchar* disparImage = disp + X + Y * disp_pitch;
+    unsigned char* disparImage = disp + X + Y * disp_pitch;
  /*   if (X < cwidth)
     {        
         unsigned int *minSSDImage_end = minSSDImage + min(ROWSperTHREAD, cheight - Y) * minssd_step;
@@ -301,6 +297,7 @@ extern "C" void cv::gpu::impl::stereoBM_GPU(const DevMem2D& left, const DevMem2D
     
     size_t smem_size = (BLOCK_W + N_DISPARITIES * SHARED_MEM_SIZE) * sizeof(unsigned int);      
 
+#define cudaSafeCall
     cudaSafeCall( cudaMemset2D(disp.ptr, disp.step, 0, disp.cols, disp. rows) );
     cudaSafeCall( cudaMemset2D(minSSD_buf.ptr, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp. rows) );        
 
