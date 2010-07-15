@@ -50,6 +50,8 @@
 #include <cvconfig.h> 
 #endif
 
+#include <iostream>
+
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/gpu/gpumat.hpp"
 
@@ -79,13 +81,16 @@ namespace cv
         {
             if( cudaSuccess != err) 
             {
-		        fprintf(stderr, "%s(%i) : cudaSafeCall() Runtime API error : %s.\n", file, line, cudaGetErrorString(err) );
+                std::cerr << file << "(" << line << ") : cudaSafeCall() Runtime API error : " << cudaGetErrorString(err) << "\n";
                 exit(-1);
             }
         }
 
         template<class T>
-        inline DevMem2D_<T> getDevMem(const GpuMat& mat) { return DevMem2D_<T>(m.rows, m.cols, m.data, m.step); }
+        inline DevMem2D_<T> getDevMem(const GpuMat& mat)
+        {
+            return DevMem2D_<T>(mat.rows, mat.cols, mat.data, mat.step);
+        }
     }
 }
 
