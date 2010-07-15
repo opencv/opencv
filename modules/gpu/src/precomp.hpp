@@ -70,25 +70,14 @@
 
 #include "cuda_runtime_api.h"
 
-#define cudaCallerSafeCall(err) err;
-
-#ifdef __GNUC__
-    #define cudaSafeCall(err)  __cudaSafeCall(err, __FILE__, __LINE__, __func__)
-#else
-    #define cudaSafeCall(err)  __cudaSafeCall(err, __FILE__, __LINE__)
+#ifdef __GNUC__   
+    #define cudaSafeCall(err)  { if(cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__, __func__); } 
+#else    
+    #define cudaSafeCall(err)  { if(cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); } 
 #endif
 
-namespace cv
-{
-    namespace gpu
-    {
-        static inline void __cudaSafeCall( cudaError err, const char *file, const int line, const char *func = "")
-        {                       
-            if( cudaSuccess != err) 
-                   cv::error( cv::Exception(CV_GpuApiCallError, cudaGetErrorString(err), func, file, line) );
-        }     
-    }
-}
+#define cudaCallerSafeCall(err) err;
+
 
 #endif /* HAVE_CUDA */
 

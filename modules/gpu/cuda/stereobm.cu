@@ -297,7 +297,6 @@ extern "C" void cv::gpu::impl::stereoBM_GPU(const DevMem2D& left, const DevMem2D
     
     size_t smem_size = (BLOCK_W + N_DISPARITIES * SHARED_MEM_SIZE) * sizeof(unsigned int);      
 
-#define cudaSafeCall
     cudaSafeCall( cudaMemset2D(disp.ptr, disp.step, 0, disp.cols, disp. rows) );
     cudaSafeCall( cudaMemset2D(minSSD_buf.ptr, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp. rows) );        
 

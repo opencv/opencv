@@ -42,3 +42,9 @@
 #include "precomp.hpp"
 
 /* End of file. */
+
+
+extern "C" void cv::gpu::error( const char *error_string, const char *file, const int line, const char *func)
+{                       
+    cv::error( cv::Exception(CV_GpuApiCallError, error_string, func, file, line) );
+}     

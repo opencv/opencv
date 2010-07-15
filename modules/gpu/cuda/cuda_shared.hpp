@@ -51,7 +51,9 @@ namespace cv
     {   
         typedef unsigned char uchar;
         typedef unsigned short ushort;
-        typedef unsigned int uint;
+        typedef unsigned int uint;        
+
+        extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
 
         namespace impl
         {   
@@ -61,5 +63,9 @@ namespace cv
         }
     }
 }
+
+#ifdef __CUDACC__
+    #define cudaSafeCall(err) { if( cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); }
+#endif
 
 #endif /* __OPENCV_CUDA_SHARED_HPP__ */
