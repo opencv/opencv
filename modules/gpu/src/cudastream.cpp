@@ -41,33 +41,37 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/gpu/stream_access.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
 
 
-cv::gpu::CudaStream::CudaStream() : impl( fastMalloc(sizeof(cudaStream_t)) )
+cv::gpu::CudaStream::CudaStream() : impl( (Impl*)fastMalloc(sizeof(Impl)) )
 {
-    cudaSafeCall( cudaStreamCreate((cudaStream_t*)impl) );
+    //cudaSafeCall( cudaStreamCreate( &impl->stream) );
 }
 cv::gpu::CudaStream::~CudaStream() 
 { 
-    cudaSafeCall( cudaStreamDestroy( *(cudaStream_t*)impl ) );
-    cv::fastFree( impl );     
+    if (impl)
+    {
+        cudaSafeCall( cudaStreamDestroy( *(cudaStream_t*)impl ) );
+        cv::fastFree( impl );
+    }         
 }
 
 bool cv::gpu::CudaStream::queryIfComplete()
 {
-    cudaError_t err = cudaStreamQuery( *(cudaStream_t*)impl );
+    //cudaError_t err = cudaStreamQuery( *(cudaStream_t*)impl );
 
-    if (err == cudaSuccess)
-        return true;
+    //if (err == cudaSuccess)
+    //    return true;
 
-    if (err == cudaErrorNotReady)
-        return false;
+    //if (err == cudaErrorNotReady)
+    //    return false;
 
-    //cudaErrorInvalidResourceHandle  
-    cudaSafeCall( err );    
+    ////cudaErrorInvalidResourceHandle  
+    //cudaSafeCall( err );    
     return true;
 }
 void cv::gpu::CudaStream::waitForCompletion()

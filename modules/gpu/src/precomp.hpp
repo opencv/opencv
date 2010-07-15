@@ -57,41 +57,39 @@
 
 #include "cuda_shared.hpp"
 
+#ifndef HAVE_CUDA
+
+    #define cudaSafeCall(err) CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support")
+    #define cudaCallerSafeCall(err) CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support")
+
+#else /* HAVE_CUDA */
+
 #if _MSC_VER >= 1200
-#pragma warning (disable : 4100 4211 4201 4408)
+    #pragma warning (disable : 4100 4211 4201 4408)
 #endif
 
 #include "cuda_runtime_api.h"
 
+#define cudaCallerSafeCall(err) err;
 
-#define cudaSafeCall(err)  __cudaSafeCall(err, __FILE__, __LINE__)
-
-//inline void __cudaSafeCall( cudaError err, const char *file, const int line )
-//{
-//    if( cudaSuccess != err) 
-//        CV_Error_(CV_StsAssert, ("%s(%i) : Runtime API error : %s.\n", cudaGetErrorString(err)));
-//}
+#ifdef __GNUC__
+    #define cudaSafeCall(err)  __cudaSafeCall(err, __FILE__, __LINE__, __func__)
+#else
+    #define cudaSafeCall(err)  __cudaSafeCall(err, __FILE__, __LINE__)
+#endif
 
 namespace cv
 {
     namespace gpu
     {
-        
-        inline void __cudaSafeCall( cudaError err, const char *file, const int line )
-        {
+        static inline void __cudaSafeCall( cudaError err, const char *file, const int line, const char *func = "")
+        {                       
             if( cudaSuccess != err) 
-            {
-                std::cerr << file << "(" << line << ") : cudaSafeCall() Runtime API error : " << cudaGetErrorString(err) << "\n";
-                exit(-1);
-            }
-        }
-
-        template<class T>
-        inline DevMem2D_<T> getDevMem(const GpuMat& mat)
-        {
-            return DevMem2D_<T>(mat.rows, mat.cols, mat.data, mat.step);
-        }
+                   cv::error( cv::Exception(CV_GpuApiCallError, cudaGetErrorString(err), func, file, line) );
+        }     
     }
 }
+
+#endif /* HAVE_CUDA */
 
 #endif

@@ -45,6 +45,16 @@
 using namespace cv;
 using namespace cv::gpu;
 
+#ifndef HAVE_CUDA
+
+CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
+CV_EXPORTS string cv::gpu::getDeviceName(int /*device*/)  { cudaSafeCall(0); return 0; } 
+CV_EXPORTS void cv::gpu::setDevice(int /*device*/) { cudaSafeCall(0); } 
+CV_EXPORTS void cv::gpu::getComputeCapability(int /*device*/, int* /*major*/, int* /*minor*/) { cudaSafeCall(0); } 
+CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { cudaSafeCall(0); return 0; } 
+
+#else
+
 CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount()
 {
     int count;
@@ -79,3 +89,5 @@ CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
     cudaSafeCall( cudaGetDeviceProperties( &prop, device ) );
     return prop.multiProcessorCount;
 }
+
+#endif

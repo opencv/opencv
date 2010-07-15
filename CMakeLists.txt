@@ -282,6 +282,7 @@ endif()
 
 set(WITH_TBB OFF CACHE BOOL "Include TBB support")
 set(WITH_EIGEN2 ON CACHE BOOL "Include Eigen2 support")
+set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
 
 # ===================================================
 # Macros that checks if module have been installed.
@@ -608,6 +609,15 @@ if (WITH_TBB)
     endif()
 endif()
 
+############################### TBB ################################
+
+if (WITH_CUDA)
+	find_package(CUDA)	
+	if (CUDA_FOUND)
+		message(STATUS "CUDA detected.")	
+		set(HAVE_CUDA 1)
+	endif()
+endif()
 
 ############################## Eigen2 ##############################
 
@@ -1247,6 +1257,12 @@ if(HAVE_TBB)
 message(STATUS "    Use TBB:                   YES")
 else()
 message(STATUS "    Use TBB:                   NO")
+endif()
+
+if (HAVE_CUDA)
+message(STATUS "    Uue Cuda:                  YES")
+else()
+message(STATUS "    Use Cuda:                  No")
 endif()
 
 if(HAVE_EIGEN2)

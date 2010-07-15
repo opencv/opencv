@@ -216,6 +216,9 @@ namespace cv
         class CudaStream
         {
         public:
+
+            static CudaStream empty();
+
             CudaStream(); 
             ~CudaStream();
 
@@ -235,10 +238,14 @@ namespace cv
 
             // converts matrix type, ex from float to uchar depending on type
             void enqueueConvert(const GpuMat& src, GpuMat& dst, int type); 
-
-            //CUstream_st& getStream();
+            
+            struct Impl;
+            const Impl& getImpl() const;
         private:
-            void *impl;
+            
+            Impl *impl;            
+
+            
             
             CudaStream(const CudaStream&); 
             CudaStream& operator=(const CudaStream&);

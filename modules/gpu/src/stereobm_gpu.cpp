@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <limits>
 
 using namespace cv;
 using namespace cv::gpu;
@@ -69,5 +68,5 @@ void StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat&
 
     DevMem2D disp = disparity;
     DevMem2D_<uint> mssd = minSSD;    
-    impl::stereoBM_GPU(left, right, disp, ndisp, mssd);     
+    cudaCallerSafeCall( impl::stereoBM_GPU(left, right, disp, ndisp, mssd) );     
 }
