@@ -65,7 +65,7 @@ namespace cv
 }
 
 #ifdef __CUDACC__
-    #define cudaSafeCall(err) { if( cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); }
+    #define cudaSafeCall(expr) { cudaError_t err = expr; if( cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); }
 #endif
 
 #endif /* __OPENCV_CUDA_SHARED_HPP__ */

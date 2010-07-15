@@ -53,30 +53,28 @@
 #include <iostream>
 
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/gpu/gpumat.hpp"
-
 #include "cuda_shared.hpp"
 
 #ifndef HAVE_CUDA
 
-    #define cudaSafeCall(err) CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support")
-    #define cudaCallerSafeCall(err) CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support")
+    #define cudaSafeCall(expr) CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support")
+    #define cudaCallerSafeCall(expr) CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support")
 
 #else /* HAVE_CUDA */
 
-#if _MSC_VER >= 1200
-    #pragma warning (disable : 4100 4211 4201 4408)
+#if _MSC_VER >= 1200   
+    #pragma warning (disable : 4100 4211 4201 4408)    
 #endif
 
 #include "cuda_runtime_api.h"
 
 #ifdef __GNUC__   
-    #define cudaSafeCall(err)  { if(cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__, __func__); } 
+    #define cudaSafeCall(expr)  { cudaError_t err = expr; if(cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__, __func__); } 
 #else    
-    #define cudaSafeCall(err)  { if(cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); } 
+    #define cudaSafeCall(expr)  { cudaError_t err = expr; if(cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); } 
 #endif
 
-#define cudaCallerSafeCall(err) err;
+#define cudaCallerSafeCall(expr) expr;
 
 
 #endif /* HAVE_CUDA */
