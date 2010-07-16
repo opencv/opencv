@@ -158,6 +158,22 @@ private:
 };
 
 
+class CvWinProperties : public QWidget
+{
+    Q_OBJECT
+public:
+    CvWinProperties(QString name,QWidget* parent);
+    ~CvWinProperties();
+    QPointer<QBoxLayout> myLayout;
+
+private:
+    void closeEvent ( QCloseEvent * e );
+    void showEvent ( QShowEvent * event ) ;
+    void hideEvent ( QHideEvent * event ) ;
+};
+
+
+
 class CvWindow : public QWidget
 {
     Q_OBJECT
@@ -174,7 +190,7 @@ public:
     void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata);
     ViewPort* getView();
 
-    QPointer<QBoxLayout> layout;
+    QPointer<QBoxLayout> myLayout;
     QPointer<QStatusBar> myStatusBar;
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
@@ -189,6 +205,7 @@ protected:
     virtual void keyPressEvent(QKeyEvent *event);
 
 private:
+    QPointer<CvWinProperties> parameters_window ;
     QPointer<ViewPort> myview;
     QVector<QAction*> vect_QActions;
     QVector<QShortcut*> vect_QShortcuts;
@@ -201,6 +218,10 @@ private:
     void createView(int mode);
     void createStatusBar();
     void createLayout();
+    void createParameterWindow();
+
+private slots:
+    void displayPropertiesWin();
 };
 
 
@@ -256,7 +277,7 @@ public slots:
     void siftWindowOnDown();
     void resizeEvent ( QResizeEvent * );
     void saveView();
-    void displayPropertiesWin();
+
 
 private:
     QPoint mouseCoordinate;

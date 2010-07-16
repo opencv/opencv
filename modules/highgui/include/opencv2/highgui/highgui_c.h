@@ -75,7 +75,7 @@ enum {	CV_STYLE_NORMAL			= 0,//QFont::StyleNormal,
 //the first bit is for normal or autoresize
 //CV_WINDOW_NORMAL = 0x00000000 and CV_WINDOW_AUTOSIZE = 0x00000001
 //the secont bit is for the gui mode (normal or extended)
-enum {CV_GUI_EXTENDED = 0x00000000, CV_GUI_NORMAL = 0x00000010};
+enum {CV_GUI_EXPANDED = 0x00000000, CV_GUI_NORMAL = 0x00000010};
 
 //for color cvScalar(blue_component, green_component, red\_component[, alpha_component])
 //and alpha= 0 <-> 0xFF (not transparent <-> transparent)
