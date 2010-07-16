@@ -113,7 +113,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 	polyline[2] = Point(imgSize.width, imgSize.height);
 	polyline[3] = Point(0, imgSize.height);
 	const Point* pts = &polyline[0];
-	int n = polyline.size();
+	int n = (int)polyline.size();
 	fillPoly( img, &pts, &n, 1, Scalar::all(255) );
 
 	Point p1(1,1), p2(3,3);
@@ -137,7 +137,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 	polyline.clear();
 	ellipse2Poly( Point(430,180), Size(100,150), 30, 0, 150, 20, polyline );
 	pts = &polyline[0];
-	n = polyline.size();
+	n = (int)polyline.size();
 	polylines( img, &pts, &n, 1, false, Scalar(0,0,150), 4, CV_AA );
 	n = 0;
 	for( vector<Point>::const_iterator it = polyline.begin(); n < (int)polyline.size()-1; ++it, n++ )
@@ -148,7 +148,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 	polyline.clear();
 	ellipse2Poly( Point(500,300), Size(50,80), 0, 0, 180, 10, polyline );
 	pts = &polyline[0];
-	n = polyline.size();
+	n = (int)polyline.size();
 	polylines( img, &pts, &n, 1, true, Scalar(100,200,100), 20 );
 	fillConvexPoly( img, pts, n, Scalar(0, 80, 0) );
 
@@ -262,7 +262,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
 	polyline[2] = cvPoint(imgSize.width, imgSize.height);
 	polyline[3] = cvPoint(0, imgSize.height);
 	CvPoint* pts = &polyline[0];
-	int n = polyline.size();
+	int n = (int)polyline.size();
 	cvFillPoly( &img, &pts, &n, 1, cvScalar(255,255,255) );
 
 	CvPoint p1 = cvPoint(1,1), p2 = cvPoint(3,3);
@@ -291,7 +291,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
 
 	polyline.resize(9);
 	pts = &polyline[0];
-	n = polyline.size();
+	n = (int)polyline.size();
 	assert( cvEllipse2Poly( cvPoint(430,180), cvSize(100,150), 30, 0, 150, &polyline[0], 20 ) == n );
 	cvPolyLine( &img, &pts, &n, 1, false, cvScalar(0,0,150), 4, CV_AA );
 	n = 0;
@@ -302,7 +302,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
 
 	polyline.resize(19);
 	pts = &polyline[0];
-	n = polyline.size();
+	n = (int)polyline.size();
 	assert( cvEllipse2Poly( cvPoint(500,300), cvSize(50,80), 0, 0, 180, &polyline[0], 10 ) == n );
 	cvPolyLine( &img, &pts, &n, 1, true, Scalar(100,200,100), 20 );
 	cvFillConvexPoly( &img, pts, n, cvScalar(0, 80, 0) );
