@@ -318,6 +318,8 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     if( !decoder->setSource(buf) )
     {
         filename = tmpnam(fnamebuf);
+        if(filename[0] == '\\')
+            filename++;
         FILE* f = fopen( filename, "wb" );
         if( !f )
             return 0;
@@ -425,6 +427,8 @@ bool imencode( const string& ext, const Mat& image,
     {
         char fnamebuf[L_tmpnam];
         const char* filename = tmpnam(fnamebuf);
+        if(filename[0] == '\\')
+            filename++;
         code = encoder->setDestination(filename);
         CV_Assert( code );
         code = encoder->write(image, params);

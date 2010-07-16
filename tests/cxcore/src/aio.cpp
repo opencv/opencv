@@ -156,6 +156,8 @@ void CV_IOTest::run( int )
         char buf[L_tmpnam+16];
         char* filename = tmpnam(buf);
         strcat(filename, idx % 2 ? ".yml" : ".xml");
+        if(filename[0] == '\\')
+            filename++;
         
         FileStorage fs(filename, FileStorage::WRITE);
         

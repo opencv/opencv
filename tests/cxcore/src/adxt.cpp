@@ -829,7 +829,7 @@ void CxCore_DFTTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-//CxCore_DFTTest dft_test;
+CxCore_DFTTest dft_test;
 
 
 ////////////////////// DCT ////////////////////////
@@ -876,7 +876,7 @@ void CxCore_DCTTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-//CxCore_DCTTest dct_test;
+CxCore_DCTTest dct_test;
 
 
 ////////////////////// MulSpectrums ////////////////////////

@@ -61,10 +61,14 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
             if( code == CvTS::OK )
             {
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps1 );
-                save( tmpnam( fname1 ) );
+                tmpnam(fname1);
+                if(fname1[0] == '\\') fname1[0] = '_';
+                save( fname1 );
                 load( fname1);
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps2 );
-                save( tmpnam( fname2 ) );
+                tmpnam(fname2);
+                if(fname2[0] == '\\') fname2[0] = '_';
+                save( fname2 );
             }
             else
                 ts->printf( CvTS::LOG, "model can not be trained" );
