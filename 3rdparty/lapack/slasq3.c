@@ -1,19 +1,24 @@
+/* slasq3.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int slasq3_(integer *i0, integer *n0, real *z__, integer *pp, 
 	 real *dmin__, real *sigma, real *desig, real *qmax, integer *nfail, 
-	integer *iter, integer *ndiv, logical *ieee)
+	integer *iter, integer *ndiv, logical *ieee, integer *ttype, real *
+	dmin1, real *dmin2, real *dn, real *dn1, real *dn2, real *g, real *
+	tau)
 {
-    /* Initialized data */
-
-    static integer ttype = 0;
-    static real dmin1 = 0.f;
-    static real dmin2 = 0.f;
-    static real dn = 0.f;
-    static real dn1 = 0.f;
-    static real dn2 = 0.f;
-    static real tau = 0.f;
-
     /* System generated locals */
     integer i__1;
     real r__1, r__2;
@@ -29,17 +34,23 @@
     real tol2, temp;
     extern /* Subroutine */ int slasq4_(integer *, integer *, real *, integer 
 	    *, integer *, real *, real *, real *, real *, real *, real *, 
-	    real *, integer *), slasq5_(integer *, integer *, real *, integer 
-	    *, real *, real *, real *, real *, real *, real *, real *, 
-	    logical *), slasq6_(integer *, integer *, real *, integer *, real 
-	    *, real *, real *, real *, real *, real *);
+	    real *, integer *, real *), slasq5_(integer *, integer *, real *, 
+	    integer *, real *, real *, real *, real *, real *, real *, real *, 
+	     logical *), slasq6_(integer *, integer *, real *, integer *, 
+	    real *, real *, real *, real *, real *, real *);
     extern doublereal slamch_(char *);
-    real safmin;
+    extern logical sisnan_(real *);
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
-/*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*  -- LAPACK routine (version 3.2)                                    -- */
+
+/*  -- Contributed by Osni Marques of the Lawrence Berkeley National   -- */
+/*  -- Laboratory and Beresford Parlett of the Univ. of California at  -- */
+/*  -- Berkeley                                                        -- */
+/*  -- November 2008                                                   -- */
+
+/*  -- LAPACK is a software package provided by Univ. of Tennessee,    -- */
+/*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..-- */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -65,8 +76,11 @@
 /*  Z      (input) REAL array, dimension ( 4*N ) */
 /*         Z holds the qd array. */
 
-/*  PP     (input) INTEGER */
+/*  PP     (input/output) INTEGER */
 /*         PP=0 for ping, PP=1 for pong. */
+/*         PP=2 indicates that flipping was applied to the Z array */
+/*         and that the initial tests for deflation should not be */
+/*         performed. */
 
 /*  DMIN   (output) REAL */
 /*         Minimum value of d. */
@@ -89,11 +103,15 @@
 /*  NDIV   (output) INTEGER */
 /*         Number of divisions. */
 
-/*  TTYPE  (output) INTEGER */
-/*         Shift type. */
-
 /*  IEEE   (input) LOGICAL */
 /*         Flag for IEEE or non IEEE arithmetic (passed to SLASQ5). */
+
+/*  TTYPE  (input/output) INTEGER */
+/*         Shift type. */
+
+/*  DMIN1, DMIN2, DN, DN1, DN2, G, TAU (input/output) REAL */
+/*         These are passed as arguments in order to save their values */
+/*         between calls to SLASQ3. */
 
 /*  ===================================================================== */
 
@@ -107,19 +125,14 @@
 /*     .. */
 /*     .. Intrinsic Functions .. */
 /*     .. */
-/*     .. Save statement .. */
-/*     .. */
-/*     .. Data statement .. */
+/*     .. Executable Statements .. */
+
     /* Parameter adjustments */
     --z__;
 
     /* Function Body */
-/*     .. */
-/*     .. Executable Statements .. */
-
     n0in = *n0;
     eps = slamch_("Precision");
-    safmin = slamch_("Safe minimum");
     tol = eps * 100.f;
 /* Computing 2nd power */
     r__1 = tol;
@@ -187,6 +200,9 @@ L40:
     goto L10;
 
 L50:
+    if (*pp == 2) {
+	*pp = 0;
+    }
 
 /*     Reverse the qd-array, if warranted. */
 
@@ -214,8 +230,8 @@ L50:
 		z__[(*n0 << 2) - *pp] = z__[(*i0 << 2) - *pp];
 	    }
 /* Computing MIN */
-	    r__1 = dmin2, r__2 = z__[(*n0 << 2) + *pp - 1];
-	    dmin2 = dmin(r__1,r__2);
+	    r__1 = *dmin2, r__2 = z__[(*n0 << 2) + *pp - 1];
+	    *dmin2 = dmin(r__1,r__2);
 /* Computing MIN */
 	    r__1 = z__[(*n0 << 2) + *pp - 1], r__2 = z__[(*i0 << 2) + *pp - 1]
 		    , r__1 = min(r__1,r__2), r__2 = z__[(*i0 << 2) + *pp + 3];
@@ -232,96 +248,94 @@ L50:
 	}
     }
 
-/* Computing MIN */
-    r__1 = z__[(*n0 << 2) + *pp - 1], r__2 = z__[(*n0 << 2) + *pp - 9], r__1 =
-	     min(r__1,r__2), r__2 = dmin2 + z__[(*n0 << 2) - *pp];
-    if (*dmin__ < 0.f || safmin * *qmax < dmin(r__1,r__2)) {
+/*     Choose a shift. */
 
-/*        Choose a shift. */
+    slasq4_(i0, n0, &z__[1], pp, &n0in, dmin__, dmin1, dmin2, dn, dn1, dn2, 
+	    tau, ttype, g);
 
-	slasq4_(i0, n0, &z__[1], pp, &n0in, dmin__, &dmin1, &dmin2, &dn, &dn1, 
-		 &dn2, &tau, &ttype);
+/*     Call dqds until DMIN > 0. */
 
-/*        Call dqds until DMIN > 0. */
+L70:
 
-L80:
+    slasq5_(i0, n0, &z__[1], pp, tau, dmin__, dmin1, dmin2, dn, dn1, dn2, 
+	    ieee);
 
-	slasq5_(i0, n0, &z__[1], pp, &tau, dmin__, &dmin1, &dmin2, &dn, &dn1, 
-		&dn2, ieee);
+    *ndiv += *n0 - *i0 + 2;
+    ++(*iter);
 
-	*ndiv += *n0 - *i0 + 2;
-	++(*iter);
+/*     Check status. */
 
-/*        Check status. */
+    if (*dmin__ >= 0.f && *dmin1 > 0.f) {
 
-	if (*dmin__ >= 0.f && dmin1 > 0.f) {
+/*        Success. */
 
-/*           Success. */
+	goto L90;
 
-	    goto L100;
+    } else if (*dmin__ < 0.f && *dmin1 > 0.f && z__[(*n0 - 1 << 2) - *pp] < 
+	    tol * (*sigma + *dn1) && dabs(*dn) < tol * *sigma) {
 
-	} else if (*dmin__ < 0.f && dmin1 > 0.f && z__[(*n0 - 1 << 2) - *pp] <
-		 tol * (*sigma + dn1) && dabs(dn) < tol * *sigma) {
+/*        Convergence hidden by negative DN. */
 
-/*           Convergence hidden by negative DN. */
+	z__[(*n0 - 1 << 2) - *pp + 2] = 0.f;
+	*dmin__ = 0.f;
+	goto L90;
+    } else if (*dmin__ < 0.f) {
 
-	    z__[(*n0 - 1 << 2) - *pp + 2] = 0.f;
-	    *dmin__ = 0.f;
-	    goto L100;
-	} else if (*dmin__ < 0.f) {
+/*        TAU too big. Select new TAU and try again. */
 
-/*           TAU too big. Select new TAU and try again. */
+	++(*nfail);
+	if (*ttype < -22) {
 
-	    ++(*nfail);
-	    if (ttype < -22) {
+/*           Failed twice. Play it safe. */
 
-/*              Failed twice. Play it safe. */
+	    *tau = 0.f;
+	} else if (*dmin1 > 0.f) {
 
-		tau = 0.f;
-	    } else if (dmin1 > 0.f) {
+/*           Late failure. Gives excellent shift. */
 
-/*              Late failure. Gives excellent shift. */
-
-		tau = (tau + *dmin__) * (1.f - eps * 2.f);
-		ttype += -11;
-	    } else {
-
-/*              Early failure. Divide by 4. */
-
-		tau *= .25f;
-		ttype += -12;
-	    }
-	    goto L80;
-	} else if (*dmin__ != *dmin__) {
-
-/*           NaN. */
-
-	    tau = 0.f;
-	    goto L80;
+	    *tau = (*tau + *dmin__) * (1.f - eps * 2.f);
+	    *ttype += -11;
 	} else {
 
-/*           Possible underflow. Play it safe. */
+/*           Early failure. Divide by 4. */
 
-	    goto L90;
+	    *tau *= .25f;
+	    *ttype += -12;
 	}
+	goto L70;
+    } else if (sisnan_(dmin__)) {
+
+/*        NaN. */
+
+	if (*tau == 0.f) {
+	    goto L80;
+	} else {
+	    *tau = 0.f;
+	    goto L70;
+	}
+    } else {
+
+/*        Possible underflow. Play it safe. */
+
+	goto L80;
     }
 
 /*     Risk of underflow. */
 
-L90:
-    slasq6_(i0, n0, &z__[1], pp, dmin__, &dmin1, &dmin2, &dn, &dn1, &dn2);
+L80:
+    slasq6_(i0, n0, &z__[1], pp, dmin__, dmin1, dmin2, dn, dn1, dn2);
     *ndiv += *n0 - *i0 + 2;
     ++(*iter);
-    tau = 0.f;
+    *tau = 0.f;
 
-L100:
-    if (tau < *sigma) {
-	*desig += tau;
+L90:
+    if (*tau < *sigma) {
+	*desig += *tau;
 	t = *sigma + *desig;
 	*desig -= t - *sigma;
     } else {
-	t = *sigma + tau;
-	*desig = *sigma - (t - tau) + *desig;
+	t = *sigma + *tau;
+	*desig = *sigma - (t - *tau) + *desig;
     }
     *sigma = t;
 

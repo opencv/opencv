@@ -447,7 +447,7 @@ float cv::Mesh3D::estimateResolution(float tryRatio)
     size_t tryNum = static_cast<size_t>(tryRatio * vtx.size());
     tryNum = min(max(tryNum, minReasonable), vtx.size());
 
-    CvMat desc = cvMat(vtx.size(), 3, CV_32F, &vtx[0]);
+    CvMat desc = cvMat((int)vtx.size(), 3, CV_32F, &vtx[0]);
     CvFeatureTree* tr = cvCreateKDTree(&desc);
 
     vector<double> dist(tryNum * neighbors);
@@ -458,9 +458,9 @@ float cv::Mesh3D::estimateResolution(float tryRatio)
     for(size_t i = 0; i < tryNum; ++i)
         query.push_back(vtx[rng.next() % vtx.size()]);
         
-    CvMat cvinds  = cvMat( tryNum, neighbors, CV_32S,  &inds[0] );
-    CvMat cvdist  = cvMat( tryNum, neighbors, CV_64F,  &dist[0] );    
-    CvMat cvquery = cvMat( tryNum,         3, CV_32F, &query[0] );
+    CvMat cvinds  = cvMat( (int)tryNum, neighbors, CV_32S,  &inds[0] );
+    CvMat cvdist  = cvMat( (int)tryNum, neighbors, CV_64F,  &dist[0] );    
+    CvMat cvquery = cvMat( (int)tryNum,         3, CV_32F, &query[0] );
     cvFindFeatures(tr, &cvquery, &cvinds, &cvdist, neighbors, 50);    
     cvReleaseFeatureTree(tr);
 
@@ -753,7 +753,7 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
 
     int sz = spins.front().cols;
 
-    Mat result(yCount * sz + (yCount - 1), xCount * sz + (xCount - 1), CV_8UC3);    
+    Mat result((int)(yCount * sz + (yCount - 1)), (int)(xCount * sz + (xCount - 1)), CV_8UC3);    
     result = colors[(static_cast<int64>(cvGetTickCount()/cvGetTickFrequency())/1000) % colors_mum];
 
     size_t pos = 0;
@@ -761,11 +761,11 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
         for(size_t x = 0; x < xCount; ++x)        
             if (pos < num)
             {
-                int starty = (y + 0) * sz + y;
-                int endy   = (y + 1) * sz + y;
+                int starty = (int)((y + 0) * sz + y);
+                int endy   = (int)((y + 1) * sz + y);
 
-                int startx = (x + 0) * sz + x;
-                int endx   = (x + 1) * sz + x;
+                int startx = (int)((x + 0) * sz + x);
+                int endx   = (int)((x + 1) * sz + x);
 
                 Mat color;
                 cvtColor(spins[pos++], color, CV_GRAY2BGR);
@@ -802,7 +802,7 @@ void cv::SpinImageModel::selectRandomSubset(float ratio)
         for(size_t i = 0; i < setSize; ++i)
         {
             int pos = rnd.next() % left.size();
-            subset[i] = left[pos];
+            subset[i] = (int)left[pos];
 
             left[pos] = left.back();        
             left.resize(left.size() - 1);        
@@ -821,14 +821,14 @@ void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& spinIm
     if (reAlloc)
     {
         size_t spinCount = mask.size() - count(mask.begin(), mask.end(), (uchar)0);
-        Mat newImgs(spinCount, spinImages.cols, spinImages.type());    
+        Mat newImgs((int)spinCount, spinImages.cols, spinImages.type());    
 
         int pos = 0;
         for(size_t t = 0; t < mask.size(); ++t)
             if (mask[t])
             {
                 Mat row = newImgs.row(pos++);
-                spinImages.row(t).copyTo(row);
+                spinImages.row((int)t).copyTo(row);
             }
         spinImages = newImgs;
     }
@@ -836,7 +836,7 @@ void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& spinIm
     {
         int last = (int)mask.size();
 
-        int dest = find(mask.begin(), mask.end(), (uchar)0) - mask.begin();
+        int dest = (int)(find(mask.begin(), mask.end(), (uchar)0) - mask.begin());
         if (dest == last)
             return;
 
@@ -942,7 +942,7 @@ void cv::SpinImageModel::matchSpinToModel(const Mat& spin, vector<int>& indeces,
         if (masks[i])
             if (/* corrs[i] < histThresLo || */ corrs[i] > histThresHi)
             {
-                indeces.push_back(i);
+                indeces.push_back((int)i);
                 corrCoeffs.push_back(corrs[i]);                
             }
 } 
@@ -975,7 +975,7 @@ struct WgcHelper
     /* Wgc( correspondence_C, group_{C1..Cn} ) = max_i=1..n_( Wgc(C, Ci) ) */
     float Wgc(const size_t corespInd, const group_t& group) const
     {
-        const float* wgcLine = mat.ptr<float>(corespInd);
+        const float* wgcLine = mat.ptr<float>((int)corespInd);
         float maximum = numeric_limits<float>::min();
         
         for(citer pos = group.begin(); pos != group.end(); ++pos)
@@ -1046,17 +1046,17 @@ private:
         allMatches.end());
     if (out) *out << "Matches number [filtered by similarity measure] = " << allMatches.size() << endl;
 
-    size_t matchesSize = allMatches.size();
+    int matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
         return;
     
     /* filtering by geometric consistency */        
-    for(size_t i = 0; i < matchesSize; ++i)
+    for(int i = 0; i < matchesSize; ++i)
     {
         size_t consistNum = 1;
         float gc = float_max;
         
-        for(size_t j = 0; j < matchesSize; ++j)
+        for(int j = 0; j < matchesSize; ++j)
             if (i != j)
             {
                 const Match& mi = allMatches[i];
@@ -1096,18 +1096,18 @@ private:
     if (out) *out << "Matches number [filtered by geometric consistency] = " << allMatches.size() << endl;
 
 
-    matchesSize = allMatches.size();
+    matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
         return;
 
     if (out) *out << "grouping ..." << endl;
 
-    Mat groupingMat(matchesSize, matchesSize, CV_32F);
+    Mat groupingMat((int)matchesSize, (int)matchesSize, CV_32F);
     groupingMat = Scalar(0);        
         
     /* grouping */
-    for(size_t j = 0; j < matchesSize; ++j)
-        for(size_t i = j + 1; i < matchesSize; ++i)        
+    for(int j = 0; j < matchesSize; ++j)
+        for(int i = j + 1; i < matchesSize; ++i)        
         {
             const Match& mi = allMatches[i];
             const Match& mj = allMatches[j];

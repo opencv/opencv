@@ -1,16 +1,20 @@
 
 /* pngwtran.c - transforms the data in a row for PNG writers
  *
- * Last changed in libpng 1.2.9 April 14, 2006
- * For conditions of distribution and use, see copyright notice in png.h
- * Copyright (c) 1998-2006 Glenn Randers-Pehrson
+ * Last changed in libpng 1.4.1 [February 25, 2010]
+ * Copyright (c) 1998-2010 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+ *
+ * This code is released under the libpng license.
+ * For conditions of distribution and use, see the disclaimer
+ * and license in png.h
  */
 
-#define PNG_INTERNAL
+#define PNG_NO_PEDANTIC_WARNINGS
 #include "png.h"
 #ifdef PNG_WRITE_SUPPORTED
+#include "pngpriv.h"
 
 /* Transform the data according to the user's wishes.  The order of
  * transformations is significant.
@@ -18,15 +22,16 @@
 void /* PRIVATE */
 png_do_write_transformations(png_structp png_ptr)
 {
-   png_debug(1, "in png_do_write_transformations\n");
+   png_debug(1, "in png_do_write_transformations");
 
    if (png_ptr == NULL)
       return;
 
-#if defined(PNG_WRITE_USER_TRANSFORM_SUPPORTED)
+#ifdef PNG_WRITE_USER_TRANSFORM_SUPPORTED
    if (png_ptr->transformations & PNG_USER_TRANSFORM)
-      if(png_ptr->write_user_transform_fn != NULL)
-        (*(png_ptr->write_user_transform_fn)) /* user write transform function */
+      if (png_ptr->write_user_transform_fn != NULL)
+        (*(png_ptr->write_user_transform_fn)) /* User write transform
+                                                 function */
           (png_ptr,                    /* png_ptr */
            &(png_ptr->row_info),       /* row_info:     */
              /*  png_uint_32 width;          width of row */
@@ -37,48 +42,48 @@ png_do_write_transformations(png_structp png_ptr)
              /*  png_byte pixel_depth;       bits per pixel (depth*channels) */
            png_ptr->row_buf + 1);      /* start of pixel data for row */
 #endif
-#if defined(PNG_WRITE_FILLER_SUPPORTED)
+#ifdef PNG_WRITE_FILLER_SUPPORTED
    if (png_ptr->transformations & PNG_FILLER)
       png_do_strip_filler(&(png_ptr->row_info), png_ptr->row_buf + 1,
          png_ptr->flags);
 #endif
-#if defined(PNG_WRITE_PACKSWAP_SUPPORTED)
+#ifdef PNG_WRITE_PACKSWAP_SUPPORTED
    if (png_ptr->transformations & PNG_PACKSWAP)
       png_do_packswap(&(png_ptr->row_info), png_ptr->row_buf + 1);
 #endif
-#if defined(PNG_WRITE_PACK_SUPPORTED)
+#ifdef PNG_WRITE_PACK_SUPPORTED
    if (png_ptr->transformations & PNG_PACK)
       png_do_pack(&(png_ptr->row_info), png_ptr->row_buf + 1,
          (png_uint_32)png_ptr->bit_depth);
 #endif
-#if defined(PNG_WRITE_SWAP_SUPPORTED)
+#ifdef PNG_WRITE_SWAP_SUPPORTED
    if (png_ptr->transformations & PNG_SWAP_BYTES)
       png_do_swap(&(png_ptr->row_info), png_ptr->row_buf + 1);
 #endif
-#if defined(PNG_WRITE_SHIFT_SUPPORTED)
+#ifdef PNG_WRITE_SHIFT_SUPPORTED
    if (png_ptr->transformations & PNG_SHIFT)
       png_do_shift(&(png_ptr->row_info), png_ptr->row_buf + 1,
          &(png_ptr->shift));
 #endif
-#if defined(PNG_WRITE_SWAP_ALPHA_SUPPORTED)
+#ifdef PNG_WRITE_SWAP_ALPHA_SUPPORTED
    if (png_ptr->transformations & PNG_SWAP_ALPHA)
       png_do_write_swap_alpha(&(png_ptr->row_info), png_ptr->row_buf + 1);
 #endif
-#if defined(PNG_WRITE_INVERT_ALPHA_SUPPORTED)
+#ifdef PNG_WRITE_INVERT_ALPHA_SUPPORTED
    if (png_ptr->transformations & PNG_INVERT_ALPHA)
       png_do_write_invert_alpha(&(png_ptr->row_info), png_ptr->row_buf + 1);
 #endif
-#if defined(PNG_WRITE_BGR_SUPPORTED)
+#ifdef PNG_WRITE_BGR_SUPPORTED
    if (png_ptr->transformations & PNG_BGR)
       png_do_bgr(&(png_ptr->row_info), png_ptr->row_buf + 1);
 #endif
-#if defined(PNG_WRITE_INVERT_SUPPORTED)
+#ifdef PNG_WRITE_INVERT_SUPPORTED
    if (png_ptr->transformations & PNG_INVERT_MONO)
       png_do_invert(&(png_ptr->row_info), png_ptr->row_buf + 1);
 #endif
 }
 
-#if defined(PNG_WRITE_PACK_SUPPORTED)
+#ifdef PNG_WRITE_PACK_SUPPORTED
 /* Pack pixels into bytes.  Pass the true bit depth in bit_depth.  The
  * row_info bit depth should be 8 (one pixel per byte).  The channels
  * should be 1 (this only happens on grayscale and paletted images).
@@ -86,11 +91,9 @@ png_do_write_transformations(png_structp png_ptr)
 void /* PRIVATE */
 png_do_pack(png_row_infop row_info, png_bytep row, png_uint_32 bit_depth)
 {
-   png_debug(1, "in png_do_pack\n");
+   png_debug(1, "in png_do_pack");
+
    if (row_info->bit_depth == 8 &&
-#if defined(PNG_USELESS_TESTS_SUPPORTED)
-       row != NULL && row_info != NULL &&
-#endif
       row_info->channels == 1)
    {
       switch ((int)bit_depth)
@@ -201,7 +204,7 @@ png_do_pack(png_row_infop row_info, png_bytep row, png_uint_32 bit_depth)
 }
 #endif
 
-#if defined(PNG_WRITE_SHIFT_SUPPORTED)
+#ifdef PNG_WRITE_SHIFT_SUPPORTED
 /* Shift pixel values to take advantage of whole range.  Pass the
  * true number of bits in bit_depth.  The row should be packed
  * according to row_info->bit_depth.  Thus, if you had a row of
@@ -212,12 +215,9 @@ png_do_pack(png_row_infop row_info, png_bytep row, png_uint_32 bit_depth)
 void /* PRIVATE */
 png_do_shift(png_row_infop row_info, png_bytep row, png_color_8p bit_depth)
 {
-   png_debug(1, "in png_do_shift\n");
-#if defined(PNG_USELESS_TESTS_SUPPORTED)
-   if (row != NULL && row_info != NULL &&
-#else
+   png_debug(1, "in png_do_shift");
+
    if (
-#endif
       row_info->color_type != PNG_COLOR_TYPE_PALETTE)
    {
       int shift_start[4], shift_dec[4];
@@ -248,7 +248,7 @@ png_do_shift(png_row_infop row_info, png_bytep row, png_color_8p bit_depth)
          channels++;
       }
 
-      /* with low row depths, could only be grayscale, so one channel */
+      /* With low row depths, could only be grayscale, so one channel */
       if (row_info->bit_depth < 8)
       {
          png_bytep bp = row;
@@ -332,14 +332,12 @@ png_do_shift(png_row_infop row_info, png_bytep row, png_color_8p bit_depth)
 }
 #endif
 
-#if defined(PNG_WRITE_SWAP_ALPHA_SUPPORTED)
+#ifdef PNG_WRITE_SWAP_ALPHA_SUPPORTED
 void /* PRIVATE */
 png_do_write_swap_alpha(png_row_infop row_info, png_bytep row)
 {
-   png_debug(1, "in png_do_write_swap_alpha\n");
-#if defined(PNG_USELESS_TESTS_SUPPORTED)
-   if (row != NULL && row_info != NULL)
-#endif
+   png_debug(1, "in png_do_write_swap_alpha");
+
    {
       if (row_info->color_type == PNG_COLOR_TYPE_RGB_ALPHA)
       {
@@ -420,14 +418,12 @@ png_do_write_swap_alpha(png_row_infop row_info, png_bytep row)
 }
 #endif
 
-#if defined(PNG_WRITE_INVERT_ALPHA_SUPPORTED)
+#ifdef PNG_WRITE_INVERT_ALPHA_SUPPORTED
 void /* PRIVATE */
 png_do_write_invert_alpha(png_row_infop row_info, png_bytep row)
 {
-   png_debug(1, "in png_do_write_invert_alpha\n");
-#if defined(PNG_USELESS_TESTS_SUPPORTED)
-   if (row != NULL && row_info != NULL)
-#endif
+   png_debug(1, "in png_do_write_invert_alpha");
+
    {
       if (row_info->color_type == PNG_COLOR_TYPE_RGB_ALPHA)
       {
@@ -439,7 +435,7 @@ png_do_write_invert_alpha(png_row_infop row_info, png_bytep row)
             png_uint_32 row_width = row_info->width;
             for (i = 0, sp = dp = row; i < row_width; i++)
             {
-               /* does nothing
+               /* Does nothing
                *(dp++) = *(sp++);
                *(dp++) = *(sp++);
                *(dp++) = *(sp++);
@@ -457,7 +453,7 @@ png_do_write_invert_alpha(png_row_infop row_info, png_bytep row)
 
             for (i = 0, sp = dp = row; i < row_width; i++)
             {
-               /* does nothing
+               /* Does nothing
                *(dp++) = *(sp++);
                *(dp++) = *(sp++);
                *(dp++) = *(sp++);
@@ -495,7 +491,7 @@ png_do_write_invert_alpha(png_row_infop row_info, png_bytep row)
 
             for (i = 0, sp = dp = row; i < row_width; i++)
             {
-               /* does nothing
+               /* Does nothing
                *(dp++) = *(sp++);
                *(dp++) = *(sp++);
                */
@@ -509,16 +505,14 @@ png_do_write_invert_alpha(png_row_infop row_info, png_bytep row)
 }
 #endif
 
-#if defined(PNG_MNG_FEATURES_SUPPORTED)
-/* undoes intrapixel differencing  */
+#ifdef PNG_MNG_FEATURES_SUPPORTED
+/* Undoes intrapixel differencing  */
 void /* PRIVATE */
 png_do_write_intrapixel(png_row_infop row_info, png_bytep row)
 {
-   png_debug(1, "in png_do_write_intrapixel\n");
+   png_debug(1, "in png_do_write_intrapixel");
+
    if (
-#if defined(PNG_USELESS_TESTS_SUPPORTED)
-       row != NULL && row_info != NULL &&
-#endif
        (row_info->color_type & PNG_COLOR_MASK_COLOR))
    {
       int bytes_per_pixel;
@@ -558,8 +552,8 @@ png_do_write_intrapixel(png_row_infop row_info, png_bytep row)
             png_uint_32 s0   = (*(rp  ) << 8) | *(rp+1);
             png_uint_32 s1   = (*(rp+2) << 8) | *(rp+3);
             png_uint_32 s2   = (*(rp+4) << 8) | *(rp+5);
-            png_uint_32 red  = (png_uint_32)((s0-s1) & 0xffffL);
-            png_uint_32 blue = (png_uint_32)((s2-s1) & 0xffffL);
+            png_uint_32 red  = (png_uint_32)((s0 - s1) & 0xffffL);
+            png_uint_32 blue = (png_uint_32)((s2 - s1) & 0xffffL);
             *(rp  ) = (png_byte)((red >> 8) & 0xff);
             *(rp+1) = (png_byte)(red & 0xff);
             *(rp+4) = (png_byte)((blue >> 8) & 0xff);

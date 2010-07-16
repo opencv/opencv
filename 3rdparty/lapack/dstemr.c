@@ -1,4 +1,17 @@
+/* dstemr.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
@@ -88,7 +101,7 @@ static doublereal c_b18 = .001;
     logical lquery, zquery;
 
 
-/*  -- LAPACK computational routine (version 3.1) -- */
+/*  -- LAPACK computational routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     November 2006 */
 
@@ -325,7 +338,6 @@ static doublereal c_b18 = .001;
 
     lquery = *lwork == -1 || *liwork == -1;
     zquery = *nzc == -1;
-    *tryrac = *info != 0;
 /*     DSTEMR needs WORK of size 6*N, IWORK of size 3*N. */
 /*     In addition, DLARRE needs WORK of size 6*N, IWORK of size 5*N. */
 /*     Furthermore, DLARRV needs WORK of size 12*N, IWORK of size 7*N. */

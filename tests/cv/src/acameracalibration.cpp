@@ -961,7 +961,7 @@ void calcdfdx( const vector<vector<Point2f> >& leftF, const vector<vector<Point2
 	CV_Assert( !leftF.empty() && !rightF.empty() && !leftF[0].empty() && !rightF[0].empty() );
 	CV_Assert( leftF[0].size() ==  rightF[0].size() );
 	CV_Assert( fabs(eps) > std::numeric_limits<double>::epsilon() );
-	int fcount = leftF[0].size(), xdim = leftF.size();
+	int fcount = (int)leftF[0].size(), xdim = (int)leftF.size();
 
 	dfdx.create( fcount*fdim, xdim, CV_64FC1 );
 
@@ -1397,7 +1397,7 @@ void CV_StereoCalibrationTest::run( int )
 			return;
 		}
 
-		size_t nframes = imglist.size()/2;
+		int nframes = (int)(imglist.size()/2);
 		int npoints = patternSize.width*patternSize.height;
 		vector<vector<Point3f> > objpt(nframes);
 		vector<vector<Point2f> > imgpt1(nframes);
@@ -1426,7 +1426,7 @@ void CV_StereoCalibrationTest::run( int )
 				ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
 				return;
 			}
-			total += imgpt1[i].size();
+			total += (int)imgpt1[i].size();
 			for( int j = 0; j < npoints; j++ )
 				objpt[i].push_back(Point3f((float)(j%patternSize.width), (float)(j/patternSize.width), 0.f));
 		}
@@ -1514,7 +1514,7 @@ void CV_StereoCalibrationTest::run( int )
 
 		bool verticalStereo = abs(P2.at<double>(0,3)) < abs(P2.at<double>(1,3));
 		double maxDiff_c = 0, maxDiff_uc = 0;
-		for( size_t i = 0, k = 0; i < nframes; i++ )
+		for( int i = 0, k = 0; i < nframes; i++ )
 		{
 			vector<Point2f> temp[2];
 			undistortPoints(Mat(imgpt1[i]), temp[0], M1, D1, R1, P1);
@@ -1592,10 +1592,10 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
 	E.create(3, 3, CV_64F);
 	F.create(3, 3, CV_64F);
 
-	int  nimages = objectPoints.size(), total = 0;
-	for( int i = 0; i < (int)objectPoints.size(); i++ )
+	int  nimages = (int)objectPoints.size(), total = 0;
+	for( int i = 0; i < nimages; i++ )
 	{
-		total += objectPoints[i].size();
+		total += (int)objectPoints[i].size();
 	}
 
 	Mat npoints( 1, nimages, CV_32S ),
@@ -1608,7 +1608,7 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
 	Point2f* imgPtData = imgPt.ptr<Point2f>();
 	for( int i = 0, ni = 0, j = 0; i < nimages; i++, j += ni )
 	{
-		ni = objectPoints[i].size();
+		ni = (int)objectPoints[i].size();
 		((int*)npoints.data)[i] = ni;
 		copy(objectPoints[i].begin(), objectPoints[i].end(), objPtData + j);
 		copy(imagePoints1[i].begin(), imagePoints1[i].end(), imgPtData + j);

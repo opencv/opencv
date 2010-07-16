@@ -3937,9 +3937,9 @@ void KDTree::findOrthoRange(const float* L, const float* R,
     
 void KDTree::getPoints(const int* idx, size_t nidx, Mat& pts) const
 {
-    int dims = points.cols;
-    pts.create( nidx, dims, points.type());
-    for( size_t i = 0; i < nidx; i++ )
+    int dims = points.cols, n = (int)nidx;
+    pts.create( n, dims, points.type());
+    for( int i = 0; i < n; i++ )
     {
         int k = idx[i];
         CV_Assert( (unsigned)k < (unsigned)points.rows );
@@ -3954,7 +3954,7 @@ void KDTree::getPoints(const Mat& idx, Mat& pts) const
     CV_Assert(idx.type() == CV_32S && idx.isContinuous() &&
               (idx.cols == 1 || idx.rows == 1));
     int dims = points.cols;
-    size_t i, nidx = idx.cols + idx.rows - 1;
+    int i, nidx = idx.cols + idx.rows - 1;
     pts.create( nidx, dims, points.type());
     const int* _idx = idx.ptr<int>();
     

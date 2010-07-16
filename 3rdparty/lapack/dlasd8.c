@@ -1,4 +1,17 @@
+/* dlasd8.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
@@ -41,9 +54,9 @@ static doublereal c_b8 = 1.;
     doublereal dsigjp;
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
+/*  -- LAPACK auxiliary routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*     October 2006 */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -78,9 +91,10 @@ static doublereal c_b8 = 1.;
 /*  D       (output) DOUBLE PRECISION array, dimension ( K ) */
 /*          On output, D contains the updated singular values. */
 
-/*  Z       (input) DOUBLE PRECISION array, dimension ( K ) */
-/*          The first K elements of this array contain the components */
-/*          of the deflation-adjusted updating row vector. */
+/*  Z       (input/output) DOUBLE PRECISION array, dimension ( K ) */
+/*          On entry, the first K elements of this array contain the */
+/*          components of the deflation-adjusted updating row vector. */
+/*          On exit, Z is updated. */
 
 /*  VF      (input/output) DOUBLE PRECISION array, dimension ( K ) */
 /*          On entry, VF contains  information passed through DBEDE8. */
@@ -109,10 +123,12 @@ static doublereal c_b8 = 1.;
 /*  LDDIFR  (input) INTEGER */
 /*          The leading dimension of DIFR, must be at least K. */
 
-/*  DSIGMA  (input) DOUBLE PRECISION array, dimension ( K ) */
-/*          The first K elements of this array contain the old roots */
-/*          of the deflated updating problem.  These are the poles */
+/*  DSIGMA  (input/output) DOUBLE PRECISION array, dimension ( K ) */
+/*          On entry, the first K elements of this array contain the old */
+/*          roots of the deflated updating problem.  These are the poles */
 /*          of the secular equation. */
+/*          On exit, the elements of DSIGMA may be very slightly altered */
+/*          in value. */
 
 /*  WORK    (workspace) DOUBLE PRECISION array, dimension at least 3 * K */
 
@@ -198,7 +214,7 @@ static doublereal c_b8 = 1.;
 /*     changes the bottommost bits of DSIGMA(I). It does not account */
 /*     for hexadecimal or decimal machines without guard digits */
 /*     (we know of none). We use a subroutine call to compute */
-/*     2*DSIGMA(I) to prevent optimizing compilers from eliminating */
+/*     2*DLAMBDA(I) to prevent optimizing compilers from eliminating */
 /*     this code. */
 
     i__1 = *k;

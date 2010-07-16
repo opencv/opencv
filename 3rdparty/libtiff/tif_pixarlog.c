@@ -1,4 +1,4 @@
-/* $Id: tif_pixarlog.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_pixarlog.c,v 1.15.2.4 2010-06-08 18:50:42 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1996-1997 Sam Leffler
@@ -327,7 +327,7 @@ horizontalAccumulate11(uint16 *wp, int n, int stride, uint16 *op)
 	    while (n > 0) {
 		REPEAT(stride,
 		    wp[stride] += *wp; *op = *wp&mask; wp++; op++)
-	    	n -= stride;
+		n -= stride;
 	    }
 	}
     }
@@ -593,7 +593,6 @@ PixarLogMakeTables(PixarLogState *sp)
 static	int PixarLogEncode(TIFF*, tidata_t, tsize_t, tsample_t);
 static	int PixarLogDecode(TIFF*, tidata_t, tsize_t, tsample_t);
 
-#define N(a)   (sizeof(a)/sizeof(a[0]))
 #define PIXARLOGDATAFMT_UNKNOWN	-1
 
 static int
@@ -670,14 +669,14 @@ PixarLogSetupDecode(TIFF* tif)
 	if (sp->user_datafmt == PIXARLOGDATAFMT_UNKNOWN)
 		sp->user_datafmt = PixarLogGuessDataFmt(td);
 	if (sp->user_datafmt == PIXARLOGDATAFMT_UNKNOWN) {
-		TIFFError(module, 
+		TIFFErrorExt(tif->tif_clientdata, module,
 			"PixarLog compression can't handle bits depth/data format combination (depth: %d)", 
 			td->td_bitspersample);
 		return (0);
 	}
 
 	if (inflateInit(&sp->stream) != Z_OK) {
-		TIFFError(module, "%s: %s", tif->tif_name, sp->stream.msg);
+		TIFFErrorExt(tif->tif_clientdata, module, "%s: %s", tif->tif_name, sp->stream.msg);
 		return (0);
 	} else {
 		sp->state |= PLSTATE_INIT;
@@ -723,7 +722,7 @@ PixarLogDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 		nsamples = occ;
 		break;
 	default:
-		TIFFError(tif->tif_name,
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 			"%d bit input not supported in PixarLog",
 			td->td_bitspersample);
 		return 0;
@@ -741,7 +740,7 @@ PixarLogDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 			break;			/* XXX */
 		}
 		if (state == Z_DATA_ERROR) {
-			TIFFError(module,
+			TIFFErrorExt(tif->tif_clientdata, module,
 			    "%s: Decoding error at scanline %d, %s",
 			    tif->tif_name, tif->tif_row, sp->stream.msg);
 			if (inflateSync(&sp->stream) != Z_OK)
@@ -749,7 +748,7 @@ PixarLogDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 			continue;
 		}
 		if (state != Z_OK) {
-			TIFFError(module, "%s: zlib error: %s",
+			TIFFErrorExt(tif->tif_clientdata, module, "%s: zlib error: %s",
 			    tif->tif_name, sp->stream.msg);
 			return (0);
 		}
@@ -757,7 +756,7 @@ PixarLogDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 
 	/* hopefully, we got all the bytes we needed */
 	if (sp->stream.avail_out != 0) {
-		TIFFError(module,
+		TIFFErrorExt(tif->tif_clientdata, module,
 		    "%s: Not enough data at scanline %d (short %d bytes)",
 		    tif->tif_name, tif->tif_row, sp->stream.avail_out);
 		return (0);
@@ -767,6 +766,18 @@ PixarLogDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 	/* Swap bytes in the data if from a different endian machine. */
 	if (tif->tif_flags & TIFF_SWAB)
 		TIFFSwabArrayOfShort(up, nsamples);
+
+	/* 
+	 * if llen is not an exact multiple of nsamples, the decode operation
+	 * may overflow the output buffer, so truncate it enough to prevent
+	 * that but still salvage as much data as possible.
+	 */
+	if (nsamples % llen) { 
+		TIFFWarningExt(tif->tif_clientdata, module,
+			"%s: stride %d is not a multiple of sample count, "
+			"%d, data truncated.", tif->tif_name, llen, nsamples);
+		nsamples -= nsamples % llen;
+	}
 
 	for (i = 0; i < nsamples; i += llen, up += llen) {
 		switch (sp->user_datafmt)  {
@@ -801,7 +812,7 @@ PixarLogDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 			op += llen * sizeof(unsigned char);
 			break;
 		default:
-			TIFFError(tif->tif_name,
+			TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 				  "PixarLogDecode: unsupported bits/sample: %d", 
 				  td->td_bitspersample);
 			return (0);
@@ -835,12 +846,12 @@ PixarLogSetupEncode(TIFF* tif)
 	if (sp->user_datafmt == PIXARLOGDATAFMT_UNKNOWN)
 		sp->user_datafmt = PixarLogGuessDataFmt(td);
 	if (sp->user_datafmt == PIXARLOGDATAFMT_UNKNOWN) {
-		TIFFError(module, "PixarLog compression can't handle %d bit linear encodings", td->td_bitspersample);
+		TIFFErrorExt(tif->tif_clientdata, module, "PixarLog compression can't handle %d bit linear encodings", td->td_bitspersample);
 		return (0);
 	}
 
 	if (deflateInit(&sp->stream, sp->quality) != Z_OK) {
-		TIFFError(module, "%s: %s", tif->tif_name, sp->stream.msg);
+		TIFFErrorExt(tif->tif_clientdata, module, "%s: %s", tif->tif_name, sp->stream.msg);
 		return (0);
 	} else {
 		sp->state |= PLSTATE_INIT;
@@ -1036,7 +1047,7 @@ PixarLogEncode(TIFF* tif, tidata_t bp, tsize_t cc, tsample_t s)
 	TIFFDirectory *td = &tif->tif_dir;
 	PixarLogState *sp = EncoderState(tif);
 	static const char module[] = "PixarLogEncode";
-	int 	i, n, llen;
+	int	i, n, llen;
 	unsigned short * up;
 
 	(void) s;
@@ -1055,7 +1066,7 @@ PixarLogEncode(TIFF* tif, tidata_t bp, tsize_t cc, tsample_t s)
 		n = cc;
 		break;
 	default:
-		TIFFError(tif->tif_name,
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 			"%d bit input not supported in PixarLog",
 			td->td_bitspersample);
 		return 0;
@@ -1081,7 +1092,7 @@ PixarLogEncode(TIFF* tif, tidata_t bp, tsize_t cc, tsample_t s)
 			bp += llen * sizeof(unsigned char);
 			break;
 		default:
-			TIFFError(tif->tif_name,
+			TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 				"%d bit input not supported in PixarLog",
 				td->td_bitspersample);
 			return 0;
@@ -1093,7 +1104,7 @@ PixarLogEncode(TIFF* tif, tidata_t bp, tsize_t cc, tsample_t s)
 
 	do {
 		if (deflate(&sp->stream, Z_NO_FLUSH) != Z_OK) {
-			TIFFError(module, "%s: Encoder error: %s",
+			TIFFErrorExt(tif->tif_clientdata, module, "%s: Encoder error: %s",
 			    tif->tif_name, sp->stream.msg);
 			return (0);
 		}
@@ -1126,7 +1137,7 @@ PixarLogPostEncode(TIFF* tif)
 		switch (state) {
 		case Z_STREAM_END:
 		case Z_OK:
-		    if (sp->stream.avail_out != tif->tif_rawdatasize) {
+		    if (sp->stream.avail_out != (uint32)tif->tif_rawdatasize) {
 			    tif->tif_rawcc =
 				tif->tif_rawdatasize - sp->stream.avail_out;
 			    TIFFFlushData1(tif);
@@ -1135,7 +1146,7 @@ PixarLogPostEncode(TIFF* tif)
 		    }
 		    break;
 		default:
-		    TIFFError(module, "%s: zlib error: %s",
+			TIFFErrorExt(tif->tif_clientdata, module, "%s: zlib error: %s",
 			tif->tif_name, sp->stream.msg);
 		    return (0);
 		}
@@ -1163,24 +1174,31 @@ PixarLogCleanup(TIFF* tif)
 {
 	PixarLogState* sp = (PixarLogState*) tif->tif_data;
 
-	if (sp) {
-		if (sp->FromLT2) _TIFFfree(sp->FromLT2);
-		if (sp->From14) _TIFFfree(sp->From14);
-		if (sp->From8) _TIFFfree(sp->From8);
-		if (sp->ToLinearF) _TIFFfree(sp->ToLinearF);
-		if (sp->ToLinear16) _TIFFfree(sp->ToLinear16);
-		if (sp->ToLinear8) _TIFFfree(sp->ToLinear8);
-		if (sp->state&PLSTATE_INIT) {
-			if (tif->tif_mode == O_RDONLY)
-				inflateEnd(&sp->stream);
-			else
-				deflateEnd(&sp->stream);
-		}
-		if (sp->tbuf)
-			_TIFFfree(sp->tbuf);
-		_TIFFfree(sp);
-		tif->tif_data = NULL;
+	assert(sp != 0);
+
+	(void)TIFFPredictorCleanup(tif);
+
+	tif->tif_tagmethods.vgetfield = sp->vgetparent;
+	tif->tif_tagmethods.vsetfield = sp->vsetparent;
+
+	if (sp->FromLT2) _TIFFfree(sp->FromLT2);
+	if (sp->From14) _TIFFfree(sp->From14);
+	if (sp->From8) _TIFFfree(sp->From8);
+	if (sp->ToLinearF) _TIFFfree(sp->ToLinearF);
+	if (sp->ToLinear16) _TIFFfree(sp->ToLinear16);
+	if (sp->ToLinear8) _TIFFfree(sp->ToLinear8);
+	if (sp->state&PLSTATE_INIT) {
+		if (tif->tif_mode == O_RDONLY)
+			inflateEnd(&sp->stream);
+		else
+			deflateEnd(&sp->stream);
 	}
+	if (sp->tbuf)
+		_TIFFfree(sp->tbuf);
+	_TIFFfree(sp);
+	tif->tif_data = NULL;
+
+	_TIFFSetDefaultCompressionState(tif);
 }
 
 static int
@@ -1196,7 +1214,7 @@ PixarLogVSetField(TIFF* tif, ttag_t tag, va_list ap)
 		if (tif->tif_mode != O_RDONLY && (sp->state&PLSTATE_INIT)) {
 			if (deflateParams(&sp->stream,
 			    sp->quality, Z_DEFAULT_STRATEGY) != Z_OK) {
-				TIFFError(module, "%s: zlib error: %s",
+				TIFFErrorExt(tif->tif_clientdata, module, "%s: zlib error: %s",
 					tif->tif_name, sp->stream.msg);
 				return (0);
 			}
@@ -1271,9 +1289,21 @@ static const TIFFFieldInfo pixarlogFieldInfo[] = {
 int
 TIFFInitPixarLog(TIFF* tif, int scheme)
 {
+	static const char module[] = "TIFFInitPixarLog";
+
 	PixarLogState* sp;
 
 	assert(scheme == COMPRESSION_PIXARLOG);
+
+	/*
+	 * Merge codec-specific tag information.
+	 */
+	if (!_TIFFMergeFieldInfo(tif, pixarlogFieldInfo,
+				 TIFFArrayCount(pixarlogFieldInfo))) {
+		TIFFErrorExt(tif->tif_clientdata, module,
+			     "Merging PixarLog codec-specific tags failed");
+		return 0;
+	}
 
 	/*
 	 * Allocate state block so tag methods have storage to record values.
@@ -1304,7 +1334,6 @@ TIFFInitPixarLog(TIFF* tif, int scheme)
 	tif->tif_cleanup = PixarLogCleanup;
 
 	/* Override SetField so we can handle our private pseudo-tag */
-	_TIFFMergeFieldInfo(tif, pixarlogFieldInfo, N(pixarlogFieldInfo));
 	sp->vgetparent = tif->tif_tagmethods.vgetfield;
 	tif->tif_tagmethods.vgetfield = PixarLogVGetField;   /* hook for codec tags */
 	sp->vsetparent = tif->tif_tagmethods.vsetfield;
@@ -1326,9 +1355,17 @@ TIFFInitPixarLog(TIFF* tif, int scheme)
 
 	return (1);
 bad:
-	TIFFError("TIFFInitPixarLog", "No space for PixarLog state block");
+	TIFFErrorExt(tif->tif_clientdata, module,
+		     "No space for PixarLog state block");
 	return (0);
 }
 #endif /* PIXARLOG_SUPPORT */
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

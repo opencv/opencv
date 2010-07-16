@@ -984,8 +984,8 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
                   const TermCriteria& criteria)
                   //,enum{MOTION_AND_STRUCTURE,MOTION,STRUCTURE})
 {     
-    int num_points = points.size();
-    int num_cameras = cameraMatrix.size();
+    int num_points = (int)points.size();
+    int num_cameras = (int)cameraMatrix.size();
 
     CV_Assert( imagePoints.size() == (size_t)num_cameras && 
                visibility.size() == (size_t)num_cameras && 

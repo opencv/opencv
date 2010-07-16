@@ -384,7 +384,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
         cv::Mat src = src_pyramid[level];
         cv::Size size = src.size();
         uchar* sptr = src.data;
-        int sstep = src.step;
+        int sstep = (int)src.step;
         uchar* mask = 0;
         int mstep = 0;
         uchar* dptr;
@@ -396,9 +396,9 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
         {
             cv::Size size1 = dst_pyramid[level+1].size();
             cv::Mat m( size.height, size.width, CV_8UC1, mask0.data );
-            dstep = dst_pyramid[level+1].step;
+            dstep = (int)dst_pyramid[level+1].step;
             dptr = dst_pyramid[level+1].data + dstep + cn;
-            mstep = m.step;
+            mstep = (int)m.step;
             mask = m.data + mstep;
             //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
             cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level] );
@@ -419,7 +419,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
         }
 
         dptr = dst_pyramid[level].data;
-        dstep = dst_pyramid[level].step;
+        dstep = (int)dst_pyramid[level].step;
 
         for( i = 0; i < size.height; i++, sptr += sstep - size.width*3,
                                           dptr += dstep - size.width*3,

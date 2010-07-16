@@ -1,4 +1,4 @@
-/* $Header: /home/vp/work/opencv-cvsbackup/opencv/3rdparty/libtiff/tif_close.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_close.c,v 1.10.2.1 2010-06-08 18:50:41 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -54,27 +54,27 @@ TIFFCleanup(TIFF* tif)
 	TIFFFreeDirectory(tif);
 
 	if (tif->tif_dirlist)
-	    _TIFFfree(tif->tif_dirlist);
-	    
+		_TIFFfree(tif->tif_dirlist);
+
 	/* Clean up client info links */
 	while( tif->tif_clientinfo )
 	{
-	    TIFFClientInfoLink *link = tif->tif_clientinfo;
+		TIFFClientInfoLink *link = tif->tif_clientinfo;
 
-	    tif->tif_clientinfo = link->next;
-	    _TIFFfree( link->name );
-	    _TIFFfree( link );
+		tif->tif_clientinfo = link->next;
+		_TIFFfree( link->name );
+		_TIFFfree( link );
 	}
 
 	if (tif->tif_rawdata && (tif->tif_flags&TIFF_MYBUFFER))
-	    _TIFFfree(tif->tif_rawdata);
+		_TIFFfree(tif->tif_rawdata);
 	if (isMapped(tif))
-	    TIFFUnmapFileContents(tif, tif->tif_base, tif->tif_size);
+		TIFFUnmapFileContents(tif, tif->tif_base, tif->tif_size);
 
 	/* Clean up custom fields */
-	if (tif->tif_nfields > 0) 
+	if (tif->tif_nfields > 0)
 	{
-	    int  i;
+		size_t  i;
 
 	    for (i = 0; i < tif->tif_nfields; i++) 
 	    {
@@ -117,3 +117,10 @@ TIFFClose(TIFF* tif)
 	(void) (*closeproc)(fd);
 }
 
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

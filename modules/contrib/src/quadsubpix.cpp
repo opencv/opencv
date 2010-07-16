@@ -89,10 +89,11 @@ bool is_smaller(const std::pair<int, float>& p1, const std::pair<int, float>& p2
 void orderContours(const vector<vector<Point> >& contours, Point2f point, vector<std::pair<int, float> >& order)
 {
     order.clear();
-    for(size_t i = 0; i < contours.size(); i++)
+    int i, j, n = (int)contours.size();
+    for(i = 0; i < n; i++)
     {
         double min_dist = std::numeric_limits<double>::max();
-        for(size_t j = 0; j < contours[i].size(); j++)
+        for(j = 0; j < n; j++)
         {
             double dist = norm(Point2f((float)contours[i][j].x, (float)contours[i][j].y) - point);
             min_dist = MIN(min_dist, dist);
@@ -137,7 +138,7 @@ void findCorner(const vector<Point>& contour, Point2f point, Point2f& corner)
         if(dist < min_dist)
         {
             min_dist = dist;
-            min_idx = i;
+            min_idx = (int)i;
         }
     }
     assert(min_idx >= 0);
@@ -162,7 +163,7 @@ void findCorner(const vector<Point2f>& contour, Point2f point, Point2f& corner)
         if(dist < min_dist)
         {
             min_dist = dist;
-            min_idx = i;
+            min_idx = (int)i;
         }
     }
     assert(min_idx >= 0);

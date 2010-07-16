@@ -453,7 +453,7 @@ bool cv::Affine3DEstimator::checkSubset( const CvMat* ms1, int count )
 
 int cv::estimateAffine3D(const Mat& from, const Mat& to, Mat& out, vector<uchar>& outliers, double param1, double param2)
 {
-    size_t count = from.cols*from.rows*from.channels()/3;
+    int count = from.cols*from.rows*from.channels()/3;
     
     CV_Assert( count >= 4 && from.isContinuous() && to.isContinuous() &&
                from.depth() == CV_32F && to.depth() == CV_32F &&

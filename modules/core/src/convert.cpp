@@ -333,7 +333,7 @@ mixChannels_( const void** _src, const int* sdelta0,
 typedef void (*MixChannelsFunc)( const void** src, const int* sdelta0,
         const int* sdelta1, void** dst, const int* ddelta0, const int* ddelta1, int n, Size size );
 
-void mixChannels( const Mat* src, int nsrcs, Mat* dst, int ndsts, const int* fromTo, size_t npairs )
+void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
     size_t i;
     

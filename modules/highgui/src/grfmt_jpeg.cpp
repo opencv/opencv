@@ -370,7 +370,7 @@ bool  JpegDecoder::readData( Mat& img )
 {
     bool result = false;
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
     bool color = img.channels() > 1;
     JpegState* state = (JpegState*)m_state;
 

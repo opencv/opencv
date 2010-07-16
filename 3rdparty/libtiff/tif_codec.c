@@ -1,4 +1,4 @@
-/* $Header: /home/vp/work/opencv-cvsbackup/opencv/3rdparty/libtiff/tif_codec.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_codec.c,v 1.10.2.2 2010-06-08 18:50:41 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -95,16 +95,19 @@ TIFFCodec _TIFFBuiltinCODECS[] = {
     { "PixarLog",	COMPRESSION_PIXARLOG,	TIFFInitPixarLog },
     { "SGILog",		COMPRESSION_SGILOG,	TIFFInitSGILog },
     { "SGILog24",	COMPRESSION_SGILOG24,	TIFFInitSGILog },
-    { NULL }
+    { NULL,             0,                      NULL }
 };
 
 static int
 _notConfigured(TIFF* tif)
 {
 	const TIFFCodec* c = TIFFFindCODEC(tif->tif_dir.td_compression);
-
-	TIFFError(tif->tif_name,
-	    "%s compression support is not configured", c->name);
+        char compression_code[20];
+        
+        sprintf( compression_code, "%d", tif->tif_dir.td_compression );
+	TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+                     "%s compression support is not configured", 
+                     c ? c->name : compression_code );
 	return (0);
 }
 
@@ -148,3 +151,10 @@ TIFFIsCODECConfigured(uint16 scheme)
 	return 0;
 }
 
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

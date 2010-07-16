@@ -13,8 +13,8 @@ libjpeg 6b (6.2) - The Independent JPEG Group's JPEG software.
              On UNIX systems configure script takes care of it.
 
 ------------------------------------------------------------------------------------
-libpng 1.2.29 - Portable Network Graphics library.
-               Copyright (C) 1998-2001, Glenn Randers-Pehrson.
+libpng 1.4.3 - Portable Network Graphics library.
+               Copyright (C) 1998-2010, Glenn Randers-Pehrson.
                See libpng home page http://www.libpng.org
                for details and links to the source code
 
@@ -22,7 +22,7 @@ libpng 1.2.29 - Portable Network Graphics library.
                On UNIX systems configure script takes care of it.
 
 ------------------------------------------------------------------------------------
-libtiff 3.7.2 - Tag Image File Format (TIFF) Software
+libtiff 3.9.4 - Tag Image File Format (TIFF) Software
                 Copyright (c) 1988-1997 Sam Leffler
                 Copyright (c) 1991-1997 Silicon Graphics, Inc.
                 See libtiff home page http://www.libtiff.org
@@ -35,8 +35,8 @@ libtiff 3.7.2 - Tag Image File Format (TIFF) Software
                 In this build support for ZIP (LZ77 compression), JPEG and LZW
                 are included.
 ------------------------------------------------------------------------------------
-zlib 1.2.3 - General purpose LZ77 compression library
-             Copyright (C) 1995-2002 Jean-loup Gailly and Mark Adler.
+zlib 1.2.5 - General purpose LZ77 compression library
+             Copyright (C) 1995-2010 Jean-loup Gailly and Mark Adler.
              See zlib home page http://www.gzip.org/zlib
              for details and links to the source code
 
@@ -89,7 +89,7 @@ openexr-1.4.0 - OpenEXR is a high dynamic-range (HDR) image file format develope
 
 ------------------------------------------------------------------------------------
 
-ffmpeg-0.5.0 - FFmpeg is a complete, cross-platform solution to record,
+ffmpeg-0.5.1 - FFmpeg is a complete, cross-platform solution to record,
              convert and stream audio and video. It includes libavcodec -
              the leading audio/video codec library, and also libavformat, libavutils and
              other helper libraries that are used by OpenCV (in highgui module) to
@@ -105,13 +105,13 @@ videoInput-0.1995 - Video capturing library for Windows using DirectShow as back
 
 ------------------------------------------------------------------------------------
 
-clapack-3.1.1.1 - F2C translation of the Linear Algebra PACKage (LAPACK),
-                  Copyright (c) 1992-2008 The University of Tennessee. All rights reserved.
-                  http://www.netlib.org/lapack/
-                  http://www.netlib.org/clapack/
+clapack-3.2.1 - F2C translation of the Linear Algebra PACKage (LAPACK),
+                Copyright (c) 1992-2010 The University of Tennessee. All rights reserved.
+                http://www.netlib.org/lapack/
+                http://www.netlib.org/clapack/
 
-                  Note, that only a subset of package is used in OpenCV.
-                  It can be extended and/or replaced with future upstream releases
-                  in the future.
+                Note, that only a subset of package is used in OpenCV.
+                It can be extended and/or replaced with future upstream releases
+                in the future.
 
 ------------------------------------------------------------------------------------

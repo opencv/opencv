@@ -1,4 +1,4 @@
-/* $Id: tif_strip.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_strip.c,v 1.19.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler
@@ -41,7 +41,7 @@ summarize(TIFF* tif, size_t summand1, size_t summand2, const char* where)
 	uint32	bytes = summand1 + summand2;
 
 	if (bytes - summand1 != summand2) {
-		TIFFError(tif->tif_name, "Integer overflow in %s", where);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "Integer overflow in %s", where);
 		bytes = 0;
 	}
 
@@ -54,7 +54,7 @@ multiply(TIFF* tif, size_t nmemb, size_t elem_size, const char* where)
 	uint32	bytes = nmemb * elem_size;
 
 	if (elem_size && bytes / elem_size != nmemb) {
-		TIFFError(tif->tif_name, "Integer overflow in %s", where);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "Integer overflow in %s", where);
 		bytes = 0;
 	}
 
@@ -73,7 +73,7 @@ TIFFComputeStrip(TIFF* tif, uint32 row, tsample_t sample)
 	strip = row / td->td_rowsperstrip;
 	if (td->td_planarconfig == PLANARCONFIG_SEPARATE) {
 		if (sample >= td->td_samplesperpixel) {
-			TIFFError(tif->tif_name,
+			TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 			    "%lu: Sample out of range, max %lu",
 			    (unsigned long) sample, (unsigned long) td->td_samplesperpixel);
 			return ((tstrip_t) 0);
@@ -121,16 +121,17 @@ TIFFVStripSize(TIFF* tif, uint32 nrows)
 		 * horizontal/vertical subsampling area include
 		 * YCbCr data for the extended image.
 		 */
-                uint16 ycbcrsubsampling[2];
-                tsize_t w, scanline, samplingarea;
+		uint16 ycbcrsubsampling[2];
+		tsize_t w, scanline, samplingarea;
 
-                TIFFGetField( tif, TIFFTAG_YCBCRSUBSAMPLING, 
-                              ycbcrsubsampling + 0, 
-                              ycbcrsubsampling + 1 );
+		TIFFGetField( tif, TIFFTAG_YCBCRSUBSAMPLING,
+			      ycbcrsubsampling + 0,
+			      ycbcrsubsampling + 1 );
 
 		samplingarea = ycbcrsubsampling[0]*ycbcrsubsampling[1];
 		if (samplingarea == 0) {
-			TIFFError(tif->tif_name, "Invalid YCbCr subsampling");
+			TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+				     "Invalid YCbCr subsampling");
 			return 0;
 		}
 
@@ -160,7 +161,7 @@ TIFFRawStripSize(TIFF* tif, tstrip_t strip)
 	tsize_t bytecount = td->td_stripbytecount[strip];
 
 	if (bytecount <= 0) {
-		TIFFError(tif->tif_name,
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 			  "%lu: Invalid strip byte count, strip %lu",
 			  (unsigned long) bytecount, (unsigned long) strip);
 		bytecount = (tsize_t) -1;
@@ -205,10 +206,11 @@ _TIFFDefaultStripSize(TIFF* tif, uint32 s)
 	if ((int32) s < 1) {
 		/*
 		 * If RowsPerStrip is unspecified, try to break the
-		 * image up into strips that are approximately 8Kbytes.
+		 * image up into strips that are approximately
+		 * STRIP_SIZE_DEFAULT bytes long.
 		 */
 		tsize_t scanline = TIFFScanlineSize(tif);
-		s = (uint32)(8*1024) / (scanline == 0 ? 1 : scanline);
+		s = (uint32)STRIP_SIZE_DEFAULT / (scanline == 0 ? 1 : scanline);
 		if (s == 0)		/* very wide images */
 			s = 1;
 	}
@@ -226,13 +228,112 @@ TIFFScanlineSize(TIFF* tif)
 {
 	TIFFDirectory *td = &tif->tif_dir;
 	tsize_t scanline;
-	
+
+	if (td->td_planarconfig == PLANARCONFIG_CONTIG) {
+		if (td->td_photometric == PHOTOMETRIC_YCBCR
+		    && !isUpSampled(tif)) {
+			uint16 ycbcrsubsampling[2];
+
+			TIFFGetField(tif, TIFFTAG_YCBCRSUBSAMPLING,
+				     ycbcrsubsampling + 0,
+				     ycbcrsubsampling + 1);
+
+			if (ycbcrsubsampling[0] == 0) {
+				TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+					     "Invalid YCbCr subsampling");
+				return 0;
+			}
+
+			scanline = TIFFroundup(td->td_imagewidth,
+					       ycbcrsubsampling[0]);
+			scanline = TIFFhowmany8(multiply(tif, scanline,
+							 td->td_bitspersample,
+							 "TIFFScanlineSize"));
+			return ((tsize_t)
+				summarize(tif, scanline,
+					  multiply(tif, 2,
+						scanline / ycbcrsubsampling[0],
+						"TIFFVStripSize"),
+					  "TIFFVStripSize"));
+		} else {
+			scanline = multiply(tif, td->td_imagewidth,
+					    td->td_samplesperpixel,
+					    "TIFFScanlineSize");
+		}
+	} else
+		scanline = td->td_imagewidth;
+	return ((tsize_t) TIFFhowmany8(multiply(tif, scanline,
+						td->td_bitspersample,
+						"TIFFScanlineSize")));
+}
+
+/*
+ * Some stuff depends on this older version of TIFFScanlineSize
+ * TODO: resolve this
+ */
+tsize_t
+TIFFOldScanlineSize(TIFF* tif)
+{
+	TIFFDirectory *td = &tif->tif_dir;
+	tsize_t scanline;
+
 	scanline = multiply (tif, td->td_bitspersample, td->td_imagewidth,
 			     "TIFFScanlineSize");
 	if (td->td_planarconfig == PLANARCONFIG_CONTIG)
 		scanline = multiply (tif, scanline, td->td_samplesperpixel,
 				     "TIFFScanlineSize");
 	return ((tsize_t) TIFFhowmany8(scanline));
+}
+
+/*
+ * Return the number of bytes to read/write in a call to
+ * one of the scanline-oriented i/o routines.  Note that
+ * this number may be 1/samples-per-pixel if data is
+ * stored as separate planes.
+ * The ScanlineSize in case of YCbCrSubsampling is defined as the
+ * strip size divided by the strip height, i.e. the size of a pack of vertical
+ * subsampling lines divided by vertical subsampling. It should thus make
+ * sense when multiplied by a multiple of vertical subsampling.
+ * Some stuff depends on this newer version of TIFFScanlineSize
+ * TODO: resolve this
+ */
+tsize_t
+TIFFNewScanlineSize(TIFF* tif)
+{
+	TIFFDirectory *td = &tif->tif_dir;
+	tsize_t scanline;
+
+	if (td->td_planarconfig == PLANARCONFIG_CONTIG) {
+		if (td->td_photometric == PHOTOMETRIC_YCBCR
+		    && !isUpSampled(tif)) {
+			uint16 ycbcrsubsampling[2];
+
+			TIFFGetField(tif, TIFFTAG_YCBCRSUBSAMPLING,
+				     ycbcrsubsampling + 0,
+				     ycbcrsubsampling + 1);
+
+			if (ycbcrsubsampling[0]*ycbcrsubsampling[1] == 0) {
+				TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+					     "Invalid YCbCr subsampling");
+				return 0;
+			}
+
+			return((tsize_t) ((((td->td_imagewidth+ycbcrsubsampling[0]-1)
+					    /ycbcrsubsampling[0])
+					   *(ycbcrsubsampling[0]*ycbcrsubsampling[1]+2)
+					   *td->td_bitspersample+7)
+					  /8)/ycbcrsubsampling[1]);
+
+		} else {
+			scanline = multiply(tif, td->td_imagewidth,
+					    td->td_samplesperpixel,
+					    "TIFFScanlineSize");
+		}
+	} else
+		scanline = td->td_imagewidth;
+	return ((tsize_t) TIFFhowmany8(multiply(tif, scanline,
+						td->td_bitspersample,
+						"TIFFScanlineSize")));
 }
 
 /*
@@ -260,3 +361,10 @@ TIFFRasterScanlineSize(TIFF* tif)
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

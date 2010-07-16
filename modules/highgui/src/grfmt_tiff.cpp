@@ -147,7 +147,7 @@ bool  TiffDecoder::readData( Mat& img )
     bool result = false;
     bool color = img.channels() > 1;
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
 
     if( m_tif && m_width && m_height )
     {

@@ -3065,7 +3065,7 @@ void invertAffineTransform(const Mat& matM, Mat& _iM)
     {
         const float* M = (const float*)matM.data;
         float* iM = (float*)_iM.data;
-        int step = matM.step/sizeof(M[0]), istep = _iM.step/sizeof(iM[0]);
+        int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
         
         double D = M[0]*M[step+1] - M[1]*M[step];
         D = D != 0 ? 1./D : 0;
@@ -3080,7 +3080,7 @@ void invertAffineTransform(const Mat& matM, Mat& _iM)
     {
         const double* M = (const double*)matM.data;
         double* iM = (double*)_iM.data;
-        int step = matM.step/sizeof(M[0]), istep = _iM.step/sizeof(iM[0]);
+        int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
         
         double D = M[0]*M[step+1] - M[1]*M[step];
         D = D != 0 ? 1./D : 0;

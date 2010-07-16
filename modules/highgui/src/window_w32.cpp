@@ -412,7 +412,7 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
 		EXIT;
 
 	{
-		DWORD dwStyle = GetWindowLongPtr(window->frame, GWL_STYLE);
+		DWORD dwStyle = (DWORD)GetWindowLongPtr(window->frame, GWL_STYLE);
 		CvRect position;
 
 		if (window->status==CV_WINDOW_FULLSCREEN && prop_value==CV_WINDOW_NORMAL)

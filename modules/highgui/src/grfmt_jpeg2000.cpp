@@ -161,7 +161,7 @@ bool  Jpeg2KDecoder::readData( Mat& img )
     bool result = false;
     int color = img.channels() > 1;
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
     jas_stream_t* stream = (jas_stream_t*)m_stream;
     jas_image_t* image = (jas_image_t*)m_image;
 

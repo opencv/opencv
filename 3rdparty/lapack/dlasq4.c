@@ -1,14 +1,23 @@
+/* dlasq4.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int dlasq4_(integer *i0, integer *n0, doublereal *z__, 
 	integer *pp, integer *n0in, doublereal *dmin__, doublereal *dmin1, 
 	doublereal *dmin2, doublereal *dn, doublereal *dn1, doublereal *dn2, 
-	doublereal *tau, integer *ttype)
+	doublereal *tau, integer *ttype, doublereal *g)
 {
-    /* Initialized data */
-
-    static doublereal g = 0.;
-
     /* System generated locals */
     integer i__1;
     doublereal d__1, d__2;
@@ -22,9 +31,15 @@
     doublereal gam, gap1, gap2;
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
-/*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*  -- LAPACK routine (version 3.2)                                    -- */
+
+/*  -- Contributed by Osni Marques of the Lawrence Berkeley National   -- */
+/*  -- Laboratory and Beresford Parlett of the Univ. of California at  -- */
+/*  -- Berkeley                                                        -- */
+/*  -- November 2008                                                   -- */
+
+/*  -- LAPACK is a software package provided by Univ. of Tennessee,    -- */
+/*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..-- */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -49,7 +64,7 @@
 /*  PP    (input) INTEGER */
 /*        PP=0 for ping, PP=1 for pong. */
 
-/*  N0IN  (input) INTEGER */
+/*  NOIN  (input) INTEGER */
 /*        The value of N0 at start of EIGTEST. */
 
 /*  DMIN  (input) DOUBLE PRECISION */
@@ -76,6 +91,10 @@
 /*  TTYPE (output) INTEGER */
 /*        Shift type. */
 
+/*  G     (input/output) REAL */
+/*        G is passed as an argument in order to save its value between */
+/*        calls to DLASQ4. */
+
 /*  Further Details */
 /*  =============== */
 /*  CNST1 = 9/16 */
@@ -88,19 +107,15 @@
 /*     .. */
 /*     .. Intrinsic Functions .. */
 /*     .. */
-/*     .. Save statement .. */
-/*     .. */
-/*     .. Data statement .. */
-    /* Parameter adjustments */
-    --z__;
-
-    /* Function Body */
-/*     .. */
 /*     .. Executable Statements .. */
 
 /*     A negative DMIN forces the shift to take that absolute value */
 /*     TTYPE records the type of shift. */
 
+    /* Parameter adjustments */
+    --z__;
+
+    /* Function Body */
     if (*dmin__ <= 0.) {
 	*tau = -(*dmin__);
 	*ttype = -1;
@@ -255,13 +270,13 @@ L40:
 /*           Case 6, no information to guide us. */
 
 	    if (*ttype == -6) {
-		g += (1. - g) * .333;
+		*g += (1. - *g) * .333;
 	    } else if (*ttype == -18) {
-		g = .083250000000000005;
+		*g = .083250000000000005;
 	    } else {
-		g = .25;
+		*g = .25;
 	    }
-	    s = g * *dmin__;
+	    s = *g * *dmin__;
 	    *ttype = -6;
 	}
 

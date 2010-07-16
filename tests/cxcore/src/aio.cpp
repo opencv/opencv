@@ -176,8 +176,8 @@ void CV_IOTest::run( int )
             multiply(test_mat, test_mat_scale, test_mat);
         }
         
-        CvSeq* seq = cvCreateSeq(test_mat.type(), sizeof(CvSeq),
-            test_mat.elemSize(), storage);
+        CvSeq* seq = cvCreateSeq(test_mat.type(), (int)sizeof(CvSeq),
+            (int)test_mat.elemSize(), storage);
         cvSeqPushMulti(seq, test_mat.data, test_mat.cols*test_mat.rows); 
         
         CvGraph* graph = cvCreateGraph( CV_ORIENTED_GRAPH,

@@ -77,7 +77,7 @@ void save_value(FILE* stream, const T& value, int count = 1)
 template<typename T>
 void load_value(FILE* stream, T& value, int count = 1)
 {
-	int read_cnt = fread(&value, sizeof(value),count, stream);
+	int read_cnt = (int)fread(&value, sizeof(value),count, stream);
 	if (read_cnt!=count) {
 		throw FLANNException("Cannot read from file");
 	}

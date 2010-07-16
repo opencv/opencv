@@ -184,7 +184,7 @@ bool  BmpDecoder::readHeader()
 bool  BmpDecoder::readData( Mat& img )
 {
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
     bool color = img.channels() > 1;
     uchar  gray_palette[256];
     bool   result = false;

@@ -106,7 +106,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
     const int OFS = 256*5, TABSZ = OFS*2 + 256;
     uchar tab[TABSZ];
     const uchar* sptr = src.data;
-    int srcstep = src.step;
+    int srcstep = (int)src.step;
     Size size = src.size();
 
     scale_g *= scale_s;
@@ -274,11 +274,11 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     const uchar* rptr0 = right.data + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
     short* dptr = (short*)disp.data;
-    int sstep = left.step;
-    int dstep = disp.step/sizeof(dptr[0]);
+    int sstep = (int)left.step;
+    int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height + dy0 + dy1)*ndisp;
     short costbuf = 0;
-    int coststep = cost.data ? cost.step/sizeof(costbuf) : 0;
+    int coststep = cost.data ? (int)(cost.step/sizeof(costbuf)) : 0;
     const int TABSZ = 256;
     uchar tab[TABSZ];
     const __m128i d0_8 = _mm_setr_epi16(0,1,2,3,4,5,6,7), dd_8 = _mm_set1_epi16(8);
@@ -529,11 +529,11 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     const uchar* rptr0 = right.data + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
     short* dptr = (short*)disp.data;
-    int sstep = left.step;
-    int dstep = disp.step/sizeof(dptr[0]);
+    int sstep = (int)left.step;
+    int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height+dy0+dy1)*ndisp;
     int costbuf = 0;
-    int coststep = cost.data ? cost.step/sizeof(costbuf) : 0;
+    int coststep = cost.data ? (int)(cost.step/sizeof(costbuf)) : 0;
     const int TABSZ = 256;
     uchar tab[TABSZ];
 

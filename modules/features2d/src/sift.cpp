@@ -52,6 +52,10 @@
 
 #define log2(a) (log((a))/CV_LOG2)
 
+#if defined _MSC_VER && _MSC_VER >= 1400
+#pragma warning(disable: 4100 4244 4267 4305)
+#endif
+
 /*
  * from sift.hpp of original code
  */

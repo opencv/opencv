@@ -51,7 +51,9 @@
 
 using namespace cv;
 
-
+#if defined _MSC_VER && _MSC_VER >= 1400
+#pragma warning(disable: 4244 4267)
+#endif
 
 /****************************************************************************************\
 The code below is implementation of Calonder Descriptor and RTree Classifier

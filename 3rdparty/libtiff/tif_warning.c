@@ -1,4 +1,4 @@
-/* $Header: /home/vp/work/opencv-cvsbackup/opencv/3rdparty/libtiff/tif_warning.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_warning.c,v 1.2.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -29,6 +29,8 @@
  */
 #include "tiffiop.h"
 
+TIFFErrorHandlerExt _TIFFwarningHandlerExt = NULL;
+
 TIFFErrorHandler
 TIFFSetWarningHandler(TIFFErrorHandler handler)
 {
@@ -37,13 +39,43 @@ TIFFSetWarningHandler(TIFFErrorHandler handler)
 	return (prev);
 }
 
+TIFFErrorHandlerExt
+TIFFSetWarningHandlerExt(TIFFErrorHandlerExt handler)
+{
+	TIFFErrorHandlerExt prev = _TIFFwarningHandlerExt;
+	_TIFFwarningHandlerExt = handler;
+	return (prev);
+}
+
 void
 TIFFWarning(const char* module, const char* fmt, ...)
 {
-	if (_TIFFwarningHandler) {
-		va_list ap;
-		va_start(ap, fmt);
+	va_list ap;
+	va_start(ap, fmt);
+	if (_TIFFwarningHandler)
 		(*_TIFFwarningHandler)(module, fmt, ap);
-		va_end(ap);
-	}
+	if (_TIFFwarningHandlerExt)
+		(*_TIFFwarningHandlerExt)(0, module, fmt, ap);
+	va_end(ap);
 }
+
+void
+TIFFWarningExt(thandle_t fd, const char* module, const char* fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	if (_TIFFwarningHandler)
+		(*_TIFFwarningHandler)(module, fmt, ap);
+	if (_TIFFwarningHandlerExt)
+		(*_TIFFwarningHandlerExt)(fd, module, fmt, ap);
+	va_end(ap);
+}
+
+
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

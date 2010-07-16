@@ -1,4 +1,4 @@
-/* $Id: tif_packbits.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_packbits.c,v 1.13.2.2 2010-06-08 18:50:42 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -38,7 +38,7 @@ PackBitsPreEncode(TIFF* tif, tsample_t s)
 {
 	(void) s;
 
-        if (!(tif->tif_data = _TIFFmalloc(sizeof(tsize_t))))
+        if (!(tif->tif_data = (tidata_t)_TIFFmalloc(sizeof(tsize_t))))
 		return (0);
 	/*
 	 * Calculate the scanline/tile-width size in bytes.
@@ -239,8 +239,8 @@ PackBitsDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
                         n = -n + 1;
                         if( occ < n )
                         {
-                            TIFFWarning(tif->tif_name,
-                                        "PackBitsDecode: discarding %d bytes "
+							TIFFWarningExt(tif->tif_clientdata, tif->tif_name,
+                                        "PackBitsDecode: discarding %ld bytes "
                                         "to avoid buffer overrun",
                                         n - occ);
                             n = occ;
@@ -252,8 +252,8 @@ PackBitsDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 		} else {		/* copy next n+1 bytes literally */
 			if (occ < n + 1)
                         {
-                            TIFFWarning(tif->tif_name,
-                                        "PackBitsDecode: discarding %d bytes "
+                            TIFFWarningExt(tif->tif_clientdata, tif->tif_name,
+                                        "PackBitsDecode: discarding %ld bytes "
                                         "to avoid buffer overrun",
                                         n - occ + 1);
                             n = occ - 1;
@@ -266,7 +266,7 @@ PackBitsDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 	tif->tif_rawcp = (tidata_t) bp;
 	tif->tif_rawcc = cc;
 	if (occ > 0) {
-		TIFFError(tif->tif_name,
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
 		    "PackBitsDecode: Not enough data for scanline %ld",
 		    (long) tif->tif_row);
 		return (0);
@@ -291,3 +291,10 @@ TIFFInitPackBits(TIFF* tif, int scheme)
 #endif /* PACKBITS_SUPPORT */
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

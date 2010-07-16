@@ -939,7 +939,7 @@ struct HaarDetectObjects_ScaleCascade_Invoker
         const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
         const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
         bool doCannyPruning = p0 != 0;
-        int sstep = sumstep/sizeof(p0[0]);
+        int sstep = (int)(sumstep/sizeof(p0[0]));
         
         for( iy = startY; iy < endY; iy++ )
         {

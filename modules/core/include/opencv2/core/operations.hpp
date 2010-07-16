@@ -2372,8 +2372,8 @@ inline LineIterator LineIterator::operator ++(int)
 inline Point LineIterator::pos() const
 {
     Point p;
-    p.y = (ptr - ptr0)/step;
-    p.x = ((ptr - ptr0) - p.y*step)/elemSize;
+    p.y = (int)((ptr - ptr0)/step);
+    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
     return p;
 }
     

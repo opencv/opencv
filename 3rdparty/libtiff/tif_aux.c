@@ -1,4 +1,4 @@
-/* $Id: tif_aux.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_aux.c,v 1.20.2.3 2010-06-09 21:15:27 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler
@@ -32,6 +32,34 @@
 #include "tiffiop.h"
 #include "tif_predict.h"
 #include <math.h>
+
+tdata_t
+_TIFFCheckRealloc(TIFF* tif, tdata_t buffer,
+		  size_t nmemb, size_t elem_size, const char* what)
+{
+	tdata_t cp = NULL;
+	tsize_t	bytes = nmemb * elem_size;
+
+	/*
+	 * XXX: Check for integer overflow.
+	 */
+	if (nmemb && elem_size && bytes / elem_size == nmemb)
+		cp = _TIFFrealloc(buffer, bytes);
+
+	if (cp == NULL)
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "Failed to allocate memory for %s "
+			     "(%ld elements of %ld bytes each)",
+			     what,(long) nmemb, (long) elem_size);
+
+	return cp;
+}
+
+tdata_t
+_TIFFCheckMalloc(TIFF* tif, size_t nmemb, size_t elem_size, const char* what)
+{
+	return _TIFFCheckRealloc(tif, NULL, nmemb, elem_size, what);
+}
 
 static int
 TIFFDefaultTransferFunction(TIFFDirectory* td)
@@ -156,17 +184,17 @@ TIFFVGetFieldDefaulted(TIFF* tif, ttag_t tag, va_list ap)
                 {
 			TIFFPredictorState* sp = (TIFFPredictorState*) tif->tif_data;
 			*va_arg(ap, uint16*) = (uint16) sp->predictor;
-			return (1);
+			return 1;
                 }
 	case TIFFTAG_DOTRANGE:
 		*va_arg(ap, uint16 *) = 0;
 		*va_arg(ap, uint16 *) = (1<<td->td_bitspersample)-1;
 		return (1);
 	case TIFFTAG_INKSET:
-		*va_arg(ap, uint16 *) = td->td_inkset;
-		return (1);
+		*va_arg(ap, uint16 *) = INKSET_CMYK;
+		return 1;
 	case TIFFTAG_NUMBEROFINKS:
-		*va_arg(ap, uint16 *) = td->td_ninks;
+		*va_arg(ap, uint16 *) = 4;
 		return (1);
 	case TIFFTAG_EXTRASAMPLES:
 		*va_arg(ap, uint16 *) = td->td_extrasamples;
@@ -190,18 +218,12 @@ TIFFVGetFieldDefaulted(TIFF* tif, ttag_t tag, va_list ap)
 		*va_arg(ap, uint32 *) = td->td_imagedepth;
 		return (1);
 	case TIFFTAG_YCBCRCOEFFICIENTS:
-		if (!td->td_ycbcrcoeffs) {
-			td->td_ycbcrcoeffs = (float *)
-			    _TIFFmalloc(3*sizeof (float));
-			if (!td->td_ycbcrcoeffs)
-				return (0);
+		{
 			/* defaults are from CCIR Recommendation 601-1 */
-			td->td_ycbcrcoeffs[0] = 0.299f;
-			td->td_ycbcrcoeffs[1] = 0.587f;
-			td->td_ycbcrcoeffs[2] = 0.114f;
+			static float ycbcrcoeffs[] = { 0.299f, 0.587f, 0.114f };
+			*va_arg(ap, float **) = ycbcrcoeffs;
+			return 1;
 		}
-		*va_arg(ap, float **) = td->td_ycbcrcoeffs;
-		return (1);
 	case TIFFTAG_YCBCRSUBSAMPLING:
 		*va_arg(ap, uint16 *) = td->td_ycbcrsubsampling[0];
 		*va_arg(ap, uint16 *) = td->td_ycbcrsubsampling[1];
@@ -210,25 +232,21 @@ TIFFVGetFieldDefaulted(TIFF* tif, ttag_t tag, va_list ap)
 		*va_arg(ap, uint16 *) = td->td_ycbcrpositioning;
 		return (1);
 	case TIFFTAG_WHITEPOINT:
-		if (!td->td_whitepoint) {
-			td->td_whitepoint = (float *)
-				_TIFFmalloc(2 * sizeof (float));
-			if (!td->td_whitepoint)
-				return (0);
-			/* TIFF 6.0 specification says that it is no default
+		{
+			static float whitepoint[2];
+
+			/* TIFF 6.0 specification tells that it is no default
 			   value for the WhitePoint, but AdobePhotoshop TIFF
 			   Technical Note tells that it should be CIE D50. */
-			td->td_whitepoint[0] =
-				D50_X0 / (D50_X0 + D50_Y0 + D50_Z0);
-			td->td_whitepoint[1] =
-				D50_Y0 / (D50_X0 + D50_Y0 + D50_Z0);
+			whitepoint[0] =	D50_X0 / (D50_X0 + D50_Y0 + D50_Z0);
+			whitepoint[1] =	D50_Y0 / (D50_X0 + D50_Y0 + D50_Z0);
+			*va_arg(ap, float **) = whitepoint;
+			return 1;
 		}
-		*va_arg(ap, float **) = td->td_whitepoint;
-		return (1);
 	case TIFFTAG_TRANSFERFUNCTION:
 		if (!td->td_transferfunction[0] &&
 		    !TIFFDefaultTransferFunction(td)) {
-			TIFFError(tif->tif_name, "No space for \"TransferFunction\" tag");
+			TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "No space for \"TransferFunction\" tag");
 			return (0);
 		}
 		*va_arg(ap, uint16 **) = td->td_transferfunction[0];
@@ -243,7 +261,7 @@ TIFFVGetFieldDefaulted(TIFF* tif, ttag_t tag, va_list ap)
 		*va_arg(ap, float **) = td->td_refblackwhite;
 		return (1);
 	}
-	return (0);
+	return 0;
 }
 
 /*
@@ -263,3 +281,10 @@ TIFFGetFieldDefaulted(TIFF* tif, ttag_t tag, ...)
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

@@ -1270,12 +1270,12 @@ MSER::MSER()
 }
 
 MSER::MSER( int _delta, int _min_area, int _max_area,
-      float _max_variation, float _min_diversity,
+      double _max_variation, double _min_diversity,
       int _max_evolution, double _area_threshold,
       double _min_margin, int _edge_blur_size )
 {
-    *(CvMSERParams*)this = cvMSERParams(_delta, _min_area, _max_area, _max_variation,
-        _min_diversity, _max_evolution, _area_threshold, _min_margin, _edge_blur_size);
+    *(CvMSERParams*)this = cvMSERParams(_delta, _min_area, _max_area, (float)_max_variation,
+        (float)_min_diversity, _max_evolution, _area_threshold, _min_margin, _edge_blur_size);
 }
 
 void MSER::operator()( const Mat& image, vector<vector<Point> >& dstcontours, const Mat& mask ) const

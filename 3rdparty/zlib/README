@@ -1,56 +1,52 @@
 ZLIB DATA COMPRESSION LIBRARY
 
-zlib 1.2.3 is a general purpose data compression library.  All the code is
+zlib 1.2.5 is a general purpose data compression library.  All the code is
 thread safe.  The data format used by the zlib library is described by RFCs
 (Request for Comments) 1950 to 1952 in the files
 http://www.ietf.org/rfc/rfc1950.txt (zlib format), rfc1951.txt (deflate format)
-and rfc1952.txt (gzip format). These documents are also available in other
-formats from ftp://ftp.uu.net/graphics/png/documents/zlib/zdoc-index.html
+and rfc1952.txt (gzip format).
 
 All functions of the compression library are documented in the file zlib.h
-(volunteer to write man pages welcome, contact zlib@gzip.org). A usage example
+(volunteer to write man pages welcome, contact zlib@gzip.org).  A usage example
 of the library is given in the file example.c which also tests that the library
-is working correctly. Another example is given in the file minigzip.c. The
+is working correctly.  Another example is given in the file minigzip.c.  The
 compression library itself is composed of all source files except example.c and
 minigzip.c.
 
 To compile all files and run the test program, follow the instructions given at
-the top of Makefile. In short "make test; make install" should work for most
-machines. For Unix: "./configure; make test; make install". For MSDOS, use one
-of the special makefiles such as Makefile.msc. For VMS, use make_vms.com.
+the top of Makefile.in.  In short "./configure; make test", and if that goes
+well, "make install" should work for most flavors of Unix.  For Windows, use one
+of the special makefiles in win32/ or contrib/vstudio/ .  For VMS, use
+make_vms.com.
 
 Questions about zlib should be sent to <zlib@gzip.org>, or to Gilles Vollant
-<info@winimage.com> for the Windows DLL version. The zlib home page is
-http://www.zlib.org or http://www.gzip.org/zlib/ Before reporting a problem,
-please check this site to verify that you have the latest version of zlib;
-otherwise get the latest version and check whether the problem still exists or
-not.
+<info@winimage.com> for the Windows DLL version.  The zlib home page is
+http://zlib.net/ .  Before reporting a problem, please check this site to
+verify that you have the latest version of zlib; otherwise get the latest
+version and check whether the problem still exists or not.
 
-PLEASE read the zlib FAQ http://www.gzip.org/zlib/zlib_faq.html before asking
-for help.
+PLEASE read the zlib FAQ http://zlib.net/zlib_faq.html before asking for help.
 
-Mark Nelson <markn@ieee.org> wrote an article about zlib for the Jan. 1997
-issue of  Dr. Dobb's Journal; a copy of the article is available in
-http://dogma.net/markn/articles/zlibtool/zlibtool.htm
+Mark Nelson <markn@ieee.org> wrote an article about zlib for the Jan.  1997
+issue of Dr.  Dobb's Journal; a copy of the article is available at
+http://marknelson.us/1997/01/01/zlib-engine/ .
 
-The changes made in version 1.2.3 are documented in the file ChangeLog.
+The changes made in version 1.2.5 are documented in the file ChangeLog.
 
-Unsupported third party contributions are provided in directory "contrib".
+Unsupported third party contributions are provided in directory contrib/ .
 
-A Java implementation of zlib is available in the Java Development Kit
-http://java.sun.com/j2se/1.4.2/docs/api/java/util/zip/package-summary.html
-See the zlib home page http://www.zlib.org for details.
+zlib is available in Java using the java.util.zip package, documented at
+http://java.sun.com/developer/technicalArticles/Programming/compression/ .
 
-A Perl interface to zlib written by Paul Marquess <pmqs@cpan.org> is in the
-CPAN (Comprehensive Perl Archive Network) sites
-http://www.cpan.org/modules/by-module/Compress/
+A Perl interface to zlib written by Paul Marquess <pmqs@cpan.org> is available
+at CPAN (Comprehensive Perl Archive Network) sites, including
+http://search.cpan.org/~pmqs/IO-Compress-Zlib/ .
 
 A Python interface to zlib written by A.M. Kuchling <amk@amk.ca> is
 available in Python 1.5 and later versions, see
-http://www.python.org/doc/lib/module-zlib.html
+http://www.python.org/doc/lib/module-zlib.html .
 
-A zlib binding for TCL written by Andreas Kupries <a.kupries@westend.com> is
-availlable at http://www.oche.de/~akupries/soft/trf/trf_zip.html
+zlib is built into tcl: http://wiki.tcl.tk/4610 .
 
 An experimental package to read and write files in .zip format, written on top
 of zlib by Gilles Vollant <info@winimage.com>, is available in the
@@ -74,25 +70,21 @@ Notes for some targets:
 - zlib doesn't work on HP-UX 9.05 with some versions of /bin/cc. It works with
   other compilers. Use "make test" to check your compiler.
 
-- gzdopen is not supported on RISCOS, BEOS and by some Mac compilers.
+- gzdopen is not supported on RISCOS or BEOS.
 
 - For PalmOs, see http://palmzlib.sourceforge.net/
-
-- When building a shared, i.e. dynamic library on Mac OS X, the library must be
-  installed before testing (do "make install" before "make test"), since the
-  library location is specified in the library.
 
 
 Acknowledgments:
 
-  The deflate format used by zlib was defined by Phil Katz. The deflate
-  and zlib specifications were written by L. Peter Deutsch. Thanks to all the
-  people who reported problems and suggested various improvements in zlib;
-  they are too numerous to cite here.
+  The deflate format used by zlib was defined by Phil Katz.  The deflate and
+  zlib specifications were written by L.  Peter Deutsch.  Thanks to all the
+  people who reported problems and suggested various improvements in zlib; they
+  are too numerous to cite here.
 
 Copyright notice:
 
- (C) 1995-2004 Jean-loup Gailly and Mark Adler
+ (C) 1995-2010 Jean-loup Gailly and Mark Adler
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -113,13 +105,11 @@ Copyright notice:
   Jean-loup Gailly        Mark Adler
   jloup@gzip.org          madler@alumni.caltech.edu
 
-If you use the zlib library in a product, we would appreciate *not*
-receiving lengthy legal documents to sign. The sources are provided
-for free but without warranty of any kind.  The library has been
-entirely written by Jean-loup Gailly and Mark Adler; it does not
-include third-party code.
+If you use the zlib library in a product, we would appreciate *not* receiving
+lengthy legal documents to sign.  The sources are provided for free but without
+warranty of any kind.  The library has been entirely written by Jean-loup
+Gailly and Mark Adler; it does not include third-party code.
 
-If you redistribute modified sources, we would appreciate that you include
-in the file ChangeLog history information documenting your changes. Please
-read the FAQ for more information on the distribution of modified source
-versions.
+If you redistribute modified sources, we would appreciate that you include in
+the file ChangeLog history information documenting your changes.  Please read
+the FAQ for more information on the distribution of modified source versions.

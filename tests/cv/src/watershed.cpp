@@ -91,7 +91,7 @@ void CV_WatershedTest::run( int /* start_from */)
             colors.push_back(exp.ptr(p->y)[p->x] - 1);
     }
     fs.release();
-    const int compNum = colors.size() - 1;
+    const int compNum = (int)(colors.size() - 1);
 
     watershed(orig, markers);
 

@@ -1,4 +1,17 @@
+/* slarfg.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int slarfg_(integer *n, real *alpha, real *x, integer *incx, 
 	real *tau)
@@ -20,7 +33,7 @@
     real safmin, rsafmn;
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
+/*  -- LAPACK auxiliary routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     November 2006 */
 
@@ -111,12 +124,12 @@
 	r__1 = slapy2_(alpha, &xnorm);
 	beta = -r_sign(&r__1, alpha);
 	safmin = slamch_("S") / slamch_("E");
+	knt = 0;
 	if (dabs(beta) < safmin) {
 
 /*           XNORM, BETA may be inaccurate; scale X and recompute them */
 
 	    rsafmn = 1.f / safmin;
-	    knt = 0;
 L10:
 	    ++knt;
 	    i__1 = *n - 1;
@@ -133,26 +146,20 @@ L10:
 	    xnorm = snrm2_(&i__1, &x[1], incx);
 	    r__1 = slapy2_(alpha, &xnorm);
 	    beta = -r_sign(&r__1, alpha);
-	    *tau = (beta - *alpha) / beta;
-	    i__1 = *n - 1;
-	    r__1 = 1.f / (*alpha - beta);
-	    sscal_(&i__1, &r__1, &x[1], incx);
-
-/*           If ALPHA is subnormal, it may lose relative accuracy */
-
-	    *alpha = beta;
-	    i__1 = knt;
-	    for (j = 1; j <= i__1; ++j) {
-		*alpha *= safmin;
-/* L20: */
-	    }
-	} else {
-	    *tau = (beta - *alpha) / beta;
-	    i__1 = *n - 1;
-	    r__1 = 1.f / (*alpha - beta);
-	    sscal_(&i__1, &r__1, &x[1], incx);
-	    *alpha = beta;
 	}
+	*tau = (beta - *alpha) / beta;
+	i__1 = *n - 1;
+	r__1 = 1.f / (*alpha - beta);
+	sscal_(&i__1, &r__1, &x[1], incx);
+
+/*        If ALPHA is subnormal, it may lose relative accuracy */
+
+	i__1 = knt;
+	for (j = 1; j <= i__1; ++j) {
+	    beta *= safmin;
+/* L20: */
+	}
+	*alpha = beta;
     }
 
     return 0;

@@ -101,12 +101,12 @@ protected:
     {
         double tmp, sum = 0;
         double nsum = 0;
-        for(size_t i = 0; i < 3; ++i)
+        for(int i = 0; i < 3; ++i)
         {
-            tmp = static_cast<double>(v1[i]);
+            tmp = v1[i];
             nsum +=  tmp * tmp;            
 
-            tmp = tmp - static_cast<double>(v2[i]);
+            tmp = tmp - v2[i];
             sum += tmp * tmp;
             
         }        

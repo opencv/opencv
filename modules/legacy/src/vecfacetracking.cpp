@@ -47,7 +47,6 @@
 #include "precomp.hpp"
 #include "_vectrack.h"
 
-#define _ASSERT     assert
 #define NUM_FACE_ELEMENTS   3
 enum 
 {
@@ -426,9 +425,9 @@ void CvFaceElement::Energy()
 CV_IMPL CvFaceTracker*
 cvInitFaceTracker(CvFaceTracker* pFaceTracker, const IplImage* imgGray, CvRect* pRects, int nRects)
 {
-    _ASSERT(NULL != imgGray);
-    _ASSERT(NULL != pRects);
-    _ASSERT(nRects >= NUM_FACE_ELEMENTS);
+    assert(NULL != imgGray);
+    assert(NULL != pRects);
+    assert(nRects >= NUM_FACE_ELEMENTS);
     if ((NULL == imgGray) ||
         (NULL == pRects) ||
         (nRects < NUM_FACE_ELEMENTS))
@@ -460,9 +459,9 @@ cvReleaseFaceTracker(CvFaceTracker** ppFaceTracker)
 CV_IMPL int
 cvTrackFace(CvFaceTracker* pFaceTracker, IplImage* imgGray, CvRect* pRects, int nRects, CvPoint* ptRotate, double* dbAngleRotate)
 {
-    _ASSERT(NULL != pFaceTracker);
-    _ASSERT(NULL != imgGray);
-    _ASSERT(NULL != pRects && nRects >= NUM_FACE_ELEMENTS);
+    assert(NULL != pFaceTracker);
+    assert(NULL != imgGray);
+    assert(NULL != pRects && nRects >= NUM_FACE_ELEMENTS);
     if ((NULL == pFaceTracker) ||
         (NULL == imgGray))
         return FALSE;
@@ -612,8 +611,8 @@ RESTART:
 
 void ThresholdingParam(IplImage *imgGray, int iNumLayers, int &iMinLevel, int &iMaxLevel, float &step, float& power, int iHistMin /*= HIST_MIN*/)
 {
-    _ASSERT(imgGray != NULL);
-    _ASSERT(imgGray->nChannels == 1);
+    assert(imgGray != NULL);
+    assert(imgGray->nChannels == 1);
     int i, j; 
     // create histogram
     int histImg[256] = {0};
@@ -782,7 +781,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
         face[element[2]].r.height = int(double(pTF->rTempl[element[2]].height) / (scale) + 0.5);
         face[element[2]].r.x = face[element[2]].ptCenter.x - (face[element[2]].r.width + 1) / 2;
         face[element[2]].r.y = face[element[2]].ptCenter.y - (face[element[2]].r.height + 1) / 2;
-        _ASSERT(face[LEYE].r.x + face[LEYE].r.width <= face[REYE].r.x);
+        assert(face[LEYE].r.x + face[LEYE].r.width <= face[REYE].r.x);
     }
     return found;
 } // int ChoiceTrackingFace3(const CvTrackingRect* tr_face, CvTrackingRect* new_face, int& new_energy)
@@ -860,8 +859,8 @@ inline double CalculateTransformationLMS3( CvPoint* pTemplPoints,
     double dbAverageShiftY = 0;
     double dbLMS = 0;
 
-    _ASSERT( NULL != pTemplPoints);
-    _ASSERT( NULL != pSrcPoints);
+    assert( NULL != pTemplPoints);
+    assert( NULL != pSrcPoints);
 
     double dbXt = double(pTemplPoints[0].x + pTemplPoints[1].x + pTemplPoints[2].x) / 3.0;
     double dbYt = double(pTemplPoints[0].y + pTemplPoints[1].y + pTemplPoints[2].y ) / 3.0;
@@ -919,7 +918,7 @@ inline double CalculateTransformationLMS3( CvPoint* pTemplPoints,
     if( pdbAverageShiftX != NULL ) *pdbAverageShiftX = dbAverageShiftX;
     if( pdbAverageShiftY != NULL ) *pdbAverageShiftY = dbAverageShiftY;
     
-    _ASSERT(dbLMS >= 0);
+    assert(dbLMS >= 0);
     return dbLMS;
 }
 
@@ -927,8 +926,8 @@ inline double CalculateTransformationLMS3_0( CvPoint* pTemplPoints, CvPoint* pSr
 {
     double dbLMS = 0;
 
-    _ASSERT( NULL != pTemplPoints);
-    _ASSERT( NULL != pSrcPoints);
+    assert( NULL != pTemplPoints);
+    assert( NULL != pSrcPoints);
 
     double dbXt = double(pTemplPoints[0].x + pTemplPoints[1].x + pTemplPoints[2].x) / 3.0;
     double dbYt = double(pTemplPoints[0].y + pTemplPoints[1].y + pTemplPoints[2].y ) / 3.0;

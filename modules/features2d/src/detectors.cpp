@@ -110,7 +110,7 @@ void GoodFeaturesToTrackDetector::read (const FileNode& fn)
     qualityLevel = fn["qualityLevel"];
     minDistance = fn["minDistance"];
     blockSize = fn["blockSize"];
-    useHarrisDetector = (int) fn["useHarrisDetector"];
+    useHarrisDetector = (int)fn["useHarrisDetector"] != 0;
     k = fn["k"];
 }
 
@@ -135,7 +135,7 @@ void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
     vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
     for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
     {
-        *keypoint_it = KeyPoint( *corner_it, blockSize );
+        *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
     }
 }
 
@@ -143,7 +143,7 @@ void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
     MserFeatureDetector
 */
 MserFeatureDetector::MserFeatureDetector( int delta, int minArea, int maxArea,
-                                          float maxVariation, float minDiversity,
+                                          double maxVariation, double minDiversity,
                                           int maxEvolution, double areaThreshold,
                                           double minMargin, int edgeBlurSize )
   : mser( delta, minArea, maxArea, maxVariation, minDiversity,

@@ -281,7 +281,7 @@ public:
 
     int size() const
     {
-    	return items.size();
+    	return (int)items.size();
     }
 
 	bool full() const

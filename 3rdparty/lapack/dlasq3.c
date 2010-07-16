@@ -1,20 +1,25 @@
+/* dlasq3.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int dlasq3_(integer *i0, integer *n0, doublereal *z__, 
 	integer *pp, doublereal *dmin__, doublereal *sigma, doublereal *desig, 
 	 doublereal *qmax, integer *nfail, integer *iter, integer *ndiv, 
-	logical *ieee)
+	logical *ieee, integer *ttype, doublereal *dmin1, doublereal *dmin2, 
+	doublereal *dn, doublereal *dn1, doublereal *dn2, doublereal *g, 
+	doublereal *tau)
 {
-    /* Initialized data */
-
-    static integer ttype = 0;
-    static doublereal dmin1 = 0.;
-    static doublereal dmin2 = 0.;
-    static doublereal dn = 0.;
-    static doublereal dn1 = 0.;
-    static doublereal dn2 = 0.;
-    static doublereal tau = 0.;
-
     /* System generated locals */
     integer i__1;
     doublereal d__1, d__2;
@@ -30,20 +35,26 @@
     doublereal tol2, temp;
     extern /* Subroutine */ int dlasq4_(integer *, integer *, doublereal *, 
 	    integer *, integer *, doublereal *, doublereal *, doublereal *, 
-	    doublereal *, doublereal *, doublereal *, doublereal *, integer *)
-	    , dlasq5_(integer *, integer *, doublereal *, integer *, 
-	    doublereal *, doublereal *, doublereal *, doublereal *, 
-	    doublereal *, doublereal *, doublereal *, logical *), dlasq6_(
+	    doublereal *, doublereal *, doublereal *, doublereal *, integer *, 
+	     doublereal *), dlasq5_(integer *, integer *, doublereal *, 
+	    integer *, doublereal *, doublereal *, doublereal *, doublereal *, 
+	     doublereal *, doublereal *, doublereal *, logical *), dlasq6_(
 	    integer *, integer *, doublereal *, integer *, doublereal *, 
 	    doublereal *, doublereal *, doublereal *, doublereal *, 
 	    doublereal *);
     extern doublereal dlamch_(char *);
-    doublereal safmin;
+    extern logical disnan_(doublereal *);
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
-/*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*  -- LAPACK routine (version 3.2)                                    -- */
+
+/*  -- Contributed by Osni Marques of the Lawrence Berkeley National   -- */
+/*  -- Laboratory and Beresford Parlett of the Univ. of California at  -- */
+/*  -- Berkeley                                                        -- */
+/*  -- November 2008                                                   -- */
+
+/*  -- LAPACK is a software package provided by Univ. of Tennessee,    -- */
+/*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..-- */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -69,8 +80,11 @@
 /*  Z      (input) DOUBLE PRECISION array, dimension ( 4*N ) */
 /*         Z holds the qd array. */
 
-/*  PP     (input) INTEGER */
+/*  PP     (input/output) INTEGER */
 /*         PP=0 for ping, PP=1 for pong. */
+/*         PP=2 indicates that flipping was applied to the Z array */
+/*         and that the initial tests for deflation should not be */
+/*         performed. */
 
 /*  DMIN   (output) DOUBLE PRECISION */
 /*         Minimum value of d. */
@@ -93,11 +107,15 @@
 /*  NDIV   (output) INTEGER */
 /*         Number of divisions. */
 
-/*  TTYPE  (output) INTEGER */
-/*         Shift type. */
-
 /*  IEEE   (input) LOGICAL */
 /*         Flag for IEEE or non IEEE arithmetic (passed to DLASQ5). */
+
+/*  TTYPE  (input/output) INTEGER */
+/*         Shift type. */
+
+/*  DMIN1, DMIN2, DN, DN1, DN2, G, TAU (input/output) DOUBLE PRECISION */
+/*         These are passed as arguments in order to save their values */
+/*         between calls to DLASQ3. */
 
 /*  ===================================================================== */
 
@@ -111,19 +129,14 @@
 /*     .. */
 /*     .. Intrinsic Functions .. */
 /*     .. */
-/*     .. Save statement .. */
-/*     .. */
-/*     .. Data statement .. */
+/*     .. Executable Statements .. */
+
     /* Parameter adjustments */
     --z__;
 
     /* Function Body */
-/*     .. */
-/*     .. Executable Statements .. */
-
     n0in = *n0;
     eps = dlamch_("Precision");
-    safmin = dlamch_("Safe minimum");
     tol = eps * 100.;
 /* Computing 2nd power */
     d__1 = tol;
@@ -191,6 +204,9 @@ L40:
     goto L10;
 
 L50:
+    if (*pp == 2) {
+	*pp = 0;
+    }
 
 /*     Reverse the qd-array, if warranted. */
 
@@ -218,8 +234,8 @@ L50:
 		z__[(*n0 << 2) - *pp] = z__[(*i0 << 2) - *pp];
 	    }
 /* Computing MIN */
-	    d__1 = dmin2, d__2 = z__[(*n0 << 2) + *pp - 1];
-	    dmin2 = min(d__1,d__2);
+	    d__1 = *dmin2, d__2 = z__[(*n0 << 2) + *pp - 1];
+	    *dmin2 = min(d__1,d__2);
 /* Computing MIN */
 	    d__1 = z__[(*n0 << 2) + *pp - 1], d__2 = z__[(*i0 << 2) + *pp - 1]
 		    , d__1 = min(d__1,d__2), d__2 = z__[(*i0 << 2) + *pp + 3];
@@ -236,96 +252,94 @@ L50:
 	}
     }
 
-/* Computing MIN */
-    d__1 = z__[(*n0 << 2) + *pp - 1], d__2 = z__[(*n0 << 2) + *pp - 9], d__1 =
-	     min(d__1,d__2), d__2 = dmin2 + z__[(*n0 << 2) - *pp];
-    if (*dmin__ < 0. || safmin * *qmax < min(d__1,d__2)) {
+/*     Choose a shift. */
 
-/*        Choose a shift. */
+    dlasq4_(i0, n0, &z__[1], pp, &n0in, dmin__, dmin1, dmin2, dn, dn1, dn2, 
+	    tau, ttype, g);
 
-	dlasq4_(i0, n0, &z__[1], pp, &n0in, dmin__, &dmin1, &dmin2, &dn, &dn1, 
-		 &dn2, &tau, &ttype);
+/*     Call dqds until DMIN > 0. */
 
-/*        Call dqds until DMIN > 0. */
+L70:
 
-L80:
+    dlasq5_(i0, n0, &z__[1], pp, tau, dmin__, dmin1, dmin2, dn, dn1, dn2, 
+	    ieee);
 
-	dlasq5_(i0, n0, &z__[1], pp, &tau, dmin__, &dmin1, &dmin2, &dn, &dn1, 
-		&dn2, ieee);
+    *ndiv += *n0 - *i0 + 2;
+    ++(*iter);
 
-	*ndiv += *n0 - *i0 + 2;
-	++(*iter);
+/*     Check status. */
 
-/*        Check status. */
+    if (*dmin__ >= 0. && *dmin1 > 0.) {
 
-	if (*dmin__ >= 0. && dmin1 > 0.) {
+/*        Success. */
 
-/*           Success. */
+	goto L90;
 
-	    goto L100;
+    } else if (*dmin__ < 0. && *dmin1 > 0. && z__[(*n0 - 1 << 2) - *pp] < tol 
+	    * (*sigma + *dn1) && abs(*dn) < tol * *sigma) {
 
-	} else if (*dmin__ < 0. && dmin1 > 0. && z__[(*n0 - 1 << 2) - *pp] < 
-		tol * (*sigma + dn1) && abs(dn) < tol * *sigma) {
+/*        Convergence hidden by negative DN. */
 
-/*           Convergence hidden by negative DN. */
+	z__[(*n0 - 1 << 2) - *pp + 2] = 0.;
+	*dmin__ = 0.;
+	goto L90;
+    } else if (*dmin__ < 0.) {
 
-	    z__[(*n0 - 1 << 2) - *pp + 2] = 0.;
-	    *dmin__ = 0.;
-	    goto L100;
-	} else if (*dmin__ < 0.) {
+/*        TAU too big. Select new TAU and try again. */
 
-/*           TAU too big. Select new TAU and try again. */
+	++(*nfail);
+	if (*ttype < -22) {
 
-	    ++(*nfail);
-	    if (ttype < -22) {
+/*           Failed twice. Play it safe. */
 
-/*              Failed twice. Play it safe. */
+	    *tau = 0.;
+	} else if (*dmin1 > 0.) {
 
-		tau = 0.;
-	    } else if (dmin1 > 0.) {
+/*           Late failure. Gives excellent shift. */
 
-/*              Late failure. Gives excellent shift. */
-
-		tau = (tau + *dmin__) * (1. - eps * 2.);
-		ttype += -11;
-	    } else {
-
-/*              Early failure. Divide by 4. */
-
-		tau *= .25;
-		ttype += -12;
-	    }
-	    goto L80;
-	} else if (*dmin__ != *dmin__) {
-
-/*           NaN. */
-
-	    tau = 0.;
-	    goto L80;
+	    *tau = (*tau + *dmin__) * (1. - eps * 2.);
+	    *ttype += -11;
 	} else {
 
-/*           Possible underflow. Play it safe. */
+/*           Early failure. Divide by 4. */
 
-	    goto L90;
+	    *tau *= .25;
+	    *ttype += -12;
 	}
+	goto L70;
+    } else if (disnan_(dmin__)) {
+
+/*        NaN. */
+
+	if (*tau == 0.) {
+	    goto L80;
+	} else {
+	    *tau = 0.;
+	    goto L70;
+	}
+    } else {
+
+/*        Possible underflow. Play it safe. */
+
+	goto L80;
     }
 
 /*     Risk of underflow. */
 
-L90:
-    dlasq6_(i0, n0, &z__[1], pp, dmin__, &dmin1, &dmin2, &dn, &dn1, &dn2);
+L80:
+    dlasq6_(i0, n0, &z__[1], pp, dmin__, dmin1, dmin2, dn, dn1, dn2);
     *ndiv += *n0 - *i0 + 2;
     ++(*iter);
-    tau = 0.;
+    *tau = 0.;
 
-L100:
-    if (tau < *sigma) {
-	*desig += tau;
+L90:
+    if (*tau < *sigma) {
+	*desig += *tau;
 	t = *sigma + *desig;
 	*desig -= t - *sigma;
     } else {
-	t = *sigma + tau;
-	*desig = *sigma - (t - tau) + *desig;
+	t = *sigma + *tau;
+	*desig = *sigma - (t - *tau) + *desig;
     }
     *sigma = t;
 

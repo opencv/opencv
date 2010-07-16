@@ -177,7 +177,7 @@ public:
     template <typename T>
 	T* allocate(size_t count = 1)
 	{
-		T* mem = (T*) this->malloc(sizeof(T)*count);
+		T* mem = (T*) this->malloc((int)(sizeof(T)*count));
 		return mem;
 	}
 

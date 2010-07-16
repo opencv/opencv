@@ -156,7 +156,7 @@ bool  SunRasterDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
     uchar  gray_palette[256];
     bool   result = false;
     int  src_pitch = ((m_width*m_bpp + 7)/8 + 1) & -2;

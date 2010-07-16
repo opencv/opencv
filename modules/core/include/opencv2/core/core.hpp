@@ -1816,7 +1816,7 @@ CV_EXPORTS void merge(const Mat* mv, size_t count, Mat& dst);
 CV_EXPORTS void split(const Mat& m, Mat* mvbegin);
 
 //! copies selected channels from the input arrays to the selected channels of the output arrays
-CV_EXPORTS void mixChannels(const Mat* src, int nsrcs, Mat* dst, int ndsts,
+CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
 //! reverses the order of the rows, columns or both in a matrix
 CV_EXPORTS void flip(const Mat& a, Mat& b, int flipCode);

@@ -56,7 +56,7 @@ void save_header(FILE* stream, const NNIndex& index)
 IndexHeader load_header(FILE* stream)
 {
 	IndexHeader header;
-	int read_size = fread(&header,sizeof(header),1,stream);
+	int read_size = (int)fread(&header,sizeof(header),1,stream);
 
 	if (read_size!=1) {
 		throw FLANNException("Invalid index file, cannot read");

@@ -83,7 +83,7 @@ protected:
                 cvFindChessboardCorners( &arr, pattern_size, out_corners, out_corner_count, flags );
             else
                 cvDrawChessboardCorners( &drawCorImg, pattern_size, 
-                    (CvPoint2D32f*)&corners[0], corners.size(), was_found);
+                    (CvPoint2D32f*)&corners[0], (int)corners.size(), was_found);
     }
 };
 

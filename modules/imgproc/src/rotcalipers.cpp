@@ -364,7 +364,7 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
     if( CV_IS_SEQ(ptseq) )
     {
         if( !CV_IS_SEQ_POINT_SET(ptseq) &&
-            (CV_SEQ_KIND(ptseq) != CV_SEQ_KIND_CURVE || !CV_IS_SEQ_CONVEX(ptseq) ||
+            (CV_SEQ_KIND(ptseq) != CV_SEQ_KIND_CURVE ||
             CV_SEQ_ELTYPE(ptseq) != CV_SEQ_ELTYPE_PPOINT ))
             CV_Error( CV_StsUnsupportedFormat,
                 "Input sequence must consist of 2d points or pointers to 2d points" );
@@ -385,31 +385,7 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
         temp_storage = cvCreateMemStorage(1 << 10);
     }
 
-    if( !CV_IS_SEQ_CONVEX( ptseq ))
-    {
-        ptseq = cvConvexHull2( ptseq, temp_storage, CV_CLOCKWISE, 1 );
-    }
-    else if( !CV_IS_SEQ_POINT_SET( ptseq ))
-    {
-        CvSeqWriter writer;
-        
-        if( !CV_IS_SEQ(ptseq->v_prev) || !CV_IS_SEQ_POINT_SET(ptseq->v_prev))
-            CV_Error( CV_StsBadArg,
-            "Convex hull must have valid pointer to point sequence stored in v_prev" );
-        cvStartReadSeq( ptseq, &reader );
-        cvStartWriteSeq( CV_SEQ_KIND_CURVE|CV_SEQ_FLAG_CONVEX|CV_SEQ_ELTYPE(ptseq->v_prev),
-                         sizeof(CvContour), CV_ELEM_SIZE(ptseq->v_prev->flags),
-                         temp_storage, &writer );
-            
-        for( i = 0; i < ptseq->total; i++ )
-        {
-            CvPoint pt = **(CvPoint**)(reader.ptr);
-            CV_WRITE_SEQ_ELEM( pt, writer );
-        }
-
-        ptseq = cvEndWriteSeq( &writer );
-    }
-
+    ptseq = cvConvexHull2( ptseq, temp_storage, CV_CLOCKWISE, 1 );
     n = ptseq->total;
 
     _points.allocate(n);

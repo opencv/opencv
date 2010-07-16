@@ -279,7 +279,7 @@ void CV_ArrayOpTest::run( int /* start_from */)
         M.copyTo(Md);
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
         
-        int nz1 = M.nzcount(), nz2 = M3.nzcount();
+        int nz1 = (int)M.nzcount(), nz2 = (int)M3.nzcount();
         double norm0 = norm(M, CV_C);
         double norm1 = norm(M, CV_L1);
         double norm2 = norm(M, CV_L2);
@@ -360,7 +360,7 @@ void CV_ArrayOpTest::run( int /* start_from */)
             }    
         }
         
-        int nz = M.nzcount();
+        int nz = (int)M.nzcount();
         if( nz != 0 )
         {
             errcount++;

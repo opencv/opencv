@@ -121,9 +121,9 @@ Index::~Index()
 void Index::knnSearch(const vector<float>& query, vector<int>& indices, vector<float>& dists, int knn, const SearchParams& searchParams)
 {
 
-	::cvflann::Matrix<float> m_query(1, query.size(), (float*)&query[0]);
-	::cvflann::Matrix<int> m_indices(1, indices.size(), &indices[0]);
-	::cvflann::Matrix<float> m_dists(1, dists.size(), &dists[0]);
+	::cvflann::Matrix<float> m_query(1, (int)query.size(), (float*)&query[0]);
+	::cvflann::Matrix<int> m_indices(1, (int)indices.size(), &indices[0]);
+	::cvflann::Matrix<float> m_dists(1, (int)dists.size(), &dists[0]);
 
 	nnIndex->knnSearch(m_query,m_indices,m_dists,knn,::cvflann::SearchParams(searchParams.checks));
 }
@@ -149,9 +149,9 @@ void Index::knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, con
 
 int Index::radiusSearch(const vector<float>& query, vector<int>& indices, vector<float>& dists, float radius, const SearchParams& searchParams)
 {
-	::cvflann::Matrix<float> m_query(1, query.size(), (float*)&query[0]);
-	::cvflann::Matrix<int> m_indices(1, indices.size(), &indices[0]);
-	::cvflann::Matrix<float> m_dists(1, dists.size(), &dists[0]);
+	::cvflann::Matrix<float> m_query(1, (int)query.size(), (float*)&query[0]);
+	::cvflann::Matrix<int> m_indices(1, (int)indices.size(), &indices[0]);
+	::cvflann::Matrix<float> m_dists(1, (int)dists.size(), &dists[0]);
 
 	return nnIndex->radiusSearch(m_query,m_indices,m_dists,radius,::cvflann::SearchParams(searchParams.checks));
 }

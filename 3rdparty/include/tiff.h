@@ -1,4 +1,4 @@
-/* $Id: tiff.h,v 1.3 2005-06-17 13:57:03 vp153 Exp $ */
+/* $Id: tiff.h,v 1.43.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -26,6 +26,9 @@
 
 #ifndef _TIFF_
 #define	_TIFF_
+
+#include "tiffconf.h"
+
 /*
  * Tag Image File Format (TIFF)
  *
@@ -40,32 +43,15 @@
  *    (http://partners.adobe.com/asn/developer/PDFS/TN/TIFF6.pdf)
  *
  * For Big TIFF design notes see the following link
- *    http://gdal.maptools.org/twiki/bin/view/libtiff/BigTIFFDesign
+ *    http://www.remotesensing.org/libtiff/bigtiffdesign.html
  */
 #define	TIFF_VERSION	        42
 #define TIFF_BIGTIFF_VERSION    43
 
 #define	TIFF_BIGENDIAN		0x4d4d
 #define	TIFF_LITTLEENDIAN	0x4949
-
-/*
- * The so called TIFF types conflict with definitions from inttypes.h 
- * included from sys/types.h on AIX (at least using VisualAge compiler). 
- * We try to work around this by detecting this case.  Defining 
- * _TIFF_DATA_TYPEDEFS_ short circuits the later definitions in tiff.h, and
- * we will in the holes not provided for by inttypes.h. 
- *
- * See http://bugzilla.remotesensing.org/show_bug.cgi?id=39
- */
-#if defined(_H_INTTYPES) && defined(_ALL_SOURCE) && defined(USING_VISUALAGE)
-
-#define _TIFF_DATA_TYPEDEFS_
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned int uint32;
-
-#endif
-
+#define	MDI_LITTLEENDIAN        0x5045
+#define	MDI_BIGENDIAN           0x4550
 /*
  * Intrinsic data types required by the file format:
  *
@@ -74,22 +60,26 @@ typedef unsigned int uint32;
  * 32-bit quantities	int32/uint32
  * strings		unsigned char*
  */
-#ifndef _TIFF_DATA_TYPEDEFS_
-#define _TIFF_DATA_TYPEDEFS_
 
+#ifndef HAVE_INT8
 typedef	signed char int8;	/* NB: non-ANSI compilers may not grok */
+#endif
 typedef	unsigned char uint8;
+#ifndef HAVE_INT16
 typedef	short int16;
+#endif
 typedef	unsigned short uint16;	/* sizeof (uint16) must == 2 */
-#if defined(__alpha) || (defined(_MIPS_SZLONG) && _MIPS_SZLONG == 64) || defined(__LP64__) || defined(__arch64__)
+#if SIZEOF_INT == 4
+#ifndef HAVE_INT32
 typedef	int int32;
+#endif
 typedef	unsigned int uint32;	/* sizeof (uint32) must == 4 */
-#else
+#elif SIZEOF_LONG == 4
+#ifndef HAVE_INT32
 typedef	long int32;
+#endif
 typedef	unsigned long uint32;	/* sizeof (uint32) must == 4 */
 #endif
-
-#endif /* _TIFF_DATA_TYPEDEFS_ */
 
 /* For TIFFReassignTagToIgnore */
 enum TIFFIgnoreSense /* IGNORE tag table */
@@ -289,6 +279,9 @@ typedef	enum {
 #define	TIFFTAG_ARTIST			315	/* creator of image */
 #define	TIFFTAG_HOSTCOMPUTER		316	/* machine where created */
 #define	TIFFTAG_PREDICTOR		317	/* prediction scheme w/ LZW */
+#define     PREDICTOR_NONE		1	/* no prediction scheme used */
+#define     PREDICTOR_HORIZONTAL	2	/* horizontal differencing */
+#define     PREDICTOR_FLOATINGPOINT	3	/* floating point predictor */
 #define	TIFFTAG_WHITEPOINT		318	/* image white point */
 #define	TIFFTAG_PRIMARYCHROMATICITIES	319	/* !primary chromaticities */
 #define	TIFFTAG_COLORMAP		320	/* RGB map for pallette image */
@@ -415,12 +408,15 @@ typedef	enum {
 #define TIFFTAG_IT8CMYKEQUIVALENT	34032	/* CMYK color equivalents */
 /* tags 34232-34236 are private tags registered to Texas Instruments */
 #define TIFFTAG_FRAMECOUNT              34232   /* Sequence Frame Count */
-/* tag 34750 is a private tag registered to Adobe? */
-#define TIFFTAG_ICCPROFILE		34675	/* ICC profile data */
 /* tag 34377 is private tag registered to Adobe for PhotoShop */
 #define TIFFTAG_PHOTOSHOP		34377 
+/* tags 34665, 34853 and 40965 are documented in EXIF specification */
+#define TIFFTAG_EXIFIFD			34665	/* Pointer to EXIF private directory */
+/* tag 34750 is a private tag registered to Adobe? */
+#define TIFFTAG_ICCPROFILE		34675	/* ICC profile data */
 /* tag 34750 is a private tag registered to Pixel Magic */
 #define	TIFFTAG_JBIGOPTIONS		34750	/* JBIG options */
+#define TIFFTAG_GPSIFD			34853	/* Pointer to GPS private directory */
 /* tags 34908-34914 are private tags registered to SGI */
 #define	TIFFTAG_FAXRECVPARAMS		34908	/* encoded Class 2 ses. parms */
 #define	TIFFTAG_FAXSUBADDRESS		34909	/* received SubAddr string */
@@ -430,9 +426,8 @@ typedef	enum {
 #define TIFFTAG_STONITS			37439	/* Sample value to Nits */
 /* tag 34929 is a private tag registered to FedEx */
 #define	TIFFTAG_FEDEX_EDR		34929	/* unknown use */
-/* tag 65535 is an undefined tag used by Eastman Kodak */
-#define TIFFTAG_DCSHUESHIFTVALUES       65535   /* hue shift correction data */
-/* Adobe Digital Negative format tags */
+#define TIFFTAG_INTEROPERABILITYIFD	40965	/* Pointer to Interoperability private directory */
+/* Adobe Digital Negative (DNG) format tags */
 #define TIFFTAG_DNGVERSION		50706	/* &DNG version number */
 #define TIFFTAG_DNGBACKWARDVERSION	50707	/* &DNG compatibility version */
 #define TIFFTAG_UNIQUECAMERAMODEL	50708	/* &name for the camera model */
@@ -485,9 +480,11 @@ typedef	enum {
 						   in the red/green rows */
 #define TIFFTAG_LINEARRESPONSELIMIT	50734	/* &non-linear encoding range */
 #define TIFFTAG_CAMERASERIALNUMBER	50735	/* &camera's serial number */
+#define TIFFTAG_LENSINFO		50736	/* info about the lens */
 #define TIFFTAG_CHROMABLURRADIUS	50737	/* &chroma blur radius */
 #define TIFFTAG_ANTIALIASSTRENGTH	50738	/* &relative strength of the
 						   camera's anti-alias filter */
+#define TIFFTAG_SHADOWSCALE		50739	/* &used by Adobe Camera Raw */
 #define TIFFTAG_DNGPRIVATEDATA		50740	/* &manufacturer's private data */
 #define TIFFTAG_MAKERNOTESAFETY		50741	/* &whether the EXIF MakerNote
 						   tag is safe to preserve
@@ -496,6 +493,23 @@ typedef	enum {
 #define	TIFFTAG_CALIBRATIONILLUMINANT1	50778	/* &illuminant 1 */
 #define TIFFTAG_CALIBRATIONILLUMINANT2	50779	/* &illuminant 2 */
 #define TIFFTAG_BESTQUALITYSCALE	50780	/* &best quality multiplier */
+#define TIFFTAG_RAWDATAUNIQUEID		50781	/* &unique identifier for
+						   the raw image data */
+#define TIFFTAG_ORIGINALRAWFILENAME	50827	/* &file name of the original
+						   raw file */
+#define TIFFTAG_ORIGINALRAWFILEDATA	50828	/* &contents of the original
+						   raw file */
+#define TIFFTAG_ACTIVEAREA		50829	/* &active (non-masked) pixels
+						   of the sensor */
+#define TIFFTAG_MASKEDAREAS		50830	/* &list of coordinates
+						   of fully masked pixels */
+#define TIFFTAG_ASSHOTICCPROFILE	50831	/* &these two tags used to */
+#define TIFFTAG_ASSHOTPREPROFILEMATRIX	50832	/* map cameras's color space
+						   into ICC profile space */
+#define TIFFTAG_CURRENTICCPROFILE	50833	/* & */
+#define TIFFTAG_CURRENTPREPROFILEMATRIX	50834	/* & */
+/* tag 65535 is an undefined tag used by Eastman Kodak */
+#define TIFFTAG_DCSHUESHIFTVALUES       65535   /* hue shift correction data */
 
 /*
  * The following are ``pseudo tags'' that can be used to control
@@ -562,6 +576,79 @@ typedef	enum {
 #define TIFFTAG_SGILOGENCODE		65561 /* SGILog data encoding control*/
 #define     SGILOGENCODE_NODITHER	0     /* do not dither encoded values*/
 #define     SGILOGENCODE_RANDITHER	1     /* randomly dither encd values */
+
+/*
+ * EXIF tags
+ */
+#define EXIFTAG_EXPOSURETIME		33434	/* Exposure time */
+#define EXIFTAG_FNUMBER			33437	/* F number */
+#define EXIFTAG_EXPOSUREPROGRAM		34850	/* Exposure program */
+#define EXIFTAG_SPECTRALSENSITIVITY	34852	/* Spectral sensitivity */
+#define EXIFTAG_ISOSPEEDRATINGS		34855	/* ISO speed rating */
+#define EXIFTAG_OECF			34856	/* Optoelectric conversion
+						   factor */
+#define EXIFTAG_EXIFVERSION		36864	/* Exif version */
+#define EXIFTAG_DATETIMEORIGINAL	36867	/* Date and time of original
+						   data generation */
+#define EXIFTAG_DATETIMEDIGITIZED	36868	/* Date and time of digital
+						   data generation */
+#define EXIFTAG_COMPONENTSCONFIGURATION	37121	/* Meaning of each component */
+#define EXIFTAG_COMPRESSEDBITSPERPIXEL	37122	/* Image compression mode */
+#define EXIFTAG_SHUTTERSPEEDVALUE	37377	/* Shutter speed */
+#define EXIFTAG_APERTUREVALUE		37378	/* Aperture */
+#define EXIFTAG_BRIGHTNESSVALUE		37379	/* Brightness */
+#define EXIFTAG_EXPOSUREBIASVALUE	37380	/* Exposure bias */
+#define EXIFTAG_MAXAPERTUREVALUE	37381	/* Maximum lens aperture */
+#define EXIFTAG_SUBJECTDISTANCE		37382	/* Subject distance */
+#define EXIFTAG_METERINGMODE		37383	/* Metering mode */
+#define EXIFTAG_LIGHTSOURCE		37384	/* Light source */
+#define EXIFTAG_FLASH			37385	/* Flash */
+#define EXIFTAG_FOCALLENGTH		37386	/* Lens focal length */
+#define EXIFTAG_SUBJECTAREA		37396	/* Subject area */
+#define EXIFTAG_MAKERNOTE		37500	/* Manufacturer notes */
+#define EXIFTAG_USERCOMMENT		37510	/* User comments */
+#define EXIFTAG_SUBSECTIME		37520	/* DateTime subseconds */
+#define EXIFTAG_SUBSECTIMEORIGINAL	37521	/* DateTimeOriginal subseconds */
+#define EXIFTAG_SUBSECTIMEDIGITIZED	37522	/* DateTimeDigitized subseconds */
+#define EXIFTAG_FLASHPIXVERSION		40960	/* Supported Flashpix version */
+#define EXIFTAG_COLORSPACE		40961	/* Color space information */
+#define EXIFTAG_PIXELXDIMENSION		40962	/* Valid image width */
+#define EXIFTAG_PIXELYDIMENSION		40963	/* Valid image height */
+#define EXIFTAG_RELATEDSOUNDFILE	40964	/* Related audio file */
+#define EXIFTAG_FLASHENERGY		41483	/* Flash energy */
+#define EXIFTAG_SPATIALFREQUENCYRESPONSE 41484	/* Spatial frequency response */
+#define EXIFTAG_FOCALPLANEXRESOLUTION	41486	/* Focal plane X resolution */
+#define EXIFTAG_FOCALPLANEYRESOLUTION	41487	/* Focal plane Y resolution */
+#define EXIFTAG_FOCALPLANERESOLUTIONUNIT 41488	/* Focal plane resolution unit */
+#define EXIFTAG_SUBJECTLOCATION		41492	/* Subject location */
+#define EXIFTAG_EXPOSUREINDEX		41493	/* Exposure index */
+#define EXIFTAG_SENSINGMETHOD		41495	/* Sensing method */
+#define EXIFTAG_FILESOURCE		41728	/* File source */
+#define EXIFTAG_SCENETYPE		41729	/* Scene type */
+#define EXIFTAG_CFAPATTERN		41730	/* CFA pattern */
+#define EXIFTAG_CUSTOMRENDERED		41985	/* Custom image processing */
+#define EXIFTAG_EXPOSUREMODE		41986	/* Exposure mode */
+#define EXIFTAG_WHITEBALANCE		41987	/* White balance */
+#define EXIFTAG_DIGITALZOOMRATIO	41988	/* Digital zoom ratio */
+#define EXIFTAG_FOCALLENGTHIN35MMFILM	41989	/* Focal length in 35 mm film */
+#define EXIFTAG_SCENECAPTURETYPE	41990	/* Scene capture type */
+#define EXIFTAG_GAINCONTROL		41991	/* Gain control */
+#define EXIFTAG_CONTRAST		41992	/* Contrast */
+#define EXIFTAG_SATURATION		41993	/* Saturation */
+#define EXIFTAG_SHARPNESS		41994	/* Sharpness */
+#define EXIFTAG_DEVICESETTINGDESCRIPTION 41995	/* Device settings description */
+#define EXIFTAG_SUBJECTDISTANCERANGE	41996	/* Subject distance range */
+#define EXIFTAG_GAINCONTROL		41991	/* Gain control */
+#define EXIFTAG_GAINCONTROL		41991	/* Gain control */
+#define EXIFTAG_IMAGEUNIQUEID		42016	/* Unique image ID */
+
 #endif /* _TIFF_ */
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

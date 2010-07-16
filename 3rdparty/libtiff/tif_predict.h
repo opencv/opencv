@@ -1,4 +1,4 @@
-/* $Header: /home/vp/work/opencv-cvsbackup/opencv/3rdparty/libtiff/tif_predict.h,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_predict.h,v 1.3.2.2 2010-06-08 18:50:42 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1995-1997 Sam Leffler
@@ -36,14 +36,20 @@
  * the predictor code can cast tif_data to find its state.
  */
 typedef struct {
-	int	predictor;		/* predictor tag value */
-	int	stride;			/* sample stride over data */
-	tsize_t	rowsize;		/* tile/strip row size */
+	int		predictor;	/* predictor tag value */
+	int		stride;		/* sample stride over data */
+	tsize_t		rowsize;	/* tile/strip row size */
 
-	TIFFPostMethod	pfunc;		/* horizontal differencer/accumulator */
-	TIFFCodeMethod	coderow;	/* parent codec encode/decode row */
-	TIFFCodeMethod	codestrip;	/* parent codec encode/decode strip */
-	TIFFCodeMethod	codetile;	/* parent codec encode/decode tile */
+ 	TIFFCodeMethod  encoderow;	/* parent codec encode/decode row */
+ 	TIFFCodeMethod  encodestrip;	/* parent codec encode/decode strip */
+ 	TIFFCodeMethod  encodetile;	/* parent codec encode/decode tile */ 
+ 	TIFFPostMethod  encodepfunc;	/* horizontal differencer */
+ 
+ 	TIFFCodeMethod  decoderow;	/* parent codec encode/decode row */
+ 	TIFFCodeMethod  decodestrip;	/* parent codec encode/decode strip */
+ 	TIFFCodeMethod  decodetile;	/* parent codec encode/decode tile */ 
+ 	TIFFPostMethod  decodepfunc;	/* horizontal accumulator */
+
 	TIFFVGetMethod	vgetparent;	/* super-class method */
 	TIFFVSetMethod	vsetparent;	/* super-class method */
 	TIFFPrintMethod	printdir;	/* super-class method */
@@ -55,7 +61,17 @@ typedef struct {
 extern "C" {
 #endif
 extern	int TIFFPredictorInit(TIFF*);
+extern	int TIFFPredictorCleanup(TIFF*);
 #if defined(__cplusplus)
 }
 #endif
 #endif /* _TIFFPREDICT_ */
+
+/* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

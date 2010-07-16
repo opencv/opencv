@@ -1,4 +1,4 @@
-/* $Id: tif_compress.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_compress.c,v 1.13.2.1 2010-06-08 18:50:41 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -32,17 +32,18 @@
 #include "tiffiop.h"
 
 static int
-TIFFNoEncode(TIFF* tif, char* method)
+TIFFNoEncode(TIFF* tif, const char* method)
 {
 	const TIFFCodec* c = TIFFFindCODEC(tif->tif_dir.td_compression);
 
 	if (c) { 
-	        TIFFError(tif->tif_name, "%s %s encoding is not implemented",
-                          c->name, method);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "%s %s encoding is not implemented",
+			     c->name, method);
 	} else { 
-		TIFFError(tif->tif_name,
-			  "Compression scheme %u %s encoding is not implemented",
-		    tif->tif_dir.td_compression, method);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			"Compression scheme %u %s encoding is not implemented",
+			     tif->tif_dir.td_compression, method);
 	}
 	return (-1);
 }
@@ -69,17 +70,18 @@ _TIFFNoTileEncode(TIFF* tif, tidata_t pp, tsize_t cc, tsample_t s)
 }
 
 static int
-TIFFNoDecode(TIFF* tif, char* method)
+TIFFNoDecode(TIFF* tif, const char* method)
 {
 	const TIFFCodec* c = TIFFFindCODEC(tif->tif_dir.td_compression);
 
 	if (c)
-		TIFFError(tif->tif_name, "%s %s decoding is not implemented",
-		    c->name, method);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "%s %s decoding is not implemented",
+			     c->name, method);
 	else
-		TIFFError(tif->tif_name,
-		    "Compression scheme %u %s decoding is not implemented",
-		    tif->tif_dir.td_compression, method);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "Compression scheme %u %s decoding is not implemented",
+			     tif->tif_dir.td_compression, method);
 	return (-1);
 }
 
@@ -108,8 +110,8 @@ int
 _TIFFNoSeek(TIFF* tif, uint32 off)
 {
 	(void) off;
-	TIFFError(tif->tif_name,
-	    "Compression algorithm does not support random access");
+	TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+		     "Compression algorithm does not support random access");
 	return (0);
 }
 
@@ -144,7 +146,7 @@ _TIFFSetDefaultCompressionState(TIFF* tif)
 	tif->tif_cleanup = _TIFFvoid;
 	tif->tif_defstripsize = _TIFFDefaultStripSize;
 	tif->tif_deftilesize = _TIFFDefaultTileSize;
-	tif->tif_flags &= ~TIFF_NOBITREV;
+	tif->tif_flags &= ~(TIFF_NOBITREV|TIFF_NOREADRAW);
 }
 
 int
@@ -204,7 +206,7 @@ TIFFRegisterCODEC(uint16 scheme, const char* name, TIFFInitMethod init)
 		cd->next = registeredCODECS;
 		registeredCODECS = cd;
 	} else {
-		TIFFError("TIFFRegisterCODEC",
+		TIFFErrorExt(0, "TIFFRegisterCODEC",
 		    "No space to register compression scheme %s", name);
 		return NULL;
 	}
@@ -223,7 +225,7 @@ TIFFUnRegisterCODEC(TIFFCodec* c)
 			_TIFFfree(cd);
 			return;
 		}
-	TIFFError("TIFFUnRegisterCODEC",
+	TIFFErrorExt(0, "TIFFUnRegisterCODEC",
 	    "Cannot remove compression scheme %s; not registered", c->name);
 }
 
@@ -248,7 +250,8 @@ TIFFGetConfiguredCODECs()
 	TIFFCodec	*codecs = NULL, *new_codecs;
 
         for (cd = registeredCODECS; cd; cd = cd->next) {
-                new_codecs = _TIFFrealloc(codecs, i * sizeof(TIFFCodec));
+                new_codecs = (TIFFCodec *)
+			_TIFFrealloc(codecs, i * sizeof(TIFFCodec));
 		if (!new_codecs) {
 			_TIFFfree (codecs);
 			return NULL;
@@ -259,7 +262,8 @@ TIFFGetConfiguredCODECs()
 	}
         for (c = _TIFFBuiltinCODECS; c->name; c++) {
                 if (TIFFIsCODECConfigured(c->scheme)) {
-                        new_codecs = _TIFFrealloc(codecs, i * sizeof(TIFFCodec));
+                        new_codecs = (TIFFCodec *)
+				_TIFFrealloc(codecs, i * sizeof(TIFFCodec));
 			if (!new_codecs) {
 				_TIFFfree (codecs);
 				return NULL;
@@ -270,7 +274,7 @@ TIFFGetConfiguredCODECs()
 		}
 	}
 
-	new_codecs = _TIFFrealloc(codecs, i * sizeof(TIFFCodec));
+	new_codecs = (TIFFCodec *) _TIFFrealloc(codecs, i * sizeof(TIFFCodec));
 	if (!new_codecs) {
 		_TIFFfree (codecs);
 		return NULL;
@@ -282,3 +286,10 @@ TIFFGetConfiguredCODECs()
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

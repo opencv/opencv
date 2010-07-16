@@ -438,7 +438,7 @@ void CV_StereoMatchingTest::run(int)
         resFS << "stereo_matching" << "{";
     }
 
-    int progress = 0, caseCount = caseNames.size();
+    int progress = 0, caseCount = (int)caseNames.size();
     for( int ci = 0; ci < caseCount; ci++)
     {
         progress = update_progress( progress, ci, caseCount, 0 );

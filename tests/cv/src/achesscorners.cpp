@@ -67,7 +67,7 @@ void show_points( const Mat& gray, const Mat& u, const vector<Point2f>& v, Size 
     }
     if (!v.empty())
     {
-        Mat corners(v.size(), 1, CV_32FC2, (void*)&v[0]);     
+        Mat corners((int)v.size(), 1, CV_32FC2, (void*)&v[0]);     
         drawChessboardCorners( rgb, pattern_size, corners, was_found );
     }
     //namedWindow( "test", 0 ); imshow( "test", rgb ); waitKey(0);
@@ -92,14 +92,14 @@ CV_ChessboardDetectorTest::CV_ChessboardDetectorTest():
 
 double calcError(const vector<Point2f>& v, const Mat& u)
 {
-    size_t count_exp = static_cast<size_t>(u.cols * u.rows);
+    int count_exp = u.cols * u.rows;
     const Point2f* u_data = u.ptr<Point2f>();
 
     double err = numeric_limits<double>::max();
-    for( size_t k = 0; k < 2; ++k )
+    for( int k = 0; k < 2; ++k )
     {
         double err1 = 0;
-        for(size_t j = 0; j < count_exp; ++j )
+        for( int j = 0; j < count_exp; ++j )
         {
             int j1 = k == 0 ? j : count_exp - j - 1;
             double dx = fabs( v[j].x - u_data[j1].x );
@@ -324,7 +324,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
     const size_t sizes_num = sizeof(sizes)/sizeof(sizes[0]);                
     const size_t test_num = 16;    
     int progress = 0;
-    for(size_t i = 0; i < test_num; ++i)
+    for(int i = 0; i < test_num; ++i)
     {          
         progress = update_progress( progress, i, test_num, 0 );
         ChessBoardGenerator cbg(sizes[i % sizes_num]);

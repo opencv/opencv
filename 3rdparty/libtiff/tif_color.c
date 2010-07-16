@@ -1,4 +1,4 @@
-/* $Id: tif_color.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_color.c,v 1.12.2.1 2010-06-08 18:50:41 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -88,27 +88,32 @@ TIFFXYZToRGB(TIFFCIELabToRGB *cielab, float X, float Y, float Z,
 	Yb =  matrix[6] * X + matrix[7] * Y + matrix[8] * Z;
 
 	/* Clip input */
-	Yr = TIFFmax( Yr, cielab->display.d_Y0R );
-	Yg = TIFFmax( Yg, cielab->display.d_Y0G );
-	Yb = TIFFmax( Yb, cielab->display.d_Y0B );
+	Yr = TIFFmax(Yr, cielab->display.d_Y0R);
+	Yg = TIFFmax(Yg, cielab->display.d_Y0G);
+	Yb = TIFFmax(Yb, cielab->display.d_Y0B);
+
+	/* Avoid overflow in case of wrong input values */
+	Yr = TIFFmin(Yr, cielab->display.d_YCR);
+	Yg = TIFFmin(Yg, cielab->display.d_YCG);
+	Yb = TIFFmin(Yb, cielab->display.d_YCB);
 
 	/* Turn luminosity to colour value. */
-	i = TIFFmin(cielab->range,
-		    (int)((Yr - cielab->display.d_Y0R) / cielab->rstep));
+	i = (int)((Yr - cielab->display.d_Y0R) / cielab->rstep);
+	i = TIFFmin(cielab->range, i);
 	*r = RINT(cielab->Yr2r[i]);
 
-	i = TIFFmin(cielab->range,
-		    (int)((Yg - cielab->display.d_Y0G) / cielab->gstep));
+	i = (int)((Yg - cielab->display.d_Y0G) / cielab->gstep);
+	i = TIFFmin(cielab->range, i);
 	*g = RINT(cielab->Yg2g[i]);
 
-	i = TIFFmin(cielab->range,
-		    (int)((Yb - cielab->display.d_Y0B) / cielab->bstep));
+	i = (int)((Yb - cielab->display.d_Y0B) / cielab->bstep);
+	i = TIFFmin(cielab->range, i);
 	*b = RINT(cielab->Yb2b[i]);
 
 	/* Clip output. */
-	*r = TIFFmin( *r, cielab->display.d_Vrwr );
-	*g = TIFFmin( *g, cielab->display.d_Vrwg );
-	*b = TIFFmin( *b, cielab->display.d_Vrwb );
+	*r = TIFFmin(*r, cielab->display.d_Vrwr);
+	*g = TIFFmin(*g, cielab->display.d_Vrwg);
+	*b = TIFFmin(*b, cielab->display.d_Vrwb);
 }
 #undef RINT
 
@@ -172,13 +177,14 @@ TIFFCIELabToRGBInit(TIFFCIELabToRGB* cielab,
 #define	ONE_HALF		((int32)(1<<(SHIFT-1)))
 #define	Code2V(c, RB, RW, CR)	((((c)-(int32)(RB))*(float)(CR))/(float)(((RW)-(RB)) ? ((RW)-(RB)) : 1))
 #define	CLAMP(f,min,max)	((f)<(min)?(min):(f)>(max)?(max):(f))
+#define HICLAMP(f,max)		((f)>(max)?(max):(f))
 
 void
 TIFFYCbCrtoRGB(TIFFYCbCrToRGB *ycbcr, uint32 Y, int32 Cb, int32 Cr,
 	       uint32 *r, uint32 *g, uint32 *b)
 {
 	/* XXX: Only 8-bit YCbCr input supported for now */
-	Y = CLAMP(Y, 0, 255), Cb = CLAMP(Cb, 0, 255), Cr = CLAMP(Cr, 0, 255);
+	Y = HICLAMP(Y, 255), Cb = CLAMP(Cb, 0, 255), Cr = CLAMP(Cr, 0, 255);
 
 	*r = ycbcr->clamptab[ycbcr->Y_tab[Y] + ycbcr->Cr_r_tab[Cr]];
 	*g = ycbcr->clamptab[ycbcr->Y_tab[Y]
@@ -259,6 +265,7 @@ TIFFYCbCrToRGBInit(TIFFYCbCrToRGB* ycbcr, float *luma, float *refBlackWhite)
 
     return 0;
 }
+#undef	HICLAMP
 #undef	CLAMP
 #undef	Code2V
 #undef	SHIFT
@@ -266,3 +273,10 @@ TIFFYCbCrToRGBInit(TIFFYCbCrToRGB* ycbcr, float *luma, float *refBlackWhite)
 #undef	FIX
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

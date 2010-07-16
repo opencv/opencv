@@ -1,4 +1,4 @@
-/* $Id: tif_fax3.h,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_fax3.h,v 1.5.2.1 2010-06-08 18:50:42 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1990-1997 Sam Leffler
@@ -217,9 +217,9 @@ static const char* StateNames[] = {
     ClrBits(TabEnt->Width);						\
 } while (0)
 
-#define SETVAL(x) do {							\
+#define SETVALUE(x) do {							\
     *pa++ = RunLength + (x);						\
-    printf("SETVAL: %d\t%d\n", RunLength + (x), a0);			\
+    printf("SETVALUE: %d\t%d\n", RunLength + (x), a0);			\
     a0 += x;								\
     RunLength = 0;							\
 } while (0)
@@ -239,7 +239,7 @@ static const char* StateNames[] = {
  * Append a run to the run length array for the
  * current row and reset decoding state.
  */
-#define SETVAL(x) do {							\
+#define SETVALUE(x) do {							\
     *pa++ = RunLength + (x);						\
     a0 += (x);								\
     RunLength = 0;							\
@@ -284,7 +284,7 @@ static const char* StateNames[] = {
  */
 #define	CLEANUP_RUNS() do {						\
     if (RunLength)							\
-	SETVAL(0);							\
+	SETVALUE(0);							\
     if (a0 != lastx) {							\
 	badlength(a0, lastx);						\
 	while (a0 > lastx && pa > thisrun)				\
@@ -293,11 +293,11 @@ static const char* StateNames[] = {
 	    if (a0 < 0)							\
 		a0 = 0;							\
 	    if ((pa-thisrun)&1)						\
-		SETVAL(0);						\
-	    SETVAL(lastx - a0);						\
+		SETVALUE(0);						\
+	    SETVALUE(lastx - a0);						\
 	} else if (a0 > lastx) {					\
-	    SETVAL(lastx);						\
-	    SETVAL(0);							\
+	    SETVALUE(lastx);						\
+	    SETVALUE(0);							\
 	}								\
     }									\
 } while (0)
@@ -323,7 +323,7 @@ static const char* StateNames[] = {
 		EOLcnt = 1;						\
 		goto done1d;						\
 	    case S_TermW:						\
-		SETVAL(TabEnt->Param);					\
+		SETVALUE(TabEnt->Param);					\
 		goto doneWhite1d;					\
 	    case S_MakeUpW:						\
 	    case S_MakeUp:						\
@@ -345,7 +345,7 @@ static const char* StateNames[] = {
 		EOLcnt = 1;						\
 		goto done1d;						\
 	    case S_TermB:						\
-		SETVAL(TabEnt->Param);					\
+		SETVALUE(TabEnt->Param);					\
 		goto doneBlack1d;					\
 	    case S_MakeUpB:						\
 	    case S_MakeUp:						\
@@ -402,7 +402,7 @@ done1d:									\
 		    LOOKUP16(13, TIFFFaxBlackTable, eof2d);		\
 		    switch (TabEnt->State) {				\
 		    case S_TermB:					\
-			SETVAL(TabEnt->Param);				\
+			SETVALUE(TabEnt->Param);				\
 			goto doneWhite2da;				\
 		    case S_MakeUpB:					\
 		    case S_MakeUp:					\
@@ -418,7 +418,7 @@ done1d:									\
 		    LOOKUP16(12, TIFFFaxWhiteTable, eof2d);		\
 		    switch (TabEnt->State) {				\
 		    case S_TermW:					\
-			SETVAL(TabEnt->Param);				\
+			SETVALUE(TabEnt->Param);				\
 			goto doneBlack2da;				\
 		    case S_MakeUpW:					\
 		    case S_MakeUp:					\
@@ -435,7 +435,7 @@ done1d:									\
 		    LOOKUP16(12, TIFFFaxWhiteTable, eof2d);		\
 		    switch (TabEnt->State) {				\
 		    case S_TermW:					\
-			SETVAL(TabEnt->Param);				\
+			SETVALUE(TabEnt->Param);				\
 			goto doneWhite2db;				\
 		    case S_MakeUpW:					\
 		    case S_MakeUp:					\
@@ -451,7 +451,7 @@ done1d:									\
 		    LOOKUP16(13, TIFFFaxBlackTable, eof2d);		\
 		    switch (TabEnt->State) {				\
 		    case S_TermB:					\
-			SETVAL(TabEnt->Param);				\
+			SETVALUE(TabEnt->Param);				\
 			goto doneBlack2db;				\
 		    case S_MakeUpB:					\
 		    case S_MakeUp:					\
@@ -468,17 +468,17 @@ done1d:									\
 	    break;							\
 	case S_V0:							\
 	    CHECK_b1;							\
-	    SETVAL(b1 - a0);						\
+	    SETVALUE(b1 - a0);						\
 	    b1 += *pb++;						\
 	    break;							\
 	case S_VR:							\
 	    CHECK_b1;							\
-	    SETVAL(b1 - a0 + TabEnt->Param);				\
+	    SETVALUE(b1 - a0 + TabEnt->Param);				\
 	    b1 += *pb++;						\
 	    break;							\
 	case S_VL:							\
 	    CHECK_b1;							\
-	    SETVAL(b1 - a0 - TabEnt->Param);				\
+	    SETVALUE(b1 - a0 - TabEnt->Param);				\
 	    b1 -= *--pb;						\
 	    break;							\
 	case S_Ext:							\
@@ -517,9 +517,16 @@ done1d:									\
 		goto badMain2d;						\
 	    ClrBits(1);							\
 	}								\
-	SETVAL(0);							\
+	SETVALUE(0);							\
     }									\
 eol2d:									\
     CLEANUP_RUNS();							\
 } while (0)
 #endif /* _FAX3_ */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

@@ -1,4 +1,4 @@
-/* $Id: tif_swab.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_swab.c,v 1.4.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -66,6 +66,22 @@ TIFFSwabArrayOfShort(uint16* wp, register unsigned long n)
 		cp = (unsigned char*) wp;
 		t = cp[1]; cp[1] = cp[0]; cp[0] = t;
 		wp++;
+	}
+}
+#endif
+
+#ifndef TIFFSwabArrayOfTriples
+void
+TIFFSwabArrayOfTriples(uint8* tp, unsigned long n)
+{
+	unsigned char* cp;
+	unsigned char t;
+
+	/* XXX unroll loop some */
+	while (n-- > 0) {
+		cp = (unsigned char*) tp;
+		t = cp[2]; cp[2] = cp[0]; cp[0] = t;
+		tp += 3;
 	}
 }
 #endif
@@ -217,3 +233,10 @@ TIFFReverseBits(register unsigned char* cp, register unsigned long n)
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

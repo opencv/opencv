@@ -209,7 +209,7 @@ CvAdaptiveSkinDetector::Histogram::~Histogram()
 
 int CvAdaptiveSkinDetector::Histogram::findCoverageIndex(double surfaceToCover, int defaultValue)
 {
-	float s = 0;
+	double s = 0;
 	for (int i = 0; i < HistogramSize; i++)
 	{
 		s += cvGetReal1D( fHistogram->bins, i );
@@ -223,7 +223,7 @@ int CvAdaptiveSkinDetector::Histogram::findCoverageIndex(double surfaceToCover, 
 
 void CvAdaptiveSkinDetector::Histogram::findCurveThresholds(int &x1, int &x2, double percent)
 {
-	float sum = 0;
+	double sum = 0;
 
 	for (int i = 0; i < HistogramSize; i++)
 	{

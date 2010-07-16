@@ -1,4 +1,17 @@
+/* dbdsqr.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
@@ -64,7 +77,7 @@ static doublereal c_b72 = -1.;
     doublereal tolmul;
 
 
-/*  -- LAPACK routine (version 3.1.1) -- */
+/*  -- LAPACK routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     January 2007 */
 
@@ -164,16 +177,23 @@ static doublereal c_b72 = -1.;
 /*          The leading dimension of the array C. */
 /*          LDC >= max(1,N) if NCC > 0; LDC >=1 if NCC = 0. */
 
-/*  WORK    (workspace) DOUBLE PRECISION array, dimension (2*N) */
-/*          if NCVT = NRU = NCC = 0, (max(1, 4*N)) otherwise */
+/*  WORK    (workspace) DOUBLE PRECISION array, dimension (4*N) */
 
 /*  INFO    (output) INTEGER */
 /*          = 0:  successful exit */
 /*          < 0:  If INFO = -i, the i-th argument had an illegal value */
-/*          > 0:  the algorithm did not converge; D and E contain the */
-/*                elements of a bidiagonal matrix which is orthogonally */
-/*                similar to the input matrix B;  if INFO = i, i */
-/*                elements of E have not converged to zero. */
+/*          > 0: */
+/*             if NCVT = NRU = NCC = 0, */
+/*                = 1, a split was marked by a positive value in E */
+/*                = 2, current block of Z not diagonalized after 30*N */
+/*                     iterations (in inner while loop) */
+/*                = 3, termination criterion of outer while loop not met */
+/*                     (program created more than N unreduced blocks) */
+/*             else NCVT = NRU = NCC = 0, */
+/*                   the algorithm did not converge; D and E contain the */
+/*                   elements of a bidiagonal matrix which is orthogonally */
+/*                   similar to the input matrix B;  if INFO = i, i */
+/*                   elements of E have not converged to zero. */
 
 /*  Internal Parameters */
 /*  =================== */

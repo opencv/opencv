@@ -1,4 +1,4 @@
-/* $Id: tif_tile.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_tile.c,v 1.12.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler
@@ -35,13 +35,13 @@ static uint32
 summarize(TIFF* tif, size_t summand1, size_t summand2, const char* where)
 {
 	/*
-	 * XXX: We are using casting to uint32 here, bacause sizeof(size_t)
+	 * XXX: We are using casting to uint32 here, because sizeof(size_t)
 	 * may be larger than sizeof(uint32) on 64-bit architectures.
 	 */
 	uint32	bytes = summand1 + summand2;
 
 	if (bytes - summand1 != summand2) {
-		TIFFError(tif->tif_name, "Integer overflow in %s", where);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "Integer overflow in %s", where);
 		bytes = 0;
 	}
 
@@ -54,7 +54,7 @@ multiply(TIFF* tif, size_t nmemb, size_t elem_size, const char* where)
 	uint32	bytes = nmemb * elem_size;
 
 	if (elem_size && bytes / elem_size != nmemb) {
-		TIFFError(tif->tif_name, "Integer overflow in %s", where);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "Integer overflow in %s", where);
 		bytes = 0;
 	}
 
@@ -107,24 +107,32 @@ TIFFCheckTile(TIFF* tif, uint32 x, uint32 y, uint32 z, tsample_t s)
 	TIFFDirectory *td = &tif->tif_dir;
 
 	if (x >= td->td_imagewidth) {
-		TIFFError(tif->tif_name, "%lu: Col out of range, max %lu",
-		    (unsigned long) x, (unsigned long) td->td_imagewidth);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "%lu: Col out of range, max %lu",
+			     (unsigned long) x,
+			     (unsigned long) (td->td_imagewidth - 1));
 		return (0);
 	}
 	if (y >= td->td_imagelength) {
-		TIFFError(tif->tif_name, "%lu: Row out of range, max %lu",
-		    (unsigned long) y, (unsigned long) td->td_imagelength);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "%lu: Row out of range, max %lu",
+			     (unsigned long) y,
+			     (unsigned long) (td->td_imagelength - 1));
 		return (0);
 	}
 	if (z >= td->td_imagedepth) {
-		TIFFError(tif->tif_name, "%lu: Depth out of range, max %lu",
-		    (unsigned long) z, (unsigned long) td->td_imagedepth);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "%lu: Depth out of range, max %lu",
+			     (unsigned long) z,
+			     (unsigned long) (td->td_imagedepth - 1));
 		return (0);
 	}
 	if (td->td_planarconfig == PLANARCONFIG_SEPARATE &&
 	    s >= td->td_samplesperpixel) {
-		TIFFError(tif->tif_name, "%lu: Sample out of range, max %lu",
-		    (unsigned long) s, (unsigned long) td->td_samplesperpixel);
+		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+			     "%lu: Sample out of range, max %lu",
+			     (unsigned long) s,
+			     (unsigned long) (td->td_samplesperpixel - 1));
 		return (0);
 	}
 	return (1);
@@ -209,7 +217,7 @@ TIFFVTileSize(TIFF* tif, uint32 nrows)
 		tsize_t samplingarea =
 		    td->td_ycbcrsubsampling[0]*td->td_ycbcrsubsampling[1];
 		if (samplingarea == 0) {
-			TIFFError(tif->tif_name, "Invalid YCbCr subsampling");
+			TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "Invalid YCbCr subsampling");
 			return 0;
 		}
 		nrows = TIFFroundup(nrows, td->td_ycbcrsubsampling[1]);
@@ -263,3 +271,10 @@ _TIFFDefaultTileSize(TIFF* tif, uint32* tw, uint32* th)
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

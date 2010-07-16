@@ -94,8 +94,8 @@ void CV_FastTest::run( int )
         cv::circle(image2, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));        
     }
 
-    Mat kps1(1, keypoints1.size() * sizeof(KeyPoint), CV_8U, &keypoints1[0]);
-    Mat kps2(1, keypoints2.size() * sizeof(KeyPoint), CV_8U, &keypoints2[0]);
+    Mat kps1(1, (int)(keypoints1.size() * sizeof(KeyPoint)), CV_8U, &keypoints1[0]);
+    Mat kps2(1, (int)(keypoints2.size() * sizeof(KeyPoint)), CV_8U, &keypoints2[0]);
 
     FileStorage fs(xml, FileStorage::READ);
     if (!fs.isOpened())

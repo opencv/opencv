@@ -1,4 +1,17 @@
+/* dlarft.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
@@ -14,17 +27,18 @@ static doublereal c_b8 = 0.;
     doublereal d__1;
 
     /* Local variables */
-    integer i__, j;
+    integer i__, j, prevlastv;
     doublereal vii;
     extern logical lsame_(char *, char *);
     extern /* Subroutine */ int dgemv_(char *, integer *, integer *, 
 	    doublereal *, doublereal *, integer *, doublereal *, integer *, 
-	    doublereal *, doublereal *, integer *), dtrmv_(char *, 
-	    char *, char *, integer *, doublereal *, integer *, doublereal *, 
-	    integer *);
+	    doublereal *, doublereal *, integer *);
+    integer lastv;
+    extern /* Subroutine */ int dtrmv_(char *, char *, char *, integer *, 
+	    doublereal *, integer *, doublereal *, integer *);
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
+/*  -- LAPACK auxiliary routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     November 2006 */
 
@@ -150,8 +164,10 @@ static doublereal c_b8 = 0.;
     }
 
     if (lsame_(direct, "F")) {
+	prevlastv = *n;
 	i__1 = *k;
 	for (i__ = 1; i__ <= i__1; ++i__) {
+	    prevlastv = max(i__,prevlastv);
 	    if (tau[i__] == 0.) {
 
 /*              H(i)  =  I */
@@ -168,21 +184,37 @@ static doublereal c_b8 = 0.;
 		vii = v[i__ + i__ * v_dim1];
 		v[i__ + i__ * v_dim1] = 1.;
 		if (lsame_(storev, "C")) {
+/*                 Skip any trailing zeros. */
+		    i__2 = i__ + 1;
+		    for (lastv = *n; lastv >= i__2; --lastv) {
+			if (v[lastv + i__ * v_dim1] != 0.) {
+			    break;
+			}
+		    }
+		    j = min(lastv,prevlastv);
 
-/*                 T(1:i-1,i) := - tau(i) * V(i:n,1:i-1)' * V(i:n,i) */
+/*                 T(1:i-1,i) := - tau(i) * V(i:j,1:i-1)' * V(i:j,i) */
 
-		    i__2 = *n - i__ + 1;
+		    i__2 = j - i__ + 1;
 		    i__3 = i__ - 1;
 		    d__1 = -tau[i__];
 		    dgemv_("Transpose", &i__2, &i__3, &d__1, &v[i__ + v_dim1], 
 			     ldv, &v[i__ + i__ * v_dim1], &c__1, &c_b8, &t[
 			    i__ * t_dim1 + 1], &c__1);
 		} else {
+/*                 Skip any trailing zeros. */
+		    i__2 = i__ + 1;
+		    for (lastv = *n; lastv >= i__2; --lastv) {
+			if (v[i__ + lastv * v_dim1] != 0.) {
+			    break;
+			}
+		    }
+		    j = min(lastv,prevlastv);
 
-/*                 T(1:i-1,i) := - tau(i) * V(1:i-1,i:n) * V(i,i:n)' */
+/*                 T(1:i-1,i) := - tau(i) * V(1:i-1,i:j) * V(i,i:j)' */
 
 		    i__2 = i__ - 1;
-		    i__3 = *n - i__ + 1;
+		    i__3 = j - i__ + 1;
 		    d__1 = -tau[i__];
 		    dgemv_("No transpose", &i__2, &i__3, &d__1, &v[i__ * 
 			    v_dim1 + 1], ldv, &v[i__ + i__ * v_dim1], ldv, &
@@ -196,10 +228,16 @@ static doublereal c_b8 = 0.;
 		dtrmv_("Upper", "No transpose", "Non-unit", &i__2, &t[
 			t_offset], ldt, &t[i__ * t_dim1 + 1], &c__1);
 		t[i__ + i__ * t_dim1] = tau[i__];
+		if (i__ > 1) {
+		    prevlastv = max(prevlastv,lastv);
+		} else {
+		    prevlastv = lastv;
+		}
 	    }
 /* L20: */
 	}
     } else {
+	prevlastv = 1;
 	for (i__ = *k; i__ >= 1; --i__) {
 	    if (tau[i__] == 0.) {
 
@@ -218,31 +256,47 @@ static doublereal c_b8 = 0.;
 		    if (lsame_(storev, "C")) {
 			vii = v[*n - *k + i__ + i__ * v_dim1];
 			v[*n - *k + i__ + i__ * v_dim1] = 1.;
+/*                    Skip any leading zeros. */
+			i__1 = i__ - 1;
+			for (lastv = 1; lastv <= i__1; ++lastv) {
+			    if (v[lastv + i__ * v_dim1] != 0.) {
+				break;
+			    }
+			}
+			j = max(lastv,prevlastv);
 
 /*                    T(i+1:k,i) := */
-/*                            - tau(i) * V(1:n-k+i,i+1:k)' * V(1:n-k+i,i) */
+/*                            - tau(i) * V(j:n-k+i,i+1:k)' * V(j:n-k+i,i) */
 
-			i__1 = *n - *k + i__;
+			i__1 = *n - *k + i__ - j + 1;
 			i__2 = *k - i__;
 			d__1 = -tau[i__];
-			dgemv_("Transpose", &i__1, &i__2, &d__1, &v[(i__ + 1) 
-				* v_dim1 + 1], ldv, &v[i__ * v_dim1 + 1], &
+			dgemv_("Transpose", &i__1, &i__2, &d__1, &v[j + (i__ 
+				+ 1) * v_dim1], ldv, &v[j + i__ * v_dim1], &
 				c__1, &c_b8, &t[i__ + 1 + i__ * t_dim1], &
 				c__1);
 			v[*n - *k + i__ + i__ * v_dim1] = vii;
 		    } else {
 			vii = v[i__ + (*n - *k + i__) * v_dim1];
 			v[i__ + (*n - *k + i__) * v_dim1] = 1.;
+/*                    Skip any leading zeros. */
+			i__1 = i__ - 1;
+			for (lastv = 1; lastv <= i__1; ++lastv) {
+			    if (v[i__ + lastv * v_dim1] != 0.) {
+				break;
+			    }
+			}
+			j = max(lastv,prevlastv);
 
 /*                    T(i+1:k,i) := */
-/*                            - tau(i) * V(i+1:k,1:n-k+i) * V(i,1:n-k+i)' */
+/*                            - tau(i) * V(i+1:k,j:n-k+i) * V(i,j:n-k+i)' */
 
 			i__1 = *k - i__;
-			i__2 = *n - *k + i__;
+			i__2 = *n - *k + i__ - j + 1;
 			d__1 = -tau[i__];
 			dgemv_("No transpose", &i__1, &i__2, &d__1, &v[i__ + 
-				1 + v_dim1], ldv, &v[i__ + v_dim1], ldv, &
-				c_b8, &t[i__ + 1 + i__ * t_dim1], &c__1);
+				1 + j * v_dim1], ldv, &v[i__ + j * v_dim1], 
+				ldv, &c_b8, &t[i__ + 1 + i__ * t_dim1], &c__1);
 			v[i__ + (*n - *k + i__) * v_dim1] = vii;
 		    }
 
@@ -253,6 +307,11 @@ static doublereal c_b8 = 0.;
 			    + 1 + (i__ + 1) * t_dim1], ldt, &t[i__ + 1 + i__ *
 			     t_dim1], &c__1)
 			    ;
+		    if (i__ > 1) {
+			prevlastv = min(prevlastv,lastv);
+		    } else {
+			prevlastv = lastv;
+		    }
 		}
 		t[i__ + i__ * t_dim1] = tau[i__];
 	    }

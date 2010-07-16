@@ -1,4 +1,17 @@
+/* dlartg.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int dlartg_(doublereal *f, doublereal *g, doublereal *cs, 
 	doublereal *sn, doublereal *r__)
@@ -12,14 +25,14 @@
 
     /* Local variables */
     integer i__;
-    doublereal f1, g1, scale;
+    doublereal f1, g1, eps, scale;
     integer count;
-    static doublereal safmn2, safmx2;
+    doublereal safmn2, safmx2;
     extern doublereal dlamch_(char *);
-    static doublereal safmin, eps;
-    static volatile logical first = TRUE_;
+    doublereal safmin;
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
+
+/*  -- LAPACK auxiliary routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     November 2006 */
 
@@ -85,15 +98,12 @@
 /*     .. Executable Statements .. */
 
 /*     IF( FIRST ) THEN */
-    if (first) {
-        safmin = dlamch_("S");
-        eps = dlamch_("E");
-        d__1 = dlamch_("B");
-        i__1 = (integer) (log(safmin / eps) / log(dlamch_("B")) / 2.);
-        safmn2 = pow_di(&d__1, &i__1);
-        safmx2 = 1. / safmn2;
-        first = FALSE_;
-    }
+    safmin = dlamch_("S");
+    eps = dlamch_("E");
+    d__1 = dlamch_("B");
+    i__1 = (integer) (log(safmin / eps) / log(dlamch_("B")) / 2.);
+    safmn2 = pow_di(&d__1, &i__1);
+    safmx2 = 1. / safmn2;
 /*        FIRST = .FALSE. */
 /*     END IF */
     if (*g == 0.) {

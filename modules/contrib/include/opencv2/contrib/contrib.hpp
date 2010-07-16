@@ -342,7 +342,7 @@ namespace cv
         Mat packRandomScaledSpins(bool separateScale = false, size_t xCount = 10, size_t yCount = 10) const;
         
         size_t getSpinCount() const { return spinImages.rows; }
-        Mat getSpinImage(size_t index) const { return spinImages.row(index); }
+        Mat getSpinImage(size_t index) const { return spinImages.row((int)index); }
         const Point3f& getSpinVertex(size_t index) const { return mesh.vtx[subset[index]]; }
         const Point3f& getSpinNormal(size_t index) const { return mesh.normals[subset[index]]; }
         

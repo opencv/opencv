@@ -75,7 +75,7 @@ int calcDistance(const vector<Point2f>& set1, const vector<Point2f>& set2, doubl
         double min_dist = std::numeric_limits<double>::max();
         int min_idx = -1;
         
-        for(size_t j = 0; j < set2.size(); j++)
+        for(int j = 0; j < (int)set2.size(); j++)
         {
             double dist = norm(set1[i] - set2[j]);
             if(dist < min_dist)
@@ -185,7 +185,7 @@ void CV_ChessboardSubpixelTest::run( int )
         
         IplImage chessboard_image_header = chessboard_image;
         cvFindCornerSubPix(&chessboard_image_header, (CvPoint2D32f*)&test_corners[0], 
-            test_corners.size(), cvSize(3, 3), cvSize(1, 1), cvTermCriteria(CV_TERMCRIT_EPS|CV_TERMCRIT_ITER,300,0.1));
+            (int)test_corners.size(), cvSize(3, 3), cvSize(1, 1), cvTermCriteria(CV_TERMCRIT_EPS|CV_TERMCRIT_ITER,300,0.1));
         find4QuadCornerSubpix(chessboard_image, test_corners, Size(5, 5));
         
         double dist2 = 0.0;

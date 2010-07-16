@@ -3000,7 +3000,7 @@ static void makeOffsets(int pixel[], int row_stride)
 static void fast9ComputeScores(const Mat& img, vector<Point>& corners, vector<int>& scores, int b)
 {   
     int pixel[16];
-    makeOffsets(pixel, img.step);
+    makeOffsets(pixel, (int)img.step);
     size_t n, num_corners = corners.size();
 
     scores.resize(num_corners);
@@ -3013,7 +3013,7 @@ static void fast9Detect(const Mat& img, vector<Point>& ret_corners, int b)
 {
     int xsize = img.cols, ysize = img.rows;
     int pixel[16];
-    makeOffsets(pixel, img.step);
+    makeOffsets(pixel, (int)img.step);
 
     ret_corners.reserve(512);
 

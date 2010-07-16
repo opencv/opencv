@@ -1704,13 +1704,13 @@ namespace cv{
 
         for (int i = 0; i < patch_count; i++)
         {
-            float sum = cvSum(patches[i]).val[0];
+            float nf = (float)(1./cvSum(patches[i]).val[0]);
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
                     *((float*)(data->data.ptr + data->step * i) + y * width + x)
-                            = (float)(unsigned char)patches[i]->imageData[y * patches[i]->widthStep + x] / sum;
+                            = (unsigned char)patches[i]->imageData[y * patches[i]->widthStep + x] * nf;
                 }
             }
         }

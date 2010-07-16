@@ -1,4 +1,17 @@
+/* slarrd.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
@@ -41,7 +54,6 @@ static integer c__0 = 0;
     integer ibegin, irange, idiscl;
     extern doublereal slamch_(char *);
     integer idumma[1];
-    real spdiam;
     extern integer ilaenv_(integer *, char *, char *, integer *, integer *, 
 	    integer *, integer *);
     integer idiscu;
@@ -52,9 +64,10 @@ static integer c__0 = 0;
     logical ncnvrg, toofew;
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
-/*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*  -- LAPACK auxiliary routine (version 3.2.1)                        -- */
+/*  -- LAPACK is a software package provided by Univ. of Tennessee,    -- */
+/*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..-- */
+/*  -- April 2009                                                      -- */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -365,7 +378,8 @@ static integer c__0 = 0;
     tnorm = dmax(r__1,r__2);
     gl = gl - tnorm * 2.f * eps * *n - *pivmin * 4.f;
     gu = gu + tnorm * 2.f * eps * *n + *pivmin * 4.f;
-    spdiam = gu - gl;
+/*     [JAN/28/2009] remove the line below since SPDIAM variable not use */
+/*     SPDIAM = GU - GL */
 /*     Input arguments for SLAEBZ: */
 /*     The relative tolerance.  An interval (a,b] lies within */
 /*     "relative tolerance" if  b-a < RELTOL*max(|a|,|b|), */
@@ -529,9 +543,14 @@ static integer c__0 = 0;
 		gu = dmax(r__1,r__2);
 /* L40: */
 	    }
-	    spdiam = gu - gl;
-	    gl = gl - spdiam * 2.f * eps * in - *pivmin * 2.f;
-	    gu = gu + spdiam * 2.f * eps * in + *pivmin * 2.f;
+/*           [JAN/28/2009] */
+/*           change SPDIAM by TNORM in lines 2 and 3 thereafter */
+/*           line 1: remove computation of SPDIAM (not useful anymore) */
+/*           SPDIAM = GU - GL */
+/*           GL = GL - FUDGE*SPDIAM*EPS*IN - FUDGE*PIVMIN */
+/*           GU = GU + FUDGE*SPDIAM*EPS*IN + FUDGE*PIVMIN */
+	    gl = gl - tnorm * 2.f * eps * in - *pivmin * 2.f;
+	    gu = gu + tnorm * 2.f * eps * in + *pivmin * 2.f;
 
 	    if (irange > 1) {
 		if (gu < *wl) {

@@ -440,7 +440,7 @@ void LDetector::operator()(const vector<Mat>& pyr, vector<KeyPoint>& keypoints, 
     const int lthreshold = 3;
     int L, x, y, i, j, k, tau = lthreshold;
     Mat scoreBuf(pyr[0].size(), CV_16S), maskBuf(pyr[0].size(), CV_8U);
-    int scoreElSize = scoreBuf.elemSize();
+    int scoreElSize = (int)scoreBuf.elemSize();
     vector<Point> circle0;
     vector<int> fhcircle0, circle, fcircle_s, fcircle;
     getDiscreteCircle(radius, circle0, fhcircle0);
@@ -461,13 +461,13 @@ void LDetector::operator()(const vector<Mat>& pyr, vector<KeyPoint>& keypoints, 
         Mat scoreLayer(layerSize, scoreBuf.type(), scoreBuf.data);
         Mat maskLayer(layerSize, maskBuf.type(), maskBuf.data);
         const Mat& pyrLayer = pyr[L];
-        int sstep = scoreLayer.step/sizeof(short);
-        int mstep = maskLayer.step;
+        int sstep = (int)(scoreLayer.step/sizeof(short));
+        int mstep = (int)maskLayer.step;
 
         int csize = (int)circle0.size(), csize2 = csize/2;
         circle.resize(csize*3);
         for( i = 0; i < csize; i++ )
-            circle[i] = circle[i+csize] = circle[i+csize*2] = (-circle0[i].y)*pyrLayer.step + circle0[i].x;
+            circle[i] = circle[i+csize] = circle[i+csize*2] = (int)((-circle0[i].y)*pyrLayer.step + circle0[i].x);
         fcircle.clear();
         fcircle_s.clear();
         for( i = -radius; i <= radius; i++ )
@@ -476,7 +476,7 @@ void LDetector::operator()(const vector<Mat>& pyr, vector<KeyPoint>& keypoints, 
             for( j = -x; j <= x; j++ )
             {
                 fcircle_s.push_back(i*sstep + j);
-                fcircle.push_back(i*pyrLayer.step + j);
+                fcircle.push_back((int)(i*pyrLayer.step + j));
             }
         }
         int nsize = (int)fcircle.size();
@@ -492,7 +492,7 @@ void LDetector::operator()(const vector<Mat>& pyr, vector<KeyPoint>& keypoints, 
             memset( maskLayer.ptr<uchar>(layerSize.height-y-1), 0, layerSize.width );
         }
 
-        int vradius = radius*pyrLayer.step;
+        int vradius = (int)(radius*pyrLayer.step);
 
         for( y = radius; y < layerSize.height - radius; y++ )
         {
@@ -785,7 +785,7 @@ int FernClassifier::getLeaf(int fern, const Mat& _patch) const
         idx = (idx << 1) + f(patch);
     }
 
-    return fern*leavesPerStruct + idx;
+    return (int)(fern*leavesPerStruct + idx);
 }
 
 
@@ -1237,7 +1237,7 @@ void PlanarObjectDetector::train(const vector<Mat>& pyr, int npoints,
     ldetector.setVerbose(verbose);
     ldetector.getMostStable2D(pyr[0], modelPoints, npoints, patchGenerator);
 
-    npoints = modelPoints.size();
+    npoints = (int)modelPoints.size();
     fernClassifier.setVerbose(verbose);
     fernClassifier.trainFromSingleView(pyr[0], modelPoints,
                                        patchSize, (int)modelPoints.size(), nstructs, structSize, nviews,

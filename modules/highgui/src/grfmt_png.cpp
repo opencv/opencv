@@ -192,7 +192,7 @@ bool  PngDecoder::readData( Mat& img )
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
@@ -223,7 +223,7 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_palette_to_rgb( png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
-                png_set_gray_1_2_4_to_8( png_ptr );
+                png_set_expand_gray_1_2_4_to_8( png_ptr );
 
             if( CV_MAT_CN(m_type) > 1 && color )
                 png_set_bgr( png_ptr ); // convert RGB to BGR

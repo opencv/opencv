@@ -372,8 +372,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     width*(sizeof(CostType) + sizeof(DispType)) + 1024; // disp2cost + disp2
     
     if( !buffer.data || !buffer.isContinuous() ||
-       buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.create(1, totalBufSize, CV_8U);
+        buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
+        buffer.create(1, (int)totalBufSize, CV_8U);
     
     // summary cost over different (nDirs) directions
     CostType* Cbuf = (CostType*)alignPtr(buffer.data, ALIGN);
@@ -828,10 +828,10 @@ void filterSpeckles( Mat& img, double _newval, int maxSpeckleSize, double _maxDi
     int width = img.cols, height = img.rows, npixels = width*height;
     size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
     if( !_buf.isContinuous() || !_buf.data || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
-        _buf.create(1, bufSize, CV_8U);
+        _buf.create(1, (int)bufSize, CV_8U);
     
     uchar* buf = _buf.data;
-    int i, j, dstep = img.step/sizeof(short);
+    int i, j, dstep = (int)(img.step/sizeof(short));
     int* labels = (int*)buf;
     buf += npixels*sizeof(labels[0]);
     Point2s* wbuf = (Point2s*)buf;

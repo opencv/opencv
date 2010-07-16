@@ -124,7 +124,7 @@ Size SelfSimDescriptor::getGridSize( Size imgSize, Size winStride ) const
 void SelfSimDescriptor::SSD(const Mat& img, Point pt, Mat& ssd) const
 {
 	int x, y, dx, dy, r0 = largeSize/2, r1 = smallSize/2;
-    int step = img.step;
+    int step = (int)img.step;
     for( y = -r0; y <= r0; y++ )
     {
         float* sptr = ssd.ptr<float>(y+r0) + r0;

@@ -1,13 +1,22 @@
+/* slasq2.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
 static integer c__1 = 1;
 static integer c__2 = 2;
-static integer c__10 = 10;
-static integer c__3 = 3;
-static integer c__4 = 4;
-static integer c__11 = 11;
 
 /* Subroutine */ int slasq2_(integer *n, real *z__, integer *info)
 {
@@ -19,43 +28,46 @@ static integer c__11 = 11;
     double sqrt(doublereal);
 
     /* Local variables */
-    real d__, e;
+    real d__, e, g;
     integer k;
     real s, t;
     integer i0, i4, n0;
     real dn;
     integer pp;
-    real dn1, dn2, eps, tau, tol;
+    real dn1, dn2, dee, eps, tau, tol;
     integer ipn4;
     real tol2;
     logical ieee;
     integer nbig;
     real dmin__, emin, emax;
-    integer ndiv, iter;
+    integer kmin, ndiv, iter;
     real qmin, temp, qmax, zmax;
     integer splt;
     real dmin1, dmin2;
     integer nfail;
     real desig, trace, sigma;
     integer iinfo, ttype;
-    extern /* Subroutine */ int slazq3_(integer *, integer *, real *, integer 
+    extern /* Subroutine */ int slasq3_(integer *, integer *, real *, integer 
 	    *, real *, real *, real *, real *, integer *, integer *, integer *
 , logical *, integer *, real *, real *, real *, real *, real *, 
-	    real *);
+	    real *, real *);
+    real deemin;
     extern doublereal slamch_(char *);
     integer iwhila, iwhilb;
     real oldemn, safmin;
-    extern /* Subroutine */ int xerbla_(char *, integer *);
-    extern integer ilaenv_(integer *, char *, char *, integer *, integer *, 
-	    integer *, integer *);
-    extern /* Subroutine */ int slasrt_(char *, integer *, real *, integer *);
+    extern /* Subroutine */ int xerbla_(char *, integer *), slasrt_(
+	    char *, integer *, real *, integer *);
 
 
-/*  -- LAPACK routine (version 3.1) -- */
-/*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*  -- LAPACK routine (version 3.2)                                    -- */
 
-/*     Modified to call SLAZQ3 in place of SLASQ3, 13 Feb 03, SJH. */
+/*  -- Contributed by Osni Marques of the Lawrence Berkeley National   -- */
+/*  -- Laboratory and Beresford Parlett of the Univ. of California at  -- */
+/*  -- Berkeley                                                        -- */
+/*  -- November 2008                                                   -- */
+
+/*  -- LAPACK is a software package provided by Univ. of Tennessee,    -- */
+/*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..-- */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -79,7 +91,7 @@ static integer c__11 = 11;
 /*  Note : SLASQ2 defines a logical variable, IEEE, which is true */
 /*  on machines which follow ieee-754 floating-point standard in their */
 /*  handling of infinities and NaNs, and false otherwise. This variable */
-/*  is passed to SLAZQ3. */
+/*  is passed to SLASQ3. */
 
 /*  Arguments */
 /*  ========= */
@@ -87,7 +99,7 @@ static integer c__11 = 11;
 /*  N     (input) INTEGER */
 /*        The number of rows and columns in the matrix. N >= 0. */
 
-/*  Z     (workspace) REAL array, dimension (4*N) */
+/*  Z     (input/output) REAL array, dimension ( 4*N ) */
 /*        On entry Z holds the qd array. On exit, entries 1 to N hold */
 /*        the eigenvalues in decreasing order, Z( 2*N+1 ) holds the */
 /*        trace, and Z( 2*N+2 ) holds the sum of the eigenvalues. If */
@@ -257,8 +269,13 @@ static integer c__11 = 11;
 
 /*     Check whether the machine is IEEE conformable. */
 
-    ieee = ilaenv_(&c__10, "SLASQ2", "N", &c__1, &c__2, &c__3, &c__4) == 1 && ilaenv_(&c__11, "SLASQ2", "N", &c__1, &c__2, 
-	     &c__3, &c__4) == 1;
+/*     IEEE = ILAENV( 10, 'SLASQ2', 'N', 1, 2, 3, 4 ).EQ.1 .AND. */
+/*    $       ILAENV( 11, 'SLASQ2', 'N', 1, 2, 3, 4 ).EQ.1 */
+
+/*     [11/15/2008] The case IEEE=.TRUE. has a problem in single precision with */
+/*     some the test matrices of type 16. The double precision code is fine. */
+
+    ieee = FALSE_;
 
 /*     Rearrange data for locality: Z=(q1,qq1,e1,ee1,q2,qq2,e2,ee2,...). */
 
@@ -353,7 +370,7 @@ static integer c__11 = 11;
 /* L80: */
     }
 
-/*     Initialise variables to pass to SLAZQ3 */
+/*     Initialise variables to pass to SLASQ3. */
 
     ttype = 0;
     dmin1 = 0.f;
@@ -361,6 +378,7 @@ static integer c__11 = 11;
     dn = 0.f;
     dn1 = 0.f;
     dn2 = 0.f;
+    g = 0.f;
     tau = 0.f;
 
     iter = 2;
@@ -370,7 +388,7 @@ static integer c__11 = 11;
     i__1 = *n + 1;
     for (iwhila = 1; iwhila <= i__1; ++iwhila) {
 	if (n0 < 1) {
-	    goto L150;
+	    goto L170;
 	}
 
 /*        While array unfinished do */
@@ -424,10 +442,43 @@ static integer c__11 = 11;
 
 L100:
 	i0 = i4 / 4;
+	pp = 0;
 
-/*        Store EMIN for passing to SLAZQ3. */
-
-	z__[(n0 << 2) - 1] = emin;
+	if (n0 - i0 > 1) {
+	    dee = z__[(i0 << 2) - 3];
+	    deemin = dee;
+	    kmin = i0;
+	    i__2 = (n0 << 2) - 3;
+	    for (i4 = (i0 << 2) + 1; i4 <= i__2; i4 += 4) {
+		dee = z__[i4] * (dee / (dee + z__[i4 - 2]));
+		if (dee <= deemin) {
+		    deemin = dee;
+		    kmin = (i4 + 3) / 4;
+		}
+/* L110: */
+	    }
+	    if (kmin - i0 << 1 < n0 - kmin && deemin <= z__[(n0 << 2) - 3] * 
+		    .5f) {
+		ipn4 = i0 + n0 << 2;
+		pp = 2;
+		i__2 = i0 + n0 - 1 << 1;
+		for (i4 = i0 << 2; i4 <= i__2; i4 += 4) {
+		    temp = z__[i4 - 3];
+		    z__[i4 - 3] = z__[ipn4 - i4 - 3];
+		    z__[ipn4 - i4 - 3] = temp;
+		    temp = z__[i4 - 2];
+		    z__[i4 - 2] = z__[ipn4 - i4 - 2];
+		    z__[ipn4 - i4 - 2] = temp;
+		    temp = z__[i4 - 1];
+		    z__[i4 - 1] = z__[ipn4 - i4 - 5];
+		    z__[ipn4 - i4 - 5] = temp;
+		    temp = z__[i4];
+		    z__[i4] = z__[ipn4 - i4 - 4];
+		    z__[ipn4 - i4 - 4] = temp;
+/* L120: */
+		}
+	    }
+	}
 
 /*        Put -(initial shift) into DMIN. */
 
@@ -435,22 +486,24 @@ L100:
 	r__1 = 0.f, r__2 = qmin - sqrt(qmin) * 2.f * sqrt(emax);
 	dmin__ = -dmax(r__1,r__2);
 
-/*        Now I0:N0 is unreduced. PP = 0 for ping, PP = 1 for pong. */
-
-	pp = 0;
+/*        Now I0:N0 is unreduced. */
+/*        PP = 0 for ping, PP = 1 for pong. */
+/*        PP = 2 indicates that flipping was applied to the Z array and */
+/*               and that the tests for deflation upon entry in SLASQ3 */
+/*               should not be performed. */
 
 	nbig = (n0 - i0 + 1) * 30;
 	i__2 = nbig;
 	for (iwhilb = 1; iwhilb <= i__2; ++iwhilb) {
 	    if (i0 > n0) {
-		goto L130;
+		goto L150;
 	    }
 
 /*           While submatrix unfinished take a good dqds step. */
 
-	    slazq3_(&i0, &n0, &z__[1], &pp, &dmin__, &sigma, &desig, &qmax, &
+	    slasq3_(&i0, &n0, &z__[1], &pp, &dmin__, &sigma, &desig, &qmax, &
 		    nfail, &iter, &ndiv, &ieee, &ttype, &dmin1, &dmin2, &dn, &
-		    dn1, &dn2, &tau);
+		    dn1, &dn2, &g, &tau);
 
 	    pp = 1 - pp;
 
@@ -483,7 +536,7 @@ L100:
 			    r__1 = oldemn, r__2 = z__[i4];
 			    oldemn = dmin(r__1,r__2);
 			}
-/* L110: */
+/* L130: */
 		    }
 		    z__[(n0 << 2) - 1] = emin;
 		    z__[n0 * 4] = oldemn;
@@ -491,7 +544,7 @@ L100:
 		}
 	    }
 
-/* L120: */
+/* L140: */
 	}
 
 	*info = 2;
@@ -499,9 +552,9 @@ L100:
 
 /*        end IWHILB */
 
-L130:
+L150:
 
-/* L140: */
+/* L160: */
 	;
     }
 
@@ -510,14 +563,14 @@ L130:
 
 /*     end IWHILA */
 
-L150:
+L170:
 
 /*     Move q's to the front. */
 
     i__1 = *n;
     for (k = 2; k <= i__1; ++k) {
 	z__[k] = z__[(k << 2) - 3];
-/* L160: */
+/* L180: */
     }
 
 /*     Sort and compute sum of eigenvalues. */
@@ -527,7 +580,7 @@ L150:
     e = 0.f;
     for (k = *n; k >= 1; --k) {
 	e += z__[k];
-/* L170: */
+/* L190: */
     }
 
 /*     Store trace, sum(eigenvalues) and information on performance. */

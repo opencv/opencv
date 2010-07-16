@@ -190,7 +190,7 @@ bool  PxMDecoder::readData( Mat& img )
 {
     int color = img.channels() > 1;
     uchar* data = img.data;
-    int step = img.step;
+    int step = (int)img.step;
     PaletteEntry palette[256];
     bool   result = false;
     int  bit_depth = CV_ELEM_SIZE1(m_type)*8;
@@ -372,9 +372,9 @@ bool  PxMEncoder::write( const Mat& img, const vector<int>& params )
     bool isBinary = true;
 
     int  width = img.cols, height = img.rows;
-    int  _channels = img.channels(), depth = img.elemSize1()*8;
+    int  _channels = img.channels(), depth = (int)img.elemSize1()*8;
     int  channels = _channels > 1 ? 3 : 1;
-    int  fileStep = width*img.elemSize();
+    int  fileStep = width*(int)img.elemSize();
     int  x, y;
 
     for( size_t i = 0; i < params.size(); i += 2 )
@@ -399,7 +399,7 @@ bool  PxMEncoder::write( const Mat& img, const vector<int>& params )
     int  bufferSize = 128; // buffer that should fit a header
 
     if( isBinary )
-        lineLength = width * img.elemSize();
+        lineLength = width * (int)img.elemSize();
     else
         lineLength = (6 * channels + (channels > 1 ? 2 : 0)) * width + 32;
 

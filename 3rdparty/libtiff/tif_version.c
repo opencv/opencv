@@ -1,4 +1,4 @@
-/* $Header: /home/vp/work/opencv-cvsbackup/opencv/3rdparty/libtiff/tif_version.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_version.c,v 1.2.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
 /*
  * Copyright (c) 1992-1997 Sam Leffler
  * Copyright (c) 1992-1997 Silicon Graphics, Inc.
@@ -31,3 +31,10 @@ TIFFGetVersion(void)
 {
 	return (TIFFVersion);
 }
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

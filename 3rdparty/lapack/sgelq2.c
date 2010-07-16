@@ -1,4 +1,17 @@
+/* sgelq2.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int sgelq2_(integer *m, integer *n, real *a, integer *lda, 
 	real *tau, real *work, integer *info)
@@ -11,11 +24,11 @@
     real aii;
     extern /* Subroutine */ int slarf_(char *, integer *, integer *, real *, 
 	    integer *, real *, real *, integer *, real *), xerbla_(
-	    char *, integer *), slarfg_(integer *, real *, real *, 
+	    char *, integer *), slarfp_(integer *, real *, real *, 
 	    integer *, real *);
 
 
-/*  -- LAPACK routine (version 3.1) -- */
+/*  -- LAPACK routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     November 2006 */
 
@@ -121,7 +134,7 @@
 	i__2 = *n - i__ + 1;
 /* Computing MIN */
 	i__3 = i__ + 1;
-	slarfg_(&i__2, &a[i__ + i__ * a_dim1], &a[i__ + min(i__3, *n)* a_dim1]
+	slarfp_(&i__2, &a[i__ + i__ * a_dim1], &a[i__ + min(i__3, *n)* a_dim1]
 , lda, &tau[i__]);
 	if (i__ < *m) {
 

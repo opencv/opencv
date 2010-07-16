@@ -1,4 +1,17 @@
+/* slascl.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Subroutine */ int slascl_(char *type__, integer *kl, integer *ku, real *
 	cfrom, real *cto, integer *m, integer *n, real *a, integer *lda, 
@@ -18,10 +31,12 @@
     extern doublereal slamch_(char *);
     real cfromc;
     extern /* Subroutine */ int xerbla_(char *, integer *);
-    real bignum, smlnum;
+    real bignum;
+    extern logical sisnan_(real *);
+    real smlnum;
 
 
-/*  -- LAPACK auxiliary routine (version 3.1) -- */
+/*  -- LAPACK auxiliary routine (version 3.2) -- */
 /*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
 /*     November 2006 */
 
@@ -133,8 +148,10 @@
 
     if (itype == -1) {
 	*info = -1;
-    } else if (*cfrom == 0.f) {
+    } else if (*cfrom == 0.f || sisnan_(cfrom)) {
 	*info = -4;
+    } else if (sisnan_(cto)) {
+	*info = -5;
     } else if (*m < 0) {
 	*info = -6;
     } else if (*n < 0 || itype == 4 && *n != *m || itype == 5 && *n != *m) {
@@ -181,18 +198,32 @@
 
 L10:
     cfrom1 = cfromc * smlnum;
-    cto1 = ctoc / bignum;
-    if (dabs(cfrom1) > dabs(ctoc) && ctoc != 0.f) {
-	mul = smlnum;
-	done = FALSE_;
-	cfromc = cfrom1;
-    } else if (dabs(cto1) > dabs(cfromc)) {
-	mul = bignum;
-	done = FALSE_;
-	ctoc = cto1;
-    } else {
+    if (cfrom1 == cfromc) {
+/*        CFROMC is an inf.  Multiply by a correctly signed zero for */
+/*        finite CTOC, or a NaN if CTOC is infinite. */
 	mul = ctoc / cfromc;
 	done = TRUE_;
+	cto1 = ctoc;
+    } else {
+	cto1 = ctoc / bignum;
+	if (cto1 == ctoc) {
+/*           CTOC is either 0 or an inf.  In both cases, CTOC itself */
+/*           serves as the correct multiplication factor. */
+	    mul = ctoc;
+	    done = TRUE_;
+	    cfromc = 1.f;
+	} else if (dabs(cfrom1) > dabs(ctoc) && ctoc != 0.f) {
+	    mul = smlnum;
+	    done = FALSE_;
+	    cfromc = cfrom1;
+	} else if (dabs(cto1) > dabs(cfromc)) {
+	    mul = bignum;
+	    done = FALSE_;
+	    ctoc = cto1;
+	} else {
+	    mul = ctoc / cfromc;
+	    done = TRUE_;
+	}
     }
 
     if (itype == 0) {

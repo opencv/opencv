@@ -557,9 +557,9 @@ void CvCascadeBoostTrainData::precalculate()
 
     double proctime = -TIME( 0 );
     parallel_for( BlockedRange(numPrecalcVal, numPrecalcIdx),
-                  FeatureIdxOnlyPrecalc(featureEvaluator, buf, sample_count, is_buf_16u) );
+                  FeatureIdxOnlyPrecalc(featureEvaluator, buf, sample_count, is_buf_16u!=0) );
     parallel_for( BlockedRange(0, minNum),
-                  FeatureValAndIdxPrecalc(featureEvaluator, buf, &valCache, sample_count, is_buf_16u) );
+                  FeatureValAndIdxPrecalc(featureEvaluator, buf, &valCache, sample_count, is_buf_16u!=0) );
     parallel_for( BlockedRange(minNum, numPrecalcVal),
                   FeatureValOnlyPrecalc(featureEvaluator, &valCache, sample_count) );
     cout << "Precalculation time: " << (proctime + TIME( 0 )) << endl;

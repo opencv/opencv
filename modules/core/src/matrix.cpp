@@ -832,7 +832,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 {
     int i, j, k, dims = _data.cols, N = _data.rows;
     const float* data = _data.ptr<float>(0);
-    int step = _data.step/sizeof(data[0]);
+    int step = (int)(_data.step/sizeof(data[0]));
     vector<int> _centers(K);
     int* centers = &_centers[0];
     vector<float> _dist(N*3);
@@ -2851,7 +2851,7 @@ void SparseMat::resizeHashTab(size_t newsize)
 {
     newsize = std::max(newsize, (size_t)8);
     if((newsize & (newsize-1)) != 0)
-        newsize = 1 << cvCeil(std::log((double)newsize)/CV_LOG2);
+        newsize = (size_t)1 << cvCeil(std::log((double)newsize)/CV_LOG2);
 
     size_t i, hsize = hdr->hashtab.size();
     vector<size_t> _newh(newsize);
@@ -2908,14 +2908,14 @@ uchar* SparseMat::newNode(const int* idx, size_t hashval)
     int i, d = hdr->dims;
     for( i = 0; i < d; i++ )
         elem->idx[i] = idx[i];
-    d = elemSize();
+    size_t esz = elemSize();
     uchar* p = &value<uchar>(elem);
-    if( d == sizeof(float) )
+    if( esz == sizeof(float) )
         *((float*)p) = 0.f;
-    else if( d == sizeof(double) )
+    else if( esz == sizeof(double) )
         *((double*)p) = 0.;
     else
-        memset(p, 0, d);
+        memset(p, 0, esz);
     
     return p;
 }

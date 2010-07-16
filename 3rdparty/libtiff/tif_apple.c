@@ -1,4 +1,4 @@
-/* $Header: /home/vp/work/opencv-cvsbackup/opencv/3rdparty/libtiff/tif_apple.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/Attic/tif_apple.c,v 1.3.2.1 2010-06-08 18:50:41 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -125,7 +125,7 @@ _tiffSizeProc(thandle_t fd)
 	long size;
 
 	if (GetEOF((short) fd, &size) != noErr) {
-		TIFFError("_tiffSizeProc", "%s: Cannot get file size");
+		TIFFErrorExt(fd, "_tiffSizeProc", "%s: Cannot get file size");
 		return (-1L);
 	}
 	return ((toff_t) size);
@@ -202,10 +202,10 @@ TIFFOpen(const char* name, const char* mode)
 	}
 	return (TIFFFdOpen((int) fref, name, mode));
 badCreate:
-	TIFFError(module, "%s: Cannot create", name);
+	TIFFErrorExt(0, module, "%s: Cannot create", name);
 	return ((TIFF*) 0);
 badOpen:
-	TIFFError(module, "%s: Cannot open", name);
+	TIFFErrorExt(0, module, "%s: Cannot open", name);
 	return ((TIFF*) 0);
 }
 
@@ -272,3 +272,10 @@ appleErrorHandler(const char* module, const char* fmt, va_list ap)
 	fprintf(stderr, ".\n");
 }
 TIFFErrorHandler _TIFFerrorHandler = appleErrorHandler;
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

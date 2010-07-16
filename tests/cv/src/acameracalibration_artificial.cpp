@@ -90,7 +90,7 @@ public:
     }
     ~CV_CalibrateCameraArtificialTest() {}
 protected:     
-    size_t r;
+    int r;
 
     const static int JUST_FIND_CORNERS = 0;
     const static int USE_CORNERS_SUBPIX = 1;
@@ -370,7 +370,7 @@ protected:
         RNG& rng = theRNG();
 
         int progress = 0;
-        size_t repeat_num = 3;
+        int repeat_num = 3;
         for(r = 0; r < repeat_num; ++r)
         {                        
             const int brds_num = 20;              

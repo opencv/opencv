@@ -1,4 +1,17 @@
+/* sgesdd.f -- translated by f2c (version 20061008).
+   You must link the resulting object file with libf2c:
+	on Microsoft Windows system, link with libf2c.lib;
+	on Linux or Unix systems, link with .../path/to/libf2c.a -lm
+	or, if you install libf2c.a in a standard place, with -lf2c -lm
+	-- in that order, at the end of the command line, as in
+		cc *.o -lf2c -lm
+	Source for libf2c is in /netlib/f2c/libf2c.zip, e.g.,
+
+		http://www.netlib.org/f2c/libf2c.zip
+*/
+
 #include "clapack.h"
+
 
 /* Table of constant values */
 
@@ -70,9 +83,10 @@ static real c_b248 = 1.f;
     logical lquery;
 
 
-/*  -- LAPACK driver routine (version 3.1) -- */
-/*     Univ. of Tennessee, Univ. of California Berkeley and NAG Ltd.. */
-/*     November 2006 */
+/*  -- LAPACK driver routine (version 3.2.1)                                  -- */
+/*  -- LAPACK is a software package provided by Univ. of Tennessee,    -- */
+/*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..-- */
+/*     March 2009 */
 
 /*     .. Scalar Arguments .. */
 /*     .. */
@@ -181,10 +195,10 @@ static real c_b248 = 1.f;
 /*          If JOBZ = 'N', */
 /*            LWORK >= 3*min(M,N) + max(max(M,N),6*min(M,N)). */
 /*          If JOBZ = 'O', */
-/*            LWORK >= 3*min(M,N)*min(M,N) + */
+/*            LWORK >= 3*min(M,N) + */
 /*                     max(max(M,N),5*min(M,N)*min(M,N)+4*min(M,N)). */
 /*          If JOBZ = 'S' or 'A' */
-/*            LWORK >= 3*min(M,N)*min(M,N) + */
+/*            LWORK >= 3*min(M,N) + */
 /*                     max(max(M,N),4*min(M,N)*min(M,N)+4*min(M,N)). */
 /*          For good performance, LWORK should generally be larger. */
 /*          If LWORK = -1 but other input arguments are legal, WORK(1) */

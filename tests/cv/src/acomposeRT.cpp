@@ -58,7 +58,7 @@ public:
     {                
         dr3_dr1.create(3, 3);     dt3_dr1.create(3, 3);
                     
-        for(size_t i = 0; i < 3; ++i) 
+        for(int i = 0; i < 3; ++i) 
         {
             ev.setTo(Scalar(0));    ev(i, 0) = eps;                        
                         
@@ -75,7 +75,7 @@ public:
     {                
         dr3_dr2.create(3, 3);     dt3_dr2.create(3, 3);
                     
-        for(size_t i = 0; i < 3; ++i) 
+        for(int i = 0; i < 3; ++i) 
         {
             ev.setTo(Scalar(0));    ev(i, 0) = eps;                        
                         
@@ -92,7 +92,7 @@ public:
     {                
         drt3_dt1.create(3, 3);     dt3_dt1.create(3, 3);
                     
-        for(size_t i = 0; i < 3; ++i) 
+        for(int i = 0; i < 3; ++i) 
         {
             ev.setTo(Scalar(0));    ev(i, 0) = eps;                        
                         
@@ -109,7 +109,7 @@ public:
     {                
         dr3_dt2.create(3, 3);     dt3_dt2.create(3, 3);
                     
-        for(size_t i = 0; i < 3; ++i) 
+        for(int i = 0; i < 3; ++i) 
         {
             ev.setTo(Scalar(0));    ev(i, 0) = eps;                        
                         

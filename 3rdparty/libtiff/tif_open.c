@@ -1,4 +1,4 @@
-/* $Id: tif_open.c,v 1.1 2005-06-17 13:54:52 vp153 Exp $ */
+/* $Id: tif_open.c,v 1.33.2.1 2010-06-08 18:50:42 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -28,8 +28,6 @@
  * TIFF Library.
  */
 #include "tiffiop.h"
-
-void _TIFFSetDefaultCompressionState(TIFF* tif);
 
 static const long typemask[13] = {
 	(long)0L,		/* TIFF_NOTYPE */
@@ -83,12 +81,14 @@ static const int litTypeshift[13] = {
 static int
 _tiffDummyMapProc(thandle_t fd, tdata_t* pbase, toff_t* psize)
 {
+	(void) fd; (void) pbase; (void) psize;
 	return (0);
 }
 
 static void
 _tiffDummyUnmapProc(thandle_t fd, tdata_t base, toff_t size)
 {
+	(void) fd; (void) base; (void) size;
 }
 
 /*
@@ -97,17 +97,19 @@ _tiffDummyUnmapProc(thandle_t fd, tdata_t base, toff_t size)
  * contents and the machine architecture.
  */
 static void
-TIFFInitOrder(TIFF* tif, int magic, int bigendian)
+TIFFInitOrder(TIFF* tif, int magic)
 {
 	tif->tif_typemask = typemask;
 	if (magic == TIFF_BIGENDIAN) {
 		tif->tif_typeshift = bigTypeshift;
-		if (!bigendian)
-			tif->tif_flags |= TIFF_SWAB;
+#ifndef WORDS_BIGENDIAN
+		tif->tif_flags |= TIFF_SWAB;
+#endif
 	} else {
 		tif->tif_typeshift = litTypeshift;
-		if (bigendian)
-			tif->tif_flags |= TIFF_SWAB;
+#ifdef WORDS_BIGENDIAN
+		tif->tif_flags |= TIFF_SWAB;
+#endif
 	}
 }
 
@@ -129,7 +131,7 @@ _TIFFgetMode(const char* mode, const char* module)
 			m |= O_TRUNC;
 		break;
 	default:
-		TIFFError(module, "\"%s\": Bad mode", mode);
+		TIFFErrorExt(0, module, "\"%s\": Bad mode", mode);
 		break;
 	}
 	return (m);
@@ -150,7 +152,7 @@ TIFFClientOpen(
 {
 	static const char module[] = "TIFFClientOpen";
 	TIFF *tif;
-	int m, bigendian;
+	int m;
 	const char* cp;
 
 	m = _TIFFgetMode(mode, module);
@@ -158,7 +160,7 @@ TIFFClientOpen(
 		goto bad2;
 	tif = (TIFF *)_TIFFmalloc(sizeof (TIFF) + strlen(name) + 1);
 	if (tif == NULL) {
-		TIFFError(module, "%s: Out of memory (TIFF structure)", name);
+		TIFFErrorExt(clientdata, module, "%s: Out of memory (TIFF structure)", name);
 		goto bad2;
 	}
 	_TIFFmemset(tif, 0, sizeof (*tif));
@@ -171,7 +173,7 @@ TIFFClientOpen(
 	tif->tif_row = (uint32) -1;		/* read/write pre-increment */
 	tif->tif_clientdata = clientdata;
 	if (!readproc || !writeproc || !seekproc || !closeproc || !sizeproc) {
-		TIFFError(module,
+		TIFFErrorExt(clientdata, module,
 			  "One of the client procedures is NULL pointer.");
 		goto bad2;
 	}
@@ -196,14 +198,13 @@ TIFFClientOpen(
 	 */
 	tif->tif_flags = FILLORDER_MSB2LSB;
 	if (m == O_RDONLY )
-            tif->tif_flags |= TIFF_MAPPED;
+		tif->tif_flags |= TIFF_MAPPED;
 
 #ifdef STRIPCHOP_DEFAULT
 	if (m == O_RDONLY || m == O_RDWR)
 		tif->tif_flags |= STRIPCHOP_DEFAULT;
 #endif
 
-	{ union { int32 i; char c[4]; } u; u.i = 1; bigendian = u.c[0] == 0; }
 	/*
 	 * Process library-specific flags in the open mode string.
 	 * The following flags may be used to control intrinsic library
@@ -221,6 +222,7 @@ TIFFClientOpen(
 	 * 'm'		disable use of memory-mapped files
 	 * 'C'		enable strip chopping support when reading
 	 * 'c'		disable strip chopping support
+	 * 'h'		read TIFF header only, do not load the first IFD
 	 *
 	 * The use of the 'l' and 'b' flags is strongly discouraged.
 	 * These flags are provided solely because numerous vendors,
@@ -256,12 +258,16 @@ TIFFClientOpen(
 	for (cp = mode; *cp; cp++)
 		switch (*cp) {
 		case 'b':
-			if ((m&O_CREAT) && !bigendian)
+#ifndef WORDS_BIGENDIAN
+		    if (m&O_CREAT)
 				tif->tif_flags |= TIFF_SWAB;
+#endif
 			break;
 		case 'l':
-			if ((m&O_CREAT) && bigendian)
+#ifdef WORDS_BIGENDIAN
+			if ((m&O_CREAT))
 				tif->tif_flags |= TIFF_SWAB;
+#endif
 			break;
 		case 'B':
 			tif->tif_flags = (tif->tif_flags &~ TIFF_FILLORDER) |
@@ -291,34 +297,54 @@ TIFFClientOpen(
 			if (m == O_RDONLY)
 				tif->tif_flags &= ~TIFF_STRIPCHOP;
 			break;
+		case 'h':
+			tif->tif_flags |= TIFF_HEADERONLY;
+			break;
 		}
 	/*
 	 * Read in TIFF header.
 	 */
-	if (!ReadOK(tif, &tif->tif_header, sizeof (TIFFHeader))) {
+	if (tif->tif_mode & O_TRUNC ||
+	    !ReadOK(tif, &tif->tif_header, sizeof (TIFFHeader))) {
 		if (tif->tif_mode == O_RDONLY) {
-			TIFFError(name, "Cannot read TIFF header");
+			TIFFErrorExt(tif->tif_clientdata, name,
+				     "Cannot read TIFF header");
 			goto bad;
 		}
 		/*
 		 * Setup header and write.
 		 */
+#ifdef WORDS_BIGENDIAN
 		tif->tif_header.tiff_magic = tif->tif_flags & TIFF_SWAB
-		    ? (bigendian ? TIFF_LITTLEENDIAN : TIFF_BIGENDIAN)
-		    : (bigendian ? TIFF_BIGENDIAN : TIFF_LITTLEENDIAN);
+		    ? TIFF_LITTLEENDIAN : TIFF_BIGENDIAN;
+#else
+		tif->tif_header.tiff_magic = tif->tif_flags & TIFF_SWAB
+		    ? TIFF_BIGENDIAN : TIFF_LITTLEENDIAN;
+#endif
 		tif->tif_header.tiff_version = TIFF_VERSION;
 		if (tif->tif_flags & TIFF_SWAB)
 			TIFFSwabShort(&tif->tif_header.tiff_version);
 		tif->tif_header.tiff_diroff = 0;	/* filled in later */
 
+
+                /*
+                 * The doc for "fopen" for some STD_C_LIBs says that if you 
+                 * open a file for modify ("+"), then you must fseek (or 
+                 * fflush?) between any freads and fwrites.  This is not
+                 * necessary on most systems, but has been shown to be needed
+                 * on Solaris. 
+                 */
+                TIFFSeekFile( tif, 0, SEEK_SET );
+               
 		if (!WriteOK(tif, &tif->tif_header, sizeof (TIFFHeader))) {
-			TIFFError(name, "Error writing TIFF header");
+			TIFFErrorExt(tif->tif_clientdata, name,
+				     "Error writing TIFF header");
 			goto bad;
 		}
 		/*
 		 * Setup the byte order handling.
 		 */
-		TIFFInitOrder(tif, tif->tif_header.tiff_magic, bigendian);
+		TIFFInitOrder(tif, tif->tif_header.tiff_magic);
 		/*
 		 * Setup default directory.
 		 */
@@ -326,6 +352,7 @@ TIFFClientOpen(
 			goto bad;
 		tif->tif_diroff = 0;
 		tif->tif_dirlist = NULL;
+		tif->tif_dirlistsize = 0;
 		tif->tif_dirnumber = 0;
 		return (tif);
 	}
@@ -333,13 +360,27 @@ TIFFClientOpen(
 	 * Setup the byte order handling.
 	 */
 	if (tif->tif_header.tiff_magic != TIFF_BIGENDIAN &&
-	    tif->tif_header.tiff_magic != TIFF_LITTLEENDIAN) {
-		TIFFError(name,  "Not a TIFF file, bad magic number %d (0x%x)",
+	    tif->tif_header.tiff_magic != TIFF_LITTLEENDIAN
+#if MDI_SUPPORT
+	    &&
+#if HOST_BIGENDIAN
+	    tif->tif_header.tiff_magic != MDI_BIGENDIAN
+#else
+	    tif->tif_header.tiff_magic != MDI_LITTLEENDIAN
+#endif
+	    ) {
+		TIFFErrorExt(tif->tif_clientdata, name,
+			"Not a TIFF or MDI file, bad magic number %d (0x%x)",
+#else
+	    ) {
+		TIFFErrorExt(tif->tif_clientdata, name,
+			     "Not a TIFF file, bad magic number %d (0x%x)",
+#endif
 		    tif->tif_header.tiff_magic,
 		    tif->tif_header.tiff_magic);
 		goto bad;
 	}
-	TIFFInitOrder(tif, tif->tif_header.tiff_magic, bigendian);
+	TIFFInitOrder(tif, tif->tif_header.tiff_magic);
 	/*
 	 * Swap header if required.
 	 */
@@ -353,21 +394,31 @@ TIFFClientOpen(
 	 * magic number that doesn't change (stupid).
 	 */
 	if (tif->tif_header.tiff_version == TIFF_BIGTIFF_VERSION) {
-		TIFFError(name,
+		TIFFErrorExt(tif->tif_clientdata, name,
                           "This is a BigTIFF file.  This format not supported\n"
                           "by this version of libtiff." );
 		goto bad;
 	}
 	if (tif->tif_header.tiff_version != TIFF_VERSION) {
-		TIFFError(name,
+		TIFFErrorExt(tif->tif_clientdata, name,
 		    "Not a TIFF file, bad version number %d (0x%x)",
 		    tif->tif_header.tiff_version,
-		    tif->tif_header.tiff_version); 
+		    tif->tif_header.tiff_version);
 		goto bad;
 	}
 	tif->tif_flags |= TIFF_MYBUFFER;
 	tif->tif_rawcp = tif->tif_rawdata = 0;
 	tif->tif_rawdatasize = 0;
+
+	/*
+	 * Sometimes we do not want to read the first directory (for example,
+	 * it may be broken) and want to proceed to other directories. I this
+	 * case we use the TIFF_HEADERONLY flag to open file and return
+	 * immediately after reading TIFF header.
+	 */
+	if (tif->tif_flags & TIFF_HEADERONLY)
+		return (tif);
+
 	/*
 	 * Setup initial directory.
 	 */
@@ -635,3 +686,10 @@ TIFFGetUnmapFileProc(TIFF* tif)
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 8
+ * fill-column: 78
+ * End:
+ */

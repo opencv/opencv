@@ -401,13 +401,13 @@ public:
 
     inline int NumCameras()
     {
-        return m_cameras.size();
+        return (int)m_cameras.size();
     }
 
     inline int AddCamera(Camera* cam)
     {
         m_cameras.push_back(cam);
-        return m_cameras.size();
+        return (int)m_cameras.size();
     }    
     
     RigidBody* GetBody()

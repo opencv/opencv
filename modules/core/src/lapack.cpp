@@ -522,7 +522,7 @@ double invert( const Mat& src, Mat& dst, int method )
             else
             {
                 src.copyTo(arr);
-                lda = arr.step/sizeof(double);
+                lda = (integer)(arr.step/sizeof(double));
             }
 
             dgetrf_(&n, &n, (double*)arr.data, &lda, (integer*)buffer, &info);
@@ -545,7 +545,7 @@ double invert( const Mat& src, Mat& dst, int method )
             else
             {
                 src.copyTo(arr);
-                lda = arr.step/sizeof(double);
+                lda = (integer)(arr.step/sizeof(double));
             }
             
             char L[] = {'L', '\0'};
@@ -944,9 +944,9 @@ template<typename Real> bool jacobi(const Mat& _S0, Mat& _e, Mat& matE, bool com
     Real mv;
     Real* E = (Real*)matE.data;
     Real* e = (Real*)_e.data;
-    int Sstep = matS.step/sizeof(Real);
-    int estep = _e.rows == 1 ? 1 : _e.step/sizeof(Real);
-    int Estep = matE.step/sizeof(Real);
+    int Sstep = (int)(matS.step/sizeof(Real));
+    int estep = _e.rows == 1 ? 1 : (int)(_e.step/sizeof(Real));
+    int Estep = (int)(matE.step/sizeof(Real));
     
     for( k = 0; k < n; k++ )
     {
@@ -1144,7 +1144,7 @@ static bool eigen( const Mat& src, Mat& evals, Mat& evects, bool computeEvects,
                      (liwork+2*n+1)*sizeof(integer));
         Mat a(n, n, type, (uchar*)buf);
         src.copyTo(a);
-        lda = a.step1();
+        lda = (integer)a.step1();
         work = a.data + n*n*elem_size;
         if( copy_evals )
             s = (float*)(work + lwork*elem_size);
@@ -1174,7 +1174,7 @@ static bool eigen( const Mat& src, Mat& evals, Mat& evects, bool computeEvects,
                      (liwork+2*n+1)*sizeof(integer));
         Mat a(n, n, type, (uchar*)buf);
         src.copyTo(a);
-        lda = a.step1();
+        lda = (integer)a.step1();
         work = a.data + n*n*elem_size;
 
         if( copy_evals )
@@ -1339,7 +1339,7 @@ SVD& SVD::operator ()(const Mat& a, int flags)
     bool temp_a = false;
     double u1=0, v1=0, work1=0;
     float uf1=0, vf1=0, workf1=0;
-    integer lda, ldu, ldv, lwork=-1, iwork1=0, info=0, *iwork=0;
+    integer lda, ldu, ldv, lwork=-1, iwork1=0, info=0;
     char mode[] = {u.data || vt.data ? 'S' : 'N', '\0'};
 
     if( m != n && !(flags & NO_UV) && (flags & FULL_UV) )
@@ -1378,7 +1378,7 @@ SVD& SVD::operator ()(const Mat& a, int flags)
     }
     work_ofs = buf_size;
     buf_size += lwork*elem_size;
-    buf_size = cvAlign(buf_size, sizeof(iwork[0]));
+    buf_size = cvAlign(buf_size, sizeof(integer));
     iwork_ofs = buf_size;
     buf_size += 8*nm*sizeof(integer);
     

@@ -85,7 +85,7 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
         for( vector<KeyPoint>::const_iterator it = keypoints2.begin(); it < keypoints2.end(); ++it )
         {
             Point p = it->pt;
-            circle( outImg, Point2f(p.x+img1.cols, p.y), 3, isRandSinglePointColor ?
+            circle( outImg, Point(p.x+img1.cols, p.y), 3, isRandSinglePointColor ?
                     Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256)) : singlePointColor );
         }
      }
@@ -205,7 +205,7 @@ void SurfDescriptorExtractor::compute( const Mat& image,
     bool useProvidedKeypoints = true;
     surf(image, mask, keypoints, _descriptors, useProvidedKeypoints);
 
-    descriptors.create(keypoints.size(), surf.descriptorSize(), CV_32FC1);
+    descriptors.create((int)keypoints.size(), (int)surf.descriptorSize(), CV_32FC1);
     assert( (int)_descriptors.size() == descriptors.rows * descriptors.cols );
     std::copy(_descriptors.begin(), _descriptors.end(), descriptors.begin<float>());
 }
@@ -273,7 +273,7 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
 
 template<>
 void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                                             const Mat& mask, vector<int>& matches ) const
+                                             const Mat& /*mask*/, vector<int>& matches ) const
 {
     matches.clear();
     matches.reserve( descriptors_1.rows );
@@ -330,7 +330,7 @@ void KeyPointCollection::add( const Mat& _image, const vector<KeyPoint>& _points
     if( startIndices.empty() )
         startIndices.push_back(0);
     else
-        startIndices.push_back(*startIndices.rbegin() + points.rbegin()->size());
+        startIndices.push_back((int)(*startIndices.rbegin() + points.rbegin()->size()));
 
     // add image and keypoints
     images.push_back(_image);
@@ -457,11 +457,11 @@ void OneWayDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
 
     size_t trainFeatureCount = keypoints.size();
 
-    base->Allocate( trainFeatureCount );
+    base->Allocate( (int)trainFeatureCount );
 
     IplImage _image = image;
     for( size_t i = 0; i < keypoints.size(); i++ )
-        base->InitializeDescriptor( i, &_image, keypoints[i], "" );
+        base->InitializeDescriptor( (int)i, &_image, keypoints[i], "" );
 
     collection.add( Mat(), keypoints );
 
@@ -478,7 +478,7 @@ void OneWayDescriptorMatch::add( KeyPointCollection& keypoints )
 
     size_t trainFeatureCount = keypoints.calcKeypointCount();
 
-    base->Allocate( trainFeatureCount );
+    base->Allocate( (int)trainFeatureCount );
 
     int count = 0;
     for( size_t i = 0; i < keypoints.points.size(); i++ )
@@ -517,19 +517,17 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
         int poseIdx = -1;
 
         DMatch match;
-        match.indexQuery = i;
+        match.indexQuery = (int)i;
         match.indexTrain = -1;
         base->FindDescriptor( &_image, points[i].pt, match.indexTrain, poseIdx, match.distance );
         matches[i] = match;
     }
 }
 
-void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold )
+void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float /*threshold*/ )
 {
     matches.clear();
     matches.resize( points.size() );
-    IplImage _image = image;
-
 
     vector<DMatch> dmatches;
     match( image, points, dmatches );
@@ -537,7 +535,6 @@ void OneWayDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, v
     {
         matches[i].push_back( dmatches[i] );
     }
-
 
     /*
     printf("Start matching %d points\n", points.size());
@@ -686,7 +683,7 @@ void CalonderDescriptorMatch::calcBestProbAndMatchIdx( const Mat& image, const P
 
     bestProb = 0;
     bestMatchIdx = -1;
-    for( size_t ci = 0; ci < (size_t)classifier->classes(); ci++ )
+    for( int ci = 0; ci < classifier->classes(); ci++ )
     {
         if( signature[ci] > bestProb )
         {
@@ -764,7 +761,7 @@ void CalonderDescriptorMatch::read( const FileNode &fn )
     params.patchSize = fn["patchSize"];
     params.reducedNumDim = (int) fn["reducedNumDim"];
     params.numQuantBits = fn["numQuantBits"];
-    params.printStatus = (int) fn["printStatus"];
+    params.printStatus = (int) fn["printStatus"] != 0;
 }
 
 void CalonderDescriptorMatch::write( FileStorage& fs ) const
@@ -839,7 +836,7 @@ void FernDescriptorMatch::trainFernClassifier()
             {
                 refimgs.push_back(new Mat (collection.images[imageIdx]));
                 points.push_back(collection.points[imageIdx][pointIdx].pt);
-                labels.push_back(pointIdx);
+                labels.push_back((int)pointIdx);
             }
         }
 
@@ -856,7 +853,7 @@ void FernDescriptorMatch::calcBestProbAndMatchIdx( const Mat& image, const Point
 
     bestProb = -FLT_MAX;
     bestMatchIdx = -1;
-    for( size_t ci = 0; ci < (size_t)classifier->getClassCount(); ci++ )
+    for( int ci = 0; ci < classifier->getClassCount(); ci++ )
     {
         if( signature[ci] > bestProb )
         {
@@ -888,7 +885,7 @@ void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, 
     matches.resize( keypoints.size() );
     vector<float> signature( (size_t)classifier->getClassCount() );
 
-    for( size_t pi = 0; pi < keypoints.size(); pi++ )
+    for( int pi = 0; pi < (int)keypoints.size(); pi++ )
     {
         matches[pi].indexQuery = pi;
         calcBestProbAndMatchIdx( image, keypoints[pi].pt, matches[pi].distance, matches[pi].indexTrain, signature );
@@ -904,14 +901,14 @@ void FernDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, 
     matches.resize( keypoints.size() );
     vector<float> signature( (size_t)classifier->getClassCount() );
 
-    for( size_t pi = 0; pi < keypoints.size(); pi++ )
+    for( int pi = 0; pi < (int)keypoints.size(); pi++ )
     {
         (*classifier)( image, keypoints[pi].pt, signature);
 
         DMatch match;
         match.indexQuery = pi;
 
-        for( size_t ci = 0; ci < (size_t)classifier->getClassCount(); ci++ )
+        for( int ci = 0; ci < classifier->getClassCount(); ci++ )
         {
             if( -signature[ci] < threshold )
             {
