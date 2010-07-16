@@ -49,7 +49,6 @@ CvSeq* findSquares4( IplImage* img, CvMemStorage* storage )
     // create empty sequence that will contain points -
     // 4 points per square (the square's vertices)
     CvSeq* squares = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvPoint), storage );
-
     // select the maximum ROI in the image
     // with the width and height divisible by 2
     cvSetImageROI( timg, cvRect( 0, 0, sz.width, sz.height ));
@@ -221,6 +220,8 @@ int main(int argc, char** argv)
     }
 
     cvDestroyWindow( wndname );
+    
+    cvReleaseMemStorage(&storage);
 
     return 0;
 }
