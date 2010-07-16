@@ -103,13 +103,6 @@ struct CvVideoWriter
 #if defined WIN32 || defined _WIN32
 #define HAVE_VFW 1
 
-#if (_MSC_VER >= 1400 || defined __GNUC__) && !defined WIN64 && !defined _WIN64
-#define HAVE_VIDEOINPUT 1
-#endif
-
-/* uncomment to enable OpenEXR codec (will not compile under MSVC6) */
-//#define HAVE_OPENEXR 1
-
 /* uncomment to enable CMUCamera1394 fireware camera module */
 //#define HAVE_CMU1394 1
 #endif

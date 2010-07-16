@@ -284,6 +284,10 @@ set(WITH_TBB OFF CACHE BOOL "Include TBB support")
 set(WITH_EIGEN2 ON CACHE BOOL "Include Eigen2 support")
 set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
 
+if(WIN32)
+	set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
+endif()
+
 # ===================================================
 # Macros that checks if module have been installed.
 # After it adds module to build and define
@@ -609,13 +613,22 @@ if (WITH_TBB)
     endif()
 endif()
 
-############################### TBB ################################
+############################### CUDA ################################
 
 if (WITH_CUDA)
 	find_package(CUDA)	
 	if (CUDA_FOUND)
 		message(STATUS "CUDA detected.")	
 		set(HAVE_CUDA 1)
+	endif()
+endif()
+
+############################### VideoInput ################################
+
+if (WIN32 AND WITH_VIDEOINPUT)
+	if(CMAKE_CXX_COMPILER MATCHES "dw2")
+	else()
+		set(HAVE_VIDEOINPUT 1)
 	endif()
 endif()
 
@@ -1238,6 +1251,16 @@ if(WITH_QUICKTIME)
 message(STATUS "  Video I/O:                   QuickTime")
 else()
 message(STATUS "  Video I/O:                   QTKit")
+endif()
+endif()
+
+if(WIN32)
+message(STATUS "")
+message(STATUS "  Video I/O: ")
+if(HAVE_VIDEOINPUT)
+message(STATUS "    VideoInput:                1")
+else()
+message(STATUS "    VideoInput:                0")
 endif()
 endif()
 

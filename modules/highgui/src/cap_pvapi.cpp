@@ -50,9 +50,9 @@
 #define _LINUX
 #endif
 
-#if defined(_x64) || defined (__x86_64) || defined (_WIN64)
+#if defined(_x64) || defined (__x86_64) || defined (_M_X64)
 #define _x64 1
-#elif defined(_x86) || defined(__i386) || defined (_WIN32)
+#elif defined(_x86) || defined(__i386) || defined (_M_IX86)
 #define _x86 1
 #endif
 

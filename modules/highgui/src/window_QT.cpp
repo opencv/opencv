@@ -262,7 +262,7 @@ CV_IMPL int cvWaitKey( int arg )
 				waitCondition.wait(&dummy, 2);
 				*/
 
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined WIN32 || defined _WIN32
 		sleep(2);
 #else
 		usleep(2);//to decrease CPU usage

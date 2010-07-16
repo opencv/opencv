@@ -48,7 +48,7 @@
   #pragma comment(lib,"milmet2.lib")
 #endif
 
-#if defined WIN64 && defined EM64T && defined _MSC_VER && !defined __ICL
+#if defined _M_X64
   #pragma optimize("",off)
 #endif
 

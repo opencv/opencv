@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined WIN64 || defined _WIN64
+#if defined WIN32 || defined _WIN32
 
 #if _MSC_VER >= 1200
 #pragma warning( disable: 4710 )
@@ -57,7 +57,7 @@
 static const char* trackbar_text =
 "                                                                                             ";
 
-#if defined WIN64 || defined _WIN64
+#if defined _M_X64 || defined __x86_64
 
 #define icvGetWindowLongPtr GetWindowLongPtr
 #define icvSetWindowLongPtr( hwnd, id, ptr ) SetWindowLongPtr( hwnd, id, (LONG_PTR)(ptr) )

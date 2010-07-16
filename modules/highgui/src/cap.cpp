@@ -45,7 +45,7 @@
 #pragma warning( disable: 4711 )
 #endif
 
-#if (defined WIN64 || defined _WIN64) && defined _MSC_VER && !defined __ICL
+#if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
 #endif
 

@@ -168,3 +168,7 @@
 
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
+
+/* VideoInput library */
+#cmakedefine HAVE_VIDEOINPUT
+

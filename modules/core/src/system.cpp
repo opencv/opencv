@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined WIN64 || defined _WIN64 || defined WINCE
+#if defined WIN32 || defined _WIN32 || defined WINCE
 #include <tchar.h>
 #if defined _MSC_VER
   #if _MSC_VER >= 1400
@@ -184,7 +184,7 @@ bool useOptimized()
     
 int64 getTickCount()
 {
-#if defined WIN32 || defined WIN64 || defined _WIN64 || defined WINCE
+#if defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
@@ -204,7 +204,7 @@ int64 getTickCount()
 
 double getTickFrequency()
 {
-#if defined WIN32 || defined WIN64 || defined _WIN64 || defined WINCE
+#if defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
@@ -266,7 +266,7 @@ int64 getCPUTickCount(void)
 
 #endif
 
-#elif defined _MSC_VER && defined WIN32 && !defined _WIN64
+#elif defined _MSC_VER && defined WIN32 && defined _M_IX86
 
 int64 getCPUTickCount(void)
 {
@@ -394,7 +394,7 @@ redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
 cvGuiBoxReport( int code, const char *func_name, const char *err_msg,
                 const char *file, int line, void* )
 {
-#if (!defined WIN32 && !defined WIN64) || defined WINCE
+#if (!defined WIN32 && !defined _WIN32) || defined WINCE
     return cvStdErrReport( code, func_name, err_msg, file, line, 0 );
 #else
     if( code != CV_StsBackTrace && code != CV_StsAutoTrace )

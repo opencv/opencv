@@ -71,7 +71,7 @@
   #endif
 
   #if (_MSC_VER >= 1400 && defined _M_X64) || (__GNUC__ >= 4 && defined __x86_64__)
-    #if defined WIN64
+    #if defined WIN32
 		#include <intrin.h>
 	#endif
     #include <emmintrin.h>
@@ -85,7 +85,7 @@
 
   #ifdef HAVE_IPL
       #ifndef __IPL_H__
-          #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+          #if defined WIN32 || defined _WIN32
               #include <ipl.h>
           #else
               #include <ipl/ipl.h>
@@ -96,7 +96,7 @@
   #endif
 #endif // SKIP_INCLUDES
 
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined WIN32 || defined _WIN32
     #define CV_CDECL __cdecl
     #define CV_STDCALL __stdcall
 #else
@@ -125,14 +125,14 @@
 #ifndef CV_INLINE
 #if defined __cplusplus
     #define CV_INLINE inline
-#elif (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64 || defined WINCE) && !defined __GNUC__
+#elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
     #define CV_INLINE __inline
 #else
     #define CV_INLINE static
 #endif
 #endif /* CV_INLINE */
 
-#if (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64 || defined WINCE) && defined CVAPI_EXPORTS
+#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS
     #define CV_EXPORTS __declspec(dllexport)
 #else
     #define CV_EXPORTS

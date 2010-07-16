@@ -43,7 +43,7 @@
 #define __OPENCV_HIGHGUI_H__
 
 #include "opencv2/core/core_c.h"
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined WIN32 || defined _WIN32
    	#include <windows.h>
 	#undef min
 	#undef max

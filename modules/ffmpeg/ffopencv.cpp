@@ -533,7 +533,7 @@ extern "C" { __declspec(dllexport) unsigned int __lc_codepage = 0; }
 #pragma comment(lib, "libgcc_.a")
 #pragma comment(lib, "libmingwex_.a")
 #pragma comment(lib, "libcoldname_.a")
-#ifdef WIN64
+#ifdef _M_X64
 #pragma comment(lib, "libavformat64.a")
 #pragma comment(lib, "libavcodec64.a")
 #pragma comment(lib, "libavutil64.a")

@@ -2009,7 +2009,7 @@ void CxCore_GraphTest::run( int )
         struct_idx = iter = -1;
         t = cvTsRandReal(rng)*(max_log_storage_block_size - min_log_storage_block_size) + min_log_storage_block_size;
         int block_size = cvRound( exp(t * CV_LOG2) );
-        block_size = MAX(block_size, sizeof(CvGraph) + sizeof(CvMemBlock));
+        block_size = MAX(block_size, (int)(sizeof(CvGraph) + sizeof(CvMemBlock)));
         
         storage = cvCreateMemStorage(block_size);
 

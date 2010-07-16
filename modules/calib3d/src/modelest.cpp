@@ -459,7 +459,7 @@ int cv::estimateAffine3D(const Mat& from, const Mat& to, Mat& out, vector<uchar>
                from.depth() == CV_32F && to.depth() == CV_32F &&
                ((from.rows == 1 && from.channels() == 3) || from.cols*from.channels() == 3) &&
                ((to.rows == 1 && to.channels() == 3) || to.cols*to.channels() == 3) &&
-               count == (size_t)to.cols*to.rows*to.channels()/3);
+               count == to.cols*to.rows*to.channels()/3);
 
     out.create(3, 4, CV_64F); 
     outliers.resize(count);

@@ -41,7 +41,8 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_VIDEOINPUT
+#if defined HAVE_VIDEOINPUT && (_MSC_VER >= 1400 || defined __GNUC__)
+
 #include "videoinput.h"
 
 /********************* Capturing video from camera via VFW *********************/
@@ -183,7 +184,11 @@ CvCapture* cvCreateCameraCapture_DShow( int index )
 }
 
 #ifdef _MSC_VER
+#if defined _M_X64
+#pragma comment(lib, "videoInput64.lib")
+#else
 #pragma comment(lib, "videoInput.lib")
+#endif
 #endif
 
 #endif

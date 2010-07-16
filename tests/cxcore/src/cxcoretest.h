@@ -42,7 +42,7 @@
 #ifndef _CXCORE_TEST_H_
 #define _CXCORE_TEST_H_
 
-#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#if defined WIN32 || defined _WIN32
 #include <windows.h>
 #undef min
 #undef max
