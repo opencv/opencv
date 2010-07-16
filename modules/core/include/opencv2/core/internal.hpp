@@ -109,7 +109,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #include "emmintrin.h"
 #define CV_SSE 1
 #define CV_SSE2 1
-#if defined __SSE3__ || _MSC_VER >= 1400
+#if defined __SSE3__ || _MSC_VER >= 1500
 #include "pmmintrin.h"
 #define CV_SSE3 1
 #endif
