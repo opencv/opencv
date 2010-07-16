@@ -149,7 +149,7 @@ void CV_MomentsTest::get_timing_test_array_types_and_sizes( int test_case_idx,
 double CV_MomentsTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = CV_MAT_DEPTH(test_mat[INPUT][0].type);
-    return depth != CV_32F ? FLT_EPSILON : FLT_EPSILON*100;
+    return depth != CV_32F ? FLT_EPSILON*10 : FLT_EPSILON*100;
 }
 
 
@@ -311,7 +311,7 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-//CV_MomentsTest img_moments_test;
+CV_MomentsTest img_moments_test;
 
 
 // Hu invariants
