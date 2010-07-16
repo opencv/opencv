@@ -64,7 +64,7 @@ typedef uint16 tsample_t;       /* sample number */
 typedef uint32 tstrile_t;       /* strip or tile number */
 typedef tstrile_t tstrip_t;     /* strip number */
 typedef tstrile_t ttile_t;      /* tile number */
-typedef int32 tsize_t;          /* i/o size in bytes */
+typedef size_t tsize_t;          /* i/o size in bytes */
 typedef void* tdata_t;          /* image data ref */
 typedef uint32 toff_t;          /* file offset */
 

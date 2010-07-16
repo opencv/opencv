@@ -66,8 +66,14 @@ using namespace std;
 
 struct TempDirHolder
 {
-	const string temp_folder;
-	TempDirHolder() { char* p = tmpnam(0); if(p[0] == '\\') p++; temp_folder = p; exec_cmd("mkdir " + temp_folder); }	
+	string temp_folder;
+	TempDirHolder()
+    {
+        char* p = tmpnam(0);
+        if(p[0] == '\\') p++;
+        temp_folder = string(p);
+        exec_cmd("mkdir " + temp_folder);
+    }	
 	~TempDirHolder() { exec_cmd("rm -rf " + temp_folder); }
 	static void exec_cmd(const string& cmd) { marker(cmd); int res = system( cmd.c_str() ); (void)res; }
 	

@@ -771,6 +771,22 @@ _TIFFFindFieldInfo(TIFF* tif, ttag_t tag, TIFFDataType dt)
 	return tif->tif_foundfield = (ret ? *ret : NULL);
 }
 
+#undef lfind
+static void *
+lfind(const void *key, const void *base, size_t *nmemb, size_t size,
+      int(*compar)(const void *, const void *))
+{
+	char *element, *end;
+    
+	end = (char *)base + *nmemb * size;
+	for (element = (char *)base; element < end; element += size)
+		if (!compar(element, key))		/* key found */
+			return element;
+    
+	return NULL;
+}
+
+
 const TIFFFieldInfo*
 _TIFFFindFieldInfoByName(TIFF* tif, const char *field_name, TIFFDataType dt)
 {
