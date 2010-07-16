@@ -72,6 +72,11 @@ enum {	CV_STYLE_NORMAL			= 0,//QFont::StyleNormal,
 };
 /* ---------*/
 
+//the first bit is for normal or autoresize
+//CV_WINDOW_NORMAL = 0x00000000 and CV_WINDOW_AUTOSIZE = 0x00000001
+//the secont bit is for the gui mode (normal or extended)
+enum {CV_GUI_EXTENDED = 0x00000000, CV_GUI_NORMAL = 0x00000010};
+
 //for color cvScalar(blue_component, green_component, red\_component[, alpha_component])
 //and alpha= 0 <-> 0xFF (not transparent <-> transparent)
 CVAPI(CvFont) cvFont_Qt(const char* nameFont, int pointSize CV_DEFAULT(-1), CvScalar color CV_DEFAULT(cvScalarAll(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
@@ -96,23 +101,26 @@ CVAPI(int) cvInitSystem( int argc, char** argv );
 
 CVAPI(int) cvStartWindowThread();
 
-enum { CV_WINDOW_AUTOSIZE = 1 };
-
-/* create window */
-CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOSIZE) );
-
 // ---------  YV ---------
 enum
 {
-	CV_WND_PROP_FULLSCREEN = 0,
-	CV_WND_PROP_AUTOSIZE   = 1,
-	CV_WND_PROP_ASPECTRATIO= 2,
-	CV_WINDOW_NORMAL       = 0,
-	CV_WINDOW_FULLSCREEN   = 1,
-	CV_WINDOW_FREERATIO	   = 0,
-	CV_WINDOW_KEEPRATIO    = 1
+	//These 3 flags are used by cvSet/GetWindowProperty
+	CV_WND_PROP_FULLSCREEN = 0,//to change/get window's fullscreen property
+	CV_WND_PROP_AUTOSIZE   = 1,//to change/get window's autosize property
+	CV_WND_PROP_ASPECTRATIO= 2,//to change/get window's aspectratio property
+	//
+	//These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
+	CV_WINDOW_NORMAL       = 0,//the user can resize the window (no constraint)
+	CV_WINDOW_AUTOSIZE 	   = 1,//the user cannot resize the window, the size is constrainted by the image displayed
+	//
+	//These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
+	CV_WINDOW_FULLSCREEN   = 1,//change the window to fullscreen
+	CV_WINDOW_FREERATIO	   = 0,//the image expends as much as it can (no ratio constraint)
+	CV_WINDOW_KEEPRATIO    = 1//the ration image is respected.
 };
 
+/* create window */
+CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOSIZE) );
 
 /* Set and Get Property of the window */
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);

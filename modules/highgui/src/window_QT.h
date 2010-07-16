@@ -72,8 +72,10 @@
 #include <QFileInfo>
 #include <QDate>
 #include <QFileDialog>
+#include <QToolBar>
+#include <QAction>
 
-//start enum
+//start private enum
 enum {CV_MODE_NORMAL= 0, CV_MODE_OPENGL = 1};
 
 //we can change the keyboard shortcuts from here !
@@ -155,6 +157,7 @@ private:
 
 };
 
+
 class CvWindow : public QWidget
 {
     Q_OBJECT
@@ -172,12 +175,14 @@ public:
     ViewPort* getView();
 
     QPointer<QBoxLayout> layout;
-    QPointer<QStatusBar> myBar;
-    QPointer<QLabel> myBar_msg;
+    QPointer<QStatusBar> myStatusBar;
+    QPointer<QToolBar> myToolBar;
+    QPointer<QLabel> myStatusBar_msg;
 
     //parameters (will be save/load)
     QString param_name;
     int param_flags;
+    int param_gui_mode;
 
 
 protected:
@@ -185,19 +190,17 @@ protected:
 
 private:
     QPointer<ViewPort> myview;
-    QPointer<QShortcut> shortcut_Z;
-    QPointer<QShortcut> shortcut_S;
-    QPointer<QShortcut> shortcut_P;
-    QPointer<QShortcut> shortcut_X;
-    QPointer<QShortcut> shortcut_Plus;
-    QPointer<QShortcut> shortcut_Minus;
-    QPointer<QShortcut> shortcut_Left;
-    QPointer<QShortcut> shortcut_Right;
-    QPointer<QShortcut> shortcut_Up;
-    QPointer<QShortcut> shortcut_Down;
+    QVector<QAction*> vect_QActions;
+    QVector<QShortcut*> vect_QShortcuts;
 
     void icvLoadTrackbars(QSettings *settings);
     void icvSaveTrackbars(QSettings *settings);
+
+    void createShortcuts();
+    void createToolBar();
+    void createView(int mode);
+    void createStatusBar();
+    void createLayout();
 };
 
 
@@ -253,6 +256,7 @@ public slots:
     void siftWindowOnDown();
     void resizeEvent ( QResizeEvent * );
     void saveView();
+    void displayPropertiesWin();
 
 private:
     QPoint mouseCoordinate;
@@ -260,11 +264,11 @@ private:
     QRect  positionCorners;
     QTransform matrixWorld_inv;
     float ratioX, ratioY;
-    
+
     //for mouse callback
     CvMouseCallback on_mouse;
     void* on_mouse_param;
-    
+
     //for opengl callback
     CvOpenGLCallback on_openGL_draw3D;
 	void* on_openGL_param;
@@ -303,67 +307,5 @@ private:
 private slots:
     void stopDisplayInfo();
 };
-
-
-
-//here css for trackbar
-/* from http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet */
-static const QString str_Trackbar_css = QString("")
-					+										"QSlider::groove:horizontal {"
-					+										"border: 1px solid #bbb;"
-					+										"background: white;"
-					+										"height: 10px;"
-					+										"border-radius: 4px;"
-					+										"}"
-
-					+										"QSlider::sub-page:horizontal {"
-					+										"background: qlineargradient(x1: 0, y1: 0,    x2: 0, y2: 1,"
-					+										"stop: 0 #66e, stop: 1 #bbf);"
-					+										"background: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 1,"
-					+										"stop: 0 #bbf, stop: 1 #55f);"
-					+										"border: 1px solid #777;"
-					+										"height: 10px;"
-					+										"border-radius: 4px;"
-					+										"}"
-
-					+										"QSlider::add-page:horizontal {"
-					+										"background: #fff;"
-					+										"border: 1px solid #777;"
-					+										"height: 10px;"
-					+										"border-radius: 4px;"
-					+										"}"
-
-					+										"QSlider::handle:horizontal {"
-					+										"background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
-					+										"stop:0 #eee, stop:1 #ccc);"
-					+										"border: 1px solid #777;"
-					+										"width: 13px;"
-					+										"margin-top: -2px;"
-					+										"margin-bottom: -2px;"
-					+										"border-radius: 4px;"
-					+										"}"
-
-					+										"QSlider::handle:horizontal:hover {"
-					+										"background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
-					+										"stop:0 #fff, stop:1 #ddd);"
-					+										"border: 1px solid #444;"
-					+										"border-radius: 4px;"
-					+										"}"
-
-					+										"QSlider::sub-page:horizontal:disabled {"
-					+										"background: #bbb;"
-					+										"border-color: #999;"
-					+										"}"
-
-					+										"QSlider::add-page:horizontal:disabled {"
-					+										"background: #eee;"
-					+										"border-color: #999;"
-					+										"}"
-
-					+										"QSlider::handle:horizontal:disabled {"
-					+										"background: #eee;"
-					+										"border: 1px solid #aaa;"
-					+										"border-radius: 4px;"
-					+										"}";
 
 #endif

@@ -77,12 +77,15 @@ if (HAVE_QT)
         set(QT_USE_QTOPENGL TRUE)
     endif()
     INCLUDE(${QT_USE_FILE})
-     
+    
+    SET(_RCCS_FILES src/window_QT.qrc)
+	QT4_ADD_RESOURCES(_RCC_OUTFILES ${_RCCS_FILES})
+
     SET(_MOC_HEADERS src/window_QT.h )
     QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
      
     set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES})
-    set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES})
+    set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
 endif()
     
 if(WIN32)
