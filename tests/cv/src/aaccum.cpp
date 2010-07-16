@@ -103,7 +103,7 @@ void CV_AccumBaseTestImpl::get_test_array_types_and_sizes( int test_case_idx,
 double CV_AccumBaseTestImpl::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     return CV_MAT_DEPTH(test_mat[INPUT_OUTPUT][0].type) < CV_64F ||
-        CV_MAT_DEPTH(test_mat[INPUT][0].type) == CV_32F ? FLT_EPSILON*10 : DBL_EPSILON*100;
+        CV_MAT_DEPTH(test_mat[INPUT][0].type) == CV_32F ? FLT_EPSILON*100 : DBL_EPSILON*1000;
 }
 
 
@@ -295,5 +295,5 @@ void CV_RunningAvgTest::prepare_to_validation( int )
     cvTsCopy( temp, dst, mask );
 }
 
-//CV_RunningAvgTest runavg_test;
+CV_RunningAvgTest runavg_test;
 
