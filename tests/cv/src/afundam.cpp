@@ -745,7 +745,8 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
     if( calc_jacobians )
     {
         //cvInvert( v2m_jac, m2v_jac, CV_SVD );
-        if( cvNorm(&test_mat[OUTPUT][3],0,CV_C) < 1000 )
+        double nrm = cvNorm(&test_mat[REF_OUTPUT][3],0,CV_C);
+        if( FLT_EPSILON < nrm && nrm < 1000 )
         {
             cvTsGEMM( &test_mat[OUTPUT][1], &test_mat[OUTPUT][3],
                       1, 0, 0, &test_mat[OUTPUT][4],
@@ -761,7 +762,7 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-//CV_RodriguesTest rodrigues_test;
+CV_RodriguesTest rodrigues_test;
 
 
 /********************************** fundamental matrix *********************************/
@@ -901,7 +902,7 @@ void CV_FundamentalMatTest::get_test_array_types_and_sizes( int /*test_case_idx*
 
 double CV_FundamentalMatTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    return 3e-2;
+    return 5e-2;
 }
 
 
@@ -1093,7 +1094,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
 }
 
 
-//CV_FundamentalMatTest fmatrix_test;
+CV_FundamentalMatTest fmatrix_test;
 
 
 /********************************** convert homogeneous *********************************/
