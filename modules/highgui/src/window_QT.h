@@ -132,6 +132,17 @@ public slots:
 
 };
 
+/*
+ protected:
+    int width, height;
+
+class CvButtonbar : public QButtonGroup
+{
+    Q_OBJECT
+public:
+    CvButtonbar();
+};*/
+
 class CvTrackbar : public QHBoxLayout
 {
     Q_OBJECT
@@ -157,7 +168,6 @@ private:
 
 };
 
-
 class CvWinProperties : public QWidget
 {
     Q_OBJECT
@@ -171,8 +181,6 @@ private:
     void showEvent ( QShowEvent * event ) ;
     void hideEvent ( QHideEvent * event ) ;
 };
-
-
 
 class CvWindow : public QWidget
 {
@@ -188,7 +196,13 @@ public:
     void readSettings();
     void writeSettings();
     void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata);
+    void hideTools();
+    void showTools();
+
+
+
     ViewPort* getView();
+    CvWinProperties* getWinProp();
 
     QPointer<QBoxLayout> myLayout;
     QPointer<QStatusBar> myStatusBar;
