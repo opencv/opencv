@@ -335,7 +335,7 @@ typedef void (*MixChannelsFunc)( const void** src, const int* sdelta0,
 
 void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
-    size_t i;
+    size_t i, j;
     
     if( npairs == 0 )
         return;
@@ -352,7 +352,7 @@ void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const in
 
     for( i = 0; i < npairs; i++ )
     {
-        int i0 = fromTo[i*2], i1 = fromTo[i*2+1], j;
+        int i0 = fromTo[i*2], i1 = fromTo[i*2+1];
         if( i0 >= 0 )
         {
             for( j = 0; j < nsrcs; i0 -= src[j].channels(), j++ )

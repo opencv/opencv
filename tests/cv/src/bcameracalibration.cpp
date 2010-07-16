@@ -54,18 +54,6 @@ public:
         imgSize(800, 600)        
     { 
         support_testing_modes = CvTS::CORRECTNESS_CHECK_MODE;         
-        
-        Mat_<float> camMat(3, 3);
-        Mat_<float> distCoeffs(1, 5);
-
-        camMat << 300.f, 0.f, imgSize.width/2.f, 0, 300.f, imgSize.height/2.f, 0.f, 0.f, 1.f;    
-        distCoeffs << 1.2f, 0.2f, 0.f, 0.f, 0.f;
-
-        ChessBoardGenerator cbg(Size(8,6));
-        corSize = cbg.cornersSize();
-        vector<Point2f> exp_corn;    
-        chessBoard = cbg(Mat(imgSize, CV_8U, Scalar(0)), camMat, distCoeffs, exp_corn);
-        Mat_<Point2f>(corSize.height, corSize.width, (Point2f*)&exp_corn[0]).copyTo(corners);        
     };
     ~CV_CameraCalibrationBadArgTest() {} ;
 protected:    
@@ -102,6 +90,18 @@ protected:
 
 void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
 {   
+    Mat_<float> camMat(3, 3);
+    Mat_<float> distCoeffs0(1, 5);
+    
+    camMat << 300.f, 0.f, imgSize.width/2.f, 0, 300.f, imgSize.height/2.f, 0.f, 0.f, 1.f;    
+    distCoeffs0 << 1.2f, 0.2f, 0.f, 0.f, 0.f;
+    
+    ChessBoardGenerator cbg(Size(8,6));
+    corSize = cbg.cornersSize();
+    vector<Point2f> exp_corn;    
+    chessBoard = cbg(Mat(imgSize, CV_8U, Scalar(0)), camMat, distCoeffs0, exp_corn);
+    Mat_<Point2f>(corSize.height, corSize.width, (Point2f*)&exp_corn[0]).copyTo(corners);
+    
     CvMat objPts, imgPts, npoints, cameraMatrix, distCoeffs, rvecs, tvecs;
     Mat zeros(1, sizeof(CvMat), CV_8U, Scalar(0));
 

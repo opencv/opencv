@@ -115,7 +115,7 @@ static int
 _TIFFPrettyPrintField(TIFF* tif, FILE* fd, ttag_t tag,
 		      uint32 value_count, void *raw_data)
 {
-	TIFFDirectory *td = &tif->tif_dir;
+	//TIFFDirectory *td = &tif->tif_dir;
 
 	switch (tag)
 	{
