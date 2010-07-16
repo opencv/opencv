@@ -902,7 +902,7 @@ void CV_FundamentalMatTest::get_test_array_types_and_sizes( int /*test_case_idx*
 
 double CV_FundamentalMatTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    return 5e-2;
+    return 1e-2;
 }
 
 
@@ -1071,12 +1071,14 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
         double y1 = p1->data.db[i*2+1];
         double x2 = p2->data.db[i*2];
         double y2 = p2->data.db[i*2+1];
+        double n1 = 1./sqrt(x1*x1 + y1*y1 + 1);
+        double n2 = 1./sqrt(x2*x2 + y2*y2 + 1);
         double t0 = fabs(f0[0]*x2*x1 + f0[1]*x2*y1 + f0[2]*x2 +
                    f0[3]*y2*x1 + f0[4]*y2*y1 + f0[5]*y2 +
-                   f0[6]*x1 + f0[7]*y1 + f0[8]);
+                   f0[6]*x1 + f0[7]*y1 + f0[8])*n1*n2;
         double t = fabs(f[0]*x2*x1 + f[1]*x2*y1 + f[2]*x2 +
                    f[3]*y2*x1 + f[4]*y2*y1 + f[5]*y2 +
-                   f[6]*x1 + f[7]*y1 + f[8]);
+                   f[6]*x1 + f[7]*y1 + f[8])*n1*n2;
         mtfm1[i] = 1;
         mtfm2[i] = !status[i] || t0 > err_level || t < err_level;
     }
