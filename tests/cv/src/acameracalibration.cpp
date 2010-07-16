@@ -1405,7 +1405,7 @@ void CV_StereoCalibrationTest::run( int )
 		Size imgsize;
 		int total = 0;
 
-		for( size_t i = 0; i < nframes; i++ )
+		for( int i = 0; i < nframes; i++ )
 		{
 			Mat left = imread(imglist[i*2]);
 			Mat right = imread(imglist[i*2+1]);

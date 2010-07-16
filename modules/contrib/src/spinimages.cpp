@@ -1053,7 +1053,7 @@ private:
     /* filtering by geometric consistency */        
     for(int i = 0; i < matchesSize; ++i)
     {
-        size_t consistNum = 1;
+        int consistNum = 1;
         float gc = float_max;
         
         for(int j = 0; j < matchesSize; ++j)
@@ -1140,14 +1140,14 @@ private:
         }
 
     group_t allMatchesInds;
-    for(size_t i = 0; i < matchesSize; ++i)
+    for(int i = 0; i < matchesSize; ++i)
         allMatchesInds.insert(i);
     
     vector<float> buf(matchesSize);
     float *buf_beg = &buf[0];
     vector<group_t> groups;
     
-    for(size_t g = 0; g < matchesSize; ++g)
+    for(int g = 0; g < matchesSize; ++g)
     {        
         if (out) if (g % 100 == 0) *out << "G = " << g << endl;
 

@@ -66,7 +66,7 @@ void BruteForceMatcherTest::run( int )
     ts->printf( CvTS::LOG, "Matching without matrix multiplication time s: %f, us per pair: %f\n",
                genericMatcherTime*1e-6, genericMatcherTime/( descriptorsNumber*descriptorsNumber ) );
 
-    if( specMatches.size() != descriptorsNumber || genericMatches.size() != descriptorsNumber )
+    if( (int)specMatches.size() != descriptorsNumber || (int)genericMatches.size() != descriptorsNumber )
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
     for( int i=0;i<descriptorsNumber;i++ )
     {

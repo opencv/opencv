@@ -322,7 +322,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 
     const Size sizes[] = { Size(6, 6), Size(8, 6), Size(11, 12),  Size(5, 4) };
     const size_t sizes_num = sizeof(sizes)/sizeof(sizes[0]);                
-    const size_t test_num = 16;    
+    const int test_num = 16;    
     int progress = 0;
     for(int i = 0; i < test_num; ++i)
     {          
