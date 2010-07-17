@@ -61,7 +61,7 @@ static Point3f image2plane(Point2f imgpt, const Mat& R, const Mat& tvec,
     R1.col(2) = R1.col(2)*Z + tvec;
     Mat_<double> v = (cameraMatrix*R1).inv()*(Mat_<double>(3,1) << imgpt.x, imgpt.y, 1);
     double iw = fabs(v(2,0)) > DBL_EPSILON ? 1./v(2,0) : 0;
-    return Point3f(v(0,0)*iw, v(1,0)*iw, Z);
+    return Point3f((float)(v(0,0)*iw), (float)(v(1,0)*iw), (float)Z);
 }
 
 
@@ -192,7 +192,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
                 projectPoints(Mat(tempobj), rvec, tvec, cameraMatrix, Mat(), tempimg);
                 
                 Point2f a = imgpt[nearestIdx], b = tempimg[0], d1 = b - a, d2 = m - a;
-                float n1 = norm(d1), n2 = norm(d2);
+                float n1 = (float)norm(d1), n2 = (float)norm(d2);
                 if( n1*n2 < eps )
                     imgpt[npt] = a;
                 else
@@ -458,7 +458,7 @@ int main(int argc, char** argv)
     vector<Point3f> box, boardPoints;
     
     readModelViews(indexFilename, box, capturedImgList, roiList, poseList);
-    calcChessboardCorners(boardSize, squareSize, boardPoints);
+    calcChessboardCorners(boardSize, (float)squareSize, boardPoints);
     int frameIdx = 0;
     bool grabNext = !imageList.empty();
 	

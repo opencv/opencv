@@ -285,8 +285,9 @@ float dispRMS( const Mat& computedDisp, const Mat& groundTruthDisp, const Mat& m
   Calculate fraction of bad matching pixels.
 */
 float badMatchPxlsFraction( const Mat& computedDisp, const Mat& groundTruthDisp, const Mat& mask,
-                              int badThresh = EVAL_BAD_THRESH )
+                            float _badThresh = EVAL_BAD_THRESH )
 {
+    int badThresh = cvRound(_badThresh);
     checkTypeAndSizeOfDisp( groundTruthDisp, 0 );
     Size sz = groundTruthDisp.size();
     checkTypeAndSizeOfDisp( computedDisp, &sz );
@@ -477,10 +478,10 @@ void CV_StereoMatchingTest::run(int)
     ts->set_failed_test_info( code );
 }
 
-void calcErrors( const Mat& leftImg, const Mat& rightImg,
+void calcErrors( const Mat& leftImg, const Mat& /*rightImg*/,
                  const Mat& trueLeftDisp, const Mat& trueRightDisp,
                  const Mat& trueLeftUnknDispMask, const Mat& trueRightUnknDispMask,
-                 const Mat& calcLeftDisp, const Mat& calcRightDisp,
+                 const Mat& calcLeftDisp, const Mat& /*calcRightDisp*/,
                  vector<float>& rms, vector<float>& badPxlsFractions,
                  const QualityEvalParams& qualityEvalParams )
 {
@@ -686,7 +687,7 @@ protected:
     }
 
     virtual int runStereoMatchingAlgorithm( const Mat& _leftImg, const Mat& _rightImg,
-                   Mat& leftDisp, Mat& rightDisp, int caseIdx )
+                   Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
@@ -805,7 +806,7 @@ protected:
     }
 
     virtual int runStereoMatchingAlgorithm( const Mat& leftImg, const Mat& rightImg,
-                   Mat& leftDisp, Mat& rightDisp, int caseIdx )
+                   Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );

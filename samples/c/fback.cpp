@@ -6,7 +6,7 @@
 using namespace cv;
 
 void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
-                    double scale, const Scalar& color)
+                    double, const Scalar& color)
 {
     for(int y = 0; y < cflowmap.rows; y += step)
         for(int x = 0; x < cflowmap.cols; x += step)
@@ -18,7 +18,7 @@ void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
         }
 }
 
-int main(int argc, char** argv)
+int main(int, char**)
 {
     VideoCapture cap(0);
     

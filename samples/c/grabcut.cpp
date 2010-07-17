@@ -149,7 +149,7 @@ void GCApplication::setLblsInMask( int flags, Point p, bool isPr )
     }
 }
 
-void GCApplication::mouseClick( int event, int x, int y, int flags, void* param )
+void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
 {
     // TODO add bad args check
     switch( event )

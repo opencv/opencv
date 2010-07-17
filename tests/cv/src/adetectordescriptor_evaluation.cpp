@@ -1500,10 +1500,8 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
     int poseCount = fn["poseCount"];
 
     if (trainImagesList.length () == 0 )
-    {
         return;
-        fs.release ();
-    }
+
     fs.release ();
 
     readAllDatasetsRunParams();

@@ -14,7 +14,7 @@ IplImage* markers = 0;
 IplImage* img0 = 0, *img = 0, *img_gray = 0, *wshed = 0;
 CvPoint prev_pt = {-1,-1};
 
-void on_mouse( int event, int x, int y, int flags, void* param )
+void on_mouse( int event, int x, int y, int flags, void* )
 {
     if( !img )
         return;

@@ -49,6 +49,11 @@
 extern "C" {
 #endif
 
+#if !defined __cplusplus && defined _MSC_VER && _MSC_VER >= 1400
+    #pragma warning(push)
+    #pragma warning(disable: 4100)
+#endif
+
 /* Find fundamental matrix */
 CV_INLINE  void  cvFindFundamentalMatrix( int* points1, int* points2,
                             int numpoints, int CV_UNREFERENCED(method), float* matrix )
@@ -270,6 +275,9 @@ CV_INLINE void  cvProjectPointsSimple( int point_count, CvPoint3D64f* _object_po
 
 #define cvConvertPointsHomogenious cvConvertPointsHomogeneous
 
+#if !defined __cplusplus && defined _MSC_VER && _MSC_VER >= 1400
+    #pragma warning(pop)
+#endif
 
 #ifdef __cplusplus
 }

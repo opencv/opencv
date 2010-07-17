@@ -10,7 +10,7 @@ int levels = 3;
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
 
-void on_trackbar(int pos, void*)
+void on_trackbar(int, void*)
 {
 	Mat cnt_img = Mat::zeros(w, w, CV_8UC3);
     int _levels = levels - 3;
@@ -20,7 +20,7 @@ void on_trackbar(int pos, void*)
     imshow("contours", cnt_img);
 }
 
-int main( int argc, char** argv )
+int main( int, char** )
 {
     Mat img = Mat::zeros(w, w, CV_8UC1);
 

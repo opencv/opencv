@@ -1,5 +1,7 @@
 //Calonder descriptor sample
+#include <stdio.h>
 
+#if 0
 #include <cxcore.h>
 #include <cv.h>
 #include <cvaux.h>
@@ -84,13 +86,14 @@ float CalcAffineReprojectionError(const vector<CvPoint>& p1, const vector<CvPoin
     
     return error;
 }
+#endif
 
-
-int main( int argc, char** argv )
+int main( int, char** )
 {
 	printf("calonder_sample is under construction\n");
 	return 0;
 
+#if 0
 	IplImage* test_image;
 	IplImage* train_image;
 	if (argc < 3)
@@ -302,4 +305,5 @@ int main( int argc, char** argv )
 	cvReleaseImage(&test_image);
 
 	return 0;
+#endif
 }

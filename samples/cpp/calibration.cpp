@@ -54,7 +54,7 @@ static double computeReprojectionErrors(
                       cameraMatrix, distCoeffs, imagePoints2);
         err = norm(Mat(imagePoints[i]), Mat(imagePoints2), CV_L1 );
         int n = (int)objectPoints[i].size();
-        perViewErrors[i] = err/n;
+        perViewErrors[i] = (float)(err/n);
         totalErr += err;
         totalPoints += n;
     }
@@ -94,8 +94,7 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
     calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
                     distCoeffs, rvecs, tvecs, flags);
     
-    bool ok = checkRange( cameraMatrix, CV_CHECK_QUIET ) &&
-            checkRange( distCoeffs, CV_CHECK_QUIET );
+    bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
     
     totalAvgErr = computeReprojectionErrors(objectPoints, imagePoints,
                 rvecs, tvecs, cameraMatrix, distCoeffs, reprojErrs);

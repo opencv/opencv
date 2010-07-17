@@ -63,6 +63,11 @@ extern "C" {
     #define CV_UNREFERENCED(arg) arg
 #endif
 
+#if !defined __cplusplus && defined _MSC_VER && _MSC_VER >= 1400
+    #pragma warning(push)
+    #pragma warning(disable: 4100)
+#endif
+
 typedef int CvMatType;
 typedef int CvDisMaskType;
 typedef CvMat CvMatArray;
@@ -870,6 +875,10 @@ CV_INLINE void  cvUnDistort( const CvArr* src, CvArr* dst,
     a[2] = data.fl[2]; a[5] = data.fl[3];
     cvUnDistortOnce( src, dst, a, data.fl + 4, 1 );
 }
+
+#if !defined __cplusplus && defined _MSC_VER && _MSC_VER >= 1400
+    #pragma warning(pop)
+#endif
 
 #ifdef __cplusplus
 }
