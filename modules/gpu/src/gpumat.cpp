@@ -68,26 +68,42 @@ void GpuMat::copyTo( GpuMat& m ) const
     cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToDevice) );
     cudaSafeCall( cudaThreadSynchronize() );
 }
-            
+
 void GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const
-{    
+{
     CV_Assert(!"Not implemented");
 }
- 
+
 void GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
 {
     CV_Assert(!"Not implemented");
 }
 
-GpuMat& GpuMat::operator = (const Scalar& /*s*/)
+GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    CV_Assert(!"Not implemented"); 
+    CV_Assert(!"Not implemented");
+    cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
     return *this;
 }
 
-GpuMat& GpuMat::setTo(const Scalar& /*s*/, const GpuMat& /*mask*/)
+GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 {
-    CV_Assert(!"Not implemented");    
+    CV_Assert(!"Not implemented");
+
+    CV_DbgAssert(!this->empty());
+
+    this->channels();
+    this->depth();
+
+    if (mask.empty())
+    {
+        cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
+    }
+    else
+    {
+        cv::gpu::impl::set_to_with_mask(*this, s.val, mask, this->depth(), this->channels());
+    }
+
     return *this;
 }
 
@@ -147,8 +163,8 @@ void GpuMat::create(int _rows, int _cols, int _type)
         rows = _rows;
         cols = _cols;
 
-        size_t esz = elemSize();                
-        
+        size_t esz = elemSize();
+
         void *dev_ptr;
         cudaSafeCall( cudaMallocPitch(&dev_ptr, &step, esz * cols, rows) );
 
@@ -157,10 +173,10 @@ void GpuMat::create(int _rows, int _cols, int _type)
 
         int64 _nettosize = (int64)step*rows;
         size_t nettosize = (size_t)_nettosize;
-                
+
         datastart = data = (uchar*)dev_ptr;
-        dataend = data + nettosize;            
-        
+        dataend = data + nettosize;
+
         refcount = (int*)fastMalloc(sizeof(*refcount));
         *refcount = 1;
     }
@@ -171,7 +187,7 @@ void GpuMat::release()
     if( refcount && CV_XADD(refcount, -1) == 1 )
     {
         fastFree(refcount);
-        cudaSafeCall( cudaFree(datastart) );        
+        cudaSafeCall( cudaFree(datastart) );
     }
     data = datastart = dataend = 0;
     step = rows = cols = 0;

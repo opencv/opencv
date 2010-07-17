@@ -48,18 +48,21 @@
 namespace cv
 {
     namespace gpu
-    {   
+    {
         typedef unsigned char uchar;
         typedef unsigned short ushort;
-        typedef unsigned int uint;        
+        typedef unsigned int uint;
 
         extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
 
         namespace impl
-        {   
+        {
             static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
             extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, DevMem2D& disp, int maxdisp, DevMem2D_<uint>& minSSD_buf);
+
+            extern "C" void set_to_without_mask (const DevMem2D& mat, const double * scalar, int depth, int channels);
+            extern "C" void set_to_with_mask    (const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int depth, int channels);
         }
     }
 }

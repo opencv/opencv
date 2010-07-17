@@ -41,23 +41,23 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/gpu/stream_access.hpp"
+//#include "opencv2/gpu/stream_access.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
 
 
-cv::gpu::CudaStream::CudaStream() : impl( (Impl*)fastMalloc(sizeof(Impl)) )
+cv::gpu::CudaStream::CudaStream() //: impl( (Impl*)fastMalloc(sizeof(Impl)) )
 {
     //cudaSafeCall( cudaStreamCreate( &impl->stream) );
 }
-cv::gpu::CudaStream::~CudaStream() 
-{ 
+cv::gpu::CudaStream::~CudaStream()
+{
     if (impl)
     {
         cudaSafeCall( cudaStreamDestroy( *(cudaStream_t*)impl ) );
         cv::fastFree( impl );
-    }         
+    }
 }
 
 bool cv::gpu::CudaStream::queryIfComplete()
@@ -70,8 +70,8 @@ bool cv::gpu::CudaStream::queryIfComplete()
     //if (err == cudaErrorNotReady)
     //    return false;
 
-    ////cudaErrorInvalidResourceHandle  
-    //cudaSafeCall( err );    
+    ////cudaErrorInvalidResourceHandle
+    //cudaSafeCall( err );
     return true;
 }
 void cv::gpu::CudaStream::waitForCompletion()
@@ -81,7 +81,7 @@ void cv::gpu::CudaStream::waitForCompletion()
 
 void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, Mat& dst)
 {
-//    cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToHost, 
+//    cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToHost,
 }
 void cv::gpu::CudaStream::enqueueUpload(const Mat& src, GpuMat& dst)
 {
@@ -109,4 +109,4 @@ void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int typ
 
 //struct cudaStream_t& cv::gpu::CudaStream::getStream() { return stream; }
 
-    
+
