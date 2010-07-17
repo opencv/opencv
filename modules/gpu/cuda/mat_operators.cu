@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include <stddef.h>
 #include "cuda_shared.hpp"
 #include "cuda_runtime.h"
 
@@ -47,11 +48,30 @@ __constant__ float scalar_d[4];
 
 namespace mat_operators
 {
+
+    template <typename T, int channels, int count = channels>
+    struct unroll
+    {
+        __device__ static void unroll_set(T * mat, size_t i)
+        {
+            mat[i] = static_cast<T>(scalar_d[i % channels]);
+            unroll<T, channels, count - 1>::unroll_set(mat, i+1);
+        }
+    };
+
+    template <typename T, int channels>
+    struct unroll<T,channels,0>
+    {
+        __device__ static void unroll_set(T * , size_t){}
+    };
+
+
+
     template <typename T, int channels>
     __global__ void kernel_set_to_without_mask(T * mat)
     {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        mat[i * sizeof(T)] = static_cast<T>(scalar_d[i % channels]);
+        size_t i = (blockIdx.x * blockDim.x + threadIdx.x) * sizeof(T);
+        unroll<T, channels>::unroll_set(mat, i);
     }
 }
 
