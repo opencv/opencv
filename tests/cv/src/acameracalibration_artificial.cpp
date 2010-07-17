@@ -425,4 +425,4 @@ protected:
     }
 };   
 
-CV_CalibrateCameraArtificialTest calibrateCameraArtificialTest;
+//CV_CalibrateCameraArtificialTest calibrateCameraArtificialTest;

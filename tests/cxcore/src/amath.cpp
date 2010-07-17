@@ -1784,7 +1784,7 @@ void CxCore_TransformTest::prepare_to_validation( int )
     cvTsTransform( &test_mat[INPUT][0], &test_mat[REF_OUTPUT][0], transmat, shift );
 }
 
-CxCore_TransformTest transform_test;
+//CxCore_TransformTest transform_test;
 
 
 ///////////////// PerspectiveTransform /////////////////////
