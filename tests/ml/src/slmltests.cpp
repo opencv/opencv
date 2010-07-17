@@ -105,8 +105,8 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     f1.close();
     f2.close();
     // delete temporary files
-    unlink( fname1 );
-    unlink( fname2 );
+    remove( fname1 );
+    remove( fname2 );
 
     // 2. compare responses
     CV_Assert( test_resps1.size() == test_resps2.size() );

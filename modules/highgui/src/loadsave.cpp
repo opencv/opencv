@@ -332,7 +332,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     if( !decoder->readHeader() )
     {
         if( filename )
-            unlink(filename);
+            remove(filename);
         return 0;
     }
 
@@ -374,7 +374,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     bool code = decoder->readData( *data );
     if( filename )
-        unlink(filename);
+        remove(filename);
 
     if( !code )
     {
@@ -441,7 +441,7 @@ bool imencode( const string& ext, const Mat& image,
         fseek( f, 0, SEEK_SET );
         buf.resize(fread( &buf[0], 1, buf.size(), f ));
         fclose(f);
-        unlink(filename);
+        remove(filename);
     }
     return code;
 }

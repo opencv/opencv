@@ -425,11 +425,7 @@ void CV_IOTest::run( int )
         }
         
         fs.release();
-        #ifdef _MSC_VER
-            _unlink(filename);
-        #else
-            unlink(filename);
-        #endif
+        remove(filename);
     }
 }
 

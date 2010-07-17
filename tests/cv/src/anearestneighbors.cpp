@@ -511,7 +511,7 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
     index->save( filename );
     
     createIndex( data, SavedIndexParams(filename));
-    unlink( filename );
+    remove( filename );
 }
 
 CV_LSHTest lsh_test;
