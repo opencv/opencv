@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!----------------------------------------------------------------------------
+<!--
   45x11 Eye pair detector computed with 7000 positive samples
 
 //////////////////////////////////////////////////////////////////////////
@@ -81,7 +81,7 @@ More information can be found at http://mozart.dis.ulpgc.es/Gias/modesto_eng.htm
 COMMERCIAL USE:
 If you have any commercial interest in this work please contact 
 mcastrillon@iusiani.ulpgc.es
------------------------------------------------------------------------->
+-->
 <opencv_storage>
 <parojos_7000pos_15000neg_45x11 type_id="opencv-haar-classifier">
   <size>

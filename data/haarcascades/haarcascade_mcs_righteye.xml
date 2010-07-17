@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!----------------------------------------------------------------------------
+<!--
   18x12 Right eye (in the image) detector computed with 7000 positive samples
 
 //////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ More information can be found at http://mozart.dis.ulpgc.es/Gias/modesto_eng.htm
 COMMERCIAL USE:
 If you have any commercial interest in this work please contact 
 mcastrillon@iusiani.ulpgc.es
------------------------------------------------------------------------->
+-->
 
 <opencv_storage>
 <ojoD type_id="opencv-haar-classifier">
