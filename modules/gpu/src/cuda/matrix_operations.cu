@@ -41,6 +41,7 @@
 //M*/
 
 #include <stddef.h>
+#include <iostream>
 #include "cuda_shared.hpp"
 #include "cuda_runtime.h"
 
@@ -88,42 +89,47 @@ namespace mat_operators
 }
 
 
-extern "C" void cv::gpu::impl::set_to_with_mask(const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int depth, int channels)
+extern "C" void cv::gpu::impl::set_to_with_mask(const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int elemSize1, int channels)
 {
-    scalar_d[0] = scalar[0];
-    scalar_d[1] = scalar[1];
-    scalar_d[2] = scalar[2];
-    scalar_d[3] = scalar[3];
+    // download scalar to constant memory
+    float data[4];
+    data[0] = scalar[0];
+    data[1] = scalar[1];
+    data[2] = scalar[2];
+    data[3] = scalar[3];
+    cudaMemcpyToSymbol(scalar_d, data, sizeof(data));
 
     dim3 numBlocks(mat.rows * mat.step / 256, 1, 1);
     dim3 threadsPerBlock(256);
 
     if (channels == 1)
     {
-        if (depth == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  1><<<numBlocks,threadsPerBlock>>>(mat.ptr, (float *)mask.ptr);
-        if (depth == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 1><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (float *)mask.ptr);
-        if (depth == 4) ::mat_operators::kernel_set_to_with_mask<unsigned int,   1><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  1><<<numBlocks,threadsPerBlock>>>(mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 1><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<unsigned int,   1><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr, (float *)mask.ptr);
     }
     if (channels == 2)
     {
-        if (depth == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  2><<<numBlocks,threadsPerBlock>>>(mat.ptr, (float *)mask.ptr);
-        if (depth == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 2><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (float *)mask.ptr);
-        if (depth == 4) ::mat_operators::kernel_set_to_with_mask<unsigned int,   2><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  2><<<numBlocks,threadsPerBlock>>>(mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 2><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<unsigned int,   2><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr, (float *)mask.ptr);
     }
     if (channels == 3)
     {
-        if (depth == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  3><<<numBlocks,threadsPerBlock>>>(mat.ptr, (float *)mask.ptr);
-        if (depth == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 3><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (float *)mask.ptr);
-        if (depth == 4) ::mat_operators::kernel_set_to_with_mask<unsigned int,   3><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  3><<<numBlocks,threadsPerBlock>>>(mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 3><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (float *)mask.ptr);
+        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<unsigned int,   3><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr, (float *)mask.ptr);
     }
 }
 
-extern "C" void cv::gpu::impl::set_to_without_mask(const DevMem2D& mat, const double * scalar, int depth, int channels)
+extern "C" void cv::gpu::impl::set_to_without_mask(const DevMem2D& mat, const double * scalar, int elemSize1, int channels)
 {
-    scalar_d[0] = scalar[0];
-    scalar_d[1] = scalar[1];
-    scalar_d[2] = scalar[2];
-    scalar_d[3] = scalar[3];
+    float data[4];
+    data[0] = scalar[0];
+    data[1] = scalar[1];
+    data[2] = scalar[2];
+    data[3] = scalar[3];
+    cudaMemcpyToSymbol(scalar_d, data, sizeof(data));
 
     int numBlocks = mat.rows * mat.step / 256;
 
@@ -131,20 +137,20 @@ extern "C" void cv::gpu::impl::set_to_without_mask(const DevMem2D& mat, const do
 
     if (channels == 1)
     {
-        if (depth == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  1><<<numBlocks,threadsPerBlock>>>(mat.ptr);
-        if (depth == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 1><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr);
-        if (depth == 4) ::mat_operators::kernel_set_to_without_mask<unsigned int,   1><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr);
+        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  1><<<numBlocks,threadsPerBlock>>>(mat.ptr);
+        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 1><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr);
+        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<unsigned int,   1><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr);
     }
     if (channels == 2)
     {
-        if (depth == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  2><<<numBlocks,threadsPerBlock>>>(mat.ptr);
-        if (depth == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 2><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr);
-        if (depth == 4) ::mat_operators::kernel_set_to_without_mask<unsigned int,   2><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr);
+        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  2><<<numBlocks,threadsPerBlock>>>(mat.ptr);
+        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 2><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr);
+        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<unsigned int,   2><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr);
     }
     if (channels == 3)
     {
-        if (depth == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  3><<<numBlocks,threadsPerBlock>>>(mat.ptr);
-        if (depth == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 3><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr);
-        if (depth == 4) ::mat_operators::kernel_set_to_without_mask<unsigned int,   3><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr);
+        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  3><<<numBlocks,threadsPerBlock>>>(mat.ptr);
+        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 3><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr);
+        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<unsigned int,   3><<<numBlocks,threadsPerBlock>>>((unsigned int *)mat.ptr);
     }
 }

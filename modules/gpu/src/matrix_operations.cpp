@@ -111,23 +111,23 @@ void cv::gpu::GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/,
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
+    cv::gpu::impl::set_to_without_mask(*this, s.val, this->elemSize1(), this->channels());
     return *this;
 }
 
 GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 {
-    CV_Assert(mask.type() == CV_8U);
+    //CV_Assert(mask.type() == CV_8U);
 
     CV_DbgAssert(!this->empty());
 
     if (mask.empty())
     {
-        cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
+        cv::gpu::impl::set_to_without_mask(*this, s.val, this->elemSize1(), this->channels());
     }
     else
     {
-        cv::gpu::impl::set_to_with_mask(*this, s.val, mask, this->depth(), this->channels());
+        cv::gpu::impl::set_to_with_mask(*this, s.val, mask, this->elemSize1(), this->channels());
     }
 
     return *this;
