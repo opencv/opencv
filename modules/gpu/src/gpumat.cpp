@@ -81,14 +81,13 @@ void GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/, double /
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    CV_Assert(!"Not implemented");
     cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
     return *this;
 }
 
 GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 {
-    CV_Assert(!"Not implemented");
+    CV_Assert(mask.type() == CV_32F);
 
     CV_DbgAssert(!this->empty());
 
