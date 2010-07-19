@@ -1,6 +1,7 @@
-set(name "gpu")
-set(DEPS "opencv_core")
 
+set(name "gpu")	
+set(DEPS "opencv_core")
+	
 
 set(the_target "opencv_${name}")
 
@@ -9,25 +10,25 @@ project(${the_target})
 add_definitions(-DCVAPI_EXPORTS)
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-					"${CMAKE_CURRENT_SOURCE_DIR}/cuda"
+					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"
 					"${CMAKE_CURRENT_SOURCE_DIR}/src"
 					"${CMAKE_CURRENT_BINARY_DIR}")
 
 foreach(d ${DEPS})
-	if(${d} MATCHES "opencv_")
+	if(${d} MATCHES "opencv_")			
 		string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-		include_directories("${d_dir}/include")
+		include_directories("${d_dir}/include")			
 	endif()
-endforeach()
+endforeach()		
 
 file(GLOB lib_srcs "src/*.cpp")
 file(GLOB lib_int_hdrs "src/*.h*")
-file(GLOB lib_cuda "cuda/*.cu")
-file(GLOB lib_cuda_hdrs "cuda/*.h*")
+file(GLOB lib_cuda "src/cuda/*.cu")
+file(GLOB lib_cuda_hdrs "src/cuda/*.h*")	
 source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 source_group("Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
 
-file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
+file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")		
 source_group("Include" FILES ${lib_hdrs})
 
 if (HAVE_CUDA)
@@ -35,13 +36,13 @@ if (HAVE_CUDA)
 	link_directories(${CUDA_LIBRARIES})
 
 	if (UNIX OR APPLE)
-		set (CUDA_NVCC_FLAGS "-Xcompiler;-fPIC")
-	endif()
-
+		set (CUDA_NVCC_FLAGS "-Xcompiler;-fPIC;")
+	endif() 
+			
 	CUDA_COMPILE(cuda_objs ${lib_cuda})
 	#CUDA_BUILD_CLEAN_TARGET()
 endif()
-
+	
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${cuda_objs})
 
@@ -50,7 +51,7 @@ if(PCHSupport_FOUND)
 	if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
 		if(${CMAKE_GENERATOR} MATCHES "Visual*")
 			set(${the_target}_pch "src/precomp.cpp")
-		endif()
+		endif()            
 		add_native_precompiled_header(${the_target} ${pch_header})
 	elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
 		add_precompiled_header(${the_target} ${pch_header})

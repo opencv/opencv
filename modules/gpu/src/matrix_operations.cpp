@@ -45,23 +45,53 @@
 using namespace cv;
 using namespace cv::gpu;
 
+////////////////////////////////////////////////////////////////////////
 //////////////////////////////// GpuMat ////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 
-void GpuMat::upload(const Mat& m)
+
+#if !defined (HAVE_CUDA)
+
+namespace cv
+{
+    namespace gpu
+    {
+        void GpuMat::upload(const Mat& /*m*/) { throw_nogpu(); }
+        void GpuMat::download(cv::Mat& /*m*/) const { throw_nogpu(); }
+        void GpuMat::copyTo( GpuMat& /*m*/ ) const { throw_nogpu(); }
+        void GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const { throw_nogpu(); }
+        void GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const { throw_nogpu(); }
+        GpuMat& GpuMat::operator = (const Scalar& /*s*/) { throw_nogpu(); return *this; }
+        GpuMat& GpuMat::setTo(const Scalar& /*s*/, const GpuMat& /*mask*/) { throw_nogpu(); return *this; }
+        GpuMat GpuMat::reshape(int /*new_cn*/, int /*new_rows*/) const { throw_nogpu(); return GpuMat(); }
+        void GpuMat::create(int /*_rows*/, int /*_cols*/, int /*_type*/) { throw_nogpu(); }
+        void GpuMat::release() { throw_nogpu(); }
+
+        void MatPL::create(int /*_rows*/, int /*_cols*/, int /*_type*/) { throw_nogpu(); }
+        void MatPL::release() { throw_nogpu(); }
+    }
+
+}
+
+
+#else /* !defined (HAVE_CUDA) */
+
+
+void cv::gpu::GpuMat::upload(const Mat& m)
 {
     CV_DbgAssert(!m.empty());
     create(m.size(), m.type());
     cudaSafeCall( cudaMemcpy2D(data, step, m.data, m.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
-void GpuMat::download(cv::Mat& m) const
+void cv::gpu::GpuMat::download(cv::Mat& m) const
 {
     CV_DbgAssert(!this->empty());
     m.create(size(), type());
     cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
 }
 
-void GpuMat::copyTo( GpuMat& m ) const
+void cv::gpu::GpuMat::copyTo( GpuMat& m ) const
 {
     CV_DbgAssert(!this->empty());
     m.create(size(), type());
@@ -69,45 +99,30 @@ void GpuMat::copyTo( GpuMat& m ) const
     cudaSafeCall( cudaThreadSynchronize() );
 }
 
-void GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const
+void cv::gpu::GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const
+{    
+    CV_Assert(!"Not implemented");
+}
+
+void cv::gpu::GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
 {
     CV_Assert(!"Not implemented");
 }
 
-void GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
+GpuMat& cv::gpu::GpuMat::operator = (const Scalar& /*s*/)
 {
-    CV_Assert(!"Not implemented");
-}
-
-GpuMat& GpuMat::operator = (const Scalar& s)
-{
-    cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
+    CV_Assert(!"Not implemented"); 
     return *this;
 }
 
-GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
+GpuMat& cv::gpu::GpuMat::setTo(const Scalar& /*s*/, const GpuMat& /*mask*/)
 {
-    CV_Assert(mask.type() == CV_32F);
-
-    CV_DbgAssert(!this->empty());
-
-    this->channels();
-    this->depth();
-
-    if (mask.empty())
-    {
-        cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
-    }
-    else
-    {
-        cv::gpu::impl::set_to_with_mask(*this, s.val, mask, this->depth(), this->channels());
-    }
-
+    CV_Assert(!"Not implemented");    
     return *this;
 }
 
 
-GpuMat GpuMat::reshape(int new_cn, int new_rows) const
+GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
 {
     GpuMat hdr = *this;
 
@@ -148,7 +163,7 @@ GpuMat GpuMat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-void GpuMat::create(int _rows, int _cols, int _type)
+void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 {
     _type &= TYPE_MASK;
     if( rows == _rows && cols == _cols && type() == _type && data )
@@ -162,7 +177,7 @@ void GpuMat::create(int _rows, int _cols, int _type)
         rows = _rows;
         cols = _cols;
 
-        size_t esz = elemSize();
+        size_t esz = elemSize();                
 
         void *dev_ptr;
         cudaSafeCall( cudaMallocPitch(&dev_ptr, &step, esz * cols, rows) );
@@ -174,19 +189,19 @@ void GpuMat::create(int _rows, int _cols, int _type)
         size_t nettosize = (size_t)_nettosize;
 
         datastart = data = (uchar*)dev_ptr;
-        dataend = data + nettosize;
+        dataend = data + nettosize;            
 
         refcount = (int*)fastMalloc(sizeof(*refcount));
         *refcount = 1;
     }
 }
 
-void GpuMat::release()
+void cv::gpu::GpuMat::release()
 {
     if( refcount && CV_XADD(refcount, -1) == 1 )
     {
         fastFree(refcount);
-        cudaSafeCall( cudaFree(datastart) );
+        cudaSafeCall( cudaFree(datastart) );        
     }
     data = datastart = dataend = 0;
     step = rows = cols = 0;
@@ -194,7 +209,52 @@ void GpuMat::release()
 }
 
 
+///////////////////////////////////////////////////////////////////////
+//////////////////////////////// MatPL ////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 
+void cv::gpu::MatPL::create(int _rows, int _cols, int _type)
+{
+    _type &= TYPE_MASK;
+    if( rows == _rows && cols == _cols && type() == _type && data )
+        return;
+    if( data )
+        release();
+    CV_DbgAssert( _rows >= 0 && _cols >= 0 );
+    if( _rows > 0 && _cols > 0 )
+    {
+        flags = Mat::MAGIC_VAL + Mat::CONTINUOUS_FLAG + _type;
+        rows = _rows;
+        cols = _cols;
+        step = elemSize()*cols;
+        int64 _nettosize = (int64)step*rows;
+        size_t nettosize = (size_t)_nettosize;
+        if( _nettosize != (int64)nettosize )
+            CV_Error(CV_StsNoMem, "Too big buffer is allocated");
+        size_t datasize = alignSize(nettosize, (int)sizeof(*refcount));
 
+        //datastart = data = (uchar*)fastMalloc(datasize + sizeof(*refcount));        
+        void *ptr;
+        cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) );
 
+        datastart = data =  (uchar*)ptr;        
+        dataend = data + nettosize;       
 
+        refcount = (int*)cv::fastMalloc(sizeof(*refcount));
+        *refcount = 1;
+    }
+}
+
+void cv::gpu::MatPL::release()
+{
+    if( refcount && CV_XADD(refcount, -1) == 1 )
+    {
+        cudaSafeCall( cudaFreeHost(datastart ) );
+        fastFree(refcount);
+    }
+    data = datastart = dataend = 0;
+    step = rows = cols = 0;
+    refcount = 0;
+}
+
+#endif /* !defined (HAVE_CUDA) */

@@ -48,12 +48,13 @@ namespace cv
     namespace gpu
     {
         // Simple lightweight structure that encapsulates image ptr on device, its pitch and its sizes.
-        // It is intended to pass to nvcc-compiled code.
+        // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
         template<typename T = unsigned char>
         struct DevMem2D_
         {
-            enum { elem_size = sizeof(T) };
+            typedef T elem_t;
+            enum { elem_size = sizeof(elem_t) };
 
             int cols;
             int rows;

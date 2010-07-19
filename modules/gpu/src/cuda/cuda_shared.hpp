@@ -40,64 +40,41 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#ifndef __OPENCV_CUDA_SHARED_HPP__
+#define __OPENCV_CUDA_SHARED_HPP__
 
-using namespace cv;
-using namespace cv::gpu;
+#include "opencv2/gpu/devmem2d.hpp"
+#include "cuda_runtime_api.h"   
 
-
-#if !defined (HAVE_CUDA)
-
-CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
-CV_EXPORTS string cv::gpu::getDeviceName(int /*device*/)  { throw_nogpu(); return 0; } 
-CV_EXPORTS void cv::gpu::setDevice(int /*device*/) { throw_nogpu(); } 
-CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
-CV_EXPORTS void cv::gpu::getComputeCapability(int /*device*/, int* /*major*/, int* /*minor*/) { throw_nogpu(); } 
-CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { throw_nogpu(); return 0; } 
-
-
-#else /* !defined (HAVE_CUDA) */
-
-CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount()
+namespace cv
 {
-    int count;
-    cudaSafeCall( cudaGetDeviceCount( &count ) );
-    return count;
+    namespace gpu
+    {   
+        typedef unsigned char uchar;
+        typedef unsigned short ushort;
+        typedef unsigned int uint;        
+
+        extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
+
+        namespace impl
+        {   
+            static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
+
+            extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, DevMem2D& disp, int maxdisp, DevMem2D_<uint>& minSSD_buf);
+        }
+    }
 }
 
-CV_EXPORTS string cv::gpu::getDeviceName(int device)
-{
-    cudaDeviceProp prop;
-    cudaSafeCall( cudaGetDeviceProperties( &prop, device) );
-    return prop.name;
-}
-
-CV_EXPORTS void cv::gpu::setDevice(int device)
-{
-    cudaSafeCall( cudaSetDevice( device ) );
-}
-CV_EXPORTS int cv::gpu::getDevice()
-{
-    int device;    
-    cudaSafeCall( cudaGetDevice( &device ) );
-    return device;
-}
-
-CV_EXPORTS void cv::gpu::getComputeCapability(int device, int* major, int* minor)
-{
-    cudaDeviceProp prop;    
-    cudaSafeCall( cudaGetDeviceProperties( &prop, device) );
-
-    *major = prop.major;
-    *minor = prop.minor;
-}
-
-CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
-{
-    cudaDeviceProp prop;
-    cudaSafeCall( cudaGetDeviceProperties( &prop, device ) );
-    return prop.multiProcessorCount;
-}
-
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__);
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__) 
 #endif
 
+    static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    {
+        if( cudaSuccess != err) 
+            cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__, func);
+    }
+
+#endif /* __OPENCV_CUDA_SHARED_HPP__ */

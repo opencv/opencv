@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other GpuMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -40,35 +40,25 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SHARED_HPP__
-#define __OPENCV_CUDA_SHARED_HPP__
+#ifndef __OPENCV_GPU_STREAM_ACCESSOR_HPP__
+#define __OPENCV_GPU_STREAM_ACCESSOR_HPP__
 
-#include "opencv2/gpu/devmem2d.hpp"
+#include "opencv2/gpu/gpu.hpp"
+#include "cuda_runtime_api.h"
 
 namespace cv
 {
     namespace gpu
     {
-        typedef unsigned char uchar;
-        typedef unsigned short ushort;
-        typedef unsigned int uint;
-
-        extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
-
-        namespace impl
+        // This is only header file that depends on Cuda. All other headers are independent.
+        // So if you use OpenCV binaries you do noot need to install Cuda Toolkit.
+        // But of you wanna use GPU by yourself, may get cuda stream instance using the class below.
+        // In this case you have to install Cuda Toolkit.
+        struct StreamAccessor
         {
-            static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
-
-            extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, DevMem2D& disp, int maxdisp, DevMem2D_<uint>& minSSD_buf);
-
-            extern "C" void set_to_without_mask (const DevMem2D& mat, const double * scalar, int depth, int channels);
-            extern "C" void set_to_with_mask    (const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int depth, int channels);
-        }
+            CV_EXPORTS static cudaStream_t getStream(const CudaStream& stream);
+        };
     }
 }
 
-#ifdef __CUDACC__
-    #define cudaSafeCall(expr) { cudaError_t err = expr; if( cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__); }
-#endif
-
-#endif /* __OPENCV_CUDA_SHARED_HPP__ */
+#endif /* __OPENCV_GPU_STREAM_ACCESSOR_HPP__ */

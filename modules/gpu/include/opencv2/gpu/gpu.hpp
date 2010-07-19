@@ -52,15 +52,20 @@ namespace cv
     {   
         //////////////////////////////// Initialization ////////////////////////
                  
+        //! This is the only function that do not throw exceptions if the library is compiled without Cuda.
         CV_EXPORTS int getCudaEnabledDeviceCount();
+
+        //! Functions below throw cv::Expception if the library is compiled without Cuda.
         CV_EXPORTS string getDeviceName(int device);
         CV_EXPORTS void setDevice(int device);        
+        CV_EXPORTS int getDevice();    
 
         CV_EXPORTS void getComputeCapability(int device, int* major, int* minor);
         CV_EXPORTS int getNumberOfSMs(int device);
  
         //////////////////////////////// GpuMat ////////////////////////////////
 
+        //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.        
         class CV_EXPORTS GpuMat
         {
         public:
@@ -85,7 +90,7 @@ namespace cv
             GpuMat(const GpuMat& m, const Rect& roi);
                                     
             //! builds GpuMat from Mat. Perfom blocking upload to device.
-            GpuMat (const Mat& m);
+            explicit GpuMat (const Mat& m);
 
             //! destructor - calls release()
             ~GpuMat();
@@ -211,44 +216,109 @@ namespace cv
             uchar* dataend;
         };
 
-        //////////////////////////////// CudaStream ////////////////////////////////
+        //////////////////////////////// MatPL ////////////////////////////////
+        // MatPL is limited cv::Mat with page locked memory allocation.
+        // Page locked memory is only needed for async and faster coping to GPU.
+        // It is convertable to cv::Mat header without reference counting
+        // so you can use it with other opencv functions.
+                
+        class CV_EXPORTS MatPL
+        {
+        public:      
 
-        class CudaStream
+            //Not supported.  Now behaviour is like ALLOC_DEFAULT.
+            //enum { ALLOC_DEFAULT = 0, ALLOC_PORTABLE = 1, ALLOC_WRITE_COMBINED = 4 }
+
+            MatPL();        
+            MatPL(const MatPL& m);       
+
+            MatPL(int _rows, int _cols, int _type);
+            MatPL(Size _size, int _type);                                                                
+
+            //! creates from cv::Mat with coping data
+            explicit MatPL(const Mat& m);
+                                                            
+            ~MatPL();            
+
+            MatPL& operator = (const MatPL& m);
+                                    
+            //! returns deep copy of the matrix, i.e. the data is copied
+            MatPL clone() const;
+                                                                       
+            //! allocates new matrix data unless the matrix already has specified size and type.            
+            void create(int _rows, int _cols, int _type);
+            void create(Size _size, int _type);                        
+
+            //! decrements reference counter and released memory if needed.
+            void release();
+
+            //! returns matrix header with disabled reference counting for MatPL data.
+            Mat createMatHeader() const;
+            operator Mat() const;
+                                                            
+            // Please see cv::Mat for descriptions
+            bool isContinuous() const;            
+            size_t elemSize() const;            
+            size_t elemSize1() const;            
+            int type() const;            
+            int depth() const;            
+            int channels() const;            
+            size_t step1() const;            
+            Size size() const;            
+            bool empty() const;
+                        
+            // Please see cv::Mat for descriptions
+            int flags;            
+            int rows, cols;            
+            size_t step;
+
+            uchar* data;            
+            int* refcount; 
+
+            uchar* datastart;
+            uchar* dataend;
+        };
+
+        //////////////////////////////// CudaStream ////////////////////////////////
+        // Encapculates Cuda Stream. Provides interface for async coping.
+        // Passed to each function that supports async kernel execution.
+        // Reference counting is enabled
+
+        class CV_EXPORTS CudaStream
         {
         public:
-
-            static CudaStream empty();
-
             CudaStream(); 
             ~CudaStream();
 
+            CudaStream(const CudaStream&); 
+            CudaStream& operator=(const CudaStream&);
+
             bool queryIfComplete();
-            void waitForCompletion(); 
+            void waitForCompletion();             
 
-            //calls cudaMemcpyAsync
+            //! downloads asynchronously. 
+            // Warning! cv::Mat must point to page locked memory (i.e. to MatPL data or to its subMat)
+            void enqueueDownload(const GpuMat& src, MatPL& dst);
             void enqueueDownload(const GpuMat& src, Mat& dst);
+
+            //! uploads asynchronously. 
+            // Warning! cv::Mat must point to page locked memory (i.e. to MatPL data or to its ROI)
+            void enqueueUpload(const MatPL& src, GpuMat& dst);            
             void enqueueUpload(const Mat& src, GpuMat& dst);
+
             void enqueueCopy(const GpuMat& src, GpuMat& dst);
-
-            // calls cudaMemset2D asynchronous for single channel. Invoke kernel for some multichannel.
-            void enqueueMemSet(const GpuMat& src, Scalar val);
-
-            // invoke kernel asynchronous because of mask
+            
+            void enqueueMemSet(const GpuMat& src, Scalar val);            
             void enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask);
 
             // converts matrix type, ex from float to uchar depending on type
-            void enqueueConvert(const GpuMat& src, GpuMat& dst, int type); 
-            
-            struct Impl;
-            const Impl& getImpl() const;
+            void enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a = 1, double b = 0); 
         private:
-            
-            Impl *impl;            
-
-            
-            
-            CudaStream(const CudaStream&); 
-            CudaStream& operator=(const CudaStream&);
+            void create();
+            void release();
+            struct Impl;
+            Impl *impl;                                              
+            friend struct StreamAccessor;
         };
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
@@ -265,17 +335,22 @@ namespace cv
             StereoBM_GPU(int preset, int ndisparities=0);
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
             //! Output disparity has CV_8U type.
-            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity) const;            
+            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity);
+
+            //! Acync version
+            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream);
+
+            //! Some heuristics that tries to estmate 
+            // if current GPU will be faster then CPU in this algorithm.
+            // It queries current active device.
+            static bool checkIfGpuCallReasonable();
         private:
-            mutable GpuMat minSSD;
+            GpuMat minSSD;
             int preset;
             int ndisp;
         };
     }
 }
-
-
-
-#include "opencv2/gpu/gpumat.hpp"
+#include "opencv2/gpu/matrix_operations.hpp"
 
 #endif /* __OPENCV_GPU_HPP__ */

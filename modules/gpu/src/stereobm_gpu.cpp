@@ -44,15 +44,45 @@
 
 using namespace cv;
 using namespace cv::gpu;
+
+#if !defined (HAVE_CUDA)
+
+cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_nogpu(); }
+cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_) { throw_nogpu(); }
+
+bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable() { throw_nogpu(); return false; }
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity) { throw_nogpu(); }
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream) { throw_nogpu(); }
+
+
+#else /* !defined (HAVE_CUDA) */
    
-StereoBM_GPU::StereoBM_GPU() : preset(BASIC_PRESET), ndisp(64)  {}
-StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_) : preset(preset_), ndisp(ndisparities_) 
+cv::gpu::StereoBM_GPU::StereoBM_GPU() : preset(BASIC_PRESET), ndisp(64)  {}
+cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_) : preset(preset_), ndisp(ndisparities_) 
 {
     const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
     CV_Assert(ndisp <= max_supported_ndisp);
+    CV_Assert(ndisp % 8 == 0);
+}
+
+bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable()
+{
+    if (0 == getCudaEnabledDeviceCount())
+        return false;
+
+    int device = getDevice();
+
+    int minor, major;
+    getComputeCapability(device, &major, &minor);
+    int numSM = getNumberOfSMs(device);
+
+    if (major > 1 || numSM > 16)
+        return true;        
+
+    return false;
 }
   
-void StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity) const
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity)
 {
     CV_DbgAssert(left.rows == right.rows && left.cols == right.cols);
     CV_DbgAssert(left.type() == CV_8UC1);
@@ -67,6 +97,13 @@ void StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat&
     }   
 
     DevMem2D disp = disparity;
-    DevMem2D_<uint> mssd = minSSD;    
-    cudaCallerSafeCall( impl::stereoBM_GPU(left, right, disp, ndisp, mssd) );     
+    DevMem2D_<unsigned int> mssd = minSSD;    
+    impl::stereoBM_GPU(left, right, disp, ndisp, mssd);     
 }
+
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream)
+{
+    CV_Assert(!"Not implemented");
+}
+
+#endif /* !defined (HAVE_CUDA) */

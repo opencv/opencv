@@ -43,27 +43,25 @@
 #ifndef __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
 #define __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
 
-
 namespace cv
 {
 
 namespace gpu
 {
 
+////////////////////////////////////////////////////////////////////////
 //////////////////////////////// GpuMat ////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 
-inline GpuMat::GpuMat()
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
+inline GpuMat::GpuMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
 
-inline GpuMat::GpuMat(int _rows, int _cols, int _type)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline GpuMat::GpuMat(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( _rows > 0 && _cols > 0 )
         create( _rows, _cols, _type );
 }
 
-inline GpuMat::GpuMat(Size _size, int _type)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline GpuMat::GpuMat(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( _size.height > 0 && _size.width > 0 )
         create( _size.height, _size.width, _type );
@@ -249,12 +247,9 @@ inline void GpuMat::assignTo( GpuMat& m, int type ) const
 
 //CPP GpuMat& GpuMat::operator = (const Scalar& s);
 //CPP GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask=GpuMat());
-
 //CPP GpuMat GpuMat::reshape(int _cn, int _rows=0) const;
-
-//CPP void GpuMat::create(int _rows, int _cols, int _type);
 inline void GpuMat::create(Size _size, int _type) { create(_size.height, _size.width, _type); }
-
+//CPP void GpuMat::create(int _rows, int _cols, int _type);
 //CPP void GpuMat::release();
 
 inline void GpuMat::swap(GpuMat& b) 
@@ -341,6 +336,87 @@ template<typename _Tp> inline const _Tp* GpuMat::ptr(int y) const
 }
 
 static inline void swap( GpuMat& a, GpuMat& b ) { a.swap(b); }
+
+
+///////////////////////////////////////////////////////////////////////
+//////////////////////////////// MatPL ////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+MatPL::MatPL()  : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
+MatPL::MatPL(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if( _rows > 0 && _cols > 0 )
+        create( _rows, _cols, _type );
+}
+
+MatPL::MatPL(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if( _size.height > 0 && _size.width > 0 )
+        create( _size.height, _size.width, _type );
+}
+
+MatPL::MatPL(const MatPL& m) : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(0), dataend(0)
+{
+    if( refcount )
+        CV_XADD(refcount, 1);
+
+}
+
+MatPL::MatPL(const Mat& m) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if( m.rows > 0 && m.cols > 0 )
+        create( m.size(), m.type() );
+
+    Mat tmp = createMatHeader();
+    m.copyTo(tmp);
+}
+
+MatPL::~MatPL()
+{
+    release();
+}
+MatPL& MatPL::operator = (const MatPL& m)
+{
+    if( this != &m )
+    {
+        if( m.refcount )
+            CV_XADD(m.refcount, 1);
+        release();
+        flags = m.flags;
+        rows = m.rows; cols = m.cols;
+        step = m.step; data = m.data;                
+        datastart = m.datastart;
+        dataend = m.dataend;
+        refcount = m.refcount;
+    }
+    return *this;
+}
+
+MatPL MatPL::clone() const
+{
+    MatPL m(size(), type());            
+    Mat to = m;
+    Mat from = *this;
+    from.copyTo(to);
+    return m;
+}
+
+inline void MatPL::create(Size _size, int _type) { create(_size.height, _size.width, _type); } 
+//CCP void MatPL::create(int _rows, int _cols, int _type);                
+//CPP void MatPL::release();
+
+inline Mat MatPL::createMatHeader() const { return Mat(size(), type(), data); }
+inline MatPL::operator Mat() const { return createMatHeader(); }
+
+inline bool MatPL::isContinuous() const { return (flags & Mat::CONTINUOUS_FLAG) != 0; }
+inline size_t MatPL::elemSize() const { return CV_ELEM_SIZE(flags); }
+inline size_t MatPL::elemSize1() const { return CV_ELEM_SIZE1(flags); }
+inline int MatPL::type() const { return CV_MAT_TYPE(flags); }
+inline int MatPL::depth() const { return CV_MAT_DEPTH(flags); }
+inline int MatPL::channels() const { return CV_MAT_CN(flags); }
+inline size_t MatPL::step1() const { return step/elemSize1(); }
+inline Size MatPL::size() const { return Size(cols, rows); }
+inline bool MatPL::empty() const { return data == 0; }  
 
 
 } /* end of namespace gpu */
