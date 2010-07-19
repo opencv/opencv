@@ -26,7 +26,7 @@ file(GLOB lib_int_hdrs "src/*.h*")
 file(GLOB lib_cuda "src/cuda/*.cu")
 file(GLOB lib_cuda_hdrs "src/cuda/*.h*")	
 source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
-source_group("Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
+source_group("Src\\Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
 
 file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")		
 source_group("Include" FILES ${lib_hdrs})
@@ -36,8 +36,19 @@ if (HAVE_CUDA)
 	link_directories(${CUDA_LIBRARIES})
 
 	if (UNIX OR APPLE)
-		set (CUDA_NVCC_FLAGS "-Xcompiler;-fPIC;")
+		set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;-fPIC;")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" "-fPIC")
 	endif() 
+			
+	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
+	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;/EHsc-;")
+	
+	if(MSVC)
+		#string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		#string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+		#string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")						
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408 /EHc-")				
+	endif()
 			
 	CUDA_COMPILE(cuda_objs ${lib_cuda})
 	#CUDA_BUILD_CLEAN_TARGET()
@@ -45,6 +56,7 @@ endif()
 	
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${cuda_objs})
+
 
 if(PCHSupport_FOUND)
 	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
@@ -63,6 +75,7 @@ set_target_properties(${the_target} PROPERTIES
 	VERSION ${OPENCV_VERSION}
 	SOVERSION ${OPENCV_SOVERSION}
 	OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"
+	COMPILE_FLAGS "/EHc-"
 	)
 
 # Additional target properties
@@ -70,7 +83,7 @@ set_target_properties(${the_target} PROPERTIES
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
-	INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+	INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"	
 	)
 
 # Add the required libraries for linking:
