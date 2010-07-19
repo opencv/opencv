@@ -100,7 +100,7 @@ void cv::gpu::GpuMat::copyTo( GpuMat& m ) const
 }
 
 void cv::gpu::GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const
-{    
+{
     CV_Assert(!"Not implemented");
 }
 
@@ -109,15 +109,27 @@ void cv::gpu::GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/,
     CV_Assert(!"Not implemented");
 }
 
-GpuMat& cv::gpu::GpuMat::operator = (const Scalar& /*s*/)
+GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    CV_Assert(!"Not implemented"); 
+    cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
     return *this;
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(const Scalar& /*s*/, const GpuMat& /*mask*/)
+GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 {
-    CV_Assert(!"Not implemented");    
+    CV_Assert(mask.type() == CV_8U);
+
+    CV_DbgAssert(!this->empty());
+
+    if (mask.empty())
+    {
+        cv::gpu::impl::set_to_without_mask(*this, s.val, this->depth(), this->channels());
+    }
+    else
+    {
+        cv::gpu::impl::set_to_with_mask(*this, s.val, mask, this->depth(), this->channels());
+    }
+
     return *this;
 }
 
@@ -177,7 +189,7 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
         rows = _rows;
         cols = _cols;
 
-        size_t esz = elemSize();                
+        size_t esz = elemSize();
 
         void *dev_ptr;
         cudaSafeCall( cudaMallocPitch(&dev_ptr, &step, esz * cols, rows) );
@@ -189,7 +201,7 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
         size_t nettosize = (size_t)_nettosize;
 
         datastart = data = (uchar*)dev_ptr;
-        dataend = data + nettosize;            
+        dataend = data + nettosize;
 
         refcount = (int*)fastMalloc(sizeof(*refcount));
         *refcount = 1;
@@ -201,7 +213,7 @@ void cv::gpu::GpuMat::release()
     if( refcount && CV_XADD(refcount, -1) == 1 )
     {
         fastFree(refcount);
-        cudaSafeCall( cudaFree(datastart) );        
+        cudaSafeCall( cudaFree(datastart) );
     }
     data = datastart = dataend = 0;
     step = rows = cols = 0;
@@ -233,12 +245,12 @@ void cv::gpu::MatPL::create(int _rows, int _cols, int _type)
             CV_Error(CV_StsNoMem, "Too big buffer is allocated");
         size_t datasize = alignSize(nettosize, (int)sizeof(*refcount));
 
-        //datastart = data = (uchar*)fastMalloc(datasize + sizeof(*refcount));        
+        //datastart = data = (uchar*)fastMalloc(datasize + sizeof(*refcount));
         void *ptr;
         cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) );
 
-        datastart = data =  (uchar*)ptr;        
-        dataend = data + nettosize;       
+        datastart = data =  (uchar*)ptr;
+        dataend = data + nettosize;
 
         refcount = (int*)cv::fastMalloc(sizeof(*refcount));
         *refcount = 1;

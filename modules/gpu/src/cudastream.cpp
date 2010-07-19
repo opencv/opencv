@@ -74,13 +74,13 @@ struct CudaStream::Impl
     cudaStream_t stream;
     int ref_counter;
 };
-namespace 
+namespace
 {
     template<class S, class D> void devcopy(const S& src, D& dst, cudaStream_t s, cudaMemcpyKind k)
     {
         dst.create(src.size(), src.type());
         size_t bwidth = src.cols * src.elemSize();
-        cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, k, s) ); 
+        cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, k, s) );
     };
 }
 
@@ -97,7 +97,7 @@ void cv::gpu::CudaStream::create()
     impl = (CudaStream::Impl*)fastMalloc(sizeof(CudaStream::Impl));
 
     impl->stream = stream;
-    impl->ref_counter = 1;    
+    impl->ref_counter = 1;
 }
 
 void cv::gpu::CudaStream::release()
@@ -125,7 +125,7 @@ CudaStream& cv::gpu::CudaStream::operator=(const CudaStream& stream)
             CV_XADD(&stream.impl->ref_counter, 1);
 
         release();
-        impl = stream.impl;        
+        impl = stream.impl;
     }
     return *this;
 }
@@ -138,20 +138,21 @@ bool cv::gpu::CudaStream::queryIfComplete()
         return err == cudaSuccess;
 
     cudaSafeCall(err);
+    return false;
 }
 
 void cv::gpu::CudaStream::waitForCompletion() { cudaSafeCall( cudaStreamSynchronize( impl->stream ) ); }
 
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, Mat& dst) 
-{ 
+void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, Mat& dst)
+{
     // if not -> allocation will be done, but after that dst will not point to page locked memory
     CV_Assert(src.cols == dst.cols && src.rows == dst.rows && src.type() == dst.type() )
-     devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); 
+     devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost);
 }
 void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, MatPL& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); }
 
 void cv::gpu::CudaStream::enqueueUpload(const MatPL& src, GpuMat& dst){ devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
-void cv::gpu::CudaStream::enqueueUpload(const Mat& src, GpuMat& dst)  { devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }   
+void cv::gpu::CudaStream::enqueueUpload(const Mat& src, GpuMat& dst)  { devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
 void cv::gpu::CudaStream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToDevice); }
 
 void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val)

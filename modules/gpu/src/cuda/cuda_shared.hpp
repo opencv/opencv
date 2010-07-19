@@ -44,23 +44,26 @@
 #define __OPENCV_CUDA_SHARED_HPP__
 
 #include "opencv2/gpu/devmem2d.hpp"
-#include "cuda_runtime_api.h"   
+#include "cuda_runtime_api.h"
 
 namespace cv
 {
     namespace gpu
-    {   
+    {
         typedef unsigned char uchar;
         typedef unsigned short ushort;
-        typedef unsigned int uint;        
+        typedef unsigned int uint;
 
         extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
 
         namespace impl
-        {   
+        {
             static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
             extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, DevMem2D& disp, int maxdisp, DevMem2D_<uint>& minSSD_buf);
+
+            extern "C" void set_to_without_mask (const DevMem2D& mat, const double * scalar, int depth, int channels);
+            extern "C" void set_to_with_mask    (const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int depth, int channels);
         }
     }
 }
@@ -68,12 +71,12 @@ namespace cv
 #if defined(__GNUC__)
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__);
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__) 
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
 #endif
 
     static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
     {
-        if( cudaSuccess != err) 
+        if( cudaSuccess != err)
             cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__, func);
     }
 

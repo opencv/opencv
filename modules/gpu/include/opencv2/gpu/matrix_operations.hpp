@@ -76,7 +76,7 @@ inline GpuMat::GpuMat(int _rows, int _cols, int _type, const Scalar& _s)
         *this = _s;
     }
 }
-   
+
 inline GpuMat::GpuMat(Size _size, int _type, const Scalar& _s)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
@@ -85,7 +85,7 @@ inline GpuMat::GpuMat(Size _size, int _type, const Scalar& _s)
         create( _size.height, _size.width, _type );
         *this = _s;
     }
-}    
+}
 
 inline GpuMat::GpuMat(const GpuMat& m)
     : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend)
@@ -182,8 +182,8 @@ inline GpuMat::GpuMat(const GpuMat& m, const Rect& roi)
     if( rows <= 0 || cols <= 0 )
         rows = cols = 0;
 }
-    
-inline GpuMat::GpuMat(const Mat& m) 
+
+inline GpuMat::GpuMat(const Mat& m)
 : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) { upload(m); }
 
 inline GpuMat::~GpuMat() { release(); }
@@ -217,7 +217,7 @@ template <class T> inline GpuMat::operator DevMem2D_<T>() const { return DevMem2
      return m;
  }
 
-//CPP void GpuMat::download(cv::Mat& m) const; 
+//CPP void GpuMat::download(cv::Mat& m) const;
 
 inline GpuMat GpuMat::row(int y) const { return GpuMat(*this, Range(y, y+1), Range::all()); }
 inline GpuMat GpuMat::col(int x) const { return GpuMat(*this, Range::all(), Range(x, x+1)); }
@@ -252,7 +252,7 @@ inline void GpuMat::create(Size _size, int _type) { create(_size.height, _size.w
 //CPP void GpuMat::create(int _rows, int _cols, int _type);
 //CPP void GpuMat::release();
 
-inline void GpuMat::swap(GpuMat& b) 
+inline void GpuMat::swap(GpuMat& b)
 {
     std::swap( flags, b.flags );
     std::swap( rows, b.rows ); std::swap( cols, b.cols );
@@ -342,27 +342,27 @@ static inline void swap( GpuMat& a, GpuMat& b ) { a.swap(b); }
 //////////////////////////////// MatPL ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
-MatPL::MatPL()  : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
-MatPL::MatPL(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline MatPL::MatPL()  : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
+inline MatPL::MatPL(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( _rows > 0 && _cols > 0 )
         create( _rows, _cols, _type );
 }
 
-MatPL::MatPL(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline MatPL::MatPL(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( _size.height > 0 && _size.width > 0 )
         create( _size.height, _size.width, _type );
 }
 
-MatPL::MatPL(const MatPL& m) : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(0), dataend(0)
+inline MatPL::MatPL(const MatPL& m) : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(0), dataend(0)
 {
     if( refcount )
         CV_XADD(refcount, 1);
 
 }
 
-MatPL::MatPL(const Mat& m) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline MatPL::MatPL(const Mat& m) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( m.rows > 0 && m.cols > 0 )
         create( m.size(), m.type() );
@@ -371,11 +371,11 @@ MatPL::MatPL(const Mat& m) : flags(0), rows(0), cols(0), step(0), data(0), refco
     m.copyTo(tmp);
 }
 
-MatPL::~MatPL()
+inline MatPL::~MatPL()
 {
     release();
 }
-MatPL& MatPL::operator = (const MatPL& m)
+inline MatPL& MatPL::operator = (const MatPL& m)
 {
     if( this != &m )
     {
@@ -384,7 +384,7 @@ MatPL& MatPL::operator = (const MatPL& m)
         release();
         flags = m.flags;
         rows = m.rows; cols = m.cols;
-        step = m.step; data = m.data;                
+        step = m.step; data = m.data;
         datastart = m.datastart;
         dataend = m.dataend;
         refcount = m.refcount;
@@ -392,17 +392,17 @@ MatPL& MatPL::operator = (const MatPL& m)
     return *this;
 }
 
-MatPL MatPL::clone() const
+inline MatPL MatPL::clone() const
 {
-    MatPL m(size(), type());            
+    MatPL m(size(), type());
     Mat to = m;
     Mat from = *this;
     from.copyTo(to);
     return m;
 }
 
-inline void MatPL::create(Size _size, int _type) { create(_size.height, _size.width, _type); } 
-//CCP void MatPL::create(int _rows, int _cols, int _type);                
+inline void MatPL::create(Size _size, int _type) { create(_size.height, _size.width, _type); }
+//CCP void MatPL::create(int _rows, int _cols, int _type);
 //CPP void MatPL::release();
 
 inline Mat MatPL::createMatHeader() const { return Mat(size(), type(), data); }
@@ -416,7 +416,7 @@ inline int MatPL::depth() const { return CV_MAT_DEPTH(flags); }
 inline int MatPL::channels() const { return CV_MAT_CN(flags); }
 inline size_t MatPL::step1() const { return step/elemSize1(); }
 inline Size MatPL::size() const { return Size(cols, rows); }
-inline bool MatPL::empty() const { return data == 0; }  
+inline bool MatPL::empty() const { return data == 0; }
 
 
 } /* end of namespace gpu */
