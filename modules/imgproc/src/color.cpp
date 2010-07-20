@@ -2183,6 +2183,247 @@ icvBayer2BGR_8u_C1C3R( const uchar* bayer0, int bayer_step,
 }
 
 
+
+static CvStatus CV_STDCALL
+icvBayer2BGR_VNG_8u_C1C3R( const uchar* bayer, int bstep,
+                           uchar *dst, int dststep,
+                           CvSize size, int code )
+{
+    int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
+    bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
+    bool greenCell0_buf = !greenCell0;
+    
+    // for too small images use the simple interpolation algorithm
+    if( MIN(size.width, size.height) < 5 )
+        return icvBayer2BGR_8u_C1C3R( bayer, bstep, dst, dststep, size, code );
+    
+    const int brows = 3, bcn = 7;
+    int i, bufstep = size.width*bcn;
+    cv::AutoBuffer<ushort> _buf(bufstep*brows);
+    ushort* buf = (ushort*)_buf;
+    
+    bayer += bstep*2;
+    
+    for( i = 0; i < size.width*3; i++ )
+    {
+        dst[i] = dst[i + dststep] =
+        dst[i + dststep*(size.height-2)] =
+        dst[i + dststep*(size.height-1)] = 0;
+    }
+    
+    for( int y = 2; y < size.height - 2; y++ )
+    {
+        uchar* dstrow = dst + dststep*y;
+        const uchar* srow;
+        
+        for( int dy = (y == 2 ? -1 : 1); dy <= 1; dy++ )
+        {
+            ushort* brow = buf + ((y + dy - 1)%brows)*bufstep;
+            srow = bayer + dy*bstep;
+            
+            for( i = 0; i < bcn; i++ )
+                brow[i] = brow[i + (size.width-1)*bcn] = 0;
+            
+            bool greenCell = greenCell0_buf;
+            for( i = 1; i < size.width-1; i++ )
+            {
+                brow += bcn;
+                brow[0] = (ushort)( abs(srow[i-1-bstep] - srow[i-1+bstep]) +
+                                    abs(srow[i-bstep] - srow[i+bstep])*2 +
+                                    abs(srow[i+1-bstep] - srow[i+1+bstep]));
+                brow[1] = (ushort)( abs(srow[i-1-bstep] - srow[i+1-bstep]) +
+                                    abs(srow[i-1] - srow[i+1])*2 +
+                                    abs(srow[i-1+bstep] - srow[i+1+bstep]));
+                brow[2] = (ushort)(abs(srow[i+1-bstep] - srow[i-1+bstep])*2);
+                brow[3] = (ushort)(abs(srow[i-1-bstep] - srow[i+1+bstep])*2);
+                if(!greenCell)
+                {
+                    brow[4] = (ushort)(brow[2] + abs(srow[i-bstep] - srow[i-1]) + abs(srow[i+bstep] - srow[i+1]));
+                    brow[5] = (ushort)(brow[3] + abs(srow[i-bstep] - srow[i+1]) + abs(srow[i+bstep] - srow[i-1]));
+                    brow[6] = (ushort)((srow[i-bstep] + srow[i-1] + srow[i+1] + srow[i+bstep] + 2)>>2);
+                }
+                greenCell = !greenCell;
+            }
+            greenCell0_buf = !greenCell0_buf;
+        }
+        
+        const ushort* brow0 = buf + ((y - 2) % brows)*bufstep + bcn;
+        const ushort* brow1 = buf + ((y - 1) % brows)*bufstep + bcn;
+        const ushort* brow2 = buf + (y % brows)*bufstep + bcn;
+        static const float scale[] = { 0.f, 1.f, 0.5f, 0.3333333333f, 0.25f, 0.2f, 0.1666666667f, 0.1428571f, 0.125f };
+        srow = bayer + y*bstep;
+        bool greenCell = greenCell0;
+        
+        for( i = 0; i < 6; i++ )
+            dstrow[i] = dstrow[i + (size.width-2)*3] = 0;
+        dstrow += 6;
+        
+        for( i = 2; i < size.width-2; i++, brow0 += bcn, brow1 += bcn, brow2 += bcn, dstrow += 3 )
+        {
+            int gradN = (brow0[0] + brow1[0])>>1;
+            int gradS = (brow1[0] + brow2[0])>>1;
+            int gradW = (brow1[-bcn+1] + brow1[1])>>1;
+            int gradE = (brow1[1] + brow1[bcn+1])>>1;
+            int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
+            int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
+            int R, G, B;
+            
+            if( !greenCell )
+            {
+                int gradNE = (brow0[bcn+4] + brow1[4])>>1;
+                int gradSW = (brow1[4] + brow2[-bcn+4])>>1;
+                int gradNW = (brow0[-bcn+5] + brow1[5])>>1;
+                int gradSE = (brow1[5] + brow2[bcn+5])>>1;
+                
+                minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
+                maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
+                int T = minGrad + maxGrad/2;
+                
+                int Rs = 0, Gs = 0, Bs = 0, ng = 0;
+                if( gradN < T )
+                {
+                    Rs += (srow[i-bstep*2] + srow[i])>>1;
+                    Gs += srow[i-bstep];
+                    Bs += (srow[i-bstep-1] + srow[i-bstep+1])>>1;
+                    ng++;
+                }
+                if( gradS < T )
+                {
+                    Rs += (srow[i+bstep*2] + srow[i])>>1;
+                    Gs += srow[i+bstep];
+                    Bs += (srow[i+bstep-1] + srow[i+bstep+1])>>1;
+                    ng++;
+                }
+                if( gradW < T )
+                {
+                    Rs += (srow[i-2] + srow[i])>>1;
+                    Gs += srow[i-1];
+                    Bs += (srow[i-bstep-1] + srow[i+bstep-1])>>1;
+                    ng++;
+                }
+                if( gradE < T )
+                {
+                    Rs += (srow[i+2] + srow[i])>>1;
+                    Gs += srow[i+1];
+                    Bs += (srow[i-bstep+1] + srow[i+bstep+1])>>1;
+                    ng++;
+                }
+                if( gradNE < T )
+                {
+                    Rs += (srow[i-bstep*2+2] + srow[i])>>1;
+                    Gs += brow0[bcn+6];
+                    Bs += srow[i-bstep+1];
+                    ng++;
+                }
+                if( gradSW < T )
+                {
+                    Rs += (srow[i+bstep*2-2] + srow[i])>>1;
+                    Gs += brow2[-bcn+6];
+                    Bs += srow[i+bstep-1];
+                    ng++;
+                }
+                if( gradNW < T )
+                {
+                    Rs += (srow[i-bstep*2+2] + srow[i])>>1;
+                    Gs += brow0[bcn+6];
+                    Bs += srow[i-bstep+1];
+                    ng++;
+                }
+                if( gradSE < T )
+                {
+                    Rs += (srow[i-bstep*2+2] + srow[i])>>1;
+                    Gs += brow0[bcn+6];
+                    Bs += srow[i-bstep+1];
+                    ng++;
+                }
+                R = srow[i];
+                G = R + cvRound((Gs - Rs)*scale[ng]);
+                B = R + cvRound((Bs - Rs)*scale[ng]); 
+            }
+            else
+            {
+                int gradNE = (brow0[2] + brow0[bcn+2] + brow1[2] + brow1[bcn+2])>>1;
+                int gradSW = (brow1[2] + brow1[-bcn+2] + brow2[2] + brow2[-bcn+2])>>1;
+                int gradNW = (brow0[3] + brow0[-bcn+3] + brow1[3] + brow1[-bcn+3])>>1;
+                int gradSE = (brow1[3] + brow1[bcn+3] + brow2[3] + brow2[bcn+3])>>1;
+                
+                minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
+                maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
+                int T = minGrad + maxGrad/2;
+                
+                int Rs = 0, Gs = 0, Bs = 0, ng = 0;
+                if( gradN < T )
+                {
+                    Rs += (srow[i-bstep*2-1] + srow[i-bstep*2+1])>>1;
+                    Gs += (srow[i-bstep*2] + srow[i])>>1;
+                    Bs += srow[i-bstep];
+                    ng++;
+                }
+                if( gradS < T )
+                {
+                    Rs += (srow[i+bstep*2-1] + srow[i+bstep*2+1])>>1;
+                    Gs += (srow[i+bstep*2] + srow[i])>>1;
+                    Bs += srow[i+bstep];
+                    ng++;
+                }
+                if( gradW < T )
+                {
+                    Rs += srow[i-1];
+                    Gs += (srow[i-2] + srow[i])>>1;
+                    Bs += (srow[i-bstep-2]+srow[i+bstep-2])>>1;
+                    ng++;
+                }
+                if( gradE < T )
+                {
+                    Rs += srow[i+1];
+                    Gs += (srow[i+2] + srow[i])>>1;
+                    Bs += (srow[i-bstep+2]+srow[i+bstep+2])>>1;
+                    ng++;
+                }
+                if( gradNE < T )
+                {
+                    Rs += (srow[i-bstep*2+1] + srow[i+1])>>1;
+                    Gs += srow[i-bstep+1];
+                    Bs += (srow[i-bstep] + srow[i-bstep+2])>>1;
+                    ng++;
+                }
+                if( gradSW < T )
+                {
+                    Rs += (srow[i+bstep*2-1] + srow[i-1])>>1;
+                    Gs += srow[i+bstep-1];
+                    Bs += (srow[i+bstep] + srow[i+bstep-2])>>1;
+                    ng++;
+                }
+                if( gradNW < T )
+                {
+                    Rs += (srow[i-bstep*2-1] + srow[i-1])>>1;
+                    Gs += srow[i-bstep-1];
+                    Bs += (srow[i-bstep-2]+srow[i-bstep])>>1;
+                    ng++;
+                }
+                if( gradSE < T )
+                {
+                    Rs += (srow[i+bstep*2+1] + srow[i+1])>>1;
+                    Gs += srow[i+bstep+1];
+                    Bs += (srow[i+bstep+2]+srow[i+bstep])>>1;
+                    ng++;
+                }
+                G = srow[i];
+                R = G + cvRound((Rs - Gs)*scale[ng]);
+                B = G + cvRound((Bs - Gs)*scale[ng]);
+            }
+            dstrow[blueIdx] = CV_CAST_8U(B);
+            dstrow[1] = CV_CAST_8U(G);
+            dstrow[blueIdx^2] = CV_CAST_8U(R);
+            greenCell = !greenCell;
+        }
+        greenCell0 = !greenCell0;
+        blueIdx ^= 2;
+    }
+    
+    return CV_OK;
+}
+
 /****************************************************************************************\
 *                                   The main function                                    *
 \****************************************************************************************/
@@ -2222,7 +2463,9 @@ cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
 
     if( CV_IS_MAT_CONT(src->type & dst->type) &&
         code != CV_BayerBG2BGR && code != CV_BayerGB2BGR &&
-        code != CV_BayerRG2BGR && code != CV_BayerGR2BGR ) 
+        code != CV_BayerRG2BGR && code != CV_BayerGR2BGR &&
+        code != CV_BayerBG2BGR_VNG && code != CV_BayerGB2BGR_VNG &&
+        code != CV_BayerRG2BGR_VNG && code != CV_BayerGR2BGR_VNG )
     {
         size.width *= size.height;
         size.height = 1;
@@ -2470,6 +2713,22 @@ cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
         func1 = (CvColorCvtFunc1)icvBayer2BGR_8u_C1C3R;
         param[0] = code; // conversion code
         break;
+            
+    case CV_BayerBG2BGR_VNG:
+    case CV_BayerGB2BGR_VNG:
+    case CV_BayerRG2BGR_VNG:
+    case CV_BayerGR2BGR_VNG:
+        if( src_cn != 1 || dst_cn != 3 )
+            CV_Error( CV_BadNumChannels,
+                     "Incorrect number of channels for this conversion code" );
+        
+        if( depth != CV_8U )
+            CV_Error( CV_BadDepth,
+                     "Bayer pattern can be converted only to 8-bit 3-channel BGR/RGB image" );
+        
+        func1 = (CvColorCvtFunc1)icvBayer2BGR_VNG_8u_C1C3R;
+        param[0] = code; // conversion code
+        break;
     default:
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
@@ -2532,6 +2791,11 @@ void cv::cvtColor( const Mat& src, Mat& dst, int code, int dst_cn )
     case CV_BayerGB2BGR:
     case CV_BayerRG2BGR:
     case CV_BayerGR2BGR:
+            
+    case CV_BayerBG2BGR_VNG:
+    case CV_BayerGB2BGR_VNG:
+    case CV_BayerRG2BGR_VNG:
+    case CV_BayerGR2BGR_VNG:
 
     case CV_BGRA2BGR:
     case CV_RGBA2BGR:
