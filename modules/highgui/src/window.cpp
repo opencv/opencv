@@ -231,6 +231,11 @@ void loadWindowParameters(const string& windowName)
 	cvLoadWindowParameters(windowName.c_str());
 }
 
+int createButton( const string& bar_name, const string& window_name, ButtonCallback on_change, const string& button_name, void* userdata)
+{
+	return cvCreateButton( bar_name.c_str(), window_name.c_str(), on_change, button_name.c_str(), userdata);
+}
+
 #endif
 
 }
@@ -263,13 +268,7 @@ CV_IMPL int cvNamedWindow( const char*, int )
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
     return -1;
-}    
-
-CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
-{
-    CV_NO_GUI_ERROR("cvNamedWindow");
-    return -1;
-}   
+}     
 
 CV_IMPL void cvDestroyWindow( const char* )
 {
@@ -363,6 +362,69 @@ CV_IMPL int cvStartWindowThread()
     CV_NO_GUI_ERROR( "cvStartWindowThread" );
     return -1;
 }
+
+
+//-------- Qt ---------
+CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint org, CvFont font)
+{
+    CV_NO_GUI_ERROR("cvAddText");
+    return -1;
+}
+
+CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
+{
+    CV_NO_GUI_ERROR("cvDisplayStatusBar");
+    return -1;
+}  
+
+CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
+{
+    CV_NO_GUI_ERROR("cvDisplayStatusBar");
+    return -1;
+}  
+
+CV_IMPL void cvCreateOpenGLCallback(const char* name, cvOpenGLCallback callback, void* param)
+{
+    CV_NO_GUI_ERROR("createOpenGLCallback");
+    return -1;
+}  
+
+CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
+{
+    CV_NO_GUI_ERROR("cvNamedWindow");
+    return -1;
+}  
+
+CV_IMPL void cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+{
+    CV_NO_GUI_ERROR("cvStartLoop");
+    return -1;
+}  
+
+CV_IMPL void cvStopLoop()
+{
+    CV_NO_GUI_ERROR("cvStopLoop");
+    return -1;
+}  
+
+CV_IMPL void cvSaveWindowParameters(const char* name)
+{
+    CV_NO_GUI_ERROR("cvSaveWindowParameters");
+    return -1;
+}  
+
+CV_IMPL void cvLoadWindowParameterss(const char* name)
+{
+    CV_NO_GUI_ERROR("cvLoadWindowParameters");
+    return -1;
+}  
+
+CV_IMPL void cvCreateButton(const char* arg1, const char* arg2, cvButtonCallback on_change, const char* name, void* userdata)
+{
+    CV_NO_GUI_ERROR("cvCreateButton");
+    return -1;
+}  
+
 
 #endif
 

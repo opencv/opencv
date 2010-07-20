@@ -96,6 +96,7 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
 class CvWindow;
 class ViewPort;
 
+
 class GuiReceiver : public QObject
 {
     Q_OBJECT
@@ -129,28 +130,60 @@ public slots:
     void loadWindowParameters(QString name);
     void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata);
     void putText(void* arg1, QString text, QPoint org, void* font);
+    void addButton(QString window_name, QString bar_name, QString button_name, void* on_change, void* userdata);
 
 };
 
-/*
- protected:
-    int width, height;
+enum typeBar{type_CvTrackbar = 0, type_CvButtonbar = 1};
+class CvBar  :  public QHBoxLayout
+{
+public:
+    typeBar type;
+    QString name_bar;
+    QPointer<CvWindow> myparent;
+};
 
-class CvButtonbar : public QButtonGroup
+
+class CvButtonbar : public CvBar
 {
     Q_OBJECT
 public:
-    CvButtonbar();
-};*/
+    CvButtonbar(CvWindow* arg, QString bar_name);
+    ~CvButtonbar();
+    void addButton( QString button_name, CvButtonCallback call, void* userdata);
 
-class CvTrackbar : public QHBoxLayout
+private:
+    void setLabel();
+
+    QPointer<QLabel> label;
+};
+
+class CvButton : public QPushButton
+{
+    Q_OBJECT
+public:
+    CvButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata);
+
+private:
+    CvButtonbar* myparent;
+    QString button_name ;
+    CvButtonCallback callback;
+    void* userdata;
+
+private slots:
+    void callCallBack();
+};
+
+
+
+class CvTrackbar :  public CvBar
 {
     Q_OBJECT
 public:
     CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback on_change = NULL);
     ~CvTrackbar();
 
-    QString trackbar_name;
+    //QString trackbar_name;
     QPointer<QSlider> slider;
 
 private slots:
@@ -159,11 +192,9 @@ private slots:
 
 private:
     void setLabel(int myvalue);
-
     QString createLabel();
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
-    QPointer<CvWindow> parent;
     int* dataSlider;
 
 };
@@ -198,6 +229,7 @@ public:
     void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata);
     void hideTools();
     void showTools();
+    CvButtonbar* createButtonbar(QString bar_name);
 
 
 
@@ -306,7 +338,7 @@ private:
 
     //for opengl callback
     CvOpenGLCallback on_openGL_draw3D;
-	void* on_openGL_param;
+    void* on_openGL_param;
 
     bool isSameSize(IplImage* img1,IplImage* img2);
     QSize sizeHint() const;

@@ -197,6 +197,8 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 }
 
 
+
+
 CV_IMPL int cvInitSystem( int, char** )
 {
     return 0;
@@ -292,7 +294,7 @@ CV_IMPL void cvStopLoop()
 }
 
 
-CV_IMPL CvWindow* icvFindWindowByName( const char* arg )
+CvWindow* icvFindWindowByName( const char* arg )
 {
 
     QPointer<CvWindow> window = NULL;
@@ -329,49 +331,53 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
     if( !w )
 	CV_Error( CV_StsNullPtr, "NULL window handler" );
 
-    QString nameQt = QString(name_trackbar);
-    QPointer<CvTrackbar> t;
+    QString nameQt(name_trackbar);
+    CvBar* t;
 
-    int start_index;
-    int stop_index;
+    int start_index = 0;
+    int stop_index = 0;
     QPointer<QLayout> myLayout;
 
     if (w->param_gui_mode == CV_GUI_NORMAL)
     {
-	myLayout = w->myLayout;
-
-	start_index = 1;
-	if (w->myToolBar)
-	    start_index = 2;
-	//Warning   ----  , asume the location 0 is toolbar, 1 is myview and max-1 the status bar
-	//done three times in the code, in loadtrackbars, savetrackbar and in findtrackbar
-
-	stop_index = myLayout->layout()->count()-1;
+		myLayout = w->myLayout;
+	
+		start_index = 1;
+		if (w->myToolBar)
+		    start_index = 2;
+		//Warning   ----  , asume the location 0 is toolbar, 1 is myview and max-1 the status bar
+		//done three times in the code, in loadtrackbars, savetrackbar and in findtrackbar
+	
+		stop_index = myLayout->layout()->count()-1;
     }
 
     if (w->param_gui_mode == CV_GUI_EXPANDED)
     {
-	myLayout = w->getWinProp()->myLayout;
-	start_index = 0;
-	stop_index = myLayout->layout()->count();
+		myLayout = w->getWinProp()->myLayout;
+		if (!myLayout)
+		    CV_Error( CV_StsNullPtr, "NULL window prop handler" );
+	
+		start_index = 0;
+		stop_index = myLayout->layout()->count();
     }
+
 
     for (int i = start_index; i < stop_index; ++i)
     {
-	t = (CvTrackbar*) myLayout->layout()->itemAt(i);
-	if (t->trackbar_name==nameQt)
-	{
-	    result = t;
-	    break;
-	}
+		t = (CvBar*) myLayout->layout()->itemAt(i);
+		if (t->type == type_CvTrackbar && t->name_bar == nameQt)
+		{
+		    result = (CvTrackbar*) t;
+		    break;
+		}
     }
+
     return result;
 
 
 }
 
-/*
-CvTrackbar* icvFindButtonbarByName( const char* name_Buttonbar, const char* name_window )
+CvButtonbar* icvFindButtonbarByName( const char* name_Buttonbar, const char* name_window )
 {
 
     QPointer<CvButtonbar> result = NULL;
@@ -382,25 +388,35 @@ CvTrackbar* icvFindButtonbarByName( const char* name_Buttonbar, const char* name
 	CV_Error( CV_StsNullPtr, "NULL window handler" );
 
     QString nameQt = QString(name_Buttonbar);
-    QPointer<CvButtonbar> t;
+    CvBar* t;
+    int start_index;
+    int stop_index;
+    QPointer<QLayout> myLayout;
 
-    int start_index = 1;
-    if (w->myToolBar)
-	start_index = 2;
-    //Warning   ----  , asume the location 0 is toolbar, 1 is myview and max-1 the status bar
-    //done three times in the code, in loadtrackbars, savetrackbar and in findtrackbar
-    for (int i = start_index; i < w->myLayout->layout()->count()-1; ++i)
+    if (w->param_gui_mode == CV_GUI_EXPANDED)
     {
-	t = (CvTrackbar*) w->myLayout->layout()->itemAt(i);
-	if (t->trackbar_name==nameQt)
+	myLayout = w->getWinProp()->myLayout;
+	if (!myLayout)
+	    CV_Error( CV_StsNullPtr, "NULL window prop handler" );
+
+	start_index = 0;
+	stop_index = myLayout->layout()->count();
+
+
+
+	for (int i = start_index; i < stop_index; ++i)
 	{
-	    result = t;
-	    break;
+	    t = (CvBar*) myLayout->layout()->itemAt(i);
+	    if (t->type == type_CvButtonbar && t->name_bar == nameQt)
+	    {
+		result = (CvButtonbar*) t;
+		break;
+	    }
 	}
     }
 
     return result;
-}*/
+}
 
 int icvInitSystem()
 {
@@ -508,9 +524,9 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 }
 
 //TODO: implement the real one, not a wrapper
-CV_IMPL int cvCreateTrackbar2( const char* trackbar_name, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata )
+CV_IMPL int cvCreateTrackbar2( const char* name_bar, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata )
 {
-    return cvCreateTrackbar( trackbar_name, window_name, val, count, (CvTrackbarCallback)on_notify );
+    return cvCreateTrackbar( name_bar, window_name, val, count, (CvTrackbarCallback)on_notify );
 }
 
 CV_IMPL int cvStartWindowThread()
@@ -518,21 +534,33 @@ CV_IMPL int cvStartWindowThread()
     return 0;
 }
 
-CV_IMPL int cvCreateTrackbar( const char* trackbar_name, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
+CV_IMPL int cvCreateTrackbar( const char* name_bar, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
 {
 
-    if (multiThreads)
-	QMetaObject::invokeMethod(&guiMainThread,
-				  "addSlider",
-				  Qt::AutoConnection,
-				  Q_ARG(QString, QString(trackbar_name)),
-				  Q_ARG(QString, QString(window_name)),
-				  Q_ARG(void*, (void*)value),
-				  Q_ARG(int, count),
-				  Q_ARG(void*, (void*)on_change)
-				  );
-    else
-	guiMainThread.addSlider(QString(trackbar_name),QString(window_name),(void*)value,count,(void*)on_change);
+    QMetaObject::invokeMethod(&guiMainThread,
+			      "addSlider",
+			      Qt::AutoConnection,
+			      Q_ARG(QString, QString(name_bar)),
+			      Q_ARG(QString, QString(window_name)),
+			      Q_ARG(void*, (void*)value),
+			      Q_ARG(int, count),
+			      Q_ARG(void*, (void*)on_change)
+			      );
+
+    return 1;//dummy value
+}
+
+CV_IMPL int cvCreateButton( const char* bar_name, const char* window_name, CvButtonCallback on_change, const char* button_name , void* userdata )
+{
+    QMetaObject::invokeMethod(&guiMainThread,
+			      "addButton",
+			      Qt::AutoConnection,
+			      Q_ARG(QString, QString(window_name)),
+			      Q_ARG(QString, QString(bar_name)),
+			      Q_ARG(QString, QString(button_name)),
+			      Q_ARG(void*, (void*)on_change),
+			      Q_ARG(void*, userdata)
+			      );
 
     return 1;//dummy value
 }
@@ -548,11 +576,11 @@ CV_IMPL void cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback c
 			      );
 }
 
-CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name )
+CV_IMPL int cvGetTrackbarPos( const char* name_bar, const char* window_name )
 {
     int result = -1;
 
-    QPointer<CvTrackbar> t = icvFindTrackbarByName(  trackbar_name, window_name );
+    QPointer<CvTrackbar> t = icvFindTrackbarByName(  name_bar, window_name );
 
     if (t)
 	result = t->slider->value();
@@ -560,10 +588,10 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
     return result;
 }
 
-CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
+CV_IMPL void cvSetTrackbarPos( const char* name_bar, const char* window_name, int pos )
 {
 
-    QPointer<CvTrackbar> t = icvFindTrackbarByName(  trackbar_name, window_name );
+    QPointer<CvTrackbar> t = icvFindTrackbarByName(  name_bar, window_name );
 
     if (t)
 	t->slider->setValue(pos);
@@ -872,12 +900,38 @@ void GuiReceiver::resizeWindow(QString name, int width, int height)
 	w->resize(width, height);
 }
 
-void GuiReceiver::addSlider(QString trackbar_name, QString window_name, void* value, int count, void* on_change)
+void GuiReceiver::addButton(QString window_name, QString bar_name, QString button_name, void* on_change, void* userdata)
 {
     QPointer<CvWindow> w = icvFindWindowByName( window_name.toLatin1().data()  );
 
     if (!w)
 	return;
+
+    if (!on_change)
+	CV_Error(CV_StsNullPtr, "Callback is NULL");
+
+    QPointer<CvButtonbar> b = icvFindButtonbarByName(  bar_name.toLatin1().data() ,window_name.toLatin1().data() );
+
+    if (!b)//if the buttonbar does not exist, create it THEN, attached a new button
+	b = w->createButtonbar(bar_name);
+
+    if (b)
+	b->addButton( button_name,(CvButtonCallback) on_change, userdata);
+}
+
+
+void GuiReceiver::addSlider(QString bar_name, QString window_name, void* value, int count, void* on_change)
+{
+    QPointer<CvWindow> w = icvFindWindowByName( window_name.toLatin1().data()  );
+
+    if (!w)
+	return;
+
+    QPointer<CvTrackbar> t = icvFindTrackbarByName( bar_name.toLatin1().data() , window_name.toLatin1().data() );
+
+    if (t)//trackbar exists
+	return;
+
 
     if (!value)
 	CV_Error(CV_StsNullPtr, "NULL value pointer" );
@@ -885,7 +939,7 @@ void GuiReceiver::addSlider(QString trackbar_name, QString window_name, void* va
     if (count<= 0)//count is the max value of the slider, so must be bigger than 0
 	CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
 
-    w->addSlider(trackbar_name,(int*)value,count,(CvTrackbarCallback) on_change);
+    w->addSlider(bar_name,(int*)value,count,(CvTrackbarCallback) on_change);
 }
 
 int GuiReceiver::start()
@@ -893,11 +947,13 @@ int GuiReceiver::start()
     return qApp->exec();
 }
 
+
 CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTrackbarCallback on_change )
 {
-    setObjectName(trackbar_name);
-    parent = arg;
-    trackbar_name = name;
+    type=type_CvTrackbar;
+    myparent = arg;
+    name_bar = name;
+    setObjectName(name_bar);
     dataSlider = value;
 
     callback = on_change;
@@ -934,8 +990,8 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
 
     //label->setStyleSheet("QPushButton:disabled {color: black}");
 
-    addWidget(label);//name + value
-    addWidget(slider);//slider
+    addWidget(label,Qt::AlignLeft);//name + value
+    addWidget(slider,Qt::AlignCenter);//slider
 }
 
 void CvTrackbar::createDialog()
@@ -956,7 +1012,7 @@ void CvTrackbar::createDialog()
 	    QInputDialog::getInteger
 #endif
 	    (this->parentWidget(),
-	     tr("Slider %1").arg(trackbar_name),
+	     tr("Slider %1").arg(name_bar),
 	     tr("New value:"),
 	     value,
 	     min,
@@ -980,7 +1036,7 @@ void CvTrackbar::update(int myvalue)
 
 void CvTrackbar::setLabel(int myvalue)
 {
-    QString nameNormalized = trackbar_name.leftJustified( 10, ' ', true );
+    QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
     QString valueMaximum = QString("%1").arg(slider->maximum());
     QString str = QString("%1 (%2/%3)").arg(nameNormalized).arg(myvalue,valueMaximum.length(),10,QChar('0')).arg(valueMaximum);
     label->setText(str);
@@ -994,16 +1050,63 @@ CvTrackbar::~CvTrackbar()
 
 
 
+
 //here CvButtonbar class
-/*
-CvButtonbar::CvButtonbar()
+CvButtonbar::CvButtonbar(CvWindow* arg,  QString arg2)
 {
+    type=type_CvButtonbar;
+    myparent = arg;
+    name_bar = arg2;
+    setObjectName(name_bar);
+
+    /*
+    label = new QLabel;
+    setLabel();
+    addWidget(label,Qt::AlignLeft );
+    */
+}
+
+CvButtonbar::~CvButtonbar()
+{
+    QLayoutItem *child;
+
+    while ((child = takeAt(0)) != 0)
+	delete child;
 
 }
-*/
 
+void CvButtonbar::setLabel()
+{
+    QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
+    label->setText(nameNormalized);
+}
 
+void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata)
+{
+    CvButton* button = new CvButton(this, name,call, userdata);
+    QString button_name = name;
 
+    if (button_name == "")
+	button_name = tr("button %1").arg(this->count());
+
+    button->setText(button_name);
+    QObject::connect( button, SIGNAL( clicked() ),button, SLOT( callCallBack() ));
+
+    this->addWidget(button,Qt::AlignCenter);
+}
+
+CvButton::CvButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4)
+{
+    myparent = arg1;
+    button_name = arg2;
+    callback = arg3;
+    userdata=arg4;
+}
+
+void CvButton::callCallBack()
+{
+    callback(userdata);
+}
 
 //here CvWinProperties class
 CvWinProperties::CvWinProperties(QString name_paraWindow, QWidget* parent)
@@ -1163,6 +1266,23 @@ CvWindow::~CvWindow()
     for (int i=0;i<vect_QShortcuts.count();i++)
 	delete vect_QShortcuts[i];
 }
+
+CvButtonbar* CvWindow::createButtonbar(QString name_bar)
+{
+    QPointer<CvButtonbar> t;
+
+    if (param_gui_mode == CV_GUI_EXPANDED)
+    {
+	t = new CvButtonbar(this,name_bar);
+	t->setAlignment(Qt::AlignHCenter);
+
+	parameters_window->myLayout->insertLayout(parameters_window->myLayout->count(),t);
+    }
+
+    return t;
+}
+
+
 
 CvWinProperties* CvWindow::getWinProp()
 {
@@ -1486,7 +1606,8 @@ void CvWindow::icvLoadTrackbars(QSettings *settings)
 	settings->setArrayIndex(i-start_index);
 	t = (CvTrackbar*)  myLayout->layout()->itemAt(i);
 
-	if (t->trackbar_name == settings->value("name").toString())
+	if (t->name_bar == settings->value("name").toString())
+	    //if (t->getName() == settings->value("name").toString())
 	{
 	    t->slider->setValue(settings->value("value").toInt());
 	}
@@ -1510,7 +1631,8 @@ void CvWindow::icvSaveTrackbars(QSettings *settings)
     for (int i = start_index; i < myLayout->layout()->count()-1; ++i) {
 	t = (CvTrackbar*)  myLayout->layout()->itemAt(i);
 	settings->setArrayIndex(i-start_index);
-	settings->setValue("name", t->trackbar_name);
+	settings->setValue("name", t->name_bar);
+	//settings->setValue("name", t->getName());
 	settings->setValue("value", t->slider->value());
     }
     settings->endArray();

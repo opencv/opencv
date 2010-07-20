@@ -93,6 +93,9 @@ CVAPI(void) cvSaveWindowParameters(const char* name);
 CVAPI(void) cvLoadWindowParameters(const char* name);
 CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 CVAPI(void) cvStopLoop();
+
+typedef void (CV_CDECL *CvButtonCallback)(void* userdata);
+CVAPI(int) cvCreateButton( const char* bar_name, const char* window_name, CvButtonCallback on_change, const char* button_name CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL));
 //----------------------
 
 
