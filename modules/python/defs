@@ -67,6 +67,10 @@
 #define  CV_BayerGB2RGB CV_BayerGR2BGR
 #define  CV_BayerRG2RGB CV_BayerBG2BGR
 #define  CV_BayerGR2RGB CV_BayerGB2BGR
+#define  CV_BayerBG2BGR_VNG
+#define  CV_BayerGB2BGR_VNG
+#define  CV_BayerRG2BGR_VNG
+#define  CV_BayerGR2BGR_VNG
 #define  CV_BGR2Luv     50
 #define  CV_RGB2Luv     51
 #define  CV_BGR2HLS     52
