@@ -55,13 +55,13 @@
 #define COL_SSD_SIZE (BLOCK_W + N_DIRTY_PIXELS)
 #define SHARED_MEM_SIZE (COL_SSD_SIZE) // amount of shared memory used
 
+namespace stereobm_gpu 
+{
+
 __constant__ unsigned int* cminSSDImage;
 __constant__ size_t cminSSD_step;
 __constant__ int cwidth;
 __constant__ int cheight;
-
-namespace device_code 
-{
 
 __device__ int SQ(int a)
 {
@@ -290,29 +290,79 @@ extern "C" __global__ void stereoKernel(unsigned char *left, unsigned char *righ
 
 }
 
-extern "C" void cv::gpu::impl::stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, DevMem2D& disp, int maxdisp, DevMem2D_<unsigned int>& minSSD_buf)
-{   
-    //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
-    //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );
-    
-    size_t smem_size = (BLOCK_W + N_DISPARITIES * SHARED_MEM_SIZE) * sizeof(unsigned int);      
+namespace cv { namespace gpu { namespace impl
+{
+    extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf)
+    {   
+        //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
+        //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );
 
-    cudaSafeCall( cudaMemset2D(disp.ptr, disp.step, 0, disp.cols, disp. rows) );
-    cudaSafeCall( cudaMemset2D(minSSD_buf.ptr, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp. rows) );        
+        size_t smem_size = (BLOCK_W + N_DISPARITIES * SHARED_MEM_SIZE) * sizeof(unsigned int);      
 
-    dim3 grid(1,1,1);
-    dim3 threads(BLOCK_W, 1, 1);    
-    
-    grid.x = divUp(left.cols - maxdisp - 2 * RADIUS, BLOCK_W);
-    grid.y = divUp(left.rows - 2 * RADIUS, ROWSperTHREAD);
-    
-    cudaSafeCall( cudaMemcpyToSymbol(  cwidth, &left.cols, sizeof (left.cols) ) );
-    cudaSafeCall( cudaMemcpyToSymbol( cheight, &left.rows, sizeof (left.rows) ) );
-    cudaSafeCall( cudaMemcpyToSymbol( cminSSDImage,  &minSSD_buf.ptr, sizeof (minSSD_buf.ptr) ) );
+        cudaSafeCall( cudaMemset2D(disp.ptr, disp.step, 0, disp.cols, disp. rows) );
+        cudaSafeCall( cudaMemset2D(minSSD_buf.ptr, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp. rows) );        
 
-    size_t minssd_step = minSSD_buf.step/minSSD_buf.elemSize();
-    cudaSafeCall( cudaMemcpyToSymbol( cminSSD_step,  &minssd_step, sizeof (minssd_step) ) );
-         
-    device_code::stereoKernel<<<grid, threads, smem_size>>>(left.ptr, right.ptr, left.step, disp.ptr, disp.step, maxdisp);
-    cudaSafeCall( cudaThreadSynchronize() );
+        dim3 grid(1,1,1);
+        dim3 threads(BLOCK_W, 1, 1);    
+
+        grid.x = divUp(left.cols - maxdisp - 2 * RADIUS, BLOCK_W);
+        grid.y = divUp(left.rows - 2 * RADIUS, ROWSperTHREAD);
+
+        cudaSafeCall( cudaMemcpyToSymbol(  stereobm_gpu::cwidth, &left.cols, sizeof(left.cols) ) );
+        cudaSafeCall( cudaMemcpyToSymbol( stereobm_gpu::cheight, &left.rows, sizeof(left.rows) ) );
+        cudaSafeCall( cudaMemcpyToSymbol( stereobm_gpu::cminSSDImage, &minSSD_buf.ptr, sizeof(minSSD_buf.ptr) ) );
+
+        size_t minssd_step = minSSD_buf.step/minSSD_buf.elemSize();
+        cudaSafeCall( cudaMemcpyToSymbol( stereobm_gpu::cminSSD_step,  &minssd_step, sizeof(minssd_step) ) );
+
+        stereobm_gpu::stereoKernel<<<grid, threads, smem_size>>>(left.ptr, right.ptr, left.step, disp.ptr, disp.step, maxdisp);
+        cudaSafeCall( cudaThreadSynchronize() );
+    }
+}}}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////// Sobel Prefiler ///////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace stereobm_gpu
+{
+
+texture<unsigned char, 2, cudaReadModeElementType> tex;
+
+extern "C" __global__ void prefilert_kernel(unsigned char *output, size_t step, int width, int height, int prefilterCap)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < width && y < height)
+    {
+        int conv = (int)tex2D(tex, x - 1, y - 1) * (-1) + (int)tex2D(tex, x + 1, y - 1) * (1) + 
+                   (int)tex2D(tex, x - 1, y    ) * (-2) + (int)tex2D(tex, x + 1, y    ) * (2) +
+                   (int)tex2D(tex, x - 1, y + 1) * (-1) + (int)tex2D(tex, x + 1, y + 1) * (1);
+
+
+        conv = min(min(max(-prefilterCap, conv), prefilterCap) + prefilterCap, 255);
+        output[y * step + x] = conv & 0xFF;
+    }
 }
+
+}
+
+namespace cv { namespace gpu  { namespace impl
+{
+    extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap)
+    {
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar>();
+        cudaSafeCall( cudaBindTexture2D( 0, stereobm_gpu::tex, input.ptr, desc, input.cols, input.rows, input.step ) );  
+
+        dim3 threads(16, 16, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(input.cols, threads.x);
+        grid.y = divUp(input.rows, threads.y);            
+
+        stereobm_gpu::prefilert_kernel<<<grid, threads>>>(output.ptr, output.step, output.cols, output.rows, prefilterCap);
+        cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+}}}

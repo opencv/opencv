@@ -56,12 +56,21 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right
 
 
 #else /* !defined (HAVE_CUDA) */
+
+namespace cv { namespace gpu 
+{  
+    namespace impl 
+    {
+        extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
+        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap = 31);
+    }
+}}
    
-cv::gpu::StereoBM_GPU::StereoBM_GPU() : preset(BASIC_PRESET), ndisp(64)  {}
-cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_) : preset(preset_), ndisp(ndisparities_) 
+cv::gpu::StereoBM_GPU::StereoBM_GPU() : preset(BASIC_PRESET), ndisp(DEFAULT_NDISP), winSize(DEFAULT_WINSZ)  {}
+cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_, int winSize_) : preset(preset_), ndisp(ndisparities_), winSize(winSize_) 
 {
-    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
-    CV_Assert(ndisp <= max_supported_ndisp);
+    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);    
+    CV_Assert(0 < ndisp && ndisp <= max_supported_ndisp);
     CV_Assert(ndisp % 8 == 0);
 }
 
@@ -91,14 +100,21 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right
     disparity.create(left.size(), CV_8U);
     minSSD.create(left.size(), CV_32S);
 
+    GpuMat le_for_bm =  left;
+    GpuMat ri_for_bm = right;
+        
     if (preset == PREFILTER_XSOBEL)
     {
-         CV_Assert(!"Not implemented");
-    }   
+        leBuf.create( left.size(),  left.type());
+        riBuf.create(right.size(), right.type());
+            
+        impl::prefilter_xsobel( left, leBuf);
+        impl::prefilter_xsobel(right, riBuf);        
 
-    DevMem2D disp = disparity;
-    DevMem2D_<unsigned int> mssd = minSSD;    
-    impl::stereoBM_GPU(left, right, disp, ndisp, mssd);     
+        le_for_bm = leBuf;
+        ri_for_bm = riBuf;
+    }  
+    impl::stereoBM_GPU(le_for_bm, ri_for_bm, disparity, ndisp, winSize, minSSD);     
 }
 
 void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream)

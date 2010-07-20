@@ -326,13 +326,15 @@ namespace cv
         class CV_EXPORTS StereoBM_GPU
         {
         public:
-            enum { BASIC_PRESET=0, PREFILTER_XSOBEL = 1 };
+            enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
+
+            enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
 
             //! the default constructor
             StereoBM_GPU();
             //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size
             //! ndisparities should be multiple of 8. SSD WindowsSize is fixed to 19 now
-            StereoBM_GPU(int preset, int ndisparities=0);
+            StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
             //! Output disparity has CV_8U type.
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity);
@@ -344,10 +346,13 @@ namespace cv
             // if current GPU will be faster then CPU in this algorithm.
             // It queries current active device.
             static bool checkIfGpuCallReasonable();
-        private:
-            GpuMat minSSD;
-            int preset;
+
             int ndisp;
+            int winSize;
+            int preset;
+        private:
+            GpuMat minSSD, leBuf, riBuf;
+                        
         };
     }
 }
