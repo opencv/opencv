@@ -2191,234 +2191,525 @@ icvBayer2BGR_VNG_8u_C1C3R( const uchar* bayer, int bstep,
 {
     int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
     bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
-    bool greenCell0_buf = !greenCell0;
     
     // for too small images use the simple interpolation algorithm
-    if( MIN(size.width, size.height) < 5 )
+    if( MIN(size.width, size.height) < 8 )
         return icvBayer2BGR_8u_C1C3R( bayer, bstep, dst, dststep, size, code );
     
     const int brows = 3, bcn = 7;
-    int i, bufstep = size.width*bcn;
+    int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;  
+    int i, bufstep = N7*bcn;
     cv::AutoBuffer<ushort> _buf(bufstep*brows);
     ushort* buf = (ushort*)_buf;
     
     bayer += bstep*2;
     
-    for( i = 0; i < size.width*3; i++ )
-    {
-        dst[i] = dst[i + dststep] =
-        dst[i + dststep*(size.height-2)] =
-        dst[i + dststep*(size.height-1)] = 0;
-    }
+#if CV_SSE2
+    bool haveSSE = cv::checkHardwareSupport(CV_CPU_SSE2);
+    #define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
+#endif
     
-    for( int y = 2; y < size.height - 2; y++ )
+    for( int y = 2; y < size.height - 4; y++ )
     {
-        uchar* dstrow = dst + dststep*y;
+        uchar* dstrow = dst + dststep*y + 6;
         const uchar* srow;
         
         for( int dy = (y == 2 ? -1 : 1); dy <= 1; dy++ )
         {
-            ushort* brow = buf + ((y + dy - 1)%brows)*bufstep;
-            srow = bayer + dy*bstep;
+            ushort* brow = buf + ((y + dy - 1)%brows)*bufstep + 1;
+            srow = bayer + (y+dy)*bstep + 1;
             
             for( i = 0; i < bcn; i++ )
-                brow[i] = brow[i + (size.width-1)*bcn] = 0;
+                brow[N*i-1] = brow[(N-2) + N*i] = 0;
             
-            bool greenCell = greenCell0_buf;
-            for( i = 1; i < size.width-1; i++ )
+            i = 1;
+
+        #if CV_SSE2
+            if( haveSSE )
             {
-                brow += bcn;
-                brow[0] = (ushort)( abs(srow[i-1-bstep] - srow[i-1+bstep]) +
-                                    abs(srow[i-bstep] - srow[i+bstep])*2 +
-                                    abs(srow[i+1-bstep] - srow[i+1+bstep]));
-                brow[1] = (ushort)( abs(srow[i-1-bstep] - srow[i+1-bstep]) +
-                                    abs(srow[i-1] - srow[i+1])*2 +
-                                    abs(srow[i-1+bstep] - srow[i+1+bstep]));
-                brow[2] = (ushort)(abs(srow[i+1-bstep] - srow[i-1+bstep])*2);
-                brow[3] = (ushort)(abs(srow[i-1-bstep] - srow[i+1+bstep])*2);
-                if(!greenCell)
+                __m128i z = _mm_setzero_si128();
+                for( ; i <= N-9; i += 8, srow += 8, brow += 8 )
                 {
-                    brow[4] = (ushort)(brow[2] + abs(srow[i-bstep] - srow[i-1]) + abs(srow[i+bstep] - srow[i+1]));
-                    brow[5] = (ushort)(brow[3] + abs(srow[i-bstep] - srow[i+1]) + abs(srow[i+bstep] - srow[i-1]));
-                    brow[6] = (ushort)((srow[i-bstep] + srow[i-1] + srow[i+1] + srow[i+bstep] + 2)>>2);
+                    __m128i s1, s2, s3, s4, s6, s7, s8, s9;
+                    
+                    s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1-bstep)),z);
+                    s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)),z);
+                    s3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1-bstep)),z);
+                    
+                    s4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)),z);
+                    s6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)),z);
+                    
+                    s7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1+bstep)),z);
+                    s8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)),z);
+                    s9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1+bstep)),z);
+                    
+                    __m128i b0, b1, b2, b3, b4, b5, b6;
+                    
+                    b0 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s2,s8),1),
+                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s7),
+                                                       _mm_absdiff_epu16(s3, s9)));
+                    b1 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s4,s6),1),
+                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s3),
+                                                       _mm_absdiff_epu16(s7, s9)));
+                    b2 = _mm_slli_epi16(_mm_absdiff_epu16(s3,s7),1);
+                    b3 = _mm_slli_epi16(_mm_absdiff_epu16(s1,s9),1);
+                    
+                    _mm_storeu_si128((__m128i*)brow, b0);
+                    _mm_storeu_si128((__m128i*)(brow + N), b1);
+                    _mm_storeu_si128((__m128i*)(brow + N2), b2);
+                    _mm_storeu_si128((__m128i*)(brow + N3), b3);
+                    
+                    b4 = _mm_adds_epu16(b2,_mm_adds_epu16(_mm_absdiff_epu16(s2, s4),
+                                                          _mm_absdiff_epu16(s6, s8)));
+                    b5 = _mm_adds_epu16(b3,_mm_adds_epu16(_mm_absdiff_epu16(s2, s6),
+                                                          _mm_absdiff_epu16(s4, s8)));
+                    b6 = _mm_adds_epu16(_mm_adds_epu16(s2, s4), _mm_adds_epu16(s6, s8));
+                    b6 = _mm_srli_epi16(b6, 1);
+                    
+                    _mm_storeu_si128((__m128i*)(brow + N4), b4);
+                    _mm_storeu_si128((__m128i*)(brow + N5), b5);
+                    _mm_storeu_si128((__m128i*)(brow + N6), b6);
                 }
-                greenCell = !greenCell;
             }
-            greenCell0_buf = !greenCell0_buf;
+        #endif
+
+            for( ; i < N-1; i++, srow++, brow++ )
+            {
+                brow[0] = (ushort)(abs(srow[-1-bstep] - srow[-1+bstep]) +
+                                   abs(srow[-bstep] - srow[+bstep])*2 +
+                                   abs(srow[1-bstep] - srow[1+bstep]));
+                brow[N] = (ushort)(abs(srow[-1-bstep] - srow[1-bstep]) +
+                                   abs(srow[-1] - srow[1])*2 +
+                                   abs(srow[-1+bstep] - srow[1+bstep]));
+                brow[N2] = (ushort)(abs(srow[+1-bstep] - srow[-1+bstep])*2);
+                brow[N3] = (ushort)(abs(srow[-1-bstep] - srow[1+bstep])*2);
+                brow[N4] = (ushort)(brow[N2] + abs(srow[-bstep] - srow[-1]) +
+                                    abs(srow[+bstep] - srow[1]));
+                brow[N5] = (ushort)(brow[N3] + abs(srow[-bstep] - srow[1]) +
+                                    abs(srow[+bstep] - srow[-1]));
+                brow[N6] = (ushort)((srow[-bstep] + srow[-1] + srow[1] + srow[+bstep])>>1);
+            }
         }
         
-        const ushort* brow0 = buf + ((y - 2) % brows)*bufstep + bcn;
-        const ushort* brow1 = buf + ((y - 1) % brows)*bufstep + bcn;
-        const ushort* brow2 = buf + (y % brows)*bufstep + bcn;
-        static const float scale[] = { 0.f, 1.f, 0.5f, 0.3333333333f, 0.25f, 0.2f, 0.1666666667f, 0.1428571f, 0.125f };
-        srow = bayer + y*bstep;
+        const ushort* brow0 = buf + ((y - 2) % brows)*bufstep + 2;
+        const ushort* brow1 = buf + ((y - 1) % brows)*bufstep + 2;
+        const ushort* brow2 = buf + (y % brows)*bufstep + 2;
+        static const float scale[] = { 0.f, 0.5f, 0.25f, 0.1666666666667f, 0.125f, 0.1f, 0.08333333333f, 0.0714286f, 0.0625f };
+        srow = bayer + y*bstep + 2;
         bool greenCell = greenCell0;
         
-        for( i = 0; i < 6; i++ )
-            dstrow[i] = dstrow[i + (size.width-2)*3] = 0;
-        dstrow += 6;
+        i = 2;
+    #if CV_SSE2        
+        int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
+    #else
+        int limit = N - 2;
+    #endif
         
-        for( i = 2; i < size.width-2; i++, brow0 += bcn, brow1 += bcn, brow2 += bcn, dstrow += 3 )
+        do
         {
-            int gradN = (brow0[0] + brow1[0])>>1;
-            int gradS = (brow1[0] + brow2[0])>>1;
-            int gradW = (brow1[-bcn+1] + brow1[1])>>1;
-            int gradE = (brow1[1] + brow1[bcn+1])>>1;
-            int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
-            int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
-            int R, G, B;
+            for( ; i < limit; i++, srow++, brow0++, brow1++, brow2++, dstrow += 3 )
+            {
+                int gradN = brow0[0] + brow1[0];
+                int gradS = brow1[0] + brow2[0];
+                int gradW = brow1[N-1] + brow1[N];
+                int gradE = brow1[N] + brow1[N+1];
+                int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
+                int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
+                int R, G, B;
+                
+                if( !greenCell )
+                {
+                    int gradNE = brow0[N4+1] + brow1[N4];
+                    int gradSW = brow1[N4] + brow2[N4-1];
+                    int gradNW = brow0[N5-1] + brow1[N5];
+                    int gradSE = brow1[N5] + brow2[N5+1];
+                    
+                    minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
+                    maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
+                    int T = minGrad + maxGrad/2;
+                    
+                    int Rs = 0, Gs = 0, Bs = 0, ng = 0;
+                    if( gradN < T )
+                    {
+                        Rs += srow[-bstep*2] + srow[0];
+                        Gs += srow[-bstep]*2;
+                        Bs += srow[-bstep-1] + srow[-bstep+1];
+                        ng++;
+                    }
+                    if( gradS < T )
+                    {
+                        Rs += srow[bstep*2] + srow[0];
+                        Gs += srow[bstep]*2;
+                        Bs += srow[bstep-1] + srow[bstep+1];
+                        ng++;
+                    }
+                    if( gradW < T )
+                    {
+                        Rs += srow[-2] + srow[0];
+                        Gs += srow[-1]*2;
+                        Bs += srow[-bstep-1] + srow[bstep-1];
+                        ng++;
+                    }
+                    if( gradE < T )
+                    {
+                        Rs += srow[2] + srow[0];
+                        Gs += srow[1]*2;
+                        Bs += srow[-bstep+1] + srow[bstep+1];
+                        ng++;
+                    }
+                    if( gradNE < T )
+                    {
+                        Rs += srow[-bstep*2+2] + srow[0];
+                        Gs += brow0[N6+1];
+                        Bs += srow[-bstep+1]*2;
+                        ng++;
+                    }
+                    if( gradSW < T )
+                    {
+                        Rs += srow[bstep*2-2] + srow[0];
+                        Gs += brow2[N6-1];
+                        Bs += srow[bstep-1]*2;
+                        ng++;
+                    }
+                    if( gradNW < T )
+                    {
+                        Rs += srow[-bstep*2-2] + srow[0];
+                        Gs += brow0[N6-1];
+                        Bs += srow[-bstep+1]*2;
+                        ng++;
+                    }
+                    if( gradSE < T )
+                    {
+                        Rs += srow[bstep*2+2] + srow[0];
+                        Gs += brow2[N6+1];
+                        Bs += srow[-bstep+1]*2;
+                        ng++;
+                    }
+                    R = srow[0];
+                    G = R + cvRound((Gs - Rs)*scale[ng]);
+                    B = R + cvRound((Bs - Rs)*scale[ng]); 
+                }
+                else
+                {
+                    int gradNE = brow0[N2] + brow0[N2+1] + brow1[N2] + brow1[N2+1];
+                    int gradSW = brow1[N2] + brow1[N2-1] + brow2[N2] + brow2[N2-1];
+                    int gradNW = brow0[N3] + brow0[N3-1] + brow1[N3] + brow1[N3-1];
+                    int gradSE = brow1[N3] + brow1[N3+1] + brow2[N3] + brow2[N3+1];
+                    
+                    minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
+                    maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
+                    int T = minGrad + maxGrad/2;
+                    
+                    int Rs = 0, Gs = 0, Bs = 0, ng = 0;
+                    if( gradN < T )
+                    {
+                        Rs += srow[-bstep*2-1] + srow[-bstep*2+1];
+                        Gs += srow[-bstep*2] + srow[0];
+                        Bs += srow[-bstep]*2;
+                        ng++;
+                    }
+                    if( gradS < T )
+                    {
+                        Rs += srow[bstep*2-1] + srow[bstep*2+1];
+                        Gs += srow[bstep*2] + srow[0];
+                        Bs += srow[bstep]*2;
+                        ng++;
+                    }
+                    if( gradW < T )
+                    {
+                        Rs += srow[-1]*2;
+                        Gs += srow[-2] + srow[0];
+                        Bs += srow[-bstep-2]+srow[bstep-2];
+                        ng++;
+                    }
+                    if( gradE < T )
+                    {
+                        Rs += srow[1]*2;
+                        Gs += srow[2] + srow[0];
+                        Bs += srow[-bstep+2]+srow[bstep+2];
+                        ng++;
+                    }
+                    if( gradNE < T )
+                    {
+                        Rs += srow[-bstep*2+1] + srow[1];
+                        Gs += srow[-bstep+1]*2;
+                        Bs += srow[-bstep] + srow[-bstep+2];
+                        ng++;
+                    }
+                    if( gradSW < T )
+                    {
+                        Rs += srow[bstep*2-1] + srow[-1];
+                        Gs += srow[bstep-1]*2;
+                        Bs += srow[bstep] + srow[bstep-2];
+                        ng++;
+                    }
+                    if( gradNW < T )
+                    {
+                        Rs += srow[-bstep*2-1] + srow[-1];
+                        Gs += srow[-bstep-1]*2;
+                        Bs += srow[-bstep-2]+srow[-bstep];
+                        ng++;
+                    }
+                    if( gradSE < T )
+                    {
+                        Rs += srow[bstep*2+1] + srow[1];
+                        Gs += srow[bstep+1]*2;
+                        Bs += srow[bstep+2]+srow[bstep];
+                        ng++;
+                    }
+                    G = srow[0];
+                    R = G + cvRound((Rs - Gs)*scale[ng]);
+                    B = G + cvRound((Bs - Gs)*scale[ng]);
+                }
+                dstrow[blueIdx] = CV_CAST_8U(B);
+                dstrow[1] = CV_CAST_8U(G);
+                dstrow[blueIdx^2] = CV_CAST_8U(R);
+                greenCell = !greenCell;
+            }
             
-            if( !greenCell )
+        #if CV_SSE2
+            if( !haveSSE )
+                break;
+            
+            __m128i emask = _mm_set1_epi32(0x0000ffff),
+                    omask = _mm_set1_epi32(0xffff0000),
+                    z = _mm_setzero_si128();
+            __m128 _0_5 = _mm_set1_ps(0.5f);
+            
+            #define _mm_merge_epi16(a, b) \
+                _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask))
+            #define _mm_cvtloepi16_ps(a) _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(a,a), 16))
+            #define _mm_cvthiepi16_ps(a) _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(a,a), 16))
+
+            // process 8 pixels at once
+            for( ; i <= N - 10; i += 8, srow += 8, brow0 += 8, brow1 += 8, brow2 += 8 )
             {
-                int gradNE = (brow0[bcn+4] + brow1[4])>>1;
-                int gradSW = (brow1[4] + brow2[-bcn+4])>>1;
-                int gradNW = (brow0[-bcn+5] + brow1[5])>>1;
-                int gradSE = (brow1[5] + brow2[bcn+5])>>1;
+                __m128i gradN, gradS, gradW, gradE, gradNE, gradSW, gradNW, gradSE;
+                gradN = _mm_adds_epu16(_mm_loadu_si128((__m128i*)brow0),
+                                       _mm_loadu_si128((__m128i*)brow1));
+                gradS = _mm_adds_epu16(_mm_loadu_si128((__m128i*)brow1),
+                                       _mm_loadu_si128((__m128i*)brow2));
+                gradW = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N-1)),
+                                       _mm_loadu_si128((__m128i*)(brow1+N)));
+                gradE = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N+1)),
+                                       _mm_loadu_si128((__m128i*)(brow1+N)));
                 
-                minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
-                maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                int T = minGrad + maxGrad/2;
+                __m128i minGrad, maxGrad, T;
+                minGrad = _mm_min_epi16(_mm_min_epi16(_mm_min_epi16(gradN, gradS), gradW), gradE);
+                maxGrad = _mm_max_epi16(_mm_max_epi16(_mm_max_epi16(gradN, gradS), gradW), gradE);
                 
-                int Rs = 0, Gs = 0, Bs = 0, ng = 0;
-                if( gradN < T )
+                __m128i grad0, grad1;
+                
+                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N4+1)),
+                                       _mm_loadu_si128((__m128i*)(brow1+N4)));
+                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N2)),
+                                                      _mm_loadu_si128((__m128i*)(brow0+N2+1))),
+                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N2)),
+                                                      _mm_loadu_si128((__m128i*)(brow1+N2+1))));
+                gradNE = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                
+                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N4-1)),
+                                       _mm_loadu_si128((__m128i*)(brow1+N4)));
+                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N2)),
+                                                      _mm_loadu_si128((__m128i*)(brow2+N2-1))),
+                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N2)),
+                                                      _mm_loadu_si128((__m128i*)(brow1+N2-1))));
+                gradSW = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                
+                minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNE), gradSW);
+                maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNE), gradSW);
+                
+                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N5-1)),
+                                       _mm_loadu_si128((__m128i*)(brow1+N5)));
+                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N3)),
+                                                      _mm_loadu_si128((__m128i*)(brow0+N3-1))),
+                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N3)),
+                                                      _mm_loadu_si128((__m128i*)(brow1+N3-1))));
+                gradNW = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                
+                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N5+1)),
+                                       _mm_loadu_si128((__m128i*)(brow1+N5)));
+                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N3)),
+                                                      _mm_loadu_si128((__m128i*)(brow2+N3+1))),
+                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N3)),
+                                                      _mm_loadu_si128((__m128i*)(brow1+N3+1))));
+                gradSE = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                
+                minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNW), gradSE);
+                maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNW), gradSE);
+                
+                T = _mm_add_epi16(_mm_srli_epi16(maxGrad, 1), minGrad);
+                __m128i RGs = z, GRs = z, Bs = z, ng = z, mask;
+                
+                __m128i t0, t1, x0, x1, x2, x3, x4, x5, x6, x7, x8,
+                        x9, x10, x11, x12, x13, x14, x15, x16;
+                
+                x0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)srow), z);
+                
+                x1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep-1)), z);
+                x2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2-1)), z);
+                x3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)), z);
+                x4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2+1)), z);
+                x5 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep+1)), z);
+                x6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep+2)), z);
+                x7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)), z);
+                x8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep+2)), z);
+                x9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep+1)), z);
+                x10 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2+1)), z);
+                x11 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)), z);
+                x12 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2-1)), z);
+                x13 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep-1)), z);
+                x14 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep-2)), z);
+                x15 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)), z);
+                x16 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep-2)), z);
+                
+                // gradN
+                mask = _mm_cmpgt_epi16(T, gradN);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x3, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x2,x4)), mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x1,x5), t0), mask));
+                
+                // gradNE
+                mask = _mm_cmpgt_epi16(T, gradNE);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x5, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2+2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6+1)),
+                                                                        _mm_adds_epu16(x4,x7)), mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x3,x6)), mask));
+                
+                // gradE
+                mask = _mm_cmpgt_epi16(T, gradE);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x7, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(t0, mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x5,x9),
+                                                                      _mm_adds_epu16(x6,x8)), mask));
+                                
+                // gradSE
+                mask = _mm_cmpgt_epi16(T, gradSE);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x9, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2+2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6+1)),
+                                                                        _mm_adds_epu16(x7,x10)), mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x8,x11)), mask));
+                
+                // gradS
+                mask = _mm_cmpgt_epi16(T, gradS);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x11, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x10,x12)), mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x9,x13), t0), mask));
+                
+                // gradSW
+                mask = _mm_cmpgt_epi16(T, gradSW);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x13, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2-2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6-1)),
+                                                                        _mm_adds_epu16(x12,x15)), mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x11,x14)), mask));
+                
+                // gradW
+                mask = _mm_cmpgt_epi16(T, gradW);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                t0 = _mm_slli_epi16(x15, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(t0, mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x1,x13),
+                                                                      _mm_adds_epu16(x14,x16)), mask));
+                
+                // gradNW
+                mask = _mm_cmpgt_epi16(T, gradNW);
+                ng = _mm_sub_epi16(ng, mask);
+                
+                __m128 ngf0, ngf1;
+                ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
+                ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
+                
+                t0 = _mm_slli_epi16(x1, 1);
+                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2-2)), z), x0);
+                
+                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6-1)),
+                                                                        _mm_adds_epu16(x2,x15)), mask));
+                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x3,x16)), mask));
+                
+                // now interpolate r, g & b
+                t0 = _mm_sub_epi16(GRs, RGs);
+                t1 = _mm_sub_epi16(Bs, RGs);
+                
+                t0 = _mm_add_epi16(x0, _mm_packs_epi32(
+                   _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t0), ngf0)),
+                   _mm_cvtps_epi32(_mm_mul_ps(_mm_cvthiepi16_ps(t0), ngf1))));
+                
+                t1 = _mm_add_epi16(x0, _mm_packs_epi32(
+                   _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t1), ngf0)),
+                   _mm_cvtps_epi32(_mm_mul_ps(_mm_cvthiepi16_ps(t1), ngf1))));
+                
+                x1 = _mm_merge_epi16(x0, t0);
+                x2 = _mm_merge_epi16(t0, x0);
+                
+                uchar R[8], G[8], B[8];
+                
+                _mm_storel_epi64(blueIdx ? (__m128i*)B : (__m128i*)R, _mm_packus_epi16(x1, z));
+                _mm_storel_epi64((__m128i*)G, _mm_packus_epi16(x2, z));
+                _mm_storel_epi64(blueIdx ? (__m128i*)R : (__m128i*)B, _mm_packus_epi16(t1, z));
+                
+                for( int j = 0; j < 8; j++, dstrow += 3 )
                 {
-                    Rs += (srow[i-bstep*2] + srow[i])>>1;
-                    Gs += srow[i-bstep];
-                    Bs += (srow[i-bstep-1] + srow[i-bstep+1])>>1;
-                    ng++;
+                    dstrow[0] = B[j]; dstrow[1] = G[j]; dstrow[2] = R[j];
                 }
-                if( gradS < T )
-                {
-                    Rs += (srow[i+bstep*2] + srow[i])>>1;
-                    Gs += srow[i+bstep];
-                    Bs += (srow[i+bstep-1] + srow[i+bstep+1])>>1;
-                    ng++;
-                }
-                if( gradW < T )
-                {
-                    Rs += (srow[i-2] + srow[i])>>1;
-                    Gs += srow[i-1];
-                    Bs += (srow[i-bstep-1] + srow[i+bstep-1])>>1;
-                    ng++;
-                }
-                if( gradE < T )
-                {
-                    Rs += (srow[i+2] + srow[i])>>1;
-                    Gs += srow[i+1];
-                    Bs += (srow[i-bstep+1] + srow[i+bstep+1])>>1;
-                    ng++;
-                }
-                if( gradNE < T )
-                {
-                    Rs += (srow[i-bstep*2+2] + srow[i])>>1;
-                    Gs += brow0[bcn+6];
-                    Bs += srow[i-bstep+1];
-                    ng++;
-                }
-                if( gradSW < T )
-                {
-                    Rs += (srow[i+bstep*2-2] + srow[i])>>1;
-                    Gs += brow2[-bcn+6];
-                    Bs += srow[i+bstep-1];
-                    ng++;
-                }
-                if( gradNW < T )
-                {
-                    Rs += (srow[i-bstep*2+2] + srow[i])>>1;
-                    Gs += brow0[bcn+6];
-                    Bs += srow[i-bstep+1];
-                    ng++;
-                }
-                if( gradSE < T )
-                {
-                    Rs += (srow[i-bstep*2+2] + srow[i])>>1;
-                    Gs += brow0[bcn+6];
-                    Bs += srow[i-bstep+1];
-                    ng++;
-                }
-                R = srow[i];
-                G = R + cvRound((Gs - Rs)*scale[ng]);
-                B = R + cvRound((Bs - Rs)*scale[ng]); 
             }
-            else
-            {
-                int gradNE = (brow0[2] + brow0[bcn+2] + brow1[2] + brow1[bcn+2])>>1;
-                int gradSW = (brow1[2] + brow1[-bcn+2] + brow2[2] + brow2[-bcn+2])>>1;
-                int gradNW = (brow0[3] + brow0[-bcn+3] + brow1[3] + brow1[-bcn+3])>>1;
-                int gradSE = (brow1[3] + brow1[bcn+3] + brow2[3] + brow2[bcn+3])>>1;
-                
-                minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
-                maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                int T = minGrad + maxGrad/2;
-                
-                int Rs = 0, Gs = 0, Bs = 0, ng = 0;
-                if( gradN < T )
-                {
-                    Rs += (srow[i-bstep*2-1] + srow[i-bstep*2+1])>>1;
-                    Gs += (srow[i-bstep*2] + srow[i])>>1;
-                    Bs += srow[i-bstep];
-                    ng++;
-                }
-                if( gradS < T )
-                {
-                    Rs += (srow[i+bstep*2-1] + srow[i+bstep*2+1])>>1;
-                    Gs += (srow[i+bstep*2] + srow[i])>>1;
-                    Bs += srow[i+bstep];
-                    ng++;
-                }
-                if( gradW < T )
-                {
-                    Rs += srow[i-1];
-                    Gs += (srow[i-2] + srow[i])>>1;
-                    Bs += (srow[i-bstep-2]+srow[i+bstep-2])>>1;
-                    ng++;
-                }
-                if( gradE < T )
-                {
-                    Rs += srow[i+1];
-                    Gs += (srow[i+2] + srow[i])>>1;
-                    Bs += (srow[i-bstep+2]+srow[i+bstep+2])>>1;
-                    ng++;
-                }
-                if( gradNE < T )
-                {
-                    Rs += (srow[i-bstep*2+1] + srow[i+1])>>1;
-                    Gs += srow[i-bstep+1];
-                    Bs += (srow[i-bstep] + srow[i-bstep+2])>>1;
-                    ng++;
-                }
-                if( gradSW < T )
-                {
-                    Rs += (srow[i+bstep*2-1] + srow[i-1])>>1;
-                    Gs += srow[i+bstep-1];
-                    Bs += (srow[i+bstep] + srow[i+bstep-2])>>1;
-                    ng++;
-                }
-                if( gradNW < T )
-                {
-                    Rs += (srow[i-bstep*2-1] + srow[i-1])>>1;
-                    Gs += srow[i-bstep-1];
-                    Bs += (srow[i-bstep-2]+srow[i-bstep])>>1;
-                    ng++;
-                }
-                if( gradSE < T )
-                {
-                    Rs += (srow[i+bstep*2+1] + srow[i+1])>>1;
-                    Gs += srow[i+bstep+1];
-                    Bs += (srow[i+bstep+2]+srow[i+bstep])>>1;
-                    ng++;
-                }
-                G = srow[i];
-                R = G + cvRound((Rs - Gs)*scale[ng]);
-                B = G + cvRound((Bs - Gs)*scale[ng]);
-            }
-            dstrow[blueIdx] = CV_CAST_8U(B);
-            dstrow[1] = CV_CAST_8U(G);
-            dstrow[blueIdx^2] = CV_CAST_8U(R);
-            greenCell = !greenCell;
+        #endif
+            
+            limit = N - 2;
         }
+        while( i < N - 2 );
+        
+        for( i = 0; i < 6; i++ )
+        {
+            dst[dststep*y + 5 - i] = dst[dststep*y + 8 - i];
+            dst[dststep*y + (N - 2)*3 + i] = dst[dststep*y + (N - 3)*3 + i];
+        }
+        
         greenCell0 = !greenCell0;
         blueIdx ^= 2;
+    }
+    
+    for( i = 0; i < size.width*3; i++ )
+    {
+        dst[i] = dst[i + dststep] = dst[i + dststep*2];
+        dst[i + dststep*(size.height-4)] =
+        dst[i + dststep*(size.height-3)] =
+        dst[i + dststep*(size.height-2)] =
+        dst[i + dststep*(size.height-1)] = dst[i + dststep*(size.height-5)];
     }
     
     return CV_OK;
