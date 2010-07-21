@@ -21,6 +21,8 @@ class CV_GpuMatOpSetTo : public CvTest
         void print_mat(gpu::GpuMat & mat, std::string name = "gpu mat");
         void run(int);
 
+        bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
+
         bool test_cv_8u_c1();
         bool test_cv_8u_c2();
         bool test_cv_8u_c3();
@@ -34,15 +36,15 @@ class CV_GpuMatOpSetTo : public CvTest
         bool test_cv_32f_c4();
 
     private:
-        int w;
-        int h;
+        int rows;
+        int cols;
         Scalar s;
 };
 
 CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GpuMatOperatorSetTo", "setTo" )
 {
-    w = 100;
-    h = 100;
+    rows = 127;
+    cols = 129;
 
     s.val[0] = 128.0;
     s.val[1] = 128.0;
@@ -66,13 +68,16 @@ void CV_GpuMatOpSetTo::print_mat(gpu::GpuMat & mat, std::string name)
     print_mat(newmat, name);
 }
 
-bool CV_GpuMatOpSetTo::test_cv_8u_c1()
+bool CV_GpuMatOpSetTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
 {
-    Mat cpumat(w, h, CV_8U, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
+    //int64 time = getTickCount();
     cpumat.setTo(s);
+    //int64 time1 = getTickCount();
     gpumat.setTo(s);
+    //int64 time2 = getTickCount();
+    //std::cout << "\ntime cpu:" << double((time1 - time) / getTickFrequency());
+    //std::cout << "\ntime gpu:" << double((time2 - time1) / getTickFrequency());
+    //std::cout << "\n";
 
 #ifdef PRINT_MATRIX
     print_mat(cpumat);
@@ -82,214 +87,87 @@ bool CV_GpuMatOpSetTo::test_cv_8u_c1()
 
     double ret = norm(cpumat, gpumat);
 
-    if (ret < 0.1)
+    if (ret < 1.0)
         return true;
     else
     {
         std::cout << "return : " << ret << "\n";
         return false;
     }
+}
+
+
+bool CV_GpuMatOpSetTo::test_cv_8u_c1()
+{
+    Mat cpumat(rows, cols, CV_8U, Scalar::all(0));
+    GpuMat gpumat(cpumat);
+
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_8u_c2()
 {
-    Mat cpumat(w, h, CV_8UC2, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_8UC2, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret << "\n";
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_8u_c3()
 {
-    Mat cpumat(w, h, CV_8UC3, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_8UC3, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret << "\n";
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_8u_c4()
 {
-    Mat cpumat(w, h, CV_8UC4, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_8UC4, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret << "\n";
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_16u_c4()
 {
-    Mat cpumat(w, h, CV_16UC4, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_16UC4, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret << "\n";
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 
 bool CV_GpuMatOpSetTo::test_cv_32f_c1()
 {
-    Mat cpumat(w, h, CV_32F, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_32F, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret << "\n";
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_32f_c2()
 {
-    Mat cpumat(w, h, CV_32FC2, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_32FC2, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret;
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_32f_c3()
 {
-    Mat cpumat(w, h, CV_32FC3, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_32FC3, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret;
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 bool CV_GpuMatOpSetTo::test_cv_32f_c4()
 {
-    Mat cpumat(w, h, CV_32FC4, Scalar::all(0));
+    Mat cpumat(rows, cols, CV_32FC4, Scalar::all(0));
     GpuMat gpumat(cpumat);
 
-    cpumat.setTo(s);
-    gpumat.setTo(s);
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 0.1)
-        return true;
-    else
-    {
-        std::cout << "return : " << ret << "\n";
-        return false;
-    }
+    return compare_matrix(cpumat, gpumat);
 }
 
 void CV_GpuMatOpSetTo::run( int /* start_from */)

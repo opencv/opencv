@@ -76,19 +76,21 @@ namespace mat_operators
     };
 
     template <typename T, int channels>
-    __device__ size_t GetIndex(size_t i, int cols, int rows, int step)
+    __device__ size_t GetIndex(size_t i, int cols, int step)
     {
-        return ((i / static_cast<size_t>(cols))*static_cast<size_t>(step) / static_cast<size_t>(sizeof(T))) +
-                (i % static_cast<size_t>(rows))*static_cast<size_t>(channels) ;
+        size_t ret =    (i / static_cast<size_t>(cols))*static_cast<size_t>(step) / static_cast<size_t>(sizeof(T)) +
+                        (i % static_cast<size_t>(cols))*static_cast<size_t>(channels);
+        return  ret;
     }
 
     template <typename T, int channels>
     __global__ void kernel_set_to_without_mask(T * mat, int cols, int rows, int step)
     {
         size_t i = (blockIdx.x * blockDim.x + threadIdx.x);
+
         if (i < cols * rows)
         {
-            unroll<T, channels>::unroll_set(mat, GetIndex<T,channels>(i, cols, rows, step));
+            unroll<T, channels>::unroll_set(mat, GetIndex<T,channels>(i, cols, step));
         }
     }
 
@@ -97,7 +99,7 @@ namespace mat_operators
     {
         size_t i = (blockIdx.x * blockDim.x + threadIdx.x);
         if (i < cols * rows)
-            unroll<T, channels>::unroll_set_with_mask(mat, mask[i], GetIndex<T,channels>(i, cols, rows, step));
+            unroll<T, channels>::unroll_set_with_mask(mat, mask[i], GetIndex<T,channels>(i, cols, step));
     }
 }
 
@@ -105,10 +107,10 @@ extern "C" void cv::gpu::impl::set_to_with_mask(const DevMem2D& mat, const doubl
 {
     // download scalar to constant memory
     float data[4];
-    data[0] = scalar[0];
-    data[1] = scalar[1];
-    data[2] = scalar[2];
-    data[3] = scalar[3];
+    data[0] = static_cast<float>(scalar[0]);
+    data[1] = static_cast<float>(scalar[1]);
+    data[2] = static_cast<float>(scalar[2]);
+    data[3] = static_cast<float>(scalar[3]);
     cudaSafeCall( cudaMemcpyToSymbol(scalar_d, &data, sizeof(data)));
 
     dim3 threadsPerBlock(256,1,1);
@@ -144,10 +146,10 @@ extern "C" void cv::gpu::impl::set_to_with_mask(const DevMem2D& mat, const doubl
 extern "C" void cv::gpu::impl::set_to_without_mask(const DevMem2D& mat, const double * scalar, int elemSize1, int channels)
 {
     float data[4];
-    data[0] = scalar[0];
-    data[1] = scalar[1];
-    data[2] = scalar[2];
-    data[3] = scalar[3];
+    data[0] = static_cast<float>(scalar[0]);
+    data[1] = static_cast<float>(scalar[1]);
+    data[2] = static_cast<float>(scalar[2]);
+    data[3] = static_cast<float>(scalar[3]);
     cudaSafeCall( cudaMemcpyToSymbol(scalar_d, &data, sizeof(data)));
 
     dim3 threadsPerBlock(256, 1, 1);
