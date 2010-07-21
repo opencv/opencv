@@ -10,7 +10,7 @@ source_group("Include" FILES ${test_hdrs})
 
 set(the_target "opencv_test_gpu")
 
-include_directories	(	
+include_directories	(
 			"${CMAKE_SOURCE_DIR}/include/opencv"
 			"${CMAKE_SOURCE_DIR}/modules/core/include"
 			"${CMAKE_SOURCE_DIR}/modules/imgproc/include"
@@ -36,10 +36,10 @@ set_target_properties(${the_target} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
 	)
 
-add_dependencies(${the_target} opencv_ts opencv_gpu)
+add_dependencies(${the_target} opencv_ts opencv_gpu opencv_highgui)
 
 # Add the required libraries for linking:
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_ts opencv_gpu)
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_ts opencv_gpu opencv_highgui)
 
 enable_testing()
 get_target_property(LOC ${the_target} LOCATION)
