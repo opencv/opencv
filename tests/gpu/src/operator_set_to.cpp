@@ -24,19 +24,6 @@ class CV_GpuMatOpSetTo : public CvTest
 
         bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
 
-        bool test_cv_8u_c1();
-        bool test_cv_8u_c2();
-        bool test_cv_8u_c3();
-        bool test_cv_8u_c4();
-
-        bool test_cv_16u_c4();
-
-        bool test_cv_32f_c1();
-        bool test_cv_32f_c2();
-        bool test_cv_32f_c3();
-        bool test_cv_32f_c4();
-
-
     private:
         int rows;
         int cols;
@@ -45,13 +32,13 @@ class CV_GpuMatOpSetTo : public CvTest
 
 CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GpuMatOperatorSetTo", "setTo" )
 {
-    rows = 129;
-    cols = 127;
+    rows = 256;
+    cols = 124;
 
-    s.val[0] = 128.0;
-    s.val[1] = 128.0;
-    s.val[2] = 128.0;
-    s.val[3] = 128.0;
+    s.val[0] = 127.0;
+    s.val[1] = 127.0;
+    s.val[2] = 127.0;
+    s.val[3] = 127.0;
 
     //#define PRINT_MATRIX
 }
@@ -99,95 +86,16 @@ bool CV_GpuMatOpSetTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
     }
 }
 
-
-bool CV_GpuMatOpSetTo::test_cv_8u_c1()
-{
-    Mat cpumat(rows, cols, CV_8U, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_8u_c2()
-{
-    Mat cpumat(rows, cols, CV_8UC2, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_8u_c3()
-{
-    Mat cpumat(rows, cols, CV_8UC3, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_8u_c4()
-{
-    Mat cpumat(rows, cols, CV_8UC4, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_16u_c4()
-{
-    Mat cpumat(rows, cols, CV_16UC4, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-
-bool CV_GpuMatOpSetTo::test_cv_32f_c1()
-{
-    Mat cpumat(rows, cols, CV_32F, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_32f_c2()
-{
-    Mat cpumat(rows, cols, CV_32FC2, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_32f_c3()
-{
-    Mat cpumat(rows, cols, CV_32FC3, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
-bool CV_GpuMatOpSetTo::test_cv_32f_c4()
-{
-    Mat cpumat(rows, cols, CV_32FC4, Scalar::all(0));
-    GpuMat gpumat(cpumat);
-
-    return compare_matrix(cpumat, gpumat);
-}
-
 void CV_GpuMatOpSetTo::run( int /* start_from */)
 {
     bool is_test_good = true;
 
-    is_test_good &= test_cv_8u_c1();
-    is_test_good &= test_cv_8u_c2();
-    is_test_good &= test_cv_8u_c3();
-    is_test_good &= test_cv_8u_c4();
-
-    is_test_good &= test_cv_16u_c4();
-
-    is_test_good &= test_cv_32f_c1();
-    is_test_good &= test_cv_32f_c2();
-    is_test_good &= test_cv_32f_c3();
-    is_test_good &= test_cv_32f_c4();
+    for (int i = 0; i < 7; i++)
+    {
+        Mat cpumat(rows, cols, i, Scalar::all(0));
+        GpuMat gpumat(cpumat);
+        is_test_good &= compare_matrix(cpumat, gpumat);
+    }
 
     if (is_test_good == true)
         ts->set_failed_test_info(CvTS::OK);

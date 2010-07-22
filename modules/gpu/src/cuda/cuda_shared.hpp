@@ -61,8 +61,8 @@ namespace cv
         {
             static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
-            extern "C" void set_to_without_mask (const DevMem2D& mat, const double * scalar, int depth, int channels);
-            extern "C" void set_to_with_mask    (const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int depth, int channels);
+            extern "C" void set_to_without_mask (const DevMem2D& mat, int depth, const double * scalar, int channels);
+            extern "C" void set_to_with_mask    (const DevMem2D& mat, int depth, const double * scalar, const DevMem2D& mask, int channels);
 
             extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta);
         }

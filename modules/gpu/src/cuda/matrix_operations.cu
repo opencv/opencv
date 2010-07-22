@@ -49,16 +49,16 @@
 using namespace cv::gpu;
 using namespace cv::gpu::impl;
 
-__constant__ __align__(16) float scalar_d[4];
+__constant__ __align__(16) double scalar_d[4];
 
 namespace mat_operators
 {
     //////////////////////////////////////////////////////////
     // SetTo
     //////////////////////////////////////////////////////////
-	
-    template<typename T, int channels>
-    __global__ void kernel_set_to_without_mask(T * mat, int cols, int rows, int step)
+
+    template<typename T>
+    __global__ void kernel_set_to_without_mask(T * mat, int cols, int rows, int step, int channels)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -70,21 +70,21 @@ namespace mat_operators
         }
     }
 
-    template<typename T, int channels>
-    __global__ void kernel_set_to_with_mask(T * mat, const unsigned char * mask, int cols, int rows, int step, int step_mask)
+    template<typename T>
+    __global__ void kernel_set_to_with_mask(T * mat, const unsigned char * mask, int cols, int rows, int step, int channels, int step_mask)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        if (mask[y * step_mask + x] != 0)
-            if ((x < cols * channels ) && (y < rows))
+        if ((x < cols * channels ) && (y < rows))
+            if (mask[y * step_mask + x / channels] != 0)
             {
                 size_t idx = y * (step / sizeof(T)) + x;
                 mat[idx] = scalar_d[ x % channels ];
             }
     }
 
-	
+
     //////////////////////////////////////////////////////////
     // ConvertTo
     //////////////////////////////////////////////////////////
@@ -109,7 +109,7 @@ namespace mat_operators
             return dim3(divUp(width, block.x), divUp(height, block.y));
         }
     };
-	
+
     template <typename T, typename DT>
     struct Converter<T, DT, 1, 1>
     {
@@ -128,7 +128,7 @@ namespace mat_operators
 
                     const T* src1b = (const T*) &src4b.x;
                     DT* dst1b = (DT*) &dst4b.x;
-                    
+
                     dst1b[0] = (DT)__double2int_rn(alpha * src1b[0] + beta);
                     dst1b[1] = (DT)__double2int_rn(alpha * src1b[1] + beta);
                     dst1b[2] = (DT)__double2int_rn(alpha * src1b[2] + beta);
@@ -154,7 +154,7 @@ namespace mat_operators
             return dim3(divUp(width, block.x << 2), divUp(height, block.y));
         }
     };/**/
-	
+
     template <typename T, typename DT>
     struct Converter<T, DT, 1, 2>
     {
@@ -190,7 +190,7 @@ namespace mat_operators
             return dim3(divUp(width, block.x << 1), divUp(height, block.y));
         }
     };/**/
-	
+
     template <typename T, typename DT>
     struct Converter<T, DT, 2, 1>
     {
@@ -203,7 +203,7 @@ namespace mat_operators
                 const T* src = (const T*)(srcmat + src_step * y);
                 DT* dst = (DT*)(dstmat + dst_step * y);
                 if ((x << 2) + 3 < width)
-                {                    
+                {
                     ushort4 src4s = ((const ushort4*)src)[x];
                     uchar4 dst4b;
 
@@ -232,7 +232,7 @@ namespace mat_operators
             return dim3(divUp(width, block.x << 2), divUp(height, block.y));
         }
     };/**/
-	
+
     template <typename T, typename DT>
     struct Converter<T, DT, 2, 2>
     {
@@ -268,7 +268,7 @@ namespace mat_operators
             return dim3(divUp(width, block.x << 1), divUp(height, block.y));
         }
     };/**/
-	
+
     template <typename T, size_t src_elem_size, size_t dst_elem_size>
     struct Converter<T, float, src_elem_size, dst_elem_size>
     {
@@ -289,7 +289,7 @@ namespace mat_operators
             return dim3(divUp(width, block.x), divUp(height, block.y));
         }
     };
-	
+
     template <typename T, size_t src_elem_size, size_t dst_elem_size>
     struct Converter<T, double, src_elem_size, dst_elem_size>
     {
@@ -309,116 +309,116 @@ namespace mat_operators
         {
             return dim3(divUp(width, block.x), divUp(height, block.y));
         }
-    };   
-    
-    template <typename T, typename DT> 
+    };
+
+    template <typename T, typename DT>
     __global__ static void kernel_convert_to(uchar* srcmat, size_t src_step, uchar* dstmat, size_t dst_step, size_t width, size_t height, double alpha, double beta)
     {
         Converter<T, DT, sizeof(T), sizeof(DT)>::convert(srcmat, src_step, dstmat, dst_step, width, height, alpha, beta);
     }
-	
+
 } // namespace mat_operators
 
-//////////////////////////////////////////////////////////////
-// SetTo
-//////////////////////////////////////////////////////////////
-
-extern "C" void cv::gpu::impl::set_to_without_mask(const DevMem2D& mat, const double * scalar, int elemSize1, int channels)
+namespace cv
 {
-    float data[4];
-    data[0] = static_cast<float>(scalar[0]);
-    data[1] = static_cast<float>(scalar[1]);
-    data[2] = static_cast<float>(scalar[2]);
-    data[3] = static_cast<float>(scalar[3]);
-    cudaSafeCall( cudaMemcpyToSymbol(scalar_d, &data, sizeof(data)));
-
-    dim3 threadsPerBlock(16, 16, 1);
-    dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
-
-    if (channels == 1)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  1><<<numBlocks,threadsPerBlock>>>(mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 1><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<float,          1><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr, mat.cols, mat.rows, mat.step);
-    }
-    if (channels == 2)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  2><<<numBlocks,threadsPerBlock>>>(mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 2><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<float,          2><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr, mat.cols, mat.rows, mat.step);
-    }
-    if (channels == 3)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  3><<<numBlocks,threadsPerBlock>>>(mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 3><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<float,          3><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr, mat.cols, mat.rows, mat.step);
-    }
-    if (channels == 4)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_without_mask<unsigned char,  4><<<numBlocks,threadsPerBlock>>>(mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_without_mask<unsigned short, 4><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, mat.cols, mat.rows, mat.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_without_mask<float,          4><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr, mat.cols, mat.rows, mat.step);
-    }
-
-    cudaSafeCall ( cudaThreadSynchronize() );
-}
-
-extern "C" void cv::gpu::impl::set_to_with_mask(const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int elemSize1, int channels)
-{
-    float data[4];
-    data[0] = static_cast<float>(scalar[0]);
-    data[1] = static_cast<float>(scalar[1]);
-    data[2] = static_cast<float>(scalar[2]);
-    data[3] = static_cast<float>(scalar[3]);
-    cudaSafeCall( cudaMemcpyToSymbol(scalar_d, &data, sizeof(data)));
-
-    dim3 threadsPerBlock(16, 16, 1);
-    dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
-
-    if (channels == 1)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  1><<<numBlocks,threadsPerBlock>>>(mat.ptr,                   (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 1><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<float,          1><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr,          (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-    }
-    if (channels == 2)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  2><<<numBlocks,threadsPerBlock>>>(mat.ptr,                   (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 2><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<float,          2><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr,          (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-    }
-    if (channels == 3)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  3><<<numBlocks,threadsPerBlock>>>(mat.ptr,                   (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 3><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<float,          3><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr,          (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-    }
-    if (channels == 4)
-    {
-        if (elemSize1 == 1) ::mat_operators::kernel_set_to_with_mask<unsigned char,  4><<<numBlocks,threadsPerBlock>>>(mat.ptr,                   (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 2) ::mat_operators::kernel_set_to_with_mask<unsigned short, 4><<<numBlocks,threadsPerBlock>>>((unsigned short *)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-        if (elemSize1 == 4) ::mat_operators::kernel_set_to_with_mask<float,          4><<<numBlocks,threadsPerBlock>>>((float *)mat.ptr,          (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, mask.step);
-    }
-
-    cudaSafeCall ( cudaThreadSynchronize() );
-}
-
-//////////////////////////////////////////////////////////////
-// ConvertTo
-//////////////////////////////////////////////////////////////
-
-namespace cv 
-{ 
-	namespace gpu 
+	namespace gpu
 	{
-		namespace impl 
-		{   
+		namespace impl
+		{
+
+                        //////////////////////////////////////////////////////////////
+                        // SetTo
+                        //////////////////////////////////////////////////////////////
+
+                        typedef void (*SetToFunc_with_mask)(const DevMem2D& mat, const DevMem2D& mask, int channels);
+                        typedef void (*SetToFunc_without_mask)(const DevMem2D& mat, int channels);
+
+                        template <typename T>
+                        void set_to_with_mask_run(const DevMem2D& mat, const DevMem2D& mask, int channels)
+                        {
+                            dim3 threadsPerBlock(32, 8, 1);
+                            dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
+                            ::mat_operators::kernel_set_to_with_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, channels, mask.step);
+                            cudaSafeCall ( cudaThreadSynchronize() );
+                        }
+
+                        template <typename T>
+                        void set_to_without_mask_run(const DevMem2D& mat, int channels)
+                        {
+                            dim3 threadsPerBlock(32, 8, 1);
+                            dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
+                            ::mat_operators::kernel_set_to_without_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, mat.cols, mat.rows, mat.step, channels);
+                            cudaSafeCall ( cudaThreadSynchronize() );
+                        }
+
+                        extern "C" void set_to_without_mask(const DevMem2D& mat, int depth, const double * scalar, int channels)
+                        {
+                            double data[4];
+                            data[0] = scalar[0];
+                            data[1] = scalar[1];
+                            data[2] = scalar[2];
+                            data[3] = scalar[3];
+                            cudaSafeCall( cudaMemcpyToSymbol(scalar_d, &data, sizeof(data)));
+
+                            static SetToFunc_without_mask tab[8] =
+                            {
+                                set_to_without_mask_run<unsigned char>,
+                                set_to_without_mask_run<char>,
+                                set_to_without_mask_run<unsigned short>,
+                                set_to_without_mask_run<short>,
+                                set_to_without_mask_run<int>,
+                                set_to_without_mask_run<float>,
+                                set_to_without_mask_run<double>,
+                                0
+                            };
+
+                            SetToFunc_without_mask func = tab[depth];
+
+                            if (func == 0) error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+
+                            func(mat, channels);
+                        }
+
+
+                        extern "C" void set_to_with_mask(const DevMem2D& mat, int depth, const double * scalar, const DevMem2D& mask, int channels)
+                        {
+                            double data[4];
+                            data[0] = scalar[0];
+                            data[1] = scalar[1];
+                            data[2] = scalar[2];
+                            data[3] = scalar[3];
+                            cudaSafeCall( cudaMemcpyToSymbol(scalar_d, &data, sizeof(data)));
+
+                            static SetToFunc_with_mask tab[8] =
+                            {
+                                set_to_with_mask_run<unsigned char>,
+                                set_to_with_mask_run<char>,
+                                set_to_with_mask_run<unsigned short>,
+                                set_to_with_mask_run<short>,
+                                set_to_with_mask_run<int>,
+                                set_to_with_mask_run<float>,
+                                set_to_with_mask_run<double>,
+                                0
+                            };
+
+                            SetToFunc_with_mask func = tab[depth];
+
+                            if (func == 0) error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+
+                            func(mat, mask, channels);
+                        }
+
+                        //////////////////////////////////////////////////////////////
+                        // ConvertTo
+                        //////////////////////////////////////////////////////////////
+
+
 
 			typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta);
 
 			//#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 130)
 
-			template<typename T, typename DT> 
+			template<typename T, typename DT>
 			void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta)
 			{
 				dim3 block(32, 8);
@@ -462,7 +462,7 @@ namespace cv
 				func(src, dst, width, height, alpha, beta);
 			}
 		}
-		
-		
-	} 
+
+
+	}
 }

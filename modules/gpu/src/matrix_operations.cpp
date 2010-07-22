@@ -126,14 +126,14 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
     const GpuMat* psrc = this;
     if( sdepth != ddepth && psrc == &dst )
         psrc = &(temp = *this);
-        
+
     dst.create( size(), rtype );
     impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->cols * psrc->channels(), psrc->rows, alpha, beta);
 }
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    cv::gpu::impl::set_to_without_mask(*this, s.val, this->elemSize1(), this->channels());
+    cv::gpu::impl::set_to_without_mask( *this, this->depth(), s.val, this->channels());
     return *this;
 }
 
@@ -145,11 +145,11 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 
     if (mask.empty())
     {
-        cv::gpu::impl::set_to_without_mask(*this, s.val, this->elemSize1(), this->channels());
+        cv::gpu::impl::set_to_without_mask( *this, this->depth(), s.val, this->channels());
     }
     else
     {
-        cv::gpu::impl::set_to_with_mask(*this, s.val, mask, this->elemSize1(), this->channels());
+        cv::gpu::impl::set_to_with_mask( *this, this->depth(), s.val, mask, this->channels());
     }
 
     return *this;
