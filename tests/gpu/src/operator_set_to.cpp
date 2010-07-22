@@ -6,6 +6,7 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <iomanip> // for  cout << setw()
 
 using namespace cv;
 using namespace std;
@@ -35,6 +36,7 @@ class CV_GpuMatOpSetTo : public CvTest
         bool test_cv_32f_c3();
         bool test_cv_32f_c4();
 
+
     private:
         int rows;
         int cols;
@@ -43,8 +45,8 @@ class CV_GpuMatOpSetTo : public CvTest
 
 CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GpuMatOperatorSetTo", "setTo" )
 {
-    rows = 127;
-    cols = 129;
+    rows = 129;
+    cols = 127;
 
     s.val[0] = 128.0;
     s.val[1] = 128.0;
@@ -75,8 +77,9 @@ bool CV_GpuMatOpSetTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
     //int64 time1 = getTickCount();
     gpumat.setTo(s);
     //int64 time2 = getTickCount();
-    //std::cout << "\ntime cpu:" << double((time1 - time) / getTickFrequency());
-    //std::cout << "\ntime gpu:" << double((time2 - time1) / getTickFrequency());
+
+    //std::cout << "\ntime cpu: " << std::fixed << std::setprecision(12) << double((time1 - time)  / (double)getTickFrequency());
+    //std::cout << "\ntime gpu: " << std::fixed << std::setprecision(12) << double((time2 - time1) / (double)getTickFrequency());
     //std::cout << "\n";
 
 #ifdef PRINT_MATRIX
