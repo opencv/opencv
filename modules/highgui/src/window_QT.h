@@ -76,6 +76,8 @@
 #include <QAction>
 #include <QPushButton>
 #include <QCheckBox>
+#include <QRadioButton>
+#include <QButtonGroup>
 #include <QMenu>
 
 //start private enum
@@ -159,6 +161,7 @@ private:
     void setLabel();
 
     QPointer<QLabel> label;
+    QPointer<QButtonGroup> group_button;
 };
 
 
@@ -195,6 +198,23 @@ private:
 private slots:
     void callCallBack();
 };
+
+class CvRadioButton : public QRadioButton
+{
+    Q_OBJECT
+public:
+    CvRadioButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, bool initial_button_state);
+
+private:
+    CvButtonbar* myparent;
+    QString button_name ;
+    CvButtonCallback callback;
+    void* userdata;
+
+private slots:
+    void callCallBack();
+};
+
 
 
 class CvTrackbar :  public CvBar

@@ -95,7 +95,7 @@ CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* a
 CVAPI(void) cvStopLoop();
 
 typedef void (CV_CDECL *CvButtonCallback)(int state, void* userdata);
-enum {CV_PUSH_BUTTON = 0, CV_CHECKBOX = 1};
+enum {CV_PUSH_BUTTON = 0, CV_CHECKBOX = 1, CV_RADIOBOX = 2};
 CVAPI(int) cvCreateButton( const char* button_name CV_DEFAULT(NULL),CvButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), bool initial_button_state CV_DEFAULT(0));
 //----------------------
 

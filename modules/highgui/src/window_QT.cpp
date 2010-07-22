@@ -1028,55 +1028,65 @@ CvTrackbar::~CvTrackbar()
 //here CvButtonbar class
 CvButtonbar::CvButtonbar(QWidget* arg,  QString arg2)
 {
-	type=type_CvButtonbar;
-	myparent = arg;
-	name_bar = arg2;
-	setObjectName(name_bar);
+    type=type_CvButtonbar;
+    myparent = arg;
+    name_bar = arg2;
+    setObjectName(name_bar);
 
-	/*
-	   label = new QLabel;
-	   setLabel();
-	   addWidget(label,Qt::AlignLeft );
-	 */
+    group_button = new QButtonGroup;
+
+    /*
+    label = new QLabel;
+    setLabel();
+    addWidget(label,Qt::AlignLeft );
+    */
 }
 
 CvButtonbar::~CvButtonbar()
 {
-	QLayoutItem *child;
+    QLayoutItem *child;
 
-	while ((child = takeAt(0)) != 0)
-		delete child;
+    while ((child = takeAt(0)) != 0)
+	delete child;
 
+    delete group_button;
 }
 
 void CvButtonbar::setLabel()
 {
-	QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
-	label->setText(nameNormalized);
+    QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
+    label->setText(nameNormalized);
 }
 
 void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata,  int button_type, bool initial_button_state)
 {
-	QString button_name = name;
+    QString button_name = name;
 
-	if (button_name == "")
-		button_name = tr("button %1").arg(this->count());
+    if (button_name == "")
+        button_name = tr("button %1").arg(this->count());
 
-	QPointer<QAbstractButton> button;
+    QPointer<QAbstractButton> button;
 
-	if (button_type == CV_PUSH_BUTTON)
-		//CvPushButton*
-		button = (QAbstractButton*) new CvPushButton(this, button_name,call, userdata);
+    if (button_type == CV_PUSH_BUTTON)
+        //CvPushButton*
+        button = (QAbstractButton*) new CvPushButton(this, button_name,call, userdata);
 
-	if (button_type == CV_CHECKBOX)
-		//CvCheckButton*
-		button = (QAbstractButton*) new CvCheckBox(this, button_name,call, userdata, initial_button_state);
+    if (button_type == CV_CHECKBOX)
+        //CvCheckButton*
+        button = (QAbstractButton*) new CvCheckBox(this, button_name,call, userdata, initial_button_state);
 
-	if (button)
-	{
-		QObject::connect( button, SIGNAL( clicked() ),button, SLOT( callCallBack() ));
-		addWidget(button,Qt::AlignCenter);
-	}
+    if (button_type == CV_RADIOBOX)
+    {
+        //CvCheckButton*
+        button = (QAbstractButton*) new CvRadioButton(this, button_name,call, userdata, initial_button_state);
+        group_button->addButton(button);
+    }
+
+    if (button)
+    {
+        QObject::connect( button, SIGNAL( clicked() ),button, SLOT( callCallBack() ));
+        addWidget(button,Qt::AlignCenter);
+    }
 }
 
 
@@ -1086,21 +1096,38 @@ void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata
 //buttons here
 CvPushButton::CvPushButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4)
 {
-	myparent = arg1;
-	button_name = arg2;
-	callback = arg3;
-	userdata=arg4;
+    myparent = arg1;
+    button_name = arg2;
+    callback = arg3;
+    userdata=arg4;
 
-	setObjectName(button_name);
-	setText(button_name);
+    setObjectName(button_name);
+    setText(button_name);
 }
 
 void CvPushButton::callCallBack()
 {
-	callback(-1,userdata);
+    callback(-1,userdata);
 }
 
 CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, bool initial_button_state)
+{
+    myparent = arg1;
+    button_name = arg2;
+    callback = arg3;
+    userdata=arg4;
+
+    setObjectName(button_name);
+    setCheckState((initial_button_state == 1?Qt::Checked:Qt::Unchecked));
+    setText(button_name);
+}
+
+void CvCheckBox::callCallBack()
+{
+    callback(this->isChecked(),userdata);
+}
+
+CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, bool initial_button_state)
 {
 	myparent = arg1;
 	button_name = arg2;
@@ -1108,16 +1135,14 @@ CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, v
 	userdata=arg4;
 
 	setObjectName(button_name);
-	setCheckState((initial_button_state == 1?Qt::Checked:Qt::Unchecked));
+	setChecked(initial_button_state);
 	setText(button_name);
 }
 
-void CvCheckBox::callCallBack()
+void CvRadioButton::callCallBack()
 {
 	callback(this->isChecked(),userdata);
 }
-
-
 
 
 
