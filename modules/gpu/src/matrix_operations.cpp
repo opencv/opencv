@@ -114,8 +114,6 @@ void cv::gpu::GpuMat::copyTo( GpuMat& mat, const GpuMat& mask ) const
 
 void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double beta ) const
 {
-    //CV_Assert(!"Not implemented");
-
     bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
 
     if( rtype < 0 )
@@ -124,11 +122,11 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
 
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
-    /*if( sdepth == ddepth && noScale )
+    if( sdepth == ddepth && noScale )
     {
         copyTo(dst);
         return;
-    }*/
+    }
 
     GpuMat temp;
     const GpuMat* psrc = this;

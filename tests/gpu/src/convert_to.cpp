@@ -26,7 +26,7 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
 {
     const Size img_size(67, 35);
 
-    const int types[] = {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F/**/};
+    const int types[] = {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F};
     const int types_num = sizeof(types) / sizeof(int);
 
     const char* types_str[] = {"CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F"};
@@ -39,9 +39,6 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
         {
             for (int c = 1; c < 2 && passed; ++c)
             {
-                //if (i == j)
-                  //  continue;
-
                 const int src_type = CV_MAKETYPE(types[i], c);
                 const int dst_type = types[j];
                 const double alpha = (double)rand() / RAND_MAX * 10.0;
@@ -53,30 +50,34 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
                 Mat cpumatdst;
                 GpuMat gpumatdst;
                 
-                //double cput = (double)getTickCount();
-                cpumatsrc.convertTo(cpumatdst, dst_type, alpha, beta);
-                //cput = ((double)getTickCount() - cput) / getTickFrequency();
+                //TickMeter tm;
+                //tm.start();
+                //for(int i = 0; i < 50; ++i)
+                    cpumatsrc.convertTo(cpumatdst, dst_type, alpha, beta);
+                //tm.stop();
+                //cout << "SRC_TYPE=" << types_str[i] << "C" << c << " DST_TYPE=" << types_str[j] << endl << "\tCPU FPS = " << 50.0/tm.getTimeSec() << endl;
 
-                //double gput = (double)getTickCount();
-                gpumatsrc.convertTo(gpumatdst, dst_type, alpha, beta);
-                //gput = ((double)getTickCount() - gput) / getTickFrequency();
+                //tm.reset();
 
-                /*cout << "convertTo time: " << endl;
-                cout << "CPU time: " << cput << endl;
-                cout << "GPU time: " << gput << endl;/**/               
-
-                double r = norm(cpumatdst, gpumatdst, NORM_L1);
-                if (r > 1)
+                try
                 {
-                    /*namedWindow("CPU"); 
-                    imshow("CPU", cpumatdst); 
-                    namedWindow("GPU"); 
-                    imshow("GPU", gpumatdst); 
-                    waitKey();/**/
-                    
-                    cout << "Failed:" << endl;
-                    cout << "\tr = " << r << endl;
-                    cout << "\tSRC_TYPE=" << types_str[i] << "C" << c << " DST_TYPE=" << types_str[j] << endl;/**/
+                    //tm.start();
+                    //for(int i = 0; i < 50; ++i)
+                        gpumatsrc.convertTo(gpumatdst, dst_type, alpha, beta);
+                    //tm.stop();
+                    //cout << "\tGPU FPS = " << 50.0/tm.getTimeSec() << endl;
+                }
+                catch(cv::Exception& e)
+                {
+                    cout << "ERROR: " << e.err << endl;
+                    passed = false;
+                    break;
+                }
+
+                double r = norm(cpumatdst, gpumatdst, NORM_INF);
+                if (r > 1)
+                {                    
+                    cout << "FAILED: " << "SRC_TYPE=" << types_str[i] << "C" << c << " DST_TYPE=" << types_str[j] << " NORM = " << r << endl;
 
                     passed = false;
                 }
