@@ -34,10 +34,13 @@ source_group("Include" FILES ${lib_hdrs})
 if (HAVE_CUDA)
 	include_directories(${CUDA_INCLUDE_DIRS})
 	link_directories(${CUDA_LIBRARIES})
+	
+	set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-arch=sm_13")
 
 	if (UNIX OR APPLE)
 		set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;-fPIC;")
 		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" "-fPIC")
+			
 	endif() 
 			
 	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
