@@ -8,18 +8,18 @@
 using namespace cv;
 using namespace std;
 
-void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG* rng )
+void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 {
     H.create(3, 3, CV_32FC1);
-    H.at<float>(0,0) = rng->uniform( 0.8f, 1.2f);
-    H.at<float>(0,1) = rng->uniform(-0.1f, 0.1f);
-    H.at<float>(0,2) = rng->uniform(-0.1f, 0.1f)*src.cols;
-    H.at<float>(1,0) = rng->uniform(-0.1f, 0.1f);
-    H.at<float>(1,1) = rng->uniform( 0.8f, 1.2f);
-    H.at<float>(1,2) = rng->uniform(-0.1f, 0.1f)*src.rows;
-    H.at<float>(2,0) = rng->uniform( -1e-4f, 1e-4f);
-    H.at<float>(2,1) = rng->uniform( -1e-4f, 1e-4f);
-    H.at<float>(2,2) = rng->uniform( 0.8f, 1.2f);
+    H.at<float>(0,0) = rng.uniform( 0.8f, 1.2f);
+    H.at<float>(0,1) = rng.uniform(-0.1f, 0.1f);
+    H.at<float>(0,2) = rng.uniform(-0.1f, 0.1f)*src.cols;
+    H.at<float>(1,0) = rng.uniform(-0.1f, 0.1f);
+    H.at<float>(1,1) = rng.uniform( 0.8f, 1.2f);
+    H.at<float>(1,2) = rng.uniform(-0.1f, 0.1f)*src.rows;
+    H.at<float>(2,0) = rng.uniform( -1e-4f, 1e-4f);
+    H.at<float>(2,1) = rng.uniform( -1e-4f, 1e-4f);
+    H.at<float>(2,2) = rng.uniform( 0.8f, 1.2f);
 
     warpPerspective( src, dst, H, src.size() );
 }
@@ -30,15 +30,12 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                   const vector<KeyPoint>& keypoints1, const Mat& descriptors1,
                   Ptr<FeatureDetector>& detector, Ptr<DescriptorExtractor>& descriptorExtractor,
                   Ptr<DescriptorMatcher>& descriptorMatcher,
-                  double ransacReprojThreshold = -1, RNG* rng = 0 )
+                  double ransacReprojThreshold, RNG& rng )
 {
     assert( !img1.empty() );
     Mat H12;
     if( isWarpPerspective )
-    {
-        assert( rng );
-        warpPerspectiveRand(img1, img2, H12, rng);
-    }
+        warpPerspectiveRand(img1, img2, H12, rng );
     else
         assert( !img2.empty()/* && img2.cols==img1.cols && img2.rows==img1.rows*/ );
 
@@ -149,7 +146,7 @@ int main(int argc, char** argv)
     RNG rng;
     doIteration( img1, img2, isWarpPerspective, keypoints1, descriptors1,
                  detector, descriptorExtractor, descriptorMatcher,
-                 ransacReprojThreshold, &rng );
+                 ransacReprojThreshold, rng );
     for(;;)
     {
         char c = (char)cvWaitKey(0);
@@ -162,7 +159,7 @@ int main(int argc, char** argv)
         {
             doIteration( img1, img2, isWarpPerspective, keypoints1, descriptors1,
                          detector, descriptorExtractor, descriptorMatcher,
-                         ransacReprojThreshold, &rng );
+                         ransacReprojThreshold, rng );
         }
     }
     waitKey(0);
