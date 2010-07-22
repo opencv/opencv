@@ -104,9 +104,31 @@ void cv::gpu::GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const
     CV_Assert(!"Not implemented");
 }
 
-void cv::gpu::GpuMat::convertTo( GpuMat& /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
+void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double beta ) const
 {
-    CV_Assert(!"Not implemented");
+    //CV_Assert(!"Not implemented");
+
+    bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
+
+    if( rtype < 0 )
+        rtype = type();
+    else
+        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
+
+    int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
+    /*if( sdepth == ddepth && noScale )
+    {
+        copyTo(dst);
+        return;
+    }*/
+
+    GpuMat temp;
+    const GpuMat* psrc = this;
+    if( sdepth != ddepth && psrc == &dst )
+        psrc = &(temp = *this);
+        
+    dst.create( size(), rtype );
+    impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->cols * psrc->channels(), psrc->rows, alpha, beta);
 }
 
 GpuMat& GpuMat::operator = (const Scalar& s)

@@ -51,6 +51,7 @@ namespace cv
     namespace gpu
     {
         typedef unsigned char uchar;
+        typedef signed char schar;
         typedef unsigned short ushort;
         typedef unsigned int uint;
 
@@ -62,6 +63,8 @@ namespace cv
 
             extern "C" void set_to_without_mask (const DevMem2D& mat, const double * scalar, int depth, int channels);
             extern "C" void set_to_with_mask    (const DevMem2D& mat, const double * scalar, const DevMem2D& mask, int depth, int channels);
+
+            extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta);
         }
     }
 }
