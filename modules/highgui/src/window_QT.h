@@ -74,6 +74,9 @@
 #include <QFileDialog>
 #include <QToolBar>
 #include <QAction>
+#include <QPushButton>
+#include <QCheckBox>
+#include <QMenu>
 
 //start private enum
 enum {CV_MODE_NORMAL= 0, CV_MODE_OPENGL = 1};
@@ -130,7 +133,7 @@ public slots:
     void loadWindowParameters(QString name);
     void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata);
     void putText(void* arg1, QString text, QPoint org, void* font);
-    void addButton(QString window_name, QString bar_name, QString button_name, void* on_change, void* userdata);
+    void addButton(QString button_name, int button_type, bool initial_button_state , void* on_change, void* userdata);
 
 };
 
@@ -140,7 +143,7 @@ class CvBar  :  public QHBoxLayout
 public:
     typeBar type;
     QString name_bar;
-    QPointer<CvWindow> myparent;
+    QPointer<QWidget> myparent;
 };
 
 
@@ -148,9 +151,9 @@ class CvButtonbar : public CvBar
 {
     Q_OBJECT
 public:
-    CvButtonbar(CvWindow* arg, QString bar_name);
+    CvButtonbar(QWidget* arg, QString bar_name);
     ~CvButtonbar();
-    void addButton( QString button_name, CvButtonCallback call, void* userdata);
+    void addButton( QString button_name, CvButtonCallback call, void* userdata,  int button_type, bool initial_button_state);
 
 private:
     void setLabel();
@@ -158,11 +161,12 @@ private:
     QPointer<QLabel> label;
 };
 
-class CvButton : public QPushButton
+
+class CvPushButton : public QPushButton
 {
     Q_OBJECT
 public:
-    CvButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata);
+    CvPushButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata);
 
 private:
     CvButtonbar* myparent;
@@ -174,6 +178,23 @@ private slots:
     void callCallBack();
 };
 
+
+
+class CvCheckBox : public QCheckBox
+{
+    Q_OBJECT
+public:
+    CvCheckBox(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, bool initial_button_state);
+
+private:
+    CvButtonbar* myparent;
+    QString button_name ;
+    CvButtonCallback callback;
+    void* userdata;
+
+private slots:
+    void callCallBack();
+};
 
 
 class CvTrackbar :  public CvBar
@@ -219,7 +240,7 @@ class CvWindow : public QWidget
 public:
     CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
     ~CvWindow();
-    void addSlider(QString name, int* value, int count, CvTrackbarCallback on_change = NULL);
+    static void addSlider(CvWindow* w,QString name, int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
     void setMouseCallBack(CvMouseCallback m, void* param);
     void updateImage(void* arr);
     void displayInfo(QString text, int delayms );
@@ -229,42 +250,44 @@ public:
     void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata);
     void hideTools();
     void showTools();
-    CvButtonbar* createButtonbar(QString bar_name);
+    static CvButtonbar* createButtonbar(QString bar_name);
 
 
 
     ViewPort* getView();
-    CvWinProperties* getWinProp();
 
-    QPointer<QBoxLayout> myLayout;
+    QPointer<QBoxLayout> myGlobalLayout;//All the widget (toolbar, view, LayoutBar, ...) are attached to it
+    QPointer<QBoxLayout> myBarLayout;
     QPointer<QStatusBar> myStatusBar;
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
 
     //parameters (will be save/load)
     QString param_name;
+    QPointer<CvWinProperties> parameters_window ;
     int param_flags;
     int param_gui_mode;
+    QVector<QAction*> vect_QActions;
 
 
 protected:
     virtual void keyPressEvent(QKeyEvent *event);
 
 private:
-    QPointer<CvWinProperties> parameters_window ;
     QPointer<ViewPort> myview;
-    QVector<QAction*> vect_QActions;
     QVector<QShortcut*> vect_QShortcuts;
 
     void icvLoadTrackbars(QSettings *settings);
     void icvSaveTrackbars(QSettings *settings);
 
     void createShortcuts();
+    void createActions();
     void createToolBar();
     void createView(int mode);
     void createStatusBar();
-    void createLayout();
-    void createParameterWindow();
+    void createGlobalLayout();
+    void createBarLayout();
+    CvWinProperties* createParameterWindow();
 
 private slots:
     void displayPropertiesWin();
@@ -323,6 +346,7 @@ public slots:
     void siftWindowOnDown();
     void resizeEvent ( QResizeEvent * );
     void saveView();
+    void contextMenuEvent(QContextMenuEvent *event);
 
 
 private:

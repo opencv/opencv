@@ -231,9 +231,9 @@ void loadWindowParameters(const string& windowName)
 	cvLoadWindowParameters(windowName.c_str());
 }
 
-int createButton( const string& bar_name, const string& window_name, ButtonCallback on_change, const string& button_name, void* userdata)
+int createButton(const string& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
 {
-	return cvCreateButton( bar_name.c_str(), window_name.c_str(), on_change, button_name.c_str(), userdata);
+	return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
 #endif
