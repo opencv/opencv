@@ -42,7 +42,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <iostream>
+//#include <iostream>
 #include "cuda_shared.hpp"
 #include "cuda_runtime.h"
 
@@ -53,6 +53,24 @@ __constant__ __align__(16) double scalar_d[4];
 
 namespace mat_operators
 {
+    //////////////////////////////////////////////////////////
+    // CopyTo
+    //////////////////////////////////////////////////////////
+
+    template<typename T>
+    __global__ void kernel_copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, int step_mat, int step_mask, int channels)
+    {
+        size_t x = blockIdx.x * blockDim.x + threadIdx.x;
+        size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if ((x < cols * channels ) && (y < rows))
+            if (mask[y * step_mask + x / channels] != 0)
+            {
+                size_t idx = y * (step_mat / sizeof(T)) + x;
+                mat_dst[idx] = mat_src[idx];
+            }
+    }
+
     //////////////////////////////////////////////////////////
     // SetTo
     //////////////////////////////////////////////////////////
@@ -327,6 +345,44 @@ namespace cv
 		{
 
                         //////////////////////////////////////////////////////////////
+                        // CopyTo
+                        //////////////////////////////////////////////////////////////
+
+                        typedef void (*CopyToFunc)(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels);
+
+                        template<typename T>
+                        void copy_to_with_mask_run(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels)
+                        {
+                            dim3 threadsPerBlock(16,16, 1);
+                            dim3 numBlocks ( divUp(mat_src.cols * channels , threadsPerBlock.x) , divUp(mat_src.rows , threadsPerBlock.y), 1);
+                            ::mat_operators::kernel_copy_to_with_mask<T><<<numBlocks,threadsPerBlock>>>
+                            ((T*)mat_src.ptr, (T*)mat_dst.ptr, (unsigned char*)mask.ptr, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
+                            cudaSafeCall ( cudaThreadSynchronize() );
+                        }
+
+                        extern "C" void copy_to_with_mask(const DevMem2D& mat_src, const DevMem2D& mat_dst, int depth, const DevMem2D& mask, int channels)
+                        {
+                            static CopyToFunc tab[8] =
+                            {
+                                copy_to_with_mask_run<unsigned char>,
+                                copy_to_with_mask_run<char>,
+                                copy_to_with_mask_run<unsigned short>,
+                                copy_to_with_mask_run<short>,
+                                copy_to_with_mask_run<int>,
+                                copy_to_with_mask_run<float>,
+                                copy_to_with_mask_run<double>,
+                                0
+                            };
+
+                            CopyToFunc func = tab[depth];
+
+                            if (func == 0) error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+
+                            func(mat_src, mat_dst, mask, channels);
+                        }
+
+
+                        //////////////////////////////////////////////////////////////
                         // SetTo
                         //////////////////////////////////////////////////////////////
 
@@ -412,11 +468,9 @@ namespace cv
                         // ConvertTo
                         //////////////////////////////////////////////////////////////
 
+                        typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta);
 
-
-			typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta);
-
-			//#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 130)
+                        //#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 130)
 
 			template<typename T, typename DT>
 			void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta)

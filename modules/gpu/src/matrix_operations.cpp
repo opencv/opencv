@@ -99,9 +99,17 @@ void cv::gpu::GpuMat::copyTo( GpuMat& m ) const
     cudaSafeCall( cudaThreadSynchronize() );
 }
 
-void cv::gpu::GpuMat::copyTo( GpuMat& /*m*/, const GpuMat&/* mask */) const
+void cv::gpu::GpuMat::copyTo( GpuMat& mat, const GpuMat& mask ) const
 {
-    CV_Assert(!"Not implemented");
+    if (mask.empty())
+    {
+        this->copyTo(mat);
+    }
+    else
+    {
+        mat.create(this->size(), this->type());
+        cv::gpu::impl::copy_to_with_mask(*this, mat, this->depth() , mask, this->channels());
+    }
 }
 
 void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double beta ) const
