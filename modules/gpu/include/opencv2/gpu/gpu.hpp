@@ -335,6 +335,7 @@ namespace cv
             //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size
             //! ndisparities should be multiple of 8. SSD WindowsSize is fixed to 19 now
             StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
+
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
             //! Output disparity has CV_8U type.
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity);
@@ -350,9 +351,14 @@ namespace cv
             int ndisp;
             int winSize;
             int preset;
+            
+            // If avergeTexThreshold  == 0 => post procesing is disabled
+            // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
+            // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
+            // i.e. input left image is low textured.                       
+            float avergeTexThreshold;
         private:
             GpuMat minSSD, leBuf, riBuf;
-                        
         };
     }
 }

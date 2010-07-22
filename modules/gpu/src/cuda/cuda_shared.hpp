@@ -80,7 +80,7 @@ namespace cv
     static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
     {
         if( cudaSuccess != err)
-            cv::gpu::error(cudaGetErrorString(err), __FILE__, __LINE__, func);
+            cv::gpu::error(cudaGetErrorString(err), file, line, func);
     }
 
 #endif /* __OPENCV_CUDA_SHARED_HPP__ */
