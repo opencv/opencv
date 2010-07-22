@@ -3763,6 +3763,21 @@ static CvSeq* cvHOGDetectMultiScale( const CvArr* image, CvMemStorage* storage,
     return seq;
 }
 
+static void cvgrabCut(CvArr *image,
+                      CvArr *mask,
+                      CvRect rect,
+                      CvArr *bgdModel,
+                      CvArr *fgdModel,
+                      int iterCount,
+                      int mode)
+{
+  cv::Mat _image = cv::cvarrToMat(image);
+  cv::Mat _mask = cv::cvarrToMat(mask);
+  cv::Mat _bgdModel = cv::cvarrToMat(bgdModel);
+  cv::Mat _fgdModel = cv::cvarrToMat(fgdModel);
+  grabCut(_image, _mask, rect, _bgdModel, _fgdModel, iterCount, mode);
+}
+
 static int zero = 0;
 
 /************************************************************************/
@@ -3826,10 +3841,13 @@ static int to_ok(PyTypeObject *to)
 
 #define MKTYPE(NAME)  do { NAME##_specials(); if (!to_ok(&NAME##_Type)) return; } while (0)
 
+using namespace cv;
+
 extern "C"
 #if defined WIN32 || defined _WIN32
 __declspec(dllexport)
 #endif
+
 void initcv()
 {
   PyObject *m, *d;
@@ -3938,6 +3956,14 @@ void initcv()
   PUBLISH(CV_PTLOC_ON_EDGE);
   PUBLISH(CV_PTLOC_VERTEX);
   PUBLISH(CV_PTLOC_OUTSIDE_RECT);
+
+  PUBLISH(GC_BGD);
+  PUBLISH(GC_FGD);
+  PUBLISH(GC_PR_BGD);
+  PUBLISH(GC_PR_FGD);
+  PUBLISH(GC_INIT_WITH_RECT);
+  PUBLISH(GC_INIT_WITH_MASK);
+  PUBLISH(GC_EVAL);
 
 #include "generated2.i"
 

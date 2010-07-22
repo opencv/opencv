@@ -1644,6 +1644,15 @@ HOGDetectMultiScale CvSeq*
   int nbins 9
   int gammaCorrection 1
 
+grabCut
+  CvArr image
+  CvArr mask
+  CvRect rect
+  CvArr bgdModel
+  CvArr fgdModel
+  int iterCount
+  int mode
+
 # These functions are handwritten in cv.cpp; they appear here as 'doconly' declarations
 # so that their documentation can be auto-generated
 ApproxPoly  /doconly
