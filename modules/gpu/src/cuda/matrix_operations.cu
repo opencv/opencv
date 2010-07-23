@@ -49,7 +49,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::impl;
 
-__constant__ __align__(16) double scalar_d[4];
+__constant__ double scalar_d[4];
 
 namespace mat_operators
 {
@@ -71,7 +71,7 @@ namespace mat_operators
             }
     }
 
-	
+
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// SetTo //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
@@ -148,7 +148,7 @@ namespace mat_operators
 
         typedef char4 read_type;
         typedef char4 write_type;
-    };    
+    };
     template <typename T, typename DT>
     struct ReadWriteTraits<T, DT, 2, 1>
     {
@@ -156,7 +156,7 @@ namespace mat_operators
 
         typedef short4 read_type;
         typedef char4 write_type;
-    };    
+    };
     template <typename T, typename DT>
     struct ReadWriteTraits<T, DT, 4, 1>
     {
@@ -164,7 +164,7 @@ namespace mat_operators
 
         typedef int4 read_type;
         typedef char4 write_type;
-    };    
+    };
     template <typename T, typename DT>
     struct ReadWriteTraits<T, DT, 1, 2>
     {
@@ -172,7 +172,7 @@ namespace mat_operators
 
         typedef char2 read_type;
         typedef short2 write_type;
-    };     
+    };
     template <typename T, typename DT>
     struct ReadWriteTraits<T, DT, 2, 2>
     {
@@ -180,7 +180,7 @@ namespace mat_operators
 
         typedef short2 read_type;
         typedef short2 write_type;
-    };     
+    };
     template <typename T, typename DT>
     struct ReadWriteTraits<T, DT, 4, 2>
     {
@@ -189,8 +189,8 @@ namespace mat_operators
         typedef int2 read_type;
         typedef short2 write_type;
     };
-    
-    template <typename T, typename DT> 
+
+    template <typename T, typename DT>
     __global__ static void kernel_convert_to(uchar* srcmat, size_t src_step, uchar* dstmat, size_t dst_step, size_t width, size_t height, double alpha, double beta)
     {
         typedef typename ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::read_type read_type;
@@ -218,7 +218,7 @@ namespace mat_operators
                 ((write_type*)dst)[x] = dstn_el;
             }
             else
-            {                    
+            {
                 for (int i = 0; i < shift - 1; ++i)
                     if ((x * shift) + i < width)
                         dst[(x * shift) + i] = ScaleTraits<T, DT>::scale(src[(x * shift) + i], alpha, beta);
@@ -267,7 +267,7 @@ namespace cv
 
                             CopyToFunc func = tab[depth];
 
-                            if (func == 0) error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+                            if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
                             func(mat_src, mat_dst, mask, channels);
                         }
@@ -321,7 +321,7 @@ namespace cv
 
                             SetToFunc_without_mask func = tab[depth];
 
-                            if (func == 0) error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+                            if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
                             func(mat, channels);
                         }
@@ -350,64 +350,64 @@ namespace cv
 
                             SetToFunc_with_mask func = tab[depth];
 
-                            if (func == 0) error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+                            if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
                             func(mat, mask, channels);
                         }
 
-						
+
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-			            typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta);
+				    typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta);
 
-			            template<typename T, typename DT> 
-			            void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta)
-			            {
-                            const int shift = ::mat_operators::ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
+				    template<typename T, typename DT>
+				    void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta)
+				    {
+					const int shift = ::mat_operators::ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
 
-				            dim3 block(32, 8);
-                            dim3 grid(divUp(width, block.x * shift), divUp(height, block.y));
+                                        dim3 block(32, 8);
+                                        dim3 grid(divUp(width, block.x * shift), divUp(height, block.y));
 
-				            ::mat_operators::kernel_convert_to<T, DT><<<grid, block>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
-				            
-                            cudaSafeCall( cudaThreadSynchronize() );
-			            }
+                                        ::mat_operators::kernel_convert_to<T, DT><<<grid, block>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
 
-			            extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta)
-			            {
-				            static CvtFunc tab[8][8] =
-				            {
-					            {cvt_<uchar, uchar>, cvt_<uchar, schar>, cvt_<uchar, ushort>, cvt_<uchar, short>,
-					            cvt_<uchar, int>, cvt_<uchar, float>, cvt_<uchar, double>, 0},
+					cudaSafeCall( cudaThreadSynchronize() );
+				    }
 
-					            {cvt_<schar, uchar>, cvt_<schar, schar>, cvt_<schar, ushort>, cvt_<schar, short>,
-					            cvt_<schar, int>, cvt_<schar, float>, cvt_<schar, double>, 0},
+				    extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta)
+				    {
+					    static CvtFunc tab[8][8] =
+					    {
+						    {cvt_<uchar, uchar>, cvt_<uchar, schar>, cvt_<uchar, ushort>, cvt_<uchar, short>,
+						    cvt_<uchar, int>, cvt_<uchar, float>, cvt_<uchar, double>, 0},
 
-					            {cvt_<ushort, uchar>, cvt_<ushort, schar>, cvt_<ushort, ushort>, cvt_<ushort, short>,
-					            cvt_<ushort, int>, cvt_<ushort, float>, cvt_<ushort, double>, 0},
+						    {cvt_<schar, uchar>, cvt_<schar, schar>, cvt_<schar, ushort>, cvt_<schar, short>,
+						    cvt_<schar, int>, cvt_<schar, float>, cvt_<schar, double>, 0},
 
-					            {cvt_<short, uchar>, cvt_<short, schar>, cvt_<short, ushort>, cvt_<short, short>,
-					            cvt_<short, int>, cvt_<short, float>, cvt_<short, double>, 0},
+						    {cvt_<ushort, uchar>, cvt_<ushort, schar>, cvt_<ushort, ushort>, cvt_<ushort, short>,
+						    cvt_<ushort, int>, cvt_<ushort, float>, cvt_<ushort, double>, 0},
 
-					            {cvt_<int, uchar>, cvt_<int, schar>, cvt_<int, ushort>,
-					            cvt_<int, short>, cvt_<int, int>, cvt_<int, float>, cvt_<int, double>, 0},
+						    {cvt_<short, uchar>, cvt_<short, schar>, cvt_<short, ushort>, cvt_<short, short>,
+						    cvt_<short, int>, cvt_<short, float>, cvt_<short, double>, 0},
 
-					            {cvt_<float, uchar>, cvt_<float, schar>, cvt_<float, ushort>,
-					            cvt_<float, short>, cvt_<float, int>, cvt_<float, float>, cvt_<float, double>, 0},
+						    {cvt_<int, uchar>, cvt_<int, schar>, cvt_<int, ushort>,
+						    cvt_<int, short>, cvt_<int, int>, cvt_<int, float>, cvt_<int, double>, 0},
 
-					            {cvt_<double, uchar>, cvt_<double, schar>, cvt_<double, ushort>,
-					            cvt_<double, short>, cvt_<double, int>, cvt_<double, float>, cvt_<double, double>, 0},
+						    {cvt_<float, uchar>, cvt_<float, schar>, cvt_<float, ushort>,
+						    cvt_<float, short>, cvt_<float, int>, cvt_<float, float>, cvt_<float, double>, 0},
 
-					            {0,0,0,0,0,0,0,0}
-				            };
+						    {cvt_<double, uchar>, cvt_<double, schar>, cvt_<double, ushort>,
+						    cvt_<double, short>, cvt_<double, int>, cvt_<double, float>, cvt_<double, double>, 0},
 
-				            CvtFunc func = tab[sdepth][ddepth];
-				            if (func == 0)
-                                cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
-				            func(src, dst, width, height, alpha, beta);
-			            }
-		} // namespace impl		
-	} // namespace gpu
-} // namespace cv
+						    {0,0,0,0,0,0,0,0}
+						};
+
+					    CvtFunc func = tab[sdepth][ddepth];
+					    if (func == 0)
+						cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
+					    func(src, dst, width, height, alpha, beta);
+					}
+				} // namespace impl
+	    } // namespace gpu
+    } // namespace cv
