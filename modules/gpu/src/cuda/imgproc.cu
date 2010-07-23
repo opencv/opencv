@@ -64,22 +64,25 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace impl {
-    extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst, size_t width, size_t height)
+namespace cv { namespace gpu { namespace impl 
+{
+    using namespace imgproc;
+
+    extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst)
     {
         dim3 block(16, 16, 1);
         dim3 grid(1, 1, 1);
-        grid.x = divUp( width, block.x);
-        grid.y = divUp(height, block.y);
+        grid.x = divUp(dst.cols, block.x);
+        grid.y = divUp(dst.rows, block.y);
 
-        ::imgproc::tex.filterMode = cudaFilterModeLinear;	    
-        ::imgproc::tex.addressMode[0] = ::imgproc::tex.addressMode[1] = cudaAddressModeWrap;
+        tex.filterMode = cudaFilterModeLinear;	    
+        tex.addressMode[0] = tex.addressMode[1] = cudaAddressModeWrap;
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D(0, ::imgproc::tex, src.ptr, desc, width, height, src.step) );
+        cudaSafeCall( cudaBindTexture2D(0, tex, src.ptr, desc, dst.cols, dst.rows, src.step) );
 
-        ::imgproc::kernel_remap<<<grid, block>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, width, height);
+        kernel_remap<<<grid, block>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
 
         cudaSafeCall( cudaThreadSynchronize() );  
-        cudaSafeCall( cudaUnbindTexture(::imgproc::tex) );
+        cudaSafeCall( cudaUnbindTexture(tex) );
     }
 }}}

@@ -47,29 +47,27 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-namespace cv
-{
-    namespace gpu
-    {
-       remap(const GpuMat& /*src*/, const GpuMat& /*xmap*/, const GpuMat& /*ymap*/, GpuMat& /*dst*/) { throw_nogpu(); }
-    }
-
-}
+cv::gpu::remap(const GpuMat& /*src*/, const GpuMat& /*xmap*/, const GpuMat& /*ymap*/, GpuMat& /*dst*/) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace impl {
-    extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst, size_t width, size_t height);
-}}}
-
+namespace cv { namespace gpu 
+{ 
+    namespace impl 
+    {
+        extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst);
+    }
+}}
 
 void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst)
 { 
-    CV_Assert((!xmap.data || xmap.size() == ymap.size()));
-    dst.create(xmap.size(), src.type());
-    CV_Assert(dst.data != src.data );
+    CV_DbgAssert(xmap.data && xmap.cols == ymap.cols && xmap.rows == ymap.rows);
+    CV_Assert(xmap.type() == CV_32F && ymap.type() == CV_32F);
 
-    impl::remap_gpu(src, xmap, ymap, dst, dst.cols, dst.rows);
+    dst.create(xmap.size(), src.type());
+    CV_Assert(dst.data != src.data);   
+    
+    impl::remap_gpu(src, xmap, ymap, dst);
 }
 
 #endif /* !defined (HAVE_CUDA) */

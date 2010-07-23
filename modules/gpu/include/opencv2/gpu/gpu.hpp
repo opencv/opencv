@@ -64,6 +64,7 @@ namespace cv
         CV_EXPORTS int getNumberOfSMs(int device);
  
         //////////////////////////////// GpuMat ////////////////////////////////
+        class CudaStrem;
 
         //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.        
         class CV_EXPORTS GpuMat
