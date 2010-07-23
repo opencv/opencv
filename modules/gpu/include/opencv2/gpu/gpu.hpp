@@ -321,6 +321,10 @@ namespace cv
             friend struct StreamAccessor;
         };
 
+        ////////////////////////////// Image processing //////////////////////////////
+
+        void CV_EXPORTS remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
+
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU

@@ -50,22 +50,11 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
                 Mat cpumatdst;
                 GpuMat gpumatdst;
                 
-                //TickMeter tm;
-                //tm.start();
-                //for(int i = 0; i < 50; ++i)
-                    cpumatsrc.convertTo(cpumatdst, dst_type, alpha, beta);
-                //tm.stop();
-                //cout << "SRC_TYPE=" << types_str[i] << "C" << c << " DST_TYPE=" << types_str[j] << endl << "\tCPU FPS = " << 50.0/tm.getTimeSec() << endl;
-
-                //tm.reset();
+                cpumatsrc.convertTo(cpumatdst, dst_type, alpha, beta);
 
                 try
                 {
-                    //tm.start();
-                    //for(int i = 0; i < 50; ++i)
-                        gpumatsrc.convertTo(gpumatdst, dst_type, alpha, beta);
-                    //tm.stop();
-                    //cout << "\tGPU FPS = " << 50.0/tm.getTimeSec() << endl;
+                    gpumatsrc.convertTo(gpumatdst, dst_type, alpha, beta);
                 }
                 catch(cv::Exception& e)
                 {

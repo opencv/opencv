@@ -109,32 +109,32 @@ namespace mat_operators
 ///////////////////////////////////////////////////////////////////////////
 
     template <typename T, typename DT>
-    struct CalcTraits
+    struct ScaleTraits
     {
-        __device__ static DT calc(T src, double alpha, double beta)
+        __device__ static DT scale(T src, double alpha, double beta)
         {
             return (DT)__double2int_rn(alpha * src + beta);
         }
     };
     template <typename T>
-    struct CalcTraits<T, float>
+    struct ScaleTraits<T, float>
     {
-        __device__ static float calc(T src, double alpha, double beta)
+        __device__ static float scale(T src, double alpha, double beta)
         {
             return (float)(alpha * src + beta);
         }
     };
     template <typename T>
-    struct CalcTraits<T, double>
+    struct ScaleTraits<T, double>
     {
-        __device__ static double calc(T src, double alpha, double beta)
+        __device__ static double scale(T src, double alpha, double beta)
         {
             return alpha * src + beta;
         }
     };
 
     template <typename T, typename DT, size_t src_elem_size, size_t dst_elem_size>
-    struct ConverterTraits
+    struct ReadWriteTraits
     {
         enum {shift=1};
 
@@ -142,7 +142,7 @@ namespace mat_operators
         typedef DT write_type;
     };
     template <typename T, typename DT>
-    struct ConverterTraits<T, DT, 1, 1>
+    struct ReadWriteTraits<T, DT, 1, 1>
     {
         enum {shift=4};
 
@@ -150,7 +150,7 @@ namespace mat_operators
         typedef char4 write_type;
     };    
     template <typename T, typename DT>
-    struct ConverterTraits<T, DT, 2, 1>
+    struct ReadWriteTraits<T, DT, 2, 1>
     {
         enum {shift=4};
 
@@ -158,7 +158,7 @@ namespace mat_operators
         typedef char4 write_type;
     };    
     template <typename T, typename DT>
-    struct ConverterTraits<T, DT, 4, 1>
+    struct ReadWriteTraits<T, DT, 4, 1>
     {
         enum {shift=4};
 
@@ -166,7 +166,7 @@ namespace mat_operators
         typedef char4 write_type;
     };    
     template <typename T, typename DT>
-    struct ConverterTraits<T, DT, 1, 2>
+    struct ReadWriteTraits<T, DT, 1, 2>
     {
         enum {shift=2};
 
@@ -174,7 +174,7 @@ namespace mat_operators
         typedef short2 write_type;
     };     
     template <typename T, typename DT>
-    struct ConverterTraits<T, DT, 2, 2>
+    struct ReadWriteTraits<T, DT, 2, 2>
     {
         enum {shift=2};
 
@@ -182,56 +182,48 @@ namespace mat_operators
         typedef short2 write_type;
     };     
     template <typename T, typename DT>
-    struct ConverterTraits<T, DT, 4, 2>
+    struct ReadWriteTraits<T, DT, 4, 2>
     {
         enum {shift=2};
 
         typedef int2 read_type;
         typedef short2 write_type;
     };
-
-    template <typename T, typename DT>
-    struct Converter
-    {
-        __device__ static void convert(uchar* srcmat, size_t src_step, uchar* dstmat, size_t dst_step, size_t width, size_t height, double alpha, double beta)
-        {
-            size_t x = threadIdx.x + blockIdx.x * blockDim.x;
-            size_t y = threadIdx.y + blockIdx.y * blockDim.y;
-            if (y < height)
-            {
-                const T* src = (const T*)(srcmat + src_step * y);
-                DT* dst = (DT*)(dstmat + dst_step * y);
-                if ((x * ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift) + ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift - 1 < width)
-                {
-                    typename ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::read_type srcn_el = ((const typename ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::read_type*)src)[x];
-                    typename ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::write_type dstn_el;
-
-                    const T* src1_el = (const T*) &srcn_el;
-                    DT* dst1_el = (DT*) &dstn_el;
-
-                    for (int i = 0; i < ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift; ++i)
-                        dst1_el[i] = CalcTraits<T, DT>::calc(src1_el[i], alpha, beta);
-
-                    ((typename ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::write_type*)dst)[x] = dstn_el;
-                }
-                else
-                {                    
-                    for (int i = 0; i < ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift - 1; ++i)
-                        if ((x * ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift) + i < width)
-                            dst[(x * ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift) + i] = CalcTraits<T, DT>::calc(src[(x * ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift) + i], alpha, beta);
-                }
-            }
-        }
-        __host__ static inline dim3 calcGrid(size_t width, size_t height, dim3 block)
-        {
-            return dim3(divUp(width, block.x * ConverterTraits<T, DT, sizeof(T), sizeof(DT)>::shift), divUp(height, block.y));
-        }
-    };
     
     template <typename T, typename DT> 
     __global__ static void kernel_convert_to(uchar* srcmat, size_t src_step, uchar* dstmat, size_t dst_step, size_t width, size_t height, double alpha, double beta)
     {
-        Converter<T, DT>::convert(srcmat, src_step, dstmat, dst_step, width, height, alpha, beta);
+        typedef typename ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::read_type read_type;
+        typedef typename ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::write_type write_type;
+        const int shift = ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
+
+        const size_t x = threadIdx.x + blockIdx.x * blockDim.x;
+        const size_t y = threadIdx.y + blockIdx.y * blockDim.y;
+
+        if (y < height)
+        {
+            const T* src = (const T*)(srcmat + src_step * y);
+            DT* dst = (DT*)(dstmat + dst_step * y);
+            if ((x * shift) + shift - 1 < width)
+            {
+                read_type srcn_el = ((read_type*)src)[x];
+                write_type dstn_el;
+
+                const T* src1_el = (const T*) &srcn_el;
+                DT* dst1_el = (DT*) &dstn_el;
+
+                for (int i = 0; i < shift; ++i)
+                    dst1_el[i] = ScaleTraits<T, DT>::scale(src1_el[i], alpha, beta);
+
+                ((write_type*)dst)[x] = dstn_el;
+            }
+            else
+            {                    
+                for (int i = 0; i < shift - 1; ++i)
+                    if ((x * shift) + i < width)
+                        dst[(x * shift) + i] = ScaleTraits<T, DT>::scale(src[(x * shift) + i], alpha, beta);
+            }
+        }
     }
 
 } // namespace mat_operators
@@ -373,10 +365,14 @@ namespace cv
 			            template<typename T, typename DT> 
 			            void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta)
 			            {
+                            const int shift = ::mat_operators::ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
+
 				            dim3 block(32, 8);
-				            dim3 grid = ::mat_operators::Converter<T, DT>::calcGrid(width, height, block);
+                            dim3 grid(divUp(width, block.x * shift), divUp(height, block.y));
+
 				            ::mat_operators::kernel_convert_to<T, DT><<<grid, block>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
-				            cudaSafeCall( cudaThreadSynchronize() );
+				            
+                            cudaSafeCall( cudaThreadSynchronize() );
 			            }
 
 			            extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta)
@@ -409,7 +405,7 @@ namespace cv
 
 				            CvtFunc func = tab[sdepth][ddepth];
 				            if (func == 0)
-                                cv::gpu::error("Operation \'ConvertTo\' doesn't supported on your GPU model", __FILE__, __LINE__);
+                                cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 				            func(src, dst, width, height, alpha, beta);
 			            }
 		} // namespace impl		
