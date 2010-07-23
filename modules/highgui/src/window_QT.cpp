@@ -274,6 +274,7 @@ CV_IMPL int cvWaitKey( int arg )
 			}
 		}
 		guiMainThread._bTimeOut = false;
+		
 	}
 
 	return result;
@@ -393,8 +394,8 @@ int icvInitSystem()
 		wasInitialized = 1;
 		qDebug()<<"init done";
 
-#if defined(OPENCV_GL)//OK tested !
-		qDebug()<<"opengl support available";
+#if defined(HAVE_QT_OPENGL)//OK tested !
+			qDebug()<<"opengl support available";
 #endif
 	}
 
@@ -533,14 +534,17 @@ CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, v
 	return 1;//dummy value
 }
 
-CV_IMPL void cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata)
+CV_IMPL void cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata, double angle, double zmin, double zmax)
 {
 	QMetaObject::invokeMethod(&guiMainThread,
 			"setOpenGLCallback",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(window_name)),
 			Q_ARG(void*, (void*)callbackOpenGL),
-			Q_ARG(void*, userdata)
+			Q_ARG(void*, userdata),
+			Q_ARG(double, angle),
+			Q_ARG(double, zmin),
+			Q_ARG(double, zmax)
 			);
 }
 
@@ -843,12 +847,12 @@ void GuiReceiver::destroyAllWindow()
 
 }
 
-void GuiReceiver::setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata)
+void GuiReceiver::setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata,  double angle, double zmin, double zmax)
 {
 	QPointer<CvWindow> w = icvFindWindowByName( window_name.toLatin1().data() );
 
 	if (w && callbackOpenGL)
-		w->setOpenGLCallback((CvOpenGLCallback) callbackOpenGL, userdata);
+		w->setOpenGLCallback((CvOpenGLCallback) callbackOpenGL, userdata,angle,zmin,zmax);
 }
 
 void GuiReceiver::moveWindow(QString name, int x, int y)
@@ -1251,7 +1255,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 	//2: my view
 	int mode_display = CV_MODE_NORMAL;
-#if defined(OPENCV_GL)
+#if defined(HAVE_QT_OPENGL)
 	mode_display = CV_MODE_OPENGL;
 #endif
 	createView(mode_display);
@@ -1507,9 +1511,9 @@ void CvWindow::createView(int mode)
 	myview->setAlignment(Qt::AlignHCenter);
 }
 
-void CvWindow::setOpenGLCallback(CvOpenGLCallback func,void* userdata)
+void CvWindow::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double angle, double zmin, double zmax)
 {
-	myview->setOpenGLCallback(func,userdata);
+	myview->setOpenGLCallback(func,userdata, angle, zmin, zmax );
 }
 
 ViewPort* CvWindow::getView()
@@ -1714,11 +1718,14 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 	on_openGL_draw3D = NULL;
 
 
-#if defined(OPENCV_GL)
+#if defined(HAVE_QT_OPENGL)
 	if ( mode_display == CV_MODE_OPENGL)
 	{
 		//QGLWidget* wGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
 		setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
+		angle = DEFAULT_ANGLE;
+		zmin = DEFAULT_ZMIN;
+		zmax = DEFAULT_ZMAX;
 		initGL();
 	}
 #endif
@@ -1769,6 +1776,13 @@ void ViewPort::saveView()
 	if (!fileName.isEmpty ())//save the picture
 	{
 		QString extension = fileName.right(3);
+
+#if defined(HAVE_QT_OPENGL)
+	 image2Draw_qt_resized = ((QGLWidget*)viewport())->grabFrameBuffer();
+#else
+     QPainter saveimage(&image2Draw_qt_resized);
+     this->render(&saveimage);
+#endif
 
 		// Save it..
 		if (QString::compare(extension, "png", Qt::CaseInsensitive) == 0)
@@ -1912,10 +1926,28 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 	on_mouse_param = param;
 }
 
-void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata)
+void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double angle_arg, double zmin_arg, double zmax_arg)
 {
 	on_openGL_draw3D = func;
 	on_openGL_param = userdata;
+	
+	if (angle_arg > 0)
+		angle = angle_arg;
+	else
+		angle = DEFAULT_ANGLE;
+		
+
+	if (zmin_arg >= 0)
+		zmin = zmin_arg;
+	else
+		zmin = DEFAULT_ZMIN;
+		
+	
+	if (zmax_arg > 0)
+		zmax = zmax_arg;
+	else
+		zmax = DEFAULT_ZMAX;
+	
 }
 
 void ViewPort::controlImagePosition()
@@ -2181,57 +2213,45 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
 
 void ViewPort::paintEvent(QPaintEvent* event)
 {
-	//first paint on a file (to be able to save it if needed)
-	//  ---------  START PAINTING FILE  --------------  //
-	QPainter myPainter(&image2Draw_qt_resized);
-	myPainter.setWorldTransform(param_matrixWorld);
 
-	draw2D(&myPainter);
+    QPainter myPainter(viewport());
+    myPainter.setWorldTransform(param_matrixWorld);
 
-#if defined(OPENCV_GL)
-	if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
-	{
-		//myPainter.beginNativePainting();
+    draw2D(&myPainter);
 
+#if defined(HAVE_QT_OPENGL)
+    if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
+    {
+	    myPainter.save(); // Needed when using the GL1 engine
+	    myPainter.beginNativePainting(); // Needed when using the GL2 engine
+	
 		setGL(width(),height());
 		on_openGL_draw3D(on_openGL_param);
-		//draw3D();
 		unsetGL();
-
-		//myPainter.endNativePainting();
-	}
+	
+	    myPainter.endNativePainting(); // Needed when using the GL2 engine
+	    myPainter.restore(); // Needed when using the GL1 engine
+    }
 #endif
 
-	//Now disable matrixWorld for overlay display
-	myPainter.setWorldMatrixEnabled (false );
+    //Now disable matrixWorld for overlay display
+    //myPainter.setWorldMatrixEnabled (false );
 
-	//in mode zoom/panning
-	if (param_matrixWorld.m11()>1)
-	{
-		if (param_matrixWorld.m11()>=threshold_zoom_img_region)
-			drawImgRegion(&myPainter);
+    //in mode zoom/panning
+    if (param_matrixWorld.m11()>1)
+    {
+	if (param_matrixWorld.m11()>=threshold_zoom_img_region)
+	    drawImgRegion(&myPainter);
 
-		drawViewOverview(&myPainter);
-	}
+	drawViewOverview(&myPainter);
+    }
 
-	//for information overlay
-	if (drawInfo)
-		drawInstructions(&myPainter);
-
-	//  ---------  END PAINTING FILE  --------------  //
-	myPainter.end();
+    //for information overlay
+    if (drawInfo)
+	drawInstructions(&myPainter);
 
 
-	//and now display the file
-	myPainter.begin(viewport());
-	myPainter.drawImage(0, 0, image2Draw_qt_resized);
-	//end display
-
-	//for statusbar
-	if (centralWidget->myStatusBar)
-		drawStatusBar();
-
-	QGraphicsView::paintEvent(event);
+    QGraphicsView::paintEvent(event);
 }
 
 void ViewPort::draw2D(QPainter *painter)
@@ -2403,7 +2423,7 @@ void ViewPort::drawInstructions(QPainter *painter)
 
 
 
-#if defined(OPENCV_GL)//all this section -> not tested
+#if defined(HAVE_QT_OPENGL)//all this section -> not tested
 
 void ViewPort::initGL()
 {
@@ -2435,7 +2455,7 @@ void ViewPort::setGL(int width, int height)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	icvgluPerspective(45, float(width) / float(height), 0.01, 1000);
+	icvgluPerspective(angle, float(width) / float(height), zmin, zmax);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
@@ -2446,38 +2466,6 @@ void ViewPort::unsetGL()
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
-}
-
-void ViewPort::draw3D()
-{
-	//draw scene here
-	glLoadIdentity();
-
-	glTranslated(10.0, 10.0, -1.0);
-	// QVector3D p = convert(mouseCoordinate);
-	//glTranslated(p.x(),p.y(),p.z());
-
-	glRotatef( 55, 1, 0, 0 );
-	glRotatef( 45, 0, 1, 0 );
-	glRotatef( 0, 0, 0, 1 );
-
-	static const int coords[6][4][3] = {
-		{ { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
-		{ { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
-		{ { +1, -1, +1 }, { +1, -1, -1 }, { +1, +1, -1 }, { +1, +1, +1 } },
-		{ { -1, -1, -1 }, { -1, -1, +1 }, { -1, +1, +1 }, { -1, +1, -1 } },
-		{ { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
-		{ { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
-	};
-
-	for (int i = 0; i < 6; ++i) {
-		glColor3ub( i*20, 100+i*10, i*42 );
-		glBegin(GL_QUADS);
-		for (int j = 0; j < 4; ++j) {
-			glVertex3d(0.2 * coords[i][j][0], 0.2 * coords[i][j][1], 0.2 * coords[i][j][2]);
-		}
-		glEnd();
-	}
 }
 #endif
 

@@ -43,7 +43,7 @@
 
 #include "precomp.hpp"
 
-#if defined(OPENCV_GL)
+#if defined(HAVE_QT_OPENGL)//OPENCV_GL)
  #include <QtOpenGL>
  #include <QGLWidget>
 #endif
@@ -96,6 +96,7 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
 		shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
 	};
 
+
 //end enum
 
 class CvWindow;
@@ -133,7 +134,7 @@ public slots:
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
-    void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata);
+    void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata, double angle, double zmin, double zmax);
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
 
@@ -267,7 +268,7 @@ public:
     void displayStatusBar(QString text, int delayms );
     void readSettings();
     void writeSettings();
-    void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata);
+    void setOpenGLCallback(CvOpenGLCallback arg1,void* userdata, double angle, double zmin, double zmax);
     void hideTools();
     void showTools();
     static CvButtonbar* createButtonbar(QString bar_name);
@@ -326,6 +327,9 @@ static const int tableMouseButtons[][3]={
 };
 
 
+static const double DEFAULT_ANGLE  = 45.0;
+static const double DEFAULT_ZMIN = 0.01;
+static const double  DEFAULT_ZMAX = 1000.0;
 class ViewPort : public QGraphicsView
 {
     Q_OBJECT
@@ -335,7 +339,7 @@ public:
     void updateImage(void* arr);
     void startDisplayInfo(QString text, int delayms);
     void setMouseCallBack(CvMouseCallback m, void* param);
-    void setOpenGLCallback(CvOpenGLCallback func,void* userdata);
+    void setOpenGLCallback(CvOpenGLCallback func,void* userdata, double arg3, double arg4, double arg5);
     int getRatio();
     void setRatio(int arg);
 
@@ -407,8 +411,10 @@ private:
     void icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags);
     void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
-#if defined(OPENCV_GL)
-    void draw3D();
+#if defined(HAVE_QT_OPENGL)
+	double angle;
+	double zmin;
+	double zmax;
     void unsetGL();
     void initGL();
     void setGL(int width, int height);

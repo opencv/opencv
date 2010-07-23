@@ -87,7 +87,7 @@ CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms);
 CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms);
 
 typedef void (CV_CDECL *CvOpenGLCallback)(void* userdata);
-CVAPI(void) cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL));
+CVAPI(void) cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1));
 
 CVAPI(void) cvSaveWindowParameters(const char* name);
 CVAPI(void) cvLoadWindowParameters(const char* name);

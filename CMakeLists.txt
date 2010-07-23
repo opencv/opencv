@@ -507,7 +507,7 @@ endif()
 ############################### QT ################################
 
 set(WITH_QT OFF CACHE BOOL "Build with QT Backend support")
-set(WITH_QT_OPENGL ON CACHE BOOL "Add OpenGL extension to QT")
+set(WITH_QT_OPENGL OFF CACHE BOOL "Add OpenGL extension to QT")
 
 set(HAVE_QT 0)
 set(HAVE_QT_OPENGL 0)
@@ -519,6 +519,7 @@ if (WITH_QT)
         find_package (OpenGL QUIET)
         if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
 			set(HAVE_QT_OPENGL 1)
+			add_definitions(-DHAVE_QT_OPENGL)
         endif()
     endif()
 endif()
