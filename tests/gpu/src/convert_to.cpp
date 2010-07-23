@@ -19,7 +19,7 @@ class CV_GpuMatOpConvertTo : public CvTest
         void run(int);
 };
 
-CV_GpuMatOpConvertTo::CV_GpuMatOpConvertTo(): CvTest( "GpuMatOperatorConvertTo", "convertTo" ) {}
+CV_GpuMatOpConvertTo::CV_GpuMatOpConvertTo(): CvTest( "GPU-MatOperatorConvertTo", "convertTo" ) {}
 CV_GpuMatOpConvertTo::~CV_GpuMatOpConvertTo() {}
 
 void CV_GpuMatOpConvertTo::run( int /* start_from */)
@@ -44,12 +44,16 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
                 const double alpha = (double)rand() / RAND_MAX * 10.0;
                 const double beta = (double)rand() / RAND_MAX * 10.0;
 
+                cv::RNG rng(*ts->get_rng());
+
                 Mat cpumatsrc(img_size, src_type);
-                randu(cpumatsrc, Scalar::all(0), Scalar::all(10));
+
+                rng.fill(cpumatsrc, RNG::UNIFORM, Scalar::all(0), Scalar::all(10));
+
                 GpuMat gpumatsrc(cpumatsrc);
                 Mat cpumatdst;
                 GpuMat gpumatdst;
-                
+
                 cpumatsrc.convertTo(cpumatdst, dst_type, alpha, beta);
 
                 try
@@ -65,7 +69,7 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
 
                 double r = norm(cpumatdst, gpumatdst, NORM_INF);
                 if (r > 1)
-                {                    
+                {
                     cout << "FAILED: " << "SRC_TYPE=" << types_str[i] << "C" << c << " DST_TYPE=" << types_str[j] << " NORM = " << r << endl;
 
                     passed = false;

@@ -32,7 +32,7 @@ class CV_GpuMatOpCopyTo : public CvTest
         int cols;
 };
 
-CV_GpuMatOpCopyTo::CV_GpuMatOpCopyTo(): CvTest( "GpuMatOperatorCopyTo", "copyTo" )
+CV_GpuMatOpCopyTo::CV_GpuMatOpCopyTo(): CvTest( "GPU-MatOperatorCopyTo", "copyTo" )
 {
     rows = 234;
     cols = 123;
@@ -54,8 +54,13 @@ bool CV_GpuMatOpCopyTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
     GpuMat gmat(cmat);
 
     Mat cpumask(cpumat.size(), CV_8U);
-    randu(cpumask, Scalar::all(0), Scalar::all(127));
+
+    cv::RNG rng(*ts->get_rng());
+
+    rng.fill(cpumask, RNG::NORMAL, Scalar::all(0), Scalar::all(127));
+
     threshold(cpumask, cpumask, 0, 127, THRESH_BINARY);
+
     GpuMat gpumask(cpumask);
 
     //int64 time = getTickCount();

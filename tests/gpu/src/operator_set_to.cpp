@@ -30,7 +30,7 @@ class CV_GpuMatOpSetTo : public CvTest
         Scalar s;
 };
 
-CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GpuMatOperatorSetTo", "setTo" )
+CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GPU-MatOperatorSetTo", "setTo" )
 {
     rows = 256;
     cols = 124;
