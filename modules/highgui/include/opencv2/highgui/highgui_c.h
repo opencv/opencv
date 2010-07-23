@@ -96,7 +96,7 @@ CVAPI(void) cvStopLoop();
 
 typedef void (CV_CDECL *CvButtonCallback)(int state, void* userdata);
 enum {CV_PUSH_BUTTON = 0, CV_CHECKBOX = 1, CV_RADIOBOX = 2};
-CVAPI(int) cvCreateButton( const char* button_name CV_DEFAULT(NULL),CvButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), bool initial_button_state CV_DEFAULT(0));
+CVAPI(int) cvCreateButton( const char* button_name CV_DEFAULT(NULL),CvButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0));
 //----------------------
 
 
@@ -154,7 +154,7 @@ typedef void (CV_CDECL *CvTrackbarCallback)(int pos);
 
 /* create trackbar and display it on top of given window, set callback */
 CVAPI(int) cvCreateTrackbar( const char* trackbar_name, const char* window_name,
-                             int* value, int count, CvTrackbarCallback on_change);
+                             int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
 
 typedef void (CV_CDECL *CvTrackbarCallback2)(int pos, void* userdata);
 

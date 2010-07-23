@@ -135,7 +135,7 @@ public slots:
     void loadWindowParameters(QString name);
     void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata);
     void putText(void* arg1, QString text, QPoint org, void* font);
-    void addButton(QString button_name, int button_type, bool initial_button_state , void* on_change, void* userdata);
+    void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
 
 };
 
@@ -155,7 +155,7 @@ class CvButtonbar : public CvBar
 public:
     CvButtonbar(QWidget* arg, QString bar_name);
     ~CvButtonbar();
-    void addButton( QString button_name, CvButtonCallback call, void* userdata,  int button_type, bool initial_button_state);
+    void addButton( QString button_name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state);
 
 private:
     void setLabel();
@@ -187,7 +187,7 @@ class CvCheckBox : public QCheckBox
 {
     Q_OBJECT
 public:
-    CvCheckBox(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, bool initial_button_state);
+    CvCheckBox(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
@@ -203,7 +203,7 @@ class CvRadioButton : public QRadioButton
 {
     Q_OBJECT
 public:
-    CvRadioButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, bool initial_button_state);
+    CvRadioButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
@@ -284,7 +284,7 @@ public:
 
     //parameters (will be save/load)
     QString param_name;
-    QPointer<CvWinProperties> parameters_window ;
+    CvWinProperties* parameters_window ;
     int param_flags;
     int param_gui_mode;
     QVector<QAction*> vect_QActions;

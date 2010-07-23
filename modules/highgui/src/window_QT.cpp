@@ -515,14 +515,17 @@ CV_IMPL int cvCreateTrackbar( const char* name_bar, const char* window_name, int
 
 
 
-CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, void* userdata , int button_type, bool initial_button_state )
+CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, void* userdata , int button_type, int initial_button_state )
 {
+	if (initial_button_state < 0 || initial_button_state > 1)
+		return 0;
+		
 	QMetaObject::invokeMethod(&guiMainThread,
 			"addButton",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(button_name)),
 			Q_ARG(int,  button_type),
-			Q_ARG(bool, initial_button_state),
+			Q_ARG(int, initial_button_state),
 			Q_ARG(void*, (void*)on_change),
 			Q_ARG(void*, userdata)
 			);
@@ -865,7 +868,7 @@ void GuiReceiver::resizeWindow(QString name, int width, int height)
 		w->resize(width, height);
 }
 
-void GuiReceiver::addButton(QString button_name, int button_type, bool initial_button_state , void* on_change, void* userdata)
+void GuiReceiver::addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata)
 {
 
 	if (!global_control_panel)
@@ -1058,7 +1061,7 @@ void CvButtonbar::setLabel()
     label->setText(nameNormalized);
 }
 
-void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata,  int button_type, bool initial_button_state)
+void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state)
 {
     QString button_name = name;
 
@@ -1107,10 +1110,11 @@ CvPushButton::CvPushButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg
 
 void CvPushButton::callCallBack()
 {
-    callback(-1,userdata);
+	if (callback)
+		callback(-1,userdata);
 }
 
-CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, bool initial_button_state)
+CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
 {
     myparent = arg1;
     button_name = arg2;
@@ -1124,10 +1128,11 @@ CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, v
 
 void CvCheckBox::callCallBack()
 {
-    callback(this->isChecked(),userdata);
+	if (callback)
+		callback(this->isChecked(),userdata);
 }
 
-CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, bool initial_button_state)
+CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
 {
 	myparent = arg1;
 	button_name = arg2;
@@ -1141,7 +1146,8 @@ CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback a
 
 void CvRadioButton::callCallBack()
 {
-	callback(this->isChecked(),userdata);
+	if (callback)
+		callback(this->isChecked(),userdata);
 }
 
 
@@ -1363,7 +1369,7 @@ void CvWindow::showTools()
 
 CvWinProperties* CvWindow::createParameterWindow()
 {
-	QString name_paraWindow ="Global control panel";
+	QString name_paraWindow =QFileInfo(QApplication::applicationFilePath()).fileName()+" settings";
 
 	CvWinProperties *result =  new CvWinProperties(name_paraWindow,this);
 	return result;
