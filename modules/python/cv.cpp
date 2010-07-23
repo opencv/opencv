@@ -390,6 +390,18 @@ static PyObject *cvmat_repr(PyObject *self)
   char *d = str + strlen(str);
   sprintf(d, "type=%08x ", m->type);
   d += strlen(d);
+  switch (CV_MAT_DEPTH(m->type)) {
+  case CV_8U: strcpy(d, "8U"); break;
+  case CV_8S: strcpy(d, "8S"); break;
+  case CV_16U: strcpy(d, "16U"); break;
+  case CV_16S: strcpy(d, "16S"); break;
+  case CV_32S: strcpy(d, "32S"); break;
+  case CV_32F: strcpy(d, "32F"); break;
+  case CV_64F: strcpy(d, "64F"); break;
+  }
+  d += strlen(d);
+  sprintf(d, "C%d ", CV_MAT_CN(m->type));
+  d += strlen(d);
   sprintf(d, "rows=%d ", m->rows);
   d += strlen(d);
   sprintf(d, "cols=%d ", m->cols);
@@ -2799,6 +2811,9 @@ static PyObject *fromarray(PyObject *o, int allowND)
   if (!allowND) {
     cvmat_t *m = PyObject_NEW(cvmat_t, &cvmat_Type);
     if (pai->nd == 2) {
+      if (pai->strides[1] != pai->itemsize) {
+        return (PyObject*)failmsg("cv.fromarray array can only accept arrays with contiguous data");
+      }
       ERRWRAP(m->a = cvCreateMatHeader(pai->shape[0], pai->shape[1], type));
       m->a->step = pai->strides[0];
     } else if (pai->nd == 3) {
