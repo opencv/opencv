@@ -1718,10 +1718,28 @@ struct cvarrseq {
   };
 };
 
+static int is_convertible_to_mat(PyObject *o)
+{
+#if PYTHON_USE_NUMPY
+  if (PyObject_HasAttrString(o, "__array_struct__")) {
+    PyObject *ao = PyObject_GetAttrString(o, "__array_struct__");
+    if (ao != NULL &&
+        PyCObject_Check(ao) &&
+        ((PyArrayInterface*)PyCObject_AsVoidPtr(ao))->two == 2) {
+      return 1;
+    }
+  }
+#endif
+  return is_iplimage(o) && is_cvmat(o) && is_cvmatnd(o);
+}
+
 static int convert_to_cvarrseq(PyObject *o, cvarrseq *dst, const char *name = "no_name")
 {
   if (PyType_IsSubtype(o->ob_type, &cvseq_Type)) {
     return convert_to_CvSeq(o, &(dst->seq), name);
+  } else if (is_convertible_to_mat(o)) {
+    int r = convert_to_CvArr(o, &(dst->mat), name);
+    return r;
   } else if (PySequence_Check(o)) {
     PyObject *fi = PySequence_Fast(o, name);
     if (fi == NULL)
@@ -1747,7 +1765,11 @@ static int convert_to_cvarrseq(PyObject *o, cvarrseq *dst, const char *name = "n
       assert(fe != NULL);
       int *pdst = (int*)cvPtr2D(mt, i, 0);
       for (Py_ssize_t j = 0; j < size; j++) {
-        *pdst++ = PyInt_AsLong(PySequence_Fast_GET_ITEM(fe, j));
+        PyObject *num = PySequence_Fast_GET_ITEM(fe, j);
+        if (!PyNumber_Check(num)) {
+          return failmsg("Sequence must contain numbers", name);
+        }
+        *pdst++ = PyInt_AsLong(num);
       }
       Py_DECREF(fe);
     }
@@ -1755,7 +1777,7 @@ static int convert_to_cvarrseq(PyObject *o, cvarrseq *dst, const char *name = "n
     dst->mat = mt;
     return 1;
   } else {
-    return convert_to_CvArr(o, &(dst->mat), name);
+    return failmsg("Argument '%s' must be CvSeq, CvArr, or a sequence of numbers");
   }
 }
 
