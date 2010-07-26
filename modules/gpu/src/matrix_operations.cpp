@@ -84,11 +84,23 @@ void cv::gpu::GpuMat::upload(const Mat& m)
     cudaSafeCall( cudaMemcpy2D(data, step, m.data, m.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
+void cv::gpu::GpuMat::upload(const cv::Mat& m, CudaStream & stream)
+{
+    CV_DbgAssert(!m.empty());
+    stream.enqueueUpload(m, *this);
+}
+
 void cv::gpu::GpuMat::download(cv::Mat& m) const
 {
     CV_DbgAssert(!this->empty());
     m.create(size(), type());
     cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
+}
+
+void cv::gpu::GpuMat::download(cv::Mat& m, CudaStream & stream) const
+{
+    CV_DbgAssert(!m.empty());
+    stream.enqueueDownload(*this, m);
 }
 
 void cv::gpu::GpuMat::copyTo( GpuMat& m ) const

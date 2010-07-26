@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cuda_shared.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -158,17 +159,37 @@ void cv::gpu::CudaStream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(
 
 void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val)
 {
-    CV_Assert(!"Not implemented");
+    cv::gpu::impl::set_to_without_mask(src, src.depth(), val.val, src.channels(), impl->stream);
 }
 
 void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
 {
-    CV_Assert(!"Not implemented");
+    cv::gpu::impl::set_to_with_mask(src, src.depth(), val.val, mask, src.channels(), impl->stream);
 }
 
-void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a, double b)
+void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
 {
-    CV_Assert(!"Not implemented");
+    bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
+
+    if( rtype < 0 )
+        rtype = src.type();
+    else
+        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), src.channels());
+
+    int sdepth = src.depth(), ddepth = CV_MAT_DEPTH(rtype);
+    if( sdepth == ddepth && noScale )
+    {
+        src.copyTo(dst);
+        return;
+    }
+
+    GpuMat temp;
+    const GpuMat* psrc = &src;
+    if( sdepth != ddepth && psrc == &dst )
+        psrc = &(temp = src);
+
+    dst.create( src.size(), rtype );
+    cv::gpu::impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->cols * psrc->channels(), psrc->rows, alpha, beta, impl->stream);
 }
 
 

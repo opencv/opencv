@@ -107,10 +107,12 @@ namespace cv
 
             //! pefroms blocking upload data to GpuMat. .
             void upload(const cv::Mat& m);
+            void upload(const cv::Mat& m, CudaStream & stream);
 
             //! Downloads data from device to host memory. Blocking calls.
             operator Mat() const;
             void download(cv::Mat& m) const;
+            void download(cv::Mat& m, CudaStream & stream) const;
 
             //! returns a new GpuMatrix header for the specified row
             GpuMat row(int y) const;
