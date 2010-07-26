@@ -42,7 +42,6 @@
 
 #include <stddef.h>
 #include <stdio.h>
-//#include <iostream>
 #include "cuda_shared.hpp"
 #include "cuda_runtime.h"
 
@@ -239,19 +238,27 @@ namespace cv
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-                        typedef void (*CopyToFunc)(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels);
+                        typedef void (*CopyToFunc)(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels, const cudaStream_t & stream);
 
                         template<typename T>
-                        void copy_to_with_mask_run(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels)
+                        void copy_to_with_mask_run(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels, const cudaStream_t & stream)
                         {
                             dim3 threadsPerBlock(16,16, 1);
                             dim3 numBlocks ( divUp(mat_src.cols * channels , threadsPerBlock.x) , divUp(mat_src.rows , threadsPerBlock.y), 1);
-                            ::mat_operators::kernel_copy_to_with_mask<T><<<numBlocks,threadsPerBlock>>>
-                            ((T*)mat_src.ptr, (T*)mat_dst.ptr, (unsigned char*)mask.ptr, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
-                            cudaSafeCall ( cudaThreadSynchronize() );
+                            if (stream == 0)
+                            {
+                                ::mat_operators::kernel_copy_to_with_mask<T><<<numBlocks,threadsPerBlock>>>
+                                ((T*)mat_src.ptr, (T*)mat_dst.ptr, (unsigned char*)mask.ptr, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
+                                cudaSafeCall ( cudaThreadSynchronize() );
+                            }
+                            else
+                            {
+                                ::mat_operators::kernel_copy_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>
+                                ((T*)mat_src.ptr, (T*)mat_dst.ptr, (unsigned char*)mask.ptr, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
+                            }
                         }
 
-                        extern "C" void copy_to_with_mask(const DevMem2D& mat_src, const DevMem2D& mat_dst, int depth, const DevMem2D& mask, int channels)
+                        extern "C" void copy_to_with_mask(const DevMem2D& mat_src, const DevMem2D& mat_dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream)
                         {
                             static CopyToFunc tab[8] =
                             {
@@ -269,7 +276,7 @@ namespace cv
 
                             if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
-                            func(mat_src, mat_dst, mask, channels);
+                            func(mat_src, mat_dst, mask, channels, stream);
                         }
 
 
@@ -277,28 +284,43 @@ namespace cv
 ////////////////////////////////// SetTo //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-                        typedef void (*SetToFunc_with_mask)(const DevMem2D& mat, const DevMem2D& mask, int channels);
-                        typedef void (*SetToFunc_without_mask)(const DevMem2D& mat, int channels);
+                        typedef void (*SetToFunc_with_mask)(const DevMem2D& mat, const DevMem2D& mask, int channels, const cudaStream_t & stream);
+                        typedef void (*SetToFunc_without_mask)(const DevMem2D& mat, int channels, const cudaStream_t & stream);
 
                         template <typename T>
-                        void set_to_with_mask_run(const DevMem2D& mat, const DevMem2D& mask, int channels)
+                        void set_to_with_mask_run(const DevMem2D& mat, const DevMem2D& mask, int channels, const cudaStream_t & stream)
                         {
                             dim3 threadsPerBlock(32, 8, 1);
                             dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
-                            ::mat_operators::kernel_set_to_with_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, channels, mask.step);
-                            cudaSafeCall ( cudaThreadSynchronize() );
+                            if (stream == 0)
+                            {
+                                ::mat_operators::kernel_set_to_with_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, channels, mask.step);
+                                cudaSafeCall ( cudaThreadSynchronize() );
+                            }
+                            else
+                            {
+                                ::mat_operators::kernel_set_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, channels, mask.step);
+                            }
+
                         }
 
                         template <typename T>
-                        void set_to_without_mask_run(const DevMem2D& mat, int channels)
+                        void set_to_without_mask_run(const DevMem2D& mat, int channels, const cudaStream_t & stream)
                         {
                             dim3 threadsPerBlock(32, 8, 1);
                             dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
-                            ::mat_operators::kernel_set_to_without_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, mat.cols, mat.rows, mat.step, channels);
-                            cudaSafeCall ( cudaThreadSynchronize() );
+                            if (stream == 0)
+                            {
+                                ::mat_operators::kernel_set_to_without_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, mat.cols, mat.rows, mat.step, channels);
+                                cudaSafeCall ( cudaThreadSynchronize() );
+                            }
+                            else
+                            {
+                                ::mat_operators::kernel_set_to_without_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.ptr, mat.cols, mat.rows, mat.step, channels);
+                            }
                         }
 
-                        extern "C" void set_to_without_mask(const DevMem2D& mat, int depth, const double * scalar, int channels)
+                        extern "C" void set_to_without_mask(const DevMem2D& mat, int depth, const double * scalar, int channels, const cudaStream_t & stream)
                         {
                             double data[4];
                             data[0] = scalar[0];
@@ -323,11 +345,11 @@ namespace cv
 
                             if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
-                            func(mat, channels);
+                            func(mat, channels, stream);
                         }
 
 
-                        extern "C" void set_to_with_mask(const DevMem2D& mat, int depth, const double * scalar, const DevMem2D& mask, int channels)
+                        extern "C" void set_to_with_mask(const DevMem2D& mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream)
                         {
                             double data[4];
                             data[0] = scalar[0];
@@ -352,7 +374,7 @@ namespace cv
 
                             if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
-                            func(mat, mask, channels);
+                            func(mat, mask, channels, stream);
                         }
 
 
@@ -360,22 +382,27 @@ namespace cv
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-				    typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta);
+				    typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream);
 
 				    template<typename T, typename DT>
-				    void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta)
+				    void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream)
 				    {
 					const int shift = ::mat_operators::ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
 
                                         dim3 block(32, 8);
                                         dim3 grid(divUp(width, block.x * shift), divUp(height, block.y));
+                                        if (stream == 0)
+                                        {
+                                            ::mat_operators::kernel_convert_to<T, DT><<<grid, block>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
+                                            cudaSafeCall( cudaThreadSynchronize() );
+                                        }
+                                        else
+                                        {
+                                            ::mat_operators::kernel_convert_to<T, DT><<<grid, block, 0, stream>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
+                                        }
+                                    }
 
-                                        ::mat_operators::kernel_convert_to<T, DT><<<grid, block>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
-
-					cudaSafeCall( cudaThreadSynchronize() );
-				    }
-
-				    extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta)
+				    extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream)
 				    {
 					    static CvtFunc tab[8][8] =
 					    {
@@ -406,7 +433,7 @@ namespace cv
 					    CvtFunc func = tab[sdepth][ddepth];
 					    if (func == 0)
 						cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
-					    func(src, dst, width, height, alpha, beta);
+					    func(src, dst, width, height, alpha, beta, stream);
 					}
 				} // namespace impl
 	    } // namespace gpu

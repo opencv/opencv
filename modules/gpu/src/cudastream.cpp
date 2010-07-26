@@ -74,6 +74,7 @@ struct CudaStream::Impl
     cudaStream_t stream;
     int ref_counter;
 };
+
 namespace
 {
     template<class S, class D> void devcopy(const S& src, D& dst, cudaStream_t s, cudaMemcpyKind k)
@@ -147,7 +148,7 @@ void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, Mat& dst)
 {
     // if not -> allocation will be done, but after that dst will not point to page locked memory
     CV_Assert(src.cols == dst.cols && src.rows == dst.rows && src.type() == dst.type() )
-     devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost);
+    devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost);
 }
 void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, MatPL& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); }
 
