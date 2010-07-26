@@ -308,7 +308,7 @@ Mat createCompressionMatrix( int rows, int cols, int distrType )
     }
     else if( distrType == CalonderClassifier::COMPRESS_DISTR_BERNOULLI )
     {
-        float par = (float)(1./sqrt(rows));
+        float par = (float)(1./sqrt((float)rows));
         for( int y = 0; y < rows; y++ )
             for( int x = 0; x < cols; x++ )
                 mtr.at<float>(y,x) = rng(2)==0 ? par : -par;
