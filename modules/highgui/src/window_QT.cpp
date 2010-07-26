@@ -39,7 +39,7 @@
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
 
-#ifdef HAVE_QT
+#if defined(HAVE_QT)
 
 #include <window_QT.h>
 
@@ -266,7 +266,7 @@ CV_IMPL int cvWaitKey( int arg )
 				 */
 
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
-				sleep(2);
+				Sleep(2);
 #else
 				usleep(2);//to decrease CPU usage
 #endif
@@ -394,7 +394,7 @@ int icvInitSystem()
 		wasInitialized = 1;
 		qDebug()<<"init done";
 
-#if defined(HAVE_QT_OPENGL)//OK tested !
+#if defined( HAVE_QT_OPENGL )//OK tested !
 			qDebug()<<"opengl support available";
 #endif
 	}
@@ -1255,7 +1255,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 	//2: my view
 	int mode_display = CV_MODE_NORMAL;
-#if defined(HAVE_QT_OPENGL)
+#if defined( HAVE_QT_OPENGL )
 	mode_display = CV_MODE_OPENGL;
 #endif
 	createView(mode_display);
@@ -1718,7 +1718,7 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 	on_openGL_draw3D = NULL;
 
 
-#if defined(HAVE_QT_OPENGL)
+#if defined( HAVE_QT_OPENGL )
 	if ( mode_display == CV_MODE_OPENGL)
 	{
 		//QGLWidget* wGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
@@ -1777,7 +1777,7 @@ void ViewPort::saveView()
 	{
 		QString extension = fileName.right(3);
 
-#if defined(HAVE_QT_OPENGL)
+#if defined( HAVE_QT_OPENGL )
 	 image2Draw_qt_resized = ((QGLWidget*)viewport())->grabFrameBuffer();
 #else
      QPainter saveimage(&image2Draw_qt_resized);
@@ -1928,6 +1928,7 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 
 void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double angle_arg, double zmin_arg, double zmax_arg)
 {
+#if defined( HAVE_QT_OPENGL )//all this section -> not tested
 	on_openGL_draw3D = func;
 	on_openGL_param = userdata;
 	
@@ -1947,7 +1948,7 @@ void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double an
 		zmax = zmax_arg;
 	else
 		zmax = DEFAULT_ZMAX;
-	
+#endif
 }
 
 void ViewPort::controlImagePosition()
@@ -2219,7 +2220,7 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
     draw2D(&myPainter);
 
-#if defined(HAVE_QT_OPENGL)
+#if defined( HAVE_QT_OPENGL )
     if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
     {
 	    myPainter.save(); // Needed when using the GL1 engine
@@ -2423,7 +2424,7 @@ void ViewPort::drawInstructions(QPainter *painter)
 
 
 
-#if defined(HAVE_QT_OPENGL)//all this section -> not tested
+#if defined( HAVE_QT_OPENGL )//all this section -> not tested
 
 void ViewPort::initGL()
 {

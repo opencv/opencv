@@ -43,9 +43,9 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_QT_OPENGL)//OPENCV_GL)
- #include <QtOpenGL>
- #include <QGLWidget>
+#if defined( HAVE_QT_OPENGL )
+#include <QtOpenGL>
+#include <QGLWidget>
 #endif
 
 #include <QAbstractEventDispatcher>
@@ -411,7 +411,7 @@ private:
     void icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags);
     void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
-#if defined(HAVE_QT_OPENGL)
+#if defined( HAVE_QT_OPENGL )
 	double angle;
 	double zmin;
 	double zmax;
