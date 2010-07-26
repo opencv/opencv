@@ -2796,7 +2796,7 @@ void CxCore_SolveTest::prepare_to_validation( int )
     cvTsZero( &test_mat[REF_OUTPUT][0] );
 }
 
-CxCore_SolveTest solve_test;
+//CxCore_SolveTest solve_test;
 
 
 ///////////////// SVD /////////////////////
