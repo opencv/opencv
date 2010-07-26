@@ -73,9 +73,7 @@ namespace cv
 
 }
 
-
 #else /* !defined (HAVE_CUDA) */
-
 
 void cv::gpu::GpuMat::upload(const Mat& m)
 {
@@ -84,7 +82,7 @@ void cv::gpu::GpuMat::upload(const Mat& m)
     cudaSafeCall( cudaMemcpy2D(data, step, m.data, m.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
-void cv::gpu::GpuMat::upload(const cv::Mat& m, CudaStream & stream)
+void cv::gpu::GpuMat::upload(const MatPL& m, CudaStream& stream)
 {
     CV_DbgAssert(!m.empty());
     stream.enqueueUpload(m, *this);
@@ -97,7 +95,7 @@ void cv::gpu::GpuMat::download(cv::Mat& m) const
     cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
 }
 
-void cv::gpu::GpuMat::download(cv::Mat& m, CudaStream & stream) const
+void cv::gpu::GpuMat::download(MatPL& m, CudaStream& stream) const
 {
     CV_DbgAssert(!m.empty());
     stream.enqueueDownload(*this, m);
@@ -115,12 +113,12 @@ void cv::gpu::GpuMat::copyTo( GpuMat& mat, const GpuMat& mask ) const
 {
     if (mask.empty())
     {
-        this->copyTo(mat);
+        copyTo(mat);
     }
     else
     {
-        mat.create(this->size(), this->type());
-        cv::gpu::impl::copy_to_with_mask(*this, mat, this->depth() , mask, this->channels());
+        mat.create(size(), type());
+        cv::gpu::impl::copy_to_with_mask(*this, mat, depth(), mask, channels());
     }
 }
 
@@ -146,12 +144,12 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         psrc = &(temp = *this);
 
     dst.create( size(), rtype );
-    impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->cols * psrc->channels(), psrc->rows, alpha, beta);
+    impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
 }
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    cv::gpu::impl::set_to_without_mask( *this, this->depth(), s.val, this->channels());
+    cv::gpu::impl::set_to_without_mask( *this, depth(), s.val, channels());
     return *this;
 }
 
@@ -162,13 +160,9 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
     CV_DbgAssert(!this->empty());
 
     if (mask.empty())
-    {
-        cv::gpu::impl::set_to_without_mask( *this, this->depth(), s.val, this->channels());
-    }
+        impl::set_to_without_mask( *this, depth(), s.val, channels());
     else
-    {
-        cv::gpu::impl::set_to_with_mask( *this, this->depth(), s.val, mask, this->channels());
-    }
+        impl::set_to_with_mask( *this, depth(), s.val, mask, channels());
 
     return *this;
 }

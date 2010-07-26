@@ -44,6 +44,7 @@
 #define __OPENCV_CUDA_SHARED_HPP__
 
 #include "opencv2/gpu/devmem2d.hpp"
+#include "safe_call.hpp"
 #include "cuda_runtime_api.h"
 
 namespace cv
@@ -55,32 +56,19 @@ namespace cv
         typedef unsigned short ushort;
         typedef unsigned int uint;
 
-        extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
-
         namespace impl
         {
             static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
-            extern "C" void copy_to_with_mask(const DevMem2D& mat_src, const DevMem2D& mat_dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
+            extern "C" void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
-            extern "C" void set_to_without_mask (const DevMem2D& mat, int depth, const double * scalar, int channels, const cudaStream_t & stream = 0);
-            extern "C" void set_to_with_mask    (const DevMem2D& mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
+            extern "C" void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);
+            extern "C" void set_to_with_mask    (DevMem2D dst, int depth, const double *scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
-            extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream = 0);
+            extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream = 0);
         }
     }
 }
 
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__);
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-#endif
-
-    static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-    {
-        if( cudaSuccess != err)
-            cv::gpu::error(cudaGetErrorString(err), file, line, func);
-    }
 
 #endif /* __OPENCV_CUDA_SHARED_HPP__ */

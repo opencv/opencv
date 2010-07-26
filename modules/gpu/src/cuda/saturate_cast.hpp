@@ -44,4 +44,10 @@
 #define __OPENCV_GPU_SATURATE_CAST_HPP__
 
 
+template<class F,T>
+__device__ void saturate_cast<T>(F)
+{
+
+}
+
 #endif /* __OPENCV_GPU_SATURATE_CAST_HPP__ */

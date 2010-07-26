@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "cuda_shared.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -159,12 +158,12 @@ void cv::gpu::CudaStream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(
 
 void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val)
 {
-    cv::gpu::impl::set_to_without_mask(src, src.depth(), val.val, src.channels(), impl->stream);
+    impl::set_to_without_mask(src, src.depth(), val.val, src.channels(), impl->stream);
 }
 
 void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
 {
-    cv::gpu::impl::set_to_with_mask(src, src.depth(), val.val, mask, src.channels(), impl->stream);
+    impl::set_to_with_mask(src, src.depth(), val.val, mask, src.channels(), impl->stream);
 }
 
 void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
@@ -189,7 +188,7 @@ void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rty
         psrc = &(temp = src);
 
     dst.create( src.size(), rtype );
-    cv::gpu::impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->cols * psrc->channels(), psrc->rows, alpha, beta, impl->stream);
+    impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta, impl->stream);
 }
 
 

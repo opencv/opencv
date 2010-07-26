@@ -40,34 +40,29 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#ifndef __OPENCV_CUDA_SAFE_CALL_HPP__
+#define __OPENCV_CUDA_SAFE_CALL_HPP__
 
-using namespace cv;
-using namespace cv::gpu;
+#include "cuda_runtime_api.h"
 
-#if !defined (HAVE_CUDA)
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__);
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+#endif
 
-void cv::gpu::remap(const GpuMat& /*src*/, const GpuMat& /*xmap*/, const GpuMat& /*ymap*/, GpuMat& /*dst*/) { throw_nogpu(); }
-
-#else /* !defined (HAVE_CUDA) */
-
-namespace cv { namespace gpu 
-{ 
-    namespace impl 
+namespace cv
+{
+    namespace gpu
     {
-        extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst);
+        extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
+
+        static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+        {
+            if( cudaSuccess != err)
+                cv::gpu::error(cudaGetErrorString(err), file, line, func);
+        }
     }
-}}
-
-void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst)
-{ 
-    CV_DbgAssert(xmap.data && xmap.cols == ymap.cols && xmap.rows == ymap.rows);
-    CV_Assert(xmap.type() == CV_32F && ymap.type() == CV_32F);
-
-    dst.create(xmap.size(), src.type());
-    CV_Assert(dst.data != src.data);   
-    
-    impl::remap_gpu(src, xmap, ymap, dst);
 }
 
-#endif /* !defined (HAVE_CUDA) */
+#endif /* __OPENCV_CUDA_SAFE_CALL_HPP__ */

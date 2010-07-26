@@ -25,7 +25,7 @@ file(GLOB lib_srcs "src/*.cpp")
 file(GLOB lib_int_hdrs "src/*.h*")
 file(GLOB lib_cuda "src/cuda/*.cu*")
 file(GLOB lib_cuda_hdrs "src/cuda/*.h*")	
-source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
+source_group("Src\\Host" FILES ${lib_srcs} ${lib_int_hdrs})
 source_group("Src\\Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
 
 file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")		

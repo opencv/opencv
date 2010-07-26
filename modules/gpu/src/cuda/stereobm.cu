@@ -40,7 +40,12 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
+//#include "cuda_shared.hpp"
+#include "opencv2/gpu/devmem2d.hpp"
+#include "safe_call.hpp"
+static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
+
+
 
 using namespace cv::gpu;
 
@@ -392,7 +397,7 @@ namespace cv { namespace gpu  { namespace impl
 {
     extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap)
     {
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar>();
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
         cudaSafeCall( cudaBindTexture2D( 0, stereobm_gpu::texForSobel, input.ptr, desc, input.cols, input.rows, input.step ) );  
 
         dim3 threads(16, 16, 1);
@@ -520,7 +525,7 @@ namespace cv { namespace gpu  { namespace impl
         stereobm_gpu::texForTF.addressMode[0] = cudaAddressModeWrap;
         stereobm_gpu::texForTF.addressMode[1] = cudaAddressModeWrap;
                         
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar>();
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
         cudaSafeCall( cudaBindTexture2D( 0, stereobm_gpu::texForTF, input.ptr, desc, input.cols, input.rows, input.step ) );  
 
         dim3 threads(128, 1, 1);

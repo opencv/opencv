@@ -65,6 +65,7 @@ namespace cv
 
         //////////////////////////////// GpuMat ////////////////////////////////
         class CudaStream;
+        class MatPL;
 
         //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
         class CV_EXPORTS GpuMat
@@ -107,12 +108,12 @@ namespace cv
 
             //! pefroms blocking upload data to GpuMat. .
             void upload(const cv::Mat& m);
-            void upload(const cv::Mat& m, CudaStream & stream);
+            void upload(const MatPL& m, CudaStream& stream);
 
             //! Downloads data from device to host memory. Blocking calls.
             operator Mat() const;
             void download(cv::Mat& m) const;
-            void download(cv::Mat& m, CudaStream & stream) const;
+            void download(MatPL& m, CudaStream& stream) const;
 
             //! returns a new GpuMatrix header for the specified row
             GpuMat row(int y) const;
