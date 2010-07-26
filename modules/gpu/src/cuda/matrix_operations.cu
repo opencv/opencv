@@ -325,12 +325,7 @@ namespace cv
 
             extern "C" void set_to_without_mask(DevMem2D mat, int depth, const double *scalar, int channels, const cudaStream_t & stream)
             {
-                double data[4];
-                data[0] = scalar[0];
-                data[1] = scalar[1];
-                data[2] = scalar[2];
-                data[3] = scalar[3];
-                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, &data, sizeof(data)));
+                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar, sizeof(double) * 4));
 
                 static SetToFunc_without_mask tab[8] =
                 {
@@ -354,13 +349,8 @@ namespace cv
 
 
             extern "C" void set_to_with_mask(DevMem2D mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream)
-            {
-                double data[4];
-                data[0] = scalar[0];
-                data[1] = scalar[1];
-                data[2] = scalar[2];
-                data[3] = scalar[3];
-                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, &data, sizeof(data)));
+            {                
+                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar, sizeof(double) * 4));
 
                 static SetToFunc_with_mask tab[8] =
                 {
