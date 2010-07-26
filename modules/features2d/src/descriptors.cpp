@@ -144,7 +144,7 @@ void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
 }
 
 /****************************************************************************************\
-*                                SiftDescriptorExtractor                                  *
+*                                SiftDescriptorExtractor                                 *
 \****************************************************************************************/
 SiftDescriptorExtractor::SiftDescriptorExtractor( double magnification, bool isNormalize, bool recalculateAngles,
                                                   int nOctaves, int nOctaveLayers, int firstOctave, int angleMode )
@@ -188,7 +188,7 @@ void SiftDescriptorExtractor::write (FileStorage &fs) const
 }
 
 /****************************************************************************************\
-*                                SurfDescriptorExtractor                                  *
+*                                SurfDescriptorExtractor                                 *
 \****************************************************************************************/
 SurfDescriptorExtractor::SurfDescriptorExtractor( int nOctaves,
                                                   int nOctaveLayers, bool extended )
@@ -227,6 +227,10 @@ void SurfDescriptorExtractor::write( FileStorage &fs ) const
     fs << "nOctaveLayers" << surf.nOctaveLayers;
     fs << "extended" << surf.extended;
 }
+
+/****************************************************************************************\
+*           Factory functions for descriptor extractor and matcher creating              *
+\****************************************************************************************/
 
 Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType )
 {
@@ -270,7 +274,9 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
     return dm;
 }
 
-
+/****************************************************************************************\
+*                             BruteForceMatcher L2 specialization                        *
+\****************************************************************************************/
 template<>
 void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
                                              const Mat& /*mask*/, vector<int>& matches ) const
@@ -316,7 +322,6 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const M
     }
 #endif
 }
-
 
 /****************************************************************************************\
 *                                GenericDescriptorMatch                                  *
@@ -394,6 +399,9 @@ void GenericDescriptorMatch::clear()
     collection.clear();
 }
 
+/*
+ * Factory function for GenericDescriptorMatch creating
+ */
 Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
 {
     GenericDescriptorMatch *descriptorMatch = 0;
@@ -409,7 +417,7 @@ Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericD
     }
     else if( ! genericDescritptorMatchType.compare ("CALONDER") )
     {
-        descriptorMatch = new CalonderDescriptorMatch ();
+        //descriptorMatch = new CalonderDescriptorMatch ();
     }
 
     if( !paramsFilename.empty() && descriptorMatch != 0 )
@@ -626,6 +634,7 @@ void OneWayDescriptorMatch::clear ()
 /****************************************************************************************\
 *                                CalonderDescriptorMatch                                 *
 \****************************************************************************************/
+#if 0
 CalonderDescriptorMatch::Params::Params( const RNG& _rng, const PatchGenerator& _patchGen,
                                          int _numTrees, int _depth, int _views,
                                          size_t _reducedNumDim,
@@ -774,6 +783,7 @@ void CalonderDescriptorMatch::write( FileStorage& fs ) const
     fs << "numQuantBits" << params.numQuantBits;
     fs << "printStatus" << params.printStatus;
 }
+#endif
 
 /****************************************************************************************\
 *                                  FernDescriptorMatch                                   *
@@ -827,22 +837,13 @@ void FernDescriptorMatch::trainFernClassifier()
     {
         assert( params.filename.empty() );
 
-        vector<Point2f> points;
-        vector<Ptr<Mat> > refimgs;
-        vector<int> labels;
-        for( size_t imageIdx = 0; imageIdx < collection.images.size(); imageIdx++ )
-        {
-            for( size_t pointIdx = 0; pointIdx < collection.points[imageIdx].size(); pointIdx++ )
-            {
-                refimgs.push_back(new Mat (collection.images[imageIdx]));
-                points.push_back(collection.points[imageIdx][pointIdx].pt);
-                labels.push_back((int)pointIdx);
-            }
-        }
+        vector<vector<Point2f> > points;
+        for( size_t imgIdx = 0; imgIdx < collection.images.size(); imgIdx++ )
+            KeyPoint::convert( collection.points[imgIdx], points[imgIdx] );
 
-        classifier = new FernClassifier( points, refimgs, labels, params.nclasses, params.patchSize,
-                                         params.signatureSize, params.nstructs, params.structSize, params.nviews,
-                                         params.compressionMethod, params.patchGenerator );
+        classifier = new FernClassifier( points, collection.images, vector<vector<int> >(), 0, // each points is a class
+                                         params.patchSize, params.signatureSize, params.nstructs, params.structSize,
+                                         params.nviews, params.compressionMethod, params.patchGenerator );
     }
 }
 
@@ -964,6 +965,61 @@ void FernDescriptorMatch::clear ()
 {
     GenericDescriptorMatch::clear();
     classifier.release();
+}
+
+/****************************************************************************************\
+*                                  VectorDescriptorMatch                                 *
+\****************************************************************************************/
+void VectorDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
+{
+    Mat descriptors;
+    extractor->compute( image, keypoints, descriptors );
+    matcher->add( descriptors );
+
+    collection.add( Mat(), keypoints );
+};
+
+void VectorDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<int>& keypointIndices )
+{
+    Mat descriptors;
+    extractor->compute( image, points, descriptors );
+
+    matcher->match( descriptors, keypointIndices );
+};
+
+void VectorDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches )
+{
+    Mat descriptors;
+    extractor->compute( image, points, descriptors );
+
+    matcher->match( descriptors, matches );
+}
+
+void VectorDescriptorMatch::match( const Mat& image, vector<KeyPoint>& points,
+                                   vector<vector<DMatch> >& matches, float threshold )
+{
+    Mat descriptors;
+    extractor->compute( image, points, descriptors );
+
+    matcher->match( descriptors, matches, threshold );
+}
+
+void VectorDescriptorMatch::clear()
+{
+    GenericDescriptorMatch::clear();
+    matcher->clear();
+}
+
+void VectorDescriptorMatch::read( const FileNode& fn )
+{
+    GenericDescriptorMatch::read(fn);
+    extractor->read (fn);
+}
+
+void VectorDescriptorMatch::write (FileStorage& fs) const
+{
+    GenericDescriptorMatch::write(fs);
+    extractor->write (fs);
 }
 
 }

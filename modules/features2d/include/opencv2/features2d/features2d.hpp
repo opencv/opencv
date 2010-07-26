@@ -179,6 +179,17 @@ CVAPI(CvSeq*) cvGetStarKeypoints( const CvArr* img, CvMemStorage* storage,
 
 namespace cv
 {
+    struct CV_EXPORTS DefaultRngAuto
+    {
+        const static uint64 def_state = (uint64)-1;
+        const uint64 old_state;
+
+        DefaultRngAuto() : old_state(theRNG().state) { theRNG().state = def_state; }
+        ~DefaultRngAuto() { theRNG().state = old_state; }
+
+        DefaultRngAuto& operator=(const DefaultRngAuto&);
+    };
+
 
 // CvAffinePose: defines a parameterized affine transformation of an image patch.
 // An image patch is rotated on angle phi (in degrees), then scaled lambda1 times
@@ -395,10 +406,7 @@ public:
 CV_EXPORTS void FAST( const Mat& image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true );
 
 /*!
- The Patch Generator class
- 
- 
- 
+ The Patch Generator class 
 */
 class CV_EXPORTS PatchGenerator
 {
@@ -459,9 +467,9 @@ class CV_EXPORTS FernClassifier
 public:
     FernClassifier();
     FernClassifier(const FileNode& node);
-    FernClassifier(const vector<Point2f>& points,
-                   const vector<Ptr<Mat> >& refimgs,
-                   const vector<int>& labels=vector<int>(),
+    FernClassifier(const vector<vector<Point2f> >& points,
+                   const vector<Mat>& refimgs,
+                   const vector<vector<int> >& labels=vector<vector<int> >(),
                    int _nclasses=0, int _patchSize=PATCH_SIZE,
                    int _signatureSize=DEFAULT_SIGNATURE_SIZE,
                    int _nstructs=DEFAULT_STRUCTS,
@@ -481,9 +489,9 @@ public:
                                      int _nviews=DEFAULT_VIEWS,
                                      int _compressionMethod=COMPRESSION_NONE,
                                      const PatchGenerator& patchGenerator=PatchGenerator());
-    virtual void train(const vector<Point2f>& points,
-                       const vector<Ptr<Mat> >& refimgs,
-                       const vector<int>& labels=vector<int>(),
+    virtual void train(const vector<vector<Point2f> >& points,
+                       const vector<Mat>& refimgs,
+                       const vector<vector<int> >& labels=vector<vector<int> >(),
                        int _nclasses=0, int _patchSize=PATCH_SIZE,
                        int _signatureSize=DEFAULT_SIGNATURE_SIZE,
                        int _nstructs=DEFAULT_STRUCTS,
@@ -594,269 +602,126 @@ protected:
     FernClassifier fernClassifier;
 };
 
-
-
 /****************************************************************************************\
-*            Calonder Descriptor                                                         *
+*                                 Calonder Classifier                                    *
 \****************************************************************************************/
-
-struct CV_EXPORTS DefaultRngAuto
-{
-    const static uint64 def_state = (uint64)-1;
-    const uint64 old_state;
-
-    DefaultRngAuto() : old_state(theRNG().state) { theRNG().state = def_state; }
-    ~DefaultRngAuto() { theRNG().state = old_state; }
-
-    DefaultRngAuto& operator=(const DefaultRngAuto&);
-};
-
-/*
-A pseudo-random number generator usable with std::random_shuffle.
-*/
-typedef cv::RNG CalonderRng;
-typedef unsigned int int_type;
-
-//----------------------------
-//randomized_tree.h
-
-//class RTTester;
-
-//namespace features {
-static const size_t DEFAULT_REDUCED_NUM_DIM = 176;
-static const float LOWER_QUANT_PERC = .03f;
-static const float UPPER_QUANT_PERC = .92f;
-static const int PATCH_SIZE = 32;
-static const int DEFAULT_DEPTH = 9;
-static const int DEFAULT_VIEWS = 5000;
-struct RTreeNode;
-
-struct BaseKeypoint
-{
-    int x;
-    int y;
-    IplImage* image;
-
-    BaseKeypoint()
-        : x(0), y(0), image(NULL)
-    {}
-
-    BaseKeypoint(int x, int y, IplImage* image)
-        : x(x), y(y), image(image)
-    {}
-};
-
-class CSMatrixGenerator {
-public:
-    typedef enum { PDT_GAUSS=1, PDT_BERNOULLI, PDT_DBFRIENDLY } PHI_DISTR_TYPE;
-    ~CSMatrixGenerator();
-    static float* getCSMatrix(int m, int n, PHI_DISTR_TYPE dt);     // do NOT free returned pointer
-
-private:
-    static float *cs_phi_;    // matrix for compressive sensing
-    static int cs_phi_m_, cs_phi_n_;
-};
-
-
-template< typename T >
-struct AlignedMemBlock
-{
-  AlignedMemBlock() : raw(NULL), data(NULL) { };
-
-  // Alloc's an `a` bytes-aligned block good to hold `sz` elements of class T
-  AlignedMemBlock(const int n, const int a)
-  {
-     alloc(n, a);
-  }
-
-  ~AlignedMemBlock()
-  {
-     free(raw);
-  }
-
-  void alloc(const int n, const int a)
-  {
-     uchar* raw = (uchar*)malloc(n*sizeof(T) + a);
-     int delta = (a - uint64(raw)%a)%a;          // # bytes required for padding s.t. we get `a`-aligned
-     data = reinterpret_cast<T*>(raw + delta);
-  }
-
-  // Methods to access the aligned data. NEVER EVER FREE A RETURNED POINTER!
-  inline T* p() { return data; }
-  inline T* operator()() { return data; }
-
-private:
-  T *raw;     // raw block, probably not aligned
-  T *data;    // exposed data, aligned, DO NOT FREE
-};
-
-typedef AlignedMemBlock<float> FloatSignature;
-typedef AlignedMemBlock<uchar> Signature;
-
-class CV_EXPORTS RandomizedTree
+class CV_EXPORTS CalonderClassifier
 {
 public:
-    friend class RTreeClassifier;
-    //friend class ::RTTester;
+    CalonderClassifier();
+    CalonderClassifier( const vector<vector<Point2f> >& points, const vector<Mat>& refimgs,
+                        const vector<vector<int> >& labels=vector<vector<int> >(), int _numClasses=0,
+                        int _pathSize=DEFAULT_PATCH_SIZE,
+                        int _numTrees=DEFAULT_NUM_TREES,
+                        int _treeDepth=DEFAULT_TREE_DEPTH,
+                        int _numViews=DEFAULT_NUM_VIEWS,
+                        int _compressedDim=DEFAULT_COMPRESSED_DIM,
+                        int _compressType=DEFAULT_COMPRESS_TYPE,
+                        int _numQuantBits=DEFAULT_NUM_QUANT_BITS,
+                        const PatchGenerator& patchGenerator=PatchGenerator() );
 
-    RandomizedTree();
-    ~RandomizedTree();
+    virtual ~CalonderClassifier();
+    virtual void clear();
 
-    void train(std::vector<BaseKeypoint> const& base_set, cv::RNG &rng,
-        int depth, int views, size_t reduced_num_dim, int num_quant_bits);
+    void train( const vector<vector<Point2f> >& points, const vector<Mat>& refimgs,
+                const vector<vector<int> >& labels=vector<vector<int> >(), int _nclasses=0,
+                int _pathSize=DEFAULT_PATCH_SIZE,
+                int _numTrees=DEFAULT_NUM_TREES,
+                int _treeDepth=DEFAULT_TREE_DEPTH,
+                int _numViews=DEFAULT_NUM_VIEWS,
+                int _compressedDim=DEFAULT_COMPRESSED_DIM,
+                int _compressType=DEFAULT_COMPRESS_TYPE,
+                int _numQuantBits=DEFAULT_NUM_QUANT_BITS,
+                const PatchGenerator& patchGenerator=PatchGenerator() );
 
-    void train(std::vector<BaseKeypoint> const& base_set, cv::RNG &rng,
-        PatchGenerator &make_patch, int depth, int views, size_t reduced_num_dim,
-        int num_quant_bits);
+    virtual void operator()(const Mat& img, Point2f pt, vector<float>& signature, float thresh=0.f) const;
+    virtual void operator()(const Mat& patch, vector<float>& signature, float thresh=-1.f) const;
+#define QUANTIZATION_AVAILABLE 1
+#if QUANTIZATION_AVAILABLE
+    void quantizePosteriors( int _numQuantBits, bool isClearFloatPosteriors=false );
+    void clearFloatPosteriors();
+    virtual void operator()(const Mat& img, Point2f pt, vector<uchar>& signature, uchar thresh=-1.f) const;
+    virtual void operator()(const Mat& patch, vector<uchar>& signature, uchar thresh=-1.f) const;
+#endif
 
-    // following two funcs are EXPERIMENTAL (do not use unless you know exactly what you do)
-    static void quantizeVector(float *vec, int dim, int N, float bnds[2], int clamp_mode=0);
-    static void quantizeVector(float *src, int dim, int N, float bnds[2], uchar *dst);
+    void read( const FileNode& fn );
+    void write( FileStorage& fs ) const;
 
-    // patch_data must be a 32x32 array (no row padding)
-    float* getPosterior(uchar* patch_data);
-    const float* getPosterior(uchar* patch_data) const;
-    uchar* getPosterior2(uchar* patch_data);
+    bool empty() const;
 
-    void read(const char* file_name, int num_quant_bits);
-    void read(std::istream &is, int num_quant_bits);
-    void write(const char* file_name) const;
-    void write(std::ostream &os) const;
+    void setVerbose( bool _verbose );
 
-    inline int classes() { return classes_; }
-    inline int depth() { return depth_; }
+    int getPatchSize() const;
+    int getNumTrees() const;
+    int getTreeDepth() const;
+    int getNumViews() const;
+    int getSignatureSize() const;
+    int getCompressType() const;
+    int getNumQuantBits() const;
+    int getOrigNumClasses() const;
 
-    inline void applyQuantization(int num_quant_bits) { makePosteriors2(num_quant_bits); }
 
-    // debug
-    void savePosteriors(std::string url, bool append=false);
-    void savePosteriors2(std::string url, bool append=false);
-
-private:
-    int classes_;
-    int depth_;
-    int num_leaves_;
-    std::vector<RTreeNode> nodes_;
-    //float **posteriors_;       // 16-bytes aligned posteriors
-    //uchar **posteriors2_;      // 16-bytes aligned posteriors
-  FloatSignature *posteriors_;
-  Signature  *posteriors2_;
-  std::vector<int> leaf_counts_;
-
-    void createNodes(int num_nodes, cv::RNG &rng);
-    void allocPosteriorsAligned(int num_leaves, int num_classes);
-    void freePosteriors(int which);    // which: 1=posteriors_, 2=posteriors2_, 3=both
-    void init(int classes, int depth, cv::RNG &rng);
-    void addExample(int class_id, uchar* patch_data);
-    void finalize(size_t reduced_num_dim, int num_quant_bits);
-    int getIndex(uchar* patch_data) const;
-    inline float* getPosteriorByIndex(int index);
-    inline uchar* getPosteriorByIndex2(int index);
-    inline const float* getPosteriorByIndex(int index) const;
-    //void makeRandomMeasMatrix(float *cs_phi, PHI_DISTR_TYPE dt, size_t reduced_num_dim);
-    void convertPosteriorsToChar();
-    void makePosteriors2(int num_quant_bits);
-    void compressLeaves(size_t reduced_num_dim);
-    void estimateQuantPercForPosteriors(float perc[2]);
-};
-
-struct RTreeNode
-{
-    short offset1, offset2;
-
-    RTreeNode() {}
-
-    RTreeNode(uchar x1, uchar y1, uchar x2, uchar y2)
-        : offset1(y1*PATCH_SIZE + x1),
-        offset2(y2*PATCH_SIZE + x2)
-    {}
-
-    //! Left child on 0, right child on 1
-    inline bool operator() (uchar* patch_data) const
+    enum
     {
-        return patch_data[offset1] > patch_data[offset2];
-    }
-};
+        COMPRESS_NONE             = -1,
+        COMPRESS_DISTR_GAUSS      =  0,
+        COMPRESS_DISTR_BERNOULLI  =  1,
+        COMPRESS_DISTR_DBFRIENDLY =  2,
+    };
 
+    static float GET_LOWER_QUANT_PERC() { return .03f; }
+    static float GET_UPPER_QUANT_PERC() { return .92f; }
 
-
-//} // namespace features
-//----------------------------
-//rtree_classifier.h
-//class RTTester;
-
-//namespace features {
-
-class CV_EXPORTS RTreeClassifier
-{
-public:
-    //friend class ::RTTester;
-    static const int DEFAULT_TREES = 80;
-    static const size_t DEFAULT_NUM_QUANT_BITS = 4;
-
-  //static const int SIG_LEN = 176;
-
-  RTreeClassifier();
-
-    //modified
-    void train(std::vector<BaseKeypoint> const& base_set,
-        cv::RNG &rng,
-        int num_trees = RTreeClassifier::DEFAULT_TREES,
-        int depth = DEFAULT_DEPTH,
-        int views = DEFAULT_VIEWS,
-        size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,
-        int num_quant_bits = DEFAULT_NUM_QUANT_BITS,
-        bool print_status = true);
-
-  void train(std::vector<BaseKeypoint> const& base_set,
-        cv::RNG &rng,
-        PatchGenerator &make_patch,
-        int num_trees = DEFAULT_TREES,
-        int depth = DEFAULT_DEPTH,
-        int views = DEFAULT_VIEWS,
-        size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,
-        int num_quant_bits = DEFAULT_NUM_QUANT_BITS,
-        bool print_status = true);
-
-    // sig must point to a memory block of at least classes()*sizeof(float|uchar) bytes
-    void getSignature(IplImage *patch, uchar *sig);
-    void getSignature(IplImage *patch, float *sig);
-    void getSparseSignature(IplImage *patch, float *sig, float thresh);
-    // TODO: deprecated in favor of getSignature overload, remove
-    void getFloatSignature(IplImage *patch, float *sig) { getSignature(patch, sig); }
-
-    static int countNonZeroElements(float *vec, int n, double tol=1e-10);
-    static inline void safeSignatureAlloc(uchar **sig, int num_sig=1, int sig_len=176);
-    static inline uchar* safeSignatureAlloc(int num_sig=1, int sig_len=176);
-
-    inline int classes() const { return classes_; }
-    inline int original_num_classes() { return original_num_classes_; }
-
-    void setQuantization(int num_quant_bits);
-    void discardFloatPosteriors();
-
-    void read(const char* file_name);
-    void read(std::istream &is);
-    void write(const char* file_name) const;
-    void write(std::ostream &os) const;
-
-    // experimental and debug
-    void saveAllFloatPosteriors(std::string file_url);
-    void saveAllBytePosteriors(std::string file_url);
-    void setFloatPosteriorsFromTextfile_176(std::string url);
-    float countZeroElements();
-
-    std::vector<RandomizedTree> trees_;
-
+    enum
+    {
+        MAX_NUM_QUANT_BITS = 8,
+        DEFAULT_PATCH_SIZE = 32,
+        DEFAULT_NUM_TREES = 48,
+        DEFAULT_TREE_DEPTH = 9,
+        DEFAULT_NUM_VIEWS = 500,
+        DEFAULT_COMPRESSED_DIM = 176,
+        DEFAULT_COMPRESS_TYPE = COMPRESS_DISTR_BERNOULLI,
+        DEFAULT_NUM_QUANT_BITS = -1,
+    };
 private:
-    int classes_;
-    int num_quant_bits_;
-    uchar **posteriors_;
-    ushort *ptemp_;
-    int original_num_classes_;
-    bool keep_floats_;
-};
+    void prepare( int _patchSize, int _signatureSize, int _numTrees, int _treeDepth, int _numViews );
 
+    int getLeafIdx( int treeIdx, const Mat& patch ) const;
+    void finalize( int _compressedDim, int _compressType, int _numQuantBits,
+                   const vector<int>& leafSampleCounters);
+
+    void compressLeaves( int _compressedDim, int _compressType );
+
+    bool verbose;
+
+    int patchSize;
+    int signatureSize;
+    int numTrees;
+    int treeDepth;
+    int numViews;
+
+    int origNumClasses;
+    int compressType;
+    int numQuantBits;
+
+    int numLeavesPerTree;
+    int numNodesPerTree;
+
+    struct Node
+    {
+        uchar x1, y1, x2, y2;
+        Node() : x1(0), y1(0), x2(0), y2(0) {}
+        Node( uchar _x1, uchar _y1, uchar _x2, uchar _y2 ) : x1(_x1), y1(_y1), x2(_x2), y2(_y2)
+        {}
+        int operator() (const Mat_<uchar>& patch) const
+        { return patch(y1,x1) > patch(y2, x2) ? 1 : 0; }
+    };
+    vector<Node> nodes;
+    vector<float> posteriors;
+#if QUANTIZATION_AVAILABLE
+    vector<uchar> quantizedPosteriors;
+#endif
+};
 
 /****************************************************************************************\
 *                                     One-Way Descriptor                                 *
@@ -1004,7 +869,7 @@ protected:
     CvAffinePose* m_affine_poses; // an array of poses
     CvMat** m_transforms; // an array of affine transforms corresponding to poses
 
-    std::string m_feature_name; // the name of the feature associated with the descriptor
+    string m_feature_name; // the name of the feature associated with the descriptor
     CvPoint m_center; // the coordinates of the feature (the center of the input image ROI)
 
     int m_pca_dim_high; // the number of descriptor pca components to use for generating affine poses
@@ -1275,7 +1140,8 @@ public:
      *
      * image        The image.
      * keypoints    The detected keypoints.
-     * mask         Mask specifying where to look for keypoints (optional). Must be a char matrix with non-zero values in the region of interest.
+     * mask         Mask specifying where to look for keypoints (optional). Must be a char
+     *              matrix with non-zero values in the region of interest.
      */
     void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
     {
@@ -1430,8 +1296,8 @@ public:
      */
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
 
-    virtual void read (const FileNode&) {};
-    virtual void write (FileStorage&) const {};
+    virtual void read( const FileNode& ) {};
+    virtual void write( FileStorage& ) const {};
 
 protected:
     /*
@@ -1451,9 +1317,9 @@ public:
                              int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
                              int angleMode=SIFT::CommonParams::FIRST_ANGLE );
 
-    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
-    virtual void read (const FileNode &fn);
-    virtual void write (FileStorage &fs) const;
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void read( const FileNode &fn );
+    virtual void write( FileStorage &fs ) const;
 
 protected:
     SIFT sift;
@@ -1465,13 +1331,55 @@ public:
     SurfDescriptorExtractor( int nOctaves=4,
                              int nOctaveLayers=2, bool extended=false );
 
-    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
-    virtual void read (const FileNode &fn);
-    virtual void write (FileStorage &fs) const;
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void read( const FileNode &fn );
+    virtual void write( FileStorage &fs ) const;
 
 protected:
     SURF surf;
 };
+
+#if 0
+template<typename T>
+class CalonderDescriptorExtractor : public DescriptorExtractor
+{
+public:
+    CalonderDescriptorExtractor( const string& classifierFile );
+
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void read( const FileNode &fn );
+    virtual void write( FileStorage &fs ) const;
+
+protected:
+    RTreeClassifier classifier_;
+    static const int BORDER_SIZE = 16;
+};
+
+template<typename T>
+CalonderDescriptorExtractor<T>::CalonderDescriptorExtractor(const std::string& classifier_file)
+{
+    classifier_.read( classifier_file.c_str() );
+}
+
+template<typename T>
+void CalonderDescriptorExtractor<T>::compute( const cv::Mat& image,
+                                              std::vector<cv::KeyPoint>& keypoints,
+                                              cv::Mat& descriptors) const
+{
+  // Cannot compute descriptors for keypoints on the image border.
+  removeBorderKeypoints(keypoints, image.size(), BORDER_SIZE);
+
+  /// @todo Check 16-byte aligned
+  descriptors.create(keypoints.size(), classifier_.classes(), cv::DataType<T>::type);
+  IplImage ipl = (IplImage)image;
+
+  for (size_t i = 0; i < keypoints.size(); ++i) {
+    cv::Point2f keypt = keypoints[i].pt;
+    cv::WImageView1_b patch = features::extractPatch(&ipl, keypt);
+    classifier_.getSignature(patch.Ipl(), descriptors.ptr<T>(i));
+  }
+}
+#endif
 
 CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );
 
@@ -1533,7 +1441,7 @@ struct CV_EXPORTS L1
 
 
 /****************************************************************************************\
-*                                  DMatch                                     *
+*                                      DMatch                                            *
 \****************************************************************************************/
 /*
  * Struct for matching: match index and distance between descriptors
@@ -1591,8 +1499,7 @@ public:
      * mask          Mask specifying permissible matches.
      * matches       Indices of the closest matches from the training set
      */
-    void match( const Mat& query, const Mat& mask,
-                vector<int>& matches ) const;
+    void match( const Mat& query, const Mat& mask, vector<int>& matches ) const;
 
     /*
      * Find the best match for each descriptor from a query set
@@ -1613,8 +1520,7 @@ public:
      * mask          Mask specifying permissible matches.
      * matches       DMatches of the closest matches from the training set
      */
-    void match( const Mat& query, const Mat& mask,
-                    vector<DMatch>& matches ) const;
+    void match( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const;
 
     /*
      * Find many matches for each descriptor from a query set
@@ -1638,7 +1544,7 @@ public:
       * threshold     Distance threshold for descriptors matching
       */
     void match( const Mat& query, const Mat& mask,
-                    vector<vector<DMatch> >&  matches, float threshold ) const;
+                vector<vector<DMatch> >&  matches, float threshold ) const;
 
 
 
@@ -1878,7 +1784,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& descriptors_1, const Mat
 
 template<>
 void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                                             const Mat& mask, vector<int>& matches ) const;
+                                               const Mat& mask, vector<int>& matches ) const;
 
 CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
 
@@ -2036,10 +1942,10 @@ public:
     virtual void clear ();
 
     // Reads match object from a file node
-    virtual void read (const FileNode &fn);
+    virtual void read( const FileNode &fn );
     
     // Writes match object to a file storage
-    virtual void write (FileStorage& fs) const;
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     Ptr<OneWayDescriptorBase> base;
@@ -2049,6 +1955,7 @@ protected:
 /*
  *  CalonderDescriptorMatch
  */
+#if 0
 class CV_EXPORTS CalonderDescriptorMatch : public GenericDescriptorMatch
 {
 public:
@@ -2113,6 +2020,7 @@ protected:
     Ptr<RTreeClassifier> classifier;
     Params params;
 };
+#endif
 
 /*
  *  FernDescriptorMatch
@@ -2178,6 +2086,7 @@ protected:
 };
 
 CV_EXPORTS Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
+
 /****************************************************************************************\
 *                                VectorDescriptorMatch                                   *
 \****************************************************************************************/
@@ -2199,62 +2108,26 @@ public:
     void index();
 
     // Calculates descriptors for a set of keypoints from a single image
-    virtual void add( const Mat& image, vector<KeyPoint>& keypoints )
-    {
-        Mat descriptors;
-        extractor->compute( image, keypoints, descriptors );
-        matcher->add( descriptors );
-
-        collection.add( Mat(), keypoints );
-    };
+    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
 
     // Matches a set of keypoints with the training set
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& keypointIndices )
-    {
-        Mat descriptors;
-        extractor->compute( image, points, descriptors );
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<int>& keypointIndices );
 
-        matcher->match( descriptors, keypointIndices );
-    };
+    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches );
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<DMatch>& matches )
-    {
-        Mat descriptors;
-        extractor->compute( image, points, descriptors );
+    virtual void match( const Mat& image, vector<KeyPoint>& points,
+                        vector<vector<DMatch> >& matches, float threshold );
 
-        matcher->match( descriptors, matches );
-    }
+    virtual void clear();
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
-    virtual void match( const Mat& image, vector<KeyPoint>& points, vector<vector<DMatch> >& matches, float threshold )
-    {
-        Mat descriptors;
-        extractor->compute( image, points, descriptors );
-
-        matcher->match( descriptors, matches, threshold );
-    }
-
-    virtual void clear()
-    {
-        GenericDescriptorMatch::clear();
-        matcher->clear();
-    }
-
-    virtual void read (const FileNode& fn)
-    {
-        GenericDescriptorMatch::read(fn);
-        extractor->read (fn);
-    }
-
-    virtual void write (FileStorage& fs) const
-    {
-        GenericDescriptorMatch::write(fs);
-        extractor->write (fs);
-    }
 protected:
     Ptr<DescriptorExtractor> extractor;
     Ptr<DescriptorMatcher> matcher;
     //vector<int> classIds;
 };
+
 
 struct CV_EXPORTS DrawMatchesFlags
 {
