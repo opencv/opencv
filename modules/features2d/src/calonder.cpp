@@ -105,18 +105,18 @@ float* CSMatrixGenerator::getCSMatrix(int m, int n, PHI_DISTR_TYPE dt)
       if (dt == PDT_GAUSS) {
          float par = (float)(1./m);
          for (int i=0; i<m*n; ++i)
-            *cs_phi++ = rng.gaussian(par);
+            *cs_phi++ = (float)rng.gaussian(par);
       }
       else if (dt == PDT_BERNOULLI) {
-         float par = (float)(1./sqrt(m));
+         float par = (float)(1./sqrt((float)m));
          for (int i=0; i<m*n; ++i)
             *cs_phi++ = (rng(2)==0 ? par : -par);
       }
       else if (dt == PDT_DBFRIENDLY) {
          float par = (float)sqrt(3./m);
          for (int i=0; i<m*n; ++i) {
-            int i = rng(6);
-            *cs_phi++ = (i==0 ? par : (i==1 ? -par : 0.f));
+            int r = rng(6);
+            *cs_phi++ = (r==0 ? par : (r==1 ? -par : 0.f));
          }
       }
       else
@@ -151,7 +151,7 @@ inline void addVec(int size, const float* src1, const float* src2, float* dst)
 // final shift is 2 bits right
 // temp buffer should be twice as long as signature
 // sig and buffer need not be initialized
-inline void sum_50t_176c(uint8_t **pp, uint8_t *sig, uint16_t *temp)
+inline void sum_50t_176c(uchar **pp, uchar *sig, unsigned short *temp)
 {
 #if CV_SSE2
   __m128i acc, *acc1, *acc2, *acc3, *acc4, tzero;
@@ -293,10 +293,10 @@ void RandomizedTree::createNodes(int num_nodes, RNG &rng)
 {
   nodes_.reserve(num_nodes);
   for (int i = 0; i < num_nodes; ++i) {
-    nodes_.push_back( RTreeNode(rng(RandomizedTree::PATCH_SIZE),
-                                rng(RandomizedTree::PATCH_SIZE),
-                                rng(RandomizedTree::PATCH_SIZE),
-                                rng(RandomizedTree::PATCH_SIZE)) );
+    nodes_.push_back( RTreeNode((uchar)rng(RandomizedTree::PATCH_SIZE),
+                                (uchar)rng(RandomizedTree::PATCH_SIZE),
+                                (uchar)rng(RandomizedTree::PATCH_SIZE),
+                                (uchar)rng(RandomizedTree::PATCH_SIZE)) );
   }
 }
 
@@ -352,10 +352,10 @@ void RandomizedTree::allocPosteriorsAligned(int num_leaves, int num_classes)
     memset(posteriors_[i], 0, num_classes*sizeof(float));
   }
 
-  posteriors2_ = new uint8_t*[num_leaves];
+  posteriors2_ = new uchar*[num_leaves];
   for (int i=0; i<num_leaves; ++i) {
-    posteriors2_[i] = (uint8_t*)cvAlloc(num_classes*sizeof(posteriors2_[i][0]));
-    memset(posteriors2_[i], 0, num_classes*sizeof(uint8_t));
+    posteriors2_[i] = (uchar*)cvAlloc(num_classes*sizeof(posteriors2_[i][0]));
+    memset(posteriors2_[i], 0, num_classes*sizeof(uchar));
   }
 
   classes_ = num_classes;
@@ -394,7 +394,7 @@ void RandomizedTree::init(int num_classes, int depth, RNG &rng)
   leaf_counts_.resize(num_leaves_);
 
   for (int i = 0; i < num_leaves_; ++i)
-    memset((void*)posteriors2_[i], 0, num_classes*sizeof(uint8_t));
+    memset((void*)posteriors2_[i], 0, num_classes*sizeof(uchar));
 
   createNodes(num_nodes, rng);
 }
@@ -510,8 +510,8 @@ void RandomizedTree::estimateQuantPercForPosteriors(float perc[2])
    assert(posteriors_ != NULL);
    perc[0] = perc[1] = .0f;
    for (int i=0; i<num_leaves_; i++) {
-      perc[0] += percentile(posteriors_[i], classes_, LOWER_QUANT_PERC);
-      perc[1] += percentile(posteriors_[i], classes_, UPPER_QUANT_PERC);
+      perc[0] += percentile(posteriors_[i], classes_, GET_LOWER_QUANT_PERC());
+      perc[1] += percentile(posteriors_[i], classes_, GET_UPPER_QUANT_PERC());
    }
    perc[0] /= num_leaves_;
    perc[1] /= num_leaves_;
@@ -528,12 +528,12 @@ const float* RandomizedTree::getPosterior(uchar* patch_data) const
   return getPosteriorByIndex( getIndex(patch_data) );
 }
 
-uint8_t* RandomizedTree::getPosterior2(uchar* patch_data)
+uchar* RandomizedTree::getPosterior2(uchar* patch_data)
 {
-  return const_cast<uint8_t*>(const_cast<const RandomizedTree*>(this)->getPosterior2(patch_data));
+  return const_cast<uchar*>(const_cast<const RandomizedTree*>(this)->getPosterior2(patch_data));
 }
 
-const uint8_t* RandomizedTree::getPosterior2(uchar* patch_data) const
+const uchar* RandomizedTree::getPosterior2(uchar* patch_data) const
 {
   return getPosteriorByIndex2( getIndex(patch_data) );
 }
@@ -559,13 +559,13 @@ void RandomizedTree::quantizeVector(float *vec, int dim, int N, float bnds[2], i
 
 }
 
-void RandomizedTree::quantizeVector(float *vec, int dim, int N, float bnds[2], uint8_t *dst)
+void RandomizedTree::quantizeVector(float *vec, int dim, int N, float bnds[2], uchar *dst)
 {
    int map_bnd[2] = {0, N};          // bounds of quantized target interval we're mapping to
    int tmp;
    for (int k=0; k<dim; ++k) {
       tmp = int((*vec - bnds[0])/(bnds[1] - bnds[0])*(map_bnd[1] - map_bnd[0]) + map_bnd[0]);
-      *dst = (uint8_t)((tmp<0) ? 0 : ((tmp>N) ? N : tmp));
+      *dst = (uchar)((tmp<0) ? 0 : ((tmp>N) ? N : tmp));
       ++vec;
       ++dst;
    }
@@ -644,7 +644,7 @@ void RandomizedTree::savePosteriors2(std::string url, bool append)
 {
    std::ofstream file(url.c_str(), (append?std::ios::app:std::ios::out));
    for (int i=0; i<num_leaves_; i++) {
-      uint8_t *post = posteriors2_[i];
+      uchar *post = posteriors2_[i];
       for (int i=0; i<classes_; i++)
          file << int(*post++) << (i<classes_-1?" ":"");
       file << std::endl;
@@ -767,7 +767,7 @@ void RTreeClassifier::getSignature(IplImage* patch, float *sig) const
   #endif
 }
 
-void RTreeClassifier::getSignature(IplImage* patch, uint8_t *sig) const
+void RTreeClassifier::getSignature(IplImage* patch, uchar *sig) const
 {
   // Need pointer to 32x32 patch data
   uchar buffer[RandomizedTree::PATCH_SIZE * RandomizedTree::PATCH_SIZE];
@@ -792,13 +792,13 @@ void RTreeClassifier::getSignature(IplImage* patch, uint8_t *sig) const
   // get posteriors
   if (posteriors_ == NULL)
     {
-      posteriors_ = (uint8_t**)cvAlloc( trees_.size()*sizeof(posteriors_[0]) );
-      ptemp_ = (uint16_t*)cvAlloc( classes_*sizeof(ptemp_[0]) );
+      posteriors_ = (uchar**)cvAlloc( trees_.size()*sizeof(posteriors_[0]) );
+      ptemp_ = (unsigned short*)cvAlloc( classes_*sizeof(ptemp_[0]) );
     }
   /// @todo What is going on in the next 4 lines?
-  uint8_t **pp = posteriors_;
+  uchar **pp = posteriors_;
   for (tree_it = trees_.begin(); tree_it != trees_.end(); ++tree_it, pp++)
-    *pp = const_cast<uint8_t*>(tree_it->getPosterior2(patch_data));
+    *pp = const_cast<uchar*>(tree_it->getPosterior2(patch_data));
   pp = posteriors_;
 
 #if 1
@@ -808,19 +808,19 @@ void RTreeClassifier::getSignature(IplImage* patch, uint8_t *sig) const
      static bool warned = false;
 
      memset((void*)sig, 0, classes_ * sizeof(sig[0]));
-     uint16_t *sig16 = new uint16_t[classes_];           // TODO: make member, no alloc here
+     unsigned short *sig16 = new unsigned short[classes_];           // TODO: make member, no alloc here
      memset((void*)sig16, 0, classes_ * sizeof(sig16[0]));
      for (tree_it = trees_.begin(); tree_it != trees_.end(); ++tree_it, pp++)
        addVec(classes_, sig16, *pp, sig16);
 
-     // squeeze signatures into an uint8_t
+     // squeeze signatures into an uchar
      const bool full_shifting = true;
      int shift;
      if (full_shifting) {
         float num_add_bits_f = log((float)trees_.size())/log(2.f);     // # additional bits required due to summation
         int num_add_bits = int(num_add_bits_f);
         if (num_add_bits_f != float(num_add_bits)) ++num_add_bits;
-        shift = num_quant_bits_ + num_add_bits - 8*sizeof(uint8_t);
+        shift = num_quant_bits_ + num_add_bits - 8*sizeof(uchar);
 //shift = num_quant_bits_ + num_add_bits - 2;
 //shift = 6;
         if (shift>0)
@@ -959,7 +959,7 @@ float RTreeClassifier::countZeroElements()
    for (int i=0; i<(int)trees_.size(); ++i)
       for (int k=0; k<(int)trees_[i].num_leaves_; ++k) {
          float *p = trees_[i].getPosteriorByIndex(k);
-         uint8_t *p2 = trees_[i].getPosteriorByIndex2(k);
+         uchar *p2 = trees_[i].getPosteriorByIndex2(k);
          assert(p); assert(p2);
          for (int j=0; j<num_elem; ++j, ++p, ++p2) {
             if (*p == 0.f) flt_zeros++;
@@ -967,8 +967,8 @@ float RTreeClassifier::countZeroElements()
          }
       }
    num_elem = trees_.size()*trees_[0].num_leaves_*num_elem;
-   float flt_perc = 100.*flt_zeros/num_elem;
-   float ui8_perc = 100.*ui8_zeros/num_elem;
+   float flt_perc = 100.f*flt_zeros/num_elem;
+   float ui8_perc = 100.f*ui8_zeros/num_elem;
    printf("[OK] RTC: overall %i/%i (%.3f%%) zeros in float leaves\n", flt_zeros, num_elem, flt_perc);
    printf("          overall %i/%i (%.3f%%) zeros in uint8 leaves\n", ui8_zeros, num_elem, ui8_perc);
 

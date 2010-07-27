@@ -628,12 +628,12 @@ class CV_EXPORTS RandomizedTree
 public:
   friend class RTreeClassifier;
 
-  static const int PATCH_SIZE = 32;
+  static const uchar PATCH_SIZE = 32;
   static const int DEFAULT_DEPTH = 9;
   static const int DEFAULT_VIEWS = 5000;
   static const size_t DEFAULT_REDUCED_NUM_DIM = 176;
-  static const float LOWER_QUANT_PERC = .03f;
-  static const float UPPER_QUANT_PERC = .92f;
+  static float GET_LOWER_QUANT_PERC() { return .03f; }
+  static float GET_UPPER_QUANT_PERC() { return .92f; }
 
   RandomizedTree();
   ~RandomizedTree();
@@ -646,13 +646,13 @@ public:
 
   // following two funcs are EXPERIMENTAL (do not use unless you know exactly what you do)
   static void quantizeVector(float *vec, int dim, int N, float bnds[2], int clamp_mode=0);
-  static void quantizeVector(float *src, int dim, int N, float bnds[2], uint8_t *dst);
+  static void quantizeVector(float *src, int dim, int N, float bnds[2], uchar *dst);
 
   // patch_data must be a 32x32 array (no row padding)
   float* getPosterior(uchar* patch_data);
   const float* getPosterior(uchar* patch_data) const;
-  uint8_t* getPosterior2(uchar* patch_data);
-  const uint8_t* getPosterior2(uchar* patch_data) const;
+  uchar* getPosterior2(uchar* patch_data);
+  const uchar* getPosterior2(uchar* patch_data) const;
 
   void read(const char* file_name, int num_quant_bits);
   void read(std::istream &is, int num_quant_bits);
@@ -677,7 +677,7 @@ private:
   int num_leaves_;
   std::vector<RTreeNode> nodes_;
   float **posteriors_;        // 16-bytes aligned posteriors
-  uint8_t **posteriors2_;     // 16-bytes aligned posteriors
+  uchar **posteriors2_;     // 16-bytes aligned posteriors
   std::vector<int> leaf_counts_;
 
   void createNodes(int num_nodes, RNG &rng);
@@ -689,8 +689,8 @@ private:
   int getIndex(uchar* patch_data) const;
   inline float* getPosteriorByIndex(int index);
   inline const float* getPosteriorByIndex(int index) const;
-  inline uint8_t* getPosteriorByIndex2(int index);
-  inline const uint8_t* getPosteriorByIndex2(int index) const;
+  inline uchar* getPosteriorByIndex2(int index);
+  inline const uchar* getPosteriorByIndex2(int index) const;
   //void makeRandomMeasMatrix(float *cs_phi, PHI_DISTR_TYPE dt, size_t reduced_num_dim);
   void convertPosteriorsToChar();
   void makePosteriors2(int num_quant_bits);
@@ -714,12 +714,12 @@ inline const float* RandomizedTree::getPosteriorByIndex(int index) const
   return posteriors_[index];
 }
 
-inline uint8_t* RandomizedTree::getPosteriorByIndex2(int index)
+inline uchar* RandomizedTree::getPosteriorByIndex2(int index)
 {
-  return const_cast<uint8_t*>(const_cast<const RandomizedTree*>(this)->getPosteriorByIndex2(index));
+  return const_cast<uchar*>(const_cast<const RandomizedTree*>(this)->getPosteriorByIndex2(index));
 }
 
-inline const uint8_t* RandomizedTree::getPosteriorByIndex2(int index) const
+inline const uchar* RandomizedTree::getPosteriorByIndex2(int index) const
 {
   return posteriors2_[index];
 }
@@ -766,16 +766,16 @@ public:
              size_t reduced_num_dim = RandomizedTree::DEFAULT_REDUCED_NUM_DIM,
              int num_quant_bits = DEFAULT_NUM_QUANT_BITS);
 
-  // sig must point to a memory block of at least classes()*sizeof(float|uint8_t) bytes
-  void getSignature(IplImage *patch, uint8_t *sig) const;
+  // sig must point to a memory block of at least classes()*sizeof(float|uchar) bytes
+  void getSignature(IplImage *patch, uchar *sig) const;
   void getSignature(IplImage *patch, float *sig) const;
   void getSparseSignature(IplImage *patch, float *sig, float thresh) const;
   // TODO: deprecated in favor of getSignature overload, remove
   void getFloatSignature(IplImage *patch, float *sig) const { getSignature(patch, sig); }
 
   static int countNonZeroElements(float *vec, int n, double tol=1e-10);
-  static inline void safeSignatureAlloc(uint8_t **sig, int num_sig=1, int sig_len=176);
-  static inline uint8_t* safeSignatureAlloc(int num_sig=1, int sig_len=176);
+  static inline void safeSignatureAlloc(uchar **sig, int num_sig=1, int sig_len=176);
+  static inline uchar* safeSignatureAlloc(int num_sig=1, int sig_len=176);
 
   inline int classes() const { return classes_; }
   inline int original_num_classes() const { return original_num_classes_; }
@@ -799,8 +799,8 @@ public:
 private:
   int classes_;
   int num_quant_bits_;
-  mutable uint8_t **posteriors_;
-  mutable uint16_t *ptemp_;
+  mutable uchar **posteriors_;
+  mutable unsigned short *ptemp_;
   int original_num_classes_;
   bool keep_floats_;
 };
@@ -1584,11 +1584,11 @@ void CalonderDescriptorExtractor<T>::compute( const cv::Mat& image,
 }
 
 template<typename T>
-void CalonderDescriptorExtractor<T>::read( const FileNode &fn )
+void CalonderDescriptorExtractor<T>::read( const FileNode& )
 {}
 
 template<typename T>
-void CalonderDescriptorExtractor<T>::write( FileStorage &fs ) const
+void CalonderDescriptorExtractor<T>::write( FileStorage&s ) const
 {}
 
 CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );
