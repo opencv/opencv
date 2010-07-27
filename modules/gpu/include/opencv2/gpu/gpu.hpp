@@ -349,7 +349,7 @@ namespace cv
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
             //! Acync version
-            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream);
+            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream & stream);
 
             //! Some heuristics that tries to estmate
             // if current GPU will be faster then CPU in this algorithm.

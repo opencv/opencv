@@ -46,25 +46,26 @@
 #pragma warning( disable: 4251 4710 4711 4514 4996 )
 #endif
 
-#ifdef HAVE_CONFIG_H 
-#include <cvconfig.h> 
+#ifdef HAVE_CONFIG_H
+#include <cvconfig.h>
 #endif
 
 #include <iostream>
 #include <limits>
 
 #include "opencv2/gpu/gpu.hpp"
+#include "opencv2/gpu/stream_accessor.hpp"
 
 
 #if defined(HAVE_CUDA)
 
     #include "cuda_shared.hpp"
-    #include "cuda_runtime_api.h"   
+    #include "cuda_runtime_api.h"
 
 #else /* defined(HAVE_CUDA) */
 
     static inline void throw_nogpu() { CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support"); }
-        
+
 #endif /* defined(HAVE_CUDA) */
 
-#endif /* __OPENCV_PRECOMP_H__ */ 
+#endif /* __OPENCV_PRECOMP_H__ */

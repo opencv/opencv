@@ -56,25 +56,26 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, 
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu 
-{  
-    namespace impl 
+namespace cv { namespace gpu
+{
+    namespace impl
     {
-        extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
+        //extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
+        extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, const cudaStream_t & stream);
         extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap = 31);
         extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avergeTexThreshold, const DevMem2D& disp);
     }
 }}
 
 const float defaultAvgTexThreshold = 3;
-   
-cv::gpu::StereoBM_GPU::StereoBM_GPU() 
+
+cv::gpu::StereoBM_GPU::StereoBM_GPU()
     : preset(BASIC_PRESET), ndisp(DEFAULT_NDISP), winSize(DEFAULT_WINSZ), avergeTexThreshold(defaultAvgTexThreshold)  {}
 
-cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_, int winSize_) 
+cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_, int winSize_)
     : preset(preset_), ndisp(ndisparities_), winSize(winSize_), avergeTexThreshold(defaultAvgTexThreshold)
 {
-    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);    
+    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
     CV_Assert(0 < ndisp && ndisp <= max_supported_ndisp);
     CV_Assert(ndisp % 8 == 0);
     CV_Assert(winSize % 2 == 1);
@@ -92,12 +93,12 @@ bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable()
     int numSM = getNumberOfSMs(device);
 
     if (major > 1 || numSM > 16)
-        return true;        
-    
+        return true;
+
     return false;
 }
-  
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity)
+
+void stereo_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  riBuf,  int preset, int ndisp, int winSize, float avergeTexThreshold, const GpuMat& left, const GpuMat& right, GpuMat& disparity, const cudaStream_t & stream)
 {
     CV_DbgAssert(left.rows == right.rows && left.cols == right.cols);
     CV_DbgAssert(left.type() == CV_8UC1);
@@ -109,26 +110,33 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right
     GpuMat le_for_bm =  left;
     GpuMat ri_for_bm = right;
 
-    if (preset == PREFILTER_XSOBEL)
+    if (preset == StereoBM_GPU::PREFILTER_XSOBEL)
     {
         leBuf.create( left.size(),  left.type());
         riBuf.create(right.size(), right.type());
 
         impl::prefilter_xsobel( left, leBuf);
-        impl::prefilter_xsobel(right, riBuf);        
+        impl::prefilter_xsobel(right, riBuf);
 
         le_for_bm = leBuf;
         ri_for_bm = riBuf;
-    }  
-    impl::stereoBM_GPU(le_for_bm, ri_for_bm, disparity, ndisp, winSize, minSSD);    
+    }
+
+    impl::stereoBM_GPU(le_for_bm, ri_for_bm, disparity, ndisp, winSize, minSSD, stream);
 
     if (avergeTexThreshold)
         impl::postfilter_textureness(le_for_bm, winSize, avergeTexThreshold, disparity);
 }
 
+
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity)
+{
+    ::stereo_gpu_operator(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity, 0);
+}
+
 void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream)
 {
-    CV_Assert(!"Not implemented");
+    ::stereo_gpu_operator(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity, StreamAccessor::getStream(stream));
 }
 
 #endif /* !defined (HAVE_CUDA) */
