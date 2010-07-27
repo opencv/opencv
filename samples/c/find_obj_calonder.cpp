@@ -8,6 +8,7 @@
 using namespace std;
 using namespace cv;
 
+
 void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 {
     H.create(3, 3, CV_32FC1);
@@ -26,6 +27,7 @@ void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 
 int main( int argc, char **argv )
 {
+    #if 0
     if( argc != 4 && argc != 3 )
     {
         cout << "Format:" << endl <<
@@ -73,13 +75,13 @@ int main( int argc, char **argv )
 
         // Write Calonder classifier
         FileStorage fs( argv[1], FileStorage::WRITE );
-        classifier.write( fs );
+        if( fs.isOpened() ) classifier.write( fs );
     }
     else
     {
         // Read Calonder classifier
         FileStorage fs( argv[1], FileStorage::READ );
-        classifier.read( fs.root() );
+        if( fs.isOpened() ) classifier.read( fs.root() );
     }
 
     if( classifier.empty() )
@@ -151,4 +153,6 @@ int main( int argc, char **argv )
     namedWindow( winName, WINDOW_AUTOSIZE );
     imshow( winName, drawImg );
     waitKey();
+#endif
+    return 0;
 }
