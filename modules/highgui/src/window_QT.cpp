@@ -44,7 +44,7 @@
 #include <window_QT.h>
 
 //Static and global first
-static GuiReceiver guiMainThread;
+static GuiReceiver *guiMainThread = NULL;
 static int parameterSystemC = 1;
 static char* parameterSystemV[] = {""};
 static bool multiThreads = false;
@@ -84,7 +84,11 @@ CV_IMPL CvFont cvFont_Qt(const char* nameFont, int pointSize,CvScalar color,int 
 
 CV_IMPL void cvAddText( CvArr* img, const char* text, CvPoint org, CvFont* font)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"putText",
 			Qt::AutoConnection,
 			Q_ARG(void*, (void*) img),
@@ -95,8 +99,12 @@ CV_IMPL void cvAddText( CvArr* img, const char* text, CvPoint org, CvFont* font)
 
 double cvGetRatioWindow_QT(const char* name)
 {
+
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
 	double result = -1;
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"getRatioWindow",
 			//Qt::DirectConnection,
 			Qt::AutoConnection,
@@ -107,7 +115,11 @@ double cvGetRatioWindow_QT(const char* name)
 
 void cvSetRatioWindow_QT(const char* name,double prop_value)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"setRatioWindow",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(name)),
@@ -116,8 +128,12 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 
 double cvGetPropWindow_QT(const char* name)
 {
+
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
 	double result = -1;
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"getPropWindow",
 			//Qt::DirectConnection,
 			Qt::AutoConnection,
@@ -128,7 +144,11 @@ double cvGetPropWindow_QT(const char* name)
 
 void cvSetPropWindow_QT(const char* name,double prop_value)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"setPropWindow",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(name)),
@@ -137,7 +157,11 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
 
 void cvSetModeWindow_QT(const char* name, double prop_value)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"toggleFullScreen",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(name)),
@@ -146,9 +170,12 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
 
 double cvGetModeWindow_QT(const char* name)
 {
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
 	double result = -1;
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"isFullScreen",
 			Qt::AutoConnection,
 			Q_RETURN_ARG(double, result),
@@ -158,8 +185,10 @@ double cvGetModeWindow_QT(const char* name)
 
 CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"displayInfo",
 			Qt::AutoConnection,
 			//Qt::DirectConnection,
@@ -171,7 +200,10 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 
 CV_IMPL void cvSaveWindowParameters(const char* name)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"saveWindowParameters",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(name)));
@@ -179,7 +211,10 @@ CV_IMPL void cvSaveWindowParameters(const char* name)
 
 CV_IMPL void cvLoadWindowParameters(const char* name)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"loadWindowParameters",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(name)));
@@ -187,8 +222,10 @@ CV_IMPL void cvLoadWindowParameters(const char* name)
 
 CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 {
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"displayStatusBar",
 			Qt::AutoConnection,
 			//Qt::DirectConnection,
@@ -229,8 +266,8 @@ CV_IMPL int cvWaitKey( int arg )
 		//cannot use wait here because events will not be distributed before processEvents (the main eventLoop is broken)
 		//so I create a Thread for the QTimer
 
-		QTimer timer(&guiMainThread);
-		QObject::connect(&timer, SIGNAL(timeout()), &guiMainThread, SLOT(timeOut()));
+		QTimer timer(guiMainThread);
+		QObject::connect(&timer, SIGNAL(timeout()), guiMainThread, SLOT(timeOut()));
 		timer.setSingleShot(true);
 
 		if (arg>0)
@@ -238,7 +275,7 @@ CV_IMPL int cvWaitKey( int arg )
 
 		//QMutex dummy;
 
-		while(!guiMainThread._bTimeOut)
+		while(!guiMainThread->_bTimeOut)
 		{
 			qApp->processEvents(QEventLoop::AllEvents);
 
@@ -273,7 +310,7 @@ CV_IMPL int cvWaitKey( int arg )
 
 			}
 		}
-		guiMainThread._bTimeOut = false;
+		guiMainThread->_bTimeOut = false;
 		
 	}
 
@@ -287,7 +324,7 @@ CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* 
 {
 	multiThreads = true;
 	QFuture<int> future = QtConcurrent::run(pt2Func,argc,argv);
-	return guiMainThread.start();
+	return guiMainThread->start();
 }
 
 CV_IMPL void cvStopLoop()
@@ -405,8 +442,11 @@ int icvInitSystem()
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
 
+	if (!guiMainThread)
+		guiMainThread = new GuiReceiver;
+
 	if (multiThreads)
-		QMetaObject::invokeMethod(&guiMainThread,
+		QMetaObject::invokeMethod(guiMainThread,
 				"createWindow",
 				//Qt::AutoConnection,
 				Qt::BlockingQueuedConnection,
@@ -415,14 +455,17 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 				Q_ARG(QString, QString(name)),
 				Q_ARG(int, flags));
 	else
-		guiMainThread.createWindow(QString(name),flags);
+		guiMainThread->createWindow(QString(name),flags);
 
 	return 1;//Dummy value
 }
 
 CV_IMPL void cvDestroyWindow( const char* name )
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"destroyWindow",
 			//Qt::BlockingQueuedConnection,
 			Qt::AutoConnection,
@@ -432,13 +475,14 @@ CV_IMPL void cvDestroyWindow( const char* name )
 
 CV_IMPL void cvDestroyAllWindows(void)
 {
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"destroyAllWindow",
 			//Qt::BlockingQueuedConnection,
 			Qt::AutoConnection
 			);
-
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* name )
@@ -461,8 +505,10 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
 CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 {
 
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"moveWindow",
 			//Qt::BlockingQueuedConnection,
 			Qt::AutoConnection,
@@ -476,7 +522,10 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"resizeWindow",
 			//Qt::BlockingQueuedConnection,
 			Qt::AutoConnection,
@@ -500,8 +549,10 @@ CV_IMPL int cvStartWindowThread()
 
 CV_IMPL int cvCreateTrackbar( const char* name_bar, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
 {
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"addSlider",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(name_bar)),
@@ -518,10 +569,13 @@ CV_IMPL int cvCreateTrackbar( const char* name_bar, const char* window_name, int
 
 CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, void* userdata , int button_type, int initial_button_state )
 {
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
 	if (initial_button_state < 0 || initial_button_state > 1)
 		return 0;
 		
-	QMetaObject::invokeMethod(&guiMainThread,
+	QMetaObject::invokeMethod(guiMainThread,
 			"addButton",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(button_name)),
@@ -536,7 +590,10 @@ CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, v
 
 CV_IMPL void cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata, double angle, double zmin, double zmax)
 {
-	QMetaObject::invokeMethod(&guiMainThread,
+	if (!guiMainThread)
+		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"setOpenGLCallback",
 			Qt::AutoConnection,
 			Q_ARG(QString, QString(window_name)),
@@ -585,7 +642,10 @@ CV_IMPL void cvSetMouseCallback( const char* window_name, CvMouseCallback on_mou
 CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 {
 
-	QMetaObject::invokeMethod(&guiMainThread,
+	if (!guiMainThread)
+		guiMainThread = new GuiReceiver;
+
+	QMetaObject::invokeMethod(guiMainThread,
 			"showImage",
 			//Qt::BlockingQueuedConnection,
 			Qt::DirectConnection,
@@ -600,7 +660,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 GuiReceiver::GuiReceiver() : _bTimeOut(false)
 {
 	icvInitSystem();
-	qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
+	//qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
 }
 
 void GuiReceiver::putText(void* arg1, QString text, QPoint org, void* arg2)
@@ -2236,7 +2296,7 @@ void ViewPort::paintEvent(QPaintEvent* event)
 #endif
 
     //Now disable matrixWorld for overlay display
-    //myPainter.setWorldMatrixEnabled (false );
+    myPainter.setWorldMatrixEnabled (false );
 
     //in mode zoom/panning
     if (param_matrixWorld.m11()>1)
