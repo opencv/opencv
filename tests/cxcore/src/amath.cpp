@@ -2526,7 +2526,7 @@ void CxCore_InvertTest::print_timing_params( int test_case_idx, char* ptr, int p
 
 double CxCore_InvertTest::get_success_error_level( int /*test_case_idx*/, int, int )
 {
-    return CV_MAT_DEPTH(cvGetElemType(test_array[OUTPUT][0])) == CV_32F ? 1e-2 : 1e-7;
+    return CV_MAT_DEPTH(cvGetElemType(test_array[OUTPUT][0])) == CV_32F ? 1e-2 : 1e-6;
 }
 
 int CxCore_InvertTest::prepare_test_case( int test_case_idx )
@@ -2618,7 +2618,7 @@ void CxCore_InvertTest::prepare_to_validation( int )
     cvTsSetIdentity( &test_mat[REF_OUTPUT][0], cvScalarAll(1.) );
 }
 
-//CxCore_InvertTest invert_test;
+CxCore_InvertTest invert_test;
 
 
 ///////////////// solve /////////////////////
