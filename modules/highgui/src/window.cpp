@@ -365,7 +365,7 @@ CV_IMPL int cvStartWindowThread()
 
 
 //-------- Qt ---------
-CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint org, CvFont font)
+CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint org, CvFont* font)
 {
     CV_NO_GUI_ERROR("cvAddText");
 }
@@ -375,12 +375,7 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
     CV_NO_GUI_ERROR("cvDisplayStatusBar");
 }  
 
-CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
-{
-    CV_NO_GUI_ERROR("cvDisplayStatusBar");
-}  
-
-CV_IMPL void cvCreateOpenGLCallback(const char* name, cvOpenGLCallback callback, void* param)
+CV_IMPL void cvCreateOpenGLCallback(const char*, void (*)(void*), void*, double, double, double)
 {
     CV_NO_GUI_ERROR("createOpenGLCallback");
 }  
@@ -390,9 +385,10 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
     CV_NO_GUI_ERROR("cvNamedWindow");
 }  
 
-CV_IMPL void cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
     CV_NO_GUI_ERROR("cvStartLoop");
+    return -1;
 }  
 
 CV_IMPL void cvStopLoop()
@@ -410,9 +406,10 @@ CV_IMPL void cvLoadWindowParameterss(const char* name)
     CV_NO_GUI_ERROR("cvLoadWindowParameters");
 }  
 
-CV_IMPL void cvCreateButton(const char* arg1, const char* arg2, cvButtonCallback on_change, const char* name, void* userdata)
+CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
 {
     CV_NO_GUI_ERROR("cvCreateButton");
+    return -1;
 }  
 
 

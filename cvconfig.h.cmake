@@ -161,10 +161,10 @@
 #cmakedefine  HAVE_EIGEN2
 
 /* Qt bindings */
-#cmakedefine  HAVE_QT
+//#cmakedefine  HAVE_QT
 
 /* Qt bindings use OpenGL */
-#cmakedefine  HAVE_HAVE_QT_OPENGL
+//#cmakedefine  HAVE_QT_OPENGL
 
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA

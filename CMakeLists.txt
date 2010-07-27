@@ -509,20 +509,21 @@ endif()
 set(WITH_QT OFF CACHE BOOL "Build with Qt Backend support")
 set(WITH_QT_OPENGL OFF CACHE BOOL "Add OpenGL extension to Qt")
 
-#set(HAVE_QT 0)
-#set(HAVE_QT_OPENGL 0)
+set(HAVE_QT 0)
+set(HAVE_QT_OPENGL 0)
 
 if (WITH_QT)
     find_package(Qt4)
     if (QT4_FOUND)
         set(HAVE_QT 1)
-        #add_definitions(-DHAVE_QT)
-        #set_property(DIRECTORY PROPERTY COMPILE_DEFINITIONS "HAVE_QT")
-        
+		add_definitions(-DHAVE_QT)#We need to define te macro this way, using cvconfig.h.cmake does not work
+
         find_package (OpenGL QUIET)
-        if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
+		if (NOT WIN32)	#WIN32 always detect OpenGL, so I disabled it.
+			if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
 			set(HAVE_QT_OPENGL 1)
-			#add_definitions(-DHAVE_QT_OPENGL)
+			add_definitions(-DHAVE_QT_OPENGL)
+        	endif()
         endif()
     endif()
 endif()

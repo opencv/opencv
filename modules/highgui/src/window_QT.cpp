@@ -82,7 +82,7 @@ CV_IMPL CvFont cvFont_Qt(const char* nameFont, int pointSize,CvScalar color,int 
 
 
 
-CV_IMPL void cvAddText( CvArr* img, const char* text, CvPoint org, CvFont* font)
+CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* font)
 {
 
 	if (!guiMainThread)
@@ -1988,7 +1988,11 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 
 void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double angle_arg, double zmin_arg, double zmax_arg)
 {
-#if defined( HAVE_QT_OPENGL )//all this section -> not tested
+	//avoid unreferenced formal parameter warning with vs 2008
+	//http://msdn.microsoft.com/en-en/library/26kb9fy0%28VS.80%29.aspx
+	func;userdata;angle_arg;zmin_arg;zmax_arg;
+
+#if defined( HAVE_QT_OPENGL )
 	on_openGL_draw3D = func;
 	on_openGL_param = userdata;
 	
@@ -2309,7 +2313,7 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
     //for information overlay
     if (drawInfo)
-	drawInstructions(&myPainter);
+		drawInstructions(&myPainter);
 
 	//for statusbar
 	if (centralWidget->myStatusBar)
