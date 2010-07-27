@@ -82,7 +82,7 @@ Mat::Mat(const IplImage* img, bool copyData)
     if( copyData )
     {
         Mat m = *this;
-        rows = cols = 0;
+        release();
         if( !img->roi || !img->roi->coi ||
             img->dataOrder == IPL_DATA_ORDER_PLANE)
             m.copyTo(*this);

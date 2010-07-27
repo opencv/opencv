@@ -2619,6 +2619,7 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
+            if(dcn <= 0) dcn = 3;
             CV_Assert( scn == 1 && dcn == 3 && depth == CV_8U );
             dst.create(sz, CV_8UC3);
             
