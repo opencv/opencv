@@ -2746,7 +2746,7 @@ void CxCore_SolveTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Cv
 
 double CxCore_SolveTest::get_success_error_level( int /*test_case_idx*/, int, int )
 {
-    return CV_MAT_DEPTH(cvGetElemType(test_array[OUTPUT][0])) == CV_32F ? 1e-2 : 1e-8;
+    return CV_MAT_DEPTH(cvGetElemType(test_array[OUTPUT][0])) == CV_32F ? 5e-2 : 1e-8;
 }
 
 
@@ -2796,7 +2796,7 @@ void CxCore_SolveTest::prepare_to_validation( int )
     cvTsZero( &test_mat[REF_OUTPUT][0] );
 }
 
-//CxCore_SolveTest solve_test;
+CxCore_SolveTest solve_test;
 
 
 ///////////////// SVD /////////////////////
