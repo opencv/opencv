@@ -1765,7 +1765,7 @@ void CxCore_TransformTest::print_timing_params( int test_case_idx, char* ptr, in
 double CxCore_TransformTest::get_success_error_level( int test_case_idx, int i, int j )
 {
     int depth = CV_MAT_DEPTH(test_mat[INPUT][0].type);
-    return depth <= CV_8S ? 1 : depth <= CV_32S ? 8 :
+    return depth <= CV_8S ? 1 : depth <= CV_32S ? 9 :
         CxCore_MatrixTest::get_success_error_level( test_case_idx, i, j );
 }
 
@@ -1784,7 +1784,7 @@ void CxCore_TransformTest::prepare_to_validation( int )
     cvTsTransform( &test_mat[INPUT][0], &test_mat[REF_OUTPUT][0], transmat, shift );
 }
 
-//CxCore_TransformTest transform_test;
+CxCore_TransformTest transform_test;
 
 
 ///////////////// PerspectiveTransform /////////////////////
