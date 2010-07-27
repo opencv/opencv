@@ -77,6 +77,58 @@ namespace mat_operators
     ////////////////////////////////// SetTo //////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
+    template <typename T>
+    class shift_and_sizeof;
+
+    template <>
+    class shift_and_sizeof<char>
+    {
+        public:
+        enum { shift = 0 };
+    };
+
+    template <>
+    class shift_and_sizeof<unsigned char>
+    {
+        public:
+        enum { shift = 0 };
+    };
+
+    template <>
+    class shift_and_sizeof<short>
+    {
+        public:
+        enum { shift = 1 };
+    };
+
+    template <>
+    class shift_and_sizeof<unsigned short>
+    {
+        public:
+        enum { shift = 1 };
+    };
+
+    template <>
+    class shift_and_sizeof<int>
+    {
+        public:
+        enum { shift = 2 };
+    };
+
+    template <>
+    class shift_and_sizeof<float>
+    {
+        public:
+        enum { shift = 2 };
+    };
+
+    template <>
+    class shift_and_sizeof<double>
+    {
+        public:
+        enum { shift = 3 };
+    };
+
     template<typename T>
     __global__ void kernel_set_to_without_mask(T * mat, int cols, int rows, int step, int channels)
     {
@@ -85,7 +137,7 @@ namespace mat_operators
 
         if ((x < cols * channels ) && (y < rows))
         {
-            size_t idx = y * (step / sizeof(T)) + x;
+            size_t idx = y * ( step >> shift_and_sizeof<T>::shift ) + x;
             mat[idx] = scalar_d[ x % channels ];
         }
     }
@@ -99,7 +151,7 @@ namespace mat_operators
         if ((x < cols * channels ) && (y < rows))
             if (mask[y * step_mask + x / channels] != 0)
             {
-                size_t idx = y * (step / sizeof(T)) + x;
+                size_t idx = y * ( step >> shift_and_sizeof<T>::shift ) + x;
                 mat[idx] = scalar_d[ x % channels ];
             }
     }
@@ -317,7 +369,7 @@ namespace cv
 
                 SetToFunc_without_mask func = tab[depth];
 
-                if (func == 0) 
+                if (func == 0)
                     cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
                 func(mat, channels, stream);
@@ -325,7 +377,7 @@ namespace cv
 
 
             extern "C" void set_to_with_mask(DevMem2D mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream)
-            {                
+            {
                 cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar, sizeof(double) * 4));
 
                 static SetToFunc_with_mask tab[8] =
@@ -342,7 +394,7 @@ namespace cv
 
                 SetToFunc_with_mask func = tab[depth];
 
-                if (func == 0) 
+                if (func == 0)
                     cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
 
                 func(mat, mask, channels, stream);
