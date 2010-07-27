@@ -206,6 +206,21 @@ enum
     CV_HLS2BGR_FULL = 72,
     CV_HLS2RGB_FULL = 73,
     
+    CV_LBGR2Lab     = 74,
+    CV_LRGB2Lab     = 75,
+    CV_LBGR2Luv     = 76,
+    CV_LRGB2Luv     = 77,
+    
+    CV_Lab2LBGR     = 78,
+    CV_Lab2LRGB     = 79,
+    CV_Luv2LBGR     = 80,
+    CV_Luv2LRGB     = 81,
+    
+    CV_BGR2YUV      = 82,
+    CV_RGB2YUV      = 83,
+    CV_YUV2BGR      = 84,
+    CV_YUV2RGB      = 85,
+    
 	CV_COLORCVT_MAX  =100
 };
 

@@ -90,6 +90,7 @@ protected:
     int fwd_code, inv_code;
     int timing_code;
     bool test_cpp;
+    bool hue_channel;
 };
 
 
@@ -116,6 +117,7 @@ CV_ColorCvtBaseTestImpl::CV_ColorCvtBaseTestImpl( const char* test_name, const c
 
     default_timing_param_names = 0;
     test_cpp = false;
+    hue_channel = false;
 }
 
 
@@ -258,6 +260,18 @@ void CV_ColorCvtBaseTestImpl::prepare_to_validation( int /*test_case_idx*/ )
     convert_forward( &test_mat[INPUT][0], &test_mat[REF_OUTPUT][0] );
     convert_backward( &test_mat[INPUT][0], &test_mat[REF_OUTPUT][0],
                       &test_mat[REF_OUTPUT][1] );
+    int depth = CV_MAT_DEPTH(test_mat[REF_OUTPUT][0].type);
+    if( depth == CV_8U && hue_channel )
+    {
+        for( int y = 0; y < test_mat[REF_OUTPUT][0].rows; y++ )
+            for( int x = 0; x < test_mat[REF_OUTPUT][0].cols; x++ )
+            {
+                uchar* h0 = test_mat[REF_OUTPUT][0].data.ptr + test_mat[REF_OUTPUT][0].step*y + x*3;
+                uchar* h = test_mat[OUTPUT][0].data.ptr + test_mat[OUTPUT][0].step*y + x*3;
+                if( abs(*h - *h0) == 180 )
+                    if( *h == 0 ) *h = 180;
+            }
+    }
 }
 
 
@@ -393,7 +407,7 @@ void CV_ColorCvtBaseTestImpl::convert_backward( const CvMat* src, const CvMat* d
                         dst_row[j*cn + 1] = CV_CAST_8U(g);
                         dst_row[j*cn + (blue_idx^2)] = CV_CAST_8U(r);
                         if( cn == 4 )
-                            dst_row[j*cn + 3] = 0;
+                            dst_row[j*cn + 3] = 255;
                     }
                 }
                 break;
@@ -416,7 +430,7 @@ void CV_ColorCvtBaseTestImpl::convert_backward( const CvMat* src, const CvMat* d
                         dst_row[j*cn + 1] = CV_CAST_16U(g);
                         dst_row[j*cn + (blue_idx^2)] = CV_CAST_16U(r);
                         if( cn == 4 )
-                            dst_row[j*cn + 3] = 0;
+                            dst_row[j*cn + 3] = 65535;
                     }
                 }
                 break;
@@ -436,7 +450,7 @@ void CV_ColorCvtBaseTestImpl::convert_backward( const CvMat* src, const CvMat* d
                         dst_row[j*cn + 1] = g;
                         dst_row[j*cn + (blue_idx^2)] = r;
                         if( cn == 4 )
-                            dst_row[j*cn + 3] = 0;
+                            dst_row[j*cn + 3] = 1.f;
                     }
                 }
                 break;
@@ -701,6 +715,7 @@ CV_ColorHSVTest::CV_ColorHSVTest()
 {
     INIT_FWD_INV_CODES( BGR2HSV, HSV2BGR );
     depth_list = cvtcolor_depths_8_32;
+    hue_channel = true;
 }
 
 
@@ -809,7 +824,7 @@ void CV_ColorHSVTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
 }
 
 
-//CV_ColorHSVTest color_hsv_test;
+CV_ColorHSVTest color_hsv_test;
 
 
 
@@ -831,6 +846,7 @@ CV_ColorHLSTest::CV_ColorHLSTest()
 {
     INIT_FWD_INV_CODES( BGR2HLS, HLS2BGR );
     depth_list = cvtcolor_depths_8_32;
+    hue_channel = true;
 }
 
 
@@ -1100,16 +1116,16 @@ void CV_ColorLabTest::get_test_array_types_and_sizes( int test_case_idx, CvSize*
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     if( blue_idx == 0 )
-        fwd_code = CV_BGR2Lab, inv_code = CV_Lab2BGR;
+        fwd_code = CV_LBGR2Lab, inv_code = CV_Lab2LBGR;
     else
-        fwd_code = CV_RGB2Lab, inv_code = CV_Lab2RGB;
+        fwd_code = CV_LRGB2Lab, inv_code = CV_Lab2LRGB;
 }
 
 
 double CV_ColorLabTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = CV_MAT_DEPTH(test_mat[i][j].type);
-    return depth == CV_8U ? 16 : depth == CV_16U ? 32 : 1e-4;
+    return depth == CV_8U ? 16 : depth == CV_16U ? 32 : 1e-3;
 }
 
 
@@ -1234,16 +1250,16 @@ void CV_ColorLuvTest::get_test_array_types_and_sizes( int test_case_idx, CvSize*
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     if( blue_idx == 0 )
-        fwd_code = CV_BGR2Luv, inv_code = CV_Luv2BGR;
+        fwd_code = CV_LBGR2Luv, inv_code = CV_Luv2LBGR;
     else
-        fwd_code = CV_RGB2Luv, inv_code = CV_Luv2RGB;
+        fwd_code = CV_LRGB2Luv, inv_code = CV_Luv2LRGB;
 }
 
 
 double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = CV_MAT_DEPTH(test_mat[i][j].type);
-    return depth == CV_8U ? 48 : depth == CV_16U ? 32 : 5e-3;
+    return depth == CV_8U ? 48 : depth == CV_16U ? 32 : 1e-2;
 }
 
 
@@ -1480,6 +1496,8 @@ void CV_ColorRGBTest::convert_forward( const CvMat* src, CvMat* dst )
                         int g = src_row[j*cn + 1] >> g_rshift;
                         int r = src_row[j*cn + (blue_idx^2)] >> 3;
                         ((ushort*)dst_row)[j] = (ushort)(b | (g << 5) | (r << r_lshift));
+                        if( cn == 4 && src_row[j*4+3] )
+                            ((ushort*)dst_row)[j] |= 1 << (r_lshift+5);
                     }
                 }
             }
@@ -1558,7 +1576,7 @@ void CV_ColorRGBTest::convert_backward( const CvMat* /*src*/, const CvMat* src, 
                         dst_row[j*cn + (blue_idx^2)] = r;
 
                         if( cn == 4 )
-                            dst_row[j*cn + 3] = 0;
+                            dst_row[j*cn + 3] = 255;
                     }
                 }
                 else
@@ -1575,7 +1593,10 @@ void CV_ColorRGBTest::convert_backward( const CvMat* /*src*/, const CvMat* src, 
                         dst_row[j*cn + (blue_idx^2)] = r;
 
                         if( cn == 4 )
-                            dst_row[j*cn + 3] = 0;
+                        {
+                            uchar alpha = r_rshift == 11 || (val & 0x8000) != 0 ? 255 : 0;
+                            dst_row[j*cn + 3] = alpha;
+                        }
                     }
                 }
             }
@@ -1596,7 +1617,7 @@ void CV_ColorRGBTest::convert_backward( const CvMat* /*src*/, const CvMat* src, 
                     dst_row[j*cn + (blue_idx^2)] = r;
 
                     if( cn == 4 )
-                        dst_row[j*cn + 3] = 0;
+                        dst_row[j*cn + 3] = 65535;
                 }
             }
             break;
@@ -1616,7 +1637,7 @@ void CV_ColorRGBTest::convert_backward( const CvMat* /*src*/, const CvMat* src, 
                     dst_row[j*cn + (blue_idx^2)] = r;
 
                     if( cn == 4 )
-                        dst_row[j*cn + 3] = 0;
+                        dst_row[j*cn + 3] = 1.f;
                 }
             }
             break;
