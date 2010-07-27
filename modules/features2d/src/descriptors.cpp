@@ -51,6 +51,24 @@ using namespace std;
 namespace cv
 {
 
+Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+                          float maxDeltaX, float maxDeltaY )
+{
+    if( keypoints1.empty() || keypoints2.empty() )
+        return Mat();
+
+    Mat mask( keypoints1.size(), keypoints2.size(), CV_8UC1 );
+    for( size_t i = 0; i < keypoints1.size(); i++ )
+    {
+        for( size_t j = 0; j < keypoints2.size(); j++ )
+        {
+            Point2f diff = keypoints2[j].pt - keypoints1[i].pt;
+            mask.at<uchar>(i, j) = std::abs(diff.x) < maxDeltaX && std::abs(diff.y) < maxDeltaY;
+        }
+    }
+    return mask;
+}
+
 void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
                   const Mat& img2,const vector<KeyPoint>& keypoints2,
                   const vector<int>& matches, Mat& outImg,
@@ -278,20 +296,19 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
 *                             BruteForceMatcher L2 specialization                        *
 \****************************************************************************************/
 template<>
-void BruteForceMatcher<L2<float> >::matchImpl( const Mat& descriptors_1, const Mat& descriptors_2,
-                                             const Mat& /*mask*/, vector<int>& matches ) const
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& /*mask*/, vector<int>& matches ) const
 {
     matches.clear();
-    matches.reserve( descriptors_1.rows );
+    matches.reserve( query.rows );
 //TODO: remove _DEBUG if bag 416 fixed
 #if (defined _DEBUG || !defined HAVE_EIGEN2)
     Mat norms;
-    cv::reduce( descriptors_2.mul( descriptors_2 ), norms, 1, 0);
+    cv::reduce( train.mul( train ), norms, 1, 0);
     norms = norms.t();
-    Mat desc_2t = descriptors_2.t();
-    for( int i=0;i<descriptors_1.rows;i++ )
+    Mat desc_2t = train.t();
+    for( int i=0;i<query.rows;i++ )
     {
-        Mat distances = (-2)*descriptors_1.row(i)*desc_2t;
+        Mat distances = (-2)*query.row(i)*desc_2t;
         distances += norms;
         Point minLoc;
         minMaxLoc ( distances, 0, 0, &minLoc );
@@ -630,160 +647,6 @@ void OneWayDescriptorMatch::clear ()
     GenericDescriptorMatch::clear();
     base->clear ();
 }
-
-/****************************************************************************************\
-*                                CalonderDescriptorMatch                                 *
-\****************************************************************************************/
-#if 0
-CalonderDescriptorMatch::Params::Params( const RNG& _rng, const PatchGenerator& _patchGen,
-                                         int _numTrees, int _depth, int _views,
-                                         size_t _reducedNumDim,
-                                         int _numQuantBits,
-                                         bool _printStatus,
-                                         int _patchSize ) :
-        rng(_rng), patchGen(_patchGen), numTrees(_numTrees), depth(_depth), views(_views),
-        patchSize(_patchSize), reducedNumDim(_reducedNumDim), numQuantBits(_numQuantBits), printStatus(_printStatus)
-{}
-
-CalonderDescriptorMatch::Params::Params( const string& _filename )
-{
-    filename = _filename;
-}
-
-CalonderDescriptorMatch::CalonderDescriptorMatch()
-{}
-
-CalonderDescriptorMatch::CalonderDescriptorMatch( const Params& _params )
-{
-    initialize(_params);
-}
-
-CalonderDescriptorMatch::~CalonderDescriptorMatch()
-{}
-
-void CalonderDescriptorMatch::initialize( const Params& _params )
-{
-    classifier.release();
-    params = _params;
-    if( !params.filename.empty() )
-    {
-        classifier = new RTreeClassifier;
-        classifier->read( params.filename.c_str() );
-    }
-}
-
-void CalonderDescriptorMatch::add( const Mat& image, vector<KeyPoint>& keypoints )
-{
-    if( params.filename.empty() )
-        collection.add( image, keypoints );
-}
-
-Mat CalonderDescriptorMatch::extractPatch( const Mat& image, const Point& pt, int patchSize ) const
-{
-    const int offset = patchSize / 2;
-    return image( Rect(pt.x - offset, pt.y - offset, patchSize, patchSize) );
-}
-
-void CalonderDescriptorMatch::calcBestProbAndMatchIdx( const Mat& image, const Point& pt,
-                                                       float& bestProb, int& bestMatchIdx, float* signature )
-{
-    IplImage roi = extractPatch( image, pt, params.patchSize );
-    classifier->getSignature( &roi, signature );
-
-    bestProb = 0;
-    bestMatchIdx = -1;
-    for( int ci = 0; ci < classifier->classes(); ci++ )
-    {
-        if( signature[ci] > bestProb )
-        {
-            bestProb = signature[ci];
-            bestMatchIdx = ci;
-        }
-    }
-}
-
-void CalonderDescriptorMatch::trainRTreeClassifier()
-{
-    if( classifier.empty() )
-    {
-        assert( params.filename.empty() );
-        classifier = new RTreeClassifier;
-
-        vector<BaseKeypoint> baseKeyPoints;
-        vector<IplImage> iplImages( collection.images.size() );
-        for( size_t imageIdx = 0; imageIdx < collection.images.size(); imageIdx++ )
-        {
-            iplImages[imageIdx] = collection.images[imageIdx];
-            for( size_t pointIdx = 0; pointIdx < collection.points[imageIdx].size(); pointIdx++ )
-            {
-                BaseKeypoint bkp;
-                KeyPoint kp = collection.points[imageIdx][pointIdx];
-                bkp.x = cvRound(kp.pt.x);
-                bkp.y = cvRound(kp.pt.y);
-                bkp.image = &iplImages[imageIdx];
-                baseKeyPoints.push_back(bkp);
-            }
-        }
-        classifier->train( baseKeyPoints, params.rng, params.patchGen, params.numTrees,
-                           params.depth, params.views, params.reducedNumDim, params.numQuantBits,
-                           params.printStatus );
-    }
-}
-
-void CalonderDescriptorMatch::match( const Mat& image, vector<KeyPoint>& keypoints, vector<int>& indices )
-{
-    trainRTreeClassifier();
-
-    float bestProb = 0;
-    AutoBuffer<float> signature( classifier->classes() );
-    indices.resize( keypoints.size() );
-
-    for( size_t pi = 0; pi < keypoints.size(); pi++ )
-        calcBestProbAndMatchIdx( image, keypoints[pi].pt, bestProb, indices[pi], signature );
-}
-
-void CalonderDescriptorMatch::classify( const Mat& image, vector<KeyPoint>& keypoints )
-{
-    trainRTreeClassifier();
-
-    AutoBuffer<float> signature( classifier->classes() );
-    for( size_t pi = 0; pi < keypoints.size(); pi++ )
-    {
-        float bestProb = 0;
-        int bestMatchIdx = -1;
-        calcBestProbAndMatchIdx( image, keypoints[pi].pt, bestProb, bestMatchIdx, signature );
-        keypoints[pi].class_id = collection.getKeyPoint(bestMatchIdx).class_id;
-    }
-}
-
-void CalonderDescriptorMatch::clear ()
-{
-    GenericDescriptorMatch::clear();
-    classifier.release();
-}
-
-void CalonderDescriptorMatch::read( const FileNode &fn )
-{
-    params.numTrees = fn["numTrees"];
-    params.depth = fn["depth"];
-    params.views = fn["views"];
-    params.patchSize = fn["patchSize"];
-    params.reducedNumDim = (int) fn["reducedNumDim"];
-    params.numQuantBits = fn["numQuantBits"];
-    params.printStatus = (int) fn["printStatus"] != 0;
-}
-
-void CalonderDescriptorMatch::write( FileStorage& fs ) const
-{
-    fs << "numTrees" << params.numTrees;
-    fs << "depth" << params.depth;
-    fs << "views" << params.views;
-    fs << "patchSize" << params.patchSize;
-    fs << "reducedNumDim" << (int) params.reducedNumDim;
-    fs << "numQuantBits" << params.numQuantBits;
-    fs << "printStatus" << params.printStatus;
-}
-#endif
 
 /****************************************************************************************\
 *                                  FernDescriptorMatch                                   *
