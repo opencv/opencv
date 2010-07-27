@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include "cuda_shared.hpp"
 #include "cuda_runtime.h"
+#include "saturate_cast.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::impl;
@@ -107,31 +108,6 @@ namespace mat_operators
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////////////// ConvertTo ////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
-
-    template <typename T, typename DT>
-    struct ScaleTraits
-    {
-        __device__ static DT scale(T src, double alpha, double beta)
-        {
-            return (DT)__double2int_rn(alpha * src + beta);
-        }
-    };
-    template <typename T>
-    struct ScaleTraits<T, float>
-    {
-        __device__ static float scale(T src, double alpha, double beta)
-        {
-            return (float)(alpha * src + beta);
-        }
-    };
-    template <typename T>
-    struct ScaleTraits<T, double>
-    {
-        __device__ static double scale(T src, double alpha, double beta)
-        {
-            return alpha * src + beta;
-        }
-    };
 
     template <typename T, typename DT, size_t src_elem_size, size_t dst_elem_size>
     struct ReadWriteTraits
@@ -213,7 +189,7 @@ namespace mat_operators
                 DT* dst1_el = (DT*) &dstn_el;
 
                 for (int i = 0; i < shift; ++i)
-                    dst1_el[i] = ScaleTraits<T, DT>::scale(src1_el[i], alpha, beta);
+                    dst1_el[i] =  saturate_cast<DT>(alpha * src1_el[i] + beta);
 
                 ((write_type*)dst)[x] = dstn_el;
             }
@@ -221,7 +197,7 @@ namespace mat_operators
             {
                 for (int i = 0; i < shift - 1; ++i)
                     if ((x * shift) + i < width)
-                        dst[(x * shift) + i] = ScaleTraits<T, DT>::scale(src[(x * shift) + i], alpha, beta);
+                        dst[(x * shift) + i] = saturate_cast<DT>(alpha * src[(x * shift) + i] + beta);
             }
         }
     }
