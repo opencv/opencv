@@ -506,29 +506,23 @@ endif()
 #YV
 ############################### QT ################################
 
-set(WITH_QT OFF CACHE BOOL "Build with QT Backend support")
-set(WITH_QT_OPENGL OFF CACHE BOOL "Add OpenGL extension to QT")
+set(WITH_QT OFF CACHE BOOL "Build with Qt Backend support")
+set(WITH_QT_OPENGL OFF CACHE BOOL "Add OpenGL extension to Qt")
 
-set(HAVE_QT 0)
-set(HAVE_QT_OPENGL 0)
+#set(HAVE_QT 0)
+#set(HAVE_QT_OPENGL 0)
 
 if (WITH_QT)
     find_package(Qt4)
     if (QT4_FOUND)
         set(HAVE_QT 1)
-        find_package (OpenGL QUIET)
-        #Qt 4.6 is the minimum for OpenGL
-        if (QT_QTOPENGL_FOUND AND OPENGL_FOUND AND QT_VERSION_MINOR GREATER 5)
-			set(HAVE_QT_OPENGL 1)
-			add_definitions(-DHAVE_QT_OPENGL)
-        endif()
         #add_definitions(-DHAVE_QT)
-        set_property(DIRECTORY PROPERTY COMPILE_DEFINITIONS "HAVE_QT")
+        #set_property(DIRECTORY PROPERTY COMPILE_DEFINITIONS "HAVE_QT")
         
         find_package (OpenGL QUIET)
         if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
 			set(HAVE_QT_OPENGL 1)
-			add_definitions(-DHAVE_QT_OPENGL)
+			#add_definitions(-DHAVE_QT_OPENGL)
         endif()
     endif()
 endif()

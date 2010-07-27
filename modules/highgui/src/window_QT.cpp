@@ -2311,6 +2311,9 @@ void ViewPort::paintEvent(QPaintEvent* event)
     if (drawInfo)
 	drawInstructions(&myPainter);
 
+	//for statusbar
+	if (centralWidget->myStatusBar)
+		drawStatusBar();
 
     QGraphicsView::paintEvent(event);
 }
