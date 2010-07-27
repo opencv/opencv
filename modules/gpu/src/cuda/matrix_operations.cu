@@ -54,28 +54,6 @@ namespace mat_operators
 {
     __constant__ double scalar_d[4];
 
-    ///////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////// CopyTo /////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
-
-    template<typename T>
-    __global__ void kernel_copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, int step_mat, int step_mask, int channels)
-    {
-        size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-        size_t y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if ((x < cols * channels ) && (y < rows))
-            if (mask[y * step_mask + x / channels] != 0)
-            {
-                size_t idx = y * (step_mat / sizeof(T)) + x;
-                mat_dst[idx] = mat_src[idx];
-            }
-    }
-
-
-    ///////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////// SetTo //////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
 
     template <typename T>
     class shift_and_sizeof;
@@ -128,6 +106,29 @@ namespace mat_operators
         public:
         enum { shift = 3 };
     };
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////// CopyTo /////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+
+    template<typename T>
+    __global__ void kernel_copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, int step_mat, int step_mask, int channels)
+    {
+        size_t x = blockIdx.x * blockDim.x + threadIdx.x;
+        size_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if ((x < cols * channels ) && (y < rows))
+            if (mask[y * step_mask + x / channels] != 0)
+            {
+                size_t idx = y * ( step_mat >> shift_and_sizeof<T>::shift ) + x;
+                mat_dst[idx] = mat_src[idx];
+            }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////// SetTo //////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
 
     template<typename T>
     __global__ void kernel_set_to_without_mask(T * mat, int cols, int rows, int step, int channels)
