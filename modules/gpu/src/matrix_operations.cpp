@@ -149,7 +149,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    cv::gpu::impl::set_to_without_mask( *this, depth(), s.val, channels());
+    impl::set_to_without_mask( *this, depth(), s.val, channels());
     return *this;
 }
 

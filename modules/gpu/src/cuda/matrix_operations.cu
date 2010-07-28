@@ -304,7 +304,7 @@ namespace cv
 
                 CopyToFunc func = tab[depth];
 
-                if (func == 0) cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
+                if (func == 0) cv::gpu::error("Unsupported copyTo operation", __FILE__, __LINE__);
 
                 func(mat_src, mat_dst, mask, channels, stream);
             }
@@ -371,7 +371,7 @@ namespace cv
                 SetToFunc_without_mask func = tab[depth];
 
                 if (func == 0)
-                    cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
+                    cv::gpu::error("Unsupported setTo operation", __FILE__, __LINE__);
 
                 func(mat, channels, stream);
             }
@@ -396,7 +396,7 @@ namespace cv
                 SetToFunc_with_mask func = tab[depth];
 
                 if (func == 0)
-                    cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
+                    cv::gpu::error("Unsupported setTo operation", __FILE__, __LINE__);
 
                 func(mat, mask, channels, stream);
             }

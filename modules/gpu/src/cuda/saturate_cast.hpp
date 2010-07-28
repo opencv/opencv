@@ -73,7 +73,7 @@ namespace cv
         { int iv = __float2int_rn(v); return saturate_cast<uchar>(iv); }
         template<> __device__ uchar saturate_cast<uchar>(double v)
         {
-        #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 130
             int iv = __double2int_rn(v); return saturate_cast<uchar>(iv);
         #else
             return saturate_cast<uchar>((float)v);
@@ -98,7 +98,7 @@ namespace cv
         { int iv = __float2int_rn(v); return saturate_cast<schar>(iv); }
         template<> __device__ schar saturate_cast<schar>(double v)
         {             
-        #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 130
             int iv = __double2int_rn(v); return saturate_cast<schar>(iv);
         #else
             return saturate_cast<schar>((float)v);
@@ -117,7 +117,7 @@ namespace cv
         { int iv = __float2int_rn(v); return saturate_cast<ushort>(iv); }
         template<> __device__ ushort saturate_cast<ushort>(double v)
         {             
-        #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 130
             int iv = __double2int_rn(v); return saturate_cast<ushort>(iv);
         #else
             return saturate_cast<ushort>((float)v);
@@ -137,7 +137,7 @@ namespace cv
         { int iv = __float2int_rn(v); return saturate_cast<short>(iv); }
         template<> __device__ short saturate_cast<short>(double v)
         {            
-        #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 130
             int iv = __double2int_rn(v); return saturate_cast<short>(iv);
         #else
             return saturate_cast<short>((float)v);
@@ -147,7 +147,7 @@ namespace cv
         template<> __device__ int saturate_cast<int>(float v) { return __float2int_rn(v); }
         template<> __device__ int saturate_cast<int>(double v) 
         {
-        #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130 
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 130 
             return __double2int_rn(v);
         #else
             return saturate_cast<int>((float)v);
@@ -157,7 +157,7 @@ namespace cv
         template<> __device__ uint saturate_cast<uint>(float v){ return __float2uint_rn(v); }
         template<> __device__ uint saturate_cast<uint>(double v) 
         {            
-        #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 130
             return __double2uint_rn(v);
         #else
             return saturate_cast<uint>((float)v);
