@@ -87,6 +87,9 @@ public:
     EllipticKeyPoint();
     EllipticKeyPoint( const Point2f& _center, const Scalar& _ellipse );
 
+    static void convert( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst );
+    static void convert( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst );
+
     static Mat_<double> getSecondMomentsMatrix( const Scalar& _ellipse );
     Mat_<double> getSecondMomentsMatrix() const;
 
@@ -95,7 +98,7 @@ public:
     Point2f center;
     Scalar ellipse; // 3 elements a, b, c: ax^2+2bxy+cy^2=1
     Size_<float> axes; // half lenght of elipse axes
-    Size_<float> boundingBox; // half sizes of bounding box
+    Size_<float> boundingBox; // half sizes of bounding box which sides are parallel to the coordinate axes
 };
 
 EllipticKeyPoint::EllipticKeyPoint()
@@ -144,20 +147,7 @@ void EllipticKeyPoint::calcProjection( const Mat_<double>& H, EllipticKeyPoint& 
     projection = EllipticKeyPoint( dstCenter, Scalar(dstM(0,0), dstM(0,1), dstM(1,1)) );
 }
 
-void calcEllipticKeyPointProjections( const vector<EllipticKeyPoint>& src, const Mat_<double>& H, vector<EllipticKeyPoint>& dst )
-{
-    if( !src.empty() )
-    {
-        assert( !H.empty() && H.cols == 3 && H.rows == 3);
-        dst.resize(src.size());
-        vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
-        vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
-        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
-            srcIt->calcProjection(H, *dstIt);
-    }
-}
-
-void transformToEllipticKeyPoints( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst )
+void EllipticKeyPoint::convert( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst )
 {
     if( !src.empty() )
     {
@@ -172,7 +162,7 @@ void transformToEllipticKeyPoints( const vector<KeyPoint>& src, vector<EllipticK
     }
 }
 
-void transformToKeyPoints( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst )
+void EllipticKeyPoint::convert( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst )
 {
     if( !src.empty() )
     {
@@ -183,6 +173,19 @@ void transformToKeyPoints( const vector<EllipticKeyPoint>& src, vector<KeyPoint>
             float rad = sqrt(axes.height*axes.width);
             dst[i] = KeyPoint(src[i].center, 2*rad );
         }
+    }
+}
+
+void calcEllipticKeyPointProjections( const vector<EllipticKeyPoint>& src, const Mat_<double>& H, vector<EllipticKeyPoint>& dst )
+{
+    if( !src.empty() )
+    {
+        assert( !H.empty() && H.cols == 3 && H.rows == 3);
+        dst.resize(src.size());
+        vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
+        vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
+        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
+            srcIt->calcProjection(H, *dstIt);
     }
 }
 
@@ -251,7 +254,7 @@ void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticK
         EllipticKeyPoint kp1 = keypoints1[i1];
         float maxDist = sqrt(kp1.axes.width*kp1.axes.height),
               fac = 30.f/maxDist;
-        if( !commonPart)
+        if( !commonPart )
             fac=3;
 
         maxDist = maxDist*4;
@@ -1064,7 +1067,7 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
 
     detector->detect( imgs[0], keypoints1 );
     writeKeypoints( keypontsFS, keypoints1, 0);
-    transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
+    EllipticKeyPoint::convert( keypoints1, ekeypoints1 );
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
@@ -1073,7 +1076,7 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
         detector->detect( imgs[ci+1], keypoints2 );
         writeKeypoints( keypontsFS, keypoints2, ci+1);
         vector<EllipticKeyPoint> ekeypoints2;
-        transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
+        EllipticKeyPoint::convert( keypoints2, ekeypoints2 );
         evaluateDetectors( ekeypoints1, ekeypoints2, imgs[0], imgs[ci], Hs[ci],
                            calcQuality[di][ci].repeatability, calcQuality[di][ci].correspondenceCount );
     }
@@ -1406,7 +1409,7 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
 
     vector<KeyPoint> keypoints1; vector<EllipticKeyPoint> ekeypoints1;
     readKeypoints( keypontsFS, keypoints1, 0);
-    transformToEllipticKeyPoints( keypoints1, ekeypoints1 );
+    EllipticKeyPoint::convert( keypoints1, ekeypoints1 );
 
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
     vector<DMatchForEvaluation> allMatches;
@@ -1426,7 +1429,7 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         }
         else
             readKeypoints( keypontsFS, keypoints2, ci+1 );
-        transformToEllipticKeyPoints( keypoints2, ekeypoints2 );
+        EllipticKeyPoint::convert( keypoints2, ekeypoints2 );
         descMatch->add( imgs[ci+1], keypoints2 );
         vector<vector<DMatch> > matches1to2;
         //TODO: use more sophisticated strategy to choose threshold
