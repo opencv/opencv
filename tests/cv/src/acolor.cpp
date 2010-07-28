@@ -1259,7 +1259,7 @@ void CV_ColorLuvTest::get_test_array_types_and_sizes( int test_case_idx, CvSize*
 double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = CV_MAT_DEPTH(test_mat[i][j].type);
-    return depth == CV_8U ? 48 : depth == CV_16U ? 32 : 1e-2;
+    return depth == CV_8U ? 48 : depth == CV_16U ? 32 : 5e-2;
 }
 
 
