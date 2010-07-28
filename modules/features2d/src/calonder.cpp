@@ -333,7 +333,7 @@ void RandomizedTree::train(std::vector<BaseKeypoint> const& base_set,
   Size patchSize(PATCH_SIZE, PATCH_SIZE);
   for (keypt_it = base_set.begin(); keypt_it != base_set.end(); ++keypt_it, ++class_id) {
     for (int i = 0; i < views; ++i) {
-      make_patch( Mat(keypt_it->image), Point(keypt_it->y, keypt_it->x ), patch, patchSize, rng );
+      make_patch( Mat(keypt_it->image), Point(keypt_it->x, keypt_it->y ), patch, patchSize, rng );
       IplImage iplPatch = patch;
       addExample(class_id, getData(&iplPatch));
     }

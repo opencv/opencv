@@ -653,6 +653,11 @@ CV_EXPORTS void equalizeHist( const Mat& src, Mat& dst );
 //! segments the image using watershed algorithm
 CV_EXPORTS void watershed( const Mat& image, Mat& markers );
 
+//! filters image using meanshift algorithm
+CV_EXPORTS void pyrMeanShiftFiltering( const Mat& src, Mat& dst,
+                    double sp, double sr, int maxLevel=1,
+                    TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) );
+
 //! class of the pixel in GrabCut algorithm
 enum { GC_BGD    = 0,  //!< background
        GC_FGD    = 1,  //!< foreground

@@ -526,3 +526,14 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     }
 }
 
+void cv::pyrMeanShiftFiltering( const Mat& src, Mat& dst,
+                                double sp, double sr, int maxLevel,
+                                TermCriteria termcrit )
+{
+    if( src.empty() )
+        return;
+
+    dst.create( src.size(), src.type() );
+    CvMat _src = src, _dst = dst;
+    cvPyrMeanShiftFiltering( &_src, &_dst, sp, sr, maxLevel, termcrit );
+}
