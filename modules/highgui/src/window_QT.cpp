@@ -690,6 +690,9 @@ void GuiReceiver::isLastWindow()
 
 GuiReceiver::~GuiReceiver()
 {
+	if (global_control_panel)
+		delete global_control_panel;
+
 	delete timer;
 }
 
@@ -1394,6 +1397,8 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 CvWindow::~CvWindow()
 {
+	printf("delete w\n");
+
 	QLayoutItem *child;
 
 	if (myGlobalLayout)
