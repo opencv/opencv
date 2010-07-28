@@ -113,21 +113,21 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
 {
     const int seedsPerDim = 50;
 
-    float rad1 = kp1.size/2,
-          rad2 = kp2.size/2;
-    float rad1_2 = rad1*rad1,
-          rad2_2 = rad2*rad2;
+	float radius1 = kp1.size/2;
+	float radius2 = kp2.size/2;
+    float radius1_2 = radius1*radius1,
+          radius2_2 = radius2*radius2;
 
     Point2f p1 = kp1.pt, p2 = kp2.pt;
     float dist = norm(p1-p2);
 
     float ovrl = 0.f;
-    if( dist < rad1+rad2 ) // circles are intersected
+    if( dist < radius1+radius2 ) // circles are intersected
     {
-        float minx = min( p1.x - rad1, p2.x - rad2 );
-        float maxx = max( p1.x + rad1, p2.x + rad2 );
-        float miny = min( p1.y - rad1, p2.y - rad2 );
-        float maxy = max( p1.y + rad1, p2.y + rad2 );
+        float minx = min( p1.x - radius1, p2.x - radius2 );
+        float maxx = max( p1.x + radius1, p2.x + radius2 );
+        float miny = min( p1.y - radius1, p2.y - radius2 );
+        float maxy = max( p1.y + radius1, p2.y + radius2 );
 
         float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny);
         float step = mina/seedsPerDim;
@@ -147,8 +147,8 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
                 float c1 = rx1*rx1+ry1*ry1;
                 float c2 = rx2*rx2+ry2*ry2;
 
-                if( c1<rad1_2 && c2<rad2_2 ) bna++;
-                if( c1<rad1_2 || c2<rad2_2 ) bua++;
+                if( c1<radius1_2 && c2<radius2_2 ) bna++;
+                if( c1<radius1_2 || c2<radius2_2 ) bua++;
             }
         }
         if( bna > 0)
