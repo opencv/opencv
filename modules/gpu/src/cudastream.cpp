@@ -52,18 +52,18 @@ void cv::gpu::CudaStream::create() { throw_nogpu(); }
 void cv::gpu::CudaStream::release() { throw_nogpu(); }
 cv::gpu::CudaStream::CudaStream() : impl(0) { throw_nogpu(); }
 cv::gpu::CudaStream::~CudaStream() { throw_nogpu(); }
-cv::gpu::CudaStream::CudaStream(const CudaStream& stream) { throw_nogpu(); }
-CudaStream& cv::gpu::CudaStream::operator=(const CudaStream& stream) { throw_nogpu(); return *this; }
+cv::gpu::CudaStream::CudaStream(const CudaStream& /*stream*/) { throw_nogpu(); }
+CudaStream& cv::gpu::CudaStream::operator=(const CudaStream& /*stream*/) { throw_nogpu(); return *this; }
 bool cv::gpu::CudaStream::queryIfComplete() { throw_nogpu(); return true; }
 void cv::gpu::CudaStream::waitForCompletion() { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, Mat& dst) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, MatPL& dst) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueUpload(const MatPL& src, GpuMat& dst) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueUpload(const Mat& src, GpuMat& dst) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueCopy(const GpuMat& src, GpuMat& dst) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a, double b) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueDownload(const GpuMat& /*src*/, Mat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueDownload(const GpuMat& /*src*/, MatPL& /*dst*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueUpload(const MatPL& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueUpload(const Mat& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueCopy(const GpuMat& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& /*src*/, Scalar /*val*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& /*src*/, Scalar /*val*/, const GpuMat& /*mask*/) { throw_nogpu(); }
+void cv::gpu::CudaStream::enqueueConvert(const GpuMat& /*src*/, GpuMat& /*dst*/, int /*type*/, double /*a*/, double /*b*/) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 

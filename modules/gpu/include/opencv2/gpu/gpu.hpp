@@ -43,6 +43,7 @@
 #ifndef __OPENCV_GPU_HPP__
 #define __OPENCV_GPU_HPP__
 
+#include <vector>
 #include "opencv2/core/core.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 
@@ -368,6 +369,42 @@ namespace cv
         private:
             GpuMat minSSD, leBuf, riBuf;
         };
+        
+        //////////////////////// StereoBeliefPropagation_GPU /////////////////////////
+        
+        class CV_EXPORTS StereoBeliefPropagation_GPU
+        {
+        public:
+            enum { DEFAULT_NDISP  = 64 };
+            enum { DEFAULT_ITERS  = 5  };
+            enum { DEFAULT_LEVELS = 5  };
+
+            static const float DEFAULT_DISC_COST;
+            static const float DEFAULT_DATA_COST;
+            static const float DEFAULT_LAMBDA_COST;
+
+            explicit StereoBeliefPropagation_GPU(int   ndisp     = DEFAULT_NDISP, 
+                                                 int   iters     = DEFAULT_ITERS, 
+                                                 int   levels    = DEFAULT_LEVELS, 
+                                                 float disc_cost = DEFAULT_DISC_COST, 
+                                                 float data_cost = DEFAULT_DATA_COST, 
+                                                 float lambda    = DEFAULT_LAMBDA_COST);
+
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
+            
+            int ndisp;
+
+            int iters;
+            int levels;
+            
+            float disc_cost;
+            float data_cost;
+            float lambda;
+        private:
+            GpuMat u, d, l, r, u2, d2, l2, r2;
+
+            std::vector<GpuMat> datas;
+        };        
     }
 }
 #include "opencv2/gpu/matrix_operations.hpp"
