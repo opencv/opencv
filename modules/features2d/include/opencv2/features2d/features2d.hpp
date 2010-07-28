@@ -237,6 +237,12 @@ public:
     //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
     static void convert(const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
                         float size=1, float response=1, int octave=0, int class_id=-1);
+
+    //! computes overlap for pair of keypoints;
+    //! overlap is a ratio between area of keypoint regions intersection and
+    //! area of keypoint regions union (now keypoint region is circle)
+    static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
+
     Point2f pt; //!< coordinates of the keypoints
     float size; //!< diameter of the meaningfull keypoint neighborhood
     float angle; //!< computed orientation of the keypoint (-1 if not applicable)

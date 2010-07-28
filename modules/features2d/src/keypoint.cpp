@@ -109,4 +109,53 @@ void KeyPoint::convert( const std::vector<Point2f>& points2f, std::vector<KeyPoi
         keypoints[i] = KeyPoint(points2f[i], size, -1, response, octave, class_id);
 }
 
+float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
+{
+    const int seedsPerDim = 50;
+
+    float rad1 = kp1.size/2,
+          rad2 = kp2.size/2;
+    float rad1_2 = rad1*rad1,
+          rad2_2 = rad2*rad2;
+
+    Point2f p1 = kp1.pt, p2 = kp2.pt;
+    float dist = norm(p1-p2);
+
+    float ovrl = 0.f;
+    if( dist < rad1+rad2 ) // circles are intersected
+    {
+        float minx = min( p1.x - rad1, p2.x - rad2 );
+        float maxx = max( p1.x + rad1, p2.x + rad2 );
+        float miny = min( p1.y - rad1, p2.y - rad2 );
+        float maxy = max( p1.y + rad1, p2.y + rad2 );
+
+        float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny);
+        float step = mina/seedsPerDim;
+        float bua = 0, bna = 0;
+
+        //compute the areas
+        for( float x = minx; x <= maxx; x+=step )
+        {
+            for( float y = miny; y <= maxy; y+=step )
+            {
+                float rx1 = x-p1.x;
+                float ry1 = y-p1.y;
+                float rx2 = x-p2.x;
+                float ry2 = y-p2.y;
+
+                //substitution in the equation of a circle
+                float c1 = rx1*rx1+ry1*ry1;
+                float c2 = rx2*rx2+ry2*ry2;
+
+                if( c1<rad1_2 && c2<rad2_2 ) bna++;
+                if( c1<rad1_2 || c2<rad2_2 ) bua++;
+            }
+        }
+        if( bna > 0)
+            ovrl = bna/bua;
+    }
+
+    return ovrl;
+}
+
 }
