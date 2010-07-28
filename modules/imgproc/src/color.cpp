@@ -1260,8 +1260,8 @@ struct RGB2Lab_b
             coeffs[i*3+(blueIdx^2)] = cvRound(_coeffs[i*3]*scale[i]);
             coeffs[i*3+1] = cvRound(_coeffs[i*3+1]*scale[i]);
             coeffs[i*3+blueIdx] = cvRound(_coeffs[i*3+2]*scale[i]);
-            CV_Assert( coeffs[i] >= 0 && coeffs[i+3] >= 0 && coeffs[i+6] >= 0 &&
-                      coeffs[i] + coeffs[i+1] + coeffs[i+2] < 2*(1 << lab_shift) );
+            CV_Assert( coeffs[i] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
+                      coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift) );
         }
     }
     
