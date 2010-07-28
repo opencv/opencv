@@ -244,7 +244,11 @@ CV_IMPL int cvInitSystem( int, char** )
 
 CV_IMPL int cvWaitKey( int arg )
 {
+
 	int result = -1;
+
+	if (!guiMainThread)
+		return result;
 
 	unsigned long delayms;//in milliseconds
 	if (arg<=0)
@@ -266,12 +270,8 @@ CV_IMPL int cvWaitKey( int arg )
 		//cannot use wait here because events will not be distributed before processEvents (the main eventLoop is broken)
 		//so I create a Thread for the QTimer
 
-		QTimer timer(guiMainThread);
-		QObject::connect(&timer, SIGNAL(timeout()), guiMainThread, SLOT(timeOut()));
-		timer.setSingleShot(true);
-
 		if (arg>0)
-			timer.start(arg);
+			guiMainThread->timer->start(arg);
 
 		//QMutex dummy;
 
@@ -279,12 +279,16 @@ CV_IMPL int cvWaitKey( int arg )
 		{
 			qApp->processEvents(QEventLoop::AllEvents);
 
+
+			if (!guiMainThread)//when all the windows are deleted
+				return result;
+
 			mutexKey.lock();
 			if (last_key != -1)
 			{
 				result = last_key;
 				last_key = -1;
-				timer.stop();
+				guiMainThread->timer->stop();
 				//printf("keypressed\n");
 			}
 			mutexKey.unlock();
@@ -302,10 +306,12 @@ CV_IMPL int cvWaitKey( int arg )
 				 waitCondition.wait(&dummy, 2);
 				 */
 
+				//to decrease CPU usage
+				//sleep 1 millisecond
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
-				Sleep(2);
+				Sleep(1);
 #else
-				usleep(2);//to decrease CPU usage
+				usleep(1000);
 #endif
 
 			}
@@ -329,6 +335,7 @@ CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* 
 
 CV_IMPL void cvStopLoop()
 {
+
 	qApp->exit();
 }
 
@@ -336,13 +343,14 @@ CV_IMPL void cvStopLoop()
 CvWindow* icvFindWindowByName( const char* arg )
 {
 
-	QPointer<CvWindow> window = NULL;
+	QPointer<CvWindow> window;
 
 	if( !arg )
 		CV_Error( CV_StsNullPtr, "NULL name string" );
 
 	QString name(arg);
-	QPointer<CvWindow> w;
+	CvWindow* w;
+
 	foreach (QWidget *widget, QApplication::topLevelWidgets())
 	{
 
@@ -356,6 +364,7 @@ CvWindow* icvFindWindowByName( const char* arg )
 			}
 		}
 	}
+
 
 	return window;
 }
@@ -472,6 +481,8 @@ CV_IMPL void cvDestroyWindow( const char* name )
 			Q_ARG(QString, QString(name))
 			);
 }
+
+
 
 CV_IMPL void cvDestroyAllWindows(void)
 {
@@ -657,10 +668,29 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 
 //----------OBJECT----------------
 
-GuiReceiver::GuiReceiver() : _bTimeOut(false)
+GuiReceiver::GuiReceiver() : _bTimeOut(false), nb_windows(0)
 {
 	icvInitSystem();
-	//qApp->setQuitOnLastWindowClosed ( false );//maybe the user would like to access this setting
+
+	timer = new QTimer;
+	QObject::connect(timer, SIGNAL(timeout()), this, SLOT(timeOut()));
+	timer->setSingleShot(true);
+}
+
+
+void GuiReceiver::isLastWindow()
+{
+	if (--nb_windows <= 0)
+	{
+		delete guiMainThread;
+		guiMainThread = NULL;
+		qApp->quit();
+	}
+}
+
+GuiReceiver::~GuiReceiver()
+{
+	delete timer;
 }
 
 void GuiReceiver::putText(void* arg1, QString text, QPoint org, void* arg2)
@@ -826,6 +856,7 @@ void GuiReceiver::createWindow( QString name, int flags )
 	}
 
 	//QPointer<CvWindow> w1 =
+	nb_windows++;
 	new CvWindow(name, flags);
 }
 
@@ -896,13 +927,15 @@ void GuiReceiver::destroyAllWindow()
 	{
 		qApp->closeAllWindows();
 	}else{
-		QPointer<CvWindow> w;
-		foreach (QWidget *widget, QApplication::topLevelWidgets())
+
+		foreach (QObject *obj, QApplication::topLevelWidgets())
 		{
-			w = (CvWindow*) widget;
-			w->close();
-			delete w;
+			if (obj->metaObject ()->className () == "CvWindow")
+			{
+				delete obj;
+			}
 		}
+		
 	}
 
 }
@@ -1135,23 +1168,20 @@ void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata
     QPointer<QAbstractButton> button;
 
     if (button_type == CV_PUSH_BUTTON)
-        //CvPushButton*
         button = (QAbstractButton*) new CvPushButton(this, button_name,call, userdata);
 
     if (button_type == CV_CHECKBOX)
-        //CvCheckButton*
         button = (QAbstractButton*) new CvCheckBox(this, button_name,call, userdata, initial_button_state);
 
     if (button_type == CV_RADIOBOX)
     {
-        //CvCheckButton*
         button = (QAbstractButton*) new CvRadioButton(this, button_name,call, userdata, initial_button_state);
         group_button->addButton(button);
     }
 
     if (button)
     {
-        QObject::connect( button, SIGNAL( clicked() ),button, SLOT( callCallBack() ));
+        QObject::connect( button, SIGNAL( toggled(bool) ),button, SLOT( callCallBack(bool) ));
         addWidget(button,Qt::AlignCenter);
     }
 }
@@ -1170,12 +1200,15 @@ CvPushButton::CvPushButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg
 
     setObjectName(button_name);
     setText(button_name);
+
+	if (isChecked())
+		callCallBack(true);
 }
 
-void CvPushButton::callCallBack()
+void CvPushButton::callCallBack(bool checked)
 {
 	if (callback)
-		callback(-1,userdata);
+		callback(checked,userdata);
 }
 
 CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
@@ -1188,12 +1221,15 @@ CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, v
     setObjectName(button_name);
     setCheckState((initial_button_state == 1?Qt::Checked:Qt::Unchecked));
     setText(button_name);
+
+	if (isChecked())
+		callCallBack(true);
 }
 
-void CvCheckBox::callCallBack()
+void CvCheckBox::callCallBack(bool checked)
 {
 	if (callback)
-		callback(this->isChecked(),userdata);
+		callback(checked,userdata);
 }
 
 CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
@@ -1206,12 +1242,15 @@ CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback a
 	setObjectName(button_name);
 	setChecked(initial_button_state);
 	setText(button_name);
+
+	if (isChecked())
+		callCallBack(true);
 }
 
-void CvRadioButton::callCallBack()
+void CvRadioButton::callCallBack(bool checked)
 {
 	if (callback)
-		callback(this->isChecked(),userdata);
+		callback(checked,userdata);
 }
 
 
@@ -1390,6 +1429,9 @@ CvWindow::~CvWindow()
 
 	for (int i=0;i<vect_QShortcuts.count();i++)
 		delete vect_QShortcuts[i];
+
+	if (guiMainThread)
+		guiMainThread->isLastWindow();
 }
 
 
@@ -1497,7 +1539,7 @@ void CvWindow::createActions()
 
 void CvWindow::createToolBar()
 {
-	myToolBar = new QToolBar;
+	myToolBar = new QToolBar(this);
 	myToolBar->setFloatable(false);//is not a window
 	myToolBar->setMaximumHeight(28);
 
@@ -1507,7 +1549,7 @@ void CvWindow::createToolBar()
 
 void CvWindow::createStatusBar()
 {
-	myStatusBar = new QStatusBar;
+	myStatusBar = new QStatusBar(this);
 	myStatusBar->setSizeGripEnabled(false);
 	myStatusBar->setMaximumHeight(20);
 	myStatusBar_msg = new QLabel;

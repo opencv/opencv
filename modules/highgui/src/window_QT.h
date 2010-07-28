@@ -109,11 +109,15 @@ class GuiReceiver : public QObject
 
 public:
     GuiReceiver();
+	~GuiReceiver();
     int start();
+	void isLastWindow();
+
     bool _bTimeOut;
+	QTimer *timer;
 
 private:
-
+	int nb_windows;
 
 public slots:
     void createWindow( QString name, int flags = 0 );
@@ -137,7 +141,6 @@ public slots:
     void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata, double angle, double zmin, double zmax);
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
-
 };
 
 enum typeBar{type_CvTrackbar = 0, type_CvButtonbar = 1};
@@ -179,7 +182,7 @@ private:
     void* userdata;
 
 private slots:
-    void callCallBack();
+    void callCallBack(bool);
 };
 
 
@@ -197,7 +200,7 @@ private:
     void* userdata;
 
 private slots:
-    void callCallBack();
+    void callCallBack(bool);
 };
 
 class CvRadioButton : public QRadioButton
@@ -213,7 +216,7 @@ private:
     void* userdata;
 
 private slots:
-    void callCallBack();
+    void callCallBack(bool);
 };
 
 
