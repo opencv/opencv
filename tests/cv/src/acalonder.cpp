@@ -152,7 +152,7 @@ void CV_CalonderTest::run(int)
     Mat ros_cdescriptors = readMatFromBin( dir + "/ros_uchar_desc" );
     double cnorm = norm(cdescriptors, ros_cdescriptors, NORM_INF );
     ts->printf(CvTS::LOG, "nofm (inf) BTW valid and calculated uchar descriptors = %f\n", cnorm );
-    if( cnorm > FLT_EPSILON )
+    if( cnorm > FLT_EPSILON + 1 ) // + 1 because of quantization float to uchar
         ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
 #endif // GET_RES
 }
