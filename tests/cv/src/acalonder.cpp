@@ -117,7 +117,7 @@ void CV_CalonderTest::run(int)
         ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         return;
     }
-#endif
+#endif //GET_RES
 
     CalonderDescriptorExtractor<float> fde(dir + "/classifier.rtc");
 
@@ -136,7 +136,7 @@ void CV_CalonderTest::run(int)
     ts->printf(CvTS::LOG, "nofm (inf) BTW valid and calculated float descriptors = %f\n", fnorm );
     if( fnorm > FLT_EPSILON )
         ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-#endif
+#endif // GET_RES
 
     CalonderDescriptorExtractor<uchar> cde(dir + "/classifier.rtc");
     Mat cdescriptors;
@@ -154,7 +154,9 @@ void CV_CalonderTest::run(int)
     ts->printf(CvTS::LOG, "nofm (inf) BTW valid and calculated uchar descriptors = %f\n", cnorm );
     if( cnorm > FLT_EPSILON )
         ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-#endif
+#endif // GET_RES
 }
 
+#if CV_SSE2
 CV_CalonderTest calonderTest;
+#endif // CV_SSE2
