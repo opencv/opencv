@@ -296,9 +296,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
             if ((int)width == frameWidth || (int)height == frameHeight)
             {
                 if (colorCoding == DC1394_COLOR_CODING_RGB8 ||
-                        colorCoding == DC1394_COLOR_CODING_RGB16 ||
-                        colorCoding == DC1394_COLOR_CODING_RAW8 ||
-                        colorCoding == DC1394_COLOR_CODING_RAW16)
+                        colorCoding == DC1394_COLOR_CODING_RAW8)
                 {
                     bestMode = mode;
                     break;
@@ -313,9 +311,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
                     pref = 1;
                 }
 
-                if (colorCoding == DC1394_COLOR_CODING_MONO8 ||
-                        (colorCoding == DC1394_COLOR_CODING_MONO16 &&
-                        pref < 0))
+                if (colorCoding == DC1394_COLOR_CODING_MONO8)
                 {
                     bestMode = mode;
                     pref = 0;
