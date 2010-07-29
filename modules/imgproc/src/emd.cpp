@@ -297,10 +297,14 @@ CV_IMPL float cvCalcEMD2( const CvArr* signature_arr1,
         float val = xp->val;
         int i = xp->i;
         int j = xp->j;
+
+        if( xp == state.enter_x )
+          continue;
+
         int ci = state.idx1[i];
         int cj = state.idx2[j];
 
-        if( xp != state.enter_x && ci >= 0 && cj >= 0 )
+        if( ci >= 0 && cj >= 0 )
         {
             total_cost += (double)val * state.cost[i][j];
             if( flow )
