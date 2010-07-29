@@ -886,8 +886,8 @@ void CvTest::run( int start_from )
                     break;
             }
 
-			sort(v_cpe.begin(), v_cpe.end());
-			sort(v_time.begin(), v_time.end());
+			std::sort(v_cpe.begin(), v_cpe.end());
+			std::sort(v_time.begin(), v_time.end());
 			
             t_cpu_acc = v_cpe[i/2];
             t_acc = v_time[i/2];

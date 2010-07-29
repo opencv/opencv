@@ -98,8 +98,8 @@ void CV_SolvePolyTest::run( int )
             for (int j = 0; j < n; ++j)
 	            ar[j] = complex_type(u[j * 2], u[j * 2 + 1]);
 
-            sort(r.begin(), r.end(), pred_complex());
-            sort(ar.begin(), ar.end(), pred_complex());
+            std::sort(r.begin(), r.end(), pred_complex());
+            std::sort(ar.begin(), ar.end(), pred_complex());
 
             pass = true;
             if( n == 3 )
@@ -114,7 +114,7 @@ void CV_SolvePolyTest::run( int )
                     nr2 = cv::solveCubic(cv::Mat_<float>(cv::Mat(&amat)), umat2);
                 cvFlip(&amat, &amat, 0);
                 if(nr2 > 0)
-                    sort(ar2.begin(), ar2.begin()+nr2, pred_double());
+                    std::sort(ar2.begin(), ar2.begin()+nr2, pred_double());
                 ar2.resize(nr2);
 
                 int nr1 = 0;

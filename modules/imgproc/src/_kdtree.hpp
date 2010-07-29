@@ -337,7 +337,7 @@ private:
 
     // add bbf_node for alternate branch in priority queue
     pq.push_back(bbf_node(alt_n, dist));
-    push_heap(pq.begin(), pq.end());
+    std::push_heap(pq.begin(), pq.end());
   }
 
   // called by bbf to walk to leaf;
@@ -374,11 +374,11 @@ private:
     bbf_nn nn(p, distance(d, p));
     if ((int) nn_pq.size() < k) {
       nn_pq.push_back(nn);
-      push_heap(nn_pq.begin(), nn_pq.end());
+      std::push_heap(nn_pq.begin(), nn_pq.end());
     } else if (nn_pq[0].dist > nn.dist) {
-      pop_heap(nn_pq.begin(), nn_pq.end());
+      std::pop_heap(nn_pq.begin(), nn_pq.end());
       nn_pq.end()[-1] = nn;
-      push_heap(nn_pq.begin(), nn_pq.end());
+      std::push_heap(nn_pq.begin(), nn_pq.end());
     }
     assert(nn_pq.size() < 2 || nn_pq[0].dist >= nn_pq[1].dist);
   }
@@ -405,7 +405,7 @@ public:
     while (tmp_pq.size() && emax > 0) {
 
       // from node nearest query point d, run to leaf
-      pop_heap(tmp_pq.begin(), tmp_pq.end());
+      std::pop_heap(tmp_pq.begin(), tmp_pq.end());
       bbf_node bbf(tmp_pq.end()[-1]);
       tmp_pq.erase(tmp_pq.end() - 1);
 

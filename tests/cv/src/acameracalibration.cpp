@@ -1610,9 +1610,9 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
 	{
 		ni = (int)objectPoints[i].size();
 		((int*)npoints.data)[i] = ni;
-		copy(objectPoints[i].begin(), objectPoints[i].end(), objPtData + j);
-		copy(imagePoints1[i].begin(), imagePoints1[i].end(), imgPtData + j);
-		copy(imagePoints2[i].begin(), imagePoints2[i].end(), imgPtData2 + j);
+		std::copy(objectPoints[i].begin(), objectPoints[i].end(), objPtData + j);
+		std::copy(imagePoints1[i].begin(), imagePoints1[i].end(), imgPtData + j);
+		std::copy(imagePoints2[i].begin(), imagePoints2[i].end(), imgPtData2 + j);
 	}
 	CvMat _objPt = objPt, _imgPt = imgPt, _imgPt2 = imgPt2, _npoints = npoints;
 	CvMat _cameraMatrix1 = cameraMatrix1, _distCoeffs1 = distCoeffs1;

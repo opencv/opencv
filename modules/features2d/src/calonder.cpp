@@ -413,7 +413,7 @@ static float percentile(float *data, int n, float p)
    assert(n>0);
    assert(p>=0 && p<=1);
    std::vector<float> vec(data, data+n);
-   sort(vec.begin(), vec.end());
+   std::sort(vec.begin(), vec.end());
    int ix = (int)(p*(n-1));
    return vec[ix];
 }
@@ -1299,7 +1299,7 @@ static float percentile( const float* data, int n, float p )
    assert( p>=0 && p<=1 );
 
    vector<float> vec( data, data+n );
-   sort(vec.begin(), vec.end());
+   std::sort(vec.begin(), vec.end());
    int ix = (int)(p*(n-1));
    return vec[ix];
 }

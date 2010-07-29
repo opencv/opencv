@@ -49,6 +49,8 @@
 #include <cstring>
 #include <cstdlib>
 
+using namespace std;
+
 #include "cvhaartraining.h"
 
 int main( int argc, char* argv[] )
