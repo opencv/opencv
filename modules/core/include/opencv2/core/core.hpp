@@ -2424,6 +2424,9 @@ class CV_EXPORTS MatConstIterator_
 public:
     typedef _Tp value_type;
     typedef int difference_type;
+    typedef const _Tp* pointer;
+    typedef const _Tp& reference;
+    typedef std::random_access_iterator_tag iterator_category;
 
     //! default constructor
     MatConstIterator_();
