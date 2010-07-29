@@ -594,8 +594,7 @@ template<typename _Tp> inline MatIterator_<_Tp> Mat::end()
     it.ptr = it.sliceEnd = (_Tp*)(data + step*(rows-1)) + cols;
     return it;
 }
-    
-    
+        
 static inline void swap( Mat& a, Mat& b )
 {
     std::swap( a.flags, b.flags );
@@ -605,7 +604,43 @@ static inline void swap( Mat& a, Mat& b )
     std::swap( a.dataend, b.dataend );
     std::swap( a.refcount, b.refcount );
 }
+    
+template<typename _Tp> inline Mat::operator vector<_Tp>() const
+{
+    CV_Assert( (rows == 1 || cols == 1) && channels() == DataType<_Tp>::channels );
+    
+    int n = rows + cols - 1;
+    if( isContinuous() && type() == DataType<_Tp>::type )
+        return vector<_Tp>((_Tp*)data,(_Tp*)data + n);
+    vector<_Tp> v(n); Mat tmp(rows, cols, DataType<_Tp>::type, &v[0]);
+    convertTo(tmp, tmp.type());
+    return v;
+}
 
+template<typename _Tp, int n> inline Mat::operator Vec<_Tp, n>() const
+{
+    CV_Assert( (rows == 1 || cols == 1) && rows + cols - 1 == n &&
+               channels() == DataType<_Tp>::channels );
+    
+    if( isContinuous() && type() == DataType<_Tp>::type )
+        return Vec<_Tp, n>((_Tp*)data);
+    Vec<_Tp, n> v; Mat tmp(rows, cols, DataType<_Tp>::type, v.val);
+    convertTo(tmp, tmp.type());
+    return v;
+}
+    
+template<typename _Tp, int m, int n> inline Mat::operator Matx<_Tp, m, n>() const
+{
+    CV_Assert( rows == m && cols == n &&
+               channels() == DataType<_Tp>::channels );
+    
+    if( isContinuous() && type() == DataType<_Tp>::type )
+        return Matx<_Tp, m, n>((_Tp*)data);
+    Matx<_Tp, m, n> mtx; Mat tmp(rows, cols, DataType<_Tp>::type, mtx.val);
+    convertTo(tmp, tmp.type());
+    return mtx;
+}    
+    
 inline SVD::SVD() {}
 inline SVD::SVD( const Mat& m, int flags ) { operator ()(m, flags); }
 inline void SVD::solveZ( const Mat& m, Mat& dst )
@@ -829,12 +864,20 @@ template<typename _Tp> inline const _Tp& Mat_<_Tp>::operator ()(Point pt) const
 
 template<typename _Tp> inline Mat_<_Tp>::operator vector<_Tp>() const
 {
-    CV_Assert( rows == 1 || cols == 1 );
-    return isContinuous() ?
-        vector<_Tp>((_Tp*)data,(_Tp*)data + (rows + cols - 1)) :
-        (vector<_Tp>)((Mat_<_Tp>)this->t());
+    return this->Mat::operator vector<_Tp>();
 }
 
+template<typename _Tp> template<int n> inline Mat_<_Tp>::operator Vec<_Tp, n>() const
+{
+    return this->Mat::operator Vec<_Tp, n>();
+}
+
+template<typename _Tp> template<int m, int n> inline Mat_<_Tp>::operator Matx<_Tp, m, n>() const
+{
+    return this->Mat::operator Matx<_Tp, m, n>();
+}    
+
+    
 template<typename T1, typename T2, typename Op> inline void
 process( const Mat_<T1>& m1, Mat_<T2>& m2, Op op )
 {

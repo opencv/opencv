@@ -1599,6 +1599,10 @@ public:
     //! converts header to IplImage; no data is copied
     operator IplImage() const;
     
+    template<typename _Tp> operator vector<_Tp>() const;
+    template<typename _Tp, int n> operator Vec<_Tp, n>() const;
+    template<typename _Tp, int m, int n> operator Matx<_Tp, m, n>() const;
+    
     //! returns true iff the matrix data is continuous
     // (i.e. when there are no gaps between successive rows).
     // similar to CV_IS_MAT_CONT(cvmat->type)
@@ -2372,6 +2376,10 @@ public:
     
     //! conversion to vector.
     operator vector<_Tp>() const;
+    //! conversion to Vec
+    template<int n> operator Vec<_Tp, n>() const;
+    //! conversion to Matx
+    template<int m, int n> operator Matx<_Tp, m, n>() const;
 };
 
 typedef Mat_<uchar> Mat1b;
