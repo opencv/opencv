@@ -300,8 +300,7 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& /*ma
 {
     matches.clear();
     matches.reserve( query.rows );
-//TODO: remove _DEBUG if bag 416 fixed
-#if (defined _DEBUG || !defined HAVE_EIGEN2)
+#if (!defined HAVE_EIGEN2)
     Mat norms;
     cv::reduce( train.mul( train ), norms, 1, 0);
     norms = norms.t();
@@ -318,12 +317,12 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& /*ma
 #else
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc1t;
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> desc2;
-    cv2eigen( descriptors_1.t(), desc1t);
-    cv2eigen( descriptors_2, desc2 );
+    cv2eigen( query.t(), desc1t);
+    cv2eigen( train, desc2 );
 
     //Eigen::Matrix<float, Eigen::Dynamic, 1> norms = desc2.rowwise().squaredNorm();
     Eigen::Matrix<float, Eigen::Dynamic, 1> norms = desc2.rowwise().squaredNorm() / 2;
-    for( int i=0;i<descriptors_1.rows;i++ )
+    for( int i=0;i<query.rows;i++ )
     {
         //Eigen::Matrix<float, Eigen::Dynamic, 1> distances = (-2) * (desc2*desc1t.col(i));
         Eigen::Matrix<float, Eigen::Dynamic, 1> distances = desc2*desc1t.col(i);
