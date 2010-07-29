@@ -8,7 +8,9 @@
 using namespace std;
 using namespace cv;
 
-
+/*
+ * Generates random perspective transform of image
+ */
 void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 {
     H.create(3, 3, CV_32FC1);
@@ -25,110 +27,85 @@ void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
     warpPerspective( src, dst, H, src.size() );
 }
 
-int main( int argc, char **argv )
+/*
+ * Trains Calonder classifier and writes trained classifier in file:
+ *      imgFilename - name of .txt file which contains list of full filenames of train images,
+ *      classifierFilename - name of binary file in which classifier will be written.
+ *
+ * To train Calonder classifier RTreeClassifier class need to be used.
+ */
+void trainCalonderClassifier( const string& classifierFilename, const string& imgFilename )
 {
-    #if 0
-    if( argc != 4 && argc != 3 )
+    // Reads train images
+    ifstream is( imgFilename.c_str(), ifstream::in );
+    vector<Mat> trainImgs;
+    while( !is.eof() )
     {
-        cout << "Format:" << endl <<
-                "   classifier(xml to write) test_image file_with_train_images_filenames(txt)" <<
-                "   or" << endl <<
-                "   classifier(xml to read) test_image" << endl;
-        return -1;
+        string str;
+        getline( is, str );
+        if (str.empty()) break;
+        Mat img = imread( str, CV_LOAD_IMAGE_GRAYSCALE );
+        if( !img.empty() )
+            trainImgs.push_back( img );
     }
-
-    CalonderClassifier classifier;
-    if( argc == 4 ) // Train
+    if( trainImgs.empty() )
     {
-        // Read train images and test image
-        ifstream fst( argv[3], ifstream::in );
-        vector<Mat> trainImgs;
-        while( !fst.eof() )
+        cout << "All train images can not be read." << endl;
+        exit(-1);
+    }
+    cout << trainImgs.size() << " train images were read." << endl;
+
+    // Extracts keypoints from train images
+    SurfFeatureDetector detector;
+    vector<BaseKeypoint> trainPoints;
+    vector<IplImage> iplTrainImgs(trainImgs.size());
+    for( size_t imgIdx = 0; imgIdx < trainImgs.size(); imgIdx++ )
+    {
+        iplTrainImgs[imgIdx] = trainImgs[imgIdx];
+        vector<KeyPoint> kps; detector.detect( trainImgs[imgIdx], kps );
+
+        for( size_t pointIdx = 0; pointIdx < kps.size(); pointIdx++ )
         {
-            string str;
-            getline( fst, str );
-            if (str.empty()) break;
-            Mat img = imread( str, CV_LOAD_IMAGE_GRAYSCALE );
-            if( !img.empty() )
-                trainImgs.push_back( img );
+            Point2f p = kps[pointIdx].pt;
+            trainPoints.push_back( BaseKeypoint(cvRound(p.x), cvRound(p.y), &iplTrainImgs[imgIdx]) );
         }
-        if( trainImgs.empty() )
-        {
-            cout << "All train images can not be read." << endl;
-            return -1;
-        }
-        cout << trainImgs.size() << " train images were read." << endl;
-
-        // Extract keypoints from train images
-        SurfFeatureDetector detector;
-        vector<vector<Point2f> > trainPoints( trainImgs.size() );
-        for( size_t i = 0; i < trainImgs.size(); i++ )
-        {
-            vector<KeyPoint> kps;
-            detector.detect( trainImgs[i], kps );
-            KeyPoint::convert( kps, trainPoints[i] );
-        }
-
-        // Train Calonder classifier on extracted points
-        classifier.setVerbose( true);
-        classifier.train( trainPoints, trainImgs );
-
-        // Write Calonder classifier
-        FileStorage fs( argv[1], FileStorage::WRITE );
-        if( fs.isOpened() ) classifier.write( fs );
-    }
-    else
-    {
-        // Read Calonder classifier
-        FileStorage fs( argv[1], FileStorage::READ );
-        if( fs.isOpened() ) classifier.read( fs.root() );
     }
 
-    if( classifier.empty() )
-    {
-        cout << "Calonder classifier is empty" << endl;
-        return -1;
-    }
+    // Trains Calonder classifier on extracted points
+    RTreeClassifier classifier;
+    classifier.train( trainPoints, theRNG(), 48, 9, 100 );
+    // Writes classifier
+    classifier.write( classifierFilename.c_str() );
+}
 
-    // Test Calonder classifier on test image and warped one
-    Mat testImg1 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE ), testImg2, H12;
-    if( testImg1.empty() )
+/*
+ * Test Calonder classifier to match keypoints on given image:
+ *      classifierFilename - name of file from which classifier will be read,
+ *      imgFilename - test image filename.
+ *
+ * To calculate keypoint descriptors you may use RTreeClassifier class (as to train),
+ * but it is convenient to use CalonderDescriptorExtractor class which is wrapper of
+ * RTreeClassifier.
+ */
+void testCalonderClassifier( const string& classifierFilename, const string& imgFilename )
+{
+    Mat img1 = imread( imgFilename, CV_LOAD_IMAGE_GRAYSCALE ), img2, H12;
+    if( img1.empty() )
     {
         cout << "Test image can not be read." << endl;
-        return -1;
+        exit(-1);
     }
-    warpPerspectiveRand( testImg1, testImg2, H12, theRNG() );
-
+    warpPerspectiveRand( img1, img2, H12, theRNG() );
 
     // Exstract keypoints from test images
     SurfFeatureDetector detector;
-    vector<KeyPoint> testKeypoints1; detector.detect( testImg1, testKeypoints1 );
-    vector<KeyPoint> testKeypoints2; detector.detect( testImg2, testKeypoints2 );
-    vector<Point2f> testPoints1; KeyPoint::convert( testKeypoints1, testPoints1 );
-    vector<Point2f> testPoints2; KeyPoint::convert( testKeypoints2, testPoints2 );
+    vector<KeyPoint> keypoints1; detector.detect( img1, keypoints1 );
+    vector<KeyPoint> keypoints2; detector.detect( img2, keypoints2 );
 
-    // Calculate Calonder descriptors
-    int signatureSize = classifier.getSignatureSize();
-    vector<float> r1(testPoints1.size()*signatureSize), r2(testPoints2.size()*signatureSize);
-    vector<float>::iterator rit = r1.begin();
-    for( size_t i = 0; i < testPoints1.size(); i++ )
-    {
-        vector<float> s;
-        classifier( testImg1, testPoints1[i], s );
-        copy( s.begin(), s.end(), rit );
-        rit += s.size();
-    }
-    rit = r2.begin();
-    for( size_t i = 0; i < testPoints2.size(); i++ )
-    {
-        vector<float> s;
-        classifier( testImg2, testPoints2[i], s );
-        copy( s.begin(), s.end(), rit );
-        rit += s.size();
-    }
-
-    Mat descriptors1(testPoints1.size(), classifier.getSignatureSize(), CV_32FC1, &r1[0] ),
-        descriptors2(testPoints2.size(), classifier.getSignatureSize(), CV_32FC1, &r2[0] );
+    // Compute descriptors
+    CalonderDescriptorExtractor<float> de( classifierFilename );
+    Mat descriptors1;  de.compute( img1, keypoints1, descriptors1 );
+    Mat descriptors2;  de.compute( img2, keypoints2, descriptors2 );
 
     // Match descriptors
     BruteForceMatcher<L1<float> > matcher;
@@ -136,23 +113,43 @@ int main( int argc, char **argv )
     vector<int> matches;
     matcher.match( descriptors1, matches );
 
-    // Draw results
     // Prepare inlier mask
     vector<char> matchesMask( matches.size(), 0 );
-    Mat points1t; perspectiveTransform(Mat(testPoints1), points1t, H12);
+    vector<Point2f> points1; KeyPoint::convert( keypoints1, points1 );
+    vector<Point2f> points2; KeyPoint::convert( keypoints2, points2 );
+    Mat points1t; perspectiveTransform(Mat(points1), points1t, H12);
     vector<int>::const_iterator mit = matches.begin();
     for( size_t mi = 0; mi < matches.size(); mi++ )
     {
-        if( norm(testPoints2[matches[mi]] - points1t.at<Point2f>(mi,0)) < 4 ) // inlier
+        if( norm(points2[matches[mi]] - points1t.at<Point2f>(mi,0)) < 4 ) // inlier
             matchesMask[mi] = 1;
     }
+
     // Draw
     Mat drawImg;
-    drawMatches( testImg1, testKeypoints1, testImg2, testKeypoints2, matches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask  );
+    drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask );
     string winName = "Matches";
     namedWindow( winName, WINDOW_AUTOSIZE );
     imshow( winName, drawImg );
     waitKey();
-#endif
+}
+
+
+int main( int argc, char **argv )
+{
+    if( argc != 4 && argc != 3 )
+    {
+        cout << "Format:" << endl <<
+                "   classifier_file(to write) test_image file_with_train_images_filenames(txt)" <<
+                "   or" << endl <<
+                "   classifier_file(to read) test_image" << endl;
+        return -1;
+    }
+
+    if( argc == 4 )
+        trainCalonderClassifier( argv[1], argv[3] );
+
+    testCalonderClassifier( argv[1], argv[2] );
+
     return 0;
 }
