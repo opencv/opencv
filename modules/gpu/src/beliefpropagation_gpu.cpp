@@ -63,6 +63,7 @@ static const float DEFAULT_DATA_COST   = 10.0f;
 static const float DEFAULT_LAMBDA_COST = 0.07f;
 
 typedef DevMem2D_<float> DevMem2Df;
+typedef DevMem2D_<int> DevMem2Di;
 
 namespace cv { namespace gpu { namespace impl {
     extern "C" void load_constants(int ndisp, float disc_cost, float data_cost, float lambda);
@@ -70,31 +71,27 @@ namespace cv { namespace gpu { namespace impl {
     extern "C" void data_down_kernel_caller(int dst_cols, int dst_rows, int src_rows, const DevMem2Df& src, DevMem2Df dst, const cudaStream_t& stream);
     extern "C" void level_up(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Df* mu, DevMem2Df* md, DevMem2Df* ml, DevMem2Df* mr, const cudaStream_t& stream);
     extern "C" void call_all_iterations(int cols, int rows, int iters, DevMem2Df& u, DevMem2Df& d, DevMem2Df& l, DevMem2Df& r, const DevMem2Df& data, const cudaStream_t& stream);
-    extern "C" void output_caller(const DevMem2Df& u, const DevMem2Df& d, const DevMem2Df& l, const DevMem2Df& r, const DevMem2Df& data, DevMem2D disp, const cudaStream_t& stream);
+    extern "C" void output_caller(const DevMem2Df& u, const DevMem2Df& d, const DevMem2Df& l, const DevMem2Df& r, const DevMem2Df& data, DevMem2Di disp, const cudaStream_t& stream);
 }}}
 
 cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_)
  : ndisp(ndisp_), iters(iters_), levels(levels_), disc_cost(DEFAULT_DISC_COST), data_cost(DEFAULT_DATA_COST), lambda(DEFAULT_LAMBDA_COST), datas(levels_) 
 {
-    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
-
-    CV_Assert(0 < ndisp && ndisp <= max_supported_ndisp);
+    CV_Assert(0 < ndisp);
     CV_Assert(ndisp % 8 == 0);
 }
 
 cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_, float disc_cost_, float data_cost_, float lambda_)
     : ndisp(ndisp_), iters(iters_), levels(levels_), disc_cost(disc_cost_), data_cost(data_cost_), lambda(lambda_), datas(levels_) 
 {
-    const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
-
-    CV_Assert(0 < ndisp && ndisp <= max_supported_ndisp);
+    CV_Assert(0 < ndisp);
     CV_Assert(ndisp % 8 == 0);
 }
 
 static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_cost, float data_cost, float lambda, 
                                    GpuMat& u, GpuMat& d, GpuMat& l, GpuMat& r, 
-                                   GpuMat& u2, GpuMat& d2, GpuMat& l2, GpuMat& r2, 
-                                   vector<GpuMat>& datas, 
+                                   GpuMat& u2, GpuMat& d2, GpuMat& l2, GpuMat& r2,
+                                   vector<GpuMat>& datas, GpuMat& out,
                                    const GpuMat& left, const GpuMat& right, GpuMat& disp, 
                                    const cudaStream_t& stream)
 {
@@ -110,8 +107,6 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
     int lowest_rows = rows / divisor;
     const int min_image_dim_size = 20;
     CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);    
-
-    disp.create(rows, cols, CV_8U);
 
     u.create(rows * ndisp, cols, CV_32F);  
     d.create(rows * ndisp, cols, CV_32F);  
@@ -146,10 +141,16 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
     }       
 
     impl::load_constants(ndisp, disc_cost, data_cost, lambda);
-     
-    vector<int> cols_all(levels);
-    vector<int> rows_all(levels);
-    vector<int> iters_all(levels);
+
+    datas.resize(levels);
+    
+    AutoBuffer<int> cols_all_buf(levels);
+    AutoBuffer<int> rows_all_buf(levels);
+    AutoBuffer<int> iters_all_buf(levels);
+
+    int *cols_all = cols_all_buf;
+    int *rows_all = rows_all_buf;
+    int *iters_all = iters_all_buf;
 
     cols_all[0] = cols;
     rows_all[0] = rows;
@@ -190,18 +191,34 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
 
         mem_idx = (mem_idx + 1) & 1;
     }
+    
+    if (disp.empty())
+        disp.create(rows, cols, CV_32S);
 
-    impl::output_caller(u, d, l, r, datas.front(), disp, stream);
+    if (disp.type() == CV_32S)
+    {
+        disp = zero;
+        impl::output_caller(u, d, l, r, datas.front(), disp, stream);
+    }
+    else
+    {    
+        out.create(rows, cols, CV_32S);
+        out = zero;
+
+        impl::output_caller(u, d, l, r, datas.front(), out, stream);
+        
+        out.convertTo(disp, disp.type());
+    }
 }
 
 void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
 {    
-    ::stereo_bp_gpu_operator(ndisp, iters, levels, disc_cost, data_cost, lambda, u, d, l, r, u2, d2, l2, r2, datas, left, right, disp, 0);
+    ::stereo_bp_gpu_operator(ndisp, iters, levels, disc_cost, data_cost, lambda, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, 0);
 }
 
 void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const CudaStream& stream)
 {
-    ::stereo_bp_gpu_operator(ndisp, iters, levels, disc_cost, data_cost, lambda, u, d, l, r, u2, d2, l2, r2, datas, left, right, disp, StreamAccessor::getStream(stream));
+    ::stereo_bp_gpu_operator(ndisp, iters, levels, disc_cost, data_cost, lambda, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, StreamAccessor::getStream(stream));
 }
 
 bool cv::gpu::StereoBeliefPropagation_GPU::checkIfGpuCallReasonable()

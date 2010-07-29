@@ -387,8 +387,8 @@ namespace cv
             //! number of levels, truncation of discontinuity cost, truncation of data cost and weighting of data cost.
             StereoBeliefPropagation_GPU(int ndisp, int iters, int levels, float disc_cost, float data_cost, float lambda);
 
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-            //! Output disparity has CV_8U type.
+            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
+            //! if disparity is empty output type will be CV_32S else output type will be disparity.type().
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
             
             //! Acync version
@@ -409,8 +409,8 @@ namespace cv
             float lambda;
         private:
             GpuMat u, d, l, r, u2, d2, l2, r2;
-
-            std::vector<GpuMat> datas;
+            std::vector<GpuMat> datas;            
+            GpuMat out;
         };        
     }
 }

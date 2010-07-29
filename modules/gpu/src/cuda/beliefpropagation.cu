@@ -353,42 +353,41 @@ namespace cv { namespace gpu { namespace impl {
 
 namespace beliefpropagation_gpu
 {  
-    __global__ void output(int cols, int rows, float *u, float *d, float *l, float *r, float* data, size_t step, unsigned char *disp, size_t res_step) 
+    __global__ void output(int cols, int rows, float *u, float *d, float *l, float *r, float* data, size_t step, int *disp, size_t res_step) 
     {   
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        if (y > 0 && y < rows - 1)
-            if (x > 0 && x < cols - 1)
+        if (y > 0 && y < rows - 1 && x > 0 && x < cols - 1)
+        {
+            float *us = u + (y + 1) * step + x;
+            float *ds = d + (y - 1) * step + x;
+            float *ls = l + y * step + (x + 1);
+            float *rs = r + y * step + (x - 1);
+            float *dt = data + y * step + x;
+
+            size_t disp_step = rows * step;
+
+            int best = 0;
+            float best_val = FLT_MAX;
+            for (int d = 0; d < cndisp; ++d) 
             {
-                float *us = u + (y + 1) * step + x;
-                float *ds = d + (y - 1) * step + x;
-                float *ls = l + y * step + (x + 1);
-                float *rs = r + y * step + (x - 1);
-                float *dt = data + y * step + x;
+                float val = us[d * disp_step] + ds[d * disp_step] + ls[d * disp_step] + rs[d * disp_step] + dt[d * disp_step];
 
-                size_t disp_step = rows * step;
-
-                int best = 0;
-                float best_val = FLT_MAX;
-                for (int d = 0; d < cndisp; ++d) 
+                if (val < best_val) 
                 {
-                    float val = us[d * disp_step] + ds[d * disp_step] + ls[d * disp_step] + rs[d * disp_step] + dt[d * disp_step];
-
-                    if (val < best_val) 
-                    {
-                        best_val = val;
-                        best = d;
-                    }
+                    best_val = val;
+                    best = d;
                 }
-
-                disp[res_step * y + x] = best & 0xFF;                           
             }
+
+            disp[res_step * y + x] = best;                           
+        }
     }
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void output_caller(const DevMem2D_<float>& u, const DevMem2D_<float>& d, const DevMem2D_<float>& l, const DevMem2D_<float>& r, const DevMem2D_<float>& data, DevMem2D disp, const cudaStream_t& stream)
+    extern "C" void output_caller(const DevMem2D_<float>& u, const DevMem2D_<float>& d, const DevMem2D_<float>& l, const DevMem2D_<float>& r, const DevMem2D_<float>& data, DevMem2D_<int> disp, const cudaStream_t& stream)
     {    
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -398,12 +397,12 @@ namespace cv { namespace gpu { namespace impl {
 
         if (stream == 0)
         {
-            beliefpropagation_gpu::output<<<grid, threads>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step);
+            beliefpropagation_gpu::output<<<grid, threads>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step/sizeof(int));
             cudaSafeCall( cudaThreadSynchronize() );
         }
         else
         {            
-            beliefpropagation_gpu::output<<<grid, threads, 0, stream>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step);
+            beliefpropagation_gpu::output<<<grid, threads, 0, stream>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step/sizeof(int));
         }
     }
 }}}
