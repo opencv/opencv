@@ -108,7 +108,7 @@ namespace cv { namespace gpu { namespace impl {
         cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::clambda, &lambda, sizeof(lambda)) );        
     }
 
-    extern "C" void comp_data_caller(const DevMem2D& l, const DevMem2D& r, DevMem2D_<float> mdata)
+    extern "C" void comp_data_caller(const DevMem2D& l, const DevMem2D& r, DevMem2D_<float> mdata, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -116,8 +116,15 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(l.cols, threads.x);
         grid.y = divUp(l.rows, threads.y);
 
-        beliefpropagation_gpu::comp_data_kernel<<<grid, threads>>>(l.ptr, r.ptr, l.step, mdata.ptr, mdata.step/sizeof(float), l.cols, l.rows);
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+        {
+            beliefpropagation_gpu::comp_data_kernel<<<grid, threads>>>(l.ptr, r.ptr, l.step, mdata.ptr, mdata.step/sizeof(float), l.cols, l.rows);
+            //cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {
+            beliefpropagation_gpu::comp_data_kernel<<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, mdata.ptr, mdata.step/sizeof(float), l.cols, l.rows);
+        }
     }
 }}}
 
@@ -151,7 +158,7 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void data_down_kernel_caller(int dst_cols, int dst_rows, int src_rows, const DevMem2D_<float>& src, DevMem2D_<float> dst)
+    extern "C" void data_down_kernel_caller(int dst_cols, int dst_rows, int src_rows, const DevMem2D_<float>& src, DevMem2D_<float> dst, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -159,8 +166,15 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(dst_cols, threads.x);
         grid.y = divUp(dst_rows, threads.y);
 
-        beliefpropagation_gpu::data_down_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, src.ptr, src.step/sizeof(float), dst.ptr, dst.step/sizeof(float));
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+        {
+            beliefpropagation_gpu::data_down_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, src.ptr, src.step/sizeof(float), dst.ptr, dst.step/sizeof(float));
+            //cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {
+            beliefpropagation_gpu::data_down_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, src.ptr, src.step/sizeof(float), dst.ptr, dst.step/sizeof(float));
+        }
     }
 }}}
 
@@ -191,7 +205,7 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void level_up(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D_<float>* mu, DevMem2D_<float>* md, DevMem2D_<float>* ml, DevMem2D_<float>* mr)
+    extern "C" void level_up(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D_<float>* mu, DevMem2D_<float>* md, DevMem2D_<float>* ml, DevMem2D_<float>* mr, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -201,12 +215,21 @@ namespace cv { namespace gpu { namespace impl {
 
         int src_idx = (dst_idx + 1) & 1;
 
-        beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, mu[src_idx].ptr, mu[src_idx].step/sizeof(float), mu[dst_idx].ptr, mu[dst_idx].step/sizeof(float));
-        beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, md[src_idx].ptr, md[src_idx].step/sizeof(float), md[dst_idx].ptr, md[dst_idx].step/sizeof(float));
-        beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, ml[src_idx].ptr, ml[src_idx].step/sizeof(float), ml[dst_idx].ptr, ml[dst_idx].step/sizeof(float));
-        beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, mr[src_idx].ptr, mr[src_idx].step/sizeof(float), mr[dst_idx].ptr, mr[dst_idx].step/sizeof(float));
-
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+        {
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, mu[src_idx].ptr, mu[src_idx].step/sizeof(float), mu[dst_idx].ptr, mu[dst_idx].step/sizeof(float));
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, md[src_idx].ptr, md[src_idx].step/sizeof(float), md[dst_idx].ptr, md[dst_idx].step/sizeof(float));
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, ml[src_idx].ptr, ml[src_idx].step/sizeof(float), ml[dst_idx].ptr, ml[dst_idx].step/sizeof(float));
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, mr[src_idx].ptr, mr[src_idx].step/sizeof(float), mr[dst_idx].ptr, mr[dst_idx].step/sizeof(float));
+            //cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, mu[src_idx].ptr, mu[src_idx].step/sizeof(float), mu[dst_idx].ptr, mu[dst_idx].step/sizeof(float));
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, md[src_idx].ptr, md[src_idx].step/sizeof(float), md[dst_idx].ptr, md[dst_idx].step/sizeof(float));
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, ml[src_idx].ptr, ml[src_idx].step/sizeof(float), ml[dst_idx].ptr, ml[dst_idx].step/sizeof(float));
+            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, mr[src_idx].ptr, mr[src_idx].step/sizeof(float), mr[dst_idx].ptr, mr[dst_idx].step/sizeof(float));
+        }
     }
 }}}
 
@@ -301,7 +324,7 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void call_all_iterations(int cols, int rows, int iters, DevMem2D_<float>& u, DevMem2D_<float>& d, DevMem2D_<float>& l, DevMem2D_<float>& r, const DevMem2D_<float>& data)
+    extern "C" void call_all_iterations(int cols, int rows, int iters, DevMem2D_<float>& u, DevMem2D_<float>& d, DevMem2D_<float>& l, DevMem2D_<float>& r, const DevMem2D_<float>& data, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -309,10 +332,17 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(cols, threads.x << 1);
         grid.y = divUp(rows, threads.y);
 
-        for(int t = 0; t < iters; ++t)
-            beliefpropagation_gpu::one_iteration<<<grid, threads>>>(t, u.ptr, d.ptr, l.ptr, r.ptr, u.step/sizeof(float), data.ptr, data.step/sizeof(float), cols, rows);        
-
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+        {
+            for(int t = 0; t < iters; ++t)
+                beliefpropagation_gpu::one_iteration<<<grid, threads>>>(t, u.ptr, d.ptr, l.ptr, r.ptr, u.step/sizeof(float), data.ptr, data.step/sizeof(float), cols, rows);
+            //cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {
+            for(int t = 0; t < iters; ++t)
+                beliefpropagation_gpu::one_iteration<<<grid, threads, 0, stream>>>(t, u.ptr, d.ptr, l.ptr, r.ptr, u.step/sizeof(float), data.ptr, data.step/sizeof(float), cols, rows);
+        }
     }
 }}}
 
@@ -358,7 +388,7 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void output_caller(const DevMem2D_<float>& u, const DevMem2D_<float>& d, const DevMem2D_<float>& l, const DevMem2D_<float>& r, const DevMem2D_<float>& data, DevMem2D disp)
+    extern "C" void output_caller(const DevMem2D_<float>& u, const DevMem2D_<float>& d, const DevMem2D_<float>& l, const DevMem2D_<float>& r, const DevMem2D_<float>& data, DevMem2D disp, const cudaStream_t& stream)
     {    
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -366,7 +396,14 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(disp.cols, threads.x);
         grid.y = divUp(disp.rows, threads.y);
 
-        beliefpropagation_gpu::output<<<grid, threads>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step);
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+        {
+            beliefpropagation_gpu::output<<<grid, threads>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step);
+            cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {            
+            beliefpropagation_gpu::output<<<grid, threads, 0, stream>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step);
+        }
     }
 }}}

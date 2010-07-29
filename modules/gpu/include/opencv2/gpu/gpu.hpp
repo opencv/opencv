@@ -379,18 +379,25 @@ namespace cv
             enum { DEFAULT_ITERS  = 5  };
             enum { DEFAULT_LEVELS = 5  };
 
-            static const float DEFAULT_DISC_COST;
-            static const float DEFAULT_DATA_COST;
-            static const float DEFAULT_LAMBDA_COST;
+            //! the default constructor
+            explicit StereoBeliefPropagation_GPU(int ndisp  = DEFAULT_NDISP, 
+                                                 int iters  = DEFAULT_ITERS, 
+                                                 int levels = DEFAULT_LEVELS);
+            //! the full constructor taking the number of disparities, number of BP iterations on first level,
+            //! number of levels, truncation of discontinuity cost, truncation of data cost and weighting of data cost.
+            StereoBeliefPropagation_GPU(int ndisp, int iters, int levels, float disc_cost, float data_cost, float lambda);
 
-            explicit StereoBeliefPropagation_GPU(int   ndisp     = DEFAULT_NDISP, 
-                                                 int   iters     = DEFAULT_ITERS, 
-                                                 int   levels    = DEFAULT_LEVELS, 
-                                                 float disc_cost = DEFAULT_DISC_COST, 
-                                                 float data_cost = DEFAULT_DATA_COST, 
-                                                 float lambda    = DEFAULT_LAMBDA_COST);
-
+            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
+            //! Output disparity has CV_8U type.
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
+            
+            //! Acync version
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream);
+
+            //! Some heuristics that tries to estmate
+            //! if current GPU will be faster then CPU in this algorithm.
+            //! It queries current active device.
+            static bool checkIfGpuCallReasonable();
             
             int ndisp;
 
