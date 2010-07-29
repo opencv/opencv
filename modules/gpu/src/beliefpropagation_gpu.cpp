@@ -75,24 +75,24 @@ namespace cv { namespace gpu { namespace impl {
 }}}
 
 cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_)
- : ndisp(ndisp_), iters(iters_), levels(levels_), disc_cost(DEFAULT_DISC_COST), data_cost(DEFAULT_DATA_COST), lambda(DEFAULT_LAMBDA_COST), datas(levels_) 
+ : ndisp(ndisp_), iters(iters_), levels(levels_), disc_cost(DEFAULT_DISC_COST), data_cost(DEFAULT_DATA_COST), lambda(DEFAULT_LAMBDA_COST), datas(levels_)
 {
     CV_Assert(0 < ndisp);
     CV_Assert(ndisp % 8 == 0);
 }
 
 cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_, float disc_cost_, float data_cost_, float lambda_)
-    : ndisp(ndisp_), iters(iters_), levels(levels_), disc_cost(disc_cost_), data_cost(data_cost_), lambda(lambda_), datas(levels_) 
+    : ndisp(ndisp_), iters(iters_), levels(levels_), disc_cost(disc_cost_), data_cost(data_cost_), lambda(lambda_), datas(levels_)
 {
     CV_Assert(0 < ndisp);
     CV_Assert(ndisp % 8 == 0);
 }
 
-static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_cost, float data_cost, float lambda, 
-                                   GpuMat& u, GpuMat& d, GpuMat& l, GpuMat& r, 
+static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_cost, float data_cost, float lambda,
+                                   GpuMat& u, GpuMat& d, GpuMat& l, GpuMat& r,
                                    GpuMat& u2, GpuMat& d2, GpuMat& l2, GpuMat& r2,
                                    vector<GpuMat>& datas, GpuMat& out,
-                                   const GpuMat& left, const GpuMat& right, GpuMat& disp, 
+                                   const GpuMat& left, const GpuMat& right, GpuMat& disp,
                                    const cudaStream_t& stream)
 {
     CV_DbgAssert(left.cols == right.cols && left.rows == right.rows && left.type() == right.type() && left.type() == CV_8U);
@@ -105,12 +105,12 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
     int divisor = (int)pow(2.f, levels - 1.0f);
     int lowest_cols = cols / divisor;
     int lowest_rows = rows / divisor;
-    const int min_image_dim_size = 20;
-    CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);    
+    const int min_image_dim_size = 2;
+    CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
 
-    u.create(rows * ndisp, cols, CV_32F);  
-    d.create(rows * ndisp, cols, CV_32F);  
-    l.create(rows * ndisp, cols, CV_32F);  
+    u.create(rows * ndisp, cols, CV_32F);
+    d.create(rows * ndisp, cols, CV_32F);
+    l.create(rows * ndisp, cols, CV_32F);
     r.create(rows * ndisp, cols, CV_32F);
 
     if (levels & 1)
@@ -136,14 +136,14 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
             u2 = zero;
             d2 = zero;
             l2 = zero;
-            r2 = zero;    
+            r2 = zero;
         }
-    }       
+    }
 
     impl::load_constants(ndisp, disc_cost, data_cost, lambda);
 
     datas.resize(levels);
-    
+
     AutoBuffer<int> cols_all_buf(levels);
     AutoBuffer<int> rows_all_buf(levels);
     AutoBuffer<int> iters_all_buf(levels);
@@ -161,7 +161,7 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
 
     impl::comp_data_caller(left, right, datas.front(), stream);
 
-    for (int i = 1; i < levels; i++) 
+    for (int i = 1; i < levels; i++)
     {
         cols_all[i] = (cols_all[i-1] + 1)/2;
         rows_all[i] = (rows_all[i-1] + 1)/2;
@@ -170,28 +170,28 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
         // we reduce iters num for each next level
         iters_all[i] = max(2 * iters_all[i-1] / 3, 1);
 
-        datas[i].create(rows_all[i] * ndisp, cols_all[i], CV_32F);               
+        datas[i].create(rows_all[i] * ndisp, cols_all[i], CV_32F);
 
         impl::data_down_kernel_caller(cols_all[i], rows_all[i], rows_all[i-1], datas[i-1], datas[i], stream);
     }
-    
-    DevMem2D_<float> mus[] = {u, u2}; 
+
+    DevMem2D_<float> mus[] = {u, u2};
     DevMem2D_<float> mds[] = {d, d2};
-    DevMem2D_<float> mrs[] = {r, r2}; 
+    DevMem2D_<float> mrs[] = {r, r2};
     DevMem2D_<float> mls[] = {l, l2};
 
     int mem_idx = (levels & 1) ? 0 : 1;
 
     for (int i = levels - 1; i >= 0; i--) // for lower level we have already computed messages by setting to zero
-    {                        
-        if (i != levels - 1) 
+    {
+        if (i != levels - 1)
             impl::level_up(mem_idx, cols_all[i], rows_all[i], rows_all[i+1], mus, mds, mls, mrs, stream);
 
         impl::call_all_iterations(cols_all[i], rows_all[i], iters_all[i], mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], stream);
 
         mem_idx = (mem_idx + 1) & 1;
     }
-    
+
     if (disp.empty())
         disp.create(rows, cols, CV_32S);
 
@@ -201,18 +201,18 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels, float disc_
         impl::output_caller(u, d, l, r, datas.front(), disp, stream);
     }
     else
-    {    
+    {
         out.create(rows, cols, CV_32S);
         out = zero;
 
         impl::output_caller(u, d, l, r, datas.front(), out, stream);
-        
+
         out.convertTo(disp, disp.type());
     }
 }
 
 void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
-{    
+{
     ::stereo_bp_gpu_operator(ndisp, iters, levels, disc_cost, data_cost, lambda, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, 0);
 }
 
