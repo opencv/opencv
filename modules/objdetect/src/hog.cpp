@@ -200,10 +200,10 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 
     for( x = -1; x < gradsize.width + 1; x++ )
         xmap[x] = borderInterpolate(x - paddingTL.width + roiofs.x,
-                        wholeSize.width, borderType);
+                        wholeSize.width, borderType) - roiofs.x;
     for( y = -1; y < gradsize.height + 1; y++ )
         ymap[y] = borderInterpolate(y - paddingTL.height + roiofs.y,
-                        wholeSize.height, borderType);
+                        wholeSize.height, borderType) - roiofs.y;
 
     // x- & y- derivatives for the whole row
     int width = gradsize.width;
