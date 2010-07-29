@@ -164,7 +164,7 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
     else
         impl::set_to_with_mask( *this, depth(), s.val, mask, channels());
 
-    return *this;
+    return *this;   
 }
 
 

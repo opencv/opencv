@@ -413,6 +413,12 @@ namespace cv
             GpuMat out;
         };        
     }
+
+    //! Speckle filtering - filters small connected components on diparity image.
+    //! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize. 
+    //! Threshold for border between CC is diffThreshold;
+    void filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar diffThreshold, Mat& buf);
+
 }
 #include "opencv2/gpu/matrix_operations.hpp"
 
