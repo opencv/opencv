@@ -519,13 +519,15 @@ if (WITH_QT)
 		add_definitions(-DHAVE_QT)#We need to define te macro this way, using cvconfig.h.cmake does not work
 
         find_package (OpenGL QUIET)
-		#if (NOT WIN32)	#WIN32 always detect OpenGL, so I disabled it.
-		if (OPENGL_INCLUDE_DIR)
+
+
+		if (NOT WIN32)#on my Windows, OPENGL_FOUND was true but this path was empty
 			if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-			set(HAVE_QT_OPENGL 1)
-			add_definitions(-DHAVE_QT_OPENGL)
-        	endif()
+				set(HAVE_QT_OPENGL 1)
+				add_definitions(-DHAVE_QT_OPENGL)
+		 	endif()
         endif()
+        
     endif()
 endif()
         

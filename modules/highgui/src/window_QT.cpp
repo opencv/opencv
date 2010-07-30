@@ -394,6 +394,9 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
 	QString nameQt(name_trackbar);
 	CvBar* result = NULL;
 
+	if (!name_window && global_control_panel)//window name is null and we have a control panel
+		layout = global_control_panel->myLayout;
+
 	if (!layout)
 	{
 		QPointer<CvWindow> w = icvFindWindowByName( name_window );
@@ -1343,6 +1346,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 	param_flags = arg2 & 0x0000000F;
 	param_gui_mode = arg2 & 0x000000F0;
+	param_ratio_mode =  arg2 & 0x00000F00;
 
 	setAttribute(Qt::WA_DeleteOnClose);//in other case, does not release memory
 	setContentsMargins(0,0,0,0);
@@ -1360,7 +1364,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 #if defined( HAVE_QT_OPENGL )
 	mode_display = CV_MODE_OPENGL;
 #endif
-	createView(mode_display);
+	createView(mode_display, param_ratio_mode);
 
 	//3: shortcuts and actions
 	createActions();
@@ -1611,10 +1615,10 @@ void CvWindow::createShortcuts()
 	QObject::connect( vect_QShortcuts[9], SIGNAL( activated ()),this, SLOT( displayPropertiesWin() ));
 }
 
-void CvWindow::createView(int mode)
+void CvWindow::createView(int mode, int ratio)
 {
 	//mode = CV_MODE_NORMAL or CV_MODE_OPENGL
-	myview = new ViewPort(this, mode,CV_WINDOW_KEEPRATIO);//parent, mode_display, keep_aspect_ratio
+	myview = new ViewPort(this, mode,ratio);//parent, mode_display, keep_aspect_ratio
 	myview->setAlignment(Qt::AlignHCenter);
 }
 
@@ -1806,7 +1810,7 @@ void CvWindow::icvSaveTrackbars(QSettings *settings)
 ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 {
 	centralWidget = arg,
-		      setParent(centralWidget);
+	setParent(centralWidget);
 	mode_display = arg2;
 	param_keepRatio = arg3;
 

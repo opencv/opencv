@@ -291,6 +291,7 @@ public:
     CvWinProperties* parameters_window ;
     int param_flags;
     int param_gui_mode;
+	int param_ratio_mode;
     QVector<QAction*> vect_QActions;
 
 
@@ -307,7 +308,7 @@ private:
     void createShortcuts();
     void createActions();
     void createToolBar();
-    void createView(int mode);
+    void createView(int display_mode, int ratio_mode);
     void createStatusBar();
     void createGlobalLayout();
     void createBarLayout();
