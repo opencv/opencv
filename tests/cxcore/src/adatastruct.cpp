@@ -2333,6 +2333,6 @@ void CxCore_GraphScanTest::run( int )
     cvReleaseMat( &edge_mask );
 }
 
-CxCore_GraphScanTest graphscan_test;
+//CxCore_GraphScanTest graphscan_test;
 
 /* End of file. */
