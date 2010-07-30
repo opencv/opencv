@@ -111,48 +111,41 @@ void KeyPoint::convert( const std::vector<Point2f>& points2f, std::vector<KeyPoi
 
 float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
 {
-    const int seedsPerDim = 50;
+    float a = kp1.size * 0.5f;
+    float b = kp2.size * 0.5f;
+    float a_2 = a * a;
+    float b_2 = b * b;
 
-	float radius1 = kp1.size/2;
-	float radius2 = kp2.size/2;
-    float radius1_2 = radius1*radius1,
-          radius2_2 = radius2*radius2;
-
-    Point2f p1 = kp1.pt, p2 = kp2.pt;
-    float dist = norm(p1-p2);
+    Point2f p1 = kp1.pt;
+    Point2f p2 = kp2.pt;
+    float c = norm( p1 - p2 );
 
     float ovrl = 0.f;
-    if( dist < radius1+radius2 ) // circles are intersected
+
+    // one circle is completely encovered by the other => no intersection points!
+    if( min( a, b ) + c <= max( a, b ) )
+        return min( a_2, b_2 ) / max( a_2, b_2 );
+
+    if( c < a + b ) // circles intersect
     {
-        float minx = min( p1.x - radius1, p2.x - radius2 );
-        float maxx = max( p1.x + radius1, p2.x + radius2 );
-        float miny = min( p1.y - radius1, p2.y - radius2 );
-        float maxy = max( p1.y + radius1, p2.y + radius2 );
+        float c_2 = c * c;
+        float cosAlpha = ( b_2 + c_2 - a_2 ) / ( kp2.size * c );
+        float cosBeta  = ( a_2 + c_2 - b_2 ) / ( kp1.size * c );
+        float alpha = acos( cosAlpha );
+        float beta = acos( cosBeta );
+        float sinAlpha = sin(alpha);
+        float sinBeta  = sin(beta);
 
-        float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny);
-        float step = mina/seedsPerDim;
-        float bua = 0, bna = 0;
+        float segmentAreaA = a_2 * beta;
+        float segmentAreaB = b_2 * alpha;
 
-        //compute the areas
-        for( float x = minx; x <= maxx; x+=step )
-        {
-            for( float y = miny; y <= maxy; y+=step )
-            {
-                float rx1 = x-p1.x;
-                float ry1 = y-p1.y;
-                float rx2 = x-p2.x;
-                float ry2 = y-p2.y;
+        float triangleAreaA = a_2 * sinBeta * cosBeta;
+        float triangleAreaB = b_2 * sinAlpha * cosAlpha;
 
-                //substitution in the equation of a circle
-                float c1 = rx1*rx1+ry1*ry1;
-                float c2 = rx2*rx2+ry2*ry2;
+        float intersectionArea = segmentAreaA + segmentAreaB - triangleAreaA - triangleAreaB;
+        float unionArea = (a_2 + b_2) * M_PI - intersectionArea;
 
-                if( c1<radius1_2 && c2<radius2_2 ) bna++;
-                if( c1<radius1_2 || c2<radius2_2 ) bua++;
-            }
-        }
-        if( bna > 0)
-            ovrl = bna/bua;
+        ovrl = intersectionArea / unionArea;
     }
 
     return ovrl;
