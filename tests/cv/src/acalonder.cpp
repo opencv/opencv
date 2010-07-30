@@ -41,13 +41,13 @@
 //M*/
 
 #include "cvtest.h"
-#include <fstream>
-#include <iostream>
 
 using namespace cv;
 using namespace std;
 
-#define GET_RES 0
+#define WRITE_KEYPOINTS     0
+#define WRITE_DESCRIPTORS   0
+
 class CV_CalonderTest : public CvTest
 {
 public:
@@ -58,26 +58,29 @@ protected:
 
 void writeMatInBin( const Mat& mat, const string& filename )
 {
-    ofstream os( filename.c_str() );
+    FILE* f = fopen( filename.c_str(), "wb");
     int type = mat.type();
-    os.write( (char*)&mat.rows, sizeof(int) );
-    os.write( (char*)&mat.cols, sizeof(int) );
-    os.write( (char*)&type, sizeof(int) );
-    os.write( (char*)&mat.step, sizeof(int) );
-    os.write( (char*)mat.data, mat.step*mat.rows );
+    fwrite( (void*)&mat.rows, sizeof(int), 1, f );
+    fwrite( (void*)&mat.cols, sizeof(int), 1, f );
+    fwrite( (void*)&type, sizeof(int), 1, f );
+    fwrite( (void*)&mat.step, sizeof(int), 1, f );
+    fwrite( (void*)mat.data, 1, mat.step*mat.rows, f );
+    fclose(f);
 }
 
 Mat readMatFromBin( const string& filename )
 {
-    ifstream is( filename.c_str() );
+    FILE* f = fopen( filename.c_str(), "rb" );
     int rows, cols, type, step;
-    is.read( (char*)&rows, sizeof(int) );
-    is.read( (char*)&cols, sizeof(int) );
-    is.read( (char*)&type, sizeof(int) );
-    is.read( (char*)&step, sizeof(int) );
+    fread( (void*)&rows, sizeof(int), 1, f );
+    fread( (void*)&cols, sizeof(int), 1, f );
+    fread( (void*)&type, sizeof(int), 1, f );
+    fread( (void*)&step, sizeof(int), 1, f );
 
     uchar* data = (uchar*)cvAlloc(step*rows);
-    is.read( (char*)data, step*rows );
+    fread( (void*)data, 1, step*rows, f );
+    fclose(f);
+
     return Mat( rows, cols, type, data );
 }
 
@@ -93,7 +96,7 @@ void CV_CalonderTest::run(int)
     }
 
     vector<KeyPoint> keypoints;
-#if GET_RES
+#if WRITE_KEYPOINTS
     FastFeatureDetector fd;
     fd.detect(img, keypoints);
 
@@ -117,7 +120,7 @@ void CV_CalonderTest::run(int)
         ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         return;
     }
-#endif //GET_RES
+#endif //WRITE_KEYPOINTS
 
     CalonderDescriptorExtractor<float> fde(dir + "/classifier.rtc");
 
@@ -127,16 +130,16 @@ void CV_CalonderTest::run(int)
     t = getTickCount() - t;
     ts->printf(CvTS::LOG, "\nAverage time of computiting float descriptor = %g ms\n", t/((double)cvGetTickFrequency()*1000.)/fdescriptors.rows );
 
-#if GET_RES
+#if WRITE_DESCRIPTORS
     assert(fdescriptors.type() == CV_32FC1);
-    writeMatInBin( fdescriptors, "" );
+    writeMatInBin( fdescriptors, dir + "/ros_float_desc" );
 #else
     Mat ros_fdescriptors = readMatFromBin( dir + "/ros_float_desc" );
     double fnorm = norm(fdescriptors, ros_fdescriptors, NORM_INF );
     ts->printf(CvTS::LOG, "nofm (inf) BTW valid and calculated float descriptors = %f\n", fnorm );
     if( fnorm > FLT_EPSILON )
         ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-#endif // GET_RES
+#endif // WRITE_DESCRIPTORS
 
     CalonderDescriptorExtractor<uchar> cde(dir + "/classifier.rtc");
     Mat cdescriptors;
@@ -145,16 +148,16 @@ void CV_CalonderTest::run(int)
     t = getTickCount() - t;
     ts->printf(CvTS::LOG, "Average time of computiting uchar descriptor = %g ms\n", t/((double)cvGetTickFrequency()*1000.)/cdescriptors.rows );
 
-#if GET_RES
+#if WRITE_DESCRIPTORS
     assert(cdescriptors.type() == CV_8UC1);
-    writeMatInBin( fdescriptors, "" );
+    writeMatInBin( cdescriptors, dir + "/ros_uchar_desc" );
 #else
     Mat ros_cdescriptors = readMatFromBin( dir + "/ros_uchar_desc" );
     double cnorm = norm(cdescriptors, ros_cdescriptors, NORM_INF );
     ts->printf(CvTS::LOG, "nofm (inf) BTW valid and calculated uchar descriptors = %f\n", cnorm );
     if( cnorm > FLT_EPSILON + 1 ) // + 1 because of quantization float to uchar
         ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-#endif // GET_RES
+#endif // WRITE_DESCRIPTORS
 }
 
 #if CV_SSE2
