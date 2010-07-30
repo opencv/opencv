@@ -51,7 +51,7 @@ using namespace std;
 class CV_CalonderTest : public CvTest
 {
 public:
-    CV_CalonderTest() : CvTest("CalonderDescriptorExtractor", "CalonderDescriptorExtractor::compute") {}
+    CV_CalonderTest() : CvTest("calonder-descriptor-extractor", "CalonderDescriptorExtractor::compute") {}
 protected:
     void run(int);
 };
