@@ -340,4 +340,4 @@ void CV_RandTest::run( int )
     }
 }
 
-CV_RandTest rand_test;
+//CV_RandTest rand_test;
