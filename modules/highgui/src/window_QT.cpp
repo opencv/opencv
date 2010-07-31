@@ -60,7 +60,7 @@ static CvWinProperties* global_control_panel = NULL;
 
 
 
-CV_IMPL CvFont cvFont_Qt(const char* nameFont, int pointSize,CvScalar color,int weight,int style, int spacing)
+CV_IMPL CvFont cvFontQt(const char* nameFont, int pointSize,CvScalar color,int weight,int style, int spacing)
 {
 
 	/*
@@ -75,7 +75,7 @@ CV_IMPL CvFont cvFont_Qt(const char* nameFont, int pointSize,CvScalar color,int 
 	int         thickness;//<- weight in Qt
 	float       dx;//spacing letter in Qt (0 default) in pixel
 	int         line_type;//<- pointSize in Qt
-	 */
+	*/
 	CvFont f = {nameFont,color,style,NULL,NULL,NULL,0,0,0,weight,spacing,pointSize};
 	return f;
 }
@@ -89,12 +89,12 @@ CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* 
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"putText",
-			Qt::AutoConnection,
-			Q_ARG(void*, (void*) img),
-			Q_ARG(QString,QString(text)),
-			Q_ARG(QPoint, QPoint(org.x,org.y)),
-			Q_ARG(void*,(void*) font));
+		"putText",
+		Qt::AutoConnection,
+		Q_ARG(void*, (void*) img),
+		Q_ARG(QString,QString(text)),
+		Q_ARG(QPoint, QPoint(org.x,org.y)),
+		Q_ARG(void*,(void*) font));
 }
 
 double cvGetRatioWindow_QT(const char* name)
@@ -105,11 +105,11 @@ double cvGetRatioWindow_QT(const char* name)
 
 	double result = -1;
 	QMetaObject::invokeMethod(guiMainThread,
-			"getRatioWindow",
-			//Qt::DirectConnection,
-			Qt::AutoConnection,
-			Q_RETURN_ARG(double, result),
-			Q_ARG(QString, QString(name)));
+		"getRatioWindow",
+		//Qt::DirectConnection,
+		Qt::AutoConnection,
+		Q_RETURN_ARG(double, result),
+		Q_ARG(QString, QString(name)));
 	return result;
 }
 
@@ -120,10 +120,10 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"setRatioWindow",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(double, prop_value));
+		"setRatioWindow",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(double, prop_value));
 }
 
 double cvGetPropWindow_QT(const char* name)
@@ -134,11 +134,11 @@ double cvGetPropWindow_QT(const char* name)
 
 	double result = -1;
 	QMetaObject::invokeMethod(guiMainThread,
-			"getPropWindow",
-			//Qt::DirectConnection,
-			Qt::AutoConnection,
-			Q_RETURN_ARG(double, result),
-			Q_ARG(QString, QString(name)));
+		"getPropWindow",
+		//Qt::DirectConnection,
+		Qt::AutoConnection,
+		Q_RETURN_ARG(double, result),
+		Q_ARG(QString, QString(name)));
 	return result;
 }
 
@@ -149,10 +149,10 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"setPropWindow",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(double, prop_value));
+		"setPropWindow",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(double, prop_value));
 }
 
 void cvSetModeWindow_QT(const char* name, double prop_value)
@@ -162,10 +162,10 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"toggleFullScreen",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(double, prop_value));
+		"toggleFullScreen",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(double, prop_value));
 }
 
 double cvGetModeWindow_QT(const char* name)
@@ -176,10 +176,10 @@ double cvGetModeWindow_QT(const char* name)
 	double result = -1;
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"isFullScreen",
-			Qt::AutoConnection,
-			Q_RETURN_ARG(double, result),
-			Q_ARG(QString, QString(name)));
+		"isFullScreen",
+		Qt::AutoConnection,
+		Q_RETURN_ARG(double, result),
+		Q_ARG(QString, QString(name)));
 	return result;
 }
 
@@ -189,12 +189,12 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"displayInfo",
-			Qt::AutoConnection,
-			//Qt::DirectConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(QString, QString(text)),
-			Q_ARG(int, delayms));
+		"displayInfo",
+		Qt::AutoConnection,
+		//Qt::DirectConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(QString, QString(text)),
+		Q_ARG(int, delayms));
 
 }
 
@@ -204,9 +204,9 @@ CV_IMPL void cvSaveWindowParameters(const char* name)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"saveWindowParameters",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)));
+		"saveWindowParameters",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)));
 }
 
 CV_IMPL void cvLoadWindowParameters(const char* name)
@@ -215,9 +215,9 @@ CV_IMPL void cvLoadWindowParameters(const char* name)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"loadWindowParameters",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)));
+		"loadWindowParameters",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)));
 }
 
 CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
@@ -226,12 +226,12 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"displayStatusBar",
-			Qt::AutoConnection,
-			//Qt::DirectConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(QString, QString(text)),
-			Q_ARG(int, delayms));
+		"displayStatusBar",
+		Qt::AutoConnection,
+		//Qt::DirectConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(QString, QString(text)),
+		Q_ARG(int, delayms));
 }
 
 
@@ -300,11 +300,11 @@ CV_IMPL int cvWaitKey( int arg )
 			else
 			{
 				/*
-				 * //will not work, I broke the event loop !!!!
-				 dummy.lock();
-				 QWaitCondition waitCondition;
-				 waitCondition.wait(&dummy, 2);
-				 */
+				* //will not work, I broke the event loop !!!!
+				dummy.lock();
+				QWaitCondition waitCondition;
+				waitCondition.wait(&dummy, 2);
+				*/
 
 				//to decrease CPU usage
 				//sleep 1 millisecond
@@ -317,7 +317,7 @@ CV_IMPL int cvWaitKey( int arg )
 			}
 		}
 		guiMainThread->_bTimeOut = false;
-		
+
 	}
 
 	return result;
@@ -441,10 +441,10 @@ int icvInitSystem()
 		new QApplication(parameterSystemC,parameterSystemV);
 
 		wasInitialized = 1;
-		qDebug()<<"init done";
+		//qDebug()<<"init done";
 
 #if defined( HAVE_QT_OPENGL )//OK tested !
-			qDebug()<<"opengl support available";
+		//qDebug()<<"opengl support available";
 #endif
 	}
 
@@ -459,13 +459,13 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
 	if (multiThreads)
 		QMetaObject::invokeMethod(guiMainThread,
-				"createWindow",
-				//Qt::AutoConnection,
-				Qt::BlockingQueuedConnection,
-				//TypeConnection,
-				//Qt::AutoConnection,
-				Q_ARG(QString, QString(name)),
-				Q_ARG(int, flags));
+		"createWindow",
+		//Qt::AutoConnection,
+		Qt::BlockingQueuedConnection,
+		//TypeConnection,
+		//Qt::AutoConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(int, flags));
 	else
 		guiMainThread->createWindow(QString(name),flags);
 
@@ -478,11 +478,11 @@ CV_IMPL void cvDestroyWindow( const char* name )
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"destroyWindow",
-			//Qt::BlockingQueuedConnection,
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name))
-			);
+		"destroyWindow",
+		//Qt::BlockingQueuedConnection,
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name))
+		);
 }
 
 
@@ -493,10 +493,10 @@ CV_IMPL void cvDestroyAllWindows(void)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"destroyAllWindow",
-			//Qt::BlockingQueuedConnection,
-			Qt::AutoConnection
-			);
+		"destroyAllWindow",
+		//Qt::BlockingQueuedConnection,
+		Qt::AutoConnection
+		);
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* name )
@@ -523,13 +523,13 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"moveWindow",
-			//Qt::BlockingQueuedConnection,
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(int, x),
-			Q_ARG(int, y)
-			);
+		"moveWindow",
+		//Qt::BlockingQueuedConnection,
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(int, x),
+		Q_ARG(int, y)
+		);
 
 }
 
@@ -540,13 +540,13 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"resizeWindow",
-			//Qt::BlockingQueuedConnection,
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(int, width),
-			Q_ARG(int, height)
-			);
+		"resizeWindow",
+		//Qt::BlockingQueuedConnection,
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(int, width),
+		Q_ARG(int, height)
+		);
 
 }
 
@@ -567,14 +567,14 @@ CV_IMPL int cvCreateTrackbar( const char* name_bar, const char* window_name, int
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"addSlider",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(name_bar)),
-			Q_ARG(QString, QString(window_name)),
-			Q_ARG(void*, (void*)value),
-			Q_ARG(int, count),
-			Q_ARG(void*, (void*)on_change)
-			);
+		"addSlider",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(name_bar)),
+		Q_ARG(QString, QString(window_name)),
+		Q_ARG(void*, (void*)value),
+		Q_ARG(int, count),
+		Q_ARG(void*, (void*)on_change)
+		);
 
 	return 1;//dummy value
 }
@@ -588,16 +588,16 @@ CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, v
 
 	if (initial_button_state < 0 || initial_button_state > 1)
 		return 0;
-		
+
 	QMetaObject::invokeMethod(guiMainThread,
-			"addButton",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(button_name)),
-			Q_ARG(int,  button_type),
-			Q_ARG(int, initial_button_state),
-			Q_ARG(void*, (void*)on_change),
-			Q_ARG(void*, userdata)
-			);
+		"addButton",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(button_name)),
+		Q_ARG(int,  button_type),
+		Q_ARG(int, initial_button_state),
+		Q_ARG(void*, (void*)on_change),
+		Q_ARG(void*, userdata)
+		);
 
 	return 1;//dummy value
 }
@@ -608,15 +608,15 @@ CV_IMPL void cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback c
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"setOpenGLCallback",
-			Qt::AutoConnection,
-			Q_ARG(QString, QString(window_name)),
-			Q_ARG(void*, (void*)callbackOpenGL),
-			Q_ARG(void*, userdata),
-			Q_ARG(double, angle),
-			Q_ARG(double, zmin),
-			Q_ARG(double, zmax)
-			);
+		"setOpenGLCallback",
+		Qt::AutoConnection,
+		Q_ARG(QString, QString(window_name)),
+		Q_ARG(void*, (void*)callbackOpenGL),
+		Q_ARG(void*, userdata),
+		Q_ARG(double, angle),
+		Q_ARG(double, zmin),
+		Q_ARG(double, zmax)
+		);
 }
 
 CV_IMPL int cvGetTrackbarPos( const char* name_bar, const char* window_name )
@@ -660,12 +660,12 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 		guiMainThread = new GuiReceiver;
 
 	QMetaObject::invokeMethod(guiMainThread,
-			"showImage",
-			//Qt::BlockingQueuedConnection,
-			Qt::DirectConnection,
-			Q_ARG(QString, QString(name)),
-			Q_ARG(void*, (void*)arr)
-			);
+		"showImage",
+		//Qt::BlockingQueuedConnection,
+		Qt::DirectConnection,
+		Q_ARG(QString, QString(name)),
+		Q_ARG(void*, (void*)arr)
+		);
 }
 
 
@@ -801,15 +801,15 @@ void GuiReceiver::setPropWindow(QString name, double arg2 )
 
 	switch(flags)
 	{
-		case  CV_WINDOW_NORMAL:
-			w->myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
-			w->param_flags = flags;
-			break;
-		case  CV_WINDOW_AUTOSIZE:
-			w->myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
-			w->param_flags = flags;
-			break;
-		default:;
+	case  CV_WINDOW_NORMAL:
+		w->myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+		w->param_flags = flags;
+		break;
+	case  CV_WINDOW_AUTOSIZE:
+		w->myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
+		w->param_flags = flags;
+		break;
+	default:;
 	}
 }
 
@@ -905,7 +905,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 	}
 	else
 	{
-		qDebug()<<"Do nothing (Window or Image NULL)"<<endl;
+		CV_Error(CV_StsNullPtr, "Do nothing (Window or Image NULL)");
 	}
 }
 
@@ -941,7 +941,7 @@ void GuiReceiver::destroyAllWindow()
 				delete obj;
 			}
 		}
-		
+
 	}
 
 }
@@ -982,12 +982,19 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 	//if (b)//button with this name already exist
 	//    return;
 
-	CvBar* lastbar = (CvBar*) global_control_panel->myLayout->itemAt(global_control_panel->myLayout->count()-1);
-
-	if (lastbar->type == type_CvTrackbar)//if last bar is a trackbar, create a new buttonbar, else, attach to the current bar
+	if (global_control_panel->myLayout->count() == 0)//if that is the first button attach to the control panel, create a new button bar
+	{
 		b = CvWindow::createButtonbar(button_name);//the bar has the name of the first button attached to it
-	else
-		b = (CvButtonbar*) lastbar;
+
+	}else{
+		CvBar* lastbar = (CvBar*) global_control_panel->myLayout->itemAt(global_control_panel->myLayout->count()-1);
+
+		if (lastbar->type == type_CvTrackbar)//if last bar is a trackbar, create a new buttonbar, else, attach to the current bar
+			b = CvWindow::createButtonbar(button_name);//the bar has the name of the first button attached to it
+		else
+			b = (CvButtonbar*) lastbar;
+
+	}
 
 	b->addButton( button_name,(CvButtonCallback) on_change, userdata, button_type, initial_button_state);
 }
@@ -1092,13 +1099,13 @@ void CvTrackbar::createDialog()
 		QInputDialog::getInteger
 #endif
 		(this->parentWidget(),
-		 tr("Slider %1").arg(name_bar),
-		 tr("New value:"),
-		 value,
-		 min,
-		 max,
-		 step,
-		 &ok);
+		tr("Slider %1").arg(name_bar),
+		tr("New value:"),
+		value,
+		min,
+		max,
+		step,
+		&ok);
 
 	if (ok)
 		slider->setValue(i);
@@ -1134,62 +1141,62 @@ CvTrackbar::~CvTrackbar()
 //here CvButtonbar class
 CvButtonbar::CvButtonbar(QWidget* arg,  QString arg2)
 {
-    type=type_CvButtonbar;
-    myparent = arg;
-    name_bar = arg2;
-    setObjectName(name_bar);
+	type=type_CvButtonbar;
+	myparent = arg;
+	name_bar = arg2;
+	setObjectName(name_bar);
 
-    group_button = new QButtonGroup;
+	group_button = new QButtonGroup;
 
-    /*
-    label = new QLabel;
-    setLabel();
-    addWidget(label,Qt::AlignLeft );
-    */
+	/*
+	label = new QLabel;
+	setLabel();
+	addWidget(label,Qt::AlignLeft );
+	*/
 }
 
 CvButtonbar::~CvButtonbar()
 {
-    QLayoutItem *child;
+	QLayoutItem *child;
 
-    while ((child = takeAt(0)) != 0)
-	delete child;
+	while ((child = takeAt(0)) != 0)
+		delete child;
 
-    delete group_button;
+	delete group_button;
 }
 
 void CvButtonbar::setLabel()
 {
-    QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
-    label->setText(nameNormalized);
+	QString nameNormalized = name_bar.leftJustified( 10, ' ', true );
+	label->setText(nameNormalized);
 }
 
 void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state)
 {
-    QString button_name = name;
+	QString button_name = name;
 
-    if (button_name == "")
-        button_name = tr("button %1").arg(this->count());
+	if (button_name == "")
+		button_name = tr("button %1").arg(this->count());
 
-    QPointer<QAbstractButton> button;
+	QPointer<QAbstractButton> button;
 
-    if (button_type == CV_PUSH_BUTTON)
-        button = (QAbstractButton*) new CvPushButton(this, button_name,call, userdata);
+	if (button_type == CV_PUSH_BUTTON)
+		button = (QAbstractButton*) new CvPushButton(this, button_name,call, userdata);
 
-    if (button_type == CV_CHECKBOX)
-        button = (QAbstractButton*) new CvCheckBox(this, button_name,call, userdata, initial_button_state);
+	if (button_type == CV_CHECKBOX)
+		button = (QAbstractButton*) new CvCheckBox(this, button_name,call, userdata, initial_button_state);
 
-    if (button_type == CV_RADIOBOX)
-    {
-        button = (QAbstractButton*) new CvRadioButton(this, button_name,call, userdata, initial_button_state);
-        group_button->addButton(button);
-    }
+	if (button_type == CV_RADIOBOX)
+	{
+		button = (QAbstractButton*) new CvRadioButton(this, button_name,call, userdata, initial_button_state);
+		group_button->addButton(button);
+	}
 
-    if (button)
-    {
-        QObject::connect( button, SIGNAL( toggled(bool) ),button, SLOT( callCallBack(bool) ));
-        addWidget(button,Qt::AlignCenter);
-    }
+	if (button)
+	{
+		QObject::connect( button, SIGNAL( toggled(bool) ),button, SLOT( callCallBack(bool) ));
+		addWidget(button,Qt::AlignCenter);
+	}
 }
 
 
@@ -1199,13 +1206,13 @@ void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata
 //buttons here
 CvPushButton::CvPushButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4)
 {
-    myparent = arg1;
-    button_name = arg2;
-    callback = arg3;
-    userdata=arg4;
+	myparent = arg1;
+	button_name = arg2;
+	callback = arg3;
+	userdata=arg4;
 
-    setObjectName(button_name);
-    setText(button_name);
+	setObjectName(button_name);
+	setText(button_name);
 
 	if (isChecked())
 		callCallBack(true);
@@ -1219,14 +1226,14 @@ void CvPushButton::callCallBack(bool checked)
 
 CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
 {
-    myparent = arg1;
-    button_name = arg2;
-    callback = arg3;
-    userdata=arg4;
+	myparent = arg1;
+	button_name = arg2;
+	callback = arg3;
+	userdata=arg4;
 
-    setObjectName(button_name);
-    setCheckState((initial_button_state == 1?Qt::Checked:Qt::Unchecked));
-    setText(button_name);
+	setObjectName(button_name);
+	setCheckState((initial_button_state == 1?Qt::Checked:Qt::Unchecked));
+	setText(button_name);
 
 	if (isChecked())
 		callCallBack(true);
@@ -1524,8 +1531,8 @@ void CvWindow::createActions()
 	QObject::connect( vect_QActions[4],SIGNAL(triggered()),myview, SLOT( resetZoom() ));
 
 	vect_QActions[5] = new QAction(QIcon(":/imgRegion-icon"),tr("Zoom x%1 (see label) (CTRL+X)")
-			.arg(threshold_zoom_img_region)
-			,this);
+		.arg(threshold_zoom_img_region)
+		,this);
 	vect_QActions[5]->setIconVisibleInMenu(true);
 	QObject::connect( vect_QActions[5],SIGNAL(triggered()),myview, SLOT( imgRegion() ));
 
@@ -1713,6 +1720,8 @@ void CvWindow::readSettings()
 	//param_name = settings.value("name_window",param_name).toString();
 	param_flags = settings.value("mode_resize",param_flags).toInt();
 	param_gui_mode = settings.value("mode_gui",param_gui_mode).toInt();
+
+	param_ratio_mode = settings.value("mode_ratio",param_ratio_mode).toInt();
 	myview->param_keepRatio = settings.value("view_aspectRatio",myview->param_keepRatio).toInt();
 
 	param_flags = settings.value("mode_resize",param_flags).toInt();
@@ -1732,6 +1741,12 @@ void CvWindow::readSettings()
 
 	resize(size);
 	move(pos);
+
+	if (global_control_panel)
+	{
+		icvLoadControlPanel();
+		global_control_panel->move(settings.value("posPanel", global_control_panel->pos()).toPoint());
+	}
 }
 
 void CvWindow::writeSettings()
@@ -1743,6 +1758,8 @@ void CvWindow::writeSettings()
 	settings.setValue("size", size());
 	settings.setValue("mode_resize",param_flags);
 	settings.setValue("mode_gui",param_gui_mode);
+
+	settings.setValue("param_ratio_mode",param_ratio_mode);
 	settings.setValue("view_aspectRatio",myview->param_keepRatio);
 
 	settings.setValue("matrix_view.m11",myview->param_matrixWorld.m11());
@@ -1756,7 +1773,133 @@ void CvWindow::writeSettings()
 	settings.setValue("matrix_view.m33",myview->param_matrixWorld.m33());
 
 	icvSaveTrackbars(&settings);
+
+
+	if (global_control_panel)
+	{
+		icvSaveControlPanel();
+		settings.setValue("posPanel", global_control_panel->pos());
+	}
 }
+
+void CvWindow::icvLoadControlPanel()
+{
+	QSettings settings("OpenCV2", QFileInfo(QApplication::applicationFilePath()).fileName()+" control panel");
+	int size = settings.beginReadArray("bars");
+	int subsize;
+	CvBar* t;
+	if (size == global_control_panel->myLayout->layout()->count())
+		for (int i = 0; i < size; ++i) {
+			t = (CvBar*) global_control_panel->myLayout->layout()->itemAt(i);
+			settings.setArrayIndex(i);
+			if (t->type == type_CvTrackbar)
+			{
+				if (t->name_bar == settings.value("namebar").toString())
+				{
+					((CvTrackbar*)t)->slider->setValue(settings.value("valuebar").toInt());
+				}
+			}
+			if (t->type == type_CvButtonbar)
+			{
+				subsize = settings.beginReadArray(QString("buttonbar")+i);
+
+				if ( subsize == ((CvButtonbar*)t)->layout()->count() )
+					icvLoadButtonbar((CvButtonbar*)t,&settings);
+				
+				settings.endArray();
+			}
+		}
+		settings.endArray();
+}
+
+void CvWindow::icvSaveControlPanel()
+{
+	QSettings settings("OpenCV2", QFileInfo(QApplication::applicationFilePath()).fileName()+" control panel");
+	settings.beginWriteArray("bars");
+
+	CvBar* t;
+	for (int i = 0; i < global_control_panel->myLayout->layout()->count(); ++i) {
+		t = (CvBar*) global_control_panel->myLayout->layout()->itemAt(i);
+		settings.setArrayIndex(i);
+		if (t->type == type_CvTrackbar)
+		{
+			settings.setValue("namebar", QString(t->name_bar));
+			settings.setValue("valuebar",((CvTrackbar*)t)->slider->value());
+		}
+		if (t->type == type_CvButtonbar)
+		{
+			settings.beginWriteArray(QString("buttonbar")+i);
+			icvSaveButtonbar((CvButtonbar*)t,&settings);
+			settings.endArray();
+		}
+	}
+	settings.endArray();
+}
+
+void CvWindow::icvSaveButtonbar(CvButtonbar* b,QSettings *settings)
+{
+	QWidget* temp;
+	QString myclass;
+	for (int i = 0; i < b->layout()->count(); ++i) {
+		settings->setArrayIndex(i);
+		temp = (QWidget*) b->layout()->itemAt(i)->widget();
+		myclass = QString(temp->metaObject ()->className ());
+		if (myclass == "CvPushButton")
+		{
+			CvPushButton* button = (CvPushButton*) temp;
+			settings->setValue("namebutton", QString(button->text()) );
+			settings->setValue("valuebutton", int(button->isChecked()));
+		}
+
+		if (myclass == "CvCheckBox")
+		{
+			CvCheckBox* button = (CvCheckBox*) temp;
+			settings->setValue("namebutton", QString(button->text()) );
+			settings->setValue("valuebutton", int(button->isChecked()));
+		}
+
+		if (myclass == "CvRadioButton")
+		{
+			CvRadioButton* button = (CvRadioButton*) temp;
+			settings->setValue("namebutton", QString(button->text()) );
+			settings->setValue("valuebutton", int(button->isChecked()));
+		}
+	}
+}
+
+void CvWindow::icvLoadButtonbar(CvButtonbar* b,QSettings *settings)
+{
+	QWidget* temp;
+	QString myclass;
+	for (int i = 0; i < b->layout()->count(); ++i)
+	{
+		settings->setArrayIndex(i);
+		temp = (QWidget*) b->layout()->itemAt(i)->widget();
+		myclass = QString(temp->metaObject ()->className ());
+		if (myclass == "CvPushButton")
+		{
+			CvPushButton* button = (CvPushButton*) temp;
+			if (button->text() == settings->value("namebutton").toString())
+				button->setChecked(settings->value("valuebutton").toInt());
+		}
+
+		if (myclass == "CvCheckBox")
+		{
+			CvCheckBox* button = (CvCheckBox*) temp;
+			if (button->text() == settings->value("namebutton").toString())
+				button->setChecked(settings->value("valuebutton").toInt());
+		}
+
+		if (myclass == "CvRadioButton")
+		{
+			CvRadioButton* button = (CvRadioButton*) temp;
+			if (button->text() == settings->value("namebutton").toString())
+				button->setChecked(settings->value("valuebutton").toInt());
+		}
+
+	}
+}
+
 
 void CvWindow::icvLoadTrackbars(QSettings *settings)
 {
@@ -1765,20 +1908,17 @@ void CvWindow::icvLoadTrackbars(QSettings *settings)
 
 	//trackbar are saved in the same order, so no need to use icvFindTrackbarByName
 
-	int start_index = 0;
-	int stop_index = myBarLayout->layout()->count() ;
-
-	if (stop_index-start_index == size)//if not the same number, the window saved and loaded is not the same (nb trackbar not equal)
-		for (int i = start_index; i < size+start_index; ++i)
+	if (myBarLayout->layout()->count() == size)//if not the same number, the window saved and loaded is not the same (nb trackbar not equal)
+		for (int i = 0; i < size; ++i)
 		{
-			settings->setArrayIndex(i-start_index);
+			settings->setArrayIndex(i);
 			t = (CvTrackbar*)  myBarLayout->layout()->itemAt(i);
 
 			if (t->name_bar == settings->value("name").toString())
 				t->slider->setValue(settings->value("value").toInt());
 
 		}
-	settings->endArray();
+		settings->endArray();
 
 }
 
@@ -1788,13 +1928,10 @@ void CvWindow::icvSaveTrackbars(QSettings *settings)
 
 	settings->beginWriteArray("trackbars");
 
-	int start_index = 0;
-
-	for (int i = start_index; i < myBarLayout->layout()->count()-1; ++i) {
+	for (int i = 0; i < myBarLayout->layout()->count(); ++i) {
 		t = (CvTrackbar*) myBarLayout->layout()->itemAt(i);
-		settings->setArrayIndex(i-start_index);
+		settings->setArrayIndex(i);
 		settings->setValue("name", t->name_bar);
-		//settings->setValue("name", t->getName());
 		settings->setValue("value", t->slider->value());
 	}
 	settings->endArray();
@@ -1810,7 +1947,7 @@ void CvWindow::icvSaveTrackbars(QSettings *settings)
 ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 {
 	centralWidget = arg,
-	setParent(centralWidget);
+		setParent(centralWidget);
 	mode_display = arg2;
 	param_keepRatio = arg3;
 
@@ -1881,18 +2018,18 @@ void ViewPort::saveView()
 	QString name_s = centralWidget->param_name+"_screenshot_"+date_s;
 
 	QString fileName = QFileDialog::getSaveFileName(this, tr("Save File %1").arg(name_s),
-			name_s+".png",
-			tr("Images (*.png *.jpg *.bmp *.jpeg)"));
+		name_s+".png",
+		tr("Images (*.png *.jpg *.bmp *.jpeg)"));
 
 	if (!fileName.isEmpty ())//save the picture
 	{
 		QString extension = fileName.right(3);
 
 #if defined( HAVE_QT_OPENGL )
-	 image2Draw_qt_resized = ((QGLWidget*)viewport())->grabFrameBuffer();
+		image2Draw_qt_resized = ((QGLWidget*)viewport())->grabFrameBuffer();
 #else
-     QPainter saveimage(&image2Draw_qt_resized);
-     this->render(&saveimage);
+		QPainter saveimage(&image2Draw_qt_resized);
+		this->render(&saveimage);
 #endif
 
 		// Save it..
@@ -1920,7 +2057,7 @@ void ViewPort::saveView()
 			return;
 		}
 
-		qDebug()<<"file extension not recognized, please choose between JPG, JPEG, BMP or PNG";
+		CV_Error(CV_StsNullPtr, "file extension not recognized, please choose between JPG, JPEG, BMP or PNG");
 	}
 }
 
@@ -2046,19 +2183,19 @@ void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double an
 #if defined( HAVE_QT_OPENGL )
 	on_openGL_draw3D = func;
 	on_openGL_param = userdata;
-	
+
 	if (angle_arg > 0)
 		angle = angle_arg;
 	else
 		angle = DEFAULT_ANGLE;
-		
+
 
 	if (zmin_arg >= 0)
 		zmin = zmin_arg;
 	else
 		zmin = DEFAULT_ZMIN;
-		
-	
+
+
 	if (zmax_arg > 0)
 		zmax = zmax_arg;
 	else
@@ -2232,39 +2369,39 @@ void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, in
 
 	switch(event->modifiers())
 	{
-		case Qt::ShiftModifier:
-			flags = CV_EVENT_FLAG_SHIFTKEY;
-			break;
-		case Qt::ControlModifier:
-			flags = CV_EVENT_FLAG_CTRLKEY;
-			break;
-		case Qt::AltModifier:
-			flags = CV_EVENT_FLAG_ALTKEY;
-			break;
-		case Qt::NoModifier	:
-			break;
-		case Qt::MetaModifier:
-			break;
-		case Qt::KeypadModifier:
-			break;
-		default:;
+	case Qt::ShiftModifier:
+		flags = CV_EVENT_FLAG_SHIFTKEY;
+		break;
+	case Qt::ControlModifier:
+		flags = CV_EVENT_FLAG_CTRLKEY;
+		break;
+	case Qt::AltModifier:
+		flags = CV_EVENT_FLAG_ALTKEY;
+		break;
+	case Qt::NoModifier	:
+		break;
+	case Qt::MetaModifier:
+		break;
+	case Qt::KeypadModifier:
+		break;
+	default:;
 	}
 
 	switch(event->button())
 	{
-		case Qt::LeftButton:
-			cv_event = tableMouseButtons[category][0];
-			flags |= CV_EVENT_FLAG_LBUTTON;
-			break;
-		case Qt::RightButton:
-			cv_event = tableMouseButtons[category][1];
-			flags |= CV_EVENT_FLAG_RBUTTON;
-			break;
-		case Qt::MidButton:
-			cv_event = tableMouseButtons[category][2];
-			flags |= CV_EVENT_FLAG_MBUTTON;
-			break;
-		default:;
+	case Qt::LeftButton:
+		cv_event = tableMouseButtons[category][0];
+		flags |= CV_EVENT_FLAG_LBUTTON;
+		break;
+	case Qt::RightButton:
+		cv_event = tableMouseButtons[category][1];
+		flags |= CV_EVENT_FLAG_RBUTTON;
+		break;
+	case Qt::MidButton:
+		cv_event = tableMouseButtons[category][2];
+		flags |= CV_EVENT_FLAG_MBUTTON;
+		break;
+	default:;
 	}
 }
 
@@ -2330,47 +2467,47 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
 void ViewPort::paintEvent(QPaintEvent* event)
 {
 
-    QPainter myPainter(viewport());
-    myPainter.setWorldTransform(param_matrixWorld);
+	QPainter myPainter(viewport());
+	myPainter.setWorldTransform(param_matrixWorld);
 
-    draw2D(&myPainter);
+	draw2D(&myPainter);
 
 #if defined( HAVE_QT_OPENGL )
-    if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
-    {
-	    myPainter.save(); // Needed when using the GL1 engine
-	    myPainter.beginNativePainting(); // Needed when using the GL2 engine
-	
+	if ( mode_display == CV_MODE_OPENGL && on_openGL_draw3D)
+	{
+		myPainter.save(); // Needed when using the GL1 engine
+		myPainter.beginNativePainting(); // Needed when using the GL2 engine
+
 		setGL(width(),height());
 		on_openGL_draw3D(on_openGL_param);
 		unsetGL();
-	
-	    myPainter.endNativePainting(); // Needed when using the GL2 engine
-	    myPainter.restore(); // Needed when using the GL1 engine
-    }
+
+		myPainter.endNativePainting(); // Needed when using the GL2 engine
+		myPainter.restore(); // Needed when using the GL1 engine
+	}
 #endif
 
-    //Now disable matrixWorld for overlay display
-    myPainter.setWorldMatrixEnabled (false );
+	//Now disable matrixWorld for overlay display
+	myPainter.setWorldMatrixEnabled (false );
 
-    //in mode zoom/panning
-    if (param_matrixWorld.m11()>1)
-    {
-	if (param_matrixWorld.m11()>=threshold_zoom_img_region)
-	    drawImgRegion(&myPainter);
+	//in mode zoom/panning
+	if (param_matrixWorld.m11()>1)
+	{
+		if (param_matrixWorld.m11()>=threshold_zoom_img_region)
+			drawImgRegion(&myPainter);
 
-	drawViewOverview(&myPainter);
-    }
+		drawViewOverview(&myPainter);
+	}
 
-    //for information overlay
-    if (drawInfo)
+	//for information overlay
+	if (drawInfo)
 		drawInstructions(&myPainter);
 
 	//for statusbar
 	if (centralWidget->myStatusBar)
 		drawStatusBar();
 
-    QGraphicsView::paintEvent(event);
+	QGraphicsView::paintEvent(event);
 }
 
 void ViewPort::draw2D(QPainter *painter)
@@ -2381,28 +2518,28 @@ void ViewPort::draw2D(QPainter *painter)
 void ViewPort::drawStatusBar()
 {
 	if (mouseCoordinate.x()>=0 &&
-			mouseCoordinate.y()>=0 &&
-			mouseCoordinate.x()<image2Draw_ipl->width &&
-			mouseCoordinate.y()<image2Draw_ipl->height)
+		mouseCoordinate.y()>=0 &&
+		mouseCoordinate.x()<image2Draw_ipl->width &&
+		mouseCoordinate.y()<image2Draw_ipl->height)
 	{
 		QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
 
 		if (nbChannelOriginImage==3)
 		{
 			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
-					.arg(mouseCoordinate.x())
-					.arg(mouseCoordinate.y())+
-					tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-					tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-					tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
-					);
+				.arg(mouseCoordinate.x())
+				.arg(mouseCoordinate.y())+
+				tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
+				tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
+				tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+				);
 		}else{
 			//all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
 			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
-					.arg(mouseCoordinate.x())
-					.arg(mouseCoordinate.y())+
-					tr("<font color='grey'>grey:%3 </font>").arg(qRed(rgbValue))
-					);
+				.arg(mouseCoordinate.x())
+				.arg(mouseCoordinate.y())+
+				tr("<font color='grey'>grey:%3 </font>").arg(qRed(rgbValue))
+				);
 		}
 	}
 }
@@ -2455,17 +2592,17 @@ void ViewPort::drawImgRegion(QPainter *painter)
 				val = tr("%1").arg(qRed(rgbValue));
 				painter->setPen(QPen(Qt::red, 1));
 				painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/3),
-						Qt::AlignCenter, val);
+					Qt::AlignCenter, val);
 
 				val = tr("%1").arg(qGreen(rgbValue));
 				painter->setPen(QPen(Qt::green, 1));
 				painter->drawText(QRect(point1.x(),point1.y()+param_matrixWorld.m11()/3,param_matrixWorld.m11(),param_matrixWorld.m11()/3),
-						Qt::AlignCenter, val);
+					Qt::AlignCenter, val);
 
 				val = tr("%1").arg(qBlue(rgbValue));
 				painter->setPen(QPen(Qt::blue, 1));
 				painter->drawText(QRect(point1.x(),point1.y()+2*param_matrixWorld.m11()/3,param_matrixWorld.m11(),param_matrixWorld.m11()/3),
-						Qt::AlignCenter, val);
+					Qt::AlignCenter, val);
 
 			}
 			else
@@ -2473,17 +2610,17 @@ void ViewPort::drawImgRegion(QPainter *painter)
 
 				val = tr("%1").arg(qRed(rgbValue));
 				painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()),
-						Qt::AlignCenter, val);
+					Qt::AlignCenter, val);
 			}
 		}
 
-	painter->setPen(QPen(Qt::black, 1));
-	painter->drawLines(linesX.data(), linesX.size());
-	painter->drawLines(linesY.data(), linesY.size());
+		painter->setPen(QPen(Qt::black, 1));
+		painter->drawLines(linesX.data(), linesX.size());
+		painter->drawLines(linesY.data(), linesY.size());
 
-	//restore font size
-	f.setPointSize(original_font_size);
-	painter->setFont(f);
+		//restore font size
+		f.setPointSize(original_font_size);
+		painter->setFont(f);
 
 }
 
@@ -2504,10 +2641,10 @@ void ViewPort::drawViewOverview(QPainter *painter)
 	qreal ratioWindow = (qreal)(viewSize.height())/(qreal)(size().height());
 	painter->setPen(Qt::darkBlue);
 	painter->drawRect(QRectF(width()-viewSize.width()-positionCorners.left()*ratioSize*ratioWindow-margin,
-				-positionCorners.top()*ratioSize*ratioWindow,
-				(viewSize.width()-1)*ratioSize,
-				(viewSize.height()-1)*ratioSize)
-			);
+		-positionCorners.top()*ratioSize*ratioWindow,
+		(viewSize.width()-1)*ratioSize,
+		(viewSize.height()-1)*ratioSize)
+		);
 }
 
 void ViewPort::drawInstructions(QPainter *painter)
@@ -2516,17 +2653,17 @@ void ViewPort::drawInstructions(QPainter *painter)
 	int border = qMax(4, metrics.leading());
 
 	QRect rect = metrics.boundingRect(0, 0, width() - 2*border, int(height()*0.125),
-			Qt::AlignCenter | Qt::TextWordWrap, infoText);
+		Qt::AlignCenter | Qt::TextWordWrap, infoText);
 	painter->setRenderHint(QPainter::TextAntialiasing);
 	painter->fillRect(QRect(0, 0, width(), rect.height() + 2*border),
-			QColor(0, 0, 0, 127));
+		QColor(0, 0, 0, 127));
 	painter->setPen(Qt::white);
 	painter->fillRect(QRect(0, 0, width(), rect.height() + 2*border),
-			QColor(0, 0, 0, 127));
+		QColor(0, 0, 0, 127));
 
 	painter->drawText((width() - rect.width())/2, border,
-			rect.width(), rect.height(),
-			Qt::AlignCenter | Qt::TextWordWrap, infoText);
+		rect.width(), rect.height(),
+		Qt::AlignCenter | Qt::TextWordWrap, infoText);
 }
 
 

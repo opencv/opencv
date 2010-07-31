@@ -190,10 +190,15 @@ int startWindowThread()
 
 #if defined (HAVE_QT)
 
+CvFont fontQt(const string& nameFont, int pointSize, Scalar color, int weight,  int style, int spacing)
+{
+return cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
+}
+
 void addText( const Mat& img, const string& text, Point org, CvFont font)
 {
 	CvMat _img = img;
-	cvAddText( &_img, text.c_str(), CvPoint(org),&font);
+	cvAddText( &_img, text.c_str(), org,&font);
 }
 
 void displayStatusBar(const string& name,  const string& text, int delayms)

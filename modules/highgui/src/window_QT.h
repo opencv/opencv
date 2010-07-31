@@ -304,6 +304,10 @@ private:
 
     void icvLoadTrackbars(QSettings *settings);
     void icvSaveTrackbars(QSettings *settings);
+	void icvLoadControlPanel();
+	void icvSaveControlPanel();
+	void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
+	void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
 
     void createShortcuts();
     void createActions();
