@@ -28,6 +28,10 @@
 
 \chapter{highgui. High-level GUI and Media I/O}
 \input{HighGui}
+\ifPy     %Qt is for C and Cpp, so do nothing
+\else
+\input{HighGui_Qt}
+\fi
 
 \chapter{ml. Machine Learning}
 \input{MachineLearning}
