@@ -1563,7 +1563,7 @@ MoveWindow
 ShowImage
   char* name
   CvArr image
-GetTrackbarPos
+GetTrackbarPos int
   char* trackbarName
   char* windowName
 SetTrackbarPos
