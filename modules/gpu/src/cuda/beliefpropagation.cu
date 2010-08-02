@@ -41,43 +41,57 @@
 //M*/
 
 #include "opencv2/gpu/devmem2d.hpp"
+#include "saturate_cast.hpp"
 #include "safe_call.hpp"
 
 using namespace cv::gpu;
-
-static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
 #ifndef FLT_MAX
 #define FLT_MAX 3.402823466e+38F
 #endif
 
-typedef unsigned char uchar;
-
-namespace beliefpropagation_gpu
-{      
-    __constant__ int   cndisp;
-    __constant__ float cdisc_cost;
-    __constant__ float cdata_cost;
-    __constant__ float clambda;
-};
-
 ///////////////////////////////////////////////////////////////
-//////////////////  comp data /////////////////////////////////
+/////////////////////// load constants ////////////////////////
 ///////////////////////////////////////////////////////////////
 
 namespace beliefpropagation_gpu
 {
-    __global__ void comp_data_kernel(uchar* l, uchar* r, size_t step, float* data, size_t data_step, int cols, int rows) 
+    __constant__ int   cndisp;
+    __constant__ float cmax_data_term;
+    __constant__ float cdata_weight;
+    __constant__ float cmax_disc_term;
+    __constant__ float cdisc_single_jump;
+};
+
+namespace cv { namespace gpu { namespace impl {
+    void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cndisp,            &ndisp,            sizeof(int  )) );
+        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cmax_data_term,    &max_data_term,    sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cdata_weight,      &data_weight,      sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cmax_disc_term,    &max_disc_term,    sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cdisc_single_jump, &disc_single_jump, sizeof(float)) );         
+    }
+}}}
+
+///////////////////////////////////////////////////////////////
+////////////////////////// comp data //////////////////////////
+///////////////////////////////////////////////////////////////
+
+namespace beliefpropagation_gpu
+{
+    template <typename T>
+    __global__ void comp_data(uchar* l, uchar* r, size_t step, T* data, size_t data_step, int cols, int rows) 
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        if (y > 0 && y < rows - 1 && x > 0 && x < cols - 1)
+        if (y < rows && x < cols)
         {
-            uchar *ls = l + y * step + x; 
-            uchar *rs = r + y * step + x; 
+            uchar* ls = l + y * step + x; 
+            uchar* rs = r + y * step + x; 
 
-            float *ds = data + y * data_step + x;
+            T* ds = data + y * data_step + x;
             size_t disp_step = data_step * rows;
 
             for (int disp = 0; disp < cndisp; disp++) 
@@ -88,11 +102,11 @@ namespace beliefpropagation_gpu
                     int re = rs[-disp];
                     float val = abs(le - re);
                     
-                    ds[disp * disp_step] = clambda * fmin(val, cdata_cost);
+                    ds[disp * disp_step] = saturate_cast<T>(fmin(cdata_weight * val, cdata_weight * cmax_data_term));
                 }
                 else
                 {
-                    ds[disp * disp_step] = cdata_cost;
+                    ds[disp * disp_step] = saturate_cast<T>(cdata_weight * cmax_data_term);
                 }
             }
         }
@@ -100,41 +114,52 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void load_constants(int ndisp, float disc_cost, float data_cost, float lambda)
-    {
-        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cndisp, &ndisp, sizeof(ndisp)) );
-        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cdisc_cost, &disc_cost, sizeof(disc_cost)) );
-        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::cdata_cost, &data_cost, sizeof(data_cost)) );
-        cudaSafeCall( cudaMemcpyToSymbol(beliefpropagation_gpu::clambda, &lambda, sizeof(lambda)) );        
-    }
+    typedef void (*CompDataFunc)(const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream);
 
-    extern "C" void comp_data_caller(const DevMem2D& l, const DevMem2D& r, DevMem2D_<float> mdata, const cudaStream_t& stream)
+    template<typename T>
+    void comp_data_(const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
 
         grid.x = divUp(l.cols, threads.x);
         grid.y = divUp(l.rows, threads.y);
-
+        
+        beliefpropagation_gpu::comp_data<T><<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, (T*)mdata.ptr, mdata.step/sizeof(T), l.cols, l.rows);
+        
         if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void comp_data(int msgType, const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream)
+    {
+        static CompDataFunc tab[8] =
         {
-            beliefpropagation_gpu::comp_data_kernel<<<grid, threads>>>(l.ptr, r.ptr, l.step, mdata.ptr, mdata.step/sizeof(float), l.cols, l.rows);
-            //cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            beliefpropagation_gpu::comp_data_kernel<<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, mdata.ptr, mdata.step/sizeof(float), l.cols, l.rows);
-        }
+            0,                  // uchar
+            0,                  // schar
+            0,                  // ushort
+            comp_data_<short>,  // short
+            0,                  // int
+            comp_data_<float>,  // float
+            0,                  // double
+            0                   // user type
+        };
+
+        CompDataFunc func = tab[msgType];
+        if (func == 0)
+            cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
+        func(l, r, mdata, stream);
     }
 }}}
 
 ///////////////////////////////////////////////////////////////
-//////////////////  data_step_down ////////////////////////////
+//////////////////////// data step down ///////////////////////
 ///////////////////////////////////////////////////////////////
 
 namespace beliefpropagation_gpu
-{    
-    __global__ void data_down_kernel(int dst_cols, int dst_rows, int src_rows, float *src, size_t src_step, float *dst, size_t dst_step)
+{
+    template <typename T>
+    __global__ void data_step_down(int dst_cols, int dst_rows, int src_rows, const T* src, size_t src_step, T* dst, size_t dst_step)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -151,14 +176,17 @@ namespace beliefpropagation_gpu
                       dst_reg += src[d * src_disp_step + src_step * (2*y+0) + (2*x+1)];
                       dst_reg += src[d * src_disp_step + src_step * (2*y+1) + (2*x+1)];
 
-                dst[d * dst_disp_step + y * dst_step + x] = dst_reg;
+                dst[d * dst_disp_step + y * dst_step + x] = saturate_cast<T>(dst_reg);
             }
         }
     }
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void data_down_kernel_caller(int dst_cols, int dst_rows, int src_rows, const DevMem2D_<float>& src, DevMem2D_<float> dst, const cudaStream_t& stream)
+    typedef void (*DataStepDownFunc)(int dst_cols, int dst_rows, int src_rows, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream);
+
+    template<typename T>
+    void data_step_down_(int dst_cols, int dst_rows, int src_rows, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -166,26 +194,41 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(dst_cols, threads.x);
         grid.y = divUp(dst_rows, threads.y);
 
+        beliefpropagation_gpu::data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)src.ptr, src.step/sizeof(T), (T*)dst.ptr, dst.step/sizeof(T));
+        
         if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void data_step_down(int dst_cols, int dst_rows, int src_rows, int msgType, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream)
+    {
+        static DataStepDownFunc tab[8] =
         {
-            beliefpropagation_gpu::data_down_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, src.ptr, src.step/sizeof(float), dst.ptr, dst.step/sizeof(float));
-            //cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            beliefpropagation_gpu::data_down_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, src.ptr, src.step/sizeof(float), dst.ptr, dst.step/sizeof(float));
-        }
+            0,                       // uchar
+            0,                       // schar
+            0,                       // ushort
+            data_step_down_<short>,  // short
+            0,                       // int
+            data_step_down_<float>,  // float
+            0,                       // double
+            0                        // user type
+        };
+
+        DataStepDownFunc func = tab[msgType];
+        if (func == 0)
+            cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
+        func(dst_cols, dst_rows, src_rows, src, dst, stream);
     }
 }}}
 
 ///////////////////////////////////////////////////////////////
-//////////////////  level up messages  ////////////////////////
+/////////////////// level up messages  ////////////////////////
 ///////////////////////////////////////////////////////////////
 
-
 namespace beliefpropagation_gpu
-{    
-    __global__ void level_up_kernel(int dst_cols, int dst_rows, int src_rows, float *src, size_t src_step, float *dst, size_t dst_step)
+{
+    template <typename T>
+    __global__ void level_up_message(int dst_cols, int dst_rows, int src_rows, const T* src, size_t src_step, T* dst, size_t dst_step)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;        
@@ -195,8 +238,8 @@ namespace beliefpropagation_gpu
             const size_t dst_disp_step = dst_step * dst_rows;
             const size_t src_disp_step = src_step * src_rows;
 
-            float *dstr = dst + y   * dst_step + x;
-            float *srcr = src + y/2 * src_step + x/2;
+            T*       dstr = dst + y   * dst_step + x;
+            const T* srcr = src + y/2 * src_step + x/2;
 
             for (int d = 0; d < cndisp; ++d)            
                 dstr[d * dst_disp_step] = srcr[d * src_disp_step];
@@ -205,7 +248,10 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void level_up(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D_<float>* mu, DevMem2D_<float>* md, DevMem2D_<float>* ml, DevMem2D_<float>* mr, const cudaStream_t& stream)
+    typedef void (*LevelUpMessagesFunc)(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream);
+
+    template<typename T>
+    void level_up_messages_(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -215,74 +261,94 @@ namespace cv { namespace gpu { namespace impl {
 
         int src_idx = (dst_idx + 1) & 1;
 
+        beliefpropagation_gpu::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mus[src_idx].ptr, mus[src_idx].step/sizeof(T), (T*)mus[dst_idx].ptr, mus[dst_idx].step/sizeof(T));
+        beliefpropagation_gpu::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mds[src_idx].ptr, mds[src_idx].step/sizeof(T), (T*)mds[dst_idx].ptr, mds[dst_idx].step/sizeof(T));
+        beliefpropagation_gpu::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mls[src_idx].ptr, mls[src_idx].step/sizeof(T), (T*)mls[dst_idx].ptr, mls[dst_idx].step/sizeof(T));
+        beliefpropagation_gpu::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mrs[src_idx].ptr, mrs[src_idx].step/sizeof(T), (T*)mrs[dst_idx].ptr, mrs[dst_idx].step/sizeof(T));
+        
         if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void level_up_messages(int dst_idx, int dst_cols, int dst_rows, int src_rows, int msgType, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream)
+    {
+        static LevelUpMessagesFunc tab[8] =
         {
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, mu[src_idx].ptr, mu[src_idx].step/sizeof(float), mu[dst_idx].ptr, mu[dst_idx].step/sizeof(float));
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, md[src_idx].ptr, md[src_idx].step/sizeof(float), md[dst_idx].ptr, md[dst_idx].step/sizeof(float));
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, ml[src_idx].ptr, ml[src_idx].step/sizeof(float), ml[dst_idx].ptr, ml[dst_idx].step/sizeof(float));
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads>>>(dst_cols, dst_rows, src_rows, mr[src_idx].ptr, mr[src_idx].step/sizeof(float), mr[dst_idx].ptr, mr[dst_idx].step/sizeof(float));
-            //cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, mu[src_idx].ptr, mu[src_idx].step/sizeof(float), mu[dst_idx].ptr, mu[dst_idx].step/sizeof(float));
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, md[src_idx].ptr, md[src_idx].step/sizeof(float), md[dst_idx].ptr, md[dst_idx].step/sizeof(float));
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, ml[src_idx].ptr, ml[src_idx].step/sizeof(float), ml[dst_idx].ptr, ml[dst_idx].step/sizeof(float));
-            beliefpropagation_gpu::level_up_kernel<<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, mr[src_idx].ptr, mr[src_idx].step/sizeof(float), mr[dst_idx].ptr, mr[dst_idx].step/sizeof(float));
-        }
+            0,                          // uchar
+            0,                          // schar
+            0,                          // ushort
+            level_up_messages_<short>,  // short
+            0,                          // int
+            level_up_messages_<float>,  // float
+            0,                          // double
+            0                           // user type
+        };
+
+        LevelUpMessagesFunc func = tab[msgType];
+        if (func == 0)
+            cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
+        func(dst_idx, dst_cols, dst_rows, src_rows, mus, mds, mls, mrs, stream);
     }
 }}}
 
-
 ///////////////////////////////////////////////////////////////
-/////////////////  Calcs all iterations ///////////////////////
+////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
-
 
 namespace beliefpropagation_gpu
 {
-    __device__ void calc_min_linear_penalty(float *dst, size_t step)
+    template <typename T>
+    __device__ void calc_min_linear_penalty(T* dst, size_t step)
     {
         float prev = dst[0];
         float cur;
         for (int disp = 1; disp < cndisp; ++disp) 
         {
-            prev += 1.0f;
+            prev += cdisc_single_jump;
             cur = dst[step * disp];
             if (prev < cur)
+            {
                 cur = prev;
-            dst[step * disp] = prev = cur;
+                dst[step * disp] = saturate_cast<T>(prev);
+            }
+            prev = cur;
         }
 
         prev = dst[(cndisp - 1) * step];
         for (int disp = cndisp - 2; disp >= 0; disp--)     
         {
-            prev += 1.0f;
+            prev += cdisc_single_jump;
             cur = dst[step * disp];
             if (prev < cur)
+            {
                 cur = prev;
-            dst[step * disp] = prev = cur;      
+                dst[step * disp] = saturate_cast<T>(prev);
+            }
+            prev = cur;      
         }
     }
 
-    __device__ void message(float *msg1, float *msg2, float *msg3, float *data, float *dst, size_t msg_disp_step, size_t data_disp_step)
+    template <typename T>
+    __device__ void message(const T* msg1, const T* msg2, const T* msg3, const T* data, T* dst, size_t msg_disp_step, size_t data_disp_step)
     {
         float minimum = FLT_MAX;
 
         for(int i = 0; i < cndisp; ++i)
         {
-            float dst_reg = msg1[msg_disp_step * i] + msg2[msg_disp_step * i] + msg3[msg_disp_step * i] + data[data_disp_step * i];
+            float dst_reg  = msg1[msg_disp_step * i];
+                  dst_reg += msg2[msg_disp_step * i];
+                  dst_reg += msg3[msg_disp_step * i];
+                  dst_reg += data[data_disp_step * i];
 
             if (dst_reg < minimum)
                 minimum = dst_reg;
 
-            dst[msg_disp_step * i] = dst_reg;
-
+            dst[msg_disp_step * i] = saturate_cast<T>(dst_reg);
         }
 
         calc_min_linear_penalty(dst, msg_disp_step);
 
-        minimum += cdisc_cost;
+        minimum += cmax_disc_term;
 
         float sum = 0;
         for(int i = 0; i < cndisp; ++i)
@@ -290,7 +356,8 @@ namespace beliefpropagation_gpu
             float dst_reg = dst[msg_disp_step * i];
             if (dst_reg > minimum)
             {
-                dst[msg_disp_step * i] = dst_reg = minimum;          
+                dst_reg = minimum;
+                dst[msg_disp_step * i] = saturate_cast<T>(minimum);
             }
             sum += dst_reg;
         }    
@@ -300,18 +367,20 @@ namespace beliefpropagation_gpu
             dst[msg_disp_step * i] -= sum;
     }
 
-    __global__ void one_iteration(int t, float* u, float *d, float *l, float *r, size_t msg_step, float *data, size_t data_step, int cols, int rows)
+    template <typename T>
+    __global__ void one_iteration(int t, T* u, T* d, T* l, T* r, size_t msg_step, const T* data, size_t data_step, int cols, int rows)
     {
         int y = blockIdx.y * blockDim.y + threadIdx.y;
         int x = ((blockIdx.x * blockDim.x + threadIdx.x) << 1) + ((y + t) & 1);
 
         if ( (y > 0) && (y < rows - 1) && (x > 0) && (x < cols - 1))
         {
-            float *us = u + y * msg_step + x;
-            float *ds = d + y * msg_step + x;
-            float *ls = l + y * msg_step + x;
-            float *rs = r + y * msg_step + x;
-            float *dt = data + y * data_step + x;
+            T* us = u + y * msg_step + x;
+            T* ds = d + y * msg_step + x;
+            T* ls = l + y * msg_step + x;
+            T* rs = r + y * msg_step + x;
+            const T* dt = data + y * data_step + x;
+
             size_t msg_disp_step = msg_step * rows;
             size_t data_disp_step = data_step * rows;
 
@@ -324,7 +393,10 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void call_all_iterations(int cols, int rows, int iters, DevMem2D_<float>& u, DevMem2D_<float>& d, DevMem2D_<float>& l, DevMem2D_<float>& r, const DevMem2D_<float>& data, const cudaStream_t& stream)
+    typedef void (*CalcAllIterationFunc)(int cols, int rows, int iters, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream);
+
+    template<typename T>
+    void calc_all_iterations_(int cols, int rows, int iters, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -332,39 +404,55 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(cols, threads.x << 1);
         grid.y = divUp(rows, threads.y);
 
-        if (stream == 0)
+        for(int t = 0; t < iters; ++t)
         {
-            for(int t = 0; t < iters; ++t)
-                beliefpropagation_gpu::one_iteration<<<grid, threads>>>(t, u.ptr, d.ptr, l.ptr, r.ptr, u.step/sizeof(float), data.ptr, data.step/sizeof(float), cols, rows);
-            //cudaSafeCall( cudaThreadSynchronize() );
+            beliefpropagation_gpu::one_iteration<T><<<grid, threads, 0, stream>>>(t, (T*)u.ptr, (T*)d.ptr, (T*)l.ptr, (T*)r.ptr, u.step/sizeof(T), (const T*)data.ptr, data.step/sizeof(T), cols, rows);
+            
+            if (stream == 0)
+                cudaSafeCall( cudaThreadSynchronize() );
         }
-        else
+    }
+
+    void calc_all_iterations(int cols, int rows, int iters, int msgType, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream)
+    {
+        static CalcAllIterationFunc tab[8] =
         {
-            for(int t = 0; t < iters; ++t)
-                beliefpropagation_gpu::one_iteration<<<grid, threads, 0, stream>>>(t, u.ptr, d.ptr, l.ptr, r.ptr, u.step/sizeof(float), data.ptr, data.step/sizeof(float), cols, rows);
-        }
+            0,                            // uchar
+            0,                            // schar
+            0,                            // ushort
+            calc_all_iterations_<short>,  // short
+            0,                            // int
+            calc_all_iterations_<float>,  // float
+            0,                            // double
+            0                             // user type
+        };
+
+        CalcAllIterationFunc func = tab[msgType];
+        if (func == 0)
+            cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
+        func(cols, rows, iters, u, d, l, r, data, stream);
     }
 }}}
 
-
 ///////////////////////////////////////////////////////////////
-//////////////////  Output caller /////////////////////////////
+/////////////////////////// output ////////////////////////////
 ///////////////////////////////////////////////////////////////
 
 namespace beliefpropagation_gpu
-{  
-    __global__ void output(int cols, int rows, float *u, float *d, float *l, float *r, float* data, size_t step, int *disp, size_t res_step) 
+{
+    template <typename T>
+    __global__ void output(int cols, int rows, const T* u, const T* d, const T* l, const T* r, const T* data, size_t step, short* disp, size_t res_step) 
     {   
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
 
         if (y > 0 && y < rows - 1 && x > 0 && x < cols - 1)
         {
-            float *us = u + (y + 1) * step + x;
-            float *ds = d + (y - 1) * step + x;
-            float *ls = l + y * step + (x + 1);
-            float *rs = r + y * step + (x - 1);
-            float *dt = data + y * step + x;
+            const T* us = u + (y + 1) * step + x;
+            const T* ds = d + (y - 1) * step + x;
+            const T* ls = l + y * step + (x + 1);
+            const T* rs = r + y * step + (x - 1);
+            const T* dt = data + y * step + x;
 
             size_t disp_step = rows * step;
 
@@ -372,7 +460,11 @@ namespace beliefpropagation_gpu
             float best_val = FLT_MAX;
             for (int d = 0; d < cndisp; ++d) 
             {
-                float val = us[d * disp_step] + ds[d * disp_step] + ls[d * disp_step] + rs[d * disp_step] + dt[d * disp_step];
+                float val  = us[d * disp_step];
+                      val += ds[d * disp_step];
+                      val += ls[d * disp_step];
+                      val += rs[d * disp_step];
+                      val += dt[d * disp_step];
 
                 if (val < best_val) 
                 {
@@ -381,28 +473,46 @@ namespace beliefpropagation_gpu
                 }
             }
 
-            disp[res_step * y + x] = best;                           
+            disp[res_step * y + x] = saturate_cast<short>(best);
         }
     }
 }
 
 namespace cv { namespace gpu { namespace impl {
-    extern "C" void output_caller(const DevMem2D_<float>& u, const DevMem2D_<float>& d, const DevMem2D_<float>& l, const DevMem2D_<float>& r, const DevMem2D_<float>& data, DevMem2D_<int> disp, const cudaStream_t& stream)
-    {    
+    typedef void (*OutputFunc)(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream);
+
+    template<typename T>
+    void output_(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream)
+    {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
 
         grid.x = divUp(disp.cols, threads.x);
         grid.y = divUp(disp.rows, threads.y);
 
+        beliefpropagation_gpu::output<T><<<grid, threads, 0, stream>>>(disp.cols, disp.rows, (const T*)u.ptr, (const T*)d.ptr, (const T*)l.ptr, (const T*)r.ptr, (const T*)data.ptr, u.step/sizeof(T), (short*)disp.ptr, disp.step/sizeof(short));
+
         if (stream == 0)
-        {
-            beliefpropagation_gpu::output<<<grid, threads>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step/sizeof(int));
             cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {            
-            beliefpropagation_gpu::output<<<grid, threads, 0, stream>>>(disp.cols, disp.rows, u.ptr, d.ptr, l.ptr, r.ptr, data.ptr, u.step/sizeof(float), disp.ptr, disp.step/sizeof(int));
-        }
+    }
+
+    void output(int msgType, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream)
+    {            
+        static OutputFunc tab[8] =
+        {
+            0,               // uchar
+            0,               // schar
+            0,               // ushort
+            output_<short>,  // short
+            0,               // int
+            output_<float>,  // float
+            0,               // double
+            0                // user type
+        };
+
+        OutputFunc func = tab[msgType];
+        if (func == 0)
+            cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
+        func(u, d, l, r, data, disp, stream);
     }
 }}}

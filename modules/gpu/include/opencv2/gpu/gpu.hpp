@@ -375,20 +375,32 @@ namespace cv
         class CV_EXPORTS StereoBeliefPropagation_GPU
         {
         public:
+            enum { MSG_TYPE_AUTO, 
+                   MSG_TYPE_FLOAT, 
+                   MSG_TYPE_SHORT_SCALE_AUTO, 
+                   MSG_TYPE_SHORT_SCALE_MANUAL };
+
             enum { DEFAULT_NDISP  = 64 };
             enum { DEFAULT_ITERS  = 5  };
             enum { DEFAULT_LEVELS = 5  };
 
             //! the default constructor
-            explicit StereoBeliefPropagation_GPU(int ndisp  = DEFAULT_NDISP, 
-                                                 int iters  = DEFAULT_ITERS, 
-                                                 int levels = DEFAULT_LEVELS);
-            //! the full constructor taking the number of disparities, number of BP iterations on first level,
-            //! number of levels, truncation of discontinuity cost, truncation of data cost and weighting of data cost.
-            StereoBeliefPropagation_GPU(int ndisp, int iters, int levels, float disc_cost, float data_cost, float lambda);
+            explicit StereoBeliefPropagation_GPU(int ndisp_  = DEFAULT_NDISP, 
+                                                 int iters_  = DEFAULT_ITERS, 
+                                                 int levels_ = DEFAULT_LEVELS,
+                                                 int msg_type_ = MSG_TYPE_AUTO,
+                                                 float msg_scale = 1.0f);
+            //! the full constructor taking the number of disparities, number of BP iterations on each level,
+            //! number of levels, truncation of data cost, data weight, 
+            //! truncation of discontinuity cost and discontinuity single jump
+            StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_, 
+                                        float max_data_term_, float data_weight_,
+                                        float max_disc_term_, float disc_single_jump_,
+                                        int msg_type_ = MSG_TYPE_AUTO,
+                                        float msg_scale = 1.0f);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-            //! if disparity is empty output type will be CV_32S else output type will be disparity.type().
+            //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
             
             //! Acync version
@@ -404,9 +416,13 @@ namespace cv
             int iters;
             int levels;
             
-            float disc_cost;
-            float data_cost;
-            float lambda;
+            float max_data_term; 
+            float data_weight;
+            float max_disc_term; 
+            float disc_single_jump;
+            
+            int msg_type;
+            float msg_scale;
         private:
             GpuMat u, d, l, r, u2, d2, l2, r2;
             std::vector<GpuMat> datas;            
