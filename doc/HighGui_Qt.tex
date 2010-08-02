@@ -1,374 +1,377 @@
-\section{Qt updated functions}
-\ifC
+
+% ----- This section is now integrated in HighGui.tex
+
+%\section{Qt updated functions}
+%\ifC
 %\section{C Language}
-\cvCPyFunc{ConvertImage} % XXX:TBD
-Converts one image to another with an optional vertical flip.
-
-\cvdefC{void cvConvertImage( const CvArr* src, CvArr* dst, int flags=0 );}
-
-\begin{description}
-\cvarg{src}{Source image.}
-\cvarg{dst}{Destination image. Must be single-channel or 3-channel 8-bit image.}
-\cvarg{flags}{The operation flags:
-\begin{description}
-\cvarg{CV\_CVTIMG\_FLIP}{Flips the image vertically}
-\cvarg{CV\_CVTIMG\_SWAP\_RB}{Swaps the red and blue channels. In OpenCV color images have \texttt{BGR} channel order, however on some systems the order needs to be reversed before displaying the image (\cross{ShowImage} does this automatically).}
-\end{description}}
-\end{description}
-
-The function \texttt{cvConvertImage} converts one image to another and flips the result vertically if desired. The function is used by \cross{ShowImage}.
-
-
-\cvCPyFunc{CreateTrackbar} 
-Creates a trackbar and attaches it to the specified window
-
-\cvdefC{
-int cvCreateTrackbar( \par const char* trackbarName, \par const char* windowName,
-                      \par int* value, \par int count, \par CvTrackbarCallback onChange );
-}
-
-\begin{description}
-\cvarg{trackbarName}{Name of the created trackbar.}
-\cvarg{windowName}{Name of the window which will be used as a parent for created trackbar. Can be NULL if the trackbar should be attached to the control panel.}
-\cvarg{value}{Pointer to an integer variable, whose value will reflect the position of the slider. Upon creation, the slider position is defined by this variable.}
-
-\cvarg{count}{Maximal position of the slider. Minimal position is always 0.}
-
-\cvarg{onChange}{
-Pointer to the function to be called every time the slider changes position.
-This function should be prototyped as \texttt{void Foo(int);}  Can be NULL if callback is not required.}
-
-\end{description}
-
-The function \texttt{cvCreateTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable to be syncronized with trackbar position and specifies a callback function to be called on trackbar position change. The created trackbar is displayed at the bottom of the given window if \emph{windowName} is correctly provided, or displayed on the control panel if \emph{windowName} is NULL.
-\begin{lstlisting}
-CV_EXTERN_C_FUNCPTR( void (*CvTrackbarCallback)(int pos) );
-\end{lstlisting}
-
-By clicking on the label of each trackbar, it is possible to edit the trackbar's value manually for a more accurate control of it.
-
-\cvCPyFunc{DestroyAllWindows} 
-Destroys all of the HighGUI windows.
-
-\cvdefC{void cvDestroyAllWindows(void);}
-
-The function \texttt{cvDestroyAllWindows} destroys all of the opened HighGUI windows.
-
-\cvCPyFunc{DestroyWindow}
-Destroys a window.
-
-\cvdefC{void cvDestroyWindow( const char* name );}
-
-\begin{description}
-\cvarg{name}{Name of the window to be destroyed.}
-\end{description}
-
-The function \texttt{cvDestroyWindow} destroys the window with the given name.
-
-\cvCPyFunc{GetTrackbarPos} 
-Returns the trackbar position.
-
-\cvdefC{int cvGetTrackbarPos( \par const char* trackbarName, \par const char* windowName );}
-
-\begin{description}
-\cvarg{trackbarName}{Name of the trackbar.}
-\cvarg{windowName}{Name of the window which is the parent of the trackbar. Can be NULL if the trackbar is attached to the control panel.} 
-\end{description}
-
-The function \texttt{cvGetTrackbarPos} returns the current position of the specified trackbar.
-
-\cvCPyFunc{GetWindowHandle}
-Gets the window's handle by its name.
-
-\cvdefC{void* cvGetWindowHandle( const char* name );}
-
-\begin{description}
-\cvarg{name}{Name of the window}.
-\end{description}
-
-The function \texttt{cvGetWindowHandle} returns the native window handle. (QWidget)
-
-\cvCPyFunc{GetWindowName} 
-Gets the window's name by its handle.
-
-\cvdefC{const char* cvGetWindowName( void* windowHandle );}
-
-\begin{description}
-\cvarg{windowHandle}{Handle of the window.}
-\end{description}
-
-The function \texttt{cvGetWindowName} returns the name of the window given its native handle (QWidget).
-
-\cvCPyFunc{InitSystem}
-Initializes HighGUI.
-
-\cvdefC{int cvInitSystem( int argc, char** argv );}
-
-\begin{description}
-\cvarg{argc}{Number of command line arguments}
-\cvarg{argv}{Array of command line arguments}
-\end{description}
-
-The function \texttt{cvInitSystem} initializes HighGUI. If it wasn't
-called explicitly by the user before the first window was created, it is
-called implicitly then with \texttt{argc=0}, \texttt{argv=NULL}. Under
-Win32 there is no need to call it explicitly. Under X Window the arguments
-may be used to customize a look of HighGUI windows and controls.
-
-
-\cvCPyFunc{MoveWindow} 
-Sets the position of the window.
-
-\cvdefC{void cvMoveWindow( const char* name, int x, int y );}
-
-\begin{description}
-\cvarg{name}{Name of the window to be moved.}
-\cvarg{x}{New x coordinate of the top-left corner}
-\cvarg{y}{New y coordinate of the top-left corner}
-\end{description}
-
-The function \texttt{cvMoveWindow} changes the position of the window.
-
-\cvCPyFunc{NamedWindow}
-Creates a window.
-
-\cvdefC{int cvNamedWindow( const char* name, int flags = 0 );}
-
-\begin{description}
-\cvarg{name}{Name of the window in the window caption that may be used as a window identifier.}
-\cvarg{flags}{Flags of the window. Currently the supported flags are:
-\begin{description}
-		\cvarg{CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:}
-{ \texttt{CV\_WINDOW\_NORMAL} let the user resize the window, whereas  \texttt{CV\_WINDOW\_AUTOSIZE} adjusts automatically the window's size to fit the displayed image (see \cross{ShowImage}), and the user can not change the window size manually.}
-		\cvarg{CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:}
-{\texttt{CV\_WINDOW\_FREERATIO} adjust the image without respect the its ration, whereas \texttt{CV\_WINDOW\_KEEPRATIO} keep the image's ratio.}
-		\cvarg{CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:}
-{ \texttt{CV\_GUI\_NORMAL} is the old way to draw the window without statusbar and toolbar, whereas \texttt{CV\_GUI\_EXPANDED} is the new enhance GUI.}
-\end{description}
-
-This parameter is optional. The default flags set for a new window are \texttt{CV\_WINDOW\_AUTOSIZE}, \texttt{CV\_WINDOW\_KEEPRATIO}, and \texttt{CV\_GUI\_EXPANDED}.
-
-However, if you want to modify the flags, you can combine them using OR operator, ie:
-cvNamedWindow( ``myWindow'', \texttt{CV\_WINDOW\_NORMAL} \textbar \texttt{CV\_GUI\_NORMAL});}
-\end{description}
-
-The function \texttt{cvNamedWindow} creates a window which can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
-
-
-If a window with the same name already exists, the function does nothing.
-
-\cvCPyFunc{ResizeWindow} 
-Sets the window size.
-
-\cvdefC{void cvResizeWindow( const char* name, int width, int height );}
-
-\begin{description}
-\cvarg{name}{Name of the window to be resized.}
-\cvarg{width}{New width}
-\cvarg{height}{New height}
-\end{description}
-
-The function \texttt{cvResizeWindow} changes the size of the window.
-
-\cvCPyFunc{SetMouseCallback}
-Assigns callback for mouse events.
-
-\cvdefC{void cvSetMouseCallback( const char* windowName, CvMouseCallback onMouse, void* param=NULL );}
-
-
-\begin{description}
-\cvarg{windowName}{Name of the window.}
-
-\cvarg{onMouse}{Pointer to the function to be called every time a mouse event occurs in the specified window. This function should be prototyped as
-\texttt{void Foo(int event, int x, int y, int flags, void* param);}
-where \texttt{event} is one of \texttt{CV\_EVENT\_*}, \texttt{x} and \texttt{y} are the coordinates of the mouse pointer in image coordinates (not window coordinates), \texttt{flags} is a combination of \texttt{CV\_EVENT\_FLAG\_*}, and \texttt{param} is a user-defined parameter passed to the \texttt{cvSetMouseCallback} function call.}
-
-\cvarg{param}{User-defined parameter to be passed to the callback function.}
-\end{description}
-
-The function \texttt{cvSetMouseCallback} sets the callback function for mouse events occuring within the specified window. 
-
-The \texttt{event} parameter is one of:
-
-\begin{description}
-\cvarg{CV\_EVENT\_MOUSEMOVE}{Mouse movement}
-\cvarg{CV\_EVENT\_LBUTTONDOWN}{Left button down}
-\cvarg{CV\_EVENT\_RBUTTONDOWN}{Right button down}
-\cvarg{CV\_EVENT\_MBUTTONDOWN}{Middle button down}
-\cvarg{CV\_EVENT\_LBUTTONUP}{Left button up}
-\cvarg{CV\_EVENT\_RBUTTONUP}{Right button up}
-\cvarg{CV\_EVENT\_MBUTTONUP}{Middle button up}
-\cvarg{CV\_EVENT\_LBUTTONDBLCLK}{Left button double click}
-\cvarg{CV\_EVENT\_RBUTTONDBLCLK}{Right button double click}
-\cvarg{CV\_EVENT\_MBUTTONDBLCLK}{Middle button double click}
-\end{description}
-
-The \texttt{flags} parameter is a combination of :
-
-\begin{description}
-\cvarg{CV\_EVENT\_FLAG\_LBUTTON}{Left button pressed}
-\cvarg{CV\_EVENT\_FLAG\_RBUTTON}{Right button pressed}
-\cvarg{CV\_EVENT\_FLAG\_MBUTTON}{Middle button pressed}
-\cvarg{CV\_EVENT\_FLAG\_CTRLKEY}{Control key pressed}
-\cvarg{CV\_EVENT\_FLAG\_SHIFTKEY}{Shift key pressed}
-\cvarg{CV\_EVENT\_FLAG\_ALTKEY}{Alt key pressed}
-\end{description}
-
-\cvCPyFunc{SetTrackbarPos} 
-Sets the trackbar position.
-
-\cvdefC{void cvSetTrackbarPos( \par const char* trackbarName, \par const char* windowName, \par int pos );}
-
-\begin{description}
-\cvarg{trackbarName}{Name of the trackbar.}
-\cvarg{windowName}{Name of the window which is the parent of trackbar.  Can be NULL if the trackbar is attached to the control panel.}
-\cvarg{pos}{New position.}
-\end{description}
-
-The function \texttt{cvSetTrackbarPos} sets the position of the specified trackbar.
-
-\cvCPyFunc{ShowImage} 
-Displays the image in the specified window
-
-\cvdefC{void cvShowImage( const char* name, const CvArr* image );}
-
-\begin{description}
-\cvarg{name}{Name of the window.}
-\cvarg{image}{Image to be shown.}
-\end{description}
-
-The function \texttt{cvShowImage} displays the image in the specified window. If the window was created with the \texttt{CV\_WINDOW\_AUTOSIZE} flag then the image is shown with its original size, otherwise the image is scaled to fit in the window. The function may scale the image, depending on its depth:
-\begin{itemize}
-    \item If the image is 8-bit unsigned, it is displayed as is.
-    \item If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the value range [0,255*256] is mapped to [0,255].
-    \item If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
-\end{itemize}
-
-\cvCPyFunc{WaitKey} 
-Waits for a pressed key.
-
-\cvdefC{int cvWaitKey( int delay=0 );}
-\cvdefPy{WaitKey(delay=0)-> int}
-
-\begin{description}
-\cvarg{delay}{Delay in milliseconds.}
-\end{description}
-
-The function \texttt{cvWaitKey} waits for key event infinitely ($ \texttt{delay} <= 0$) or for \texttt{delay} milliseconds. Returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
-
-\textbf{Note:} This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing. With this current Qt implementation, this is the only way to process event such as repaint for the windows, and so on \ldots
-
-\fi
-
-\ifCpp
+%\cvCPyFunc{ConvertImage} % XXX:TBD
+%Converts one image to another with an optional vertical flip.
+%
+%\cvdefC{void cvConvertImage( const CvArr* src, CvArr* dst, int flags=0 );}
+%
+%\begin{description}
+%\cvarg{src}{Source image.}
+%\cvarg{dst}{Destination image. Must be single-channel or 3-channel 8-bit image.}
+%\cvarg{flags}{The operation flags:
+%\begin{description}
+%\cvarg{CV\_CVTIMG\_FLIP}{Flips the image vertically}
+%\cvarg{CV\_CVTIMG\_SWAP\_RB}{Swaps the red and blue channels. In OpenCV color images have \texttt{BGR} channel order, however on some systems the order needs to be reversed before displaying the image (\cross{ShowImage} does this automatically).}
+%\end{description}}
+%\end{description}
+%
+%The function \texttt{cvConvertImage} converts one image to another and flips the result vertically if desired. The function is used by \cross{ShowImage}.
+
+
+%\cvCPyFunc{CreateTrackbar} 
+%Creates a trackbar and attaches it to the specified window
+%
+%\cvdefC{
+%int cvCreateTrackbar( \par const char* trackbarName, \par const char* windowName,
+%                      \par int* value, \par int count, \par CvTrackbarCallback onChange );
+%}
+%
+%\begin{description}
+%\cvarg{trackbarName}{Name of the created trackbar.}
+%\cvarg{windowName}{Name of the window which will be used as a parent for created trackbar. Can be NULL if the trackbar should be attached to the control panel.}
+%\cvarg{value}{Pointer to an integer variable, whose value will reflect the position of the slider. Upon creation, the slider position is defined by this variable.}
+%
+%\cvarg{count}{Maximal position of the slider. Minimal position is always 0.}
+%
+%\cvarg{onChange}{
+%Pointer to the function to be called every time the slider changes position.
+%This function should be prototyped as \texttt{void Foo(int);}  Can be NULL if callback is not required.}
+%
+%\end{description}
+%
+%The function \texttt{cvCreateTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable to be syncronized with trackbar position and specifies a callback function to be called on trackbar position change. The created trackbar is displayed at the bottom of the given window if \emph{windowName} is correctly provided, or displayed on the control panel if \emph{windowName} is NULL.
+%\begin{lstlisting}
+%CV_EXTERN_C_FUNCPTR( void (*CvTrackbarCallback)(int pos) );
+%\end{lstlisting}
+
+%By clicking on the label of each trackbar, it is possible to edit the trackbar's value manually for a more accurate control of it.
+
+%\cvCPyFunc{DestroyAllWindows} 
+%Destroys all of the HighGUI windows.
+%
+%\cvdefC{void cvDestroyAllWindows(void);}
+%
+%The function \texttt{cvDestroyAllWindows} destroys all of the opened HighGUI windows.
+%
+%\cvCPyFunc{DestroyWindow}
+%Destroys a window.
+%
+%\cvdefC{void cvDestroyWindow( const char* name );}
+%
+%\begin{description}
+%\cvarg{name}{Name of the window to be destroyed.}
+%\end{description}
+%
+%The function \texttt{cvDestroyWindow} destroys the window with the given name.
+
+%\cvCPyFunc{GetTrackbarPos} 
+%Returns the trackbar position.
+%
+%\cvdefC{int cvGetTrackbarPos( \par const char* trackbarName, \par const char* windowName );}
+%
+%\begin{description}
+%\cvarg{trackbarName}{Name of the trackbar.}
+%\cvarg{windowName}{Name of the window which is the parent of the trackbar. Can be NULL if the trackbar is attached to the control panel.} 
+%\end{description}
+%
+%The function \texttt{cvGetTrackbarPos} returns the current position of the specified trackbar.
+
+%\cvCPyFunc{GetWindowHandle}
+%Gets the window's handle by its name.
+%
+%\cvdefC{void* cvGetWindowHandle( const char* name );}
+%
+%\begin{description}
+%\cvarg{name}{Name of the window}.
+%\end{description}
+%
+%The function \texttt{cvGetWindowHandle} returns the native window handle. (QWidget)
+
+%\cvCPyFunc{GetWindowName} 
+%Gets the window's name by its handle.
+%
+%\cvdefC{const char* cvGetWindowName( void* windowHandle );}
+%
+%\begin{description}
+%\cvarg{windowHandle}{Handle of the window.}
+%\end{description}
+%
+%The function \texttt{cvGetWindowName} returns the name of the window given its native handle (QWidget).
+%
+%\cvCPyFunc{InitSystem}
+%Initializes HighGUI.
+%
+%\cvdefC{int cvInitSystem( int argc, char** argv );}
+%
+%\begin{description}
+%\cvarg{argc}{Number of command line arguments}
+%\cvarg{argv}{Array of command line arguments}
+%\end{description}
+%
+%The function \texttt{cvInitSystem} initializes HighGUI. If it wasn't
+%called explicitly by the user before the first window was created, it is
+%called implicitly then with \texttt{argc=0}, \texttt{argv=NULL}. Under
+%Win32 there is no need to call it explicitly. Under X Window the arguments
+%may be used to customize a look of HighGUI windows and controls.
+
+
+%\cvCPyFunc{MoveWindow} 
+%Sets the position of the window.
+%
+%\cvdefC{void cvMoveWindow( const char* name, int x, int y );}
+%
+%\begin{description}
+%\cvarg{name}{Name of the window to be moved.}
+%\cvarg{x}{New x coordinate of the top-left corner}
+%\cvarg{y}{New y coordinate of the top-left corner}
+%\end{description}
+%
+%The function \texttt{cvMoveWindow} changes the position of the window.
+
+%\cvCPyFunc{NamedWindow}
+%Creates a window.
+%
+%\cvdefC{int cvNamedWindow( const char* name, int flags = 0 );}
+%
+%\begin{description}
+%\cvarg{name}{Name of the window in the window caption that may be used as a window identifier.}
+%\cvarg{flags}{Flags of the window. Currently the supported flags are:
+%\begin{description}
+%		\cvarg{CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:}
+%{ \texttt{CV\_WINDOW\_NORMAL} let the user resize the window, whereas  \texttt{CV\_WINDOW\_AUTOSIZE} adjusts automatically the window's size to fit the displayed image (see \cross{ShowImage}), and the user can not change the window size manually.}
+%		\cvarg{CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:}
+%{\texttt{CV\_WINDOW\_FREERATIO} adjust the image without respect the its ration, whereas \texttt{CV\_WINDOW\_KEEPRATIO} keep the image's ratio.}
+%		\cvarg{CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:}
+%{ \texttt{CV\_GUI\_NORMAL} is the old way to draw the window without statusbar and toolbar, whereas \texttt{CV\_GUI\_EXPANDED} is the new enhance GUI.}
+%\end{description}
+%
+%This parameter is optional. The default flags set for a new window are \texttt{CV\_WINDOW\_AUTOSIZE}, \texttt{CV\_WINDOW\_KEEPRATIO}, and \texttt{CV\_GUI\_EXPANDED}.
+%
+%However, if you want to modify the flags, you can combine them using OR operator, ie:
+%cvNamedWindow( ``myWindow'', \texttt{CV\_WINDOW\_NORMAL} \textbar \texttt{CV\_GUI\_NORMAL});}
+%\end{description}
+%
+%The function \texttt{cvNamedWindow} creates a window which can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
+%
+%
+%If a window with the same name already exists, the function does nothing.
+
+%\cvCPyFunc{ResizeWindow} 
+%Sets the window size.
+%
+%\cvdefC{void cvResizeWindow( const char* name, int width, int height );}
+%
+%\begin{description}
+%\cvarg{name}{Name of the window to be resized.}
+%\cvarg{width}{New width}
+%\cvarg{height}{New height}
+%\end{description}
+%
+%The function \texttt{cvResizeWindow} changes the size of the window.
+
+%\cvCPyFunc{SetMouseCallback}
+%Assigns callback for mouse events.
+%
+%\cvdefC{void cvSetMouseCallback( const char* windowName, CvMouseCallback onMouse, void* param=NULL );}
+%
+%
+%\begin{description}
+%\cvarg{windowName}{Name of the window.}
+%
+%\cvarg{onMouse}{Pointer to the function to be called every time a mouse event occurs in the specified window. This function should be prototyped as
+%\texttt{void Foo(int event, int x, int y, int flags, void* param);}
+%where \texttt{event} is one of \texttt{CV\_EVENT\_*}, \texttt{x} and \texttt{y} are the coordinates of the mouse pointer in image coordinates (not window coordinates), \texttt{flags} is a combination of \texttt{CV\_EVENT\_FLAG\_*}, and \texttt{param} is a user-defined parameter passed to the \texttt{cvSetMouseCallback} function call.}
+%
+%\cvarg{param}{User-defined parameter to be passed to the callback function.}
+%\end{description}
+%
+%The function \texttt{cvSetMouseCallback} sets the callback function for mouse events occuring within the specified window. 
+%
+%The \texttt{event} parameter is one of:
+%
+%\begin{description}
+%\cvarg{CV\_EVENT\_MOUSEMOVE}{Mouse movement}
+%\cvarg{CV\_EVENT\_LBUTTONDOWN}{Left button down}
+%\cvarg{CV\_EVENT\_RBUTTONDOWN}{Right button down}
+%\cvarg{CV\_EVENT\_MBUTTONDOWN}{Middle button down}
+%\cvarg{CV\_EVENT\_LBUTTONUP}{Left button up}
+%\cvarg{CV\_EVENT\_RBUTTONUP}{Right button up}
+%\cvarg{CV\_EVENT\_MBUTTONUP}{Middle button up}
+%\cvarg{CV\_EVENT\_LBUTTONDBLCLK}{Left button double click}
+%\cvarg{CV\_EVENT\_RBUTTONDBLCLK}{Right button double click}
+%\cvarg{CV\_EVENT\_MBUTTONDBLCLK}{Middle button double click}
+%\end{description}
+%
+%The \texttt{flags} parameter is a combination of :
+%
+%\begin{description}
+%\cvarg{CV\_EVENT\_FLAG\_LBUTTON}{Left button pressed}
+%\cvarg{CV\_EVENT\_FLAG\_RBUTTON}{Right button pressed}
+%\cvarg{CV\_EVENT\_FLAG\_MBUTTON}{Middle button pressed}
+%\cvarg{CV\_EVENT\_FLAG\_CTRLKEY}{Control key pressed}
+%\cvarg{CV\_EVENT\_FLAG\_SHIFTKEY}{Shift key pressed}
+%\cvarg{CV\_EVENT\_FLAG\_ALTKEY}{Alt key pressed}
+%\end{description}
+
+%\cvCPyFunc{SetTrackbarPos} 
+%Sets the trackbar position.
+%
+%\cvdefC{void cvSetTrackbarPos( \par const char* trackbarName, \par const char* windowName, \par int pos );}
+%
+%\begin{description}
+%\cvarg{trackbarName}{Name of the trackbar.}
+%\cvarg{windowName}{Name of the window which is the parent of trackbar.  Can be NULL if the trackbar is attached to the control panel.}
+%\cvarg{pos}{New position.}
+%\end{description}
+%
+%The function \texttt{cvSetTrackbarPos} sets the position of the specified trackbar.
+%
+%\cvCPyFunc{ShowImage} 
+%Displays the image in the specified window
+%
+%\cvdefC{void cvShowImage( const char* name, const CvArr* image );}
+%
+%\begin{description}
+%\cvarg{name}{Name of the window.}
+%\cvarg{image}{Image to be shown.}
+%\end{description}
+%
+%The function \texttt{cvShowImage} displays the image in the specified window. If the window was created with the \texttt{CV\_WINDOW\_AUTOSIZE} flag then the image is shown with its original size, otherwise the image is scaled to fit in the window. The function may scale the image, depending on its depth:
+%\begin{itemize}
+%    \item If the image is 8-bit unsigned, it is displayed as is.
+%    \item If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the value range [0,255*256] is mapped to [0,255].
+%    \item If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
+%\end{itemize}
+
+%\cvCPyFunc{WaitKey} 
+%Waits for a pressed key.
+%
+%\cvdefC{int cvWaitKey( int delay=0 );}
+%\cvdefPy{WaitKey(delay=0)-> int}
+%
+%\begin{description}
+%\cvarg{delay}{Delay in milliseconds.}
+%\end{description}
+%
+%The function \texttt{cvWaitKey} waits for key event infinitely ($ \texttt{delay} <= 0$) or for \texttt{delay} milliseconds. Returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
+%
+%\textbf{Note:} This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing. With this current Qt implementation, this is the only way to process event such as repaint for the windows, and so on \ldots
+%
+%\fi
+
+%\ifCpp
 
 %%%%%%%%%%%%%%%%%%% HERE CPP
 %\section{C++ Language}
 
-\cvCppFunc{createTrackbar}
-Creates a trackbar and attaches it to the specified window
+%\cvCppFunc{createTrackbar}
+%Creates a trackbar and attaches it to the specified window
+%
+%\cvdefCpp{int createTrackbar( const string\& trackbarname,\par
+%                    const string\& winname,\par
+%                    int* value, int count,\par
+%                    TrackbarCallback onChange CV\_DEFAULT(0),\par
+%                    void* userdata CV\_DEFAULT(0));}
+%\begin{description}
+%\cvarg{trackbarname}{Name of the created trackbar.}
+%\cvarg{winname}{Name of the window which will be used as a parent for created trackbar. Can be NULL if the trackbar should be attached to the control panel.}
+%\cvarg{value}{The optional pointer to an integer variable, whose value will reflect the position of the slider. Upon creation, the slider position is defined by this variable.}
+%\cvarg{count}{The maximal position of the slider. The minimal position is always 0.}
+%\cvarg{onChange}{Pointer to the function to be called every time the slider changes position. This function should be prototyped as \texttt{void Foo(int,void*);}, where the first parameter is the trackbar position and the second parameter is the user data (see the next parameter). If the callback is NULL pointer, then no callbacks is called, but only \texttt{value} is updated}
+%\cvarg{userdata}{The user data that is passed as-is to the callback; it can be used to handle trackbar events without using global variables}
+%\end{description}
+%
+%The function \texttt{createTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable \texttt{value} to be syncronized with trackbar position and specifies a callback function \texttt{onChange} to be called on the trackbar position change. The created trackbar is displayed at the bottom of the given window if \emph{winname} is correctly provided, or displayed on the control panel if \emph{winname} is NULL.
+%
+%By clicking on the label of each trackbar, it is possible to edit the trackbar's value manually for a more accurate control of it.
 
-\cvdefCpp{int createTrackbar( const string\& trackbarname,\par
-                    const string\& winname,\par
-                    int* value, int count,\par
-                    TrackbarCallback onChange CV\_DEFAULT(0),\par
-                    void* userdata CV\_DEFAULT(0));}
-\begin{description}
-\cvarg{trackbarname}{Name of the created trackbar.}
-\cvarg{winname}{Name of the window which will be used as a parent for created trackbar. Can be NULL if the trackbar should be attached to the control panel.}
-\cvarg{value}{The optional pointer to an integer variable, whose value will reflect the position of the slider. Upon creation, the slider position is defined by this variable.}
-\cvarg{count}{The maximal position of the slider. The minimal position is always 0.}
-\cvarg{onChange}{Pointer to the function to be called every time the slider changes position. This function should be prototyped as \texttt{void Foo(int,void*);}, where the first parameter is the trackbar position and the second parameter is the user data (see the next parameter). If the callback is NULL pointer, then no callbacks is called, but only \texttt{value} is updated}
-\cvarg{userdata}{The user data that is passed as-is to the callback; it can be used to handle trackbar events without using global variables}
-\end{description}
+%\cvCppFunc{getTrackbarPos}
+%Returns the trackbar position.
+%
+%\cvdefCpp{int getTrackbarPos( const string\& trackbarname, \par const string\& winname );}
+%\begin{description}
+%\cvarg{trackbarname}{Name of the trackbar.}
+%\cvarg{winname}{Name of the window which is the parent of the trackbar. Can be NULL if the trackbar is attached to the control panel.}
+%\end{description}
+%
+%The function returns the current position of the specified trackbar.
 
-The function \texttt{createTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable \texttt{value} to be syncronized with trackbar position and specifies a callback function \texttt{onChange} to be called on the trackbar position change. The created trackbar is displayed at the bottom of the given window if \emph{winname} is correctly provided, or displayed on the control panel if \emph{winname} is NULL.
-
-By clicking on the label of each trackbar, it is possible to edit the trackbar's value manually for a more accurate control of it.
-
-\cvCppFunc{getTrackbarPos}
-Returns the trackbar position.
-
-\cvdefCpp{int getTrackbarPos( const string\& trackbarname, \par const string\& winname );}
-\begin{description}
-\cvarg{trackbarname}{Name of the trackbar.}
-\cvarg{winname}{Name of the window which is the parent of the trackbar. Can be NULL if the trackbar is attached to the control panel.}
-\end{description}
-
-The function returns the current position of the specified trackbar.
-
-
-\cvCppFunc{imshow}
-Displays the image in the specified window
-
-\cvdefCpp{void imshow( const string\& winname, \par const Mat\& image );}
-\begin{description}
-\cvarg{winname}{Name of the window.}
-\cvarg{image}{Image to be shown.}
-\end{description}
-
-The function \texttt{imshow} displays the image in the specified window. If the window was created with the \texttt{CV\_WINDOW\_AUTOSIZE} flag then the image is shown with its original size, otherwise the image is scaled to fit in the window. The function may scale the image, depending on its depth:
-\begin{itemize}
-    \item If the image is 8-bit unsigned, it is displayed as is.
-    \item If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the value range [0,255*256] is mapped to [0,255].
-    \item If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
-\end{itemize}
-
-
-\cvCppFunc{namedWindow}
-Creates a window.
-
-\cvdefCpp{void namedWindow( const string\& winname, \par int flags = 0 );}
-\begin{description}
-\cvarg{name}{Name of the window in the window caption that may be used as a window identifier.}
-\cvarg{flags}{Flags of the window. Currently the supported flags are:
-\begin{description}
-		\cvarg{CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:}
-{ \texttt{CV\_WINDOW\_NORMAL} let the user resize the window, whereas  \texttt{CV\_WINDOW\_AUTOSIZE} adjusts automatically the window's size to fit the displayed image (see \cross{ShowImage}), and the user can not change the window size manually.}
-		\cvarg{CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:}
-{\texttt{CV\_WINDOW\_FREERATIO} adjust the image without respect the its ration, whereas \texttt{CV\_WINDOW\_KEEPRATIO} keep the image's ratio.}
-		\cvarg{CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:}
-{ \texttt{CV\_GUI\_NORMAL} is the old way to draw the window without statusbar and toolbar, whereas \texttt{CV\_GUI\_EXPANDED} is the new enhance GUI.}
-\end{description}
-
-This parameter is optional. The default flags set for a new window are \texttt{CV\_WINDOW\_AUTOSIZE}, \texttt{CV\_WINDOW\_KEEPRATIO}, and \texttt{CV\_GUI\_EXPANDED}.
-
-However, if you want to modify the flags, you can combine them using OR operator, ie:
-namedWindow( ``myWindow'', \texttt{CV\_WINDOW\_NORMAL} \textbar \texttt{CV\_GUI\_NORMAL});}
-\end{description}
-
-The function \texttt{namedWindow} creates a window which can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
-
-If a window with the same name already exists, the function does nothing.
-
-\cvCppFunc{setTrackbarPos}
-Sets the trackbar position.
-
-\cvdefCpp{void setTrackbarPos( const string\& trackbarname, \par const string\& winname, int pos );}
-\begin{description}
-\cvarg{trackbarname}{Name of the trackbar.}
-\cvarg{winname}{Name of the window which is the parent of trackbar. Can be NULL if the trackbar is attached to the control panel.}
-\cvarg{pos}{The new position.}
-\end{description}
-
-The function sets the position of the specified trackbar.
+%
+%\cvCppFunc{imshow}
+%Displays the image in the specified window
+%
+%\cvdefCpp{void imshow( const string\& winname, \par const Mat\& image );}
+%\begin{description}
+%\cvarg{winname}{Name of the window.}
+%\cvarg{image}{Image to be shown.}
+%\end{description}
+%
+%The function \texttt{imshow} displays the image in the specified window. If the window was created with the \texttt{CV\_WINDOW\_AUTOSIZE} flag then the image is shown with its original size, otherwise the image is scaled to fit in the window. The function may scale the image, depending on its depth:
+%\begin{itemize}
+%    \item If the image is 8-bit unsigned, it is displayed as is.
+%    \item If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the value range [0,255*256] is mapped to [0,255].
+%    \item If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
+%\end{itemize}
 
 
-\cvCppFunc{waitKey}
-Waits for a pressed key.
+%\cvCppFunc{namedWindow}
+%Creates a window.
+%
+%\cvdefCpp{void namedWindow( const string\& winname, \par int flags = 0 );}
+%\begin{description}
+%\cvarg{name}{Name of the window in the window caption that may be used as a window identifier.}
+%\cvarg{flags}{Flags of the window. Currently the supported flags are:
+%\begin{description}
+%		\cvarg{CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:}
+%{ \texttt{CV\_WINDOW\_NORMAL} let the user resize the window, whereas  \texttt{CV\_WINDOW\_AUTOSIZE} adjusts automatically the window's size to fit the displayed image (see \cross{ShowImage}), and the user can not change the window size manually.}
+%		\cvarg{CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:}
+%{\texttt{CV\_WINDOW\_FREERATIO} adjust the image without respect the its ration, whereas \texttt{CV\_WINDOW\_KEEPRATIO} keep the image's ratio.}
+%		\cvarg{CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:}
+%{ \texttt{CV\_GUI\_NORMAL} is the old way to draw the window without statusbar and toolbar, whereas \texttt{CV\_GUI\_EXPANDED} is the new enhance GUI.}
+%\end{description}
+%
+%This parameter is optional. The default flags set for a new window are \texttt{CV\_WINDOW\_AUTOSIZE}, \texttt{CV\_WINDOW\_KEEPRATIO}, and \texttt{CV\_GUI\_EXPANDED}.
+%
+%However, if you want to modify the flags, you can combine them using OR operator, ie:
+%namedWindow( ``myWindow'', \texttt{CV\_WINDOW\_NORMAL} \textbar \texttt{CV\_GUI\_NORMAL});}
+%\end{description}
+%
+%The function \texttt{namedWindow} creates a window which can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
+%
+%If a window with the same name already exists, the function does nothing.
+%
+%\cvCppFunc{setTrackbarPos}
+%Sets the trackbar position.
+%
+%\cvdefCpp{void setTrackbarPos( const string\& trackbarname, \par const string\& winname, int pos );}
+%\begin{description}
+%\cvarg{trackbarname}{Name of the trackbar.}
+%\cvarg{winname}{Name of the window which is the parent of trackbar. Can be NULL if the trackbar is attached to the control panel.}
+%\cvarg{pos}{The new position.}
+%\end{description}
+%
+%The function sets the position of the specified trackbar.
 
-\cvdefCpp{int waitKey(int delay=0);}
-\begin{description}
-\cvarg{delay}{Delay in milliseconds. 0 is the special value that means "forever"}
-\end{description}
 
-The function \texttt{waitKey} waits for key event infinitely (when $\texttt{delay}\leq 0$) or for \texttt{delay} milliseconds, when it's positive. Returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
+%\cvCppFunc{waitKey}
+%Waits for a pressed key.
+%
+%\cvdefCpp{int waitKey(int delay=0);}
+%\begin{description}
+%\cvarg{delay}{Delay in milliseconds. 0 is the special value that means "forever"}
+%\end{description}
+%
+%The function \texttt{waitKey} waits for key event infinitely (when $\texttt{delay}\leq 0$) or for \texttt{delay} milliseconds, when it's positive. Returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
+%
+%\textbf{Note:} This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing. With this current Qt implementation, this is the only way to process event such as repaint for the windows, and so on \ldots
+%
+%\textbf{Note 2:} The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
 
-\textbf{Note:} This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing. With this current Qt implementation, this is the only way to process event such as repaint for the windows, and so on \ldots
-
-\textbf{Note 2:} The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
-
-\fi
+%\fi
 
 
 

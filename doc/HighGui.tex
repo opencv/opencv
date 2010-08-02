@@ -62,7 +62,17 @@ This function should be prototyped as \texttt{void Foo(int);}  Can be NULL if ca
 \fi
 \end{description}
 
-The function \texttt{cvCreateTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable to be syncronized with trackbar position and specifies a callback function to be called on trackbar position change. The created trackbar is displayed on the top of the given window.
+The function \texttt{cvCreateTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable to be syncronized with trackbar position and specifies a callback function to be called on trackbar position change. The created trackbar is displayed on the top of the given window.\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{windowName}{Name of the window which will be used as a parent for created trackbar. Can be NULL if the trackbar should be attached to the control panel.}
+\end{description}
+
+The created trackbar is displayed at the bottom of the given window if \emph{windowName} is correctly provided, or displayed on the control panel if \emph{windowName} is NULL.
+
+By clicking on the label of each trackbar, it is possible to edit the trackbar's value manually for a more accurate control of it.
+
 \ifC
 \begin{lstlisting}
 CV_EXTERN_C_FUNCPTR( void (*CvTrackbarCallback)(int pos) );
@@ -100,7 +110,12 @@ Returns the trackbar position.
 \cvarg{windowName}{Name of the window which is the parent of the trackbar.}
 \end{description}
 
-The function \texttt{cvGetTrackbarPos} returns the current position of the specified trackbar.
+The function \texttt{cvGetTrackbarPos} returns the current position of the specified trackbar.\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{windowName}{Name of the window which is the parent of the trackbar. Can be NULL if the trackbar is attached to the control panel.} 
+\end{description}
 
 \ifC
 
@@ -113,7 +128,10 @@ Gets the window's handle by its name.
 \cvarg{name}{Name of the window}.
 \end{description}
 
-The function \texttt{cvGetWindowHandle} returns the native window handle (HWND in case of Win32 and GtkWidget in case of GTK+).
+The function \texttt{cvGetWindowHandle} returns the native window handle (HWND in case of Win32 and GtkWidget in case of GTK+).\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+The function \texttt{cvGetWindowHandle} returns the native window handle inheriting from the Qt class QWidget.
 
 \cvCPyFunc{GetWindowName} 
 Gets the window's name by its handle.
@@ -124,7 +142,10 @@ Gets the window's name by its handle.
 \cvarg{windowHandle}{Handle of the window.}
 \end{description}
 
-The function \texttt{cvGetWindowName} returns the name of the window given its native handle (HWND in case of Win32 and GtkWidget in case of GTK+).
+The function \texttt{cvGetWindowName} returns the name of the window given its native handle (HWND in case of Win32 and GtkWidget in case of GTK+).\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+The function \texttt{cvGetWindowName} returns the name of the window given its native handle (QWidget).
 
 \cvCPyFunc{InitSystem}
 Initializes HighGUI.
@@ -140,7 +161,10 @@ The function \texttt{cvInitSystem} initializes HighGUI. If it wasn't
 called explicitly by the user before the first window was created, it is
 called implicitly then with \texttt{argc=0}, \texttt{argv=NULL}. Under
 Win32 there is no need to call it explicitly. Under X Window the arguments
-may be used to customize a look of HighGUI windows and controls.
+may be used to customize a look of HighGUI windows and controls.\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+The function \texttt{cvInitSystem} is automatically called at the first cvNameWindow call. 
 
 \fi
 
@@ -171,7 +195,31 @@ Creates a window.
 
 The function \texttt{cvNamedWindow} creates a window which can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
 
-If a window with the same name already exists, the function does nothing.
+If a window with the same name already exists, the function does nothing.\\\\
+
+
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{flags}{Flags of the window. Currently the supported flags are:
+\begin{description}
+		\cvarg{CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:}
+{ \texttt{CV\_WINDOW\_NORMAL} let the user resize the window, whereas  \texttt{CV\_WINDOW\_AUTOSIZE} adjusts automatically the window's size to fit the displayed image (see \cross{ShowImage}), and the user can not change the window size manually.}
+		\cvarg{CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:}
+{\texttt{CV\_WINDOW\_FREERATIO} adjust the image without respect the its ration, whereas \texttt{CV\_WINDOW\_KEEPRATIO} keep the image's ratio.}
+		\cvarg{CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:}
+{ \texttt{CV\_GUI\_NORMAL} is the old way to draw the window without statusbar and toolbar, whereas \texttt{CV\_GUI\_EXPANDED} is the new enhance GUI.}
+\end{description}
+
+This parameter is optional. The default flags set for a new window are \texttt{CV\_WINDOW\_AUTOSIZE}, \texttt{CV\_WINDOW\_KEEPRATIO}, and \texttt{CV\_GUI\_EXPANDED}.
+
+However, if you want to modify the flags, you can combine them using OR operator, ie:
+\begin{lstlisting}
+cvNamedWindow( ``myWindow'', \texttt{CV\_WINDOW\_NORMAL} \textbar \texttt{CV\_GUI\_NORMAL});}
+\end{lstlisting}
+\end{description}
+
+
+
 
 \cvCPyFunc{ResizeWindow} 
 Sets the window size.
@@ -250,7 +298,12 @@ Sets the trackbar position.
 \cvarg{pos}{New position.}
 \end{description}
 
-The function \texttt{cvSetTrackbarPos} sets the position of the specified trackbar.
+The function \texttt{cvSetTrackbarPos} sets the position of the specified trackbar.\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{windowName}{Name of the window which is the parent of trackbar.  Can be NULL if the trackbar is attached to the control panel.}
+\end{description}
 
 \cvCPyFunc{ShowImage} 
 Displays the image in the specified window
@@ -282,8 +335,10 @@ Waits for a pressed key.
 
 The function \texttt{cvWaitKey} waits for key event infinitely ($ \texttt{delay} <= 0$) or for \texttt{delay} milliseconds. Returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
 
-\textbf{Note:} This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing.
+\textbf{Note:} This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing.\\\\
 
+\textbf{[Qt Backend Only]} qt-specific details:
+With this current Qt implementation, this is the only way to process event such as repaint for the windows, and so on \ldots
 
 \section{Reading and Writing Images and Video}
 
@@ -597,7 +652,16 @@ Creates a trackbar and attaches it to the specified window
 \cvarg{userdata}{The user data that is passed as-is to the callback; it can be used to handle trackbar events without using global variables}
 \end{description}
 
-The function \texttt{createTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable \texttt{value} to be syncronized with trackbar position and specifies a callback function \texttt{onChange} to be called on the trackbar position change. The created trackbar is displayed on the top of the given window.
+The function \texttt{createTrackbar} creates a trackbar (a.k.a. slider or range control) with the specified name and range, assigns a variable \texttt{value} to be syncronized with trackbar position and specifies a callback function \texttt{onChange} to be called on the trackbar position change. The created trackbar is displayed on the top of the given window.\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{winname}{Name of the window which will be used as a parent for created trackbar. Can be NULL if the trackbar should be attached to the control panel.}
+\end{description}
+
+The created trackbar is displayed at the bottom of the given window if \emph{winname} is correctly provided, or displayed on the control panel if \emph{winname} is NULL.
+
+By clicking on the label of each trackbar, it is possible to edit the trackbar's value manually for a more accurate control of it.
 
 \cvCppFunc{getTrackbarPos}
 Returns the trackbar position.
@@ -608,8 +672,12 @@ Returns the trackbar position.
 \cvarg{winname}{Name of the window which is the parent of the trackbar.}
 \end{description}
 
-The function returns the current position of the specified trackbar.
+The function returns the current position of the specified trackbar.\\\\
 
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{winname}{Name of the window which is the parent of the trackbar. Can be NULL if the trackbar is attached to the control panel.}
+\end{description}
 
 \cvCppFunc{imshow}
 Displays the image in the specified window
@@ -639,7 +707,28 @@ Creates a window.
 
 The function \texttt{namedWindow} creates a window which can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
 
-If a window with the same name already exists, the function does nothing.
+If a window with the same name already exists, the function does nothing.\\\\
+
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{flags}{Flags of the window. Currently the supported flags are:
+\begin{description}
+		\cvarg{CV\_WINDOW\_NORMAL or CV\_WINDOW\_AUTOSIZE:}
+{ \texttt{CV\_WINDOW\_NORMAL} let the user resize the window, whereas  \texttt{CV\_WINDOW\_AUTOSIZE} adjusts automatically the window's size to fit the displayed image (see \cross{ShowImage}), and the user can not change the window size manually.}
+		\cvarg{CV\_WINDOW\_FREERATIO or CV\_WINDOW\_KEEPRATIO:}
+{\texttt{CV\_WINDOW\_FREERATIO} adjust the image without respect the its ration, whereas \texttt{CV\_WINDOW\_KEEPRATIO} keep the image's ratio.}
+		\cvarg{CV\_GUI\_NORMAL or CV\_GUI\_EXPANDED:}
+{ \texttt{CV\_GUI\_NORMAL} is the old way to draw the window without statusbar and toolbar, whereas \texttt{CV\_GUI\_EXPANDED} is the new enhance GUI.}
+\end{description}
+
+This parameter is optional. The default flags set for a new window are \texttt{CV\_WINDOW\_AUTOSIZE}, \texttt{CV\_WINDOW\_KEEPRATIO}, and \texttt{CV\_GUI\_EXPANDED}.
+
+However, if you want to modify the flags, you can combine them using OR operator, ie:
+\begin{lstlisting}
+namedWindow( ``myWindow'', \texttt{CV\_WINDOW\_NORMAL} \textbar \texttt{CV\_GUI\_NORMAL});}
+\end{lstlisting}
+\end{description}
+
 
 \cvCppFunc{setTrackbarPos}
 Sets the trackbar position.
@@ -651,8 +740,12 @@ Sets the trackbar position.
 \cvarg{pos}{The new position.}
 \end{description}
 
-The function sets the position of the specified trackbar in the specified window.
+The function sets the position of the specified trackbar in the specified window.\\\\
 
+\textbf{[Qt Backend Only]} qt-specific details:
+\begin{description}
+\cvarg{winname}{Name of the window which is the parent of trackbar. Can be NULL if the trackbar is attached to the control panel.}
+\end{description}
 
 \cvCppFunc{waitKey}
 Waits for a pressed key.
