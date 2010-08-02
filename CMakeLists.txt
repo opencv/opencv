@@ -521,14 +521,14 @@ if (WITH_QT)
         find_package (OpenGL QUIET)
 
 
-		if (NOT WIN32)#on my Windows, OPENGL_FOUND was true but this path was empty
+		#if (NOT WIN32)
 			if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
 				set(HAVE_QT_OPENGL 1)
 				add_definitions(-DHAVE_QT_OPENGL)
 				link_directories("${OPENGL_LIBRARIES}")
 				set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
 		 	endif()
-        endif()
+        #endif()
         
     endif()
 endif()

@@ -235,13 +235,6 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 }
 
 
-
-
-CV_IMPL int cvInitSystem( int, char** )
-{
-	return 0;
-}
-
 CV_IMPL int cvWaitKey( int arg )
 {
 
@@ -431,25 +424,32 @@ CvButtonbar* icvFindButtonbarByName( const char* button_name,QBoxLayout* layout)
 	return (CvButtonbar*) icvFindBarbyName( layout, nameQt, type_CvButtonbar);
 }
 
-int icvInitSystem()
+int icvInitSystem(int *c, char** v)
 {
 	static int wasInitialized = 0;
 
 	// check initialization status
 	if( !wasInitialized)
 	{
-		new QApplication(parameterSystemC,parameterSystemV);
+		new QApplication(*c,v);
 
 		wasInitialized = 1;
-		//qDebug()<<"init done";
+		qDebug()<<"init done";
 
 #if defined( HAVE_QT_OPENGL )//OK tested !
-		//qDebug()<<"opengl support available";
+		qDebug()<<"opengl support available";
 #endif
 	}
 
 	return 0;
 }
+
+CV_IMPL int cvInitSystem( int, char** )
+{
+	icvInitSystem(&parameterSystemC, parameterSystemV);
+	return 0;
+}
+
 
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
@@ -673,7 +673,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 
 GuiReceiver::GuiReceiver() : _bTimeOut(false), nb_windows(0)
 {
-	icvInitSystem();
+	icvInitSystem(&parameterSystemC, parameterSystemV);
 
 	timer = new QTimer;
 	QObject::connect(timer, SIGNAL(timeout()), this, SLOT(timeOut()));
@@ -1967,15 +1967,34 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 
 
 #if defined( HAVE_QT_OPENGL )
+	
 	if ( mode_display == CV_MODE_OPENGL)
 	{
 		//QGLWidget* wGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
 		setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
+		if (param_keepRatio == CV_WINDOW_KEEPRATIO)
+		{
+		//TODO: fix this bug:
+		//::::blinking in OpenGL with CV_WINDOW_KEEPRATIO::::
+		//The raison is that to move the widget in the middle and resize it manually to keep the aspect ratio,
+		//we resize in resizeEvent() and use a trick not to be blocked in an infinity loop.
+		//This is working fine if the viewport is not OpenGL, however we have two rendering with OpenGL.
+		//The first rendering with the widget not moved in the midle (so stuck in top left), then the final and correct rendering.
+		//This two rendering are visible with OpenGL and CV_WINDOW_KEEPRATIO but not with native rendering (why ???)
+
+		//I tried to use Qt::AlignCenter of the layout manager but the widget does not expand anymore
+		//I tried to center with painter.drawImage (in draw2D), but the imgRegion and all other function using the size of the widget will not work anymore.
+		startDisplayInfo("WARNING: For now, you cannot use OpenGL rendering with CV_WINDOW_KEEPRATIO, so we changed to CV_WINDOW_FREERATIO", 5000);
+		setRatio(CV_WINDOW_FREERATIO);
+		}
+
+		//setViewport(new QGLWidget());
 		angle = DEFAULT_ANGLE;
 		zmin = DEFAULT_ZMIN;
 		zmax = DEFAULT_ZMAX;
 		initGL();
 	}
+	
 #endif
 
 	image2Draw_ipl=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
@@ -2063,6 +2082,7 @@ void ViewPort::saveView()
 
 void ViewPort::setRatio(int flags)
 {
+	centralWidget->param_ratio_mode = flags;
 	param_keepRatio = flags;
 	updateGeometry();
 	viewport()->update();
@@ -2499,7 +2519,7 @@ void ViewPort::paintEvent(QPaintEvent* event)
 		if (param_matrixWorld.m11()>=threshold_zoom_img_region)
 		{
 			if (centralWidget->param_flags == CV_WINDOW_NORMAL)
-				startDisplayInfo("WARNING: The values displayed are the values of the resized image. If you want the values of the original image, use CV_WINDOW_AUTORESIZE", 1000);
+				startDisplayInfo("WARNING: The values displayed are the resized image's values. If you want the original image's values, use CV_WINDOW_AUTORESIZE", 1000);
 
 			drawImgRegion(&myPainter);
 		}
@@ -2605,10 +2625,12 @@ void ViewPort::drawImgRegion(QPainter *painter)
 			if (nbChannelOriginImage==3)
 			{
 				//for debug
+				/*
 				val = tr("%1 %2").arg(point2.x()).arg(point2.y());
 				painter->setPen(QPen(Qt::black, 1));
 				painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/2),
 					Qt::AlignCenter, val);
+				*/
 
 				val = tr("%1").arg(qRed(rgbValue));
 				painter->setPen(QPen(Qt::red, 1));
