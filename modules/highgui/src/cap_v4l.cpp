@@ -202,7 +202,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_CAMV4L
+#if !defined WIN32 && (defined HAVE_CAMV4L || defined HAVE_CAMV4L2)
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
