@@ -525,6 +525,8 @@ if (WITH_QT)
 			if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
 				set(HAVE_QT_OPENGL 1)
 				add_definitions(-DHAVE_QT_OPENGL)
+				link_directories("${OPENGL_LIBRARIES}")
+				set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
 		 	endif()
         endif()
         

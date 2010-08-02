@@ -2241,7 +2241,7 @@ void ViewPort::controlImagePosition()
 	//save also the inv matrix
 	matrixWorld_inv = param_matrixWorld.inverted();
 
-	viewport()->update();
+	//viewport()->update();
 }
 
 void ViewPort::moveView(QPointF delta)
@@ -2409,9 +2409,12 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
 {
 	//to convert mouse coordinate
 	qreal pfx, pfy;
+	//qreal ratioX = float(image2Draw_qt.width())/image2Draw_qt_resized.width();
+	//qreal ratioY = float(image2Draw_qt.height())/image2Draw_qt_resized.height();
 	matrixWorld_inv.map(pt.x(),pt.y(),&pfx,&pfy);
-	mouseCoordinate.rx()=floor(pfx);
-	mouseCoordinate.ry()=floor(pfy);
+	
+	mouseCoordinate.rx()=floor(pfx/ratioX);
+	mouseCoordinate.ry()=floor(pfy/ratioY);
 
 	if (on_mouse)
 		on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
@@ -2430,7 +2433,6 @@ QSize ViewPort::sizeHint() const
 
 void ViewPort::resizeEvent ( QResizeEvent *event)
 {
-	image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 
 	controlImagePosition();
 	ratioX=width()/float(image2Draw_ipl->width);
@@ -2493,8 +2495,14 @@ void ViewPort::paintEvent(QPaintEvent* event)
 	//in mode zoom/panning
 	if (param_matrixWorld.m11()>1)
 	{
+		
 		if (param_matrixWorld.m11()>=threshold_zoom_img_region)
+		{
+			if (centralWidget->param_flags == CV_WINDOW_NORMAL)
+				startDisplayInfo("WARNING: The values displayed are the values of the resized image. If you want the values of the original image, use CV_WINDOW_AUTORESIZE", 1000);
+
 			drawImgRegion(&myPainter);
+		}
 
 		drawViewOverview(&myPainter);
 	}
@@ -2512,7 +2520,8 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
 void ViewPort::draw2D(QPainter *painter)
 {
-	painter->drawImage(0,0,image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+	image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+	painter->drawImage(0,0,image2Draw_qt_resized);
 }
 
 void ViewPort::drawStatusBar()
@@ -2544,6 +2553,7 @@ void ViewPort::drawStatusBar()
 	}
 }
 
+
 void ViewPort::drawImgRegion(QPainter *painter)
 {
 	qreal offsetX = param_matrixWorld.dx()/param_matrixWorld.m11();
@@ -2573,22 +2583,33 @@ void ViewPort::drawImgRegion(QPainter *painter)
 	QPointF point1;//sorry, I do not know how to name it
 	QPointF point2;//idem
 
+	//qreal ratioX = float(image2Draw_qt.width())/image2Draw_qt_resized.width();
+	//qreal ratioY = float(image2Draw_qt.height())/image2Draw_qt_resized.height();
 
-	for (int j=-1;j<view.height()/param_matrixWorld.m11();j++)
-		for (int i=-1;i<view.width()/param_matrixWorld.m11();i++)
+	for (int j=-1;j<height()/param_matrixWorld.m11();j++)//-1 because display the pixels top rows left colums
+		for (int i=-1;i<width()/param_matrixWorld.m11();i++)//-1
 		{
 			point1.setX((i+offsetX)*param_matrixWorld.m11());
 			point1.setY((j+offsetY)*param_matrixWorld.m11());
 
 			matrixWorld_inv.map(point1.x(),point1.y(),&point2.rx(),&point2.ry());
 
+			point2.rx()= (long) (point2.x() + 0.5);
+			point2.ry()= (long) (point2.y() + 0.5);
+
 			if (point2.x() >= 0 && point2.y() >= 0)
-				rgbValue = image2Draw_qt.pixel(QPoint(point2.x(),point2.y()));
+				rgbValue = image2Draw_qt_resized.pixel(QPoint(point2.x(),point2.y()));
 			else
 				rgbValue = qRgb(0,0,0);
 
 			if (nbChannelOriginImage==3)
 			{
+				//for debug
+				val = tr("%1 %2").arg(point2.x()).arg(point2.y());
+				painter->setPen(QPen(Qt::black, 1));
+				painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/2),
+					Qt::AlignCenter, val);
+
 				val = tr("%1").arg(qRed(rgbValue));
 				painter->setPen(QPen(Qt::red, 1));
 				painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/3),

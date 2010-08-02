@@ -101,6 +101,9 @@ enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
 
 class CvWindow;
 class ViewPort;
+#if defined( HAVE_QT_OPENGL )
+class OpenGLWidget;
+#endif
 
 
 class GuiReceiver : public QObject
@@ -258,6 +261,18 @@ private:
     void hideEvent ( QHideEvent * event ) ;
 };
 
+
+
+class GlobalLayout : public QBoxLayout
+{
+    Q_OBJECT
+public:
+	GlobalLayout(QWidget* parent) : QBoxLayout(QBoxLayout::TopToBottom,parent){};
+	bool hasHeightForWidth () {return true;};
+	int heightForWidth( int w ) {qDebug()<<"yopyopypp";return w;};
+};
+
+
 class CvWindow : public QWidget
 {
     Q_OBJECT
@@ -275,7 +290,7 @@ public:
     void hideTools();
     void showTools();
     static CvButtonbar* createButtonbar(QString bar_name);
-
+	QSize getAvailableSize();
 
 
     ViewPort* getView();
@@ -350,6 +365,8 @@ public:
     void setOpenGLCallback(CvOpenGLCallback func,void* userdata, double arg3, double arg4, double arg5);
     int getRatio();
     void setRatio(int arg);
+	int heightForWidth( int w );// {qDebug()<<"yopyopypp";return w;};
+	bool hasHeightForWidth (){qDebug()<<"ask";return true;};
 
     //parameters (will be save/load)
     QTransform param_matrixWorld;
@@ -402,6 +419,7 @@ private:
     QPointer<QTimer> timerDisplay;
     bool drawInfo;
     QString infoText;
+	QRectF target;
     //QImage* image;
 
     void paintEvent(QPaintEvent* paintEventInfo);
@@ -420,6 +438,7 @@ private:
     void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
 #if defined( HAVE_QT_OPENGL )
+	QPointer<OpenGLWidget> myGL;
 	double angle;
 	double zmin;
 	double zmax;
