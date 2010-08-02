@@ -81,26 +81,60 @@ namespace cv { namespace gpu { namespace impl {
 namespace beliefpropagation_gpu
 {
     template <typename T>
-    __global__ void comp_data(uchar* l, uchar* r, size_t step, T* data, size_t data_step, int cols, int rows) 
+    __global__ void comp_data_gray(const uchar* l, const uchar* r, size_t step, T* data, size_t data_step, int cols, int rows) 
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        if (y < rows && x < cols)
+        if (y > 0 && y < rows - 1 && x > 0 && x < cols - 1)
         {
-            uchar* ls = l + y * step + x; 
-            uchar* rs = r + y * step + x; 
+            const uchar* ls = l + y * step + x; 
+            const uchar* rs = r + y * step + x; 
 
             T* ds = data + y * data_step + x;
             size_t disp_step = data_step * rows;
 
             for (int disp = 0; disp < cndisp; disp++) 
             {
-                if (x - disp >= 0)
+                if (x - disp >= 1)
                 {
-                    int le = ls[0];
-                    int re = rs[-disp];
-                    float val = abs(le - re);
+                    float val  = abs((int)ls[0] - rs[-disp]);
+                    
+                    ds[disp * disp_step] = saturate_cast<T>(fmin(cdata_weight * val, cdata_weight * cmax_data_term));
+                }
+                else
+                {
+                    ds[disp * disp_step] = saturate_cast<T>(cdata_weight * cmax_data_term);
+                }
+            }
+        }
+    }
+
+    template <typename T>
+    __global__ void comp_data_bgr(const uchar* l, const uchar* r, size_t step, T* data, size_t data_step, int cols, int rows) 
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (y > 0 && y < rows - 1 && x > 0 && x < cols - 1)
+        {
+            const uchar* ls = l + y * step + x * 3; 
+            const uchar* rs = r + y * step + x * 3; 
+
+            T* ds = data + y * data_step + x;
+            size_t disp_step = data_step * rows;
+
+            for (int disp = 0; disp < cndisp; disp++) 
+            {
+                if (x - disp >= 1)
+                {                    
+                    const float tr = 0.299f;
+                    const float tg = 0.587f;
+                    const float tb = 0.114f;
+
+                    float val  = tb * abs((int)ls[0] - rs[0-disp*3]);
+                          val += tg * abs((int)ls[1] - rs[1-disp*3]);
+                          val += tr * abs((int)ls[2] - rs[2-disp*3]);
                     
                     ds[disp * disp_step] = saturate_cast<T>(fmin(cdata_weight * val, cdata_weight * cmax_data_term));
                 }
@@ -114,10 +148,10 @@ namespace beliefpropagation_gpu
 }
 
 namespace cv { namespace gpu { namespace impl {
-    typedef void (*CompDataFunc)(const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream);
+    typedef void (*CompDataFunc)(const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream);
 
     template<typename T>
-    void comp_data_(const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream)
+    void comp_data_(const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -125,13 +159,16 @@ namespace cv { namespace gpu { namespace impl {
         grid.x = divUp(l.cols, threads.x);
         grid.y = divUp(l.rows, threads.y);
         
-        beliefpropagation_gpu::comp_data<T><<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, (T*)mdata.ptr, mdata.step/sizeof(T), l.cols, l.rows);
+        if (channels == 1)
+            beliefpropagation_gpu::comp_data_gray<T><<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, (T*)mdata.ptr, mdata.step/sizeof(T), l.cols, l.rows);
+        else
+            beliefpropagation_gpu::comp_data_bgr<T><<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, (T*)mdata.ptr, mdata.step/sizeof(T), l.cols, l.rows);
         
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void comp_data(int msgType, const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream)
+    void comp_data(int msg_type, const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream)
     {
         static CompDataFunc tab[8] =
         {
@@ -145,10 +182,10 @@ namespace cv { namespace gpu { namespace impl {
             0                   // user type
         };
 
-        CompDataFunc func = tab[msgType];
+        CompDataFunc func = tab[msg_type];
         if (func == 0)
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
-        func(l, r, mdata, stream);
+        func(l, r, channels, mdata, stream);
     }
 }}}
 
@@ -200,7 +237,7 @@ namespace cv { namespace gpu { namespace impl {
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void data_step_down(int dst_cols, int dst_rows, int src_rows, int msgType, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream)
+    void data_step_down(int dst_cols, int dst_rows, int src_rows, int msg_type, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream)
     {
         static DataStepDownFunc tab[8] =
         {
@@ -214,7 +251,7 @@ namespace cv { namespace gpu { namespace impl {
             0                        // user type
         };
 
-        DataStepDownFunc func = tab[msgType];
+        DataStepDownFunc func = tab[msg_type];
         if (func == 0)
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(dst_cols, dst_rows, src_rows, src, dst, stream);
@@ -270,7 +307,7 @@ namespace cv { namespace gpu { namespace impl {
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void level_up_messages(int dst_idx, int dst_cols, int dst_rows, int src_rows, int msgType, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream)
+    void level_up_messages(int dst_idx, int dst_cols, int dst_rows, int src_rows, int msg_type, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream)
     {
         static LevelUpMessagesFunc tab[8] =
         {
@@ -284,7 +321,7 @@ namespace cv { namespace gpu { namespace impl {
             0                           // user type
         };
 
-        LevelUpMessagesFunc func = tab[msgType];
+        LevelUpMessagesFunc func = tab[msg_type];
         if (func == 0)
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(dst_idx, dst_cols, dst_rows, src_rows, mus, mds, mls, mrs, stream);
@@ -413,7 +450,7 @@ namespace cv { namespace gpu { namespace impl {
         }
     }
 
-    void calc_all_iterations(int cols, int rows, int iters, int msgType, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream)
+    void calc_all_iterations(int cols, int rows, int iters, int msg_type, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream)
     {
         static CalcAllIterationFunc tab[8] =
         {
@@ -427,7 +464,7 @@ namespace cv { namespace gpu { namespace impl {
             0                             // user type
         };
 
-        CalcAllIterationFunc func = tab[msgType];
+        CalcAllIterationFunc func = tab[msg_type];
         if (func == 0)
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(cols, rows, iters, u, d, l, r, data, stream);
@@ -496,7 +533,7 @@ namespace cv { namespace gpu { namespace impl {
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void output(int msgType, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream)
+    void output(int msg_type, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream)
     {            
         static OutputFunc tab[8] =
         {
@@ -510,7 +547,7 @@ namespace cv { namespace gpu { namespace impl {
             0                // user type
         };
 
-        OutputFunc func = tab[msgType];
+        OutputFunc func = tab[msg_type];
         if (func == 0)
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(u, d, l, r, data, disp, stream);

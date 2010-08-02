@@ -65,11 +65,11 @@ const float DEFAULT_DISC_SINGLE_JUMP = 1.0f;
 
 namespace cv { namespace gpu { namespace impl {
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
-    void comp_data(int msgType, const DevMem2D& l, const DevMem2D& r, DevMem2D mdata, const cudaStream_t& stream);
-    void data_step_down(int dst_cols, int dst_rows, int src_rows, int msgType, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream);
-    void level_up_messages(int dst_idx, int dst_cols, int dst_rows, int src_rows, int msgType, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream);
-    void calc_all_iterations(int cols, int rows, int iters, int msgType, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream);
-    void output(int msgType, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream);
+    void comp_data(int msg_type, const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream);
+    void data_step_down(int dst_cols, int dst_rows, int src_rows, int msg_type, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream);
+    void level_up_messages(int dst_idx, int dst_cols, int dst_rows, int src_rows, int msg_type, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream);
+    void calc_all_iterations(int cols, int rows, int iters, int msg_type, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream);
+    void output(int msg_type, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream);
 }}}
 
 cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_, int msg_type_, float msg_scale_)
@@ -228,7 +228,7 @@ static void stereo_bp_gpu_operator(int ndisp, int iters, int levels,
 
     datas[0].create(rows * ndisp, cols, msg_type);
 
-    impl::comp_data(msg_type, left, right, datas.front(), stream);
+    impl::comp_data(msg_type, left, right, left.channels(), datas.front(), stream);
 
     for (int i = 1; i < levels; i++)
     {
