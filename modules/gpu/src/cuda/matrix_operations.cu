@@ -52,7 +52,7 @@ using namespace cv::gpu::impl;
 
 namespace mat_operators
 {
-    __constant__ double scalar_d[256];
+    __constant__ double scalar_d[4];
 
 
     template <typename T>
@@ -139,7 +139,7 @@ namespace mat_operators
         if ((x < cols * channels ) && (y < rows))
         {
             size_t idx = y * ( step >> shift_and_sizeof<T>::shift ) + x;
-            mat[idx] = scalar_d[ threadIdx.x];
+            mat[idx] = scalar_d[ x % channels ];
         }
     }
 
@@ -153,7 +153,7 @@ namespace mat_operators
             if (mask[y * step_mask + x / channels] != 0)
             {
                 size_t idx = y * ( step >> shift_and_sizeof<T>::shift ) + x;
-                mat[idx] = scalar_d[ threadIdx.x ];
+                mat[idx] = scalar_d[ x % channels ];
             }
     }
 
@@ -354,17 +354,7 @@ namespace cv
 
             extern "C" void set_to_without_mask(DevMem2D mat, int depth, const double *scalar, int channels, const cudaStream_t & stream)
             {
-                double * scalar_vec = new double [256];
-                int index = 0;
-                for (int i = 0; i < 256; i++)
-                {
-                    scalar_vec[i] = scalar[index];
-                    index++;
-                    if (index == channels) index = 0;
-                }
-                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar_vec, sizeof(double) * 256));
-
-                delete [] scalar_vec;
+                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar, sizeof(double) * 4));
 
                 static SetToFunc_without_mask tab[8] =
                 {
@@ -389,17 +379,7 @@ namespace cv
 
             extern "C" void set_to_with_mask(DevMem2D mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream)
             {
-                double * scalar_vec = new double [256];
-                int index = 0;
-                for (int i = 0; i < 256; i++)
-                {
-                    scalar_vec[i] = scalar[index];
-                    index++;
-                    if (index == channels) index = 0;
-                }
-                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar_vec, sizeof(double) * 256));
-
-                delete [] scalar_vec;
+                cudaSafeCall( cudaMemcpyToSymbol(mat_operators::scalar_d, scalar, sizeof(double) * 4));
 
                 static SetToFunc_with_mask tab[8] =
                 {
