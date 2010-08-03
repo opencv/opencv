@@ -10,11 +10,11 @@ using namespace cv;
 using namespace std;
 
 /* 
-example command line when 3 cameras are connected. 
-   tri_calibration  -w 4 -h 5 -s 0.025 -o camera_left.yml -op -oe
+ example command line for calibration from a live feed.
+   calibration  -w 4 -h 5 -s 0.025 -o camera.yml -op -oe
  
- example command line for a list of stored images(for copy-n-paste):
-   tri_calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml
+ example command line for calibration from a list of stored images:
+   calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml
  where image_list.xml is the standard OpenCV XML/YAML
  file consisting of the list of strings, e.g.:
  
@@ -30,8 +30,6 @@ example command line when 3 cameras are connected.
 </images>
 </opencv_storage>
 
- you can also use a video file or live camera input to calibrate the camera
- 
  */
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
@@ -307,6 +305,7 @@ int main( int argc, char** argv )
         {
             if( sscanf( argv[++i], "%f", &aspectRatio ) != 1 || aspectRatio <= 0 )
                 return printf("Invalid aspect ratio\n" ), -1;
+            flags |= CV_CALIB_FIX_ASPECT_RATIO;
         }
         else if( strcmp( s, "-d" ) == 0 )
         {
