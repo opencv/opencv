@@ -46,8 +46,8 @@ using namespace std;
 namespace cv
 {
 /*
-    FeatureDetector
-*/
+ *  FeatureDetector
+ */
 struct MaskPredicate
 {
     MaskPredicate( const Mat& _mask ) : mask(_mask)
@@ -70,8 +70,8 @@ void FeatureDetector::removeInvalidPoints( const Mat& mask, vector<KeyPoint>& ke
 };
 
 /*
-    FastFeatureDetector
-*/
+ *   FastFeatureDetector
+ */
 FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression )
   : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression)
 {}
@@ -95,8 +95,8 @@ void FastFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<
 }
 
 /*
-    GoodFeaturesToTrackDetector
-*/
+ *  GoodFeaturesToTrackDetector
+ */
 GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector( int _maxCorners, double _qualityLevel, \
                                                           double _minDistance, int _blockSize,
                                                           bool _useHarrisDetector, double _k )
@@ -140,8 +140,8 @@ void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
 }
 
 /*
-    MserFeatureDetector
-*/
+ *  MserFeatureDetector
+ */
 MserFeatureDetector::MserFeatureDetector( int delta, int minArea, int maxArea,
                                           double maxVariation, double minDiversity,
                                           int maxEvolution, double areaThreshold,
@@ -204,8 +204,8 @@ void MserFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<
 }
 
 /*
-    StarFeatureDetector
-*/
+ *  StarFeatureDetector
+ */
 StarFeatureDetector::StarFeatureDetector(int maxSize, int responseThreshold,
                                          int lineThresholdProjected,
                                          int lineThresholdBinarized,
@@ -244,8 +244,8 @@ void StarFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<
 }
 
 /*
-    SiftFeatureDetector
-*/
+ *   SiftFeatureDetector
+ */
 SiftFeatureDetector::SiftFeatureDetector(double threshold, double edgeThreshold,
                                          int nOctaves, int nOctaveLayers, int firstOctave, int angleMode) :
     sift(threshold, edgeThreshold, nOctaves, nOctaveLayers, firstOctave, angleMode)
@@ -286,8 +286,8 @@ void SiftFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
 }
 
 /*
-    SurfFeatureDetector
-*/
+ *  SurfFeatureDetector
+ */
 SurfFeatureDetector::SurfFeatureDetector( double hessianThreshold, int octaves, int octaveLayers)
     : surf(hessianThreshold, octaves, octaveLayers)
 {}
@@ -358,6 +358,100 @@ Ptr<FeatureDetector> createDetector( const string& detectorType )
         //CV_Error( CV_StsBadArg, "unsupported feature detector type");
     }
     return fd;
+}
+
+/*
+ *  GridAdaptedFeatureDetector
+ */
+GridAdaptedFeatureDetector::GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector,
+                                                        int _maxTotalKeypoints, int _gridRows, int _gridCols )
+    : detector(_detector), maxTotalKeypoints(_maxTotalKeypoints), gridRows(_gridRows), gridCols(_gridCols)
+{}
+
+struct ResponseComparator
+{
+    bool operator() (const KeyPoint& a, const KeyPoint& b)
+    {
+        return std::abs(a.response) > std::abs(b.response);
+    }
+};
+
+void keepStrongest( int N, vector<KeyPoint>& keypoints )
+{
+    if( (int)keypoints.size() > N )
+    {
+        vector<KeyPoint>::iterator nth = keypoints.begin() + N;
+        std::nth_element( keypoints.begin(), nth, keypoints.end(), ResponseComparator() );
+        keypoints.erase( nth, keypoints.end() );
+    }
+}
+
+void GridAdaptedFeatureDetector::detectImpl( const Mat &image, const Mat &mask,
+                                             vector<KeyPoint> &keypoints ) const
+{
+    keypoints.clear();
+    keypoints.reserve(maxTotalKeypoints);
+
+    int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
+    for( int i = 0; i < gridRows; ++i )
+    {
+        Range row_range((i*image.rows)/gridRows, ((i+1)*image.rows)/gridRows);
+        for( int j = 0; j < gridCols; ++j )
+        {
+            Range col_range((j*image.cols)/gridCols, ((j+1)*image.cols)/gridCols);
+            Mat sub_image = image(row_range, col_range);
+            Mat sub_mask;
+            if( !mask.empty() )
+                sub_mask = mask(row_range, col_range);
+
+            vector<KeyPoint> sub_keypoints;
+            detector->detect( sub_image, sub_keypoints, sub_mask );
+            keepStrongest( maxPerCell, sub_keypoints );
+            for( std::vector<cv::KeyPoint>::iterator it = sub_keypoints.begin(), end = sub_keypoints.end();
+                 it != end; ++it )
+            {
+                it->pt.x += col_range.start;
+                it->pt.y += row_range.start;
+            }
+
+            keypoints.insert( keypoints.end(), sub_keypoints.begin(), sub_keypoints.end() );
+        }
+    }
+}
+
+/*
+ *  GridAdaptedFeatureDetector
+ */
+PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _levels )
+    : detector(_detector), levels(_levels)
+{}
+
+void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
+{
+    Mat src = image;
+    for( int l = 0, multiplier = 1; l <= levels; ++l, multiplier *= 2 )
+    {
+        // Detect on current level of the pyramid
+        vector<KeyPoint> new_pts;
+        detector->detect(src, new_pts);
+        for( vector<KeyPoint>::iterator it = new_pts.begin(), end = new_pts.end(); it != end; ++it)
+        {
+            it->pt.x *= multiplier;
+            it->pt.y *= multiplier;
+            it->size *= multiplier;
+            it->octave = l;
+        }
+        removeInvalidPoints( mask, new_pts );
+        keypoints.insert( keypoints.end(), new_pts.begin(), new_pts.end() );
+
+        // Downsample
+        if( l < levels )
+        {
+            Mat dst;
+            pyrDown(src, dst);
+            src = dst;
+        }
+    }
 }
 
 }

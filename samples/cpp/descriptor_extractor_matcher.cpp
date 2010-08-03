@@ -8,6 +8,9 @@
 using namespace cv;
 using namespace std;
 
+#define DRAW_RICH_KEYPOINTS_MODE     0
+#define DRAW_OUTLIERS_MODE           0
+
 void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 {
     H.create(3, 3, CV_32FC1);
@@ -79,12 +82,18 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                 matchesMask[i1] = 1;
         }
         // draw inliers
-        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask );
-#if 0   // draw outliers
+        drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask
+#if DRAW_RICH_KEYPOINTS_MODE
+                     , DrawMatchesFlags::DRAW_RICH_KEYPOINTS
+#endif
+                   );
+
+#if DRAW_OUTLIERS_MODE
+        // draw outliers
         for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
             matchesMask[i1] = !matchesMask[i1];
         drawMatches( img1, keypoints1, img2, keypoints2, matches, drawImg, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0), matchesMask,
-                     DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS )
+                     DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 #endif
     }
     else

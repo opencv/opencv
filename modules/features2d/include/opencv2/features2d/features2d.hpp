@@ -1477,6 +1477,44 @@ protected:
 
 CV_EXPORTS Ptr<FeatureDetector> createDetector( const string& detectorType );
 
+/*
+ * Adapts a detector to partition the source image into a grid and detect
+ * points in each cell.
+ */
+class CV_EXPORTS GridAdaptedFeatureDetector : public FeatureDetector
+{
+public:
+    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _maxTotalKeypoints,
+                                int _gridRows=4, int _gridCols=4 );
+    // todo read/write
+
+protected:
+    Ptr<FeatureDetector> detector;
+    int maxTotalKeypoints;
+    int gridRows;
+    int gridCols;
+
+    virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
+};
+
+/*
+ * Adapts a detector to detect points over multiple levels of a Gaussian
+ * pyramid. Useful for detectors that are not inherently scaled.
+ */
+class PyramidAdaptedFeatureDetector : public FeatureDetector
+{
+public:
+    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _levels=2 );
+
+    // todo read/write
+
+protected:
+    Ptr<FeatureDetector> detector;
+    int levels;
+
+    virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
+};
+
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
 \****************************************************************************************/
@@ -2273,18 +2311,38 @@ struct CV_EXPORTS DrawMatchesFlags
     enum{ DEFAULT = 0, // Output image matrix will be created (Mat::create),
                        // i.e. existing memory of output image may be reused.
                        // Two source image, matches and single keypoints will be drawn.
+                       // For each keypoint only the center point will be drawn (without
+                       // the circle around keypoint with keypoint size and orientation).
           DRAW_OVER_OUTIMG = 1, // Output image matrix will not be created (Mat::create).
                                 // Matches will be drawn on existing content of output image.
-          NOT_DRAW_SINGLE_POINTS = 2 // Single keypoints will not be drawn.
+          NOT_DRAW_SINGLE_POINTS = 2, // Single keypoints will not be drawn.
+          DRAW_RICH_KEYPOINTS = 4 // For each keypoint the circle around keypoint with keypoint size and
+                                 // orientation will be drawn.
         };
 };
+
+// Draw keypoints.
+CV_EXPORTS void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImg,
+                               const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
 
 // Draws matches of keypints from two images on output image.
 CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
 							 const Mat& img2, const vector<KeyPoint>& keypoints2,
-                             const vector<int>& matches, Mat& outImg,
-                             const Scalar& matchColor = Scalar::all(-1), const Scalar& singlePointColor = Scalar::all(-1),
-                             const vector<char>& matchesMask = vector<char>(), int flags = DrawMatchesFlags::DEFAULT );
+                             const vector<int>& matches1to2, Mat& outImg,
+                             const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
+                             const vector<char>& matchesMask=vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
+
+CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                             const Mat& img2, const vector<KeyPoint>& keypoints2,
+                             const vector<DMatch>& matches1to2, Mat& outImg,
+                             const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
+                             const vector<char>& matchesMask=vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
+
+CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                             const Mat& img2, const vector<KeyPoint>& keypoints2,
+                             const vector<vector<DMatch> >& matches1to2, Mat& outImg,
+                             const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
+                             const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
 
 }
 

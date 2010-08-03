@@ -48,6 +48,10 @@
 //#define _KDTREE
 
 using namespace std;
+
+const int draw_shift_bits = 4;
+const int draw_multiplier = 1 << draw_shift_bits;
+
 namespace cv
 {
 
@@ -69,63 +73,190 @@ Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPo
     return mask;
 }
 
-void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
-                  const Mat& img2,const vector<KeyPoint>& keypoints2,
-                  const vector<int>& matches, Mat& outImg,
-                  const Scalar& matchColor, const Scalar& singlePointColor,
-                  const vector<char>& matchesMask, int flags )
+/*
+ * Drawing functions
+ */
+
+static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& color, int flags )
+{
+    Point center( p.pt.x * draw_multiplier, p.pt.y * draw_multiplier );
+
+    if( flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS )
+    {
+        int radius = p.size/2 * draw_multiplier; // KeyPoint::size is a diameter
+
+        // draw the circles around keypoints with the keypoints size
+        circle( img, center, radius, color, 1, CV_AA, draw_shift_bits );
+
+        // draw orientation of the keypoint, if it is applicable
+        if( p.angle != -1 )
+        {
+            float srcAngleRad = p.angle*CV_PI/180;
+            Point orient(cos(srcAngleRad)*radius, sin(srcAngleRad)*radius);
+            line( img, center, center+orient, color, 1, CV_AA, draw_shift_bits );
+        }
+#if 0
+        else
+        {
+            // draw center with R=1
+            int radius = 1 * draw_multiplier;
+            circle( img, center, radius, color, 1, CV_AA, draw_shift_bits );
+        }
+#endif
+    }
+    else
+    {
+        // draw center with R=3
+        int radius = 3 * draw_multiplier;
+        circle( img, center, radius, color, 1, CV_AA, draw_shift_bits );
+    }
+}
+
+void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImg,
+                    const Scalar& _color, int flags )
+{
+    if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
+        cvtColor( image, outImg, CV_GRAY2BGR );
+
+    RNG& rng=theRNG();
+    bool isRandColor = _color == Scalar::all(-1);
+
+    for( vector<KeyPoint>::const_iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
+    {
+        Scalar color = isRandColor ? Scalar(rng(256), rng(256), rng(256)) : _color;
+        _drawKeypoint( outImg, *i, color, flags );
+    }
+}
+
+static void _prepareImgAndDrawKeypoints( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                                         const Mat& img2, const vector<KeyPoint>& keypoints2,
+                                         Mat& outImg, Mat& outImg1, Mat& outImg2,
+                                         const Scalar& singlePointColor, int flags )
 {
     Size size( img1.cols + img2.cols, MAX(img1.rows, img2.rows) );
     if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )
     {
         if( size.width > outImg.cols || size.height > outImg.rows )
             CV_Error( CV_StsBadSize, "outImg has size less than need to draw img1 and img2 together" );
+        outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
     }
     else
     {
         outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
-        Mat outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
         cvtColor( img1, outImg1, CV_GRAY2RGB );
-        Mat outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
         cvtColor( img2, outImg2, CV_GRAY2RGB );
     }
 
-    RNG rng;
     // draw keypoints
     if( !(flags & DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS) )
     {
-        bool isRandSinglePointColor = singlePointColor == Scalar::all(-1);
-        for( vector<KeyPoint>::const_iterator it = keypoints1.begin(); it < keypoints1.end(); ++it )
-        {
-            circle( outImg, it->pt, 3, isRandSinglePointColor ?
-                    Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256)) : singlePointColor );
-        }
-        for( vector<KeyPoint>::const_iterator it = keypoints2.begin(); it < keypoints2.end(); ++it )
-        {
-            Point p = it->pt;
-            circle( outImg, Point(p.x+img1.cols, p.y), 3, isRandSinglePointColor ?
-                    Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256)) : singlePointColor );
-        }
-     }
+        Mat outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        drawKeypoints( outImg1, keypoints1, outImg1, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
+
+        Mat outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
+        drawKeypoints( outImg2, keypoints2, outImg2, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
+    }
+}
+
+static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
+                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, int flags )
+{
+    RNG& rng = theRNG();
+    bool isRandMatchColor = matchColor == Scalar::all(-1);
+    Scalar color = isRandMatchColor ? Scalar( rng(256), rng(256), rng(256) ) : matchColor;
+
+    _drawKeypoint( outImg1, kp1, color, flags );
+    _drawKeypoint( outImg2, kp2, color, flags );
+
+    Point2f pt1 = kp1.pt,
+            pt2 = kp2.pt,
+            dpt2 = Point2f( std::min(pt2.x+outImg1.cols, float(outImg.cols-1)), pt2.y );
+
+    line( outImg, Point(pt1.x*draw_multiplier, pt1.y*draw_multiplier), Point(dpt2.x*draw_multiplier, dpt2.y*draw_multiplier),
+          color, 1, CV_AA, draw_shift_bits );
+}
+
+void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                  const Mat& img2,const vector<KeyPoint>& keypoints2,
+                  const vector<int>& matches1to2, Mat& outImg,
+                  const Scalar& matchColor, const Scalar& singlePointColor,
+                  const vector<char>& matchesMask, int flags )
+{
+    if( matches1to2.size() != keypoints1.size() )
+        CV_Error( CV_StsBadSize, "matches1to2 must have the same size as keypoints1" );
+    if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
+        CV_Error( CV_StsBadSize, "matchesMask must have the same size as matches1to2" );
+
+    Mat outImg1, outImg2;
+    _prepareImgAndDrawKeypoints( img1, keypoints1, img2, keypoints2,
+                                 outImg, outImg1, outImg2, singlePointColor, flags );
 
     // draw matches
-    bool isRandMatchColor = matchColor == Scalar::all(-1);
-    if( matches.size() != keypoints1.size() )
-        CV_Error( CV_StsBadSize, "matches must have the same size as keypoints1" );
-    if( !matchesMask.empty() && matchesMask.size() != keypoints1.size() )
-        CV_Error( CV_StsBadSize, "mask must have the same size as keypoints1" );
-    vector<int>::const_iterator mit = matches.begin();
-    for( int i1 = 0; mit != matches.end(); ++mit, i1++ )
+    for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
     {
-        if( (matchesMask.empty() || matchesMask[i1] ) && *mit >= 0 )
+        int i2 = matches1to2[i1];
+        if( (matchesMask.empty() || matchesMask[i1] ) && i2 >= 0 )
         {
-            Point2f pt1 = keypoints1[i1].pt,
-                    pt2 = keypoints2[*mit].pt,
-                    dpt2 = Point2f( std::min(pt2.x+img1.cols, float(outImg.cols-1)), pt2.y );
-            Scalar randColor( rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256) );
-            circle( outImg, pt1, 3, isRandMatchColor ? randColor : matchColor );
-            circle( outImg, dpt2, 3, isRandMatchColor ? randColor : matchColor );
-            line( outImg, pt1, dpt2, isRandMatchColor ? randColor : matchColor );
+            const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
+            _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
+        }
+    }
+}
+
+void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                  const Mat& img2, const vector<KeyPoint>& keypoints2,
+                  const vector<DMatch>& matches1to2, Mat& outImg,
+                  const Scalar& matchColor, const Scalar& singlePointColor,
+                  const vector<char>& matchesMask, int flags )
+{
+    if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
+        CV_Error( CV_StsBadSize, "matchesMask must have the same size as matches1to2" );
+
+    Mat outImg1, outImg2;
+    _prepareImgAndDrawKeypoints( img1, keypoints1, img2, keypoints2,
+                                 outImg, outImg1, outImg2, singlePointColor, flags );
+
+    // draw matches
+    for( size_t m = 0; m < matches1to2.size(); m++ )
+    {
+        int i1 = matches1to2[m].indexQuery;
+        int i2 = matches1to2[m].indexTrain;
+        if( matchesMask.empty() || matchesMask[m] )
+        {
+            const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
+            _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
+        }
+    }
+}
+
+void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+                  const Mat& img2, const vector<KeyPoint>& keypoints2,
+                  const vector<vector<DMatch> >& matches1to2, Mat& outImg,
+                  const Scalar& matchColor, const Scalar& singlePointColor,
+                  const vector<vector<char> >& matchesMask, int flags )
+{
+    if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
+        CV_Error( CV_StsBadSize, "matchesMask must have the same size as matches1to2" );
+
+    Mat outImg1, outImg2;
+    _prepareImgAndDrawKeypoints( img1, keypoints1, img2, keypoints2,
+                                 outImg, outImg1, outImg2, singlePointColor, flags );
+
+    // draw matches
+    for( size_t i = 0; i < matches1to2.size(); i++ )
+    {
+        for( size_t j = 0; j < matches1to2[i].size(); j++ )
+        {
+            int i1 = matches1to2[i][j].indexQuery;
+            int i2 = matches1to2[i][j].indexTrain;
+            if( matchesMask.empty() || matchesMask[i][j] )
+            {
+                const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
+                _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
+            }
         }
     }
 }
