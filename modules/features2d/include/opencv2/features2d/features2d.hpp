@@ -1931,13 +1931,13 @@ protected:
 template<class Distance> inline
 void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const
 {
-    vector<DMatch> matchings;
-    matchImpl( query, mask, matchings);
+    vector<DMatch> fullMatches;
+    matchImpl( query, mask, fullMatches);
     matches.clear();
-    matches.resize( matchings.size() );
-    for( size_t i=0;i<matchings.size();i++)
+    matches.resize( fullMatches.size() );
+    for( size_t i=0;i<fullMatches.size();i++)
     {
-        matches[i] = matchings[i].indexTrain;
+        matches[i] = fullMatches[i].indexTrain;
     }
 }
 
@@ -1955,7 +1955,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 
     int dimension = query.cols;
     matches.clear();
-    matches.resize(query.rows);
+    matches.reserve(query.rows);
 
     for( int i = 0; i < query.rows; i++ )
     {
@@ -1983,7 +1983,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
             match.indexTrain = matchIndex;
             match.indexQuery = i;
             match.distance = matchDistance;
-            matches[i] = match;
+            matches.push_back( match );
         }
     }
 }
@@ -2028,7 +2028,8 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 }
 
 template<>
-void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const;
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const;
+//void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const;
 
 CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
 

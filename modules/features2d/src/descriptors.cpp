@@ -427,8 +427,11 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
 *                             BruteForceMatcher L2 specialization                        *
 \****************************************************************************************/
 template<>
-void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& /*mask*/, vector<int>& matches ) const
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const
 {
+    assert( mask.empty() || (mask.rows == query.rows && mask.cols == train.rows) );
+    assert( query.cols == train.cols ||  query.empty() ||  train.empty() );
+
     matches.clear();
     matches.reserve( query.rows );
 #if (!defined HAVE_EIGEN2)
@@ -440,9 +443,27 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& /*ma
     {
         Mat distances = (-2)*query.row(i)*desc_2t;
         distances += norms;
+        DMatch match;
+        match.indexTrain = -1;
+        double minVal;
         Point minLoc;
-        minMaxLoc ( distances, 0, 0, &minLoc );
-        matches.push_back( minLoc.x );
+        if( mask.empty() )
+        {
+            minMaxLoc ( distances, &minVal, 0, &minLoc );
+        }
+        else
+        {
+            minMaxLoc ( distances, &minVal, 0, &minLoc, 0, mask.row( i ) );
+        }
+        match.indexTrain = minLoc.x;
+
+        if( match.indexTrain != -1 )
+        {
+            match.indexQuery = i;
+            double queryNorm = norm( query.row(i) );
+            match.distance = sqrt( minVal + queryNorm*queryNorm );
+            matches.push_back( match );
+        }
     }
 
 #else
@@ -451,21 +472,46 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& /*ma
     cv2eigen( query.t(), desc1t);
     cv2eigen( train, desc2 );
 
-    //Eigen::Matrix<float, Eigen::Dynamic, 1> norms = desc2.rowwise().squaredNorm();
     Eigen::Matrix<float, Eigen::Dynamic, 1> norms = desc2.rowwise().squaredNorm() / 2;
-    for( int i=0;i<query.rows;i++ )
+
+    if( mask.empty() )
     {
-        //Eigen::Matrix<float, Eigen::Dynamic, 1> distances = (-2) * (desc2*desc1t.col(i));
-        Eigen::Matrix<float, Eigen::Dynamic, 1> distances = desc2*desc1t.col(i);
+        for( int i=0;i<query.rows;i++ )
+        {
+            Eigen::Matrix<float, Eigen::Dynamic, 1> distances = desc2*desc1t.col(i);
+            distances -= norms;
+            DMatch match;
+            match.indexQuery = i;
+            match.distance = sqrt( (-2)*distances.maxCoeff( &match.indexTrain ) + desc1t.col(i).squaredNorm() );
+            matches.push_back( match );
+        }
+    }
+    else
+    {
+        for( int i=0;i<query.rows;i++ )
+        {
+            Eigen::Matrix<float, Eigen::Dynamic, 1> distances = desc2*desc1t.col(i);
+            distances -= norms;
 
-        //distances += norms;
-        distances -= norms;
+            float maxCoeff = -std::numeric_limits<float>::max();
+            DMatch match;
+            match.indexTrain = -1;
+            for( int j=0;j<train.rows;j++ )
+            {
+                if( possibleMatch( mask, i, j ) && distances( j, 0 ) > maxCoeff )
+                {
+                    maxCoeff = distances( j, 0 );
+                    match.indexTrain = j;
+                }
+            }
 
-        int idx;
-
-        //distances.minCoeff(&idx);
-        distances.maxCoeff(&idx);
-        matches.push_back( idx );
+            if( match.indexTrain != -1 )
+            {
+                match.indexQuery = i;
+                match.distance = sqrt( (-2)*maxCoeff + desc1t.col(i).squaredNorm() );
+                matches.push_back( match );
+            }
+        }
     }
 #endif
 }
