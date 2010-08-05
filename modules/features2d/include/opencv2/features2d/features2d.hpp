@@ -811,127 +811,6 @@ private:
   bool keep_floats_;
 };
 
-#if 0
-class CV_EXPORTS CalonderClassifier
-{
-public:
-    CalonderClassifier();
-    CalonderClassifier( const vector<vector<Point2f> >& points, const vector<Mat>& refimgs,
-                        const vector<vector<int> >& labels=vector<vector<int> >(), int _numClasses=0,
-                        int _pathSize=DEFAULT_PATCH_SIZE,
-                        int _numTrees=DEFAULT_NUM_TREES,
-                        int _treeDepth=DEFAULT_TREE_DEPTH,
-                        int _numViews=DEFAULT_NUM_VIEWS,
-                        int _compressedDim=DEFAULT_COMPRESSED_DIM,
-                        int _compressType=DEFAULT_COMPRESS_TYPE,
-                        int _numQuantBits=DEFAULT_NUM_QUANT_BITS,
-                        const PatchGenerator& patchGenerator=PatchGenerator() );
-
-    virtual ~CalonderClassifier();
-    virtual void clear();
-
-    void train( const vector<vector<Point2f> >& points, const vector<Mat>& refimgs,
-                const vector<vector<int> >& labels=vector<vector<int> >(), int _nclasses=0,
-                int _pathSize=DEFAULT_PATCH_SIZE,
-                int _numTrees=DEFAULT_NUM_TREES,
-                int _treeDepth=DEFAULT_TREE_DEPTH,
-                int _numViews=DEFAULT_NUM_VIEWS,
-                int _compressedDim=DEFAULT_COMPRESSED_DIM,
-                int _compressType=DEFAULT_COMPRESS_TYPE,
-                int _numQuantBits=DEFAULT_NUM_QUANT_BITS,
-                const PatchGenerator& patchGenerator=PatchGenerator() );
-
-    virtual void operator()(const Mat& img, Point2f pt, vector<float>& signature, float thresh=0.f) const;
-    virtual void operator()(const Mat& patch, vector<float>& signature, float thresh=-1.f) const;
-#define QUANTIZATION_AVAILABLE 1
-#if QUANTIZATION_AVAILABLE
-    void quantizePosteriors( int _numQuantBits, bool isClearFloatPosteriors=false );
-    void clearFloatPosteriors();
-    virtual void operator()(const Mat& img, Point2f pt, vector<uchar>& signature, uchar thresh=-1.f) const;
-    virtual void operator()(const Mat& patch, vector<uchar>& signature, uchar thresh=-1.f) const;
-#endif
-
-    void read( const FileNode& fn );
-    void read( std::istream& is );
-    void write( FileStorage& fs ) const;
-
-    bool empty() const;
-
-    void setVerbose( bool _verbose );
-
-    int getPatchSize() const;
-    int getNumTrees() const;
-    int getTreeDepth() const;
-    int getNumViews() const;
-    int getSignatureSize() const;
-    int getCompressType() const;
-    int getNumQuantBits() const;
-    int getOrigNumClasses() const;
-
-
-    enum
-    {
-        COMPRESS_NONE             = -1,
-        COMPRESS_DISTR_GAUSS      =  0,
-        COMPRESS_DISTR_BERNOULLI  =  1,
-        COMPRESS_DISTR_DBFRIENDLY =  2,
-    };
-
-    static float GET_LOWER_QUANT_PERC() { return .03f; }
-    static float GET_UPPER_QUANT_PERC() { return .92f; }
-
-    enum
-    {
-        MAX_NUM_QUANT_BITS = 8,
-        DEFAULT_PATCH_SIZE = 32,
-        DEFAULT_NUM_TREES = 48,
-        DEFAULT_TREE_DEPTH = 9,
-        DEFAULT_NUM_VIEWS = 500,
-        DEFAULT_COMPRESSED_DIM = 176,
-        DEFAULT_COMPRESS_TYPE = COMPRESS_DISTR_BERNOULLI,
-        DEFAULT_NUM_QUANT_BITS = -1,
-    };
-private:
-    void prepare( int _patchSize, int _signatureSize, int _numTrees, int _treeDepth, int _numViews );
-
-    int getLeafIdx( int treeIdx, const Mat& patch ) const;
-    void finalize( int _compressedDim, int _compressType, int _numQuantBits,
-                   const vector<int>& leafSampleCounters);
-
-    void compressLeaves( int _compressedDim, int _compressType );
-
-    bool verbose;
-
-    int patchSize;
-    int signatureSize;
-    int numTrees;
-    int treeDepth;
-    int numViews;
-
-    int origNumClasses;
-    int compressType;
-    int numQuantBits;
-
-    int numLeavesPerTree;
-    int numNodesPerTree;
-
-    struct Node
-    {
-        uchar x1, y1, x2, y2;
-        Node() : x1(0), y1(0), x2(0), y2(0) {}
-        Node( uchar _x1, uchar _y1, uchar _x2, uchar _y2 ) : x1(_x1), y1(_y1), x2(_x2), y2(_y2)
-        {}
-        int operator() (const Mat_<uchar>& patch) const
-        { return patch(y1,x1) > patch(y2, x2) ? 1 : 0; }
-    };
-    vector<Node> nodes;
-    vector<float> posteriors;
-#if QUANTIZATION_AVAILABLE
-    vector<uchar> quantizedPosteriors;
-#endif
-};
-#endif
-
 /****************************************************************************************\
 *                                     One-Way Descriptor                                 *
 \****************************************************************************************/
@@ -1514,6 +1393,10 @@ protected:
 
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 };
+
+
+CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+                                     float maxDeltaX, float maxDeltaY );
 
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
@@ -2274,8 +2157,8 @@ class CV_EXPORTS VectorDescriptorMatch : public GenericDescriptorMatch
 public:
     using GenericDescriptorMatch::add;
 
-    VectorDescriptorMatch( DescriptorExtractor *_extractor = 0, DescriptorMatcher * _matcher = 0 ) :
-                           extractor( _extractor ), matcher( _matcher ) {}
+    VectorDescriptorMatch( const Ptr<DescriptorExtractor>& _extractor, const Ptr<DescriptorMatcher>& _matcher )
+                        : extractor( _extractor ), matcher( _matcher ) {}
 
     ~VectorDescriptorMatch() {}
 
@@ -2303,10 +2186,9 @@ protected:
     //vector<int> classIds;
 };
 
-CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
-                                     float maxDeltaX, float maxDeltaY );
-
-
+/****************************************************************************************\
+*                                   Drawing functions                                    *
+\****************************************************************************************/
 struct CV_EXPORTS DrawMatchesFlags
 {
     enum{ DEFAULT = 0, // Output image matrix will be created (Mat::create),
@@ -2318,7 +2200,7 @@ struct CV_EXPORTS DrawMatchesFlags
                                 // Matches will be drawn on existing content of output image.
           NOT_DRAW_SINGLE_POINTS = 2, // Single keypoints will not be drawn.
           DRAW_RICH_KEYPOINTS = 4 // For each keypoint the circle around keypoint with keypoint size and
-                                 // orientation will be drawn.
+                                  // orientation will be drawn.
         };
 };
 
@@ -2345,7 +2227,28 @@ CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
 
-}
+/****************************************************************************************\
+*                                   Evaluation functions                                 *
+\****************************************************************************************/
+
+CV_EXPORTS void evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H1to2,
+                                         vector<KeyPoint>* keypoints1, vector<KeyPoint>* keypoints2,
+                                         float& repeatability, int& correspCount,
+                                         const Ptr<FeatureDetector>& fdetector=Ptr<FeatureDetector>() );
+
+CV_EXPORTS void computeRecallPrecisionCurve( const vector<vector<DMatch> >& matches1to2,
+                                             const vector<vector<uchar> >& correctMatches1to2Mask,
+                                             vector<Point2f>& recallPrecisionCurve );
+CV_EXPORTS float getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precision );
+
+CV_EXPORTS void evaluateDescriptorMatch( const Mat& img1, const Mat& img2, const Mat& H1to2,
+                                         vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
+                                         vector<vector<DMatch> >* matches1to2, vector<vector<uchar> >* correctMatches1to2Mask,
+                                         vector<Point2f>& recallPrecisionCurve,
+                                         const Ptr<GenericDescriptorMatch>& dmatch=Ptr<GenericDescriptorMatch>() );
+
+
+} /* namespace cv */
 
 #endif /* __cplusplus */
 

@@ -51,143 +51,9 @@ using namespace cv;
 /****************************************************************************************\
 *           Functions to evaluate affine covariant detectors and descriptors.            *
 \****************************************************************************************/
-inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
-{
-    double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
-    if( z )
-    {
-        double w = 1./z;
-        return Point2f( (H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w, (H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w );
-    }
-    return Point2f( numeric_limits<double>::max(), numeric_limits<double>::max() );
-}
 
-inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A )
-{
-    A.create(2,2);
-    double p1 = H(0,0)*pt.x + H(0,1)*pt.y + H(0,2),
-           p2 = H(1,0)*pt.x + H(1,1)*pt.y + H(1,2),
-           p3 = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2),
-           p3_2 = p3*p3;
-    if( p3 )
-    {
-        A(0,0) = H(0,0)/p3 - p1*H(2,0)/p3_2; // fxdx
-        A(0,1) = H(0,1)/p3 - p1*H(2,1)/p3_2; // fxdy
-
-        A(1,0) = H(1,0)/p3 - p2*H(2,0)/p3_2; // fydx
-        A(1,1) = H(1,1)/p3 - p2*H(2,1)/p3_2; // fydx
-    }
-    else
-        A.setTo(Scalar::all(numeric_limits<double>::max()));
-}
-
-class EllipticKeyPoint
-{
-public:
-    EllipticKeyPoint();
-    EllipticKeyPoint( const Point2f& _center, const Scalar& _ellipse );
-
-    static void convert( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst );
-    static void convert( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst );
-
-    static Mat_<double> getSecondMomentsMatrix( const Scalar& _ellipse );
-    Mat_<double> getSecondMomentsMatrix() const;
-
-    void calcProjection( const Mat_<double>& H, EllipticKeyPoint& projection ) const;
-
-    Point2f center;
-    Scalar ellipse; // 3 elements a, b, c: ax^2+2bxy+cy^2=1
-    Size_<float> axes; // half lenght of elipse axes
-    Size_<float> boundingBox; // half sizes of bounding box which sides are parallel to the coordinate axes
-};
-
-EllipticKeyPoint::EllipticKeyPoint()
-{
-    *this = EllipticKeyPoint(Point2f(0,0), Scalar(1, 0, 1) );
-}
-
-EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellipse )
-{
-    center = _center;
-    ellipse = _ellipse;
-
-    Mat_<double> M = getSecondMomentsMatrix(_ellipse), eval;
-    eigen( M, eval );
-    assert( eval.rows == 2 && eval.cols == 1 );
-    axes.width = 1.f / sqrt(eval(0,0));
-    axes.height = 1.f / sqrt(eval(1,0));
-
-    float ac_b2 = ellipse[0]*ellipse[2] - ellipse[1]*ellipse[1];
-    boundingBox.width = sqrt(ellipse[2]/ac_b2);
-    boundingBox.height = sqrt(ellipse[0]/ac_b2);
-}
-
-Mat_<double> EllipticKeyPoint::getSecondMomentsMatrix( const Scalar& _ellipse )
-{
-    Mat_<double> M(2, 2);
-    M(0,0) = _ellipse[0];
-    M(1,0) = M(0,1) = _ellipse[1];
-    M(1,1) = _ellipse[2];
-    return M;
-}
-
-Mat_<double> EllipticKeyPoint::getSecondMomentsMatrix() const
-{
-    return getSecondMomentsMatrix(ellipse);
-}
-
-void EllipticKeyPoint::calcProjection( const Mat_<double>& H, EllipticKeyPoint& projection ) const
-{
-    Point2f dstCenter = applyHomography(H, center);
-
-    Mat_<double> invM; invert(getSecondMomentsMatrix(), invM);
-    Mat_<double> Aff; linearizeHomographyAt(H, center, Aff);
-    Mat_<double> dstM; invert(Aff*invM*Aff.t(), dstM);
-
-    projection = EllipticKeyPoint( dstCenter, Scalar(dstM(0,0), dstM(0,1), dstM(1,1)) );
-}
-
-void EllipticKeyPoint::convert( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst )
-{
-    if( !src.empty() )
-    {
-        dst.resize(src.size());
-        for( size_t i = 0; i < src.size(); i++ )
-        {
-            float rad = src[i].size/2;
-            assert( rad );
-            float fac = 1.f/(rad*rad);
-            dst[i] = EllipticKeyPoint( src[i].pt, Scalar(fac, 0, fac) );
-        }
-    }
-}
-
-void EllipticKeyPoint::convert( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst )
-{
-    if( !src.empty() )
-    {
-        dst.resize(src.size());
-        for( size_t i = 0; i < src.size(); i++ )
-        {
-            Size_<float> axes = src[i].axes;
-            float rad = sqrt(axes.height*axes.width);
-            dst[i] = KeyPoint(src[i].center, 2*rad );
-        }
-    }
-}
-
-void calcEllipticKeyPointProjections( const vector<EllipticKeyPoint>& src, const Mat_<double>& H, vector<EllipticKeyPoint>& dst )
-{
-    if( !src.empty() )
-    {
-        assert( !H.empty() && H.cols == 3 && H.rows == 3);
-        dst.resize(src.size());
-        vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
-        vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
-        for( ; srcIt != src.end(); ++srcIt, ++dstIt )
-            srcIt->calcProjection(H, *dstIt);
-    }
-}
+Point2f applyHomography( const Mat_<double>& H, const Point2f& pt );
+void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A );
 
 void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H, vector<KeyPoint>& dst )
 {
@@ -202,7 +68,10 @@ void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H
             Point2f dstPt = applyHomography(H, srcIt->pt);
 
             float srcSize2 = srcIt->size * srcIt->size;
-            Mat_<double> invM; invert(EllipticKeyPoint::getSecondMomentsMatrix( Scalar(1./srcSize2, 0., 1./srcSize2)), invM);
+            Mat_<double> M(2, 2);
+            M(0,0) = M(1,1) = 1./srcSize2;
+            M(1,0) = M(0,1) = 0;
+            Mat_<double> invM; invert(M, invM);
             Mat_<double> Aff; linearizeHomographyAt(H, srcIt->pt, Aff);
             Mat_<double> dstM; invert(Aff*invM*Aff.t(), dstM);
             Mat_<double> eval; eigen( dstM, eval );
@@ -233,261 +102,6 @@ void filterKeyPointsByImageSize( vector<KeyPoint>& keypoints, const Size& imgSiz
             if( r.contains(it->pt) )
                 filtered.push_back(*it);
         keypoints.assign(filtered.begin(), filtered.end());
-    }
-}
-
-/*
- * calulate ovelap errors
- */
-void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2t, bool commonPart,
-              SparseMat_<float>& overlaps )
-{
-    overlaps.clear();
-    if( keypoints1.empty() || keypoints2t.empty() )
-        return;
-
-    int size[] = { keypoints1.size(), keypoints2t.size() };
-    overlaps.create( 2, size );
-
-    for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
-    {
-        EllipticKeyPoint kp1 = keypoints1[i1];
-        float maxDist = sqrt(kp1.axes.width*kp1.axes.height),
-              fac = 30.f/maxDist;
-        if( !commonPart )
-            fac=3;
-
-        maxDist = maxDist*4;
-        fac = 1.0/(fac*fac);
-
-        EllipticKeyPoint keypoint1a = EllipticKeyPoint( kp1.center, Scalar(fac*kp1.ellipse[0], fac*kp1.ellipse[1], fac*kp1.ellipse[2]) );
-
-        for( size_t i2 = 0; i2 < keypoints2t.size(); i2++ )
-        {
-            EllipticKeyPoint kp2 = keypoints2t[i2];
-            Point2f diff = kp2.center - kp1.center;
-
-            if( norm(diff) < maxDist )
-            {
-                EllipticKeyPoint keypoint2a = EllipticKeyPoint( kp2.center, Scalar(fac*kp2.ellipse[0], fac*kp2.ellipse[1], fac*kp2.ellipse[2]) );
-                //find the largest eigenvalue
-                float maxx =  ceil(( keypoint1a.boundingBox.width > (diff.x+keypoint2a.boundingBox.width)) ?
-                                     keypoint1a.boundingBox.width : (diff.x+keypoint2a.boundingBox.width));
-                float minx = floor((-keypoint1a.boundingBox.width < (diff.x-keypoint2a.boundingBox.width)) ?
-                                    -keypoint1a.boundingBox.width : (diff.x-keypoint2a.boundingBox.width));
-
-                float maxy =  ceil(( keypoint1a.boundingBox.height > (diff.y+keypoint2a.boundingBox.height)) ?
-                                     keypoint1a.boundingBox.height : (diff.y+keypoint2a.boundingBox.height));
-                float miny = floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
-                                    -keypoint1a.boundingBox.height : (diff.y-keypoint2a.boundingBox.height));
-                float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
-                float dr = mina/50.0;
-                float bua = 0, bna = 0;
-                //compute the area
-                for( float rx1 = minx; rx1 <= maxx; rx1+=dr )
-                {
-                    float rx2 = rx1-diff.x;
-                    for( float ry1=miny; ry1<=maxy; ry1+=dr )
-                    {
-                        float ry2=ry1-diff.y;
-                        //compute the distance from the ellipse center
-                        float e1 = keypoint1a.ellipse[0]*rx1*rx1+2*keypoint1a.ellipse[1]*rx1*ry1+keypoint1a.ellipse[2]*ry1*ry1;
-                        float e2 = keypoint2a.ellipse[0]*rx2*rx2+2*keypoint2a.ellipse[1]*rx2*ry2+keypoint2a.ellipse[2]*ry2*ry2;
-                        //compute the area
-                        if( e1<1 && e2<1 ) bna++;
-                        if( e1<1 || e2<1 ) bua++;
-                    }
-                }
-                if( bna > 0)
-                    overlaps.ref(i1,i2) = 100.0*bna/bua;
-            }
-        }
-    }
-}
-
-void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoints, const Size& imgSize )
-{
-    if( !keypoints.empty() )
-    {
-        vector<EllipticKeyPoint> filtered;
-        filtered.reserve(keypoints.size());
-        vector<EllipticKeyPoint>::const_iterator it = keypoints.begin();
-        for( int i = 0; it != keypoints.end(); ++it, i++ )
-        {
-            if( it->center.x + it->boundingBox.width < imgSize.width &&
-                it->center.x - it->boundingBox.width > 0 &&
-                it->center.y + it->boundingBox.height < imgSize.height &&
-                it->center.y - it->boundingBox.height > 0 )
-                filtered.push_back(*it);
-        }
-        keypoints.assign(filtered.begin(), filtered.end());
-    }
-}
-
-void getEllipticKeyPointsInCommonPart( vector<EllipticKeyPoint>& keypoints1, vector<EllipticKeyPoint>& keypoints2,
-                              vector<EllipticKeyPoint>& keypoints1t, vector<EllipticKeyPoint>& keypoints2t,
-                              Size& imgSize1, const Size& imgSize2 )
-{
-    filterEllipticKeyPointsByImageSize( keypoints1, imgSize1 );
-    filterEllipticKeyPointsByImageSize( keypoints1t, imgSize2 );
-    filterEllipticKeyPointsByImageSize( keypoints2, imgSize2 );
-    filterEllipticKeyPointsByImageSize( keypoints2t, imgSize1 );
-}
-
-void calculateRepeatability( const vector<EllipticKeyPoint>& _keypoints1, const vector<EllipticKeyPoint>& _keypoints2,
-                             const Mat& img1, const Mat& img2, const Mat& H1to2,
-                             float& repeatability, int& correspondencesCount,
-                             SparseMat_<uchar>* thresholdedOverlapMask=0 )
-{
-    vector<EllipticKeyPoint> keypoints1( _keypoints1.begin(), _keypoints1.end() ),
-                             keypoints2( _keypoints2.begin(), _keypoints2.end() ),
-                             keypoints1t( keypoints1.size() ),
-                             keypoints2t( keypoints2.size() );
-
-    // calculate projections of key points
-    calcEllipticKeyPointProjections( keypoints1, H1to2, keypoints1t );
-    Mat H2to1; invert(H1to2, H2to1);
-    calcEllipticKeyPointProjections( keypoints2, H2to1, keypoints2t );
-
-    bool ifEvaluateDetectors = !thresholdedOverlapMask; // == commonPart
-    float overlapThreshold;
-    if( ifEvaluateDetectors )
-    {
-        overlapThreshold = 100.f - 40.f;
-
-        // remove key points from outside of the common image part
-        Size sz1 = img1.size(), sz2 = img2.size();
-        getEllipticKeyPointsInCommonPart( keypoints1, keypoints2, keypoints1t, keypoints2t, sz1, sz2 );
-    }
-    else
-    {
-        overlapThreshold = 100.f - 50.f;
-    }
-    int minCount = min( keypoints1.size(), keypoints2t.size() );
-
-    // calculate overlap errors
-    SparseMat_<float> overlaps;
-    overlap( keypoints1, keypoints2t, ifEvaluateDetectors, overlaps );
-
-    correspondencesCount = -1;
-    repeatability = -1.f;
-    const int* size = overlaps.size();
-    if( !size || overlaps.nzcount() == 0 )
-        return;
-
-    if( ifEvaluateDetectors )
-    {
-        // threshold the overlaps
-        for( int y = 0; y < size[0]; y++ )
-        {
-            for( int x = 0; x < size[1]; x++ )
-            {
-                if ( overlaps(y,x) < overlapThreshold )
-                    overlaps.erase(y,x);
-            }
-        }
-    
-        // regions one-to-one matching
-        correspondencesCount = 0;
-        while( overlaps.nzcount() > 0 )
-        {
-            double maxOverlap = 0;
-            int maxIdx[2];
-            minMaxLoc( overlaps, 0, &maxOverlap, 0, maxIdx );
-            for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
-                overlaps.erase(i1, maxIdx[1]);
-            for( size_t i2 = 0; i2 < keypoints2t.size(); i2++ )
-                overlaps.erase(maxIdx[0], i2);
-            correspondencesCount++;
-        }
-        repeatability = minCount ? (float)(correspondencesCount*100)/minCount : -1;
-    }
-    else
-    {
-        thresholdedOverlapMask->create( 2, size );
-        for( int y = 0; y < size[0]; y++ )
-        {
-            for( int x = 0; x < size[1]; x++ )
-            {
-                float val = overlaps(y,x);
-                if ( val >= overlapThreshold )
-                    thresholdedOverlapMask->ref(y,x) = val;
-            }
-        }
-    }
-}
-
-
-void evaluateDetectors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
-                        const Mat& img1, const Mat& img2, const Mat& H1to2,
-                        float& repeatability, int& correspCount )
-{
-    calculateRepeatability( keypoints1, keypoints2,
-                            img1, img2, H1to2,
-                            repeatability, correspCount );
-}
-
-inline float recall( int correctMatchCount, int correspondenceCount )
-{
-    return correspondenceCount ? (float)correctMatchCount / (float)correspondenceCount : -1;
-}
-
-inline float precision( int correctMatchCount, int falseMatchCount )
-{
-    return correctMatchCount + falseMatchCount ? (float)correctMatchCount / (float)(correctMatchCount + falseMatchCount) : -1;
-}
-
-
-struct DMatchForEvaluation : public DMatch
-{
-    int isCorrect;
-
-    DMatchForEvaluation( const DMatch &dm )
-    : DMatch( dm )
-    {
-    }
-};
-
-
-void evaluateDescriptors( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2,
-                          const vector<vector<DMatch> >& matches1to2, vector<DMatchForEvaluation> &allMatches,
-                          const Mat& img1, const Mat& img2, const Mat& H1to2,
-                          int &correctMatchCount, int &falseMatchCount, int& correspondenceCount )
-{
-    assert( !keypoints1.empty() && !keypoints2.empty() && !matches1to2.empty() );
-    assert( keypoints1.size() == matches1to2.size() );
-
-    float repeatability;
-    int correspCount;
-    SparseMat_<uchar> thresholdedOverlapMask; // thresholded allOverlapErrors
-    calculateRepeatability( keypoints1, keypoints2,
-                            img1, img2, H1to2,
-                            repeatability, correspCount,
-                            &thresholdedOverlapMask );
-    correspondenceCount = thresholdedOverlapMask.nzcount();
-
-    correctMatchCount = 0;
-    falseMatchCount = 0;
-
-    for( size_t i = 0; i < matches1to2.size(); i++ )
-    {
-        for( size_t j = 0;j < matches1to2[i].size(); j++ )
-        {
-        //if( matches1to2[i].match.indexTrain > 0 )
-        //{
-            DMatchForEvaluation match = matches1to2[i][j];
-            match.isCorrect = thresholdedOverlapMask( match.indexQuery, match.indexTrain);
-            if( match.isCorrect )
-                correctMatchCount++;
-            else
-                falseMatchCount++;
-            allMatches.push_back( match );
-        //}
-        //else
-        //{
-        //    matches1to2[i].isCorrect = -1;
-        //}
-        }
     }
 }
 
@@ -1063,22 +677,18 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
 
     calcQuality[di].resize(TEST_CASE_COUNT);
 
-    vector<KeyPoint> keypoints1; vector<EllipticKeyPoint> ekeypoints1;
-
+    vector<KeyPoint> keypoints1;
     detector->detect( imgs[0], keypoints1 );
     writeKeypoints( keypontsFS, keypoints1, 0);
-    EllipticKeyPoint::convert( keypoints1, ekeypoints1 );
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
         progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
         vector<KeyPoint> keypoints2;
-        detector->detect( imgs[ci+1], keypoints2 );
+        evaluateFeatureDetector( imgs[0], imgs[ci+1], Hs[ci], &keypoints1, &keypoints2,
+                                 calcQuality[di][ci].repeatability, calcQuality[di][ci].correspondenceCount,
+                                 detector );
         writeKeypoints( keypontsFS, keypoints2, ci+1);
-        vector<EllipticKeyPoint> ekeypoints2;
-        EllipticKeyPoint::convert( keypoints2, ekeypoints2 );
-        evaluateDetectors( ekeypoints1, ekeypoints2, imgs[0], imgs[ci], Hs[ci],
-                           calcQuality[di][ci].repeatability, calcQuality[di][ci].correspondenceCount );
     }
 }
 
@@ -1185,7 +795,7 @@ protected:
     virtual int processResults( int datasetIdx, int caseIdx );
 
     virtual void writePlotData( int di ) const;
-    void calculatePlotData( vector<DMatchForEvaluation> &allMatches, int allCorrespCount, int di );
+    void calculatePlotData( vector<vector<DMatch> > &allMatches, vector<vector<uchar> > &allCorrectMatchesMask, int di );
 
     struct Quality
     {
@@ -1333,8 +943,8 @@ void DescriptorQualityTest::readAlgorithm( )
 
     if( defaultDescMatch == 0 )
     {
-        DescriptorExtractor *extractor = createDescriptorExtractor( algName );
-        DescriptorMatcher *matcher = createDescriptorMatcher( matcherName );
+        Ptr<DescriptorExtractor> extractor = createDescriptorExtractor( algName );
+        Ptr<DescriptorMatcher> matcher = createDescriptorMatcher( matcherName );
         defaultDescMatch = new VectorDescriptorMatch( extractor, matcher );
         specificDescMatch = new VectorDescriptorMatch( extractor, matcher );
 
@@ -1346,10 +956,15 @@ void DescriptorQualityTest::readAlgorithm( )
     }
 }
 
-void DescriptorQualityTest::calculatePlotData( vector<DMatchForEvaluation> &allMatches, int allCorrespCount, int di )
+void DescriptorQualityTest::calculatePlotData( vector<vector<DMatch> > &allMatches, vector<vector<uchar> > &allCorrectMatchesMask, int di )
 {
-    std::sort( allMatches.begin(), allMatches.end() );
+    vector<Point2f> recallPrecisionCurve;
+    computeRecallPrecisionCurve( allMatches, allCorrectMatchesMask, recallPrecisionCurve );
+    // you have recallPrecisionCurve for all images from dataset
+    // size of recallPrecisionCurve == total matches count
+#if 0
 
+    std::sort( allMatches.begin(), allMatches.end() );
     //calcDatasetQuality[di].resize( allMatches.size() );
     calcDatasetQuality[di].clear();
     int correctMatchCount = 0, falseMatchCount = 0;
@@ -1358,6 +973,7 @@ void DescriptorQualityTest::calculatePlotData( vector<DMatchForEvaluation> &allM
     int step = 1 + allMatches.size() / npoints;
     const float resultPrecision = 0.5;
     bool isResultCalculated = false;
+
     for( size_t i=0;i<allMatches.size();i++)
     {
         if( allMatches[i].isCorrect )
@@ -1373,7 +989,7 @@ void DescriptorQualityTest::calculatePlotData( vector<DMatchForEvaluation> &allM
 
             calcDatasetQuality[di].push_back( quality );
 
-            if( !isResultCalculated && quality.precision < resultPrecision)
+            if( !isResultCalculated && quality.precision < resultPrecision )
             {
                 for(int ci=0;ci<TEST_CASE_COUNT;ci++)
                 {
@@ -1390,6 +1006,7 @@ void DescriptorQualityTest::calculatePlotData( vector<DMatchForEvaluation> &allM
     quality.precision = precision( correctMatchCount, falseMatchCount );
 
     calcDatasetQuality[di].push_back( quality );
+#endif
 
 }
 
@@ -1407,20 +1024,18 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
     Ptr<GenericDescriptorMatch> descMatch = commRunParams[di].isActiveParams ? specificDescMatch : defaultDescMatch;
     calcQuality[di].resize(TEST_CASE_COUNT);
 
-    vector<KeyPoint> keypoints1; vector<EllipticKeyPoint> ekeypoints1;
+    vector<KeyPoint> keypoints1;
     readKeypoints( keypontsFS, keypoints1, 0);
-    EllipticKeyPoint::convert( keypoints1, ekeypoints1 );
 
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
-    vector<DMatchForEvaluation> allMatches;
 
-    int allCorrespCount = 0;
+    vector<vector<DMatch> > allMatches1to2;
+    vector<vector<uchar> > allCorrectMatchesMask;
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
         progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
 
         vector<KeyPoint> keypoints2;
-        vector<EllipticKeyPoint> ekeypoints2;
         if( commRunParams[di].projectKeypointsFrom1Image )
         {
             // TODO need to test function calcKeyPointProjections
@@ -1429,24 +1044,20 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         }
         else
             readKeypoints( keypontsFS, keypoints2, ci+1 );
-        EllipticKeyPoint::convert( keypoints2, ekeypoints2 );
-        descMatch->add( imgs[ci+1], keypoints2 );
-        vector<vector<DMatch> > matches1to2;
-        //TODO: use more sophisticated strategy to choose threshold
-        descMatch->match( imgs[0], keypoints1, matches1to2, std::numeric_limits<float>::max() );
-
         // TODO if( commRunParams[di].matchFilter )
-        int correspCount;
-        int correctMatchCount = 0, falseMatchCount = 0;
-        evaluateDescriptors( ekeypoints1, ekeypoints2, matches1to2, allMatches, imgs[0], imgs[ci+1], Hs[ci],
-                             correctMatchCount, falseMatchCount, correspCount );
 
-        allCorrespCount += correspCount;
-
-        descMatch->clear ();
+        vector<vector<DMatch> > matches1to2;
+        vector<vector<uchar> > correctMatchesMask;
+        vector<Point2f> recallPrecisionCurve; // not used because we need recallPrecisionCurve for
+                                              // all images in dataset
+        evaluateDescriptorMatch( imgs[0], imgs[ci+1], Hs[ci], keypoints1, keypoints2,
+                                 &matches1to2, &correctMatchesMask, recallPrecisionCurve,
+                                 descMatch );
+        allMatches1to2.insert( allMatches1to2.end(), matches1to2.begin(), matches1to2.end() );
+        allCorrectMatchesMask.insert( allCorrectMatchesMask.end(), correctMatchesMask.begin(), correctMatchesMask.end() );
     }
 
-    calculatePlotData( allMatches, allCorrespCount, di );
+    calculatePlotData( allMatches1to2, allCorrectMatchesMask, di );
 }
 
 int DescriptorQualityTest::processResults( int datasetIdx, int caseIdx )
