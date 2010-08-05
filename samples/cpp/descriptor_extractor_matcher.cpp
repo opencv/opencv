@@ -30,7 +30,7 @@ void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 const string winName = "correspondences";
 
 void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
-                  const vector<KeyPoint>& keypoints1, const Mat& descriptors1,
+                  vector<KeyPoint>& keypoints1, const Mat& descriptors1,
                   Ptr<FeatureDetector>& detector, Ptr<DescriptorExtractor>& descriptorExtractor,
                   Ptr<DescriptorMatcher>& descriptorMatcher,
                   double ransacReprojThreshold, RNG& rng )
@@ -45,12 +45,23 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     cout << endl << "< Extracting keypoints from second image..." << endl;
     vector<KeyPoint> keypoints2;
     detector->detect( img2, keypoints2 );
-    cout << keypoints2.size() << " >" << endl;
+    cout << keypoints2.size() << " points" << endl << ">" << endl;
+
+    if( !H12.empty() )
+    {
+        cout << "< Evaluate feature detector..." << endl;
+        float repeatability;
+        int correspCount;
+        evaluateFeatureDetector( img1, img2, H12, &keypoints1, &keypoints2, repeatability, correspCount );
+        cout << "repeatability = " << repeatability << endl;
+        cout << "correspCount = " << correspCount << endl;
+        cout << ">" << endl;
+    }
 
     cout << "< Computing descriptors for keypoints from second image..." << endl;
     Mat descriptors2;
     descriptorExtractor->compute( img2, keypoints2, descriptors2 );
-    cout << " >" << endl;
+    cout << ">" << endl;
 
     cout << "< Matching descriptors..." << endl;
     vector<int> matches;
@@ -58,6 +69,17 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     descriptorMatcher->add( descriptors2 );
     descriptorMatcher->match( descriptors1, matches );
     cout << ">" << endl;
+
+    if( !H12.empty() )
+    {
+        cout << "< Evaluate descriptor match..." << endl;
+        vector<Point2f> curve;
+        Ptr<GenericDescriptorMatch> gdm = new VectorDescriptorMatch( descriptorExtractor, descriptorMatcher );
+        evaluateDescriptorMatch( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
+        for( float l_p = 0; l_p < 1 - FLT_EPSILON; l_p+=0.1 )
+            cout << "1-precision = " << l_p << "; recall = " << getRecall( curve, l_p ) << endl;
+        cout << ">" << endl;
+    }
 
     if( !isWarpPerspective && ransacReprojThreshold >= 0 )
     {
@@ -144,15 +166,15 @@ int main(int argc, char** argv)
     cout << endl << "< Extracting keypoints from first image..." << endl;
     vector<KeyPoint> keypoints1;
     detector->detect( img1, keypoints1 );
-    cout << keypoints1.size() << " >" << endl;
+    cout << keypoints1.size() << " points" << endl << ">" << endl;
 
     cout << "< Computing descriptors for keypoints from first image..." << endl;
     Mat descriptors1;
     descriptorExtractor->compute( img1, keypoints1, descriptors1 );
-    cout << " >" << endl;
+    cout << ">" << endl;
 
     namedWindow(winName, 1);
-    RNG rng;
+    RNG rng = theRNG();
     doIteration( img1, img2, isWarpPerspective, keypoints1, descriptors1,
                  detector, descriptorExtractor, descriptorMatcher,
                  ransacReprojThreshold, rng );
