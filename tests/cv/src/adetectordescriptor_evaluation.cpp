@@ -52,8 +52,35 @@ using namespace cv;
 *           Functions to evaluate affine covariant detectors and descriptors.            *
 \****************************************************************************************/
 
-Point2f applyHomography( const Mat_<double>& H, const Point2f& pt );
-void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A );
+static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
+{
+    double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
+    if( z )
+    {
+        double w = 1./z;
+        return Point2f( (H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w, (H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w );
+    }
+    return Point2f( numeric_limits<float>::max(), numeric_limits<float>::max() );
+}
+
+static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A )
+{
+    A.create(2,2);
+    double p1 = H(0,0)*pt.x + H(0,1)*pt.y + H(0,2),
+           p2 = H(1,0)*pt.x + H(1,1)*pt.y + H(1,2),
+           p3 = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2),
+           p3_2 = p3*p3;
+    if( p3 )
+    {
+        A(0,0) = H(0,0)/p3 - p1*H(2,0)/p3_2; // fxdx
+        A(0,1) = H(0,1)/p3 - p1*H(2,1)/p3_2; // fxdy
+
+        A(1,0) = H(1,0)/p3 - p2*H(2,0)/p3_2; // fydx
+        A(1,1) = H(1,1)/p3 - p2*H(2,1)/p3_2; // fydx
+    }
+    else
+        A.setTo(Scalar::all(numeric_limits<double>::max()));
+}
 
 void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H, vector<KeyPoint>& dst )
 {
@@ -1066,7 +1093,7 @@ int DescriptorQualityTest::processResults( int datasetIdx, int caseIdx )
     Quality valid = validQuality[datasetIdx][caseIdx], calc = calcQuality[datasetIdx][caseIdx];
 
     bool isBadAccuracy;
-    const float rltvEps = 0.001;
+    const float rltvEps = 0.001f;
     ts->printf(CvTS::LOG, "%s: calc=%f, valid=%f", RECALL.c_str(), calc.recall, valid.recall );
     isBadAccuracy = valid.recall - calc.recall > rltvEps;
     testLog( ts, isBadAccuracy );

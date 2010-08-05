@@ -125,7 +125,7 @@ void CV_CalonderTest::run(int)
     CalonderDescriptorExtractor<float> fde(dir + "/classifier.rtc");
 
     Mat fdescriptors;
-    double t = getTickCount();
+    double t = (double)getTickCount();
     fde.compute(img, keypoints, fdescriptors);
     t = getTickCount() - t;
     ts->printf(CvTS::LOG, "\nAverage time of computiting float descriptor = %g ms\n", t/((double)cvGetTickFrequency()*1000.)/fdescriptors.rows );
@@ -143,7 +143,7 @@ void CV_CalonderTest::run(int)
 
     CalonderDescriptorExtractor<uchar> cde(dir + "/classifier.rtc");
     Mat cdescriptors;
-    t = getTickCount();
+    t = (double)getTickCount();
     cde.compute(img, keypoints, cdescriptors);
     t = getTickCount() - t;
     ts->printf(CvTS::LOG, "Average time of computiting uchar descriptor = %g ms\n", t/((double)cvGetTickFrequency()*1000.)/cdescriptors.rows );

@@ -79,11 +79,11 @@ Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPo
 
 static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& color, int flags )
 {
-    Point center( p.pt.x * draw_multiplier, p.pt.y * draw_multiplier );
+    Point center( cvRound(p.pt.x * draw_multiplier), cvRound(p.pt.y * draw_multiplier) );
 
     if( flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS )
     {
-        int radius = p.size/2 * draw_multiplier; // KeyPoint::size is a diameter
+        int radius = cvRound(p.size/2 * draw_multiplier); // KeyPoint::size is a diameter
 
         // draw the circles around keypoints with the keypoints size
         circle( img, center, radius, color, 1, CV_AA, draw_shift_bits );
@@ -91,8 +91,9 @@ static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& col
         // draw orientation of the keypoint, if it is applicable
         if( p.angle != -1 )
         {
-            float srcAngleRad = p.angle*CV_PI/180;
-            Point orient(cos(srcAngleRad)*radius, sin(srcAngleRad)*radius);
+            float srcAngleRad = p.angle*(float)CV_PI/180.f;
+            Point orient(cvRound(cos(srcAngleRad)*radius), 
+						 cvRound(sin(srcAngleRad)*radius));
             line( img, center, center+orient, color, 1, CV_AA, draw_shift_bits );
         }
 #if 0
@@ -175,7 +176,9 @@ static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
             pt2 = kp2.pt,
             dpt2 = Point2f( std::min(pt2.x+outImg1.cols, float(outImg.cols-1)), pt2.y );
 
-    line( outImg, Point(pt1.x*draw_multiplier, pt1.y*draw_multiplier), Point(dpt2.x*draw_multiplier, dpt2.y*draw_multiplier),
+    line( outImg, 
+		  Point(cvRound(pt1.x*draw_multiplier), cvRound(pt1.y*draw_multiplier)),
+		  Point(cvRound(dpt2.x*draw_multiplier), cvRound(dpt2.y*draw_multiplier)),
           color, 1, CV_AA, draw_shift_bits );
 }
 
@@ -461,7 +464,7 @@ void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask
         {
             match.indexQuery = i;
             double queryNorm = norm( query.row(i) );
-            match.distance = sqrt( minVal + queryNorm*queryNorm );
+            match.distance = (float)sqrt( minVal + queryNorm*queryNorm );
             matches.push_back( match );
         }
     }

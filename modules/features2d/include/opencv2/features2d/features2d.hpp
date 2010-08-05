@@ -1505,7 +1505,7 @@ void CalonderDescriptorExtractor<T>::compute( const cv::Mat& image,
   int offset = patchSize / 2;
   for (size_t i = 0; i < keypoints.size(); ++i) {
     cv::Point2f pt = keypoints[i].pt;
-    IplImage ipl = image( Rect(pt.x - offset, pt.y - offset, patchSize, patchSize) );
+    IplImage ipl = image( Rect((int)(pt.x - offset), (int)(pt.y - offset), patchSize, patchSize) );
     classifier_.getSignature( &ipl, descriptors.ptr<T>(i));
   }
 }
@@ -1515,7 +1515,7 @@ void CalonderDescriptorExtractor<T>::read( const FileNode& )
 {}
 
 template<typename T>
-void CalonderDescriptorExtractor<T>::write( FileStorage&s ) const
+void CalonderDescriptorExtractor<T>::write( FileStorage& ) const
 {}
 
 CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );

@@ -46,18 +46,18 @@
 using namespace cv;
 using namespace std;
 
-inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
+static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
 {
     double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
     if( z )
     {
         double w = 1./z;
-        return Point2f( (H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w, (H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w );
+        return Point2f( (float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w), (float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w) );
     }
-    return Point2f( numeric_limits<double>::max(), numeric_limits<double>::max() );
+    return Point2f( numeric_limits<float>::max(), numeric_limits<float>::max() );
 }
 
-inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A )
+static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A )
 {
     A.create(2,2);
     double p1 = H(0,0)*pt.x + H(0,1)*pt.y + H(0,2),
@@ -110,12 +110,12 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
     Mat_<double> M = getSecondMomentsMatrix(_ellipse), eval;
     eigen( M, eval );
     assert( eval.rows == 2 && eval.cols == 1 );
-    axes.width = 1.f / sqrt(eval(0,0));
-    axes.height = 1.f / sqrt(eval(1,0));
+    axes.width = 1.f / (float)sqrt(eval(0,0));
+    axes.height = 1.f / (float)sqrt(eval(1,0));
 
-    float ac_b2 = ellipse[0]*ellipse[2] - ellipse[1]*ellipse[1];
-    boundingBox.width = sqrt(ellipse[2]/ac_b2);
-    boundingBox.height = sqrt(ellipse[0]/ac_b2);
+    double ac_b2 = ellipse[0]*ellipse[2] - ellipse[1]*ellipse[1];
+    boundingBox.width = (float)sqrt(ellipse[2]/ac_b2);
+    boundingBox.height = (float)sqrt(ellipse[0]/ac_b2);
 }
 
 Mat_<double> EllipticKeyPoint::getSecondMomentsMatrix( const Scalar& _ellipse )
@@ -223,7 +223,7 @@ static void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<El
             fac=3;
 
         maxDist = maxDist*4;
-        fac = 1.0/(fac*fac);
+        fac = 1.f/(fac*fac);
 
         EllipticKeyPoint keypoint1a = EllipticKeyPoint( kp1.center, Scalar(fac*kp1.ellipse[0], fac*kp1.ellipse[1], fac*kp1.ellipse[2]) );
 
@@ -246,8 +246,8 @@ static void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<El
                 float miny = floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
                                     -keypoint1a.boundingBox.height : (diff.y-keypoint2a.boundingBox.height));
                 float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
-                float dr = mina/50.0;
-                float bua = 0, bna = 0;
+                float dr = mina/50.f;
+                float bua = 0.f, bna = 0.f;
                 //compute the area
                 for( float rx1 = minx; rx1 <= maxx; rx1+=dr )
                 {
@@ -256,8 +256,8 @@ static void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<El
                     {
                         float ry2=ry1-diff.y;
                         //compute the distance from the ellipse center
-                        float e1 = keypoint1a.ellipse[0]*rx1*rx1+2*keypoint1a.ellipse[1]*rx1*ry1+keypoint1a.ellipse[2]*ry1*ry1;
-                        float e2 = keypoint2a.ellipse[0]*rx2*rx2+2*keypoint2a.ellipse[1]*rx2*ry2+keypoint2a.ellipse[2]*ry2*ry2;
+                        float e1 = (float)(keypoint1a.ellipse[0]*rx1*rx1+2*keypoint1a.ellipse[1]*rx1*ry1+keypoint1a.ellipse[2]*ry1*ry1);
+                        float e2 = (float)(keypoint2a.ellipse[0]*rx2*rx2+2*keypoint2a.ellipse[1]*rx2*ry2+keypoint2a.ellipse[2]*ry2*ry2);
                         //compute the area
                         if( e1<1 && e2<1 ) bna++;
                         if( e1<1 || e2<1 ) bua++;

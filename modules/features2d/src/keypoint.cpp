@@ -118,7 +118,7 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
 
     Point2f p1 = kp1.pt;
     Point2f p2 = kp2.pt;
-    float c = norm( p1 - p2 );
+    float c = (float)norm( p1 - p2 );
 
     float ovrl = 0.f;
 
@@ -143,7 +143,7 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
         float triangleAreaB = b_2 * sinAlpha * cosAlpha;
 
         float intersectionArea = segmentAreaA + segmentAreaB - triangleAreaA - triangleAreaB;
-        float unionArea = (a_2 + b_2) * CV_PI - intersectionArea;
+        float unionArea = (a_2 + b_2) * (float)CV_PI - intersectionArea;
 
         ovrl = intersectionArea / unionArea;
     }
