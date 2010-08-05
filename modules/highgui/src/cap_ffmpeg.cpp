@@ -60,9 +60,10 @@ extern "C" {
 #endif
 
 #ifdef WIN32
-  #include <ffmpeg_/avformat.h>
-  #include <ffmpeg_/avcodec.h>
-  #include <ffmpeg_/imgconvert.h>
+  #define HAVE_FFMPEG_SWSCALE 1
+  #include <libavformat/avformat.h>
+  #include <libavcodec/avcodec.h>
+  #include <libswscale/swscale.h>
 #else
 
 // if the header path is not specified explicitly, let's deduce it

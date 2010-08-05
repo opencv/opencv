@@ -146,6 +146,16 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_OPENCV_GCC_VERSION ${CMAKE_OPENCV_GCC_VERSION_MAJOR}${CMAKE_OPENCV_GCC_VERSION_MINOR})
     math(EXPR CMAKE_OPENCV_GCC_VERSION_NUM "${CMAKE_OPENCV_GCC_VERSION_MAJOR}*100 + ${CMAKE_OPENCV_GCC_VERSION_MINOR}")
     message(STATUS "Detected version of GNU GCC: ${CMAKE_OPENCV_GCC_VERSION} (${CMAKE_OPENCV_GCC_VERSION_NUM})")
+
+    if(WIN32)
+        execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
+                  OUTPUT_VARIABLE CMAKE_OPENCV_GCC_TARGET_MACHINE
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
+            set(MINGW64 1)
+        endif()
+    endif()
+
 endif()
 
 # ----------------------------------------------------------------------------
@@ -638,7 +648,9 @@ endif()
 if (WIN32 AND WITH_VIDEOINPUT)
 	if(CMAKE_CXX_COMPILER MATCHES "dw2")
 	else()
-		set(HAVE_VIDEOINPUT 1)
+        if(NOT MINGW64)
+		  set(HAVE_VIDEOINPUT 1)
+        endif()
 	endif()
 endif()
 
@@ -804,12 +816,6 @@ if(MSVC)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-
-    if(WIN32)
-        if(CMAKE_CXX_COMPILER MATCHES "64")
-            set(MINGW64 1)
-        endif()
-    endif()
 
     # High level of warnings.
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wall")

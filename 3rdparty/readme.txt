@@ -89,7 +89,7 @@ openexr-1.4.0 - OpenEXR is a high dynamic-range (HDR) image file format develope
 
 ------------------------------------------------------------------------------------
 
-ffmpeg-0.5.1 - FFmpeg is a complete, cross-platform solution to record,
+ffmpeg-0.6.0 - FFmpeg is a complete, cross-platform solution to record,
              convert and stream audio and video. It includes libavcodec -
              the leading audio/video codec library, and also libavformat, libavutils and
              other helper libraries that are used by OpenCV (in highgui module) to

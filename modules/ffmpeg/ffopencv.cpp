@@ -541,6 +541,7 @@ extern "C" { __declspec(dllexport) unsigned int __lc_codepage = 0; }
 #pragma comment(lib, "libavformat.a")
 #pragma comment(lib, "libavcodec.a")
 #pragma comment(lib, "libavutil.a")
+#pragma comment(lib, "libswscale.a")
 #endif
 #pragma comment(lib, "libwsock32_.a")
 

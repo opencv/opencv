@@ -53,6 +53,10 @@
    }
 #endif
 
+#if _MSC_VER >= 1600
+#include "stdint.h"
+#else
+
 // 7.18.1 Integer types
 
 // 7.18.1.1 Exact-width integer types
@@ -218,5 +222,6 @@ typedef uint64_t  uintmax_t;
 
 #endif // __STDC_CONSTANT_MACROS ]
 
+#endif
 
 #endif // _MSC_STDINT_H_ ]
