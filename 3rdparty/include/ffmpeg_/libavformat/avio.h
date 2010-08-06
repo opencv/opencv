@@ -28,7 +28,7 @@
  * header, so it should not be directly included in your projects.
  */
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 #include "libavutil/common.h"
 

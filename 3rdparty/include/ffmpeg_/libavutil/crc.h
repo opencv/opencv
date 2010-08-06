@@ -21,7 +21,7 @@
 #ifndef AVUTIL_CRC_H
 #define AVUTIL_CRC_H
 
-#include <stdint.h>
+#include <msc_stdint.h>
 #include <stddef.h>
 #include "attributes.h"
 

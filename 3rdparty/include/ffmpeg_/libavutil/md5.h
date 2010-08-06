@@ -21,7 +21,7 @@
 #ifndef AVUTIL_MD5_H
 #define AVUTIL_MD5_H
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 extern const int av_md5_size;
 

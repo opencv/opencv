@@ -24,7 +24,7 @@
 #ifndef AVUTIL_FIFO_H
 #define AVUTIL_FIFO_H
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 typedef struct AVFifoBuffer {
     uint8_t *buffer;

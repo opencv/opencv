@@ -21,7 +21,7 @@
 #ifndef AVUTIL_SHA1_H
 #define AVUTIL_SHA1_H
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 extern const int av_sha1_size;
 

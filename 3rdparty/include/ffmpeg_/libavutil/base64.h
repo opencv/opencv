@@ -21,7 +21,7 @@
 #ifndef AVUTIL_BASE64_H
 #define AVUTIL_BASE64_H
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 /**
  * Decodes the base64-encoded string in in and puts the decoded

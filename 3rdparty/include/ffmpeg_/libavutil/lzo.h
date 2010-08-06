@@ -22,7 +22,7 @@
 #ifndef AVUTIL_LZO_H
 #define AVUTIL_LZO_H
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 /** \defgroup errflags Error flags returned by av_lzo1x_decode
   * \{ */
