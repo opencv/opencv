@@ -368,7 +368,10 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
 }
 
 
-void cv::undistortPoints( const Mat& src, Mat& dst,
+namespace cv
+{
+    
+void undistortPoints( const Mat& src, Mat& dst,
                           const Mat& cameraMatrix, const Mat& distCoeffs,
                           const Mat& R, const Mat& P )
 {
@@ -387,9 +390,9 @@ void cv::undistortPoints( const Mat& src, Mat& dst,
     cvUndistortPoints(&_src, &_dst, &_cameraMatrix, pD, pR, pP);
 }
 
-void cv::undistortPoints( const Mat& src, std::vector<Point2f>& dst,
-                          const Mat& cameraMatrix, const Mat& distCoeffs,
-                          const Mat& R, const Mat& P )
+void undistortPoints( const Mat& src, std::vector<Point2f>& dst,
+                      const Mat& cameraMatrix, const Mat& distCoeffs,
+                      const Mat& R, const Mat& P )
 {
     size_t sz = src.cols*src.rows*src.channels()/2;
     CV_Assert( src.isContinuous() && src.depth() == CV_32F &&
@@ -405,6 +408,160 @@ void cv::undistortPoints( const Mat& src, std::vector<Point2f>& dst,
     if( distCoeffs.data )
         pD = &(_distCoeffs = distCoeffs);
     cvUndistortPoints(&_src, &_dst, &_cameraMatrix, pD, pR, pP);
+}
+
+
+static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int projType)
+{
+    double x = p.x, y = p.y;
+    double beta = 1 + 2*alpha;
+    double v = x*x + y*y + 1, iv = 1/v;
+    double u = sqrt(beta*v + alpha*alpha);
+    
+    double k = (u - alpha)*iv;
+    double kv = (v*beta/u - (u - alpha)*2)*iv*iv;
+    double kx = kv*x, ky = kv*y;
+    
+    if( projType == PROJ_SPHERICAL_ORTHO )
+    {
+        if(J)
+            *J = Vec4d(kx*x + k, kx*y, ky*x, ky*y + k);
+        return Point2f((float)(x*k), (float)(y*k));
+    }
+    if( projType == PROJ_SPHERICAL_EQRECT )
+    {
+        // equirectangular
+        double iR = 1/(alpha + 1);
+        double x1 = std::max(std::min(x*k*iR, 1.), -1.);
+        double y1 = std::max(std::min(y*k*iR, 1.), -1.);
+        
+        if(J)
+        {
+            double fx1 = iR/sqrt(1 - x1*x1);
+            double fy1 = iR/sqrt(1 - y1*y1);
+            *J = Vec4d(fx1*(kx*x + k), fx1*ky*x, fy1*kx*y, fy1*(ky*y + k));
+        }
+        return Point2f((float)asin(x1), (float)asin(y1));
+    }
+    CV_Error(CV_StsBadArg, "Unknown projection type");
+    return Point2f();
+}
+
+    
+static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
+{
+    static int avgiter = 0, avgn = 0;
+    
+    double eps = 1e-12;
+    Vec2d p(_p.x, _p.y), q(_p.x, _p.y), err;
+    Vec4d J;
+    int i, maxiter = 5;
+    
+    for( i = 0; i < maxiter; i++ )
+    {
+        Point2f p1 = mapPointSpherical(Point2f((float)q[0], (float)q[1]), alpha, &J, projType);
+        err = Vec2d(p1.x, p1.y) - p;
+        if( err[0]*err[0] + err[1]*err[1] < eps )
+            break;
+        
+        Vec4d JtJ(J[0]*J[0] + J[2]*J[2], J[0]*J[1] + J[2]*J[3],
+                  J[0]*J[1] + J[2]*J[3], J[1]*J[1] + J[3]*J[3]);
+        double d = JtJ[0]*JtJ[3] - JtJ[1]*JtJ[2];
+        d = d ? 1./d : 0;
+        Vec4d iJtJ(JtJ[3]*d, -JtJ[1]*d, -JtJ[2]*d, JtJ[0]*d);
+        Vec2d JtErr(J[0]*err[0] + J[2]*err[1], J[1]*err[0] + J[3]*err[1]);
+        
+        q -= Vec2d(iJtJ[0]*JtErr[0] + iJtJ[1]*JtErr[1], iJtJ[2]*JtErr[0] + iJtJ[3]*JtErr[1]);
+        //Matx22d J(kx*x + k, kx*y, ky*x, ky*y + k);
+        //q -= Vec2d((J.t()*J).inv()*(J.t()*err));
+    }
+    
+    if( i < maxiter )
+    {
+        avgiter += i;
+        avgn++;
+        if( avgn == 1500 )
+            printf("avg iters = %g\n", (double)avgiter/avgn);
+    }
+    
+    return i < maxiter ? Point2f((float)q[0], (float)q[1]) : Point2f(-FLT_MAX, -FLT_MAX);
+}
+
+    
+float initWideAngleProjMap( const Mat& cameraMatrix, const Mat& distCoeffs,
+                            Size imageSize, int destImageWidth, int m1type,
+                            Mat& map1, Mat& map2, int projType, double _alpha )
+{
+    Point2f scenter((float)cameraMatrix.at<double>(0,2), (float)cameraMatrix.at<double>(1,2));
+    Point2f dcenter((destImageWidth-1)*0.5f, 0.f);
+    float xmin = FLT_MAX, xmax = -FLT_MAX, ymin = FLT_MAX, ymax = -FLT_MAX;
+    int N = 9;
+    std::vector<Point2f> u(1), v(1);
+    Mat _u(u), I = Mat::eye(3,3,CV_64F);
+    float alpha = (float)_alpha;
+    
+    alpha = std::min(alpha, 0.999f);
+    
+    for( int i = 0; i < N; i++ )
+        for( int j = 0; j < N; j++ )
+        {
+            Point2f p((float)j*imageSize.width/(N-1), (float)i*imageSize.height/(N-1));
+            u[0] = p;
+            undistortPoints(_u, v, cameraMatrix, distCoeffs, I, I);
+            Point2f q = mapPointSpherical(v[0], alpha, 0, projType);
+            if( xmin > q.x ) xmin = q.x;
+            if( xmax < q.x ) xmax = q.x;
+            if( ymin > q.y ) ymin = q.y;
+            if( ymax < q.y ) ymax = q.y;
+        }
+    
+    float scale = (float)std::min(dcenter.x/fabs(xmax), dcenter.x/fabs(xmin));
+    Size dsize(destImageWidth, cvCeil(std::max(scale*fabs(ymin)*2, scale*fabs(ymax)*2)));
+    dcenter.y = (dsize.height - 1)*0.5f;
+    
+    Mat mapxy(dsize, CV_32FC2);
+    double k1 = distCoeffs.at<double>(0,0),
+    k2 = distCoeffs.at<double>(1,0),
+    k3 = distCoeffs.at<double>(4,0),
+    p1 = distCoeffs.at<double>(2,0),
+    p2 = distCoeffs.at<double>(3,0);
+    double fx = cameraMatrix.at<double>(0,0),
+    fy = cameraMatrix.at<double>(1,1),
+    cx = scenter.x, cy = scenter.y;
+    
+    for( int y = 0; y < dsize.height; y++ )
+    {
+        Point2f* mxy = mapxy.ptr<Point2f>(y);
+        for( int x = 0; x < dsize.width; x++ )
+        {
+            Point2f p = (Point2f((float)x, (float)y) - dcenter)*(1.f/scale);
+            Point2f q = invMapPointSpherical(p, alpha, projType);
+            if( q.x <= -FLT_MAX && q.y <= -FLT_MAX )
+            {
+                mxy[x] = Point2f(-1.f, -1.f);
+                continue;
+            }
+            double x2 = q.x*q.x, y2 = q.y*q.y;
+            double r2 = x2 + y2, _2xy = 2*q.x*q.y;
+            double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2;
+            double u = fx*(q.x*kr + p1*_2xy + p2*(r2 + 2*x2)) + cx;
+            double v = fy*(q.y*kr + p1*(r2 + 2*y2) + p2*_2xy) + cy;
+            
+            mxy[x] = Point2f((float)u, (float)v);
+        }
+    }
+    
+    if(m1type == CV_32FC2)
+    {
+        mapxy.copyTo(map1);
+        map2.release();
+    }
+    else
+        convertMaps(mapxy, Mat(), map1, map2, m1type, false);
+    
+    return scale;
+}
+
 }
 
 /*  End of file  */

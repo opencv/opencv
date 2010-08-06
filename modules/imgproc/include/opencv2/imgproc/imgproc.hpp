@@ -601,6 +601,19 @@ CV_EXPORTS void undistort( const Mat& src, Mat& dst, const Mat& cameraMatrix,
 CV_EXPORTS void initUndistortRectifyMap( const Mat& cameraMatrix, const Mat& distCoeffs,
                            const Mat& R, const Mat& newCameraMatrix,
                            Size size, int m1type, Mat& map1, Mat& map2 );
+
+enum
+{
+    PROJ_SPHERICAL_ORTHO = 0,
+    PROJ_SPHERICAL_EQRECT = 1
+};    
+    
+//! initializes maps for cv::remap() for wide-angle
+CV_EXPORTS float initWideAngleProjMap( const Mat& cameraMatrix, const Mat& distCoeffs,
+                                       Size imageSize, int destImageWidth,
+                                       int m1type, Mat& map1, Mat& map2,
+                                       int projType=PROJ_SPHERICAL_EQRECT, double alpha=0);
+    
 //! returns the default new camera matrix (by default it is the same as cameraMatrix unless centerPricipalPoint=true)
 CV_EXPORTS Mat getDefaultNewCameraMatrix( const Mat& cameraMatrix, Size imgsize=Size(),
                                           bool centerPrincipalPoint=false );
