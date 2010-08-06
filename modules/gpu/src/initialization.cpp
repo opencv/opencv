@@ -54,6 +54,7 @@ CV_EXPORTS void cv::gpu::setDevice(int /*device*/) { throw_nogpu(); }
 CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
 CV_EXPORTS void cv::gpu::getComputeCapability(int /*device*/, int* /*major*/, int* /*minor*/) { throw_nogpu(); } 
 CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { throw_nogpu(); return 0; } 
+CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t* /*free*/, size_t* /*total*/)  { throw_nogpu(); } 
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -97,6 +98,12 @@ CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
     cudaDeviceProp prop;
     cudaSafeCall( cudaGetDeviceProperties( &prop, device ) );
     return prop.multiProcessorCount;
+}
+
+
+CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t *free, size_t* total)
+{
+    cudaSafeCall( cudaMemGetInfo( free, total ) );
 }
 
 #endif

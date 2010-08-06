@@ -48,6 +48,7 @@ using namespace cv::gpu;
 #if !defined (HAVE_CUDA)
 
 void cv::gpu::remap(const GpuMat& /*src*/, const GpuMat& /*xmap*/, const GpuMat& /*ymap*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, float, float, TermCriteria ) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -56,6 +57,8 @@ namespace cv { namespace gpu
     namespace impl 
     {
         extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst);
+
+        extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, float sp, float sr, int maxIter, float eps);
     }
 }}
 
@@ -69,5 +72,31 @@ void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, G
     
     impl::remap_gpu(src, xmap, ymap, dst);
 }
+
+
+
+void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, float sp, float sr, TermCriteria criteria)
+{       
+    if( src.empty() )
+        CV_Error( CV_StsBadArg, "The input image is empty" );
+
+    if( src.depth() != CV_8U || src.channels() != 4 )
+        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+
+    dst.create( src.size(), CV_8UC3 );
+    
+    float eps;
+    if( !(criteria.type & TermCriteria::MAX_ITER) )
+        criteria.maxCount = 5;
+    
+    int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
+    
+    if( !(criteria.type & TermCriteria::EPS) )
+        eps = 1.f;
+
+    eps = std::max(criteria.epsilon, 0.0);        
+    impl::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
+}
+
 
 #endif /* !defined (HAVE_CUDA) */

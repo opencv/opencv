@@ -64,6 +64,8 @@ namespace cv
         CV_EXPORTS void getComputeCapability(int device, int* major, int* minor);
         CV_EXPORTS int getNumberOfSMs(int device);
 
+        CV_EXPORTS void getGpuMemInfo(size_t *free, size_t* total);
+
         //////////////////////////////// GpuMat ////////////////////////////////
         class CudaStream;
         class MatPL;
@@ -328,7 +330,10 @@ namespace cv
 
         ////////////////////////////// Image processing //////////////////////////////
 
-        void CV_EXPORTS remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
+        CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
+
+        
+        CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, float sp, float sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
