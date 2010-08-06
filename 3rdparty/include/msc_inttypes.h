@@ -40,7 +40,7 @@
 #pragma once
 #endif
 
-#include <stdint.h>
+#include <msc_stdint.h>
 
 // 7.8 Format conversion of integer types
 
