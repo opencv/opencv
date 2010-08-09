@@ -1330,6 +1330,8 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
     const int sample_size = var_count*sizeof(samples[0][0]);
     int i, j, k;
 
+    cvClearMemStorage( storage );
+
     if( svm_type == ONE_CLASS || svm_type == EPS_SVR || svm_type == NU_SVR )
     {
         int sv_count = 0;

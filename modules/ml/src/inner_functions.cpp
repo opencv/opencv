@@ -676,7 +676,7 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
     if( r_type != CV_32FC1 && r_type != CV_32SC1 )
         CV_ERROR( CV_StsUnsupportedFormat, "Unsupported response type" );
 
-    r_step = responses->step ? responses->step / CV_ELEM_SIZE(responses->type) : 1;
+    r_step = responses->rows == 1 ? 1 : responses->step / CV_ELEM_SIZE(responses->type);
 
     if( sample_idx )
     {
