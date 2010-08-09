@@ -165,7 +165,7 @@ namespace cv { namespace gpu { namespace impl
         grid.y = divUp(src.rows, threads.y);
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-        cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.ptr, desc, src.cols * 4, src.rows, src.step ) );
+        cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.ptr, desc, src.cols, src.rows, src.step ) );
 
         meanshift_kernel<<< grid, threads >>>( dst.ptr, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaThreadSynchronize() );
