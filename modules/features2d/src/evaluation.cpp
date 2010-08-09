@@ -466,14 +466,24 @@ void cv::evaluateDescriptorMatch( const Mat& img1, const Mat& img2, const Mat& H
     matches1to2 = _matches1to2 != 0 ? _matches1to2 : &buf1;
     correctMatches1to2Mask = _correctMatches1to2Mask != 0 ? _correctMatches1to2Mask : &buf2;
 
-    if( keypoints1.empty() || keypoints2.empty() )
-        CV_Error( CV_StsBadArg, "keypoints1 and keypoints2 must be no empty" );
+    if( keypoints1.empty() )
+        CV_Error( CV_StsBadArg, "keypoints1 must be no empty" );
+
     if( matches1to2->empty() && dmatch.empty() )
         CV_Error( CV_StsBadArg, "dmatch must be no empty when matches1to2 is empty" );
-    if( matches1to2->empty() )
+
+    bool computeKeypoints2ByPrj = keypoints2.empty();
+    if( computeKeypoints2ByPrj )
     {
+        assert(0);
+        // TODO: add computing keypoints2 from keypoints1 using H1to2
+    }
+
+    if( matches1to2->empty() || computeKeypoints2ByPrj )
+    {
+        dmatch->clear();
         dmatch->add( img2, keypoints2 );
-        //TODO: use more sophisticated strategy to choose threshold
+        // TODO: use more sophisticated strategy to choose threshold
         dmatch->match( img1, keypoints1, *matches1to2, std::numeric_limits<float>::max() );
     }
     float repeatability;
