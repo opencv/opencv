@@ -138,12 +138,12 @@ namespace imgproc
                 if( count == 0 )
                     break;
 
-                icount = 1./count;
-                int x1 = floor(sx*icount);
-                int y1 = floor(sy*icount);
-                s0 = floor(s0*icount);
-                s1 = floor(s1*icount);
-                s2 = floor(s2*icount);
+                icount = 1.f/count;
+                int x1 = __float2int_rz(sx*icount);
+                int y1 = __float2int_rz(sy*icount);
+                s0 = __float2int_rz(s0*icount);
+                s1 = __float2int_rz(s1*icount);
+                s2 = __float2int_rz(s2*icount);
 
                 int norm2 = (s0 - c.x) * (s0 - c.x) + (s1 - c.y) * (s1 - c.y) + (s2 - c.z) * (s2 - c.z);
 
@@ -166,7 +166,7 @@ namespace imgproc
 
 namespace cv { namespace gpu { namespace impl 
 {
-    extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, float sp, float sr, int maxIter, float eps)
+    extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
     {                        
         dim3  grid(1, 1, 1);
         dim3 threads(32, 16, 1);

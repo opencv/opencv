@@ -333,7 +333,7 @@ namespace cv
         CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
 
         
-        CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, float sp, float sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+        CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 

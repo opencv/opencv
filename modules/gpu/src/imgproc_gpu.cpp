@@ -48,7 +48,7 @@ using namespace cv::gpu;
 #if !defined (HAVE_CUDA)
 
 void cv::gpu::remap(const GpuMat& /*src*/, const GpuMat& /*xmap*/, const GpuMat& /*ymap*/, GpuMat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, float, float, TermCriteria ) { throw_nogpu(); }
+void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -58,7 +58,7 @@ namespace cv { namespace gpu
     {
         extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst);
 
-        extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, float sp, float sr, int maxIter, float eps);
+        extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps);
     }
 }}
 
@@ -75,7 +75,7 @@ void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, G
 
 
 
-void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, float sp, float sr, TermCriteria criteria)
+void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria)
 {       
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
