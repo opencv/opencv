@@ -1302,7 +1302,7 @@ message(STATUS "    Use TBB:                   NO")
 endif()
 
 if (HAVE_CUDA)
-message(STATUS "    Uue Cuda:                  YES")
+message(STATUS "    Use Cuda:                  YES")
 else()
 message(STATUS "    Use Cuda:                  No")
 endif()
