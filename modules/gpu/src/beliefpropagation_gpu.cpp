@@ -52,7 +52,7 @@ cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int, int, int,
 cv::gpu::StereoBeliefPropagation_GPU::StereoBeliefPropagation_GPU(int, int, int, float, float, float, float, int, float) { throw_nogpu(); }
 
 void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, const CudaStream&) { throw_nogpu(); }
+void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
 
 bool cv::gpu::StereoBeliefPropagation_GPU::checkIfGpuCallReasonable() { throw_nogpu(); return false; }
 
@@ -282,7 +282,7 @@ void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat& left, const 
     ::stereo_bp_gpu_operator(ndisp, iters, levels, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type, msg_scale, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, 0);
 }
 
-void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const CudaStream& stream)
+void cv::gpu::StereoBeliefPropagation_GPU::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const Stream& stream)
 {
     ::stereo_bp_gpu_operator(ndisp, iters, levels, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type, msg_scale, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, StreamAccessor::getStream(stream));
 }

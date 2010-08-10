@@ -48,28 +48,28 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::CudaStream::create() { throw_nogpu(); }
-void cv::gpu::CudaStream::release() { throw_nogpu(); }
-cv::gpu::CudaStream::CudaStream() : impl(0) { throw_nogpu(); }
-cv::gpu::CudaStream::~CudaStream() { throw_nogpu(); }
-cv::gpu::CudaStream::CudaStream(const CudaStream& /*stream*/) { throw_nogpu(); }
-CudaStream& cv::gpu::CudaStream::operator=(const CudaStream& /*stream*/) { throw_nogpu(); return *this; }
-bool cv::gpu::CudaStream::queryIfComplete() { throw_nogpu(); return true; }
-void cv::gpu::CudaStream::waitForCompletion() { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& /*src*/, Mat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& /*src*/, MatPL& /*dst*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueUpload(const MatPL& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueUpload(const Mat& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueCopy(const GpuMat& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& /*src*/, Scalar /*val*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& /*src*/, Scalar /*val*/, const GpuMat& /*mask*/) { throw_nogpu(); }
-void cv::gpu::CudaStream::enqueueConvert(const GpuMat& /*src*/, GpuMat& /*dst*/, int /*type*/, double /*a*/, double /*b*/) { throw_nogpu(); }
+void cv::gpu::Stream::create() { throw_nogpu(); }
+void cv::gpu::Stream::release() { throw_nogpu(); }
+cv::gpu::Stream::Stream() : impl(0) { throw_nogpu(); }
+cv::gpu::Stream::~Stream() { throw_nogpu(); }
+cv::gpu::Stream::Stream(const Stream& /*stream*/) { throw_nogpu(); }
+Stream& cv::gpu::Stream::operator=(const Stream& /*stream*/) { throw_nogpu(); return *this; }
+bool cv::gpu::Stream::queryIfComplete() { throw_nogpu(); return true; }
+void cv::gpu::Stream::waitForCompletion() { throw_nogpu(); }
+void cv::gpu::Stream::enqueueDownload(const GpuMat& /*src*/, Mat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueDownload(const GpuMat& /*src*/, MatPL& /*dst*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueUpload(const MatPL& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueUpload(const Mat& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueCopy(const GpuMat& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueMemSet(const GpuMat& /*src*/, Scalar /*val*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueMemSet(const GpuMat& /*src*/, Scalar /*val*/, const GpuMat& /*mask*/) { throw_nogpu(); }
+void cv::gpu::Stream::enqueueConvert(const GpuMat& /*src*/, GpuMat& /*dst*/, int /*type*/, double /*a*/, double /*b*/) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 #include "opencv2/gpu/stream_accessor.hpp"
 
-struct CudaStream::Impl
+struct Stream::Impl
 {
     cudaStream_t stream;
     int ref_counter;
@@ -85,9 +85,9 @@ namespace
     };
 }
 
-CV_EXPORTS cudaStream_t cv::gpu::StreamAccessor::getStream(const CudaStream& stream) { return stream.impl->stream; };
+CV_EXPORTS cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream) { return stream.impl->stream; };
 
-void cv::gpu::CudaStream::create()
+void cv::gpu::Stream::create()
 {
     if (impl)
         release();
@@ -95,13 +95,13 @@ void cv::gpu::CudaStream::create()
     cudaStream_t stream;
     cudaSafeCall( cudaStreamCreate( &stream ) );
 
-    impl = (CudaStream::Impl*)fastMalloc(sizeof(CudaStream::Impl));
+    impl = (Stream::Impl*)fastMalloc(sizeof(Stream::Impl));
 
     impl->stream = stream;
     impl->ref_counter = 1;
 }
 
-void cv::gpu::CudaStream::release()
+void cv::gpu::Stream::release()
 {
     if( impl && CV_XADD(&impl->ref_counter, -1) == 1 )
     {
@@ -110,15 +110,15 @@ void cv::gpu::CudaStream::release()
     }
 }
 
-cv::gpu::CudaStream::CudaStream() : impl(0) { create(); }
-cv::gpu::CudaStream::~CudaStream() { release(); }
+cv::gpu::Stream::Stream() : impl(0) { create(); }
+cv::gpu::Stream::~Stream() { release(); }
 
-cv::gpu::CudaStream::CudaStream(const CudaStream& stream) : impl(stream.impl)
+cv::gpu::Stream::Stream(const Stream& stream) : impl(stream.impl)
 {
     if( impl )
         CV_XADD(&impl->ref_counter, 1);
 }
-CudaStream& cv::gpu::CudaStream::operator=(const CudaStream& stream)
+Stream& cv::gpu::Stream::operator=(const Stream& stream)
 {
     if( this != &stream )
     {
@@ -131,7 +131,7 @@ CudaStream& cv::gpu::CudaStream::operator=(const CudaStream& stream)
     return *this;
 }
 
-bool cv::gpu::CudaStream::queryIfComplete()
+bool cv::gpu::Stream::queryIfComplete()
 {
     cudaError_t err = cudaStreamQuery( impl->stream );
 
@@ -142,31 +142,31 @@ bool cv::gpu::CudaStream::queryIfComplete()
     return false;
 }
 
-void cv::gpu::CudaStream::waitForCompletion() { cudaSafeCall( cudaStreamSynchronize( impl->stream ) ); }
+void cv::gpu::Stream::waitForCompletion() { cudaSafeCall( cudaStreamSynchronize( impl->stream ) ); }
 
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, Mat& dst)
+void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
 {
     // if not -> allocation will be done, but after that dst will not point to page locked memory
     CV_Assert(src.cols == dst.cols && src.rows == dst.rows && src.type() == dst.type() )
     devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost);
 }
-void cv::gpu::CudaStream::enqueueDownload(const GpuMat& src, MatPL& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); }
+void cv::gpu::Stream::enqueueDownload(const GpuMat& src, MatPL& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); }
 
-void cv::gpu::CudaStream::enqueueUpload(const MatPL& src, GpuMat& dst){ devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
-void cv::gpu::CudaStream::enqueueUpload(const Mat& src, GpuMat& dst)  { devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
-void cv::gpu::CudaStream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToDevice); }
+void cv::gpu::Stream::enqueueUpload(const MatPL& src, GpuMat& dst){ devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
+void cv::gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)  { devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
+void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToDevice); }
 
-void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val)
+void cv::gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val)
 {
     impl::set_to_without_mask(src, src.depth(), val.val, src.channels(), impl->stream);
 }
 
-void cv::gpu::CudaStream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
+void cv::gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
 {
     impl::set_to_with_mask(src, src.depth(), val.val, mask, src.channels(), impl->stream);
 }
 
-void cv::gpu::CudaStream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
+void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
 {
     bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
 

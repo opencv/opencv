@@ -44,9 +44,11 @@
 
 using namespace cv::gpu;
 
+
+/////////////////////////////////// Remap ///////////////////////////////////////////////
 namespace imgproc
 {
-    texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex1;
+    texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap;
 
     __global__ void kernel_remap(const float *mapx, const float *mapy, size_t map_step, unsigned char* out, size_t out_step, int width, int height)
     {    
@@ -58,12 +60,40 @@ namespace imgproc
 
             float xcoo = mapx[idx];
             float ycoo = mapy[idx];
-            
-            out[y * out_step + x] = (unsigned char)(255.f * tex2D(tex1, xcoo, ycoo));            
+
+            out[y * out_step + x] = (unsigned char)(255.f * tex2D(tex_remap, xcoo, ycoo));            
         }
     }
 
-    texture< uchar4, 2, cudaReadModeElementType > tex_meanshift;
+}
+
+namespace cv { namespace gpu { namespace impl 
+{
+    extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst)
+    {
+        dim3 block(16, 16, 1);
+        dim3 grid(1, 1, 1);
+        grid.x = divUp(dst.cols, block.x);
+        grid.y = divUp(dst.rows, block.y);
+
+        imgproc::tex_remap.filterMode = cudaFilterModeLinear;	    
+        imgproc::tex_remap.addressMode[0] = imgproc::tex_remap.addressMode[1] = cudaAddressModeWrap;
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
+        cudaSafeCall( cudaBindTexture2D(0, imgproc::tex_remap, src.ptr, desc, dst.cols, dst.rows, src.step) );
+
+        imgproc::kernel_remap<<<grid, block>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
+
+        cudaSafeCall( cudaThreadSynchronize() );  
+        cudaSafeCall( cudaUnbindTexture(imgproc::tex_remap) );
+    }
+}}}
+
+
+/////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
+
+namespace imgproc
+{
+    texture<uchar4, 2> tex_meanshift;
 
     extern "C" __global__ void meanshift_kernel( unsigned char* out, int out_step, int cols, int rows, int sp, int sr, int maxIter, float eps )
     {
@@ -72,9 +102,8 @@ namespace imgproc
 
         if( x0 < cols && y0 < rows )
         {
-
             int isr2 = sr*sr;
-            uchar4 c = tex2D( tex_meanshift, x0, y0 );
+            uchar4 c = tex2D(tex_meanshift, x0, y0 );
             // iterate meanshift procedure
             for( int iter = 0; iter < maxIter; iter++ )
             {
@@ -137,26 +166,6 @@ namespace imgproc
 
 namespace cv { namespace gpu { namespace impl 
 {
-    using namespace imgproc;
-
-    extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst)
-    {
-        dim3 block(16, 16, 1);
-        dim3 grid(1, 1, 1);
-        grid.x = divUp(dst.cols, block.x);
-        grid.y = divUp(dst.rows, block.y);
-
-        tex1.filterMode = cudaFilterModeLinear;	    
-        tex1.addressMode[0] = tex1.addressMode[1] = cudaAddressModeWrap;
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D(0, tex1, src.ptr, desc, dst.cols, dst.rows, src.step) );
-
-        kernel_remap<<<grid, block>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
-
-        cudaSafeCall( cudaThreadSynchronize() );  
-        cudaSafeCall( cudaUnbindTexture(tex1) );
-    }
-
     extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, float sp, float sr, int maxIter, float eps)
     {                        
         dim3  grid(1, 1, 1);
@@ -165,11 +174,11 @@ namespace cv { namespace gpu { namespace impl
         grid.y = divUp(src.rows, threads.y);
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-        cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.ptr, desc, src.cols, src.rows, src.step ) );
+        cudaSafeCall( cudaBindTexture2D( 0, imgproc::tex_meanshift, src.ptr, desc, src.cols, src.rows, src.step ) );
 
-        meanshift_kernel<<< grid, threads >>>( dst.ptr, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
+        imgproc::meanshift_kernel<<< grid, threads >>>( dst.ptr, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaThreadSynchronize() );
-        cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
+        cudaSafeCall( cudaUnbindTexture( imgproc::tex_meanshift ) );        
     }
 }}}
 

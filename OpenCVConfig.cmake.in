@@ -43,7 +43,7 @@ SET(OpenCV_LIB_DIR "@CMAKE_LIB_DIRS_CONFIGCMAKE@")
 # ====================================================================
 # Link libraries: e.g.   opencv_core220.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
-set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib)
+set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_gpu opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib)
 SET(OpenCV_LIBS "")
 foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
 	# CMake>=2.6 supports the notation "debug XXd optimized XX"

@@ -67,7 +67,7 @@ namespace cv
         CV_EXPORTS void getGpuMemInfo(size_t *free, size_t* total);
 
         //////////////////////////////// GpuMat ////////////////////////////////
-        class CudaStream;
+        class Stream;
         class MatPL;
 
         //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
@@ -111,12 +111,12 @@ namespace cv
 
             //! pefroms blocking upload data to GpuMat. .
             void upload(const cv::Mat& m);
-            void upload(const MatPL& m, CudaStream& stream);
+            void upload(const MatPL& m, Stream& stream);
 
             //! Downloads data from device to host memory. Blocking calls.
             operator Mat() const;
             void download(cv::Mat& m) const;
-            void download(MatPL& m, CudaStream& stream) const;
+            void download(MatPL& m, Stream& stream) const;
 
             //! returns a new GpuMatrix header for the specified row
             GpuMat row(int y) const;
@@ -291,14 +291,14 @@ namespace cv
         // Passed to each function that supports async kernel execution.
         // Reference counting is enabled
 
-        class CV_EXPORTS CudaStream
+        class CV_EXPORTS Stream
         {
         public:
-            CudaStream();
-            ~CudaStream();
+            Stream();
+            ~Stream();
 
-            CudaStream(const CudaStream&);
-            CudaStream& operator=(const CudaStream&);
+            Stream(const Stream&);
+            Stream& operator=(const Stream&);
 
             bool queryIfComplete();
             void waitForCompletion();
@@ -355,7 +355,7 @@ namespace cv
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
             //! Acync version
-            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream & stream);
+            void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream & stream);
 
             //! Some heuristics that tries to estmate
             // if current GPU will be faster then CPU in this algorithm.
@@ -390,18 +390,18 @@ namespace cv
             enum { DEFAULT_LEVELS = 5  };
 
             //! the default constructor
-            explicit StereoBeliefPropagation_GPU(int ndisp_  = DEFAULT_NDISP, 
-                                                 int iters_  = DEFAULT_ITERS, 
-                                                 int levels_ = DEFAULT_LEVELS,
-                                                 int msg_type_ = MSG_TYPE_AUTO,
+            explicit StereoBeliefPropagation_GPU(int ndisp  = DEFAULT_NDISP, 
+                                                 int iters  = DEFAULT_ITERS, 
+                                                 int levels = DEFAULT_LEVELS,
+                                                 int msg_type = MSG_TYPE_AUTO,
                                                  float msg_scale = 1.0f);
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, truncation of data cost, data weight, 
             //! truncation of discontinuity cost and discontinuity single jump
-            StereoBeliefPropagation_GPU(int ndisp_, int iters_, int levels_, 
-                                        float max_data_term_, float data_weight_,
-                                        float max_disc_term_, float disc_single_jump_,
-                                        int msg_type_ = MSG_TYPE_AUTO,
+            StereoBeliefPropagation_GPU(int ndisp, int iters, int levels, 
+                                        float max_data_term, float data_weight,
+                                        float max_disc_term, float disc_single_jump,
+                                        int msg_type = MSG_TYPE_AUTO,
                                         float msg_scale = 1.0f);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
@@ -409,7 +409,7 @@ namespace cv
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
             
             //! Acync version
-            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const CudaStream& stream);
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
 
             //! Some heuristics that tries to estmate
             //! if current GPU will be faster then CPU in this algorithm.

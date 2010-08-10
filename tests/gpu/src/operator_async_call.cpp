@@ -58,7 +58,7 @@ bool CV_GpuMatASyncCall::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
 
     //int64 time = getTickCount();
 
-    CudaStream stream;
+    Stream stream;
     stream.enqueueCopy(gmat0, gmat1);
     stream.enqueueCopy(gmat0, gmat2);
     stream.enqueueCopy(gmat0, gmat3);

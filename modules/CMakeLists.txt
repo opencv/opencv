@@ -24,4 +24,4 @@ add_subdirectory(haartraining)
 add_subdirectory(traincascade)
 
 
-#add_subdirectory(gpu)
+add_subdirectory(gpu)

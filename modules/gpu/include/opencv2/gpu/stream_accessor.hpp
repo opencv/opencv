@@ -56,7 +56,7 @@ namespace cv
         // In this case you have to install Cuda Toolkit.
         struct StreamAccessor
         {
-            CV_EXPORTS static cudaStream_t getStream(const CudaStream& stream);
+            CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
         };
     }
 }
