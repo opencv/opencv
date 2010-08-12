@@ -30,6 +30,8 @@ void CV_GpuMeanShift::run(int )
 
         cv::gpu::meanShiftFiltering_GPU( cv::gpu::GpuMat(rgba), res, spatialRad, colorRad );
 
+        res.convertTo(res, img_template.type());
+
         double norm = cv::norm(res, img_template, cv::NORM_INF);
 
         ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
