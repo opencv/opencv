@@ -36,7 +36,9 @@ if (HAVE_CUDA)
 	include_directories(${CUDA_INCLUDE_DIRS})
 	link_directories(${CUDA_LIBRARIES})
 
-	set(CUDA_NVCC_FLAGS_ARCH "1.2 1.3 2.0" CACHE STRING "Add or remove compute copability" FORCE)
+	set(CUDA_NVCC_FLAGS_ARCH " 1.0 1.1 1.2 1.3 2.0 ")
+
+	set(CUDA_NVCC_FLAGS_ARCHITECTURE ${CUDA_NVCC_FLAGS_ARCH} CACHE STRING "Add or remove compute copability" FORCE)
 
 	set(CUDA_NVCC_FLAGS_NUM "")
 
@@ -51,11 +53,8 @@ if (HAVE_CUDA)
 
 	set (loop_var "")
 	foreach( loop_var IN LISTS CUDA_NVCC_FLAGS_NUM)
-	    set (CUDA_NVCC_FLAGS
-		"${CUDA_NVCC_FLAGS} -gencode=arch=compute_${loop_var},code=\"sm_${loop_var},compute_${loop_var}\"")
+	    set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_${loop_var},code=sm_${loop_var})
 	endforeach()
-
-	set (CUDA_NVCC_FLAGS_ARCH ${CUDA_NVCC_FLAGS_ARCH_STR} CACHE STRING "Add or remove compute copability" FORCE)
 
 	message(STATUS " CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS} ")
 
