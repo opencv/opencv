@@ -375,34 +375,28 @@ namespace cv
             GpuMat minSSD, leBuf, riBuf;
         };
         
-        //////////////////////// StereoBeliefPropagation_GPU /////////////////////////
+        ////////////////////////// StereoBeliefPropagation ///////////////////////////
         
-        class CV_EXPORTS StereoBeliefPropagation_GPU
+        class CV_EXPORTS StereoBeliefPropagation
         {
         public:
-            enum { MSG_TYPE_AUTO, 
-                   MSG_TYPE_FLOAT, 
-                   MSG_TYPE_SHORT_SCALE_AUTO, 
-                   MSG_TYPE_SHORT_SCALE_MANUAL };
-
             enum { DEFAULT_NDISP  = 64 };
             enum { DEFAULT_ITERS  = 5  };
             enum { DEFAULT_LEVELS = 5  };
 
             //! the default constructor
-            explicit StereoBeliefPropagation_GPU(int ndisp  = DEFAULT_NDISP, 
-                                                 int iters  = DEFAULT_ITERS, 
-                                                 int levels = DEFAULT_LEVELS,
-                                                 int msg_type = MSG_TYPE_AUTO,
-                                                 float msg_scale = 1.0f);
+            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP, 
+                                             int iters  = DEFAULT_ITERS, 
+                                             int levels = DEFAULT_LEVELS,
+                                             int msg_type = CV_32F);
+
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, truncation of data cost, data weight, 
             //! truncation of discontinuity cost and discontinuity single jump
-            StereoBeliefPropagation_GPU(int ndisp, int iters, int levels, 
-                                        float max_data_term, float data_weight,
-                                        float max_disc_term, float disc_single_jump,
-                                        int msg_type = MSG_TYPE_AUTO,
-                                        float msg_scale = 1.0f);
+            StereoBeliefPropagation(int ndisp, int iters, int levels, 
+                                    float max_data_term, float data_weight,
+                                    float max_disc_term, float disc_single_jump,
+                                    int msg_type = CV_32F);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
@@ -410,11 +404,6 @@ namespace cv
             
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
-
-            //! Some heuristics that tries to estmate
-            //! if current GPU will be faster then CPU in this algorithm.
-            //! It queries current active device.
-            static bool checkIfGpuCallReasonable();
             
             int ndisp;
 
@@ -427,12 +416,67 @@ namespace cv
             float disc_single_jump;
             
             int msg_type;
-            float msg_scale;
         private:
             GpuMat u, d, l, r, u2, d2, l2, r2;
             std::vector<GpuMat> datas;            
             GpuMat out;
-        };        
+        };
+        
+        /////////////////////////// StereoConstantSpaceBP ///////////////////////////
+        
+        class CV_EXPORTS StereoConstantSpaceBP
+        {
+        public:
+            enum { DEFAULT_NDISP    = 64 };
+            enum { DEFAULT_ITERS    = 5  };
+            enum { DEFAULT_LEVELS   = 5  };
+            enum { DEFAULT_NR_PLANE = 2  };
+
+            //! the default constructor
+            explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
+                                           int iters    = DEFAULT_ITERS, 
+                                           int levels   = DEFAULT_LEVELS, 
+                                           int nr_plane = DEFAULT_NR_PLANE,
+                                           int msg_type = CV_32F);
+
+            //! the full constructor taking the number of disparities, number of BP iterations on each level,
+            //! number of levels, number of active disparity on the first level, truncation of data cost, data weight, 
+            //! truncation of discontinuity cost and discontinuity single jump
+            StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
+                                  float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
+                                  int msg_type = CV_32F);
+
+            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
+            //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
+            
+            //! Acync version
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
+            
+            int ndisp;
+
+            int iters;
+            int levels;
+            
+            int nr_plane;
+            
+            float max_data_term; 
+            float data_weight;
+            float max_disc_term; 
+            float disc_single_jump;
+
+            int msg_type;
+        private:
+            GpuMat u[2], d[2], l[2], r[2];
+            GpuMat disp_selected_pyr[2];
+
+            GpuMat data_cost;
+            GpuMat data_cost_selected;
+
+            GpuMat temp1, temp2;
+
+            GpuMat out;
+        };
     }
 
     //! Speckle filtering - filters small connected components on diparity image.
