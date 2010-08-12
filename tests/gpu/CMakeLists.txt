@@ -22,6 +22,7 @@ include_directories	(
 			"${CMAKE_SOURCE_DIR}/modules/legacy/include"
 			"${CMAKE_SOURCE_DIR}/modules/contrib/include"
 			"${CMAKE_SOURCE_DIR}/modules/gpu/include"
+			"${CMAKE_SOURCE_DIR}/modules/ml/include"
 			"${CMAKE_CURRENT_SOURCE_DIR}/src"
 			"${CMAKE_CURRENT_BINARY_DIR}"
 			)

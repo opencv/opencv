@@ -269,7 +269,7 @@ namespace cv { namespace gpu { namespace csbp
         const int threadsNum = 256;
         const size_t smem_size = threadsNum * sizeof(float);
         
-        dim3 threads(winsz, 1, threadsNum/winsz);
+        dim3 threads(winsz, 1, threadsNum / winsz);
         dim3 grid(w, h, 1);        
         grid.y *= divUp(ndisp, threads.z);
         
@@ -278,7 +278,7 @@ namespace cv { namespace gpu { namespace csbp
         case 1: csbp_kernels::data_init<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
         case 3: csbp_kernels::data_init<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
-        }            
+        }
     }
       
     typedef void (*DataInitCaller)(int cols, int rows, int w, int h, int level, int ndisp, int channels, const cudaStream_t& stream);
@@ -419,7 +419,7 @@ namespace cv { namespace gpu { namespace csbp
       
     typedef void (*ComputeDataCostCaller)(const DevMem2D& disp_selected_pyr, const DevMem2D& data_cost, 
                            int h, int w, int level, int nr_plane, int channels, const cudaStream_t& stream);
-
+    
     void compute_data_cost(const DevMem2D& disp_selected_pyr, const DevMem2D& data_cost, size_t msg_step1, size_t msg_step2, int msg_type,
                            int h, int w, int h2, int level, int nr_plane, int channels, const cudaStream_t& stream)
     {

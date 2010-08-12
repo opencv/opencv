@@ -185,9 +185,9 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
     step_pyr[0] = data_cost.step / type_size;
 
     Size temp_size = data_cost_size;
-    if (data_cost.step * data_cost_size.height < static_cast<size_t>(step_pyr[levels - 1]) * rows_pyr[levels - 1] * ndisp)
+    if (data_cost_size.width * data_cost_size.height < static_cast<size_t>(step_pyr[levels - 1]) * rows_pyr[levels - 1] * ndisp)
     {
-        temp_size = Size(step_pyr[levels - 1], rows_pyr[levels - 1] * nr_plane);
+        temp_size = Size(step_pyr[levels - 1], rows_pyr[levels - 1] * ndisp);
     }
 
     temp1.create(temp_size, msg_type);
