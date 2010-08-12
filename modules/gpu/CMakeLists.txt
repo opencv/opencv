@@ -36,8 +36,8 @@ if (HAVE_CUDA)
 	include_directories(${CUDA_INCLUDE_DIRS})
 	link_directories(${CUDA_LIBRARIES})
 
-	set(CUDA_NVCC_FLAGS_ARCHITECTURE " 1.0 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute copability")
-	set(CUDA_NVCC_FLAGS_ARCH ${CUDA_NVCC_FLAGS_ARCHITECTURE})
+	set(CUDA_COMPUTE_CAPABILITIES " 1.0 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute capability")
+	set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
 
 	set(CUDA_NVCC_FLAGS_NUM "")
 
