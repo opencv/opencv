@@ -413,7 +413,7 @@ namespace cv
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
             //! Acync version
-            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
             int ndisp;
 
@@ -462,7 +462,7 @@ namespace cv
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
             //! Acync version
-            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
+            void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
             int ndisp;
 

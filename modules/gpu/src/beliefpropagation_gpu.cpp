@@ -212,7 +212,7 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuM
     ::stereo_bp_gpu_operator(ndisp, iters, levels, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, 0);
 }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const Stream& stream)
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
 {
     ::stereo_bp_gpu_operator(ndisp, iters, levels, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, StreamAccessor::getStream(stream));
 }
