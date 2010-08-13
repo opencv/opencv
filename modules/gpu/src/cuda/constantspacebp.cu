@@ -77,12 +77,13 @@ struct TypeLimits<float>
 namespace csbp_kernels
 {
     __constant__ int cndisp;
-    __constant__ int cth;
 
     __constant__ float cmax_data_term;
     __constant__ float cdata_weight;
     __constant__ float cmax_disc_term;
     __constant__ float cdisc_single_jump;
+    
+    __constant__ int cth;
 
     __constant__ size_t cimg_step;
     __constant__ size_t cmsg_step1;
@@ -97,18 +98,17 @@ namespace csbp_kernels
 
 namespace cv { namespace gpu { namespace csbp 
 {
-    void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, 
+    void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
                         const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp)
     {
-        int th = (int)(ndisp * 0.2); 
-
         cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cndisp, &ndisp, sizeof(int)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cth,    &th,    sizeof(int)) );
 
         cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cmax_data_term,    &max_data_term,    sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cdata_weight,      &data_weight,      sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cmax_disc_term,    &max_disc_term,    sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cdisc_single_jump, &disc_single_jump, sizeof(float)) );
+        
+        cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cth, &min_disp_th, sizeof(int)) );
         
         cudaSafeCall( cudaMemcpyToSymbol(csbp_kernels::cimg_step, &left.step, sizeof(size_t)) );
 

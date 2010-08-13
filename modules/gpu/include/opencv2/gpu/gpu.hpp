@@ -441,9 +441,10 @@ namespace cv
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, number of active disparity on the first level, truncation of data cost, data weight, 
-            //! truncation of discontinuity cost and discontinuity single jump
+            //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
             StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
                                   float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
+                                  int min_disp_th = 0,
                                   int msg_type = CV_32F);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
@@ -464,6 +465,8 @@ namespace cv
             float data_weight;
             float max_disc_term; 
             float disc_single_jump;
+
+            int min_disp_th;
 
             int msg_type;
         private:

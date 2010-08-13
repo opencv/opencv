@@ -58,8 +58,8 @@ void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, Gp
 
 namespace cv { namespace gpu { namespace csbp 
 {   
-    void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, 
-                        const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp/*, const DevMem2D& temp2*/);
+    void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
+                        const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp);
 
     void init_data_cost(int rows, int cols, const DevMem2D& disp_selected_pyr, const DevMem2D& data_cost_selected,
                         size_t msg_step, int msg_type, int h, int w, int level, int nr_plane, int ndisp, int channels, 
@@ -86,33 +86,35 @@ namespace cv { namespace gpu { namespace csbp
 
 namespace
 {
-    const float DEFAULT_MAX_DATA_TERM = 10.0f;
-    const float DEFAULT_DATA_WEIGHT = 0.07f;
-    const float DEFAULT_MAX_DISC_TERM = 1.7f;
-    const float DEFAULT_DISC_SINGLE_JUMP = 1.0f;
+    const float DEFAULT_MAX_DATA_TERM = 30.0f;
+    const float DEFAULT_DATA_WEIGHT = 1.0f;
+    const float DEFAULT_MAX_DISC_TERM = 160.0f;
+    const float DEFAULT_DISC_SINGLE_JUMP = 10.0f;
 }
 
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, int levels_, int nr_plane_,
                                                       int msg_type_)
     : ndisp(ndisp_), iters(iters_), levels(levels_), nr_plane(nr_plane_), 
       max_data_term(DEFAULT_MAX_DATA_TERM), data_weight(DEFAULT_DATA_WEIGHT), 
-      max_disc_term(DEFAULT_MAX_DISC_TERM), disc_single_jump(DEFAULT_DISC_SINGLE_JUMP),
+      max_disc_term(DEFAULT_MAX_DISC_TERM), disc_single_jump(DEFAULT_DISC_SINGLE_JUMP), min_disp_th(0),
       msg_type(msg_type_)
 {  
 }
 
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, int levels_, int nr_plane_,
                                                       float max_data_term_, float data_weight_, float max_disc_term_, float disc_single_jump_,
+                                                      int min_disp_th_,
                                                       int msg_type_)
     : ndisp(ndisp_), iters(iters_), levels(levels_), nr_plane(nr_plane_), 
       max_data_term(max_data_term_), data_weight(data_weight_), 
-      max_disc_term(max_disc_term_), disc_single_jump(disc_single_jump_),
+      max_disc_term(max_disc_term_), disc_single_jump(disc_single_jump_), min_disp_th(min_disp_th_),
       msg_type(msg_type_)
 {   
 }
 
 static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& nr_plane, 
                                      float& max_data_term, float& data_weight, float& max_disc_term, float& disc_single_jump,
+                                     int& min_disp_th,
                                      int& msg_type,
                                      GpuMat u[2], GpuMat d[2], GpuMat l[2], GpuMat r[2],
                                      GpuMat disp_selected_pyr[2], GpuMat& data_cost, GpuMat& data_cost_selected,
@@ -195,7 +197,7 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
     ////////////////////////////////////////////////////////////////////////////
     // Compute
 
-    csbp::load_constants(ndisp, max_data_term, scale * data_weight, scale * max_disc_term, scale * disc_single_jump, 
+    csbp::load_constants(ndisp, max_data_term, scale * data_weight, scale * max_disc_term, scale * disc_single_jump, min_disp_th,
         left, right, temp);
 
     l[0] = zero;
@@ -257,14 +259,14 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
 
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
 {
-    ::stereo_csbp_gpu_operator(ndisp, iters, levels, nr_plane, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type,
-                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp/*, temp2*/, out, left, right, disp, 0);
+    ::stereo_csbp_gpu_operator(ndisp, iters, levels, nr_plane, max_data_term, data_weight, max_disc_term, disc_single_jump, min_disp_th, msg_type,
+                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out, left, right, disp, 0);
 }
 
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const Stream& stream)
 {
-    ::stereo_csbp_gpu_operator(ndisp, iters, levels, nr_plane, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type,
-                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp/*, temp2*/, out, left, right, disp, 
+    ::stereo_csbp_gpu_operator(ndisp, iters, levels, nr_plane, max_data_term, data_weight, max_disc_term, disc_single_jump, min_disp_th, msg_type,
+                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out, left, right, disp, 
                                StreamAccessor::getStream(stream));
 }
 
