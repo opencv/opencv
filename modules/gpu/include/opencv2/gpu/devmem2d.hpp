@@ -68,6 +68,8 @@ namespace cv
         };
 
         typedef DevMem2D_<> DevMem2D;
+        typedef DevMem2D_<float> DevMem2Df;
+        typedef DevMem2D_<int> DevMem2Di;
     }
 }
 
