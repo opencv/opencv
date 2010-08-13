@@ -82,7 +82,7 @@ static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& 
         A.setTo(Scalar::all(numeric_limits<double>::max()));
 }
 
-void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H, vector<KeyPoint>& dst )
+static void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H, vector<KeyPoint>& dst )
 {
     if(  !src.empty() )
     {
@@ -117,7 +117,7 @@ void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<double>& H
     }
 }
 
-void filterKeyPointsByImageSize( vector<KeyPoint>& keypoints, const Size& imgSize )
+static void filterKeyPointsByImageSize( vector<KeyPoint>& keypoints, const Size& imgSize )
 {
     if( !keypoints.empty() )
     {
