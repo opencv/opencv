@@ -233,17 +233,18 @@ namespace cv
         {
         public:
 
-            //Not supported.  Now behaviour is like ALLOC_DEFAULT.
-            //enum { ALLOC_DEFAULT = 0, ALLOC_PORTABLE = 1, ALLOC_WRITE_COMBINED = 4 }
+            //Supported.  Now behaviour is like ALLOC_DEFAULT.
+            enum  { ALLOC_PAGE_LOCKED = 0, ALLOC_ZEROCOPY = 1, ALLOC_WRITE_COMBINED = 4 };
 
             MatPL();
             MatPL(const MatPL& m);
 
-            MatPL(int _rows, int _cols, int _type);
-            MatPL(Size _size, int _type);
+            MatPL(int _rows, int _cols, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
+            MatPL(Size _size, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
+
 
             //! creates from cv::Mat with coping data
-            explicit MatPL(const Mat& m);
+            explicit MatPL(const Mat& m, int type_alloc = ALLOC_PAGE_LOCKED);
 
             ~MatPL();
 
@@ -253,8 +254,8 @@ namespace cv
             MatPL clone() const;
 
             //! allocates new matrix data unless the matrix already has specified size and type.
-            void create(int _rows, int _cols, int _type);
-            void create(Size _size, int _type);
+            void create(int _rows, int _cols, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
+            void create(Size _size, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
 
             //! decrements reference counter and released memory if needed.
             void release();
@@ -262,6 +263,11 @@ namespace cv
             //! returns matrix header with disabled reference counting for MatPL data.
             Mat createMatHeader() const;
             operator Mat() const;
+
+            operator GpuMat() const;
+
+            static bool can_device_map_to_host();
+
 
             // Please see cv::Mat for descriptions
             bool isContinuous() const;
@@ -274,16 +280,20 @@ namespace cv
             Size size() const;
             bool empty() const;
 
+
             // Please see cv::Mat for descriptions
             int flags;
             int rows, cols;
             size_t step;
+
+            int alloc_type;
 
             uchar* data;
             int* refcount;
 
             uchar* datastart;
             uchar* dataend;
+
         };
 
         //////////////////////////////// CudaStream ////////////////////////////////
@@ -332,7 +342,7 @@ namespace cv
 
         CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
 
-        
+
         CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
@@ -374,9 +384,9 @@ namespace cv
         private:
             GpuMat minSSD, leBuf, riBuf;
         };
-        
+
         ////////////////////////// StereoBeliefPropagation ///////////////////////////
-        
+
         class CV_EXPORTS StereoBeliefPropagation
         {
         public:
@@ -385,15 +395,15 @@ namespace cv
             enum { DEFAULT_LEVELS = 5  };
 
             //! the default constructor
-            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP, 
-                                             int iters  = DEFAULT_ITERS, 
+            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
+                                             int iters  = DEFAULT_ITERS,
                                              int levels = DEFAULT_LEVELS,
                                              int msg_type = CV_32F);
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
-            //! number of levels, truncation of data cost, data weight, 
+            //! number of levels, truncation of data cost, data weight,
             //! truncation of discontinuity cost and discontinuity single jump
-            StereoBeliefPropagation(int ndisp, int iters, int levels, 
+            StereoBeliefPropagation(int ndisp, int iters, int levels,
                                     float max_data_term, float data_weight,
                                     float max_disc_term, float disc_single_jump,
                                     int msg_type = CV_32F);
@@ -401,29 +411,29 @@ namespace cv
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
-            
+
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
-            
+
             int ndisp;
 
             int iters;
             int levels;
-            
-            float max_data_term; 
+
+            float max_data_term;
             float data_weight;
-            float max_disc_term; 
+            float max_disc_term;
             float disc_single_jump;
-            
+
             int msg_type;
         private:
             GpuMat u, d, l, r, u2, d2, l2, r2;
-            std::vector<GpuMat> datas;            
+            std::vector<GpuMat> datas;
             GpuMat out;
         };
-        
+
         /////////////////////////// StereoConstantSpaceBP ///////////////////////////
-        
+
         class CV_EXPORTS StereoConstantSpaceBP
         {
         public:
@@ -434,13 +444,13 @@ namespace cv
 
             //! the default constructor
             explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
-                                           int iters    = DEFAULT_ITERS, 
-                                           int levels   = DEFAULT_LEVELS, 
+                                           int iters    = DEFAULT_ITERS,
+                                           int levels   = DEFAULT_LEVELS,
                                            int nr_plane = DEFAULT_NR_PLANE,
                                            int msg_type = CV_32F);
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
-            //! number of levels, number of active disparity on the first level, truncation of data cost, data weight, 
+            //! number of levels, number of active disparity on the first level, truncation of data cost, data weight,
             //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
             StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
                                   float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
@@ -450,20 +460,20 @@ namespace cv
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
-            
+
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream);
-            
+
             int ndisp;
 
             int iters;
             int levels;
-            
+
             int nr_plane;
-            
-            float max_data_term; 
+
+            float max_data_term;
             float data_weight;
-            float max_disc_term; 
+            float max_disc_term;
             float disc_single_jump;
 
             int min_disp_th;
@@ -483,7 +493,7 @@ namespace cv
     }
 
     //! Speckle filtering - filters small connected components on diparity image.
-    //! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize. 
+    //! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize.
     //! Threshold for border between CC is diffThreshold;
     void filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar diffThreshold, Mat& buf);
 

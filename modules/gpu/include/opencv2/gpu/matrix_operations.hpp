@@ -343,29 +343,28 @@ static inline void swap( GpuMat& a, GpuMat& b ) { a.swap(b); }
 ///////////////////////////////////////////////////////////////////////
 
 inline MatPL::MatPL()  : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
-inline MatPL::MatPL(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline MatPL::MatPL(int _rows, int _cols, int _type, int type_alloc) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( _rows > 0 && _cols > 0 )
-        create( _rows, _cols, _type );
+        create( _rows, _cols, _type , type_alloc);
 }
 
-inline MatPL::MatPL(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline MatPL::MatPL(Size _size, int _type, int type_alloc) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( _size.height > 0 && _size.width > 0 )
-        create( _size.height, _size.width, _type );
+        create( _size.height, _size.width, _type, type_alloc );
 }
 
 inline MatPL::MatPL(const MatPL& m) : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(0), dataend(0)
 {
     if( refcount )
         CV_XADD(refcount, 1);
-
 }
 
-inline MatPL::MatPL(const Mat& m) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline MatPL::MatPL(const Mat& m, int type_alloc) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
     if( m.rows > 0 && m.cols > 0 )
-        create( m.size(), m.type() );
+        create( m.size(), m.type() , type_alloc);
 
     Mat tmp = createMatHeader();
     m.copyTo(tmp);
@@ -375,6 +374,7 @@ inline MatPL::~MatPL()
 {
     release();
 }
+
 inline MatPL& MatPL::operator = (const MatPL& m)
 {
     if( this != &m )
@@ -388,6 +388,7 @@ inline MatPL& MatPL::operator = (const MatPL& m)
         datastart = m.datastart;
         dataend = m.dataend;
         refcount = m.refcount;
+        alloc_type = m.alloc_type;
     }
     return *this;
 }
@@ -401,7 +402,7 @@ inline MatPL MatPL::clone() const
     return m;
 }
 
-inline void MatPL::create(Size _size, int _type) { create(_size.height, _size.width, _type); }
+inline void MatPL::create(Size _size, int _type, int type_alloc) { create(_size.height, _size.width, _type, type_alloc); }
 //CCP void MatPL::create(int _rows, int _cols, int _type);
 //CPP void MatPL::release();
 
