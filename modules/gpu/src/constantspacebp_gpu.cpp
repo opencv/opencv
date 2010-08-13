@@ -59,14 +59,14 @@ void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, Gp
 namespace cv { namespace gpu { namespace csbp 
 {   
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, 
-                        const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp1, const DevMem2D& temp2);
+                        const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp/*, const DevMem2D& temp2*/);
 
     void init_data_cost(int rows, int cols, const DevMem2D& disp_selected_pyr, const DevMem2D& data_cost_selected,
                         size_t msg_step, int msg_type, int h, int w, int level, int nr_plane, int ndisp, int channels, 
                         const cudaStream_t& stream);
     
     void compute_data_cost(const DevMem2D& disp_selected_pyr, const DevMem2D& data_cost, size_t msg_step1, size_t msg_step2, int msg_type,
-                           int h, int w, int h2, int level, int nr_plane, int channels, const cudaStream_t& stream);
+                           int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, const cudaStream_t& stream);
 
     void init_message(const DevMem2D& u_new, const DevMem2D& d_new, const DevMem2D& l_new, const DevMem2D& r_new, 
                       const DevMem2D& u_cur, const DevMem2D& d_cur, const DevMem2D& l_cur, const DevMem2D& r_cur, 
@@ -116,7 +116,7 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
                                      int& msg_type,
                                      GpuMat u[2], GpuMat d[2], GpuMat l[2], GpuMat r[2],
                                      GpuMat disp_selected_pyr[2], GpuMat& data_cost, GpuMat& data_cost_selected,
-                                     GpuMat& temp1, GpuMat& temp2, GpuMat& out,
+                                     GpuMat& temp, GpuMat& out,
                                      const GpuMat& left, const GpuMat& right, GpuMat& disp,
                                      const cudaStream_t& stream)
 {
@@ -190,14 +190,13 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
         temp_size = Size(step_pyr[levels - 1], rows_pyr[levels - 1] * ndisp);
     }
 
-    temp1.create(temp_size, msg_type);
-    temp2.create(temp_size, msg_type);
+    temp.create(temp_size, msg_type);
 
     ////////////////////////////////////////////////////////////////////////////
     // Compute
 
     csbp::load_constants(ndisp, max_data_term, scale * data_weight, scale * max_disc_term, scale * disc_single_jump, 
-        left, right, temp1, temp2);
+        left, right, temp);
 
     l[0] = zero;
     d[0] = zero;
@@ -224,7 +223,7 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
         else
         {
             csbp::compute_data_cost(disp_selected_pyr[cur_idx], data_cost, step_pyr[i], step_pyr[i+1], msg_type, 
-                rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
+                left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
 
             int new_idx = (cur_idx + 1) & 1;
 
@@ -259,13 +258,13 @@ static void stereo_csbp_gpu_operator(int& ndisp, int& iters, int& levels, int& n
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
 {
     ::stereo_csbp_gpu_operator(ndisp, iters, levels, nr_plane, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type,
-                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp1, temp2, out, left, right, disp, 0);
+                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp/*, temp2*/, out, left, right, disp, 0);
 }
 
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const Stream& stream)
 {
     ::stereo_csbp_gpu_operator(ndisp, iters, levels, nr_plane, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type,
-                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp1, temp2, out, left, right, disp, 
+                               u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp/*, temp2*/, out, left, right, disp, 
                                StreamAccessor::getStream(stream));
 }
 

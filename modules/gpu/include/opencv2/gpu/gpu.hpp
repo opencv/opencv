@@ -473,7 +473,7 @@ namespace cv
             GpuMat data_cost;
             GpuMat data_cost_selected;
 
-            GpuMat temp1, temp2;
+            GpuMat temp;
 
             GpuMat out;
         };
