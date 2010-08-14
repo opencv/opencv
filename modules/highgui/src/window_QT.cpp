@@ -804,10 +804,12 @@ void GuiReceiver::setPropWindow(QString name, double arg2 )
 	case  CV_WINDOW_NORMAL:
 		w->myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
 		w->param_flags = flags;
+
 		break;
 	case  CV_WINDOW_AUTOSIZE:
 		w->myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
 		w->param_flags = flags;
+
 		break;
 	default:;
 	}
@@ -1584,6 +1586,9 @@ void CvWindow::createGlobalLayout()
 
 	if (param_flags == CV_WINDOW_AUTOSIZE)
 		myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
+
+	if (param_flags == CV_WINDOW_NORMAL)
+		myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
 }
 
 void CvWindow::createBarLayout()
@@ -1625,6 +1630,7 @@ void CvWindow::createShortcuts()
 void CvWindow::createView(int mode, int ratio)
 {
 	//mode = CV_MODE_NORMAL or CV_MODE_OPENGL
+	//ratio = CV_WINDOW_KEEPRATIO or CV_WINDOW_FREERATIO
 	myview = new ViewPort(this, mode,ratio);//parent, mode_display, keep_aspect_ratio
 	myview->setAlignment(Qt::AlignHCenter);
 }
@@ -1947,11 +1953,12 @@ void CvWindow::icvSaveTrackbars(QSettings *settings)
 ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 {
 	centralWidget = arg,
-		setParent(centralWidget);
+	setParent(centralWidget);
 	mode_display = arg2;
 	param_keepRatio = arg3;
 
-	setupViewport(centralWidget);
+
+	//setAlignment(Qt::AlignLeft | Qt::AlignTop);
 	setContentsMargins(0,0,0,0);
 
 	setObjectName(QString::fromUtf8("graphicsView"));
@@ -1965,6 +1972,8 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 	mouseCoordinate = QPoint(-1,-1);
 	on_openGL_draw3D = NULL;
 
+	//no border
+	setStyleSheet( "QGraphicsView { border-style: none; }" ); 
 
 #if defined( HAVE_QT_OPENGL )
 	
@@ -1994,12 +2003,16 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 		zmax = DEFAULT_ZMAX;
 		initGL();
 	}
-	
+#else
+	setViewport(centralWidget);
 #endif
 
-	image2Draw_ipl=cvCreateImage(cvSize(centralWidget->width(),centralWidget->height()),IPL_DEPTH_8U,3);
-	image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
-	image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+	image2Draw_ipl=cvCreateImage(cvSize(viewport()->width(),viewport()->height()),IPL_DEPTH_8U,3);
+	//image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
+	//image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+	
+	//setupViewport(viewport());//centralWidget
+	//setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 
 	nbChannelOriginImage = 0;
 	cvZero(image2Draw_ipl);
@@ -2044,9 +2057,13 @@ void ViewPort::saveView()
 	{
 		QString extension = fileName.right(3);
 
+
 #if defined( HAVE_QT_OPENGL )
 		image2Draw_qt_resized = ((QGLWidget*)viewport())->grabFrameBuffer();
 #else
+		//   (no need anymore) create the image resized to receive the 'screenshot'
+		//    image2Draw_qt_resized = QImage(viewport()->width(), viewport()->height(),QImage::Format_RGB888);
+		
 		QPainter saveimage(&image2Draw_qt_resized);
 		this->render(&saveimage);
 #endif
@@ -2169,21 +2186,25 @@ void ViewPort::updateImage(void* arr)
 	//CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
 	CV_Assert(arr)
 
-		IplImage* tempImage = (IplImage*)arr;
+	IplImage* tempImage = (IplImage*)arr;
 
 	if (!isSameSize(image2Draw_ipl,tempImage))
 	{
 		cvReleaseImage(&image2Draw_ipl);
-		image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
-		image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
-		image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 
+		//the image in ipl (to do a deep copy with cvCvtColor)
+		image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
+
+		//the ipl image in qt format (with shared memory)
+		//image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
 
 		nbChannelOriginImage = tempImage->nChannels;
+
 		updateGeometry();
 	}
 
-	cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
+	cvCvtColor(tempImage,image2Draw_ipl,CV_BGR2RGB);
+	//cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
 
 	viewport()->update();
 }
@@ -2445,6 +2466,7 @@ QSize ViewPort::sizeHint() const
 {
 	if(image2Draw_ipl)
 	{
+		//qDebug()<<centralWidget->param_name<<" "<<image2Draw_ipl->width<<" "<<image2Draw_ipl->height;
 		return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
 	} else {
 		return QGraphicsView::sizeHint();
@@ -2458,6 +2480,7 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
 	ratioX=width()/float(image2Draw_ipl->width);
 	ratioY=height()/float(image2Draw_ipl->height);
 
+	
 	if(param_keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
 	{
 		QSize newSize = QSize(image2Draw_ipl->width,image2Draw_ipl->height);
@@ -2519,7 +2542,7 @@ void ViewPort::paintEvent(QPaintEvent* event)
 		if (param_matrixWorld.m11()>=threshold_zoom_img_region)
 		{
 			if (centralWidget->param_flags == CV_WINDOW_NORMAL)
-				startDisplayInfo("WARNING: The values displayed are the resized image's values. If you want the original image's values, use CV_WINDOW_AUTORESIZE", 1000);
+				startDisplayInfo("WARNING: The values displayed are the resized image's values. If you want the original image's values, use CV_WINDOW_AUTOSIZE", 1000);
 
 			drawImgRegion(&myPainter);
 		}
@@ -2540,8 +2563,10 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
 void ViewPort::draw2D(QPainter *painter)
 {
-	image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+	image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
+	image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 	painter->drawImage(0,0,image2Draw_qt_resized);
+	//painter->drawImage(0,0,image2Draw_qt_resized);
 }
 
 void ViewPort::drawStatusBar()
