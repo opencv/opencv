@@ -438,7 +438,7 @@ private:
     void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
 #if defined( HAVE_QT_OPENGL )
-	QPointer<OpenGLWidget> myGL;
+	QPointer<QGLWidget> myGL;
 	double angle;
 	double zmin;
 	double zmax;

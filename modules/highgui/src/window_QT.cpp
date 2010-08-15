@@ -1979,8 +1979,8 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 	
 	if ( mode_display == CV_MODE_OPENGL)
 	{
-		//QGLWidget* wGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
-		setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers)));
+		myGL = new QGLWidget(QGLFormat(QGL::SampleBuffers));
+		setViewport(myGL);
 		if (param_keepRatio == CV_WINDOW_KEEPRATIO)
 		{
 		//TODO: fix this bug:
@@ -2026,6 +2026,14 @@ ViewPort::~ViewPort()
 {
 	if (image2Draw_ipl)
 		cvReleaseImage(&image2Draw_ipl);
+
+	
+#if defined( HAVE_QT_OPENGL )
+	if (myGL)
+		delete myGL;
+#endif;
+		
+	qDebug()<<"kill vieport";
 
 	delete timerDisplay;
 }
@@ -2198,13 +2206,16 @@ void ViewPort::updateImage(void* arr)
 		//the ipl image in qt format (with shared memory)
 		//image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
 
-		nbChannelOriginImage = tempImage->nChannels;
+		//nbChannelOriginImage = tempImage->nChannels;
 
 		updateGeometry();
 	}
 
-	cvCvtColor(tempImage,image2Draw_ipl,CV_BGR2RGB);
-	//cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
+	nbChannelOriginImage = tempImage->nChannels;
+
+
+	//cvCvtColor(tempImage,image2Draw_ipl,CV_BGR2RGB);//will not work if tempImage is 1 channel !!
+	cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
 
 	viewport()->update();
 }
@@ -2289,6 +2300,7 @@ void ViewPort::moveView(QPointF delta)
 {
 	param_matrixWorld.translate(delta.x(),delta.y());
 	controlImagePosition();
+	viewport()->update();
 }
 
 //factor is -0.5 (zoom out) or 0.5 (zoom in)
@@ -2331,6 +2343,7 @@ void ViewPort::scaleView(qreal factor,QPointF center)
 void ViewPort::wheelEvent(QWheelEvent *event)
 {
 	scaleView( -event->delta() / 240.0,event->pos());
+	viewport()->update();
 }
 
 void ViewPort::mousePressEvent(QMouseEvent *event)
