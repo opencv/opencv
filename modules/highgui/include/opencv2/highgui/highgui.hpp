@@ -67,7 +67,7 @@ CV_EXPORTS double getWindowProperty(const string& winname, int prop_id);//YV
 //Only for Qt
 //------------------------
 CV_EXPORTS CvFont fontQt(const string& nameFont, int pointSize CV_DEFAULT(-1), Scalar color CV_DEFAULT(Scalar::all(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
-CV_EXPORTS void addText( const Mat& img, const char* text, Point org, CvFont font);
+CV_EXPORTS void addText( const Mat& img, const string& text, Point org, CvFont font);
 
 CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
 CV_EXPORTS void displayStatusBar(const string& winname, const string& text, int delayms);
