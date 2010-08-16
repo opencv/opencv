@@ -52,11 +52,11 @@ cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, int) { 
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, float, float, float, float, int) { throw_nogpu(); }
 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace bp 
+namespace cv { namespace gpu { namespace bp
 {
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
     void comp_data(int msg_type, const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream);
@@ -75,22 +75,22 @@ namespace
 }
 
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int ndisp_, int iters_, int levels_, int msg_type_)
-    : ndisp(ndisp_), iters(iters_), levels(levels_), 
-      max_data_term(DEFAULT_MAX_DATA_TERM), data_weight(DEFAULT_DATA_WEIGHT), 
-      max_disc_term(DEFAULT_MAX_DISC_TERM), disc_single_jump(DEFAULT_DISC_SINGLE_JUMP), 
+    : ndisp(ndisp_), iters(iters_), levels(levels_),
+      max_data_term(DEFAULT_MAX_DATA_TERM), data_weight(DEFAULT_DATA_WEIGHT),
+      max_disc_term(DEFAULT_MAX_DISC_TERM), disc_single_jump(DEFAULT_DISC_SINGLE_JUMP),
       msg_type(msg_type_), datas(levels_)
 {
 }
 
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int ndisp_, int iters_, int levels_, float max_data_term_, float data_weight_, float max_disc_term_, float disc_single_jump_, int msg_type_)
-    : ndisp(ndisp_), iters(iters_), levels(levels_), 
-      max_data_term(max_data_term_), data_weight(data_weight_), 
-      max_disc_term(max_disc_term_), disc_single_jump(disc_single_jump_), 
+    : ndisp(ndisp_), iters(iters_), levels(levels_),
+      max_data_term(max_data_term_), data_weight(data_weight_),
+      max_disc_term(max_disc_term_), disc_single_jump(disc_single_jump_),
       msg_type(msg_type_), datas(levels_)
 {
 }
 
-static void stereo_bp_gpu_operator(int& ndisp, int& iters, int& levels, 
+static void stereo_bp_gpu_operator(int& ndisp, int& iters, int& levels,
                                    float& max_data_term, float& data_weight, float& max_disc_term, float& disc_single_jump,
                                    int& msg_type,
                                    GpuMat& u, GpuMat& d, GpuMat& l, GpuMat& r,
@@ -116,7 +116,7 @@ static void stereo_bp_gpu_operator(int& ndisp, int& iters, int& levels,
     int lowest_cols = cols / divisor;
     int lowest_rows = rows / divisor;
     const int min_image_dim_size = 2;
-    CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);    
+    CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
 
     u.create(rows * ndisp, cols, msg_type);
     d.create(rows * ndisp, cols, msg_type);
@@ -200,7 +200,7 @@ static void stereo_bp_gpu_operator(int& ndisp, int& iters, int& levels,
 
     out = ((disp.type() == CV_16S) ? disp : GpuMat(rows, cols, CV_16S));
     out = zero;
-    
+
     bp::output(msg_type, u, d, l, r, datas.front(), disp, stream);
 
     if (disp.type() != CV_16S)
