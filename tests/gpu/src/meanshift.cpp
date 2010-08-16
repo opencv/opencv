@@ -61,7 +61,7 @@ void CV_GpuMeanShift::run(int )
         int spatialRad = 30;
         int colorRad = 30;
 
-        cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/con.png");
+        cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
         cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
 
         cv::Mat rgba;
