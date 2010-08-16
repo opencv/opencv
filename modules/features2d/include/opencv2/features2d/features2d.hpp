@@ -1583,7 +1583,7 @@ struct CV_EXPORTS L1
 /*
  * Struct for matching: match index and distance between descriptors
  */
-struct DMatch
+struct CV_EXPORTS DMatch
 {
     int indexTrain;
     int indexQuery;
@@ -1683,25 +1683,6 @@ public:
     void match( const Mat& query, const Mat& mask,
                 vector<vector<DMatch> >&  matches, float threshold ) const;
 
-
-
-    /*
-     * Find the best keypoint matches for small view changes.
-     *
-     * This function will only match descriptors whose keypoints have close enough
-     * image coordinates.
-     *
-     * keypoints_1   The first set of keypoints.
-     * descriptors_1 The first set of descriptors.
-     * keypoints_2   The second set of keypoints.
-     * descriptors_2 The second set of descriptors.
-     * maxDeltaX     The maximum horizontal displacement.
-     * maxDeltaY     The maximum vertical displacement.
-     * matches       The matches between both sets.
-     */
-    /*void matchWindowed( const vector<KeyPoint>& keypoints_1, const Mat& descriptors_1,
-                        const vector<KeyPoint>& keypoints_2, const Mat& descriptors_2,
-                        float maxDeltaX, float maxDeltaY, vector<Match>& matches) const;*/
     virtual void clear();
 
 protected:
@@ -1727,64 +1708,6 @@ protected:
         return mask.empty() || mask.at<char>(index_1, index_2);
     }
 };
-
-inline void DescriptorMatcher::add( const Mat& descriptors )
-{
-    if( train.empty() )
-    {
-        train = descriptors;
-    }
-    else
-    {
-        // merge train and descriptors
-        Mat m( train.rows + descriptors.rows, train.cols, CV_32F );
-        Mat m1 = m.rowRange( 0, train.rows );
-        train.copyTo( m1 );
-        Mat m2 = m.rowRange( train.rows + 1, m.rows );
-        descriptors.copyTo( m2 );
-        train = m;
-    }
-}
-
-inline void DescriptorMatcher::match( const Mat& query, vector<int>& matches ) const
-{
-    matchImpl( query, Mat(), matches );
-}
-
-inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
-                                      vector<int>& matches ) const
-{
-    matchImpl( query, mask, matches );
-}
-
-inline void DescriptorMatcher::match( const Mat& query, vector<DMatch>& matches ) const
-{
-    matchImpl( query, Mat(), matches );
-}
-
-
-inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
-                                      vector<DMatch>& matches ) const
-{
-    matchImpl( query, mask, matches );
-}
-
-inline void DescriptorMatcher::match( const Mat& query, vector<vector<DMatch> >& matches, float threshold ) const
-{
-    matchImpl( query, Mat(), matches, threshold );
-}
-
-inline void DescriptorMatcher::match( const Mat& query, const Mat& mask,
-                                      vector<vector<DMatch> >& matches, float threshold ) const
-{
-    matchImpl( query, mask, matches, threshold );
-}
-
-
-inline void DescriptorMatcher::clear()
-{
-    train.release();
-}
 
 /*
  * Brute-force descriptor matcher.
@@ -1912,7 +1835,6 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 
 template<>
 void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const;
-//void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const;
 
 CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
 
@@ -2129,7 +2051,7 @@ public:
 
     virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
 
-    virtual void clear ();
+    virtual void clear();
 
     virtual void read( const FileNode &fn );
 
@@ -2160,7 +2082,7 @@ public:
     VectorDescriptorMatch( const Ptr<DescriptorExtractor>& _extractor, const Ptr<DescriptorMatcher>& _matcher )
                         : extractor( _extractor ), matcher( _matcher ) {}
 
-    ~VectorDescriptorMatch() {}
+    virtual ~VectorDescriptorMatch() {}
 
     // Builds flann index
     void index();

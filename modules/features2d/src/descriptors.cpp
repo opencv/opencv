@@ -427,8 +427,67 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
 }
 
 /****************************************************************************************\
-*                             BruteForceMatcher L2 specialization                        *
+*                                      DescriptorMatcher                                 *
 \****************************************************************************************/
+void DescriptorMatcher::add( const Mat& descriptors )
+{
+    if( train.empty() )
+    {
+        train = descriptors;
+    }
+    else
+    {
+        // merge train and descriptors
+        Mat m( train.rows + descriptors.rows, train.cols, CV_32F );
+        Mat m1 = m.rowRange( 0, train.rows );
+        train.copyTo( m1 );
+        Mat m2 = m.rowRange( train.rows + 1, m.rows );
+        descriptors.copyTo( m2 );
+        train = m;
+    }
+}
+
+void DescriptorMatcher::match( const Mat& query, vector<int>& matches ) const
+{
+    matchImpl( query, Mat(), matches );
+}
+
+void DescriptorMatcher::match( const Mat& query, const Mat& mask,
+                               vector<int>& matches ) const
+{
+    matchImpl( query, mask, matches );
+}
+
+void DescriptorMatcher::match( const Mat& query, vector<DMatch>& matches ) const
+{
+    matchImpl( query, Mat(), matches );
+}
+
+void DescriptorMatcher::match( const Mat& query, const Mat& mask,
+                               vector<DMatch>& matches ) const
+{
+    matchImpl( query, mask, matches );
+}
+
+void DescriptorMatcher::match( const Mat& query, vector<vector<DMatch> >& matches, float threshold ) const
+{
+    matchImpl( query, Mat(), matches, threshold );
+}
+
+void DescriptorMatcher::match( const Mat& query, const Mat& mask,
+                               vector<vector<DMatch> >& matches, float threshold ) const
+{
+    matchImpl( query, mask, matches, threshold );
+}
+
+void DescriptorMatcher::clear()
+{
+    train.release();
+}
+
+/*
+ * BruteForceMatcher L2 specialization
+ */
 template<>
 void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const
 {
