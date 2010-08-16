@@ -415,6 +415,11 @@ namespace cv
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
+            
+            //! version for user specified data term
+            void operator()(const GpuMat& data, GpuMat& disparity);
+            void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream);
+
             int ndisp;
 
             int iters;

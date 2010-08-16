@@ -54,6 +54,9 @@ cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, float, 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+
 #else /* !defined (HAVE_CUDA) */
 
 namespace cv { namespace gpu { namespace bp
@@ -90,131 +93,202 @@ cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int ndisp_, int iters_
 {
 }
 
-static void stereo_bp_gpu_operator(int& ndisp, int& iters, int& levels,
-                                   float& max_data_term, float& data_weight, float& max_disc_term, float& disc_single_jump,
-                                   int& msg_type,
-                                   GpuMat& u, GpuMat& d, GpuMat& l, GpuMat& r,
-                                   GpuMat& u2, GpuMat& d2, GpuMat& l2, GpuMat& r2,
-                                   vector<GpuMat>& datas, GpuMat& out,
-                                   const GpuMat& left, const GpuMat& right, GpuMat& disp,
-                                   const cudaStream_t& stream)
+namespace
 {
-    CV_DbgAssert(0 < ndisp && 0 < iters && 0 < levels
-        && (msg_type == CV_32F || msg_type == CV_16S)
-        && left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
-
-    CV_Assert((left.type() == CV_8UC1 || left.type() == CV_8UC3));
-
-    const Scalar zero = Scalar::all(0);
-
-    const float scale = ((msg_type == CV_32F) ? 1.0f : 10.0f);
-
-    int rows = left.rows;
-    int cols = left.cols;
-
-    int divisor = (int)pow(2.f, levels - 1.0f);
-    int lowest_cols = cols / divisor;
-    int lowest_rows = rows / divisor;
-    const int min_image_dim_size = 2;
-    CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
-
-    u.create(rows * ndisp, cols, msg_type);
-    d.create(rows * ndisp, cols, msg_type);
-    l.create(rows * ndisp, cols, msg_type);
-    r.create(rows * ndisp, cols, msg_type);
-
-    if (levels & 1)
+    class StereoBeliefPropagationImpl
     {
-        //can clear less area
-        u = zero;
-        d = zero;
-        l = zero;
-        r = zero;
-    }
-
-    if (levels > 1)
-    {
-        int less_rows = (rows + 1) / 2;
-        int less_cols = (cols + 1) / 2;
-
-        u2.create(less_rows * ndisp, less_cols, msg_type);
-        d2.create(less_rows * ndisp, less_cols, msg_type);
-        l2.create(less_rows * ndisp, less_cols, msg_type);
-        r2.create(less_rows * ndisp, less_cols, msg_type);
-
-        if ((levels & 1) == 0)
+    public:
+        StereoBeliefPropagationImpl(StereoBeliefPropagation& rthis_,
+                                    GpuMat& u_, GpuMat& d_, GpuMat& l_, GpuMat& r_,
+                                    GpuMat& u2_, GpuMat& d2_, GpuMat& l2_, GpuMat& r2_,
+                                    vector<GpuMat>& datas_, GpuMat& out_)
+            : rthis(rthis_), u(u_), d(d_), l(l_), r(r_), u2(u2_), d2(d2_), l2(l2_), r2(r2_), datas(datas_), out(out_),
+              zero(Scalar::all(0)), scale(rthis_.msg_type == CV_32F ? 1.0f : 10.0f)
         {
-            u2 = zero;
-            d2 = zero;
-            l2 = zero;
-            r2 = zero;
+            CV_DbgAssert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels);
+            CV_Assert(rthis.msg_type == CV_32F || rthis.msg_type == CV_16S);
+
+            if (rthis.msg_type == CV_16S)
+                CV_Assert((1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
         }
-    }
 
-    bp::load_constants(ndisp, max_data_term, scale * data_weight, scale * max_disc_term, scale * disc_single_jump);
+        void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const cudaStream_t& stream)
+        {
+            CV_DbgAssert(left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
+            CV_Assert(left.type() == CV_8UC1 || left.type() == CV_8UC3);
 
-    datas.resize(levels);
+            rows = left.rows; 
+            cols = left.cols;
 
-    AutoBuffer<int> buf(levels << 1);
+            int divisor = (int)pow(2.f, rthis.levels - 1.0f);
+            int lowest_cols = cols / divisor;
+            int lowest_rows = rows / divisor;
+            const int min_image_dim_size = 2;
+            CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
 
-    int* cols_all = buf;
-    int* rows_all = cols_all + levels;
+            init();
 
-    cols_all[0] = cols;
-    rows_all[0] = rows;
+            datas[0].create(rows * rthis.ndisp, cols, rthis.msg_type);
 
-    datas[0].create(rows * ndisp, cols, msg_type);
+            bp::comp_data(rthis.msg_type, left, right, left.channels(), datas[0], stream);
 
-    bp::comp_data(msg_type, left, right, left.channels(), datas.front(), stream);
+            calcBP(disp, stream);
+        }
+        
+        void operator()(const GpuMat& data, GpuMat& disp, const cudaStream_t& stream)
+        {
+            CV_Assert((data.type() == rthis.msg_type) && (data.rows % rthis.ndisp == 0));
+            
+            rows = data.rows / rthis.ndisp;
+            cols = data.cols;
+            
+            int divisor = (int)pow(2.f, rthis.levels - 1.0f);
+            int lowest_cols = cols / divisor;
+            int lowest_rows = rows / divisor;
+            const int min_image_dim_size = 2;
+            CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
 
-    for (int i = 1; i < levels; i++)
-    {
-        cols_all[i] = (cols_all[i-1] + 1) / 2;
-        rows_all[i] = (rows_all[i-1] + 1) / 2;
+            init();
 
-        datas[i].create(rows_all[i] * ndisp, cols_all[i], msg_type);
+            datas[0] = data;
 
-        bp::data_step_down(cols_all[i], rows_all[i], rows_all[i-1], msg_type, datas[i-1], datas[i], stream);
-    }
+            calcBP(disp, stream);
+        }
+    private:
+        void init()
+        {
+            u.create(rows * rthis.ndisp, cols, rthis.msg_type);
+            d.create(rows * rthis.ndisp, cols, rthis.msg_type);
+            l.create(rows * rthis.ndisp, cols, rthis.msg_type);
+            r.create(rows * rthis.ndisp, cols, rthis.msg_type);
 
-    DevMem2D mus[] = {u, u2};
-    DevMem2D mds[] = {d, d2};
-    DevMem2D mrs[] = {r, r2};
-    DevMem2D mls[] = {l, l2};
+            if (rthis.levels & 1)
+            {
+                //can clear less area
+                u = zero;
+                d = zero;
+                l = zero;
+                r = zero;
+            }
 
-    int mem_idx = (levels & 1) ? 0 : 1;
+            if (rthis.levels > 1)
+            {
+                int less_rows = (rows + 1) / 2;
+                int less_cols = (cols + 1) / 2;
 
-    for (int i = levels - 1; i >= 0; i--)
-    {
-        // for lower level we have already computed messages by setting to zero
-        if (i != levels - 1)
-            bp::level_up_messages(mem_idx, cols_all[i], rows_all[i], rows_all[i+1], msg_type, mus, mds, mls, mrs, stream);
+                u2.create(less_rows * rthis.ndisp, less_cols, rthis.msg_type);
+                d2.create(less_rows * rthis.ndisp, less_cols, rthis.msg_type);
+                l2.create(less_rows * rthis.ndisp, less_cols, rthis.msg_type);
+                r2.create(less_rows * rthis.ndisp, less_cols, rthis.msg_type);
 
-        bp::calc_all_iterations(cols_all[i], rows_all[i], iters, msg_type, mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], stream);
+                if ((rthis.levels & 1) == 0)
+                {
+                    u2 = zero;
+                    d2 = zero;
+                    l2 = zero;
+                    r2 = zero;
+                }
+            }
 
-        mem_idx = (mem_idx + 1) & 1;
-    }
+            bp::load_constants(rthis.ndisp, rthis.max_data_term, scale * rthis.data_weight, scale * rthis.max_disc_term, scale * rthis.disc_single_jump);
 
-    if (disp.empty())
-        disp.create(rows, cols, CV_16S);
+            datas.resize(rthis.levels);
 
-    out = ((disp.type() == CV_16S) ? disp : GpuMat(rows, cols, CV_16S));
-    out = zero;
+            cols_all.resize(rthis.levels);
+            rows_all.resize(rthis.levels);
 
-    bp::output(msg_type, u, d, l, r, datas.front(), disp, stream);
+            cols_all[0] = cols;
+            rows_all[0] = rows;           
+        }
 
-    if (disp.type() != CV_16S)
-        out.convertTo(disp, disp.type());
+        void calcBP(GpuMat& disp, const cudaStream_t& stream)
+        {
+            for (int i = 1; i < rthis.levels; ++i)
+            {
+                cols_all[i] = (cols_all[i-1] + 1) / 2;
+                rows_all[i] = (rows_all[i-1] + 1) / 2;
+
+                datas[i].create(rows_all[i] * rthis.ndisp, cols_all[i], rthis.msg_type);
+
+                bp::data_step_down(cols_all[i], rows_all[i], rows_all[i-1], rthis.msg_type, datas[i-1], datas[i], stream);
+            }
+
+            DevMem2D mus[] = {u, u2};
+            DevMem2D mds[] = {d, d2};
+            DevMem2D mrs[] = {r, r2};
+            DevMem2D mls[] = {l, l2};
+
+            int mem_idx = (rthis.levels & 1) ? 0 : 1;
+
+            for (int i = rthis.levels - 1; i >= 0; --i)
+            {
+                // for lower level we have already computed messages by setting to zero
+                if (i != rthis.levels - 1)
+                    bp::level_up_messages(mem_idx, cols_all[i], rows_all[i], rows_all[i+1], rthis.msg_type, mus, mds, mls, mrs, stream);
+
+                bp::calc_all_iterations(cols_all[i], rows_all[i], rthis.iters, rthis.msg_type, mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], stream);
+
+                mem_idx = (mem_idx + 1) & 1;
+            }
+
+            if (disp.empty())
+                disp.create(rows, cols, CV_16S);
+
+            out = ((disp.type() == CV_16S) ? disp : GpuMat(rows, cols, CV_16S));
+            out = zero;
+
+            bp::output(rthis.msg_type, u, d, l, r, datas.front(), disp, stream);
+
+            if (disp.type() != CV_16S)
+                out.convertTo(disp, disp.type());
+        }
+
+        StereoBeliefPropagation& rthis;
+
+        GpuMat& u;
+        GpuMat& d;
+        GpuMat& l;
+        GpuMat& r;
+
+        GpuMat& u2;
+        GpuMat& d2;
+        GpuMat& l2;
+        GpuMat& r2;
+
+        vector<GpuMat>& datas;
+        GpuMat& out;
+
+        const Scalar zero;
+        const float scale;
+
+        int rows, cols;
+
+        vector<int> cols_all, rows_all;
+    };
 }
 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
 {
-    ::stereo_bp_gpu_operator(ndisp, iters, levels, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, 0);
+    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
+    impl(left, right, disp, 0);
 }
 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
 {
-    ::stereo_bp_gpu_operator(ndisp, iters, levels, max_data_term, data_weight, max_disc_term, disc_single_jump, msg_type, u, d, l, r, u2, d2, l2, r2, datas, out, left, right, disp, StreamAccessor::getStream(stream));
+    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
+    impl(left, right, disp, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp) 
+{ 
+    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
+    impl(data, disp, 0);
+}
+
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp, Stream& stream) 
+{ 
+    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
+    impl(data, disp, StreamAccessor::getStream(stream));
 }
 
 #endif /* !defined (HAVE_CUDA) */

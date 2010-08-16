@@ -52,6 +52,7 @@
 
 #include <iostream>
 #include <limits>
+#include <vector>
 
 #include "opencv2/gpu/gpu.hpp"
 

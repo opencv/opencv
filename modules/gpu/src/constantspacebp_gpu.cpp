@@ -129,9 +129,9 @@ cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, in
 
 template<class T>
 static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2], GpuMat l[2], GpuMat r[2],
-                                     GpuMat disp_selected_pyr[2], GpuMat& data_cost, GpuMat& data_cost_selected,
-                                     GpuMat& temp, GpuMat& out, const GpuMat& left, const GpuMat& right, GpuMat& disp,
-                                     cudaStream_t stream)
+                          GpuMat disp_selected_pyr[2], GpuMat& data_cost, GpuMat& data_cost_selected,
+                          GpuMat& temp, GpuMat& out, const GpuMat& left, const GpuMat& right, GpuMat& disp,
+                          cudaStream_t stream)
 {
     CV_DbgAssert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels && 0 < rthis.nr_plane
         && left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
