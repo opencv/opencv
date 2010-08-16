@@ -68,7 +68,7 @@ namespace cv
         void GpuMat::release() { throw_nogpu(); }
 
         void MatPL::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
-        void MatPL::get_property_device() { throw_nogpu(); }
+        bool MatPL::can_device_map_to_host() { throw_nogpu(); }
         void MatPL::release() { throw_nogpu(); }
     }
 
