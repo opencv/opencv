@@ -139,7 +139,6 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     CV_Assert(rthis.levels <= 8 && (left.type() == CV_8UC1 || left.type() == CV_8UC3));
 
     const Scalar zero = Scalar::all(0);
-    const float scale = (rthis.msg_type == CV_32F) ? 1.0f : 10.0f;
 
     ////////////////////////////////////////////////////////////////////////////////////////////
     // Init
@@ -203,8 +202,8 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     ////////////////////////////////////////////////////////////////////////////
     // Compute
 
-    csbp::load_constants(rthis.ndisp, rthis.max_data_term, scale * rthis.data_weight,
-        scale * rthis.max_disc_term, scale * rthis.disc_single_jump, rthis.min_disp_th, left, right, temp);
+    csbp::load_constants(rthis.ndisp, rthis.max_data_term, rthis.data_weight, 
+        rthis.max_disc_term, rthis.disc_single_jump, rthis.min_disp_th, left, right, temp);
 
     l[0] = zero;
     d[0] = zero;
