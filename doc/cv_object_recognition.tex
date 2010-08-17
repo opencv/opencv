@@ -32,7 +32,7 @@ Computes a code-book of visual words or \emph{vocabulary} given a set of input d
 \cvCppFunc{BasicBOWTrainer::saveVocabulary}
 Saves a trained vocabulary to file for use later e.g. by the BOWGenerator class.
 
-\cvdefCpp{void saveVocabulary(const std::string filename, const Mat& vocabulary);}
+\cvdefCpp{void saveVocabulary(const std::string filename, const Mat\& vocabulary);}
 \begin{description}
 \cvarg{filename}{ Filename to save the vocabulary to.}
 \cvarg{vocabulary}{ Matrix of type CV\_32F as returned from BasicBOWTrainer::compute.}
@@ -81,8 +81,8 @@ Once the class has been properly initialized with a visual vocabulary and extrac
 \cvCppFunc{BOWGenerator::compute}
 Computes the `bag-of-visual-words' vector for a set of keypoints using the currently loaded visual vocabulary. There are several different ways in which this can be called. The most basic way is to compute the image descriptor for a single image using:
 
-\cvdefCpp{void compute(const Mat& image, std::vector<KeyPoint>& points,
-    Mat& image_desc);}
+\cvdefCpp{void compute(const Mat\& image, std::vector<KeyPoint>\& points,
+    Mat\& image\_desc);}
 \begin{description}
 \cvarg{image}{ Source image for which to compute the image descriptor.}
 \cvarg{points}{ A vector of keypoints extracted from the image using a class derived from features\_2d::FeatureDetector.}
@@ -91,22 +91,22 @@ Computes the `bag-of-visual-words' vector for a set of keypoints using the curre
 
 If information about the specific keypoint to which a given visual word occurence in the returned image descriptor relates is required (e.g. to incorporate a spatial verification stage when matching bag of words vectors) the following overloaded version of the function can be used:
 
-\cvdefCpp{void compute(const Mat& image, std::vector<KeyPoint>& points,
-    Mat& image\_desc, std::vector<std::vector<KeyPoint> >& keypoint\_data);}
+\cvdefCpp{void compute(const Mat\& image, std::vector<KeyPoint>\& points,
+    Mat\& image\_desc, std::vector<std::vector<KeyPoint> >\& keypoint\_data);}
 A three dimensional vector of keypoints is returned in \texttt{keypoint\_data} which can be used to establish which keypoint in the \texttt{points} input array each visual word occurence in \texttt{image\_desc} relates to. Keypoints can be indexed in the form:
 \[
-\texttt{keypoint\_data}[\texttt{visual\_word\_index}][\texttt{occurence\_index}]}}
+\texttt{keypoint\_data}[\texttt{visual\_word\_index}][\texttt{occurence\_index}]
 \]
 
 Finally, bag of words vectors can be returned for multiple images at the same time by passing image and keypoint data to the function using a KeyPointCollection structure. There are two versions which correspond to the overloaded function calls for single images above:
 
-\cvdefCpp{void compute(KeyPointCollection& keypoints, Mat& image\_descs);
-void compute(KeyPointCollection& keypoints, Mat& image\_descs, std::vector<std::vector<std::vector<KeyPoint> > >& keypoint\_data);}
+\cvdefCpp{void compute(KeyPointCollection\& keypoints, Mat\& image\_descs);
+void compute(KeyPointCollection\& keypoints, Mat\& image\_descs, std::vector<std::vector<std::vector<KeyPoint> > >\& keypoint\_data);}
 
 In the case of the version which returns keypoint data, as the keypoints from multiple images have now been used \texttt{keypoint\_data} is now indexed in the form:
 \[
-\texttt{keypoint\_data}[\texttt{image\_index}][\texttt{visual\_word\_index}][\texttt{occurence\_index}]}.}
-\]
+\texttt{keypoint\_data}[\texttt{image\_index}][\texttt{visual\_word\_index}][\texttt{occurence\_index}]
+\].
 
 \subsection{PASCAL VOC Datasets}
 
@@ -238,7 +238,7 @@ The first step in using the class is to initialize it with the desired VOC datas
 
 Return the classification ground truth data for all images of a given VOC object class.
 
-\cvdefCpp{void getClassImages(const std::string& obj\_class, const ObdDatasetType dataset, vector<ObdImage>& images, vector<bool>& object\_present)}
+\cvdefCpp{void getClassImages(const std::string\& obj\_class, const ObdDatasetType dataset, vector<ObdImage>\& images, vector<bool>\& object\_present)}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to retrieve ground truth data.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract images from the training or test set.}
@@ -252,8 +252,8 @@ This function is primarily useful for the classification task, where only whethe
 
 Return the object data for all images of a given VOC object class. This function returns extended object information in addition to the absent/present classification data returned by \texttt{getClassImages}.
 
-\cvdefCpp{void getClassObjects(const std::string& obj\_class, const ObdDatasetType dataset, 
-vector<ObdImage>& images, vector<vector<ObdObject> >& objects)}
+\cvdefCpp{void getClassObjects(const std::string\& obj\_class, const ObdDatasetType dataset, 
+vector<ObdImage>\& images, vector<vector<ObdObject> >\& objects)}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to retrieve ground truth data.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract images from the training or test set.}
@@ -263,9 +263,9 @@ vector<ObdImage>& images, vector<vector<ObdObject> >& objects)}
 
 There is a further overloaded version of the function which returns extended information in addition to the basic object bounding box data encapsulated in the array of \texttt{ObdObject}'s:
 
-\cvdefCpp{void getClassObjects(const std::string& obj\_class, const ObdDatasetType dataset, 
-vector<ObdImage>& images, vector<vector<ObdObject> >& objects,
-vector<vector<VocObjectData> >& object\_data, vector<VocGT>& ground\_truth}
+\cvdefCpp{void getClassObjects(const std::string\& obj\_class, const ObdDatasetType dataset, 
+vector<ObdImage>\& images, vector<vector<ObdObject> >\& objects,
+vector<vector<VocObjectData> >\& object\_data, vector<VocGT>\& ground\_truth}
 \begin{description}
 \cvarg{object\_data}{ A 2D vector returning VOC-specific extended object info (marked difficult etc.). See \texttt{VocObjectData} for more details.}
 \cvarg{ground\_truth}{ Returns whether there are any difficult/non-difficult instances of the current object class within each image. If there are non-difficult instances, the value corresponding to any image is set to \texttt{CV\_VOC\_GT\_PRESENT}. If there are only difficult instances it is set to \texttt{CV\_VOC\_GT\_DIFFICULT}. Otherwise the object is not present, and it is set to \texttt{CV\_VOC\_GT\_NONE}.}
@@ -275,7 +275,7 @@ vector<vector<VocObjectData> >& object\_data, vector<VocGT>& ground\_truth}
 
 Return ground truth data for the objects present in an image with a given VOC image code. This is used to retrieve the ground truth data for a specific image from the VOC dataset given it's identifier in the format \texttt{YYYY\_XXXXXX} where \texttt{YYYY} specifies the year of the VOC dataset the image was originally from (e.g. 2010 in the case of the VOC 2010 dataset) and \texttt{XXXXXX} is a unique identifying code\footnote{The VOC2007 dataset lacks the year portion of the code}.
 
-\cvdefCpp{ObdImage getObjects(const std::string& id, vector<ObdObject>& objects)}
+\cvdefCpp{ObdImage getObjects(const std::string\& id, vector<ObdObject>\& objects)}
 \begin{description}
 \cvarg{id}{ VOC unique identifier of the image for which ground truth data should be retrieved (string code in form YYYY\_XXXXXX where YYYY is the year)}
 \cvarg{objects}{ Returns the extended object info (bounding box etc.) for each object in the image. See \texttt{ObdObject} for more details.}
@@ -283,13 +283,13 @@ Return ground truth data for the objects present in an image with a given VOC im
 
 The function returns an instance of \texttt{ObdImage} containing the path of the image in the filesystem with the given code. There are also two extended versions of this function which return additional information:
 
-\cvdefCpp{ObdImage getObjects(const std::string& id, vector<ObdObject>& objects, vector<VocObjectData>& object\_data)}
+\cvdefCpp{ObdImage getObjects(const std::string\& id, vector<ObdObject>\& objects, vector<VocObjectData>\& object\_data)}
 \begin{description}
 \cvarg{object\_data}{ Returns VOC-specific extended object info (marked difficult etc.) for the objects in the image. See \texttt{VocObjectData} for more details.}
 \end{description}
 
-\cvdefCpp{ObdImage getObjects(const std::string& obj\_class, const std::string id, vector<ObdObject>& objects, 
-vector<VocObjectData>& object\_data, VocGT& ground\_truth)}
+\cvdefCpp{ObdImage getObjects(const std::string\& obj\_class, const std::string id, vector<ObdObject>\& objects, 
+vector<VocObjectData>\& object\_data, VocGT\& ground\_truth)}
 \begin{description}
 \cvarg{ground\_truth}{ Returns whether there are any difficult/non-difficult instances of the object class specified by \texttt{obj\_class} within the image. If there are non-difficult instances, the value corresponding to any image is set to \texttt{CV\_VOC\_GT\_PRESENT}. If there are only difficult instances it is set to \texttt{CV\_VOC\_GT\_DIFFICULT}. Otherwise the object is not present, and it is set to \texttt{CV\_VOC\_GT\_NONE}.}
 \end{description}
@@ -298,8 +298,8 @@ vector<VocObjectData>& object\_data, VocGT& ground\_truth)}
 
 Return ground truth classification data for the presence/absence of a given object class in an arbitrary array of images.
 
-\cvdefCpp{void getClassifierGroundTruth(const std::string& obj\_class, const vector<ObdImage>& images, 
-vector<bool>& ground\_truth);}
+\cvdefCpp{void getClassifierGroundTruth(const std::string\& obj\_class, const vector<ObdImage>\& images, 
+vector<bool>\& ground\_truth);}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to retrieve ground truth data for.}
 \cvarg{images}{ An input array of \texttt{ObdImage} containing the images for which ground truth data will be returned.}
@@ -308,14 +308,14 @@ vector<bool>& ground\_truth);}
 
 There is also an overloaded version which accepts a vector of image code strings instead of a vector of ObdImage:
 
-\cvdefCpp{void getClassifierGroundTruth(const std::string& obj\_class, const vector<std::string>& images, 
-vector<bool>& ground\_truth);}
+\cvdefCpp{void getClassifierGroundTruth(const std::string\& obj\_class, const vector<std::string>\& images, 
+vector<bool>\& ground\_truth);}
 
 \cvCppFunc{VocData::getDetectorGroundTruth}
 
 Return ground truth detection data for the accuracy of an array of object detections.
 
-\cvdefCpp{void getDetectorGroundTruth(const std::string& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>& images, const vector<vector<Rect> >& bounding\_boxes, const vector<vector<float> >& scores, vector<vector<bool> >& ground\_truth, vector<vector<bool> >& detection\_difficult, bool ignore\_difficult = true);}
+\cvdefCpp{void getDetectorGroundTruth(const std::string\& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>\& images, const vector<vector<Rect> >\& bounding\_boxes, const vector<vector<float> >\& scores, vector<vector<bool> >\& ground\_truth, vector<vector<bool> >\& detection\_difficult, bool ignore\_difficult = true);}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class represented by the detections in \texttt{bounding\_boxes}.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract ground truth for the training or test set.}
@@ -333,7 +333,7 @@ Note that as specified in the VOC development kit documentation, multiple detect
 
 Write VOC-compliant classifier results file to the current dataset results directory (at the location defined by the VOC documentation).
 
-\cvdefCpp{void writeClassifierResultsFile(const std::string& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>& images, const vector<float>& scores, const int competition = 1, const bool overwrite\_ifexists = false)}
+\cvdefCpp{void writeClassifierResultsFile(const std::string\& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>\& images, const vector<float>\& scores, const int competition = 1, const bool overwrite\_ifexists = false)}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to write a results file.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract images from the training or test set.}
@@ -349,13 +349,13 @@ Note that if the dataset results directory does not exist, the function call wil
 
 Write VOC-compliant detector results file to the current dataset results directory (at the location defined by the VOC documentation).
 
-\cvdefCpp{void writeDetectorResultsFile(const std::string& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>& images, const vector<vector<float> >& scores, const vector<vector<Rect> >& bounding\_boxes, const int competition = 3, const bool overwrite\_ifexists = false)}
+\cvdefCpp{void writeDetectorResultsFile(const std::string\& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>\& images, const vector<vector<float> >\& scores, const vector<vector<Rect> >\& bounding\_boxes, const int competition = 3, const bool overwrite\_ifexists = false)}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to write a results file.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract images from the training or test set.}
 \cvarg{images}{ An input array of \texttt{ObdImage} containing the images for which data will be saved to the result file.}
 \cvarg{scores}{ A corresponding input array of confidence scores for the presence of the specified object class in each object detection within each image of the \texttt{images} array (the first array dimension corresponds to a given image, and the second dimension corresponds to a given object detection).}
-\cvarg{bounding_boxes}{ A corresponding input array of bounding boxes for the presence of the specified object class in each object detection within each image of the \texttt{images} array.}
+\cvarg{bounding\_boxes}{ A corresponding input array of bounding boxes for the presence of the specified object class in each object detection within each image of the \texttt{images} array.}
 \cvarg{competition}{ If specified, defines which competition the results are for (see VOC development kit documentation -- default 3).}
 \cvarg{overwrite\_ifexists}{ Specifies whether the classifier results file should be overwritten if it exists. By default, this is false and instead a new file with a numbered postfix will be created.}
 \end{description}
@@ -392,8 +392,8 @@ const ObdDatasetType dataset, const int competition, const int number)}
 
 Used to calculate precision, recall and average precision (AP) over a given set of classification results. The most straightforward way to use this function is to provide the filename of a VOC standard classification results file:
 
-\cvdefCpp{void calcClassifierPrecRecall(const std::string input\_file, vector<float>& precision, 
-vector<float>& recall, float& ap, bool outputRankingFile = false);}
+\cvdefCpp{void calcClassifierPrecRecall(const std::string input\_file, vector<float>\& precision, 
+vector<float>\& recall, float\& ap, bool outputRankingFile = false);}
 \begin{description}
 \cvarg{input\_file}{ The VOC standard classification results file from which to read data and calculate precision/recall. If a full path is not specified, it is assumed that this file is in the current dataset results directory. The filename itself can be constructed using \texttt{getResultsFilename}.}
 \cvarg{precision}{ Returns a vector containing the precision calculated at each datapoint of a p-r curve generated from the result set.}
@@ -404,8 +404,8 @@ vector<float>& recall, float& ap, bool outputRankingFile = false);}
 
 There is also a version of the function which can be used to calculate precision and recall from a set of input arrays instead of a VOC results file:
 
-\cvdefCpp{void calcClassifierPrecRecall(const std::string& obj\_class, const vector<ObdImage>& images, 
-const vector<float>& scores, vector<float>& precision, vector<float>& recall, float& ap)}
+\cvdefCpp{void calcClassifierPrecRecall(const std::string\& obj\_class, const vector<ObdImage>\& images, 
+const vector<float>\& scores, vector<float>\& precision, vector<float>\& recall, float\& ap)}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to calculate precision/recall metrics.}
 \cvarg{images}{ An input array of \texttt{ObdImage} containing the images for which precision/recall will be calculated.}
@@ -414,8 +414,8 @@ const vector<float>& scores, vector<float>& precision, vector<float>& recall, fl
 
 There is no need for the input arrays (images and scores) to be sorted in any way. However, internally both are sorted in order of descending score. This ordering may be useful for constructing an ordered ranking list of results, and so there is another version of the function which returns this sorting order:
 
-\cvdefCpp{void calcClassifierPrecRecall(const std::string& obj\_class, const vector<ObdImage>& images, 
-const vector<float>& scores, vector<float>& precision, vector<float>& recall, float& ap, vector<size\_t>& ranking)}
+\cvdefCpp{void calcClassifierPrecRecall(const std::string\& obj\_class, const vector<ObdImage>\& images, 
+const vector<float>\& scores, vector<float>\& precision, vector<float>\& recall, float\& ap, vector<size\_t>\& ranking)}
 \begin{description}
 \cvarg{ranking}{ A output vector containing indices which can subsequently be used to retrieve elements of \texttt{images} and \texttt{scores} in descending order of similarity score. For example, to access the first sorted item in the ranked list in the \texttt{images} array use:
 \[
@@ -429,8 +429,8 @@ Note that to calculate the average precision (AP) instead of taking the area ben
 
 Used to calculate precision, recall and average precision (AP) over a given set of detection results. The most straightforward way to use this function is to provide the filename of a VOC standard detection results file:
 
-\cvdefCpp{void calcDetectorPrecRecall(const std::string& input\_file, vector<float>& precision, 
-vector<float>& recall, float& ap, bool ignore\_difficult = true);}
+\cvdefCpp{void calcDetectorPrecRecall(const std::string\& input\_file, vector<float>\& precision, 
+vector<float>\& recall, float\& ap, bool ignore\_difficult = true);}
 \begin{description}
 \cvarg{input\_file}{ The VOC standard detection results file from which to read data and calculate precision/recall. If a full path is not specified, it is assumed that this file is in the current dataset results directory. The filename itself can be constructed using \texttt{getResultsFilename}.}
 \cvarg{precision}{ Returns a vector containing the precision calculated at each datapoint of a p-r curve generated from the result set.}
@@ -441,7 +441,7 @@ vector<float>& recall, float& ap, bool ignore\_difficult = true);}
 
 There is also a version of the function which can be used to calculate precision and recall from a set of input arrays instead of a VOC results file:
 
-\cvdefCpp{void calcDetectorPrecRecall(const std::string& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>& images, const vector<vector<float> >& scores, const vector<vector<Rect> >& bounding\_boxes, vector<float>& precision, vector<float>& recall, float& ap, bool ignore\_difficult = true);}
+\cvdefCpp{void calcDetectorPrecRecall(const std::string\& obj\_class, const ObdDatasetType dataset, const vector<ObdImage>\& images, const vector<vector<float> >\& scores, const vector<vector<Rect> >\& bounding\_boxes, vector<float>\& precision, vector<float>\& recall, float\& ap, bool ignore\_difficult = true);}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to calculate precision/recall metrics.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract ground truth for the training or test set.}
@@ -456,9 +456,9 @@ In both cases, the validity of a detection in the results set is calculated inte
 
 Used to calculate the row of a confusion matrix given a set of classifier results for a VOC object class.
 
-\cvdefCpp{void calcClassifierConfMatRow(const std::string& obj\_class, 
-const vector<ObdImage>& images, const vector<float>& scores, const VocConfCond cond, 
-const float threshold, vector<string>& output\_headers, vector<float>& output\_values);}
+\cvdefCpp{void calcClassifierConfMatRow(const std::string\& obj\_class, 
+const vector<ObdImage>\& images, const vector<float>\& scores, const VocConfCond cond, 
+const float threshold, vector<string>\& output\_headers, vector<float>\& output\_values);}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to calculate the confusion matrix row.}
 \cvarg{images}{ An input array of \texttt{ObdImage} containing the images for which the confusion matrix row will be calculated.}
@@ -479,7 +479,7 @@ A full confusion matrix can be constructed by calling this function recursively 
 
 Used to calculate the row of a confusion matrix given a set of detection results for a VOC object class.
 
-\cvdefCpp{virtual void calcDetectorConfMatRow(const std::string& obj\_class, ObdDatasetType dataset, const vector<ObdImage>& images, const vector<vector<float> >& scores, const vector<vector<Rect> >& bounding\_boxes, const VocConfCond cond, const float threshold, vector<string>& output\_headers, vector<float>& output\_values, bool ignore\_difficult = true);}
+\cvdefCpp{virtual void calcDetectorConfMatRow(const std::string\& obj\_class, ObdDatasetType dataset, const vector<ObdImage>\& images, const vector<vector<float> >\& scores, const vector<vector<Rect> >\& bounding\_boxes, const VocConfCond cond, const float threshold, vector<string>\& output\_headers, vector<float>\& output\_values, bool ignore\_difficult = true);}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to calculate the confusion matrix row.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract ground truth for the training or test set.}
@@ -506,8 +506,8 @@ Used to output a set of precision-recall results (generated using \texttt{calcCl
 \texttt{>> gnuplot "datafile.dat"}
 \]
 
-\cvdefCpp{void savePrecRecallToGnuplot(const std::string& output\_file, const vector<float>& precision, 
-const vector<float>& recall, const float ap, const std::string title, const VocPlotType plot\_type)}
+\cvdefCpp{void savePrecRecallToGnuplot(const std::string\& output\_file, const vector<float>\& precision, 
+const vector<float>\& recall, const float ap, const std::string title, const VocPlotType plot\_type)}
 \begin{description}
 \cvarg{output\_file}{ The filename to save the GNUPlot datafile. If a full path is not specified, it is assumed that this file should be save to the current dataset results directory.}
 \cvarg{precision}{ An input vector of precision values as returned from \texttt{calcClassifierPrecRecall} or \texttt{calcDetectorPrecRecall}.}
@@ -523,8 +523,8 @@ Note that no plot file is produced nor is any plot displayed on the screen when 
 
 Utility function which extracts data from the classification ground truth file for a given object class and dataset into a set of output vectors.
 
-\cvdefCpp{void readClassifierGroundTruth(const std::string& obj\_class, 
-const ObdDatasetType dataset, vector<ObdObject>& images, vector<bool>& object\_present);}
+\cvdefCpp{void readClassifierGroundTruth(const std::string\& obj\_class, 
+const ObdDatasetType dataset, vector<ObdObject>\& images, vector<bool>\& object\_present);}
 \begin{description}
 \cvarg{obj\_class}{ The VOC object class identifier string for the object class for which to retrieve the classifier ground truth.}
 \cvarg{dataset}{ Either \texttt{CV\_OBD\_TRAIN} or \texttt{CV\_OBD\_TEST}. Specifies whether to extract ground truth for the training or test set.}
@@ -536,8 +536,8 @@ const ObdDatasetType dataset, vector<ObdObject>& images, vector<bool>& object\_p
 
 Utility function which extracts data from a given classifier results file into a set of output vectors.
 
-\cvdefCpp{void readClassifierResultsFile(const std:: string& input\_file, 
-vector<ObdImage>& images, vector<float>& scores);}
+\cvdefCpp{void readClassifierResultsFile(const std:: string\& input\_file, 
+vector<ObdImage>\& images, vector<float>\& scores);}
 \begin{description}
 \cvarg{input\_file}{ The VOC standard classification results file from which to read data. If a full path is not specified, it is assumed that this file is in the current dataset results directory. The filename itself can be constructed using \texttt{getResultsFilename}.}
 \cvarg{images}{ An output array of \texttt{ObdImage} containing the images extracted from the results file.}
@@ -548,9 +548,9 @@ vector<ObdImage>& images, vector<float>& scores);}
 
 Utility function which extracts data from a given detector results file into a set of output vectors.
 
-\cvdefCpp{void readDetectorResultsFile(const std::string& input\_file, 
-vector<ObdImage>& images, vector<vector<float> >& scores, 
-vector<vector<Rect> >& bounding\_boxes);}
+\cvdefCpp{void readDetectorResultsFile(const std::string\& input\_file, 
+vector<ObdImage>\& images, vector<vector<float> >\& scores, 
+vector<vector<Rect> >\& bounding\_boxes);}
 \begin{description}
 \cvarg{input\_file}{ The VOC standard detection results file from which to read data and calculate precision/recall. If a full path is not specified, it is assumed that this file is in the current dataset results directory. The filename itself can be constructed using \texttt{getResultsFilename}.}
 \cvarg{images}{ An output array of \texttt{ObdImage} containing the images extracted from the results file.}
