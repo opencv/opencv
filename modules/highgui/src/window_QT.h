@@ -144,6 +144,7 @@ public slots:
     void setOpenGLCallback(QString window_name, void* callbackOpenGL, void* userdata, double angle, double zmin, double zmax);
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
+	void enablePropertiesButtonEachWindow();
 };
 
 enum typeBar{type_CvTrackbar = 0, type_CvButtonbar = 1};
@@ -303,7 +304,6 @@ public:
 
     //parameters (will be save/load)
     QString param_name;
-    CvWinProperties* parameters_window ;
     int param_flags;
     int param_gui_mode;
 	int param_ratio_mode;
@@ -324,8 +324,7 @@ private:
 	void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
 	void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
 
-    void createShortcuts();
-    void createActions();
+	void createActionsandShortcuts();
     void createToolBar();
     void createView(int display_mode, int ratio_mode);
     void createStatusBar();

@@ -407,7 +407,7 @@ CvTrackbar* icvFindTrackbarByName( const char* name_trackbar, const char* name_w
 			if (result)
 				return (CvTrackbar*) result;
 
-			return (CvTrackbar*) icvFindBarbyName(w->parameters_window->myLayout, nameQt, type_CvTrackbar);
+			return (CvTrackbar*) icvFindBarbyName(global_control_panel->myLayout, nameQt, type_CvTrackbar);
 		}
 
 		return NULL;
@@ -460,10 +460,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 	if (multiThreads)
 		QMetaObject::invokeMethod(guiMainThread,
 		"createWindow",
-		//Qt::AutoConnection,
 		Qt::BlockingQueuedConnection,
-		//TypeConnection,
-		//Qt::AutoConnection,
 		Q_ARG(QString, QString(name)),
 		Q_ARG(int, flags));
 	else
@@ -892,7 +889,6 @@ void GuiReceiver::displayStatusBar( QString name, QString text, int delayms )
 
 void GuiReceiver::showImage(QString name, void* arr)
 {
-	//qDebug()<<"inshowimage"<<endl;
 	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
 	if (!w)//as observed in the previous implementation (W32, GTK or Carbon), create a new window is the pointer returned is null
@@ -973,6 +969,23 @@ void GuiReceiver::resizeWindow(QString name, int width, int height)
 		w->resize(width, height);
 }
 
+void GuiReceiver::enablePropertiesButtonEachWindow()
+{
+	CvWindow* w;
+
+	//For each window, enable window property button
+	foreach (QWidget *widget, QApplication::topLevelWidgets())
+	{
+
+		if (widget->isWindow() && !widget->parentWidget ())//is a window without parent
+		{
+			w = (CvWindow*) widget;
+			//active window properties button
+			w->vect_QActions[9]->setDisabled(false);
+		}
+	}
+}
+
 void GuiReceiver::addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata)
 {
 
@@ -987,6 +1000,8 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 	if (global_control_panel->myLayout->count() == 0)//if that is the first button attach to the control panel, create a new button bar
 	{
 		b = CvWindow::createButtonbar(button_name);//the bar has the name of the first button attached to it
+		
+		enablePropertiesButtonEachWindow();
 
 	}else{
 		CvBar* lastbar = (CvBar*) global_control_panel->myLayout->itemAt(global_control_panel->myLayout->count()-1);
@@ -1279,7 +1294,6 @@ CvWinProperties::CvWinProperties(QString name_paraWindow, QWidget* parent)
 	setContentsMargins(0,0,0,0);
 	setWindowTitle(name_paraWindow);
 	setObjectName(name_paraWindow);
-	//parameters_window->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
 	resize(100,50);
 
 	myLayout = new QBoxLayout(QBoxLayout::TopToBottom);
@@ -1364,33 +1378,30 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 	resize(400,300);
 
-	//1: Layouts
+	//1: create control panel
+	if (!global_control_panel)
+		global_control_panel = createParameterWindow();
+
+	//2: Layouts
 	createBarLayout();
 	createGlobalLayout();
 
-	//2: my view
+	//3: my view
 	int mode_display = CV_MODE_NORMAL;
 #if defined( HAVE_QT_OPENGL )
 	mode_display = CV_MODE_OPENGL;
 #endif
 	createView(mode_display, param_ratio_mode);
 
-	//3: shortcuts and actions
-	createActions();
-	createShortcuts();
+	//4: shortcuts and actions
+	createActionsandShortcuts();
 
-	//4: toolBar and statusbar
+	//5: toolBar and statusbar
 	if (param_gui_mode == CV_GUI_EXPANDED)
 	{
 		createToolBar();
 		createStatusBar();
 	}
-
-	//5: create control panel
-	if (!global_control_panel)
-		global_control_panel = createParameterWindow();
-
-	parameters_window = global_control_panel;
 
 
 	//Now attach everything
@@ -1406,6 +1417,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 	setLayout(myGlobalLayout);
 	show();
+
 }
 
 CvWindow::~CvWindow()
@@ -1475,8 +1487,8 @@ void CvWindow::hideTools()
 	if (myStatusBar)
 		myStatusBar->hide();
 
-	if (parameters_window)
-		parameters_window->hide();
+	if (global_control_panel)
+		global_control_panel->hide();
 }
 
 void CvWindow::showTools()
@@ -1487,8 +1499,6 @@ void CvWindow::showTools()
 	if (myStatusBar)
 		myStatusBar->show();
 
-	//if (parameters_window)
-	//	parameters_window->show();
 }
 
 CvWinProperties* CvWindow::createParameterWindow()
@@ -1501,58 +1511,73 @@ CvWinProperties* CvWindow::createParameterWindow()
 
 void CvWindow::displayPropertiesWin()
 {
-	if (parameters_window->isHidden())
-		parameters_window->show();
+	if (global_control_panel->isHidden())
+		global_control_panel->show();
 	else
-		parameters_window->hide();
+		global_control_panel->hide();
 }
 
-void CvWindow::createActions()
+void CvWindow::createActionsandShortcuts()
 {
 	vect_QActions.resize(10);
 
 	//if the shortcuts are changed in window_QT.h, we need to update the tooltip manually
 	vect_QActions[0] = new QAction(QIcon(":/left-icon"),"Panning left (CTRL+arrowLEFT)",this);
 	vect_QActions[0]->setIconVisibleInMenu(true);
+	vect_QActions[0]->setShortcut(shortcut_panning_left);
 	QObject::connect( vect_QActions[0],SIGNAL(triggered()),myview, SLOT( siftWindowOnLeft() ));
 
 	vect_QActions[1] = new QAction(QIcon(":/right-icon"),"Panning right (CTRL+arrowRIGHT)",this);
 	vect_QActions[1]->setIconVisibleInMenu(true);
+	vect_QActions[1]->setShortcut(shortcut_panning_right);
 	QObject::connect( vect_QActions[1],SIGNAL(triggered()),myview, SLOT( siftWindowOnRight() ));
 
 	vect_QActions[2] = new QAction(QIcon(":/up-icon"),"Panning up (CTRL+arrowUP)",this);
 	vect_QActions[2]->setIconVisibleInMenu(true);
+	vect_QActions[2]->setShortcut(shortcut_panning_up);
 	QObject::connect( vect_QActions[2],SIGNAL(triggered()),myview, SLOT( siftWindowOnUp() ));
 
 	vect_QActions[3] = new QAction(QIcon(":/down-icon"),"Panning down (CTRL+arrowDOWN)",this);
 	vect_QActions[3]->setIconVisibleInMenu(true);
+	vect_QActions[3]->setShortcut(shortcut_panning_down);
 	QObject::connect( vect_QActions[3],SIGNAL(triggered()),myview, SLOT( siftWindowOnDown() ));
 
-	vect_QActions[4] = new QAction(QIcon(":/zoom_x1-icon"),"Zoom x1 (CTRL+P)",this);
+	vect_QActions[4] = new QAction(QIcon(":/zoom_x1-icon"),"Zoom x1 (CTRL+Z)",this);
 	vect_QActions[4]->setIconVisibleInMenu(true);
+	vect_QActions[4]->setShortcut(shortcut_zoom_normal);
 	QObject::connect( vect_QActions[4],SIGNAL(triggered()),myview, SLOT( resetZoom() ));
 
 	vect_QActions[5] = new QAction(QIcon(":/imgRegion-icon"),tr("Zoom x%1 (see label) (CTRL+X)")
 		.arg(threshold_zoom_img_region)
 		,this);
 	vect_QActions[5]->setIconVisibleInMenu(true);
+	vect_QActions[5]->setShortcut(shortcut_zoom_imgRegion);
 	QObject::connect( vect_QActions[5],SIGNAL(triggered()),myview, SLOT( imgRegion() ));
 
 	vect_QActions[6] = new QAction(QIcon(":/zoom_in-icon"),tr("Zoom in (CTRL++)"),this);
 	vect_QActions[6]->setIconVisibleInMenu(true);
+	vect_QActions[6]->setShortcut(shortcut_zoom_in);
 	QObject::connect( vect_QActions[6],SIGNAL(triggered()),myview, SLOT( ZoomIn() ));
 
 	vect_QActions[7] = new QAction(QIcon(":/zoom_out-icon"),tr("Zoom out (CTRL+-)"),this);
 	vect_QActions[7]->setIconVisibleInMenu(true);
+	vect_QActions[7]->setShortcut(shortcut_zoom_out);
 	QObject::connect( vect_QActions[7],SIGNAL(triggered()),myview, SLOT( ZoomOut() ));
 
 	vect_QActions[8] = new QAction(QIcon(":/save-icon"),tr("Save current image (CTRL+S)"),this);
 	vect_QActions[8]->setIconVisibleInMenu(true);
+	vect_QActions[8]->setShortcut(shortcut_save_img);
 	QObject::connect( vect_QActions[8],SIGNAL(triggered()),myview, SLOT( saveView() ));
 
 	vect_QActions[9] = new QAction(QIcon(":/properties-icon"),tr("Display properties window (CTRL+P)"),this);
 	vect_QActions[9]->setIconVisibleInMenu(true);
+	vect_QActions[9]->setShortcut(shortcut_properties_win);
+
+	if (global_control_panel->myLayout->count() == 0)
+		vect_QActions[9]->setDisabled(true);
+
 	QObject::connect( vect_QActions[9],SIGNAL(triggered()),this, SLOT( displayPropertiesWin() ));
+
 }
 
 void CvWindow::createToolBar()
@@ -1600,32 +1625,6 @@ void CvWindow::createBarLayout()
 	myBarLayout->setMargin(0);
 }
 
-void CvWindow::createShortcuts()
-{
-	vect_QShortcuts.resize(10);
-
-	vect_QShortcuts[0] = new QShortcut(shortcut_panning_left, this);
-	QObject::connect( vect_QShortcuts[0], SIGNAL( activated ()),myview, SLOT( siftWindowOnLeft() ));
-	vect_QShortcuts[1] = new QShortcut(shortcut_panning_right, this);
-	QObject::connect( vect_QShortcuts[1], SIGNAL( activated ()),myview, SLOT( siftWindowOnRight() ));
-	vect_QShortcuts[2] = new QShortcut(shortcut_panning_up, this);
-	QObject::connect(vect_QShortcuts[2], SIGNAL( activated ()),myview, SLOT( siftWindowOnUp() ));
-	vect_QShortcuts[3] = new QShortcut(shortcut_panning_down, this);
-	QObject::connect(vect_QShortcuts[3], SIGNAL( activated ()),myview, SLOT( siftWindowOnDown() ));
-
-	vect_QShortcuts[4] = new QShortcut(shortcut_zoom_normal, this);
-	QObject::connect( vect_QShortcuts[4], SIGNAL( activated ()),myview, SLOT( resetZoom( ) ));
-	vect_QShortcuts[5] = new QShortcut(shortcut_zoom_imgRegion, this);
-	QObject::connect( vect_QShortcuts[5], SIGNAL( activated ()),myview, SLOT( imgRegion( ) ));
-	vect_QShortcuts[6] = new QShortcut(shortcut_zoom_in, this);
-	QObject::connect( vect_QShortcuts[6], SIGNAL( activated ()),myview, SLOT( ZoomIn() ));
-	vect_QShortcuts[7] = new QShortcut(shortcut_zoom_out, this);
-	QObject::connect(vect_QShortcuts[7], SIGNAL( activated ()),myview, SLOT( ZoomOut() ));
-	vect_QShortcuts[8] = new QShortcut(shortcut_save_img, this);
-	QObject::connect( vect_QShortcuts[8], SIGNAL( activated ()),myview, SLOT( saveView( ) ));
-	vect_QShortcuts[9] = new QShortcut(shortcut_properties_win, this);
-	QObject::connect( vect_QShortcuts[9], SIGNAL( activated ()),this, SLOT( displayPropertiesWin() ));
-}
 
 void CvWindow::createView(int mode, int ratio)
 {
@@ -1674,9 +1673,17 @@ void CvWindow::addSlider(CvWindow* w,QString name, int* value, int count,CvTrack
 	QPointer<QBoxLayout> myLayout;
 
 	if (w)
+	{
 		myLayout = w->myBarLayout;
+	}
 	else
+	{
 		myLayout = global_control_panel->myLayout;
+
+		//if first one, enable control panel
+		if (myLayout->count() == 0)
+			guiMainThread->enablePropertiesButtonEachWindow();
+	}
 
 	myLayout->insertLayout( myLayout->count(),t);
 
@@ -2003,17 +2010,11 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 		zmax = DEFAULT_ZMAX;
 		initGL();
 	}
-#else
-	setViewport(centralWidget);
+
 #endif
 
 	image2Draw_ipl=cvCreateImage(cvSize(viewport()->width(),viewport()->height()),IPL_DEPTH_8U,3);
-	//image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
-	//image2Draw_qt_resized = image2Draw_qt.scaled(this->width(),this->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 	
-	//setupViewport(viewport());//centralWidget
-	//setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-
 	nbChannelOriginImage = 0;
 	cvZero(image2Draw_ipl);
 
