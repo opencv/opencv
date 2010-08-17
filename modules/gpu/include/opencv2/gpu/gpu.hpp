@@ -235,7 +235,7 @@ namespace cv
 
         class CV_EXPORTS CudaMem
         {
-        public:            
+        public:
             enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
 
             CudaMem();
@@ -417,7 +417,7 @@ namespace cv
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
-            
+
             //! version for user specified data term
             void operator()(const GpuMat& data, GpuMat& disparity);
             void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream);
@@ -486,6 +486,8 @@ namespace cv
             int min_disp_th;
 
             int msg_type;
+
+            bool use_local_init_data_cost;
         private:
             GpuMat u[2], d[2], l[2], r[2];
             GpuMat disp_selected_pyr[2];
