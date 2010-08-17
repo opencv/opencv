@@ -68,7 +68,7 @@ namespace cv
 
         //////////////////////////////// GpuMat ////////////////////////////////
         class Stream;
-        class MatPL;
+        class CudaMem;
 
         //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
         class CV_EXPORTS GpuMat
@@ -111,12 +111,16 @@ namespace cv
 
             //! pefroms blocking upload data to GpuMat. .
             void upload(const cv::Mat& m);
-            void upload(const MatPL& m, Stream& stream);
 
-            //! Downloads data from device to host memory. Blocking calls.
+            //! upload async
+            void upload(const CudaMem& m, Stream& stream);
+
+            //! downloads data from device to host memory. Blocking calls.
             operator Mat() const;
             void download(cv::Mat& m) const;
-            void download(MatPL& m, Stream& stream) const;
+
+            //! download async
+            void download(CudaMem& m, Stream& stream) const;
 
             //! returns a new GpuMatrix header for the specified row
             GpuMat row(int y) const;
@@ -223,51 +227,49 @@ namespace cv
             uchar* dataend;
         };
 
-        //////////////////////////////// MatPL ////////////////////////////////
-        // MatPL is limited cv::Mat with page locked memory allocation.
+        //////////////////////////////// CudaMem ////////////////////////////////
+        // CudaMem is limited cv::Mat with page locked memory allocation.
         // Page locked memory is only needed for async and faster coping to GPU.
         // It is convertable to cv::Mat header without reference counting
         // so you can use it with other opencv functions.
 
-        class CV_EXPORTS MatPL
+        class CV_EXPORTS CudaMem
         {
-        public:
+        public:            
+            enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
 
-            //Supported.  Now behaviour is like ALLOC_DEFAULT.
-            enum  { ALLOC_PAGE_LOCKED = 0, ALLOC_ZEROCOPY = 1, ALLOC_WRITE_COMBINED = 4 };
+            CudaMem();
+            CudaMem(const CudaMem& m);
 
-            MatPL();
-            MatPL(const MatPL& m);
-
-            MatPL(int _rows, int _cols, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
-            MatPL(Size _size, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
+            CudaMem(int _rows, int _cols, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
+            CudaMem(Size _size, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
 
 
             //! creates from cv::Mat with coping data
-            explicit MatPL(const Mat& m, int type_alloc = ALLOC_PAGE_LOCKED);
+            explicit CudaMem(const Mat& m, int _alloc_type = ALLOC_PAGE_LOCKED);
 
-            ~MatPL();
+            ~CudaMem();
 
-            MatPL& operator = (const MatPL& m);
+            CudaMem& operator = (const CudaMem& m);
 
             //! returns deep copy of the matrix, i.e. the data is copied
-            MatPL clone() const;
+            CudaMem clone() const;
 
             //! allocates new matrix data unless the matrix already has specified size and type.
-            void create(int _rows, int _cols, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
-            void create(Size _size, int _type, int type_alloc = ALLOC_PAGE_LOCKED);
+            void create(int _rows, int _cols, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
+            void create(Size _size, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
 
             //! decrements reference counter and released memory if needed.
             void release();
 
-            //! returns matrix header with disabled reference counting for MatPL data.
+            //! returns matrix header with disabled reference counting for CudaMem data.
             Mat createMatHeader() const;
             operator Mat() const;
 
             operator GpuMat() const;
 
+            //returns if host memory can be mapperd to gpu address space;
             static bool can_device_map_to_host();
-
 
             // Please see cv::Mat for descriptions
             bool isContinuous() const;
@@ -314,13 +316,13 @@ namespace cv
             void waitForCompletion();
 
             //! downloads asynchronously.
-            // Warning! cv::Mat must point to page locked memory (i.e. to MatPL data or to its subMat)
-            void enqueueDownload(const GpuMat& src, MatPL& dst);
+            // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its subMat)
+            void enqueueDownload(const GpuMat& src, CudaMem& dst);
             void enqueueDownload(const GpuMat& src, Mat& dst);
 
             //! uploads asynchronously.
-            // Warning! cv::Mat must point to page locked memory (i.e. to MatPL data or to its ROI)
-            void enqueueUpload(const MatPL& src, GpuMat& dst);
+            // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its ROI)
+            void enqueueUpload(const CudaMem& src, GpuMat& dst);
             void enqueueUpload(const Mat& src, GpuMat& dst);
 
             void enqueueCopy(const GpuMat& src, GpuMat& dst);

@@ -234,7 +234,7 @@ namespace
             if (disp.empty())
                 disp.create(rows, cols, CV_16S);
 
-            out = ((disp.type() == CV_16S) ? disp : GpuMat(rows, cols, CV_16S));
+            out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
             out = zero;
 
             bp::output(rthis.msg_type, u, d, l, r, datas.front(), disp, stream);

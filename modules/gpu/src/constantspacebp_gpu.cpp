@@ -251,7 +251,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     if (disp.empty())
         disp.create(rows, cols, CV_16S);
 
-    out = ((disp.type() == CV_16S) ? disp : GpuMat(rows, cols, CV_16S));
+    out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
     out = zero;
 
     csbp::compute_disp(u[cur_idx].ptr<T>(), d[cur_idx].ptr<T>(), l[cur_idx].ptr<T>(), r[cur_idx].ptr<T>(),

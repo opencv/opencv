@@ -67,9 +67,9 @@ namespace cv
         void GpuMat::create(int /*_rows*/, int /*_cols*/, int /*_type*/) { throw_nogpu(); }
         void GpuMat::release() { throw_nogpu(); }
 
-        void MatPL::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
-        bool MatPL::can_device_map_to_host() { throw_nogpu(); return false; }
-        void MatPL::release() { throw_nogpu(); }
+        void CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
+        bool CudaMem::can_device_map_to_host() { throw_nogpu(); return false; }
+        void CudaMem::release() { throw_nogpu(); }
     }
 
 }
@@ -83,7 +83,7 @@ void cv::gpu::GpuMat::upload(const Mat& m)
     cudaSafeCall( cudaMemcpy2D(data, step, m.data, m.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
-void cv::gpu::GpuMat::upload(const MatPL& m, Stream& stream)
+void cv::gpu::GpuMat::upload(const CudaMem& m, Stream& stream)
 {
     CV_DbgAssert(!m.empty());
     stream.enqueueUpload(m, *this);
@@ -96,7 +96,7 @@ void cv::gpu::GpuMat::download(cv::Mat& m) const
     cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
 }
 
-void cv::gpu::GpuMat::download(MatPL& m, Stream& stream) const
+void cv::gpu::GpuMat::download(CudaMem& m, Stream& stream) const
 {
     CV_DbgAssert(!m.empty());
     stream.enqueueDownload(*this, m);
@@ -210,15 +210,6 @@ GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-bool cv::gpu::MatPL::can_device_map_to_host()
-{
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, 0);
-
-        return (prop.canMapHostMemory != 0) ? true : false;
-}
-
-
 void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 {
     _type &= TYPE_MASK;
@@ -266,12 +257,21 @@ void cv::gpu::GpuMat::release()
 
 
 ///////////////////////////////////////////////////////////////////////
-//////////////////////////////// MatPL ////////////////////////////////
+//////////////////////////////// CudaMem //////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
-void cv::gpu::MatPL::create(int _rows, int _cols, int _type, int type_alloc)
+bool cv::gpu::CudaMem::can_device_map_to_host()
 {
-    alloc_type = type_alloc;
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    return (prop.canMapHostMemory != 0) ? true : false;
+}
+
+void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
+{   
+    if (_alloc_type == ALLOC_ZEROCOPY && !can_device_map_to_host())
+            cv::gpu::error("ZeroCopy is not supported by current device", __FILE__, __LINE__);
+
     _type &= TYPE_MASK;
     if( rows == _rows && cols == _cols && type() == _type && data )
         return;
@@ -279,7 +279,7 @@ void cv::gpu::MatPL::create(int _rows, int _cols, int _type, int type_alloc)
         release();
     CV_DbgAssert( _rows >= 0 && _cols >= 0 );
     if( _rows > 0 && _cols > 0 )
-    {
+    {        
         flags = Mat::MAGIC_VAL + Mat::CONTINUOUS_FLAG + _type;
         rows = _rows;
         cols = _cols;
@@ -291,24 +291,15 @@ void cv::gpu::MatPL::create(int _rows, int _cols, int _type, int type_alloc)
         size_t datasize = alignSize(nettosize, (int)sizeof(*refcount));
 
         //datastart = data = (uchar*)fastMalloc(datasize + sizeof(*refcount));
+        alloc_type = _alloc_type;
         void *ptr;
-
-        switch (type_alloc)
+        
+        switch (alloc_type)
         {
-            case ALLOC_PAGE_LOCKED:  cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) ); break;
-            case ALLOC_ZEROCOPY:
-                if (can_device_map_to_host() == true)
-                {
-                    cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocMapped) );
-                }
-                else
-                    cv::gpu::error("ZeroCopy is not supported by current device", __FILE__, __LINE__);
-                break;
-
+            case ALLOC_PAGE_LOCKED:    cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) ); break;
+            case ALLOC_ZEROCOPY:       cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocMapped) );  break;
             case ALLOC_WRITE_COMBINED: cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocWriteCombined) ); break;
-
-            default:
-                cv::gpu::error("Invalid alloc type", __FILE__, __LINE__);
+            default: cv::gpu::error("Invalid alloc type", __FILE__, __LINE__);
         }
 
         datastart = data =  (uchar*)ptr;
@@ -319,20 +310,22 @@ void cv::gpu::MatPL::create(int _rows, int _cols, int _type, int type_alloc)
     }
 }
 
-inline MatPL::operator GpuMat() const
+inline CudaMem::operator GpuMat() const
 {
+    GpuMat res;
     if (alloc_type == ALLOC_ZEROCOPY)
     {
-        void ** pdev;
-        cudaHostGetDevicePointer( pdev, this->data, 0 );
-        GpuMat m(this->rows, this->cols, this->type(), *pdev, this->step);
-        return m;
+        void *pdev;
+        cudaSafeCall( cudaHostGetDevicePointer( &pdev, data, 0 ) );
+        res = GpuMat(rows, cols, type(), pdev, step);
     }
     else
-        cv::gpu::error("", __FILE__, __LINE__);
+        cv::gpu::error("Zero-copy is not supported or memory was allocated without zero-copy flag", __FILE__, __LINE__);
+        
+    return res;
 }
 
-void cv::gpu::MatPL::release()
+void cv::gpu::CudaMem::release()
 {
     if( refcount && CV_XADD(refcount, -1) == 1 )
     {

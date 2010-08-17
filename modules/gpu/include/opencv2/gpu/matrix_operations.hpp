@@ -339,43 +339,43 @@ static inline void swap( GpuMat& a, GpuMat& b ) { a.swap(b); }
 
 
 ///////////////////////////////////////////////////////////////////////
-//////////////////////////////// MatPL ////////////////////////////////
+//////////////////////////////// CudaMem ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
-inline MatPL::MatPL()  : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
-inline MatPL::MatPL(int _rows, int _cols, int _type, int type_alloc) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline CudaMem::CudaMem()  : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0) {}
+inline CudaMem::CudaMem(int _rows, int _cols, int _type, int _alloc_type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
     if( _rows > 0 && _cols > 0 )
-        create( _rows, _cols, _type , type_alloc);
+        create( _rows, _cols, _type, _alloc_type);
 }
 
-inline MatPL::MatPL(Size _size, int _type, int type_alloc) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline CudaMem::CudaMem(Size _size, int _type, int _alloc_type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
     if( _size.height > 0 && _size.width > 0 )
-        create( _size.height, _size.width, _type, type_alloc );
+        create( _size.height, _size.width, _type, _alloc_type);
 }
 
-inline MatPL::MatPL(const MatPL& m) : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(0), dataend(0)
+inline CudaMem::CudaMem(const CudaMem& m) : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), alloc_type(m.alloc_type)
 {
     if( refcount )
         CV_XADD(refcount, 1);
 }
 
-inline MatPL::MatPL(const Mat& m, int type_alloc) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+inline CudaMem::CudaMem(const Mat& m, int _alloc_type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
     if( m.rows > 0 && m.cols > 0 )
-        create( m.size(), m.type() , type_alloc);
+        create( m.size(), m.type(), _alloc_type);
 
     Mat tmp = createMatHeader();
     m.copyTo(tmp);
 }
 
-inline MatPL::~MatPL()
+inline CudaMem::~CudaMem()
 {
     release();
 }
 
-inline MatPL& MatPL::operator = (const MatPL& m)
+inline CudaMem& CudaMem::operator = (const CudaMem& m)
 {
     if( this != &m )
     {
@@ -393,31 +393,31 @@ inline MatPL& MatPL::operator = (const MatPL& m)
     return *this;
 }
 
-inline MatPL MatPL::clone() const
+inline CudaMem CudaMem::clone() const
 {
-    MatPL m(size(), type());
+    CudaMem m(size(), type(), alloc_type);
     Mat to = m;
     Mat from = *this;
     from.copyTo(to);
     return m;
 }
 
-inline void MatPL::create(Size _size, int _type, int type_alloc) { create(_size.height, _size.width, _type, type_alloc); }
-//CCP void MatPL::create(int _rows, int _cols, int _type);
-//CPP void MatPL::release();
+inline void CudaMem::create(Size _size, int _type, int _alloc_type) { create(_size.height, _size.width, _type, _alloc_type); }
+//CCP void CudaMem::create(int _rows, int _cols, int _type, int _alloc_type);
+//CPP void CudaMem::release();
 
-inline Mat MatPL::createMatHeader() const { return Mat(size(), type(), data); }
-inline MatPL::operator Mat() const { return createMatHeader(); }
+inline Mat CudaMem::createMatHeader() const { return Mat(size(), type(), data); }
+inline CudaMem::operator Mat() const { return createMatHeader(); }
 
-inline bool MatPL::isContinuous() const { return (flags & Mat::CONTINUOUS_FLAG) != 0; }
-inline size_t MatPL::elemSize() const { return CV_ELEM_SIZE(flags); }
-inline size_t MatPL::elemSize1() const { return CV_ELEM_SIZE1(flags); }
-inline int MatPL::type() const { return CV_MAT_TYPE(flags); }
-inline int MatPL::depth() const { return CV_MAT_DEPTH(flags); }
-inline int MatPL::channels() const { return CV_MAT_CN(flags); }
-inline size_t MatPL::step1() const { return step/elemSize1(); }
-inline Size MatPL::size() const { return Size(cols, rows); }
-inline bool MatPL::empty() const { return data == 0; }
+inline bool CudaMem::isContinuous() const { return (flags & Mat::CONTINUOUS_FLAG) != 0; }
+inline size_t CudaMem::elemSize() const { return CV_ELEM_SIZE(flags); }
+inline size_t CudaMem::elemSize1() const { return CV_ELEM_SIZE1(flags); }
+inline int CudaMem::type() const { return CV_MAT_TYPE(flags); }
+inline int CudaMem::depth() const { return CV_MAT_DEPTH(flags); }
+inline int CudaMem::channels() const { return CV_MAT_CN(flags); }
+inline size_t CudaMem::step1() const { return step/elemSize1(); }
+inline Size CudaMem::size() const { return Size(cols, rows); }
+inline bool CudaMem::empty() const { return data == 0; }
 
 
 } /* end of namespace gpu */
