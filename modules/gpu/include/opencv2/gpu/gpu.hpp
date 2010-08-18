@@ -288,13 +288,13 @@ namespace cv
             int rows, cols;
             size_t step;
 
-            int alloc_type;
-
             uchar* data;
             int* refcount;
 
             uchar* datastart;
             uchar* dataend;
+
+            int alloc_type;
 
         };
 
@@ -374,9 +374,10 @@ namespace cv
             // It queries current active device.
             static bool checkIfGpuCallReasonable();
 
+            int preset;
             int ndisp;
             int winSize;
-            int preset;
+
 
             // If avergeTexThreshold  == 0 => post procesing is disabled
             // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image

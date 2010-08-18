@@ -73,7 +73,7 @@ cv::gpu::StereoBM_GPU::StereoBM_GPU()
     : preset(BASIC_PRESET), ndisp(DEFAULT_NDISP), winSize(DEFAULT_WINSZ), avergeTexThreshold(defaultAvgTexThreshold)  {}
 
 cv::gpu::StereoBM_GPU::StereoBM_GPU(int preset_, int ndisparities_, int winSize_)
-    : ndisp(ndisparities_), winSize(winSize_), preset(preset_), avergeTexThreshold(defaultAvgTexThreshold)
+    : preset(preset_), ndisp(ndisparities_), winSize(winSize_), avergeTexThreshold(defaultAvgTexThreshold)
 {
     const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
     CV_Assert(0 < ndisp && ndisp <= max_supported_ndisp);

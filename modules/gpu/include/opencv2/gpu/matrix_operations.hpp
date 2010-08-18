@@ -403,6 +403,8 @@ inline CudaMem CudaMem::clone() const
 }
 
 inline void CudaMem::create(Size _size, int _type, int _alloc_type) { create(_size.height, _size.width, _type, _alloc_type); }
+
+
 //CCP void CudaMem::create(int _rows, int _cols, int _type, int _alloc_type);
 //CPP void CudaMem::release();
 
