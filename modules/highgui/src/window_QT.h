@@ -253,11 +253,23 @@ private:
 
 };
 
-class CvWinProperties : public QWidget
+//Both are top level window, so that a way to differenciate them.
+//if (obj->metaObject ()->className () == "CvWindow") does not give me robust result
+
+enum typeWindow{type_CvWindow = 0, type_CvWinProperties = 1};
+
+class CvWinModel : public QWidget
+{
+public:
+typeWindow type;
+};
+
+
+class CvWinProperties : public CvWinModel
 {
     Q_OBJECT
 public:
-    CvWinProperties(QString name,QWidget* parent);
+    CvWinProperties(QString name,QObject* parent);
     ~CvWinProperties();
     QPointer<QBoxLayout> myLayout;
 
@@ -279,7 +291,7 @@ public:
 };
 
 
-class CvWindow : public QWidget
+class CvWindow : public CvWinModel
 {
     Q_OBJECT
 public:

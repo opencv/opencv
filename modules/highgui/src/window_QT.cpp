@@ -343,21 +343,27 @@ CvWindow* icvFindWindowByName( const char* arg )
 
 	QString name(arg);
 	CvWindow* w;
+	CvWinModel* temp;
+
 
 	foreach (QWidget *widget, QApplication::topLevelWidgets())
 	{
 
 		if (widget->isWindow() && !widget->parentWidget ())//is a window without parent
 		{
-			w = (CvWindow*) widget;
+			temp = (CvWinModel*) widget;
+			if (temp->type == type_CvWindow)
+			{
+			w = (CvWindow*) temp;
 			if (w->param_name==name)
 			{
 				window = w;
 				break;
 			}
+			}
 		}
 	}
-
+	
 
 	return window;
 }
@@ -695,7 +701,7 @@ void GuiReceiver::isLastWindow()
 {
 	if (--nb_windows <= 0)
 	{
-		delete guiMainThread;
+		delete guiMainThread;//delete global_control_panel too
 		guiMainThread = NULL;
 		qApp->quit();
 	}
@@ -703,8 +709,12 @@ void GuiReceiver::isLastWindow()
 
 GuiReceiver::~GuiReceiver()
 {
+	
 	if (global_control_panel)
+	{
 		delete global_control_panel;
+		global_control_panel = NULL;
+	}
 
 	delete timer;
 }
@@ -913,6 +923,9 @@ void GuiReceiver::showImage(QString name, void* arr)
 	if( w && arr )
 	{
 		w->updateImage(arr);
+
+		if (w->isHidden())
+			w->show();
 	}
 	else
 	{
@@ -1353,9 +1366,10 @@ void CvRadioButton::callCallBack(bool checked)
 
 
 //here CvWinProperties class
-CvWinProperties::CvWinProperties(QString name_paraWindow, QWidget* parent)
+CvWinProperties::CvWinProperties(QString name_paraWindow, QObject* parent)
 {
-	setParent(parent);
+	//setParent(parent);
+	type = type_CvWinProperties;
 	setWindowFlags(Qt::Tool);
 	setContentsMargins(0,0,0,0);
 	setWindowTitle(name_paraWindow);
@@ -1411,7 +1425,6 @@ CvWinProperties::~CvWinProperties()
 	QSettings settings("OpenCV2", this->windowTitle());
 	settings.remove("pos");
 
-
 	QLayoutItem *child;
 	if (myLayout)
 	{
@@ -1430,6 +1443,7 @@ CvWinProperties::~CvWinProperties()
 //Here CvWindow class
 CvWindow::CvWindow(QString arg, int arg2)
 {
+	type = type_CvWindow;
 	moveToThread(qApp->instance()->thread());
 	param_name = arg;
 
@@ -1437,7 +1451,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 	param_gui_mode = arg2 & 0x000000F0;
 	param_ratio_mode =  arg2 & 0x00000F00;
 
-	setAttribute(Qt::WA_DeleteOnClose);//in other case, does not release memory
+	//setAttribute(Qt::WA_DeleteOnClose);//in other case, does not release memory
 	setContentsMargins(0,0,0,0);
 	setWindowTitle(param_name);
 	setObjectName(param_name);
@@ -1490,6 +1504,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 CvWindow::~CvWindow()
 {
+
 	QLayoutItem *child;
 
 	if (myGlobalLayout)
@@ -1507,7 +1522,6 @@ CvWindow::~CvWindow()
 
 		delete myBarLayout;
 	}
-
 
 	if (myStatusBar)
 	{
@@ -1571,7 +1585,7 @@ CvWinProperties* CvWindow::createParameterWindow()
 {
 	QString name_paraWindow =QFileInfo(QApplication::applicationFilePath()).fileName()+" settings";
 
-	CvWinProperties *result =  new CvWinProperties(name_paraWindow,this);
+	CvWinProperties *result =  new CvWinProperties(name_paraWindow,guiMainThread);
 	return result;
 }
 
@@ -1632,7 +1646,6 @@ void CvWindow::createActions()
 
 	if (global_control_panel->myLayout->count() == 0)
 		vect_QActions[9]->setDisabled(true);
-
 }
 
 
@@ -2138,12 +2151,10 @@ ViewPort::~ViewPort()
 		cvReleaseImage(&image2Draw_ipl);
 
 	
-#if defined( HAVE_QT_OPENGL )
-	if (myGL)
-		delete myGL;
-#endif;
-		
-	qDebug()<<"kill vieport";
+//#if defined( HAVE_QT_OPENGL )
+//	if (myGL)
+//		delete myGL;
+//#endif;
 
 	delete timerDisplay;
 }
@@ -2573,8 +2584,6 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
 {
 	//to convert mouse coordinate
 	qreal pfx, pfy;
-	//qreal ratioX = float(image2Draw_qt.width())/image2Draw_qt_resized.width();
-	//qreal ratioY = float(image2Draw_qt.height())/image2Draw_qt_resized.height();
 	matrixWorld_inv.map(pt.x(),pt.y(),&pfx,&pfy);
 	
 	mouseCoordinate.rx()=floor(pfx/ratioX);
@@ -2588,12 +2597,9 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
 QSize ViewPort::sizeHint() const
 {
 	if(image2Draw_ipl)
-	{
-		//qDebug()<<centralWidget->param_name<<" "<<image2Draw_ipl->width<<" "<<image2Draw_ipl->height;
 		return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
-	} else {
+	else
 		return QGraphicsView::sizeHint();
-	}
 }
 
 void ViewPort::resizeEvent ( QResizeEvent *event)
@@ -2750,9 +2756,6 @@ void ViewPort::drawImgRegion(QPainter *painter)
 
 	QPointF point1;//sorry, I do not know how to name it
 	QPointF point2;//idem
-
-	//qreal ratioX = float(image2Draw_qt.width())/image2Draw_qt_resized.width();
-	//qreal ratioY = float(image2Draw_qt.height())/image2Draw_qt_resized.height();
 
 	for (int j=-1;j<height()/param_matrixWorld.m11();j++)//-1 because display the pixels top rows left colums
 		for (int i=-1;i<width()/param_matrixWorld.m11();i++)//-1
