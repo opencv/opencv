@@ -547,10 +547,23 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 
 }
 
-//TODO: implement the real one, not a wrapper
 CV_IMPL int cvCreateTrackbar2( const char* name_bar, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata )
 {
-	return cvCreateTrackbar( name_bar, window_name, val, count, (CvTrackbarCallback)on_notify );
+	if (!guiMainThread) 
+ 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" ); 
+
+ 	QMetaObject::invokeMethod(guiMainThread, 
+ 								"addSlider2", 
+ 								Qt::AutoConnection, 
+ 								Q_ARG(QString, QString(name_bar)), 
+ 								Q_ARG(QString, QString(window_name)), 
+ 								Q_ARG(void*, (void*)val), 
+ 								Q_ARG(int, count), 
+ 								Q_ARG(void*, (void*)on_notify), 
+ 								Q_ARG(void*, (void*)userdata) 
+ 	); 
+
+ 	return 1;//dummy value 
 }
 
 CV_IMPL int cvStartWindowThread()
@@ -1016,6 +1029,34 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 	b->addButton( button_name,(CvButtonCallback) on_change, userdata, button_type, initial_button_state);
 }
 
+void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value, int count, void* on_change, void *userdata)
+{
+	QBoxLayout *layout = NULL;
+	QPointer<CvWindow> w;
+	if (window_name != "")
+	{
+		w = icvFindWindowByName( window_name.toLatin1().data()  );
+
+		if (!w)
+			return;
+	}else{
+		if (global_control_panel)
+			layout = global_control_panel->myLayout;
+	}
+
+	QPointer<CvTrackbar> t = icvFindTrackbarByName( bar_name.toLatin1().data() , window_name.toLatin1().data(), layout );
+
+	if (t)//trackbar exists
+		return;
+
+	if (!value)
+		CV_Error(CV_StsNullPtr, "NULL value pointer" );
+
+	if (count<= 0)//count is the max value of the slider, so must be bigger than 0
+		CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
+
+	CvWindow::addSlider2(w,bar_name,(int*)value,count,(CvTrackbarCallback2) on_change, userdata);
+}
 
 void GuiReceiver::addSlider(QString bar_name, QString window_name, void* value, int count, void* on_change)
 {
@@ -1051,8 +1092,25 @@ int GuiReceiver::start()
 	return qApp->exec();
 }
 
+CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data )
+{
+	callback = NULL;
+	callback2 = on_change;
+	userdata = data;
+
+	construc_trackbar(arg,name, value, count);
+}
 
 CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTrackbarCallback on_change )
+{
+	callback = on_change;
+	callback2 = NULL;
+	userdata = NULL;
+
+	construc_trackbar(arg,name, value, count);
+}
+
+void CvTrackbar::construc_trackbar(CvWindow* arg, QString name, int* value, int count)
 {
 	type=type_CvTrackbar;
 	myparent = arg;
@@ -1060,7 +1118,6 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int count, CvTra
 	setObjectName(name_bar);
 	dataSlider = value;
 
-	callback = on_change;
 	slider = new QSlider(Qt::Horizontal);
 	slider->setFocusPolicy(Qt::StrongFocus);
 	slider->setMinimum(0);
@@ -1135,7 +1192,16 @@ void CvTrackbar::update(int myvalue)
 
 	*dataSlider = myvalue;
 	if (callback)
+	{
 		callback(myvalue);
+		return;
+	}
+
+	if (callback2)
+	{
+		callback2(myvalue,userdata);
+		return;
+	}
 }
 
 void CvTrackbar::setLabel(int myvalue)
@@ -1422,8 +1488,6 @@ CvWindow::CvWindow(QString arg, int arg2)
 
 CvWindow::~CvWindow()
 {
-	printf("delete w\n");
-
 	QLayoutItem *child;
 
 	if (myGlobalLayout)
@@ -1662,6 +1726,32 @@ void CvWindow::updateImage(void* arr)
 void CvWindow::setMouseCallBack(CvMouseCallback m, void* param)
 {
 	myview->setMouseCallBack(m,param);
+}
+
+//addSlider2 is static
+void CvWindow::addSlider2(CvWindow* w,QString name, int* value, int count,CvTrackbarCallback2 on_change, void* userdata)
+{
+	QPointer<CvTrackbar> t = new CvTrackbar(w,name,value, count, on_change, userdata);
+	t->setAlignment(Qt::AlignHCenter);
+
+	QPointer<QBoxLayout> myLayout;
+
+	if (w)
+	{
+		myLayout = w->myBarLayout;
+	}
+	else
+	{
+		myLayout = global_control_panel->myLayout;
+
+		//if first one, enable control panel
+		if (myLayout->count() == 0)
+			guiMainThread->enablePropertiesButtonEachWindow();
+	}
+
+	myLayout->insertLayout( myLayout->count(),t);
+
+
 }
 
 //addSlider is static

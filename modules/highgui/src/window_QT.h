@@ -127,6 +127,7 @@ public slots:
     void destroyWindow(QString name);
     void destroyAllWindow();
     void addSlider(QString trackbar_name, QString window_name, void* value, int count, void* on_change);
+	void addSlider2(QString trackbar_name, QString window_name, void* value, int count, void* on_change, void *userdata);
     void moveWindow(QString name, int x, int y);
     void resizeWindow(QString name, int width, int height);
     void showImage(QString name, void* arr);
@@ -229,7 +230,8 @@ class CvTrackbar :  public CvBar
 {
     Q_OBJECT
 public:
-    CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback on_change = NULL);
+    CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback on_change);
+	CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
     ~CvTrackbar();
 
     //QString trackbar_name;
@@ -241,10 +243,13 @@ private slots:
 
 private:
     void setLabel(int myvalue);
+	void construc_trackbar(CvWindow* arg, QString name, int* value, int count);
     QString createLabel();
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
+	CvTrackbarCallback2 callback2;//look like it is use by python binding
     int* dataSlider;
+	void* userdata;
 
 };
 
@@ -281,6 +286,7 @@ public:
     CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
     ~CvWindow();
     static void addSlider(CvWindow* w,QString name, int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
+	static void addSlider2(CvWindow* w,QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
     void setMouseCallBack(CvMouseCallback m, void* param);
     void updateImage(void* arr);
     void displayInfo(QString text, int delayms );
