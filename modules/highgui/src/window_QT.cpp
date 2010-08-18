@@ -436,7 +436,7 @@ int icvInitSystem(int *c, char** v)
 		wasInitialized = 1;
 		qDebug()<<"init done";
 
-#if defined( HAVE_QT_OPENGL )//OK tested !
+#if defined( HAVE_QT_OPENGL )
 		qDebug()<<"opengl support available";
 #endif
 	}
@@ -1014,7 +1014,7 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 	{
 		b = CvWindow::createButtonbar(button_name);//the bar has the name of the first button attached to it
 		
-		enablePropertiesButtonEachWindow();
+		//enablePropertiesButtonEachWindow();
 
 	}else{
 		CvBar* lastbar = (CvBar*) global_control_panel->myLayout->itemAt(global_control_panel->myLayout->count()-1);
@@ -1637,8 +1637,8 @@ void CvWindow::createActionsandShortcuts()
 	vect_QActions[9]->setIconVisibleInMenu(true);
 	vect_QActions[9]->setShortcut(shortcut_properties_win);
 
-	if (global_control_panel->myLayout->count() == 0)
-		vect_QActions[9]->setDisabled(true);
+	//if (global_control_panel->myLayout->count() == 0)
+	//	vect_QActions[9]->setDisabled(true);
 
 	QObject::connect( vect_QActions[9],SIGNAL(triggered()),this, SLOT( displayPropertiesWin() ));
 
@@ -1745,8 +1745,8 @@ void CvWindow::addSlider2(CvWindow* w,QString name, int* value, int count,CvTrac
 		myLayout = global_control_panel->myLayout;
 
 		//if first one, enable control panel
-		if (myLayout->count() == 0)
-			guiMainThread->enablePropertiesButtonEachWindow();
+		//if (myLayout->count() == 0)
+		//	guiMainThread->enablePropertiesButtonEachWindow();
 	}
 
 	myLayout->insertLayout( myLayout->count(),t);
@@ -1771,8 +1771,8 @@ void CvWindow::addSlider(CvWindow* w,QString name, int* value, int count,CvTrack
 		myLayout = global_control_panel->myLayout;
 
 		//if first one, enable control panel
-		if (myLayout->count() == 0)
-			guiMainThread->enablePropertiesButtonEachWindow();
+		//if (myLayout->count() == 0)
+		//	guiMainThread->enablePropertiesButtonEachWindow();
 	}
 
 	myLayout->insertLayout( myLayout->count(),t);
