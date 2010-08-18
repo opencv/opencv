@@ -86,8 +86,8 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
     
     vector<vector<Point3f> > objectPoints(1);
     calcChessboardCorners(boardSize, squareSize, objectPoints[0]);
-    for( size_t i = 1; i < imagePoints.size(); i++ )
-        objectPoints.push_back(objectPoints[0]);
+
+	objectPoints.resize(imagePoints.size(),objectPoints[0]);
     
     calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
                     distCoeffs, rvecs, tvecs, flags);
