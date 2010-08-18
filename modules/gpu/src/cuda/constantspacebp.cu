@@ -160,21 +160,21 @@ namespace csbp_krnls
 
             for(int i = 0; i < nr_plane; i++)
             {
-                T fmin_ = data_cost[i * cdisp_step1];
-                int id = i;
-                for(int j = 0; j < nr_plane; j++)
+                T minimum = TypeLimits<T>::max();
+                int id = 0;
+                for(int d = 0; d < cndisp; d++)
                 {
-                    T cur = data_cost[j * cdisp_step1];
-                    if(cur < fmin_)
+                    T cur = data_cost[d * cdisp_step1];
+                    if(cur < minimum)
                     {
-                        fmin_ = cur;
-                        id = j;
+                        minimum = cur;
+                        id = d;
                     }
                 }
 
-                data_cost_selected[i  * cdisp_step1] = fmin_;
+                data_cost_selected[i  * cdisp_step1] = minimum;
                 selected_disparity[i  * cdisp_step1] = id;
-                data_cost         [id * cdisp_step1] = TypeLimits<T>::max();;
+                data_cost         [id * cdisp_step1] = TypeLimits<T>::max();
             }
         }
     }
