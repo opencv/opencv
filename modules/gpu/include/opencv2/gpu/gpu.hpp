@@ -235,7 +235,7 @@ namespace cv
 
         class CV_EXPORTS CudaMem
         {
-        public:
+        public:            
             enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
 
             CudaMem();
@@ -266,6 +266,8 @@ namespace cv
             Mat createMatHeader() const;
             operator Mat() const;
 
+            //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.            
+            GpuMat createGpuMatHeader() const;
             operator GpuMat() const;
 
             //returns if host memory can be mapperd to gpu address space;
@@ -295,7 +297,6 @@ namespace cv
             uchar* dataend;
 
             int alloc_type;
-
         };
 
         //////////////////////////////// CudaStream ////////////////////////////////
@@ -341,10 +342,11 @@ namespace cv
         };
 
         ////////////////////////////// Image processing //////////////////////////////
-
+        // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation. 
+        // xymap.type() == xymap.type() == CV_32FC1
         CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
 
-
+        // Does mean shift filtering on GPU.
         CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
@@ -358,8 +360,7 @@ namespace cv
 
             //! the default constructor
             StereoBM_GPU();
-            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size
-            //! ndisparities should be multiple of 8. SSD WindowsSize is fixed to 19 now
+            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8. 
             StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
@@ -374,10 +375,9 @@ namespace cv
             // It queries current active device.
             static bool checkIfGpuCallReasonable();
 
-            int preset;
             int ndisp;
             int winSize;
-
+            int preset;
 
             // If avergeTexThreshold  == 0 => post procesing is disabled
             // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
@@ -389,7 +389,8 @@ namespace cv
         };
 
         ////////////////////////// StereoBeliefPropagation ///////////////////////////
-
+        // "Efficient Belief Propagation for Early Vision" 
+        // P.Felzenszwalb
         class CV_EXPORTS StereoBeliefPropagation
         {
         public:
@@ -418,7 +419,7 @@ namespace cv
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
-
+            
             //! version for user specified data term
             void operator()(const GpuMat& data, GpuMat& disparity);
             void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream);
@@ -441,6 +442,9 @@ namespace cv
         };
 
         /////////////////////////// StereoConstantSpaceBP ///////////////////////////
+        // "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
+        // Qingxiong Yang, Liang Wang†, Narendra Ahuja         
+        // http://vision.ai.uiuc.edu/~qyang6/
 
         class CV_EXPORTS StereoConstantSpaceBP
         {

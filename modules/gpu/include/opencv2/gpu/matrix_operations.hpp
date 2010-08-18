@@ -411,6 +411,9 @@ inline void CudaMem::create(Size _size, int _type, int _alloc_type) { create(_si
 inline Mat CudaMem::createMatHeader() const { return Mat(size(), type(), data); }
 inline CudaMem::operator Mat() const { return createMatHeader(); }
 
+inline CudaMem::operator GpuMat() const { return createGpuMatHeader(); }
+//CPP GpuMat CudaMem::createGpuMatHeader() const;
+
 inline bool CudaMem::isContinuous() const { return (flags & Mat::CONTINUOUS_FLAG) != 0; }
 inline size_t CudaMem::elemSize() const { return CV_ELEM_SIZE(flags); }
 inline size_t CudaMem::elemSize1() const { return CV_ELEM_SIZE1(flags); }

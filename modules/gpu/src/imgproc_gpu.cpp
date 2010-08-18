@@ -94,7 +94,7 @@ void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int
     if( !(criteria.type & TermCriteria::EPS) )
         eps = 1.f;
 
-    eps = std::max(criteria.epsilon, 0.0);        
+    eps = (float)std::max(criteria.epsilon, 0.0);        
     impl::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
 }
 

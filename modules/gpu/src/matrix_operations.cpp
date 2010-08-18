@@ -70,6 +70,7 @@ namespace cv
         void CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
         bool CudaMem::can_device_map_to_host() { throw_nogpu(); return false; }
         void CudaMem::release() { throw_nogpu(); }
+        GpuMat CudaMem::createGpuMatHeader () const { throw_nogpu(); return GpuMat(); }
     }
 
 }
@@ -310,7 +311,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
     }
 }
 
-inline CudaMem::operator GpuMat() const
+GpuMat cv::gpu::CudaMem::createGpuMatHeader () const
 {
     GpuMat res;
     if (alloc_type == ALLOC_ZEROCOPY)
