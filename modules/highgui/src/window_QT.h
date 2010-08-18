@@ -330,7 +330,8 @@ private:
 	void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
 	void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
 
-	void createActionsandShortcuts();
+	void createActions();
+	void createShortcuts();
     void createToolBar();
     void createView(int display_mode, int ratio_mode);
     void createStatusBar();
