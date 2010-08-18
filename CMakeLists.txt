@@ -42,6 +42,7 @@ cmake_minimum_required(VERSION 2.4)
 
 if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
+    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} /MP)
 endif()
 
 #set(CMAKE_C_COMPILER "/opt/BullseyeCoverage/bin/gcc")
