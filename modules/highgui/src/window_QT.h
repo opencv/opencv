@@ -256,7 +256,7 @@ private:
 //Both are top level window, so that a way to differenciate them.
 //if (obj->metaObject ()->className () == "CvWindow") does not give me robust result
 
-enum typeWindow{type_CvWindow = 0, type_CvWinProperties = 1};
+enum typeWindow{type_CvWindow = 1, type_CvWinProperties = 2};
 
 class CvWinModel : public QWidget
 {
@@ -277,17 +277,6 @@ private:
     void closeEvent ( QCloseEvent * e );
     void showEvent ( QShowEvent * event ) ;
     void hideEvent ( QHideEvent * event ) ;
-};
-
-
-
-class GlobalLayout : public QBoxLayout
-{
-    Q_OBJECT
-public:
-	GlobalLayout(QWidget* parent) : QBoxLayout(QBoxLayout::TopToBottom,parent){};
-	bool hasHeightForWidth () {return true;};
-	int heightForWidth( int w ) {qDebug()<<"yopyopypp";return w;};
 };
 
 
@@ -383,8 +372,6 @@ public:
     void setOpenGLCallback(CvOpenGLCallback func,void* userdata, double arg3, double arg4, double arg5);
     int getRatio();
     void setRatio(int arg);
-	int heightForWidth( int w );// {qDebug()<<"yopyopypp";return w;};
-	bool hasHeightForWidth (){qDebug()<<"ask";return true;};
 
     //parameters (will be save/load)
     QTransform param_matrixWorld;

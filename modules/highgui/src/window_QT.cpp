@@ -345,7 +345,8 @@ CvWindow* icvFindWindowByName( const char* arg )
 	CvWindow* w;
 	CvWinModel* temp;
 
-
+	//This is not a very clean way to do the stuff. Indeed, QAction automatically generate toolTil (QLabel)
+	//that can be grabbed here and crash the code at 'w->param_name==name'.
 	foreach (QWidget *widget, QApplication::topLevelWidgets())
 	{
 
@@ -355,7 +356,7 @@ CvWindow* icvFindWindowByName( const char* arg )
 			if (temp->type == type_CvWindow)
 			{
 			w = (CvWindow*) temp;
-			if (w->param_name==name)
+			if (name.compare(w->param_name)==0)
 			{
 				window = w;
 				break;
@@ -1685,7 +1686,8 @@ void CvWindow::createShortcuts()
 void CvWindow::createToolBar()
 {
 	myToolBar = new QToolBar(this);
-	myToolBar->setFloatable(false);//is not a window
+	myToolBar->blockSignals(true);
+	//myToolBar->setFloatable(false);//is not a window
 	myToolBar->setMaximumHeight(28);
 
 	foreach (QAction *a, vect_QActions)
