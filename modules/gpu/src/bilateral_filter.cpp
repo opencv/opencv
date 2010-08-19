@@ -100,12 +100,17 @@ namespace
         short edge_disc = max<short>(short(1), short(rthis.ndisp * rthis.edge_threshold + 0.5));
         short max_disc = short(rthis.ndisp * rthis.max_disc_threshold + 0.5);
 
-        bf::load_constants(&table_color[0], table_space, rthis.ndisp, rthis.radius, edge_disc, max_disc);
+        float* table_color_dev;
+        cudaSafeCall( cudaMalloc((void**)&table_color_dev, table_color.size() * sizeof(float)) );
+        cudaSafeCall( cudaMemcpy(table_color_dev, &table_color[0], table_color.size() * sizeof(float), cudaMemcpyHostToDevice) );
+        bf::load_constants(table_color_dev, table_space, rthis.ndisp, rthis.radius, edge_disc, max_disc);
 
         if (&dst != &disp)
             disp.copyTo(dst);
 
         bf::bilateral_filter_gpu((DevMem2D_<T>)dst, img, img.channels(), rthis.iters, stream);
+
+        cudaSafeCall( cudaFree(table_color_dev) );
     }
 
     typedef void (*bilateral_filter_operator_t)(DisparityBilateralFilter& rthis, vector<float>& table_color, GpuMat& table_space, 
