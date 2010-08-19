@@ -391,6 +391,7 @@ namespace cv
         ////////////////////////// StereoBeliefPropagation ///////////////////////////
         // "Efficient Belief Propagation for Early Vision" 
         // P.Felzenszwalb
+
         class CV_EXPORTS StereoBeliefPropagation
         {
         public:
@@ -503,6 +504,45 @@ namespace cv
             GpuMat temp;
 
             GpuMat out;
+        };
+
+        /////////////////////////// DisparityBilateralFilter ///////////////////////////
+        // Disparity map refinement using joint bilateral filtering given a single color image.
+        // Qingxiong Yang, Liang Wang†, Narendra Ahuja         
+        // http://vision.ai.uiuc.edu/~qyang6/
+
+        class CV_EXPORTS DisparityBilateralFilter
+        {
+        public:
+            enum { DEFAULT_NDISP  = 64 };
+            enum { DEFAULT_RADIUS = 3 };
+            enum { DEFAULT_ITERS  = 1 };
+
+            //! the default constructor
+            explicit DisparityBilateralFilter(int ndisp = DEFAULT_NDISP, int radius = DEFAULT_RADIUS, int iters = DEFAULT_ITERS);
+
+            //! the full constructor taking the number of disparities, filter radius,
+            //! number of iterations, truncation of data continuity, truncation of disparity continuity
+            //! and filter range sigma
+            DisparityBilateralFilter(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, float sigma_range);
+
+            //! the disparity map refinement operator. Refine disparity map using joint bilateral filtering given a single color image.
+            //! disparity must have CV_8U or CV_16S type, image must have CV_8UC1 or CV_8UC3 type.
+            void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst);
+
+            //! Acync version
+            void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst, Stream& stream);
+
+            int ndisp;
+            int radius;
+            int iters;
+
+            float edge_threshold;
+            float max_disc_threshold;
+            float sigma_range;
+        private:
+            std::vector<float> table_color;
+            GpuMat table_space;
         };
     }
 
