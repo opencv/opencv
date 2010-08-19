@@ -599,6 +599,7 @@ CV_IMPL int cvCreateTrackbar( const char* name_bar, const char* window_name, int
 
 CV_IMPL int cvCreateButton(const char* button_name,CvButtonCallback on_change, void* userdata , int button_type, int initial_button_state )
 {
+
 	if (!guiMainThread)
 		CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
 
@@ -998,6 +999,7 @@ void GuiReceiver::resizeWindow(QString name, int width, int height)
 void GuiReceiver::enablePropertiesButtonEachWindow()
 {
 	CvWindow* w;
+	CvWinModel* temp;
 
 	//For each window, enable window property button
 	foreach (QWidget *widget, QApplication::topLevelWidgets())
@@ -1005,9 +1007,13 @@ void GuiReceiver::enablePropertiesButtonEachWindow()
 
 		if (widget->isWindow() && !widget->parentWidget ())//is a window without parent
 		{
-			w = (CvWindow*) widget;
-			//active window properties button
-			w->vect_QActions[9]->setDisabled(false);
+			temp = (CvWinModel*) widget;
+			if (temp->type == type_CvWindow)
+			{
+				w = (CvWindow*) widget;
+				//active window properties button
+				w->vect_QActions[9]->setDisabled(false);
+			}
 		}
 	}
 }
@@ -1017,16 +1023,16 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 
 	if (!global_control_panel)
 		return;
-
 	QPointer<CvButtonbar> b;// = icvFindButtonbarByName(  button_name.toLatin1().data(), global_control_panel->myLayout );
 
 	//if (b)//button with this name already exist
 	//    return;
 
+
 	if (global_control_panel->myLayout->count() == 0)//if that is the first button attach to the control panel, create a new button bar
 	{
+
 		b = CvWindow::createButtonbar(button_name);//the bar has the name of the first button attached to it
-		
 		enablePropertiesButtonEachWindow();
 
 	}else{
@@ -2135,10 +2141,10 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 
 #endif
 
-	image2Draw_ipl=cvCreateImage(cvSize(viewport()->width(),viewport()->height()),IPL_DEPTH_8U,3);
-	
+	image2Draw_mat = cvCreateMat( viewport()->width(),viewport()->height(), CV_8UC3 );
+
 	nbChannelOriginImage = 0;
-	cvZero(image2Draw_ipl);
+	cvZero(image2Draw_mat);
 
 	setInteractive(false);
 	setMouseTracking (true);//receive mouse event everytime
@@ -2147,8 +2153,9 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 
 ViewPort::~ViewPort()
 {
-	if (image2Draw_ipl)
-		cvReleaseImage(&image2Draw_ipl);
+	if (image2Draw_mat)
+		
+		cvReleaseMat(&image2Draw_mat);
 
 	
 //#if defined( HAVE_QT_OPENGL )
@@ -2309,34 +2316,37 @@ inline bool ViewPort::isSameSize(IplImage* img1,IplImage* img2)
 	return img1->width == img2->width && img1->height == img2->height;
 }
 
-void ViewPort::updateImage(void* arr)
+void ViewPort::updateImage(const CvArr *arr)
 {
 	//if (!arr)
 	//CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
 	CV_Assert(arr)
 
-	IplImage* tempImage = (IplImage*)arr;
+	CvMat * mat, stub;
+	int origin=0;
 
-	if (!isSameSize(image2Draw_ipl,tempImage))
+	if( CV_IS_IMAGE_HDR( arr ))
+		origin = ((IplImage*)arr)->origin;
+
+	mat = cvGetMat(arr, &stub);
+
+	//IplImage* tempImage = (IplImage*)arr;
+
+	if( CV_IS_IMAGE_HDR( arr ))
+		origin = ((IplImage*)arr)->origin;
+
+	if (!CV_ARE_SIZES_EQ(image2Draw_mat,mat))
 	{
-		cvReleaseImage(&image2Draw_ipl);
-
+		cvReleaseMat(&image2Draw_mat);
 		//the image in ipl (to do a deep copy with cvCvtColor)
-		image2Draw_ipl=cvCreateImage(cvGetSize(tempImage),IPL_DEPTH_8U,3);
-
-		//the ipl image in qt format (with shared memory)
-		//image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
-
-		//nbChannelOriginImage = tempImage->nChannels;
+		image2Draw_mat = cvCreateMat( mat->rows, mat->cols, CV_8UC3 );
 
 		updateGeometry();
 	}
 
-	nbChannelOriginImage = tempImage->nChannels;
+	nbChannelOriginImage = cvGetElemType(mat);
 
-
-	//cvCvtColor(tempImage,image2Draw_ipl,CV_BGR2RGB);//will not work if tempImage is 1 channel !!
-	cvConvertImage(tempImage,image2Draw_ipl,CV_CVTIMG_SWAP_RB );
+	cvConvertImage(mat,image2Draw_mat,(origin != 0 ? CV_CVTIMG_FLIP : 0) + CV_CVTIMG_SWAP_RB );
 
 	viewport()->update();
 }
@@ -2596,8 +2606,8 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
 
 QSize ViewPort::sizeHint() const
 {
-	if(image2Draw_ipl)
-		return QSize(image2Draw_ipl->width,image2Draw_ipl->height);
+	if(image2Draw_mat)
+		return QSize(image2Draw_mat->cols,image2Draw_mat->rows);
 	else
 		return QGraphicsView::sizeHint();
 }
@@ -2606,13 +2616,13 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
 {
 
 	controlImagePosition();
-	ratioX=width()/float(image2Draw_ipl->width);
-	ratioY=height()/float(image2Draw_ipl->height);
+	ratioX=width()/float(image2Draw_mat->cols);
+	ratioY=height()/float(image2Draw_mat->rows);
 
 	
 	if(param_keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
 	{
-		QSize newSize = QSize(image2Draw_ipl->width,image2Draw_ipl->height);
+		QSize newSize = QSize(image2Draw_mat->cols,image2Draw_mat->rows);
 		newSize.scale(event->size(),Qt::KeepAspectRatio);
 
 		//imageWidth/imageHeight = newWidth/newHeight +/- epsilon
@@ -2692,22 +2702,23 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
 void ViewPort::draw2D(QPainter *painter)
 {
-	image2Draw_qt = QImage((uchar*) image2Draw_ipl->imageData, image2Draw_ipl->width, image2Draw_ipl->height,QImage::Format_RGB888);
+	image2Draw_qt = QImage((uchar*) image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,QImage::Format_RGB888);
 	image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
 	painter->drawImage(0,0,image2Draw_qt_resized);
 	//painter->drawImage(0,0,image2Draw_qt_resized);
 }
 
+//only if CV_8UC1 or CV_8UC3
 void ViewPort::drawStatusBar()
 {
 	if (mouseCoordinate.x()>=0 &&
 		mouseCoordinate.y()>=0 &&
-		mouseCoordinate.x()<image2Draw_ipl->width &&
-		mouseCoordinate.y()<image2Draw_ipl->height)
+		mouseCoordinate.x()<image2Draw_mat->cols &&
+		mouseCoordinate.y()<image2Draw_mat->rows)
 	{
 		QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
 
-		if (nbChannelOriginImage==3)
+		if (nbChannelOriginImage==CV_8UC3 )
 		{
 			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
 				.arg(mouseCoordinate.x())
@@ -2716,7 +2727,10 @@ void ViewPort::drawStatusBar()
 				tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
 				tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
 				);
-		}else{
+		}
+
+		if (nbChannelOriginImage==CV_8UC1)
+		{
 			//all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
 			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
 				.arg(mouseCoordinate.x())

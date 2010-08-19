@@ -377,7 +377,7 @@ class ViewPort : public QGraphicsView
 public:
     ViewPort(CvWindow* centralWidget, int mode = CV_MODE_NORMAL, int keepRatio = CV_WINDOW_KEEPRATIO);
     ~ViewPort();
-    void updateImage(void* arr);
+    void updateImage(const CvArr *arr);
     void startDisplayInfo(QString text, int delayms);
     void setMouseCallBack(CvMouseCallback m, void* param);
     void setOpenGLCallback(CvOpenGLCallback func,void* userdata, double arg3, double arg4, double arg5);
@@ -391,7 +391,8 @@ public:
 
     int param_keepRatio;
 
-    IplImage* image2Draw_ipl;
+    //IplImage* image2Draw_ipl;
+	CvMat* image2Draw_mat;
     QImage image2Draw_qt;
     QImage image2Draw_qt_resized;
     int mode_display;//opengl or native
