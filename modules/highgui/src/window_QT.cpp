@@ -2342,6 +2342,11 @@ void ViewPort::updateImage(const CvArr *arr)
 		cvReleaseMat(&image2Draw_mat);
 		//the image in ipl (to do a deep copy with cvCvtColor)
 		image2Draw_mat = cvCreateMat( mat->rows, mat->cols, CV_8UC3 );
+		image2Draw_qt = QImage((uchar*) image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,QImage::Format_RGB888);
+
+		//use to compute mouse coordinate, I need to update the ratio here and in resizeEvent
+		ratioX=width()/float(image2Draw_mat->cols);
+		ratioY=height()/float(image2Draw_mat->rows);
 
 		updateGeometry();
 	}
@@ -2618,6 +2623,8 @@ void ViewPort::resizeEvent ( QResizeEvent *event)
 {
 
 	controlImagePosition();
+
+	//use to compute mouse coordinate, I need to update the ratio here and in resizeEvent
 	ratioX=width()/float(image2Draw_mat->cols);
 	ratioY=height()/float(image2Draw_mat->rows);
 
@@ -2713,10 +2720,14 @@ void ViewPort::draw2D(QPainter *painter)
 //only if CV_8UC1 or CV_8UC3
 void ViewPort::drawStatusBar()
 {
-	if (mouseCoordinate.x()>=0 &&
-		mouseCoordinate.y()>=0 &&
-		mouseCoordinate.x()<image2Draw_mat->cols &&
-		mouseCoordinate.y()<image2Draw_mat->rows)
+	if (nbChannelOriginImage!=CV_8UC1 && nbChannelOriginImage!=CV_8UC3)
+		return;
+
+	//if (mouseCoordinate.x()>=0 &&
+	//	mouseCoordinate.y()>=0 &&
+	//	mouseCoordinate.x()<image2Draw_qt.width() &&
+	//	mouseCoordinate.y()<image2Draw_qt.height())
+	if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
 	{
 		QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
 
@@ -2743,9 +2754,13 @@ void ViewPort::drawStatusBar()
 	}
 }
 
-
+//accept only CV_8UC1 and CV_8UC8 image for now
 void ViewPort::drawImgRegion(QPainter *painter)
 {
+
+	if (nbChannelOriginImage!=CV_8UC1 && nbChannelOriginImage!=CV_8UC3)
+		return;
+
 	qreal offsetX = param_matrixWorld.dx()/param_matrixWorld.m11();
 	offsetX = offsetX - floor(offsetX);
 	qreal offsetY = param_matrixWorld.dy()/param_matrixWorld.m11();
@@ -2789,7 +2804,7 @@ void ViewPort::drawImgRegion(QPainter *painter)
 			else
 				rgbValue = qRgb(0,0,0);
 
-			if (nbChannelOriginImage==3)
+			if (nbChannelOriginImage==CV_8UC3)
 			{
 				//for debug
 				/*
@@ -2815,7 +2830,8 @@ void ViewPort::drawImgRegion(QPainter *painter)
 					Qt::AlignCenter, val);
 
 			}
-			else
+
+			if (nbChannelOriginImage==CV_8UC1)
 			{
 
 				val = tr("%1").arg(qRed(rgbValue));
