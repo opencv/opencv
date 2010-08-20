@@ -182,4 +182,131 @@ namespace cv { namespace gpu { namespace impl
     }
 }}}
 
+/////////////////////////////////// colorizeDisp ///////////////////////////////////////////////
 
+namespace imgproc
+{
+    template <typename T>
+    __device__ unsigned int cvtPixel(T d, int ndisp, float S = 1, float V = 1)
+    {        
+        unsigned int H = ((ndisp-d) * 240)/ndisp;
+
+        unsigned int hi = (H/60) % 6;
+        float f = H/60.f - H/60;
+        float p = V * (1 - S);
+        float q = V * (1 - f * S);
+        float t = V * (1 - (1 - f) * S);
+
+        float3 res;
+        
+        if (hi == 0) //R = V,	G = t,	B = p
+        {
+            res.x = p;
+            res.y = t;
+            res.z = V;
+        }
+
+        if (hi == 1) // R = q,	G = V,	B = p
+        {
+            res.x = p;
+            res.y = V;
+            res.z = q;
+        }        
+        
+        if (hi == 2) // R = p,	G = V,	B = t
+        {
+            res.x = t;
+            res.y = V;
+            res.z = p;
+        }
+            
+        if (hi == 3) // R = p,	G = q,	B = V
+        {
+            res.x = V;
+            res.y = q;
+            res.z = p;
+        }
+
+        if (hi == 4) // R = t,	G = p,	B = V
+        {
+            res.x = V;
+            res.y = p;
+            res.z = t;
+        }
+
+        if (hi == 5) // R = V,	G = p,	B = q
+        {
+            res.x = q;
+            res.y = p;
+            res.z = V;
+        }
+        unsigned int b = (unsigned int)(max(0.f, min (res.x, 1.f)) * 255.f);
+        unsigned int g = (unsigned int)(max(0.f, min (res.y, 1.f)) * 255.f);
+        unsigned int r = (unsigned int)(max(0.f, min (res.z, 1.f)) * 255.f);
+
+        return (r << 16) + (g << 8) + b;    
+    } 
+
+    __global__ void colorizeDisp(uchar* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
+    {
+        const int x = (blockIdx.x * blockDim.x + threadIdx.x) << 2;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if(x < width && y < height) 
+        {
+            uchar4 d4 = *(uchar4*)(disp + y * disp_step + x);
+
+            uint4 res;
+            res.x = cvtPixel(d4.x, ndisp);
+            res.y = cvtPixel(d4.y, ndisp);
+            res.z = cvtPixel(d4.z, ndisp);
+            res.w = cvtPixel(d4.w, ndisp);
+                    
+            uint4* line = (uint4*)(out_image + y * out_step);
+            line[x >> 2] = res;
+        }
+    }
+
+    __global__ void colorizeDisp(short* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
+    {
+        const int x = (blockIdx.x * blockDim.x + threadIdx.x) << 1;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if(x < width && y < height) 
+        {
+            short2 d2 = *(short2*)(disp + y * disp_step + x);
+
+            uint2 res;
+            res.x = cvtPixel(d2.x, ndisp);            
+            res.y = cvtPixel(d2.y, ndisp);
+
+            uint2* line = (uint2*)(out_image + y * out_step);
+            line[x >> 1] = res;
+        }
+    }
+}
+
+namespace cv { namespace gpu { namespace impl 
+{
+    void colorizeDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp)
+    {
+        dim3 threads(16, 16, 1);
+        dim3 grid(1, 1, 1);
+        grid.x = divUp(src.cols, threads.x << 2);
+        grid.y = divUp(src.rows, threads.y);
+         
+        imgproc::colorizeDisp<<<grid, threads>>>(src.ptr, src.step, dst.ptr, dst.step, src.cols, src.rows, ndisp);
+        cudaThreadSynchronize(); 
+    }
+
+    void colorizeDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+        grid.x = divUp(src.cols, threads.x << 1);
+        grid.y = divUp(src.rows, threads.y);
+         
+        imgproc::colorizeDisp<<<grid, threads>>>(src.ptr, src.step / sizeof(short), dst.ptr, dst.step, src.cols, src.rows, ndisp);
+        cudaThreadSynchronize();
+    }
+}}}

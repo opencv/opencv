@@ -47,8 +47,9 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::remap(const GpuMat& /*src*/, const GpuMat& /*xmap*/, const GpuMat& /*ymap*/, GpuMat& /*dst*/) { throw_nogpu(); }
+void cv::gpu::remap(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
+void cv::gpu::colorizeDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -59,6 +60,9 @@ namespace cv { namespace gpu
         extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst);
 
         extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps);
+
+        void colorizeDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp);
+        void colorizeDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp);
     }
 }}
 
@@ -98,5 +102,29 @@ void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int
     impl::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
 }
 
+namespace
+{
+    template <typename T>
+    void colorizeDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp)
+    {
+        impl::colorizeDisp_gpu((DevMem2D_<T>)src, dst, ndisp);
+    }
+}
+
+void cv::gpu::colorizeDisp(const GpuMat& src, GpuMat& dst, int ndisp)
+{
+    typedef void (*colorizeDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp);
+
+    static const colorizeDisp_caller_t callers[] = {colorizeDisp_caller<uchar>, 0, 0, colorizeDisp_caller<short>, 0, 0, 0, 0};
+    CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
+
+    GpuMat out;
+    if (&dst != &src)
+        out = dst;
+    out.create(src.size(), CV_8UC4);
+    
+    callers[src.type()](src, out, ndisp);
+    dst = out;
+}
 
 #endif /* !defined (HAVE_CUDA) */

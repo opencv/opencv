@@ -53,34 +53,6 @@ using namespace cv::gpu::impl;
 
 namespace bf_krnls
 {
-    __global__ void calc_space_weighted_filter(float* table_space, size_t step, int half, float dist_space)
-    {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (y <= half && x <= half)
-            *(table_space + y * step + x) = expf(-sqrtf(float(y * y) + float(x * x)) / dist_space);
-    }
-}
-
-namespace cv { namespace gpu { namespace bf 
-{
-    void calc_space_weighted_filter_gpu(const DevMem2Df& table_space, int half, float dist_space, cudaStream_t stream)
-    {
-        dim3 threads(32, 8, 1);
-        dim3 grid(1, 1, 1);
-        grid.x = divUp(half + 1, threads.x);
-        grid.x = divUp(half + 1, threads.y);
-
-        bf_krnls::calc_space_weighted_filter<<<grid, threads, 0, stream>>>(table_space.ptr, table_space.step/sizeof(float), half, dist_space);
-
-        if (stream != 0)
-            cudaSafeCall( cudaThreadSynchronize() );
-    }
-}}}
-
-namespace bf_krnls
-{
     __constant__ float* ctable_color;
     __constant__ float* ctable_space;
     __constant__ size_t ctable_space_step;

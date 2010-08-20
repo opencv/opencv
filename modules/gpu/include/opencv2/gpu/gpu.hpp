@@ -349,6 +349,8 @@ namespace cv
         // Does mean shift filtering on GPU.
         CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
+        CV_EXPORTS void colorizeDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp);
+
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU
@@ -533,6 +535,7 @@ namespace cv
             //! Acync version
             void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst, Stream& stream);
 
+        private:
             int ndisp;
             int radius;
             int iters;
@@ -540,8 +543,8 @@ namespace cv
             float edge_threshold;
             float max_disc_threshold;
             float sigma_range;
-        private:
-            std::vector<float> table_color;
+
+            GpuMat table_color;
             GpuMat table_space;
         };
     }
