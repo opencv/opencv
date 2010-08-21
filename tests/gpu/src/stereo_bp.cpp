@@ -63,7 +63,7 @@ void CV_GpuStereoBP::run(int )
         cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", 0);
 
         cv::gpu::GpuMat disp;
-        cv::gpu::StereoBeliefPropagation bpm(128, 8, 4, 25, 0.1f, 15, 1);
+        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
 
         bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
@@ -77,3 +77,4 @@ void CV_GpuStereoBP::run(int )
 
 
 CV_GpuStereoBP CV_GpuStereoBP_test;
+
