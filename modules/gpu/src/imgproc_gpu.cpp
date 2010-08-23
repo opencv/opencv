@@ -50,6 +50,7 @@ using namespace cv::gpu;
 void cv::gpu::remap(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
 void cv::gpu::colorizeDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
+void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -63,6 +64,9 @@ namespace cv { namespace gpu
 
         void colorizeDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp);
         void colorizeDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp);
+
+        void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q);
+        void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q);
     }
 }}
 
@@ -125,6 +129,27 @@ void cv::gpu::colorizeDisp(const GpuMat& src, GpuMat& dst, int ndisp)
     
     callers[src.type()](src, out, ndisp);
     dst = out;
+}
+
+namespace
+{
+    template <typename T>
+    void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
+    {
+        impl::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>());
+    }
+}
+
+void cv::gpu::reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
+{
+    typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
+
+    static const reprojectImageTo3D_caller_t callers[] = {reprojectImageTo3D_caller<uchar>, 0, 0, reprojectImageTo3D_caller<short>, 0, 0, 0, 0};
+    CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
+
+    xyzw.create(disp.rows, disp.cols, CV_32FC4);
+    
+    callers[disp.type()](disp, xyzw, Q);
 }
 
 #endif /* !defined (HAVE_CUDA) */

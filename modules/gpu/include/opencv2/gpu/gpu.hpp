@@ -351,6 +351,8 @@ namespace cv
 
         CV_EXPORTS void colorizeDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp);
 
+        CV_EXPORTS void reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
+
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU
@@ -452,10 +454,10 @@ namespace cv
         class CV_EXPORTS StereoConstantSpaceBP
         {
         public:
-            enum { DEFAULT_NDISP    = 64 };
-            enum { DEFAULT_ITERS    = 5  };
-            enum { DEFAULT_LEVELS   = 5  };
-            enum { DEFAULT_NR_PLANE = 2  };
+            enum { DEFAULT_NDISP    = 128 };
+            enum { DEFAULT_ITERS    = 8   };
+            enum { DEFAULT_LEVELS   = 4   };
+            enum { DEFAULT_NR_PLANE = 4   };
 
             //! the default constructor
             explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
@@ -552,7 +554,7 @@ namespace cv
     //! Speckle filtering - filters small connected components on diparity image.
     //! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize.
     //! Threshold for border between CC is diffThreshold;
-    void filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar diffThreshold, Mat& buf);
+    CV_EXPORTS void filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar diffThreshold, Mat& buf);
 
 }
 #include "opencv2/gpu/matrix_operations.hpp"
