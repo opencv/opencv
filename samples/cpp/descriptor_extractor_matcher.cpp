@@ -64,10 +64,8 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     cout << ">" << endl;
 
     cout << "< Matching descriptors..." << endl;
-    vector<int> matches;
-    descriptorMatcher->clear();
-    descriptorMatcher->add( descriptors2 );
-    descriptorMatcher->match( descriptors1, matches );
+    vector<DMatch> matches;
+    descriptorMatcher->match( descriptors1, descriptors2, matches, Mat() );
     cout << ">" << endl;
 
     if( !H12.empty() )
@@ -81,11 +79,15 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         cout << ">" << endl;
     }
 
+    vector<int> trainIdxs( matches.size() );
+    for( size_t i = 0; i < matches.size(); i++ )
+        trainIdxs[i] = matches[i].indexTrain;
+
     if( !isWarpPerspective && ransacReprojThreshold >= 0 )
     {
         cout << "< Computing homography (RANSAC)..." << endl;
         vector<Point2f> points1; KeyPoint::convert(keypoints1, points1);
-        vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, matches);
+        vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, trainIdxs);
         H12 = findHomography( Mat(points1), Mat(points2), CV_RANSAC, ransacReprojThreshold );
         cout << ">" << endl;
     }
@@ -95,9 +97,8 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     {
         vector<char> matchesMask( matches.size(), 0 );
         vector<Point2f> points1; KeyPoint::convert(keypoints1, points1);
-        vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, matches);
+        vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, trainIdxs);
         Mat points1t; perspectiveTransform(Mat(points1), points1t, H12);
-        vector<int>::const_iterator mit = matches.begin();
         for( size_t i1 = 0; i1 < points1.size(); i1++ )
         {
             if( norm(points2[i1] - points1t.at<Point2f>(i1,0)) < 4 ) // inlier

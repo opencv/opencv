@@ -431,65 +431,70 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
 \****************************************************************************************/
 void DescriptorMatcher::add( const Mat& descriptors )
 {
-    if( train.empty() )
+    if( m_train.empty() )
     {
-        train = descriptors;
+        m_train = descriptors;
     }
     else
     {
         // merge train and descriptors
-        Mat m( train.rows + descriptors.rows, train.cols, CV_32F );
-        Mat m1 = m.rowRange( 0, train.rows );
-        train.copyTo( m1 );
-        Mat m2 = m.rowRange( train.rows + 1, m.rows );
+        Mat m( m_train.rows + descriptors.rows, m_train.cols, CV_32F );
+        Mat m1 = m.rowRange( 0, m_train.rows );
+        m_train.copyTo( m1 );
+        Mat m2 = m.rowRange( m_train.rows + 1, m.rows );
         descriptors.copyTo( m2 );
-        train = m;
+        m_train = m;
     }
 }
 
 void DescriptorMatcher::match( const Mat& query, vector<int>& matches ) const
 {
-    matchImpl( query, Mat(), matches );
+    matchImpl( query, m_train, matches, Mat() );
 }
 
 void DescriptorMatcher::match( const Mat& query, const Mat& mask,
                                vector<int>& matches ) const
 {
-    matchImpl( query, mask, matches );
+    matchImpl( query, m_train, matches, mask );
 }
 
 void DescriptorMatcher::match( const Mat& query, vector<DMatch>& matches ) const
 {
-    matchImpl( query, Mat(), matches );
+    matchImpl( query, m_train, matches, Mat() );
 }
 
 void DescriptorMatcher::match( const Mat& query, const Mat& mask,
                                vector<DMatch>& matches ) const
 {
-    matchImpl( query, mask, matches );
+    matchImpl( query, m_train, matches, mask );
+}
+
+void DescriptorMatcher::match( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask ) const
+{
+    matchImpl( query, train, matches, mask );
 }
 
 void DescriptorMatcher::match( const Mat& query, vector<vector<DMatch> >& matches, float threshold ) const
 {
-    matchImpl( query, Mat(), matches, threshold );
+    matchImpl( query, m_train, matches, threshold, Mat() );
 }
 
 void DescriptorMatcher::match( const Mat& query, const Mat& mask,
                                vector<vector<DMatch> >& matches, float threshold ) const
 {
-    matchImpl( query, mask, matches, threshold );
+    matchImpl( query, m_train, matches, threshold, mask );
 }
 
 void DescriptorMatcher::clear()
 {
-    train.release();
+    m_train.release();
 }
 
 /*
  * BruteForceMatcher L2 specialization
  */
 template<>
-void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask ) const
 {
     assert( mask.empty() || (mask.rows == query.rows && mask.cols == train.rows) );
     assert( query.cols == train.cols ||  query.empty() ||  train.empty() );

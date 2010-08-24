@@ -1659,6 +1659,8 @@ public:
      */
     void match( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const;
 
+    void match( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask ) const;
+
     /*
      * Find many matches for each descriptor from a query set
      *
@@ -1686,21 +1688,21 @@ public:
     virtual void clear();
 
 protected:
-    Mat train;
+    Mat m_train;
 
     /*
      * Find matches; match() calls this. Must be implemented by the subclass.
      * The mask may be empty.
      */
-    virtual void matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const = 0;
+    virtual void matchImpl( const Mat& query, const Mat& train, vector<int>& matches, const Mat& mask ) const = 0;
 
     /*
      * Find matches; match() calls this. Must be implemented by the subclass.
      * The mask may be empty.
      */
-    virtual void matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const = 0;
+    virtual void matchImpl( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask ) const = 0;
 
-    virtual void matchImpl( const Mat& query, const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const = 0;
+    virtual void matchImpl( const Mat& query, const Mat& train, vector<vector<DMatch> >& matches, float threshold, const Mat& mask ) const = 0;
 
 
     static bool possibleMatch( const Mat& mask, int index_1, int index_2 )
@@ -1725,20 +1727,20 @@ public:
     BruteForceMatcher( Distance d = Distance() ) : distance(d) {}
     virtual void index() {}
 protected:
-   virtual void matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const;
+   virtual void matchImpl( const Mat& query, const Mat& train, vector<int>& matches, const Mat& mask ) const;
 
-   virtual void matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const;
+   virtual void matchImpl( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask ) const;
 
-   virtual void matchImpl( const Mat& query, const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const;
+   virtual void matchImpl( const Mat& query, const Mat& train, vector<vector<DMatch> >& matches, float threshold, const Mat& mask ) const;
 
    Distance distance;
 };
 
 template<class Distance> inline
-void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, vector<int>& matches ) const
+void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& train, vector<int>& matches, const Mat& mask ) const
 {
     vector<DMatch> fullMatches;
-    matchImpl( query, mask, fullMatches);
+    matchImpl( query, train, fullMatches, mask );
     matches.clear();
     matches.resize( fullMatches.size() );
     for( size_t i=0;i<fullMatches.size();i++)
@@ -1748,7 +1750,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 }
 
 template<class Distance> inline
-void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const
+void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask ) const
 {
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
@@ -1795,7 +1797,8 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 }
 
 template<class Distance> inline
-void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, vector<vector<DMatch> >& matches, float threshold ) const
+void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& train, vector<vector<DMatch> >& matches,
+                                             float threshold, const Mat& mask ) const
 {
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
@@ -1804,7 +1807,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 
     assert( query.cols == train.cols ||  query.empty() ||  train.empty() );
     assert( DataType<ValueType>::type == query.type() ||  query.empty() );
-    assert( DataType<ValueType>::type == train.type() ||  train.empty() );
+    assert( DataType<ValueType>::type == train.type() || train.empty() );
 
     int dimension = query.cols;
     matches.clear();
@@ -1834,7 +1837,7 @@ void BruteForceMatcher<Distance>::matchImpl( const Mat& query, const Mat& mask, 
 }
 
 template<>
-void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& mask, vector<DMatch>& matches ) const;
+void BruteForceMatcher<L2<float> >::matchImpl( const Mat& query, const Mat& train, vector<DMatch>& matches, const Mat& mask) const;
 
 CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
 
