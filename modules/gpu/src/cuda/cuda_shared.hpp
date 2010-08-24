@@ -67,6 +67,10 @@ namespace cv
 
             extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream = 0);
         }
+
+        template<class T> 
+        inline void uploadConstant(const char* name, const T& value) { cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); }
+
     }
 }
 
