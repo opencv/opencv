@@ -2348,7 +2348,7 @@ void ViewPort::updateImage(const CvArr *arr)
 		cvReleaseMat(&image2Draw_mat);
 		//the image in ipl (to do a deep copy with cvCvtColor)
 		image2Draw_mat = cvCreateMat( mat->rows, mat->cols, CV_8UC3 );
-		image2Draw_qt = QImage((uchar*) image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,QImage::Format_RGB888);
+		image2Draw_qt = QImage(image2Draw_mat->data.ptr, image2Draw_mat->cols,image2Draw_mat->rows, image2Draw_mat->step,QImage::Format_RGB888);
 
 		//use to compute mouse coordinate, I need to update the ratio here and in resizeEvent
 		ratioX=width()/float(image2Draw_mat->cols);
@@ -2717,10 +2717,9 @@ void ViewPort::paintEvent(QPaintEvent* event)
 
 void ViewPort::draw2D(QPainter *painter)
 {
-	image2Draw_qt = QImage((uchar*) image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,QImage::Format_RGB888);
-	image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+	image2Draw_qt = QImage(image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,image2Draw_mat->step,QImage::Format_RGB888);
+	image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::FastTransformation);//Qt::SmoothTransformation);
 	painter->drawImage(0,0,image2Draw_qt_resized);
-	//painter->drawImage(0,0,image2Draw_qt_resized);
 }
 
 //only if CV_8UC1 or CV_8UC3
