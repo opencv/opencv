@@ -237,7 +237,7 @@ namespace
             out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
             out = zero;
 
-            bp::output(rthis.msg_type, u, d, l, r, datas.front(), disp, stream);
+            bp::output(rthis.msg_type, u, d, l, r, datas.front(), out, stream);
 
             if (disp.type() != CV_16S)
                 out.convertTo(disp, disp.type());
