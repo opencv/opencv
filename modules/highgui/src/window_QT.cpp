@@ -1686,9 +1686,8 @@ void CvWindow::createShortcuts()
 void CvWindow::createToolBar()
 {
 	myToolBar = new QToolBar(this);
-	myToolBar->blockSignals(true);
-	//myToolBar->setFloatable(false);//is not a window
-	myToolBar->setMaximumHeight(28);
+	myToolBar->setFloatable(false);//is not a window
+	myToolBar->setFixedHeight(28);
 
 	foreach (QAction *a, vect_QActions)
 		myToolBar->addAction(a);
@@ -1698,9 +1697,16 @@ void CvWindow::createStatusBar()
 {
 	myStatusBar = new QStatusBar(this);
 	myStatusBar->setSizeGripEnabled(false);
-	myStatusBar->setMaximumHeight(20);
+	myStatusBar->setFixedHeight(20);
 	myStatusBar_msg = new QLabel;
-	myStatusBar_msg->setFrameStyle(QFrame::Raised);
+
+
+	//I comment this because if we change the style, myview (the picture)
+	//will not be the correct size anymore (will lost 2 pixel because of the borders)
+
+	//myStatusBar_msg->setFrameStyle(QFrame::Raised);
+
+
 	myStatusBar_msg->setAlignment(Qt::AlignHCenter);
 	myStatusBar->addWidget(myStatusBar_msg);
 }
