@@ -87,7 +87,7 @@ void cv::gpu::StereoBeliefPropagation::estimateRecopmmendedParams( int width, in
     int mm =::max(width, height);
     iters = mm / 100 + 2;
 
-    levels = cvRound(log((double)mm) + 1) * 4 / 5;
+    levels = (int)(log(static_cast<double>(mm)) + 1) * 4 / 5;
     if (levels == 0) levels++;
 }
 
