@@ -3,24 +3,30 @@
 #
 #             ** File generated automatically, do not modify **
 #
-#  Usage from an external project: 
+#  Usage from an external project:
 #    In your CMakeLists.txt, add these lines:
 #
 #    FIND_PACKAGE(OpenCV REQUIRED )
-#    TARGET_LINK_LIBRARIES(MY_TARGET_NAME ${OpenCV_LIBS})   
+#    TARGET_LINK_LIBRARIES(MY_TARGET_NAME ${OpenCV_LIBS})
 #
 #    This file will define the following variables:
-#      - OpenCV_LIBS          : The list of libraries to links against.
-#      - OpenCV_LIB_DIR       : The directory where lib files are. Calling LINK_DIRECTORIES
-#                                with this path is NOT needed.
-#      - OpenCV_INCLUDE_DIRS  : The OpenCV include directories.
-#      - OpenCV_VERSION       : The  version of this OpenCV build. Example: "1.2.0"
-#      - OpenCV_VERSION_MAJOR : Major version part of OpenCV_VERSION. Example: "1"
-#      - OpenCV_VERSION_MINOR : Minor version part of OpenCV_VERSION. Example: "2"
-#      - OpenCV_VERSION_PATCH : Patch version part of OpenCV_VERSION. Example: "0"
+#      - OpenCV_LIBS                 : The list of libraries to links against.
+#      - OpenCV_LIB_DIR              : The directory where lib files are. Calling LINK_DIRECTORIES
+#                                      with this path is NOT needed.
+#      - OpenCV_INCLUDE_DIRS         : The OpenCV include directories.
+#      - OpenCV_COMPUTE_CAPABILITIES : The version of compute capability
+#      - OpenCV_VERSION              : The version of this OpenCV build. Example: "1.2.0"
+#      - OpenCV_VERSION_MAJOR        : Major version part of OpenCV_VERSION. Example: "1"
+#      - OpenCV_VERSION_MINOR        : Minor version part of OpenCV_VERSION. Example: "2"
+#      - OpenCV_VERSION_PATCH        : Patch version part of OpenCV_VERSION. Example: "0"
 #
-# ===================================================================================
+# =================================================================================================
 
+# ======================================================
+# Version Compute Capability from which library OpenCV
+# has been compiled is remembered
+# ======================================================
+SET(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC@)
 
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
 #  This variable may or may not be used below, depending on the parsing of OpenCVConfig.cmake
@@ -68,26 +74,26 @@ if(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 	endforeach(__CVLIB)
 endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 
-# For OpenCV built as static libs, we need the user to link against 
+# For OpenCV built as static libs, we need the user to link against
 #  many more dependencies:
 IF (NOT @OPENCV_BUILD_SHARED_LIB@)
 	# Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
 	LINK_DIRECTORIES("@CMAKE_BINARY_DIR@/3rdparty/lib")
 
-	SET(OpenCV_LIBS 
-		@OPENCV_LINKER_LIBS@ 
+	SET(OpenCV_LIBS
+		@OPENCV_LINKER_LIBS@
 		@IPP_LIBS@
-		@JPEG_LIBRARIES@ 
-		@PNG_LIBRARIES@ 
-		@TIFF_LIBRARIES@ 
-		@JASPER_LIBRARIES@ 
-		@HIGHGUI_LIBRARIES@ 
+		@JPEG_LIBRARIES@
+		@PNG_LIBRARIES@
+		@TIFF_LIBRARIES@
+		@JASPER_LIBRARIES@
+		@HIGHGUI_LIBRARIES@
 		${OpenCV_LIBS}) # The standard libs BEFORE (OpenCV_LIBS) since these can have "debug","optimized".
 ENDIF(NOT @OPENCV_BUILD_SHARED_LIB@)
 
 
 # ======================================================
-#  Version variables: 
+#  Version variables:
 # ======================================================
 SET(OpenCV_VERSION @OPENCV_VERSION@)
 SET(OpenCV_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)

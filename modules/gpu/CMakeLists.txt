@@ -36,28 +36,6 @@ if (HAVE_CUDA)
 	include_directories(${CUDA_INCLUDE_DIRS})
 	link_directories(${CUDA_LIBRARIES})
 
-	set(CUDA_COMPUTE_CAPABILITIES " 1.0 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute capability")
-	set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
-
-	set(CUDA_NVCC_FLAGS_NUM "")
-
-	while(NOT ${CUDA_NVCC_FLAGS_ARCH} STREQUAL "")
-	    string(REGEX MATCH "[0-9]+.[0-9]+" RESULT_NUM ${CUDA_NVCC_FLAGS_ARCH})
-	    string(REGEX MATCHALL "[0-9]" RESULT_STR ${RESULT_NUM})
-	    string(REGEX REPLACE ";" "\ " RESULT ${RESULT_STR})
-	    list(APPEND CUDA_NVCC_FLAGS_NUM ${RESULT})
-	    string(REGEX REPLACE "${RESULT_NUM}" "\ " CUDA_NVCC_FLAGS_ARCH_STR ${CUDA_NVCC_FLAGS_ARCH})
-	    string(STRIP ${CUDA_NVCC_FLAGS_ARCH_STR} CUDA_NVCC_FLAGS_ARCH)
-	endwhile()
-
-	set (loop_var "")
-	foreach( loop_var IN LISTS CUDA_NVCC_FLAGS_NUM)
-	    set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_${loop_var},code=sm_${loop_var})
-	endforeach()
-
-	message(STATUS " CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS} ")
-
-
 	if (UNIX OR APPLE)
 		set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;-fPIC;")
 		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" "-fPIC")
@@ -66,7 +44,7 @@ if (HAVE_CUDA)
 
 	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
 	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;/EHsc-;")
-	
+
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
