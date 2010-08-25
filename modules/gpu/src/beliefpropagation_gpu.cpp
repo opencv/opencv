@@ -81,12 +81,13 @@ namespace
 void cv::gpu::StereoBeliefPropagation::estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels)
 {
     ndisp = width / 4;
-    if (ndisp & 1 != 0) ndisp++;
+    if ((ndisp & 1) != 0) 
+        ndisp++;
 
     int mm =::max(width, height);
     iters = mm / 100 + 2;
 
-    levels = (int)(log(mm) + 1) * 4 / 5;
+    levels = cvRound(log((double)mm) + 1) * 4 / 5;
     if (levels == 0) levels++;
 }
 
