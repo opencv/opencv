@@ -105,6 +105,20 @@ namespace
     const float DEFAULT_DISC_SINGLE_JUMP = 10.0f;
 }
 
+void cv::gpu::StereoConstantSpaceBP::estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels, int &nr_plane)
+{
+    ndisp = (int) ((float) width / 3.14f);
+    if (ndisp & 1 != 0) ndisp++;
+
+    int mm = ::max(width, height);
+    iters = mm / 100 + ((mm > 1200)? - 4 : 4);
+
+    levels = (int)log(mm) * 2 / 3;
+    if (levels == 0) levels++;
+
+    nr_plane = (int) ((float) ndisp / pow(2.0, levels + 1));
+}
+
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, int levels_, int nr_plane_,
                                                       int msg_type_)
 

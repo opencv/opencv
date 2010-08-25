@@ -235,7 +235,7 @@ namespace cv
 
         class CV_EXPORTS CudaMem
         {
-        public:            
+        public:
             enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
 
             CudaMem();
@@ -266,7 +266,7 @@ namespace cv
             Mat createMatHeader() const;
             operator Mat() const;
 
-            //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.            
+            //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
             GpuMat createGpuMatHeader() const;
             operator GpuMat() const;
 
@@ -342,7 +342,7 @@ namespace cv
         };
 
         ////////////////////////////// Image processing //////////////////////////////
-        // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation. 
+        // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
         // xymap.type() == xymap.type() == CV_32FC1
         CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
 
@@ -376,7 +376,7 @@ namespace cv
 
             //! the default constructor
             StereoBM_GPU();
-            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8. 
+            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
             StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
@@ -405,7 +405,7 @@ namespace cv
         };
 
         ////////////////////////// StereoBeliefPropagation ///////////////////////////
-        // "Efficient Belief Propagation for Early Vision" 
+        // "Efficient Belief Propagation for Early Vision"
         // P.Felzenszwalb
 
         class CV_EXPORTS StereoBeliefPropagation
@@ -414,6 +414,8 @@ namespace cv
             enum { DEFAULT_NDISP  = 64 };
             enum { DEFAULT_ITERS  = 5  };
             enum { DEFAULT_LEVELS = 5  };
+
+            static void estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels);
 
             //! the default constructor
             explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
@@ -436,7 +438,7 @@ namespace cv
             //! Acync version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
-            
+
             //! version for user specified data term
             void operator()(const GpuMat& data, GpuMat& disparity);
             void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream);
@@ -460,7 +462,7 @@ namespace cv
 
         /////////////////////////// StereoConstantSpaceBP ///////////////////////////
         // "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
-        // Qingxiong Yang, Liang Wang†, Narendra Ahuja         
+        // Qingxiong Yang, Liang Wang†, Narendra Ahuja
         // http://vision.ai.uiuc.edu/~qyang6/
 
         class CV_EXPORTS StereoConstantSpaceBP
@@ -470,6 +472,8 @@ namespace cv
             enum { DEFAULT_ITERS    = 8   };
             enum { DEFAULT_LEVELS   = 4   };
             enum { DEFAULT_NR_PLANE = 4   };
+
+            static void estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels, int & nr_plane);
 
             //! the default constructor
             explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
@@ -524,7 +528,7 @@ namespace cv
 
         /////////////////////////// DisparityBilateralFilter ///////////////////////////
         // Disparity map refinement using joint bilateral filtering given a single color image.
-        // Qingxiong Yang, Liang Wang†, Narendra Ahuja         
+        // Qingxiong Yang, Liang Wang†, Narendra Ahuja
         // http://vision.ai.uiuc.edu/~qyang6/
 
         class CV_EXPORTS DisparityBilateralFilter

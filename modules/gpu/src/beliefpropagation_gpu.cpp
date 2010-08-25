@@ -77,6 +77,19 @@ namespace
     const float DEFAULT_DISC_SINGLE_JUMP = 1.0f;
 }
 
+
+void cv::gpu::StereoBeliefPropagation::estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels)
+{
+    ndisp = width / 4;
+    if (ndisp & 1 != 0) ndisp++;
+
+    int mm =::max(width, height);
+    iters = mm / 100 + 2;
+
+    levels = (int)(log(mm) + 1) * 4 / 5;
+    if (levels == 0) levels++;
+}
+
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int ndisp_, int iters_, int levels_, int msg_type_)
     : ndisp(ndisp_), iters(iters_), levels(levels_),
       max_data_term(DEFAULT_MAX_DATA_TERM), data_weight(DEFAULT_DATA_WEIGHT),
@@ -117,7 +130,7 @@ namespace
             CV_DbgAssert(left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
             CV_Assert(left.type() == CV_8UC1 || left.type() == CV_8UC3);
 
-            rows = left.rows; 
+            rows = left.rows;
             cols = left.cols;
 
             int divisor = (int)pow(2.f, rthis.levels - 1.0f);
@@ -134,14 +147,14 @@ namespace
 
             calcBP(disp, stream);
         }
-        
+
         void operator()(const GpuMat& data, GpuMat& disp, const cudaStream_t& stream)
         {
             CV_Assert((data.type() == rthis.msg_type) && (data.rows % rthis.ndisp == 0));
-            
+
             rows = data.rows / rthis.ndisp;
             cols = data.cols;
-            
+
             int divisor = (int)pow(2.f, rthis.levels - 1.0f);
             int lowest_cols = cols / divisor;
             int lowest_rows = rows / divisor;
@@ -198,7 +211,7 @@ namespace
             rows_all.resize(rthis.levels);
 
             cols_all[0] = cols;
-            rows_all[0] = rows;           
+            rows_all[0] = rows;
         }
 
         void calcBP(GpuMat& disp, const cudaStream_t& stream)
@@ -279,14 +292,14 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuM
     impl(left, right, disp, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp) 
-{ 
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp)
+{
     ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
     impl(data, disp, 0);
 }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp, Stream& stream) 
-{ 
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp, Stream& stream)
+{
     ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
     impl(data, disp, StreamAccessor::getStream(stream));
 }
