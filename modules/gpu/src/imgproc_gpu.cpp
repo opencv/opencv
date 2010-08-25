@@ -49,8 +49,10 @@ using namespace cv::gpu;
 
 void cv::gpu::remap(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
-void cv::gpu::colorizeDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
+void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
+void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, const Stream&) { throw_nogpu(); }
 void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }
+void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&, const Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -62,11 +64,11 @@ namespace cv { namespace gpu
 
         extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps);
 
-        void colorizeDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp);
-        void colorizeDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp);
+        void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
+        void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
 
-        void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q);
-        void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q);
+        void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
+        void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
     }
 }}
 
@@ -109,47 +111,63 @@ void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int
 namespace
 {
     template <typename T>
-    void colorizeDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp)
-    {
-        impl::colorizeDisp_gpu((DevMem2D_<T>)src, dst, ndisp);
+    void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
+    {        
+        GpuMat out;
+        if (&dst != &src)
+            out = dst;
+        out.create(src.size(), CV_8UC4);
+
+        impl::drawColorDisp_gpu((DevMem2D_<T>)src, out, ndisp, stream);
+
+        dst = out;
     }
+
+    typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);
+
+    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};
 }
 
-void cv::gpu::colorizeDisp(const GpuMat& src, GpuMat& dst, int ndisp)
+void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp)
 {
-    typedef void (*colorizeDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp);
-
-    static const colorizeDisp_caller_t callers[] = {colorizeDisp_caller<uchar>, 0, 0, colorizeDisp_caller<short>, 0, 0, 0, 0};
     CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
-
-    GpuMat out;
-    if (&dst != &src)
-        out = dst;
-    out.create(src.size(), CV_8UC4);
     
-    callers[src.type()](src, out, ndisp);
-    dst = out;
+    drawColorDisp_callers[src.type()](src, dst, ndisp, 0);
+}
+
+void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, const Stream& stream)
+{
+    CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
+    
+    drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
 }
 
 namespace
 {
     template <typename T>
-    void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
-    {
-        impl::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>());
+    void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream)
+    {        
+        xyzw.create(disp.rows, disp.cols, CV_32FC4);
+        impl::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
     }
+    
+    typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream);
+    
+    const reprojectImageTo3D_caller_t reprojectImageTo3D_callers[] = {reprojectImageTo3D_caller<unsigned char>, 0, 0, reprojectImageTo3D_caller<short>, 0, 0, 0, 0};
 }
 
 void cv::gpu::reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
 {
-    typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
-
-    static const reprojectImageTo3D_caller_t callers[] = {reprojectImageTo3D_caller<uchar>, 0, 0, reprojectImageTo3D_caller<short>, 0, 0, 0, 0};
     CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
-
-    xyzw.create(disp.rows, disp.cols, CV_32FC4);
     
-    callers[disp.type()](disp, xyzw, Q);
+    reprojectImageTo3D_callers[disp.type()](disp, xyzw, Q, 0);
+}
+
+void cv::gpu::reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream)
+{
+    CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
+    
+    reprojectImageTo3D_callers[disp.type()](disp, xyzw, Q, StreamAccessor::getStream(stream));
 }
 
 #endif /* !defined (HAVE_CUDA) */

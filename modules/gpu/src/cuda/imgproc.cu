@@ -182,7 +182,7 @@ namespace cv { namespace gpu { namespace impl
     }
 }}}
 
-/////////////////////////////////// colorizeDisp ///////////////////////////////////////////////
+/////////////////////////////////// drawColorDisp ///////////////////////////////////////////////
 
 namespace imgproc
 {
@@ -240,14 +240,15 @@ namespace imgproc
             res.y = p;
             res.z = V;
         }
-        unsigned int b = (unsigned int)(max(0.f, min (res.x, 1.f)) * 255.f);
-        unsigned int g = (unsigned int)(max(0.f, min (res.y, 1.f)) * 255.f);
-        unsigned int r = (unsigned int)(max(0.f, min (res.z, 1.f)) * 255.f);
+        const unsigned int b = (unsigned int)(max(0.f, min (res.x, 1.f)) * 255.f);
+        const unsigned int g = (unsigned int)(max(0.f, min (res.y, 1.f)) * 255.f);
+        const unsigned int r = (unsigned int)(max(0.f, min (res.z, 1.f)) * 255.f);
+        const unsigned int a = 255U;
 
-        return (r << 16) + (g << 8) + b;    
+        return (a << 24) + (r << 16) + (g << 8) + b;    
     } 
 
-    __global__ void colorizeDisp(uchar* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
+    __global__ void drawColorDisp(uchar* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
     {
         const int x = (blockIdx.x * blockDim.x + threadIdx.x) << 2;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -267,7 +268,7 @@ namespace imgproc
         }
     }
 
-    __global__ void colorizeDisp(short* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
+    __global__ void drawColorDisp(short* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
     {
         const int x = (blockIdx.x * blockDim.x + threadIdx.x) << 1;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -288,30 +289,34 @@ namespace imgproc
 
 namespace cv { namespace gpu { namespace impl 
 {
-    void colorizeDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp)
+    void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
     {
         dim3 threads(16, 16, 1);
         dim3 grid(1, 1, 1);
         grid.x = divUp(src.cols, threads.x << 2);
         grid.y = divUp(src.rows, threads.y);
          
-        imgproc::colorizeDisp<<<grid, threads>>>(src.ptr, src.step, dst.ptr, dst.step, src.cols, src.rows, ndisp);
-        cudaSafeCall( cudaThreadSynchronize() ); 
+        imgproc::drawColorDisp<<<grid, threads, 0, stream>>>(src.ptr, src.step, dst.ptr, dst.step, src.cols, src.rows, ndisp);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() ); 
     }
 
-    void colorizeDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp)
+    void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
         grid.x = divUp(src.cols, threads.x << 1);
         grid.y = divUp(src.rows, threads.y);
          
-        imgproc::colorizeDisp<<<grid, threads>>>(src.ptr, src.step / sizeof(short), dst.ptr, dst.step, src.cols, src.rows, ndisp);
-        cudaSafeCall( cudaThreadSynchronize() );
+        imgproc::drawColorDisp<<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(short), dst.ptr, dst.step, src.cols, src.rows, ndisp);
+        
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
     }
 }}}
 
-/////////////////////////////////// colorizeDisp ///////////////////////////////////////////////
+/////////////////////////////////// reprojectImageTo3D ///////////////////////////////////////////////
 
 namespace imgproc
 {
@@ -351,7 +356,7 @@ namespace imgproc
 namespace cv { namespace gpu { namespace impl 
 {
     template <typename T>
-    inline void reprojectImageTo3D_caller(const DevMem2D_<T>& disp, const DevMem2Df& xyzw, const float* q)
+    inline void reprojectImageTo3D_caller(const DevMem2D_<T>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -360,18 +365,19 @@ namespace cv { namespace gpu { namespace impl
 
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cq, q, 16 * sizeof(float)) );
 
-        imgproc::reprojectImageTo3D<<<grid, threads>>>(disp.ptr, disp.step / sizeof(T), xyzw.ptr, xyzw.step / sizeof(float), disp.rows, disp.cols);
+        imgproc::reprojectImageTo3D<<<grid, threads, 0, stream>>>(disp.ptr, disp.step / sizeof(T), xyzw.ptr, xyzw.step / sizeof(float), disp.rows, disp.cols);
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q)
+    void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
     {
-        reprojectImageTo3D_caller(disp, xyzw, q);
+        reprojectImageTo3D_caller(disp, xyzw, q, stream);
     }
 
-    void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q)
+    void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
     {
-        reprojectImageTo3D_caller(disp, xyzw, q);
+        reprojectImageTo3D_caller(disp, xyzw, q, stream);
     }
 }}}
