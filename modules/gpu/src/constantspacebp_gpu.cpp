@@ -48,6 +48,8 @@ using namespace std;
 
 #if !defined (HAVE_CUDA)
 
+void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int&, int&, int&, int&) { throw_nogpu(); }
+
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, int) { throw_nogpu(); }
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float, float, float, float, int, int) { throw_nogpu(); }
 
@@ -105,10 +107,9 @@ namespace
     const float DEFAULT_DISC_SINGLE_JUMP = 10.0f;
 }
 
-void cv::gpu::StereoConstantSpaceBP::estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels, int &nr_plane)
+void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)
 {
     ndisp = (int) ((float) width / 3.14f);
-    if (ndisp & 1 != 0) ndisp++;
     if ((ndisp & 1) != 0) 
         ndisp++;
 

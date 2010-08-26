@@ -44,13 +44,12 @@
 
 using namespace cv::gpu;
 
-
 /////////////////////////////////// Remap ///////////////////////////////////////////////
 namespace imgproc
 {
     texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap;
 
-    __global__ void kernel_remap(const float *mapx, const float *mapy, size_t map_step, unsigned char* out, size_t out_step, int width, int height)
+    __global__ void remap_1c(const float* mapx, const float* mapy, size_t map_step, uchar* out, size_t out_step, int width, int height)
     {    
         int x = blockDim.x * blockIdx.x + threadIdx.x;
         int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -65,26 +64,87 @@ namespace imgproc
         }
     }
 
+    __global__ void remap_3c(const uchar* src, size_t src_step, const float* mapx, const float* mapy, size_t map_step, 
+                             uchar* dst, size_t dst_step, int width, int height)
+    {    
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < width && y < height)
+        {
+            const int idx = y * (map_step >> 2) + x; /* map_step >> 2  <=> map_step / sizeof(float)*/
+
+            const float xcoo = mapx[idx];
+            const float ycoo = mapy[idx];
+            
+            uchar3 out = make_uchar3(0, 0, 0);
+
+            if (xcoo >= 0 && xcoo < width - 1 && ycoo >= 0 && ycoo < height - 1)
+            {
+                const int x1 = __float2int_rd(xcoo);
+                const int y1 = __float2int_rd(ycoo);
+                const int x2 = x1 + 1;
+                const int y2 = y1 + 1;
+                
+                uchar3 src_reg = *(uchar3*)(src + y1 * src_step + 3 * x1);
+                out.x += src_reg.x * (x2 - xcoo) * (y2 - ycoo);
+                out.y += src_reg.y * (x2 - xcoo) * (y2 - ycoo);
+                out.z += src_reg.z * (x2 - xcoo) * (y2 - ycoo);
+
+                src_reg = *(uchar3*)(src + y1 * src_step + 3 * x2);
+                
+                out.x += src_reg.x * (xcoo - x1) * (y2 - ycoo);
+                out.y += src_reg.y * (xcoo - x1) * (y2 - ycoo);
+                out.z += src_reg.z * (xcoo - x1) * (y2 - ycoo);
+
+                src_reg = *(uchar3*)(src + y2 * src_step + 3 * x1);
+                
+                out.x += src_reg.x * (x2 - xcoo) * (ycoo - y1);
+                out.y += src_reg.y * (x2 - xcoo) * (ycoo - y1);
+                out.z += src_reg.z * (x2 - xcoo) * (ycoo - y1);
+
+                src_reg = *(uchar3*)(src + y2 * src_step + 3 * x2);
+                
+                out.x += src_reg.x * (xcoo - x1) * (ycoo - y1);
+                out.y += src_reg.y * (xcoo - x1) * (ycoo - y1);
+                out.z += src_reg.z * (xcoo - x1) * (ycoo - y1);
+            }
+
+            *(uchar3*)(dst + y * dst_step + 3 * x) = out;
+        }
+    }
 }
 
 namespace cv { namespace gpu { namespace impl 
 {
-    extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst)
+    void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
     {
-        dim3 block(16, 16, 1);
+        dim3 threads(16, 16, 1);
         dim3 grid(1, 1, 1);
-        grid.x = divUp(dst.cols, block.x);
-        grid.y = divUp(dst.rows, block.y);
+        grid.x = divUp(dst.cols, threads.x);
+        grid.y = divUp(dst.rows, threads.y);
 
         imgproc::tex_remap.filterMode = cudaFilterModeLinear;	    
         imgproc::tex_remap.addressMode[0] = imgproc::tex_remap.addressMode[1] = cudaAddressModeWrap;
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D(0, imgproc::tex_remap, src.ptr, desc, dst.cols, dst.rows, src.step) );
+        cudaSafeCall( cudaBindTexture2D(0, imgproc::tex_remap, src.ptr, desc, src.cols, src.rows, src.step) );
 
-        imgproc::kernel_remap<<<grid, block>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
+        imgproc::remap_1c<<<grid, threads>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
 
         cudaSafeCall( cudaThreadSynchronize() );  
         cudaSafeCall( cudaUnbindTexture(imgproc::tex_remap) );
+    }
+    
+    void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+        grid.x = divUp(dst.cols, threads.x);
+        grid.y = divUp(dst.rows, threads.y);
+
+        imgproc::remap_3c<<<grid, threads>>>(src.ptr, src.step, xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
+
+        cudaSafeCall( cudaThreadSynchronize() ); 
     }
 }}}
 

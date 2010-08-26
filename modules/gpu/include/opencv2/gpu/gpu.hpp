@@ -415,7 +415,7 @@ namespace cv
             enum { DEFAULT_ITERS  = 5  };
             enum { DEFAULT_LEVELS = 5  };
 
-            static void estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels);
+            static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
 
             //! the default constructor
             explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
@@ -473,7 +473,7 @@ namespace cv
             enum { DEFAULT_LEVELS   = 4   };
             enum { DEFAULT_NR_PLANE = 4   };
 
-            static void estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels, int & nr_plane);
+            static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane);
 
             //! the default constructor
             explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,

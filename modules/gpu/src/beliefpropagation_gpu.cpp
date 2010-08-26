@@ -48,6 +48,8 @@ using namespace std;
 
 #if !defined (HAVE_CUDA)
 
+void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_nogpu(); }
+
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, int) { throw_nogpu(); }
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, float, float, float, float, int) { throw_nogpu(); }
 
@@ -78,13 +80,13 @@ namespace
 }
 
 
-void cv::gpu::StereoBeliefPropagation::estimateRecopmmendedParams( int width, int height, int & ndisp, int & iters, int & levels)
+void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
 {
     ndisp = width / 4;
     if ((ndisp & 1) != 0) 
         ndisp++;
 
-    int mm =::max(width, height);
+    int mm = ::max(width, height);
     iters = mm / 100 + 2;
 
     levels = (int)(log(static_cast<double>(mm)) + 1) * 4 / 5;

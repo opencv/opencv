@@ -60,7 +60,8 @@ namespace cv { namespace gpu
 { 
     namespace impl 
     {
-        extern "C" void remap_gpu(const DevMem2D& src, const DevMem2D_<float>& xmap, const DevMem2D_<float>& ymap, DevMem2D dst);
+        void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
+        void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
 
         extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps);
 
@@ -73,14 +74,21 @@ namespace cv { namespace gpu
 }}
 
 void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst)
-{ 
-    CV_DbgAssert(xmap.data && xmap.cols == ymap.cols && xmap.rows == ymap.rows);
-    CV_Assert(xmap.type() == CV_32F && ymap.type() == CV_32F);
+{
+    typedef void (*remap_gpu_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
+    static const remap_gpu_t callers[] = {impl::remap_gpu_1c, 0, impl::remap_gpu_3c};
 
-    dst.create(xmap.size(), src.type());
-    CV_Assert(dst.data != src.data);   
+    CV_Assert((src.type() == CV_8U || src.type() == CV_8UC3) && xmap.type() == CV_32F && ymap.type() == CV_32F);
+
+    GpuMat out;
+    if (dst.data != src.data)
+        out = dst;
+
+    out.create(xmap.size(), src.type());
     
-    impl::remap_gpu(src, xmap, ymap, dst);
+    callers[src.channels() - 1](src, xmap, ymap, out);
+    
+    dst = out;
 }
 
 
@@ -114,7 +122,7 @@ namespace
     void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
     {        
         GpuMat out;
-        if (&dst != &src)
+        if (dst.data != src.data)
             out = dst;
         out.create(src.size(), CV_8UC4);
 
