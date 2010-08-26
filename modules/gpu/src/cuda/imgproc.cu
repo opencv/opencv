@@ -86,31 +86,39 @@ namespace imgproc
                 const int x2 = x1 + 1;
                 const int y2 = y1 + 1;
                 
-                uchar3 src_reg = *(uchar3*)(src + y1 * src_step + 3 * x1);
-                out.x += src_reg.x * (x2 - xcoo) * (y2 - ycoo);
-                out.y += src_reg.y * (x2 - xcoo) * (y2 - ycoo);
-                out.z += src_reg.z * (x2 - xcoo) * (y2 - ycoo);
+                uchar src_reg = *(src + y1 * src_step + 3 * x1);
+                out.x += src_reg * (x2 - xcoo) * (y2 - ycoo);
+                src_reg = *(src + y1 * src_step + 3 * x1 + 1);
+                out.y += src_reg * (x2 - xcoo) * (y2 - ycoo);
+                src_reg = *(src + y1 * src_step + 3 * x1 + 2);
+                out.z += src_reg * (x2 - xcoo) * (y2 - ycoo);
 
-                src_reg = *(uchar3*)(src + y1 * src_step + 3 * x2);
-                
-                out.x += src_reg.x * (xcoo - x1) * (y2 - ycoo);
-                out.y += src_reg.y * (xcoo - x1) * (y2 - ycoo);
-                out.z += src_reg.z * (xcoo - x1) * (y2 - ycoo);
+                src_reg = *(src + y1 * src_step + 3 * x2);                
+                out.x += src_reg * (xcoo - x1) * (y2 - ycoo);
+                src_reg = *(src + y1 * src_step + 3 * x2 + 1); 
+                out.y += src_reg * (xcoo - x1) * (y2 - ycoo);
+                src_reg = *(src + y1 * src_step + 3 * x2 + 2); 
+                out.z += src_reg * (xcoo - x1) * (y2 - ycoo);
 
-                src_reg = *(uchar3*)(src + y2 * src_step + 3 * x1);
-                
-                out.x += src_reg.x * (x2 - xcoo) * (ycoo - y1);
-                out.y += src_reg.y * (x2 - xcoo) * (ycoo - y1);
-                out.z += src_reg.z * (x2 - xcoo) * (ycoo - y1);
+                src_reg = *(src + y2 * src_step + 3 * x1);                
+                out.x += src_reg * (x2 - xcoo) * (ycoo - y1);
+                src_reg = *(src + y2 * src_step + 3 * x1 + 1); 
+                out.y += src_reg * (x2 - xcoo) * (ycoo - y1);
+                src_reg = *(src + y2 * src_step + 3 * x1 + 2); 
+                out.z += src_reg * (x2 - xcoo) * (ycoo - y1);
 
-                src_reg = *(uchar3*)(src + y2 * src_step + 3 * x2);
-                
-                out.x += src_reg.x * (xcoo - x1) * (ycoo - y1);
-                out.y += src_reg.y * (xcoo - x1) * (ycoo - y1);
-                out.z += src_reg.z * (xcoo - x1) * (ycoo - y1);
+                src_reg = *(src + y2 * src_step + 3 * x2);                
+                out.x += src_reg * (xcoo - x1) * (ycoo - y1);
+                src_reg = *(src + y2 * src_step + 3 * x2 + 1);  
+                out.y += src_reg * (xcoo - x1) * (ycoo - y1);
+                src_reg = *(src + y2 * src_step + 3 * x2 + 2);  
+                out.z += src_reg * (xcoo - x1) * (ycoo - y1);
             }
 
-            *(uchar3*)(dst + y * dst_step + 3 * x) = out;
+            /**(uchar3*)(dst + y * dst_step + 3 * x) = out;*/
+            *(dst + y * dst_step + 3 * x) = out.x;
+            *(dst + y * dst_step + 3 * x + 1) = out.y;
+            *(dst + y * dst_step + 3 * x + 2) = out.z;
         }
     }
 }
