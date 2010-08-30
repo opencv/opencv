@@ -1316,60 +1316,62 @@ SVBkSb( int m, int n, const T* w, int incw,
 }
 
 
-SVD& SVD::operator ()(const Mat& a, int flags)
+static void _SVDcompute( const Mat& a, Mat& w, Mat* u, Mat* vt, int flags )
 {
     integer m = a.rows, n = a.cols, mn = std::max(m, n), nm = std::min(m, n);
     int type = a.type(), elem_size = (int)a.elemSize();
+    bool compute_uv = u && vt;
     
-    if( flags & NO_UV )
+    if( flags & SVD::NO_UV )
     {
-        u.release();
-        vt.release();
+        if(u) u->release();
+        if(vt) vt->release();
+        u = vt = 0;
     }
-    else
+    
+    if( compute_uv )
     {
-        u.create( (int)m, (int)((flags & FULL_UV) ? m : nm), type );
-        vt.create( (int)((flags & FULL_UV) ? n : nm), n, type );
+        u->create( (int)m, (int)((flags & SVD::FULL_UV) ? m : nm), type );
+        vt->create( (int)((flags & SVD::FULL_UV) ? n : nm), n, type );
     }
-
+    
     w.create(nm, 1, type);
-
+    
     Mat _a = a;
     int a_ofs = 0, work_ofs=0, iwork_ofs=0, buf_size = 0;
     bool temp_a = false;
     double u1=0, v1=0, work1=0;
     float uf1=0, vf1=0, workf1=0;
     integer lda, ldu, ldv, lwork=-1, iwork1=0, info=0;
-    char mode[] = {u.data || vt.data ? 'S' : 'N', '\0'};
-
-    if( m != n && !(flags & NO_UV) && (flags & FULL_UV) )
+    char mode[] = {compute_uv ? 'S' : 'N', '\0'};
+    
+    if( m != n && compute_uv && (flags & SVD::FULL_UV) )
         mode[0] = 'A';
-
-    if( !(flags & MODIFY_A) )
+    
+    if( !(flags & SVD::MODIFY_A) )
     {
         if( mode[0] == 'N' || mode[0] == 'A' )
             temp_a = true;
-        else if( ((vt.data && a.size() == vt.size()) || (u.data && a.size() == u.size())) &&
-                  mode[0] == 'S' )
+        else if( compute_uv && (a.size() == vt->size() || a.size() == u->size()) && mode[0] == 'S' )
             mode[0] = 'O';
     }
-
+    
     lda = a.cols;
     ldv = ldu = mn;
-
+    
     if( type == CV_32F )
     {
         sgesdd_(mode, &n, &m, (float*)a.data, &lda, (float*)w.data,
-            &vf1, &ldv, &uf1, &ldu, &workf1, &lwork, &iwork1, &info );
+                &vf1, &ldv, &uf1, &ldu, &workf1, &lwork, &iwork1, &info );
         lwork = cvRound(workf1);
     }
     else
     {
         dgesdd_(mode, &n, &m, (double*)a.data, &lda, (double*)w.data,
-            &v1, &ldv, &u1, &ldu, &work1, &lwork, &iwork1, &info );
+                &v1, &ldv, &u1, &ldu, &work1, &lwork, &iwork1, &info );
         lwork = cvRound(work1);
     }
-
+    
     assert(info == 0);
     if( temp_a )
     {
@@ -1384,78 +1386,100 @@ SVD& SVD::operator ()(const Mat& a, int flags)
     
     AutoBuffer<uchar> buf(buf_size);
     uchar* buffer = (uchar*)buf;
-
+    
     if( temp_a )
     {
         _a = Mat(a.rows, a.cols, type, buffer );
         a.copyTo(_a);
     }
-
-    if( !(flags & MODIFY_A) && !temp_a )
+    
+    if( !(flags & SVD::MODIFY_A) && !temp_a )
     {
-        if( vt.data && a.size() == vt.size() )
+        if( compute_uv && a.size() == vt->size() )
         {
-            a.copyTo(vt);
-            _a = vt;
+            a.copyTo(*vt);
+            _a = *vt;
         }
-        else if( u.data && a.size() == u.size() )
+        else if( compute_uv && a.size() == u->size() )
         {
-            a.copyTo(u);
-            _a = u;
+            a.copyTo(*u);
+            _a = *u;
         }
     }
-
-    if( mode[0] != 'N' )
+    
+    if( compute_uv )
     {
-        ldv = (int)(vt.step ? vt.step/elem_size : vt.cols);
-        ldu = (int)(u.step ? u.step/elem_size : u.cols);
+        ldv = (int)(vt->step ? vt->step/elem_size : vt->cols);
+        ldu = (int)(u->step ? u->step/elem_size : u->cols);
     }
-
+    
     lda = (int)(_a.step ? _a.step/elem_size : _a.cols);
     if( type == CV_32F )
     {
         sgesdd_(mode, &n, &m, (float*)_a.data, &lda, (float*)w.data,
-            (float*)vt.data, &ldv, (float*)u.data, &ldu,
-            (float*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
+                (float*)vt->data, &ldv, (float*)u->data, &ldu,
+                (float*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
     }
     else
     {
         dgesdd_(mode, &n, &m, (double*)_a.data, &lda, (double*)w.data,
-            (double*)vt.data, &ldv, (double*)u.data, &ldu,
-            (double*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
+                (double*)vt->data, &ldv, (double*)u->data, &ldu,
+                (double*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
     }
     CV_Assert(info >= 0);
     if(info != 0)
     {
-        u = Scalar(0.);
-        vt = Scalar(0.);
+        *u = Scalar(0.);
+        *vt = Scalar(0.);
         w = Scalar(0.);
     }
+}       
+    
+    
+void SVD::compute( const Mat& a, Mat& w, Mat& u, Mat& vt, int flags )
+{
+    _SVDcompute(a, w, &u, &vt, flags);
+}
+
+void SVD::compute( const Mat& a, Mat& w, int flags )
+{
+    _SVDcompute(a, w, 0, 0, flags);
+}
+    
+void SVD::backSubst( const Mat& w, const Mat& u, const Mat& vt, const Mat& rhs, Mat& dst )
+{
+    int type = w.type(), esz = (int)w.elemSize();
+    int m = u.rows, n = vt.cols, nb = rhs.data ? rhs.cols : m;
+    AutoBuffer<double> buffer(nb);
+    CV_Assert( u.data && vt.data && w.data );
+    
+    if( rhs.data )
+        CV_Assert( rhs.type() == type && rhs.rows == m );
+    
+    dst.create( n, nb, type );
+    if( type == CV_32F )
+        SVBkSb(m, n, (float*)w.data, 1, (float*)u.data, (int)(u.step/esz), false,
+               (float*)vt.data, (int)(vt.step/esz), true, (float*)rhs.data, (int)(rhs.step/esz),
+               nb, (float*)dst.data, (int)(dst.step/esz), buffer, 10*FLT_EPSILON );
+    else if( type == CV_64F )
+        SVBkSb(m, n, (double*)w.data, 1, (double*)u.data, (int)(u.step/esz), false,
+               (double*)vt.data, (int)(vt.step/esz), true, (double*)rhs.data, (int)(rhs.step/esz),
+               nb, (double*)dst.data, (int)(dst.step/esz), buffer, 2*DBL_EPSILON );
+    else
+        CV_Error( CV_StsUnsupportedFormat, "" );
+}
+
+    
+SVD& SVD::operator ()(const Mat& a, int flags)
+{
+    _SVDcompute(a, w, &u, &vt, flags);
     return *this;
 }
 
 
 void SVD::backSubst( const Mat& rhs, Mat& dst ) const
 {
-    int type = w.type(), esz = (int)w.elemSize();
-    int m = u.rows, n = vt.cols, nb = rhs.data ? rhs.cols : m;
-    AutoBuffer<double> buffer(nb);
-    CV_Assert( u.data && vt.data && w.data );
-
-    if( rhs.data )
-        CV_Assert( rhs.type() == type && rhs.rows == m );
-
-    dst.create( n, nb, type );
-    if( type == CV_32F )
-        SVBkSb(m, n, (float*)w.data, 1, (float*)u.data, (int)(u.step/esz), false,
-            (float*)vt.data, (int)(vt.step/esz), true, (float*)rhs.data, (int)(rhs.step/esz),
-            nb, (float*)dst.data, (int)(dst.step/esz), buffer, 10*FLT_EPSILON );
-    else if( type == CV_64F )
-        SVBkSb(m, n, (double*)w.data, 1, (double*)u.data, (int)(u.step/esz), false,
-            (double*)vt.data, (int)(vt.step/esz), true, (double*)rhs.data, (int)(rhs.step/esz),
-            nb, (double*)dst.data, (int)(dst.step/esz), buffer, 2*DBL_EPSILON );
-    else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+    backSubst( w, u, vt, rhs, dst );
 }
 
 }

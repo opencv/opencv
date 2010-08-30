@@ -258,7 +258,7 @@ template<typename _Tp, int m, int n> inline Mat::Mat(const Matx<_Tp,m,n>& M, boo
     {
         rows = m;
         cols = n;
-        step = sizeof(_Tp);
+        step = n*sizeof(_Tp);
         data = datastart = (uchar*)M.val;
         dataend = datastart + rows*step;
     }
@@ -649,6 +649,35 @@ inline void SVD::solveZ( const Mat& m, Mat& dst )
     svd.vt.row(svd.vt.rows-1).reshape(1,svd.vt.cols).copyTo(dst);
 }
 
+template<typename _Tp, int m, int n, int nm> inline void
+    SVD::compute( const Matx<_Tp, m, n>& a, Matx<_Tp, nm, 1>& w, Matx<_Tp, m, nm>& u, Matx<_Tp, n, nm>& vt )
+{
+    assert( nm == MIN(m, n));
+    Mat _a(a, false), _u(u, false), _w(w, false), _vt(vt, false);
+    SVD::compute(_a, _w, _u, _vt);
+    CV_Assert(_w.data == (uchar*)&w.val[0] && _u.data == (uchar*)&u.val[0] && _vt.data == (uchar*)&vt.val[0]);
+}
+    
+template<typename _Tp, int m, int n, int nm> inline void
+SVD::compute( const Matx<_Tp, m, n>& a, Matx<_Tp, nm, 1>& w )
+{
+    assert( nm == MIN(m, n));
+    Mat _a(a, false), _w(w, false);
+    SVD::compute(_a, _w);
+    CV_Assert(_w.data == (uchar*)&w.val[0]);
+}
+    
+template<typename _Tp, int m, int n, int nm, int nb> inline void
+SVD::backSubst( const Matx<_Tp, nm, 1>& w, const Matx<_Tp, m, nm>& u,
+                const Matx<_Tp, n, nm>& vt, const Matx<_Tp, m, nb>& rhs,
+                Matx<_Tp, n, nb>& dst )
+{
+    assert( nm == MIN(m, n));
+    Mat _u(u, false), _w(w, false), _vt(vt, false), _rhs(_rhs, false), _dst(dst, false);
+    SVD::backSubst(_w, _u, _vt, _rhs, _dst);
+    CV_Assert(_dst.data == (uchar*)&dst.val[0]);
+}
+    
 ///////////////////////////////// Mat_<_Tp> ////////////////////////////////////
 
 template<typename _Tp> inline Mat_<_Tp>::Mat_() :

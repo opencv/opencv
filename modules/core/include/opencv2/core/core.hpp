@@ -2046,6 +2046,21 @@ public:
     //! the operator that performs SVD. The previously allocated SVD::u, SVD::w are SVD::vt are released.
     SVD& operator ()( const Mat& m, int flags=0 );
 
+    //! decomposes matrix and stores the results to user-provided matrices
+    static void compute( const Mat& m, Mat& w, Mat& u, Mat& vt, int flags=0 );
+    //! computes singular values of a matrix
+    static void compute( const Mat& m, Mat& w, int flags=0 );
+    //! performs back substitution
+    static void backSubst( const Mat& w, const Mat& u, const Mat& vt,
+                           const Mat& rhs, Mat& dst );
+    
+    template<typename _Tp, int m, int n, int nm> static void compute( const Matx<_Tp, m, n>& a,
+        Matx<_Tp, nm, 1>& w, Matx<_Tp, m, nm>& u, Matx<_Tp, n, nm>& vt );
+    template<typename _Tp, int m, int n, int nm> static void compute( const Matx<_Tp, m, n>& a,
+        Matx<_Tp, nm, 1>& w );
+    template<typename _Tp, int m, int n, int nm, int nb> static void backSubst( const Matx<_Tp, nm, 1>& w,
+        const Matx<_Tp, m, nm>& u, const Matx<_Tp, n, nm>& vt, const Matx<_Tp, m, nb>& rhs, Matx<_Tp, n, nb>& dst );
+    
     //! finds dst = arg min_{|dst|=1} |m*dst|
     static void solveZ( const Mat& m, Mat& dst );
     //! performs back substitution, so that dst is the solution or pseudo-solution of m*dst = rhs, where m is the decomposed matrix 
