@@ -75,8 +75,8 @@ __device__ int SQ(int a)
 }
 
 template<int RADIUS>
-__device__ unsigned int CalcSSD(unsigned int *col_ssd_cache, unsigned int *col_ssd)
-{
+__device__ unsigned int CalcSSD(volatile unsigned int *col_ssd_cache, volatile unsigned int *col_ssd)
+{	
     unsigned int cache = 0;
     unsigned int cache2 = 0;
 
@@ -97,18 +97,25 @@ __device__ unsigned int CalcSSD(unsigned int *col_ssd_cache, unsigned int *col_s
 }
 
 template<int RADIUS>
-__device__ uint2 MinSSD(unsigned int *col_ssd_cache, unsigned int *col_ssd)
+__device__ uint2 MinSSD(volatile unsigned int *col_ssd_cache, volatile unsigned int *col_ssd)
 {
     unsigned int ssd[N_DISPARITIES];
 
     //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * RADIUS)
     ssd[0] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 0 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[1] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 1 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[2] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 2 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[3] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 3 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[4] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 4 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[5] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 5 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[6] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 6 * (BLOCK_W + 2 * RADIUS));
+	__syncthreads();
     ssd[7] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 7 * (BLOCK_W + 2 * RADIUS));
 
     int mssd = min(min(min(ssd[0], ssd[1]), min(ssd[4], ssd[5])), min(min(ssd[2], ssd[3]), min(ssd[6], ssd[7])));
@@ -124,7 +131,7 @@ __device__ uint2 MinSSD(unsigned int *col_ssd_cache, unsigned int *col_ssd)
 }
 
 template<int RADIUS>
-__device__ void StepDown(int idx1, int idx2, unsigned char* imageL, unsigned char* imageR, int d, unsigned int *col_ssd)
+__device__ void StepDown(int idx1, int idx2, unsigned char* imageL, unsigned char* imageR, int d, volatile unsigned int *col_ssd)
 {
     unsigned char leftPixel1;
     unsigned char leftPixel2;
@@ -191,7 +198,7 @@ __device__ void StepDown(int idx1, int idx2, unsigned char* imageL, unsigned cha
 }
 
 template<int RADIUS>
-__device__ void InitColSSD(int x_tex, int y_tex, int im_pitch, unsigned char* imageL, unsigned char* imageR, int d, unsigned int *col_ssd)
+__device__ void InitColSSD(int x_tex, int y_tex, int im_pitch, unsigned char* imageL, unsigned char* imageR, int d, volatile unsigned int *col_ssd)
 {
     unsigned char leftPixel1;
     int idx;
@@ -229,11 +236,11 @@ template<int RADIUS>
 __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t img_step, unsigned char* disp, size_t disp_pitch, int maxdisp)
 {
     extern __shared__ unsigned int col_ssd_cache[];
-    unsigned int *col_ssd = col_ssd_cache + BLOCK_W + threadIdx.x;
-    unsigned int *col_ssd_extra = threadIdx.x < (2 * RADIUS) ? col_ssd + BLOCK_W : 0;  //#define N_DIRTY_PIXELS (2 * RADIUS)
+    volatile unsigned int *col_ssd = col_ssd_cache + BLOCK_W + threadIdx.x;
+    volatile unsigned int *col_ssd_extra = threadIdx.x < (2 * RADIUS) ? col_ssd + BLOCK_W : 0;  //#define N_DIRTY_PIXELS (2 * RADIUS)
 
     //#define X (blockIdx.x * BLOCK_W + threadIdx.x + STEREO_MAXD)
-    int X = (blockIdx.x * BLOCK_W + threadIdx.x + maxdisp);
+    int X = (blockIdx.x * BLOCK_W + threadIdx.x + maxdisp + RADIUS);
     //#define Y (__mul24(blockIdx.y, ROWSperTHREAD) + RADIUS)
     #define Y (blockIdx.y * ROWSperTHREAD + RADIUS)
     //int Y = blockIdx.y * ROWSperTHREAD + RADIUS;
