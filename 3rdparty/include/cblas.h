@@ -37,11 +37,28 @@ static __inline double r_sign(real *a, real *b)
     return *b >= 0 ? x : -x;
 }
 
+extern const unsigned char lapack_toupper_tab[];
+#define lapack_toupper(c) ((char)lapack_toupper_tab[(unsigned char)(c)])
+
+extern const unsigned char lapack_lamch_tab[];
+extern const doublereal lapack_dlamch_tab[];
+extern const doublereal lapack_slamch_tab[];
+    
 static __inline logical lsame_(char *ca, char *cb)
 {
-    return toupper(ca[0]) == toupper(cb[0]);
+    return lapack_toupper(ca[0]) == lapack_toupper(cb[0]);
 }
 
+static __inline doublereal dlamch_(char* cmach)
+{
+    return lapack_dlamch_tab[lapack_lamch_tab[(unsigned char)cmach[0]]];
+}
+    
+static __inline doublereal slamch_(char* cmach)
+{
+    return lapack_slamch_tab[lapack_lamch_tab[(unsigned char)cmach[0]]];
+}    
+    
 static __inline integer i_nint(real *x)
 {
     return (integer)(*x >= 0 ? floor(*x + .5) : -floor(.5 - *x));

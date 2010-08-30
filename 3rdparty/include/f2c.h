@@ -7,6 +7,7 @@
 #ifndef F2C_INCLUDE
 #define F2C_INCLUDE
 
+#include <assert.h>
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -16,6 +17,10 @@
 #endif
 #include <string.h>
 #include <stdio.h>
+
+#if __SSE2__ || defined _M_X64
+#include "emmintrin.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

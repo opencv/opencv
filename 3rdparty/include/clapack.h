@@ -3680,8 +3680,6 @@ doublereal dsecnd_();
 
 doublereal second_();
 
-doublereal slamch_(char *cmach);
-
 /* Subroutine */ int slamc1_(integer *beta, integer *t, logical *rnd, logical 
 	*ieee1);
 
@@ -3696,8 +3694,6 @@ doublereal slamc3_(real *a, real *b);
 		    logical *ieee, integer *emax, real *rmax);
 
 
-doublereal dlamch_(char *cmach);
-
 /* Subroutine */ int dlamc1_(integer *beta, integer *t, logical *rnd, logical
 		    *ieee1);
 
@@ -3711,9 +3707,6 @@ doublereal dlamc3_(doublereal *a, doublereal *b);
 
 /* Subroutine */ int dlamc5_(integer *beta, integer *p, integer *emin,
 		    logical *ieee, integer *emax, doublereal *rmax);
-
-integer ilaenv_(integer *ispec, char *name__, char *opts, integer *n1, 
-	integer *n2, integer *n3, integer *n4);
 
 #ifdef __cplusplus
 }
