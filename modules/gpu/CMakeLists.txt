@@ -1,6 +1,6 @@
 
 set(name "gpu")
-set(DEPS "opencv_core")
+set(DEPS "opencv_core" "opencv_imgproc")
 
 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
 

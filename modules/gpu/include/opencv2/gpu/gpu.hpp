@@ -365,6 +365,9 @@ namespace cv
         // Acync version
         CV_EXPORTS void reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream);
 
+        CV_EXPORTS void cvtColor_GPU(const GpuMat& src, GpuMat& dst, int code, int dcn = 0);
+        CV_EXPORTS void cvtColor_GPU(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
+
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU
