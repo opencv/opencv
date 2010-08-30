@@ -72,6 +72,7 @@ void CV_GpuCSStereoBP::run(int )
         disp.convertTo(disp, img_template.type());
 
         double norm = cv::norm(disp, img_template, cv::NORM_INF);
+		if (norm >= 0.5) std::cout << "ConstantSpaceStereoBP norm = " << norm << std::endl;
         ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 

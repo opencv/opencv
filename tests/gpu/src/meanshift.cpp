@@ -54,7 +54,7 @@ class CV_GpuMeanShift : public CvTest
         void run(int);
 };
 
-CV_GpuMeanShift::CV_GpuMeanShift(): CvTest( "GPU-MeanShift", "meanshift" ){}
+CV_GpuMeanShift::CV_GpuMeanShift(): CvTest( "GPU-MeanShift", "MeanShift" ){}
 
 void CV_GpuMeanShift::run(int )
 {
@@ -74,7 +74,7 @@ void CV_GpuMeanShift::run(int )
         res.convertTo(res, img_template.type());
 
         double norm = cv::norm(res, img_template, cv::NORM_INF);
-
+		if (norm >= 0.5) std::cout << "MeanShift norm = " << norm << std::endl;
         ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
