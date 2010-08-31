@@ -53,8 +53,8 @@ void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, const Stream&) { throw_nogpu(); }
 void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }
 void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&, const Stream&) { throw_nogpu(); }
-void cvtColor_GPU(const GpuMat& GpuMat&, int, int) { throw_nogpu(); }
-void cvtColor_GPU(const GpuMat& GpuMat&, int, int, const Stream&) { throw_nogpu(); }
+void cvtColor_GPU(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
+void cvtColor_GPU(const GpuMat&, GpuMat&, int, int, const Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
