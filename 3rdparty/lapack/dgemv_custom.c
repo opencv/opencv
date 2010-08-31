@@ -181,11 +181,14 @@
                 if( s == 0. )
                     continue;
                 s *= alpha;
-                for( j = 0; j <= m - 2; j += 2 )
+                for( j = 0; j <= m - 4; j += 4 )
                 {
                     doublereal t0 = y[j] + s*a[j];
                     doublereal t1 = y[j+1] + s*a[j+1];
                     y[j] = t0; y[j+1] = t1;
+                    t0 = y[j+2] + s*a[j+2];
+                    t1 = y[j+3] + s*a[j+3];
+                    y[j+2] = t0; y[j+3] = t1;
                 }
                 
                 for( ; j < m; j++ )
@@ -212,8 +215,8 @@
             for( i = 0; i < n; i++, a += lda )
             {
                 doublereal s = 0;
-                for( j = 0; j <= m - 2; j += 2 )
-                    s += x[j]*a[j] + x[j+1]*a[j+1];
+                for( j = 0; j <= m - 4; j += 4 )
+                    s += x[j]*a[j] + x[j+1]*a[j+1] + x[j+2]*a[j+2] + x[j+3]*a[j+3];
                 for( ; j < m; j++ )
                     s += x[j]*a[j];
                 y[i*incy] += alpha*s;

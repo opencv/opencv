@@ -163,37 +163,65 @@
         ;
     else if( trans == 'N' )
     {
-        for( i = 0; i < n; i++, a += lda )
+        if( incy == 1 )
         {
-            real s = x[i*incx];
-            if( s == 0.f )
-                continue;
-            s *= alpha;
-            
-            for( j = 0; j <= m - 4; j += 4 )
+            for( i = 0; i < n; i++, a += lda )
             {
-                real t0 = y[j] + s*a[j];
-                real t1 = y[j+1] + s*a[j+1];
-                y[j] = t0; y[j+1] = t1;
-                t0 = y[j+2] + s*a[j+2];
-                t1 = y[j+3] + s*a[j+3];
-                y[j+2] = t0; y[j+3] = t1;
-            }
+                real s = x[i*incx];
+                if( s == 0.f )
+                    continue;
+                s *= alpha;
+                
+                for( j = 0; j <= m - 4; j += 4 )
+                {
+                    real t0 = y[j] + s*a[j];
+                    real t1 = y[j+1] + s*a[j+1];
+                    y[j] = t0; y[j+1] = t1;
+                    t0 = y[j+2] + s*a[j+2];
+                    t1 = y[j+3] + s*a[j+3];
+                    y[j+2] = t0; y[j+3] = t1;
+                }
 
-            for( ; j < m; j++ )
-                y[j] += s*a[j];
+                for( ; j < m; j++ )
+                    y[j] += s*a[j];
+            }
+        }
+        else
+        {
+            for( i = 0; i < n; i++, a += lda )
+            {
+                real s = x[i*incx];
+                if( s == 0. )
+                    continue;
+                s *= alpha;
+                for( j = 0; j < m; j++ )
+                    y[j*incy] += s*a[j];
+            }
         }
     }
     else
     {
-        for( i = 0; i < n; i++, a += lda )
+        if( incx == 1 )
         {
-            real s = 0;
-            for( j = 0; j <= m - 4; j += 4 )
-                s += x[j]*a[j] + x[j+1]*a[j+1] + x[j+2]*a[j+2] + x[j+3]*a[j+3];
-            for( ; j < m; j++ )
-                s += x[j]*a[j];
-            y[i*incy] += alpha*s;
+            for( i = 0; i < n; i++, a += lda )
+            {
+                real s = 0;
+                for( j = 0; j <= m - 4; j += 4 )
+                    s += x[j]*a[j] + x[j+1]*a[j+1] + x[j+2]*a[j+2] + x[j+3]*a[j+3];
+                for( ; j < m; j++ )
+                    s += x[j]*a[j];
+                y[i*incy] += alpha*s;
+            }
+        }
+        else
+        {
+            for( i = 0; i < n; i++, a += lda )
+            {
+                real s = 0;
+                for( j = 0; j < m; j++ )
+                    s += x[j*incx]*a[j];
+                y[i*incy] += alpha*s;
+            }
         }
     }
     

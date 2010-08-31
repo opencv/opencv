@@ -1327,6 +1327,7 @@ static void _SVDcompute( const Mat& a, Mat& w, Mat* u, Mat* vt, int flags )
         if(u) u->release();
         if(vt) vt->release();
         u = vt = 0;
+        compute_uv = false;
     }
     
     if( compute_uv )
@@ -1417,13 +1418,13 @@ static void _SVDcompute( const Mat& a, Mat& w, Mat* u, Mat* vt, int flags )
     if( type == CV_32F )
     {
         sgesdd_(mode, &n, &m, (float*)_a.data, &lda, (float*)w.data,
-                (float*)vt->data, &ldv, (float*)u->data, &ldu,
+                vt ? (float*)vt->data : (float*)&v1, &ldv, u ? (float*)u->data : (float*)&u1, &ldu,
                 (float*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
     }
     else
     {
         dgesdd_(mode, &n, &m, (double*)_a.data, &lda, (double*)w.data,
-                (double*)vt->data, &ldv, (double*)u->data, &ldu,
+                vt ? (double*)vt->data : &v1, &ldv, u ? (double*)u->data : &u1, &ldu,
                 (double*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
     }
     CV_Assert(info >= 0);
