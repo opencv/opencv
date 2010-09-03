@@ -163,7 +163,8 @@ namespace imgproc
 {
     texture<uchar4, 2> tex_meanshift;
 
-    extern "C" __global__ void meanshift_kernel( unsigned char* out, int out_step, int cols, int rows, int sp, int sr, int maxIter, float eps )
+    extern "C" __global__ void meanshift_kernel( unsigned char* out, int out_step, int cols, int rows, 
+                                                 int sp, int sr, int maxIter, float eps )
     {
         int x0 = blockIdx.x * blockDim.x + threadIdx.x;
         int y0 = blockIdx.y * blockDim.y + threadIdx.y;
@@ -224,10 +225,8 @@ namespace imgproc
                     break;
             }
 
-            int base = (blockIdx.y * blockDim.y + threadIdx.y) * out_step + (blockIdx.x * blockDim.x + threadIdx.x) * 3 * sizeof(uchar);
-            out[base+0] = c.x;
-            out[base+1] = c.y;
-            out[base+2] = c.z;
+            int base = (blockIdx.y * blockDim.y + threadIdx.y) * out_step + (blockIdx.x * blockDim.x + threadIdx.x) * 4 * sizeof(uchar);
+            *(uchar4*)(out + base) = c;
         }
     }
 }
@@ -236,7 +235,7 @@ namespace cv { namespace gpu { namespace impl
 {
     extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
     {                        
-        dim3  grid(1, 1, 1);
+        dim3 grid(1, 1, 1);
         dim3 threads(32, 16, 1);
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);

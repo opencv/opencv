@@ -119,18 +119,18 @@ void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int
     if( src.depth() != CV_8U || src.channels() != 4 )
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-    dst.create( src.size(), CV_8UC3 );
+    dst.create( src.size(), CV_8UC4 );
     
-    float eps;
     if( !(criteria.type & TermCriteria::MAX_ITER) )
         criteria.maxCount = 5;
     
     int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
     
+    float eps;
     if( !(criteria.type & TermCriteria::EPS) )
         eps = 1.f;
-
     eps = (float)std::max(criteria.epsilon, 0.0);        
+
     impl::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
 }
 

@@ -56,7 +56,7 @@ class CV_GpuMeanShift : public CvTest
 
 CV_GpuMeanShift::CV_GpuMeanShift(): CvTest( "GPU-MeanShift", "MeanShift" ){}
 
-void CV_GpuMeanShift::run(int )
+void CV_GpuMeanShift::run(int)
 {
         int spatialRad = 30;
         int colorRad = 30;
@@ -64,19 +64,47 @@ void CV_GpuMeanShift::run(int )
         cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
         cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
 
+        if (img.empty() || img_template.empty())
+        {
+            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+            return;
+        }
+
         cv::Mat rgba;
         cvtColor(img, rgba, CV_BGR2BGRA);
 
         cv::gpu::GpuMat res;
-
         cv::gpu::meanShiftFiltering_GPU( cv::gpu::GpuMat(rgba), res, spatialRad, colorRad );
+        if (res.type() != CV_8UC4)
+        {
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+            return;
+        }
 
-        res.convertTo(res, img_template.type());
+        cv::Mat result;
+        res.download(result);
 
-        double norm = cv::norm(res, img_template, cv::NORM_INF);
-		if (norm >= 0.5) std::cout << "MeanShift norm = " << norm << std::endl;
-        ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
+        uchar maxDiff = 0;
+        for (int j = 0; j < result.rows; ++j)
+        {
+            const uchar* res_line = result.ptr<uchar>(j);
+            const uchar* ref_line = img_template.ptr<uchar>(j);
+
+            for (int i = 0; i < result.cols; ++i)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    const uchar& ch1 = res_line[result.channels()*i + k];
+                    const uchar& ch2 = ref_line[img_template.channels()*i + k];
+                    uchar diff = abs(ch1 - ch2);
+                    if (maxDiff < diff)
+                        maxDiff = diff;
+                }
+            }
+        }
+        if (maxDiff > 0) 
+            ts->printf(CvTS::CONSOLE, "\nMeanShift maxDiff = %d\n", maxDiff);
+        ts->set_failed_test_info((maxDiff == 0) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
-
 
 CV_GpuMeanShift CV_GpuMeanShift_test;

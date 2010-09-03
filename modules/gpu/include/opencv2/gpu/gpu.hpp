@@ -347,7 +347,8 @@ namespace cv
         CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
 
         // Does mean shift filtering on GPU.
-        CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+        CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, 
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         // Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
         // Supported types of input disparity: CV_8U, CV_16S.

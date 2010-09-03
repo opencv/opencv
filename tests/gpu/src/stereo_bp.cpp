@@ -58,22 +58,28 @@ CV_GpuStereoBP::CV_GpuStereoBP(): CvTest( "GPU-StereoBP", "StereoBP" ){}
 
 void CV_GpuStereoBP::run(int )
 {
-        cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
-        cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
-        cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", 0);
+    cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
+    cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
+    cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", 0);
 
-        cv::gpu::GpuMat disp;
-        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+    if (img_l.empty() || img_r.empty() || img_template.empty())
+    {
+        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+        return;
+    }
 
-        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+    cv::gpu::GpuMat disp;
+    cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
 
-        //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
+    bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
-        disp.convertTo(disp, img_template.type());
+    //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
 
-        double norm = cv::norm(disp, img_template, cv::NORM_INF);
-		if (norm >= 0.5) std::cout << "StereoBP norm = " << norm << std::endl;
-        ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
+    disp.convertTo(disp, img_template.type());
+
+    double norm = cv::norm(disp, img_template, cv::NORM_INF);
+	if (norm >= 0.5) std::cout << "StereoBP norm = " << norm << std::endl;
+    ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
 
