@@ -40,23 +40,24 @@
 //M*/
 
 #include "gputest.hpp"
-#include <iostream>
-#include <string>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-class CV_GpuStereoBP : public CvTest
+#include <iostream>
+#include <string>
+
+
+class CV_GpuStereoBPTest : public CvTest
 {
     public:
-        CV_GpuStereoBP();
+        CV_GpuStereoBPTest();
     protected:
         void run(int);
 };
 
-CV_GpuStereoBP::CV_GpuStereoBP(): CvTest( "GPU-StereoBP", "StereoBP" ){}
+CV_GpuStereoBPTest::CV_GpuStereoBPTest(): CvTest( "GPU-StereoBP", "StereoBP" ){}
 
-void CV_GpuStereoBP::run(int )
+void CV_GpuStereoBPTest::run(int )
 {
     cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
     cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
@@ -78,10 +79,10 @@ void CV_GpuStereoBP::run(int )
     disp.convertTo(disp, img_template.type());
 
     double norm = cv::norm(disp, img_template, cv::NORM_INF);
-	if (norm >= 0.5) std::cout << "StereoBP norm = " << norm << std::endl;
+	if (norm >= 0.5) 
+        ts->printf(CvTS::CONSOLE, "\nStereoBP norm = %f\n", norm);
     ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
 
-CV_GpuStereoBP CV_GpuStereoBP_test;
-
+CV_GpuStereoBPTest CV_GpuStereoBP_test;

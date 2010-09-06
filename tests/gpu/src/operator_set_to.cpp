@@ -41,6 +41,7 @@
 
 #include "gputest.hpp"
 #include "highgui.h"
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -53,25 +54,25 @@ using namespace cv;
 using namespace std;
 using namespace gpu;
 
-class CV_GpuMatOpSetTo : public CvTest
+class CV_GpuMatOpSetToTest : public CvTest
 {
-    public:
-        CV_GpuMatOpSetTo();
-        ~CV_GpuMatOpSetTo();
-    protected:
-        void print_mat(cv::Mat & mat, std::string name = "cpu mat");
-        void print_mat(gpu::GpuMat & mat, std::string name = "gpu mat");
-        void run(int);
+public:
+    CV_GpuMatOpSetToTest();
+    ~CV_GpuMatOpSetToTest();
 
-        bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
+protected:
+    void run(int);
+    void print_mat(cv::Mat & mat, std::string name = "cpu mat");
+    void print_mat(gpu::GpuMat & mat, std::string name = "gpu mat");
+    bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
 
-    private:
-        int rows;
-        int cols;
-        Scalar s;
+private:
+    int rows;
+    int cols;
+    Scalar s;
 };
 
-CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GPU-MatOperatorSetTo", "setTo" )
+CV_GpuMatOpSetToTest::CV_GpuMatOpSetToTest(): CvTest( "GPU-MatOperatorSetTo", "setTo" )
 {
     rows = 256;
     cols = 124;
@@ -84,21 +85,21 @@ CV_GpuMatOpSetTo::CV_GpuMatOpSetTo(): CvTest( "GPU-MatOperatorSetTo", "setTo" )
     //#define PRINT_MATRIX
 }
 
-CV_GpuMatOpSetTo::~CV_GpuMatOpSetTo() {}
+CV_GpuMatOpSetToTest::~CV_GpuMatOpSetToTest() {}
 
-void CV_GpuMatOpSetTo::print_mat(cv::Mat & mat, std::string name )
+void CV_GpuMatOpSetToTest::print_mat(cv::Mat & mat, std::string name )
 {
     cv::imshow(name, mat);
 }
 
-void CV_GpuMatOpSetTo::print_mat(gpu::GpuMat & mat, std::string name)
+void CV_GpuMatOpSetToTest::print_mat(gpu::GpuMat & mat, std::string name)
 {
     cv::Mat newmat;
     mat.download(newmat);
     print_mat(newmat, name);
 }
 
-bool CV_GpuMatOpSetTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
+bool CV_GpuMatOpSetToTest::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
 {
     //int64 time = getTickCount();
     cpumat.setTo(s);
@@ -122,12 +123,12 @@ bool CV_GpuMatOpSetTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
         return true;
     else
     {
-        std::cout << "return : " << ret << "\n";
+        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
         return false;
     }
 }
 
-void CV_GpuMatOpSetTo::run( int /* start_from */)
+void CV_GpuMatOpSetToTest::run( int /* start_from */)
 {
     bool is_test_good = true;
 
@@ -144,4 +145,4 @@ void CV_GpuMatOpSetTo::run( int /* start_from */)
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMatOpSetTo CV_GpuMatOpSetTo_test;
+CV_GpuMatOpSetToTest CV_GpuMatOpSetTo_test;

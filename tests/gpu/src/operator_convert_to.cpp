@@ -40,6 +40,7 @@
 //M*/
 
 #include "gputest.hpp"
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -51,19 +52,20 @@ using namespace cv;
 using namespace std;
 using namespace gpu;
 
-class CV_GpuMatOpConvertTo : public CvTest
+class CV_GpuMatOpConvertToTest : public CvTest
 {
     public:
-        CV_GpuMatOpConvertTo();
-        ~CV_GpuMatOpConvertTo();
+        CV_GpuMatOpConvertToTest();
+        ~CV_GpuMatOpConvertToTest();
+
     protected:
         void run(int);
 };
 
-CV_GpuMatOpConvertTo::CV_GpuMatOpConvertTo(): CvTest( "GPU-MatOperatorConvertTo", "convertTo" ) {}
-CV_GpuMatOpConvertTo::~CV_GpuMatOpConvertTo() {}
+CV_GpuMatOpConvertToTest::CV_GpuMatOpConvertToTest(): CvTest( "GPU-MatOperatorConvertTo", "convertTo" ) {}
+CV_GpuMatOpConvertToTest::~CV_GpuMatOpConvertToTest() {}
 
-void CV_GpuMatOpConvertTo::run( int /* start_from */)
+void CV_GpuMatOpConvertToTest::run(int /* start_from */)
 {
     const Size img_size(67, 35);
 
@@ -102,8 +104,9 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
                     double r = norm(cpumatdst, gpumatdst, NORM_INF);
                     if (r > 1)
                     {
-                        cout << "FAILED: " << "SRC_TYPE=" << types_str[i] << "C" << c << " DST_TYPE=" << types_str[j] << " NORM = " << r << endl;
-
+                        ts->printf(CvTS::CONSOLE, 
+                                   "\nFAILED: SRC_TYPE=%sC%d DST_TYPE=%s NORM = %d\n",
+                                   types_str[i], c, types_str[j], r);
                         passed = false;
                     }
                 }
@@ -112,9 +115,9 @@ void CV_GpuMatOpConvertTo::run( int /* start_from */)
     }
     catch(cv::Exception& e)
     {
-        cout << "ERROR: " << e.err << endl;
+        ts->printf(CvTS::CONSOLE, "\nERROR: %s\n", e.err);
     }
     ts->set_failed_test_info(passed ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMatOpConvertTo CV_GpuMatOpConvertTo_test;
+CV_GpuMatOpConvertToTest CV_GpuMatOpConvertTo_test;

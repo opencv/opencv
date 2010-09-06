@@ -40,27 +40,34 @@
 //M*/
 
 #include "gputest.hpp"
-#include <iostream>
-#include <string>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-class CV_GpuStereoBM : public CvTest
+#include <iostream>
+#include <string>
+
+
+class CV_GpuStereoBMTest : public CvTest
 {
 public:
-	CV_GpuStereoBM();
+	CV_GpuStereoBMTest();
 protected:
 	void run(int);
 };
 
-CV_GpuStereoBM::CV_GpuStereoBM(): CvTest( "GPU-StereoBM", "StereoBM" ){}
+CV_GpuStereoBMTest::CV_GpuStereoBMTest(): CvTest( "GPU-StereoBM", "StereoBM" ){}
 
-void CV_GpuStereoBM::run(int )
+void CV_GpuStereoBMTest::run(int )
 {
 	cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-L.png", 0);
 	cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-R.png", 0);
 	cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", 0);
+
+    if (img_l.empty() || img_r.empty() || img_template.empty())
+    {
+        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+        return;
+    }
 
 	cv::gpu::GpuMat disp;
 	cv::gpu::StereoBM_GPU bm(0, 128, 19);
@@ -72,10 +79,11 @@ void CV_GpuStereoBM::run(int )
 	disp.convertTo(disp, img_template.type());
 
 	double norm = cv::norm(disp, img_template, cv::NORM_INF);
-	if (norm >= 100) std::cout << "StereoBM norm = " << norm << std::endl;
+	if (norm >= 100) 
+        ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
 	ts->set_failed_test_info((norm < 100) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
 
-CV_GpuStereoBM CV_GpuStereoBM_test;
+CV_GpuStereoBMTest CV_GpuStereoBM_test;
 

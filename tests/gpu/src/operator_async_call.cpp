@@ -42,6 +42,7 @@
 #include "gputest.hpp"
 #include "highgui.h"
 #include "cv.h"
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -54,26 +55,24 @@ using namespace cv;
 using namespace std;
 using namespace gpu;
 
-class CV_GpuMatASyncCall : public CvTest
+class CV_GpuMatAsyncCallTest : public CvTest
 {
     public:
-        CV_GpuMatASyncCall();
-        ~CV_GpuMatASyncCall();
-    protected:
+        CV_GpuMatAsyncCallTest();
+        ~CV_GpuMatAsyncCallTest();
 
+    protected:
+        void run(int);
         template <typename T>
         void print_mat(const T & mat, const std::string & name) const;
-
-        void run(int);
-
-        bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
+        bool compare_matrix(cv::Mat & cpumat);
 
     private:
         int rows;
         int cols;
 };
 
-CV_GpuMatASyncCall::CV_GpuMatASyncCall(): CvTest( "GPU-MatOperatorASyncCall", "async" )
+CV_GpuMatAsyncCallTest::CV_GpuMatAsyncCallTest(): CvTest( "GPU-MatOperatorAsyncCall", "async" )
 {
     rows = 234;
     cols = 123;
@@ -81,15 +80,15 @@ CV_GpuMatASyncCall::CV_GpuMatASyncCall(): CvTest( "GPU-MatOperatorASyncCall", "a
     //#define PRINT_MATRIX
 }
 
-CV_GpuMatASyncCall::~CV_GpuMatASyncCall() {}
+CV_GpuMatAsyncCallTest::~CV_GpuMatAsyncCallTest() {}
 
 template<typename T>
-void CV_GpuMatASyncCall::print_mat(const T & mat, const std::string & name) const
+void CV_GpuMatAsyncCallTest::print_mat(const T & mat, const std::string & name) const
 {
     cv::imshow(name, mat);
 }
 
-bool CV_GpuMatASyncCall::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
+bool CV_GpuMatAsyncCallTest::compare_matrix(cv::Mat & cpumat)
 {
     Mat cmat(cpumat.size(), cpumat.type(), Scalar::all(0));
     GpuMat gmat0(cmat);
@@ -132,19 +131,19 @@ bool CV_GpuMatASyncCall::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
         return true;
     else
     {
-        std::cout << "return : " << ret << "\n";
+        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
         return false;
     }
 }
 
-void CV_GpuMatASyncCall::run( int /* start_from */)
+void CV_GpuMatAsyncCallTest::run( int /* start_from */)
 {
     bool is_test_good = true;
 
     Mat cpumat(rows, cols, CV_8U);
     cpumat.setTo(Scalar::all(127));
-    GpuMat gpumat(cpumat);
-    is_test_good &= compare_matrix(cpumat, gpumat);
+
+    is_test_good &= compare_matrix(cpumat);
 
     if (is_test_good == true)
         ts->set_failed_test_info(CvTS::OK);
@@ -152,4 +151,4 @@ void CV_GpuMatASyncCall::run( int /* start_from */)
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMatASyncCall CV_GpuMatASyncCall_test;
+CV_GpuMatAsyncCallTest CV_GpuMatAsyncCall_test;

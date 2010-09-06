@@ -40,27 +40,34 @@
 //M*/
 
 #include "gputest.hpp"
-#include <iostream>
-#include <string>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-class CV_GpuCSStereoBP : public CvTest
+#include <iostream>
+#include <string>
+
+
+class CV_GpuStereoCSBPTest : public CvTest
 {
     public:
-        CV_GpuCSStereoBP();
+        CV_GpuStereoCSBPTest();
     protected:
         void run(int);
 };
 
-CV_GpuCSStereoBP::CV_GpuCSStereoBP(): CvTest( "GPU-CSStereoBP", "ConstantSpaceStereoBP" ){}
+CV_GpuStereoCSBPTest::CV_GpuStereoCSBPTest(): CvTest( "GPU-StereoCSBP", "ConstantSpaceStereoBP" ){}
 
-void CV_GpuCSStereoBP::run(int )
+void CV_GpuStereoCSBPTest::run(int )
 {
         cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-L.png");
         cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-R.png");
         cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", 0);
+
+        if (img_l.empty() || img_r.empty() || img_template.empty())
+        {
+            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+            return;
+        }
 
         cv::gpu::GpuMat disp;
         cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
@@ -72,9 +79,9 @@ void CV_GpuCSStereoBP::run(int )
         disp.convertTo(disp, img_template.type());
 
         double norm = cv::norm(disp, img_template, cv::NORM_INF);
-		if (norm >= 0.5) std::cout << "ConstantSpaceStereoBP norm = " << norm << std::endl;
+		if (norm >= 0.5) 
+            ts->printf(CvTS::CONSOLE, "\nConstantSpaceStereoBP norm = %f\n", norm);
         ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
-
-CV_GpuCSStereoBP CV_GpuCSStereoBP_test;
+CV_GpuStereoCSBPTest CV_GpuCSStereoBP_test;

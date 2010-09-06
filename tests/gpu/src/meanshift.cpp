@@ -40,23 +40,25 @@
 //M*/
 
 #include "gputest.hpp"
-#include <iostream>
-#include <string>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-class CV_GpuMeanShift : public CvTest
+#include <iostream>
+#include <string>
+
+
+class CV_GpuMeanShiftTest : public CvTest
 {
-    public:
-        CV_GpuMeanShift();
-    protected:
-        void run(int);
+public:
+    CV_GpuMeanShiftTest();
+
+protected:
+    void run(int);
 };
 
-CV_GpuMeanShift::CV_GpuMeanShift(): CvTest( "GPU-MeanShift", "MeanShift" ){}
+CV_GpuMeanShiftTest::CV_GpuMeanShiftTest(): CvTest( "GPU-MeanShift", "MeanShift" ){}
 
-void CV_GpuMeanShift::run(int)
+void CV_GpuMeanShiftTest::run(int)
 {
         int spatialRad = 30;
         int colorRad = 30;
@@ -107,4 +109,4 @@ void CV_GpuMeanShift::run(int)
         ts->set_failed_test_info((maxDiff == 0) ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMeanShift CV_GpuMeanShift_test;
+CV_GpuMeanShiftTest CV_GpuMeanShift_test;

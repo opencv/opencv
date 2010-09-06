@@ -42,6 +42,7 @@
 #include "gputest.hpp"
 #include "highgui.h"
 #include "cv.h"
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -54,18 +55,16 @@ using namespace cv;
 using namespace std;
 using namespace gpu;
 
-class CV_GpuMatOpCopyTo : public CvTest
+class CV_GpuMatOpCopyToTest : public CvTest
 {
     public:
-        CV_GpuMatOpCopyTo();
-        ~CV_GpuMatOpCopyTo();
-    protected:
+        CV_GpuMatOpCopyToTest();
+        ~CV_GpuMatOpCopyToTest();
 
+    protected:
+        void run(int);
         template <typename T>
         void print_mat(const T & mat, const std::string & name) const;
-
-        void run(int);
-
         bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
 
     private:
@@ -73,7 +72,7 @@ class CV_GpuMatOpCopyTo : public CvTest
         int cols;
 };
 
-CV_GpuMatOpCopyTo::CV_GpuMatOpCopyTo(): CvTest( "GPU-MatOperatorCopyTo", "copyTo" )
+CV_GpuMatOpCopyToTest::CV_GpuMatOpCopyToTest(): CvTest( "GPU-MatOperatorCopyTo", "copyTo" )
 {
     rows = 234;
     cols = 123;
@@ -81,15 +80,15 @@ CV_GpuMatOpCopyTo::CV_GpuMatOpCopyTo(): CvTest( "GPU-MatOperatorCopyTo", "copyTo
     //#define PRINT_MATRIX
 }
 
-CV_GpuMatOpCopyTo::~CV_GpuMatOpCopyTo() {}
+CV_GpuMatOpCopyToTest::~CV_GpuMatOpCopyToTest() {}
 
 template<typename T>
-void CV_GpuMatOpCopyTo::print_mat(const T & mat, const std::string & name) const
+void CV_GpuMatOpCopyToTest::print_mat(const T & mat, const std::string & name) const
 {
     cv::imshow(name, mat);
 }
 
-bool CV_GpuMatOpCopyTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
+bool CV_GpuMatOpCopyToTest::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
 {
     Mat cmat(cpumat.size(), cpumat.type(), Scalar::all(0));
     GpuMat gmat(cmat);
@@ -128,12 +127,12 @@ bool CV_GpuMatOpCopyTo::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
         return true;
     else
     {
-        std::cout << "return : " << ret << "\n";
+        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
         return false;
     }
 }
 
-void CV_GpuMatOpCopyTo::run( int /* start_from */)
+void CV_GpuMatOpCopyToTest::run( int /* start_from */)
 {
     bool is_test_good = true;
 
@@ -153,4 +152,4 @@ void CV_GpuMatOpCopyTo::run( int /* start_from */)
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMatOpCopyTo CV_GpuMatOpCopyTo_test;
+CV_GpuMatOpCopyToTest CV_GpuMatOpCopyTo_test;
