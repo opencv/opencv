@@ -47,7 +47,7 @@
 #include "saturate_cast.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::impl;
+using namespace cv::gpu::matrix_operations;
 
 
 namespace mat_operators
@@ -261,7 +261,7 @@ namespace cv
 {
     namespace gpu
     {
-        namespace impl
+        namespace matrix_operations
         {
 
             ///////////////////////////////////////////////////////////////////////////

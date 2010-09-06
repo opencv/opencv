@@ -47,20 +47,20 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::remap(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::meanShiftFiltering_GPU(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
+void cv::gpu::remap( const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap ){ throw_nogpu(); }
+void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, const Stream&) { throw_nogpu(); }
-void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }
-void cv::gpu::reprojectImageTo3D_GPU(const GpuMat&, GpuMat&, const Mat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::cvtColor_GPU(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
-void cv::gpu::cvtColor_GPU(const GpuMat&, GpuMat&, int, int, const Stream&) { throw_nogpu(); }
+void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }
+void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
+void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, const Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 namespace cv { namespace gpu 
 { 
-    namespace impl 
+    namespace improc 
     {
         void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
         void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
@@ -90,10 +90,10 @@ namespace cv { namespace gpu
 ////////////////////////////////////////////////////////////////////////
 // remap
 
-void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst)
+void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
 {
     typedef void (*remap_gpu_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
-    static const remap_gpu_t callers[] = {impl::remap_gpu_1c, 0, impl::remap_gpu_3c};
+    static const remap_gpu_t callers[] = {improc::remap_gpu_1c, 0, improc::remap_gpu_3c};
 
     CV_Assert((src.type() == CV_8U || src.type() == CV_8UC3) && xmap.type() == CV_32F && ymap.type() == CV_32F);
 
@@ -111,7 +111,7 @@ void cv::gpu::remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, G
 ////////////////////////////////////////////////////////////////////////
 // meanShiftFiltering_GPU
 
-void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria)
+void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria)
 {       
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
@@ -131,7 +131,7 @@ void cv::gpu::meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int
         eps = 1.f;
     eps = (float)std::max(criteria.epsilon, 0.0);        
 
-    impl::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
+    improc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ namespace
             out = dst;
         out.create(src.size(), CV_8UC4);
 
-        impl::drawColorDisp_gpu((DevMem2D_<T>)src, out, ndisp, stream);
+        improc::drawColorDisp_gpu((DevMem2D_<T>)src, out, ndisp, stream);
 
         dst = out;
     }
@@ -180,7 +180,7 @@ namespace
     void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream)
     {        
         xyzw.create(disp.rows, disp.cols, CV_32FC4);
-        impl::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
+        improc::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
     }
     
     typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream);
@@ -188,14 +188,14 @@ namespace
     const reprojectImageTo3D_caller_t reprojectImageTo3D_callers[] = {reprojectImageTo3D_caller<unsigned char>, 0, 0, reprojectImageTo3D_caller<short>, 0, 0, 0, 0};
 }
 
-void cv::gpu::reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
+void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
 {
     CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
     
     reprojectImageTo3D_callers[disp.type()](disp, xyzw, Q, 0);
 }
 
-void cv::gpu::reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream)
+void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream)
 {
     CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
     
@@ -229,11 +229,11 @@ namespace
                 
                 out.create(sz, CV_MAKETYPE(depth, dcn));
                 if( depth == CV_8U )
-                    impl::RGB2RGB_gpu((DevMem2D)src, scn, (DevMem2D)out, dcn, bidx, stream);
+                    improc::RGB2RGB_gpu((DevMem2D)src, scn, (DevMem2D)out, dcn, bidx, stream);
                 else if( depth == CV_16U )
-                    impl::RGB2RGB_gpu((DevMem2D_<unsigned short>)src, scn, (DevMem2D_<unsigned short>)out, dcn, bidx, stream);
+                    improc::RGB2RGB_gpu((DevMem2D_<unsigned short>)src, scn, (DevMem2D_<unsigned short>)out, dcn, bidx, stream);
                 else
-                    impl::RGB2RGB_gpu((DevMem2Df)src, scn, (DevMem2Df)out, dcn, bidx, stream);
+                    improc::RGB2RGB_gpu((DevMem2Df)src, scn, (DevMem2Df)out, dcn, bidx, stream);
                 break;
                 
             //case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
@@ -270,11 +270,11 @@ namespace
                 bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
                 
                 if( depth == CV_8U )
-                    impl::RGB2Gray_gpu((DevMem2D)src, scn, (DevMem2D)out, bidx, stream);
+                    improc::RGB2Gray_gpu((DevMem2D)src, scn, (DevMem2D)out, bidx, stream);
                 else if( depth == CV_16U )
-                    impl::RGB2Gray_gpu((DevMem2D_<unsigned short>)src, scn, (DevMem2D_<unsigned short>)out, bidx, stream);
+                    improc::RGB2Gray_gpu((DevMem2D_<unsigned short>)src, scn, (DevMem2D_<unsigned short>)out, bidx, stream);
                 else
-                    impl::RGB2Gray_gpu((DevMem2Df)src, scn, (DevMem2Df)out, bidx, stream);
+                    improc::RGB2Gray_gpu((DevMem2Df)src, scn, (DevMem2Df)out, bidx, stream);
                 break;
             
             //case CV_BGR5652GRAY: case CV_BGR5552GRAY:
@@ -291,11 +291,11 @@ namespace
                 out.create(sz, CV_MAKETYPE(depth, dcn));
                 
                 if( depth == CV_8U )
-                    impl::Gray2RGB_gpu((DevMem2D)src, (DevMem2D)out, dcn, stream);
+                    improc::Gray2RGB_gpu((DevMem2D)src, (DevMem2D)out, dcn, stream);
                 else if( depth == CV_16U )
-                    impl::Gray2RGB_gpu((DevMem2D_<unsigned short>)src, (DevMem2D_<unsigned short>)out, dcn, stream);
+                    improc::Gray2RGB_gpu((DevMem2D_<unsigned short>)src, (DevMem2D_<unsigned short>)out, dcn, stream);
                 else
-                    impl::Gray2RGB_gpu((DevMem2Df)src, (DevMem2Df)out, dcn, stream);
+                    improc::Gray2RGB_gpu((DevMem2Df)src, (DevMem2Df)out, dcn, stream);
                 break;
                 
             //case CV_GRAY2BGR565: case CV_GRAY2BGR555:
@@ -516,12 +516,12 @@ namespace
     }
 }
 
-void cv::gpu::cvtColor_GPU(const GpuMat& src, GpuMat& dst, int code, int dcn)
+void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn)
 {
     cvtColor_caller(src, dst, code, dcn, 0);
 }
 
-void cv::gpu::cvtColor_GPU(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
+void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
 {
     cvtColor_caller(src, dst, code, dcn, StreamAccessor::getStream(stream));
 }

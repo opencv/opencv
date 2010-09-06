@@ -123,7 +123,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace impl 
+namespace cv { namespace gpu { namespace improc 
 {
     void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
     {
@@ -231,7 +231,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace impl 
+namespace cv { namespace gpu { namespace improc 
 {
     extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
     {                        
@@ -354,7 +354,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace impl 
+namespace cv { namespace gpu { namespace improc 
 {
     void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
     {
@@ -420,7 +420,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace impl 
+namespace cv { namespace gpu { namespace improc 
 {
     template <typename T>
     inline void reprojectImageTo3D_caller(const DevMem2D_<T>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)

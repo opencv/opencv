@@ -51,6 +51,7 @@ class CV_GpuStereoBMTest : public CvTest
 {
 public:
 	CV_GpuStereoBMTest();
+
 protected:
 	void run(int);
 };
@@ -61,9 +62,9 @@ void CV_GpuStereoBMTest::run(int )
 {
 	cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-L.png", 0);
 	cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-R.png", 0);
-	cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", 0);
+	cv::Mat img_reference = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", 0);
 
-    if (img_l.empty() || img_r.empty() || img_template.empty())
+    if (img_l.empty() || img_r.empty() || img_reference.empty())
     {
         ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
         return;
@@ -71,14 +72,11 @@ void CV_GpuStereoBMTest::run(int )
 
 	cv::gpu::GpuMat disp;
 	cv::gpu::StereoBM_GPU bm(0, 128, 19);
-
 	bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
-	//cv::imwrite(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", disp);
+	disp.convertTo(disp, img_reference.type());
+	double norm = cv::norm(disp, img_reference, cv::NORM_INF);
 
-	disp.convertTo(disp, img_template.type());
-
-	double norm = cv::norm(disp, img_template, cv::NORM_INF);
 	if (norm >= 100) 
         ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
 	ts->set_failed_test_info((norm < 100) ? CvTS::OK : CvTS::FAIL_GENERIC);

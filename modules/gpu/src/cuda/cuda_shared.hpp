@@ -56,10 +56,10 @@ namespace cv
         typedef unsigned short ushort;
         typedef unsigned int uint;
 
-        namespace impl
-        {
-            static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
+        static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
+        namespace matrix_operations
+        {            
             extern "C" void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
             extern "C" void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);

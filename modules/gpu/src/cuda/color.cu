@@ -44,7 +44,6 @@
 #include "saturate_cast.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::impl;
 
 #ifndef CV_DESCALE
 #define CV_DESCALE(x,n) (((x) + (1 << ((n)-1))) >> (n))
@@ -167,7 +166,7 @@ namespace imgproc
         }
 }
 
-namespace cv { namespace gpu { namespace impl
+namespace cv { namespace gpu { namespace improc
 {
     template <typename T>
     void RGB2RGB_caller(const DevMem2D_<T>& src, int srccn, const DevMem2D_<T>& dst, int dstcn, int bidx, cudaStream_t stream)
@@ -377,7 +376,7 @@ namespace imgproc
     //};
 }
 
-namespace cv { namespace gpu { namespace impl
+namespace cv { namespace gpu { namespace improc
 {
     template <typename T>
     void Gray2RGB_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, int dstcn, cudaStream_t stream)
@@ -627,7 +626,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace impl
+namespace cv { namespace gpu { namespace improc
 {
     void RGB2Gray_gpu(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {

@@ -316,7 +316,7 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
 }
 
 
-namespace cv { namespace gpu { namespace impl
+namespace cv { namespace gpu { namespace bm
 {
     template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, const cudaStream_t & stream)
     {
@@ -408,7 +408,7 @@ extern "C" __global__ void prefilter_kernel(unsigned char *output, size_t step, 
 
 }
 
-namespace cv { namespace gpu  { namespace impl
+namespace cv { namespace gpu  { namespace bm
 {
     extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap)
     {
@@ -530,7 +530,7 @@ extern "C" __global__ void textureness_kernel(unsigned char *disp, size_t disp_s
 }
 }
 
-namespace cv { namespace gpu  { namespace impl
+namespace cv { namespace gpu  { namespace bm
 {
     extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp)
     {

@@ -76,7 +76,7 @@ void CV_GpuMeanShiftTest::run(int)
         cvtColor(img, rgba, CV_BGR2BGRA);
 
         cv::gpu::GpuMat res;
-        cv::gpu::meanShiftFiltering_GPU( cv::gpu::GpuMat(rgba), res, spatialRad, colorRad );
+        cv::gpu::meanShiftFiltering( cv::gpu::GpuMat(rgba), res, spatialRad, colorRad );
         if (res.type() != CV_8UC4)
         {
             ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);

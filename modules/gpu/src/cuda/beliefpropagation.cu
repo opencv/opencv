@@ -45,7 +45,6 @@
 #include "safe_call.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::impl;
 
 #ifndef FLT_MAX
 #define FLT_MAX 3.402823466e+38F

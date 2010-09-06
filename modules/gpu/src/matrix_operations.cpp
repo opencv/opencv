@@ -120,7 +120,7 @@ void cv::gpu::GpuMat::copyTo( GpuMat& mat, const GpuMat& mask ) const
     else
     {
         mat.create(size(), type());
-        cv::gpu::impl::copy_to_with_mask(*this, mat, depth(), mask, channels());
+        cv::gpu::matrix_operations::copy_to_with_mask(*this, mat, depth(), mask, channels());
     }
 }
 
@@ -146,12 +146,12 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         psrc = &(temp = *this);
 
     dst.create( size(), rtype );
-    impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
+    matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
 }
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    impl::set_to_without_mask( *this, depth(), s.val, channels());
+    matrix_operations::set_to_without_mask( *this, depth(), s.val, channels());
     return *this;
 }
 
@@ -162,9 +162,9 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
     CV_DbgAssert(!this->empty());
 
     if (mask.empty())
-        impl::set_to_without_mask( *this, depth(), s.val, channels());
+        matrix_operations::set_to_without_mask( *this, depth(), s.val, channels());
     else
-        impl::set_to_with_mask( *this, depth(), s.val, mask, channels());
+        matrix_operations::set_to_with_mask( *this, depth(), s.val, mask, channels());
 
     return *this;
 }

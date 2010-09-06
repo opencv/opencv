@@ -344,10 +344,10 @@ namespace cv
         ////////////////////////////// Image processing //////////////////////////////
         // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
         // xymap.type() == xymap.type() == CV_32FC1
-        CV_EXPORTS void remap(const GpuMat& src, const GpuMat& xmap, const GpuMat& ymap, GpuMat& dst);
+        CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
 
         // Does mean shift filtering on GPU.
-        CV_EXPORTS void meanShiftFiltering_GPU(const GpuMat& src, GpuMat& dst, int sp, int sr, 
+        CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, 
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         // Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
@@ -362,18 +362,18 @@ namespace cv
         // The output is a 4-channel floating-point (CV_32FC4) matrix. 
         // Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
         // Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
-        CV_EXPORTS void reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
+        CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
         // Acync version
-        CV_EXPORTS void reprojectImageTo3D_GPU(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream);
+        CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream);
 
-        CV_EXPORTS void cvtColor_GPU(const GpuMat& src, GpuMat& dst, int code, int dcn = 0);
-        CV_EXPORTS void cvtColor_GPU(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
+        CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0);
+        CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU
         {
-        public:
+        public:                                    
             enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
 
             enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };

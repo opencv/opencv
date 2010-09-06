@@ -58,7 +58,7 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, 
 
 namespace cv { namespace gpu
 {
-    namespace impl
+    namespace bm
     {
         //extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
         extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, const cudaStream_t & stream);
@@ -115,17 +115,17 @@ static void stereo_bm_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  ri
         leBuf.create( left.size(),  left.type());
         riBuf.create(right.size(), right.type());
 
-        impl::prefilter_xsobel( left, leBuf);
-        impl::prefilter_xsobel(right, riBuf);
+        bm::prefilter_xsobel( left, leBuf);
+        bm::prefilter_xsobel(right, riBuf);
 
         le_for_bm = leBuf;
         ri_for_bm = riBuf;
     }
 
-    impl::stereoBM_GPU(le_for_bm, ri_for_bm, disparity, ndisp, winSize, minSSD, stream);
+    bm::stereoBM_GPU(le_for_bm, ri_for_bm, disparity, ndisp, winSize, minSSD, stream);
 
     if (avergeTexThreshold)
-        impl::postfilter_textureness(le_for_bm, winSize, avergeTexThreshold, disparity);
+        bm::postfilter_textureness(le_for_bm, winSize, avergeTexThreshold, disparity);
 }
 
 

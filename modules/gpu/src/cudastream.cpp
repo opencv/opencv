@@ -158,12 +158,12 @@ void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src,
 
 void cv::gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val)
 {
-    impl::set_to_without_mask(src, src.depth(), val.val, src.channels(), impl->stream);
+    matrix_operations::set_to_without_mask(src, src.depth(), val.val, src.channels(), impl->stream);
 }
 
 void cv::gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
 {
-    impl::set_to_with_mask(src, src.depth(), val.val, mask, src.channels(), impl->stream);
+    matrix_operations::set_to_with_mask(src, src.depth(), val.val, mask, src.channels(), impl->stream);
 }
 
 void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
@@ -188,7 +188,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, 
         psrc = &(temp = src);
 
     dst.create( src.size(), rtype );
-    impl::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta, impl->stream);
+    matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta, impl->stream);
 }
 
 
