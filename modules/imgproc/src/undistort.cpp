@@ -89,7 +89,7 @@ void initUndistortRectifyMap( const Mat& _cameraMatrix, const Mat& _distCoeffs,
         distCoeffs = Mat_<double>(_distCoeffs);
     else
     {
-        distCoeffs.create(5, 1);
+        distCoeffs.create(8, 1);
         distCoeffs = 0.;
     }
 
@@ -101,8 +101,9 @@ void initUndistortRectifyMap( const Mat& _cameraMatrix, const Mat& _distCoeffs,
     double u0 = A(0, 2),  v0 = A(1, 2);
     double fx = A(0, 0),  fy = A(1, 1);
 
-    CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(1, 5) ||
-               distCoeffs.size() == Size(4, 1) || distCoeffs.size() == Size(5, 1));
+    CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) || 
+               distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
+               distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1));
 
     if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() )
         distCoeffs = distCoeffs.t();
@@ -111,7 +112,10 @@ void initUndistortRectifyMap( const Mat& _cameraMatrix, const Mat& _distCoeffs,
     double k2 = ((double*)distCoeffs.data)[1];
     double p1 = ((double*)distCoeffs.data)[2];
     double p2 = ((double*)distCoeffs.data)[3];
-    double k3 = distCoeffs.cols + distCoeffs.rows - 1 == 5 ? ((double*)distCoeffs.data)[4] : 0.;
+    double k3 = distCoeffs.cols + distCoeffs.rows - 1 >= 5 ? ((double*)distCoeffs.data)[4] : 0.;
+    double k4 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[5] : 0.;
+    double k5 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[6] : 0.;
+    double k6 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[7] : 0.;
 
     for( int i = 0; i < size.height; i++ )
     {
@@ -126,7 +130,7 @@ void initUndistortRectifyMap( const Mat& _cameraMatrix, const Mat& _distCoeffs,
             double w = 1./_w, x = _x*w, y = _y*w;
             double x2 = x*x, y2 = y*y;
             double r2 = x2 + y2, _2xy = 2*x*y;
-            double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2;
+            double kr = (1 + ((k3*r2 + k2)*r2 + k1)*r2)/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
             double u = fx*(x*kr + p1*_2xy + p2*(r2 + 2*x2)) + u0;
             double v = fy*(y*kr + p1*(r2 + 2*y2) + p2*_2xy) + v0;
             if( m1type == CV_16SC2 )
@@ -248,7 +252,7 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
                    const CvMat* _distCoeffs,
                    const CvMat* matR, const CvMat* matP )
 {
-    double A[3][3], RR[3][3], k[5]={0,0,0,0,0}, fx, fy, ifx, ify, cx, cy;
+    double A[3][3], RR[3][3], k[8]={0,0,0,0,0,0,0,0}, fx, fy, ifx, ify, cx, cy;
     CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
     CvMat _RR=cvMat(3, 3, CV_64F, RR);
     const CvPoint2D32f* srcf;
@@ -276,7 +280,8 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
         CV_Assert( CV_IS_MAT(_distCoeffs) &&
             (_distCoeffs->rows == 1 || _distCoeffs->cols == 1) &&
             (_distCoeffs->rows*_distCoeffs->cols == 4 ||
-            _distCoeffs->rows*_distCoeffs->cols == 5) );
+             _distCoeffs->rows*_distCoeffs->cols == 5 ||
+             _distCoeffs->rows*_distCoeffs->cols == 8)); 
 
         _Dk = cvMat( _distCoeffs->rows, _distCoeffs->cols,
             CV_MAKETYPE(CV_64F,CV_MAT_CN(_distCoeffs->type)), k);
@@ -341,7 +346,7 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
         for( j = 0; j < iters; j++ )
         {
             double r2 = x*x + y*y;
-            double icdist = 1./(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
+            double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
             double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x);
             double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y;
             x = (x0 - deltaX)*icdist;
@@ -488,10 +493,13 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
 }
 
     
-float initWideAngleProjMap( const Mat& cameraMatrix, const Mat& distCoeffs,
+float initWideAngleProjMap( const Mat& cameraMatrix0, const Mat& distCoeffs0,
                             Size imageSize, int destImageWidth, int m1type,
                             Mat& map1, Mat& map2, int projType, double _alpha )
 {
+    double k[8] = {0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
+    Mat distCoeffs(distCoeffs0.rows, distCoeffs0.cols, CV_MAKETYPE(CV_64F,distCoeffs0.channels()), k);
+    Mat cameraMatrix(3,3,CV_64F,M);
     Point2f scenter((float)cameraMatrix.at<double>(0,2), (float)cameraMatrix.at<double>(1,2));
     Point2f dcenter((destImageWidth-1)*0.5f, 0.f);
     float xmin = FLT_MAX, xmax = -FLT_MAX, ymin = FLT_MAX, ymax = -FLT_MAX;
@@ -499,6 +507,13 @@ float initWideAngleProjMap( const Mat& cameraMatrix, const Mat& distCoeffs,
     std::vector<Point2f> u(1), v(1);
     Mat _u(u), I = Mat::eye(3,3,CV_64F);
     float alpha = (float)_alpha;
+    
+    int ndcoeffs = distCoeffs0.cols*distCoeffs0.rows*distCoeffs0.channels();
+    CV_Assert((distCoeffs0.cols == 1 || distCoeffs0.rows == 1) &&
+              (ndcoeffs == 4 || ndcoeffs == 5 || ndcoeffs == 8));
+    CV_Assert(cameraMatrix0.size() == Size(3,3));
+    distCoeffs0.convertTo(distCoeffs,CV_64F);
+    cameraMatrix0.convertTo(cameraMatrix,CV_64F);
     
     alpha = std::min(alpha, 0.999f);
     
@@ -520,14 +535,8 @@ float initWideAngleProjMap( const Mat& cameraMatrix, const Mat& distCoeffs,
     dcenter.y = (dsize.height - 1)*0.5f;
     
     Mat mapxy(dsize, CV_32FC2);
-    double k1 = distCoeffs.at<double>(0,0),
-    k2 = distCoeffs.at<double>(1,0),
-    k3 = distCoeffs.at<double>(4,0),
-    p1 = distCoeffs.at<double>(2,0),
-    p2 = distCoeffs.at<double>(3,0);
-    double fx = cameraMatrix.at<double>(0,0),
-    fy = cameraMatrix.at<double>(1,1),
-    cx = scenter.x, cy = scenter.y;
+    double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7];
+    double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
     
     for( int y = 0; y < dsize.height; y++ )
     {
@@ -543,7 +552,7 @@ float initWideAngleProjMap( const Mat& cameraMatrix, const Mat& distCoeffs,
             }
             double x2 = q.x*q.x, y2 = q.y*q.y;
             double r2 = x2 + y2, _2xy = 2*q.x*q.y;
-            double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2;
+            double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
             double u = fx*(q.x*kr + p1*_2xy + p2*(r2 + 2*x2)) + cx;
             double v = fy*(q.y*kr + p1*(r2 + 2*y2) + p2*_2xy) + cy;
             

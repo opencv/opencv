@@ -82,7 +82,7 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
     if( flags & CV_CALIB_FIX_ASPECT_RATIO )
         cameraMatrix.at<double>(0,0) = aspectRatio;
     
-    distCoeffs = Mat::zeros(5, 1, CV_64F);
+    distCoeffs = Mat::zeros(8, 1, CV_64F);
     
     vector<vector<Point3f> > objectPoints(1);
     calcChessboardCorners(boardSize, squareSize, objectPoints[0]);
@@ -90,7 +90,7 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
 	objectPoints.resize(imagePoints.size(),objectPoints[0]);
     
     calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
-                    distCoeffs, rvecs, tvecs, flags);
+                    distCoeffs, rvecs, tvecs, flags|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);///*|CV_CALIB_FIX_K3*/|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
     
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
     
@@ -237,6 +237,7 @@ int main( int argc, char** argv )
     int flags = 0;
     VideoCapture capture;
     bool flipVertical = false;
+    bool showUndistorted = false;
     int delay = 1000;
     clock_t prevTimestamp = 0;
     int mode = DETECTION;
@@ -269,6 +270,7 @@ int main( int argc, char** argv )
             "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
             "     [-p]                     # fix the principal point at the center\n"
             "     [-v]                     # flip the captured images around the horizontal axis\n"
+            "     [-su]                    # show undistorted images after calibration\n"
             "     [input_data]             # input data, one of the following:\n"
             "                              #  - text file with a list of the images of the board\n"
             "                              #  - name of video file with a video of the board\n"
@@ -335,6 +337,10 @@ int main( int argc, char** argv )
         else if( strcmp( s, "-o" ) == 0 )
         {
             outputFilename = argv[++i];
+        }
+        else if( strcmp( s, "-su" ) == 0 )
+        {
+            showUndistorted = true;
         }
         else if( s[0] != '-' )
         {
@@ -469,5 +475,27 @@ int main( int argc, char** argv )
                 break;
         }
     }
+    
+    if( !capture.isOpened() && showUndistorted )
+    {
+        Mat view, rview, map1, map2;
+        initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
+                                getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+                                imageSize, CV_16SC2, map1, map2);
+        
+        for( i = 0; i < (int)imageList.size(); i++ )
+        {
+            view = imread(imageList[i], 1);
+            if(!view.data)
+                continue;
+            //undistort( view, rview, cameraMatrix, distCoeffs, cameraMatrix );
+            remap(view, rview, map1, map2, INTER_LINEAR);
+            imshow("Image View", rview);
+            int c = waitKey();
+            if( (c & 255) == 27 || c == 'q' || c == 'Q' )
+                break;
+        }
+    }
+                                                
     return 0;
 }

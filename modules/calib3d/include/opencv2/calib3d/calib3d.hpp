@@ -220,6 +220,9 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_FIX_K1  32
 #define CV_CALIB_FIX_K2  64
 #define CV_CALIB_FIX_K3  128
+#define CV_CALIB_FIX_K4  2048
+#define CV_CALIB_FIX_K5  4096
+#define CV_CALIB_FIX_K6  8192
 
 /* Finds intrinsic and extrinsic camera parameters
    from a few views of known calibration pattern */
@@ -544,6 +547,9 @@ enum
     CALIB_FIX_K1 = 32,
     CALIB_FIX_K2 = 64,
     CALIB_FIX_K3 = 128,
+    CALIB_FIX_K4 = 2048,
+    CALIB_FIX_K5 = 4096,
+    CALIB_FIX_K6 = 8192,
     // only for stereo
     CALIB_FIX_INTRINSIC = 256,
     CALIB_SAME_FOCAL_LENGTH = 512,
@@ -605,6 +611,17 @@ CV_EXPORTS bool stereoRectifyUncalibrated( const Mat& points1,
                                            Mat& H1, Mat& H2,
                                            double threshold=5 );
 
+//! computes the rectification transformations for 3-head camera, where the heads are on the same line.
+CV_EXPORTS float rectify3( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+                   const Mat& cameraMatrix2, const Mat& distCoeffs2,
+                   const Mat& cameraMatrix3, const Mat& distCoeffs3,
+                   const vector<vector<Point2f> >& imgpt1,
+                   const vector<vector<Point2f> >& imgpt3,
+                   Size imageSize, const Mat& R12, const Mat& T12, const Mat& R13, const Mat& T13,
+                   Mat& R1, Mat& R2, Mat& R3, Mat& P1, Mat& P2, Mat& P3, Mat& Q,
+                   double alpha, Size newImgSize,
+                   Rect* roi1, Rect* roi2, int flags );
+    
 //! returns the optimal new camera matrix
 CV_EXPORTS Mat getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs,
                                           Size imageSize, double alpha, Size newImgSize=Size(),
