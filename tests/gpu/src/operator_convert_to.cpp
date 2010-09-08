@@ -115,9 +115,10 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
     }
     catch(cv::Exception& e)
     {
-        ts->printf(CvTS::CONSOLE, "\nERROR: %s\n", e.err);
+        ts->printf(CvTS::CONSOLE, "\nERROR: %s\n", e.what());
     }
     ts->set_failed_test_info(passed ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMatOpConvertToTest CV_GpuMatOpConvertTo_test;
+CV_GpuMatOpConvertToTest CV_GpuMatOpConvertToTest_test;
+
