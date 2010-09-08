@@ -99,9 +99,9 @@ bool CV_GpuMatAsyncCallTest::compare_matrix(cv::Mat & cpumat)
     //int64 time = getTickCount();
 
     Stream stream;
-    stream.enqueueCopy(gmat0, gmat1);
-    stream.enqueueCopy(gmat0, gmat2);
-    stream.enqueueCopy(gmat0, gmat3);
+	stream.enqueueMemSet(gmat0, cv::Scalar::all(1), gmat1);
+	stream.enqueueMemSet(gmat0, cv::Scalar::all(1), gmat2);
+	stream.enqueueMemSet(gmat0, cv::Scalar::all(1), gmat3);
     stream.waitForCompletion();
 
     //int64 time1 = getTickCount();

@@ -410,7 +410,7 @@ extern "C" __global__ void prefilter_kernel(unsigned char *output, size_t step, 
 
 namespace cv { namespace gpu  { namespace bm
 {
-    extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap)
+    extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap, const cudaStream_t & stream)
     {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
         cudaSafeCall( cudaBindTexture2D( 0, stereobm_gpu::texForSobel, input.ptr, desc, input.cols, input.rows, input.step ) );
@@ -421,10 +421,18 @@ namespace cv { namespace gpu  { namespace bm
         grid.x = divUp(input.cols, threads.x);
         grid.y = divUp(input.rows, threads.y);
 
-        stereobm_gpu::prefilter_kernel<<<grid, threads>>>(output.ptr, output.step, output.cols, output.rows, prefilterCap);
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+        {
+			stereobm_gpu::prefilter_kernel<<<grid, threads>>>(output.ptr, output.step, output.cols, output.rows, prefilterCap);
+			cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {
+            stereobm_gpu::prefilter_kernel<<<grid, threads, 0, stream>>>(output.ptr, output.step, output.cols, output.rows, prefilterCap);
+        }
 
         cudaSafeCall( cudaUnbindTexture (stereobm_gpu::texForSobel ) );
+
     }
 
 }}}
@@ -532,7 +540,7 @@ extern "C" __global__ void textureness_kernel(unsigned char *disp, size_t disp_s
 
 namespace cv { namespace gpu  { namespace bm
 {
-    extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp)
+    extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, const cudaStream_t & stream)
     {
         avgTexturenessThreshold *= winsz * winsz;
 
@@ -551,8 +559,15 @@ namespace cv { namespace gpu  { namespace bm
 
         size_t smem_size = (threads.x + threads.x + (winsz/2) * 2 ) * sizeof(float);
 
-        stereobm_gpu::textureness_kernel<<<grid, threads, smem_size>>>(disp.ptr, disp.step, winsz, avgTexturenessThreshold, disp.cols, disp.rows);
-        cudaSafeCall( cudaThreadSynchronize() );
+		if (stream == 0)
+		{
+			stereobm_gpu::textureness_kernel<<<grid, threads, smem_size>>>(disp.ptr, disp.step, winsz, avgTexturenessThreshold, disp.cols, disp.rows);
+			cudaSafeCall( cudaThreadSynchronize() );
+		}
+		else
+		{
+			stereobm_gpu::textureness_kernel<<<grid, threads, smem_size, stream>>>(disp.ptr, disp.step, winsz, avgTexturenessThreshold, disp.cols, disp.rows);		
+		}
 
         cudaSafeCall( cudaUnbindTexture (stereobm_gpu::texForTF) );
     }

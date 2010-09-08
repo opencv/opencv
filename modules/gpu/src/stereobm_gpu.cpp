@@ -62,8 +62,8 @@ namespace cv { namespace gpu
     {
         //extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
         extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, const cudaStream_t & stream);
-        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap = 31);
-        extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avergeTexThreshold, const DevMem2D& disp);
+        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap /*= 31*/, const cudaStream_t & stream);
+        extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, const cudaStream_t & stream);
     }
 }}
 
@@ -115,8 +115,8 @@ static void stereo_bm_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  ri
         leBuf.create( left.size(),  left.type());
         riBuf.create(right.size(), right.type());
 
-        bm::prefilter_xsobel( left, leBuf);
-        bm::prefilter_xsobel(right, riBuf);
+		bm::prefilter_xsobel( left, leBuf, 31, stream);
+        bm::prefilter_xsobel(right, riBuf, 31, stream);
 
         le_for_bm = leBuf;
         ri_for_bm = riBuf;
@@ -125,7 +125,7 @@ static void stereo_bm_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  ri
     bm::stereoBM_GPU(le_for_bm, ri_for_bm, disparity, ndisp, winSize, minSSD, stream);
 
     if (avergeTexThreshold)
-        bm::postfilter_textureness(le_for_bm, winSize, avergeTexThreshold, disparity);
+        bm::postfilter_textureness(le_for_bm, winSize, avergeTexThreshold, disparity, stream);
 }
 
 
