@@ -341,6 +341,10 @@ namespace cv
             friend struct StreamAccessor;
         };
 
+        ////////////////////////////// Arithmetics ///////////////////////////////////
+
+        CV_EXPORTS void add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
+
         ////////////////////////////// Image processing //////////////////////////////
         // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
         // xymap.type() == xymap.type() == CV_32FC1
