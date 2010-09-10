@@ -99,7 +99,7 @@ set_target_properties(${the_target} PROPERTIES
 	)
 
 # Add the required libraries for linking:
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} ${CUDA_LIBRARIES})
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} ${CUDA_LIBRARIES} ${NPP_LIB})
 
 if(MSVC)
 	if(CMAKE_CROSSCOMPILING)
