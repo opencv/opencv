@@ -1877,8 +1877,12 @@ CvDTreeSplit* CvDTree::find_best_split( CvDTreeNode* node )
 
     cv::parallel_reduce(cv::BlockedRange(0, data->var_count), finder);
 
-    CvDTreeSplit *bestSplit = data->new_split_cat( 0, -1.0f );
-    memcpy( bestSplit, finder.bestSplit, finder.splitSize );
+    CvDTreeSplit *bestSplit = 0;
+    if( finder.bestSplit->quality > 0 )
+    {
+        bestSplit = data->new_split_cat( 0, -1.0f );
+        memcpy( bestSplit, finder.bestSplit, finder.splitSize );
+    }
 
     return bestSplit;
 }
