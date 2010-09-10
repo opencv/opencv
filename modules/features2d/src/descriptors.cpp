@@ -665,15 +665,13 @@ void GenericDescriptorMatch::clear()
 Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename )
 {
     GenericDescriptorMatch *descriptorMatch = 0;
-    if( ! genericDescritptorMatchType.compare ("ONEWAY") )
+    if( ! genericDescritptorMatchType.compare("ONEWAY") )
     {
-        descriptorMatch = new OneWayDescriptorMatch ();
+        descriptorMatch = new OneWayDescriptorMatch();
     }
-    else if( ! genericDescritptorMatchType.compare ("FERN") )
+    else if( ! genericDescritptorMatchType.compare("FERN") )
     {
-        FernDescriptorMatch::Params params;
-        params.signatureSize = numeric_limits<int>::max();
-        descriptorMatch = new FernDescriptorMatch (params);
+        descriptorMatch = new FernDescriptorMatch();
     }
     else if( ! genericDescritptorMatchType.compare ("CALONDER") )
     {

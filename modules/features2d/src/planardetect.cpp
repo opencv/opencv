@@ -805,7 +805,7 @@ void FernClassifier::prepare(int _nclasses, int _patchSize, int _signatureSize,
     patchSize = Size(_patchSize, _patchSize);
     nstructs = _nstructs;
     structSize = _structSize;
-    signatureSize = std::min(_signatureSize, nclasses);
+    signatureSize = _compressionMethod == COMPRESSION_NONE ? nclasses : std::min(_signatureSize, nclasses);
     compressionMethod = signatureSize == nclasses ? COMPRESSION_NONE : _compressionMethod;
 
     leavesPerStruct = 1 << structSize;
