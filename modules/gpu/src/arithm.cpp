@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "npp.h" //TODO: move to the precomp.hpp
 
 using namespace cv;
 using namespace cv::gpu;
@@ -55,24 +54,39 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) { throw_n
 
 void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 {
+    dst.create( src1.size(), src1.type() );
+
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
 
-    dst.create( src1.size(), src1.type() );
-    
-    CV_DbgAssert(src1.depth() == CV_8U || src1.depth() == CV_32F);
-    CV_DbgAssert(src1.channels() == 1 || src1.channels() == 4);
+    int nChannels = src1.channels();
+    CV_DbgAssert((src1.depth() == CV_8U  && nChannels == 1 || nChannels == 4) || 
+                 (src1.depth() == CV_32F && nChannels == 1));
 
     NppiSize sz;
-    sz.width = src1.cols;
+    sz.width  = src1.cols;
     sz.height = src1.rows;
 
     if (src1.depth() == CV_8U)
     {
-        nppiAdd_8u_C1RSfs((const Npp8u*)src1.ptr<char>(), src1.step, 
-                          (const Npp8u*)src2.ptr<char>(), src2.step, 
-                          (Npp8u*)dst.ptr<char>(), dst.step, sz, 0);
+        if (nChannels == 1)
+        {
+            nppiAdd_8u_C1RSfs((const Npp8u*)src1.ptr<char>(), src1.step, 
+                              (const Npp8u*)src2.ptr<char>(), src2.step, 
+                              (Npp8u*)dst.ptr<char>(), dst.step, sz, 0);
+        }
+        else
+        {
+            nppiAdd_8u_C4RSfs((const Npp8u*)src1.ptr<char>(), src1.step, 
+                              (const Npp8u*)src2.ptr<char>(), src2.step, 
+                              (Npp8u*)dst.ptr<char>(), dst.step, sz, 0);
+        }        
     }
-    //TODO: implement other depths
+    else //if (src1.depth() == CV_32F)
+    {
+        nppiAdd_32f_C1R((const Npp32f*)src1.ptr<float>(), src1.step,
+                        (const Npp32f*)src2.ptr<float>(), src2.step,
+                        (Npp32f*)dst.ptr<float>(), dst.step, sz);
+    }
 }
 
 #endif /* !defined (HAVE_CUDA) */

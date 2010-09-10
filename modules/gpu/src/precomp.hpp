@@ -62,6 +62,7 @@
     #include "cuda_shared.hpp"
     #include "cuda_runtime_api.h"
     #include "opencv2/gpu/stream_accessor.hpp"
+    #include "npp.h"
 
 #else /* defined(HAVE_CUDA) */
 
