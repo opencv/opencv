@@ -299,10 +299,6 @@ set(WITH_TBB OFF CACHE BOOL "Include TBB support")
 set(WITH_EIGEN2 ON CACHE BOOL "Include Eigen2 support")
 set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
 
-if (WITH_CUDA)
-	set(WITH_NPP OFF CACHE BOOL "Include Nvidia NPP support")
-endif()
-
 if(WIN32)
         set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
 endif()
@@ -676,73 +672,6 @@ if (WITH_CUDA)
 		### set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${OpenCV_COMPUTE_CAPABILITIES})
 	endif()
 endif()
-
-
-############################### NPP ################################
-
-if (WITH_NPP)
-	set(NPP_PATH "" CACHE PATH "Path to NPP folder")
-	if (NOT ${NPP_PATH} STREQUAL "")
-		set(NPP_DEFAULT_INCLUDE_DIRS ${NPP_PATH})
-		set(NPP_DEFAULT_INCLUDE_DIRS ${NPP_DEFAULT_INCLUDE_DIRS}common/npp/include/)
-
-		#message(STATUS "NPP DEFAULT INCLUDE DIRS: ${NPP_DEFAULT_INCLUDE_DIRS}")
-		find_path(NPP_INCLUDE_DIR "npp.h" PATHS NPP_DEFAULT_INCLUDE_DIRS DOC "The path to NPP headers")
-		#message(STATUS "npp: ${NPP_INCLUDE_DIR}")
-
-		if (NPP_INCLUDE_DIR)
-
-			#message(STATUS "PROC: ${CMAKE_SYSTEM_PROCESSOR}")
-
-			set(X86_64 0)
-			set(X86 0)
-
-	                if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*)
-        	            set(X86_64 1)
-                	elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64*)
-        	            set(X86_64 1)
-                	elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES i686*)
-        	            set(X86 1)
-                	elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES i386*)
-        	            set(X86 1)
-                	elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*)
-                	    set(X86 1)
-	                endif()
-
-			message (STATUS "x86 : ${X86}")
-			message (STATUS "x64 : ${X86_64}")
-
-			if (UNIX AND X86)
-				set(NPP_LIB npp32)
-			elseif(UNIX AND X86_64)
-				set(NPP_LIB npp64)
-			elseif(WIN32 AND x86)
-				set(NPP_LIB npp-mt)
-			elseif(WIN32 AND X86_64)
-				set(NPP_LIB npp-mt-x64)
-			elseif(APPLE AND x86)
-				set(NPP_LIB npp32.dynlib)
-			elseif(APPLE AND x86_64)		
-				set(NPP_LIB npp64.dynlib)
-			endif()
-			
-			set(NPP_LIB_DIR "${NPP_INCLUDE_DIR}/../../lib" CACHE PATH "Full path of NPP library directory")
-			
-			link_directories("${NPP_LIB_DIR}")
-		else()
-			message(STATUS "Could NOT find npp.h")
-		endif()
-
-		if(NOT "${NPP_INCLUDE_DIR}" STREQUAL "")
-			include_directories("${NPP_INCLUDE_DIR}")
-			set(HAVE_NPP 1)
-		endif()
-	endif()
-endif()
-
-
-
-
 
 ############################### VideoInput ################################
 
