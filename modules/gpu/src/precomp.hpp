@@ -55,7 +55,7 @@
 #include <vector>
 
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/imgproc/types_c.h"
+#include "opencv2/imgproc/imgproc.hpp"
 
 #if defined(HAVE_CUDA)
 

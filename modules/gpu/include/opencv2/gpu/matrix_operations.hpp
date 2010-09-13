@@ -335,6 +335,13 @@ template<typename _Tp> inline const _Tp* GpuMat::ptr(int y) const
     return (const _Tp*)(data + step*y);
 }
 
+inline GpuMat GpuMat::t() const
+{
+    GpuMat tmp;
+    transpose(*this, tmp);
+    return tmp;
+}
+
 static inline void swap( GpuMat& a, GpuMat& b ) { a.swap(b); }
 
 

@@ -204,6 +204,9 @@ namespace cv
             template<typename _Tp> _Tp* ptr(int y=0);
             template<typename _Tp> const _Tp* ptr(int y=0) const;
 
+            //! matrix transposition
+            GpuMat t() const;
+
             /*! includes several bit-fields:
             - the magic signature
             - continuity flag
@@ -343,7 +346,34 @@ namespace cv
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
-        CV_EXPORTS void add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
+        //! adds one matrix to another (c = a + b)
+        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! subtracts one matrix from another (c = a - b)
+		CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! computes element-wise product of the two arrays (c = a * b)
+		CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! computes element-wise quotient of the two arrays (c = a / b)
+		CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
+
+        //! transposes the matrix
+		CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
+
+        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
+		CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
+
+        //! applies fixed threshold to the image. 
+        //! Now supports only THRESH_TRUNC threshold type and one channels float source.
+        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int thresholdType);
+
+        //! compares elements of two arrays (c = a <cmpop> b)
+        //! Now doesn't support CMP_NE.
+        CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop);
+
+        //! computes mean value and standard deviation of all or selected array elements
+        CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
+
+        CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
+        CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
 
         ////////////////////////////// Image processing //////////////////////////////
         // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
