@@ -47,7 +47,7 @@ if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
 	else()
 		set(NPP_SUFFIX "-mt")
 	endif()
-elseif(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+else(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
 	if (UNIX OR APPLE)
 		set(NPP_SUFFIX "64")				
 	else()
@@ -67,13 +67,14 @@ mark_as_advanced(CUDA_NPP_INCLUDES)
 
 # Find NPP library
 find_library(CUDA_NPP_LIBRARIES
-	NAMES libnpp${NPP_SUFFIX}
+	NAMES npp${NPP_SUFFIX} libnpp${NPP_SUFFIX}
 	PATHS "${CUDA_NPP_LIBRARY_ROOT_DIR}/common/lib"    
 	DOC "NPP library"
 	NO_DEFAULT_PATH
 	)
+
 # Search default search paths, after we search our own set of paths.
-find_library(CUDA_NPP_LIBRARIES NAMES libnpp${NPP_SUFFIX} DOC "NPP library")
+find_library(CUDA_NPP_LIBRARIES NAMES npp${NPP_SUFFIX} libnpp${NPP_SUFFIX} DOC "NPP library")
 mark_as_advanced(CUDA_NPP_LIBRARIES)
 
 if(NOT EXISTS ${CUDA_NPP_LIBRARIES} OR NOT EXISTS ${CUDA_NPP_INCLUDES}/npp.h)
