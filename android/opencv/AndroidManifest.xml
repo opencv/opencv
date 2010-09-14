@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="com.opencv"
+      android:versionCode="2"
+      android:versionName="2.2">
+   
+</manifest> 
