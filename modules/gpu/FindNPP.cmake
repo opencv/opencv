@@ -78,15 +78,15 @@ find_library(CUDA_NPP_LIBRARIES NAMES npp${NPP_SUFFIX} libnpp${NPP_SUFFIX} DOC "
 mark_as_advanced(CUDA_NPP_LIBRARIES)
 
 if(NOT EXISTS ${CUDA_NPP_LIBRARIES} OR NOT EXISTS ${CUDA_NPP_INCLUDES}/npp.h)
+	set(CUDA_FOUND FALSE)
+	unset(CUDA_NPP_INCLUDES CACHE)
+	unset(CUDA_NPP_LIBRARIES CACHE)
+	
 	if(NPP_FIND_REQUIRED)
 		message(FATAL_ERROR "NPP headers/libraries are not found. Specify CUDA_NPP_LIBRARY_ROOT_DIR.")
 	elseif(NOT CUDA_FIND_QUIETLY)
 		message("NPP headers/libraries are not found or CUDA_NPP_LIBRARY_ROOT_DIR not specified.")
 	endif()	
-	
-	set(CUDA_FOUND FALSE)
-	unset(CUDA_NPP_INCLUDES CACHE)
-	unset(CUDA_NPP_LIBRARIES CACHE)
 else()
 	
 	if(APPLE)
