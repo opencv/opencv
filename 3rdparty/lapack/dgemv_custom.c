@@ -117,7 +117,7 @@
     char trans = lapack_toupper(_trans[0]);
     integer i, j, m = *_m, n = *_n, lda = *_lda, incx = *_incx, incy = *_incy;
     integer leny = trans == 'N' ? m : n, lenx = trans == 'N' ? n : m;
-    real alpha = *_alpha, beta = *_beta;
+    doublereal alpha = *_alpha, beta = *_beta;
     
     integer info = 0;
     if (trans != 'N' && trans != 'T' && trans != 'C')
