@@ -43,9 +43,15 @@
 
 CvTS test_system;
 
+const char* blacklist[] =
+{
+    //"matrix-invert",
+    0
+};
+
 int main( int argc, char** argv )
 {
-    return test_system.run( argc, argv );
+    return test_system.run( argc, argv, blacklist );
 }
 
 /* End of file. */

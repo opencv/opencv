@@ -1302,7 +1302,7 @@ static int CV_CDECL cmp_test_names( const void* a, const void* b )
     return strcmp( (*(const CvTest**)a)->get_name(), (*(const CvTest**)b)->get_name() );
 }
 
-int CvTS::run( int argc, char** argv )
+int CvTS::run( int argc, char** argv, const char** blacklist )
 {
     time( &start_time );
 
@@ -1475,7 +1475,7 @@ int CvTS::run( int argc, char** argv )
         if( !(test->get_support_testing_modes() & get_testing_mode()) )
             continue;
 
-        if( strcmp( test->get_func_list(), "" ) != 0 && filter(test) )
+        if( strcmp( test->get_func_list(), "" ) != 0 && filter(test, blacklist) )
         {
             if( test->init(this) >= 0 )
             {
@@ -1875,11 +1875,21 @@ static char* cv_strnstr( const char* str, int len,
 }
 
 
-int CvTS::filter( CvTest* test )
+int CvTS::filter( CvTest* test, const char** blacklist )
 {
     const char* pattern = params.test_filter_pattern;
+    const char* test_name = test->get_name();
     int inverse = 0;
 
+    if( blacklist )
+    {
+        for( ; *blacklist != 0; blacklist++ )
+        {
+            if( strcmp( *blacklist, test_name ) == 0 )
+                return 0;
+        }
+    }
+    
     if( pattern && pattern[0] == '!' )
     {
         inverse = 1;
@@ -1888,7 +1898,7 @@ int CvTS::filter( CvTest* test )
 
     if( !pattern || strcmp( pattern, "" ) == 0 || strcmp( pattern, "*" ) == 0 )
         return 1 ^ inverse;
-
+    
     if( params.test_filter_mode == CHOOSE_TESTS )
     {
         int found = 0;
@@ -1914,9 +1924,9 @@ int CvTS::filter( CvTest* test )
                 have_wildcard = 0;
             }
 
-            t_name_len = (int)strlen( test->get_name() );
+            t_name_len = (int)strlen( test_name );
             found = (t_name_len == len || (have_wildcard && t_name_len > len)) &&
-                    (len == 0 || memcmp( test->get_name(), pattern, len ) == 0);
+                    (len == 0 || memcmp( test_name, pattern, len ) == 0);
             if( endptr )
             {
                 *endptr = ',';

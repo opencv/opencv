@@ -290,7 +290,7 @@ public:
     virtual void vprintf( int streams, const char* fmt, va_list arglist );
 
     // runs the tests (the whole set or some selected tests)
-    virtual int run( int argc, char** argv );
+    virtual int run( int argc, char** argv, const char** blacklist=0 );
 
     // updates the context: current test, test case, rng state
     virtual void update_context( CvTest* test, int test_case_idx, bool update_ts_context );
@@ -433,7 +433,7 @@ protected:
     virtual int read_params( CvFileStorage* fs );
     
     // checks, whether the test needs to be run (1) or not (0); called from run()
-    virtual int filter( CvTest* test );
+    virtual int filter( CvTest* test, const char** blacklist=0 );
 
     // makes base name of output files
     virtual void make_output_stream_base_name( const char* config_name );
