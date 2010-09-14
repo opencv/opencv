@@ -69,6 +69,10 @@ static __inline void exit_(integer *rc)
     exit(*rc);
 }
 
+integer pow_ii(integer *ap, integer *bp);
+double pow_ri(real *ap, integer *bp);
+double pow_di(doublereal *ap, integer *bp);
+
 static __inline double pow_dd(doublereal *ap, doublereal *bp)
 {
     return pow(*ap, *bp);
