@@ -21,6 +21,13 @@
 
 #include "zlib.h"
 
+#ifdef __arm__
+#  define z_off64_t z_off_t
+#endif
+#ifndef Z_TREES
+#define Z_TREES 6
+#endif
+
 #ifdef STDC
 #  if !(defined(_WIN32_WCE) && defined(_MSC_VER))
 #    include <stddef.h>

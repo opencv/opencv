@@ -19,7 +19,7 @@
 #endif
 
 #include <stdio.h>
-#include "zlib.h"
+#include "zutil.h"
 #ifdef STDC
 #  include <string.h>
 #  include <stdlib.h>
@@ -34,6 +34,10 @@
 #ifdef _MSC_VER
 #  include <io.h>
 #  define vsnprintf _vsnprintf
+#endif
+
+#ifdef __GNUC__
+#include <unistd.h>
 #endif
 
 #ifndef local

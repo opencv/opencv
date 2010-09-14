@@ -12,22 +12,17 @@ project(flann)
 
 include_directories(
    ${CMAKE_CURRENT_SOURCE_DIR}
-   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms
-   ${CMAKE_CURRENT_SOURCE_DIR}/util
-   ${CMAKE_CURRENT_SOURCE_DIR}/nn
    "${CMAKE_CURRENT_SOURCE_DIR}/../include/flann"
    )
 
 # The .cpp files:
-file(GLOB_RECURSE flann_sources_cpp *.cpp)
-file(GLOB_RECURSE flann_sources_h1 "${CMAKE_CURRENT_SOURCE_DIR}/../include/flann/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/../include/flann/*.hpp")
-file(GLOB_RECURSE flann_sources_h2 *.h *.hpp)
+file(GLOB flann_sources *.cpp *.h *.hpp)
+file(GLOB flann_h "${CMAKE_CURRENT_SOURCE_DIR}/../include/flann/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/../include/flann/*.hpp")
 
-source_group("Src" FILES ${flann_sources_cpp})
-source_group("Include\\External" FILES ${flann_sources_h1})
-source_group("Include\\Internal" FILES ${flann_sources_h2})
+source_group("Src" FILES ${flann_sources})
+source_group("Include" FILES ${flann_h})
 
-set(flann_sources ${flann_sources_cpp} ${flann_sources_h1} ${flann_sources_h2})
+set(flann_sources ${flann_sources} ${flann_h})
 
 # ----------------------------------------------------------------------------------
 #           Define the library target:
