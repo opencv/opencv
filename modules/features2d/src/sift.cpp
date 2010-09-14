@@ -47,6 +47,9 @@
 // MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 #include "precomp.hpp"
+
+#ifndef __arm__
+
 #include <iostream>
 #include <limits>
 
@@ -2145,3 +2148,5 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
         vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, angleVal);
     }
 }
+
+#endif
