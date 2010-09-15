@@ -162,7 +162,49 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
     CV_DbgAssert(!this->empty());
 
     if (mask.empty())
-        matrix_operations::set_to_without_mask( *this, depth(), s.val, channels());
+    {
+        switch (type())
+        {
+        case CV_8UC1:
+            {
+                NppiSize sz;
+	            sz.width  = cols;
+	            sz.height = rows;
+                Npp8u nVal = (Npp8u)s[0];
+                nppiSet_8u_C1R(nVal, (Npp8u*)ptr<char>(), step, sz);
+                break;
+            }
+        case CV_8UC4:
+            {
+                NppiSize sz;
+	            sz.width  = cols;
+	            sz.height = rows;
+                Npp8u nVal[] = {(Npp8u)s[0], (Npp8u)s[1], (Npp8u)s[2], (Npp8u)s[3]};
+                nppiSet_8u_C4R(nVal, (Npp8u*)ptr<char>(), step, sz);
+                break;
+            }
+        case CV_32SC1:
+            {
+                NppiSize sz;
+	            sz.width  = cols;
+	            sz.height = rows;
+                Npp32s nVal = (Npp32s)s[0];
+                nppiSet_32s_C1R(nVal, (Npp32s*)ptr<char>(), step, sz);
+                break;
+            }
+        case CV_32FC1:
+            {
+                NppiSize sz;
+	            sz.width  = cols;
+	            sz.height = rows;
+                Npp32f nVal = (Npp32f)s[0];
+                nppiSet_32f_C1R(nVal, (Npp32f*)ptr<char>(), step, sz);
+                break;
+            }
+        default:
+            matrix_operations::set_to_without_mask( *this, depth(), s.val, channels());
+        }        
+    }
     else
         matrix_operations::set_to_with_mask( *this, depth(), s.val, mask, channels());
 

@@ -66,6 +66,16 @@ void cv::gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev) { thro
 double cv::gpu::norm(const GpuMat& src1, int normType) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType) { throw_nogpu(); return 0.0; }
 
+void cv::gpu::flip(const GpuMat& a, GpuMat& b, int flipCode) { throw_nogpu(); }
+
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation) { throw_nogpu(); }
+
+Scalar cv::gpu::sum(const GpuMat& m) { throw_nogpu(); return Scalar(); }
+
+void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal) { throw_nogpu(); }
+
+void cv::gpu::copyConstBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value) { throw_nogpu(); }
+
 #else /* !defined (HAVE_CUDA) */
 
 namespace
@@ -247,13 +257,157 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     sz.height = src1.rows;
 
     int funcIdx = normType >> 1;
-    Npp64f retVal[3];
+    Scalar retVal;
 
     npp_norm_diff_func[funcIdx]((const Npp8u*)src1.ptr<char>(), src1.step, 
         (const Npp8u*)src2.ptr<char>(), src2.step, 
-        sz, retVal);
+        sz, retVal.val);
 
     return retVal[0];
+}
+
+void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
+{
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
+
+    dst.create( src.size(), src.type() );
+
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    if (src.channels() == 1)
+    {
+        nppiMirror_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, 
+            (Npp8u*)dst.ptr<char>(), dst.step, sz, 
+            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS)));
+    }
+    else
+    {
+        nppiMirror_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, 
+            (Npp8u*)dst.ptr<char>(), dst.step, sz, 
+            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS)));
+    }
+}
+
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation)
+{
+    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS};
+
+    CV_Assert((src.type() == CV_8UC1 || src.type() == CV_8UC4) && 
+        (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4));
+
+    CV_Assert( src.size().area() > 0 );
+    CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
+    if( dsize == Size() )
+    {
+        dsize = Size(saturate_cast<int>(src.cols * fx), saturate_cast<int>(src.rows * fy));
+    }
+    else
+    {
+        fx = (double)dsize.width / src.cols;
+        fy = (double)dsize.height / src.rows;
+    }
+    dst.create(dsize, src.type());
+
+    NppiSize srcsz;
+    srcsz.width  = src.cols;
+    srcsz.height = src.rows;
+    NppiRect srcrect;
+    srcrect.x = srcrect.y = 0;
+    srcrect.width  = src.cols;
+    srcrect.height = src.rows;
+    NppiSize dstsz;
+    dstsz.width  = dst.cols;
+    dstsz.height = dst.rows;
+
+    if (src.channels() == 1)
+    {
+        nppiResize_8u_C1R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcrect,
+            (Npp8u*)dst.ptr<char>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]);
+    }
+    else
+    {
+        nppiResize_8u_C4R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcrect,
+            (Npp8u*)dst.ptr<char>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]);
+    }
+}
+
+Scalar cv::gpu::sum(const GpuMat& src)
+{
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
+    
+    Scalar res;
+
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    if (src.channels() == 1)
+    {
+        nppiSum_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, res.val);
+    }
+    else
+    {
+        nppiSum_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, sz, res.val);
+    }
+
+    return res;
+}
+
+void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal) 
+{
+    CV_Assert(src.type() == CV_8UC1);
+
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    Npp8u min_res, max_res;
+
+    nppiMinMax_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, &min_res, &max_res);
+
+    if (minVal)
+        *minVal = min_res;
+
+    if (maxVal)
+        *maxVal = max_res;
+}
+
+void cv::gpu::copyConstBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value) 
+{
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1);
+
+    dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
+
+	NppiSize srcsz;
+	srcsz.width  = src.cols;
+	srcsz.height = src.rows;
+    NppiSize dstsz;
+	dstsz.width  = dst.cols;
+	dstsz.height = dst.rows;
+
+	if (src.depth() == CV_8U)
+	{
+		if (src.channels() == 1)
+		{
+            Npp8u nVal = (Npp8u)value[0];
+            nppiCopyConstBorder_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, srcsz, 
+                (Npp8u*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal);
+		}
+		else
+		{
+            Npp8u nVal[] = {(Npp8u)value[0], (Npp8u)value[1], (Npp8u)value[2], (Npp8u)value[3]};
+            nppiCopyConstBorder_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, srcsz, 
+                (Npp8u*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal);
+		}        
+	}
+	else //if (src.depth() == CV_32S)
+	{
+        Npp32s nVal = (Npp32s)value[0];
+        nppiCopyConstBorder_32s_C1R((const Npp32s*)src.ptr<char>(), src.step, srcsz, 
+            (Npp32s*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal);
+	}
 }
 
 #endif /* !defined (HAVE_CUDA) */

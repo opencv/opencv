@@ -45,6 +45,7 @@
 
 #include <vector>
 #include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 
 namespace cv
@@ -372,8 +373,28 @@ namespace cv
         //! computes mean value and standard deviation of all or selected array elements
         CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
 
+        //! computes norm of array
+        //! Supports NORM_INF, NORM_L1, NORM_L2
         CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
+        //! computes norm of the difference between two arrays
+        //! Supports NORM_INF, NORM_L1, NORM_L2
         CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
+
+        //! reverses the order of the rows, columns or both in a matrix
+        CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode);
+
+        //! resizes the image
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4
+        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR);
+
+        //! computes sum of array elements
+        CV_EXPORTS Scalar sum(const GpuMat& m);
+
+        //! finds global minimum and maximum array elements and returns their values
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal = 0);
+
+        //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
+        CV_EXPORTS void copyConstBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
 
         ////////////////////////////// Image processing //////////////////////////////
         // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
