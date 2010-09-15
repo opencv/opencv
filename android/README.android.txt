@@ -107,3 +107,6 @@ include $(BUILD_SHARED_LIBRARY)
 }}}
 
 The LOCAL_LDLIBS are very picky.  {{{-L$(NDK_APP_OUT)/opencv/armeabi}}} is where the ndk builds opencv, usually in {{{<ndk>/out/apps/opencv/armeabi}}}. You can navigate there and see the static libraries that were built.
+
+test edit
+
