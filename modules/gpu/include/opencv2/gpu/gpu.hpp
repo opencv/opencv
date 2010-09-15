@@ -385,7 +385,7 @@ namespace cv
 
         //! resizes the image
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4
-        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR);
+        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR);
 
         //! computes sum of array elements
         CV_EXPORTS Scalar sum(const GpuMat& m);
@@ -394,9 +394,22 @@ namespace cv
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal = 0);
 
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-        CV_EXPORTS void copyConstBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
+        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
+
+        //! warps the image using affine transformation
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
+
+        //! warps the image using perspective transformation
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
+
+        //! rotate 8bit single or four channel image
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
 
         ////////////////////////////// Image processing //////////////////////////////
+
         // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
         // xymap.type() == xymap.type() == CV_32FC1
         CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);

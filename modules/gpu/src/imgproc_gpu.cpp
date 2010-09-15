@@ -47,8 +47,8 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::remap( const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap ){ throw_nogpu(); }
-void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria ) { throw_nogpu(); }
+void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&){ throw_nogpu(); }
+void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, const Stream&) { throw_nogpu(); }
 void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }

@@ -687,20 +687,20 @@ CV_GpuNppImageMinNaxTest CV_GpuNppImageMinNax_test;
 
 ////////////////////////////////////////////////////////////////////////////////
 // copyConstBorder
-class CV_GpuNppImageCopyConstBorderTest : public CV_GpuNppImageArithmTest
+class CV_GpuNppImageCopyMakeBorderTest : public CV_GpuNppImageArithmTest
 {
 public:
-    CV_GpuNppImageCopyConstBorderTest();
+    CV_GpuNppImageCopyMakeBorderTest();
 
 protected:
     virtual int test(const Mat& cpu1, const Mat& cpu2);
 };
 
-CV_GpuNppImageCopyConstBorderTest::CV_GpuNppImageCopyConstBorderTest(): CV_GpuNppImageArithmTest( "GPU-NppImageCopyConstBorder", "copyConstBorder" )
+CV_GpuNppImageCopyMakeBorderTest::CV_GpuNppImageCopyMakeBorderTest(): CV_GpuNppImageArithmTest( "GPU-NppImageCopyMakeBorder", "copyMakeBorder" )
 {
 }
 
-int CV_GpuNppImageCopyConstBorderTest::test( const Mat& cpu1, const Mat& )
+int CV_GpuNppImageCopyMakeBorderTest::test( const Mat& cpu1, const Mat& )
 {
     if (cpu1.type() != CV_8UC1 && cpu1.type() != CV_8UC4 && cpu1.type() != CV_32SC1)
         return CvTS::OK;
@@ -710,9 +710,88 @@ int CV_GpuNppImageCopyConstBorderTest::test( const Mat& cpu1, const Mat& )
 
     GpuMat gpu1(cpu1);
     GpuMat gpudst;    
-    cv::gpu::copyConstBorder(gpu1, gpudst, 5, 5, 5, 5);
+    cv::gpu::copyMakeBorder(gpu1, gpudst, 5, 5, 5, 5);
 
     return CheckNorm(cpudst, gpudst);
 }
 
-CV_GpuNppImageCopyConstBorderTest CV_GpuNppImageCopyConstBorder_test;
+CV_GpuNppImageCopyMakeBorderTest CV_GpuNppImageCopyMakeBorder_test;
+
+////////////////////////////////////////////////////////////////////////////////
+// warpAffine
+class CV_GpuNppImageWarpAffineTest : public CV_GpuNppImageArithmTest
+{
+public:
+    CV_GpuNppImageWarpAffineTest();
+
+protected:
+    virtual int test(const Mat& cpu1, const Mat& cpu2);
+};
+
+CV_GpuNppImageWarpAffineTest::CV_GpuNppImageWarpAffineTest(): CV_GpuNppImageArithmTest( "GPU-NppImageWarpAffine", "warpAffine" )
+{
+}
+
+int CV_GpuNppImageWarpAffineTest::test( const Mat& cpu1, const Mat& )
+{
+    static const double coeffs[2][3] = 
+    { 
+        {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
+        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+    };
+    Mat M(2, 3, CV_64F, (void*)coeffs);
+
+    if (cpu1.type() == CV_32SC1)
+        return CvTS::OK;
+
+    Mat cpudst;
+    cv::warpAffine(cpu1, cpudst, M, cpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+
+    GpuMat gpu1(cpu1);
+    GpuMat gpudst;
+    cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+
+    return CheckNorm(cpudst, gpudst);
+}
+
+CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;
+
+////////////////////////////////////////////////////////////////////////////////
+// warpAffine
+class CV_GpuNppImageWarpPerspectiveTest : public CV_GpuNppImageArithmTest
+{
+public:
+    CV_GpuNppImageWarpPerspectiveTest();
+
+protected:
+    virtual int test(const Mat& cpu1, const Mat& cpu2);
+};
+
+CV_GpuNppImageWarpPerspectiveTest::CV_GpuNppImageWarpPerspectiveTest(): CV_GpuNppImageArithmTest( "GPU-NppImageWarpPerspective", "warpPerspective" )
+{
+}
+
+int CV_GpuNppImageWarpPerspectiveTest::test( const Mat& cpu1, const Mat& )
+{
+    static const double coeffs[3][3] = 
+    {
+        {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
+        {sin(3.14 / 6), cos(3.14 / 6), -100.0}, 
+        {0.0, 0.0, 1.0}
+    };
+    Mat M(3, 3, CV_64F, (void*)coeffs);
+
+    if (cpu1.type() == CV_32SC1)
+        return CvTS::OK;
+
+    Mat cpudst;
+    cv::warpPerspective(cpu1, cpudst, M, cpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+
+    GpuMat gpu1(cpu1);
+    GpuMat gpudst;
+    cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+
+    return CheckNorm(cpudst, gpudst);
+}
+
+CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
