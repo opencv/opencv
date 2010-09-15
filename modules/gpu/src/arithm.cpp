@@ -121,22 +121,22 @@ namespace
 		{
 			if (src1.channels() == 1)
 			{
-				npp_func_8uc1((const Npp8u*)src1.ptr<char>(), src1.step, 
+				nppSafeCall( npp_func_8uc1((const Npp8u*)src1.ptr<char>(), src1.step, 
 					(const Npp8u*)src2.ptr<char>(), src2.step, 
-					(Npp8u*)dst.ptr<char>(), dst.step, sz, 0);
+					(Npp8u*)dst.ptr<char>(), dst.step, sz, 0) );
 			}
 			else
 			{
-				npp_func_8uc4((const Npp8u*)src1.ptr<char>(), src1.step, 
+				nppSafeCall( npp_func_8uc4((const Npp8u*)src1.ptr<char>(), src1.step, 
 					(const Npp8u*)src2.ptr<char>(), src2.step, 
-					(Npp8u*)dst.ptr<char>(), dst.step, sz, 0);
+					(Npp8u*)dst.ptr<char>(), dst.step, sz, 0) );
 			}        
 		}
 		else //if (src1.depth() == CV_32F)
 		{
-			npp_func_32fc1((const Npp32f*)src1.ptr<float>(), src1.step,
+			nppSafeCall( npp_func_32fc1((const Npp32f*)src1.ptr<float>(), src1.step,
 				(const Npp32f*)src2.ptr<float>(), src2.step,
-				(Npp32f*)dst.ptr<float>(), dst.step, sz);
+				(Npp32f*)dst.ptr<float>(), dst.step, sz) );
 		}
 	}
 }
@@ -171,7 +171,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
     sz.width  = src.cols;
     sz.height = src.rows;
 
-    nppiTranspose_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, (Npp8u*)dst.ptr<char>(), dst.step, sz);
+    nppSafeCall( nppiTranspose_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, (Npp8u*)dst.ptr<char>(), dst.step, sz) );
 }
 
 void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
@@ -188,15 +188,15 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 
     if (src1.depth() == CV_8U)
     {
-        nppiAbsDiff_8u_C1R((const Npp8u*)src1.ptr<char>(), src1.step, 
+        nppSafeCall( nppiAbsDiff_8u_C1R((const Npp8u*)src1.ptr<char>(), src1.step, 
                 (const Npp8u*)src2.ptr<char>(), src2.step, 
-                (Npp8u*)dst.ptr<char>(), dst.step, sz);
+                (Npp8u*)dst.ptr<char>(), dst.step, sz) );
     }
     else //if (src1.depth() == CV_32F)
     {
-        nppiAbsDiff_32f_C1R((const Npp32f*)src1.ptr<float>(), src1.step,
+        nppSafeCall( nppiAbsDiff_32f_C1R((const Npp32f*)src1.ptr<float>(), src1.step,
             (const Npp32f*)src2.ptr<float>(), src2.step,
-            (Npp32f*)dst.ptr<float>(), dst.step, sz);
+            (Npp32f*)dst.ptr<float>(), dst.step, sz) );
     }
 }
 
@@ -210,8 +210,8 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
     sz.width  = src.cols;
     sz.height = src.rows;
 
-    nppiThreshold_32f_C1R((const Npp32f*)src.ptr<float>(), src.step, 
-        (Npp32f*)dst.ptr<float>(), dst.step, sz, (Npp32f)thresh, NPP_CMP_GREATER);
+    nppSafeCall( nppiThreshold_32f_C1R((const Npp32f*)src.ptr<float>(), src.step, 
+        (Npp32f*)dst.ptr<float>(), dst.step, sz, (Npp32f)thresh, NPP_CMP_GREATER) );
 
     return thresh;
 }
@@ -232,15 +232,15 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
 
     if (src1.depth() == CV_8U)
     {
-        nppiCompare_8u_C4R((const Npp8u*)src1.ptr<char>(), src1.step, 
+        nppSafeCall( nppiCompare_8u_C4R((const Npp8u*)src1.ptr<char>(), src1.step, 
             (const Npp8u*)src2.ptr<char>(), src2.step, 
-            (Npp8u*)dst.ptr<char>(), dst.step, sz, nppCmpOp[cmpop]);
+            (Npp8u*)dst.ptr<char>(), dst.step, sz, nppCmpOp[cmpop]) );
     }
     else //if (src1.depth() == CV_32F)
     {
-        nppiCompare_32f_C1R((const Npp32f*)src1.ptr<float>(), src1.step,
+        nppSafeCall( nppiCompare_32f_C1R((const Npp32f*)src1.ptr<float>(), src1.step,
             (const Npp32f*)src2.ptr<float>(), src2.step,
-            (Npp8u*)dst.ptr<char>(), dst.step, sz, nppCmpOp[cmpop]);
+            (Npp8u*)dst.ptr<char>(), dst.step, sz, nppCmpOp[cmpop]) );
     }
 }
 
@@ -252,7 +252,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
     sz.width  = src.cols;
     sz.height = src.rows;
 
-    nppiMean_StdDev_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, mean.val, stddev.val);
+    nppSafeCall( nppiMean_StdDev_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, mean.val, stddev.val) );
 }
 
 double cv::gpu::norm(const GpuMat& src1, int normType) 
@@ -278,9 +278,9 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     int funcIdx = normType >> 1;
     Scalar retVal;
 
-    npp_norm_diff_func[funcIdx]((const Npp8u*)src1.ptr<char>(), src1.step, 
+    nppSafeCall( npp_norm_diff_func[funcIdx]((const Npp8u*)src1.ptr<char>(), src1.step, 
         (const Npp8u*)src2.ptr<char>(), src2.step, 
-        sz, retVal.val);
+        sz, retVal.val) );
 
     return retVal[0];
 }
@@ -297,15 +297,15 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 
     if (src.channels() == 1)
     {
-        nppiMirror_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, 
+        nppSafeCall( nppiMirror_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, 
             (Npp8u*)dst.ptr<char>(), dst.step, sz, 
-            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS)));
+            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
     }
     else
     {
-        nppiMirror_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, 
+        nppSafeCall( nppiMirror_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, 
             (Npp8u*)dst.ptr<char>(), dst.step, sz, 
-            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS)));
+            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
     }
 }
 
@@ -342,13 +342,13 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     if (src.channels() == 1)
     {
-        nppiResize_8u_C1R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcrect,
-            (Npp8u*)dst.ptr<char>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]);
+        nppSafeCall( nppiResize_8u_C1R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcrect,
+            (Npp8u*)dst.ptr<char>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]) );
     }
     else
     {
-        nppiResize_8u_C4R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcrect,
-            (Npp8u*)dst.ptr<char>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]);
+        nppSafeCall( nppiResize_8u_C4R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcrect,
+            (Npp8u*)dst.ptr<char>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]) );
     }
 }
 
@@ -364,11 +364,11 @@ Scalar cv::gpu::sum(const GpuMat& src)
 
     if (src.channels() == 1)
     {
-        nppiSum_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, res.val);
+        nppSafeCall( nppiSum_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, res.val) );
     }
     else
     {
-        nppiSum_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, sz, res.val);
+        nppSafeCall( nppiSum_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, sz, res.val) );
     }
 
     return res;
@@ -384,7 +384,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
 
     Npp8u min_res, max_res;
 
-    nppiMinMax_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, &min_res, &max_res);
+    nppSafeCall( nppiMinMax_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, sz, &min_res, &max_res) );
 
     if (minVal)
         *minVal = min_res;
@@ -411,21 +411,21 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 		if (src.channels() == 1)
 		{
             Npp8u nVal = (Npp8u)value[0];
-            nppiCopyConstBorder_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, srcsz, 
-                (Npp8u*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal);
+            nppSafeCall( nppiCopyConstBorder_8u_C1R((const Npp8u*)src.ptr<char>(), src.step, srcsz, 
+                (Npp8u*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal) );
 		}
 		else
 		{
             Npp8u nVal[] = {(Npp8u)value[0], (Npp8u)value[1], (Npp8u)value[2], (Npp8u)value[3]};
-            nppiCopyConstBorder_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, srcsz, 
-                (Npp8u*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal);
+            nppSafeCall( nppiCopyConstBorder_8u_C4R((const Npp8u*)src.ptr<char>(), src.step, srcsz, 
+                (Npp8u*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal) );
 		}        
 	}
 	else //if (src.depth() == CV_32S)
 	{
         Npp32s nVal = (Npp32s)value[0];
-        nppiCopyConstBorder_32s_C1R((const Npp32s*)src.ptr<char>(), src.step, srcsz, 
-            (Npp32s*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal);
+        nppSafeCall( nppiCopyConstBorder_32s_C1R((const Npp32s*)src.ptr<char>(), src.step, srcsz, 
+            (Npp32s*)dst.ptr<char>(), dst.step, dstsz, top, left, nVal) );
 	}
 }
 
@@ -461,20 +461,20 @@ namespace
         switch (src.depth())
         {
         case CV_8U:
-            npp_warp_8u[src.channels()][warpInd]((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcroi, 
-                (Npp8u*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]);
+            nppSafeCall( npp_warp_8u[src.channels()][warpInd]((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcroi, 
+                (Npp8u*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_16U:
-            npp_warp_16u[src.channels()][warpInd]((const Npp16u*)src.ptr<char>(), srcsz, src.step, srcroi, 
-                (Npp16u*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]);
+            nppSafeCall( npp_warp_16u[src.channels()][warpInd]((const Npp16u*)src.ptr<char>(), srcsz, src.step, srcroi, 
+                (Npp16u*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32SC1:
-            npp_warp_32s[src.channels()][warpInd]((const Npp32s*)src.ptr<char>(), srcsz, src.step, srcroi, 
-                (Npp32s*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]);
+            nppSafeCall( npp_warp_32s[src.channels()][warpInd]((const Npp32s*)src.ptr<char>(), srcsz, src.step, srcroi, 
+                (Npp32s*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32FC1:
-            npp_warp_32f[src.channels()][warpInd]((const Npp32f*)src.ptr<char>(), srcsz, src.step, srcroi, 
-                (Npp32f*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]);
+            nppSafeCall( npp_warp_32f[src.channels()][warpInd]((const Npp32f*)src.ptr<char>(), srcsz, src.step, srcroi, 
+                (Npp32f*)dst.ptr<char>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         default:
             CV_Assert(!"Unsupported source type");
@@ -593,13 +593,13 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
 
     if (src.channels() == 1)
     {
-        nppiRotate_8u_C1R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcroi, 
-            (Npp8u*)dst.ptr<char>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]);
+        nppSafeCall( nppiRotate_8u_C1R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcroi, 
+            (Npp8u*)dst.ptr<char>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
     }
     else
     {
-        nppiRotate_8u_C4R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcroi, 
-            (Npp8u*)dst.ptr<char>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]);
+        nppSafeCall( nppiRotate_8u_C4R((const Npp8u*)src.ptr<char>(), srcsz, src.step, srcroi, 
+            (Npp8u*)dst.ptr<char>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
     }
 }
 

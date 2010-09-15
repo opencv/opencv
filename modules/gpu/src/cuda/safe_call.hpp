@@ -44,11 +44,14 @@
 #define __OPENCV_CUDA_SAFE_CALL_HPP__
 
 #include "cuda_runtime_api.h"
+#include <nppdefs.h>
 
 #if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__);
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
 #endif
 
 namespace cv
@@ -61,6 +64,12 @@ namespace cv
         {
             if( cudaSuccess != err)
                 cv::gpu::error(cudaGetErrorString(err), file, line, func);
+        }
+
+        static inline void ___nppSafeCall(NppStatus err, const char *file, const int line, const char *func = "")
+        {
+            if (err < 0)
+                cv::gpu::error("NPP Error", file, line, func);
         }
     }
 }
