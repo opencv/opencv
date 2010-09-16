@@ -519,7 +519,7 @@ The function \texttt{cvFontQt} creates a CvFont object to be used with \cross{ad
 A basic usage of this function is:
 \begin{lstlisting}
 CvFont font = cvFontQt(''Times'');
-cvAddText( img1, ``Hello World !'', cvPoint(50,50), &font);
+cvAddText( img1, ``Hello World !'', cvPoint(50,50), font);
 \end{lstlisting}
 
 
@@ -772,7 +772,7 @@ The function \texttt{fontQt} creates a CvFont object. This CvFont is not compati
 A basic usage of this function is:
 \begin{lstlisting}
 CvFont font = fontQt(''Times'');
-addText( img1, ``Hello World !'', Point(50,50), &font);
+addText( img1, ``Hello World !'', Point(50,50), font);
 \end{lstlisting}
 
 \cvCppFunc{addText}
