@@ -721,21 +721,36 @@ GuiReceiver::~GuiReceiver()
 	delete timer;
 }
 
-void GuiReceiver::putText(void* arg1, QString text, QPoint org, void* arg2)
+void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
 {
-	CV_Assert(arg1)
+	CV_Assert(arr)
 
-		IplImage* img = (IplImage*)arg1;
+	CvMat * mat, stub;
+	int origin=0;
+
+	if( CV_IS_IMAGE_HDR( arr ))
+		origin = ((IplImage*)arr)->origin;
+
+	mat = cvGetMat(arr, &stub);
+
+	int nbChannelOriginImage = cvGetElemType(mat);
+
+
+	 if (nbChannelOriginImage!=CV_8UC3) return;//for now, font works only with 8UC3
+
+	//CvMat* image2Draw_mat = cvCreateMat( mat->rows, mat->cols, CV_8UC3 );
+	QImage qimg = QImage(mat->data.ptr, mat->cols,mat->rows, mat->step,QImage::Format_RGB888);
+
+
+	//IplImage* img = (IplImage*)arg1;
 
 	//for now, only support QImage::Format_RGB888
-	if (img->depth !=IPL_DEPTH_8U || img->nChannels != 3)
-		return;
+	//if (img->depth !=IPL_DEPTH_8U || img->nChannels != 3)
+	//	return;
 
 	CvFont* font = (CvFont*)arg2;
 
-
-
-	QImage qimg((uchar*) img->imageData, img->width, img->height,QImage::Format_RGB888);
+	//QImage qimg((uchar*) img->imageData, img->width, img->height,QImage::Format_RGB888);
 	QPainter qp(&qimg);
 	if (font)
 	{
@@ -750,6 +765,8 @@ void GuiReceiver::putText(void* arg1, QString text, QPoint org, void* arg2)
 	}
 	qp.drawText (org, text );
 	qp.end();
+
+	//cvReleaseMat(&image2Draw_mat);
 }
 
 void GuiReceiver::saveWindowParameters(QString name)
@@ -1464,6 +1481,7 @@ CvWindow::CvWindow(QString arg, int arg2)
 	setObjectName(param_name);
 
 	resize(400,300);
+	setMinimumSize(1,1);
 
 	//1: create control panel
 	if (!global_control_panel)
@@ -1483,7 +1501,6 @@ CvWindow::CvWindow(QString arg, int arg2)
 	//4: shortcuts and actions
 	createActions();
 	createShortcuts();
-	//createActionsandShortcuts();
 
 	//5: toolBar and statusbar
 	if (param_gui_mode == CV_GUI_EXPANDED)
@@ -1688,6 +1705,7 @@ void CvWindow::createToolBar()
 	myToolBar = new QToolBar(this);
 	myToolBar->setFloatable(false);//is not a window
 	myToolBar->setFixedHeight(28);
+	myToolBar->setMinimumWidth(1);
 
 	foreach (QAction *a, vect_QActions)
 		myToolBar->addAction(a);
@@ -1698,6 +1716,7 @@ void CvWindow::createStatusBar()
 	myStatusBar = new QStatusBar(this);
 	myStatusBar->setSizeGripEnabled(false);
 	myStatusBar->setFixedHeight(20);
+	myStatusBar->setMinimumWidth(1);
 	myStatusBar_msg = new QLabel;
 
 
@@ -1718,6 +1737,7 @@ void CvWindow::createGlobalLayout()
 	myGlobalLayout->setContentsMargins(0, 0, 0, 0);
 	myGlobalLayout->setSpacing(0);
 	myGlobalLayout->setMargin(0);
+	setMinimumSize(1,1);
 
 	if (param_flags == CV_WINDOW_AUTOSIZE)
 		myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
@@ -2103,6 +2123,7 @@ ViewPort::ViewPort(CvWindow* arg, int arg2, int arg3)
 
 	//setAlignment(Qt::AlignLeft | Qt::AlignTop);
 	setContentsMargins(0,0,0,0);
+	setMinimumSize(1,1);
 
 	setObjectName(QString::fromUtf8("graphicsView"));
 	timerDisplay = new QTimer(this);
