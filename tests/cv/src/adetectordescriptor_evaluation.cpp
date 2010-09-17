@@ -686,8 +686,8 @@ inline void readKeypoints( FileStorage& fs, vector<KeyPoint>& keypoints, int img
 
 void DetectorQualityTest::readAlgorithm ()
 {
-    defaultDetector = createDetector( algName );
-    specificDetector = createDetector( algName );
+    defaultDetector = createFeatureDetector( algName );
+    specificDetector = createFeatureDetector( algName );
     if( defaultDetector == 0 )
     {
         ts->printf(CvTS::LOG, "Algorithm can not be read\n");

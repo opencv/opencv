@@ -651,7 +651,7 @@ int main(int argc, char** argv)
     Size calibratedImageSize;
     readCameraMatrix(intrinsicsFilename, cameraMatrix, distCoeffs, calibratedImageSize);
     
-    Ptr<FeatureDetector> detector = createDetector(detectorName);
+    Ptr<FeatureDetector> detector = createFeatureDetector(detectorName);
     Ptr<DescriptorExtractor> descriptorExtractor = createDescriptorExtractor(descriptorExtractorName);
     
     string modelIndexFilename = format("%s_segm/frame_index.yml", modelName);

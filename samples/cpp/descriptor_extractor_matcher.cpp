@@ -143,7 +143,7 @@ int main(int argc, char** argv)
         ransacReprojThreshold = atof(argv[5]);
 
     cout << "< Creating detector, descriptor extractor and descriptor matcher ..." << endl;
-    Ptr<FeatureDetector> detector = createDetector( argv[1] );
+    Ptr<FeatureDetector> detector = createFeatureDetector( argv[1] );
     Ptr<DescriptorExtractor> descriptorExtractor = createDescriptorExtractor( argv[2] );
     Ptr<DescriptorMatcher> descriptorMatcher = createDescriptorMatcher( "BruteForce" );
     cout << ">" << endl;

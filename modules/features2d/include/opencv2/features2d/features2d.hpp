@@ -1354,7 +1354,7 @@ protected:
     SURF surf;
 };
 
-CV_EXPORTS Ptr<FeatureDetector> createDetector( const string& detectorType );
+CV_EXPORTS Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
 
 /*
  * Adapts a detector to partition the source image into a grid and detect
