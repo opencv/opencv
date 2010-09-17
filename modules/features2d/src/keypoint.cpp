@@ -59,7 +59,7 @@ void write(FileStorage& fs, const string& objname, const vector<KeyPoint>& keypo
         write(fs, kpt.angle);
         write(fs, kpt.response);
         write(fs, kpt.octave);
-//        write(fs, kpt.class_id);
+        write(fs, kpt.class_id);
     }
 }
 
@@ -71,7 +71,7 @@ void read(const FileNode& node, vector<KeyPoint>& keypoints)
     for( ; it != it_end; )
     {
         KeyPoint kpt;
-        it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave/* >> kpt.class_id*/;
+        it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave >> kpt.class_id;
         keypoints.push_back(kpt);
     }
 }
