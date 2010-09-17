@@ -62,10 +62,10 @@ namespace cv
         CV_EXPORTS void setDevice(int device);
         CV_EXPORTS int getDevice();
 
-        CV_EXPORTS void getComputeCapability(int device, int* major, int* minor);
+        CV_EXPORTS void getComputeCapability(int device, int& major, int& minor);
         CV_EXPORTS int getNumberOfSMs(int device);
 
-        CV_EXPORTS void getGpuMemInfo(size_t *free, size_t* total);
+        CV_EXPORTS void getGpuMemInfo(size_t& free, size_t& total);
 
         //////////////////////////////// GpuMat ////////////////////////////////
         class Stream;

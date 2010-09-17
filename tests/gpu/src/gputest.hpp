@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef _CXCORE_TEST_H_
-#define _CXCORE_TEST_H_
+#ifndef _GPU_TEST_H_
+#define _GPU_TEST_H_
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
@@ -62,10 +62,8 @@
 #pragma warning(disable : 4996) /* deprecated function */
 #endif
 
-#endif /* _CXCORE_TEST_H_ */
 
-
-inline bool check_and_treat_gpu_exception(const cv::Exception& e, CvTS* ts)
+static inline bool check_and_treat_gpu_exception(const cv::Exception& e, CvTS* ts)
 {
     switch (e.code)
     {
@@ -87,5 +85,7 @@ inline bool check_and_treat_gpu_exception(const cv::Exception& e, CvTS* ts)
     ts->set_failed_test_info(CvTS::FAIL_GENERIC);                        
     return true;
 }
+
+#endif 
 
 /* End of file. */

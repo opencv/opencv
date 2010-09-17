@@ -61,6 +61,8 @@ namespace cv
             T* ptr;
             size_t step;
 
+            DevMem2D_() : cols(0), rows(0), ptr(0), step(0) {}
+
             DevMem2D_(int rows_, int cols_, T *ptr_, size_t step_)
                 : cols(cols_), rows(rows_), ptr(ptr_), step(step_) {}
 

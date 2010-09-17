@@ -89,7 +89,7 @@ bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable()
     int device = getDevice();
 
     int minor, major;
-    getComputeCapability(device, &major, &minor);
+    getComputeCapability(device, major, minor);
     int numSM = getNumberOfSMs(device);
 
     if (major > 1 || numSM > 16)

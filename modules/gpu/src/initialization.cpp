@@ -52,9 +52,9 @@ CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
 CV_EXPORTS string cv::gpu::getDeviceName(int /*device*/)  { throw_nogpu(); return 0; } 
 CV_EXPORTS void cv::gpu::setDevice(int /*device*/) { throw_nogpu(); } 
 CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
-CV_EXPORTS void cv::gpu::getComputeCapability(int /*device*/, int* /*major*/, int* /*minor*/) { throw_nogpu(); } 
+CV_EXPORTS void cv::gpu::getComputeCapability(int /*device*/, int& /*major*/, int& /*minor*/) { throw_nogpu(); } 
 CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { throw_nogpu(); return 0; } 
-CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t* /*free*/, size_t* /*total*/)  { throw_nogpu(); } 
+CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& /*free*/, size_t& /*total*/)  { throw_nogpu(); } 
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -84,13 +84,13 @@ CV_EXPORTS int cv::gpu::getDevice()
     return device;
 }
 
-CV_EXPORTS void cv::gpu::getComputeCapability(int device, int* major, int* minor)
+CV_EXPORTS void cv::gpu::getComputeCapability(int device, int& major, int& minor)
 {
     cudaDeviceProp prop;    
     cudaSafeCall( cudaGetDeviceProperties( &prop, device) );
 
-    *major = prop.major;
-    *minor = prop.minor;
+    major = prop.major;
+    minor = prop.minor;
 }
 
 CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
@@ -101,9 +101,9 @@ CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
 }
 
 
-CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t *free, size_t* total)
+CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& free, size_t& total)
 {
-    cudaSafeCall( cudaMemGetInfo( free, total ) );
+    cudaSafeCall( cudaMemGetInfo( &free, &total ) );
 }
 
 #endif
