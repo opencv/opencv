@@ -64,4 +64,28 @@
 
 #endif /* _CXCORE_TEST_H_ */
 
+
+inline bool check_and_treat_gpu_exception(const cv::Exception& e, CvTS* ts)
+{
+    switch (e.code)
+    {
+    case CV_GpuNotFound: 
+        ts->printf(CvTS::CONSOLE, "\nGpu not found"); 
+        break;
+
+    case CV_GpuApiCallError: 
+        ts->printf(CvTS::CONSOLE, "\nGPU Error: %s", e.what());
+        break;
+
+    case CV_GpuNppCallError: 
+        ts->printf(CvTS::CONSOLE, "\nNPP Error: %s", e.what());
+        break;
+
+    default:
+        return false;
+    }
+    ts->set_failed_test_info(CvTS::FAIL_GENERIC);                        
+    return true;
+}
+
 /* End of file. */

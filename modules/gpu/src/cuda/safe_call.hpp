@@ -59,6 +59,7 @@ namespace cv
     namespace gpu
     {
         extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
+        extern "C" void npp_error( int error, const char *file, const int line, const char *func = "");   
 
         static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
         {
@@ -69,7 +70,7 @@ namespace cv
         static inline void ___nppSafeCall(NppStatus err, const char *file, const int line, const char *func = "")
         {
             if (err < 0)
-                cv::gpu::error("NPP Error", file, line, func);
+                cv::gpu::npp_error(err, file, line, func);
         }
     }
 }
