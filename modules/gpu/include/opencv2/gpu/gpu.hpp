@@ -408,6 +408,30 @@ namespace cv
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
 
+        //! makes multi-channel array out of several single-channel arrays
+        CV_EXPORTS void merge(const GpuMat* src, size_t n, GpuMat& dst);
+
+        //! makes multi-channel array out of several single-channel arrays
+        CV_EXPORTS void merge(const vector<GpuMat>& src, GpuMat& dst);
+
+        //! makes multi-channel array out of several single-channel arrays (async version)
+        CV_EXPORTS void merge(const GpuMat* src, size_t n, GpuMat& dst, const Stream& stream);
+
+        //! makes multi-channel array out of several single-channel arrays (async version)
+        CV_EXPORTS void merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream);
+
+        //! copies each plane of a multi-channel array to a dedicated array
+        CV_EXPORTS void split(const GpuMat& src, GpuMat* dst);
+
+        //! copies each plane of a multi-channel array to a dedicated array
+        CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst);
+
+        //! copies each plane of a multi-channel array to a dedicated array (async version)
+        CV_EXPORTS void split(const GpuMat& src, GpuMat* dst, const Stream& stream);
+
+        //! copies each plane of a multi-channel array to a dedicated array (async version)
+        CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream);
+
         ////////////////////////////// Image processing //////////////////////////////
 
         // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
