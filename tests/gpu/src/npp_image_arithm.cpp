@@ -132,7 +132,7 @@ int CV_GpuNppImageArithmTest::CheckNorm(const Mat& m1, const Mat& m2)
     }
     else
     {
-        ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
+        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
         return CvTS::FAIL_GENERIC;
     }
 }
@@ -154,7 +154,7 @@ int CV_GpuNppImageArithmTest::CheckNorm(double d1, double d2)
     }
     else
     {
-        ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
+        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
         return CvTS::FAIL_GENERIC;
     }
 }
@@ -165,8 +165,14 @@ void CV_GpuNppImageArithmTest::run( int )
     //cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-L.png");
     //cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-R.png");
 
-    cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
-    cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
+    //cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
+    //cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
+
+    cv::RNG rng(*ts->get_rng());
+    cv::Size sz(200, 200);
+    cv::Mat img_l(sz, CV_8UC3), img_r(sz, CV_8UC3);
+    rng.fill(img_l, cv::RNG::UNIFORM, cv::Scalar::all(10), cv::Scalar::all(100));
+    rng.fill(img_r, cv::RNG::UNIFORM, cv::Scalar::all(10), cv::Scalar::all(100));
 
     if (img_l.empty() || img_r.empty())
     {
@@ -174,32 +180,41 @@ void CV_GpuNppImageArithmTest::run( int )
         return;
     }
 
-    //run tests
-    int testResult = test8UC1(img_l, img_r);
-    if (testResult != CvTS::OK)
+    try
     {
-        ts->set_failed_test_info(testResult);
-        return;
-    }
+        //run tests
+        int testResult = test8UC1(img_l, img_r);
+        if (testResult != CvTS::OK)
+        {
+            ts->set_failed_test_info(testResult);
+            return;
+        }
 
-    testResult = test8UC4(img_l, img_r);
-    if (testResult != CvTS::OK)
-    {
-        ts->set_failed_test_info(testResult);
-        return;
-    }
+        testResult = test8UC4(img_l, img_r);
+        if (testResult != CvTS::OK)
+        {
+            ts->set_failed_test_info(testResult);
+            return;
+        }
 
-    testResult = test32SC1(img_l, img_r);
-    if (testResult != CvTS::OK)
-    {
-        ts->set_failed_test_info(testResult);
-        return;
-    }
+        testResult = test32SC1(img_l, img_r);
+        if (testResult != CvTS::OK)
+        {
+            ts->set_failed_test_info(testResult);
+            return;
+        }
 
-    testResult = test32FC1(img_l, img_r);
-    if (testResult != CvTS::OK)
+        testResult = test32FC1(img_l, img_r);
+        if (testResult != CvTS::OK)
+        {
+            ts->set_failed_test_info(testResult);
+            return;
+        }
+    }
+    catch(const cv::Exception& e)
     {
-        ts->set_failed_test_info(testResult);
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
         return;
     }
 
@@ -423,15 +438,15 @@ int CV_GpuNppImageThresholdTest::test( const Mat& cpu1, const Mat& )
     if (cpu1.type() != CV_32FC1)
         return CvTS::OK;
 
-    const double thresh = 0.5;
-    const double maxval = 0.0;
+    cv::RNG rng(*ts->get_rng());
+    const double thresh = rng;
 
     cv::Mat cpuRes;
-    cv::threshold(cpu1, cpuRes, thresh, maxval, THRESH_TRUNC);
+    cv::threshold(cpu1, cpuRes, thresh, 0.0, THRESH_TRUNC);
 
     GpuMat gpu1(cpu1);
     GpuMat gpuRes;
-    cv::gpu::threshold(gpu1, gpuRes, thresh, maxval, THRESH_TRUNC);
+    cv::gpu::threshold(gpu1, gpuRes, thresh);
 
     return CheckNorm(cpuRes, gpuRes);
 }
@@ -458,15 +473,30 @@ int CV_GpuNppImageCompareTest::test( const Mat& cpu1, const Mat& cpu2 )
     if (cpu1.type() != CV_32FC1)
         return CvTS::OK;
 
-    cv::Mat cpuRes;
-    cv::compare(cpu1, cpu2, cpuRes, CMP_GT);
+    int cmp_codes[] = {CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE};
+    const char* cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
+    int cmp_num = sizeof(cmp_codes) / sizeof(int);
 
-    GpuMat gpu1(cpu1);
-    GpuMat gpu2(cpu2);
-    GpuMat gpuRes;
-    cv::gpu::compare(gpu1, gpu2, gpuRes, CMP_GT);
+    int test_res = CvTS::OK;
 
-    return CheckNorm(cpuRes, gpuRes);
+    for (int i = 0; i < cmp_num; ++i)
+    {
+        cv::Mat cpuRes;
+        cv::compare(cpu1, cpu2, cpuRes, cmp_codes[i]);
+
+        GpuMat gpu1(cpu1);
+        GpuMat gpu2(cpu2);
+        GpuMat gpuRes;
+        cv::gpu::compare(gpu1, gpu2, gpuRes, cmp_codes[i]);
+
+        if (CheckNorm(cpuRes, gpuRes) != CvTS::OK)
+        {
+            ts->printf(CvTS::CONSOLE, "\nCompare operation: %s\n", cmp_str[i]);
+            test_res = CvTS::FAIL_GENERIC;
+        }
+    }
+
+    return test_res;
 }
 
 CV_GpuNppImageCompareTest CV_GpuNppImageCompare_test;
@@ -525,19 +555,28 @@ int CV_GpuNppImageNormTest::test( const Mat& cpu1, const Mat& cpu2 )
     if (cpu1.type() != CV_8UC1)
         return CvTS::OK;
 
-    double cpu_norm_inf = cv::norm(cpu1, cpu2, NORM_INF);
-    double cpu_norm_L1 = cv::norm(cpu1, cpu2, NORM_L1);
-    double cpu_norm_L2 = cv::norm(cpu1, cpu2, NORM_L2);
+    int norms[] = {NORM_INF, NORM_L1, NORM_L2};
+    const char* norms_str[] = {"NORM_INF", "NORM_L1", "NORM_L2"};
+    int norms_num = sizeof(norms) / sizeof(int);
 
-    GpuMat gpu1(cpu1);
-    GpuMat gpu2(cpu2);
-    double gpu_norm_inf = cv::gpu::norm(gpu1, gpu2, NORM_INF);
-    double gpu_norm_L1 = cv::gpu::norm(gpu1, gpu2, NORM_L1);
-    double gpu_norm_L2 = cv::gpu::norm(gpu1, gpu2, NORM_L2);
+    int test_res = CvTS::OK;
 
-    return (CheckNorm(cpu_norm_inf, gpu_norm_inf) == CvTS::OK  
-            && CheckNorm(cpu_norm_L1, gpu_norm_L1) == CvTS::OK 
-            && CheckNorm(cpu_norm_L2, gpu_norm_L2) == CvTS::OK) ? CvTS::OK : CvTS::FAIL_GENERIC;
+    for (int i = 0; i < norms_num; ++i)
+    {
+        double cpu_norm = cv::norm(cpu1, cpu2, norms[i]);
+
+        GpuMat gpu1(cpu1);
+        GpuMat gpu2(cpu2);
+        double gpu_norm = cv::gpu::norm(gpu1, gpu2, norms[i]);
+
+        if (CheckNorm(cpu_norm, gpu_norm) != CvTS::OK)
+        {
+            ts->printf(CvTS::CONSOLE, "\nNorm type: %s\n", norms_str[i]);
+            test_res = CvTS::FAIL_GENERIC;
+        }
+    }
+
+    return test_res;
 }
 
 CV_GpuNppImageNormTest CV_GpuNppImageNorm_test;
@@ -562,20 +601,29 @@ int CV_GpuNppImageFlipTest::test( const Mat& cpu1, const Mat& )
     if (cpu1.type() != CV_8UC1 && cpu1.type() != CV_8UC4)
         return CvTS::OK;
 
-    Mat cpux, cpuy, cpub;
-    cv::flip(cpu1, cpux, 0);
-    cv::flip(cpu1, cpuy, 1);
-    cv::flip(cpu1, cpub, -1);
+    int flip_codes[] = {0, 1, -1};
+    const char* flip_axis[] = {"X", "Y", "Both"};
+    int flip_codes_num = sizeof(flip_codes) / sizeof(int);
 
-    GpuMat gpu1(cpu1);
-    GpuMat gpux, gpuy, gpub;
-    cv::gpu::flip(gpu1, gpux, 0);
-    cv::gpu::flip(gpu1, gpuy, 1);
-    cv::gpu::flip(gpu1, gpub, -1);
+    int test_res = CvTS::OK;
 
-    return (CheckNorm(cpux, gpux) == CvTS::OK && 
-            CheckNorm(cpuy, gpuy) == CvTS::OK && 
-            CheckNorm(cpub, gpub) == CvTS::OK) ? CvTS::OK : CvTS::FAIL_GENERIC;
+    for (int i = 0; i < flip_codes_num; ++i)
+    {
+        Mat cpu_res;
+        cv::flip(cpu1, cpu_res, flip_codes[i]);
+        
+        GpuMat gpu1(cpu1);
+        GpuMat gpu_res;
+        cv::gpu::flip(gpu1, gpu_res, flip_codes[i]);
+
+        if (CheckNorm(cpu_res, gpu_res) != CvTS::OK)
+        {
+            ts->printf(CvTS::CONSOLE, "\nFlip Axis: %s\n", flip_axis[i]);
+            test_res = CvTS::FAIL_GENERIC;
+        }
+    }
+
+    return test_res;
 }
 
 CV_GpuNppImageFlipTest CV_GpuNppImageFlip_test;
@@ -600,25 +648,28 @@ int CV_GpuNppImageResizeTest::test( const Mat& cpu1, const Mat& )
     if (cpu1.type() != CV_8UC1 && cpu1.type() != CV_8UC4)
         return CvTS::OK;
 
-    Mat cpunn, cpulin, cpucub, cpulanc;
-    cv::resize(cpu1, cpunn, Size(), 0.5, 0.5, INTER_NEAREST);
-    cv::resize(cpu1, cpulin, Size(), 0.5, 0.5, INTER_LINEAR);
-    cv::resize(cpu1, cpucub, Size(), 0.5, 0.5, INTER_CUBIC);
-    cv::resize(cpu1, cpulanc, Size(), 0.5, 0.5, INTER_LANCZOS4);
+    int interpolations[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4};
+    const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LANCZOS4"};
+    int interpolations_num = sizeof(interpolations) / sizeof(int);
 
-    GpuMat gpu1(cpu1);
-    GpuMat gpunn, gpulin, gpucub, gpulanc;
-    cv::gpu::resize(gpu1, gpunn, Size(), 0.5, 0.5, INTER_NEAREST);
-    cv::gpu::resize(gpu1, gpulin, Size(), 0.5, 0.5, INTER_LINEAR);
-    cv::gpu::resize(gpu1, gpucub, Size(), 0.5, 0.5, INTER_CUBIC);
-    cv::gpu::resize(gpu1, gpulanc, Size(), 0.5, 0.5, INTER_LANCZOS4);
+    int test_res = CvTS::OK;
 
-    int nnres =CheckNorm(cpunn, gpunn);
-    int linres = CheckNorm(cpulin, gpulin);
-    int cubres = CheckNorm(cpucub, gpucub);
-    int lancres = CheckNorm(cpulanc, gpulanc);
+    for (int i = 0; i < interpolations_num; ++i)
+    {
+        Mat cpu_res;
+        cv::resize(cpu1, cpu_res, Size(), 0.5, 0.5, interpolations[i]);
 
-    return (nnres == CvTS::OK && linres == CvTS::OK && cubres == CvTS::OK && lancres == CvTS::OK) ? CvTS::OK : CvTS::FAIL_GENERIC;
+        GpuMat gpu1(cpu1), gpu_res;
+        cv::gpu::resize(gpu1, gpu_res, Size(), 0.5, 0.5, interpolations[i]);
+
+        if (CheckNorm(cpu_res, gpu_res) != CvTS::OK)
+        {
+            ts->printf(CvTS::CONSOLE, "\nInterpolation type: %s\n", interpolations_str[i]);
+            test_res = CvTS::FAIL_GENERIC;
+        }
+    }
+
+    return test_res;
 }
 
 CV_GpuNppImageResizeTest CV_GpuNppImageResize_test;
@@ -744,14 +795,29 @@ int CV_GpuNppImageWarpAffineTest::test( const Mat& cpu1, const Mat& )
     if (cpu1.type() == CV_32SC1)
         return CvTS::OK;
 
-    Mat cpudst;
-    cv::warpAffine(cpu1, cpudst, M, cpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+    int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
+    const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
+    int flags_num = sizeof(flags) / sizeof(int);
 
-    GpuMat gpu1(cpu1);
-    GpuMat gpudst;
-    cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+    int test_res = CvTS::OK;
 
-    return CheckNorm(cpudst, gpudst);
+    for (int i = 0; i < flags_num; ++i)
+    {
+        Mat cpudst;
+        cv::warpAffine(cpu1, cpudst, M, cpu1.size(), flags[i]);
+
+        GpuMat gpu1(cpu1);
+        GpuMat gpudst;
+        cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), flags[i]);
+
+        if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+        {
+            ts->printf(CvTS::CONSOLE, "\nFlags: %s\n", flags_str[i]);
+            test_res = CvTS::FAIL_GENERIC;
+        }
+    }
+
+    return test_res;
 }
 
 CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;
@@ -784,14 +850,29 @@ int CV_GpuNppImageWarpPerspectiveTest::test( const Mat& cpu1, const Mat& )
     if (cpu1.type() == CV_32SC1)
         return CvTS::OK;
 
-    Mat cpudst;
-    cv::warpPerspective(cpu1, cpudst, M, cpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+    int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
+    const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
+    int flags_num = sizeof(flags) / sizeof(int);
 
-    GpuMat gpu1(cpu1);
-    GpuMat gpudst;
-    cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), INTER_CUBIC | WARP_INVERSE_MAP);
+    int test_res = CvTS::OK;
 
-    return CheckNorm(cpudst, gpudst);
+    for (int i = 0; i < flags_num; ++i)
+    {
+        Mat cpudst;
+        cv::warpPerspective(cpu1, cpudst, M, cpu1.size(), flags[i]);
+
+        GpuMat gpu1(cpu1);
+        GpuMat gpudst;
+        cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
+
+        if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+        {
+            ts->printf(CvTS::CONSOLE, "\nFlags: %s\n", flags_str[i]);
+            test_res = CvTS::FAIL_GENERIC;
+        }
+    }
+
+    return test_res;
 }
 
 CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;

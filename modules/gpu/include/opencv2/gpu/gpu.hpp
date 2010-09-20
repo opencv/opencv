@@ -364,7 +364,7 @@ namespace cv
 
         //! applies fixed threshold to the image. 
         //! Now supports only THRESH_TRUNC threshold type and one channels float source.
-        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int thresholdType);
+        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh);
 
         //! compares elements of two arrays (c = a <cmpop> b)
         //! Now doesn't support CMP_NE.

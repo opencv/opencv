@@ -70,18 +70,30 @@ void CV_GpuStereoBMTest::run(int )
         return;
     }
 
-	cv::gpu::GpuMat disp;
-	cv::gpu::StereoBM_GPU bm(0, 128, 19);
-	bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+    try
+    {
+	    cv::gpu::GpuMat disp;
+	    cv::gpu::StereoBM_GPU bm(0, 128, 19);
+	    bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
-	disp.convertTo(disp, img_reference.type());
-	double norm = cv::norm(disp, img_reference, cv::NORM_INF);
+	    disp.convertTo(disp, img_reference.type());
+	    double norm = cv::norm(disp, img_reference, cv::NORM_INF);
 
-	if (norm >= 100) 
-        ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
-	ts->set_failed_test_info((norm < 100) ? CvTS::OK : CvTS::FAIL_GENERIC);
+	    if (norm >= 100) 
+        {
+            ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
+	        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            return;
+        }
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
+    }
+
+    ts->set_failed_test_info(CvTS::OK);
 }
 
-
 CV_GpuStereoBMTest CV_GpuStereoBM_test;
-

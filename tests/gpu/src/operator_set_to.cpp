@@ -132,11 +132,20 @@ void CV_GpuMatOpSetToTest::run( int /* start_from */)
 {
     bool is_test_good = true;
 
-    for (int i = 0; i < 7; i++)
+    try
     {
-        Mat cpumat(rows, cols, i, Scalar::all(0));
-        GpuMat gpumat(cpumat);
-        is_test_good &= compare_matrix(cpumat, gpumat);
+        for (int i = 0; i < 7; i++)
+        {
+            Mat cpumat(rows, cols, i, Scalar::all(0));
+            GpuMat gpumat(cpumat);
+            is_test_good &= compare_matrix(cpumat, gpumat);
+        }
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
     }
 
     if (is_test_good == true)

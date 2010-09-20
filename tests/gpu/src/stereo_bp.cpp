@@ -69,20 +69,33 @@ void CV_GpuStereoBPTest::run(int )
         return;
     }
 
-    cv::gpu::GpuMat disp;
-    cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+    try
+    {
+        cv::gpu::GpuMat disp;
+        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
 
-    bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
-    //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
+        //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
 
-    disp.convertTo(disp, img_template.type());
+        disp.convertTo(disp, img_template.type());
 
-    double norm = cv::norm(disp, img_template, cv::NORM_INF);
-	if (norm >= 0.5) 
-        ts->printf(CvTS::CONSOLE, "\nStereoBP norm = %f\n", norm);
-    ts->set_failed_test_info((norm < 0.5) ? CvTS::OK : CvTS::FAIL_GENERIC);
+        double norm = cv::norm(disp, img_template, cv::NORM_INF);
+	    if (norm >= 0.5) 
+        {
+            ts->printf(CvTS::CONSOLE, "\nStereoBP norm = %f\n", norm);
+            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            return;
+        }
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
+    }
+
+    ts->set_failed_test_info(CvTS::OK);
 }
-
 
 CV_GpuStereoBPTest CV_GpuStereoBP_test;

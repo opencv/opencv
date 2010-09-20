@@ -60,21 +60,23 @@ CV_GpuMeanShiftTest::CV_GpuMeanShiftTest(): CvTest( "GPU-MeanShift", "MeanShift"
 
 void CV_GpuMeanShiftTest::run(int)
 {
-        int spatialRad = 30;
-        int colorRad = 30;
+    int spatialRad = 30;
+    int colorRad = 30;
 
-        cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
-        cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
+    cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
+    cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
 
-        if (img.empty() || img_template.empty())
-        {
-            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
-            return;
-        }
+    if (img.empty() || img_template.empty())
+    {
+        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+        return;
+    }
 
-        cv::Mat rgba;
-        cvtColor(img, rgba, CV_BGR2BGRA);
+    cv::Mat rgba;
+    cvtColor(img, rgba, CV_BGR2BGRA);
 
+    try
+    {
         cv::gpu::GpuMat res;
         cv::gpu::meanShiftFiltering( cv::gpu::GpuMat(rgba), res, spatialRad, colorRad );
         if (res.type() != CV_8UC4)
@@ -98,15 +100,27 @@ void CV_GpuMeanShiftTest::run(int)
                 {
                     const uchar& ch1 = res_line[result.channels()*i + k];
                     const uchar& ch2 = ref_line[img_template.channels()*i + k];
-                    uchar diff = abs(ch1 - ch2);
+                    uchar diff = static_cast<uchar>(abs(ch1 - ch2));
                     if (maxDiff < diff)
                         maxDiff = diff;
                 }
             }
         }
         if (maxDiff > 0) 
+        {
             ts->printf(CvTS::CONSOLE, "\nMeanShift maxDiff = %d\n", maxDiff);
-        ts->set_failed_test_info((maxDiff == 0) ? CvTS::OK : CvTS::FAIL_GENERIC);
+            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            return;
+        }
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
+    }
+
+    ts->set_failed_test_info(CvTS::OK);
 }
 
 CV_GpuMeanShiftTest CV_GpuMeanShift_test;

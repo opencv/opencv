@@ -74,24 +74,37 @@ void CV_GpuMatAsyncCallStereoBMTest::run( int /* start_from */)
         return;
     }
 
-	cv::gpu::GpuMat disp;
-	cv::gpu::StereoBM_GPU bm(0, 128, 19);
+    try
+    {
+	    cv::gpu::GpuMat disp;
+	    cv::gpu::StereoBM_GPU bm(0, 128, 19);
 
-	cv::gpu::Stream stream;
+	    cv::gpu::Stream stream;
 
-	for (size_t i = 0; i < 50; i++)
-	{
-		bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp, stream);
-	}
+	    for (size_t i = 0; i < 50; i++)
+	    {
+		    bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp, stream);
+	    }
 
-	stream.waitForCompletion();
-	disp.convertTo(disp, img_reference.type());
-	double norm = cv::norm(disp, img_reference, cv::NORM_INF);
+	    stream.waitForCompletion();
+	    disp.convertTo(disp, img_reference.type());
+	    double norm = cv::norm(disp, img_reference, cv::NORM_INF);
 
-	if (norm >= 100) 
-        ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
-	ts->set_failed_test_info((norm < 100) ? CvTS::OK : CvTS::FAIL_GENERIC);
+	    if (norm >= 100) 
+        {
+            ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
+	        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            return;
+        }
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
+    }
 
+    ts->set_failed_test_info(CvTS::OK);
 }
 
 CV_GpuMatAsyncCallStereoBMTest CV_GpuMatAsyncCallStereoBMTest_test;

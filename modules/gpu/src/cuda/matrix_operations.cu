@@ -255,6 +255,24 @@ namespace mat_operators
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    /////////////////////////////// compare_ne ////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+
+    template <typename T>
+    __global__ void kernel_compare_ne(uchar* src1, size_t src1_step, uchar* src2, size_t src2_step, uchar* dst, size_t dst_step, int cols, int rows)
+    {
+        const size_t x = threadIdx.x + blockIdx.x * blockDim.x;
+        const size_t y = threadIdx.y + blockIdx.y * blockDim.y;
+
+        if (x < cols && y < rows)
+        {
+            T src1_pix = ((T*)(src1 + y * src1_step))[x];
+            T src2_pix = ((T*)(src2 + y * src2_step))[x];
+            uchar res = (uchar)(src1_pix != src2_pix) * 255;
+            ((dst + y * dst_step))[x] = res;
+        }
+    }
 } // namespace mat_operators
 
 namespace cv
@@ -460,6 +478,28 @@ namespace cv
                     cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
                 func(src, dst, src.cols * channels, src.rows, alpha, beta, stream);
             }
-        } // namespace impl
+
+            ///////////////////////////////////////////////////////////////////////////
+            /////////////////////////////// compare_ne ////////////////////////////////
+            ///////////////////////////////////////////////////////////////////////////
+
+            void compare_ne_8u(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+            {
+                dim3 block(32, 8);
+                dim3 grid(divUp(src1.cols, block.x), divUp(src1.rows, block.y));
+
+                mat_operators::kernel_compare_ne<uint><<<grid, block>>>(src1.ptr, src1.step, src2.ptr, src2.step, dst.ptr, dst.step, src1.cols, src1.rows);
+                cudaSafeCall( cudaThreadSynchronize() );
+            }
+
+            void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+            {
+                dim3 block(32, 8);
+                dim3 grid(divUp(src1.cols, block.x), divUp(src1.rows, block.y));
+
+                mat_operators::kernel_compare_ne<float><<<grid, block>>>(src1.ptr, src1.step, src2.ptr, src2.step, dst.ptr, dst.step, src1.cols, src1.rows);
+                cudaSafeCall( cudaThreadSynchronize() );
+            }
+        } // namespace matrix_operations
     } // namespace gpu
 } // namespace cv

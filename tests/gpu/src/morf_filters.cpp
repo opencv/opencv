@@ -81,7 +81,7 @@ protected:
         if (res < std::numeric_limits<double>::epsilon())
             return CvTS::OK;
         
-        ts->printf(CvTS::LOG, "\nNorm: %f\n", res);
+        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", res);
         return CvTS::FAIL_GENERIC;
     }
 };
@@ -116,7 +116,8 @@ void CV_GpuNppMorphogyTest::run( int )
     catch(const cv::Exception& e)
     {
         if (!check_and_treat_gpu_exception(e, ts))
-            throw;        
+            throw;
+        return;
     }
 
     ts->set_failed_test_info(CvTS::OK);
@@ -173,7 +174,6 @@ protected:
 };
 
 CV_GpuDilateTest CV_GpuDilate_test;
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Dilate

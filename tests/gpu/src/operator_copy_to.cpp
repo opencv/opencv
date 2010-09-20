@@ -136,14 +136,23 @@ void CV_GpuMatOpCopyToTest::run( int /* start_from */)
 {
     bool is_test_good = true;
 
-    for (int i = 0 ; i < 7; i++)
+    try
     {
-        Mat cpumat(rows, cols, i);
-        cpumat.setTo(Scalar::all(127));
+        for (int i = 0 ; i < 7; i++)
+        {
+            Mat cpumat(rows, cols, i);
+            cpumat.setTo(Scalar::all(127));
 
-        GpuMat gpumat(cpumat);
+            GpuMat gpumat(cpumat);
 
-        is_test_good &= compare_matrix(cpumat, gpumat);
+            is_test_good &= compare_matrix(cpumat, gpumat);
+        }
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
     }
 
     if (is_test_good == true)

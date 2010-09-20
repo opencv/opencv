@@ -143,7 +143,16 @@ void CV_GpuMatAsyncCallTest::run( int /* start_from */)
     Mat cpumat(rows, cols, CV_8U);
     cpumat.setTo(Scalar::all(127));
 
-    is_test_good &= compare_matrix(cpumat);
+    try
+    {
+        is_test_good &= compare_matrix(cpumat);
+    }
+    catch(cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw; 
+        return;
+    }
 
     if (is_test_good == true)
         ts->set_failed_test_info(CvTS::OK);
@@ -151,4 +160,4 @@ void CV_GpuMatAsyncCallTest::run( int /* start_from */)
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
 
-CV_GpuMatAsyncCallTest CV_GpuMatAsyncCall_test;
+//CV_GpuMatAsyncCallTest CV_GpuMatAsyncCall_test;
