@@ -753,7 +753,7 @@ void CV_WarpAffineTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-CV_WarpAffineTest warp_affine_test;
+//CV_WarpAffineTest warp_affine_test;
 
 
 
