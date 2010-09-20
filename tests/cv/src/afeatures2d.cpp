@@ -320,9 +320,9 @@ public:
     }
 };
 
-CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_sift", 0.004f,
+CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_sift", 0.001f,
                                                 createDescriptorExtractor("SIFT"), 8.06652f  );
-CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_surf", 0.001f,
+CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_surf",  0.004f,
                                                 createDescriptorExtractor("SURF"), 0.147372f );
 #if CV_SSE2
 CV_CalonderDescriptorExtractorTest<uchar> ucharCalonderTest( "descriptor_calonder_uchar",
