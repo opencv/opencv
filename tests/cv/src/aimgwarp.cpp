@@ -965,7 +965,7 @@ void CV_WarpPerspectiveTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-CV_WarpPerspectiveTest warp_perspective_test;
+//CV_WarpPerspectiveTest warp_perspective_test;
 
 
 
@@ -1191,7 +1191,7 @@ void CV_RemapTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-CV_RemapTest remap_test;
+//CV_RemapTest remap_test;
 
 
 ////////////////////////////// undistort /////////////////////////////////
@@ -1435,7 +1435,7 @@ void CV_UndistortTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
-CV_UndistortTest undistort_test;
+//CV_UndistortTest undistort_test;
 
 
 
