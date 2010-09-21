@@ -1996,6 +1996,11 @@ template<typename _Tp> inline Scalar_<_Tp> Scalar_<_Tp>::conj() const
                         saturate_cast<_Tp>(-this->val[3]));
 }
 
+template<typename _Tp> inline bool Scalar_<_Tp>::isReal() const
+{
+    return this->val[1] == 0 && this->val[2] == 0 && this->val[3] == 0;
+}
+    
 template<typename _Tp> static inline
 Scalar_<_Tp> operator / (const Scalar_<_Tp>& a, _Tp alpha)
 {

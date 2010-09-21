@@ -342,7 +342,7 @@ bool CV_OperationsTest::TestMat()
         m = mi.clone(); m+=(3.0 * mi * mt + d1); CHECK_DIFF_FLT(m, mi + d1 * 4);
         m = mi.clone(); m-=(3.0 * mi * mt + d1); CHECK_DIFF_FLT(m, mi - d1 * 4);
         m = mi.clone(); m*=(mt * 1.0); CHECK_DIFF_FLT(m, d1);
-        m = mi.clone(); m*=(mt * 1.0 + 1.0); CHECK_DIFF_FLT(m, d1 + mi);
+        m = mi.clone(); m*=(mt * 1.0 + Mat::eye(m.size(), m.type())); CHECK_DIFF_FLT(m, d1 + mi);
         m = mi.clone(); m*=mt_tr.t(); CHECK_DIFF_FLT(m, d1);
 
         CHECK_DIFF_FLT( (mi * 2) * mt, d2);
@@ -611,7 +611,7 @@ bool CV_OperationsTest::TestTemplateMat()
         if (Mat_<Point3f>(1, 1).channels() != 3) throw test_excep();
         if (Mat_<Point3d>(1, 1).channels() != 3) throw test_excep();
 
-        Mat_<uchar> eye = Mat_<uchar>::zeros(2, 2);  CHECK_DIFF(Mat_<uchar>::zeros(Size(2, 2)), eye);
+        Mat_<uchar> eye = Mat_<uchar>::zeros(2, 2); CHECK_DIFF(Mat_<uchar>::zeros(Size(2, 2)), eye);
         eye.at<uchar>(Point(0,0)) = 1; eye.at<uchar>(1, 1) = 1;
                 
         CHECK_DIFF(Mat_<uchar>::eye(2, 2), eye);

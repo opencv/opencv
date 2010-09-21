@@ -86,23 +86,8 @@ typedef std::basic_string<wchar_t> WString;
 
 class Mat;
 class MatND;
-template<typename M> class CV_EXPORTS MatExpr_Base_;
-typedef MatExpr_Base_<Mat> MatExpr_Base;
-template<typename E, typename M> class MatExpr_;
-template<typename A1, typename M, typename Op> class MatExpr_Op1_;
-template<typename A1, typename A2, typename M, typename Op> class MatExpr_Op2_;
-template<typename A1, typename A2, typename A3, typename M, typename Op> class MatExpr_Op3_;
-template<typename A1, typename A2, typename A3, typename A4,
-typename M, typename Op> class MatExpr_Op4_;
-template<typename A1, typename A2, typename A3, typename A4,
-typename A5, typename M, typename Op> class MatExpr_Op5_;
-template<typename M> class CV_EXPORTS MatOp_DivRS_;
-template<typename M> class CV_EXPORTS MatOp_Inv_;
-template<typename M> class CV_EXPORTS MatOp_MulDiv_;
-template<typename M> class CV_EXPORTS MatOp_Repeat_;
-template<typename M> class CV_EXPORTS MatOp_Set_;
-template<typename M> class CV_EXPORTS MatOp_Scale_;
-template<typename M> class CV_EXPORTS MatOp_T_;
+class CV_EXPORTS MatExpr;
+class CV_EXPORTS MatOp_Base;
 
 template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
@@ -928,7 +913,11 @@ public:
     //! another helper conversion method. \see cvScalarToRawData
     template<typename T2> void convertTo(T2* buf, int channels, int unroll_to=0) const;
     
+    // returns (v0, -v1, -v2, -v3)
     Scalar_<_Tp> conj() const;
+    
+    // returns true iff v1 == v2 == v3 == 0
+    bool isReal() const;
 };
 
 typedef Scalar_<double> Scalar;
@@ -1244,9 +1233,6 @@ protected:
 
 //////////////////////////////// Mat ////////////////////////////////
 
-typedef MatExpr_<MatExpr_Op4_<Size, int, Scalar,
-    int, Mat, MatOp_Set_<Mat> >, Mat> MatExpr_Initializer;
-    
 enum { MAGIC_MASK=0xFFFF0000, TYPE_MASK=0x00000FFF, DEPTH_MASK=7 };
 
 static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
@@ -1500,15 +1486,11 @@ public:
     template<typename _Tp> explicit Mat(const Point3_<_Tp>& pt);
     //! builds matrix from comma initializer
     template<typename _Tp> explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
-    //! helper constructor to compile matrix expressions
-    Mat(const MatExpr_Base& expr);
     //! destructor - calls release()
     ~Mat();
     //! assignment operators
     Mat& operator = (const Mat& m);
-    Mat& operator = (const MatExpr_Base& expr);
-
-    operator MatExpr_<Mat, Mat>() const;
+    Mat& operator = (const MatExpr& expr);
 
     //! returns a new matrix header for the specified row
     Mat row(int y) const;
@@ -1549,18 +1531,12 @@ public:
     Mat reshape(int _cn, int _rows=0) const;
 
     //! matrix transposition by means of matrix expressions
-    MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_T_<Mat> >, Mat>
-    t() const;
+    MatExpr t() const;
     //! matrix inversion by means of matrix expressions
-    MatExpr_<MatExpr_Op2_<Mat, int, Mat, MatOp_Inv_<Mat> >, Mat>
-        inv(int method=DECOMP_LU) const;
-    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>
+    MatExpr inv(int method=DECOMP_LU) const;
     //! per-element matrix multiplication by means of matrix expressions
-    mul(const Mat& m, double scale=1) const;
-    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>
-    mul(const MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_Scale_<Mat> >, Mat>& m, double scale=1) const;
-    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>    
-    mul(const MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_DivRS_<Mat> >, Mat>& m, double scale=1) const;
+    MatExpr mul(const Mat& m, double scale=1) const;
+    MatExpr mul(const MatExpr& m, double scale=1) const;
     
     //! computes cross-product of 2 3D vectors
     Mat cross(const Mat& m) const;
@@ -1568,12 +1544,12 @@ public:
     double dot(const Mat& m) const;
 
     //! Matlab-style matrix initialization
-    static MatExpr_Initializer zeros(int rows, int cols, int type);
-    static MatExpr_Initializer zeros(Size size, int type);
-    static MatExpr_Initializer ones(int rows, int cols, int type);
-    static MatExpr_Initializer ones(Size size, int type);
-    static MatExpr_Initializer eye(int rows, int cols, int type);
-    static MatExpr_Initializer eye(Size size, int type);
+    static MatExpr zeros(int rows, int cols, int type);
+    static MatExpr zeros(Size size, int type);
+    static MatExpr ones(int rows, int cols, int type);
+    static MatExpr ones(Size size, int type);
+    static MatExpr eye(int rows, int cols, int type);
+    static MatExpr eye(Size size, int type);
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     // previous data is unreferenced if needed.
@@ -2301,8 +2277,6 @@ public:
     Mat_(const Mat_& m, const Range& rowRange, const Range& colRange);
     //! selects a submatrix
     Mat_(const Mat_& m, const Rect& roi);
-    //! to support complex matrix expressions
-    Mat_(const MatExpr_Base& expr);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
     explicit Mat_(const vector<_Tp>& vec, bool copyData=false);
     template<int n> explicit Mat_(const Vec<_Tp, n>& vec, bool copyData=true);
@@ -2329,7 +2303,7 @@ public:
     //! cross-product
     Mat_ cross(const Mat_& m) const;
     //! to support complex matrix expressions
-    Mat_& operator = (const MatExpr_Base& expr);
+    Mat_& operator = (const MatExpr& expr);
     //! data type conversion
     template<typename T2> operator Mat_<T2>() const;
     //! overridden forms of Mat::row() etc.
@@ -2337,19 +2311,6 @@ public:
     Mat_ col(int x) const;
     Mat_ diag(int d=0) const;
     Mat_ clone() const;
-
-    //! transposition, inversion, per-element multiplication
-    MatExpr_<MatExpr_Op2_<Mat, double, Mat, MatOp_T_<Mat> >, Mat> t() const;
-    MatExpr_<MatExpr_Op2_<Mat, int, Mat, MatOp_Inv_<Mat> >, Mat> inv(int method=DECOMP_LU) const;
-
-    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>
-    mul(const Mat_& m, double scale=1) const;
-    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>
-    mul(const MatExpr_<MatExpr_Op2_<Mat, double, Mat,
-        MatOp_Scale_<Mat> >, Mat>& m, double scale=1) const;
-    MatExpr_<MatExpr_Op4_<Mat, Mat, double, char, Mat, MatOp_MulDiv_<Mat> >, Mat>    
-    mul(const MatExpr_<MatExpr_Op2_<Mat, double, Mat,
-        MatOp_DivRS_<Mat> >, Mat>& m, double scale=1) const;
 
     //! overridden forms of Mat::elemSize() etc.
     size_t elemSize() const;
@@ -2362,12 +2323,12 @@ public:
     size_t stepT() const;
 
     //! overridden forms of Mat::zeros() etc. Data type is omitted, of course
-    static MatExpr_Initializer zeros(int rows, int cols);
-    static MatExpr_Initializer zeros(Size size);
-    static MatExpr_Initializer ones(int rows, int cols);
-    static MatExpr_Initializer ones(Size size);
-    static MatExpr_Initializer eye(int rows, int cols);
-    static MatExpr_Initializer eye(Size size);
+    static MatExpr zeros(int rows, int cols);
+    static MatExpr zeros(Size size);
+    static MatExpr ones(int rows, int cols);
+    static MatExpr ones(Size size);
+    static MatExpr eye(int rows, int cols);
+    static MatExpr eye(Size size);
 
     //! some more overriden methods
     Mat_ reshape(int _rows) const;
@@ -2386,9 +2347,6 @@ public:
     _Tp& operator ()(int i);
     const _Tp& operator ()(int i) const;
 
-    //! to support matrix expressions
-    operator MatExpr_<Mat, Mat>() const;
-    
     //! conversion to vector.
     operator vector<_Tp>() const;
     //! conversion to Vec
@@ -2541,8 +2499,7 @@ template<typename _Tp> class CV_EXPORTS MatOp_Iter_;
  Mat R = (Mat_<double>(2,2) << a, -b, b, a);
  \endcode
 */ 
-template<typename _Tp> class CV_EXPORTS MatCommaInitializer_ :
-    public MatExpr_<MatExpr_Op1_<MatIterator_<_Tp>, Mat_<_Tp>, MatOp_Iter_<_Tp> >, Mat_<_Tp> >
+template<typename _Tp> class CV_EXPORTS MatCommaInitializer_
 {
 public:
     //! the constructor, created by "matrix << firstValue" operator, where matrix is cv::Mat
@@ -2553,7 +2510,10 @@ public:
     //operator Mat_<_Tp>() const;
     //! another form of conversion operator
     Mat_<_Tp> operator *() const;
-    void assignTo(Mat& m, int type=-1) const;
+    operator Mat_<_Tp>() const;
+    virtual void assignTo(Mat& m, int type=-1) const;
+protected:
+    MatIterator_<_Tp> it;
 };
 
 
