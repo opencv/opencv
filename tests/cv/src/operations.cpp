@@ -321,8 +321,8 @@ bool CV_OperationsTest::TestMat()
         Mat mi = mt.inv();
         Mat d1 = Mat::eye(3, 3, CV_32F);
         Mat d2 = d1 * 2;
-        Mat mt_tr = mt.t();
-        Mat mi_tr = mi.t();
+        MatExpr mt_tr = mt.t();
+        MatExpr mi_tr = mi.t();
         Mat mi2 = mi * 2;
 
 
@@ -368,8 +368,8 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF( mi * (mt * 2.0 + 1.0), mi * mt_mul_2_plus_1);        // A*(B*alpha + beta)            
         CHECK_DIFF( (mt * 2.0 + 1.0) * (mi * 2), mt_mul_2_plus_1 * mi2); // (A*alpha + beta)*(B*gamma)
         CHECK_DIFF( (mi *2)* (mt * 2.0 + 1.0), mi2 * mt_mul_2_plus_1);   // (A*gamma)*(B*alpha + beta)
-        CHECK_DIFF( (mt * 2.0 + 1.0) * mi.t(), mt_mul_2_plus_1 * mi_tr); // (A*alpha + beta)*B^t
-        CHECK_DIFF( mi.t() * (mt * 2.0 + 1.0), mi_tr * mt_mul_2_plus_1); // A^t*(B*alpha + beta)
+        CHECK_DIFF_FLT( (mt * 2.0 + 1.0) * mi.t(), mt_mul_2_plus_1 * mi_tr); // (A*alpha + beta)*B^t
+        CHECK_DIFF_FLT( mi.t() * (mt * 2.0 + 1.0), mi_tr * mt_mul_2_plus_1); // A^t*(B*alpha + beta)
 
         CHECK_DIFF_FLT( (mi * mt + d2)*5, d1 * 3 * 5);
         CHECK_DIFF_FLT( mi * mt + d2, d1 * 3);
