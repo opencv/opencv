@@ -172,7 +172,7 @@ CV_FeatureDetectorTest harrisTest( "detector_harris", createFeatureDetector("HAR
 CV_FeatureDetectorTest mserTest( "detector_mser", createFeatureDetector("MSER") );
 CV_FeatureDetectorTest siftTest( "detector_sift", createFeatureDetector("SIFT") );
 CV_FeatureDetectorTest starTest( "detector_star", createFeatureDetector("STAR") );
-CV_FeatureDetectorTest surfTest( "detector_surf", createFeatureDetector("SURF") );
+//CV_FeatureDetectorTest surfTest( "detector_surf", createFeatureDetector("SURF") );
 
 /****************************************************************************************\
 *                     Regression tests for descriptor extractors.                        *

@@ -1569,7 +1569,7 @@ int CV_CalcBackProjectTest::validate_test_results( int /*test_case_idx*/ )
 }
 
 
-CV_CalcBackProjectTest hist_backproj_test;
+//CV_CalcBackProjectTest hist_backproj_test;
 
 
 ////////////// cvCalcBackProjectPatch //////////////
