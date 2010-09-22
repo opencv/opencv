@@ -418,8 +418,8 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                             "variable (=%g) is too large", i, vi, val );
                         CV_ERROR( CV_StsBadArg, err );
                     }
+                    num_valid++;
                 }
-                num_valid++;
             }
         }
         if( vi < var_count )

@@ -528,8 +528,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                             "variable (=%g) is too large", i, vi, val );
                         CV_ERROR( CV_StsBadArg, err );
                     }
+                    num_valid++;
                 }
-                num_valid++;
+
                 if (is_buf_16u)
                     udst[i] = (unsigned short)i;
                 else
@@ -538,9 +539,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                 
             }
             if (is_buf_16u)
-                icvSortUShAux( udst, num_valid, _fdst);
+                icvSortUShAux( udst, sample_count, _fdst);
             else
-                icvSortIntAux( idst, /*or num_valid?\*/ sample_count, _fdst );
+                icvSortIntAux( idst, sample_count, _fdst );
         }
        
         if( vi < var_count )
