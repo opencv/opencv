@@ -46,6 +46,7 @@ import com.opencv.jni.image_pool;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.opengl.GLSurfaceView;
+import android.util.AttributeSet;
 import android.util.Log;
 
 
@@ -87,14 +88,22 @@ public class GL2CameraViewer extends GLSurfaceView{
 		}
 	};
 
+	 public GL2CameraViewer(Context context,AttributeSet attributeSet) {
+	        super(context,attributeSet);
+	        
+	        init(false, 0, 0);
+	        setZOrderMediaOverlay(true);
+	 }
     public GL2CameraViewer(Context context) {
         super(context);
         init(false, 0, 0);
+        setZOrderMediaOverlay(true);
     }
 
     public GL2CameraViewer(Context context, boolean translucent, int depth, int stencil) {
         super(context);
         init(translucent, depth, stencil);
+        setZOrderMediaOverlay(true);
     }
 
     private void init(boolean translucent, int depth, int stencil) {

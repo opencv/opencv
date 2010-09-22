@@ -39,7 +39,7 @@ SWIG_C_OUT = $(SWIG_C_DIR)/android_cv_wrap.cpp
 LIB		= libs/armeabi-v7a/$(LIBNAME) libs/armeabi/$(LIBNAME)
 
 
-all:	$(LIB)
+all:	$(LIB) nogdb
 
 
 #calls the ndk-build script, passing it OPENCV_ROOT and OPENCV_LIBS_DIR

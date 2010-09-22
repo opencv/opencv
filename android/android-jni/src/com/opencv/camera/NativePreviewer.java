@@ -9,10 +9,10 @@ import java.util.List;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.hardware.Camera;
-import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.Size;
 import android.os.Handler;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -31,9 +31,26 @@ public class NativePreviewer extends SurfaceView implements
 	private int pixelformat;
 	private PixelFormat pixelinfo;
 
+	public NativePreviewer(Context context,AttributeSet attributes){
+		super(context,attributes);
+		listAllCameraMethods();
+		// Install a SurfaceHolder.Callback so we get notified when the
+		// underlying surface is created and destroyed.
+		mHolder = getHolder();
+		mHolder.addCallback(this);
+		mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+	
+		this.preview_width = attributes.getAttributeIntValue("opencv", "preview_width", 600);
+		this.preview_height= attributes.getAttributeIntValue("opencv", "preview_height", 600);
+
+		processor = new NativeProcessor();
+		
+		 setZOrderMediaOverlay(false);
+	}
 	public NativePreviewer(Context context, int preview_width,
 			int preview_height) {
 		super(context);
+	
 
 		listAllCameraMethods();
 		// Install a SurfaceHolder.Callback so we get notified when the
@@ -46,40 +63,73 @@ public class NativePreviewer extends SurfaceView implements
 		this.preview_height = preview_height;
 
 		processor = new NativeProcessor();
+		 setZOrderMediaOverlay(false);
 
 	}
-
-	public void surfaceCreated(SurfaceHolder holder) {
-
-		// The Surface has been created, acquire the camera and tell it where
-		// to draw.
-		mCamera = Camera.open();
-		try {
-			mCamera.setPreviewDisplay(holder);
-		} catch (IOException exception) {
-			mCamera.release();
-			mCamera = null;
-
+	Handler camerainiter = new Handler();
+	void initCamera(SurfaceHolder holder) throws InterruptedException{
+		if(mCamera == null){
+			// The Surface has been created, acquire the camera and tell it where
+			// to draw.
+			int i = 0;
+			while(i++ < 5){
+				try{
+					mCamera = Camera.open();
+					break;
+				}catch(RuntimeException e){
+					Thread.sleep(200);
+				}
+			}
+			try {
+				mCamera.setPreviewDisplay(holder);
+			} catch (IOException exception) {
+				mCamera.release();
+				mCamera = null;
+	
+			}catch(RuntimeException e){
+				Log.e("camera", "stacktrace", e);
+			}
 		}
-
 	}
-
-	public void surfaceDestroyed(SurfaceHolder holder) {
-		// Surface will be destroyed when we return, so stop the preview.
-		// Because the CameraDevice object is not a shared resource, it's very
-		// important to release it when the activity is paused.
-		mCamera.stopPreview();
-		mCamera.release();
+	void releaseCamera(){
+		if(mCamera !=null){
+			// Surface will be destroyed when we return, so stop the preview.
+			// Because the CameraDevice object is not a shared resource, it's very
+			// important to release it when the activity is paused.
+			mCamera.stopPreview();
+			mCamera.release();
+		}
 
 		// processor = null;
 		mCamera = null;
 		mAcb = null;
 		mPCWB = null;
+	}
+
+	public void surfaceCreated(SurfaceHolder holder) {
+
+		
 
 	}
 
+	public void surfaceDestroyed(SurfaceHolder holder) {
+		
+		releaseCamera();
+
+	}
+
+	private boolean hasAutoFocus = false;
 	public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
 
+		try {
+			initCamera(mHolder);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
+		}
+		
+		
 		// Now that the size is known, set up the camera parameters and begin
 		// the preview.
 
@@ -95,6 +145,27 @@ public class NativePreviewer extends SurfaceView implements
 		}
 		preview_width = best_width;
 		preview_height = best_height;
+		List<String> fmodes = mCamera.getParameters().getSupportedFocusModes();
+		
+		
+		int idx = fmodes.indexOf(Camera.Parameters.FOCUS_MODE_INFINITY);
+		if(idx != -1){
+			parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
+		}else if(fmodes.indexOf(Camera.Parameters.FOCUS_MODE_FIXED) != -1){
+			parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
+		}
+
+		if(fmodes.indexOf(Camera.Parameters.FOCUS_MODE_AUTO) != -1){
+			hasAutoFocus  = true;
+		}
+		
+		List<String> scenemodes = mCamera.getParameters().getSupportedSceneModes();
+		if(scenemodes != null)
+		if(scenemodes.indexOf(Camera.Parameters.SCENE_MODE_STEADYPHOTO) != -1){
+			parameters.setSceneMode(Camera.Parameters.SCENE_MODE_STEADYPHOTO);
+		}
+		
+		
 
 		parameters.setPreviewSize(preview_width, preview_height);
 
@@ -123,13 +194,14 @@ public class NativePreviewer extends SurfaceView implements
 
 		mCamera.startPreview();
 
-		postautofocus(0);
+		//postautofocus(0);
 	}
 	public void postautofocus(int delay) {
-		handler.postDelayed(autofocusrunner, delay);
+		if(hasAutoFocus)
+			handler.postDelayed(autofocusrunner, delay);
 		
 	}
-	Runnable autofocusrunner = new Runnable() {
+	private Runnable autofocusrunner = new Runnable() {
 		
 		@Override
 		public void run() {
@@ -143,14 +215,7 @@ public class NativePreviewer extends SurfaceView implements
 		@Override
 		public void onAutoFocus(boolean success, Camera camera) {
 			if(!success)
-				postautofocus(1000);
-			else{
-				 Parameters params = camera.getParameters();
-				params.setSceneMode(Parameters.SCENE_MODE_AUTO);
-				camera.setParameters(params);
-			}
-			
-			
+				postautofocus(1000);		
 		}
 	};
 	Handler handler = new Handler();
@@ -321,14 +386,25 @@ public class NativePreviewer extends SurfaceView implements
 	 * 
 	 */
 	public void onPause() {
+		
+		releaseCamera();
+		
 		addCallbackStack(null);
+		
 		processor.stop();
-		mCamera.stopPreview();
+		
+		
+		
+		
 		
 	}
 
 	public void onResume() {
+	
+		
 		processor.start();
+		
+		
 	}
 
 }
