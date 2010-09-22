@@ -3,7 +3,7 @@
 #   Some parts taken from version of Hartmut Seichter, HIT Lab NZ.
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
-if(!ANDROID)
+if(NOT ANDROID)
 project(opencv_highgui)
 
 if(WITH_JPEG)
@@ -334,7 +334,9 @@ install(FILES ${highgui_ext_hdrs}
         DESTINATION include/opencv2/highgui
         COMPONENT main)
         
-else(!ANDROID)
+endif()
+
+if(ANDROID)
 set(high_gui_android_srcs src/bitstrm.cpp
     src/cap.cpp 
     src/grfmt_base.cpp 
@@ -350,4 +352,4 @@ set(high_gui_android_srcs src/bitstrm.cpp
     src/grfmt_pxm.cpp 
     src/window.cpp )
 define_android_manual(highgui "${high_gui_android_srcs}" "$(LOCAL_PATH)/src  $(OPENCV_INCLUDES)")	
-endif(!ANDROID)
+endif()

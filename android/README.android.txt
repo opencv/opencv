@@ -32,4 +32,7 @@ LOCAL_LDLIBS += $(OPENCV_LIBS)
     
 LOCAL_C_INCLUDES +=  $(OPENCV_INCLUDES)
 
+for now, you also need to cd to android-jni and run make
+this will create the android shared library with some useful functionality
+that may be reused in android projects.
 
