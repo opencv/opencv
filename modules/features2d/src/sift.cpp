@@ -48,7 +48,15 @@
 
 #include "precomp.hpp"
 
-#ifndef __arm__
+#ifdef __arm__
+#define ARM_NO_SIFT
+#endif
+
+#ifdef ANDROID
+#undef  ARM_NO_SIFT
+#endif //ANDROID
+
+#ifndef ARM_NO_SIFT
 
 #include <iostream>
 #include <limits>
@@ -175,6 +183,7 @@ public:
   typedef Keypoints::iterator       KeypointsIter ;      ///< Keypoint list iter datatype
   typedef Keypoints::const_iterator KeypointsConstIter ; ///< Keypoint list const iter datatype
 
+#undef _S
   /** @brief Constructors and destructors */
   /*@{*/
   Sift(const pixel_t* _im_pt, int _width, int _height,

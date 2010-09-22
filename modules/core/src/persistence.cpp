@@ -114,7 +114,7 @@ cv::string cv::FileStorage::getDefaultObjectName(const string& _filename)
 
 namespace cv
 {
-
+#ifndef ANDROID //unsuported wcstombs on android
 string fromUtf16(const WString& str)
 {
     cv::AutoBuffer<char> _buf(str.size()*4 + 1);
@@ -138,7 +138,7 @@ WString toUtf16(const string& str)
     buf[sz] = '\0';
     return WString(buf);
 }
-
+#endif
 }
 
 typedef struct CvGenericHash
