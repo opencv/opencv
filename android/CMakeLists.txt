@@ -46,11 +46,7 @@ configure_file("${CMAKE_SOURCE_DIR}/AndroidManifest.xml.in" "${CMAKE_BINARY_DIR}
 configure_file("${CMAKE_SOURCE_DIR}/default.properties.in" "${CMAKE_BINARY_DIR}/default.properties")
 configure_file("${CMAKE_SOURCE_DIR}/cvconfig.h.in" "${CMAKE_BINARY_DIR}/include/cvconfig.h")
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/zlib-android)
-
-
 add_subdirectory(${opencv_root}/modules "${CMAKE_BINARY_DIR}/modules")
-
 
 add_subdirectory(${opencv_root}/3rdparty "${CMAKE_BINARY_DIR}/3rdparty")
 
