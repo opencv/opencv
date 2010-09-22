@@ -1,3 +1,7 @@
+if(ANDROID)
+ configure_file("${CMAKE_SOURCE_DIR}/Android.mk.modules.in" "${CMAKE_CURRENT_BINARY_DIR}/Android.mk")
+endif()
+
 add_subdirectory(flann)
 add_subdirectory(lapack)
 add_subdirectory(zlib)
@@ -13,4 +17,7 @@ endif()
 if(WITH_TIFF AND NOT TIFF_FOUND)
 	add_subdirectory(libtiff)
 endif()
+
+if(NOT ANDROID)
 add_subdirectory(gtest)
+endif()

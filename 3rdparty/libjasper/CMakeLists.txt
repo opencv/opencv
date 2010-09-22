@@ -1,8 +1,16 @@
+if(ANDROID)
+set(android_defs "-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT")
+define_3rdparty_module(jasper)
+set(android_defs "")
+else(ANDROID)
+
+
 # ----------------------------------------------------------------------------
 #  CMake file for libjasper. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
 project(libjasper)
+
 
 add_definitions(-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT)
 
@@ -41,9 +49,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration -Wno-unused")
 endif()
 
+
+
 set_target_properties(${the_target}
 	PROPERTIES
 	OUTPUT_NAME "${the_target}"
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/lib"
 	)
+endif(ANDROID)#!android

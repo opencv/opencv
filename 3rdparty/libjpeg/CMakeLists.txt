@@ -1,3 +1,7 @@
+if(ANDROID)
+define_3rdparty_module(jpeg)
+else()
+#endif()#android
 # ----------------------------------------------------------------------------
 #  CMake file for libjpeg. See root CMakeLists.txt
 #
@@ -39,3 +43,4 @@ set_target_properties(${the_target}
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/3rdparty/lib
 	)
+endif()#android

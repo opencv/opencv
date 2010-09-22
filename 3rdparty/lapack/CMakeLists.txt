@@ -2,6 +2,10 @@
 #  CMake file for opencv_lapack. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
+if(ANDROID)
+define_3rdparty_module(opencv_lapack)
+else()
+
 project(opencv_lapack)
 
 # List of C++ files:
@@ -56,3 +60,4 @@ set_target_properties(${the_target}
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/3rdparty/lib
 	)
+endif() #android

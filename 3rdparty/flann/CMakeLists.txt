@@ -1,3 +1,7 @@
+if(ANDROID)
+file(GLOB_RECURSE flann_sources_cpp *.cpp)
+define_android_manual(flann "${flann_sources_cpp}" "$(LOCAL_PATH)/../include $(LOCAL_PATH)/../include/flann")		
+else(ANDROID)
 if (DEFINED OPENCV_VERSION)
 
 # ----------------------------------------------------------------------------
@@ -100,3 +104,4 @@ INSTALL (
 )
 
 ENDIF()
+endif(ANDROID)#android
