@@ -14,14 +14,21 @@ ifndef OPENCV_BUILD_ROOT
 OPENCV_BUILD_ROOT := ${CMAKE_BINARY_DIR}
 endif
 
-OPENCV_INCLUDES := ${android_module_include_dirs} $(OPENCV_ROOT)/android/android-jni/jni
+OPENCV_INCLUDES := ${android_module_include_dirs}
+
 ANDROID_OPENCV_INCLUDES := $(OPENCV_ROOT)/android/android-jni/jni
 
-ARMOBJS := obj/local/armeabi
-ARMOBJS_V7A := obj/local/armeabi-v7a
-OPENCV_LIB_DIRS := -L$(OPENCV_BUILD_ROOT)/$(ARMOBJS_V7A) -L$(OPENCV_BUILD_ROOT)/$(ARMOBJS)
+ARMOBJS := local/armeabi
+ARMOBJS_V7A := local/armeabi-v7a
 
-ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/$(ARMOBJS_V7A) -L$(OPENCV_ROOT)/android/android-jni/$(ARMOBJS)
+OPENCV_LIB_DIRS := -L$(OPENCV_BUILD_ROOT)/obj/$(ARMOBJS_V7A) \
+    -L$(OPENCV_BUILD_ROOT)/obj/$(ARMOBJS) -L$(OPENCV_BUILD_ROOT)/bin/ndk/$(ARMOBJS) \
+    -L$(OPENCV_BUILD_ROOT)/bin/ndk/$(ARMOBJS_V7A)
+
+ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/obj/$(ARMOBJS_V7A) \
+    -L$(OPENCV_ROOT)/android/android-jni/obj/$(ARMOBJS) \
+    -L$(OPENCV_ROOT)/android/android-jni/bin/ndk/$(ARMOBJS_V7A) \
+    -L$(OPENCV_ROOT)/android/android-jni/bin/ndk/$(ARMOBJS)
 
 #order of linking very important ---- may have stuff out of order here, but
 #important that modules that are more dependent come first...
