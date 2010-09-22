@@ -46,7 +46,9 @@
 #ifdef __cplusplus
 
 #include "cxcore.h"
+#ifndef EIGEN_CORE_H
 #include <Eigen/Core>
+#endif
 
 namespace cv
 {
