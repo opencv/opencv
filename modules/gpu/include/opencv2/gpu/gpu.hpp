@@ -360,11 +360,7 @@ namespace cv
 		CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
 
         //! computes element-wise absolute difference of two arrays (c = abs(a - b))
-		CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
-
-        //! applies fixed threshold to the image. 
-        //! Now supports only THRESH_TRUNC threshold type and one channels float source.
-        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh);
+		CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);        
 
         //! compares elements of two arrays (c = a <cmpop> b)
         //! Now doesn't support CMP_NE.
@@ -383,30 +379,17 @@ namespace cv
         //! reverses the order of the rows, columns or both in a matrix
         CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode);
 
-        //! resizes the image
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4
-        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR);
-
         //! computes sum of array elements
         CV_EXPORTS Scalar sum(const GpuMat& m);
 
         //! finds global minimum and maximum array elements and returns their values
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal = 0);
 
-        //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
-
-        //! warps the image using affine transformation
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-        CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
-
-        //! warps the image using perspective transformation
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-        CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
-
-        //! rotate 8bit single or four channel image
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
+        //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
+        //! supports only single channels source
+        //! destination array will have the same type as source
+        //! lut must hase CV_32S depth and the same number of channels as in the source array
+        CV_EXPORTS void LUT(const GpuMat& src, const Mat& lut, GpuMat& dst);
 
         //! makes multi-channel array out of several single-channel arrays
         CV_EXPORTS void merge(const GpuMat* src, size_t n, GpuMat& dst);
@@ -434,33 +417,69 @@ namespace cv
 
         ////////////////////////////// Image processing //////////////////////////////
 
-        // DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
-        // xymap.type() == xymap.type() == CV_32FC1
+        //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
+        //! xymap.type() == xymap.type() == CV_32FC1
         CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
 
-        // Does mean shift filtering on GPU.
+        //! Does mean shift filtering on GPU.
         CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, 
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
-        // Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
-        // Supported types of input disparity: CV_8U, CV_16S.
-        // Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
+        //! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
+        //! Supported types of input disparity: CV_8U, CV_16S.
+        //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
         CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp);
-        // Acync version
+        //! Acync version
         CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, const Stream& stream);
 
-        // Reprojects disparity image to 3D space. 
-        // Supports CV_8U and CV_16S types of input disparity.
-        // The output is a 4-channel floating-point (CV_32FC4) matrix. 
-        // Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
-        // Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
+        //! Reprojects disparity image to 3D space. 
+        //! Supports CV_8U and CV_16S types of input disparity.
+        //! The output is a 4-channel floating-point (CV_32FC4) matrix. 
+        //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
+        //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
         CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
-        // Acync version
+        //! Acync version
         CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream);
 
+        //! converts image from one color space to another
         CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0);
+        //! Acync version
         CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
 
+        //! applies fixed threshold to the image. 
+        //! Now supports only THRESH_TRUNC threshold type and one channels float source.
+        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh);
+
+        //! resizes the image
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4
+        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR);
+        
+        //! warps the image using affine transformation
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
+
+        //! warps the image using perspective transformation
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
+        
+        //! rotate 8bit single or four channel image
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
+        
+        //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
+        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
+        
+        //! computes the integral image and integral for the squared image
+        //! sum will have CV_32S type, sqsum - CV32F type
+        CV_EXPORTS void integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum);
+
+        //! smooths the image using the normalized box filter
+        CV_EXPORTS void boxFilter(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1));
+        //! a synonym for normalized box filter
+        static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1))
+        {
+            boxFilter(src, dst, ksize, anchor);
+        }
 
         //! erodes the image (applies the local minimum operator)
         CV_EXPORTS void erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor, int iterations);

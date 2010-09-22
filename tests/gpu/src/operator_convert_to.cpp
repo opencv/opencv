@@ -104,7 +104,7 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
                     double r = norm(cpumatdst, gpumatdst, NORM_INF);
                     if (r > 1)
                     {
-                        ts->printf(CvTS::CONSOLE, 
+                        ts->printf(CvTS::LOG, 
                                    "\nFAILED: SRC_TYPE=%sC%d DST_TYPE=%s NORM = %d\n",
                                    types_str[i], c, types_str[j], r);
                         passed = false;

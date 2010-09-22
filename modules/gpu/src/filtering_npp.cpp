@@ -50,7 +50,7 @@ using namespace cv::gpu;
 
 void cv::gpu::erode( const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
 void cv::gpu::dilate( const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
-void morphologyEx( const GpuMat&, GpuMat&, int, const Mat&, Point, int) { throw_nogpu(); }
+void cv::gpu::morphologyEx( const GpuMat&, GpuMat&, int, const Mat&, Point, int) { throw_nogpu(); }
 
 #else
 
@@ -132,7 +132,6 @@ void cv::gpu::morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& k
             temp = dst;
         dilate( src, temp, kernel, anchor, iterations);
         erode( temp, temp, kernel, anchor, iterations);
-        dst = temp - src;
         subtract(temp, src, dst);
         break;
     default:

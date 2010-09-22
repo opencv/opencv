@@ -127,7 +127,7 @@ bool CV_GpuMatOpCopyToTest::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpuma
         return true;
     else
     {
-        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
+        ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
         return false;
     }
 }

@@ -81,7 +81,7 @@ protected:
         if (res < std::numeric_limits<double>::epsilon())
             return CvTS::OK;
         
-        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", res);
+        ts->printf(CvTS::LOG, "\nNorm: %f\n", res);
         return CvTS::FAIL_GENERIC;
     }
 };

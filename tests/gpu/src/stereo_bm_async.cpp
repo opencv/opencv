@@ -92,7 +92,7 @@ void CV_GpuMatAsyncCallStereoBMTest::run( int /* start_from */)
 
 	    if (norm >= 100) 
         {
-            ts->printf(CvTS::CONSOLE, "\nStereoBM norm = %f\n", norm);
+            ts->printf(CvTS::LOG, "\nStereoBM norm = %f\n", norm);
 	        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
             return;
         }

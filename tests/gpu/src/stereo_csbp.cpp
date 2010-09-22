@@ -83,7 +83,7 @@ void CV_GpuStereoCSBPTest::run(int )
         double norm = cv::norm(disp, img_template, cv::NORM_INF);
 	    if (norm >= 0.5) 
         {
-            ts->printf(CvTS::CONSOLE, "\nConstantSpaceStereoBP norm = %f\n", norm);
+            ts->printf(CvTS::LOG, "\nConstantSpaceStereoBP norm = %f\n", norm);
             ts->set_failed_test_info(CvTS::FAIL_GENERIC);
             return;
         }

@@ -52,37 +52,21 @@ void cv::gpu::add(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::subtract(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::multiply(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::divide(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-
 void cv::gpu::transpose(const GpuMat&, GpuMat&) { throw_nogpu(); }
-
 void cv::gpu::absdiff(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-
-double cv::gpu::threshold(const GpuMat&, GpuMat&, double) { throw_nogpu(); return 0.0; }
-
 void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_nogpu(); }
-
 void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_nogpu(); }
-
 double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
-
 void cv::gpu::flip(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
-
-void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int) { throw_nogpu(); }
-
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-
 void cv::gpu::minMax(const GpuMat&, double*, double*) { throw_nogpu(); }
-
-void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, const Scalar&) { throw_nogpu(); }
-
-void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_nogpu(); }
-
-void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_nogpu(); }
-
-void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int) { throw_nogpu(); }
+void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
+
+////////////////////////////////////////////////////////////////////////
+// add subtract multiply divide
 
 namespace
 {
@@ -147,6 +131,9 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 	nppFuncCaller(src2, src1, dst, nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, nppiDiv_32f_C1R);
 }
 
+////////////////////////////////////////////////////////////////////////
+// transpose
+
 void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
 {
     CV_Assert(src.type() == CV_8UC1);
@@ -159,6 +146,9 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
 
     nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );
 }
+
+////////////////////////////////////////////////////////////////////////
+// absdiff
 
 void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 {
@@ -186,21 +176,8 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
     }
 }
 
-double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh) 
-{ 
-    CV_Assert(src.type() == CV_32FC1)
-
-    dst.create( src.size(), src.type() );
-
-    NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
-
-    nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step, 
-        dst.ptr<Npp32f>(), dst.step, sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
-
-    return thresh;
-}
+////////////////////////////////////////////////////////////////////////
+// compare
 
 namespace cv { namespace gpu { namespace matrix_operations
 {
@@ -250,6 +227,9 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     }
 }
 
+////////////////////////////////////////////////////////////////////////
+// meanStdDev
+
 void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev) 
 {
     CV_Assert(src.type() == CV_8UC1);
@@ -260,6 +240,9 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, mean.val, stddev.val) );
 }
+
+////////////////////////////////////////////////////////////////////////
+// norm
 
 double cv::gpu::norm(const GpuMat& src1, int normType) 
 {
@@ -292,6 +275,9 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     return retVal[0];
 }
 
+////////////////////////////////////////////////////////////////////////
+// flip
+
 void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 {
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
@@ -316,50 +302,8 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
     }
 }
 
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation)
-{
-    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS};
-
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4);
-
-    CV_Assert( src.size().area() > 0 );
-    CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
-
-    if( dsize == Size() )
-    {
-        dsize = Size(saturate_cast<int>(src.cols * fx), saturate_cast<int>(src.rows * fy));
-    }
-    else
-    {
-        fx = (double)dsize.width / src.cols;
-        fy = (double)dsize.height / src.rows;
-    }
-
-    dst.create(dsize, src.type());
-
-    NppiSize srcsz;
-    srcsz.width  = src.cols;
-    srcsz.height = src.rows;
-    NppiRect srcrect;
-    srcrect.x = srcrect.y = 0;
-    srcrect.width  = src.cols;
-    srcrect.height = src.rows;
-    NppiSize dstsz;
-    dstsz.width  = dst.cols;
-    dstsz.height = dst.rows;
-
-    if (src.type() == CV_8UC1)
-    {
-        nppSafeCall( nppiResize_8u_C1R(src.ptr<Npp8u>(), srcsz, src.step, srcrect,
-            dst.ptr<Npp8u>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]) );
-    }
-    else
-    {
-        nppSafeCall( nppiResize_8u_C4R(src.ptr<Npp8u>(), srcsz, src.step, srcrect,
-            dst.ptr<Npp8u>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]) );
-    }
-}
+////////////////////////////////////////////////////////////////////////
+// sum
 
 Scalar cv::gpu::sum(const GpuMat& src)
 {
@@ -383,6 +327,9 @@ Scalar cv::gpu::sum(const GpuMat& src)
     return res;
 }
 
+////////////////////////////////////////////////////////////////////////
+// minMax
+
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal) 
 {
     CV_Assert(src.type() == CV_8UC1);
@@ -402,232 +349,37 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
         *maxVal = max_res;
 }
 
-void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value) 
+////////////////////////////////////////////////////////////////////////
+// LUT
+
+void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1);
-
-    dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
-
-	NppiSize srcsz;
-	srcsz.width  = src.cols;
-	srcsz.height = src.rows;
-    NppiSize dstsz;
-	dstsz.width  = dst.cols;
-	dstsz.height = dst.rows;
-
-    switch (src.type())
+    class LevelsInit
     {
-    case CV_8UC1:
-		{
-            Npp8u nVal = static_cast<Npp8u>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), src.step, srcsz, 
-                dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
-            break;
-		}
-    case CV_8UC4:
-		{
-            Npp8u nVal[] = {static_cast<Npp8u>(value[0]), static_cast<Npp8u>(value[1]), static_cast<Npp8u>(value[2]), static_cast<Npp8u>(value[3])};
-            nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), src.step, srcsz, 
-                dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
-            break;
-		}
-    case CV_32SC1:
-	    {
-            Npp32s nVal = static_cast<Npp32s>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz, 
-                dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );
-            break;
-	    }
-    default:
-        CV_Assert(!"Unsupported source type");
-    }
-}
+    public:
+        Npp32s pLevels[256];
 
-namespace
-{    
-    typedef NppStatus (*npp_warp_8u_t)(const Npp8u* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp8u* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
-                                       int interpolation);
-    typedef NppStatus (*npp_warp_16u_t)(const Npp16u* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp16u* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
-                                       int interpolation);
-    typedef NppStatus (*npp_warp_32s_t)(const Npp32s* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp32s* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
-                                       int interpolation);
-    typedef NppStatus (*npp_warp_32f_t)(const Npp32f* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp32f* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
-                                       int interpolation);
-
-    void nppWarpCaller(const GpuMat& src, GpuMat& dst, double coeffs[][3], const Size& dsize, int flags, 
-                       npp_warp_8u_t npp_warp_8u[][2], npp_warp_16u_t npp_warp_16u[][2], 
-                       npp_warp_32s_t npp_warp_32s[][2], npp_warp_32f_t npp_warp_32f[][2]) 
-    {
-        static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
-    
-        int interpolation = flags & INTER_MAX;
-
-        CV_Assert((src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S || src.depth() == CV_32F) && src.channels() != 2);
-        CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
-
-        dst.create(dsize, src.type());
-
-        NppiSize srcsz;
-        srcsz.height = src.rows;
-        srcsz.width = src.cols;
-        NppiRect srcroi;
-        srcroi.x = srcroi.y = 0;
-        srcroi.height = src.rows;
-        srcroi.width = src.cols;
-        NppiRect dstroi;
-        dstroi.x = dstroi.y = 0;
-        dstroi.height = dst.rows;
-        dstroi.width = dst.cols;
-
-        int warpInd = (flags & WARP_INVERSE_MAP) >> 4;
-
-        switch (src.depth())
-        {
-        case CV_8U:
-            nppSafeCall( npp_warp_8u[src.channels()][warpInd](src.ptr<Npp8u>(), srcsz, src.step, srcroi, 
-                dst.ptr<Npp8u>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
-            break;
-        case CV_16U:
-            nppSafeCall( npp_warp_16u[src.channels()][warpInd](src.ptr<Npp16u>(), srcsz, src.step, srcroi, 
-                dst.ptr<Npp16u>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
-            break;
-        case CV_32S:
-            nppSafeCall( npp_warp_32s[src.channels()][warpInd](src.ptr<Npp32s>(), srcsz, src.step, srcroi, 
-                dst.ptr<Npp32s>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
-            break;
-        case CV_32F:
-            nppSafeCall( npp_warp_32f[src.channels()][warpInd](src.ptr<Npp32f>(), srcsz, src.step, srcroi, 
-                dst.ptr<Npp32f>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
-            break;
-        default:
-            CV_Assert(!"Unsupported source type");
+        LevelsInit()
+        {            
+            for (int i = 0; i < 256; ++i)
+                pLevels[i] = i;
         }
-    }
-}
+    };
+    static LevelsInit lvls;
 
-void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags) 
-{
-    static npp_warp_8u_t npp_warpAffine_8u[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpAffine_8u_C1R, nppiWarpAffineBack_8u_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_8u_C3R, nppiWarpAffineBack_8u_C3R}, 
-            {nppiWarpAffine_8u_C4R, nppiWarpAffineBack_8u_C4R}
-        };
-    static npp_warp_16u_t npp_warpAffine_16u[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpAffine_16u_C1R, nppiWarpAffineBack_16u_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_16u_C3R, nppiWarpAffineBack_16u_C3R}, 
-            {nppiWarpAffine_16u_C4R, nppiWarpAffineBack_16u_C4R}
-        };
-    static npp_warp_32s_t npp_warpAffine_32s[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpAffine_32s_C1R, nppiWarpAffineBack_32s_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_32s_C3R, nppiWarpAffineBack_32s_C3R}, 
-            {nppiWarpAffine_32s_C4R, nppiWarpAffineBack_32s_C4R}
-        };
-    static npp_warp_32f_t npp_warpAffine_32f[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpAffine_32f_C1R, nppiWarpAffineBack_32f_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_32f_C3R, nppiWarpAffineBack_32f_C3R}, 
-            {nppiWarpAffine_32f_C4R, nppiWarpAffineBack_32f_C4R}
-        };
+    int cn = src.channels();
 
-    CV_Assert(M.rows == 2 && M.cols == 3);
+    CV_Assert(src.type() == CV_8UC1);
+    CV_Assert(lut.depth() == CV_32SC1 && lut.rows * lut.cols == 256 && lut.isContinuous());
 
-    double coeffs[2][3];
-    Mat coeffsMat(2, 3, CV_64F, (void*)coeffs);
-    M.convertTo(coeffsMat, coeffsMat.type());
+    dst.create(src.size(), src.type());
 
-    nppWarpCaller(src, dst, coeffs, dsize, flags, npp_warpAffine_8u, npp_warpAffine_16u, npp_warpAffine_32s, npp_warpAffine_32f);
-}
+    NppiSize sz;
+    sz.height = src.rows;
+    sz.width = src.cols;
 
-void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags)
-{
-    static npp_warp_8u_t npp_warpPerspective_8u[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpPerspective_8u_C1R, nppiWarpPerspectiveBack_8u_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_8u_C3R, nppiWarpPerspectiveBack_8u_C3R}, 
-            {nppiWarpPerspective_8u_C4R, nppiWarpPerspectiveBack_8u_C4R}
-        };
-    static npp_warp_16u_t npp_warpPerspective_16u[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpPerspective_16u_C1R, nppiWarpPerspectiveBack_16u_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_16u_C3R, nppiWarpPerspectiveBack_16u_C3R}, 
-            {nppiWarpPerspective_16u_C4R, nppiWarpPerspectiveBack_16u_C4R}
-        };
-    static npp_warp_32s_t npp_warpPerspective_32s[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpPerspective_32s_C1R, nppiWarpPerspectiveBack_32s_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_32s_C3R, nppiWarpPerspectiveBack_32s_C3R}, 
-            {nppiWarpPerspective_32s_C4R, nppiWarpPerspectiveBack_32s_C4R}
-        };
-    static npp_warp_32f_t npp_warpPerspective_32f[][2] = 
-        {
-            {0, 0}, 
-            {nppiWarpPerspective_32f_C1R, nppiWarpPerspectiveBack_32f_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_32f_C3R, nppiWarpPerspectiveBack_32f_C3R}, 
-            {nppiWarpPerspective_32f_C4R, nppiWarpPerspectiveBack_32f_C4R}
-        };
-
-    CV_Assert(M.rows == 3 && M.cols == 3);
-
-    double coeffs[3][3];
-    Mat coeffsMat(3, 3, CV_64F, (void*)coeffs);
-    M.convertTo(coeffsMat, coeffsMat.type());
-
-    nppWarpCaller(src, dst, coeffs, dsize, flags, npp_warpPerspective_8u, npp_warpPerspective_16u, npp_warpPerspective_32s, npp_warpPerspective_32f);
-}
-
-void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation)
-{
-    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
-    
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
-
-    dst.create(dsize, src.type());
-
-    NppiSize srcsz;
-    srcsz.height = src.rows;
-    srcsz.width = src.cols;
-    NppiRect srcroi;
-    srcroi.x = srcroi.y = 0;
-    srcroi.height = src.rows;
-    srcroi.width = src.cols;
-    NppiRect dstroi;
-    dstroi.x = dstroi.y = 0;
-    dstroi.height = dst.rows;
-    dstroi.width = dst.cols;
-
-    if (src.type() == CV_8UC1)
-    {
-        nppSafeCall( nppiRotate_8u_C1R(src.ptr<Npp8u>(), srcsz, src.step, srcroi, 
-            dst.ptr<Npp8u>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
-    }
-    else
-    {
-        nppSafeCall( nppiRotate_8u_C4R(src.ptr<Npp8u>(), srcsz, src.step, srcroi, 
-            dst.ptr<Npp8u>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
-    }
+    nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, 
+        lut.ptr<Npp32s>(), lvls.pLevels, 256) );
 }
 
 #endif /* !defined (HAVE_CUDA) */

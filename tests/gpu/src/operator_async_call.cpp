@@ -131,7 +131,7 @@ bool CV_GpuMatAsyncCallTest::compare_matrix(cv::Mat & cpumat)
         return true;
     else
     {
-        ts->printf(CvTS::CONSOLE, "\nNorm: %f\n", ret);
+        ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
         return false;
     }
 }

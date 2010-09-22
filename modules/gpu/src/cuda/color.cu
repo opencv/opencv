@@ -46,20 +46,30 @@
 using namespace cv::gpu;
 
 #ifndef CV_DESCALE
-#define CV_DESCALE(x,n) (((x) + (1 << ((n)-1))) >> (n))
+#define CV_DESCALE(x, n) (((x) + (1 << ((n)-1))) >> (n))
 #endif
 
 namespace imgproc
 {
-    template<typename _Tp> struct ColorChannel
-    {
-    };
+    template<typename T, int N> struct TypeVec {};
+    template<> struct TypeVec<uchar, 1> { typedef uchar1 vec_t; };
+    template<> struct TypeVec<uchar, 2> { typedef uchar2 vec_t; };
+    template<> struct TypeVec<uchar, 3> { typedef uchar3 vec_t; };
+    template<> struct TypeVec<uchar, 4> { typedef uchar4 vec_t; };
+    template<> struct TypeVec<unsigned short, 1> { typedef ushort1 vec_t; };
+    template<> struct TypeVec<unsigned short, 2> { typedef ushort2 vec_t; };
+    template<> struct TypeVec<unsigned short, 3> { typedef ushort3 vec_t; };
+    template<> struct TypeVec<unsigned short, 4> { typedef ushort4 vec_t; };
+    template<> struct TypeVec<float, 1> { typedef float1 vec_t; };
+    template<> struct TypeVec<float, 2> { typedef float2 vec_t; };
+    template<> struct TypeVec<float, 3> { typedef float3 vec_t; };
+    template<> struct TypeVec<float, 4> { typedef float4 vec_t; };
+
+    template<typename _Tp> struct ColorChannel {};
 
     template<> struct ColorChannel<uchar>
     {
         typedef float worktype_f;
-        typedef uchar3 vec3_t;
-        typedef uchar4 vec4_t;
         static __device__ unsigned char max() { return UCHAR_MAX; }
         static __device__ unsigned char half() { return (unsigned char)(max()/2 + 1); }
     };
@@ -67,8 +77,6 @@ namespace imgproc
     template<> struct ColorChannel<unsigned short>
     {
         typedef float worktype_f;
-        typedef ushort3 vec3_t;
-        typedef ushort4 vec4_t;
         static __device__ unsigned short max() { return USHRT_MAX; }
         static __device__ unsigned short half() { return (unsigned short)(max()/2 + 1); }
     };
@@ -76,94 +84,114 @@ namespace imgproc
     template<> struct ColorChannel<float>
     {
         typedef float worktype_f;
-        typedef float3 vec3_t;
-        typedef float4 vec4_t;
         static __device__ float max() { return 1.f; }
         static __device__ float half() { return 0.5f; }
-    };
+    };    
 }
+
+//////////////////////////////////////// SwapChannels /////////////////////////////////////
+
+namespace imgproc
+{
+    __constant__ int ccoeffs[4];
+
+    template <int CN, typename T>
+    __global__ void swapChannels(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols)
+    {
+        typedef typename TypeVec<T, CN>::vec_t vec_t;
+
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            vec_t src = *(const vec_t*)(src_ + y * src_step + x * CN);
+            vec_t dst;
+
+            const T* src_ptr = (const T*)(&src);
+            T* dst_ptr = (T*)(&dst);
+
+            for (int i = 0; i < CN; ++i)
+                dst_ptr[i] = src_ptr[ccoeffs[i]];
+
+            *(vec_t*)(dst_ + y * dst_step + x * CN) = dst;
+        }
+    }
+}
+
+namespace cv { namespace gpu { namespace improc
+{
+    template <typename T>
+    void swapChannels_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, int cn, const int* coeffs, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc::ccoeffs, coeffs, cn * sizeof(int)) );
+
+        switch (cn)
+        {
+        case 3:
+            imgproc::swapChannels<3><<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T), src.rows, src.cols);
+            break;
+        case 4:
+            imgproc::swapChannels<4><<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T), src.rows, src.cols);
+            break;
+        default:
+            cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
+            break;
+        }
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void swapChannels_gpu(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream)
+    {
+        swapChannels_caller(src, dst, cn, coeffs, stream);
+    }
+
+    void swapChannels_gpu(const DevMem2D_<unsigned short>& src, const DevMem2D_<unsigned short>& dst, int cn, const int* coeffs, cudaStream_t stream)
+    {
+        swapChannels_caller(src, dst, cn, coeffs, stream);
+    }
+
+    void swapChannels_gpu(const DevMem2Df& src, const DevMem2Df& dst, int cn, const int* coeffs, cudaStream_t stream)
+    {
+        swapChannels_caller(src, dst, cn, coeffs, stream);
+    }
+}}}
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
 namespace imgproc
 {
-    template <typename T>
-        __global__ void RGB2RGB_3_3(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols, int bidx)
-        {
-                const int x = blockDim.x * blockIdx.x + threadIdx.x;
-                const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-        if (y < rows && x < cols)
-        {
-            const T* src = src_ + y * src_step + x * 3;
-            T* dst = dst_ + y * dst_step + x * 3;
-
-            T t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
-            dst[0] = t0; dst[1] = t1; dst[2] = t2;
-        }
-        }
-
-    template <typename T>
-        __global__ void RGB2RGB_4_3(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols, int bidx)
-        {
-        typedef typename ColorChannel<T>::vec4_t vec4_t;
+    template <int SRCCN, int DSTCN, typename T>
+    __global__ void RGB2RGB(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols, int bidx)
+    {
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
 
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
         if (y < rows && x < cols)
         {
-            vec4_t src = *(vec4_t*)(src_ + y * src_step + (x << 2));
-            T* dst = dst_ + y * dst_step + x * 3;
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN);
+            dst_t dst;
 
-            T t0 = ((T*)(&src))[bidx], t1 = src.y, t2 = ((T*)(&src))[bidx ^ 2];
-            dst[0] = t0; dst[1] = t1; dst[2] = t2;
-        }
-        }
-
-    template <typename T>
-        __global__ void RGB2RGB_3_4(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols, int bidx)
-        {
-        typedef typename ColorChannel<T>::vec4_t vec4_t;
-
-		const int x = blockDim.x * blockIdx.x + threadIdx.x;
-		const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-        if (y < rows && x < cols)
-        {
-            const T* src = src_ + y * src_step + x * 3;
-
-            vec4_t dst;
-
-            dst.x = src[bidx];
-            dst.y = src[1];
-            dst.z = src[bidx ^ 2];
-            dst.w = ColorChannel<T>::max();
-            *(vec4_t*)(dst_ + y * dst_step + (x << 2)) = dst;
-        }
-        }
-
-    template <typename T>
-        __global__ void RGB2RGB_4_4(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols, int bidx)
-        {
-        typedef typename ColorChannel<T>::vec4_t vec4_t;
-
-		const int x = blockDim.x * blockIdx.x + threadIdx.x;
-		const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-        if (y < rows && x < cols)
-        {
-            vec4_t src = *(const vec4_t*)(src_ + y * src_step + (x << 2));
-            vec4_t dst;
-
-            dst.x = ((T*)(&src))[bidx];
+            dst.x = ((const T*)(&src))[bidx];
             dst.y = src.y;
-            dst.z = ((T*)(&src))[bidx ^ 2];
-            dst.w = src.w;
-
-            *(vec4_t*)(dst_ + y * dst_step + (x << 2)) = dst;
+            dst.z = ((const T*)(&src))[bidx ^ 2];
+            if (DSTCN == 4)
+                ((T*)(&dst))[3] = ColorChannel<T>::max();
+            
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN) = dst;
         }
-        }
+    }
 }
 
 namespace cv { namespace gpu { namespace improc
@@ -183,12 +211,15 @@ namespace cv { namespace gpu { namespace improc
             switch (srccn)
             {
             case 3:
-                imgproc::RGB2RGB_3_3<<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T),
-                                                                          src.rows, src.cols, bidx);
+                {
+                int coeffs[] = {2, 1, 0};
+                cudaSafeCall( cudaMemcpyToSymbol(imgproc::ccoeffs, coeffs, 3 * sizeof(int)) );
+                imgproc::swapChannels<3><<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T), src.rows, src.cols);
                 break;
+                }
             case 4:
-                imgproc::RGB2RGB_4_3<<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T),
-                                                                          src.rows, src.cols, bidx);
+                imgproc::RGB2RGB<4, 3><<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T),
+                                                                   src.rows, src.cols, bidx);
                 break;
             default:
                 cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
@@ -199,13 +230,16 @@ namespace cv { namespace gpu { namespace improc
             switch (srccn)
             {
             case 3:
-                imgproc::RGB2RGB_3_4<<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T),
-                                                                          src.rows, src.cols, bidx);
+                imgproc::RGB2RGB<3, 4><<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T),
+                                                                   src.rows, src.cols, bidx);
                 break;
             case 4:
-                imgproc::RGB2RGB_4_4<<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T),
-                                                                          src.rows, src.cols, bidx);
+                {
+                int coeffs[] = {2, 1, 0, 3};
+                cudaSafeCall( cudaMemcpyToSymbol(imgproc::ccoeffs, coeffs, 4 * sizeof(int)) );
+                imgproc::swapChannels<4><<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(T), dst.ptr, dst.step / sizeof(T), src.rows, src.cols);
                 break;
+                }
             default:
                 cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
                 break;
@@ -319,8 +353,8 @@ namespace imgproc
     template <typename T>
     __global__ void Gray2RGB_3(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols)
     {
-                const int x = blockDim.x * blockIdx.x + threadIdx.x;
-                const int y = blockDim.y * blockIdx.y + threadIdx.y;
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
         if (y < rows && x < cols)
         {
@@ -335,7 +369,7 @@ namespace imgproc
     template <typename T>
     __global__ void Gray2RGB_4(const T* src_, size_t src_step, T* dst_, size_t dst_step, int rows, int cols)
     {
-        typedef typename ColorChannel<T>::vec4_t vec4_t;
+        typedef typename TypeVec<T, 4>::vec_t vec4_t;
 
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;

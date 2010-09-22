@@ -68,15 +68,15 @@ static inline bool check_and_treat_gpu_exception(const cv::Exception& e, CvTS* t
     switch (e.code)
     {
     case CV_GpuNotFound: 
-        ts->printf(CvTS::CONSOLE, "\nGpu not found"); 
+        ts->printf(CvTS::LOG, "\nGpu not found"); 
         break;
 
     case CV_GpuApiCallError: 
-        ts->printf(CvTS::CONSOLE, "\nGPU Error: %s", e.what());
+        ts->printf(CvTS::LOG, "\nGPU Error: %s", e.what());
         break;
 
     case CV_GpuNppCallError: 
-        ts->printf(CvTS::CONSOLE, "\nNPP Error: %s", e.what());
+        ts->printf(CvTS::LOG, "\nNPP Error: %s", e.what());
         break;
 
     default:

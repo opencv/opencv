@@ -108,7 +108,7 @@ void CV_GpuMeanShiftTest::run(int)
         }
         if (maxDiff > 0) 
         {
-            ts->printf(CvTS::CONSOLE, "\nMeanShift maxDiff = %d\n", maxDiff);
+            ts->printf(CvTS::LOG, "\nMeanShift maxDiff = %d\n", maxDiff);
             ts->set_failed_test_info(CvTS::FAIL_GENERIC);
             return;
         }
