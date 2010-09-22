@@ -1,0 +1,13 @@
+LOCAL_PATH := ${CMAKE_CURRENT_SOURCE_DIR}
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := ${android_module_name}
+ 
+LOCAL_SRC_FILES :=  ${android_srcs}
+
+LOCAL_CFLAGS := ${android_defs}
+
+LOCAL_C_INCLUDES :=  ${include_dirs} $(LOCAL_PATH)
+
+include $(BUILD_STATIC_LIBRARY)

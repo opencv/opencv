@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="com.opencv" android:versionCode="1"
+	android:versionName="0.1">
+	
+	 <application android:debuggable="true">
+        <!-- The activity tag here is currently not used. The main project TicTacToeMain
+             must currently redefine the activities to be used from the libraries.
+             However later the tools will pick up the activities from here and merge them
+             automatically, so it's best to define your activities here like for any
+             regular Android project.
+        -->
+        <activity android:name="com.opencv.OpenCV" />
+    </application>
+    <!-- set the opengl version 
+    <uses-feature android:glEsVersion="0x00020000" />-->
+	<uses-sdk android:minSdkVersion="7" />
+	<uses-permission android:name="android.permission.CAMERA"></uses-permission>
+	
+</manifest> 

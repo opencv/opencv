@@ -1,0 +1,17 @@
+changes
+added some specific CMakeLists.txt changes see the changes.diff for these
+
+basically see
+mbstowcs is not supported - so see had to 
+#ifndef ANDROID
+string fromUtf16(const WString& str)
+WString toUtf16(const string& str)
+#endif
+
+ANDROID is always defined when building with the ndk
+
+_S is a bad variable name for android...
+
+added the zlib-android - because i couldn't figure out how to configure the
+existing zlib in 3rdparty
+

@@ -1,0 +1,33 @@
+#you may override this if you move the build
+#just define it before including this or on the command line - or with
+#an environment variable
+#this points to the root of the opencv trunk - where the original opencv 
+#sources are - with modules 3rparty ...
+ifndef OPENCV_ROOT
+OPENCV_ROOT := ${opencv_root}
+endif
+
+#you may override this same as above
+#this points to the actually directory that you built opencv for android from
+#maybe in under opencv/android/build
+ifndef OPENCV_BUILD_ROOT
+OPENCV_BUILD_ROOT := ${CMAKE_BINARY_DIR}
+endif
+
+OPENCV_INCLUDES := ${android_module_include_dirs} $(OPENCV_ROOT)/android/android-jni/jni
+ANDROID_OPENCV_INCLUDES := $(OPENCV_ROOT)/android/android-jni/jni
+
+ARMOBJS := obj/local/armeabi
+ARMOBJS_V7A := obj/local/armeabi-v7a
+OPENCV_LIB_DIRS := -L$(OPENCV_BUILD_ROOT)/$(ARMOBJS_V7A) -L$(OPENCV_BUILD_ROOT)/$(ARMOBJS)
+
+ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/$(ARMOBJS_V7A) -L$(OPENCV_ROOT)/android/android-jni/$(ARMOBJS)
+
+#order of linking very important ---- may have stuff out of order here, but
+#important that modules that are more dependent come first...
+
+OPENCV_LIBS := $(OPENCV_LIB_DIRS) -lfeatures2d  -lcalib3d -limgproc -lobjdetect  \
+     -lvideo  -lhighgui -lml -llegacy -lcore -lopencv_lapack -lflann \
+    -lzlib -lpng -ljpeg -ljasper
+ANDROID_OPENCV_LIBS := $(ANDROID_OPENCV_LIB_DIRS) -landroid-opencv
+    
