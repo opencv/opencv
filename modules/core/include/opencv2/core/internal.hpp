@@ -135,6 +135,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #endif
 
 #ifdef HAVE_EIGEN2
+    #include <Eigen/Core>
     #include "opencv2/core/eigen.hpp"
 #endif
 
