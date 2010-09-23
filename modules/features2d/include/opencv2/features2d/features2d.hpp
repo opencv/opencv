@@ -1394,7 +1394,6 @@ protected:
     virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 };
 
-
 CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
                                      float maxDeltaX, float maxDeltaY );
 
@@ -1429,6 +1428,9 @@ public:
     virtual void read( const FileNode& ) {};
     virtual void write( FileStorage& ) const {};
 
+    virtual int descriptorSize() const = 0;
+    virtual int descriptorType() const = 0;
+
 protected:
     /*
      * Remove keypoints within border_pixels of an image edge.
@@ -1451,6 +1453,9 @@ public:
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
 
+    virtual int descriptorSize() const { return sift.descriptorSize(); }
+    virtual int descriptorType() const { return CV_32FC1; }
+
 protected:
     SIFT sift;
 };
@@ -1465,6 +1470,9 @@ public:
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
 
+    virtual int descriptorSize() const { return surf.descriptorSize(); }
+    virtual int descriptorType() const { return CV_32FC1; }
+
 protected:
     SURF surf;
 };
@@ -1478,6 +1486,9 @@ public:
     virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
+
+    virtual int descriptorSize() const { return classifier_.classes(); }
+    virtual int descriptorType() const { return DataType<T>::type; }
 
 protected:
     RTreeClassifier classifier_;
@@ -1517,6 +1528,30 @@ void CalonderDescriptorExtractor<T>::read( const FileNode& )
 template<typename T>
 void CalonderDescriptorExtractor<T>::write( FileStorage& ) const
 {}
+
+/*
+ * Adapts a descriptor extractor to compute descripors in Opponent Color Space
+ * (refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
+ * Input RGB image is transformed in Opponent Color Space. Then unadapted descriptor extractor
+ * (set in constructor) computes descriptors on each of the three channel and concatenate
+ * them into a single color descriptor.
+ */
+class OpponentColorDescriptorExtractor : public DescriptorExtractor
+{
+public:
+    OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor );
+
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+
+    virtual void read( const FileNode& );
+    virtual void write( FileStorage& ) const;
+
+    virtual int descriptorSize() const { return 3*dextractor->descriptorSize(); }
+    virtual int descriptorType() const { return dextractor->descriptorType(); }
+
+protected:
+    Ptr<DescriptorExtractor> dextractor;
+};
 
 CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );
 

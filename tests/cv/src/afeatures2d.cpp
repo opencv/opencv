@@ -321,9 +321,14 @@ public:
 };
 
 //CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_sift", 0.001f,
-  //                                              createDescriptorExtractor("SIFT"), 8.06652f  );
+//                                                createDescriptorExtractor("SIFT"), 8.06652f  );
 //CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_surf",  0.004f,
-  //                                              createDescriptorExtractor("SURF"), 0.147372f );
+//                                                createDescriptorExtractor("SURF"), 0.147372f );
+//CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_opponent_sift", 0.001f,
+//                                                createDescriptorExtractor("OpponentSIFT"), 8.06652f  );
+//CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_opponent_surf",  0.004f,
+//                                                createDescriptorExtractor("OpponentSURF"), 0.147372f );
+
 #if CV_SSE2
 CV_CalonderDescriptorExtractorTest<uchar> ucharCalonderTest( "descriptor_calonder_uchar",
                                                              std::numeric_limits<float>::epsilon() + 1,

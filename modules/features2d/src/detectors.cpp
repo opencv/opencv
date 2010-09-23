@@ -90,7 +90,9 @@ void FastFeatureDetector::write (FileStorage& fs) const
 
 void FastFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints) const
 {
-    FAST( image, keypoints, threshold, nonmaxSuppression );
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    FAST( grayImage, keypoints, threshold, nonmaxSuppression );
     removeInvalidPoints( mask, keypoints );
 }
 
@@ -127,8 +129,11 @@ void GoodFeaturesToTrackDetector::write (FileStorage& fs) const
 void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
                                               vector<KeyPoint>& keypoints ) const
 {
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
     vector<Point2f> corners;
-    goodFeaturesToTrack( image, corners, maxCorners, qualityLevel, minDistance, mask,
+    goodFeaturesToTrack( grayImage, corners, maxCorners, qualityLevel, minDistance, mask,
                          blockSize, useHarrisDetector, k );
     keypoints.resize(corners.size());
     vector<Point2f>::const_iterator corner_it = corners.begin();
@@ -190,7 +195,11 @@ void MserFeatureDetector::write (FileStorage& fs) const
 void MserFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
 {
     vector<vector<Point> > msers;
-    mser(image, msers, mask);
+
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
+    mser(grayImage, msers, mask);
 
     keypoints.resize( msers.size() );
     vector<vector<Point> >::const_iterator contour_it = msers.begin();
@@ -239,7 +248,10 @@ void StarFeatureDetector::write (FileStorage& fs) const
 
 void StarFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints) const
 {
-    star(image, keypoints);
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
+    star(grayImage, keypoints);
     removeInvalidPoints(mask, keypoints);
 }
 
@@ -282,7 +294,10 @@ void SiftFeatureDetector::write (FileStorage& fs) const
 void SiftFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
                                       vector<KeyPoint>& keypoints) const
 {
-    sift(image, mask, keypoints);
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
+    sift(grayImage, mask, keypoints);
 }
 
 /*
@@ -313,7 +328,10 @@ void SurfFeatureDetector::write (FileStorage& fs) const
 void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
                                       vector<KeyPoint>& keypoints) const
 {
-    surf(image, mask, keypoints);
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
+    surf(grayImage, mask, keypoints);
 }
 
 Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
@@ -352,10 +370,6 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     {
         fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
                                               3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
-    }
-    else
-    {
-        //CV_Error( CV_StsBadArg, "unsupported feature detector type");
     }
     return fd;
 }

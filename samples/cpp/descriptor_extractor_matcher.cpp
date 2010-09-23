@@ -154,9 +154,9 @@ int main(int argc, char** argv)
 	}
 		
     cout << "< Reading the images..." << endl;
-    Mat img1 = imread( argv[3], CV_LOAD_IMAGE_GRAYSCALE), img2;
+    Mat img1 = imread( argv[3] ), img2;
     if( !isWarpPerspective )
-        img2 = imread( argv[4], CV_LOAD_IMAGE_GRAYSCALE);
+        img2 = imread( argv[4] );
     cout << ">" << endl;
     if( img1.empty() || (!isWarpPerspective && img2.empty()) )
     {

@@ -147,8 +147,16 @@ static void _prepareImgAndDrawKeypoints( const Mat& img1, const vector<KeyPoint>
         outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
         outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
         outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
-        cvtColor( img1, outImg1, CV_GRAY2RGB );
-        cvtColor( img2, outImg2, CV_GRAY2RGB );
+
+        if( img1.type() == CV_8U )
+            cvtColor( img1, outImg1, CV_GRAY2BGR );
+        else
+            img1.copyTo( outImg1 );
+
+        if( img2.type() == CV_8U )
+            cvtColor( img2, outImg2, CV_GRAY2BGR );
+        else
+            img2.copyTo( outImg2 );
     }
 
     // draw keypoints
@@ -308,7 +316,10 @@ void SiftDescriptorExtractor::compute( const Mat& image,
                                        Mat& descriptors) const
 {
     bool useProvidedKeypoints = true;
-    sift(image, Mat(), keypoints, descriptors, useProvidedKeypoints);
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
+    sift(grayImage, Mat(), keypoints, descriptors, useProvidedKeypoints);
 }
 
 void SiftDescriptorExtractor::read (const FileNode &fn)
@@ -355,7 +366,10 @@ void SurfDescriptorExtractor::compute( const Mat& image,
     vector<float> _descriptors;
     Mat mask;
     bool useProvidedKeypoints = true;
-    surf(image, mask, keypoints, _descriptors, useProvidedKeypoints);
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
+    surf(grayImage, mask, keypoints, _descriptors, useProvidedKeypoints);
 
     descriptors.create((int)keypoints.size(), (int)surf.descriptorSize(), CV_32FC1);
     assert( (int)_descriptors.size() == descriptors.rows * descriptors.cols );
@@ -381,6 +395,104 @@ void SurfDescriptorExtractor::write( FileStorage &fs ) const
 }
 
 /****************************************************************************************\
+*                             OpponentColorDescriptorExtractor                           *
+\****************************************************************************************/
+OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& _dextractor ) :
+        dextractor(_dextractor)
+{}
+
+void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& opponentChannels )
+{
+    if( bgrImage.type() != CV_8UC3 )
+        CV_Error( CV_StsBadArg, "input image must be an BGR image of type CV_8UC3" );
+
+    // Split image into RGB to allow conversion to Opponent Color Space.
+    vector<Mat> bgrChannels(3);
+    split( bgrImage, bgrChannels );
+
+    // Prepare opponent color space storage matrices.
+    opponentChannels.resize( 3 );
+    opponentChannels[0] = cv::Mat(bgrImage.size(), CV_8UC1); // R-G RED-GREEN
+    opponentChannels[1] = cv::Mat(bgrImage.size(), CV_8UC1); // R+G-2B YELLOW-BLUE
+    opponentChannels[2] = cv::Mat(bgrImage.size(), CV_8UC1); // R+G+B
+
+    // Calculate the channels of the opponent color space
+    {
+        // (R - G) / sqrt(2)
+        MatConstIterator_<char> rIt = bgrChannels[2].begin<char>();
+        MatConstIterator_<char> gIt = bgrChannels[1].begin<char>();
+        MatIterator_<char> dstIt = opponentChannels[0].begin<char>();
+        float factor = 1.f / sqrt(2.0);
+        for( ; dstIt != opponentChannels[0].end<char>(); ++rIt, ++gIt, ++dstIt )
+        {
+            int value = static_cast<int>( static_cast<float>(static_cast<int>(*gIt)-static_cast<int>(*rIt)) * factor );
+            if( value < 0 ) value = 0;
+            if( value > 255 ) value = 255;
+            (*dstIt) = static_cast<unsigned char>(value);
+        }
+    }
+    {
+        // (R + G - 2B)/sqrt(6)
+        MatConstIterator_<char> rIt = bgrChannels[2].begin<char>();
+        MatConstIterator_<char> gIt = bgrChannels[1].begin<char>();
+        MatConstIterator_<char> bIt = bgrChannels[0].begin<char>();
+        MatIterator_<char> dstIt = opponentChannels[1].begin<char>();
+        float factor = 1.f / sqrt(6.0);
+        for( ; dstIt != opponentChannels[1].end<char>(); ++rIt, ++gIt, ++bIt, ++dstIt )
+        {
+            int value = static_cast<int>( static_cast<float>(static_cast<int>(*rIt) + static_cast<int>(*gIt) - 2*static_cast<int>(*bIt)) *
+                                          factor );
+            if( value < 0 ) value = 0;
+            if( value > 255 ) value = 255;
+            (*dstIt) = static_cast<unsigned char>(value);
+        }
+    }
+    {
+        // (R + G + B)/sqrt(3)
+        MatConstIterator_<char> rIt = bgrChannels[2].begin<char>();
+        MatConstIterator_<char> gIt = bgrChannels[1].begin<char>();
+        MatConstIterator_<char> bIt = bgrChannels[0].begin<char>();
+        MatIterator_<char> dstIt = opponentChannels[2].begin<char>();
+        float factor = 1.f / sqrt(3.0);
+        for( ; dstIt != opponentChannels[2].end<char>(); ++rIt, ++gIt, ++bIt, ++dstIt )
+        {
+            int value = static_cast<int>( static_cast<float>(static_cast<int>(*rIt) + static_cast<int>(*gIt) + static_cast<int>(*bIt)) *
+                                          factor );
+            if( value < 0 ) value = 0;
+            if( value > 255 ) value = 255;
+            (*dstIt) = static_cast<unsigned char>(value);
+        }
+    }
+}
+
+void OpponentColorDescriptorExtractor::compute( const Mat& bgrImage, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+{
+    vector<Mat> opponentChannels;
+    convertBGRImageToOpponentColorSpace( bgrImage, opponentChannels );
+
+    // Compute descriptors three times, once for each Opponent channel
+    // and concatenate into a single color surf descriptor
+    int descriptorSize = dextractor->descriptorSize();
+    descriptors.create( static_cast<int>(keypoints.size()), 3*descriptorSize, CV_32FC1 );
+    for( int i = 0; i < 3/*channel count*/; i++ )
+    {
+        CV_Assert( opponentChannels[i].type() == CV_8UC1 );
+        Mat opponentDescriptors = descriptors.colRange( i*descriptorSize, (i+1)*descriptorSize );
+        dextractor->compute( opponentChannels[i], keypoints, opponentDescriptors );
+    }
+}
+
+void OpponentColorDescriptorExtractor::read( const FileNode& fn )
+{
+    dextractor->read( fn );
+}
+
+void OpponentColorDescriptorExtractor::write( FileStorage& fs ) const
+{
+    dextractor->write( fs );
+}
+
+/****************************************************************************************\
 *           Factory functions for descriptor extractor and matcher creating              *
 \****************************************************************************************/
 
@@ -389,20 +501,19 @@ Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtr
     DescriptorExtractor* de = 0;
     if( !descriptorExtractorType.compare( "SIFT" ) )
     {
-        de = new SiftDescriptorExtractor/*( double magnification=SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION(),
-                             bool isNormalize=true, bool recalculateAngles=true,
-                             int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
-                             int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-                             int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
-                             int angleMode=SIFT::CommonParams::FIRST_ANGLE )*/;
+        de = new SiftDescriptorExtractor();
     }
     else if( !descriptorExtractorType.compare( "SURF" ) )
     {
-        de = new SurfDescriptorExtractor/*( int nOctaves=4, int nOctaveLayers=2, bool extended=false )*/;
+        de = new SurfDescriptorExtractor();
     }
-    else
+    else if( !descriptorExtractorType.compare( "OpponentSIFT" ) )
     {
-        //CV_Error( CV_StsBadArg, "unsupported descriptor extractor type");
+        de = new OpponentColorDescriptorExtractor( new SiftDescriptorExtractor );
+    }
+    else if( !descriptorExtractorType.compare( "OpponentSURF" ) )
+    {
+        de = new OpponentColorDescriptorExtractor( new SurfDescriptorExtractor );
     }
     return de;
 }
@@ -414,13 +525,9 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
     {
         dm = new BruteForceMatcher<L2<float> >();
     }
-    else if ( !descriptorMatcherType.compare( "BruteForce-L1" ) )
+    else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
     {
         dm = new BruteForceMatcher<L1<float> >();
-    }
-    else
-    {
-        //CV_Error( CV_StsBadArg, "unsupported descriptor matcher type");
     }
 
     return dm;
