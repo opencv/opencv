@@ -17,7 +17,8 @@ here:
    
    
 to include in an android project -
-just include the generated android-opencv.mk in you android ndk project
+just include the generated android-opencv.mk in you android ndk project 
+(in an Android.mk file)
 with:
 
 include android-opencv.mk

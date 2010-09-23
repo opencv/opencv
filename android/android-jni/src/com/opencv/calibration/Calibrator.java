@@ -91,7 +91,7 @@ private class CalibrationTask extends AsyncTask<Object, Object, Object> {
 	}
 	
 
-	@Override
+	//@Override
 	public void process(int idx, image_pool pool, long timestamp,
 			NativeProcessor nativeProcessor) {
 		if(lock.tryLock()){

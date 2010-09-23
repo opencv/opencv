@@ -25,10 +25,8 @@ OPENCV_LIB_DIRS := -L$(OPENCV_BUILD_ROOT)/obj/$(ARMOBJS_V7A) \
     -L$(OPENCV_BUILD_ROOT)/obj/$(ARMOBJS) -L$(OPENCV_BUILD_ROOT)/bin/ndk/$(ARMOBJS) \
     -L$(OPENCV_BUILD_ROOT)/bin/ndk/$(ARMOBJS_V7A)
 
-ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/obj/$(ARMOBJS_V7A) \
-    -L$(OPENCV_ROOT)/android/android-jni/obj/$(ARMOBJS) \
-    -L$(OPENCV_ROOT)/android/android-jni/bin/ndk/$(ARMOBJS_V7A) \
-    -L$(OPENCV_ROOT)/android/android-jni/bin/ndk/$(ARMOBJS)
+ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/libs/armeabi-v7a \
+    -L$(OPENCV_ROOT)/android/android-jni/libs/armeabi
 
 #order of linking very important ---- may have stuff out of order here, but
 #important that modules that are more dependent come first...
