@@ -73,7 +73,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         cout << "< Evaluate descriptor match..." << endl;
         vector<Point2f> curve;
         Ptr<GenericDescriptorMatch> gdm = new VectorDescriptorMatch( descriptorExtractor, descriptorMatcher );
-        evaluateDescriptorMatch( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
+        evaluateGenericDescriptorMatcher( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
         for( float l_p = 0; l_p < 1 - FLT_EPSILON; l_p+=0.1 )
             cout << "1-precision = " << l_p << "; recall = " << getRecall( curve, l_p ) << endl;
         cout << ">" << endl;

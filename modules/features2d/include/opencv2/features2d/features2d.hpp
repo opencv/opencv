@@ -2188,7 +2188,7 @@ CV_EXPORTS void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1
                              const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
 
 /****************************************************************************************\
-*                                   Evaluation functions                                 *
+*   Functions to evaluate the feature detectors and [generic] descriptor extractors      *
 \****************************************************************************************/
 
 CV_EXPORTS void evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H1to2,
@@ -2201,12 +2201,69 @@ CV_EXPORTS void computeRecallPrecisionCurve( const vector<vector<DMatch> >& matc
                                              vector<Point2f>& recallPrecisionCurve );
 CV_EXPORTS float getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precision );
 
-CV_EXPORTS void evaluateDescriptorMatch( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                         vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
-                                         vector<vector<DMatch> >* matches1to2, vector<vector<uchar> >* correctMatches1to2Mask,
-                                         vector<Point2f>& recallPrecisionCurve,
-                                         const Ptr<GenericDescriptorMatch>& dmatch=Ptr<GenericDescriptorMatch>() );
+CV_EXPORTS void evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, const Mat& H1to2,
+                                                  vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
+                                                  vector<vector<DMatch> >* matches1to2, vector<vector<uchar> >* correctMatches1to2Mask,
+                                                  vector<Point2f>& recallPrecisionCurve,
+                                                  const Ptr<GenericDescriptorMatch>& dmatch=Ptr<GenericDescriptorMatch>() );
 
+
+/****************************************************************************************\
+*                                     Bag of visual words                                *
+\****************************************************************************************/
+/*
+ * Abstract base class for training of a 'bag of visual words' vocabulary from a set of descriptors
+ */
+class BOWTrainer
+{
+public:
+    /*
+     * Train visual words vocabulary, that is cluster training descriptors and
+     * compute cluster centers.
+     *
+     * descriptors      Training descriptors computed on images keypoints.
+     * vocabulary       Vocabulary is cluster centers.
+     */
+    virtual void cluster( const Mat& descriptors, Mat& vocabulary ) = 0;
+};
+
+/*
+ * This is BOWTrainer using cv::kmeans to get vocabulary.
+ */
+class BOWKMeansTrainer : public BOWTrainer
+{
+public:
+    BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(),
+                      int attempts=3, int flags=KMEANS_PP_CENTERS );
+
+    virtual void cluster( const Mat& descriptors, Mat& vocabulary );
+
+protected:
+    int clusterCount;
+    TermCriteria termcrit;
+    int attempts;
+    int flags;
+};
+
+/*
+ * Class to compute image descriptor using bad of visual words.
+ */
+class BOWImgDescriptorExtractor
+{
+public:
+    BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
+                               const Ptr<DescriptorMatcher>& dmatcher );
+    void set( const Mat& vocabulary );
+    void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
+                  vector<vector<int> >& pointIdxsInClusters );
+    int descriptorSize() const { return vocabulary.empty() ? 0 : vocabulary.rows; }
+    int descriptorType() const { return CV_32FC1; }
+
+protected:
+    Mat vocabulary;
+    Ptr<DescriptorExtractor> dextractor;
+    Ptr<DescriptorMatcher> dmatcher;
+};
 
 } /* namespace cv */
 

@@ -452,11 +452,11 @@ float cv::getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precis
     return recall;
 }
 
-void cv::evaluateDescriptorMatch( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                  vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
-                                  vector<vector<DMatch> >* _matches1to2, vector<vector<uchar> >* _correctMatches1to2Mask,
-                                  vector<Point2f>& recallPrecisionCurve,
-                                  const Ptr<GenericDescriptorMatch>& _dmatch )
+void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, const Mat& H1to2,
+                                           vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
+                                           vector<vector<DMatch> >* _matches1to2, vector<vector<uchar> >* _correctMatches1to2Mask,
+                                           vector<Point2f>& recallPrecisionCurve,
+                                           const Ptr<GenericDescriptorMatch>& _dmatch )
 {
     Ptr<GenericDescriptorMatch> dmatch = _dmatch;
     dmatch->clear();

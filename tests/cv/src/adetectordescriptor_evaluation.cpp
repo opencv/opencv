@@ -1077,9 +1077,9 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
         vector<vector<uchar> > correctMatchesMask;
         vector<Point2f> recallPrecisionCurve; // not used because we need recallPrecisionCurve for
                                               // all images in dataset
-        evaluateDescriptorMatch( imgs[0], imgs[ci+1], Hs[ci], keypoints1, keypoints2,
-                                 &matches1to2, &correctMatchesMask, recallPrecisionCurve,
-                                 descMatch );
+        evaluateGenericDescriptorMatcher( imgs[0], imgs[ci+1], Hs[ci], keypoints1, keypoints2,
+                                          &matches1to2, &correctMatchesMask, recallPrecisionCurve,
+                                          descMatch );
         allMatches1to2.insert( allMatches1to2.end(), matches1to2.begin(), matches1to2.end() );
         allCorrectMatchesMask.insert( allCorrectMatchesMask.end(), correctMatchesMask.begin(), correctMatchesMask.end() );
     }
