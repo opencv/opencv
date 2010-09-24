@@ -25,7 +25,7 @@ endif()
 
 add_subdirectory(video)
 
-if(!ANDROID)
+if(NOT ANDROID)
 add_subdirectory(haartraining)
 add_subdirectory(traincascade)
 add_subdirectory(gpu)
