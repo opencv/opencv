@@ -334,44 +334,32 @@ void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
     surf(grayImage, mask, keypoints);
 }
 
-Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
+/*
+ *  GridAdaptedFeatureDetector
+ */
+void DenseFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
 {
-    FeatureDetector* fd = 0;
-    if( !detectorType.compare( "FAST" ) )
+    keypoints.clear();
+
+    float curScale = initFeatureScale;
+    int curStep = initXyStep;
+    int curBound = initImgBound;
+    for( int curLevel = 0; curLevel < featureScaleLevels; curLevel++ )
     {
-        fd = new FastFeatureDetector( 10/*threshold*/, true/*nonmax_suppression*/ );
+        for( int x = curBound; x < image.cols - curBound; x += curStep )
+        {
+            for( int y = curBound; y < image.rows - curBound; y += curStep )
+            {
+                keypoints.push_back( KeyPoint(static_cast<float>(x), static_cast<float>(y), curScale) );
+            }
+        }
+
+        curScale = curScale * featureScaleMul;
+        if( varyXyStepWithScale ) curStep = static_cast<int>( curStep * featureScaleMul + 0.5f );
+        if( varyImgBoundWithScale ) curBound = static_cast<int>( curBound * featureScaleMul + 0.5f );
     }
-    else if( !detectorType.compare( "STAR" ) )
-    {
-        fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
-                                      8/*line_threshold_binarized*/, 5/*suppress_nonmax_size*/ );
-    }
-    else if( !detectorType.compare( "SIFT" ) )
-    {
-        fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-    }
-    else if( !detectorType.compare( "SURF" ) )
-    {
-        fd = new SurfFeatureDetector( 400./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
-    }
-    else if( !detectorType.compare( "MSER" ) )
-    {
-        fd = new MserFeatureDetector( 5/*delta*/, 60/*min_area*/, 14400/*_max_area*/, 0.25f/*max_variation*/,
-                0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
-                5/*edge_blur_size*/ );
-    }
-    else if( !detectorType.compare( "GFTT" ) )
-    {
-        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
-                                              3/*int _blockSize*/, false/*useHarrisDetector*/, 0.04/*k*/ );
-    }
-    else if( !detectorType.compare( "HARRIS" ) )
-    {
-        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
-                                              3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
-    }
-    return fd;
+
+    removeInvalidPoints( mask, keypoints );
 }
 
 /*
@@ -466,6 +454,46 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, const Mat& mas
             src = dst;
         }
     }
+}
+
+Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
+{
+    FeatureDetector* fd = 0;
+    if( !detectorType.compare( "FAST" ) )
+    {
+        fd = new FastFeatureDetector( 10/*threshold*/, true/*nonmax_suppression*/ );
+    }
+    else if( !detectorType.compare( "STAR" ) )
+    {
+        fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
+                                      8/*line_threshold_binarized*/, 5/*suppress_nonmax_size*/ );
+    }
+    else if( !detectorType.compare( "SIFT" ) )
+    {
+        fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
+                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
+    }
+    else if( !detectorType.compare( "SURF" ) )
+    {
+        fd = new SurfFeatureDetector( 400./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
+    }
+    else if( !detectorType.compare( "MSER" ) )
+    {
+        fd = new MserFeatureDetector( 5/*delta*/, 60/*min_area*/, 14400/*_max_area*/, 0.25f/*max_variation*/,
+                0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
+                5/*edge_blur_size*/ );
+    }
+    else if( !detectorType.compare( "GFTT" ) )
+    {
+        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
+                                              3/*int _blockSize*/, false/*useHarrisDetector*/, 0.04/*k*/ );
+    }
+    else if( !detectorType.compare( "HARRIS" ) )
+    {
+        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
+                                              3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
+    }
+    return fd;
 }
 
 }

@@ -1356,6 +1356,32 @@ protected:
 
 CV_EXPORTS Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
 
+class DenseFeatureDetector : public FeatureDetector
+{
+public:
+    DenseFeatureDetector() : initFeatureScale(1), featureScaleLevels(1), featureScaleMul(0.1f),
+                             initXyStep(6), initImgBound(0),  varyXyStepWithScale(true), varyImgBoundWithScale(false) {}
+    DenseFeatureDetector( float _initFeatureScale, int _featureScaleLevels=1, float _featureScaleMul=0.1f,
+                          int _initXyStep=6, int _initImgBound=0, bool _varyXyStepWithScale=true, bool _varyImgBoundWithScale=false ) :
+        initFeatureScale(_initFeatureScale), featureScaleLevels(_featureScaleLevels), featureScaleMul(_featureScaleMul),
+        initXyStep(_initXyStep), initImgBound(_initImgBound), varyXyStepWithScale(_varyXyStepWithScale), varyImgBoundWithScale(_varyImgBoundWithScale) {}
+
+protected:
+
+    virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const = 0;
+
+    float initFeatureScale;
+    int featureScaleLevels;
+    float featureScaleMul;
+
+    int initXyStep;
+    int initImgBound;
+
+    bool varyXyStepWithScale;
+    bool varyImgBoundWithScale;
+
+};
+
 /*
  * Adapts a detector to partition the source image into a grid and detect
  * points in each cell.
