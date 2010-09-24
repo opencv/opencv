@@ -54,6 +54,7 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
+#include <sstream>
 
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/imgproc/imgproc.hpp"

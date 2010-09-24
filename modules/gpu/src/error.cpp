@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 
+
 using namespace cv;
 using namespace cv::gpu;
 
@@ -56,7 +57,7 @@ namespace
     struct NppError
     {
         int error;
-        const char* str;
+        string str;
     } 
     npp_errors [] = 
     {
@@ -95,8 +96,9 @@ namespace
         { NPP_WRONG_INTERSECTION_QUAD_WARNING, "NPP_WRONG_INTERSECTION_QUAD_WARNING" },
         { NPP_MISALIGNED_DST_ROI_WARNING, "NPP_MISALIGNED_DST_ROI_WARNING" },
         { NPP_AFFINE_QUAD_INCORRECT_WARNING, "NPP_AFFINE_QUAD_INCORRECT_WARNING" },
-        { NPP_AFFINE_QUAD_CHANGED_WARNING, "NPP_AFFINE_QUAD_CHANGED_WARNING" },
-        { NPP_ADJUSTED_ROI_SIZE_WARNING, "NPP_ADJUSTED_ROI_SIZE_WARNING" },
+        //disabled in NPP for cuda 3.2-rc
+        //{ NPP_AFFINE_QUAD_CHANGED_WARNING, "NPP_AFFINE_QUAD_CHANGED_WARNING" },
+        //{ NPP_ADJUSTED_ROI_SIZE_WARNING, "NPP_ADJUSTED_ROI_SIZE_WARNING" },
         { NPP_DOUBLE_SIZE_WARNING, "NPP_DOUBLE_SIZE_WARNING" },
         { NPP_ODD_ROI_WARNING, "NPP_ODD_ROI_WARNING" }
     };
@@ -116,16 +118,25 @@ namespace cv
 {
     namespace gpu
     {
-        extern "C" const char* getNppErrorString( int err )
+        const string getNppErrorString( int err )
         {
             int idx = std::find_if(npp_errors, npp_errors + error_num, Searcher(err)) - npp_errors;
+            const string& msg = (idx != error_num) ? npp_errors[idx].str : string("Unknown error code");
 
-            return (idx != error_num) ? npp_errors[idx].str : "";             
+            std::stringstream interpreter;
+            interpreter << "<" << err << "> " << msg;
+
+            return interpreter.str();
         }
 
         extern "C" void npp_error( int err, const char *file, const int line, const char *func)
         {                    
             cv::error( cv::Exception(CV_GpuNppCallError, getNppErrorString(err), func, file, line) );                
+        }
+
+        extern "C" void error(const char *error_string, const char *file, const int line, const char *func)
+        {                       
+            cv::error( cv::Exception(CV_GpuApiCallError, error_string, func, file, line) );
         }
     }
 }

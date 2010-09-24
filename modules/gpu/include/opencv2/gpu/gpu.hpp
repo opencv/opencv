@@ -372,6 +372,7 @@ namespace cv
         //! computes norm of array
         //! Supports NORM_INF, NORM_L1, NORM_L2
         CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
+        
         //! computes norm of the difference between two arrays
         //! Supports NORM_INF, NORM_L1, NORM_L2
         CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
@@ -475,11 +476,9 @@ namespace cv
 
         //! smooths the image using the normalized box filter
         CV_EXPORTS void boxFilter(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1));
+
         //! a synonym for normalized box filter
-        static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1))
-        {
-            boxFilter(src, dst, ksize, anchor);
-        }
+        static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1)) { boxFilter(src, dst, ksize, anchor); }
 
         //! erodes the image (applies the local minimum operator)
         CV_EXPORTS void erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor, int iterations);
