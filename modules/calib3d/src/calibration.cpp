@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <stdio.h>
+#include <iterator>
 
 /*
     This is stright-forward port v3 of Matlab calibration engine by Jean-Yves Bouguet
@@ -3510,9 +3511,9 @@ static void adjust3rdMatrix(const vector<vector<Point2f> >& imgpt1_0,
     undistortPoints(Mat(imgpt3), imgpt3, cameraMatrix3, distCoeffs3, R3, P3);
     
     double y1_ = 0, y2_ = 0, y1y1_ = 0, y1y2_ = 0;
-    int n = imgpt1.size();
+    size_t n = imgpt1.size();
     
-    for( int i = 0; i < n; i++ )
+    for( size_t i = 0; i < n; i++ )
     {
         double y1 = imgpt3[i].y, y2 = imgpt1[i].y;
         
@@ -3543,7 +3544,7 @@ float cv::rectify3( const Mat& cameraMatrix1, const Mat& distCoeffs1,
                    const vector<vector<Point2f> >& imgpt3,
                    Size imageSize, const Mat& R12, const Mat& T12, const Mat& R13, const Mat& T13,
                    Mat& R1, Mat& R2, Mat& R3, Mat& P1, Mat& P2, Mat& P3, Mat& Q,
-                   double alpha, Size newImgSize,
+                   double alpha, Size /*newImgSize*/,
                    Rect* roi1, Rect* roi2, int flags )
 {
     // first, rectify the 1-2 stereo pair
