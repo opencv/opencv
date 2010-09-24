@@ -259,12 +259,12 @@ bool CvCascadeClassifier::updateTrainingSet( double& acceptanceRatio)
 {
     int64 posConsumed = 0, negConsumed = 0;
     imgReader.restart();
-    int posCount = fillPassedSamles( 0, numPos, true, posConsumed );
+    int posCount = fillPassedSamples( 0, numPos, true, posConsumed );
     if( !posCount )
         return false;
     cout << "POS count : consumed   " << posCount << " : " << (int)posConsumed << endl;
 
-    int negCount = fillPassedSamles( numPos, numNeg, false, negConsumed );
+    int negCount = fillPassedSamples( numPos, numNeg, false, negConsumed );
     if ( !negCount )
         return false;
     curNumSamples = posCount + negCount;
@@ -273,7 +273,7 @@ bool CvCascadeClassifier::updateTrainingSet( double& acceptanceRatio)
     return true;
 }
 
-int CvCascadeClassifier::fillPassedSamles( int first, int count, bool isPositive, int64& consumed )
+int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositive, int64& consumed )
 {
     int getcount = 0;
     Mat img(cascadeParams.winSize, CV_8UC1);

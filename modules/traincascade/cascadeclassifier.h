@@ -98,7 +98,7 @@ private:
     void save( const String cascadeDirName, bool baseFormat = false );
     bool load( const String cascadeDirName );
     bool updateTrainingSet( double& acceptanceRatio );
-    int fillPassedSamles( int first, int count, bool isPositive, int64& consumed );
+    int fillPassedSamples( int first, int count, bool isPositive, int64& consumed );
 
     void writeParams( FileStorage &fs ) const;
     void writeStages( FileStorage &fs, const Mat& featureMap ) const;
