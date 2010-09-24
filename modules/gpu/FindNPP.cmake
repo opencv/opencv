@@ -55,12 +55,13 @@ else(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
 	endif()
 endif(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
 
-if(NOT CUDA_NPP_LIBRARY_ROOT_DIR)
-	find_path(CUDA_NPP_LIBRARY_ROOT_DIR common/npp/include/npp.h DOC "NPP root directory." NO_DEFAULT_PATH)		  
+if(NOT CUDA_NPP_LIBRARY_ROOT_DIR)	
+	set(CUDA_NPP_LIBRARY_ROOT_DIR $ENV{CUDA_NPP_ROOT} CACHE PATH "NPP root directory." FORCE)	
+	find_path(CUDA_NPP_LIBRARY_ROOT_DIR "common/npp/include/npp.h" PATHS ENV CUDA_NPP_ROOT DOC "NPP root directory.")	
 endif (NOT CUDA_NPP_LIBRARY_ROOT_DIR)
 
 # Search includes in our own paths.
-find_path(CUDA_NPP_INCLUDES npp.h PATHS "${CUDA_NPP_LIBRARY_ROOT_DIR}/common/npp/include" NO_DEFAULT_PATH)
+find_path(CUDA_NPP_INCLUDES npp.h PATHS "${CUDA_NPP_LIBRARY_ROOT_DIR}/common/npp/include")
 # Search default search paths, after we search our own set of paths.
 find_path(CUDA_NPP_INCLUDES device_functions.h)
 mark_as_advanced(CUDA_NPP_INCLUDES)
@@ -69,8 +70,7 @@ mark_as_advanced(CUDA_NPP_INCLUDES)
 find_library(CUDA_NPP_LIBRARIES
 	NAMES npp${NPP_SUFFIX} libnpp${NPP_SUFFIX}
 	PATHS "${CUDA_NPP_LIBRARY_ROOT_DIR}/common/lib"    
-	DOC "NPP library"
-	NO_DEFAULT_PATH
+	DOC "NPP library"	
 	)
 
 # Search default search paths, after we search our own set of paths.
