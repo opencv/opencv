@@ -68,10 +68,11 @@ mark_as_advanced(CUDA_NPP_INCLUDES)
 
 # Find NPP library
 find_library(CUDA_NPP_LIBRARIES
-	NAMES npp${NPP_SUFFIX} libnpp${NPP_SUFFIX}
-	PATHS "${CUDA_NPP_LIBRARY_ROOT_DIR}/common/lib"    
+	NAMES "npp" "npp${NPP_SUFFIX}" "libnpp${NPP_SUFFIX}"
+	PATHS "${CUDA_NPP_LIBRARY_ROOT_DIR}"    
+	PATH_SUFFIXES "common/lib" "common/npp/lib"
 	DOC "NPP library"	
-	)
+	)	
 
 # Search default search paths, after we search our own set of paths.
 find_library(CUDA_NPP_LIBRARIES NAMES npp${NPP_SUFFIX} libnpp${NPP_SUFFIX} DOC "NPP library")
