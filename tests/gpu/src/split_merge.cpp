@@ -9,13 +9,16 @@
 using namespace std;
 using namespace cv;
 
+////////////////////////////////////////////////////////////////////////////////
+// Merge
+
 struct CV_MergeTest : public CvTest
 {
     CV_MergeTest() : CvTest("GPU-Merge", "merge") {}
     void can_merge(size_t rows, size_t cols);
     void can_merge_submatrixes(size_t rows, size_t cols);
     void run(int);
-} merge_test;
+};
 
 
 void CV_MergeTest::can_merge(size_t rows, size_t cols)
@@ -96,7 +99,6 @@ void CV_MergeTest::can_merge_submatrixes(size_t rows, size_t cols)
         }
 }
 
-
 void CV_MergeTest::run(int) 
 {
     try
@@ -116,14 +118,16 @@ void CV_MergeTest::run(int)
 }
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Split
+
 struct CV_SplitTest : public CvTest
 {
     CV_SplitTest() : CvTest("GPU-Split", "split") {}
     void can_split(size_t rows, size_t cols);    
     void can_split_submatrix(size_t rows, size_t cols);
     void run(int);
-} split_test;
-
+};
 
 void CV_SplitTest::can_split(size_t rows, size_t cols)
 {
@@ -162,8 +166,6 @@ void CV_SplitTest::can_split(size_t rows, size_t cols)
             }
         }
 }
-
-
 
 void CV_SplitTest::can_split_submatrix(size_t rows, size_t cols)
 {
@@ -204,7 +206,6 @@ void CV_SplitTest::can_split_submatrix(size_t rows, size_t cols)
         }
 }
 
-
 void CV_SplitTest::run(int)
 {
     try 
@@ -224,13 +225,15 @@ void CV_SplitTest::run(int)
 }
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Split and merge
+
 struct CV_SplitMergeTest : public CvTest
 {
     CV_SplitMergeTest() : CvTest("GPU-SplitMerge", "split merge") {}
     void can_split_merge(size_t rows, size_t cols);    
     void run(int);
-} split_merge_test;
-
+};
 
 void CV_SplitMergeTest::can_split_merge(size_t rows, size_t cols) {
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
@@ -273,3 +276,17 @@ void CV_SplitMergeTest::run(int)
             throw;        
     }    
 }
+
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+// If we comment some tests, we may foget/miss to uncomment it after.
+// Placing all test definitions in one place 
+// makes us know about what tests are commented.
+
+
+CV_SplitTest split_test;
+CV_MergeTest merge_test;
+CV_SplitMergeTest split_merge_test;

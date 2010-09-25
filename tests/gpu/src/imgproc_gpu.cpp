@@ -54,8 +54,8 @@ using namespace gpu;
 class CV_GpuImageProcTest : public CvTest
 {
 public:
-    CV_GpuImageProcTest(const char* test_name, const char* test_funcs);
-    virtual ~CV_GpuImageProcTest();
+    CV_GpuImageProcTest(const char* test_name, const char* test_funcs) : CvTest(test_name, test_funcs) {}
+    virtual ~CV_GpuImageProcTest() {}
 
 protected:
     void run(int);
@@ -70,11 +70,6 @@ protected:
     int CheckNorm(const Mat& m1, const Mat& m2);
 };
 
-CV_GpuImageProcTest::CV_GpuImageProcTest(const char* test_name, const char* test_funcs): CvTest(test_name, test_funcs)
-{
-}
-
-CV_GpuImageProcTest::~CV_GpuImageProcTest() {}
 
 int CV_GpuImageProcTest::test8UC1(const Mat& img)
 {
@@ -188,352 +183,284 @@ void CV_GpuImageProcTest::run( int )
 
 ////////////////////////////////////////////////////////////////////////////////
 // threshold
-class CV_GpuNppImageThresholdTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageThresholdTest : public CV_GpuImageProcTest
 {
 public:
-    CV_GpuNppImageThresholdTest();
+    CV_GpuNppImageThresholdTest() : CV_GpuImageProcTest( "GPU-NppImageThreshold", "threshold" ) {}
 
-protected:
-    virtual int test(const Mat& img);
-};
-
-CV_GpuNppImageThresholdTest::CV_GpuNppImageThresholdTest(): CV_GpuImageProcTest( "GPU-NppImageThreshold", "threshold" )
-{
-}
-
-int CV_GpuNppImageThresholdTest::test(const Mat& img)
-{
-    if (img.type() != CV_32FC1)
+    int test(const Mat& img)
     {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
+        if (img.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::RNG rng(*ts->get_rng());
+        const double thresh = rng;
+
+        cv::Mat cpuRes;
+        cv::threshold(img, cpuRes, thresh, 0.0, THRESH_TRUNC);
+
+        GpuMat gpu1(img);
+        GpuMat gpuRes;
+        cv::gpu::threshold(gpu1, gpuRes, thresh);
+
+        return CheckNorm(cpuRes, gpuRes);
     }
-
-    cv::RNG rng(*ts->get_rng());
-    const double thresh = rng;
-
-    cv::Mat cpuRes;
-    cv::threshold(img, cpuRes, thresh, 0.0, THRESH_TRUNC);
-
-    GpuMat gpu1(img);
-    GpuMat gpuRes;
-    cv::gpu::threshold(gpu1, gpuRes, thresh);
-
-    return CheckNorm(cpuRes, gpuRes);
-}
-
-CV_GpuNppImageThresholdTest CV_GpuNppImageThreshold_test;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // resize
-class CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
 {
-public:
-    CV_GpuNppImageResizeTest();
+    CV_GpuNppImageResizeTest() : CV_GpuImageProcTest( "GPU-NppImageResize", "resize" ) {}
+    int test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
 
-protected:
-    virtual int test(const Mat& img);
+        int interpolations[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4};
+        const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LANCZOS4"};
+        int interpolations_num = sizeof(interpolations) / sizeof(int);
+
+        int test_res = CvTS::OK;
+
+        for (int i = 0; i < interpolations_num; ++i)
+        {
+            ts->printf(CvTS::LOG, "\nInterpolation type: %s\n", interpolations_str[i]);
+
+            Mat cpu_res;
+            cv::resize(img, cpu_res, Size(), 0.5, 0.5, interpolations[i]);
+
+            GpuMat gpu1(img), gpu_res;
+            cv::gpu::resize(gpu1, gpu_res, Size(), 0.5, 0.5, interpolations[i]);
+
+            if (CheckNorm(cpu_res, gpu_res) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
+    }
 };
-
-CV_GpuNppImageResizeTest::CV_GpuNppImageResizeTest(): CV_GpuImageProcTest( "GPU-NppImageResize", "resize" )
-{
-}
-
-int CV_GpuNppImageResizeTest::test(const Mat& img)
-{
-    if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
-    {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
-    }
-
-    int interpolations[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4};
-    const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LANCZOS4"};
-    int interpolations_num = sizeof(interpolations) / sizeof(int);
-
-    int test_res = CvTS::OK;
-
-    for (int i = 0; i < interpolations_num; ++i)
-    {
-        ts->printf(CvTS::LOG, "\nInterpolation type: %s\n", interpolations_str[i]);
-
-        Mat cpu_res;
-        cv::resize(img, cpu_res, Size(), 0.5, 0.5, interpolations[i]);
-
-        GpuMat gpu1(img), gpu_res;
-        cv::gpu::resize(gpu1, gpu_res, Size(), 0.5, 0.5, interpolations[i]);
-
-        if (CheckNorm(cpu_res, gpu_res) != CvTS::OK)
-            test_res = CvTS::FAIL_GENERIC;
-    }
-
-    return test_res;
-}
-
-//CV_GpuNppImageResizeTest CV_GpuNppImageResize_test;
 
 ////////////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
-class CV_GpuNppImageCopyMakeBorderTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageCopyMakeBorderTest : public CV_GpuImageProcTest
 {
-public:
-    CV_GpuNppImageCopyMakeBorderTest();
+    CV_GpuNppImageCopyMakeBorderTest() : CV_GpuImageProcTest( "GPU-NppImageCopyMakeBorder", "copyMakeBorder" ) {}
 
-protected:
-    virtual int test(const Mat& img);
-};
-
-CV_GpuNppImageCopyMakeBorderTest::CV_GpuNppImageCopyMakeBorderTest(): CV_GpuImageProcTest( "GPU-NppImageCopyMakeBorder", "copyMakeBorder" )
-{
-}
-
-int CV_GpuNppImageCopyMakeBorderTest::test(const Mat& img)
-{
-    if (img.type() != CV_8UC1 && img.type() != CV_8UC4 && img.type() != CV_32SC1)
+    int test(const Mat& img)
     {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
+        if (img.type() != CV_8UC1 && img.type() != CV_8UC4 && img.type() != CV_32SC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::RNG rng(*ts->get_rng());
+        int top = rng.uniform(1, 10);
+        int botton = rng.uniform(1, 10);
+        int left = rng.uniform(1, 10);
+        int right = rng.uniform(1, 10);
+        cv::Scalar val(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+
+        Mat cpudst;
+        cv::copyMakeBorder(img, cpudst, top, botton, left, right, BORDER_CONSTANT, val);
+
+        GpuMat gpu1(img);
+        GpuMat gpudst;    
+        cv::gpu::copyMakeBorder(gpu1, gpudst, top, botton, left, right, val);
+
+        return CheckNorm(cpudst, gpudst);
     }
-
-    cv::RNG rng(*ts->get_rng());
-    int top = rng.uniform(1, 10);
-    int botton = rng.uniform(1, 10);
-    int left = rng.uniform(1, 10);
-    int right = rng.uniform(1, 10);
-    cv::Scalar val(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-
-    Mat cpudst;
-    cv::copyMakeBorder(img, cpudst, top, botton, left, right, BORDER_CONSTANT, val);
-
-    GpuMat gpu1(img);
-    GpuMat gpudst;    
-    cv::gpu::copyMakeBorder(gpu1, gpudst, top, botton, left, right, val);
-
-    return CheckNorm(cpudst, gpudst);
-}
-
-CV_GpuNppImageCopyMakeBorderTest CV_GpuNppImageCopyMakeBorder_test;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // warpAffine
-class CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
 {
-public:
-    CV_GpuNppImageWarpAffineTest();
+    CV_GpuNppImageWarpAffineTest() : CV_GpuImageProcTest( "GPU-NppImageWarpAffine", "warpAffine" ) {}
 
-protected:
-    virtual int test(const Mat& img);
-};
-
-CV_GpuNppImageWarpAffineTest::CV_GpuNppImageWarpAffineTest(): CV_GpuImageProcTest( "GPU-NppImageWarpAffine", "warpAffine" )
-{
-}
-
-int CV_GpuNppImageWarpAffineTest::test(const Mat& img)
-{
-    if (img.type() == CV_32SC1)
+    int test(const Mat& img)
     {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
-    }
-    
-    static const double coeffs[2][3] = 
-    { 
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
-    };
-    Mat M(2, 3, CV_64F, (void*)coeffs);
-
-    int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
-    const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
-    int flags_num = sizeof(flags) / sizeof(int);
-
-    int test_res = CvTS::OK;
-
-    for (int i = 0; i < flags_num; ++i)
-    {
-        ts->printf(CvTS::LOG, "\nFlags: %s\n", flags_str[i]);
-
-        Mat cpudst;
-        cv::warpAffine(img, cpudst, M, img.size(), flags[i]);
-
-        GpuMat gpu1(img);
-        GpuMat gpudst;
-        cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), flags[i]);
+        if (img.type() == CV_32SC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
         
-        if (CheckNorm(cpudst, gpudst) != CvTS::OK)
-            test_res = CvTS::FAIL_GENERIC;
+        static const double coeffs[2][3] = 
+        { 
+            {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
+            {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+        };
+        Mat M(2, 3, CV_64F, (void*)coeffs);
+
+        int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
+        const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
+        int flags_num = sizeof(flags) / sizeof(int);
+
+        int test_res = CvTS::OK;
+
+        for (int i = 0; i < flags_num; ++i)
+        {
+            ts->printf(CvTS::LOG, "\nFlags: %s\n", flags_str[i]);
+
+            Mat cpudst;
+            cv::warpAffine(img, cpudst, M, img.size(), flags[i]);
+
+            GpuMat gpu1(img);
+            GpuMat gpudst;
+            cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), flags[i]);
+            
+            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
     }
-
-    return test_res;
-}
-
-//CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // warpPerspective
-class CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
 {
-public:
-    CV_GpuNppImageWarpPerspectiveTest();
+    CV_GpuNppImageWarpPerspectiveTest() : CV_GpuImageProcTest( "GPU-NppImageWarpPerspective", "warpPerspective" ) {}
 
-protected:
-    virtual int test(const Mat& img);
+
+    int test(const Mat& img)
+    {
+        if (img.type() == CV_32SC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+        
+        static const double coeffs[3][3] = 
+        {
+            {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
+            {sin(3.14 / 6), cos(3.14 / 6), -100.0}, 
+            {0.0, 0.0, 1.0}
+        };
+        Mat M(3, 3, CV_64F, (void*)coeffs);
+
+        int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
+        const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
+        int flags_num = sizeof(flags) / sizeof(int);
+
+        int test_res = CvTS::OK;
+
+        for (int i = 0; i < flags_num; ++i)
+        {
+            ts->printf(CvTS::LOG, "\nFlags: %s\n", flags_str[i]);
+
+            Mat cpudst;
+            cv::warpPerspective(img, cpudst, M, img.size(), flags[i]);
+
+            GpuMat gpu1(img);
+            GpuMat gpudst;
+            cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
+
+            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
+    }
 };
-
-CV_GpuNppImageWarpPerspectiveTest::CV_GpuNppImageWarpPerspectiveTest(): CV_GpuImageProcTest( "GPU-NppImageWarpPerspective", "warpPerspective" )
-{
-}
-
-int CV_GpuNppImageWarpPerspectiveTest::test(const Mat& img)
-{
-    if (img.type() == CV_32SC1)
-    {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
-    }
-    
-    static const double coeffs[3][3] = 
-    {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}, 
-        {0.0, 0.0, 1.0}
-    };
-    Mat M(3, 3, CV_64F, (void*)coeffs);
-
-    int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
-    const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
-    int flags_num = sizeof(flags) / sizeof(int);
-
-    int test_res = CvTS::OK;
-
-    for (int i = 0; i < flags_num; ++i)
-    {
-        ts->printf(CvTS::LOG, "\nFlags: %s\n", flags_str[i]);
-
-        Mat cpudst;
-        cv::warpPerspective(img, cpudst, M, img.size(), flags[i]);
-
-        GpuMat gpu1(img);
-        GpuMat gpudst;
-        cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
-
-        if (CheckNorm(cpudst, gpudst) != CvTS::OK)
-            test_res = CvTS::FAIL_GENERIC;
-    }
-
-    return test_res;
-}
-
-//CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
 
 ////////////////////////////////////////////////////////////////////////////////
 // integral
-class CV_GpuNppImageIntegralTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageIntegralTest : public CV_GpuImageProcTest
 {
-public:
-    CV_GpuNppImageIntegralTest();
+    CV_GpuNppImageIntegralTest() : CV_GpuImageProcTest( "GPU-NppImageIntegral", "integral" ) {}
 
-protected:
-    virtual int test(const Mat& img);
+    int CV_GpuNppImageIntegralTest::test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        Mat cpusum, cpusqsum;
+        cv::integral(img, cpusum, cpusqsum, CV_32S);
+
+        GpuMat gpu1(img);
+        GpuMat gpusum, gpusqsum;
+        cv::gpu::integral(gpu1, gpusum, gpusqsum);
+
+        gpusqsum.convertTo(gpusqsum, CV_64F);
+
+        int test_res = CvTS::OK;
+
+        if (CheckNorm(cpusum, gpusum) != CvTS::OK)
+        {
+            ts->printf(CvTS::LOG, "\nSum failed\n");
+            test_res = CvTS::FAIL_GENERIC;
+        }
+        if (CheckNorm(cpusqsum, gpusqsum) != CvTS::OK)
+        {
+            ts->printf(CvTS::LOG, "\nSquared sum failed\n");
+            test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
+    }
 };
-
-CV_GpuNppImageIntegralTest::CV_GpuNppImageIntegralTest(): CV_GpuImageProcTest( "GPU-NppImageIntegral", "integral" )
-{
-}
-
-int CV_GpuNppImageIntegralTest::test(const Mat& img)
-{
-    if (img.type() != CV_8UC1)
-    {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
-    }
-
-    Mat cpusum, cpusqsum;
-    cv::integral(img, cpusum, cpusqsum, CV_32S);
-
-    GpuMat gpu1(img);
-    GpuMat gpusum, gpusqsum;
-    cv::gpu::integral(gpu1, gpusum, gpusqsum);
-
-    gpusqsum.convertTo(gpusqsum, CV_64F);
-
-    int test_res = CvTS::OK;
-
-    if (CheckNorm(cpusum, gpusum) != CvTS::OK)
-    {
-        ts->printf(CvTS::LOG, "\nSum failed\n");
-        test_res = CvTS::FAIL_GENERIC;
-    }
-    if (CheckNorm(cpusqsum, gpusqsum) != CvTS::OK)
-    {
-        ts->printf(CvTS::LOG, "\nSquared sum failed\n");
-        test_res = CvTS::FAIL_GENERIC;
-    }
-
-    return test_res;
-}
-
-CV_GpuNppImageIntegralTest CV_GpuNppImageIntegral_test;
 
 ////////////////////////////////////////////////////////////////////////////////
 // blur
-class CV_GpuNppImageBlurTest : public CV_GpuImageProcTest
+struct CV_GpuNppImageBlurTest : public CV_GpuImageProcTest
 {
-public:
-    CV_GpuNppImageBlurTest();
+    CV_GpuNppImageBlurTest() : CV_GpuImageProcTest( "GPU-NppImageBlur", "blur" ) {}
 
-protected:
-    virtual int test(const Mat& img);
+    int test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        int ksizes[] = {3, 5, 7};
+        int ksizes_num = sizeof(ksizes) / sizeof(int);
+
+        int test_res = CvTS::OK;
+
+        for (int i = 0; i < ksizes_num; ++i)
+        {
+            ts->printf(CvTS::LOG, "\nksize = %d\n", ksizes[i]);
+
+            Mat cpudst;
+            cv::blur(img, cpudst, Size(ksizes[i], ksizes[i]));
+
+            GpuMat gpu1(img);
+            GpuMat gpudst;
+            cv::gpu::blur(gpu1, gpudst, Size(ksizes[i], ksizes[i]));
+
+            cv::Mat c;
+            cv::absdiff(cpudst, gpudst, c);
+
+            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
+    }
 };
-
-CV_GpuNppImageBlurTest::CV_GpuNppImageBlurTest(): CV_GpuImageProcTest( "GPU-NppImageBlur", "blur" )
-{
-}
-
-int CV_GpuNppImageBlurTest::test(const Mat& img)
-{
-    if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
-    {
-        ts->printf(CvTS::LOG, "\nUnsupported type\n");
-        return CvTS::OK;
-    }
-
-    int ksizes[] = {3, 5, 7};
-    int ksizes_num = sizeof(ksizes) / sizeof(int);
-
-    int test_res = CvTS::OK;
-
-    for (int i = 0; i < ksizes_num; ++i)
-    {
-        ts->printf(CvTS::LOG, "\nksize = %d\n", ksizes[i]);
-
-        Mat cpudst;
-        cv::blur(img, cpudst, Size(ksizes[i], ksizes[i]));
-
-        GpuMat gpu1(img);
-        GpuMat gpudst;
-        cv::gpu::blur(gpu1, gpudst, Size(ksizes[i], ksizes[i]));
-
-        cv::Mat c;
-        cv::absdiff(cpudst, gpudst, c);
-
-        if (CheckNorm(cpudst, gpudst) != CvTS::OK)
-            test_res = CvTS::FAIL_GENERIC;
-    }
-
-    return test_res;
-}
-
-//CV_GpuNppImageBlurTest CV_GpuNppImageBlur_test;
 
 ////////////////////////////////////////////////////////////////////////////////
 // cvtColor
 class CV_GpuCvtColorTest : public CvTest
 {
 public:
-    CV_GpuCvtColorTest();
+    CV_GpuCvtColorTest() : CvTest("GPU-NppCvtColor", "cvtColor") {}
+    ~CV_GpuCvtColorTest() {};
 
 protected:
     void run(int);
@@ -541,9 +468,6 @@ protected:
     int CheckNorm(const Mat& m1, const Mat& m2);
 };
 
-CV_GpuCvtColorTest::CV_GpuCvtColorTest(): CvTest("GPU-NppCvtColor", "cvtColor")
-{
-}
 
 int CV_GpuCvtColorTest::CheckNorm(const Mat& m1, const Mat& m2)
 {
@@ -610,4 +534,19 @@ void CV_GpuCvtColorTest::run( int )
     ts->set_failed_test_info(testResult);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+// If we comment some tests, we may foget/miss to uncomment it after.
+// Placing all test definitions in one place 
+// makes us know about what tests are commented.
+
+CV_GpuNppImageThresholdTest CV_GpuNppImageThreshold_test;
+CV_GpuNppImageResizeTest CV_GpuNppImageResize_test;
+CV_GpuNppImageCopyMakeBorderTest CV_GpuNppImageCopyMakeBorder_test;
+CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;
+CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
+CV_GpuNppImageIntegralTest CV_GpuNppImageIntegral_test;
+CV_GpuNppImageBlurTest CV_GpuNppImageBlur_test;
 CV_GpuCvtColorTest CV_GpuCvtColor_test;

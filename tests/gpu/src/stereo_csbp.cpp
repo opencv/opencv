@@ -46,56 +46,55 @@
 #include <iostream>
 #include <string>
 
-
-class CV_GpuStereoCSBPTest : public CvTest
+struct CV_GpuStereoCSBPTest : public CvTest
 {
-    public:
-        CV_GpuStereoCSBPTest();
-    protected:
-        void run(int);
-};
+    CV_GpuStereoCSBPTest() : CvTest( "GPU-StereoCSBP", "ConstantSpaceStereoBP" ){}
+    ~CV_GpuStereoCSBPTest() {}
 
-CV_GpuStereoCSBPTest::CV_GpuStereoCSBPTest(): CvTest( "GPU-StereoCSBP", "ConstantSpaceStereoBP" ){}
-
-void CV_GpuStereoCSBPTest::run(int )
-{
-    cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-L.png");
-    cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-R.png");
-    cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", 0);
-
-    if (img_l.empty() || img_r.empty() || img_template.empty())
+    void run(int )
     {
-        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
-        return;
-    }
+        cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-L.png");
+        cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-R.png");
+        cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", 0);
 
-    try
-    {
-        cv::gpu::GpuMat disp;
-        cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
-
-        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
-
-        //cv::imwrite(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", disp);
-
-        disp.convertTo(disp, img_template.type());
-
-        double norm = cv::norm(disp, img_template, cv::NORM_INF);
-	    if (norm >= 0.5) 
+        if (img_l.empty() || img_r.empty() || img_template.empty())
         {
-            ts->printf(CvTS::LOG, "\nConstantSpaceStereoBP norm = %f\n", norm);
-            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
             return;
         }
-    }
-    catch(const cv::Exception& e)
-    {
-        if (!check_and_treat_gpu_exception(e, ts))
-            throw;
-        return;
-    }
 
-    ts->set_failed_test_info(CvTS::OK);
-}
+        try
+        {
+            cv::gpu::GpuMat disp;
+            cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
+
+            bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+
+            //cv::imwrite(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", disp);
+
+            disp.convertTo(disp, img_template.type());
+
+            double norm = cv::norm(disp, img_template, cv::NORM_INF);
+            if (norm >= 0.5) 
+            {
+                ts->printf(CvTS::LOG, "\nConstantSpaceStereoBP norm = %f\n", norm);
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+        }
+        catch(const cv::Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts))
+                throw;
+            return;
+        }
+
+        ts->set_failed_test_info(CvTS::OK);
+    }
+};
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 CV_GpuStereoCSBPTest CV_GpuCSStereoBP_test;

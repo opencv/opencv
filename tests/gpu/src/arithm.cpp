@@ -240,7 +240,7 @@ struct CV_GpuNppImageMultiplyTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageMultiplyTest() : CV_GpuArithmTest( "GPU-NppImageMultiply", "multiply" ) {}
 
-    int CV_GpuNppImageMultiplyTest::test( const Mat& mat1, const Mat& mat2 )
+    int test( const Mat& mat1, const Mat& mat2 )
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
@@ -266,7 +266,7 @@ struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageDivideTest() : CV_GpuArithmTest( "GPU-NppImageDivide", "divide" ) {}
 
-    int CV_GpuNppImageDivideTest::test( const Mat& mat1, const Mat& mat2 )
+    int test( const Mat& mat1, const Mat& mat2 )
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
@@ -292,7 +292,7 @@ struct CV_GpuNppImageTransposeTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageTransposeTest() : CV_GpuArithmTest( "GPU-NppImageTranspose", "transpose" ) {}
 
-    int CV_GpuNppImageTransposeTest::test( const Mat& mat1, const Mat& )
+    int test( const Mat& mat1, const Mat& )
     {
         if (mat1.type() != CV_8UC1)
         {
@@ -317,7 +317,7 @@ struct CV_GpuNppImageAbsdiffTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageAbsdiffTest() : CV_GpuArithmTest( "GPU-NppImageAbsdiff", "absdiff" ) {}
 
-    int CV_GpuNppImageAbsdiffTest::test( const Mat& mat1, const Mat& mat2 )
+    int test( const Mat& mat1, const Mat& mat2 )
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_32FC1)
         {
@@ -343,7 +343,7 @@ struct CV_GpuNppImageCompareTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageCompareTest() : CV_GpuArithmTest( "GPU-NppImageCompare", "compare" ) {}
 
-    int CV_GpuNppImageCompareTest::test( const Mat& mat1, const Mat& mat2 )
+    int test( const Mat& mat1, const Mat& mat2 )
     {
         if (mat1.type() != CV_32FC1)
         {
@@ -383,7 +383,7 @@ struct CV_GpuNppImageMeanStdDevTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageMeanStdDevTest() : CV_GpuArithmTest( "GPU-NppImageMeanStdDev", "meanStdDev" ) {}
 
-    int CV_GpuNppImageMeanStdDevTest::test( const Mat& mat1, const Mat& )
+    int test( const Mat& mat1, const Mat& )
     {
         if (mat1.type() != CV_8UC1)
         {
@@ -424,7 +424,7 @@ struct CV_GpuNppImageNormTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageNormTest() : CV_GpuArithmTest( "GPU-NppImageNorm", "norm" ) {}
 
-    int CV_GpuNppImageNormTest::test( const Mat& mat1, const Mat& mat2 )
+    int test( const Mat& mat1, const Mat& mat2 )
     {
         if (mat1.type() != CV_8UC1)
         {
@@ -462,7 +462,7 @@ struct CV_GpuNppImageFlipTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageFlipTest() : CV_GpuArithmTest( "GPU-NppImageFlip", "flip" ) {}
 
-    int CV_GpuNppImageFlipTest::test( const Mat& mat1, const Mat& )
+    int test( const Mat& mat1, const Mat& )
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4)
         {
@@ -501,7 +501,7 @@ struct CV_GpuNppImageSumTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageSumTest() : CV_GpuArithmTest( "GPU-NppImageSum", "sum" ) {}
 
-    int CV_GpuNppImageSumTest::test( const Mat& mat1, const Mat& )
+    int test( const Mat& mat1, const Mat& )
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4)
         {
@@ -524,7 +524,7 @@ struct CV_GpuNppImageMinNaxTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageMinNaxTest() : CV_GpuArithmTest( "GPU-NppImageMinNax", "minNax" ) {}
 
-    int CV_GpuNppImageMinNaxTest::test( const Mat& mat1, const Mat& )
+    int test( const Mat& mat1, const Mat& )
     {
         if (mat1.type() != CV_8UC1)
         {
@@ -549,7 +549,7 @@ struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageLUTTest() : CV_GpuArithmTest( "GPU-NppImageLUT", "LUT" ) {}
 
-    int CV_GpuNppImageLUTTest::test( const Mat& mat1, const Mat& )
+    int test( const Mat& mat1, const Mat& )
     {
         if (mat1.type() != CV_8UC1)
         {
@@ -572,7 +572,9 @@ struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
     }
 };
 
-
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 // If we comment some tests, we may foget/miss to uncomment it after.
 // Placing all test definitions in one place 

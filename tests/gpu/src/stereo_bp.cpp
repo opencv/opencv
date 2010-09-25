@@ -47,55 +47,55 @@
 #include <string>
 
 
-class CV_GpuStereoBPTest : public CvTest
+struct CV_GpuStereoBPTest : public CvTest
 {
-    public:
-        CV_GpuStereoBPTest();
-    protected:
-        void run(int);
-};
-
-CV_GpuStereoBPTest::CV_GpuStereoBPTest(): CvTest( "GPU-StereoBP", "StereoBP" ){}
-
-void CV_GpuStereoBPTest::run(int )
-{
-    cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
-    cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
-    cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", 0);
-
-    if (img_l.empty() || img_r.empty() || img_template.empty())
+    CV_GpuStereoBPTest() : CvTest( "GPU-StereoBP", "StereoBP" ){}
+    ~CV_GpuStereoBPTest() {}
+  
+    void run(int )
     {
-        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
-        return;
-    }
+        cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
+        cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
+        cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", 0);
 
-    try
-    {
-        cv::gpu::GpuMat disp;
-        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
-
-        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
-
-        //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
-
-        disp.convertTo(disp, img_template.type());
-
-        double norm = cv::norm(disp, img_template, cv::NORM_INF);
-	    if (norm >= 0.5) 
+        if (img_l.empty() || img_r.empty() || img_template.empty())
         {
-            ts->printf(CvTS::LOG, "\nStereoBP norm = %f\n", norm);
-            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
             return;
         }
-    }
-    catch(const cv::Exception& e)
-    {
-        if (!check_and_treat_gpu_exception(e, ts))
-            throw;
-        return;
-    }
 
-    ts->set_failed_test_info(CvTS::OK);
-}
+        try
+        {
+            cv::gpu::GpuMat disp;
+            cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+
+            bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+
+            //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
+
+            disp.convertTo(disp, img_template.type());
+
+            double norm = cv::norm(disp, img_template, cv::NORM_INF);
+	        if (norm >= 0.5) 
+            {
+                ts->printf(CvTS::LOG, "\nStereoBP norm = %f\n", norm);
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+        }
+        catch(const cv::Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts))
+                throw;
+            return;
+        }
+
+        ts->set_failed_test_info(CvTS::OK);
+    }
+};
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 CV_GpuStereoBPTest CV_GpuStereoBP_test;

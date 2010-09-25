@@ -47,64 +47,60 @@
 using namespace cv;
 using namespace std;
 
-class CV_GpuMatAsyncCallStereoBMTest : public CvTest
+struct CV_GpuMatAsyncCallStereoBMTest : public CvTest
 {
     public:
-        CV_GpuMatAsyncCallStereoBMTest();
-        ~CV_GpuMatAsyncCallStereoBMTest();
+        CV_GpuMatAsyncCallStereoBMTest() : CvTest( "GPU-MatAsyncCallStereoBM", "asyncStereoBM" ) {}
+        ~CV_GpuMatAsyncCallStereoBMTest() {}
 
-    protected:
-        void run(int);
-};
-
-CV_GpuMatAsyncCallStereoBMTest::CV_GpuMatAsyncCallStereoBMTest(): CvTest( "GPU-MatAsyncCallStereoBM", "asyncStereoBM" )
-{}
-
-CV_GpuMatAsyncCallStereoBMTest::~CV_GpuMatAsyncCallStereoBMTest() {}
-
-void CV_GpuMatAsyncCallStereoBMTest::run( int /* start_from */)
-{
-	cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-L.png", 0);
-	cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-R.png", 0);
-	cv::Mat img_reference = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", 0);
-
-    if (img_l.empty() || img_r.empty() || img_reference.empty())
+    void run( int /* start_from */)
     {
-        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
-        return;
-    }
+	    cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-L.png", 0);
+	    cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-R.png", 0);
+	    cv::Mat img_reference = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", 0);
 
-    try
-    {
-	    cv::gpu::GpuMat disp;
-	    cv::gpu::StereoBM_GPU bm(0, 128, 19);
-
-	    cv::gpu::Stream stream;
-
-	    for (size_t i = 0; i < 50; i++)
-	    {
-		    bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp, stream);
-	    }
-
-	    stream.waitForCompletion();
-	    disp.convertTo(disp, img_reference.type());
-	    double norm = cv::norm(disp, img_reference, cv::NORM_INF);
-
-	    if (norm >= 100) 
+        if (img_l.empty() || img_r.empty() || img_reference.empty())
         {
-            ts->printf(CvTS::LOG, "\nStereoBM norm = %f\n", norm);
-	        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
             return;
         }
-    }
-    catch(const cv::Exception& e)
-    {
-        if (!check_and_treat_gpu_exception(e, ts))
-            throw;
-        return;
-    }
 
-    ts->set_failed_test_info(CvTS::OK);
-}
+        try
+        {
+	        cv::gpu::GpuMat disp;
+	        cv::gpu::StereoBM_GPU bm(0, 128, 19);
+
+	        cv::gpu::Stream stream;
+
+	        for (size_t i = 0; i < 50; i++)
+	        {
+		        bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp, stream);
+	        }
+
+	        stream.waitForCompletion();
+	        disp.convertTo(disp, img_reference.type());
+	        double norm = cv::norm(disp, img_reference, cv::NORM_INF);
+
+	        if (norm >= 100) 
+            {
+                ts->printf(CvTS::LOG, "\nStereoBM norm = %f\n", norm);
+	            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+        }
+        catch(const cv::Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts))
+                throw;
+            return;
+        }
+
+        ts->set_failed_test_info(CvTS::OK);
+    }
+};
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 CV_GpuMatAsyncCallStereoBMTest CV_GpuMatAsyncCallStereoBMTest_test;

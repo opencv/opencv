@@ -58,8 +58,13 @@ using namespace gpu;
 class CV_GpuMatAsyncCallTest : public CvTest
 {
     public:
-        CV_GpuMatAsyncCallTest();
-        ~CV_GpuMatAsyncCallTest();
+        CV_GpuMatAsyncCallTest() : CvTest( "GPU-MatOperatorAsyncCall", "async" )
+        {
+             rows = 234;
+            cols = 123;
+
+        }
+        ~CV_GpuMatAsyncCallTest() {}
 
     protected:
         void run(int);
@@ -72,21 +77,8 @@ class CV_GpuMatAsyncCallTest : public CvTest
         int cols;
 };
 
-CV_GpuMatAsyncCallTest::CV_GpuMatAsyncCallTest(): CvTest( "GPU-MatOperatorAsyncCall", "async" )
-{
-    rows = 234;
-    cols = 123;
-
-    //#define PRINT_MATRIX
-}
-
-CV_GpuMatAsyncCallTest::~CV_GpuMatAsyncCallTest() {}
-
 template<typename T>
-void CV_GpuMatAsyncCallTest::print_mat(const T & mat, const std::string & name) const
-{
-    cv::imshow(name, mat);
-}
+void CV_GpuMatAsyncCallTest::print_mat(const T & mat, const std::string & name) const { cv::imshow(name, mat); }
 
 bool CV_GpuMatAsyncCallTest::compare_matrix(cv::Mat & cpumat)
 {
@@ -160,4 +152,10 @@ void CV_GpuMatAsyncCallTest::run( int /* start_from */)
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
 
-//CV_GpuMatAsyncCallTest CV_GpuMatAsyncCall_test;
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+
+CV_GpuMatAsyncCallTest CV_GpuMatAsyncCall_test;

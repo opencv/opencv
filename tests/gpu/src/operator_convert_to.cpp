@@ -55,15 +55,12 @@ using namespace gpu;
 class CV_GpuMatOpConvertToTest : public CvTest
 {
     public:
-        CV_GpuMatOpConvertToTest();
-        ~CV_GpuMatOpConvertToTest();
+        CV_GpuMatOpConvertToTest() : CvTest( "GPU-MatOperatorConvertTo", "convertTo" ) {}
+        ~CV_GpuMatOpConvertToTest() {}
 
     protected:
         void run(int);
 };
-
-CV_GpuMatOpConvertToTest::CV_GpuMatOpConvertToTest(): CvTest( "GPU-MatOperatorConvertTo", "convertTo" ) {}
-CV_GpuMatOpConvertToTest::~CV_GpuMatOpConvertToTest() {}
 
 void CV_GpuMatOpConvertToTest::run(int /* start_from */)
 {
@@ -122,5 +119,9 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
 
     ts->set_failed_test_info(passed ? CvTS::OK : CvTS::FAIL_GENERIC);
 }
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 CV_GpuMatOpConvertToTest CV_GpuMatOpConvertToTest_test;

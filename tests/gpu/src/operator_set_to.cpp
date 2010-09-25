@@ -58,7 +58,7 @@ class CV_GpuMatOpSetToTest : public CvTest
 {
 public:
     CV_GpuMatOpSetToTest();
-    ~CV_GpuMatOpSetToTest();
+    ~CV_GpuMatOpSetToTest() {}
 
 protected:
     void run(int);
@@ -85,7 +85,6 @@ CV_GpuMatOpSetToTest::CV_GpuMatOpSetToTest(): CvTest( "GPU-MatOperatorSetTo", "s
     //#define PRINT_MATRIX
 }
 
-CV_GpuMatOpSetToTest::~CV_GpuMatOpSetToTest() {}
 
 void CV_GpuMatOpSetToTest::print_mat(cv::Mat & mat, std::string name )
 {
@@ -153,5 +152,10 @@ void CV_GpuMatOpSetToTest::run( int /* start_from */)
     else
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
+
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 CV_GpuMatOpSetToTest CV_GpuMatOpSetTo_test;

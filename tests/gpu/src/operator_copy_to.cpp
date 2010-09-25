@@ -58,8 +58,12 @@ using namespace gpu;
 class CV_GpuMatOpCopyToTest : public CvTest
 {
     public:
-        CV_GpuMatOpCopyToTest();
-        ~CV_GpuMatOpCopyToTest();
+        CV_GpuMatOpCopyToTest() : CvTest( "GPU-MatOperatorCopyTo", "copyTo" ) 
+        {
+            rows = 234;
+            cols = 123;
+        }
+        ~CV_GpuMatOpCopyToTest() {}
 
     protected:
         void run(int);
@@ -72,21 +76,8 @@ class CV_GpuMatOpCopyToTest : public CvTest
         int cols;
 };
 
-CV_GpuMatOpCopyToTest::CV_GpuMatOpCopyToTest(): CvTest( "GPU-MatOperatorCopyTo", "copyTo" )
-{
-    rows = 234;
-    cols = 123;
-
-    //#define PRINT_MATRIX
-}
-
-CV_GpuMatOpCopyToTest::~CV_GpuMatOpCopyToTest() {}
-
 template<typename T>
-void CV_GpuMatOpCopyToTest::print_mat(const T & mat, const std::string & name) const
-{
-    cv::imshow(name, mat);
-}
+void CV_GpuMatOpCopyToTest::print_mat(const T & mat, const std::string & name) const { cv::imshow(name, mat); }
 
 bool CV_GpuMatOpCopyToTest::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
 {
@@ -160,5 +151,10 @@ void CV_GpuMatOpCopyToTest::run( int /* start_from */)
     else
         ts->set_failed_test_info(CvTS::FAIL_GENERIC);
 }
+
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////// tests registration  /////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 CV_GpuMatOpCopyToTest CV_GpuMatOpCopyTo_test;
