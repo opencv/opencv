@@ -9,7 +9,7 @@ using namespace cv;
 extern "C" {
 #endif
 
-
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved);
 //
 //JNIEXPORT jobject JNICALL Java_com_opencv_jni_opencvJNI_getBitmapBuffer(
 //		JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_);

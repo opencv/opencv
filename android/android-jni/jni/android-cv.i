@@ -34,6 +34,7 @@ using namespace cv;
   }
 %}
 
+
 %pragma(java) jniclasscode=%{
   static {
     try {
@@ -47,6 +48,7 @@ using namespace cv;
     }
   }
 %}
+
 
 %include "cv.i"
 
