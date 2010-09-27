@@ -46,6 +46,18 @@ CvTS test_system;
 const char* blacklist[] =
 {    
     "GPU-NppImageSum",
+    "GPU-MatOperatorAsyncCall",
+    //"GPU-NppErode",
+    //"GPU-NppDilate",
+    //"GPU-NppMorphologyEx",
+    //"GPU-NppImageDivide",
+    //"GPU-NppImageMeanStdDev",
+    //"GPU-NppImageMinNax",
+    //"GPU-NppImageResize",
+    //"GPU-NppImageWarpAffine",
+    //"GPU-NppImageWarpPerspective",
+    //"GPU-NppImageIntegral",
+    //"GPU-NppImageBlur",
     0
 };
 

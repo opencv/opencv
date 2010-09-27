@@ -266,13 +266,13 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     sz.height = src1.rows;
 
     int funcIdx = normType >> 1;
-    Scalar retVal;
+    double retVal;
 
     nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step, 
         src2.ptr<Npp8u>(), src2.step, 
-        sz, retVal.val) );
+        sz, &retVal) );
 
-    return retVal[0];
+    return retVal;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -307,10 +307,7 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 
 Scalar cv::gpu::sum(const GpuMat& src)
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    
-    
-    
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);    
 
     NppiSize sz;
     sz.width  = src.cols;
@@ -324,7 +321,7 @@ Scalar cv::gpu::sum(const GpuMat& src)
         GpuMat buf(1, bufsz, CV_32S);
 
         Scalar res;
-         nppSafeCall( nppiSum_8u_C1R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
+        nppSafeCall( nppiSum_8u_C1R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
         return res;
     }
     else
@@ -336,8 +333,6 @@ Scalar cv::gpu::sum(const GpuMat& src)
         nppSafeCall( nppiSum_8u_C4R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
         return res;
     }
-
-    
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -371,28 +366,54 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
     {
     public:
         Npp32s pLevels[256];
+        const Npp32s* pLevels3[3];
+        int nValues3[3];
 
         LevelsInit()
-        {            
+        {
+            nValues3[0] = nValues3[1] = nValues3[2] = 256;
             for (int i = 0; i < 256; ++i)
                 pLevels[i] = i;
+            pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
         }
     };
     static LevelsInit lvls;
 
     int cn = src.channels();
 
-    CV_Assert(src.type() == CV_8UC1);
-    CV_Assert(lut.depth() == CV_32SC1 && lut.rows * lut.cols == 256 && lut.isContinuous());
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);
+    CV_Assert(lut.depth() == CV_8U && (lut.channels() == 1 || lut.channels() == cn) && lut.rows * lut.cols == 256 && lut.isContinuous());
 
-    dst.create(src.size(), src.type());
+    dst.create(src.size(), CV_MAKETYPE(lut.depth(), cn));
 
     NppiSize sz;
     sz.height = src.rows;
     sz.width = src.cols;
+    
+    Mat nppLut;
+    lut.convertTo(nppLut, CV_32S);
 
-    nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, 
-        lut.ptr<Npp32s>(), lvls.pLevels, 256) );
+    if (src.type() == CV_8UC1)
+    {
+        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, 
+            nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
+    }
+    else
+    {
+        Mat nppLut3[3];
+        const Npp32s* pValues3[3];
+        if (nppLut.channels() == 1)
+            pValues3[0] = pValues3[1] = pValues3[2] = nppLut.ptr<Npp32s>();
+        else
+        {
+            cv::split(nppLut, nppLut3);
+            pValues3[0] = nppLut3[0].ptr<Npp32s>();
+            pValues3[1] = nppLut3[1].ptr<Npp32s>(); 
+            pValues3[2] = nppLut3[2].ptr<Npp32s>();
+        }
+        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, 
+            pValues3, lvls.pLevels3, lvls.nValues3) );
+    }
 }
 
 #endif /* !defined (HAVE_CUDA) */

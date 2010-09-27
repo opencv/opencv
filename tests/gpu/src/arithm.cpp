@@ -131,45 +131,6 @@ void CV_GpuArithmTest::run( int )
                 testResult = CvTS::FAIL_MISMATCH;
             }    
         }
-
-        ///!!! author, please remove commented code if loop above is equivalent.
-
-
-        /*ts->printf(CvTS::LOG, "\n========Start test 8UC1========\n");
-        if (test(CV_8UC1) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
-        else
-        {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
-            testResult = CvTS::FAIL_GENERIC;
-        }
-
-        ts->printf(CvTS::LOG, "\n========Start test 8UC3========\n");
-        if (test(CV_8UC3) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
-        else
-        {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
-            testResult = CvTS::FAIL_GENERIC;
-        }
-
-        ts->printf(CvTS::LOG, "\n========Start test 8UC4========\n");
-        if (test(CV_8UC4) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
-        else
-        {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
-            testResult = CvTS::FAIL_GENERIC;
-        }
-
-        ts->printf(CvTS::LOG, "\n========Start test 32FC1========\n");
-        if (test(CV_32FC1) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
-        else
-        {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
-            testResult = CvTS::FAIL_GENERIC;
-        }*/
     }
     catch(const cv::Exception& e)
     {
@@ -551,19 +512,18 @@ struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& )
     {
-        if (mat1.type() != CV_8UC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC3)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
         }
 
-        cv::Mat lut(1, 256, CV_32SC1);
+        cv::Mat lut(1, 256, CV_8UC1);
         cv::RNG rng(*ts->get_rng());
         rng.fill(lut, cv::RNG::UNIFORM, cv::Scalar::all(100), cv::Scalar::all(200));
 
         cv::Mat cpuRes;
         cv::LUT(mat1, lut, cpuRes);
-        cpuRes.convertTo(cpuRes, CV_8U);
 
         cv::gpu::GpuMat gpuRes;
         cv::gpu::LUT(GpuMat(mat1), lut, gpuRes);

@@ -81,13 +81,16 @@ namespace cv { namespace gpu
         void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
         void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
 
-        void swapChannels_gpu(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
-        void swapChannels_gpu(const DevMem2D_<ushort>& src, const DevMem2D_<ushort>& dst, int cn, const int* coeffs, cudaStream_t stream);
-        void swapChannels_gpu(const DevMem2Df& src, const DevMem2Df& dst, int cn, const int* coeffs, cudaStream_t stream);
+        void swapChannels_gpu_8u(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
+        void swapChannels_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
+        void swapChannels_gpu_32f(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
 
-        void RGB2RGB_gpu(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
-        void RGB2RGB_gpu(const DevMem2D_<ushort>& src, int srccn, const DevMem2D_<ushort>& dst, int dstcn, int bidx, cudaStream_t stream);
-        void RGB2RGB_gpu(const DevMem2Df& src, int srccn, const DevMem2Df& dst, int dstcn, int bidx, cudaStream_t stream);
+        void RGB2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
+        void RGB2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
+        void RGB2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
+
+        void RGB5x52RGB_gpu(const DevMem2D& src, int green_bits, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
+        void RGB2RGB5x5_gpu(const DevMem2D& src, int srccn, const DevMem2D& dst, int green_bits, int bidx, cudaStream_t stream);
 
         void Gray2RGB_gpu(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
         void Gray2RGB_gpu(const DevMem2D_<ushort>& src, const DevMem2D_<ushort>& dst, int dstcn, cudaStream_t stream);
@@ -245,38 +248,36 @@ namespace
                 
                 out.create(sz, CV_MAKETYPE(depth, dcn));
                 if( depth == CV_8U )
-                    improc::RGB2RGB_gpu((DevMem2D)src, scn, (DevMem2D)out, dcn, bidx, stream);
+                    improc::RGB2RGB_gpu_8u(src, scn, out, dcn, bidx, stream);
                 else if( depth == CV_16U )
-                    improc::RGB2RGB_gpu((DevMem2D_<unsigned short>)src, scn, (DevMem2D_<unsigned short>)out, dcn, bidx, stream);
+                    improc::RGB2RGB_gpu_16u(src, scn, out, dcn, bidx, stream);
                 else
-                    improc::RGB2RGB_gpu((DevMem2Df)src, scn, (DevMem2Df)out, dcn, bidx, stream);
+                    improc::RGB2RGB_gpu_32f(src, scn, out, dcn, bidx, stream);
                 break;
                 
-            //case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
-            //case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
-            //    CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-            //    dst.create(sz, CV_8UC2);
-            //
-            //    CvtColorLoop(src, dst, RGB2RGB5x5(scn,
-            //              code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
-            //              code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ? 0 : 2,
-            //              code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
-            //              code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5 // green bits
-            //                                      ));
-            //    break;
+            case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
+            case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
+                CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
+                out.create(sz, CV_8UC2);
+
+                improc::RGB2RGB5x5_gpu(src, scn, out, code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
+                          code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5,
+                          code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
+                          code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ? 0 : 2,
+                          stream);
+                break;
             
             //case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
             //case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
             //    if(dcn <= 0) dcn = 3;
             //    CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
-            //    dst.create(sz, CV_MAKETYPE(depth, dcn));
-            //    
-            //    CvtColorLoop(src, dst, RGB5x52RGB(dcn,
-            //              code == CV_BGR5652BGR || code == CV_BGR5552BGR ||
-            //              code == CV_BGR5652BGRA || code == CV_BGR5552BGRA ? 0 : 2, // blue idx
-            //              code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
-            //              code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5 // green bits
-            //              ));
+            //    out.create(sz, CV_MAKETYPE(depth, dcn));
+
+            //    improc::RGB5x52RGB_gpu(src, code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
+            //              code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5, out, dcn,
+            //              code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
+            //              code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ? 0 : 2,
+            //              stream);
             //    break;
                         
             case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
@@ -329,7 +330,7 @@ namespace
                 nppSafeCall( nppiRGBToYCbCr_8u_C3R(src.ptr<Npp8u>(), src.step, out.ptr<Npp8u>(), out.step, nppsz) );
                 {
                     static int coeffs[] = {0, 2, 1};
-                    improc::swapChannels_gpu((DevMem2D)out, (DevMem2D)out, 3, coeffs, 0);
+                    improc::swapChannels_gpu_8u(out, out, 3, coeffs, 0);
                 }
                 break;
 
@@ -341,7 +342,7 @@ namespace
                 {
                     static int coeffs[] = {0, 2, 1};
                     GpuMat src1(src.size(), src.type());
-                    improc::swapChannels_gpu((DevMem2D)src, (DevMem2D)src1, 3, coeffs, 0);
+                    improc::swapChannels_gpu_8u(src, src1, 3, coeffs, 0);
                     nppSafeCall( nppiYCbCrToRGB_8u_C3R(src1.ptr<Npp8u>(), src1.step, out.ptr<Npp8u>(), out.step, nppsz) );   
                 }             
                 break;

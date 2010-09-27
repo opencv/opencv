@@ -223,8 +223,8 @@ struct CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
             return CvTS::OK;
         }
 
-        int interpolations[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4};
-        const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LANCZOS4"};
+        int interpolations[] = {INTER_NEAREST, INTER_LINEAR, /*INTER_CUBIC,*/ /*INTER_LANCZOS4*/};
+        const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", /*"INTER_CUBIC",*/ /*"INTER_LANCZOS4"*/};
         int interpolations_num = sizeof(interpolations) / sizeof(int);
 
         int test_res = CvTS::OK;
@@ -364,7 +364,7 @@ struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
             GpuMat gpu1(img);
             GpuMat gpudst;
             cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
-
+            
             if (CheckNorm(cpudst, gpudst) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
@@ -443,9 +443,6 @@ struct CV_GpuNppImageBlurTest : public CV_GpuImageProcTest
             GpuMat gpudst;
             cv::gpu::blur(gpu1, gpudst, Size(ksizes[i], ksizes[i]));
 
-            cv::Mat c;
-            cv::absdiff(cpudst, gpudst, c);
-
             if (CheckNorm(cpudst, gpudst) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
@@ -459,7 +456,7 @@ struct CV_GpuNppImageBlurTest : public CV_GpuImageProcTest
 class CV_GpuCvtColorTest : public CvTest
 {
 public:
-    CV_GpuCvtColorTest() : CvTest("GPU-NppCvtColor", "cvtColor") {}
+    CV_GpuCvtColorTest() : CvTest("GPU-CvtColor", "cvtColor") {}
     ~CV_GpuCvtColorTest() {};
 
 protected:
@@ -501,8 +498,8 @@ void CV_GpuCvtColorTest::run( int )
     try
     {
         //run tests
-        int codes[] = {CV_BGR2RGB, CV_RGB2YCrCb, CV_YCrCb2RGB, CV_RGB2RGBA, CV_RGBA2BGRA, CV_BGRA2GRAY, CV_GRAY2RGB};
-        const char* codes_str[] = {"CV_BGR2RGB", "CV_RGB2YCrCb", "CV_YCrCb2RGB", "CV_RGB2RGBA", "CV_RGBA2BGRA", "CV_BGRA2GRAY", "CV_GRAY2RGB"};
+        int codes[]             = { CV_BGR2RGB,  /* CV_RGB2YCrCb,   CV_YCrCb2RGB,*/   CV_RGB2RGBA,   CV_RGBA2BGRA,   CV_BGRA2GRAY,   CV_GRAY2RGB,   CV_RGB2BGR555/*,   CV_BGR5552BGR/*, CV_BGR2BGR565, CV_BGR5652RGB*/};
+        const char* codes_str[] = {"CV_BGR2RGB", /*"CV_RGB2YCrCb", "CV_YCrCb2RGB",*/ "CV_RGB2RGBA", "CV_RGBA2BGRA", "CV_BGRA2GRAY", "CV_GRAY2RGB", "CV_RGB2BGR555"/*, "CV_BGR5552BGR"/*, "CV_BGR2BGR565", "CV_BGR5652RGB"*/};
         int codes_num = sizeof(codes) / sizeof(int);
 
         for (int i = 0; i < codes_num; ++i)
