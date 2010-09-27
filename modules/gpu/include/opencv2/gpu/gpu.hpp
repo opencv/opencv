@@ -591,7 +591,10 @@ namespace cv
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, truncation of data cost, data weight,
-            //! truncation of discontinuity cost and discontinuity single jump
+            //! truncation of discontinuity cost and discontinuity single jump            
+            //! DataTerm = data_weight * min(fabs(I2-I1), max_data_term)
+            //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
+            //! please see paper for more details
             StereoBeliefPropagation(int ndisp, int iters, int levels,
                                     float max_data_term, float data_weight,
                                     float max_disc_term, float disc_single_jump,
