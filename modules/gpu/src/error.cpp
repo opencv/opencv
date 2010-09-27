@@ -124,7 +124,7 @@ namespace cv
             const string& msg = (idx != error_num) ? npp_errors[idx].str : string("Unknown error code");
 
             std::stringstream interpreter;
-            interpreter << "<" << err << "> " << msg;
+            interpreter << msg <<" [Code = " << err << "]";
 
             return interpreter.str();
         }

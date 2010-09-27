@@ -69,7 +69,7 @@ namespace
         
         NppiSize sz;
         sz.width = src.cols;
-        sz.height = dst.rows;
+        sz.height = src.rows;
 
         NppiSize mask_sz;
         mask_sz.width = kernel.cols;

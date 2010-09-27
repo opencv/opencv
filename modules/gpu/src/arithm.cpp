@@ -309,7 +309,7 @@ Scalar cv::gpu::sum(const GpuMat& src)
 {
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
     
-    Scalar res;
+    
     
 
     NppiSize sz;
@@ -322,16 +322,22 @@ Scalar cv::gpu::sum(const GpuMat& src)
     {        
         nppiReductionGetBufferHostSize_8u_C1R(sz, &bufsz);
         GpuMat buf(1, bufsz, CV_32S);
-        nppSafeCall( nppiSum_8u_C1R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
+
+        Scalar res;
+         nppSafeCall( nppiSum_8u_C1R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
+        return res;
     }
     else
     {                
         nppiReductionGetBufferHostSize_8u_C4R(sz, &bufsz);
         GpuMat buf(1, bufsz, CV_32S);
+
+        Scalar res;
         nppSafeCall( nppiSum_8u_C4R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
+        return res;
     }
 
-    return res;
+    
 }
 
 ////////////////////////////////////////////////////////////////////////

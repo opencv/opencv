@@ -590,6 +590,6 @@ CV_GpuNppImageCompareTest CV_GpuNppImageCompare_test;
 CV_GpuNppImageMeanStdDevTest CV_GpuNppImageMeanStdDev_test;
 CV_GpuNppImageNormTest CV_GpuNppImageNorm_test;
 CV_GpuNppImageFlipTest CV_GpuNppImageFlip_test;
-//CV_GpuNppImageSumTest CV_GpuNppImageSum_test;
+CV_GpuNppImageSumTest CV_GpuNppImageSum_test;
 CV_GpuNppImageMinNaxTest CV_GpuNppImageMinNax_test;
 CV_GpuNppImageLUTTest CV_GpuNppImageLUT_test;
