@@ -498,8 +498,16 @@ void CV_GpuCvtColorTest::run( int )
     try
     {
         //run tests
-        int codes[]             = { CV_BGR2RGB,  /* CV_RGB2YCrCb,   CV_YCrCb2RGB,*/   CV_RGB2RGBA,   CV_RGBA2BGRA,   CV_BGRA2GRAY,   CV_GRAY2RGB,   CV_RGB2BGR555/*,   CV_BGR5552BGR/*, CV_BGR2BGR565, CV_BGR5652RGB*/};
-        const char* codes_str[] = {"CV_BGR2RGB", /*"CV_RGB2YCrCb", "CV_YCrCb2RGB",*/ "CV_RGB2RGBA", "CV_RGBA2BGRA", "CV_BGRA2GRAY", "CV_GRAY2RGB", "CV_RGB2BGR555"/*, "CV_BGR5552BGR"/*, "CV_BGR2BGR565", "CV_BGR5652RGB"*/};
+        int codes[] = { CV_BGR2RGB, CV_RGB2BGRA, CV_BGRA2RGB,
+                        CV_RGB2BGR555, CV_BGR5552BGR, CV_BGR2BGR565, CV_BGR5652RGB, 
+                        /* CV_RGB2YCrCb, CV_YCrCb2RGB,*/  
+                        CV_RGB2GRAY, CV_GRAY2BGRA, CV_BGRA2GRAY,
+                        CV_GRAY2BGR555, CV_BGR5552GRAY, CV_GRAY2BGR565, CV_BGR5652GRAY};
+        const char* codes_str[] = { "CV_BGR2RGB", "CV_RGB2BGRA", "CV_BGRA2RGB",
+                                    "CV_RGB2BGR555", "CV_BGR5552BGR", "CV_BGR2BGR565", "CV_BGR5652RGB", 
+                                    /* "CV_RGB2YCrCb", "CV_YCrCb2RGB",*/  
+                                    "CV_RGB2GRAY", "CV_GRAY2BGRA", "CV_BGRA2GRAY",
+                                    "CV_GRAY2BGR555", "CV_BGR5552GRAY", "CV_GRAY2BGR565", "CV_BGR5652GRAY"};
         int codes_num = sizeof(codes) / sizeof(int);
 
         for (int i = 0; i < codes_num; ++i)

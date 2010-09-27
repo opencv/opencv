@@ -312,41 +312,6 @@ namespace imgproc
         }
     }
 
-    /*struct RGB5x52RGB
-    {
-        typedef uchar channel_type;
-
-        RGB5x52RGB(int _dstcn, int _blueIdx, int _greenBits)
-		    : dstcn(_dstcn), blueIdx(_blueIdx), greenBits(_greenBits) {}
-
-        void operator()(const uchar* src, uchar* dst, int n) const
-        {
-            int dcn = dstcn, bidx = blueIdx;
-            if( greenBits == 6 )
-                for( int i = 0; i < n; i++, dst += dcn )
-                {
-                    unsigned t = ((const unsigned short*)src)[i];
-                    dst[bidx] = (uchar)(t << 3);
-                    dst[1] = (uchar)((t >> 3) & ~3);
-                    dst[bidx ^ 2] = (uchar)((t >> 8) & ~7);
-                    if( dcn == 4 )
-                        dst[3] = 255;
-                }
-            else
-                for( int i = 0; i < n; i++, dst += dcn )
-                {
-                    unsigned t = ((const unsigned short*)src)[i];
-                    dst[bidx] = (uchar)(t << 3);
-                    dst[1] = (uchar)((t >> 2) & ~7);
-                    dst[bidx ^ 2] = (uchar)((t >> 7) & ~7);
-                    if( dcn == 4 )
-                        dst[3] = t & 0x8000 ? 255 : 0;
-                }
-        }
-
-        int dstcn, blueIdx, greenBits;
-    };*/
-
     template <int SRCCN, int GREEN_BITS> struct RGB2RGB5x5Converter {};
 
     template<int SRCCN> struct RGB2RGB5x5Converter<SRCCN, 6> 
@@ -415,7 +380,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB5x52RGB_caller<6, 3>, RGB5x52RGB_caller<6, 4>}
         };
 
-        RGB5x52RGB_callers[green_bits - 5][dstcn - 5](src, dst, bidx, stream);
+        RGB5x52RGB_callers[green_bits - 5][dstcn - 3](src, dst, bidx, stream);
     }
 
     template <int SRCCN, int GREEN_BITS>
@@ -471,28 +436,37 @@ namespace imgproc
         }
     }
 
-    //struct Gray2RGB5x5
-    //{
-    //    typedef uchar channel_type;
-    //
-    //    Gray2RGB5x5(int _greenBits) : greenBits(_greenBits) {}
-    //    void operator()(const uchar* src, uchar* dst, int n) const
-    //    {
-    //        if( greenBits == 6 )
-    //            for( int i = 0; i < n; i++ )
-    //            {
-    //                int t = src[i];
-    //                ((unsigned short*)dst)[i] = (unsigned short)((t >> 3)|((t & ~3) << 3)|((t & ~7) << 8));
-    //            }
-    //        else
-    //            for( int i = 0; i < n; i++ )
-    //            {
-    //                int t = src[i] >> 3;
-    //                ((unsigned short*)dst)[i] = (unsigned short)(t|(t << 5)|(t << 10));
-    //            }
-    //    }
-    //    int greenBits;
-    //};
+    template <int GREEN_BITS> struct Gray2RGB5x5Converter {};
+
+    template<> struct Gray2RGB5x5Converter<6> 
+    {
+        static __device__ unsigned short cvt(unsigned int t)
+        {
+            return (unsigned short)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
+        }
+    };
+    template<> struct Gray2RGB5x5Converter<5> 
+    {
+        static __device__ unsigned short cvt(unsigned int t)
+        {
+            t >>= 3;
+            return (unsigned short)(t | (t << 5) | (t << 10));
+        }
+    };   
+
+    template<int GREEN_BITS>
+    __global__ void Gray2RGB5x5(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
+    {
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            unsigned int src = src_[y * src_step + x];
+
+            *(unsigned short*)(dst_ + y * dst_step + (x << 1)) = Gray2RGB5x5Converter<GREEN_BITS>::cvt(src);
+        }
+    }
 }
 
 namespace cv { namespace gpu { namespace improc
@@ -536,60 +510,86 @@ namespace cv { namespace gpu { namespace improc
 
         Gray2RGB_callers[dstcn - 3](src, dst, stream);
     }
+
+    template <int GREEN_BITS>
+    void Gray2RGB5x5_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        imgproc::Gray2RGB5x5<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            dst.ptr, dst.step, src.rows, src.cols);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void Gray2RGB5x5_gpu(const DevMem2D& src, const DevMem2D& dst, int green_bits, cudaStream_t stream)
+    {
+        typedef void (*Gray2RGB5x5_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+        static const Gray2RGB5x5_caller_t Gray2RGB5x5_callers[2] = 
+        {
+            Gray2RGB5x5_caller<5>, Gray2RGB5x5_caller<6>
+        };
+
+        Gray2RGB5x5_callers[green_bits - 5](src, dst, stream);
+    }
 }}}
 
 ///////////////////////////////// Color to Grayscale ////////////////////////////////
 
 namespace imgproc
 {
-    //#undef R2Y
-    //#undef G2Y
-    //#undef B2Y
-    //
-    //enum
-    //{
-    //    yuv_shift = 14,
-    //    xyz_shift = 12,
-    //    R2Y = 4899,
-    //    G2Y = 9617,
-    //    B2Y = 1868,
-    //    BLOCK_SIZE = 256
-    //};
+    #undef R2Y
+    #undef G2Y
+    #undef B2Y
+    
+    enum
+    {
+        yuv_shift  = 14,
+        xyz_shift  = 12,
+        R2Y        = 4899,
+        G2Y        = 9617,
+        B2Y        = 1868,
+        BLOCK_SIZE = 256
+    };
 
-    //struct RGB5x52Gray
-    //{
-    //    typedef uchar channel_type;
-    //
-    //    RGB5x52Gray(int _greenBits) : greenBits(_greenBits) {}
-    //    void operator()(const uchar* src, uchar* dst, int n) const
-    //    {
-    //        if( greenBits == 6 )
-    //            for( int i = 0; i < n; i++ )
-    //            {
-    //                int t = ((unsigned short*)src)[i];
-    //                dst[i] = (uchar)CV_DESCALE(((t << 3) & 0xf8)*B2Y +
-    //                                           ((t >> 3) & 0xfc)*G2Y +
-    //                                           ((t >> 8) & 0xf8)*R2Y, yuv_shift);
-    //            }
-    //        else
-    //            for( int i = 0; i < n; i++ )
-    //            {
-    //                int t = ((unsigned short*)src)[i];
-    //                dst[i] = (uchar)CV_DESCALE(((t << 3) & 0xf8)*B2Y +
-    //                                           ((t >> 2) & 0xf8)*G2Y +
-    //                                           ((t >> 7) & 0xf8)*R2Y, yuv_shift);
-    //            }
-    //    }
-    //    int greenBits;
-    //};
+    template <int GREEN_BITS> struct RGB5x52GrayConverter {};
+
+    template<> struct RGB5x52GrayConverter<6> 
+    {
+        static __device__ unsigned char cvt(unsigned int t)
+        {
+            return (unsigned char)CV_DESCALE(((t << 3) & 0xf8)*B2Y + ((t >> 3) & 0xfc)*G2Y + ((t >> 8) & 0xf8)*R2Y, yuv_shift);
+        }
+    };
+    template<> struct RGB5x52GrayConverter<5> 
+    {
+        static __device__ unsigned char cvt(unsigned int t)
+        {
+            return (unsigned char)CV_DESCALE(((t << 3) & 0xf8)*B2Y + ((t >> 2) & 0xf8)*G2Y + ((t >> 7) & 0xf8)*R2Y, yuv_shift);
+        }
+    };   
+
+    template<int GREEN_BITS>
+    __global__ void RGB5x52Gray(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
+    {
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            unsigned int src = *(unsigned short*)(src_ + y * src_step + (x << 1));
+
+            dst_[y * dst_step + x] = RGB5x52GrayConverter<GREEN_BITS>::cvt(src);
+        }
+    }
 
     __global__ void RGB2Gray_3(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
-        const int cr = 4899;
-        const int cg = 9617;
-        const int cb = 1868;
-        const int yuv_shift = 14;
-
 		const int x = (blockDim.x * blockIdx.x + threadIdx.x) << 2;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -600,19 +600,19 @@ namespace imgproc
             uchar t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
 
             uchar4 dst;
-            dst.x = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.x = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src += 3;
             t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
-            dst.y = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.y = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src += 3;
             t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
-            dst.z = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.z = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src += 3;
             t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
-            dst.w = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.w = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             *(uchar4*)(dst_ + y * dst_step + x) = dst;
         }
@@ -620,11 +620,6 @@ namespace imgproc
 
     __global__ void RGB2Gray_3(const unsigned short* src_, size_t src_step, unsigned short* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
-        const int cr = 4899;
-        const int cg = 9617;
-        const int cb = 1868;
-        const int yuv_shift = 14;
-
 		const int x = (blockDim.x * blockIdx.x + threadIdx.x) << 1;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -635,11 +630,11 @@ namespace imgproc
             unsigned short t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
 
             ushort2 dst;
-            dst.x = (unsigned short)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.x = (unsigned short)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src += 3;
             t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
-            dst.y = (unsigned short)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.y = (unsigned short)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             *(ushort2*)(dst_ + y * dst_step + x) = dst;
         }
@@ -665,11 +660,6 @@ namespace imgproc
 
     __global__ void RGB2Gray_4(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
-        const int cr = 4899;
-        const int cg = 9617;
-        const int cb = 1868;
-        const int yuv_shift = 14;
-
 		const int x = (blockDim.x * blockIdx.x + threadIdx.x) << 2;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -680,19 +670,19 @@ namespace imgproc
             uchar t0 = ((uchar*)(&src))[bidx], t1 = src.y, t2 = ((uchar*)(&src))[bidx ^ 2];
 
             uchar4 dst;
-            dst.x = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.x = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src = *(uchar4*)(src_ + y * src_step + (x << 2) + 4);
             t0 = ((uchar*)(&src))[bidx], t1 = src.y, t2 = ((uchar*)(&src))[bidx ^ 2];
-            dst.y = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.y = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src = *(uchar4*)(src_ + y * src_step + (x << 2) + 8);
             t0 = ((uchar*)(&src))[bidx], t1 = src.y, t2 = ((uchar*)(&src))[bidx ^ 2];
-            dst.z = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.z = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src = *(uchar4*)(src_ + y * src_step + (x << 2) + 12);
             t0 = ((uchar*)(&src))[bidx], t1 = src.y, t2 = ((uchar*)(&src))[bidx ^ 2];
-            dst.w = (uchar)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.w = (uchar)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             *(uchar4*)(dst_ + y * dst_step + x) = dst;
         }
@@ -700,11 +690,6 @@ namespace imgproc
 
     __global__ void RGB2Gray_4(const unsigned short* src_, size_t src_step, unsigned short* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
-        const int cr = 4899;
-        const int cg = 9617;
-        const int cb = 1868;
-        const int yuv_shift = 14;
-
 		const int x = (blockDim.x * blockIdx.x + threadIdx.x) << 1;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -715,11 +700,11 @@ namespace imgproc
             unsigned short t0 = ((unsigned short*)(&src))[bidx], t1 = src.y, t2 = ((unsigned short*)(&src))[bidx ^ 2];
 
             ushort2 dst;
-            dst.x = (unsigned short)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.x = (unsigned short)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             src = *(ushort4*)(src_ + y * src_step + (x << 2) + 4);
             t0 = ((unsigned short*)(&src))[bidx], t1 = src.y, t2 = ((unsigned short*)(&src))[bidx ^ 2];
-            dst.y = (unsigned short)CV_DESCALE((unsigned)(t0 * cb + t1 * cg + t2 * cr), yuv_shift);
+            dst.y = (unsigned short)CV_DESCALE((unsigned)(t0 * B2Y + t1 * G2Y + t2 * R2Y), yuv_shift);
 
             *(ushort2*)(dst_ + y * dst_step + x) = dst;
         }
@@ -819,6 +804,33 @@ namespace cv { namespace gpu { namespace improc
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    template <int GREEN_BITS>
+    void RGB5x52Gray_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        imgproc::RGB5x52Gray<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            dst.ptr, dst.step, src.rows, src.cols);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void RGB5x52Gray_gpu(const DevMem2D& src, int green_bits, const DevMem2D& dst, cudaStream_t stream)
+    {
+        typedef void (*RGB5x52Gray_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+        static const RGB5x52Gray_caller_t RGB5x52Gray_callers[2] = 
+        {
+            RGB5x52Gray_caller<5>, RGB5x52Gray_caller<6>
+        };
+
+        RGB5x52Gray_callers[green_bits - 5](src, dst, stream);
     }
 }}}
 

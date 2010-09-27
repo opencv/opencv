@@ -70,6 +70,7 @@ void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::log(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::magnitude(const GpuMat&, GpuMat&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -530,6 +531,19 @@ void cv::gpu::log(const GpuMat& src, GpuMat& dst)
 ////////////////////////////////////////////////////////////////////////
 // magnitude
 
+void cv::gpu::magnitude(const GpuMat& src, GpuMat& dst)
+{
+    CV_Assert(src.type() == CV_32FC2);
+
+    dst.create(src.size(), CV_32FC1);
+
+    NppiSize sz;
+    sz.width = src.cols;
+    sz.height = src.rows;
+
+    nppSafeCall( nppiMagnitude_32fc32f_C1R(src.ptr<Npp32fc>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+}
+
 void cv::gpu::magnitude(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 {
     CV_DbgAssert(src1.type() == src2.type() && src1.size() == src2.size());
@@ -539,13 +553,7 @@ void cv::gpu::magnitude(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
     GpuMat srcs[] = {src1, src2};
     cv::gpu::merge(srcs, 2, src);
 
-    dst.create(src1.size(), src1.type());
-
-    NppiSize sz;
-    sz.width = src.cols;
-    sz.height = src.rows;
-
-    nppSafeCall( nppiMagnitude_32fc32f_C1R(src.ptr<Npp32fc>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+    cv::gpu::magnitude(src, dst);
 }
 
 #endif /* !defined (HAVE_CUDA) */

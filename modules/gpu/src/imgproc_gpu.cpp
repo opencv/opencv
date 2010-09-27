@@ -95,10 +95,12 @@ namespace cv { namespace gpu
         void Gray2RGB_gpu(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
         void Gray2RGB_gpu(const DevMem2D_<ushort>& src, const DevMem2D_<ushort>& dst, int dstcn, cudaStream_t stream);
         void Gray2RGB_gpu(const DevMem2Df& src, const DevMem2Df& dst, int dstcn, cudaStream_t stream);
+        void Gray2RGB5x5_gpu(const DevMem2D& src, const DevMem2D& dst, int green_bits, cudaStream_t stream);
 
         void RGB2Gray_gpu(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream);
         void RGB2Gray_gpu(const DevMem2D_<ushort>& src, int srccn, const DevMem2D_<ushort>& dst, int bidx, cudaStream_t stream);
         void RGB2Gray_gpu(const DevMem2Df& src, int srccn, const DevMem2Df& dst, int bidx, cudaStream_t stream);
+        void RGB5x52Gray_gpu(const DevMem2D& src, int green_bits, const DevMem2D& dst, cudaStream_t stream);
     }
 }}
 
@@ -267,18 +269,20 @@ namespace
                           stream);
                 break;
             
-            //case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
-            //case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-            //    if(dcn <= 0) dcn = 3;
-            //    CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
-            //    out.create(sz, CV_MAKETYPE(depth, dcn));
+            case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
+            case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
+                if(dcn <= 0) dcn = 3;
+                CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
+                out.create(sz, CV_MAKETYPE(depth, dcn));
 
-            //    improc::RGB5x52RGB_gpu(src, code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
-            //              code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5, out, dcn,
-            //              code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
-            //              code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ? 0 : 2,
-            //              stream);
-            //    break;
+                improc::RGB5x52RGB_gpu(src, 
+                          code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
+                          code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5, 
+                          out, dcn,
+                          code == CV_BGR5652BGR || code == CV_BGR5552BGR ||
+                          code == CV_BGR5652BGRA || code == CV_BGR5552BGRA ? 0 : 2,
+                          stream);
+                break;
                         
             case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
                 CV_Assert(scn == 3 || scn == 4);
@@ -294,11 +298,13 @@ namespace
                     improc::RGB2Gray_gpu((DevMem2Df)src, scn, (DevMem2Df)out, bidx, stream);
                 break;
             
-            //case CV_BGR5652GRAY: case CV_BGR5552GRAY:
-            //    CV_Assert( scn == 2 && depth == CV_8U );
-            //    dst.create(sz, CV_8UC1);
-            //    CvtColorLoop(src, dst, RGB5x52Gray(code == CV_BGR5652GRAY ? 6 : 5));
-            //    break;
+            case CV_BGR5652GRAY: case CV_BGR5552GRAY:
+                CV_Assert( scn == 2 && depth == CV_8U );
+
+                out.create(sz, CV_8UC1);
+
+                improc::RGB5x52Gray_gpu(src, code == CV_BGR5652GRAY ? 6 : 5, out, stream);
+                break;
             
             case CV_GRAY2BGR: case CV_GRAY2BGRA:
                 if (dcn <= 0) 
@@ -315,12 +321,13 @@ namespace
                     improc::Gray2RGB_gpu((DevMem2Df)src, (DevMem2Df)out, dcn, stream);
                 break;
                 
-            //case CV_GRAY2BGR565: case CV_GRAY2BGR555:
-            //    CV_Assert( scn == 1 && depth == CV_8U );
-            //    dst.create(sz, CV_8UC2);
-            //    
-            //    CvtColorLoop(src, dst, Gray2RGB5x5(code == CV_GRAY2BGR565 ? 6 : 5));
-            //    break;
+            case CV_GRAY2BGR565: case CV_GRAY2BGR555:
+                CV_Assert( scn == 1 && depth == CV_8U );
+
+                out.create(sz, CV_8UC2);
+                
+                improc::Gray2RGB5x5_gpu(src, out, code == CV_GRAY2BGR565 ? 6 : 5, stream);
+                break;
                 
             case CV_RGB2YCrCb:
                 CV_Assert(scn == 3 && depth == CV_8U);

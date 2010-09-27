@@ -452,6 +452,8 @@ namespace cv
 
         //! computes magnitude (magnitude(i)) of each (x(i), y(i)) vector
         CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
+        //! computes magnitude (magnitude(i)) of complex (x(i).re, x(i).im) vector
+        CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude);
 
         ////////////////////////////// Image processing //////////////////////////////
 
