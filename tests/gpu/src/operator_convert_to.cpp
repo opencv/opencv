@@ -68,7 +68,6 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
 
     const int types[] = {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F};
     const int types_num = sizeof(types) / sizeof(int);
-
     const char* types_str[] = {"CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F"};
 
     bool passed = true;
@@ -78,17 +77,16 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
         {
             for (int j = 0; j < types_num && passed; ++j)
             {
-                for (int c = 1; c < 2 && passed; ++c)
+                for (int c = 1; c < 5 && passed; ++c)
                 {
                     const int src_type = CV_MAKETYPE(types[i], c);
                     const int dst_type = types[j];
-                    const double alpha = (double)rand() / RAND_MAX * 2.0;
-                    const double beta = (double)rand() / RAND_MAX * 150.0 - 75;
 
                     cv::RNG rng(*ts->get_rng());
+                    const double alpha = rng.uniform(0.0, 2.0);
+                    const double beta = rng.uniform(-75.0, 75.0);
 
                     Mat cpumatsrc(img_size, src_type);
-
                     rng.fill(cpumatsrc, RNG::UNIFORM, Scalar::all(0), Scalar::all(300));
 
                     GpuMat gpumatsrc(cpumatsrc);

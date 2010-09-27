@@ -40,15 +40,7 @@
 //M*/
 
 #include "gputest.hpp"
-#include "highgui.h"
-
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
 #include <limits>
-#include <numeric>
-#include <iomanip> // for  cout << setw()
 
 using namespace cv;
 using namespace std;
@@ -62,9 +54,8 @@ public:
 
 protected:
     void run(int);
-    void print_mat(cv::Mat & mat, std::string name = "cpu mat");
-    void print_mat(gpu::GpuMat & mat, std::string name = "gpu mat");
-    bool compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat);
+
+    bool testSetTo(cv::Mat& cpumat, gpu::GpuMat& gpumat, const cv::Mat& cpumask = cv::Mat(), const cv::gpu::GpuMat& gpumask = cv::gpu::GpuMat());
 
 private:
     int rows;
@@ -74,51 +65,23 @@ private:
 
 CV_GpuMatOpSetToTest::CV_GpuMatOpSetToTest(): CvTest( "GPU-MatOperatorSetTo", "setTo" )
 {
-    rows = 256;
-    cols = 124;
+    rows = 35;
+    cols = 67;
 
     s.val[0] = 127.0;
     s.val[1] = 127.0;
     s.val[2] = 127.0;
     s.val[3] = 127.0;
-
-    //#define PRINT_MATRIX
 }
 
-
-void CV_GpuMatOpSetToTest::print_mat(cv::Mat & mat, std::string name )
+bool CV_GpuMatOpSetToTest::testSetTo(cv::Mat& cpumat, gpu::GpuMat& gpumat, const cv::Mat& cpumask, const cv::gpu::GpuMat& gpumask)
 {
-    cv::imshow(name, mat);
-}
+    cpumat.setTo(s, cpumask);
+    gpumat.setTo(s, gpumask);
 
-void CV_GpuMatOpSetToTest::print_mat(gpu::GpuMat & mat, std::string name)
-{
-    cv::Mat newmat;
-    mat.download(newmat);
-    print_mat(newmat, name);
-}
+    double ret = norm(cpumat, gpumat, NORM_INF);
 
-bool CV_GpuMatOpSetToTest::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpumat)
-{
-    //int64 time = getTickCount();
-    cpumat.setTo(s);
-    //int64 time1 = getTickCount();
-    gpumat.setTo(s);
-    //int64 time2 = getTickCount();
-
-    //std::cout << "\ntime cpu: " << std::fixed << std::setprecision(12) << double((time1 - time)  / (double)getTickFrequency());
-    //std::cout << "\ntime gpu: " << std::fixed << std::setprecision(12) << double((time2 - time1) / (double)getTickFrequency());
-    //std::cout << "\n";
-
-#ifdef PRINT_MATRIX
-    print_mat(cpumat);
-    print_mat(gpumat);
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cpumat, gpumat);
-
-    if (ret < 1.0)
+    if (ret < std::numeric_limits<double>::epsilon())
         return true;
     else
     {
@@ -133,11 +96,20 @@ void CV_GpuMatOpSetToTest::run( int /* start_from */)
 
     try
     {
+        cv::Mat cpumask(rows, cols, CV_8UC1);
+        cv::RNG rng(*ts->get_rng());
+        rng.fill(cpumask, RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar(1.5));
+        cv::gpu::GpuMat gpumask(cpumask);
+
         for (int i = 0; i < 7; i++)
         {
-            Mat cpumat(rows, cols, i, Scalar::all(0));
-            GpuMat gpumat(cpumat);
-            is_test_good &= compare_matrix(cpumat, gpumat);
+            for (int cn = 1; cn <= 4; ++cn)
+            {
+                int mat_type = CV_MAKETYPE(i, cn);
+                Mat cpumat(rows, cols, mat_type, Scalar::all(0));
+                GpuMat gpumat(cpumat);
+                is_test_good &= testSetTo(cpumat, gpumat, cpumask, gpumask);
+            }
         }
     }
     catch(const cv::Exception& e)

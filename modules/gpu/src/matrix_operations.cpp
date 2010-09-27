@@ -151,15 +151,19 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
 
 GpuMat& GpuMat::operator = (const Scalar& s)
 {
-    matrix_operations::set_to_without_mask( *this, depth(), s.val, channels());
+    setTo(s);
     return *this;
 }
 
 GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 {
-    //CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8UC1);
 
     CV_DbgAssert(!this->empty());
+    
+    NppiSize sz;
+    sz.width  = cols;
+    sz.height = rows;
 
     if (mask.empty())
     {
@@ -167,38 +171,74 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
         {
         case CV_8UC1:
             {
-                NppiSize sz;
-	            sz.width  = cols;
-	            sz.height = rows;
                 Npp8u nVal = (Npp8u)s[0];
-                nppSafeCall( nppiSet_8u_C1R(nVal, (Npp8u*)ptr<char>(), step, sz) );
+                nppSafeCall( nppiSet_8u_C1R(nVal, ptr<Npp8u>(), step, sz) );
                 break;
             }
         case CV_8UC4:
             {
-                NppiSize sz;
-	            sz.width  = cols;
-	            sz.height = rows;
-                Npp8u nVal[] = {(Npp8u)s[0], (Npp8u)s[1], (Npp8u)s[2], (Npp8u)s[3]};
-                nppSafeCall( nppiSet_8u_C4R(nVal, (Npp8u*)ptr<char>(), step, sz) );
+                Scalar_<Npp8u> nVal = s;
+                nppSafeCall( nppiSet_8u_C4R(nVal.val, ptr<Npp8u>(), step, sz) );
+                break;
+            }
+        case CV_16UC1:
+            {
+                Npp16u nVal = (Npp16u)s[0];
+                nppSafeCall( nppiSet_16u_C1R(nVal, ptr<Npp16u>(), step, sz) );
+                break;
+            }
+        /*case CV_16UC2:
+            {
+                Scalar_<Npp16u> nVal = s;
+                nppSafeCall( nppiSet_16u_C2R(nVal.val, ptr<Npp16u>(), step, sz) );
+                break;
+            }*/
+        case CV_16UC4:
+            {
+                Scalar_<Npp16u> nVal = s;
+                nppSafeCall( nppiSet_16u_C4R(nVal.val, ptr<Npp16u>(), step, sz) );
+                break;
+            }
+        case CV_16SC1:
+            {
+                Npp16s nVal = (Npp16s)s[0];
+                nppSafeCall( nppiSet_16s_C1R(nVal, ptr<Npp16s>(), step, sz) );
+                break;
+            }
+        /*case CV_16SC2:
+            {
+                Scalar_<Npp16s> nVal = s;
+                nppSafeCall( nppiSet_16s_C2R(nVal.val, ptr<Npp16s>(), step, sz) );
+                break;
+            }*/
+        case CV_16SC4:
+            {
+                Scalar_<Npp16s> nVal = s;
+                nppSafeCall( nppiSet_16s_C4R(nVal.val, ptr<Npp16s>(), step, sz) );
                 break;
             }
         case CV_32SC1:
             {
-                NppiSize sz;
-	            sz.width  = cols;
-	            sz.height = rows;
                 Npp32s nVal = (Npp32s)s[0];
-                nppSafeCall( nppiSet_32s_C1R(nVal, (Npp32s*)ptr<char>(), step, sz) );
+                nppSafeCall( nppiSet_32s_C1R(nVal, ptr<Npp32s>(), step, sz) );
+                break;
+            }
+        case CV_32SC4:
+            {
+                Scalar_<Npp32s> nVal = s;
+                nppSafeCall( nppiSet_32s_C4R(nVal.val, ptr<Npp32s>(), step, sz) );
                 break;
             }
         case CV_32FC1:
             {
-                NppiSize sz;
-	            sz.width  = cols;
-	            sz.height = rows;
                 Npp32f nVal = (Npp32f)s[0];
-                nppSafeCall( nppiSet_32f_C1R(nVal, (Npp32f*)ptr<char>(), step, sz) );
+                nppSafeCall( nppiSet_32f_C1R(nVal, ptr<Npp32f>(), step, sz) );
+                break;
+            }
+        case CV_32FC4:
+            {
+                Scalar_<Npp32f> nVal = s;
+                nppSafeCall( nppiSet_32f_C4R(nVal.val, ptr<Npp32f>(), step, sz) );
                 break;
             }
         default:
@@ -206,7 +246,73 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
         }        
     }
     else
-        matrix_operations::set_to_with_mask( *this, depth(), s.val, mask, channels());
+    {
+        switch (type())
+        {
+        case CV_8UC1:
+            {
+                Npp8u nVal = (Npp8u)s[0];
+                nppSafeCall( nppiSet_8u_C1MR(nVal, ptr<Npp8u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_8UC4:
+            {
+                Scalar_<Npp8u> nVal = s;
+                nppSafeCall( nppiSet_8u_C4MR(nVal.val, ptr<Npp8u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_16UC1:
+            {
+                Npp16u nVal = (Npp16u)s[0];
+                nppSafeCall( nppiSet_16u_C1MR(nVal, ptr<Npp16u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_16UC4:
+            {
+                Scalar_<Npp16u> nVal = s;
+                nppSafeCall( nppiSet_16u_C4MR(nVal.val, ptr<Npp16u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_16SC1:
+            {
+                Npp16s nVal = (Npp16s)s[0];
+                nppSafeCall( nppiSet_16s_C1MR(nVal, ptr<Npp16s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_16SC4:
+            {
+                Scalar_<Npp16s> nVal = s;
+                nppSafeCall( nppiSet_16s_C4MR(nVal.val, ptr<Npp16s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_32SC1:
+            {
+                Npp32s nVal = (Npp32s)s[0];
+                nppSafeCall( nppiSet_32s_C1MR(nVal, ptr<Npp32s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_32SC4:
+            {
+                Scalar_<Npp32s> nVal = s;
+                nppSafeCall( nppiSet_32s_C4MR(nVal.val, ptr<Npp32s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_32FC1:
+            {
+                Npp32f nVal = (Npp32f)s[0];
+                nppSafeCall( nppiSet_32f_C1MR(nVal, ptr<Npp32f>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        case CV_32FC4:
+            {
+                Scalar_<Npp32f> nVal = s;
+                nppSafeCall( nppiSet_32f_C4MR(nVal.val, ptr<Npp32f>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
+                break;
+            }
+        default:
+            matrix_operations::set_to_with_mask( *this, depth(), s.val, mask, channels());
+        }
+    }
 
     return *this;
 }

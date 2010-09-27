@@ -348,48 +348,74 @@ namespace cv
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
         //! adds one matrix to another (c = a + b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
         CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! adds scalar to a matrix (c = a + s)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! subtracts one matrix from another (c = a - b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
 		CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! subtracts scalar from a matrix (c = a - s)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! computes element-wise product of the two arrays (c = a * b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
 		CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! multiplies matrix to a scalar (c = a * s)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! computes element-wise quotient of the two arrays (c = a / b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
 		CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! computes element-wise quotient of matrix and scalar (c = a / s)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c);
 
         //! transposes the matrix
+        //! supports only CV_8UC1 type
 		CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
 
         //! computes element-wise absolute difference of two arrays (c = abs(a - b))
-		CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);        
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+		CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c);
 
         //! compares elements of two arrays (c = a <cmpop> b)
-        //! Now doesn't support CMP_NE.
+        //! supports CV_8UC4, CV_32FC1 types
         CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop);
 
         //! computes mean value and standard deviation of all or selected array elements
+        //! supports only CV_8UC1 type
         CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
 
         //! computes norm of array
-        //! Supports NORM_INF, NORM_L1, NORM_L2
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports only CV_8UC1 type
         CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
         
         //! computes norm of the difference between two arrays
-        //! Supports NORM_INF, NORM_L1, NORM_L2
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports only CV_8UC1 type
         CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
 
         //! reverses the order of the rows, columns or both in a matrix
+        //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode);
 
         //! computes sum of array elements
+        //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS Scalar sum(const GpuMat& m);
 
         //! finds global minimum and maximum array elements and returns their values
+        //! supports only CV_8UC1 type
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal = 0);
 
         //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
-        //! supports only single channels source
-        //! destination array will have the same type as source
-        //! lut must hase CV_32S depth and the same number of channels as in the source array
+        //! destination array will have the depth type as lut and the same channels number as source
+        //! supports CV_8UC1, CV_8UC3 types
         CV_EXPORTS void LUT(const GpuMat& src, const Mat& lut, GpuMat& dst);
 
         //! makes multi-channel array out of several single-channel arrays
@@ -416,10 +442,21 @@ namespace cv
         //! copies each plane of a multi-channel array to a dedicated array (async version)
         CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream);
 
+        //! computes exponent of each matrix element (b = e**a)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void exp(const GpuMat& a, GpuMat& b);
+        
+        //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void log(const GpuMat& a, GpuMat& b);
+
+        //! computes magnitude (magnitude(i)) of each (x(i), y(i)) vector
+        CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
+
         ////////////////////////////// Image processing //////////////////////////////
 
         //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
-        //! xymap.type() == xymap.type() == CV_32FC1
+        //! supports CV_8UC1, CV_8UC3 source types and CV_32FC1 map type
         CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
 
         //! Does mean shift filtering on GPU.
@@ -452,7 +489,8 @@ namespace cv
         CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh);
 
         //! resizes the image
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4
+        //! Supports INTER_NEAREST, INTER_LINEAR
+        //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR);
         
         //! warps the image using affine transformation
@@ -465,16 +503,20 @@ namespace cv
         
         //! rotate 8bit single or four channel image
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
         
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1 types
         CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
         
         //! computes the integral image and integral for the squared image
         //! sum will have CV_32S type, sqsum - CV32F type
+        //! supports only CV_32FC1 source type
         CV_EXPORTS void integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum);
 
         //! smooths the image using the normalized box filter
+        //! supports CV_8UC1, CV_8UC4 types and kernel size 3, 5, 7
         CV_EXPORTS void boxFilter(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1));
 
         //! a synonym for normalized box filter

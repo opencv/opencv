@@ -45,19 +45,22 @@ CvTS test_system;
 
 const char* blacklist[] =
 {    
-    "GPU-NppImageSum",
-    "GPU-MatOperatorAsyncCall",
-    //"GPU-NppErode",
-    //"GPU-NppDilate",
-    //"GPU-NppMorphologyEx",
-    //"GPU-NppImageDivide",
-    //"GPU-NppImageMeanStdDev",
-    //"GPU-NppImageMinNax",
-    //"GPU-NppImageResize",
-    //"GPU-NppImageWarpAffine",
-    //"GPU-NppImageWarpPerspective",
-    //"GPU-NppImageIntegral",
-    //"GPU-NppImageBlur",
+    "GPU-NppImageSum",              // crash
+    "GPU-MatOperatorAsyncCall",     // crash
+    //"GPU-NppErode",                 // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppDilate",                // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppMorphologyEx",          // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppImageDivide",           // different round mode
+    //"GPU-NppImageMeanStdDev",       // different precision
+    //"GPU-NppImageMinNax",           // npp bug
+    //"GPU-NppImageResize",           // different precision in interpolation
+    //"GPU-NppImageWarpAffine",       // different precision in interpolation
+    //"GPU-NppImageWarpPerspective",  // different precision in interpolation
+    //"GPU-NppImageIntegral",         // different precision
+    //"GPU-NppImageBlur",             // different precision
+    //"GPU-NppImageExp",              // different precision
+    //"GPU-NppImageLog",              // different precision
+    //"GPU-NppImageMagnitude",        // different precision
     0
 };
 

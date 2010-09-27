@@ -74,8 +74,8 @@ int CV_GpuArithmTest::test(int type)
     cv::Size sz(200, 200);
     cv::Mat mat1(sz, type), mat2(sz, type);
     cv::RNG rng(*ts->get_rng());
-    rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(10), cv::Scalar::all(100));
-    rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(10), cv::Scalar::all(100));
+    rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
+    rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
 
     return test(mat1, mat2);
 }
@@ -114,8 +114,8 @@ void CV_GpuArithmTest::run( int )
     int testResult = CvTS::OK;
     try
     {
-        const int types[] = {CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1};
-        const char* type_names[] = {"CV_8UC1", "CV_8UC3", "CV_8UC4", "CV_32FC1"};
+        const int types[] = {CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1};
+        const char* type_names[] = {"CV_8UC1", "CV_8UC3", "CV_8UC4", "CV_32SC1", "CV_32FC1"};
         const int type_count = sizeof(types)/sizeof(types[0]);
 
         //run tests
@@ -151,7 +151,7 @@ struct CV_GpuNppImageAddTest : public CV_GpuArithmTest
 
 	virtual int test(const Mat& mat1, const Mat& mat2)
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -177,7 +177,7 @@ struct CV_GpuNppImageSubtractTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -203,7 +203,7 @@ struct CV_GpuNppImageMultiplyTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -229,7 +229,7 @@ struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -280,7 +280,7 @@ struct CV_GpuNppImageAbsdiffTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -532,6 +532,82 @@ struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// exp
+struct CV_GpuNppImageExpTest : public CV_GpuArithmTest
+{
+    CV_GpuNppImageExpTest() : CV_GpuArithmTest( "GPU-NppImageExp", "exp" ) {}
+
+    int test( const Mat& mat1, const Mat& )
+    {
+        if (mat1.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::Mat cpuRes;
+        cv::exp(mat1, cpuRes);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpuRes;
+        cv::gpu::exp(gpu1, gpuRes);
+
+        return CheckNorm(cpuRes, gpuRes);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// log
+struct CV_GpuNppImageLogTest : public CV_GpuArithmTest
+{
+    CV_GpuNppImageLogTest() : CV_GpuArithmTest( "GPU-NppImageLog", "log" ) {}
+
+    int test( const Mat& mat1, const Mat& )
+    {
+        if (mat1.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::Mat cpuRes;
+        cv::log(mat1, cpuRes);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpuRes;
+        cv::gpu::log(gpu1, gpuRes);
+
+        return CheckNorm(cpuRes, gpuRes);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// magnitude
+struct CV_GpuNppImageMagnitudeTest : public CV_GpuArithmTest
+{
+    CV_GpuNppImageMagnitudeTest() : CV_GpuArithmTest( "GPU-NppImageMagnitude", "magnitude" ) {}
+
+    int test( const Mat& mat1, const Mat& mat2 )
+    {
+        if (mat1.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::Mat cpuRes;
+        cv::magnitude(mat1, mat2, cpuRes);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpu2(mat2);
+        GpuMat gpuRes;
+        cv::gpu::magnitude(gpu1, gpu2, gpuRes);
+
+        return CheckNorm(cpuRes, gpuRes);
+    }
+};
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -553,3 +629,6 @@ CV_GpuNppImageFlipTest CV_GpuNppImageFlip_test;
 CV_GpuNppImageSumTest CV_GpuNppImageSum_test;
 CV_GpuNppImageMinNaxTest CV_GpuNppImageMinNax_test;
 CV_GpuNppImageLUTTest CV_GpuNppImageLUT_test;
+CV_GpuNppImageExpTest CV_GpuNppImageExp_test;
+CV_GpuNppImageLogTest CV_GpuNppImageLog_test;
+CV_GpuNppImageMagnitudeTest CV_GpuNppImageMagnitude_test;

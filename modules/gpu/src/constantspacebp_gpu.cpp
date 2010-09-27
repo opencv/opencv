@@ -116,7 +116,7 @@ void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int he
     int mm = ::max(width, height);
     iters = mm / 100 + ((mm > 1200)? - 4 : 4);
 
-    levels = (int)log(static_cast<double>(mm)) * 2 / 3;
+    levels = (int)::log(static_cast<double>(mm)) * 2 / 3;
     if (levels == 0) levels++;
 
     nr_plane = (int) ((float) ndisp / pow(2.0, levels + 1));

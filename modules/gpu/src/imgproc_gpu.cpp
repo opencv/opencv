@@ -592,10 +592,10 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh)
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation)
 {
-    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS};
+    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR/*, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS*/};
 
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4);
+    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR/* || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4*/);
 
     CV_Assert( src.size().area() > 0 );
     CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
