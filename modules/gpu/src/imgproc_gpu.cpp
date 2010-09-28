@@ -81,10 +81,6 @@ namespace cv { namespace gpu
         void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
         void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
 
-        void swapChannels_gpu_8u(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
-        void swapChannels_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
-        void swapChannels_gpu_32f(const DevMem2D& src, const DevMem2D& dst, int cn, const int* coeffs, cudaStream_t stream);
-
         void RGB2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
         void RGB2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
         void RGB2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
@@ -101,6 +97,14 @@ namespace cv { namespace gpu
         void RGB2Gray_gpu(const DevMem2D_<ushort>& src, int srccn, const DevMem2D_<ushort>& dst, int bidx, cudaStream_t stream);
         void RGB2Gray_gpu(const DevMem2Df& src, int srccn, const DevMem2Df& dst, int bidx, cudaStream_t stream);
         void RGB5x52Gray_gpu(const DevMem2D& src, int green_bits, const DevMem2D& dst, cudaStream_t stream);
+
+        void RGB2YCrCb_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, const int* coeffs, cudaStream_t stream);
+        void RGB2YCrCb_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, const int* coeffs, cudaStream_t stream);
+        void RGB2YCrCb_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, const float* coeffs, cudaStream_t stream);
+
+        void YCrCb2RGB_gpu_8u(const DevMem2D& src, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream);
+        void YCrCb2RGB_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream);
+        void YCrCb2RGB_gpu_32f(const DevMem2D& src, const DevMem2D& dst, int dstcn, int bidx, const float* coeffs, cudaStream_t stream);
     }
 }}
 
@@ -224,6 +228,23 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q,
 
 namespace
 {
+    #undef R2Y
+    #undef G2Y
+    #undef B2Y
+    
+    enum
+    {
+        yuv_shift  = 14,
+        xyz_shift  = 12,
+        R2Y        = 4899,
+        G2Y        = 9617,
+        B2Y        = 1868,
+        BLOCK_SIZE = 256
+    };
+}
+
+namespace
+{
     void cvtColor_caller(const GpuMat& src, GpuMat& dst, int code, int dcn, const cudaStream_t& stream) 
     {
         Size sz = src.size();
@@ -328,74 +349,70 @@ namespace
                 
                 improc::Gray2RGB5x5_gpu(src, out, code == CV_GRAY2BGR565 ? 6 : 5, stream);
                 break;
-                
-            case CV_RGB2YCrCb:
-                CV_Assert(scn == 3 && depth == CV_8U);
-                
-                out.create(sz, CV_MAKETYPE(depth, 3));
 
-                nppSafeCall( nppiRGBToYCbCr_8u_C3R(src.ptr<Npp8u>(), src.step, out.ptr<Npp8u>(), out.step, nppsz) );
+            case CV_BGR2YCrCb: case CV_RGB2YCrCb:
+            case CV_BGR2YUV: case CV_RGB2YUV:
                 {
-                    static int coeffs[] = {0, 2, 1};
-                    improc::swapChannels_gpu_8u(out, out, 3, coeffs, 0);
+                    CV_Assert( scn == 3 || scn == 4 );
+
+                    bidx = code == CV_BGR2YCrCb || code == CV_RGB2YUV ? 0 : 2;
+
+                    static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
+                    static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
+
+                    static const float YCrCb_f[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
+                    static const int YCrCb_i[] = {R2Y, G2Y, B2Y, 11682, 9241};
+
+                    float coeffs_f[5];
+                    int coeffs_i[5];
+                    ::memcpy(coeffs_f, code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? YCrCb_f : yuv_f, 5 * sizeof(float));
+                    ::memcpy(coeffs_i, code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? YCrCb_i : yuv_i, 5 * sizeof(int));
+
+                    if (bidx==0) 
+                    {
+                        std::swap(coeffs_f[0], coeffs_f[2]);
+                        std::swap(coeffs_i[0], coeffs_i[2]);
+                    }
+                        
+                    out.create(sz, CV_MAKETYPE(depth, 3));
+                    
+                    if( depth == CV_8U )
+                        improc::RGB2YCrCb_gpu_8u(src, scn, out, bidx, coeffs_i, stream);
+                    else if( depth == CV_16U )
+                        improc::RGB2YCrCb_gpu_16u(src, scn, out, bidx, coeffs_i, stream);
+                    else
+                        improc::RGB2YCrCb_gpu_32f(src, scn, out, bidx, coeffs_f, stream);
                 }
                 break;
-
-            case CV_YCrCb2RGB:
-                CV_Assert(scn == 3 && depth == CV_8U);
                 
-                out.create(sz, CV_MAKETYPE(depth, 3));
-
+            case CV_YCrCb2BGR: case CV_YCrCb2RGB:
+            case CV_YUV2BGR: case CV_YUV2RGB:
                 {
-                    static int coeffs[] = {0, 2, 1};
-                    GpuMat src1(src.size(), src.type());
-                    improc::swapChannels_gpu_8u(src, src1, 3, coeffs, 0);
-                    nppSafeCall( nppiYCbCrToRGB_8u_C3R(src1.ptr<Npp8u>(), src1.step, out.ptr<Npp8u>(), out.step, nppsz) );   
-                }             
-                break;
+                    if (dcn <= 0) dcn = 3;
 
-            //case CV_BGR2YCrCb: case CV_RGB2YCrCb:
-            //case CV_BGR2YUV: case CV_RGB2YUV:
-            //    {
-            //    CV_Assert( scn == 3 || scn == 4 );
-            //    bidx = code == CV_BGR2YCrCb || code == CV_RGB2YUV ? 0 : 2;
-            //    static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-            //    static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
-            //    const float* coeffs_f = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_f;
-            //    const int* coeffs_i = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_i;
-            //        
-            //    dst.create(sz, CV_MAKETYPE(depth, 3));
-            //    
-            //    if( depth == CV_8U )
-            //        CvtColorLoop(src, dst, RGB2YCrCb_i<uchar>(scn, bidx, coeffs_i));
-            //    else if( depth == CV_16U )
-            //        CvtColorLoop(src, dst, RGB2YCrCb_i<ushort>(scn, bidx, coeffs_i));
-            //    else
-            //        CvtColorLoop(src, dst, RGB2YCrCb_f<float>(scn, bidx, coeffs_f));
-            //    }
-            //    break;
-                
-            //case CV_YCrCb2BGR: case CV_YCrCb2RGB:
-            //case CV_YUV2BGR: case CV_YUV2RGB:
-            //    {
-            //    if( dcn <= 0 ) dcn = 3;
-            //    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
-            //    bidx = code == CV_YCrCb2BGR || code == CV_YUV2RGB ? 0 : 2;
-            //    static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
-            //    static const int yuv_i[] = { 33292, -6472, -9519, 18678 }; 
-            //    const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_f;
-            //    const int* coeffs_i = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_i;
-            //    
-            //    dst.create(sz, CV_MAKETYPE(depth, dcn));
-            //    
-            //    if( depth == CV_8U )
-            //        CvtColorLoop(src, dst, YCrCb2RGB_i<uchar>(dcn, bidx, coeffs_i));
-            //    else if( depth == CV_16U )
-            //        CvtColorLoop(src, dst, YCrCb2RGB_i<ushort>(dcn, bidx, coeffs_i));
-            //    else
-            //        CvtColorLoop(src, dst, YCrCb2RGB_f<float>(dcn, bidx, coeffs_f));
-            //    }
-            //    break;
+                    CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
+
+                    bidx = code == CV_YCrCb2BGR || code == CV_YUV2RGB ? 0 : 2;
+
+                    static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
+                    static const int yuv_i[] = { 33292, -6472, -9519, 18678 }; 
+
+                    static const float YCrCb_f[] = {1.403f, -0.714f, -0.344f, 1.773f};
+                    static const int YCrCb_i[] = {22987, -11698, -5636, 29049};
+
+                    const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? YCrCb_f : yuv_f;
+                    const int* coeffs_i = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? YCrCb_i : yuv_i;
+                    
+                    out.create(sz, CV_MAKETYPE(depth, dcn));
+                    
+                    if( depth == CV_8U )
+                        improc::YCrCb2RGB_gpu_8u(src, out, dcn, bidx, coeffs_i, stream);
+                    else if( depth == CV_16U )
+                        improc::YCrCb2RGB_gpu_16u(src, out, dcn, bidx, coeffs_i, stream);
+                    else
+                        improc::YCrCb2RGB_gpu_32f(src, out, dcn, bidx, coeffs_f, stream);
+                }
+                break;
             
             //case CV_BGR2XYZ: case CV_RGB2XYZ:
             //    CV_Assert( scn == 3 || scn == 4 );
