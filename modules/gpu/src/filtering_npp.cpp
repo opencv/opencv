@@ -64,8 +64,19 @@ namespace
         CV_Assert(src.type() == CV_8U || src.type() == CV_8UC4);        
         CV_Assert(kernel.type() == CV_8U && (kernel.cols & 1) != 0 && (kernel.rows & 1) != 0);
 
+        if (anchor.x == -1)
+            anchor.x = 0;
+        if (anchor.y == -1)
+            anchor.y = 0;
+
         // in NPP for Cuda 3.1 only such anchor is supported.
-        CV_Assert(anchor.x == kernel.cols/2 && anchor.y == kernel.rows/2);
+        CV_Assert(anchor.x == 0 && anchor.y == 0);
+
+        if (iterations == 0)
+        {
+            src.copyTo(dst);
+            return;
+        }
 
         const Mat& cont_krnl = (kernel.isContinuous() ? kernel : kernel.clone()).reshape(1, 1);
         GpuMat gpu_krnl(cont_krnl);
@@ -84,8 +95,9 @@ namespace
         
         dst.create(src.size(), src.type());
 
-        for(int i = 0; i < iterations; ++i)
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
+        nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
+        for(int i = 1; i < iterations; ++i)
+            nppSafeCall( func(dst.ptr<Npp8u>(), dst.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
     }
 }
 

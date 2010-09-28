@@ -134,7 +134,7 @@ protected:
 	virtual int test(const Mat& img)
     {
         GpuMat kernel(Mat::ones(3, 3, CV_8U));
-        Point anchor(1,1);
+        Point anchor(-1, -1);
         int iters = 3;
 
 	    cv::Mat cpuRes;
@@ -158,7 +158,7 @@ protected:
 	virtual int test(const Mat& img)
     {
         GpuMat kernel(Mat::ones(3, 3, CV_8U));
-        Point anchor(1,1);
+        Point anchor(-1, -1);
         int iters = 3;
 
 	    cv::Mat cpuRes;
@@ -186,7 +186,7 @@ protected:
         int num = sizeof(ops)/sizeof(ops[0]);
 
         GpuMat kernel(Mat::ones(3, 3, CV_8U));
-        Point anchor(1,1);
+        Point anchor(-1, -1);
         int iters = 3;
 
         for(int i = 0; i < num; ++i)

@@ -47,9 +47,9 @@ const char* blacklist[] =
 {    
     "GPU-NppImageSum",              // crash
     "GPU-MatOperatorAsyncCall",     // crash
-    "GPU-NppErode",                 // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
-    "GPU-NppDilate",                // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
-    "GPU-NppMorphologyEx",          // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppErode",                 // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppDilate",                // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppMorphologyEx",          // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
     //"GPU-NppImageDivide",           // different round mode
     //"GPU-NppImageMeanStdDev",       // different precision
     //"GPU-NppImageMinNax",           // npp bug
