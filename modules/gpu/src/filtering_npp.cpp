@@ -62,11 +62,14 @@ namespace
     void morphoogy_caller(npp_morf_func func, const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor, int iterations)
     {
         CV_Assert(src.type() == CV_8U || src.type() == CV_8UC4);        
-        CV_Assert(kernel.isContinuous() && kernel.type() == CV_8U && (kernel.cols & 1) != 0 && (kernel.rows & 1) != 0);
+        CV_Assert(kernel.type() == CV_8U && (kernel.cols & 1) != 0 && (kernel.rows & 1) != 0);
 
         // in NPP for Cuda 3.1 only such anchor is supported.
         CV_Assert(anchor.x == kernel.cols/2 && anchor.y == kernel.rows/2);
-        
+
+        const Mat& cont_krnl = (kernel.isContinuous() ? kernel : kernel.clone()).reshape(1, 1);
+        GpuMat gpu_krnl(cont_krnl);
+                
         NppiSize sz;
         sz.width = src.cols;
         sz.height = src.rows;
@@ -82,7 +85,7 @@ namespace
         dst.create(src.size(), src.type());
 
         for(int i = 0; i < iterations; ++i)
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, kernel.ptr<Npp8u>(), mask_sz, anc) );
+            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
     }
 }
 

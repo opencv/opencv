@@ -133,7 +133,7 @@ public:
 protected:
 	virtual int test(const Mat& img)
     {
-        Mat kernel(3, 3, CV_8U, Scalar(1));
+        GpuMat kernel(Mat::ones(3, 3, CV_8U));
         Point anchor(1,1);
         int iters = 3;
 
@@ -157,7 +157,7 @@ public:
 protected:
 	virtual int test(const Mat& img)
     {
-        Mat kernel(3, 3, CV_8U, Scalar(1));
+        GpuMat kernel(Mat::ones(3, 3, CV_8U));
         Point anchor(1,1);
         int iters = 3;
 
@@ -185,7 +185,7 @@ protected:
         const char *names[] = { "MORPH_OPEN", "CV_MOP_CLOSE", "CV_MOP_GRADIENT", "CV_MOP_TOPHAT", "CV_MOP_BLACKHAT"};
         int num = sizeof(ops)/sizeof(ops[0]);
 
-        Mat kernel(3, 3, CV_8U, Scalar(1));
+        GpuMat kernel(Mat::ones(3, 3, CV_8U));
         Point anchor(1,1);
         int iters = 3;
 

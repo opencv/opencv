@@ -57,7 +57,7 @@ public:
     MatOp_Identity() {}
     virtual ~MatOp_Identity() {}
 
-    bool elementWise(const MatExpr& expr) const { return true; }
+    bool elementWise(const MatExpr& /*expr*/) const { return true; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
             
     static void makeExpr(MatExpr& res, const Mat& m);
@@ -71,7 +71,7 @@ public:
     MatOp_AddEx() {}
     virtual ~MatOp_AddEx() {}
     
-    bool elementWise(const MatExpr& expr) const { return true; }
+    bool elementWise(const MatExpr& /*expr*/) const { return true; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     void add(const MatExpr& e1, const Scalar& s, MatExpr& res) const;
@@ -93,7 +93,7 @@ public:
     MatOp_Bin() {}
     virtual ~MatOp_Bin() {}
     
-    bool elementWise(const MatExpr& expr) const { return true; }
+    bool elementWise(const MatExpr& /*expr*/) const { return true; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
         
     void multiply(const MatExpr& e1, double s, MatExpr& res) const;
@@ -111,7 +111,7 @@ public:
     MatOp_Cmp() {}
     virtual ~MatOp_Cmp() {}
     
-    bool elementWise(const MatExpr& expr) const { return true; }
+    bool elementWise(const MatExpr& /*expr*/) const { return true; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     static void makeExpr(MatExpr& res, int cmpop, const Mat& a, const Mat& b);
@@ -126,7 +126,7 @@ public:
     MatOp_GEMM() {}
     virtual ~MatOp_GEMM() {}
     
-    bool elementWise(const MatExpr& expr) const { return false; }
+    bool elementWise(const MatExpr& /*expr*/) const { return false; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     void add(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const;
@@ -147,7 +147,7 @@ public:
     MatOp_Invert() {}
     virtual ~MatOp_Invert() {}
     
-    bool elementWise(const MatExpr& expr) const { return false; }
+    bool elementWise(const MatExpr& /*expr*/) const { return false; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     void matmul(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const;
@@ -163,7 +163,7 @@ public:
     MatOp_T() {}
     virtual ~MatOp_T() {}
     
-    bool elementWise(const MatExpr& expr) const { return false; }
+    bool elementWise(const MatExpr& /*expr*/) const { return false; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     void multiply(const MatExpr& e1, double s, MatExpr& res) const;
@@ -180,7 +180,7 @@ public:
     MatOp_Solve() {}
     virtual ~MatOp_Solve() {}
     
-    bool elementWise(const MatExpr& expr) const { return false; }
+    bool elementWise(const MatExpr& /*expr*/) const { return false; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     static void makeExpr(MatExpr& res, int method, const Mat& a, const Mat& b);
@@ -194,7 +194,7 @@ public:
     MatOp_Initializer() {}
     virtual ~MatOp_Initializer() {}
     
-    bool elementWise(const MatExpr& expr) const { return false; }
+    bool elementWise(const MatExpr& /*expr*/) const { return false; }
     void assign(const MatExpr& expr, Mat& m, int type=-1) const;
     
     void multiply(const MatExpr& e, double s, MatExpr& res) const;
@@ -217,7 +217,7 @@ static inline bool isInitializer(const MatExpr& e) { return e.op == &g_MatOp_Ini
     
 /////////////////////////////////////////////////////////////////////////////////////////////////////
     
-bool MatOp::elementWise(const MatExpr& expr) const
+bool MatOp::elementWise(const MatExpr& /*expr*/) const
 {
     return false;
 }

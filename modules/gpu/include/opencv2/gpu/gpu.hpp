@@ -533,6 +533,12 @@ namespace cv
         //! applies an advanced morphological operation to the image
         CV_EXPORTS void morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor, int iterations);
 
+
+        //////////////////////////////// Image Labeling ////////////////////////////////
+
+        //!performs labeling via graph cuts
+        CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf);
+
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU
