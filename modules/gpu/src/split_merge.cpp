@@ -100,8 +100,9 @@ namespace cv { namespace gpu { namespace split_merge
             for(size_t i = 0; i < n; ++i)
                 src_as_devmem[i] = src[i];
 
-            split_merge::merge_caller(src_as_devmem, (DevMem2D)dst, 
-                                      total_channels, CV_ELEM_SIZE(depth), 
+            DevMem2D dst_as_devmem(dst);
+            split_merge::merge_caller(src_as_devmem, dst_as_devmem,
+                                      total_channels, CV_ELEM_SIZE(depth),
                                       stream);
         }   
     }
@@ -130,7 +131,8 @@ namespace cv { namespace gpu { namespace split_merge
         for (int i = 0; i < num_channels; ++i)
             dst_as_devmem[i] = dst[i];
 
-        split_merge::split_caller((DevMem2D)src, dst_as_devmem, 
+        DevMem2D src_as_devmem(src);
+        split_merge::split_caller(src_as_devmem, dst_as_devmem,
                                   num_channels, src.elemSize1(), 
                                   stream);
     }

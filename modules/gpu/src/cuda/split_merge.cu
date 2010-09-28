@@ -94,73 +94,7 @@ namespace cv { namespace gpu { namespace split_merge {
     typedef void (*SplitFunction)(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream);
 
     //------------------------------------------------------------
-    // Merge
-
-    template <typename T> 
-    static void mergeC2_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
-    {
-        dim3 blockDim(32, 8);
-        dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
-        mergeC2_<T><<<gridDim, blockDim, 0, stream>>>(
-                src[0].ptr, src[0].step, 
-                src[1].ptr, src[1].step,
-                dst.rows, dst.cols, dst.ptr, dst.step);
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
-    }
-
-
-    template <typename T> 
-    static void mergeC3_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
-    {
-        dim3 blockDim(32, 8);
-        dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
-        mergeC3_<T><<<gridDim, blockDim, 0, stream>>>(
-                src[0].ptr, src[0].step, 
-                src[1].ptr, src[1].step,
-                src[2].ptr, src[2].step,
-                dst.rows, dst.cols, dst.ptr, dst.step);
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
-    }
-
-
-    template <typename T> 
-    static void mergeC4_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
-    {
-        dim3 blockDim(32, 8);
-        dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
-        mergeC4_<T><<<gridDim, blockDim, 0, stream>>>(
-                src[0].ptr, src[0].step, 
-                src[1].ptr, src[1].step,
-                src[2].ptr, src[2].step,
-                src[3].ptr, src[3].step,
-                dst.rows, dst.cols, dst.ptr, dst.step);
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
-    }
-
-
-    extern "C" void merge_caller(const DevMem2D* src, DevMem2D& dst, 
-                                 int total_channels, int elem_size, 
-                                 const cudaStream_t& stream) 
-    {
-        static MergeFunction merge_func_tbl[] = 
-        {
-            mergeC2_<char>, mergeC2_<short>, mergeC2_<int>, 0, mergeC2_<double>,
-            mergeC3_<char>, mergeC3_<short>, mergeC3_<int>, 0, mergeC3_<double>,
-            mergeC4_<char>, mergeC4_<short>, mergeC4_<int>, 0, mergeC4_<double>,
-        };
-
-        int merge_func_id = (total_channels - 2) * 5 + (elem_size >> 1);
-        MergeFunction merge_func = merge_func_tbl[merge_func_id];
-
-        if (merge_func == 0)
-            cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__);
-
-        merge_func(src, dst, stream);
-    }
-
+    // Merge    
 
     template <typename T>
     __global__ void mergeC2_(const uchar* src0, size_t src0_step, 
@@ -289,74 +223,76 @@ namespace cv { namespace gpu { namespace split_merge {
         }
     }
 
-    //------------------------------------------------------------
-    // Split
 
-
-    template <typename T> 
-    static void splitC2_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    template <typename T>
+    static void mergeC2_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
-        dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
-        splitC2_<T><<<gridDim, blockDim, 0, stream>>>(
-                src.ptr, src.step, src.rows, src.cols,
-                dst[0].ptr, dst[0].step, 
-                dst[1].ptr, dst[1].step);
+        dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
+        mergeC2_<T><<<gridDim, blockDim, 0, stream>>>(
+                src[0].ptr, src[0].step,
+                src[1].ptr, src[1].step,
+                dst.rows, dst.cols, dst.ptr, dst.step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
 
 
-    template <typename T> 
-    static void splitC3_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    template <typename T>
+    static void mergeC3_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
-        dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
-        splitC3_<T><<<gridDim, blockDim, 0, stream>>>(
-                src.ptr, src.step, src.rows, src.cols,
-                dst[0].ptr, dst[0].step, 
-                dst[1].ptr, dst[1].step,
-                dst[2].ptr, dst[2].step);         
+        dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
+        mergeC3_<T><<<gridDim, blockDim, 0, stream>>>(
+                src[0].ptr, src[0].step,
+                src[1].ptr, src[1].step,
+                src[2].ptr, src[2].step,
+                dst.rows, dst.cols, dst.ptr, dst.step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
 
 
-    template <typename T> 
-    static void splitC4_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    template <typename T>
+    static void mergeC4_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
-        dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
-        splitC4_<T><<<gridDim, blockDim, 0, stream>>>(
-                 src.ptr, src.step, src.rows, src.cols,
-                 dst[0].ptr, dst[0].step, 
-                 dst[1].ptr, dst[1].step,
-                 dst[2].ptr, dst[2].step,
-                 dst[3].ptr, dst[3].step);
+        dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
+        mergeC4_<T><<<gridDim, blockDim, 0, stream>>>(
+                src[0].ptr, src[0].step,
+                src[1].ptr, src[1].step,
+                src[2].ptr, src[2].step,
+                src[3].ptr, src[3].step,
+                dst.rows, dst.cols, dst.ptr, dst.step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
 
 
-    extern "C" void split_caller(const DevMem2D& src, DevMem2D* dst, 
-                                 int num_channels, int elem_size1, 
-                                 const cudaStream_t& stream) 
+    extern "C" void merge_caller(const DevMem2D* src, DevMem2D& dst,
+                                 int total_channels, int elem_size,
+                                 const cudaStream_t& stream)
     {
-        static SplitFunction split_func_tbl[] = 
+        static MergeFunction merge_func_tbl[] =
         {
-            splitC2_<char>, splitC2_<short>, splitC2_<int>, 0, splitC2_<double>,
-            splitC3_<char>, splitC3_<short>, splitC3_<int>, 0, splitC3_<double>,
-            splitC4_<char>, splitC4_<short>, splitC4_<int>, 0, splitC4_<double>,
+            mergeC2_<char>, mergeC2_<short>, mergeC2_<int>, 0, mergeC2_<double>,
+            mergeC3_<char>, mergeC3_<short>, mergeC3_<int>, 0, mergeC3_<double>,
+            mergeC4_<char>, mergeC4_<short>, mergeC4_<int>, 0, mergeC4_<double>,
         };
 
-        int split_func_id = (num_channels - 2) * 5 + (elem_size1 >> 1);
-        SplitFunction split_func = split_func_tbl[split_func_id];
+        int merge_func_id = (total_channels - 2) * 5 + (elem_size >> 1);
+        MergeFunction merge_func = merge_func_tbl[merge_func_id];
 
-        if (split_func == 0)
+        if (merge_func == 0)
             cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__);
 
-        split_func(src, dst, stream);
+        merge_func(src, dst, stream);
     }
+
+
+
+    //------------------------------------------------------------
+    // Split
 
 
     template <typename T>
@@ -489,6 +425,71 @@ namespace cv { namespace gpu { namespace split_merge {
             dst2_y[x] = src_elem2.x;
             dst3_y[x] = src_elem2.y;
         }
+    }
+
+    template <typename T>
+    static void splitC2_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    {
+        dim3 blockDim(32, 8);
+        dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
+        splitC2_<T><<<gridDim, blockDim, 0, stream>>>(
+                src.ptr, src.step, src.rows, src.cols,
+                dst[0].ptr, dst[0].step,
+                dst[1].ptr, dst[1].step);
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    template <typename T>
+    static void splitC3_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    {
+        dim3 blockDim(32, 8);
+        dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
+        splitC3_<T><<<gridDim, blockDim, 0, stream>>>(
+                src.ptr, src.step, src.rows, src.cols,
+                dst[0].ptr, dst[0].step,
+                dst[1].ptr, dst[1].step,
+                dst[2].ptr, dst[2].step);
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    template <typename T>
+    static void splitC4_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    {
+        dim3 blockDim(32, 8);
+        dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
+        splitC4_<T><<<gridDim, blockDim, 0, stream>>>(
+                 src.ptr, src.step, src.rows, src.cols,
+                 dst[0].ptr, dst[0].step,
+                 dst[1].ptr, dst[1].step,
+                 dst[2].ptr, dst[2].step,
+                 dst[3].ptr, dst[3].step);
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    extern "C" void split_caller(const DevMem2D& src, DevMem2D* dst,
+                                 int num_channels, int elem_size1,
+                                 const cudaStream_t& stream)
+    {
+        static SplitFunction split_func_tbl[] =
+        {
+            splitC2_<char>, splitC2_<short>, splitC2_<int>, 0, splitC2_<double>,
+            splitC3_<char>, splitC3_<short>, splitC3_<int>, 0, splitC3_<double>,
+            splitC4_<char>, splitC4_<short>, splitC4_<int>, 0, splitC4_<double>,
+        };
+
+        int split_func_id = (num_channels - 2) * 5 + (elem_size1 >> 1);
+        SplitFunction split_func = split_func_tbl[split_func_id];
+
+        if (split_func == 0)
+            cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__);
+
+        split_func(src, dst, stream);
     }
 
 }}} // namespace cv::gpu::split_merge

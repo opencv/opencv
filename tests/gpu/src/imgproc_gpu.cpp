@@ -379,7 +379,7 @@ struct CV_GpuNppImageIntegralTest : public CV_GpuImageProcTest
 {
     CV_GpuNppImageIntegralTest() : CV_GpuImageProcTest( "GPU-NppImageIntegral", "integral" ) {}
 
-    int CV_GpuNppImageIntegralTest::test(const Mat& img)
+    int test(const Mat& img)
     {
         if (img.type() != CV_8UC1)
         {
