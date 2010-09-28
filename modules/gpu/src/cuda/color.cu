@@ -52,35 +52,26 @@ using namespace cv::gpu;
 namespace imgproc
 {
     template<typename T, int N> struct TypeVec {};
-    template<> struct TypeVec<uchar, 1> { typedef uchar1 vec_t; };
-    template<> struct TypeVec<uchar, 2> { typedef uchar2 vec_t; };
     template<> struct TypeVec<uchar, 3> { typedef uchar3 vec_t; };
     template<> struct TypeVec<uchar, 4> { typedef uchar4 vec_t; };
-    template<> struct TypeVec<unsigned short, 1> { typedef ushort1 vec_t; };
-    template<> struct TypeVec<unsigned short, 2> { typedef ushort2 vec_t; };
     template<> struct TypeVec<unsigned short, 3> { typedef ushort3 vec_t; };
     template<> struct TypeVec<unsigned short, 4> { typedef ushort4 vec_t; };
-    template<> struct TypeVec<float, 1> { typedef float1 vec_t; };
-    template<> struct TypeVec<float, 2> { typedef float2 vec_t; };
     template<> struct TypeVec<float, 3> { typedef float3 vec_t; };
     template<> struct TypeVec<float, 4> { typedef float4 vec_t; };
 
     template<typename T> struct ColorChannel {};
-
     template<> struct ColorChannel<uchar>
     {
         typedef float worktype_f;
         static __device__ unsigned char max() { return UCHAR_MAX; }
         static __device__ unsigned char half() { return (unsigned char)(max()/2 + 1); }
     };
-
     template<> struct ColorChannel<unsigned short>
     {
         typedef float worktype_f;
         static __device__ unsigned short max() { return USHRT_MAX; }
         static __device__ unsigned short half() { return (unsigned short)(max()/2 + 1); }
     };
-
     template<> struct ColorChannel<float>
     {
         typedef float worktype_f;
@@ -124,7 +115,7 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN);
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
             dst_t dst;
 
             dst.x = ((const T*)(&src))[bidx];
@@ -132,7 +123,7 @@ namespace imgproc
             dst.z = ((const T*)(&src))[bidx ^ 2];
             setAlpha(dst, getAlpha<T>(src));
             
-            *(dst_t*)(dst_ + y * dst_step + x * DSTCN) = dst;
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
 }
@@ -817,12 +808,12 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN);
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
             dst_t dst;
 
             RGB2YCrCbConverter<T>::cvt(((const T*)(&src)), dst, bidx);
             
-            *(dst_t*)(dst_ + y * dst_step + x * 3) = dst;
+            *(dst_t*)(dst_ + y * dst_step + x * 3 * sizeof(T)) = dst;
         }
     }
 
@@ -865,13 +856,13 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            src_t src = *(const src_t*)(src_ + y * src_step + x * 3);
+            src_t src = *(const src_t*)(src_ + y * src_step + x * 3 * sizeof(T));
             dst_t dst;
 
             YCrCb2RGBConvertor<T>::cvt(src, ((T*)(&dst)), bidx);
             setAlpha(dst, ColorChannel<T>::max());
             
-            *(dst_t*)(dst_ + y * dst_step + x * DSTCN) = dst;
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
 }
