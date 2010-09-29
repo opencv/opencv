@@ -533,6 +533,9 @@ namespace cv
         //! applies an advanced morphological operation to the image
         CV_EXPORTS void morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor, int iterations);
 
+        CV_EXPORTS void sumWindowColumn(const GpuMat& src, GpuMat& dst, int ksize, int anchor = -1);
+        CV_EXPORTS void sumWindowRow(const GpuMat& src, GpuMat& dst, int ksize, int anchor = -1);
+
 
         //////////////////////////////// Image Labeling ////////////////////////////////
 

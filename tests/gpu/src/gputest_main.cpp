@@ -47,12 +47,11 @@ const char* blacklist[] =
 {    
     "GPU-NppImageSum",              // crash
     "GPU-MatOperatorAsyncCall",     // crash
-    //"GPU-NppErode",                 // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
-    //"GPU-NppDilate",                // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
-    //"GPU-NppMorphologyEx",          // npp func returns error code (CUDA_KERNEL_LAUNCH_ERROR or TEXTURE_BIND_ERROR)
+    //"GPU-NppErode",                 // different border interpolation
+    //"GPU-NppMorphologyEx",          // different border interpolation
     //"GPU-NppImageDivide",           // different round mode
     //"GPU-NppImageMeanStdDev",       // different precision
-    //"GPU-NppImageMinNax",           // npp bug
+    //"GPU-NppImageMinNax",           // npp bug - don't find min/max near right border
     //"GPU-NppImageResize",           // different precision in interpolation
     //"GPU-NppImageWarpAffine",       // different precision in interpolation
     //"GPU-NppImageWarpPerspective",  // different precision in interpolation
@@ -61,6 +60,7 @@ const char* blacklist[] =
     //"GPU-NppImageExp",              // different precision
     //"GPU-NppImageLog",              // different precision
     //"GPU-NppImageMagnitude",        // different precision
+    //"GPU-NppImageSumWindow",        // different border interpolation
     0
 };
 

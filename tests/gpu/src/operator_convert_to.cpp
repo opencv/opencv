@@ -83,8 +83,6 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
                     const int dst_type = types[j];
 
                     cv::RNG rng(*ts->get_rng());
-                    const double alpha = rng.uniform(0.0, 2.0);
-                    const double beta = rng.uniform(-75.0, 75.0);
 
                     Mat cpumatsrc(img_size, src_type);
                     rng.fill(cpumatsrc, RNG::UNIFORM, Scalar::all(0), Scalar::all(300));
@@ -93,8 +91,8 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
                     Mat cpumatdst;
                     GpuMat gpumatdst;
 
-                    cpumatsrc.convertTo(cpumatdst, dst_type, alpha, beta);
-                    gpumatsrc.convertTo(gpumatdst, dst_type, alpha, beta);
+                    cpumatsrc.convertTo(cpumatdst, dst_type);
+                    gpumatsrc.convertTo(gpumatdst, dst_type);
 
                     double r = norm(cpumatdst, gpumatdst, NORM_INF);
                     if (r > 1)

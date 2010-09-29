@@ -452,6 +452,47 @@ struct CV_GpuNppImageBlurTest : public CV_GpuImageProcTest
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// sumWindow
+struct CV_GpuNppImageSumWindowTest : public CV_GpuImageProcTest
+{
+    CV_GpuNppImageSumWindowTest() : CV_GpuImageProcTest( "GPU-NppImageSumWindow", "sumWindow" ) {}
+
+    int test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        int ksizes[] = {3, 5, 7};
+        int ksizes_num = sizeof(ksizes) / sizeof(int);
+
+        int test_res = CvTS::OK;        
+
+        for (int i = 0; i < ksizes_num; ++i)
+        {
+            ts->printf(CvTS::LOG, "\nksize = %d\n", ksizes[i]);
+
+            Mat cpudst(img.size(), CV_64FC1, Scalar());
+            cv::Ptr<cv::BaseRowFilter> ft = cv::getRowSumFilter(CV_8UC1, CV_64FC1, ksizes[i], 0);
+            for (int y = 0; y < img.rows; ++y)
+                (*ft)(img.ptr(y), cpudst.ptr(y), img.cols, 1);
+            cpudst.convertTo(cpudst, CV_32F);
+
+            GpuMat gpu1(img);
+            GpuMat gpudst;
+            cv::gpu::sumWindowRow(gpu1, gpudst, ksizes[i], 0);
+
+            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
 // cvtColor
 class CV_GpuCvtColorTest : public CvTest
 {
@@ -501,11 +542,13 @@ void CV_GpuCvtColorTest::run( int )
         int codes[] = { CV_BGR2RGB, CV_RGB2BGRA, CV_BGRA2RGB,
                         CV_RGB2BGR555, CV_BGR5552BGR, CV_BGR2BGR565, CV_BGR5652RGB, 
                         CV_RGB2YCrCb, CV_YCrCb2BGR, CV_BGR2YUV, CV_YUV2RGB,
+                        CV_RGB2XYZ, CV_XYZ2BGR, CV_BGR2XYZ, CV_XYZ2RGB,
                         CV_RGB2GRAY, CV_GRAY2BGRA, CV_BGRA2GRAY,
                         CV_GRAY2BGR555, CV_BGR5552GRAY, CV_GRAY2BGR565, CV_BGR5652GRAY};
         const char* codes_str[] = { "CV_BGR2RGB", "CV_RGB2BGRA", "CV_BGRA2RGB",
                                     "CV_RGB2BGR555", "CV_BGR5552BGR", "CV_BGR2BGR565", "CV_BGR5652RGB", 
                                     "CV_RGB2YCrCb", "CV_YCrCb2BGR", "CV_BGR2YUV", "CV_YUV2RGB",
+                                    "CV_RGB2XYZ", "CV_XYZ2BGR", "CV_BGR2XYZ", "CV_XYZ2RGB",
                                     "CV_RGB2GRAY", "CV_GRAY2BGRA", "CV_BGRA2GRAY",
                                     "CV_GRAY2BGR555", "CV_BGR5552GRAY", "CV_GRAY2BGR565", "CV_BGR5652GRAY"};
         int codes_num = sizeof(codes) / sizeof(int);
@@ -554,4 +597,5 @@ CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;
 CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
 CV_GpuNppImageIntegralTest CV_GpuNppImageIntegral_test;
 CV_GpuNppImageBlurTest CV_GpuNppImageBlur_test;
+CV_GpuNppImageSumWindowTest CV_GpuNppImageSumWindow_test;
 CV_GpuCvtColorTest CV_GpuCvtColor_test;

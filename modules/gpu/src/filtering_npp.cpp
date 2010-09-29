@@ -51,6 +51,9 @@ using namespace cv::gpu;
 void cv::gpu::erode( const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
 void cv::gpu::dilate( const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
 void cv::gpu::morphologyEx( const GpuMat&, GpuMat&, int, const Mat&, Point, int) { throw_nogpu(); }
+void cv::gpu::boxFilter(const GpuMat&, GpuMat&, Size, Point) { throw_nogpu(); }
+void cv::gpu::sumWindowColumn(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
+void cv::gpu::sumWindowRow(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
 
 #else
 
@@ -64,10 +67,10 @@ namespace
         CV_Assert(src.type() == CV_8U || src.type() == CV_8UC4);        
         CV_Assert(kernel.type() == CV_8U && (kernel.cols & 1) != 0 && (kernel.rows & 1) != 0);
 
-        if (anchor.x == -1)
-            anchor.x = 0;
-        if (anchor.y == -1)
-            anchor.y = 0;
+        if( anchor.x == -1 )
+            anchor.x = kernel.cols / 2;
+        if( anchor.y == -1 )
+            anchor.y = kernel.rows / 2;
 
         // in NPP for Cuda 3.1 only such anchor is supported.
         CV_Assert(anchor.x == 0 && anchor.y == 0);
@@ -94,10 +97,16 @@ namespace
         anc.y = anchor.y;
         
         dst.create(src.size(), src.type());
+        GpuMat dstBuf;
+        if (iterations > 1)
+            dstBuf.create(src.size(), src.type());
 
         nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
         for(int i = 1; i < iterations; ++i)
-            nppSafeCall( func(dst.ptr<Npp8u>(), dst.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
+        {
+            dst.swap(dstBuf);
+            nppSafeCall( func(dstBuf.ptr<Npp8u>(), dstBuf.step, dst.ptr<Npp8u>(), dst.step, sz, gpu_krnl.ptr<Npp8u>(), mask_sz, anc) );
+        }
     }
 }
 
@@ -152,6 +161,80 @@ void cv::gpu::morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& k
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
     }
+}
+
+////////////////////////////////////////////////////////////////////////
+// boxFilter
+
+void cv::gpu::boxFilter(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor)
+{
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
+    CV_Assert(ksize.height == 3 || ksize.height == 5 || ksize.height == 7);
+    CV_Assert(ksize.height == ksize.width);
+
+    if (anchor.x == -1)
+        anchor.x = 0;
+    if (anchor.y == -1)
+        anchor.y = 0;
+
+    CV_Assert(anchor.x == 0 && anchor.y == 0);
+
+    dst.create(src.size(), src.type());
+
+    NppiSize srcsz;
+    srcsz.height = src.rows;
+    srcsz.width = src.cols;
+    NppiSize masksz;
+    masksz.height = ksize.height;
+    masksz.width = ksize.width;
+    NppiPoint anc;
+    anc.x = anchor.x;
+    anc.y = anchor.y;
+
+    if (src.type() == CV_8UC1)
+    {
+        nppSafeCall( nppiFilterBox_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, srcsz, masksz, anc) );
+    }
+    else
+    {
+        nppSafeCall( nppiFilterBox_8u_C4R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, srcsz, masksz, anc) );
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
+// sumWindow Filter
+
+namespace
+{
+    typedef NppStatus (*nppSumWindow_t)(const Npp8u * pSrc, Npp32s nSrcStep, 
+                                        Npp32f * pDst, Npp32s nDstStep, NppiSize oROI, 
+                                        Npp32s nMaskSize, Npp32s nAnchor);
+
+    inline void sumWindowCaller(nppSumWindow_t func, const GpuMat& src, GpuMat& dst, int ksize, int anchor)
+    {
+        CV_Assert(src.type() == CV_8UC1);
+        
+        if (anchor == -1)
+            anchor = ksize / 2;
+
+        NppiSize sz;
+        sz.width = src.cols;
+        sz.height = src.rows;
+
+        dst.create(src.size(), CV_32FC1);
+
+        nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp32f>(), dst.step, sz, ksize, anchor) );
+    }
+}
+
+void cv::gpu::sumWindowColumn(const GpuMat& src, GpuMat& dst, int ksize, int anchor)
+{
+    sumWindowCaller(nppiSumWindowColumn_8u32f_C1R, src, dst, ksize, anchor);
+}
+
+void cv::gpu::sumWindowRow(const GpuMat& src, GpuMat& dst, int ksize, int anchor)
+{
+    sumWindowCaller(nppiSumWindowRow_8u32f_C1R, src, dst, ksize, anchor);
 }
 
 #endif

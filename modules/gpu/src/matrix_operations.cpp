@@ -132,7 +132,8 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         rtype = type();
     else
         rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
-
+    
+    int stype = type();
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
     if( sdepth == ddepth && noScale )
     {
@@ -146,7 +147,50 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         psrc = &(temp = *this);
 
     dst.create( size(), rtype );
-    matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
+
+    if (!noScale)
+        matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
+    else
+    {
+        NppiSize sz;
+        sz.width = cols;
+        sz.height = rows;
+
+        if (stype == CV_8UC1 && ddepth == CV_16U)
+            nppSafeCall( nppiConvert_8u16u_C1R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16u>(), dst.step, sz) );
+        else if (stype == CV_16UC1 && ddepth == CV_8U)
+            nppSafeCall( nppiConvert_16u8u_C1R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
+        else if (stype == CV_8UC4 && ddepth == CV_16U)
+            nppSafeCall( nppiConvert_8u16u_C4R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16u>(), dst.step, sz) );
+        else if (stype == CV_16UC4 && ddepth == CV_8U)
+            nppSafeCall( nppiConvert_16u8u_C4R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
+        else if (stype == CV_8UC1 && ddepth == CV_16S)
+            nppSafeCall( nppiConvert_8u16s_C1R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16s>(), dst.step, sz) );
+        else if (stype == CV_16SC1 && ddepth == CV_8U)
+            nppSafeCall( nppiConvert_16s8u_C1R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
+        else if (stype == CV_8UC4 && ddepth == CV_16S)
+            nppSafeCall( nppiConvert_8u16s_C4R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16s>(), dst.step, sz) );
+        else if (stype == CV_16SC4 && ddepth == CV_8U)
+            nppSafeCall( nppiConvert_16s8u_C4R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
+        else if (stype == CV_16SC1 && ddepth == CV_32F)
+            nppSafeCall( nppiConvert_16s32f_C1R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp32f>(), dst.step, sz) );
+        else if (stype == CV_32FC1 && ddepth == CV_16S)
+            nppSafeCall( nppiConvert_32f16s_C1R(psrc->ptr<Npp32f>(), psrc->step, dst.ptr<Npp16s>(), dst.step, sz, NPP_RND_NEAR) );
+        else if (stype == CV_8UC1 && ddepth == CV_32F)
+            nppSafeCall( nppiConvert_8u32f_C1R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp32f>(), dst.step, sz) );
+        else if (stype == CV_32FC1 && ddepth == CV_8U)
+            nppSafeCall( nppiConvert_32f8u_C1R(psrc->ptr<Npp32f>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz, NPP_RND_NEAR) );
+        else if (stype == CV_16UC1 && ddepth == CV_32F)
+            nppSafeCall( nppiConvert_16u32f_C1R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp32f>(), dst.step, sz) );
+        else if (stype == CV_32FC1 && ddepth == CV_16U)
+            nppSafeCall( nppiConvert_32f16u_C1R(psrc->ptr<Npp32f>(), psrc->step, dst.ptr<Npp16u>(), dst.step, sz, NPP_RND_NEAR) );
+        else if (stype == CV_16UC1 && ddepth == CV_32S)
+            nppSafeCall( nppiConvert_16u32s_C1R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp32s>(), dst.step, sz) );
+        else if (stype == CV_16SC1 && ddepth == CV_32S)
+            nppSafeCall( nppiConvert_16s32s_C1R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp32s>(), dst.step, sz) );
+        else
+            matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), 1.0, 0.0);
+    }
 }
 
 GpuMat& GpuMat::operator = (const Scalar& s)

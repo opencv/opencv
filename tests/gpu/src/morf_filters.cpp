@@ -69,7 +69,7 @@ protected:
 
     int test8UC4(const Mat& img)
     {
-        cv::Mat img_C4;    
+        cv::Mat img_C4;
         cvtColor(img, img_C4, CV_BGR2BGRA);    
         return test(img_C4);
     }
@@ -111,7 +111,7 @@ void CV_GpuNppMorphogyTest::run( int )
         {
             ts->set_failed_test_info(testResult);
             return;
-        }        
+        }    
     }
     catch(const cv::Exception& e)
     {
@@ -134,10 +134,10 @@ protected:
 	virtual int test(const Mat& img)
     {
         GpuMat kernel(Mat::ones(3, 3, CV_8U));
-        Point anchor(-1, -1);
-        int iters = 3;
+        Point anchor(0, 0);
+        int iters = 1;
 
-	    cv::Mat cpuRes;
+	    cv::Mat cpuRes, cpuRes1;
         cv::erode(img, cpuRes, kernel, anchor, iters);
 
 	    GpuMat gpuRes;
@@ -158,13 +158,13 @@ protected:
 	virtual int test(const Mat& img)
     {
         GpuMat kernel(Mat::ones(3, 3, CV_8U));
-        Point anchor(-1, -1);
-        int iters = 3;
+        Point anchor(0, 0);
+        int iters = 1;
 
-	    cv::Mat cpuRes;
+	    cv::Mat cpuRes, cpuRes1;
         cv::dilate(img, cpuRes, kernel, anchor, iters);
 
-	    GpuMat gpuRes;
+	    GpuMat gpuRes, gpuRes1;
         cv::gpu::dilate(GpuMat(img), gpuRes, kernel, anchor, iters);
 	
 	    return CheckNorm(cpuRes, gpuRes);
@@ -186,8 +186,8 @@ protected:
         int num = sizeof(ops)/sizeof(ops[0]);
 
         GpuMat kernel(Mat::ones(3, 3, CV_8U));
-        Point anchor(-1, -1);
-        int iters = 3;
+        Point anchor(0, 0);
+        int iters = 1;
 
         for(int i = 0; i < num; ++i)
         {
