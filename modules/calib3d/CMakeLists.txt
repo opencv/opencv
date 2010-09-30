@@ -1,1 +1,1 @@
-define_opencv_module(calib3d opencv_core opencv_imgproc)
+define_opencv_module(calib3d opencv_core opencv_imgproc opencv_highgui)
