@@ -987,54 +987,39 @@ void DescriptorQualityTest::calculatePlotData( vector<vector<DMatch> > &allMatch
 {
     vector<Point2f> recallPrecisionCurve;
     computeRecallPrecisionCurve( allMatches, allCorrectMatchesMask, recallPrecisionCurve );
-    // you have recallPrecisionCurve for all images from dataset
-    // size of recallPrecisionCurve == total matches count
-#if 0
 
-    std::sort( allMatches.begin(), allMatches.end() );
-    //calcDatasetQuality[di].resize( allMatches.size() );
     calcDatasetQuality[di].clear();
-    int correctMatchCount = 0, falseMatchCount = 0;
-    const float sparsePlotBound = 0.1;
-    const int npoints = 10000;
-    int step = 1 + allMatches.size() / npoints;
     const float resultPrecision = 0.5;
     bool isResultCalculated = false;
+    const double eps = 1e-2;
 
-    for( size_t i=0;i<allMatches.size();i++)
+    Quality initQuality;
+    initQuality.recall = 0;
+    initQuality.precision = 0;
+    calcDatasetQuality[di].push_back( initQuality );
+
+    for( size_t i=0;i<recallPrecisionCurve.size();i++ )
     {
-        if( allMatches[i].isCorrect )
-            correctMatchCount++;
-        else
-            falseMatchCount++;
+        Quality quality;
+        quality.recall = recallPrecisionCurve[i].y;
+        quality.precision = 1 - recallPrecisionCurve[i].x;
+        Quality back = calcDatasetQuality[di].back();
 
-        if( precision( correctMatchCount, falseMatchCount ) >= sparsePlotBound || (i % step == 0) )
+        if( fabs( quality.recall - back.recall ) < eps && fabs( quality.precision - back.precision ) < eps )
+            continue;
+
+        calcDatasetQuality[di].push_back( quality );
+
+        if( !isResultCalculated && quality.precision < resultPrecision )
         {
-            Quality quality;
-            quality.recall = recall( correctMatchCount, allCorrespCount );
-            quality.precision = precision( correctMatchCount, falseMatchCount );
-
-            calcDatasetQuality[di].push_back( quality );
-
-            if( !isResultCalculated && quality.precision < resultPrecision )
+            for(int ci=0;ci<TEST_CASE_COUNT;ci++)
             {
-                for(int ci=0;ci<TEST_CASE_COUNT;ci++)
-                {
-                    calcQuality[di][ci].recall = quality.recall;
-                    calcQuality[di][ci].precision = quality.precision;
-                }
-                isResultCalculated = true;
+                calcQuality[di][ci].recall = quality.recall;
+                calcQuality[di][ci].precision = quality.precision;
             }
+            isResultCalculated = true;
         }
     }
-
-    Quality quality;
-    quality.recall = recall( correctMatchCount, allCorrespCount );
-    quality.precision = precision( correctMatchCount, falseMatchCount );
-
-    calcDatasetQuality[di].push_back( quality );
-#endif
-
 }
 
 void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress)
