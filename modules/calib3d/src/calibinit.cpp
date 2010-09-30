@@ -304,7 +304,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     // This is necessary because some squares simply do not separate properly with a single dilation.  However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
     // making it difficult to detect smaller squares.
-    for( k = 0; k < 3; k++ )
+    for( k = 0; k < 6; k++ )
     {
         for( dilations = min_dilations; dilations <= max_dilations; dilations++ )
         {
@@ -328,11 +328,11 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                 if( flags & CV_CALIB_CB_ADAPTIVE_THRESH )
                 {
                     int block_size = cvRound(prev_sqr_size == 0 ?
-                        MIN(img->cols,img->rows)*0.2 : prev_sqr_size*2.)|1;
+                        MIN(img->cols,img->rows)*(k%2 == 0 ? 0.2 : 0.1): prev_sqr_size*2)|1;
 
                     // convert to binary
                     cvAdaptiveThreshold( img, thresh_img, 255,
-                        CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, block_size, k*5 );
+                        CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, block_size, (k/2)*5 );
                     if (dilations > 0)
                         cvDilate( thresh_img, thresh_img, 0, dilations-1 );
                 }
@@ -1682,12 +1682,15 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
         // reject contours with too small perimeter
         if( CV_IS_SEQ_HOLE(src_contour) && rect.width*rect.height >= min_size )
         {
-            const int min_approx_level = 2, max_approx_level = MAX_CONTOUR_APPROX;
+            const int min_approx_level = 1, max_approx_level = MAX_CONTOUR_APPROX;
             int approx_level;
             for( approx_level = min_approx_level; approx_level <= max_approx_level; approx_level++ )
             {
                 dst_contour = cvApproxPoly( src_contour, sizeof(CvContour), temp_storage,
                                             CV_POLY_APPROX_DP, (float)approx_level );
+                if( dst_contour->total == 4 )
+                    break;
+                
                 // we call this again on its own output, because sometimes
                 // cvApproxPoly() does not simplify as much as it should.
                 dst_contour = cvApproxPoly( dst_contour, sizeof(CvContour), temp_storage,
