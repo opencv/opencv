@@ -335,7 +335,7 @@ void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
 }
 
 /*
- *  GridAdaptedFeatureDetector
+ *  DenseFeatureDetector
  */
 void DenseFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
 {
@@ -461,7 +461,7 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     FeatureDetector* fd = 0;
     if( !detectorType.compare( "FAST" ) )
     {
-        fd = new FastFeatureDetector( 10/*threshold*/, true/*nonmax_suppression*/ );
+        fd = new FastFeatureDetector( 30/*threshold*/, true/*nonmax_suppression*/ );
     }
     else if( !detectorType.compare( "STAR" ) )
     {
@@ -475,7 +475,7 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     }
     else if( !detectorType.compare( "SURF" ) )
     {
-        fd = new SurfFeatureDetector( 400./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
+        fd = new SurfFeatureDetector( 500./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
     }
     else if( !detectorType.compare( "MSER" ) )
     {

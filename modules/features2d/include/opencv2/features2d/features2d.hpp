@@ -1356,7 +1356,7 @@ protected:
 
 CV_EXPORTS Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
 
-class DenseFeatureDetector : public FeatureDetector
+class CV_EXPORTS DenseFeatureDetector : public FeatureDetector
 {
 public:
     DenseFeatureDetector() : initFeatureScale(1), featureScaleLevels(1), featureScaleMul(0.1f),
@@ -1368,7 +1368,7 @@ public:
 
 protected:
 
-    virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const = 0;
+    virtual void detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const;
 
     float initFeatureScale;
     int featureScaleLevels;
@@ -1379,7 +1379,6 @@ protected:
 
     bool varyXyStepWithScale;
     bool varyImgBoundWithScale;
-
 };
 
 /*
@@ -2240,31 +2239,47 @@ CV_EXPORTS void evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& im
 /*
  * Abstract base class for training of a 'bag of visual words' vocabulary from a set of descriptors
  */
-class BOWTrainer
+class CV_EXPORTS BOWTrainer
 {
 public:
+    void add( const Mat& descriptors );
+    const vector<Mat>& getDescriptors() const { return descriptors; }
+    int descripotorsCount() const { return descriptors.empty() ? 0 : size; }
+
+    virtual void clear();
+
     /*
      * Train visual words vocabulary, that is cluster training descriptors and
      * compute cluster centers.
+     * Returns cluster centers.
      *
      * descriptors      Training descriptors computed on images keypoints.
-     * vocabulary       Vocabulary is cluster centers.
      */
-    virtual void cluster( const Mat& descriptors, Mat& vocabulary ) = 0;
+    virtual Mat cluster() const = 0;
+    virtual Mat cluster( const Mat& descriptors ) const = 0;
+
+protected:
+    vector<Mat> descriptors;
+    int size;
 };
 
 /*
  * This is BOWTrainer using cv::kmeans to get vocabulary.
  */
-class BOWKMeansTrainer : public BOWTrainer
+class CV_EXPORTS BOWKMeansTrainer : public BOWTrainer
 {
 public:
     BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(),
                       int attempts=3, int flags=KMEANS_PP_CENTERS );
 
-    virtual void cluster( const Mat& descriptors, Mat& vocabulary );
+
+
+    // Returns trained vocabulary (i.e. cluster centers).
+    virtual Mat cluster() const;
+    virtual Mat cluster( const Mat& descriptors ) const;
 
 protected:
+
     int clusterCount;
     TermCriteria termcrit;
     int attempts;
@@ -2274,14 +2289,15 @@ protected:
 /*
  * Class to compute image descriptor using bad of visual words.
  */
-class BOWImgDescriptorExtractor
+class CV_EXPORTS BOWImgDescriptorExtractor
 {
 public:
     BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
                                const Ptr<DescriptorMatcher>& dmatcher );
-    void set( const Mat& vocabulary );
+    void setVocabulary( const Mat& vocabulary );
+    const Mat& getVocabulary() const { return vocabulary; }
     void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
-                  vector<vector<int> >& pointIdxsInClusters );
+                  vector<vector<int> >* pointIdxsInClusters=0 ) const;
     int descriptorSize() const { return vocabulary.empty() ? 0 : vocabulary.rows; }
     int descriptorType() const { return CV_32FC1; }
 
