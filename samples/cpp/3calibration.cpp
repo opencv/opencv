@@ -42,9 +42,13 @@ static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
     {
         const vector<vector<Point2f> >& imgpt0 = c == 1 ? imagePoints1 : c == 2 ? imagePoints2 : imagePoints3;
         imgpt.clear();
+        int N = 0;
         for( i = 0; i < (int)imgpt0.size(); i++ )
             if( !imgpt0[i].empty() )
+            {
                 imgpt.push_back(imgpt0[i]);
+                N += (int)imgpt0[i].size();
+            }
         
         if( imgpt.size() < 3 )
         {
@@ -60,17 +64,16 @@ static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
         
         Mat distCoeffs = Mat::zeros(5, 1, CV_64F);
         
-        if( c == 3 )
+        double err = calibrateCamera(objpt, imgpt, imageSize, cameraMatrix,
+                        distCoeffs, rvecs, tvecs,
+                        flags|CV_CALIB_FIX_K3/*|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6*/);
+        bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
+        if(!ok)
         {
-            calibrateCamera(objpt, imgpt, imageSize, cameraMatrix,
-                            distCoeffs, rvecs, tvecs, flags|CV_CALIB_FIX_K3);
-            bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
-            if(!ok)
-            {
-                printf("Error: camera %d was not calibrated\n", c);
-                return false;
-            }
+            printf("Error: camera %d was not calibrated\n", c);
+            return false;
         }
+        printf("Camera %d calibration reprojection error = %g\n", c, sqrt(err/N));
         
         if( c == 1 )
             cameraMatrix1 = cameraMatrix, distCoeffs1 = distCoeffs;
@@ -89,12 +92,14 @@ static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
         
         imgpt.clear();
         imgpt_right.clear();
+        int N = 0;
         
         for( i = 0; i < (int)std::min(imagePoints1.size(), imgpt0.size()); i++ )
             if( !imagePoints1.empty() && !imgpt0[i].empty() )
             {
                 imgpt.push_back(imagePoints1[i]);
                 imgpt_right.push_back(imgpt0[i]);
+                N += (int)imgpt0[i].size();
             }
         
         if( imgpt.size() < 3 )
@@ -107,10 +112,12 @@ static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
         Mat cameraMatrix = c == 2 ? cameraMatrix2 : cameraMatrix3;
         Mat distCoeffs = c == 2 ? distCoeffs2 : distCoeffs3;
         Mat R, T, E, F;
-        stereoCalibrate(objpt, imgpt, imgpt_right, cameraMatrix1, distCoeffs1, cameraMatrix, distCoeffs,
-                        imageSize, R, T, E, F,
-                        TermCriteria(TermCriteria::COUNT, 30, 0),
-                        (c == 3 ? CV_CALIB_FIX_INTRINSIC : 0) | CV_CALIB_FIX_K3);
+        double err = stereoCalibrate(objpt, imgpt, imgpt_right, cameraMatrix1, distCoeffs1,
+                                     cameraMatrix, distCoeffs,
+                                     imageSize, R, T, E, F,
+                                     TermCriteria(TermCriteria::COUNT, 30, 0),
+                                     CV_CALIB_FIX_INTRINSIC);
+        printf("Pair (1,%d) calibration reprojection error = %g\n", c, sqrt(err/(N*2)));
         if( c == 2 )
         {
             cameraMatrix2 = cameraMatrix;
