@@ -3533,6 +3533,8 @@ static void adjust3rdMatrix(const vector<vector<Point2f> >& imgpt1_0,
     P3.at<double>(1,1) *= a;
     P3.at<double>(0,2) = P3.at<double>(0,2)*a;
     P3.at<double>(1,2) = P3.at<double>(1,2)*a + b;
+    P3.at<double>(0,3) *= a;
+    P3.at<double>(1,3) *= a;
 }
 
 }
@@ -3587,6 +3589,8 @@ float cv::rectify3( const Mat& cameraMatrix1, const Mat& distCoeffs1,
     P2.copyTo(P3);
     Mat t = P3.col(3);
     t13.copyTo(t);
+    P3.at<double>(0,3) *= P3.at<double>(0,0);
+    P3.at<double>(1,3) *= P3.at<double>(1,1);
     
     if( !imgpt1.empty() && imgpt3.empty() )
         adjust3rdMatrix(imgpt1, imgpt3, cameraMatrix1, distCoeffs1, cameraMatrix3, distCoeffs3, R1, R3, P1, P3);

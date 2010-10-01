@@ -301,18 +301,30 @@ int main( int argc, char** argv )
     
     fs << "imageWidth" << imageSize.width;
     fs << "imageHeight" << imageSize.height;
-    fs.release();
     
     Mat Q;
     
     // step 3: find rectification transforms
-    rectify3(cameraMatrix[0], distCoeffs[0], cameraMatrix[1],
+    double ratio = rectify3(cameraMatrix[0], distCoeffs[0], cameraMatrix[1],
              distCoeffs[1], cameraMatrix[2], distCoeffs[2],
              imgpt[0], imgpt[2],
              imageSize, R12, T12, R13, T13,
              R[0], R[1], R[2], P[0], P[1], P[2], Q, -1.,
              imageSize, 0, 0, CV_CALIB_ZERO_DISPARITY);
     Mat map1[3], map2[3];
+    
+    fs << "R1" << R[0];
+    fs << "R2" << R[1];
+    fs << "R3" << R[2];
+    
+    fs << "P1" << P[0];
+    fs << "P2" << P[1];
+    fs << "P3" << P[2];
+    
+    fs << "disparityRatio" << ratio;
+    fs.release();
+    
+    printf("Disparity ratio = %g\n", ratio);
     
     for( k = 0; k < 3; k++ )
         initUndistortRectifyMap(cameraMatrix[k], distCoeffs[k], R[k], P[k], imageSize, CV_16SC2, map1[k], map2[k]);
