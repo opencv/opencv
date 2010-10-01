@@ -712,9 +712,11 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
     {
         progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
         vector<KeyPoint> keypoints2;
+        float rep;
         evaluateFeatureDetector( imgs[0], imgs[ci+1], Hs[ci], &keypoints1, &keypoints2,
-                                 calcQuality[di][ci].repeatability, calcQuality[di][ci].correspondenceCount,
+                                 rep, calcQuality[di][ci].correspondenceCount,
                                  detector );
+        calcQuality[di][ci].repeatability = 100.f*rep;
         writeKeypoints( keypontsFS, keypoints2, ci+1);
     }
 }
@@ -748,13 +750,13 @@ int DetectorQualityTest::processResults( int datasetIdx, int caseIdx )
     return res;
 }
 
-//DetectorQualityTest fastDetectorQuality = DetectorQualityTest( "FAST", "quality-detector-fast" );
-//DetectorQualityTest gfttDetectorQuality = DetectorQualityTest( "GFTT", "quality-detector-gftt" );
-//DetectorQualityTest harrisDetectorQuality = DetectorQualityTest( "HARRIS", "quality-detector-harris" );
-//DetectorQualityTest mserDetectorQuality = DetectorQualityTest( "MSER", "quality-detector-mser" );
-//DetectorQualityTest starDetectorQuality = DetectorQualityTest( "STAR", "quality-detector-star" );
-//DetectorQualityTest siftDetectorQuality = DetectorQualityTest( "SIFT", "quality-detector-sift" );
-//DetectorQualityTest surfDetectorQuality = DetectorQualityTest( "SURF", "quality-detector-surf" );
+DetectorQualityTest fastDetectorQuality = DetectorQualityTest( "FAST", "quality-detector-fast" );
+DetectorQualityTest gfttDetectorQuality = DetectorQualityTest( "GFTT", "quality-detector-gftt" );
+DetectorQualityTest harrisDetectorQuality = DetectorQualityTest( "HARRIS", "quality-detector-harris" );
+DetectorQualityTest mserDetectorQuality = DetectorQualityTest( "MSER", "quality-detector-mser" );
+DetectorQualityTest starDetectorQuality = DetectorQualityTest( "STAR", "quality-detector-star" );
+DetectorQualityTest siftDetectorQuality = DetectorQualityTest( "SIFT", "quality-detector-sift" );
+DetectorQualityTest surfDetectorQuality = DetectorQualityTest( "SURF", "quality-detector-surf" );
 
 /****************************************************************************************\
 *                                  Descriptors evaluation                                 *

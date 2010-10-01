@@ -371,7 +371,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
     if( keypoints1->empty() )
         fdetector->detect( img1, *keypoints1 );
     if( keypoints2->empty() )
-        fdetector->detect( img1, *keypoints2 );
+        fdetector->detect( img2, *keypoints2 );
 
     calculateRepeatability( img1, img2, H1to2, *keypoints1, *keypoints2, repeatability, correspCount );
 }
