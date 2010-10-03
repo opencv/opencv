@@ -719,29 +719,133 @@ static const double expTab[] = {
     1.9571441241754002690183222516269 * EXPPOLY_32F_A0,
     1.9784560263879509682582499181312 * EXPPOLY_32F_A0,
 };
-
+    
+    
 static const double exp_prescale = 1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE);
 static const double exp_postscale = 1./(1 << EXPTAB_SCALE);
 static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) < 3000
 
 static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
 {
-    static const double
-        EXPPOLY_32F_A4 = 1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0,
-        EXPPOLY_32F_A3 = .6931471805521448196800669615864773144641 / EXPPOLY_32F_A0,
-        EXPPOLY_32F_A2 = .2402265109513301490103372422686535526573 / EXPPOLY_32F_A0,
-        EXPPOLY_32F_A1 = .5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0;
-
-    #undef EXPPOLY
-    #define EXPPOLY(x)  \
-        (((((x) + EXPPOLY_32F_A1)*(x) + EXPPOLY_32F_A2)*(x) + EXPPOLY_32F_A3)*(x) + EXPPOLY_32F_A4)
-
+    static const float
+        A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
+        A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
+        A2 = (float)(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
+        A1 = (float)(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
+    
+#undef EXPPOLY
+#define EXPPOLY(x)  \
+    (((((x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)
+    
     int i = 0;
-    DBLINT buf[4];
     const Cv32suf* x = (const Cv32suf*)_x;
+    Cv32suf buf[4];
 
-    buf[0].i.lo = buf[1].i.lo = buf[2].i.lo = buf[3].i.lo = 0;
+#if CV_SSE2
+    if( n >= 8 && checkHardwareSupport(CV_CPU_SSE) )
+    {
+        static const __m128d prescale2 = _mm_set1_pd(exp_prescale);
+        static const __m128 postscale4 = _mm_set1_ps((float)exp_postscale);
+        static const __m128 maxval4 = _mm_set1_ps((float)(exp_max_val/exp_prescale));
+        static const __m128 minval4 = _mm_set1_ps((float)(-exp_max_val/exp_prescale));
+        
+        static const __m128 mA1 = _mm_set1_ps(A1);
+        static const __m128 mA2 = _mm_set1_ps(A2);
+        static const __m128 mA3 = _mm_set1_ps(A3);
+        static const __m128 mA4 = _mm_set1_ps(A4);
+        bool y_aligned = (size_t)(void*)y % 16 == 0;
+        
+        ushort CV_DECL_ALIGNED(16) tab_idx[8];
+        
+        for( ; i <= n - 8; i += 8 )
+        {
+            __m128 xf0, xf1;
+            xf0 = _mm_loadu_ps(&x[i].f);
+            xf1 = _mm_loadu_ps(&x[i+4].f);
+            __m128i xi0, xi1, xi2, xi3;
+            
+            xf0 = _mm_min_ps(_mm_max_ps(xf0, minval4), maxval4);
+            xf1 = _mm_min_ps(_mm_max_ps(xf1, minval4), maxval4);
+            
+            __m128d xd0 = _mm_cvtps_pd(xf0);
+            __m128d xd2 = _mm_cvtps_pd(_mm_movehl_ps(xf0, xf0));
+            __m128d xd1 = _mm_cvtps_pd(xf1);
+            __m128d xd3 = _mm_cvtps_pd(_mm_movehl_ps(xf1, xf1));
+            
+            xd0 = _mm_mul_pd(xd0, prescale2);
+            xd2 = _mm_mul_pd(xd2, prescale2);
+            xd1 = _mm_mul_pd(xd1, prescale2);
+            xd3 = _mm_mul_pd(xd3, prescale2);
+            
+            xi0 = _mm_cvtpd_epi32(xd0);
+            xi2 = _mm_cvtpd_epi32(xd2);
+            
+            xi1 = _mm_cvtpd_epi32(xd1);
+            xi3 = _mm_cvtpd_epi32(xd3);
+            
+            xd0 = _mm_sub_pd(xd0, _mm_cvtepi32_pd(xi0));
+            xd2 = _mm_sub_pd(xd2, _mm_cvtepi32_pd(xi2));
+            xd1 = _mm_sub_pd(xd1, _mm_cvtepi32_pd(xi1));
+            xd3 = _mm_sub_pd(xd3, _mm_cvtepi32_pd(xi3));
+            
+            xf0 = _mm_movelh_ps(_mm_cvtpd_ps(xd0), _mm_cvtpd_ps(xd2));
+            xf1 = _mm_movelh_ps(_mm_cvtpd_ps(xd1), _mm_cvtpd_ps(xd3));
+            
+            xf0 = _mm_mul_ps(xf0, postscale4);
+            xf1 = _mm_mul_ps(xf1, postscale4);
 
+            xi0 = _mm_unpacklo_epi64(xi0, xi2);
+            xi1 = _mm_unpacklo_epi64(xi1, xi3);
+            xi0 = _mm_packs_epi32(xi0, xi1);
+            
+            _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi16(EXPTAB_MASK)));
+            
+            xi0 = _mm_add_epi16(_mm_srai_epi16(xi0, EXPTAB_SCALE), _mm_set1_epi16(127));
+            xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
+            xi0 = _mm_min_epi16(xi0, _mm_set1_epi16(255));
+            xi1 = _mm_unpackhi_epi16(xi0, _mm_setzero_si128());
+            xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
+            
+            __m128d yd0 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[0]), _mm_load_sd(expTab + tab_idx[1]));
+            __m128d yd1 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[2]), _mm_load_sd(expTab + tab_idx[3]));
+            __m128d yd2 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[4]), _mm_load_sd(expTab + tab_idx[5]));
+            __m128d yd3 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[6]), _mm_load_sd(expTab + tab_idx[7]));
+            
+            __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
+            __m128 yf1 = _mm_movelh_ps(_mm_cvtpd_ps(yd2), _mm_cvtpd_ps(yd3));
+
+            yf0 = _mm_mul_ps(yf0, _mm_castsi128_ps(_mm_slli_epi32(xi0, 23)));
+            yf1 = _mm_mul_ps(yf1, _mm_castsi128_ps(_mm_slli_epi32(xi1, 23)));
+            
+            __m128 zf0 = _mm_add_ps(xf0, mA1);
+            __m128 zf1 = _mm_add_ps(xf1, mA1);
+            
+            zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA2);
+            zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA2);
+            
+            zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA3);
+            zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA3);
+            
+            zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA4);
+            zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA4);
+            
+            zf0 = _mm_mul_ps(zf0, yf0);
+            zf1 = _mm_mul_ps(zf1, yf1);
+            
+            if( y_aligned )
+            {
+                _mm_store_ps(y + i, zf0);
+                _mm_store_ps(y + i + 4, zf1);
+            }
+            else
+            {
+                _mm_storeu_ps(y + i, zf0);
+                _mm_storeu_ps(y + i + 4, zf1);
+            }
+        }
+    }
+    else
+#endif
     for( ; i <= n - 4; i += 4 )
     {
         double x0 = x[i].f * exp_prescale;
@@ -749,183 +853,252 @@ static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
         double x2 = x[i + 2].f * exp_prescale;
         double x3 = x[i + 3].f * exp_prescale;
         int val0, val1, val2, val3, t;
-
+        
         if( ((x[i].i >> 23) & 255) > 127 + 10 )
             x0 = x[i].i < 0 ? -exp_max_val : exp_max_val;
-
+        
         if( ((x[i+1].i >> 23) & 255) > 127 + 10 )
             x1 = x[i+1].i < 0 ? -exp_max_val : exp_max_val;
-
+        
         if( ((x[i+2].i >> 23) & 255) > 127 + 10 )
             x2 = x[i+2].i < 0 ? -exp_max_val : exp_max_val;
-
+        
         if( ((x[i+3].i >> 23) & 255) > 127 + 10 )
             x3 = x[i+3].i < 0 ? -exp_max_val : exp_max_val;
-
+        
         val0 = cvRound(x0);
         val1 = cvRound(x1);
         val2 = cvRound(x2);
         val3 = cvRound(x3);
-
+        
         x0 = (x0 - val0)*exp_postscale;
         x1 = (x1 - val1)*exp_postscale;
         x2 = (x2 - val2)*exp_postscale;
         x3 = (x3 - val3)*exp_postscale;
-
-        t = (val0 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[0].i.hi = t << 20;
-
-        t = (val1 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[1].i.hi = t << 20;
-
-        t = (val2 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[2].i.hi = t << 20;
-
-        t = (val3 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[3].i.hi = t << 20;
-
-        x0 = buf[0].d * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
-        x1 = buf[1].d * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
-
-        y[i] = (float)x0;
-        y[i + 1] = (float)x1;
-
-        x2 = buf[2].d * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
-        x3 = buf[3].d * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
-
-        y[i + 2] = (float)x2;
-        y[i + 3] = (float)x3;
+        
+        t = (val0 >> EXPTAB_SCALE) + 127;
+        t = !(t & ~255) ? t : t < 0 ? 0 : 255;
+        buf[0].i = t << 23;
+        
+        t = (val1 >> EXPTAB_SCALE) + 127;
+        t = !(t & ~255) ? t : t < 0 ? 0 : 255;
+        buf[1].i = t << 23;
+        
+        t = (val2 >> EXPTAB_SCALE) + 127;
+        t = !(t & ~255) ? t : t < 0 ? 0 : 255;
+        buf[2].i = t << 23;
+        
+        t = (val3 >> EXPTAB_SCALE) + 127;
+        t = !(t & ~255) ? t : t < 0 ? 0 : 255;
+        buf[3].i = t << 23;
+        
+        x0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
+        x1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
+        
+        y[i] = x0;
+        y[i + 1] = x1;
+        
+        x2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
+        x3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
+        
+        y[i + 2] = x2;
+        y[i + 3] = x3;
     }
-
+    
     for( ; i < n; i++ )
     {
         double x0 = x[i].f * exp_prescale;
         int val0, t;
-
+        
         if( ((x[i].i >> 23) & 255) > 127 + 10 )
             x0 = x[i].i < 0 ? -exp_max_val : exp_max_val;
-
+        
         val0 = cvRound(x0);
-        t = (val0 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-
-        buf[0].i.hi = t << 20;
+        t = (val0 >> EXPTAB_SCALE) + 127;
+        t = !(t & ~255) ? t : t < 0 ? 0 : 255;
+        
+        buf[0].i = t << 23;
         x0 = (x0 - val0)*exp_postscale;
-
-        y[i] = (float)(buf[0].d * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0));
+        
+        y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0);
     }
-
+    
     return CV_OK;
 }
-
+    
 
 static CvStatus CV_STDCALL Exp_64f( const double *_x, double *y, int n )
 {
     static const double
-        A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
-        A4 = .69314718055994546743029643825322 / EXPPOLY_32F_A0,
-        A3 = .24022650695886477918181338054308 / EXPPOLY_32F_A0,
-        A2 = .55504108793649567998466049042729e-1 / EXPPOLY_32F_A0,
-        A1 = .96180973140732918010002372686186e-2 / EXPPOLY_32F_A0,
-        A0 = .13369713757180123244806654839424e-2 / EXPPOLY_32F_A0;
-
-    #undef EXPPOLY
-    #define EXPPOLY(x)  (((((A0*(x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)*(x) + A5)
-
+    A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
+    A4 = .69314718055994546743029643825322 / EXPPOLY_32F_A0,
+    A3 = .24022650695886477918181338054308 / EXPPOLY_32F_A0,
+    A2 = .55504108793649567998466049042729e-1 / EXPPOLY_32F_A0,
+    A1 = .96180973140732918010002372686186e-2 / EXPPOLY_32F_A0,
+    A0 = .13369713757180123244806654839424e-2 / EXPPOLY_32F_A0;
+    
+#undef EXPPOLY
+#define EXPPOLY(x)  (((((A0*(x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)*(x) + A5)
+    
     int i = 0;
-    DBLINT buf[4];
+    Cv64suf buf[4];
     const Cv64suf* x = (const Cv64suf*)_x;
-
-    buf[0].i.lo = buf[1].i.lo = buf[2].i.lo = buf[3].i.lo = 0;
-
+    
+#if CV_SSE2
+    if( checkHardwareSupport(CV_CPU_SSE) )
+    {
+        static const __m128d prescale2 = _mm_set1_pd(exp_prescale);
+        static const __m128d postscale2 = _mm_set1_pd(exp_postscale);
+        static const __m128d maxval2 = _mm_set1_pd(exp_max_val);
+        static const __m128d minval2 = _mm_set1_pd(-exp_max_val);
+        
+        static const __m128d mA0 = _mm_set1_pd(A0);
+        static const __m128d mA1 = _mm_set1_pd(A1);
+        static const __m128d mA2 = _mm_set1_pd(A2);
+        static const __m128d mA3 = _mm_set1_pd(A3);
+        static const __m128d mA4 = _mm_set1_pd(A4);
+        static const __m128d mA5 = _mm_set1_pd(A5);
+        
+        int CV_DECL_ALIGNED(16) tab_idx[4];
+        
+        for( ; i <= n - 4; i += 4 )
+        {
+            __m128d xf0 = _mm_loadu_pd(&x[i].f), xf1 = _mm_loadu_pd(&x[i+2].f);
+            __m128i xi0, xi1;
+            xf0 = _mm_min_pd(_mm_max_pd(xf0, minval2), maxval2);
+            xf1 = _mm_min_pd(_mm_max_pd(xf1, minval2), maxval2);
+            xf0 = _mm_mul_pd(xf0, prescale2);
+            xf1 = _mm_mul_pd(xf1, prescale2);
+            
+            xi0 = _mm_cvtpd_epi32(xf0);
+            xi1 = _mm_cvtpd_epi32(xf1);
+            xf0 = _mm_mul_pd(_mm_sub_pd(xf0, _mm_cvtepi32_pd(xi0)), postscale2);
+            xf1 = _mm_mul_pd(_mm_sub_pd(xf1, _mm_cvtepi32_pd(xi1)), postscale2);
+            
+            xi0 = _mm_unpacklo_epi64(xi0, xi1);
+            _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi32(EXPTAB_MASK)));
+            
+            xi0 = _mm_add_epi32(_mm_srai_epi32(xi0, EXPTAB_SCALE), _mm_set1_epi32(1023));
+            xi0 = _mm_packs_epi32(xi0, xi0);
+            xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
+            xi0 = _mm_min_epi16(xi0, _mm_set1_epi16(2047));
+            xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
+            xi1 = _mm_unpackhi_epi32(xi0, _mm_setzero_si128());
+            xi0 = _mm_unpacklo_epi32(xi0, _mm_setzero_si128());
+            
+            __m128d yf0 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[0]), _mm_load_sd(expTab + tab_idx[1]));
+            __m128d yf1 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[2]), _mm_load_sd(expTab + tab_idx[3]));
+            yf0 = _mm_mul_pd(yf0, _mm_castsi128_pd(_mm_slli_epi64(xi0, 52)));
+            yf1 = _mm_mul_pd(yf1, _mm_castsi128_pd(_mm_slli_epi64(xi1, 52)));
+            
+            __m128d zf0 = _mm_add_pd(_mm_mul_pd(mA0, xf0), mA1);
+            __m128d zf1 = _mm_add_pd(_mm_mul_pd(mA0, xf1), mA1);
+            
+            zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA2);
+            zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA2);
+            
+            zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA3);
+            zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA3);
+            
+            zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA4);
+            zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA4);
+            
+            zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA5);
+            zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA5);
+            
+            zf0 = _mm_mul_pd(zf0, yf0);
+            zf1 = _mm_mul_pd(zf1, yf1);
+            
+            _mm_storeu_pd(y + i, zf0);
+            _mm_storeu_pd(y + i + 2, zf1);
+        }
+    }
+    else
+#endif
     for( ; i <= n - 4; i += 4 )
     {
         double x0 = x[i].f * exp_prescale;
         double x1 = x[i + 1].f * exp_prescale;
         double x2 = x[i + 2].f * exp_prescale;
         double x3 = x[i + 3].f * exp_prescale;
-
+        
         double y0, y1, y2, y3;
         int val0, val1, val2, val3, t;
-
+        
         t = (int)(x[i].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x0 = t < 0 ? -exp_max_val : exp_max_val;
-
+        
         t = (int)(x[i+1].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x1 = t < 0 ? -exp_max_val : exp_max_val;
-
+        
         t = (int)(x[i+2].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x2 = t < 0 ? -exp_max_val : exp_max_val;
-
+        
         t = (int)(x[i+3].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x3 = t < 0 ? -exp_max_val : exp_max_val;
-
+        
         val0 = cvRound(x0);
         val1 = cvRound(x1);
         val2 = cvRound(x2);
         val3 = cvRound(x3);
-
+        
         x0 = (x0 - val0)*exp_postscale;
         x1 = (x1 - val1)*exp_postscale;
         x2 = (x2 - val2)*exp_postscale;
         x3 = (x3 - val3)*exp_postscale;
-
+        
         t = (val0 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[0].i.hi = t << 20;
-
+        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
+        buf[0].i = (int64)t << 52;
+        
         t = (val1 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[1].i.hi = t << 20;
-
+        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
+        buf[1].i = (int64)t << 52;
+        
         t = (val2 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[2].i.hi = t << 20;
-
+        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
+        buf[2].i = (int64)t << 52;
+        
         t = (val3 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-        buf[3].i.hi = t << 20;
-
-        y0 = buf[0].d * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
-        y1 = buf[1].d * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
-
+        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
+        buf[3].i = (int64)t << 52;
+        
+        y0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
+        y1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
+        
         y[i] = y0;
         y[i + 1] = y1;
-
-        y2 = buf[2].d * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
-        y3 = buf[3].d * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
-
+        
+        y2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
+        y3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
+        
         y[i + 2] = y2;
         y[i + 3] = y3;
     }
-
+    
     for( ; i < n; i++ )
     {
         double x0 = x[i].f * exp_prescale;
         int val0, t;
-
+        
         t = (int)(x[i].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x0 = t < 0 ? -exp_max_val : exp_max_val;
-
+        
         val0 = cvRound(x0);
         t = (val0 >> EXPTAB_SCALE) + 1023;
-        t = (t | ((t < 2047) - 1)) & (((t < 0) - 1) & 2047);
-
-        buf[0].i.hi = t << 20;
+        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
+        
+        buf[0].i = (int64)t << 52;
         x0 = (x0 - val0)*exp_postscale;
-
-        y[i] = buf[0].d * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
+        
+        y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
     }
-
+    
     return CV_OK;
 }
 
@@ -968,7 +1141,7 @@ void exp( const Mat& src, Mat& dst )
 #define LOGTAB_MASK2        ((1 << (20 - LOGTAB_SCALE)) - 1)
 #define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
 
-static const double icvLogTab[] = {
+static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
 0.0000000000000000000000000000000000000000,    1.000000000000000000000000000000000000000,
 .00389864041565732288852075271279318258166,    .9961089494163424124513618677042801556420,
 .00778214044205494809292034119607706088573,    .9922480620155038759689922480620155038760,
@@ -1234,26 +1407,75 @@ static const double ln_2 = 0.69314718055994530941723212145818;
 
 static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
 {
-    static const double shift[] = { 0, -1./512 };
-    static const double
-        A0 = 0.3333333333333333333333333,
-        A1 = -0.5,
-        A2 = 1;
+    static const float shift[] = { 0, -1.f/512 };
+    static const float
+        A0 = 0.3333333333333333333333333f,
+        A1 = -0.5f,
+        A2 = 1.f;
 
     #undef LOGPOLY
-    #define LOGPOLY(x,k) ((x)+=shift[k],((A0*(x) + A1)*(x) + A2)*(x))
+    #define LOGPOLY(x) (((A0*(x) + A1)*(x) + A2)*(x))
 
     int i = 0;
-    union
-    {
-        int i;
-        float f;
-    }
-    buf[4];
-
+    Cv32suf buf[4];
     const int* x = (const int*)_x;
 
-    for( i = 0; i <= n - 4; i += 4 )
+#if CV_SSE2
+    if( checkHardwareSupport(CV_CPU_SSE) )
+    {
+        static const __m128d ln2_2 = _mm_set1_pd(ln_2);
+        static const __m128 _1_4 = _mm_set1_ps(1.f);
+        static const __m128 shift4 = _mm_set1_ps(-1.f/512);
+        
+        static const __m128 mA0 = _mm_set1_ps(A0);
+        static const __m128 mA1 = _mm_set1_ps(A1);
+        static const __m128 mA2 = _mm_set1_ps(A2);
+        
+        int CV_DECL_ALIGNED(16) idx[4];
+        
+        for( ; i <= n - 4; i += 4 )
+        {            
+            __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
+            __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 23), _mm_set1_epi32(255)), _mm_set1_epi32(127));
+            __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
+            __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0,yi0)), ln2_2);
+            
+            __m128i xi0 = _mm_or_si128(_mm_and_si128(h0, _mm_set1_epi32(LOGTAB_MASK2_32F)), _mm_set1_epi32(127 << 23));
+            
+            h0 = _mm_and_si128(_mm_srli_epi32(h0, 23 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK*2));
+            _mm_store_si128((__m128i*)idx, h0);
+            h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
+            
+            __m128d t0, t1, t2, t3, t4;
+            t0 = _mm_load_pd(icvLogTab + idx[0]);
+            t2 = _mm_load_pd(icvLogTab + idx[1]);
+            t1 = _mm_unpackhi_pd(t0, t2);
+            t0 = _mm_unpacklo_pd(t0, t2);
+            t2 = _mm_load_pd(icvLogTab + idx[2]);
+            t4 = _mm_load_pd(icvLogTab + idx[3]);
+            t3 = _mm_unpackhi_pd(t2, t4);
+            t2 = _mm_unpacklo_pd(t2, t4);
+            
+            yd0 = _mm_add_pd(yd0, t0);
+            yd1 = _mm_add_pd(yd1, t2);
+            
+            __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
+            
+            __m128 xf0 = _mm_sub_ps(_mm_castsi128_ps(xi0), _1_4);
+            xf0 = _mm_mul_ps(xf0, _mm_movelh_ps(_mm_cvtpd_ps(t1), _mm_cvtpd_ps(t3)));
+            xf0 = _mm_add_ps(xf0, _mm_and_ps(_mm_castsi128_ps(h0), shift4));
+            
+            __m128 zf0 = _mm_mul_ps(xf0, mA0);
+            zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA1), xf0);
+            zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA2), xf0);
+            yf0 = _mm_add_ps(yf0, zf0);
+            
+            _mm_storeu_ps(y + i, yf0);
+        }
+    }
+    else
+#endif
+    for( ; i <= n - 4; i += 4 )
     {
         double x0, x1, x2, x3;
         double y0, y1, y2, y3;
@@ -1294,14 +1516,18 @@ static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
         x2 = LOGTAB_TRANSLATE( buf[2].f, h2 );
         x3 = LOGTAB_TRANSLATE( buf[3].f, h3 );
 
-        y0 += LOGPOLY( x0, h0 == 510 );
-        y1 += LOGPOLY( x1, h1 == 510 );
+        x0 += shift[h0 == 510];
+        x1 += shift[h1 == 510];
+        y0 += LOGPOLY( x0 );
+        y1 += LOGPOLY( x1 );
 
         y[i] = (float) y0;
         y[i + 1] = (float) y1;
 
-        y2 += LOGPOLY( x2, h2 == 510 );
-        y3 += LOGPOLY( x3, h3 == 510 );
+        x2 += shift[h2 == 510];
+        x3 += shift[h3 == 510];
+        y2 += LOGPOLY( x2 );
+        y3 += LOGPOLY( x3 );
 
         y[i + 2] = (float) y2;
         y[i + 3] = (float) y3;
@@ -1310,7 +1536,8 @@ static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
     for( ; i < n; i++ )
     {
         int h0 = x[i];
-        double x0, y0;
+        double y0;
+        float x0;
 
         y0 = (((h0 >> 23) & 0xff) - 127) * ln_2;
 
@@ -1319,7 +1546,8 @@ static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
 
         y0 += icvLogTab[h0];
         x0 = LOGTAB_TRANSLATE( buf[0].f, h0 );
-        y0 += LOGPOLY( x0, h0 == 510 );
+        x0 += shift[h0 == 510];
+        y0 += LOGPOLY( x0 );
 
         y[i] = (float)y0;
     }
@@ -1350,6 +1578,91 @@ static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
     DBLINT buf[4];
     DBLINT *X = (DBLINT *) x;
 
+#if CV_SSE2
+    if( checkHardwareSupport(CV_CPU_SSE) )
+    {
+        static const __m128d ln2_2 = _mm_set1_pd(ln_2);
+        static const __m128d _1_2 = _mm_set1_pd(1.);
+        static const __m128d shift2 = _mm_set1_pd(-1./512);
+        
+        static const __m128i log_and_mask2 = _mm_set_epi32(LOGTAB_MASK2, 0xffffffff, LOGTAB_MASK2, 0xffffffff);
+        static const __m128i log_or_mask2 = _mm_set_epi32(1023 << 20, 0, 1023 << 20, 0);
+        
+        static const __m128d mA0 = _mm_set1_pd(A0);
+        static const __m128d mA1 = _mm_set1_pd(A1);
+        static const __m128d mA2 = _mm_set1_pd(A2);
+        static const __m128d mA3 = _mm_set1_pd(A3);
+        static const __m128d mA4 = _mm_set1_pd(A4);
+        static const __m128d mA5 = _mm_set1_pd(A5);
+        static const __m128d mA6 = _mm_set1_pd(A6);
+        static const __m128d mA7 = _mm_set1_pd(A7);
+        
+        int CV_DECL_ALIGNED(16) idx[4];
+        
+        for( ; i <= n - 4; i += 4 )
+        {
+            __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
+            __m128i h1 = _mm_loadu_si128((const __m128i*)(x + i + 2));
+            
+            __m128d xd0 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h0, log_and_mask2), log_or_mask2));
+            __m128d xd1 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h1, log_and_mask2), log_or_mask2));
+            
+            h0 = _mm_unpackhi_epi32(_mm_unpacklo_epi32(h0, h1), _mm_unpackhi_epi32(h0, h1));
+            
+            __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 20),
+                                    _mm_set1_epi32(2047)), _mm_set1_epi32(1023));
+            __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
+            __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0, yi0)), ln2_2);
+            
+            h0 = _mm_and_si128(_mm_srli_epi32(h0, 20 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK * 2));
+            _mm_store_si128((__m128i*)idx, h0);
+            h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
+            
+            __m128d t0, t1, t2, t3, t4;
+            t0 = _mm_load_pd(icvLogTab + idx[0]);
+            t2 = _mm_load_pd(icvLogTab + idx[1]);
+            t1 = _mm_unpackhi_pd(t0, t2);
+            t0 = _mm_unpacklo_pd(t0, t2);
+            t2 = _mm_load_pd(icvLogTab + idx[2]);
+            t4 = _mm_load_pd(icvLogTab + idx[3]);
+            t3 = _mm_unpackhi_pd(t2, t4);
+            t2 = _mm_unpacklo_pd(t2, t4);
+            
+            yd0 = _mm_add_pd(yd0, t0);
+            yd1 = _mm_add_pd(yd1, t2);
+            
+            xd0 = _mm_mul_pd(_mm_sub_pd(xd0, _1_2), t1);
+            xd1 = _mm_mul_pd(_mm_sub_pd(xd1, _1_2), t3);
+            
+            xd0 = _mm_add_pd(xd0, _mm_and_pd(_mm_castsi128_pd(_mm_unpacklo_epi32(h0, h0)), shift2));
+            xd1 = _mm_add_pd(xd1, _mm_and_pd(_mm_castsi128_pd(_mm_unpackhi_epi32(h0, h0)), shift2));
+            
+            __m128d zd0 = _mm_mul_pd(xd0, mA0);
+            __m128d zd1 = _mm_mul_pd(xd1, mA0);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA1), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA1), xd1);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA2), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA2), xd1);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA3), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA3), xd1);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA4), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA4), xd1);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA5), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA5), xd1);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA6), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA6), xd1);
+            zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA7), xd0);
+            zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA7), xd1);
+            
+            yd0 = _mm_add_pd(yd0, zd0);
+            yd1 = _mm_add_pd(yd1, zd1);
+            
+            _mm_storeu_pd(y + i, yd0);
+            _mm_storeu_pd(y + i + 2, yd1);
+        }
+    }
+    else
+#endif
     for( ; i <= n - 4; i += 4 )
     {
         double xq;
@@ -1414,7 +1727,7 @@ static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
         y[i + 2] = y2;
         y[i + 3] = y3;
     }
-
+    
     for( ; i < n; i++ )
     {
         int h0 = X[i].i.hi;
