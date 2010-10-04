@@ -62,6 +62,7 @@ void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_nogpu(); }
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int) { throw_nogpu(); }
 void cv::gpu::integral(GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -984,6 +985,35 @@ void cv::gpu::integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum)
 
     nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(src.ptr<Npp8u>(), src.step, sum.ptr<Npp32s>(), 
         sum.step, sqsum.ptr<Npp32f>(), sqsum.step, sz, 0, 0.0f, h) );
+}
+
+////////////////////////////////////////////////////////////////////////
+// Canny
+
+void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
+{
+    CV_Assert(image.type() == CV_8UC1);
+
+    GpuMat srcDx, srcDy;
+
+    Sobel(image, srcDx, -1, 1, 0, apertureSize);
+    Sobel(image, srcDy, -1, 0, 1, apertureSize);
+
+    srcDx.convertTo(srcDx, CV_32F);
+    srcDy.convertTo(srcDy, CV_32F);
+
+    edges.create(image.size(), CV_8UC1);
+
+    NppiSize sz;
+    sz.height = image.rows;
+    sz.width = image.cols;
+
+    int bufsz;
+    nppSafeCall( nppiCannyGetBufferSize(sz, &bufsz) );
+    GpuMat buf(1, bufsz, CV_8UC1);
+
+    nppSafeCall( nppiCanny_32f8u_C1R(srcDx.ptr<Npp32f>(), srcDx.step, srcDy.ptr<Npp32f>(), srcDy.step, 
+        edges.ptr<Npp8u>(), edges.step, sz, (Npp32f)threshold1, (Npp32f)threshold2, buf.ptr<Npp8u>()) );
 }
 
 #endif /* !defined (HAVE_CUDA) */

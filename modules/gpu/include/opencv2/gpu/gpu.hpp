@@ -533,9 +533,18 @@ namespace cv
         //! applies an advanced morphological operation to the image
         CV_EXPORTS void morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor, int iterations);
 
+        //! 1D mask Window Sum for 8 bit images
         CV_EXPORTS void sumWindowColumn(const GpuMat& src, GpuMat& dst, int ksize, int anchor = -1);
         CV_EXPORTS void sumWindowRow(const GpuMat& src, GpuMat& dst, int ksize, int anchor = -1);
 
+        //! applies generalized Sobel operator to the image
+        CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1);
+
+        //! smooths the image using Gaussian filter.
+        CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0);
+
+        //! applies Canny edge detector and produces the edge map.
+        CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize = 3);
 
         //////////////////////////////// Image Labeling ////////////////////////////////
 

@@ -61,6 +61,9 @@ const char* blacklist[] =
     //"GPU-NppImageLog",              // different precision
     //"GPU-NppImageMagnitude",        // different precision
     //"GPU-NppImageSumWindow",        // different border interpolation
+    //"GPU-NppImageSobel",            // ???
+    //"GPU-NppImageGaussianBlur",     // different border interpolation
+    "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
     0
 };
 

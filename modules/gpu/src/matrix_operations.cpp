@@ -124,6 +124,61 @@ void cv::gpu::GpuMat::copyTo( GpuMat& mat, const GpuMat& mask ) const
     }
 }
 
+namespace
+{
+    template<int n> struct NPPTypeTraits;
+    template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
+    template<> struct NPPTypeTraits<CV_16U> { typedef Npp16u npp_type; };
+    template<> struct NPPTypeTraits<CV_16S> { typedef Npp16s npp_type; };
+    template<> struct NPPTypeTraits<CV_32S> { typedef Npp32s npp_type; };
+    template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
+
+    template<int SDEPTH, int DDEPTH> struct NppConvertFunc
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
+
+        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, dst_t* pDst, int nDstStep, NppiSize oSizeROI);
+    };
+    template<int DDEPTH> struct NppConvertFunc<CV_32F, DDEPTH>
+    {
+        typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
+
+        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, dst_t* pDst, int nDstStep, NppiSize oSizeROI, NppRoundMode eRoundMode);
+    };
+    
+    template<int SDEPTH, int DDEPTH, typename NppConvertFunc<SDEPTH, DDEPTH>::func_ptr func> struct NppCvt 
+    { 
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
+
+        static void cvt(const GpuMat& src, GpuMat& dst)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            nppSafeCall( func(src.ptr<src_t>(), src.step, dst.ptr<dst_t>(), dst.step, sz) );
+        }
+    };
+    template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> struct NppCvt<CV_32F, DDEPTH, func>
+    { 
+        typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
+
+        static void cvt(const GpuMat& src, GpuMat& dst)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            nppSafeCall( func(src.ptr<Npp32f>(), src.step, dst.ptr<dst_t>(), dst.step, sz, NPP_RND_NEAR) );
+        }
+    };
+
+    void convertToKernelCaller(const GpuMat& src, GpuMat& dst)
+    {
+        matrix_operations::convert_to(src, src.depth(), dst, dst.depth(), src.channels(), 1.0, 0.0);
+    }
+}
+
 void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double beta ) const
 {
     bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
@@ -133,7 +188,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
     else
         rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
     
-    int stype = type();
+    int scn = channels();
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
     if( sdepth == ddepth && noScale )
     {
@@ -152,44 +207,85 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
     else
     {
-        NppiSize sz;
-        sz.width = cols;
-        sz.height = rows;
+        typedef void (*convert_caller_t)(const GpuMat& src, GpuMat& dst);
+        static const convert_caller_t convert_callers[8][8][4] = 
+        {
+            {
+                {0,0,0,0},
+                {convertToKernelCaller, convertToKernelCaller, convertToKernelCaller, convertToKernelCaller},
+                {NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C4R>::cvt},
+                {NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C4R>::cvt},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_8U, CV_32F, nppiConvert_8u32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0}
+            },
+            {
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0}
+            },
+            {
+                {NppCvt<CV_16U, CV_8U, nppiConvert_16u8u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_16U, CV_8U, nppiConvert_16u8u_C4R>::cvt},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_16U, CV_32S, nppiConvert_16u32s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {NppCvt<CV_16U, CV_32F, nppiConvert_16u32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0}
+            },
+            {
+                {NppCvt<CV_16S, CV_8U, nppiConvert_16s8u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_16S, CV_8U, nppiConvert_16s8u_C4R>::cvt},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0},
+                {NppCvt<CV_16S, CV_32S, nppiConvert_16s32s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {NppCvt<CV_16S, CV_32F, nppiConvert_16s32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0}
+            },
+            {
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0}
+            },
+            {
+                {NppCvt<CV_32F, CV_8U, nppiConvert_32f8u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_32F, CV_16U, nppiConvert_32f16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {NppCvt<CV_32F, CV_16S, nppiConvert_32f16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0}
+            },
+            {
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {0,0,0,0},
+                {0,0,0,0}
+            },
+            {
+                {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}
+            }
+        };
 
-        if (stype == CV_8UC1 && ddepth == CV_16U)
-            nppSafeCall( nppiConvert_8u16u_C1R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16u>(), dst.step, sz) );
-        else if (stype == CV_16UC1 && ddepth == CV_8U)
-            nppSafeCall( nppiConvert_16u8u_C1R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
-        else if (stype == CV_8UC4 && ddepth == CV_16U)
-            nppSafeCall( nppiConvert_8u16u_C4R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16u>(), dst.step, sz) );
-        else if (stype == CV_16UC4 && ddepth == CV_8U)
-            nppSafeCall( nppiConvert_16u8u_C4R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
-        else if (stype == CV_8UC1 && ddepth == CV_16S)
-            nppSafeCall( nppiConvert_8u16s_C1R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16s>(), dst.step, sz) );
-        else if (stype == CV_16SC1 && ddepth == CV_8U)
-            nppSafeCall( nppiConvert_16s8u_C1R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
-        else if (stype == CV_8UC4 && ddepth == CV_16S)
-            nppSafeCall( nppiConvert_8u16s_C4R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp16s>(), dst.step, sz) );
-        else if (stype == CV_16SC4 && ddepth == CV_8U)
-            nppSafeCall( nppiConvert_16s8u_C4R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz) );
-        else if (stype == CV_16SC1 && ddepth == CV_32F)
-            nppSafeCall( nppiConvert_16s32f_C1R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp32f>(), dst.step, sz) );
-        else if (stype == CV_32FC1 && ddepth == CV_16S)
-            nppSafeCall( nppiConvert_32f16s_C1R(psrc->ptr<Npp32f>(), psrc->step, dst.ptr<Npp16s>(), dst.step, sz, NPP_RND_NEAR) );
-        else if (stype == CV_8UC1 && ddepth == CV_32F)
-            nppSafeCall( nppiConvert_8u32f_C1R(psrc->ptr<Npp8u>(), psrc->step, dst.ptr<Npp32f>(), dst.step, sz) );
-        else if (stype == CV_32FC1 && ddepth == CV_8U)
-            nppSafeCall( nppiConvert_32f8u_C1R(psrc->ptr<Npp32f>(), psrc->step, dst.ptr<Npp8u>(), dst.step, sz, NPP_RND_NEAR) );
-        else if (stype == CV_16UC1 && ddepth == CV_32F)
-            nppSafeCall( nppiConvert_16u32f_C1R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp32f>(), dst.step, sz) );
-        else if (stype == CV_32FC1 && ddepth == CV_16U)
-            nppSafeCall( nppiConvert_32f16u_C1R(psrc->ptr<Npp32f>(), psrc->step, dst.ptr<Npp16u>(), dst.step, sz, NPP_RND_NEAR) );
-        else if (stype == CV_16UC1 && ddepth == CV_32S)
-            nppSafeCall( nppiConvert_16u32s_C1R(psrc->ptr<Npp16u>(), psrc->step, dst.ptr<Npp32s>(), dst.step, sz) );
-        else if (stype == CV_16SC1 && ddepth == CV_32S)
-            nppSafeCall( nppiConvert_16s32s_C1R(psrc->ptr<Npp16s>(), psrc->step, dst.ptr<Npp32s>(), dst.step, sz) );
-        else
-            matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), 1.0, 0.0);
+        convert_callers[sdepth][ddepth][scn-1](*psrc, dst);
     }
 }
 
@@ -197,6 +293,99 @@ GpuMat& GpuMat::operator = (const Scalar& s)
 {
     setTo(s);
     return *this;
+}
+
+namespace
+{
+    template<int SDEPTH, int SCN> struct NppSetFunc
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        typedef NppStatus (*func_ptr)(const src_t values[], src_t* pSrc, int nSrcStep, NppiSize oSizeROI);
+    };
+    template<int SDEPTH> struct NppSetFunc<SDEPTH, 1>
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI);
+    };
+    
+    template<int SDEPTH, int SCN, typename NppSetFunc<SDEPTH, SCN>::func_ptr func> struct NppSet 
+    { 
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        static void set(GpuMat& src, const Scalar& s)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            Scalar_<src_t> nppS = s;
+            nppSafeCall( func(nppS.val, src.ptr<src_t>(), src.step, sz) );
+        }
+    };
+    template<int SDEPTH, typename NppSetFunc<SDEPTH, 1>::func_ptr func> struct NppSet<SDEPTH, 1, func>
+    { 
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        static void set(GpuMat& src, const Scalar& s)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            Scalar_<src_t> nppS = s;
+            nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz) );
+        }
+    };
+
+    void kernelSet(GpuMat& src, const Scalar& s)
+    {
+        matrix_operations::set_to_without_mask(src, src.depth(), s.val, src.channels());
+    }
+    
+    template<int SDEPTH, int SCN> struct NppSetMaskFunc
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        typedef NppStatus (*func_ptr)(const src_t values[], src_t* pSrc, int nSrcStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
+    };
+    template<int SDEPTH> struct NppSetMaskFunc<SDEPTH, 1>
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
+    };
+    
+    template<int SDEPTH, int SCN, typename NppSetMaskFunc<SDEPTH, SCN>::func_ptr func> struct NppSetMask
+    { 
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        static void set(GpuMat& src, const Scalar& s, const GpuMat& mask)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            Scalar_<src_t> nppS = s;
+            nppSafeCall( func(nppS.val, src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
+        }
+    };
+    template<int SDEPTH, typename NppSetMaskFunc<SDEPTH, 1>::func_ptr func> struct NppSetMask<SDEPTH, 1, func>
+    { 
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        static void set(GpuMat& src, const Scalar& s, const GpuMat& mask)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            Scalar_<src_t> nppS = s;
+            nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
+        }
+    };
+    
+    void kernelSetMask(GpuMat& src, const Scalar& s, const GpuMat& mask)
+    {
+        matrix_operations::set_to_with_mask(src, src.depth(), s.val, mask, src.channels());
+    }
 }
 
 GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
@@ -211,151 +400,35 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 
     if (mask.empty())
     {
-        switch (type())
+        typedef void (*set_caller_t)(GpuMat& src, const Scalar& s);
+        static const set_caller_t set_callers[8][4] =
         {
-        case CV_8UC1:
-            {
-                Npp8u nVal = (Npp8u)s[0];
-                nppSafeCall( nppiSet_8u_C1R(nVal, ptr<Npp8u>(), step, sz) );
-                break;
-            }
-        case CV_8UC4:
-            {
-                Scalar_<Npp8u> nVal = s;
-                nppSafeCall( nppiSet_8u_C4R(nVal.val, ptr<Npp8u>(), step, sz) );
-                break;
-            }
-        case CV_16UC1:
-            {
-                Npp16u nVal = (Npp16u)s[0];
-                nppSafeCall( nppiSet_16u_C1R(nVal, ptr<Npp16u>(), step, sz) );
-                break;
-            }
-        /*case CV_16UC2:
-            {
-                Scalar_<Npp16u> nVal = s;
-                nppSafeCall( nppiSet_16u_C2R(nVal.val, ptr<Npp16u>(), step, sz) );
-                break;
-            }*/
-        case CV_16UC4:
-            {
-                Scalar_<Npp16u> nVal = s;
-                nppSafeCall( nppiSet_16u_C4R(nVal.val, ptr<Npp16u>(), step, sz) );
-                break;
-            }
-        case CV_16SC1:
-            {
-                Npp16s nVal = (Npp16s)s[0];
-                nppSafeCall( nppiSet_16s_C1R(nVal, ptr<Npp16s>(), step, sz) );
-                break;
-            }
-        /*case CV_16SC2:
-            {
-                Scalar_<Npp16s> nVal = s;
-                nppSafeCall( nppiSet_16s_C2R(nVal.val, ptr<Npp16s>(), step, sz) );
-                break;
-            }*/
-        case CV_16SC4:
-            {
-                Scalar_<Npp16s> nVal = s;
-                nppSafeCall( nppiSet_16s_C4R(nVal.val, ptr<Npp16s>(), step, sz) );
-                break;
-            }
-        case CV_32SC1:
-            {
-                Npp32s nVal = (Npp32s)s[0];
-                nppSafeCall( nppiSet_32s_C1R(nVal, ptr<Npp32s>(), step, sz) );
-                break;
-            }
-        case CV_32SC4:
-            {
-                Scalar_<Npp32s> nVal = s;
-                nppSafeCall( nppiSet_32s_C4R(nVal.val, ptr<Npp32s>(), step, sz) );
-                break;
-            }
-        case CV_32FC1:
-            {
-                Npp32f nVal = (Npp32f)s[0];
-                nppSafeCall( nppiSet_32f_C1R(nVal, ptr<Npp32f>(), step, sz) );
-                break;
-            }
-        case CV_32FC4:
-            {
-                Scalar_<Npp32f> nVal = s;
-                nppSafeCall( nppiSet_32f_C4R(nVal.val, ptr<Npp32f>(), step, sz) );
-                break;
-            }
-        default:
-            matrix_operations::set_to_without_mask( *this, depth(), s.val, channels());
-        }        
+            {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set,kernelSet,kernelSet,NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
+            {kernelSet,kernelSet,kernelSet,kernelSet},
+            {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set,kernelSet,kernelSet,NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
+            {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set,kernelSet,kernelSet,NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
+            {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet,kernelSet,NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
+            {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet,kernelSet,NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
+            {kernelSet,kernelSet,kernelSet,kernelSet},
+            {0,0,0,0}
+        };
+        set_callers[depth()][channels()-1](*this, s);     
     }
     else
     {
-        switch (type())
+        typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, const GpuMat& mask);
+        static const set_caller_t set_callers[8][4] =
         {
-        case CV_8UC1:
-            {
-                Npp8u nVal = (Npp8u)s[0];
-                nppSafeCall( nppiSet_8u_C1MR(nVal, ptr<Npp8u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_8UC4:
-            {
-                Scalar_<Npp8u> nVal = s;
-                nppSafeCall( nppiSet_8u_C4MR(nVal.val, ptr<Npp8u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_16UC1:
-            {
-                Npp16u nVal = (Npp16u)s[0];
-                nppSafeCall( nppiSet_16u_C1MR(nVal, ptr<Npp16u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_16UC4:
-            {
-                Scalar_<Npp16u> nVal = s;
-                nppSafeCall( nppiSet_16u_C4MR(nVal.val, ptr<Npp16u>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_16SC1:
-            {
-                Npp16s nVal = (Npp16s)s[0];
-                nppSafeCall( nppiSet_16s_C1MR(nVal, ptr<Npp16s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_16SC4:
-            {
-                Scalar_<Npp16s> nVal = s;
-                nppSafeCall( nppiSet_16s_C4MR(nVal.val, ptr<Npp16s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_32SC1:
-            {
-                Npp32s nVal = (Npp32s)s[0];
-                nppSafeCall( nppiSet_32s_C1MR(nVal, ptr<Npp32s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_32SC4:
-            {
-                Scalar_<Npp32s> nVal = s;
-                nppSafeCall( nppiSet_32s_C4MR(nVal.val, ptr<Npp32s>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_32FC1:
-            {
-                Npp32f nVal = (Npp32f)s[0];
-                nppSafeCall( nppiSet_32f_C1MR(nVal, ptr<Npp32f>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        case CV_32FC4:
-            {
-                Scalar_<Npp32f> nVal = s;
-                nppSafeCall( nppiSet_32f_C4MR(nVal.val, ptr<Npp32f>(), step, sz, mask.ptr<Npp8u>(), mask.step) );
-                break;
-            }
-        default:
-            matrix_operations::set_to_with_mask( *this, depth(), s.val, mask, channels());
-        }
+            {NppSetMask<CV_8U, 1, nppiSet_8u_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_8U, 4, nppiSet_8u_C4MR>::set},
+            {kernelSetMask,kernelSetMask,kernelSetMask,kernelSetMask},
+            {NppSetMask<CV_16U, 1, nppiSet_16u_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_16U, 4, nppiSet_16u_C4MR>::set},
+            {NppSetMask<CV_16S, 1, nppiSet_16s_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_16S, 4, nppiSet_16s_C4MR>::set},
+            {NppSetMask<CV_32S, 1, nppiSet_32s_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_32S, 4, nppiSet_32s_C4MR>::set},
+            {NppSetMask<CV_32F, 1, nppiSet_32f_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_32F, 4, nppiSet_32f_C4MR>::set},
+            {kernelSetMask,kernelSetMask,kernelSetMask,kernelSetMask},
+            {0,0,0,0}
+        };
+        set_callers[depth()][channels()-1](*this, s, mask);
     }
 
     return *this;

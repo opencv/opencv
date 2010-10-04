@@ -493,6 +493,115 @@ struct CV_GpuNppImageSumWindowTest : public CV_GpuImageProcTest
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// Sobel
+struct CV_GpuNppImageSobelTest : public CV_GpuImageProcTest
+{
+    CV_GpuNppImageSobelTest() : CV_GpuImageProcTest( "GPU-NppImageSobel", "Sobel" ) {}
+
+    int test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        int ksizes[] = {3, 5, 7};
+        int ksizes_num = sizeof(ksizes) / sizeof(int);
+
+        int dx = 1, dy = 0;
+
+        int test_res = CvTS::OK;
+
+        for (int i = 0; i < ksizes_num; ++i)
+        {
+            ts->printf(CvTS::LOG, "\nksize = %d\n", ksizes[i]);
+
+            Mat cpudst;
+            cv::Sobel(img, cpudst, -1, dx, dy, ksizes[i]);
+
+            GpuMat gpu1(img);
+            GpuMat gpudst;
+            cv::gpu::Sobel(gpu1, gpudst, -1, dx, dy, ksizes[i]);
+
+            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
+        }
+
+        return test_res;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// GaussianBlur
+struct CV_GpuNppImageGaussianBlurTest : public CV_GpuImageProcTest
+{
+    CV_GpuNppImageGaussianBlurTest() : CV_GpuImageProcTest( "GPU-NppImageGaussianBlur", "GaussianBlur" ) {}
+
+    int test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        int ksizes[] = {3, 5, 7};
+        int ksizes_num = sizeof(ksizes) / sizeof(int);
+
+        int test_res = CvTS::OK;
+
+        const double sigma1 = 3.0;
+
+        for (int i = 0; i < ksizes_num; ++i)
+        {
+            for (int j = 0; j < ksizes_num; ++j)
+            {
+                ts->printf(CvTS::LOG, "\nksize = (%dx%d)\n", ksizes[i], ksizes[j]);
+
+                Mat cpudst;
+                cv::GaussianBlur(img, cpudst, cv::Size(ksizes[i], ksizes[j]), sigma1);
+
+                GpuMat gpu1(img);
+                GpuMat gpudst;
+                cv::gpu::GaussianBlur(gpu1, gpudst, cv::Size(ksizes[i], ksizes[j]), sigma1);
+                if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+                    test_res = CvTS::FAIL_GENERIC;
+            }
+        }
+
+        return test_res;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Canny
+struct CV_GpuNppImageCannyTest : public CV_GpuImageProcTest
+{
+    CV_GpuNppImageCannyTest() : CV_GpuImageProcTest( "GPU-NppImageCanny", "Canny" ) {}
+
+    int test(const Mat& img)
+    {
+        if (img.type() != CV_8UC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        const double threshold1 = 1.0, threshold2 = 10.0;
+
+        Mat cpudst;
+        cv::Canny(img, cpudst, threshold1, threshold2);
+
+        GpuMat gpu1(img);
+        GpuMat gpudst;
+        cv::gpu::Canny(gpu1, gpudst, threshold1, threshold2);
+
+        return CheckNorm(cpudst, gpudst);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
 // cvtColor
 class CV_GpuCvtColorTest : public CvTest
 {
@@ -598,4 +707,7 @@ CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
 CV_GpuNppImageIntegralTest CV_GpuNppImageIntegral_test;
 CV_GpuNppImageBlurTest CV_GpuNppImageBlur_test;
 CV_GpuNppImageSumWindowTest CV_GpuNppImageSumWindow_test;
+CV_GpuNppImageSobelTest CV_GpuNppImageSobel_test;
+CV_GpuNppImageGaussianBlurTest CV_GpuNppImageGaussianBlur_test;
+CV_GpuNppImageCannyTest CV_GpuNppImageCanny_test;
 CV_GpuCvtColorTest CV_GpuCvtColor_test;
