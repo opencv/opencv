@@ -2128,7 +2128,8 @@ protected:
     Params params;
 };
 
-CV_EXPORTS Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType, const string &paramsFilename = string () );
+CV_EXPORTS Ptr<GenericDescriptorMatch> createGenericDescriptorMatcher( const string& genericDescritptorMatcherType,
+                                                                       const string &paramsFilename = string () );
 
 /****************************************************************************************\
 *                                VectorDescriptorMatch                                   *

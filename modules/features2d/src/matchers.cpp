@@ -569,7 +569,7 @@ void FernDescriptorMatch::trainFernClassifier()
     {
         assert( params.filename.empty() );
 
-        vector<vector<Point2f> > points;
+        vector<vector<Point2f> > points(collection.images.size());
         for( size_t imgIdx = 0; imgIdx < collection.images.size(); imgIdx++ )
             KeyPoint::convert( collection.points[imgIdx], points[imgIdx] );
 
@@ -757,34 +757,34 @@ void VectorDescriptorMatch::write (FileStorage& fs) const
 /****************************************************************************************\
 *                Factory function for GenericDescriptorMatch creating                    *
 \****************************************************************************************/
-Ptr<GenericDescriptorMatch> createGenericDescriptorMatch( const string& genericDescritptorMatchType,
-                                                          const string &paramsFilename )
+Ptr<GenericDescriptorMatch> createGenericDescriptorMatcher( const string& genericDescritptorMatcherType,
+                                                            const string &paramsFilename )
 {
-    GenericDescriptorMatch *descriptorMatch = 0;
-    if( ! genericDescritptorMatchType.compare("ONEWAY") )
+    GenericDescriptorMatch *descriptorMatcher = 0;
+    if( ! genericDescritptorMatcherType.compare("ONEWAY") )
     {
-        descriptorMatch = new OneWayDescriptorMatch();
+        descriptorMatcher = new OneWayDescriptorMatch();
     }
-    else if( ! genericDescritptorMatchType.compare("FERN") )
+    else if( ! genericDescritptorMatcherType.compare("FERN") )
     {
-        descriptorMatch = new FernDescriptorMatch();
+        descriptorMatcher = new FernDescriptorMatch();
     }
-    else if( ! genericDescritptorMatchType.compare ("CALONDER") )
+    else if( ! genericDescritptorMatcherType.compare ("CALONDER") )
     {
         //descriptorMatch = new CalonderDescriptorMatch ();
     }
 
-    if( !paramsFilename.empty() && descriptorMatch != 0 )
+    if( !paramsFilename.empty() && descriptorMatcher != 0 )
     {
         FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
         if( fs.isOpened() )
         {
-            descriptorMatch->read( fs.root() );
+            descriptorMatcher->read( fs.root() );
             fs.release();
         }
     }
 
-    return descriptorMatch;
+    return descriptorMatcher;
 }
 
 }

@@ -204,15 +204,75 @@ static void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoi
     }
 }
 
-static void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2t, bool commonPart,
-                     SparseMat_<float>& overlaps )
+struct IntersectAreaCounter
 {
+    IntersectAreaCounter() : bua(0.f), bna(0.f) {}
+    IntersectAreaCounter( float _miny, float _maxy, float _dr, const Point2f& _diff,
+                          const Scalar& _ellipse1, const Scalar& _ellipse2 ) : bua(0.f), bna(0.f),
+                                                                               miny(_miny), maxy(_maxy), dr(_dr), diff(_diff),
+                                                                               ellipse1(_ellipse1), ellipse2(_ellipse2) {}
+    void operator()( const BlockedRange& range )
+    {
+        float temp_bua = bua, temp_bna = bna;
+        for( float rx1 = range.begin(); rx1 <= range.end(); rx1 += dr )
+        {
+            float rx2 = rx1 - diff.x;
+            for( float ry1 = miny; ry1 <= maxy; ry1 += dr )
+            {
+                float ry2 = ry1 - diff.y;
+                //compute the distance from the ellipse center
+                float e1 = (float)(ellipse1[0]*rx1*rx1 + 2*ellipse1[1]*rx1*ry1 + ellipse1[2]*ry1*ry1);
+                float e2 = (float)(ellipse2[0]*rx2*rx2 + 2*ellipse2[1]*rx2*ry2 + ellipse2[2]*ry2*ry2);
+                //compute the area
+                if( e1<1 && e2<1 ) temp_bna++;
+                if( e1<1 || e2<1 ) temp_bua++;
+            }
+        }
+        bua = temp_bua;
+        bna = temp_bna;
+    }
+    void join( IntersectAreaCounter& ac )
+    {
+        bua += ac.bua;
+        bna += ac.bna;
+    }
+
+    float bua, bna;
+
+    float miny, maxy, dr;
+    Point2f diff;
+    Scalar ellipse1, ellipse2;
+
+};
+
+struct SIdx
+{
+    SIdx() : S(-1), i1(-1), i2(-1) {}
+    SIdx(float _S, int _i1, int _i2) : S(_S), i1(_i1), i2(_i2) {}
+    float S;
+    int i1;
+    int i2;
+
+    bool operator<(const SIdx& v) const { return S > v.S; }
+
+    struct UsedFinder
+    {
+        UsedFinder(const SIdx& _used) : used(_used) {}
+        const SIdx& used;
+        bool operator()(const SIdx& v) const { return  (v.i1 == used.i1 || v.i2 == used.i2); }
+    };
+};
+
+static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2t,
+                                            bool commonPart, vector<SIdx>& overlaps, float minOverlap )
+{
+    CV_Assert( minOverlap >= 0.f );
     overlaps.clear();
     if( keypoints1.empty() || keypoints2t.empty() )
         return;
 
-    int size[] = { keypoints1.size(), keypoints2t.size() };
-    overlaps.create( 2, size );
+    overlaps.clear();
+    overlaps.reserve(cvRound(keypoints1.size() * keypoints2t.size() * 0.01));
 
     for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
     {
@@ -246,34 +306,40 @@ static void overlap( const vector<EllipticKeyPoint>& keypoints1, const vector<El
                 float miny = floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
                                     -keypoint1a.boundingBox.height : (diff.y-keypoint2a.boundingBox.height));
                 float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
-                float dr = mina/50.f;
-                float bua = 0.f, bna = 0.f;
+
                 //compute the area
-                for( float rx1 = minx; rx1 <= maxx; rx1+=dr )
+                float dr = mina/50.f;
+                IntersectAreaCounter ac( miny, maxy, dr, diff, keypoint1a.ellipse, keypoint2a.ellipse );
+                parallel_reduce( BlockedRange(minx, maxx), ac );
+                if( ac.bna > 0 )
                 {
-                    float rx2 = rx1-diff.x;
-                    for( float ry1=miny; ry1<=maxy; ry1+=dr )
-                    {
-                        float ry2=ry1-diff.y;
-                        //compute the distance from the ellipse center
-                        float e1 = (float)(keypoint1a.ellipse[0]*rx1*rx1+2*keypoint1a.ellipse[1]*rx1*ry1+keypoint1a.ellipse[2]*ry1*ry1);
-                        float e2 = (float)(keypoint2a.ellipse[0]*rx2*rx2+2*keypoint2a.ellipse[1]*rx2*ry2+keypoint2a.ellipse[2]*ry2*ry2);
-                        //compute the area
-                        if( e1<1 && e2<1 ) bna++;
-                        if( e1<1 || e2<1 ) bua++;
-                    }
+                    float ov =  ac.bna / ac.bua;
+                    if( ov >= minOverlap )
+                        overlaps.push_back(SIdx(ov, i1, i2));
                 }
-                if( bna > 0)
-                    overlaps.ref(i1,i2) = bna/bua;
             }
         }
     }
+
+    sort( overlaps.begin(), overlaps.end() );
+
+    typedef vector<SIdx>::iterator It;
+
+    It pos = overlaps.begin();
+    It end = overlaps.end();
+
+    while(pos != end)
+    {
+        It prev = pos++;
+        end = std::remove_if(pos, end, SIdx::UsedFinder(*prev));
+    }
+    overlaps.erase(pos, overlaps.end());
 }
 
 static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat& H1to2,
                                     const vector<KeyPoint>& _keypoints1, const vector<KeyPoint>& _keypoints2,
                                     float& repeatability, int& correspondencesCount,
-                                    SparseMat_<uchar>* thresholdedOverlapMask=0 )
+                                    Mat* thresholdedOverlapMask=0  )
 {
     vector<EllipticKeyPoint> keypoints1, keypoints2, keypoints1t, keypoints2t;
     EllipticKeyPoint::convert( _keypoints1, keypoints1 );
@@ -284,8 +350,8 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
     Mat H2to1; invert(H1to2, H2to1);
     EllipticKeyPoint::calcProjection( keypoints2, H2to1, keypoints2t );
 
-    bool ifEvaluateDetectors = !thresholdedOverlapMask; // == commonPart
     float overlapThreshold;
+    bool ifEvaluateDetectors = thresholdedOverlapMask == 0;
     if( ifEvaluateDetectors )
     {
         overlapThreshold = 1.f - 0.4f;
@@ -300,57 +366,34 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
     else
     {
         overlapThreshold = 1.f - 0.5f;
+
+        thresholdedOverlapMask->create( keypoints1.size(), keypoints2t.size(), CV_8UC1 );
+        thresholdedOverlapMask->setTo( Scalar::all(0) );
     }
     int minCount = min( keypoints1.size(), keypoints2t.size() );
 
     // calculate overlap errors
-    SparseMat_<float> overlaps;
-    overlap( keypoints1, keypoints2t, ifEvaluateDetectors, overlaps );
+    vector<SIdx> overlaps;
+    computeOneToOneMatchedOverlaps( keypoints1, keypoints2t, ifEvaluateDetectors, overlaps, overlapThreshold/*min overlap*/ );
 
     correspondencesCount = -1;
     repeatability = -1.f;
-    const int* size = overlaps.size();
-    if( !size || overlaps.nzcount() == 0 )
+    if( overlaps.empty() )
         return;
 
     if( ifEvaluateDetectors )
     {
-        // threshold the overlaps
-        for( int y = 0; y < size[0]; y++ )
-        {
-            for( int x = 0; x < size[1]; x++ )
-            {
-                if ( overlaps(y,x) < overlapThreshold )
-                    overlaps.erase(y,x);
-            }
-        }
-
         // regions one-to-one matching
-        correspondencesCount = 0;
-        while( overlaps.nzcount() > 0 )
-        {
-            double maxOverlap = 0;
-            int maxIdx[2];
-            minMaxLoc( overlaps, 0, &maxOverlap, 0, maxIdx );
-            for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
-                overlaps.erase(i1, maxIdx[1]);
-            for( size_t i2 = 0; i2 < keypoints2t.size(); i2++ )
-                overlaps.erase(maxIdx[0], i2);
-            correspondencesCount++;
-        }
-        repeatability = minCount ? (float)correspondencesCount/minCount : -1;
+        correspondencesCount = overlaps.size();
+        repeatability = minCount ? (float)correspondencesCount / minCount : -1;
     }
     else
     {
-        thresholdedOverlapMask->create( 2, size );
-        for( int y = 0; y < size[0]; y++ )
+        for( size_t i = 0; i < overlaps.size(); i++ )
         {
-            for( int x = 0; x < size[1]; x++ )
-            {
-                float val = overlaps(y,x);
-                if ( val >= overlapThreshold )
-                    thresholdedOverlapMask->ref(y,x) = 1;
-            }
+            int y = overlaps[i].i1;
+            int x = overlaps[i].i2;
+            thresholdedOverlapMask->at<uchar>(y,x) = 1;
         }
     }
 }
@@ -462,8 +505,9 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
     dmatch->clear();
 
     vector<vector<DMatch> > *matches1to2, buf1;
-    vector<vector<uchar> > *correctMatches1to2Mask, buf2;
     matches1to2 = _matches1to2 != 0 ? _matches1to2 : &buf1;
+
+    vector<vector<uchar> > *correctMatches1to2Mask, buf2;
     correctMatches1to2Mask = _correctMatches1to2Mask != 0 ? _correctMatches1to2Mask : &buf2;
 
     if( keypoints1.empty() )
@@ -488,14 +532,10 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
     }
     float repeatability;
     int correspCount;
-    SparseMat_<uchar> thresholdedOverlapMask; // thresholded allOverlapErrors
-    calculateRepeatability( img1, img2, H1to2,
-                            keypoints1, keypoints2,
-                            repeatability, correspCount,
-                            &thresholdedOverlapMask );
+    Mat thresholdedOverlapMask; // thresholded allOverlapErrors
+    calculateRepeatability( img1, img2, H1to2, keypoints1, keypoints2, repeatability, correspCount, &thresholdedOverlapMask );
 
     correctMatches1to2Mask->resize(matches1to2->size());
-    int ddd = 0;
     for( size_t i = 0; i < matches1to2->size(); i++ )
     {
         (*correctMatches1to2Mask)[i].resize((*matches1to2)[i].size());
@@ -503,8 +543,7 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
         {
             int indexQuery = (*matches1to2)[i][j].indexQuery;
             int indexTrain = (*matches1to2)[i][j].indexTrain;
-            (*correctMatches1to2Mask)[i][j] = thresholdedOverlapMask( indexQuery, indexTrain );
-            ddd += thresholdedOverlapMask( indexQuery, indexTrain ) != 0 ? 1 : 0;
+            (*correctMatches1to2Mask)[i][j] = thresholdedOverlapMask.at<uchar>( indexQuery, indexTrain );
         }
     }
 

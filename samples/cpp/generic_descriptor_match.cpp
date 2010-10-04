@@ -24,8 +24,8 @@ int main(int argc, char** argv)
     std::string alg_name = std::string(argv[3]);
     std::string params_filename = std::string(argv[4]);
 
-    GenericDescriptorMatch *descriptorMatch = createGenericDescriptorMatch(alg_name, params_filename);
-    if( descriptorMatch == 0 )
+    GenericDescriptorMatch *descriptorMatcher = createGenericDescriptorMatcher(alg_name, params_filename);
+    if( descriptorMatcher == 0 )
     {
         printf ("Cannot create descriptor\n");
         return 0;
@@ -50,10 +50,10 @@ int main(int argc, char** argv)
 
     printf("Finding nearest neighbors... \n");
     // find NN for each of keypoints2 in keypoints1
-    descriptorMatch->add( img1, keypoints1 );
+    descriptorMatcher->add( img1, keypoints1 );
     vector<int> matches2to1;
     matches2to1.resize(keypoints2.size());
-    descriptorMatch->match( img2, keypoints2, matches2to1 );
+    descriptorMatcher->match( img2, keypoints2, matches2to1 );
     printf("Done\n");
 
     IplImage* img_corr = DrawCorrespondences(img1, keypoints1, img2, keypoints2, matches2to1);
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     cvReleaseImage(&img1);
     cvReleaseImage(&img2);
     cvReleaseImage(&img_corr);
-    delete descriptorMatch;
+    delete descriptorMatcher;
 }
 
 IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
