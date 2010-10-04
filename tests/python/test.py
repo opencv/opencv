@@ -313,6 +313,15 @@ class FunctionTests(OpenCVTests):
         # just check that something was drawn
         self.assert_(cv.Sum(img)[0] > 0)
 
+    def test_ConvertImage(self):
+        i1 = cv.GetImage(self.get_sample("samples/c/lena.jpg", 1))
+        i2 = cv.CloneImage(i1)
+        i3 = cv.CloneImage(i1)
+        cv.ConvertImage(i1, i2, cv.CV_CVTIMG_FLIP + cv.CV_CVTIMG_SWAP_RB)
+        self.assertNotEqual(self.hashimg(i1), self.hashimg(i2))
+        cv.ConvertImage(i2, i3, cv.CV_CVTIMG_FLIP + cv.CV_CVTIMG_SWAP_RB)
+        self.assertEqual(self.hashimg(i1), self.hashimg(i3))
+
     def test_ConvexHull2(self):
         # Draw a series of N-pointed stars, find contours, assert the contour is not convex,
         # assert the hull has N segments, assert that there are N convexity defects.
@@ -617,6 +626,13 @@ class FunctionTests(OpenCVTests):
             self.assertEqual(aslist(m1), range(10))
             self.assertEqual(aslist(m2), range(5, 9))
             self.assertEqual(aslist(m3), range(6, 8))
+
+    def test_grabCut(self):
+        image = self.get_sample("samples/c/lena.jpg", cv.CV_LOAD_IMAGE_COLOR)
+        tmp1 = cv.CreateMat(1, 13 * 5, cv.CV_32FC1)
+        tmp2 = cv.CreateMat(1, 13 * 5, cv.CV_32FC1)
+        mask = cv.CreateMat(image.rows, image.cols, cv.CV_8UC1)
+        cv.grabCut(image, mask, (10,10,200,200), tmp1, tmp2, 10, cv.GC_INIT_WITH_RECT)
 
     def test_HoughLines2_PROBABILISTIC(self):
         li = cv.HoughLines2(self.yield_line_image(),

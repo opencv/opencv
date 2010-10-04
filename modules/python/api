@@ -1546,6 +1546,10 @@ CalcOpticalFlowFarneback
   int flags 0
 
 # Highgui
+ConvertImage
+  CvArr src
+  CvArr dst
+  int flags 0
 NamedWindow
   char* name
   int flags CV_WINDOW_AUTOSIZE
