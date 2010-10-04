@@ -895,14 +895,14 @@ static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
         x0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
         x1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
         
-        y[i] = x0;
-        y[i + 1] = x1;
+        y[i] = (float)x0;
+        y[i + 1] = (float)x1;
         
         x2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
         x3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
         
-        y[i + 2] = x2;
-        y[i + 3] = x3;
+        y[i + 2] = (float)x2;
+        y[i + 3] = (float)x3;
     }
     
     for( ; i < n; i++ )
@@ -920,7 +920,7 @@ static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
         buf[0].i = t << 23;
         x0 = (x0 - val0)*exp_postscale;
         
-        y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0);
+        y[i] = (float)(buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0));
     }
     
     return CV_OK;
@@ -1545,7 +1545,7 @@ static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
         h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
 
         y0 += icvLogTab[h0];
-        x0 = LOGTAB_TRANSLATE( buf[0].f, h0 );
+        x0 = (float)LOGTAB_TRANSLATE( buf[0].f, h0 );
         x0 += shift[h0 == 510];
         y0 += LOGPOLY( x0 );
 
