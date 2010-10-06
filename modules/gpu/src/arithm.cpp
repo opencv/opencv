@@ -387,6 +387,7 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 
 Scalar cv::gpu::sum(const GpuMat& src)
 {
+    CV_Assert(!"disabled until fix crash");
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);    
 
     NppiSize sz;
@@ -420,6 +421,7 @@ Scalar cv::gpu::sum(const GpuMat& src)
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal) 
 {
+    CV_Assert(!"disabled until fix npp bug");
     CV_Assert(src.type() == CV_8UC1);
 
     NppiSize sz;

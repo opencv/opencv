@@ -45,25 +45,27 @@ CvTS test_system;
 
 const char* blacklist[] =
 {    
-    "GPU-NppImageSum",              // crash
     "GPU-MatOperatorAsyncCall",     // crash
-    //"GPU-NppErode",                 // different border interpolation
-    //"GPU-NppMorphologyEx",          // different border interpolation
+
+    "GPU-NppImageSum",              // crash, probably npp bug
+    "GPU-NppImageMinNax",           // npp bug - don't find min/max near right border
     //"GPU-NppImageDivide",           // different round mode
     //"GPU-NppImageMeanStdDev",       // different precision
-    //"GPU-NppImageMinNax",           // npp bug - don't find min/max near right border
-    //"GPU-NppImageResize",           // different precision in interpolation
-    //"GPU-NppImageWarpAffine",       // different precision in interpolation
-    //"GPU-NppImageWarpPerspective",  // different precision in interpolation
-    //"GPU-NppImageIntegral",         // different precision
-    //"GPU-NppImageBlur",             // different precision
     //"GPU-NppImageExp",              // different precision
     //"GPU-NppImageLog",              // different precision
     //"GPU-NppImageMagnitude",        // different precision
-    //"GPU-NppImageSumWindow",        // different border interpolation
-    //"GPU-NppImageSobel",            // ???
-    //"GPU-NppImageGaussianBlur",     // different border interpolation
+    
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
+    //"GPU-NppImageResize",           // different precision
+    //"GPU-NppImageWarpAffine",       // different precision
+    //"GPU-NppImageWarpPerspective",  // different precision
+    //"GPU-NppImageIntegral",         // different precision
+    
+    //"GPU-NppImageSobel",            // ???
+    //"GPU-NppImageScharr",           // ???
+    
+    //"GPU-NppImageGaussianBlur",     // different precision    
+    //"GPU-NppMorphologyEx",          // different precision?
     0
 };
 

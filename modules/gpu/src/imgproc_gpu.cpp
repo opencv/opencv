@@ -992,6 +992,7 @@ void cv::gpu::integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum)
 
 void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
 {
+    CV_Assert(!"disabled until fix crash");
     CV_Assert(image.type() == CV_8UC1);
 
     GpuMat srcDx, srcDy;
