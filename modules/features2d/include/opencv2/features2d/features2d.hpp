@@ -2243,6 +2243,9 @@ CV_EXPORTS void evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& im
 class CV_EXPORTS BOWTrainer
 {
 public:
+    BOWTrainer(){}
+    virtual ~BOWTrainer(){}
+
     void add( const Mat& descriptors );
     const vector<Mat>& getDescriptors() const { return descriptors; }
     int descripotorsCount() const { return descriptors.empty() ? 0 : size; }
@@ -2272,8 +2275,7 @@ class CV_EXPORTS BOWKMeansTrainer : public BOWTrainer
 public:
     BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(),
                       int attempts=3, int flags=KMEANS_PP_CENTERS );
-
-
+    virtual ~BOWKMeansTrainer(){}
 
     // Returns trained vocabulary (i.e. cluster centers).
     virtual Mat cluster() const;
@@ -2295,6 +2297,8 @@ class CV_EXPORTS BOWImgDescriptorExtractor
 public:
     BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
                                const Ptr<DescriptorMatcher>& dmatcher );
+    virtual ~BOWImgDescriptorExtractor(){}
+
     void setVocabulary( const Mat& vocabulary );
     const Mat& getVocabulary() const { return vocabulary; }
     void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
