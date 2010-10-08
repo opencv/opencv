@@ -211,6 +211,13 @@ struct IntersectAreaCounter
                           const Scalar& _ellipse1, const Scalar& _ellipse2 ) : bua(0.f), bna(0.f),
                                                                                miny(_miny), maxy(_maxy), dr(_dr), diff(_diff),
                                                                                ellipse1(_ellipse1), ellipse2(_ellipse2) {}
+    IntersectAreaCounter( const IntersectAreaCounter& counter, Split )
+    {
+        *this = counter;
+        bua = 0.f;
+        bna = 0.f;
+    }
+
     void operator()( const BlockedRange& range )
     {
         float temp_bua = bua, temp_bna = bna;
@@ -231,6 +238,7 @@ struct IntersectAreaCounter
         bua = temp_bua;
         bna = temp_bna;
     }
+
     void join( IntersectAreaCounter& ac )
     {
         bua += ac.bua;
