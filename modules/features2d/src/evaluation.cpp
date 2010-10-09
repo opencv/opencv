@@ -46,6 +46,8 @@
 using namespace cv;
 using namespace std;
 
+//for android ndk
+#undef _S
 static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
 {
     double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
