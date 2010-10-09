@@ -208,23 +208,26 @@ static void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoi
 
 struct IntersectAreaCounter
 {
-    IntersectAreaCounter() : bua(0.f), bna(0.f) {}
-    IntersectAreaCounter( float _miny, float _maxy, float _dr, const Point2f& _diff,
-                          const Scalar& _ellipse1, const Scalar& _ellipse2 ) : bua(0.f), bna(0.f),
-                                                                               miny(_miny), maxy(_maxy), dr(_dr), diff(_diff),
-                                                                               ellipse1(_ellipse1), ellipse2(_ellipse2) {}
+    IntersectAreaCounter() : bua(0), bna(0) {}
+    IntersectAreaCounter( float _dr, int _minx,
+                          int _miny, int _maxy,
+                          const Point2f& _diff,
+                          const Scalar& _ellipse1, const Scalar& _ellipse2 ) :
+               dr(_dr), bua(0), bna(0), minx(_minx), miny(_miny), maxy(_maxy),
+               diff(_diff), ellipse1(_ellipse1), ellipse2(_ellipse2) {}
     IntersectAreaCounter( const IntersectAreaCounter& counter, Split )
     {
         *this = counter;
-        bua = 0.f;
-        bna = 0.f;
+        bua = 0;
+        bna = 0;
     }
 
     void operator()( const BlockedRange& range )
     {
-        float temp_bua = bua, temp_bna = bna;
-        for( float rx1 = range.begin(); rx1 <= range.end(); rx1 += dr )
+        int temp_bua = bua, temp_bna = bna;
+        for( int i = range.begin(); i != range.end(); i++ )
         {
+            float rx1 = minx + i*dr;
             float rx2 = rx1 - diff.x;
             for( float ry1 = miny; ry1 <= maxy; ry1 += dr )
             {
@@ -247,9 +250,12 @@ struct IntersectAreaCounter
         bna += ac.bna;
     }
 
-    float bua, bna;
+    float dr;
+    int bua, bna;
 
-    float miny, maxy, dr;
+    int minx;
+    int miny, maxy;
+
     Point2f diff;
     Scalar ellipse1, ellipse2;
 
@@ -306,24 +312,25 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
             {
                 EllipticKeyPoint keypoint2a = EllipticKeyPoint( kp2.center, Scalar(fac*kp2.ellipse[0], fac*kp2.ellipse[1], fac*kp2.ellipse[2]) );
                 //find the largest eigenvalue
-                float maxx =  ceil(( keypoint1a.boundingBox.width > (diff.x+keypoint2a.boundingBox.width)) ?
+                int maxx =  ceil(( keypoint1a.boundingBox.width > (diff.x+keypoint2a.boundingBox.width)) ?
                                      keypoint1a.boundingBox.width : (diff.x+keypoint2a.boundingBox.width));
-                float minx = floor((-keypoint1a.boundingBox.width < (diff.x-keypoint2a.boundingBox.width)) ?
+                int minx = floor((-keypoint1a.boundingBox.width < (diff.x-keypoint2a.boundingBox.width)) ?
                                     -keypoint1a.boundingBox.width : (diff.x-keypoint2a.boundingBox.width));
 
-                float maxy =  ceil(( keypoint1a.boundingBox.height > (diff.y+keypoint2a.boundingBox.height)) ?
+                int maxy =  ceil(( keypoint1a.boundingBox.height > (diff.y+keypoint2a.boundingBox.height)) ?
                                      keypoint1a.boundingBox.height : (diff.y+keypoint2a.boundingBox.height));
-                float miny = floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
+                int miny = floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
                                     -keypoint1a.boundingBox.height : (diff.y-keypoint2a.boundingBox.height));
-                float mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
+                int mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
 
                 //compute the area
-                float dr = mina/50.f;
-                IntersectAreaCounter ac( miny, maxy, dr, diff, keypoint1a.ellipse, keypoint2a.ellipse );
-                parallel_reduce( BlockedRange(minx, maxx), ac );
+                float dr = (float)mina/50.f;
+                int N = (int)floor((float)(maxx - minx) / dr);
+                IntersectAreaCounter ac( dr, minx, miny, maxy, diff, keypoint1a.ellipse, keypoint2a.ellipse );
+                parallel_reduce( BlockedRange(0, N+1), ac );
                 if( ac.bna > 0 )
                 {
-                    float ov =  ac.bna / ac.bua;
+                    float ov =  (float)ac.bna / (float)ac.bua;
                     if( ov >= minOverlap )
                         overlaps.push_back(SIdx(ov, i1, i2));
                 }
