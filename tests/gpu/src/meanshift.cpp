@@ -123,3 +123,104 @@ struct CV_GpuMeanShiftTest : public CvTest
 /////////////////////////////////////////////////////////////////////////////
 
 CV_GpuMeanShiftTest CV_GpuMeanShift_test;
+
+struct CV_GpuMeanShiftProcTest : public CvTest
+{
+    CV_GpuMeanShiftProcTest(): CvTest( "GPU-MeanShiftProc", "MeanShiftProc" ){}
+
+    void run(int)
+    {
+        int spatialRad = 30;
+        int colorRad = 30;
+
+        cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
+
+        if (img.empty())
+        {
+            ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+            return;
+        }
+
+        cv::Mat rgba;
+        cvtColor(img, rgba, CV_BGR2BGRA);
+
+        try
+        {
+            cv::gpu::GpuMat h_rmap_filtered;
+            cv::gpu::meanShiftFiltering( cv::gpu::GpuMat(rgba), h_rmap_filtered, spatialRad, colorRad );
+
+            cv::gpu::GpuMat d_rmap;
+            cv::gpu::GpuMat d_spmap;
+            cv::gpu::meanShiftProc( cv::gpu::GpuMat(rgba), d_rmap, d_spmap, spatialRad, colorRad );
+
+            if (d_rmap.type() != CV_8UC4)
+            {
+                ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                return;
+            }
+
+            cv::Mat rmap_filtered;
+            h_rmap_filtered.download(rmap_filtered);
+
+            cv::Mat rmap;
+            d_rmap.download(rmap);
+
+            uchar maxDiff = 0;
+            for (int j = 0; j < rmap_filtered.rows; ++j)
+            {
+                const uchar* res_line = rmap_filtered.ptr<uchar>(j);
+                const uchar* ref_line = rmap.ptr<uchar>(j);
+
+                for (int i = 0; i < rmap_filtered.cols; ++i)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        const uchar& ch1 = res_line[rmap_filtered.channels()*i + k];
+                        const uchar& ch2 = ref_line[rmap.channels()*i + k];
+                        uchar diff = static_cast<uchar>(abs(ch1 - ch2));
+                        if (maxDiff < diff)
+                            maxDiff = diff;
+                    }
+                }
+            }
+            if (maxDiff > 0) 
+            {
+                ts->printf(CvTS::LOG, "\nMeanShiftProc maxDiff = %d\n", maxDiff);
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+
+            cv::Mat spmap;
+            d_spmap.download(spmap);
+
+            cv::Mat spmap_template;
+            cv::FileStorage fs(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
+            fs["spmap"] >> spmap_template;
+
+            for (int y = 0; y < spmap.rows; ++y) {
+                for (int x = 0; x < spmap.cols; ++x) {
+                    cv::Point_<short> expected = spmap_template.at<cv::Point_<short> >(y, x);
+                    cv::Point_<short> actual = spmap.at<cv::Point_<short> >(y, x);
+                    int diff = (expected - actual).dot(expected - actual);
+                    if (actual != expected) {
+                        ts->printf(CvTS::LOG, "\nMeanShiftProc SpMap is bad, diff=%d\n", diff);
+                        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                        return;
+                    }
+                }
+            }
+
+        }
+        catch(const cv::Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts))
+                throw;
+            return;
+        }
+
+        ts->set_failed_test_info(CvTS::OK);
+    }
+
+};
+
+CV_GpuMeanShiftProcTest CV_GpuMeanShiftProc_test;
