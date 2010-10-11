@@ -411,7 +411,7 @@ namespace cv
         CV_EXPORTS Scalar sum(const GpuMat& m);
 
         //! finds global minimum and maximum array elements and returns their values
-        //! supports only CV_8UC1 type
+        //! supports CV_8UC1 and CV_8UC4 type
         //! disabled until fix npp bug
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal = 0);
 
@@ -648,6 +648,12 @@ namespace cv
 
         //! returns the Gaussian filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0);
+
+        //! returns maximum filter
+        CV_EXPORTS Ptr<BaseFilter_GPU> getMaxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1));
+
+        //! returns minimum filter
+        CV_EXPORTS Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1));
 
         //! smooths the image using the normalized box filter
         //! supports CV_8UC1, CV_8UC4 types

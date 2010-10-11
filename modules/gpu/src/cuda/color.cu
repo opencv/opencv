@@ -625,9 +625,8 @@ namespace imgproc
 
     template <typename T> struct RGB2YCrCbConverter 
     {
-        typedef typename TypeVec<T, 3>::vec_t dst_t;
-
-        static __device__ void cvt(const T* src, dst_t& dst, int bidx)
+        template <typename D>
+        static __device__ void cvt(const T* src, D& dst, int bidx)
         {
             const int delta = ColorChannel<T>::half() * (1 << yuv_shift);
 
@@ -642,9 +641,8 @@ namespace imgproc
     };
     template<> struct RGB2YCrCbConverter<float>
     {
-        typedef typename TypeVec<float, 3>::vec_t dst_t;
-
-        static __device__ void cvt(const float* src, dst_t& dst, int bidx)
+        template <typename D>
+        static __device__ void cvt(const float* src, D& dst, int bidx)
         {
             dst.x = src[0] * cYCrCbCoeffs_f[0] + src[1] * cYCrCbCoeffs_f[1] + src[2] * cYCrCbCoeffs_f[2];
             dst.y = (src[bidx^2] - dst.x) * cYCrCbCoeffs_f[3] + ColorChannel<float>::half();
@@ -652,11 +650,11 @@ namespace imgproc
         }
     };
 
-    template <int SRCCN, typename T>
+    template <int SRCCN, int DSTCN, typename T>
     __global__ void RGB2YCrCb(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
         typedef typename TypeVec<T, SRCCN>::vec_t src_t;
-        typedef typename TypeVec<T, 3>::vec_t dst_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
 
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -668,30 +666,28 @@ namespace imgproc
 
             RGB2YCrCbConverter<T>::cvt(((const T*)(&src)), dst, bidx);
             
-            *(dst_t*)(dst_ + y * dst_step + x * 3 * sizeof(T)) = dst;
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
 
-    template <typename T> struct YCrCb2RGBConvertor
+    template <typename D> struct YCrCb2RGBConvertor
     {
-        typedef typename TypeVec<T, 3>::vec_t src_t;
-
-        static __device__ void cvt(const src_t& src, T* dst, int bidx)
+        template <typename T>
+        static __device__ void cvt(const T& src, D* dst, int bidx)
         {
-            const int b = src.x + CV_DESCALE((src.z - ColorChannel<T>::half()) * cYCrCbCoeffs_i[3], yuv_shift);
-            const int g = src.x + CV_DESCALE((src.z - ColorChannel<T>::half()) * cYCrCbCoeffs_i[2] + (src.y - ColorChannel<T>::half()) * cYCrCbCoeffs_i[1], yuv_shift);
-            const int r = src.x + CV_DESCALE((src.y - ColorChannel<T>::half()) * cYCrCbCoeffs_i[0], yuv_shift);
+            const int b = src.x + CV_DESCALE((src.z - ColorChannel<D>::half()) * cYCrCbCoeffs_i[3], yuv_shift);
+            const int g = src.x + CV_DESCALE((src.z - ColorChannel<D>::half()) * cYCrCbCoeffs_i[2] + (src.y - ColorChannel<D>::half()) * cYCrCbCoeffs_i[1], yuv_shift);
+            const int r = src.x + CV_DESCALE((src.y - ColorChannel<D>::half()) * cYCrCbCoeffs_i[0], yuv_shift);
 
-            dst[bidx] = saturate_cast<T>(b);
-            dst[1] = saturate_cast<T>(g);
-            dst[bidx^2] = saturate_cast<T>(r);
+            dst[bidx] = saturate_cast<D>(b);
+            dst[1] = saturate_cast<D>(g);
+            dst[bidx^2] = saturate_cast<D>(r);
         }
     };
     template <> struct YCrCb2RGBConvertor<float>
     {
-        typedef typename TypeVec<float, 3>::vec_t src_t;
-
-        static __device__ void cvt(const src_t& src, float* dst, int bidx)
+        template <typename T>
+        static __device__ void cvt(const T& src, float* dst, int bidx)
         {
             dst[bidx] = src.x + (src.z - ColorChannel<float>::half()) * cYCrCbCoeffs_f[3];
             dst[1] = src.x + (src.z - ColorChannel<float>::half()) * cYCrCbCoeffs_f[2] + (src.y - ColorChannel<float>::half()) * cYCrCbCoeffs_f[1];
@@ -699,10 +695,10 @@ namespace imgproc
         }
     };
 
-    template <int DSTCN, typename T>
+    template <int SRCCN, int DSTCN, typename T>
     __global__ void YCrCb2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
-        typedef typename TypeVec<T, 3>::vec_t src_t;
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
         typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
 
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -710,7 +706,7 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            src_t src = *(const src_t*)(src_ + y * src_step + x * 3 * sizeof(T));
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
             dst_t dst;
 
             YCrCb2RGBConvertor<T>::cvt(src, ((T*)(&dst)), bidx);
@@ -723,7 +719,7 @@ namespace imgproc
 
 namespace cv { namespace gpu { namespace improc
 {
-    template <typename T, int SRCCN>
+    template <typename T, int SRCCN, int DSTCN>
     void RGB2YCrCb_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
@@ -732,53 +728,56 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2YCrCb<SRCCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc::RGB2YCrCb<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void RGB2YCrCb_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, const int* coeffs, cudaStream_t stream)
+    void RGB2YCrCb_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2YCrCb_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2] = 
+        static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2][2] = 
         {
-            RGB2YCrCb_caller<uchar, 3>, RGB2YCrCb_caller<uchar, 4>
+            {RGB2YCrCb_caller<uchar, 3, 3>, RGB2YCrCb_caller<uchar, 3, 4>},
+            {RGB2YCrCb_caller<uchar, 4, 3>, RGB2YCrCb_caller<uchar, 4, 4>}
         };
 
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
 
-        RGB2YCrCb_callers[srccn-3](src, dst, bidx, stream);
+        RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void RGB2YCrCb_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, const int* coeffs, cudaStream_t stream)
+    void RGB2YCrCb_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2YCrCb_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2] = 
+        static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2][2] = 
         {
-            RGB2YCrCb_caller<unsigned short, 3>, RGB2YCrCb_caller<unsigned short, 4>
+            {RGB2YCrCb_caller<unsigned short, 3, 3>, RGB2YCrCb_caller<unsigned short, 3, 4>},
+            {RGB2YCrCb_caller<unsigned short, 4, 3>, RGB2YCrCb_caller<unsigned short, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
 
-        RGB2YCrCb_callers[srccn-3](src, dst, bidx, stream);
+        RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void RGB2YCrCb_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, const float* coeffs, cudaStream_t stream)
+    void RGB2YCrCb_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const float* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2YCrCb_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2] = 
+        static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2][2] = 
         {
-            RGB2YCrCb_caller<float, 3>, RGB2YCrCb_caller<float, 4>
+            {RGB2YCrCb_caller<float, 3, 3>, RGB2YCrCb_caller<float, 3, 4>},
+            {RGB2YCrCb_caller<float, 4, 3>, RGB2YCrCb_caller<float, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_f, coeffs, 5 * sizeof(float)) );
 
-        RGB2YCrCb_callers[srccn-3](src, dst, bidx, stream);
+        RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
     
-    template <typename T, int DSTCN>
+    template <typename T, int SRCCN, int DSTCN>
     void YCrCb2RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
@@ -787,50 +786,53 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::YCrCb2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc::YCrCb2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void YCrCb2RGB_gpu_8u(const DevMem2D& src, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
+    void YCrCb2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*YCrCb2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2] = 
+        static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2][2] = 
         {
-            YCrCb2RGB_caller<uchar, 3>, YCrCb2RGB_caller<uchar, 4>
+            {YCrCb2RGB_caller<uchar, 3, 3>, YCrCb2RGB_caller<uchar, 3, 4>},
+            {YCrCb2RGB_caller<uchar, 4, 3>, YCrCb2RGB_caller<uchar, 4, 4>}
         };
 
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
 
-        YCrCb2RGB_callers[dstcn-3](src, dst, bidx, stream);
+        YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void YCrCb2RGB_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
+    void YCrCb2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*YCrCb2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2] = 
+        static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2][2] = 
         {
-            YCrCb2RGB_caller<unsigned short, 3>, YCrCb2RGB_caller<unsigned short, 4>
+            {YCrCb2RGB_caller<unsigned short, 3, 3>, YCrCb2RGB_caller<unsigned short, 3, 4>},
+            {YCrCb2RGB_caller<unsigned short, 4, 3>, YCrCb2RGB_caller<unsigned short, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
 
-        YCrCb2RGB_callers[dstcn-3](src, dst, bidx, stream);
+        YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void YCrCb2RGB_gpu_32f(const DevMem2D& src, const DevMem2D& dst, int dstcn, int bidx, const float* coeffs, cudaStream_t stream)
+    void YCrCb2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const float* coeffs, cudaStream_t stream)
     {
         typedef void (*YCrCb2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2] = 
+        static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2][2] = 
         {
-            YCrCb2RGB_caller<float, 3>, YCrCb2RGB_caller<float, 4>
+            {YCrCb2RGB_caller<float, 3, 3>, YCrCb2RGB_caller<float, 3, 4>},
+            {YCrCb2RGB_caller<float, 4, 3>, YCrCb2RGB_caller<float, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_f, coeffs, 4 * sizeof(float)) );
 
-        YCrCb2RGB_callers[dstcn-3](src, dst, bidx, stream);
+        YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 }}}
 
@@ -843,75 +845,29 @@ namespace imgproc
 
     template <typename T> struct RGB2XYZConvertor
     {
-        typedef typename TypeVec<T, 3>::vec_t dst_t;
-        static __device__ dst_t cvt(const T* src)
+        template <typename D>
+        static __device__ void cvt(const T* src, D& dst)
         {
-            dst_t dst;
-
 	        dst.x = saturate_cast<T>(CV_DESCALE(src[0] * cXYZ_D65i[0] + src[1] * cXYZ_D65i[1] + src[2] * cXYZ_D65i[2], xyz_shift));
 	        dst.y = saturate_cast<T>(CV_DESCALE(src[0] * cXYZ_D65i[3] + src[1] * cXYZ_D65i[4] + src[2] * cXYZ_D65i[5], xyz_shift));
 	        dst.z = saturate_cast<T>(CV_DESCALE(src[0] * cXYZ_D65i[6] + src[1] * cXYZ_D65i[7] + src[2] * cXYZ_D65i[8], xyz_shift));
-
-            return dst;
         }
     };
     template <> struct RGB2XYZConvertor<float>
     {
-        typedef typename TypeVec<float, 3>::vec_t dst_t;
-        static __device__ dst_t cvt(const float* src)
+        template <typename D>
+        static __device__ void cvt(const float* src, D& dst)
         {
-            dst_t dst;
-
 	        dst.x = src[0] * cXYZ_D65f[0] + src[1] * cXYZ_D65f[1] + src[2] * cXYZ_D65f[2];
 	        dst.y = src[0] * cXYZ_D65f[3] + src[1] * cXYZ_D65f[4] + src[2] * cXYZ_D65f[5];
 	        dst.z = src[0] * cXYZ_D65f[6] + src[1] * cXYZ_D65f[7] + src[2] * cXYZ_D65f[8];
-
-            return dst;
         }
     };
 
-    template <int SRCCN, typename T>
+    template <int SRCCN, int DSTCN, typename T>
     __global__ void RGB2XYZ(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
     {
         typedef typename TypeVec<T, SRCCN>::vec_t src_t;
-        typedef typename TypeVec<T, 3>::vec_t dst_t;
-
-		const int x = blockDim.x * blockIdx.x + threadIdx.x;
-		const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-        if (y < rows && x < cols)
-        {
-            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
-            
-            *(dst_t*)(dst_ + y * dst_step + x * 3 * sizeof(T)) = RGB2XYZConvertor<T>::cvt((const T*)(&src));
-        }
-    }
-
-    template <typename T> struct XYZ2RGBConvertor
-    {
-        typedef typename TypeVec<T, 3>::vec_t src_t;
-        static __device__ void cvt(const src_t& src, T* dst)
-        {
-            dst[0] = saturate_cast<T>(CV_DESCALE(src.x * cXYZ_D65i[0] + src.y * cXYZ_D65i[1] + src.z * cXYZ_D65i[2], xyz_shift));
-		    dst[1] = saturate_cast<T>(CV_DESCALE(src.x * cXYZ_D65i[3] + src.y * cXYZ_D65i[4] + src.z * cXYZ_D65i[5], xyz_shift));
-		    dst[2] = saturate_cast<T>(CV_DESCALE(src.x * cXYZ_D65i[6] + src.y * cXYZ_D65i[7] + src.z * cXYZ_D65i[8], xyz_shift));
-        }
-    };
-    template <> struct XYZ2RGBConvertor<float>
-    {
-        typedef typename TypeVec<float, 3>::vec_t src_t;
-        static __device__ void cvt(const src_t& src, float* dst)
-        {
-            dst[0] = src.x * cXYZ_D65f[0] + src.y * cXYZ_D65f[1] + src.z * cXYZ_D65f[2];
-		    dst[1] = src.x * cXYZ_D65f[3] + src.y * cXYZ_D65f[4] + src.z * cXYZ_D65f[5];
-		    dst[2] = src.x * cXYZ_D65f[6] + src.y * cXYZ_D65f[7] + src.z * cXYZ_D65f[8];
-        }
-    };
-
-    template <int DSTCN, typename T>
-    __global__ void XYZ2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
-    {
-        typedef typename TypeVec<T, 3>::vec_t src_t;
         typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
 
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -919,7 +875,48 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            src_t src = *(const src_t*)(src_ + y * src_step + x * 3 * sizeof(T));
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
+
+            dst_t dst;
+            RGB2XYZConvertor<T>::cvt((const T*)(&src), dst);
+            
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
+        }
+    }
+
+    template <typename D> struct XYZ2RGBConvertor
+    {
+        template <typename T>
+        static __device__ void cvt(const T& src, D* dst)
+        {
+            dst[0] = saturate_cast<D>(CV_DESCALE(src.x * cXYZ_D65i[0] + src.y * cXYZ_D65i[1] + src.z * cXYZ_D65i[2], xyz_shift));
+		    dst[1] = saturate_cast<D>(CV_DESCALE(src.x * cXYZ_D65i[3] + src.y * cXYZ_D65i[4] + src.z * cXYZ_D65i[5], xyz_shift));
+		    dst[2] = saturate_cast<D>(CV_DESCALE(src.x * cXYZ_D65i[6] + src.y * cXYZ_D65i[7] + src.z * cXYZ_D65i[8], xyz_shift));
+        }
+    };
+    template <> struct XYZ2RGBConvertor<float>
+    {
+        template <typename T>
+        static __device__ void cvt(const T& src, float* dst)
+        {
+            dst[0] = src.x * cXYZ_D65f[0] + src.y * cXYZ_D65f[1] + src.z * cXYZ_D65f[2];
+		    dst[1] = src.x * cXYZ_D65f[3] + src.y * cXYZ_D65f[4] + src.z * cXYZ_D65f[5];
+		    dst[2] = src.x * cXYZ_D65f[6] + src.y * cXYZ_D65f[7] + src.z * cXYZ_D65f[8];
+        }
+    };
+
+    template <int SRCCN, int DSTCN, typename T>
+    __global__ void XYZ2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
+    {
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
+
+		const int x = blockDim.x * blockIdx.x + threadIdx.x;
+		const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
 
             dst_t dst;
             XYZ2RGBConvertor<T>::cvt(src, (T*)(&dst));
@@ -932,7 +929,7 @@ namespace imgproc
 
 namespace cv { namespace gpu { namespace improc
 {
-    template <typename T, int SRCCN>
+    template <typename T, int SRCCN, int DSTCN>
     void RGB2XYZ_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
@@ -941,44 +938,56 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2XYZ<SRCCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc::RGB2XYZ<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void RGB2XYZ_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, const int* coeffs, cudaStream_t stream)
+    void RGB2XYZ_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2XYZ_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const RGB2XYZ_caller_t RGB2XYZ_callers[] = {RGB2XYZ_caller<uchar, 3>, RGB2XYZ_caller<uchar, 4>};
+        static const RGB2XYZ_caller_t RGB2XYZ_callers[2][2] = 
+        {
+            {RGB2XYZ_caller<uchar, 3, 3>, RGB2XYZ_caller<uchar, 3, 4>},
+            {RGB2XYZ_caller<uchar, 4, 3>, RGB2XYZ_caller<uchar, 4, 4>}
+        };
 
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
-        RGB2XYZ_callers[srccn-3](src, dst, stream);
+        RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void RGB2XYZ_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, const int* coeffs, cudaStream_t stream)
+    void RGB2XYZ_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2XYZ_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const RGB2XYZ_caller_t RGB2XYZ_callers[] = {RGB2XYZ_caller<unsigned short, 3>, RGB2XYZ_caller<unsigned short, 4>};
+        static const RGB2XYZ_caller_t RGB2XYZ_callers[2][2] = 
+        {
+            {RGB2XYZ_caller<unsigned short, 3, 3>, RGB2XYZ_caller<unsigned short, 3, 4>},
+            {RGB2XYZ_caller<unsigned short, 4, 3>, RGB2XYZ_caller<unsigned short, 4, 4>}
+        };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
-        RGB2XYZ_callers[srccn-3](src, dst, stream);
+        RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void RGB2XYZ_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, const float* coeffs, cudaStream_t stream)
+    void RGB2XYZ_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const float* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2XYZ_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const RGB2XYZ_caller_t RGB2XYZ_callers[] = {RGB2XYZ_caller<float, 3>, RGB2XYZ_caller<float, 4>};
+        static const RGB2XYZ_caller_t RGB2XYZ_callers[2][2] = 
+        {
+            {RGB2XYZ_caller<float, 3, 3>, RGB2XYZ_caller<float, 3, 4>},
+            {RGB2XYZ_caller<float, 4, 3>, RGB2XYZ_caller<float, 4, 4>}
+        };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
 
-        RGB2XYZ_callers[srccn-3](src, dst, stream);
+        RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
     
-    template <typename T, int DSTCN>
+    template <typename T, int SRCCN, int DSTCN>
     void XYZ2RGB_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
@@ -987,41 +996,53 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::XYZ2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc::XYZ2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void XYZ2RGB_gpu_8u(const DevMem2D& src, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
+    void XYZ2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*XYZ2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const XYZ2RGB_caller_t XYZ2RGB_callers[] = {XYZ2RGB_caller<uchar, 3>, XYZ2RGB_caller<uchar, 4>};
+        static const XYZ2RGB_caller_t XYZ2RGB_callers[2][2] = 
+        {
+            {XYZ2RGB_caller<uchar, 3, 3>, XYZ2RGB_caller<uchar, 3, 4>},
+            {XYZ2RGB_caller<uchar, 4, 3>, XYZ2RGB_caller<uchar, 4, 4>}
+        };
 
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
-        XYZ2RGB_callers[dstcn-3](src, dst, stream);
+        XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void XYZ2RGB_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
+    void XYZ2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
     {
         typedef void (*XYZ2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const XYZ2RGB_caller_t XYZ2RGB_callers[] = {XYZ2RGB_caller<unsigned short, 3>, XYZ2RGB_caller<unsigned short, 4>};
+        static const XYZ2RGB_caller_t XYZ2RGB_callers[2][2] = 
+        {
+            {XYZ2RGB_caller<unsigned short, 3, 3>, XYZ2RGB_caller<unsigned short, 3, 4>},
+            {XYZ2RGB_caller<unsigned short, 4, 3>, XYZ2RGB_caller<unsigned short, 4, 4>}
+        };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
-        XYZ2RGB_callers[dstcn-3](src, dst, stream);
+        XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void XYZ2RGB_gpu_32f(const DevMem2D& src, const DevMem2D& dst, int dstcn, const float* coeffs, cudaStream_t stream)
+    void XYZ2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const float* coeffs, cudaStream_t stream)
     {
         typedef void (*XYZ2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const XYZ2RGB_caller_t XYZ2RGB_callers[] = {XYZ2RGB_caller<float, 3>, XYZ2RGB_caller<float, 4>};
+        static const XYZ2RGB_caller_t XYZ2RGB_callers[2][2] = 
+        {
+            {XYZ2RGB_caller<float, 3, 3>, XYZ2RGB_caller<float, 3, 4>},
+            {XYZ2RGB_caller<float, 4, 3>, XYZ2RGB_caller<float, 4, 4>}
+        };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
 
-        XYZ2RGB_callers[dstcn-3](src, dst, stream);
+        XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 }}}
 

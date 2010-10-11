@@ -419,24 +419,55 @@ Scalar cv::gpu::sum(const GpuMat& src)
 ////////////////////////////////////////////////////////////////////////
 // minMax
 
+namespace
+{
+    void minMax_c1(const GpuMat& src, double* minVal, double* maxVal)
+    {
+        NppiSize sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
+
+        Npp8u min_res, max_res;
+
+        nppSafeCall( nppiMinMax_8u_C1R(src.ptr<Npp8u>(), src.step, sz, &min_res, &max_res) );
+
+        if (minVal)
+            *minVal = min_res;
+
+        if (maxVal)
+            *maxVal = max_res;
+    }
+
+    void minMax_c4(const GpuMat& src, double* minVal, double* maxVal)
+    {
+        NppiSize sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
+
+        Npp8u* cuMin = nppsMalloc_8u(4);
+        Npp8u* cuMax = nppsMalloc_8u(4);
+
+        nppSafeCall( nppiMinMax_8u_C4R(src.ptr<Npp8u>(), src.step, sz, cuMin, cuMax) );
+
+        if (minVal)
+            cudaMemcpy(minVal, cuMin, 4 * sizeof(Npp8u), cudaMemcpyDeviceToHost);        
+        if (maxVal)
+            cudaMemcpy(maxVal, cuMax, 4 * sizeof(Npp8u), cudaMemcpyDeviceToHost);
+
+        nppsFree(cuMin);
+        nppsFree(cuMax);
+    }
+}
+
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal) 
 {
+    typedef void (*minMax_t)(const GpuMat& src, double* minVal, double* maxVal);
+    static const minMax_t minMax_callers[] = {0, minMax_c1, 0, 0, minMax_c4};
+
     CV_Assert(!"disabled until fix npp bug");
-    CV_Assert(src.type() == CV_8UC1);
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
 
-    NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
-
-    Npp8u min_res, max_res;
-
-    nppSafeCall( nppiMinMax_8u_C1R(src.ptr<Npp8u>(), src.step, sz, &min_res, &max_res) );
-
-    if (minVal)
-        *minVal = min_res;
-
-    if (maxVal)
-        *maxVal = max_res;
+    minMax_callers[src.channels()](src, minVal, maxVal);
 }
 
 ////////////////////////////////////////////////////////////////////////

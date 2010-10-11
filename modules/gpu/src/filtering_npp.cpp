@@ -63,6 +63,9 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int, int, const Gpu
 Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int, int, const Mat&, const Mat&, const Point&) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<FilterEngine_GPU> cv::gpu::createDerivFilter_GPU(int, int, int, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int, Size, double, double) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int, int, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int, int, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
+
 void cv::gpu::boxFilter(const GpuMat&, GpuMat&, int, Size, Point) { throw_nogpu(); }
 void cv::gpu::erode( const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
 void cv::gpu::dilate( const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
@@ -105,20 +108,20 @@ namespace
         int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
         if (nDivisor) *nDivisor = scale;
         
-        Mat cont_krnl = (kernel.isContinuous() ? kernel : kernel.clone()).reshape(1, 1);
-        Mat temp;
-        cont_krnl.convertTo(temp, type, scale);
+        Mat temp(kernel.size(), type);
+        kernel.convertTo(temp, type, scale);
+        Mat cont_krnl = temp.reshape(1, 1);
 
         if (reverse)
         {
-            int count = temp.cols >> 1;
+            int count = cont_krnl.cols >> 1;
             for (int i = 0; i < count; ++i)
             {
-                std::swap(temp.at<int>(0, i), temp.at<int>(0, temp.cols - 1 - i));
+                std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
             }
         }
 
-        gpu_krnl.upload(temp);
+        gpu_krnl.upload(cont_krnl);
     } 
 }
 
@@ -783,6 +786,60 @@ void cv::gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double si
     
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2);
     f->apply(src, dst);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Image Rank Filter
+
+namespace
+{
+    typedef NppStatus (*nppFilterRank_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI, 
+        NppiSize oMaskSize, NppiPoint oAnchor);
+
+    class NPPRankFilter : public BaseFilter_GPU
+    {
+    public:
+        NPPRankFilter(const Size& ksize_, const Point& anchor_, nppFilterRank_t func_) : BaseFilter_GPU(ksize_, anchor_), func(func_) {}
+
+        virtual void operator()(const GpuMat& src, GpuMat& dst)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+            NppiSize oKernelSize;
+            oKernelSize.height = ksize.height;
+            oKernelSize.width = ksize.width;
+            NppiPoint oAnchor;
+            oAnchor.x = anchor.x;
+            oAnchor.y = anchor.y;
+            
+            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, oKernelSize, oAnchor) );
+        }
+
+        nppFilterRank_t func;
+    };
+}
+
+Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor)
+{
+    static const nppFilterRank_t nppFilterRank_callers[] = {0, nppiFilterMax_8u_C1R, 0, 0, nppiFilterMax_8u_C4R};
+
+    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType); 
+
+    normalizeAnchor(anchor, ksize);
+
+    return Ptr<BaseFilter_GPU>(new NPPRankFilter(ksize, anchor, nppFilterRank_callers[CV_MAT_CN(srcType)]));
+}
+
+Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor)
+{
+    static const nppFilterRank_t nppFilterRank_callers[] = {0, nppiFilterMin_8u_C1R, 0, 0, nppiFilterMin_8u_C4R};
+
+    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType); 
+
+    normalizeAnchor(anchor, ksize);
+
+    return Ptr<BaseFilter_GPU>(new NPPRankFilter(ksize, anchor, nppFilterRank_callers[CV_MAT_CN(srcType)]));
 }
 
 #endif
