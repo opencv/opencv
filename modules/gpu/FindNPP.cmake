@@ -86,7 +86,7 @@ if(NOT EXISTS ${CUDA_NPP_LIBRARIES} OR NOT EXISTS ${CUDA_NPP_INCLUDES}/npp.h)
 	if(NPP_FIND_REQUIRED)
 		message(FATAL_ERROR "NPP headers/libraries are not found. Specify CUDA_NPP_LIBRARY_ROOT_DIR.")
 	elseif(NOT CUDA_FIND_QUIETLY)
-		message("NPP headers/libraries are not found or CUDA_NPP_LIBRARY_ROOT_DIR not specified.")
+		message("NPP headers/libraries are not found. Please specify CUDA_NPP_LIBRARY_ROOT_DIR in CMake or set $NPP_ROOT_DIR.")
 	endif()	
 else()
 	

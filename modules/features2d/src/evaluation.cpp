@@ -229,7 +229,7 @@ struct IntersectAreaCounter
         {
             float rx1 = minx + i*dr;
             float rx2 = rx1 - diff.x;
-            for( float ry1 = miny; ry1 <= maxy; ry1 += dr )
+            for( float ry1 = (float)miny; ry1 <= (float)maxy; ry1 += dr )
             {
                 float ry2 = ry1 - diff.y;
                 //compute the distance from the ellipse center
@@ -276,6 +276,7 @@ struct SIdx
         UsedFinder(const SIdx& _used) : used(_used) {}
         const SIdx& used;
         bool operator()(const SIdx& v) const { return  (v.i1 == used.i1 || v.i2 == used.i2); }
+        UsedFinder& operator=(const UsedFinder&);
     };
 };
 
@@ -312,14 +313,14 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
             {
                 EllipticKeyPoint keypoint2a = EllipticKeyPoint( kp2.center, Scalar(fac*kp2.ellipse[0], fac*kp2.ellipse[1], fac*kp2.ellipse[2]) );
                 //find the largest eigenvalue
-                int maxx =  ceil(( keypoint1a.boundingBox.width > (diff.x+keypoint2a.boundingBox.width)) ?
+                int maxx =  (int)ceil(( keypoint1a.boundingBox.width > (diff.x+keypoint2a.boundingBox.width)) ?
                                      keypoint1a.boundingBox.width : (diff.x+keypoint2a.boundingBox.width));
-                int minx = floor((-keypoint1a.boundingBox.width < (diff.x-keypoint2a.boundingBox.width)) ?
+                int minx = (int)floor((-keypoint1a.boundingBox.width < (diff.x-keypoint2a.boundingBox.width)) ?
                                     -keypoint1a.boundingBox.width : (diff.x-keypoint2a.boundingBox.width));
 
-                int maxy =  ceil(( keypoint1a.boundingBox.height > (diff.y+keypoint2a.boundingBox.height)) ?
+                int maxy =  (int)ceil(( keypoint1a.boundingBox.height > (diff.y+keypoint2a.boundingBox.height)) ?
                                      keypoint1a.boundingBox.height : (diff.y+keypoint2a.boundingBox.height));
-                int miny = floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
+                int miny = (int)floor((-keypoint1a.boundingBox.height < (diff.y-keypoint2a.boundingBox.height)) ?
                                     -keypoint1a.boundingBox.height : (diff.y-keypoint2a.boundingBox.height));
                 int mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
 

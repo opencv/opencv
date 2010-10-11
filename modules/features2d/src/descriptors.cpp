@@ -196,7 +196,7 @@ void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& oppo
         MatConstIterator_<char> rIt = bgrChannels[2].begin<char>();
         MatConstIterator_<char> gIt = bgrChannels[1].begin<char>();
         MatIterator_<char> dstIt = opponentChannels[0].begin<char>();
-        float factor = 1.f / sqrt(2.0);
+        float factor = 1.f / sqrt(2.f);
         for( ; dstIt != opponentChannels[0].end<char>(); ++rIt, ++gIt, ++dstIt )
         {
             int value = static_cast<int>( static_cast<float>(static_cast<int>(*gIt)-static_cast<int>(*rIt)) * factor );
@@ -211,7 +211,7 @@ void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& oppo
         MatConstIterator_<char> gIt = bgrChannels[1].begin<char>();
         MatConstIterator_<char> bIt = bgrChannels[0].begin<char>();
         MatIterator_<char> dstIt = opponentChannels[1].begin<char>();
-        float factor = 1.f / sqrt(6.0);
+        float factor = 1.f / sqrt(6.f);
         for( ; dstIt != opponentChannels[1].end<char>(); ++rIt, ++gIt, ++bIt, ++dstIt )
         {
             int value = static_cast<int>( static_cast<float>(static_cast<int>(*rIt) + static_cast<int>(*gIt) - 2*static_cast<int>(*bIt)) *
@@ -227,7 +227,7 @@ void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& oppo
         MatConstIterator_<char> gIt = bgrChannels[1].begin<char>();
         MatConstIterator_<char> bIt = bgrChannels[0].begin<char>();
         MatIterator_<char> dstIt = opponentChannels[2].begin<char>();
-        float factor = 1.f / sqrt(3.0);
+        float factor = 1.f / sqrt(3.f);
         for( ; dstIt != opponentChannels[2].end<char>(); ++rIt, ++gIt, ++bIt, ++dstIt )
         {
             int value = static_cast<int>( static_cast<float>(static_cast<int>(*rIt) + static_cast<int>(*gIt) + static_cast<int>(*bIt)) *
