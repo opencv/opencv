@@ -47,20 +47,19 @@
 #define EBTAG     (STEP_END + BTAG)
 
 //extern "C" {
-    void LSVMparser(const char * filename, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score);
+    int LSVMparser(const char * filename, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score);
 #ifdef __cplusplus
 extern "C"
 #endif
     int loadModel(
-             // Входные параметры
-              const char *modelPath,// - путь до файла с моделью
              
-              // Выходные параметры
-              filterObject ***filters,// - массив указателей на фильтры компонент
-              int *kFilters, //- общее количество фильтров во всех моделях
-              int *kComponents, //- количество компонент
-              int **kPartFilters, //- массив, содержащий количество точных фильтров в каждой компоненте
-              float **b, //- массив линейных членов в оценочной функции
-              float *scoreThreshold); //- порог для score)
+              const char *modelPath,
+             
+              filterObject ***filters,
+              int *kFilters,
+              int *kComponents,
+              int **kPartFilters,
+              float **b,
+              float *scoreThreshold); 
 //};
 #endif

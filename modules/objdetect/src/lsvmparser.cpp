@@ -718,7 +718,7 @@ void parserModel(FILE * xmlf, filterObject *** model, int *last, int *max, int *
     }
 }
 
-void LSVMparser(const char * filename, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
+int LSVMparser(const char * filename, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
     int st = 0;
     int tag;
     char ch;
@@ -732,7 +732,11 @@ void LSVMparser(const char * filename, filterObject *** model, int *last, int *m
     (*model) = (filterObject ** )malloc((sizeof(filterObject * )) * (*max));
 
     //printf("parse : %s\n", filename);
+
     xmlf = fopen(filename, "rb");
+	if(xmlf == NULL){
+		return -1;
+	}
     
     i   = 0;
     j   = 0;
@@ -762,28 +766,31 @@ void LSVMparser(const char * filename, filterObject *** model, int *last, int *m
             }
         }        
     }
+	return 0;
 }
 
 int loadModel(
-             // Входные параметры
-              const char *modelPath,// - путь до файла с моделью
+              const char *modelPath,
              
-              // Выходные параметры
-              filterObject ***filters,// - массив указателей на фильтры компонент
-              int *kFilters, //- общее количество фильтров во всех моделях
-              int *kComponents, //- количество компонент
-              int **kPartFilters, //- массив, содержащий количество точных фильтров в каждой компоненте
-              float **b, //- массив линейных членов в оценочной функции
-              float *scoreThreshold){ //- порог для score)
+              filterObject ***filters,
+              int *kFilters, 
+              int *kComponents, 
+              int **kPartFilters, 
+              float **b, 
+              float *scoreThreshold){ 
     int last;
     int max;
     int *comp;
     int count;
     int i;
+	int err;
     float score;
     //printf("start_parse\n\n");
 
-    LSVMparser(modelPath, filters, &last, &max, &comp, b, &count, &score);
+    err = LSVMparser(modelPath, filters, &last, &max, &comp, b, &count, &score);
+	if(err != 0){
+		return -1;
+	}
     (*kFilters)       = last + 1;
     (*kComponents)    = count;
     (*scoreThreshold) = (float) score;
