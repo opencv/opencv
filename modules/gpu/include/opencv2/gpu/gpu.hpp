@@ -469,6 +469,10 @@ namespace cv
         CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, 
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
+        //! Does mean shift procedure on GPU.
+        CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, 
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+
         //! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
         //! Supported types of input disparity: CV_8U, CV_16S.
         //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).

@@ -49,6 +49,7 @@ using namespace cv::gpu;
 
 void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&){ throw_nogpu(); }
 void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria) { throw_nogpu(); }
+void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, const Stream&) { throw_nogpu(); }
 void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&) { throw_nogpu(); }
@@ -74,6 +75,7 @@ namespace cv { namespace gpu
         void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
 
         extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps);
+        extern "C" void meanShiftProc_gpu(const DevMem2D& src, DevMem2D dstr, DevMem2D dstsp, int sp, int sr, int maxIter, float eps);
 
         void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
         void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
@@ -161,6 +163,33 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
     eps = (float)std::max(criteria.epsilon, 0.0);        
 
     improc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
+}
+
+////////////////////////////////////////////////////////////////////////
+// meanShiftProc_GPU
+
+void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria)
+{       
+    if( src.empty() )
+        CV_Error( CV_StsBadArg, "The input image is empty" );
+
+    if( src.depth() != CV_8U || src.channels() != 4 )
+        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+
+    dstr.create( src.size(), CV_8UC4 );
+    dstsp.create( src.size(), CV_16SC2 );
+    
+    if( !(criteria.type & TermCriteria::MAX_ITER) )
+        criteria.maxCount = 5;
+    
+    int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
+    
+    float eps;
+    if( !(criteria.type & TermCriteria::EPS) )
+        eps = 1.f;
+    eps = (float)std::max(criteria.epsilon, 0.0);        
+
+    improc::meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps);    
 }
 
 ////////////////////////////////////////////////////////////////////////
