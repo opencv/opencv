@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Calibration</string>
+	<string name="patternsize">Pattern Size</string>
+	<string name="patterntext">Please choose the width and height (number of inside corners) of the checker
+	board pattern you will be using for calibration. Default is 6 by 8 corners. You may find a checkerboard pattern at
+	http://opencv.willowgarage.com/pattern</string>
+	
+	<string name="patternlink">http://opencv.willowgarage.com/pattern</string>
+	
+	<string name="calibfile">/opencv/camera.yml</string>
+	<string name="sdcarddir">/opencv</string>
+	
+	<string name="calibration_service_started">Calibration calculations have started...</string>
+	<string name="calibration_service_stopped">Calibration calculations has stopped.</string>
+	<string name="calibration_service_finished">Calibration finished, you camera is calibrated.</string>
+	
+	<string name="calibration_service_label">Calibration</string>
+	<string name="calibration_not_enough">Please capture atleast 3 - preferably greater than 10 - images of the pattern!</string>
+
+	
+	<string name="sdcard_error_msg"> Please make sure that you\'re sdcard is not mounted to you\'re computer, and that you have an sdcard that is writable on your device.</string>
+		
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="app_name">FooBar</string>
+<string name="about_str">FooBar is a template app for the android-opencv project!\nVisit http://code.google.com/p/android-opencv for details.</string>
+<string name="about_title">About FooBar</string>
+<string name="about_menu">About</string>
+<string name="ok">O.K.</string>
+</resources>

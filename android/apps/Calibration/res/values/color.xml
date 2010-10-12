@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<color name="good_color">#00ff00</color>
+<color name="bad_color">#FF0000</color>
+</resources>
