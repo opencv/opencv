@@ -65,7 +65,6 @@ protected:
 
 
     bool checkMatSetError(const Mat& m1, const Mat& m2);
-    bool checkMatSetError(const MatND& m1, const MatND& m2);    
 };
 
 CV_MatrOpTest::CV_MatrOpTest(): CvTest( "matrix-operations", "?" )
@@ -75,15 +74,6 @@ CV_MatrOpTest::CV_MatrOpTest(): CvTest( "matrix-operations", "?" )
 CV_MatrOpTest::~CV_MatrOpTest() {}
 
 bool CV_MatrOpTest::checkMatSetError(const Mat& m1, const Mat& m2)
-{
-    if (norm(m1, m2, NORM_INF) == 0)
-        return true;
-    
-    ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-    return false;    
-}
-
-bool CV_MatrOpTest::checkMatSetError(const MatND& m1, const MatND& m2)
 {
     if (norm(m1, m2, NORM_INF) == 0)
         return true;
