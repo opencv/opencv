@@ -596,7 +596,7 @@ namespace cv
 
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter, 
-            const Ptr<BaseColumnFilter_GPU>& columnFilter);
+            const Ptr<BaseColumnFilter_GPU>& columnFilter, bool rowFilterFirst = true);
 
         //! returns horizontal 1D box filter
         //! supports only CV_8UC1 source type and CV_32FC1 sum type
@@ -645,7 +645,7 @@ namespace cv
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, 
-            const Mat& columnKernel, const Point& anchor = Point(-1,-1));
+            const Mat& columnKernel, const Point& anchor = Point(-1,-1), bool rowFilterFirst = true);
 
         //! returns filter engine for the generalized Sobel operator
         CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize);
@@ -680,7 +680,7 @@ namespace cv
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, 
-            Point anchor = Point(-1,-1));
+            Point anchor = Point(-1,-1), bool rowFilterFirst = true);
 
         //! applies generalized Sobel operator to the image
         CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1);

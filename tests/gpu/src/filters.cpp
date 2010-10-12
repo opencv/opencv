@@ -359,7 +359,7 @@ protected:
 	        GpuMat gpuRes;
             cv::gpu::morphologyEx(GpuMat(img), gpuRes, ops[i], kernel);
 
-            if (CvTS::OK != CheckNorm(cpuRes, gpuRes, Size(3, 3)))
+            if (CvTS::OK != CheckNorm(cpuRes, gpuRes, Size(4, 4)))
                 res = CvTS::FAIL_GENERIC;
         }
         return res;

@@ -62,10 +62,8 @@ const char* blacklist[] =
     //"GPU-NppImageIntegral",         // different precision
     
     //"GPU-NppImageSobel",            // ???
-    //"GPU-NppImageScharr",           // ???
-    
-    //"GPU-NppImageGaussianBlur",     // different precision    
-    //"GPU-NppMorphologyEx",          // different precision?
+    //"GPU-NppImageScharr",           // ???    
+    //"GPU-NppImageGaussianBlur",     // different precision 
     0
 };
 
