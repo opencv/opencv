@@ -69,7 +69,7 @@ bool runCalibration(vector<vector<Point2f> > imagePoints,
 	if (flags & CV_CALIB_FIX_ASPECT_RATIO)
 		cameraMatrix.at<double> (0, 0) = aspectRatio;
 
-	distCoeffs = Mat::zeros(5, 1, CV_64F);
+	distCoeffs = Mat::zeros(4, 1, CV_64F);
 
 	vector<vector<Point3f> > objectPoints(1);
 	calcChessboardCorners(boardSize, squareSize, objectPoints[0]);

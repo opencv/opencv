@@ -1,7 +1,7 @@
 # The path to the NDK, requires crystax version r-4 for now, due to support
-#for the standard library
+# for the standard library
 
-#load environment from local make file
+# load environment from local make file
 LOCAL_ENV_MK=local.env.mk
 ifneq "$(wildcard $(LOCAL_ENV_MK))" ""
 include $(LOCAL_ENV_MK)
@@ -9,8 +9,7 @@ else
 $(shell cp sample.$(LOCAL_ENV_MK) $(LOCAL_ENV_MK))
 $(info ERROR local environement not setup! try:)
 $(info gedit $(LOCAL_ENV_MK))
-$(info Please setup the $(LOCAL_ENV_MK) - the default was just created')
-include $(LOCAL_ENV_MK)
+$(error Please setup the $(LOCAL_ENV_MK) - the default was just created')
 endif
 
 ANDROID_NDK_BASE = $(ANDROID_NDK_ROOT)
