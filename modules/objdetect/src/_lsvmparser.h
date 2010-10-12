@@ -1,8 +1,7 @@
 #ifndef LSVM_PARSER
 #define LSVM_PARSER
 
-#include "precomp.hpp"
-#include "_types.h"
+#include "_lsvm_types.h"
 
 #define MODEL    1
 #define P        2

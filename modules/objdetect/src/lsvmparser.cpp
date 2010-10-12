@@ -1,3 +1,4 @@
+#include "precomp.hpp"
 #include <stdio.h>
 #include "string.h"
 #include "_lsvmparser.h"

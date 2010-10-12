@@ -1,8 +1,7 @@
 #ifndef RESIZEIMG
 #define RESIZEIMG
 
-#include "precomp.hpp"
-#include "_types.h"
+#include "_lsvm_types.h"
 
 IplImage * resize_opencv (IplImage * img, float scale);
 IplImage * resize_article_dp1(IplImage * img, float scale, const int k);

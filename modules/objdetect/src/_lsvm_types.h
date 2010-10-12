@@ -1,10 +1,6 @@
 #ifndef SVM_TYPE
 #define SVM_TYPE
 
-//#include "opencv2/core/core.hpp"
-//#include "opencv2/highgui/highgui.hpp"
-#include "precomp.hpp"
-
 //#define FFT_CONV
 
 // Значение числа PI
