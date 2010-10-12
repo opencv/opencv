@@ -181,10 +181,9 @@ namespace cv
 {
     struct CV_EXPORTS DefaultRngAuto
     {
-        const static uint64 def_state = (uint64)-1;
         const uint64 old_state;
 
-        DefaultRngAuto() : old_state(theRNG().state) { theRNG().state = def_state; }
+        DefaultRngAuto() : old_state(theRNG().state) { theRNG().state = (uint64)-1; }
         ~DefaultRngAuto() { theRNG().state = old_state; }
 
         DefaultRngAuto& operator=(const DefaultRngAuto&);
