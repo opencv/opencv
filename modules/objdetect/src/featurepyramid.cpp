@@ -1,5 +1,6 @@
+#include "precomp.hpp"
 #include "_latentsvm.h"
-#include "_resizeimg.h"
+#include "_lsvm_resizeimg.h"
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))

@@ -1,4 +1,5 @@
-#include "_fft.h"
+#include "precomp.hpp"
+#include "_lsvm_fft.h"
 
 int getEntireRes(int number, int divisor, int *entire, int *res)
 {

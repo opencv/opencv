@@ -1,8 +1,8 @@
-#include "_resizeimg.h"
+#include "precomp.hpp"
+#include "_lsvm_resizeimg.h"
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-
 
 
 IplImage * resize_opencv (IplImage * img, float scale){

@@ -1,5 +1,6 @@
+#include "precomp.hpp"
 #include "_latentsvm.h"
-#include "_matching.h"
+#include "_lsvm_matching.h"
 
 /*
 // Transformation filter displacement from the block space 

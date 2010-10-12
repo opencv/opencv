@@ -1,4 +1,5 @@
-#include "_routine.h"
+#include "precomp.hpp"
+#include "_lsvm_routine.h"
 
 int allocFilterObject(filterObject **obj, const int sizeX, const int sizeY, const int p, const int xp){
     int i;

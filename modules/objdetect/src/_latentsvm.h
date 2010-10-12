@@ -6,10 +6,9 @@
 #define SVM_LATENTSVM
 
 #include <stdio.h>
-#include "precomp.hpp"
-#include "_types.h"
-#include "_error.h"
-#include "_routine.h"
+#include "_lsvm_types.h"
+#include "_lsvm_error.h"
+#include "_lsvm_routine.h"
 
 //////////////////////////////////////////////////////////////
 // Building feature pyramid

@@ -1,4 +1,5 @@
-#include "_distancetransform.h"
+#include "precomp.hpp"
+#include "_lsvm_distancetransform.h"
 
 /*
 // Computation the point of intersection functions

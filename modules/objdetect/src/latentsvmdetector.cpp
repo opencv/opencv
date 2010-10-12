@@ -1,6 +1,6 @@
 #include "precomp.hpp"
 #include "_lsvmparser.h"
-#include "_matching.h" 
+#include "_lsvm_matching.h" 
 
 /*
 // load trained detector from a file
