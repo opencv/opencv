@@ -530,6 +530,80 @@ void CV_GpuCvtColorTest::run( int )
     ts->set_failed_test_info(testResult);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Histograms
+class CV_GpuHistogramsTest : public CvTest
+{
+public:
+    CV_GpuHistogramsTest() : CvTest("GPU-Histograms", "histEven") {}
+    ~CV_GpuHistogramsTest() {};
+
+protected:
+    void run(int);
+
+    int CheckNorm(const Mat& m1, const Mat& m2)
+    {
+        double ret = norm(m1, m2, NORM_INF);
+
+        if (ret < std::numeric_limits<double>::epsilon())
+        {
+            return CvTS::OK;
+        }
+        else
+        {
+            ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
+            return CvTS::FAIL_GENERIC;
+        }
+    }
+};
+
+void CV_GpuHistogramsTest::run( int )
+{
+    //load image
+    cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
+
+    if (img.empty())
+    {
+        ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
+        return;
+    }
+
+    try
+    {
+        Mat hsv;
+        cv::cvtColor(img, hsv, CV_BGR2HSV);
+
+        int hbins = 30;
+        int histSize[] = {hbins};
+
+        float hranges[] = {0, 180};
+        const float* ranges[] = {hranges};
+
+        MatND hist;
+        
+        int channels[] = {0};
+        calcHist(&hsv, 1, channels, Mat(), hist, 1, histSize, ranges);
+
+        GpuMat gpuHsv(hsv);
+        std::vector<GpuMat> srcs;
+        cv::gpu::split(gpuHsv, srcs);
+        GpuMat gpuHist;
+        histEven(srcs[0], gpuHist, hbins, (int)hranges[0], (int)hranges[1]);
+
+        Mat cpuHist = hist;
+        cpuHist = cpuHist.t();
+        cpuHist.convertTo(cpuHist, CV_32S);
+
+        ts->set_failed_test_info(CheckNorm(cpuHist, gpuHist));
+    }
+    catch(const cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw;
+        return;
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -546,3 +620,4 @@ CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
 CV_GpuNppImageIntegralTest CV_GpuNppImageIntegral_test;
 CV_GpuNppImageCannyTest CV_GpuNppImageCanny_test;
 CV_GpuCvtColorTest CV_GpuCvtColor_test;
+CV_GpuHistogramsTest CV_GpuHistograms_test;

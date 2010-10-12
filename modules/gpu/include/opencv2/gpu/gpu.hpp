@@ -700,6 +700,31 @@ namespace cv
         //!performs labeling via graph cuts
         CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf);
 
+        ////////////////////////////////// Histograms //////////////////////////////////
+
+        //! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.
+        CV_EXPORTS void evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel);
+        //! Calculates histogram with evenly distributed bins for signle channel source.
+        //! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
+        //! Output hist will have one row and histSize cols and CV_32SC1 type.
+        CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel);
+        //! Calculates histogram with evenly distributed bins for four-channel source.
+        //! All channels of source are processed separately.
+        //! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
+        //! Output hist[i] will have one row and histSize[i] cols and CV_32SC1 type.
+        CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4]);
+        //! Calculates histogram with bins determined by levels array.
+        //! levels must have one row and CV_32SC1 type.
+        //! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
+        //! Output hist will have one row and (levels.cols-1) cols and CV_32SC1 type.
+        CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels);
+        //! Calculates histogram with bins determined by levels array.
+        //! All levels must have one row and CV_32SC1 type.
+        //! All channels of source are processed separately.
+        //! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
+        //! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
+        CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4]);
+
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
         class CV_EXPORTS StereoBM_GPU
