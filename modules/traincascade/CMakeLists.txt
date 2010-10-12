@@ -9,6 +9,7 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/modules/highgui/include"
     "${CMAKE_SOURCE_DIR}/modules/video/include"
     "${CMAKE_SOURCE_DIR}/modules/features2d/include"
+    "${CMAKE_SOURCE_DIR}/modules/flann/include"
     "${CMAKE_SOURCE_DIR}/modules/calib3d/include"
     "${CMAKE_SOURCE_DIR}/modules/legacy/include"
     )

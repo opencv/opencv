@@ -293,18 +293,23 @@ This section documents OpenCV's interface to the FLANN\footnote{http://people.cs
 contains a collection of algorithms optimized for fast nearest neighbor search in large datasets and for high dimensional features. More 
 information about FLANN can be found in \cite{muja_flann_2009}.
 
-\cvclass{cvflann::Index}
-The FLANN nearest neighbor index class.
+\cvclass{cv::flann::Index_}
+The FLANN nearest neighbor index class. This class is templated with the type of elements for which the index is built.
 
 \begin{lstlisting}
-namespace cvflann
+namespace cv
 {
-    class Index 
+namespace flann
+{
+    template <typename T>
+    class Index_ 
     {
     public:
-	    Index(const Mat& features, const IndexParams& params);
+	    Index_(const Mat& features, const IndexParams& params);
 
-	    void knnSearch(const vector<float>& query, 
+	    ~Index_();
+
+	    void knnSearch(const vector<T>& query, 
 			   vector<int>& indices, 
 			   vector<float>& dists, 
 			   int knn, 
@@ -315,7 +320,7 @@ namespace cvflann
                            int knn, 
 		           const SearchParams& params);
 
-	    int radiusSearch(const vector<float>& query, 
+	    int radiusSearch(const vector<T>& query, 
 			     vector<int>& indices, 
 			     vector<float>& dists, 
 			     float radius, 
@@ -331,16 +336,22 @@ namespace cvflann
 	    int veclen() const;
 
 	    int size() const;
+
+	    const IndexParams* getIndexParameters();
     };
-}
+
+    typedef Index_<float> Index;
+
+} } // namespace cv::flann
 \end{lstlisting}
 
-\cvCppFunc{cvflann::Index::Index}
+\cvCppFunc{cv::flann::Index_<T>::Index_}
 Constructs a nearest neighbor search index for a given dataset.
 
-\cvdefCpp{Index::Index(const Mat\& features, const IndexParams\& params);}
+\cvdefCpp{Index_<T>::Index_(const Mat\& features, const IndexParams\& params);}
 \begin{description}
-\cvarg{features}{ Matrix of type CV\_32F containing the features(points) to index. The size of the matrix is num\_features x feature\_dimensionality.}
+\cvarg{features}{ Matrix of containing the features(points) to index. The size of the matrix is num\_features x feature\_dimensionality and 
+the data type of the elements in the matrix must coincide with the type of the index.}
 \cvarg{params}{Structure containing the index parameters. The type of index that will be constructed depends on the type of this parameter.
 The possible parameter types are:}
 
@@ -428,9 +439,9 @@ struct SavedIndexParams : public IndexParams
 \end{description}
 \end{description}
 
-\cvCppFunc{cvflann::Index::knnSearch}
+\cvCppFunc{cv::flann::Index_<T>::knnSearch}
 Performs a K-nearest neighbor search for a given query point using the index.
-\cvdefCpp{void Index::knnSearch(const vector<float>\& query, \par
+\cvdefCpp{void Index_<T>::knnSearch(const vector<T>\& query, \par
 		vector<int>\& indices, \par
 		vector<float>\& dists, \par
 		int knn, \par
@@ -451,15 +462,15 @@ Performs a K-nearest neighbor search for a given query point using the index.
 \end{description}
 \end{description}
 
-\cvCppFunc{cvflann::Index::knnSearch}
+\cvCppFunc{cv::flann::Index_<T>::knnSearch}
 Performs a K-nearest neighbor search for multiple query points.
 
-\cvdefCpp{void Index::knnSearch(const Mat\& queries,\par
+\cvdefCpp{void Index_<T>::knnSearch(const Mat\& queries,\par
 		Mat\& indices, Mat\& dists,\par
 		int knn, const SearchParams\& params);}
 
 \begin{description}
-\cvarg{queries}{The query points, one per row}
+\cvarg{queries}{The query points, one per row. The type of queries must match the index type.}
 \cvarg{indices}{Indices of the nearest neighbors found }
 \cvarg{dists}{Distances to the nearest neighbors found}
 \cvarg{knn}{Number of nearest neighbors to search for}
@@ -467,9 +478,9 @@ Performs a K-nearest neighbor search for multiple query points.
 \end{description}
 
 
-\cvCppFunc{cvflann::Index::radiusSearch}
+\cvCppFunc{cv::flann::Index_<T>::radiusSearch}
 Performs a radius nearest neighbor search for a given query point.
-\cvdefCpp{int Index::radiusSearch(const vector<float>\& query, \par
+\cvdefCpp{int Index_<T>::radiusSearch(const vector<T>\& query, \par
 		  vector<int>\& indices, \par
 		  vector<float>\& dists, \par
 		  float radius, \par
@@ -483,9 +494,9 @@ Performs a radius nearest neighbor search for a given query point.
 \end{description}
 
 
-\cvCppFunc{cvflann::Index::radiusSearch}
+\cvCppFunc{cv::flann::Index_<T>::radiusSearch}
 Performs a radius nearest neighbor search for multiple query points.
-\cvdefCpp{int Index::radiusSearch(const Mat\& query, \par
+\cvdefCpp{int Index_<T>::radiusSearch(const Mat\& query, \par
 		  Mat\& indices, \par
 		  Mat\& dists, \par
 		  float radius, \par
@@ -499,21 +510,25 @@ Performs a radius nearest neighbor search for multiple query points.
 \end{description}
 
 
-\cvCppFunc{cvflann::Index::save}
+\cvCppFunc{cv::flann::Index_<T>::save}
 Saves the index to a file.
-\cvdefCpp{void Index::save(std::string filename);}
+\cvdefCpp{void Index_<T>::save(std::string filename);}
 \begin{description}
 \cvarg{filename}{The file to save the index to}
 \end{description}
 
+\cvCppFunc{cv::flann::Index_<T>::getIndexParameters}
+Returns the index paramreters. This is usefull in case of autotuned indices, when the parameters computed can be retrived using this method.
+\cvdefCpp{const IndexParams* Index_<T>::getIndexParameters();}
 
-\cvCppFunc{cvflann::hierarchicalClustering}
+
+\cvCppFunc{cv::flann::hierarchicalClustering<ET,DT>}
 Clusters the given points by constructing a hierarchical k-means tree and choosing a cut in the tree that minimizes the cluster's variance.
-\cvdefCpp{int hierarchicalClustering(const Mat\& features, Mat\& centers,\par
+\cvdefCpp{int hierarchicalClustering<ET,DT>(const Mat\& features, Mat\& centers,\par
                                       const KMeansIndexParams\& params);}
 \begin{description}
-\cvarg{features}{The points to be clustered}
-\cvarg{centers}{The centers of the clusters obtained. The number of rows in this matrix represents the number of clusters desired, however, because of the way the cut in the hierarchical tree is chosen, the number of clusters computed will be the highest number of the form \texttt{(branching-1)*k+1} that's lower than the number of clusters desired, where \texttt{branching} is the tree's branching factor (see description of the KMeansIndexParams).}
+\cvarg{features}{The points to be clustered. The matrix must have elements of type ET.}
+\cvarg{centers}{The centers of the clusters obtained. The matrix must have type DT. The number of rows in this matrix represents the number of clusters desired, however, because of the way the cut in the hierarchical tree is chosen, the number of clusters computed will be the highest number of the form \texttt{(branching-1)*k+1} that's lower than the number of clusters desired, where \texttt{branching} is the tree's branching factor (see description of the KMeansIndexParams).}
 \cvarg{params}{Parameters used in the construction of the hierarchical k-means tree}
 \end{description}
 The function returns the number of clusters computed.

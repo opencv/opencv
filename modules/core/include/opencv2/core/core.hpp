@@ -3985,6 +3985,5 @@ public:
 
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/mat.hpp"
-#include "opencv2/core/flann.hpp"	// FLANN (Fast Library for Approximate Nearest Neighbors)
 
 #endif /*__OPENCV_CORE_HPP__*/

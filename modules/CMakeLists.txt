@@ -5,6 +5,7 @@ endif()
 add_subdirectory(calib3d)
 add_subdirectory(core)
 add_subdirectory(features2d)
+add_subdirectory(flann)
 
 if(MSVC OR MINGW)
    if(NOT CMAKE_CL_64)

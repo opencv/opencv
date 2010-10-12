@@ -44,6 +44,7 @@
 #define __OPENCV_FEATURES_2D_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/flann/flann.hpp"
 
 #ifdef __cplusplus
 #include <limits>

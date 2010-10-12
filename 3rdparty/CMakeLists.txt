@@ -2,7 +2,6 @@ if(ANDROID)
  configure_file("${CMAKE_SOURCE_DIR}/Android.mk.modules.in" "${CMAKE_CURRENT_BINARY_DIR}/Android.mk")
 endif()
 
-add_subdirectory(flann)
 add_subdirectory(lapack)
 add_subdirectory(zlib)
 if(WITH_JASPER AND NOT JASPER_FOUND)
