@@ -48,14 +48,347 @@
 
 namespace cv {
 
+void swap( Mat& a, Mat& b )
+{
+    int *ap = (int*)&a, *bp = (int*)&b;
+    size_t i, n = sizeof(Mat)/sizeof(ap[0]);
+    
+    for( i = 0; i < n; i++ )
+        std::swap(ap[i], bp[i]);
+    
+    if( a.step.p == b.step.buf )
+    {
+        a.step.p = a.step.buf;
+        a.size.p = &a.rows;
+    }
+    
+    if( b.step.p == a.step.buf )
+    {
+        b.step.p = b.step.buf;
+        b.size.p = &b.rows;
+    }
+}
+
+
+static inline void setSize( Mat& m, int _dims, const int* _sz,
+                            const size_t* _steps, bool autoSteps=false )
+{
+    CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
+    if( m.dims != _dims )
+    {
+        if( m.step.p != m.step.buf )
+        {
+            fastFree(m.step.p);
+            m.step.p = m.step.buf;
+            m.size.p = &m.rows;
+        }
+        if( _dims > 2 )
+        {
+            m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
+            m.size.p = (int*)(m.step.p + _dims) + 1;
+            m.size.p[-1] = _dims;
+        }
+    }
+    
+    m.dims = _dims;
+    if( !_sz )
+        return;
+    
+    size_t esz = m.elemSize(), total = esz;
+    int i;
+    for( i = _dims-1; i >= 0; i-- )
+    {
+        int s = _sz[i];
+        CV_Assert( s > 0 );
+        m.size.p[i] = s;
+        
+        if( _steps )
+            m.step.p[i] = i < _dims-1 ? _steps[i] : esz;
+        else if( autoSteps )
+        {
+            m.step.p[i] = total;
+            int64 total1 = (int64)total*s;
+            if( (uint64)total1 != (size_t)total1 )
+                CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
+            total = (size_t)total1;
+        }
+    }
+    
+    if( _dims == 1 )
+    {
+        m.dims = 2;
+        m.cols = 1;
+        m.step[1] = esz;
+    }
+}
+    
+static void finalizeHdr(Mat& m)
+{
+    int i, j;
+    
+    for( i = 0; i < m.dims; i++ )
+    {
+        if( m.size[i] > 1 )
+            break;
+    }
+    
+    for( j = m.dims-1; j > i; j-- )
+    {
+        if( m.step[j]*m.size[j] < m.step[j-1] )
+            break;
+    }
+    m.flags &= ~Mat::CONTINUOUS_FLAG;
+    int64 t = (int64)(m.step[0]/m.elemSize())*m.size[0];
+    if( j <= i && t == (int)t )
+        m.flags |= Mat::CONTINUOUS_FLAG;
+    
+    if( m.dims > 2 )
+        m.rows = m.cols = -1;
+    if( m.data )
+    {
+        m.dataend = m.data;
+        for( i = 0; i < m.dims; i++ )
+            m.dataend += (m.size[i] - 1)*m.step[i];
+    }
+}
+    
+    
+void Mat::create(int d, const int* _sizes, int _type)
+{
+    int i;
+    CV_Assert(0 <= d && _sizes && d <= CV_MAX_DIM && _sizes);
+    _type = CV_MAT_TYPE(_type);
+    
+    if( data && (d == dims || (d == 1 && dims <= 2)) && _type == type() )
+    {
+        if( d == 2 && rows == _sizes[0] && cols == _sizes[1] )
+            return;
+        for( i = 0; i < d; i++ )
+            if( size[i] != _sizes[i] )
+                break;
+        if( i == d && (d > 1 || size[1] == 1))
+            return;
+    }
+    
+    release();
+    if( d == 0 )
+        return;
+    flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
+    setSize(*this, d, _sizes, 0, allocator == 0);
+    
+    if( !allocator )
+    {
+        size_t total = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
+        data = datastart = (uchar*)fastMalloc(total + (int)sizeof(*refcount));
+        refcount = (int*)(data + total);
+        *refcount = 1;
+    }
+    else
+    {
+        allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
+        CV_Assert( step[dims-1] == elemSize() );
+    }
+    
+    finalizeHdr(*this);
+}
+
+void Mat::copySize(const Mat& m)
+{
+    setSize(*this, m.dims, 0, 0);
+    for( int i = 0; i < dims; i++ )
+    {
+        size[i] = m.size[i];
+        step[i] = m.step[i];
+    }
+}
+    
+void Mat::deallocate()
+{
+    if( allocator )
+        allocator->deallocate(refcount, datastart, data);
+    else
+    {
+        CV_DbgAssert(refcount != 0);
+        fastFree(datastart);
+    }
+}
+
+    
+Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
+    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
+    datastart(0), dataend(0), allocator(0), size(&rows)
+{
+    CV_Assert( m.dims >= 2 );
+    if( m.dims > 2 )
+    {
+        AutoBuffer<Range> rs(m.dims);
+        rs[0] = rowRange;
+        rs[1] = colRange;
+        for( int i = 2; i < m.dims; i++ )
+            rs[i] = Range::all();
+        *this = m(rs);
+        return;
+    }
+    
+    *this = m;
+    if( rowRange != Range::all() )
+    {
+        CV_Assert( 0 <= rowRange.start && rowRange.start <= rowRange.end && rowRange.end <= m.rows );
+        rows = rowRange.size();
+        data += step*rowRange.start;
+    }
+    
+    if( colRange != Range::all() )
+    {
+        CV_Assert( 0 <= colRange.start && colRange.start <= colRange.end && colRange.end <= m.cols );
+        cols = colRange.size();
+        data += colRange.start*elemSize();
+        flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
+    }
+    
+    if( rows == 1 )
+        flags |= CONTINUOUS_FLAG;
+    
+    if( refcount )
+        CV_XADD(refcount, 1);
+    if( rows <= 0 || cols <= 0 )
+    {
+        release();
+        rows = cols = 0;
+    }
+}
+ 
+    
+Mat::Mat(const Mat& m, const Rect& roi)
+    : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
+    data(m.data + roi.y*m.step[0]), refcount(m.refcount),
+    datastart(m.datastart), dataend(m.dataend), allocator(m.allocator), size(&rows)
+{
+    CV_Assert( m.dims <= 2 );
+    flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
+    flags |= roi.height == 1 ? CONTINUOUS_FLAG : 0;
+    
+    size_t esz = elemSize();
+    data += roi.x*esz;
+    CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
+              0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
+    if( refcount )
+        CV_XADD(refcount, 1);
+    
+    step[0] = m.step[0]; step[1] = esz;
+    
+    if( rows <= 0 || cols <= 0 )
+    {
+        release();
+        rows = cols = 0;
+    }
+}
+
+    
+Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
+    : flags(MAGIC_VAL|CV_MAT_TYPE(_type)), dims(0), rows(0), cols(0),
+    data((uchar*)_data), refcount(0),
+    datastart((uchar*)_data), dataend((uchar*)_data), allocator(0), size(&rows)
+{
+    setSize(*this, _dims, _sizes, _steps, true);
+    finalizeHdr(*this);
+}
+    
+    
+Mat::Mat(const Mat& m, const Range* ranges)
+    : flags(m.flags), dims(0), rows(0), cols(0), data(0), refcount(0),
+    datastart(0), dataend(0), allocator(0), size(&rows)
+{
+    int i, d = m.dims;
+    
+    CV_Assert(ranges);
+    for( i = 0; i < d; i++ )
+    {
+        Range r = ranges[i];
+        CV_Assert( r == Range::all() || (0 <= r.start && r.start < r.end && r.end <= m.size[i]) );
+    }
+    *this = m;
+    for( i = 0; i < d; i++ )
+    {
+        Range r = ranges[i];
+        if( r != Range::all() )
+        {
+            size[i] = r.end - r.start;
+            data += r.start*step[i];
+        }
+    }
+    
+    finalizeHdr(*this);
+}
+ 
+    
+Mat::Mat(const CvMatND* m, bool copyData)
+    : flags(MAGIC_VAL|CV_MAT_TYPE(m->type)), dims(0), rows(0), cols(0),
+    data((uchar*)m->data.ptr), refcount(0),
+    datastart((uchar*)m->data.ptr), dataend((uchar*)m->data.ptr), allocator(0),
+    size(&rows)
+{
+    int _sizes[CV_MAX_DIM];
+    size_t _steps[CV_MAX_DIM];
+    
+    int i, d = m->dims;
+    for( i = 0; i < d; i++ )
+    {
+        _sizes[i] = m->dim[i].size;
+        _steps[i] = m->dim[i].step;
+    }
+    
+    setSize(*this, d, _sizes, _steps);
+    finalizeHdr(*this);
+
+    if( copyData )
+    {
+        Mat temp(*this);
+        temp.copyTo(*this);
+    }
+}
+    
+    
+Mat Mat::diag(int d) const
+{
+    CV_Assert( dims <= 2 );
+    Mat m = *this;
+    size_t esz = elemSize();
+    int len;
+    
+    if( d >= 0 )
+    {
+        len = std::min(cols - d, rows);
+        m.data += esz*d;
+    }
+    else
+    {
+        len = std::min(rows + d, cols);
+        m.data -= step[0]*d;
+    }
+    CV_DbgAssert( len > 0 );
+    
+    m.size[0] = m.rows = len;
+    m.size[1] = m.cols = 1;
+    m.step[0] += (len > 1 ? esz : 0);
+    
+    if( m.rows > 1 )
+        m.flags &= ~CONTINUOUS_FLAG;
+    else
+        m.flags |= CONTINUOUS_FLAG;
+    return m;
+}
+    
+    
 Mat::Mat(const IplImage* img, bool copyData)
+    : flags(MAGIC_VAL), dims(2), rows(0), cols(0),
+    data(0), refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
 {
     CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
     
     int depth = IPL2CV_DEPTH(img->depth);
     size_t esz;
-    step = img->widthStep;
-    refcount = 0;
+    step[0] = img->widthStep;
 
     if(!img->roi)
     {
@@ -74,10 +407,11 @@ Mat::Mat(const IplImage* img, bool copyData)
         esz = elemSize();
         data = datastart = (uchar*)img->imageData +
 			(selectedPlane ? (img->roi->coi - 1)*step*img->height : 0) +
-			img->roi->yOffset*step + img->roi->xOffset*esz;        
+			img->roi->yOffset*step[0] + img->roi->xOffset*esz;        
     }
     dataend = datastart + step*(rows-1) + esz*cols;
     flags |= (cols*esz == step || rows == 1 ? CONTINUOUS_FLAG : 0);
+    step[1] = esz;
 
     if( copyData )
     {
@@ -98,9 +432,10 @@ Mat::Mat(const IplImage* img, bool copyData)
     
 Mat::operator IplImage() const
 {
+    CV_Assert( dims <= 2 );
     IplImage img;
     cvInitImageHeader(&img, size(), cvIplDepth(flags), channels());
-    cvSetData(&img, data, (int)step);
+    cvSetData(&img, data, (int)step[0]);
     return img;
 }
     
@@ -108,16 +443,20 @@ Mat::operator IplImage() const
 Mat cvarrToMat(const CvArr* arr, bool copyData,
                bool allowND, int coiMode)
 {
+    if( !arr )
+        return Mat();
     if( CV_IS_MAT(arr) )
         return Mat((const CvMat*)arr, copyData );
-    else if( CV_IS_IMAGE(arr) )
+    if( CV_IS_MATND(arr) )
+        return Mat((const CvMatND*)arr, copyData );
+    if( CV_IS_IMAGE(arr) )
     {
         const IplImage* iplimg = (const IplImage*)arr;
         if( coiMode == 0 && iplimg->roi && iplimg->roi->coi > 0 )
             CV_Error(CV_BadCOI, "COI is not supported by the function");
         return Mat(iplimg, copyData);
     }
-    else if( CV_IS_SEQ(arr) )
+    if( CV_IS_SEQ(arr) )
     {
         CvSeq* seq = (CvSeq*)arr;
         CV_Assert(seq->total > 0 && CV_ELEM_SIZE(seq->flags) == seq->elem_size);
@@ -127,20 +466,53 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
         cvCvtSeqToArray(seq, buf.data, CV_WHOLE_SEQ);
         return buf;
     }
-    else
-    {
-        CvMat hdr, *cvmat = cvGetMat( arr, &hdr, 0, allowND ? 1 : 0 );
-        if( cvmat )
-            return Mat(cvmat, copyData);
-    }
+    CV_Error(CV_StsBadArg, "Unknown array type");
     return Mat();
 }
-    
 
+void Mat::locateROI( Size& wholeSize, Point& ofs ) const
+{
+    CV_Assert( dims <= 2 && step[0] > 0 );
+    size_t esz = elemSize(), minstep;
+    ptrdiff_t delta1 = data - datastart, delta2 = dataend - datastart;
+    
+    if( delta1 == 0 )
+        ofs.x = ofs.y = 0;
+    else
+    {
+        ofs.y = (int)(delta1/step[0]);
+        ofs.x = (int)((delta1 - step[0]*ofs.y)/esz);
+        CV_DbgAssert( data == datastart + ofs.y*step[0] + ofs.x*esz );
+    }
+    minstep = (ofs.x + cols)*esz;
+    wholeSize.height = (int)((delta2 - minstep)/step[0] + 1);
+    wholeSize.height = std::max(wholeSize.height, ofs.y + rows);
+    wholeSize.width = (int)((delta2 - step*(wholeSize.height-1))/esz);
+    wholeSize.width = std::max(wholeSize.width, ofs.x + cols);
+}
+
+Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
+{
+    CV_Assert( dims <= 2 && step[0] > 0 );
+    Size wholeSize; Point ofs;
+    size_t esz = elemSize();
+    locateROI( wholeSize, ofs );
+    int row1 = std::max(ofs.y - dtop, 0), row2 = std::min(ofs.y + rows + dbottom, wholeSize.height);
+    int col1 = std::max(ofs.x - dleft, 0), col2 = std::min(ofs.x + cols + dright, wholeSize.width);
+    data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
+    rows = row2 - row1; cols = col2 - col1;
+    size.p[0] = rows; size.p[1] = cols;
+    if( esz*cols == step[0] || rows == 1 )
+        flags |= CONTINUOUS_FLAG;
+    else
+        flags &= ~CONTINUOUS_FLAG;
+    return *this;
+}    
+    
 void extractImageCOI(const CvArr* arr, Mat& ch, int coi)
 {
     Mat mat = cvarrToMat(arr, false, true, 1);
-    ch.create(mat.size(), mat.depth());
+    ch.create(mat.dims, mat.size, mat.depth());
     if(coi < 0) 
         CV_Assert( CV_IS_IMAGE(arr) && (coi = cvGetImageCOI((const IplImage*)arr)-1) >= 0 );
     CV_Assert(0 <= coi && coi < mat.channels());
@@ -153,7 +525,7 @@ void insertImageCOI(const Mat& ch, CvArr* arr, int coi)
     Mat mat = cvarrToMat(arr, false, true, 1);
     if(coi < 0) 
         CV_Assert( CV_IS_IMAGE(arr) && (coi = cvGetImageCOI((const IplImage*)arr)-1) >= 0 );
-    CV_Assert(ch.size() == mat.size() && ch.depth() == mat.depth() && 0 <= coi && coi < mat.channels());
+    CV_Assert(ch.size == mat.size && ch.depth() == mat.depth() && 0 <= coi && coi < mat.channels());
     int _pairs[] = { 0, coi };
     mixChannels( &ch, 1, &mat, 1, _pairs, 1 );
 }
@@ -161,6 +533,7 @@ void insertImageCOI(const Mat& ch, CvArr* arr, int coi)
 
 Mat Mat::reshape(int new_cn, int new_rows) const
 {
+    CV_Assert( dims <= 2 );
     Mat hdr = *this;
 
     int cn = channels();
@@ -189,7 +562,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
                                     "is not divisible by the new number of rows" );
 
         hdr.rows = new_rows;
-        hdr.step = total_width * elemSize1();
+        hdr.step[0] = total_width * elemSize1();
     }
 
     int new_width = total_width / new_cn;
@@ -207,6 +580,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
 void
 setIdentity( Mat& m, const Scalar& s )
 {
+    CV_Assert( m.dims <= 2 );
     int i, j, rows = m.rows, cols = m.cols, type = m.type();
     
     if( type == CV_32FC1 )
@@ -244,6 +618,7 @@ setIdentity( Mat& m, const Scalar& s )
 
 Scalar trace( const Mat& m )
 {
+    CV_Assert( m.dims <= 2 );
     int i, type = m.type();
     int nm = std::min(m.rows, m.cols);
     
@@ -269,7 +644,6 @@ Scalar trace( const Mat& m )
     
     return cv::sum(m.diag());
 }
-
 
 /****************************************************************************************\
 *                                       transpose                                        *
@@ -355,7 +729,7 @@ void transpose( const Mat& src, Mat& dst )
     };
 
     size_t esz = src.elemSize();
-    CV_Assert( esz <= (size_t)32 );
+    CV_Assert( src.dims <= 2 && esz <= (size_t)32 );
 
     if( dst.data == src.data && dst.cols == dst.rows )
     {
@@ -373,16 +747,18 @@ void transpose( const Mat& src, Mat& dst )
 }
 
 
-void completeSymm( Mat& matrix, bool LtoR )
+void completeSymm( Mat& m, bool LtoR )
 {
-    int i, j, nrows = matrix.rows, type = matrix.type();
+    CV_Assert( m.dims <= 2 );
+    
+    int i, j, nrows = m.rows, type = m.type();
     int j0 = 0, j1 = nrows;
-    CV_Assert( matrix.rows == matrix.cols );
+    CV_Assert( m.rows == m.cols );
 
     if( type == CV_32FC1 || type == CV_32SC1 )
     {
-        int* data = (int*)matrix.data;
-        size_t step = matrix.step/sizeof(data[0]);
+        int* data = (int*)m.data;
+        size_t step = m.step/sizeof(data[0]);
         for( i = 0; i < nrows; i++ )
         {
             if( !LtoR ) j1 = i; else j0 = i+1;
@@ -392,8 +768,8 @@ void completeSymm( Mat& matrix, bool LtoR )
     }
     else if( type == CV_64FC1 )
     {
-        double* data = (double*)matrix.data;
-        size_t step = matrix.step/sizeof(data[0]);
+        double* data = (double*)m.data;
+        size_t step = m.step/sizeof(data[0]);
         for( i = 0; i < nrows; i++ )
         {
             if( !LtoR ) j1 = i; else j0 = i+1;
@@ -405,10 +781,11 @@ void completeSymm( Mat& matrix, bool LtoR )
         CV_Error( CV_StsUnsupportedFormat, "" );
 }
 
+    
 Mat Mat::cross(const Mat& m) const
 {
     int t = type(), d = CV_MAT_DEPTH(t);
-    CV_Assert( size() == m.size() && t == m.type() &&
+    CV_Assert( dims <= 2 && m.dims <= 2 && size() == m.size() && t == m.type() &&
         ((rows == 3 && cols == 1) || (cols*channels() == 3 && rows == 1)));
     Mat result(rows, cols, t);
 
@@ -528,6 +905,7 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 void reduce(const Mat& src, Mat& dst, int dim, int op, int dtype)
 {
+    CV_Assert( src.dims <= 2 );
     int op0 = op;
     int stype = src.type(), sdepth = src.depth();
     if( dtype < 0 )
@@ -757,7 +1135,7 @@ void sort( const Mat& src, Mat& dst, int flags )
         sort_<int>, sort_<float>, sort_<double>, 0
     };
     SortFunc func = tab[src.depth()];
-    CV_Assert( src.channels() == 1 && func != 0 );
+    CV_Assert( src.dims <= 2 && src.channels() == 1 && func != 0 );
     dst.create( src.size(), src.type() );
     func( src, dst, flags );
 }
@@ -770,7 +1148,7 @@ void sortIdx( const Mat& src, Mat& dst, int flags )
         sortIdx_<int>, sortIdx_<float>, sortIdx_<double>, 0
     };
     SortFunc func = tab[src.depth()];
-    CV_Assert( src.channels() == 1 && func != 0 );
+    CV_Assert( src.dims <= 2 && src.channels() == 1 && func != 0 );
     if( dst.data == src.data )
         dst.release();
     dst.create( src.size(), CV_32S );
@@ -898,7 +1276,7 @@ double kmeans( const Mat& data, int K, Mat& best_labels,
     bool simd = checkHardwareSupport(CV_CPU_SSE);
 
     attempts = std::max(attempts, 1);
-    CV_Assert( type == CV_32F && K > 0 );
+    CV_Assert( data.dims <= 2 && type == CV_32F && K > 0 );
 
     Mat _labels;
     if( flags & CV_KMEANS_USE_INITIAL_LABELS )
@@ -1253,196 +1631,14 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
 namespace cv
 {
 
-//////////////////////////////// MatND ///////////////////////////////////
-
-MatND::MatND(const MatND& m, const Range* ranges)
- : flags(MAGIC_VAL), dims(0), refcount(0), data(0), datastart(0), dataend(0)
-{
-    int i, j, d = m.dims;
-
-    CV_Assert(ranges);
-    for( i = 0; i < d; i++ )
-    {
-        Range r = ranges[i];
-        CV_Assert( r == Range::all() ||
-            (0 <= r.start && r.start < r.end && r.end <= m.size[i]) );
-    }
-    *this = m;
-    for( i = 0; i < d; i++ )
-    {
-        Range r = ranges[i];
-        if( r != Range::all() )
-        {
-            size[i] = r.end - r.start;
-            data += r.start*step[i];
-        }
-    }
-    
-    for( i = 0; i < d; i++ )
-    {
-        if( size[i] != 1 )
-            break;
-    }
-
-    CV_Assert( step[d-1] == elemSize() );
-    for( j = d-1; j > i; j-- )
-    {
-        if( step[j]*size[j] < step[j-1] )
-            break;
-    }
-    flags = (flags & ~CONTINUOUS_FLAG) | (j <= i ? CONTINUOUS_FLAG : 0);
-}
-
-void MatND::create(int d, const int* _sizes, int _type)
-{
-    CV_Assert(d > 0 && _sizes);
-    int i;
-    _type = CV_MAT_TYPE(_type);
-    if( data && d == dims && _type == type() )
-    {
-        for( i = 0; i < d; i++ )
-            if( size[i] != _sizes[i] )
-                break;
-        if( i == d )
-            return;
-    }
-    
-    release();
-    
-    flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL | CONTINUOUS_FLAG;
-    size_t total = elemSize();
-    int64 total1;
-    
-    for( i = d-1; i >= 0; i-- )
-    {
-        int sz = _sizes[i];
-        size[i] = sz;
-        step[i] = total;
-        total1 = (int64)total*sz;
-        CV_Assert( sz > 0 );
-        if( (uint64)total1 != (size_t)total1 )
-            CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
-        total = (size_t)total1;
-    }
-    total = alignSize(total, (int)sizeof(*refcount));
-    data = datastart = (uchar*)fastMalloc(total + (int)sizeof(*refcount));
-    dataend = datastart + step[0]*size[0];
-    refcount = (int*)(data + total);
-    *refcount = 1;
-    dims = d;
-}
-
-void MatND::copyTo( MatND& m ) const
-{
-    m.create( dims, size, type() );
-    NAryMatNDIterator it(*this, m);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        it.planes[0].copyTo(it.planes[1]); 
-}
-
-void MatND::copyTo( MatND& m, const MatND& mask ) const
-{
-    m.create( dims, size, type() );
-    NAryMatNDIterator it(*this, m, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        it.planes[0].copyTo(it.planes[1], it.planes[2]); 
-}
-
-void MatND::convertTo( MatND& m, int rtype, double alpha, double beta ) const
-{
-    rtype = rtype < 0 ? type() : CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
-    m.create( dims, size, rtype );
-    NAryMatNDIterator it(*this, m);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        it.planes[0].convertTo(it.planes[1], rtype, alpha, beta);
-}
-
-MatND& MatND::operator = (const Scalar& s)
-{
-    NAryMatNDIterator it(*this);
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        it.planes[0] = s;
-
-    return *this;
-}
-
-MatND& MatND::setTo(const Scalar& s, const MatND& mask)
-{
-    NAryMatNDIterator it(*this, mask);
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        it.planes[0].setTo(s, it.planes[1]);
-
-    return *this;
-}
-
-MatND MatND::reshape(int, int, const int*) const
+Mat Mat::reshape(int, int, const int*) const
 {
     CV_Error(CV_StsNotImplemented, "");
     // TBD
-    return MatND();
+    return Mat();
 }
 
-MatND::operator Mat() const
-{
-    int i, d = dims, d1, rows, cols;
-    size_t _step = Mat::AUTO_STEP;
-    
-    if( d <= 2 )
-    {
-        rows = size[0];
-        cols = d == 2 ? size[1] : 1;
-        if( d == 2 )
-            _step = step[0];
-    }
-    else
-    {
-        rows = 1;
-        cols = size[d-1];
-
-        for( d1 = 0; d1 < d; d1++ )
-            if( size[d1] > 1 )
-                break;
-
-        for( i = d-1; i > d1; i-- )
-        {
-            int64 cols1 = (int64)cols*size[i-1];
-            if( cols1 != (int)cols1 || size[i]*step[i] != step[i-1] )
-                break;
-            cols = (int)cols1;
-        }
-
-        if( i > d1 )
-        {
-            --i;
-            _step = step[i];
-            rows = size[i];
-            for( ; i > d1; i-- )
-            {
-                int64 rows1 = (int64)rows*size[i-1];
-                if( rows1 != (int)rows1 || size[i]*step[i] != step[i-1] )
-                    break;
-                rows = (int)rows1;
-            }
-
-            if( i > d1 )
-                CV_Error( CV_StsBadArg,
-                "The nD matrix can not be represented as 2D matrix due "
-                "to its layout in memory; you may use (Mat)the_matnd.clone() instead" );
-        }
-    }
-
-    Mat m(rows, cols, type(), data, _step);
-    m.datastart = datastart;
-    m.dataend = dataend;
-    m.refcount = refcount;
-    m.addref();
-    return m;
-}
-
-MatND::operator CvMatND() const
+Mat::operator CvMatND() const
 {
     CvMatND mat;
     cvInitMatNDHeader( &mat, dims, size, type(), data );
@@ -1453,77 +1649,43 @@ MatND::operator CvMatND() const
     return mat;
 }
 
-NAryMatNDIterator::NAryMatNDIterator(const MatND** _arrays, size_t count)
+NAryMatIterator::NAryMatIterator()
+    : arrays(0), planes(0), narrays(0), nplanes(0), iterdepth(0), idx(0)
 {
-    init(_arrays, count);
-}
-
-NAryMatNDIterator::NAryMatNDIterator(const MatND* _arrays, size_t count)
-{
-    AutoBuffer<const MatND*, 32> buf(count);
-    for( size_t i = 0; i < count; i++ )
-        buf[i] = _arrays + i;
-    init(buf, count);
-}
-
-    
-NAryMatNDIterator::NAryMatNDIterator(const MatND& m1)
-{
-    const MatND* mm[] = {&m1};
-    init(mm, 1);
-}
-
-NAryMatNDIterator::NAryMatNDIterator(const MatND& m1, const MatND& m2)
-{
-    const MatND* mm[] = {&m1, &m2};
-    init(mm, 2);
-}
-
-NAryMatNDIterator::NAryMatNDIterator(const MatND& m1, const MatND& m2, const MatND& m3)
-{
-    const MatND* mm[] = {&m1, &m2, &m3};
-    init(mm, 3);
-}
-
-NAryMatNDIterator::NAryMatNDIterator(const MatND& m1, const MatND& m2,
-                                     const MatND& m3, const MatND& m4)
-{
-    const MatND* mm[] = {&m1, &m2, &m3, &m4};
-    init(mm, 4);
 }
     
-NAryMatNDIterator::NAryMatNDIterator(const MatND& m1, const MatND& m2,
-                                     const MatND& m3, const MatND& m4,
-                                     const MatND& m5)
+NAryMatIterator::NAryMatIterator(const Mat** _arrays, Mat* _planes, int _narrays)
+    : arrays(0), planes(0), narrays(0), nplanes(0), iterdepth(0), idx(0)
 {
-    const MatND* mm[] = {&m1, &m2, &m3, &m4, &m5};
-    init(mm, 5);
+    init(_arrays, _planes, _narrays);
 }
     
-NAryMatNDIterator::NAryMatNDIterator(const MatND& m1, const MatND& m2,
-                                     const MatND& m3, const MatND& m4,
-                                     const MatND& m5, const MatND& m6)
+void NAryMatIterator::init(const Mat** _arrays, Mat* _planes, int _narrays)
 {
-    const MatND* mm[] = {&m1, &m2, &m3, &m4, &m5, &m6};
-    init(mm, 6);
-}    
+    CV_Assert( _arrays && _planes );
+    int i, j, d1=0, i0 = -1, d = -1, total = 0;
     
-void NAryMatNDIterator::init(const MatND** _arrays, size_t count)
-{
-    CV_Assert( _arrays && count > 0 );
-    arrays.resize(count);
-    int i, j, d1=0, i0 = -1, d = -1, n = (int)count;
+    arrays = _arrays;
+    planes = _planes;
+    narrays = _narrays;
+    nplanes = 0;
+    
+    if( narrays < 0 )
+    {
+        for( i = 0; _arrays[i] != 0; i++ )
+            ;
+        narrays = i;
+        CV_Assert(narrays <= 1000);
+    }
 
     iterdepth = 0;
 
-    for( i = 0; i < n; i++ )
+    for( i = 0; i < narrays; i++ )
     {
-        if( !_arrays[i] || !_arrays[i]->data )
-        {
-            arrays[i] = MatND();
+        CV_Assert(arrays[i] != 0);
+        if( !arrays[i]->data )
             continue;
-        }
-        const MatND& A = arrays[i] = *_arrays[i];
+        const Mat& A = *arrays[i];
         
         if( i0 < 0 )
         {
@@ -1531,17 +1693,13 @@ void NAryMatNDIterator::init(const MatND** _arrays, size_t count)
             d = A.dims;
             
             // find the first dimensionality which is different from 1;
-            // in any of the arrays the first "d1" steps do not affect the continuity
+            // in any of the arrays the first "d1" step do not affect the continuity
             for( d1 = 0; d1 < d; d1++ )
                 if( A.size[d1] > 1 )
                     break;
         }
         else
-        {
-            CV_Assert( A.dims == d );
-            for( j = 0; j < d; j++ )
-                CV_Assert( A.size[j] == arrays[i0].size[j] );
-        }
+            CV_Assert( A.size == arrays[i0]->size );
 
         if( !A.isContinuous() )
         {
@@ -1553,53 +1711,53 @@ void NAryMatNDIterator::init(const MatND** _arrays, size_t count)
         }
     }
 
-    if( i0 < 0 )
-        CV_Error( CV_StsBadArg, "All the input arrays are empty" );
-
-    int total = arrays[i0].size[d-1];
-    for( j = d-1; j > iterdepth; j-- )
+    if( i0 >= 0 )
     {
-        int64 total1 = (int64)total*arrays[i0].size[j-1];
-        if( total1 != (int)total1 )
-            break;
-        total = (int)total1;
+        total = arrays[i0]->size[d-1];
+        for( j = d-1; j > iterdepth; j-- )
+        {
+            int64 total1 = (int64)total*arrays[i0]->size[j-1];
+            if( total1 != (int)total1 )
+                break;
+            total = (int)total1;
+        }
+
+        iterdepth = j;
+        if( iterdepth == d1 )
+            iterdepth = 0;
+        
+        nplanes = 1;
+        for( j = iterdepth-1; j >= 0; j-- )
+            nplanes *= arrays[i0]->size[j];
     }
+    else
+        iterdepth = nplanes = 0;
 
-    iterdepth = j;
-    if( iterdepth == d1 )
-        iterdepth = 0;
-
-    planes.resize(n);
-    for( i = 0; i < n; i++ )
+    for( i = 0; i < narrays; i++ )
     {
-        if( !arrays[i].data )
+        if( !arrays[i]->data )
         {
             planes[i] = Mat();
             continue;
         }
-        planes[i] = Mat( 1, total, arrays[i].type(), arrays[i].data );
-        planes[i].datastart = arrays[i].datastart;
-        planes[i].dataend = arrays[i].dataend;
-        planes[i].refcount = arrays[i].refcount;
-        planes[i].addref();
+        planes[i] = Mat( 1, total, arrays[i]->type(), arrays[i]->data );
+        planes[i].datastart = arrays[i]->datastart;
+        planes[i].dataend = arrays[i]->dataend;
     }
 
     idx = 0;
-    nplanes = 1;
-    for( j = iterdepth-1; j >= 0; j-- )
-        nplanes *= arrays[i0].size[j];
 }
 
 
-NAryMatNDIterator& NAryMatNDIterator::operator ++()
+NAryMatIterator& NAryMatIterator::operator ++()
 {
     if( idx >= nplanes-1 )
         return *this;
     ++idx;
 
-    for( size_t i = 0; i < arrays.size(); i++ )
+    for( int i = 0; i < narrays; i++ )
     {
-        const MatND& A = arrays[i];
+        const Mat& A = *arrays[i];
         Mat& M = planes[i];
         if( !A.data )
             continue;
@@ -1617,588 +1775,149 @@ NAryMatNDIterator& NAryMatNDIterator::operator ++()
     return *this;
 }
 
-NAryMatNDIterator NAryMatNDIterator::operator ++(int)
+NAryMatIterator NAryMatIterator::operator ++(int)
 {
-    NAryMatNDIterator it = *this;
+    NAryMatIterator it = *this;
     ++*this;
     return it;
 }
 
-void add(const MatND& a, const MatND& b, MatND& c, const MatND& mask)
+///////////////////////////////////////////////////////////////////////////
+//                              MatConstIterator                         //
+///////////////////////////////////////////////////////////////////////////
+
+Point MatConstIterator::pos() const
 {
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        add( it.planes[0], it.planes[1], it.planes[2], it.planes[3] ); 
-}
-
-void subtract(const MatND& a, const MatND& b, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        subtract( it.planes[0], it.planes[1], it.planes[2], it.planes[3] ); 
-}
-
-void add(const MatND& a, const MatND& b, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        add( it.planes[0], it.planes[1], it.planes[2] ); 
-}
-
-
-void subtract(const MatND& a, const MatND& b, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        subtract( it.planes[0], it.planes[1], it.planes[2] ); 
-}
-
-void add(const MatND& a, const Scalar& s, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        add( it.planes[0], s, it.planes[1], it.planes[2] ); 
-}
-
-void subtract(const Scalar& s, const MatND& a, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        subtract( s, it.planes[0], it.planes[1], it.planes[2] ); 
-}
-
-void multiply(const MatND& a, const MatND& b, MatND& c, double scale)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        multiply( it.planes[0], it.planes[1], it.planes[2], scale ); 
-}
-
-void divide(const MatND& a, const MatND& b, MatND& c, double scale)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        divide( it.planes[0], it.planes[1], it.planes[2], scale ); 
-}
-
-void divide(double scale, const MatND& b, MatND& c)
-{
-    c.create(b.dims, b.size, b.type());
-    NAryMatNDIterator it(b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        divide( scale, it.planes[0], it.planes[1] ); 
-}
-
-void scaleAdd(const MatND& a, double alpha, const MatND& b, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        scaleAdd( it.planes[0], alpha, it.planes[1], it.planes[2] ); 
-}
-
-void addWeighted(const MatND& a, double alpha, const MatND& b,
-                 double beta, double gamma, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        addWeighted( it.planes[0], alpha, it.planes[1], beta, gamma, it.planes[2] );
-}
-
-Scalar sum(const MatND& m)
-{
-    NAryMatNDIterator it(m);
-    Scalar s;
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        s += sum(it.planes[0]);
-    return s;
-}
-
-int countNonZero( const MatND& m )
-{
-    NAryMatNDIterator it(m);
-    int nz = 0;
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        nz += countNonZero(it.planes[0]);
-    return nz;
-}
-
-Scalar mean(const MatND& m)
-{
-    NAryMatNDIterator it(m);
-    double total = 1;
-    for( int i = 0; i < m.dims; i++ )
-        total *= m.size[i];
-    return sum(m)*(1./total);
-}
-
-Scalar mean(const MatND& m, const MatND& mask)
-{
-    if( !mask.data )
-        return mean(m);
-    NAryMatNDIterator it(m, mask);
-    double total = 0;
-    Scalar s;
-    for( int i = 0; i < it.nplanes; i++, ++it )
-    {
-        int n = countNonZero(it.planes[1]);
-        s += mean(it.planes[0], it.planes[1])*(double)n;
-        total += n;
-    }
-    return s *= 1./std::max(total, 1.);
-}
-
-void meanStdDev(const MatND& m, Scalar& mean, Scalar& stddev, const MatND& mask)
-{
-    NAryMatNDIterator it(m, mask);
-    double total = 0;
-    Scalar s, sq;
-    int k, cn = m.channels();
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-    {
-        Scalar _mean, _stddev;
-        meanStdDev(it.planes[0], _mean, _stddev, it.planes[1]);
-        double nz = mask.data ? countNonZero(it.planes[1]) :
-            (double)it.planes[0].rows*it.planes[0].cols;
-        for( k = 0; k < cn; k++ )
-        {
-            s[k] += _mean[k]*nz;
-            sq[k] += (_stddev[k]*_stddev[k] + _mean[k]*_mean[k])*nz;
-        }
-        total += nz;
-    }
-
-    mean = stddev = Scalar();
-    total = 1./std::max(total, 1.);
-    for( k = 0; k < cn; k++ )
-    {
-        mean[k] = s[k]*total;
-        stddev[k] = std::sqrt(std::max(sq[k]*total - mean[k]*mean[k], 0.));
-    }
-}
-
-double norm(const MatND& a, int normType, const MatND& mask)
-{
-    NAryMatNDIterator it(a, mask);
-    double total = 0;
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-    {
-        double n = norm(it.planes[0], normType, it.planes[1]);
-        if( normType == NORM_INF )
-            total = std::max(total, n);
-        else if( normType == NORM_L1 )
-            total += n;
-        else
-            total += n*n;
-    }
-
-    return normType != NORM_L2 ? total : std::sqrt(total);
-}
-
-double norm(const MatND& a, const MatND& b,
-            int normType, const MatND& mask)
-{
-    bool isRelative = (normType & NORM_RELATIVE) != 0;
-    normType &= 7;
-
-    NAryMatNDIterator it(a, b, mask);
-    double num = 0, denom = 0;
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-    {
-        double n = norm(it.planes[0], it.planes[1], normType, it.planes[2]);
-        double d = !isRelative ? 0 : norm(it.planes[1], normType, it.planes[2]);
-        if( normType == NORM_INF )
-        {
-            num = std::max(num, n);
-            denom = std::max(denom, d);
-        }
-        else if( normType == NORM_L1 )
-        {
-            num += n;
-            denom += d;
-        }
-        else
-        {
-            num += n*n;
-            denom += d*d;
-        }
-    }
-
-    if( normType == NORM_L2 )
-    {
-        num = std::sqrt(num);
-        denom = std::sqrt(denom);
-    }
-
-    return !isRelative ? num : num/std::max(denom,DBL_EPSILON);
-}
-
-void normalize( const MatND& src, MatND& dst, double a, double b,
-                int norm_type, int rtype, const MatND& mask )
-{
-    double scale = 1, shift = 0;
-    if( norm_type == CV_MINMAX )
-    {
-        double smin = 0, smax = 0;
-        double dmin = std::min( a, b ), dmax = std::max( a, b );
-        minMaxLoc( src, &smin, &smax, 0, 0, mask );
-        scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
-        shift = dmin - smin*scale;
-    }
-    else if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
-    {
-        scale = norm( src, norm_type, mask );
-        scale = scale > DBL_EPSILON ? a/scale : 0.;
-        shift = 0;
-    }
-    else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
+    if( !m )
+        return Point();
+    CV_DbgAssert(m->dims <= 2);
     
-    if( !mask.data )
-        src.convertTo( dst, rtype, scale, shift );
-    else
+    ptrdiff_t ofs = ptr - m->data;
+    int y = (int)(ofs/m->step[0]);
+    return Point((int)((ofs - y*m->step[0])/elemSize), y);
+}
+
+void MatConstIterator::pos(int* _idx) const
+{
+    CV_Assert(m != 0 && _idx);
+    ptrdiff_t ofs = ptr - m->data;
+    for( int i = 0; i < m->dims; i++ )
     {
-        MatND temp;
-        src.convertTo( temp, rtype, scale, shift );
-        temp.copyTo( dst, mask );
+        size_t s = m->step[i], v = ofs/s;
+        ofs -= v*s;
+        _idx[i] = (int)v;
     }
 }
 
-static void ofs2idx(const MatND& a, size_t ofs, int* idx)
+ptrdiff_t MatConstIterator::lpos() const
 {
-    int i, d = a.dims;
+    if(!m)
+        return 0;
+    if( m->isContinuous() )
+        return (ptr - sliceStart)/elemSize;
+    ptrdiff_t ofs = ptr - m->data;
+    int i, d = m->dims;
+    if( d == 2 )
+    {
+        ptrdiff_t y = ofs/m->step[0];
+        return y*m->cols + (ofs - y*m->step[0])/elemSize;
+    }
+    ptrdiff_t result = 0;
     for( i = 0; i < d; i++ )
     {
-        idx[i] = (int)(ofs / a.step[i]);
-        ofs %= a.step[i];
+        size_t s = m->step[i], v = ofs/s;
+        ofs -= v*s;
+        result = result*m->size[i] + v;
     }
+    return result;
 }
     
+void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
+{
+    if( m->isContinuous() )
+    {
+        ptr = (relative ? ptr : sliceStart) + ofs*elemSize;
+        if( ptr < sliceStart )
+            ptr = sliceStart;
+        else if( ptr > sliceEnd )
+            ptr = sliceEnd;
+        return;
+    }
     
-void minMaxLoc(const MatND& a, double* minVal,
-               double* maxVal, int* minLoc, int* maxLoc,
-               const MatND& mask)
-{
-    NAryMatNDIterator it(a, mask);
-    double minval = DBL_MAX, maxval = -DBL_MAX;
-    size_t minofs = 0, maxofs = 0, esz = a.elemSize();
+    int d = m->dims;
+    if( d == 2 )
+    {
+        ptrdiff_t ofs0, y;
+        if( relative )
+        {
+            ofs0 = ptr - m->data;
+            y = ofs0/m->step[0];
+            ofs += y*m->cols + (ofs0 - y*m->step[0])/elemSize;
+        }
+        y = ofs/m->cols;
+        int y1 = std::min(std::max((int)y, 0), m->rows-1);
+        sliceStart = m->data + y1*m->step[0];
+        sliceEnd = sliceStart + (m->cols-1)*elemSize;
+        ptr = y < 0 ? sliceStart : y >= m->rows ? sliceEnd :
+            sliceStart + (ofs - y*m->cols)*elemSize;
+        return;
+    }
     
-    for( int i = 0; i < it.nplanes; i++, ++it )
+    if( relative )
+        ofs += lpos();
+    
+    if( ofs < 0 )
+        ofs = 0;
+    
+    int szi = m->size[d-1];
+    ptrdiff_t t = ofs/szi;
+    int v = (int)(ofs - t*szi);
+    ofs = t;
+    ptr = m->data + v*elemSize;
+    sliceStart = m->data;
+    
+    for( int i = d-2; i >= 0; i-- )
     {
-        double val0 = 0, val1 = 0;
-        Point pt0, pt1;
-        minMaxLoc( it.planes[0], &val0, &val1, &pt0, &pt1, it.planes[1] );
-        if( val0 < minval )
-        {
-            minval = val0;
-            minofs = (it.planes[0].data - a.data) + pt0.x*esz;
-        }
-        if( val1 > maxval )
-        {
-            maxval = val1;
-            maxofs = (it.planes[0].data - a.data) + pt1.x*esz;
-        }
+        szi = m->size[i];
+        t = ofs/szi;
+        v = (int)(ofs - t*szi);
+        ofs = t;
+        sliceStart += v*m->step[i];
     }
-
-    if( minVal )
-        *minVal = minval;
-    if( maxVal )
-        *maxVal = maxval;
-    if( minLoc )
-        ofs2idx(a, minofs, minLoc);
-    if( maxLoc )
-        ofs2idx(a, maxofs, maxLoc);
+    
+    sliceEnd = sliceStart + m->size[d-1]*elemSize;
+    if( ofs > 0 )
+        ptr = sliceEnd;
+    else
+        ptr = sliceStart + (ptr - m->data);
 }
-
-void merge(const MatND* mv, size_t n, MatND& dst)
+    
+void MatConstIterator::seek(const int* _idx, bool relative)
 {
-    size_t k;
-    CV_Assert( n > 0 );
-    vector<MatND> v(n + 1);
-    int total_cn = 0;
-    for( k = 0; k < n; k++ )
+    int i, d = m->dims;
+    ptrdiff_t ofs = 0;
+    if( !_idx )
+        ;
+    else if( d == 2 )
+        ofs = _idx[0]*m->size[1] + _idx[1];
+    else
     {
-        total_cn += mv[k].channels();
-        v[k] = mv[k];
+        for( i = 0; i < d; i++ )
+            ofs = ofs*m->size[i] + _idx[i];
     }
-    dst.create( mv[0].dims, mv[0].size, CV_MAKETYPE(mv[0].depth(), total_cn) );
-    v[n] = dst;
-    NAryMatNDIterator it(&v[0], v.size());
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        merge( &it.planes[0], n, it.planes[n] );
+    seek(ofs, relative);
 }
 
-void split(const MatND& m, MatND* mv)
+ptrdiff_t operator - (const MatConstIterator& b, const MatConstIterator& a)
 {
-    size_t k, n = m.channels();
-    CV_Assert( n > 0 );
-    vector<MatND> v(n + 1);
-    for( k = 0; k < n; k++ )
-    {
-        mv[k].create( m.dims, m.size, CV_MAKETYPE(m.depth(), 1) );
-        v[k] = mv[k];
-    }
-    v[n] = m;
-    NAryMatNDIterator it(&v[0], v.size());
+    if( a.m != b.m )
+        return INT_MAX;
+    if( a.sliceEnd == b.sliceEnd )
+        return (b.ptr - a.ptr)/b.elemSize;
 
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        split( it.planes[n], &it.planes[0] );
-}
-
-void mixChannels(const MatND* src, int nsrcs, MatND* dst, int ndsts,
-                 const int* fromTo, size_t npairs)
-{
-    size_t k, m = nsrcs, n = ndsts;
-    CV_Assert( n > 0 && m > 0 );
-    vector<MatND> v(m + n);
-    for( k = 0; k < m; k++ )
-        v[k] = src[k];
-    for( k = 0; k < n; k++ )
-        v[m + k] = dst[k];
-    NAryMatNDIterator it(&v[0], v.size());
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-    {
-        Mat* pptr = &it.planes[0];
-        mixChannels( pptr, m, pptr + m, n, fromTo, npairs );
-    }
-}
-
-void bitwise_and(const MatND& a, const MatND& b, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_and( it.planes[0], it.planes[1], it.planes[2], it.planes[3] ); 
-}
-
-void bitwise_or(const MatND& a, const MatND& b, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_or( it.planes[0], it.planes[1], it.planes[2], it.planes[3] ); 
-}
-
-void bitwise_xor(const MatND& a, const MatND& b, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_xor( it.planes[0], it.planes[1], it.planes[2], it.planes[3] ); 
-}
-
-void bitwise_and(const MatND& a, const Scalar& s, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_and( it.planes[0], s, it.planes[1], it.planes[2] ); 
-}
-
-void bitwise_or(const MatND& a, const Scalar& s, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_or( it.planes[0], s, it.planes[1], it.planes[2] ); 
-}
-
-void bitwise_xor(const MatND& a, const Scalar& s, MatND& c, const MatND& mask)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c, mask);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_xor( it.planes[0], s, it.planes[1], it.planes[2] ); 
-}
-
-void bitwise_not(const MatND& a, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        bitwise_not( it.planes[0], it.planes[1] ); 
-}
-
-void absdiff(const MatND& a, const MatND& b, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        absdiff( it.planes[0], it.planes[1], it.planes[2] ); 
-}
-
-void absdiff(const MatND& a, const Scalar& s, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        absdiff( it.planes[0], s, it.planes[1] ); 
-}
-
-void inRange(const MatND& src, const MatND& lowerb,
-             const MatND& upperb, MatND& dst)
-{
-    dst.create(src.dims, src.size, CV_8UC1);
-    NAryMatNDIterator it(src, lowerb, upperb, dst);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        inRange( it.planes[0], it.planes[1], it.planes[2], it.planes[3] ); 
-}
-
-void inRange(const MatND& src, const Scalar& lowerb,
-             const Scalar& upperb, MatND& dst)
-{
-    dst.create(src.dims, src.size, CV_8UC1);
-    NAryMatNDIterator it(src, dst);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        inRange( it.planes[0], lowerb, upperb, it.planes[1] ); 
-}
-
-void compare(const MatND& a, const MatND& b, MatND& c, int cmpop)
-{
-    c.create(a.dims, a.size, CV_8UC1);
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        compare( it.planes[0], it.planes[1], it.planes[2], cmpop ); 
-}
-
-void compare(const MatND& a, double s, MatND& c, int cmpop)
-{
-    c.create(a.dims, a.size, CV_8UC1);
-    NAryMatNDIterator it(a, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        compare( it.planes[0], s, it.planes[1], cmpop ); 
-}
-
-void min(const MatND& a, const MatND& b, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        min( it.planes[0], it.planes[1], it.planes[2] );
-}
-
-void min(const MatND& a, double alpha, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        min( it.planes[0], alpha, it.planes[1] );
-}
-
-void max(const MatND& a, const MatND& b, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        max( it.planes[0], it.planes[1], it.planes[2] ); 
-}
-
-void max(const MatND& a, double alpha, MatND& c)
-{
-    c.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, c);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        max( it.planes[0], alpha, it.planes[1] );
-}
-
-void sqrt(const MatND& a, MatND& b)
-{
-    b.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        sqrt( it.planes[0], it.planes[1] );
-}
-
-void pow(const MatND& a, double power, MatND& b)
-{
-    b.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        pow( it.planes[0], power, it.planes[1] );
-}
-
-void exp(const MatND& a, MatND& b)
-{
-    b.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        exp( it.planes[0], it.planes[1] );
-}
-
-void log(const MatND& a, MatND& b)
-{
-    b.create(a.dims, a.size, a.type());
-    NAryMatNDIterator it(a, b);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        log( it.planes[0], it.planes[1] );
-}
-
-bool checkRange(const MatND& a, bool quiet, int*,
-                double minVal, double maxVal)
-{
-    NAryMatNDIterator it(a);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-    {
-        Point pt;
-        if( !checkRange( it.planes[0], quiet, &pt, minVal, maxVal ))
-        {
-            // todo: set index properly
-            return false;
-        }
-    }
-    return true;
-}
-
-
+    return b.lpos() - a.lpos();
+}    
+    
 //////////////////////////////// SparseMat ////////////////////////////////
 
 template<typename T1, typename T2> void
@@ -2366,48 +2085,7 @@ void SparseMat::Hdr::clear()
 }
 
 
-SparseMat::SparseMat(const Mat& m, bool try1d)
-: flags(MAGIC_VAL), hdr(0)
-{
-    bool is1d = try1d && m.cols == 1;
-    
-    if( is1d )
-    {
-        int i, M = m.rows;
-        const uchar* data = m.data;
-        size_t step =  m.step, esz = m.elemSize();
-        create( 1, &M, m.type() );
-        for( i = 0; i < M; i++ )
-        {
-            const uchar* from = data + step*i;
-            if( isZeroElem(from, esz) )
-                continue;
-            uchar* to = newNode(&i, hash(i));
-            copyElem(from, to, esz);
-        }
-    }
-    else
-    {
-        int i, j, size[] = {m.rows, m.cols};
-        const uchar* data = m.data;
-        size_t step =  m.step, esz = m.elemSize();
-        create( 2, size, m.type() );
-        for( i = 0; i < m.rows; i++ )
-        {
-            for( j = 0; j < m.cols; j++ )
-            {
-                const uchar* from = data + step*i + esz*j;
-                if( isZeroElem(from, esz) )
-                    continue;
-                int idx[] = {i, j};
-                uchar* to = newNode(idx, hash(i, j));
-                copyElem(from, to, esz);
-            }
-        }
-    }
-}
-
-SparseMat::SparseMat(const MatND& m)
+SparseMat::SparseMat(const Mat& m)
 : flags(MAGIC_VAL), hdr(0)
 {
     create( m.dims, m.size, m.type() );
@@ -2503,35 +2181,6 @@ void SparseMat::copyTo( SparseMat& m ) const
 
 void SparseMat::copyTo( Mat& m ) const
 {
-    CV_Assert( hdr && hdr->dims <= 2 );
-    m.create( hdr->size[0], hdr->dims == 2 ? hdr->size[1] : 1, type() );
-    m = Scalar(0);
-
-    SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = elemSize();
-
-    if( hdr->dims == 2 )
-    {
-        for( i = 0; i < N; i++, ++from )
-        {
-            const Node* n = from.node();
-            uchar* to = m.data + m.step*n->idx[0] + esz*n->idx[1];
-            copyElem( from.ptr, to, esz );
-        }
-    }
-    else
-    {
-        for( i = 0; i < N; i++, ++from )
-        {
-            const Node* n = from.node();
-            uchar* to = m.data + esz*n->idx[0];
-            copyElem( from.ptr, to, esz );
-        }
-    }
-}
-
-void SparseMat::copyTo( MatND& m ) const
-{
     CV_Assert( hdr );
     m.create( dims(), hdr->size, type() );
     m = Scalar(0);
@@ -2592,68 +2241,6 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
 
 
 void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
-{
-    int cn = channels();
-    if( rtype < 0 )
-        rtype = type();
-    rtype = CV_MAKETYPE(rtype, cn);
-    
-    CV_Assert( hdr && hdr->dims <= 2 );
-    m.create( hdr->size[0], hdr->dims == 2 ? hdr->size[1] : 1, type() );
-    m = Scalar(beta);
-
-    SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = CV_ELEM_SIZE(rtype);
-
-    if( alpha == 1 && beta == 0 )
-    {
-        ConvertData cvtfunc = getConvertData(type(), rtype);
-
-        if( hdr->dims == 2 )
-        {
-            for( i = 0; i < N; i++, ++from )
-            {
-                const Node* n = from.node();
-                uchar* to = m.data + m.step*n->idx[0] + esz*n->idx[1];
-                cvtfunc( from.ptr, to, cn );
-            }
-        }
-        else
-        {
-            for( i = 0; i < N; i++, ++from )
-            {
-                const Node* n = from.node();
-                uchar* to = m.data + esz*n->idx[0];
-                cvtfunc( from.ptr, to, cn );
-            }
-        }
-    }
-    else
-    {
-        ConvertScaleData cvtfunc = getConvertScaleData(type(), rtype);
-
-        if( hdr->dims == 2 )
-        {
-            for( i = 0; i < N; i++, ++from )
-            {
-                const Node* n = from.node();
-                uchar* to = m.data + m.step*n->idx[0] + esz*n->idx[1];
-                cvtfunc( from.ptr, to, cn, alpha, beta );
-            }
-        }
-        else
-        {
-            for( i = 0; i < N; i++, ++from )
-            {
-                const Node* n = from.node();
-                uchar* to = m.data + esz*n->idx[0];
-                cvtfunc( from.ptr, to, cn, alpha, beta );
-            }
-        }
-    }
-}
-
-void SparseMat::convertTo( MatND& m, int rtype, double alpha, double beta ) const
 {
     int cn = channels();
     if( rtype < 0 )

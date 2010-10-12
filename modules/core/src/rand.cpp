@@ -482,7 +482,7 @@ void RNG::fill( Mat& mat, int disttype, const Scalar& param1, const Scalar& para
         Randn_<float,float>,
         Randn_<double,double>, 0}
     };
-
+    
     int depth = mat.depth(), channels = mat.channels();
     double dparam[2][12];
     float fparam[2][12];
@@ -588,15 +588,18 @@ void RNG::fill( Mat& mat, int disttype, const Scalar& param1, const Scalar& para
     }
 
     CV_Assert( func != 0);
-    func( mat, &state, param );
-}
-
-void RNG::fill( MatND& mat, int disttype, const Scalar& param1, const Scalar& param2 )
-{
-    NAryMatNDIterator it(mat);
-
-    for( int i = 0; i < it.nplanes; i++, ++it )
-        fill( it.planes[0], disttype, param1, param2 ); 
+    
+    if( mat.dims > 2 )
+    {
+        const Mat* arrays[] = {&mat, 0};
+        Mat planes[1];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            func( it.planes[0], &state, param );
+    }
+    else
+        func( mat, &state, param );
 }
 
 #ifdef WIN32

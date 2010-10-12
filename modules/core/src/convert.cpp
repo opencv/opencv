@@ -120,7 +120,6 @@ void split(const Mat& src, Mat* mv)
     };
 
     int i, depth = src.depth(), cn = src.channels();
-    Size size = src.size();
 
     if( cn == 1 )
     {
@@ -129,17 +128,31 @@ void split(const Mat& src, Mat* mv)
     }
 
     for( i = 0; i < cn; i++ )
-        mv[i].create(src.size(), depth);
+        mv[i].create(src.dims, src.size, depth);
 
     if( cn <= 4 )
     {
         SplitFunc func = tab[(cn-2)*5 + (src.elemSize1()>>1)];
         CV_Assert( func != 0 );
-        func( src, mv );
+        
+        if( src.dims > 2 )
+        {
+            const Mat* arrays[5];
+            Mat planes[5];
+            arrays[0] = &src;
+            for( i = 0; i < cn; i++ )
+                arrays[i+1] = &mv[i];
+            NAryMatIterator it(arrays, planes, cn+1);
+            
+            for( int i = 0; i < it.nplanes; i++, ++it )
+                func( it.planes[0], &it.planes[1] );
+        }
+        else
+            func( src, mv );
     }
     else
     {
-        vector<int> pairs(cn*2);
+        AutoBuffer<int> pairs(cn*2);
 
         for( i = 0; i < cn; i++ )
         {
@@ -216,7 +229,7 @@ mergeC4_( const Mat* srcmat, Mat& dstmat )
 
 typedef void (*MergeFunc)(const Mat* src, Mat& dst);
 
-void merge(const Mat* mv, size_t n, Mat& dst)
+void merge(const Mat* mv, size_t _n, Mat& dst)
 {
     static MergeFunc tab[] =
     {
@@ -225,18 +238,15 @@ void merge(const Mat* mv, size_t n, Mat& dst)
         mergeC4_<uchar>, mergeC4_<ushort>, mergeC4_<int>, 0, mergeC4_<int64>
     };
 
-    size_t i;
-    CV_Assert( mv && n > 0 );
+    CV_Assert( mv && _n > 0 );
     
     int depth = mv[0].depth();
     bool allch1 = true;
-    int total = 0;
+    int i, total = 0, n = (int)_n;
     
-    Size size = mv[0].size();
-
     for( i = 0; i < n; i++ )
     {
-        CV_Assert(mv[i].size() == size && mv[i].depth() == depth);
+        CV_Assert(mv[i].size == mv[0].size && mv[i].depth() == depth);
         allch1 = allch1 && mv[i].channels() == 1;
         total += mv[i].channels();
     }
@@ -249,17 +259,30 @@ void merge(const Mat* mv, size_t n, Mat& dst)
         return;
     }
 
-    dst.create(size, CV_MAKETYPE(depth, total));
+    dst.create(mv[0].dims, mv[0].size, CV_MAKETYPE(depth, total));
 
     if( allch1 && total <= 4 )
     {
         MergeFunc func = tab[(total-2)*5 + (CV_ELEM_SIZE(depth)>>1)];
         CV_Assert( func != 0 );
-        func( mv, dst );
+        if( mv[0].dims > 2 )
+        {
+            const Mat* arrays[5];
+            Mat planes[5];
+            arrays[total] = &dst;
+            for( i = 0; i < total; i++ )
+                arrays[i] = &mv[i];
+            NAryMatIterator it(arrays, planes, total+1);
+            
+            for( i = 0; i < it.nplanes; i++, ++it )
+                func( &it.planes[0], it.planes[total] );
+        }
+        else
+            func( mv, dst );
     }
     else
     {
-        vector<int> pairs(total*2);
+        AutoBuffer<int> pairs(total*2);
         int j, k, ni=0;
 
         for( i = 0, j = 0; i < n; i++, j += ni )
@@ -335,12 +358,28 @@ typedef void (*MixChannelsFunc)( const void** src, const int* sdelta0,
 
 void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
-    size_t i, j;
-    
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
-
+    
+    if( src[0].dims > 2 )
+    {
+        size_t k, m = nsrcs, n = ndsts;
+        CV_Assert( n > 0 && m > 0 );
+        AutoBuffer<const Mat*> v(m + n);
+        AutoBuffer<Mat> planes(m + n);
+        for( k = 0; k < m; k++ )
+            v[k] = &src[k];
+        for( k = 0; k < n; k++ )
+            v[m + k] = &dst[k];
+        NAryMatIterator it(v, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            mixChannels( &it.planes[0], m, &it.planes[m], n, fromTo, npairs );
+        return;
+    }
+    
+    size_t i, j;
     int depth = dst[0].depth(), esz1 = (int)dst[0].elemSize1();
     Size size = dst[0].size();
 
@@ -704,22 +743,46 @@ void Mat::convertTo(Mat& dst, int _type, double alpha, double beta) const
 
     Mat temp;
     const Mat* psrc = this;
-    if( sdepth != ddepth && psrc == &dst )
+    if( sdepth != ddepth && data == dst.data )
         psrc = &(temp = *this);
         
-    dst.create( size(), _type );
+    CvtFunc func = 0;
+    CvtScaleFunc scaleFunc = 0;
+    
     if( noScale )
     {
-        CvtFunc func = tab[sdepth][ddepth];
+        func = tab[sdepth][ddepth];
         CV_Assert( func != 0 );
-        func( *psrc, dst );
     }
     else
     {
-        CvtScaleFunc func = stab[sdepth][ddepth];
-        CV_Assert( func != 0 );
-        func( *psrc, dst, alpha, beta );
+        scaleFunc = stab[sdepth][ddepth];
+        CV_Assert( scaleFunc != 0 );
     }
+    
+    if( dims <= 2 )
+    {
+        dst.create( size(), _type );
+        if( func )
+            func( *psrc, dst );
+        else
+            scaleFunc( *psrc, dst, alpha, beta );
+    }
+    else
+    {
+        dst.create( dims, size, _type );
+        const Mat* arrays[] = {psrc, &dst, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            if( func )
+                func(it.planes[0], it.planes[1]);
+            else
+                scaleFunc(it.planes[0], it.planes[1], alpha, beta);
+        }
+    }    
 }
 
 /****************************************************************************************\

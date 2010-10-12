@@ -160,14 +160,23 @@ Scalar sum( const Mat& m )
         sum_<Vec<double, 4>, Vec<double, 4> >, 0
     };
 
-    Size size = m.size();
-    SumFunc func; 
-
     CV_Assert( m.channels() <= 4 );
 
-    func = tab[m.type()];
+    SumFunc func = tab[m.type()];
     CV_Assert( func != 0 );
 
+    if( m.dims > 2 )
+    {
+        const Mat* arrays[] = {&m, 0};
+        Mat planes[1];
+        NAryMatIterator it(arrays, planes);
+        Scalar s;
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            s += func(it.planes[0]);
+        return s;
+    }
+    
     return func(m);
 }
 
@@ -208,6 +217,19 @@ int countNonZero( const Mat& m )
     
     CountNonZeroFunc func = tab[m.depth()];
     CV_Assert( m.channels() == 1 && func != 0 );
+    
+    if( m.dims > 2 )
+    {
+        const Mat* arrays[] = {&m, 0};
+        Mat planes[1];
+        NAryMatIterator it(arrays, planes);
+        int nz = 0;
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            nz += func(it.planes[0]);
+        return nz;
+    }
+    
     return func(m);
 }
 
@@ -275,7 +297,7 @@ typedef Scalar (*MeanMaskFunc)(const Mat& src, const Mat& mask);
 
 Scalar mean(const Mat& m)
 {
-    return sum(m)*(1./std::max(m.rows*m.cols, 1));
+    return sum(m)*(1./m.total());
 }
 
 Scalar mean( const Mat& m, const Mat& mask )
@@ -314,11 +336,28 @@ Scalar mean( const Mat& m, const Mat& mask )
     if( !mask.data )
         return mean(m);
 
-    CV_Assert( m.channels() <= 4 && m.size() == mask.size() && mask.type() == CV_8U );
+    CV_Assert( m.channels() <= 4 && mask.type() == CV_8U );
 
     MeanMaskFunc func = tab[m.type()];
     CV_Assert( func != 0 );
-
+    
+    if( m.dims > 2 )
+    {
+        const Mat* arrays[] = {&m, &mask, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        double total = 0;
+        Scalar s;
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            int n = countNonZero(it.planes[1]);
+            s += mean(it.planes[0], it.planes[1])*(double)n;
+            total += n;
+        }
+        return (s * 1./std::max(total, 1.));
+    }
+    
+    CV_Assert( m.size() == mask.size() );
     return func( m, mask );
 }
 
@@ -510,20 +549,57 @@ void meanStdDev( const Mat& m, Scalar& mean, Scalar& stddev, const Mat& mask )
         meanStdDevMask_<SqrC4<double, double> >, 0
     };
 
-    CV_Assert( m.channels() <= 4 );
+    CV_Assert( m.channels() <= 4 && (mask.empty() || mask.type() == CV_8U) );
     
-    if( !mask.data )
+    MeanStdDevFunc func = tab[m.type()];
+    MeanStdDevMaskFunc mfunc = mtab[m.type()];
+    CV_Assert( func != 0 || mfunc != 0 );
+    
+    if( m.dims > 2 )
     {
-        MeanStdDevFunc func = tab[m.type()];
-        CV_Assert( func != 0 );
-        func( m, mean, stddev );
+        Scalar s, sq;
+        double total = 0;
+        
+        const Mat* arrays[] = {&m, &mask, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        int k, cn = m.channels();
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            Scalar _mean, _stddev;
+            double nz = (double)(mask.data ? countNonZero(it.planes[1]) : it.planes[0].rows*it.planes[0].cols);
+            
+            if( func )
+                func(it.planes[0], _mean, _stddev);
+            else
+                mfunc(it.planes[0], it.planes[1], _mean, _stddev);
+            
+            total += nz;
+            for( k = 0; k < cn; k++ )
+            {
+                s[k] += _mean[k]*nz;
+                sq[k] += (_stddev[k]*_stddev[k] + _mean[k]*_mean[k])*nz;
+            }
+        }
+        
+        mean = stddev = Scalar();
+        total = 1./std::max(total, 1.);
+        for( k = 0; k < cn; k++ )
+        {
+            mean[k] = s[k]*total;
+            stddev[k] = std::sqrt(std::max(sq[k]*total - mean[k]*mean[k], 0.));
+        }
+        return;
+    }
+    
+    if( mask.data )
+    {
+        CV_Assert( mask.size() == m.size() ); 
+        mfunc( m, mask, mean, stddev );
     }
     else
-    {
-        MeanStdDevMaskFunc func = mtab[m.type()];
-        CV_Assert( mask.size() == m.size() && mask.type() == CV_8U && func != 0 );
-        func( m, mask, mean, stddev );
-    }
+        func( m, mean, stddev );
 }
 
 
@@ -630,6 +706,8 @@ typedef void (*MinMaxIndxMaskFunc)(const Mat&, const Mat&,
 void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
                 Point* minLoc, Point* maxLoc, const Mat& mask )
 {
+    CV_Assert(img.dims <= 2);
+    
     static MinMaxIndxFunc tab[] =
         {minMaxIndx_<uchar>, 0, minMaxIndx_<ushort>, minMaxIndx_<short>,
         minMaxIndx_<int>, minMaxIndx_<float>, minMaxIndx_<double>, 0};
@@ -683,6 +761,64 @@ void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
     }
 }
 
+static void ofs2idx(const Mat& a, size_t ofs, int* idx)
+{
+    int i, d = a.dims;
+    for( i = 0; i < d; i++ )
+    {
+        idx[i] = (int)(ofs / a.step[i]);
+        ofs %= a.step[i];
+    }
+}
+
+void minMaxIndx(const Mat& a, double* minVal,
+                double* maxVal, int* minIdx, int* maxIdx,
+                const Mat& mask)
+{
+    if( a.dims <= 2 )
+    {
+        Point minLoc, maxLoc;
+        minMaxLoc(a, minVal, maxVal, &minLoc, &maxLoc, mask);
+        if( minIdx )
+            minIdx[0] = minLoc.x, minIdx[1] = minLoc.y;
+        if( maxIdx )
+            maxIdx[0] = maxLoc.x, maxIdx[1] = maxLoc.y;
+        return;
+    }
+    
+    const Mat* arrays[] = {&a, &mask, 0};
+    Mat planes[2];
+    NAryMatIterator it(arrays, planes);
+    double minval = DBL_MAX, maxval = -DBL_MAX;
+    size_t minofs = 0, maxofs = 0, esz = a.elemSize();
+    
+    for( int i = 0; i < it.nplanes; i++, ++it )
+    {
+        double val0 = 0, val1 = 0;
+        Point pt0, pt1;
+        minMaxLoc( it.planes[0], &val0, &val1, &pt0, &pt1, it.planes[1] );
+        if( val0 < minval )
+        {
+            minval = val0;
+            minofs = (it.planes[0].data - a.data) + pt0.x*esz;
+        }
+        if( val1 > maxval )
+        {
+            maxval = val1;
+            maxofs = (it.planes[0].data - a.data) + pt1.x*esz;
+        }
+    }
+    
+    if( minVal )
+        *minVal = minval;
+    if( maxVal )
+        *maxVal = maxval;
+    if( minIdx )
+        ofs2idx(a, minofs, minIdx);
+    if( maxIdx )
+        ofs2idx(a, maxofs, maxIdx);
+}    
+    
 /****************************************************************************************\
 *                                         norm                                           *
 \****************************************************************************************/
@@ -1066,7 +1202,26 @@ double norm( const Mat& a, int normType )
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
     NormFunc func = tab[normType >> 1][a.depth()];
     CV_Assert(func != 0);
-    double r = func(a);
+    
+    double r = 0;
+    if( a.dims > 2 )
+    {
+        const Mat* arrays[] = {&a, 0};
+        Mat planes[1];
+        NAryMatIterator it(arrays, planes);
+    
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            double n = func(it.planes[0]);
+            if( normType == NORM_INF )
+                r = std::max(r, n);
+            else
+                r += n;
+        }
+    }
+    else
+        r = func(a);
+    
     return normType == NORM_L2 ? std::sqrt(r) : r;
 }
 
@@ -1111,10 +1266,32 @@ double norm( const Mat& a, int normType, const Mat& mask )
 
     normType &= 7;
     CV_Assert((normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) &&
-        a.size() == mask.size() && mask.type() == CV_8U && a.channels() == 1);
+              mask.type() == CV_8U && a.channels() == 1);
     NormMaskFunc func = tab[normType >> 1][a.depth()];
     CV_Assert(func != 0);
-    double r = func(a, mask);
+    
+    double r = 0;
+    if( a.dims > 2 )
+    {
+        const Mat* arrays[] = {&a, &mask, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            double n = func(it.planes[0], it.planes[1]);
+            if( normType == NORM_INF )
+                r = std::max(r, n);
+            else
+                r += n;
+        }
+    }
+    else
+    {
+        CV_Assert( a.size() == mask.size() );
+        r = func(a, mask);
+    }
+    
     return normType == NORM_L2 ? std::sqrt(r) : r;
 }
 
@@ -1154,15 +1331,35 @@ double norm( const Mat& a, const Mat& b, int normType )
         }
     };
     
-    CV_Assert( a.type() == b.type() && a.size() == b.size() );
-
+    CV_Assert( a.type() == b.type() );
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= 7;
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
-
     NormDiffFunc func = tab[normType >> 1][a.depth()];
     CV_Assert(func != 0);
-    double r = func( a, b );
+    
+    double r = 0.;
+    if( a.dims > 2 )
+    {
+        const Mat* arrays[] = {&a, &b, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            double n = func(it.planes[0], it.planes[1]);
+                
+            if( normType == NORM_INF )
+                r = std::max(r, n);
+            else
+                r += n;
+        }
+    }
+    else
+    {
+        CV_Assert( a.size() == b.size() );
+        r = func( a, b );
+    }
     if( normType == NORM_L2 )
         r = std::sqrt(r);
     if( isRelative )
@@ -1208,16 +1405,37 @@ double norm( const Mat& a, const Mat& b, int normType, const Mat& mask )
     if( !mask.data )
         return norm(a, b, normType);
 
-    CV_Assert( a.type() == b.type() && a.size() == b.size() &&
-        a.size() == mask.size() && mask.type() == CV_8U && a.channels() == 1);
-
+    CV_Assert( a.type() == b.type() && mask.type() == CV_8U && a.channels() == 1);
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= 7;
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
 
     NormDiffMaskFunc func = tab[normType >> 1][a.depth()];
     CV_Assert(func != 0);
-    double r = func( a, b, mask );
+    
+    double r = 0.;
+    if( a.dims > 2 )
+    {
+        const Mat* arrays[] = {&a, &b, &mask, 0};
+        Mat planes[3];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            double n = func(it.planes[0], it.planes[1], it.planes[2]);
+            
+            if( normType == NORM_INF )
+                r = std::max(r, n);
+            else
+                r += n;
+        }
+    }
+    else
+    {
+        CV_Assert( a.size() == b.size() && a.size() == mask.size() );
+        r = func( a, b, mask );
+    }
+    
     if( normType == NORM_L2 )
         r = std::sqrt(r);
     if( isRelative )

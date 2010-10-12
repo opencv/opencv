@@ -989,7 +989,7 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
     GEMMStoreFunc storeFunc;
     Mat *matD = &D, tmat;
     const uchar* Cdata = C ? C->data : 0;
-    size_t Cstep = C ? C->step : 0;
+    size_t Cstep = C ? (size_t)C->step : 0;
     AutoBuffer<uchar> buf;
 
     if( type == CV_32FC1 )
@@ -2058,6 +2058,18 @@ void perspectiveTransform( const Mat& src, Mat& dst, const Mat& _m )
 
 void scaleAdd( const Mat& src1, double alpha, const Mat& src2, Mat& dst )
 {
+    if( src1.dims > 2 || src2.dims > 2 )
+    {
+        dst.create(src1.dims, src1.size, src1.type());
+        const Mat* arrays[] = {&src1, &src2, &dst, 0};
+        Mat planes[3];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            scaleAdd( it.planes[0], alpha, it.planes[1], it.planes[2] );
+        return;
+    }
+    
     int type = src1.type(), depth = CV_MAT_DEPTH(type);
     CV_Assert( src1.size() == src2.size() && type == src2.type() );
     dst.create( src1.size(), type );

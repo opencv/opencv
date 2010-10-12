@@ -5266,16 +5266,18 @@ void writeScalar(FileStorage& fs, const string& value )
     
 void write( FileStorage& fs, const string& name, const Mat& value )
 {
-    CvMat mat = value;
-    cvWrite( *fs, name.size() ? name.c_str() : 0, &mat );
+    if( value.dims <= 2 )
+    {
+        CvMat mat = value;
+        cvWrite( *fs, name.size() ? name.c_str() : 0, &mat );
+    }
+    else
+    {
+        CvMatND mat = value;
+        cvWrite( *fs, name.size() ? name.c_str() : 0, &mat );
+    }
 }
     
-void write( FileStorage& fs, const string& name, const MatND& value )
-{
-    CvMatND mat = value;
-    cvWrite( *fs, name.size() ? name.c_str() : 0, &mat );
-}
-
 // TODO: the 4 functions below need to be implemented more efficiently 
 void write( FileStorage& fs, const string& name, const SparseMat& value )
 {
@@ -5301,23 +5303,24 @@ void read( const FileNode& node, Mat& mat, const Mat& default_mat )
         default_mat.copyTo(mat);
         return;
     }
-    Ptr<CvMat> m = (CvMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
-    CV_Assert(CV_IS_MAT(m));
-    Mat(m).copyTo(mat);
+    void* obj = cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
+    if(CV_IS_MAT(obj))
+    {
+        Mat((const CvMat*)obj).copyTo(mat);
+        cvReleaseMat((CvMat**)&obj);
+    }
+    else if(CV_IS_MATND(obj))
+    {
+        Mat((const CvMatND*)obj).copyTo(mat);
+        cvReleaseMatND((CvMatND**)&obj);
+    }
+    else
+    {
+        cvRelease(&obj);
+        CV_Error(CV_StsBadArg, "Unknown array type");
+    }
 }
     
-void read( const FileNode& node, MatND& mat, const MatND& default_mat )
-{
-    if( node.empty() )
-    {
-        default_mat.copyTo(mat);
-        return;
-    }
-    Ptr<CvMatND> m = (CvMatND*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
-    CV_Assert(CV_IS_MATND(m));
-    MatND(m).copyTo(mat);
-}
-        
 void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
 {
     if( node.empty() )

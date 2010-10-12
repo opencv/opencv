@@ -347,7 +347,19 @@ static CvStatus CV_STDCALL Sqrt_64f(const double* src, double* dst, int len)
 
 void magnitude( const Mat& X, const Mat& Y, Mat& Mag )
 {
-	int type = X.type(), depth = X.depth(), cn = X.channels();
+	if( X.dims > 2 )
+    {
+        Mag.create(X.dims, X.size, X.type());
+        const Mat* arrays[] = {&X, &Y, &Mag, 0};
+        Mat planes[3];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            magnitude( it.planes[0], it.planes[1], it.planes[2] );
+        return;
+    }
+    
+    int type = X.type(), depth = X.depth(), cn = X.channels();
 	CV_Assert( X.size() == Y.size() && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     Mag.create( X.size(), type );
 
@@ -377,6 +389,18 @@ void magnitude( const Mat& X, const Mat& Y, Mat& Mag )
 
 void phase( const Mat& X, const Mat& Y, Mat& Angle, bool angleInDegrees )
 {
+    if( X.dims > 2 )
+    {
+        Angle.create(X.dims, X.size, X.type());
+        const Mat* arrays[] = {&X, &Y, &Angle, 0};
+        Mat planes[3];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            phase( it.planes[0], it.planes[1], it.planes[2], angleInDegrees );
+        return;
+    }
+    
     float buf[2][MAX_BLOCK_SIZE];
     int i, j, type = X.type(), depth = X.depth(), cn = X.channels();
 
@@ -422,6 +446,19 @@ void phase( const Mat& X, const Mat& Y, Mat& Angle, bool angleInDegrees )
 
 void cartToPolar( const Mat& X, const Mat& Y, Mat& Mag, Mat& Angle, bool angleInDegrees )
 {
+    if( X.dims > 2 )
+    {
+        Mag.create(X.dims, X.size, X.type());
+        Angle.create(X.dims, X.size, X.type());
+        const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
+        Mat planes[4];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            cartToPolar( it.planes[0], it.planes[1], it.planes[2], it.planes[2], angleInDegrees );
+        return;
+    }
+    
     float buf[2][MAX_BLOCK_SIZE];
     int i, j, type = X.type(), depth = X.depth(), cn = X.channels();
 
@@ -568,6 +605,19 @@ SinCos_32f( const float *angle,float *sinval, float* cosval,
 
 void polarToCart( const Mat& Mag, const Mat& Angle, Mat& X, Mat& Y, bool angleInDegrees )
 {
+    if( Mag.dims > 2 )
+    {
+        X.create(Mag.dims, Mag.size, Mag.type());
+        Y.create(Mag.dims, Mag.size, Mag.type());
+        const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
+        Mat planes[4];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            polarToCart( it.planes[0], it.planes[1], it.planes[2], it.planes[2], angleInDegrees );
+        return;
+    }
+    
     int i, j, type = Angle.type(), depth = Angle.depth();
     Size size;
 
@@ -1115,6 +1165,18 @@ static CvStatus CV_STDCALL Exp_64f( const double *_x, double *y, int n )
 
 void exp( const Mat& src, Mat& dst )
 {
+    if( src.dims > 2 )
+    {
+        dst.create(src.dims, src.size, src.type());
+        const Mat* arrays[] = {&src, &dst, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            exp( it.planes[0], it.planes[1] );
+        return;
+    }
+    
     int depth = src.depth();
     dst.create( src.size(), src.type() );
     Size size = getContinuousSize( src, dst, src.channels() );
@@ -1756,6 +1818,18 @@ static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
 
 void log( const Mat& src, Mat& dst )
 {
+    if( src.dims > 2 )
+    {
+        dst.create(src.dims, src.size, src.type());
+        const Mat* arrays[] = {&src, &dst, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            log( it.planes[0], it.planes[1] );
+        return;
+    }
+    
     int depth = src.depth();
     dst.create( src.size(), src.type() );
     Size size = getContinuousSize( src, dst, src.channels() );
@@ -1804,6 +1878,18 @@ typedef CvStatus (CV_STDCALL * IPowFunc)( const void* src, void* dst, int len, i
 
 void pow( const Mat& _src, double power, Mat& dst )
 {
+    if( _src.dims > 2 )
+    {
+        dst.create(_src.dims, _src.size, _src.type());
+        const Mat* arrays[] = {&_src, &dst, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            pow( it.planes[0], power, it.planes[1] );
+        return;
+    }
+    
     int ipower = cvRound( power ), i, j;
     bool is_ipower = 0;
     int depth = _src.depth();
@@ -1913,6 +1999,23 @@ void sqrt(const Mat& a, Mat& b)
 bool checkRange(const Mat& src, bool quiet, Point* pt,
                 double minVal, double maxVal)
 {
+    if( src.dims > 2 )
+    {
+        const Mat* arrays[] = {&src, 0};
+        Mat planes[1];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+        {
+            if( !checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
+            {
+                // todo: set index properly
+                return false;
+            }
+        }
+        return true;
+    }
+    
     int depth = src.depth();
     Point badPt(-1, -1);
     double badValue = 0;
@@ -2263,6 +2366,7 @@ cvSolveCubic( const CvMat* coeffs, CvMat* roots )
 
 int cv::solveCubic( const Mat& coeffs, Mat& roots )
 {
+    CV_Assert( coeffs.dims <= 2 );
     const int n = 3;
     if( ((roots.rows != 1 || roots.cols != n) &&
         (roots.rows != n || roots.cols != 1)) ||
@@ -2289,7 +2393,8 @@ double cv::solvePoly( const Mat& coeffs0, Mat& roots0, int maxIters )
     double maxDiff = 0;
     int iter, i, j, n;
 
-    CV_Assert( (coeffs0.cols == 1 || coeffs0.rows == 1) &&
+    CV_Assert( coeffs0.dims <= 2 &&
+               (coeffs0.cols == 1 || coeffs0.rows == 1) &&
                (coeffs0.depth() == CV_32F || coeffs0.depth() == CV_64F) &&
                coeffs0.channels() <= 2 );
     n = coeffs0.cols + coeffs0.rows - 2;
