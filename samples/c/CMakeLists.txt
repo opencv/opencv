@@ -33,11 +33,11 @@ if (BUILD_EXAMPLES)
 		set_target_properties(${the_target} PROPERTIES
 		    OUTPUT_NAME "${name}"
 		    PROJECT_LABEL "(EXAMPLE) ${name}")
-    	add_dependencies(${the_target} opencv_core opencv_imgproc opencv_highgui
+    	add_dependencies(${the_target} opencv_core opencv_flann opencv_imgproc opencv_highgui
     	    opencv_ml opencv_video opencv_objdetect opencv_features2d
     	    opencv_calib3d opencv_legacy opencv_contrib)
     	target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core
-    	    opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect
+    	    opencv_flann opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect
     	    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib)
 
         if(WIN32)
