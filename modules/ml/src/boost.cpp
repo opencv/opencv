@@ -1894,7 +1894,7 @@ float CvBoost::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
 
 void CvBoost::write_params( CvFileStorage* fs ) const
 {
-    //CV_FUNCNAME( "CvBoost::write_params" );
+    CV_FUNCNAME( "CvBoost::write_params" );
 
     __BEGIN__;
 
@@ -1995,7 +1995,7 @@ void CvBoost::read_params( CvFileStorage* fs, CvFileNode* fnode )
 void
 CvBoost::read( CvFileStorage* fs, CvFileNode* node )
 {
-    CV_FUNCNAME( "CvRTrees::read" );
+    CV_FUNCNAME( "CvBoost::read" );
 
     __BEGIN__;
 

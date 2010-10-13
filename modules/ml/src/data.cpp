@@ -141,7 +141,7 @@ static char *fgets_chomp(char *str, int n, FILE *stream)
 
 int CvMLData :: read_csv(const char* filename)
 {
-    const int M = 10000;
+    const int M = 50000;
     const char str_delimiter[3] = { ' ', delimiter, '\0' };
     FILE* file = 0;
     CvMemStorage* storage;
