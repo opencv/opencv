@@ -379,11 +379,10 @@ void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int mins
     {
         for (int e_it = g.start[v]; e_it != -1; e_it = g.edges[e_it].next)
         {
-            int comp1 = comps.find(v);
-            int comp2 = comps.find(g.edges[e_it].to);
-            if (comp1 != comp2 && g.edges[e_it].val.dr < hr 
-                               && g.edges[e_it].val.dsp < hsp)
-                comps.merge(comp1, comp2);
+            int c1 = comps.find(v);
+            int c2 = comps.find(g.edges[e_it].to);
+            if (c1 != c2 && g.edges[e_it].val.dr < hr && g.edges[e_it].val.dsp < hsp)
+                comps.merge(c1, c2);
         }
     }
 
@@ -396,14 +395,15 @@ void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int mins
     LOG2("initedges:", clock() - start);
     DBG(start = clock());
 
+    // Prepare edges connecting differnet components
     for (int v = 0; v < g.numv; ++v)
     {
-        int comp1 = comps.find(v);
+        int c1 = comps.find(v);
         for (int e_it = g.start[v]; e_it != -1; e_it = g.edges[e_it].next)
         {
-            int comp2 = comps.find(g.edges[e_it].to);
-            if (comp1 != comp2)
-                edges.push_back(SegmLink(comp1, comp2, g.edges[e_it].val));
+            int c2 = comps.find(g.edges[e_it].to);
+            if (c1 != c2)
+                edges.push_back(SegmLink(c1, c2, g.edges[e_it].val));
         }
     }
 
@@ -417,13 +417,12 @@ void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int mins
     DBG(start = clock());
 
     // Exclude small components (starting from the nearest couple)
-    vector<SegmLink>::iterator e_it = edges.begin();
-    for (; e_it != edges.end(); ++e_it)
+    for (size_t i = 0; i < edges.size(); ++i)
     {
-        int comp1 = comps.find(e_it->from);
-        int comp2 = comps.find(e_it->to);
-        if (comp1 != comp2 && (comps.size[comp1] < minsize || comps.size[comp2] < minsize))
-            comps.merge(comp1, comp2);
+        int c1 = comps.find(edges[i].from);
+        int c2 = comps.find(edges[i].to);
+        if (c1 != c2 && (comps.size[c1] < minsize || comps.size[c2] < minsize))
+            comps.merge(c1, c2);
     }
 
     LOG2("excludesmall:", clock() - start);
