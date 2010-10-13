@@ -12,6 +12,7 @@ if (BUILD_EXAMPLES)
     
 	include_directories(
 		"${CMAKE_SOURCE_DIR}/modules/core/include"
+		"${CMAKE_SOURCE_DIR}/modules/flann/include"
 		"${CMAKE_SOURCE_DIR}/modules/imgproc/include"
 		"${CMAKE_SOURCE_DIR}/modules/video/include"
 		"${CMAKE_SOURCE_DIR}/modules/highgui/include"
