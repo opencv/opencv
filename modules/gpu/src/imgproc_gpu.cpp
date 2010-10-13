@@ -63,6 +63,7 @@ void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_nogpu(); }
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int) { throw_nogpu(); }
 void cv::gpu::integral(GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
 void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
@@ -970,6 +971,26 @@ void cv::gpu::integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum)
         sum.step, sqsum.ptr<Npp32f>(), sqsum.step, sz, 0, 0.0f, h) );
 }
 
+void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect)
+{
+    CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_32FC1);
+
+    dst.create(src.size(), CV_32FC1);
+
+    NppiSize sz;
+    sz.width = src.cols;
+    sz.height = src.rows;
+
+    NppiRect nppRect;
+    nppRect.height = rect.height;
+    nppRect.width = rect.width;
+    nppRect.x = rect.x;
+    nppRect.y = rect.y;
+
+    nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), src.step, sqr.ptr<Npp32f>(), sqr.step,
+		dst.ptr<Npp32f>(), dst.step, sz, nppRect) );
+}
+
 ////////////////////////////////////////////////////////////////////////
 // Canny
 
@@ -1009,6 +1030,7 @@ namespace
     template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
     template<> struct NPPTypeTraits<CV_16U> { typedef Npp16u npp_type; };
     template<> struct NPPTypeTraits<CV_16S> { typedef Npp16s npp_type; };
+    template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
     
     typedef NppStatus (*get_buf_size_c1_t)(NppiSize oSizeROI, int nLevels, int* hpBufferSize);
     typedef NppStatus (*get_buf_size_c4_t)(NppiSize oSizeROI, int nLevels[], int* hpBufferSize);
@@ -1082,26 +1104,50 @@ namespace
     template<int SDEPTH> struct NppHistogramRangeFuncC1
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef Npp32s level_t;
+        enum {LEVEL_TYPE_CODE=CV_32SC1};
 
         typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist, 
             const Npp32s* pLevels, int nLevels, Npp8u* pBuffer);
     };
+    template<> struct NppHistogramRangeFuncC1<CV_32F>
+    {
+        typedef Npp32f src_t;
+        typedef Npp32f level_t;
+        enum {LEVEL_TYPE_CODE=CV_32FC1};
+
+        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist, 
+            const Npp32f* pLevels, int nLevels, Npp8u* pBuffer);
+    };
     template<int SDEPTH> struct NppHistogramRangeFuncC4
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef Npp32s level_t;
+        enum {LEVEL_TYPE_CODE=CV_32SC1};
 
         typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist[4], 
             const Npp32s* pLevels[4], int nLevels[4], Npp8u* pBuffer);
+    };
+    template<> struct NppHistogramRangeFuncC4<CV_32F>
+    {
+        typedef Npp32f src_t;
+        typedef Npp32f level_t;
+        enum {LEVEL_TYPE_CODE=CV_32FC1};
+
+        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist[4], 
+            const Npp32f* pLevels[4], int nLevels[4], Npp8u* pBuffer);
     };
         
     template<int SDEPTH, typename NppHistogramRangeFuncC1<SDEPTH>::func_ptr func, get_buf_size_c1_t get_buf_size> 
     struct NppHistogramRangeC1
     { 
         typedef typename NppHistogramRangeFuncC1<SDEPTH>::src_t src_t;
+        typedef typename NppHistogramRangeFuncC1<SDEPTH>::level_t level_t;
+        enum {LEVEL_TYPE_CODE=NppHistogramRangeFuncC1<SDEPTH>::LEVEL_TYPE_CODE};
 
         static void hist(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
         {            
-            CV_Assert(levels.type() == CV_32SC1 && levels.rows == 1);
+            CV_Assert(levels.type() == LEVEL_TYPE_CODE && levels.rows == 1);
 
             hist.create(1, levels.cols - 1, CV_32S);
 
@@ -1114,20 +1160,22 @@ namespace
 
             get_buf_size(sz, levels.cols, &buf_size);
             buffer.create(1, buf_size, CV_8U);
-            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels.ptr<Npp32s>(), levels.cols, buffer.ptr<Npp8u>()) );
+            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels.ptr<level_t>(), levels.cols, buffer.ptr<Npp8u>()) );
         }
     }; 
     template<int SDEPTH, typename NppHistogramRangeFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size> 
     struct NppHistogramRangeC4
     { 
         typedef typename NppHistogramRangeFuncC4<SDEPTH>::src_t src_t;
+        typedef typename NppHistogramRangeFuncC1<SDEPTH>::level_t level_t;
+        enum {LEVEL_TYPE_CODE=NppHistogramRangeFuncC1<SDEPTH>::LEVEL_TYPE_CODE};
 
         static void hist(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
         {
-            CV_Assert(levels[0].type() == CV_32SC1 && levels[0].rows == 1);
-            CV_Assert(levels[1].type() == CV_32SC1 && levels[1].rows == 1);
-            CV_Assert(levels[2].type() == CV_32SC1 && levels[2].rows == 1);
-            CV_Assert(levels[3].type() == CV_32SC1 && levels[3].rows == 1);
+            CV_Assert(levels[0].type() == LEVEL_TYPE_CODE && levels[0].rows == 1);
+            CV_Assert(levels[1].type() == LEVEL_TYPE_CODE && levels[1].rows == 1);
+            CV_Assert(levels[2].type() == LEVEL_TYPE_CODE && levels[2].rows == 1);
+            CV_Assert(levels[3].type() == LEVEL_TYPE_CODE && levels[3].rows == 1);
 
             hist[0].create(1, levels[0].cols - 1, CV_32S);
             hist[1].create(1, levels[1].cols - 1, CV_32S);
@@ -1136,7 +1184,7 @@ namespace
 
             Npp32s* pHist[] = {hist[0].ptr<Npp32s>(), hist[1].ptr<Npp32s>(), hist[2].ptr<Npp32s>(), hist[3].ptr<Npp32s>()};
             int nLevels[] = {levels[0].cols, levels[1].cols, levels[2].cols, levels[3].cols};
-            const Npp32s* pLevels[] = {levels[0].ptr<Npp32s>(), levels[1].ptr<Npp32s>(), levels[2].ptr<Npp32s>(), levels[3].ptr<Npp32s>()};
+            const level_t* pLevels[] = {levels[0].ptr<level_t>(), levels[1].ptr<level_t>(), levels[2].ptr<level_t>(), levels[3].ptr<level_t>()};
 
             NppiSize sz;
             sz.width = src.cols;
@@ -1193,7 +1241,7 @@ void cv::gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int l
 
 void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1);
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 || src.type() == CV_32FC1);
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat& hist, const GpuMat& levels);
     static const hist_t hist_callers[] = 
@@ -1201,7 +1249,9 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
         NppHistogramRangeC1<CV_8U , nppiHistogramRange_8u_C1R , nppiHistogramRangeGetBufferSize_8u_C1R >::hist,
         0,
         NppHistogramRangeC1<CV_16U, nppiHistogramRange_16u_C1R, nppiHistogramRangeGetBufferSize_16u_C1R>::hist,
-        NppHistogramRangeC1<CV_16S, nppiHistogramRange_16s_C1R, nppiHistogramRangeGetBufferSize_16s_C1R>::hist
+        NppHistogramRangeC1<CV_16S, nppiHistogramRange_16s_C1R, nppiHistogramRangeGetBufferSize_16s_C1R>::hist,
+        0,
+        NppHistogramRangeC1<CV_32F, nppiHistogramRange_32f_C1R, nppiHistogramRangeGetBufferSize_32f_C1R>::hist
     };
 
     hist_callers[src.depth()](src, hist, levels);
@@ -1209,7 +1259,7 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 
 void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
 {
-    CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4 || src.type() == CV_16SC4);
+    CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4 || src.type() == CV_16SC4 || src.type() == CV_32FC4);
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4]);
     static const hist_t hist_callers[] = 
@@ -1217,7 +1267,9 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
         NppHistogramRangeC4<CV_8U , nppiHistogramRange_8u_C4R , nppiHistogramRangeGetBufferSize_8u_C4R >::hist,
         0,
         NppHistogramRangeC4<CV_16U, nppiHistogramRange_16u_C4R, nppiHistogramRangeGetBufferSize_16u_C4R>::hist,
-        NppHistogramRangeC4<CV_16S, nppiHistogramRange_16s_C4R, nppiHistogramRangeGetBufferSize_16s_C4R>::hist
+        NppHistogramRangeC4<CV_16S, nppiHistogramRange_16s_C4R, nppiHistogramRangeGetBufferSize_16s_C4R>::hist,
+        0,
+        NppHistogramRangeC4<CV_32F, nppiHistogramRange_32f_C4R, nppiHistogramRangeGetBufferSize_32f_C4R>::hist
     };
 
     hist_callers[src.depth()](src, hist, levels);

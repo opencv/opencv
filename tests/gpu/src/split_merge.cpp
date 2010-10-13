@@ -41,8 +41,6 @@
 //M*/
 
 #include "gputest.hpp"
-#include <opencv2/opencv.hpp>
-#include <opencv2/gpu/gpu.hpp>
 
 #include <iostream>
 #include <string>

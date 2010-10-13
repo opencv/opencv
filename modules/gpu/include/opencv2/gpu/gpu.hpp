@@ -351,25 +351,25 @@ namespace cv
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
         CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! adds scalar to a matrix (c = a + s)
-        //! supports only CV_32FC1 type
+        //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! subtracts one matrix from another (c = a - b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
 		CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! subtracts scalar from a matrix (c = a - s)
-        //! supports only CV_32FC1 type
+        //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! computes element-wise product of the two arrays (c = a * b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
 		CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! multiplies matrix to a scalar (c = a * s)
-        //! supports only CV_32FC1 type
+        //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! computes element-wise quotient of the two arrays (c = a / b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
 		CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! computes element-wise quotient of matrix and scalar (c = a / s)
-        //! supports only CV_32FC1 type
+        //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c);
 
         //! transposes the matrix
@@ -452,12 +452,19 @@ namespace cv
         //! supports only CV_32FC1 type
         CV_EXPORTS void log(const GpuMat& a, GpuMat& b);
 
-        //! computes magnitude (magnitude(i)) of each (x(i), y(i)) vector
+        //! computes magnitude of each (x(i), y(i)) vector
         //! supports only CV_32FC1 type
         CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
-        //! computes magnitude (magnitude(i)) of complex (x(i).re, x(i).im) vector
+        //! computes magnitude of complex (x(i).re, x(i).im) vector
         //! supports only CV_32FC2 type
         CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude);
+
+        //! computes squared magnitude of each (x(i), y(i)) vector
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
+        //! computes squared magnitude of complex (x(i).re, x(i).im) vector
+        //! supports only CV_32FC2 type
+        CV_EXPORTS void magnitudeSqr(const GpuMat& x, GpuMat& magnitude);
 
         ////////////////////////////// Image processing //////////////////////////////
 
@@ -528,6 +535,11 @@ namespace cv
         //! sum will have CV_32S type, sqsum - CV32F type
         //! supports only CV_32FC1 source type
         CV_EXPORTS void integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum);
+
+        //! computes the standard deviation of integral images
+        //! supports only CV_32SC1 source type and CV_32FC1 sqr type
+        //! output will have CV_32FC1 type
+        CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect);
 
         //! applies Canny edge detector and produces the edge map
         //! supprots only CV_8UC1 source type
@@ -718,14 +730,14 @@ namespace cv
         //! Output hist[i] will have one row and histSize[i] cols and CV_32SC1 type.
         CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4]);
         //! Calculates histogram with bins determined by levels array.
-        //! levels must have one row and CV_32SC1 type.
-        //! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
+        //! levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
+        //! Supports CV_8UC1, CV_16UC1, CV_16SC1 and CV_32FC1 source types.
         //! Output hist will have one row and (levels.cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels);
         //! Calculates histogram with bins determined by levels array.
-        //! All levels must have one row and CV_32SC1 type.
+        //! All levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
         //! All channels of source are processed separately.
-        //! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
+        //! Supports CV_8UC4, CV_16UC4, CV_16SC4 and CV_32FC4 source types.
         //! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4]);
 

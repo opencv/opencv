@@ -40,9 +40,6 @@
 //M*/
 
 #include "gputest.hpp"
-#include "highgui.h"
-#include "cv.h"
-
 
 using namespace cv;
 using namespace std;

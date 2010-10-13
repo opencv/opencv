@@ -71,6 +71,8 @@ void cv::gpu::exp(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::log(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::magnitude(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::magnitudeSqr(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -127,22 +129,49 @@ namespace
         }
 	}
 
-    typedef NppStatus (*npp_arithm_scalar_32f_t)(const Npp32f *pSrc, int nSrcStep, Npp32f nValue, Npp32f *pDst, 
-                                                 int nDstStep, NppiSize oSizeROI);
+    template<int SCN> struct NppArithmScalarFunc;
+    template<> struct NppArithmScalarFunc<1>
+    {
+        typedef NppStatus (*func_ptr)(const Npp32f *pSrc, int nSrcStep, Npp32f nValue, Npp32f *pDst, 
+                                      int nDstStep, NppiSize oSizeROI);
+    };
+    template<> struct NppArithmScalarFunc<2>
+    {        
+        typedef NppStatus (*func_ptr)(const Npp32fc *pSrc, int nSrcStep, Npp32fc nValue, Npp32fc *pDst,
+                                      int nDstStep, NppiSize oSizeROI);
+    };
 
-    void nppArithmCaller(const GpuMat& src1, const Scalar& sc, GpuMat& dst, 
-					     npp_arithm_scalar_32f_t npp_func)
-	{
-        CV_Assert(src1.type() == CV_32FC1);
+    template<int SCN, typename NppArithmScalarFunc<SCN>::func_ptr func> struct NppArithmScalar;
+    template<typename NppArithmScalarFunc<1>::func_ptr func> struct NppArithmScalar<1, func>
+    {
+        static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+	    {
+            dst.create(src.size(), src.type());
 
-        dst.create(src1.size(), src1.type());
+		    NppiSize sz;
+		    sz.width  = src.cols;
+		    sz.height = src.rows;
 
-		NppiSize sz;
-		sz.width  = src1.cols;
-		sz.height = src1.rows;
+		    nppSafeCall( func(src.ptr<Npp32f>(), src.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
+	    }
+    };
+    template<typename NppArithmScalarFunc<2>::func_ptr func> struct NppArithmScalar<2, func>
+    {
+        static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+	    {
+            dst.create(src.size(), src.type());
 
-		nppSafeCall( npp_func(src1.ptr<Npp32f>(), src1.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
-	}
+		    NppiSize sz;
+		    sz.width  = src.cols;
+		    sz.height = src.rows;
+
+            Npp32fc nValue;
+            nValue.re = (Npp32f)sc[0];
+            nValue.im = (Npp32f)sc[1];
+
+		    nppSafeCall( func(src.ptr<Npp32fc>(), src.step, nValue, dst.ptr<Npp32fc>(), dst.step, sz) );
+	    }
+    };
 }
 
 void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
@@ -167,22 +196,42 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 
 void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst)
 {
-    nppArithmCaller(src, sc, dst, nppiAddC_32f_C1R);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    static const caller_t callers[] = {NppArithmScalar<1, nppiAddC_32f_C1R>::calc, NppArithmScalar<2, nppiAddC_32fc_C1R>::calc};
+
+    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+
+    callers[src.channels()](src, sc, dst);
 }
 
 void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst)
 {
-    nppArithmCaller(src, sc, dst, nppiSubC_32f_C1R);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    static const caller_t callers[] = {NppArithmScalar<1, nppiSubC_32f_C1R>::calc, NppArithmScalar<2, nppiSubC_32fc_C1R>::calc};
+
+    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+
+    callers[src.channels()](src, sc, dst);
 }
 
 void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst)
 {
-    nppArithmCaller(src, sc, dst, nppiMulC_32f_C1R);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    static const caller_t callers[] = {NppArithmScalar<1, nppiMulC_32f_C1R>::calc, NppArithmScalar<2, nppiMulC_32fc_C1R>::calc};
+
+    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+
+    callers[src.channels()](src, sc, dst);
 }
 
 void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst)
 {
-    nppArithmCaller(src, sc, dst, nppiDivC_32f_C1R);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    static const caller_t callers[] = {NppArithmScalar<1, nppiDivC_32f_C1R>::calc, NppArithmScalar<2, nppiDivC_32fc_C1R>::calc};
+
+    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+
+    callers[src.channels()](src, sc, dst);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -587,6 +636,31 @@ void cv::gpu::magnitude(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
     cv::gpu::merge(srcs, 2, src);
 
     cv::gpu::magnitude(src, dst);
+}
+
+void cv::gpu::magnitudeSqr(const GpuMat& src, GpuMat& dst)
+{
+    CV_Assert(src.type() == CV_32FC2);
+
+    dst.create(src.size(), CV_32FC1);
+
+    NppiSize sz;
+    sz.width = src.cols;
+    sz.height = src.rows;
+
+    nppSafeCall( nppiMagnitudeSqr_32fc32f_C1R(src.ptr<Npp32fc>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+}
+
+void cv::gpu::magnitudeSqr(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+{
+    CV_DbgAssert(src1.type() == src2.type() && src1.size() == src2.size());
+    CV_Assert(src1.type() == CV_32FC1);
+
+    GpuMat src(src1.size(), CV_32FC2);
+    GpuMat srcs[] = {src1, src2};
+    cv::gpu::merge(srcs, 2, src);
+
+    cv::gpu::magnitudeSqr(src, dst);
 }
 
 #endif /* !defined (HAVE_CUDA) */
