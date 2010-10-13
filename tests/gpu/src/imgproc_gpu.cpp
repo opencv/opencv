@@ -459,7 +459,7 @@ int CV_GpuCvtColorTest::CheckNorm(const Mat& m1, const Mat& m2)
 {
     double ret = norm(m1, m2, NORM_INF);
 
-    if (ret < std::numeric_limits<double>::epsilon())
+    if (ret <= 2)
     {
         return CvTS::OK;
     }
@@ -472,7 +472,6 @@ int CV_GpuCvtColorTest::CheckNorm(const Mat& m1, const Mat& m2)
 
 void CV_GpuCvtColorTest::run( int )
 {
-    //load image
     cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
 
     if (img.empty())
@@ -486,17 +485,20 @@ void CV_GpuCvtColorTest::run( int )
     cv::gpu::GpuMat gpuImg(img), gpuRes;
     try
     {
-        //run tests
         int codes[] = { CV_BGR2RGB, CV_RGB2BGRA, CV_BGRA2RGB,
                         CV_RGB2BGR555, CV_BGR5552BGR, CV_BGR2BGR565, CV_BGR5652RGB, 
                         CV_RGB2YCrCb, CV_YCrCb2BGR, CV_BGR2YUV, CV_YUV2RGB,
                         CV_RGB2XYZ, CV_XYZ2BGR, CV_BGR2XYZ, CV_XYZ2RGB,
+                        CV_RGB2HSV, CV_HSV2BGR, CV_BGR2HSV_FULL, CV_HSV2RGB_FULL,
+                        CV_RGB2HLS, CV_HLS2BGR, CV_BGR2HLS_FULL, CV_HLS2RGB_FULL,
                         CV_RGB2GRAY, CV_GRAY2BGRA, CV_BGRA2GRAY,
                         CV_GRAY2BGR555, CV_BGR5552GRAY, CV_GRAY2BGR565, CV_BGR5652GRAY};
         const char* codes_str[] = { "CV_BGR2RGB", "CV_RGB2BGRA", "CV_BGRA2RGB",
                                     "CV_RGB2BGR555", "CV_BGR5552BGR", "CV_BGR2BGR565", "CV_BGR5652RGB", 
                                     "CV_RGB2YCrCb", "CV_YCrCb2BGR", "CV_BGR2YUV", "CV_YUV2RGB",
                                     "CV_RGB2XYZ", "CV_XYZ2BGR", "CV_BGR2XYZ", "CV_XYZ2RGB",
+                                    "CV_RGB2HSV", "CV_HSV2RGB", "CV_BGR2HSV_FULL", "CV_HSV2RGB_FULL",
+                                    "CV_RGB2HLS", "CV_HLS2RGB", "CV_BGR2HLS_FULL", "CV_HLS2RGB_FULL",
                                     "CV_RGB2GRAY", "CV_GRAY2BGRA", "CV_BGRA2GRAY",
                                     "CV_GRAY2BGR555", "CV_BGR5552GRAY", "CV_GRAY2BGR565", "CV_BGR5652GRAY"};
         int codes_num = sizeof(codes) / sizeof(int);

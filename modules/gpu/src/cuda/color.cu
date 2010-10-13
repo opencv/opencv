@@ -49,13 +49,17 @@ using namespace cv::gpu;
 #define CV_DESCALE(x, n) (((x) + (1 << ((n)-1))) >> (n))
 #endif
 
+#ifndef FLT_EPSILON
+#define FLT_EPSILON     1.192092896e-07F
+#endif
+
 namespace imgproc
 {
     template<typename T, int N> struct TypeVec {};
     template<> struct TypeVec<uchar, 3> { typedef uchar3 vec_t; };
     template<> struct TypeVec<uchar, 4> { typedef uchar4 vec_t; };
-    template<> struct TypeVec<unsigned short, 3> { typedef ushort3 vec_t; };
-    template<> struct TypeVec<unsigned short, 4> { typedef ushort4 vec_t; };
+    template<> struct TypeVec<ushort, 3> { typedef ushort3 vec_t; };
+    template<> struct TypeVec<ushort, 4> { typedef ushort4 vec_t; };
     template<> struct TypeVec<float, 3> { typedef float3 vec_t; };
     template<> struct TypeVec<float, 4> { typedef float4 vec_t; };
 
@@ -63,14 +67,14 @@ namespace imgproc
     template<> struct ColorChannel<uchar>
     {
         typedef float worktype_f;
-        static __device__ unsigned char max() { return UCHAR_MAX; }
-        static __device__ unsigned char half() { return (unsigned char)(max()/2 + 1); }
+        static __device__ uchar max() { return UCHAR_MAX; }
+        static __device__ uchar half() { return (uchar)(max()/2 + 1); }
     };
-    template<> struct ColorChannel<unsigned short>
+    template<> struct ColorChannel<ushort>
     {
         typedef float worktype_f;
-        static __device__ unsigned short max() { return USHRT_MAX; }
-        static __device__ unsigned short half() { return (unsigned short)(max()/2 + 1); }
+        static __device__ ushort max() { return USHRT_MAX; }
+        static __device__ ushort half() { return (ushort)(max()/2 + 1); }
     };
     template<> struct ColorChannel<float>
     {
@@ -118,9 +122,9 @@ namespace imgproc
             src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
             dst_t dst;
 
-            dst.x = ((const T*)(&src))[bidx];
+            dst.x = (&src.x)[bidx];
             dst.y = src.y;
-            dst.z = ((const T*)(&src))[bidx ^ 2];
+            dst.z = (&src.x)[bidx ^ 2];
             setAlpha(dst, getAlpha<T>(src));
             
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
@@ -163,8 +167,8 @@ namespace cv { namespace gpu { namespace improc
         typedef void (*RGB2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const RGB2RGB_caller_t RGB2RGB_callers[2][2] = 
         {
-            {RGB2RGB_caller<unsigned short, 3, 3>, RGB2RGB_caller<unsigned short, 3, 4>}, 
-            {RGB2RGB_caller<unsigned short, 4, 3>, RGB2RGB_caller<unsigned short, 4, 4>}
+            {RGB2RGB_caller<ushort, 3, 3>, RGB2RGB_caller<ushort, 3, 4>}, 
+            {RGB2RGB_caller<ushort, 4, 3>, RGB2RGB_caller<ushort, 4, 4>}
         };
 
         RGB2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
@@ -192,13 +196,13 @@ namespace imgproc
     {
         typedef typename TypeVec<uchar, DSTCN>::vec_t dst_t;
 
-        static __device__ dst_t cvt(unsigned int src, int bidx)
+        static __device__ dst_t cvt(uint src, int bidx)
         {
             dst_t dst;
             
-            ((uchar*)(&dst))[bidx] = (uchar)(src << 3);
+            (&dst.x)[bidx] = (uchar)(src << 3);
             dst.y = (uchar)((src >> 2) & ~7);
-            ((uchar*)(&dst))[bidx ^ 2] = (uchar)((src >> 7) & ~7);
+            (&dst.x)[bidx ^ 2] = (uchar)((src >> 7) & ~7);
             setAlpha(dst, (uchar)(src & 0x8000 ? 255 : 0));
 
             return dst;
@@ -208,13 +212,13 @@ namespace imgproc
     {
         typedef typename TypeVec<uchar, DSTCN>::vec_t dst_t;
 
-        static __device__ dst_t cvt(unsigned int src, int bidx)
+        static __device__ dst_t cvt(uint src, int bidx)
         {
             dst_t dst;
             
-            ((uchar*)(&dst))[bidx] = (uchar)(src << 3);
+            (&dst.x)[bidx] = (uchar)(src << 3);
             dst.y = (uchar)((src >> 3) & ~3);
-            ((uchar*)(&dst))[bidx ^ 2] = (uchar)((src >> 8) & ~7);
+            (&dst.x)[bidx ^ 2] = (uchar)((src >> 8) & ~7);
             setAlpha(dst, (uchar)(255));
 
             return dst;
@@ -231,7 +235,7 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            unsigned int src = *(const unsigned short*)(src_ + y * src_step + (x << 1));
+            uint src = *(const ushort*)(src_ + y * src_step + (x << 1));
             
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN) = RGB5x52RGBConverter<GREEN_BITS, DSTCN>::cvt(src, bidx);
         }
@@ -240,23 +244,23 @@ namespace imgproc
     template <int SRCCN, int GREEN_BITS> struct RGB2RGB5x5Converter {};
     template<int SRCCN> struct RGB2RGB5x5Converter<SRCCN, 6> 
     {
-        static __device__ unsigned short cvt(const uchar* src_ptr, int bidx)
+        static __device__ ushort cvt(const uchar* src, int bidx)
         {
-            return (unsigned short)((src_ptr[bidx] >> 3) | ((src_ptr[1] & ~3) << 3) | ((src_ptr[bidx^2] & ~7) << 8));
+            return (ushort)((src[bidx] >> 3) | ((src[1] & ~3) << 3) | ((src[bidx^2] & ~7) << 8));
         }
     };
     template<> struct RGB2RGB5x5Converter<3, 5> 
     {
-        static __device__ unsigned short cvt(const uchar* src_ptr, int bidx)
+        static __device__ ushort cvt(const uchar* src, int bidx)
         {
-            return (unsigned short)((src_ptr[bidx] >> 3) | ((src_ptr[1] & ~7) << 2) | ((src_ptr[bidx^2] & ~7) << 7));
+            return (ushort)((src[bidx] >> 3) | ((src[1] & ~7) << 2) | ((src[bidx^2] & ~7) << 7));
         }
     };
     template<> struct RGB2RGB5x5Converter<4, 5> 
     {
-        static __device__ unsigned short cvt(const uchar* src_ptr, int bidx)
+        static __device__ ushort cvt(const uchar* src, int bidx)
         {
-            return (unsigned short)((src_ptr[bidx] >> 3) | ((src_ptr[1] & ~7) << 2) | ((src_ptr[bidx^2] & ~7) << 7) | (src_ptr[3] ? 0x8000 : 0));
+            return (ushort)((src[bidx] >> 3) | ((src[1] & ~7) << 2) | ((src[bidx^2] & ~7) << 7) | (src[3] ? 0x8000 : 0));
         }
     };    
 
@@ -272,7 +276,7 @@ namespace imgproc
         {
             src_t src = *(src_t*)(src_ + y * src_step + x * SRCCN);
 
-            *(unsigned short*)(dst_ + y * dst_step + (x << 1)) = RGB2RGB5x5Converter<SRCCN, GREEN_BITS>::cvt((const uchar*)(&src), bidx);
+            *(ushort*)(dst_ + y * dst_step + (x << 1)) = RGB2RGB5x5Converter<SRCCN, GREEN_BITS>::cvt(&src.x, bidx);
         }
     }
 }
@@ -363,17 +367,17 @@ namespace imgproc
     template <int GREEN_BITS> struct Gray2RGB5x5Converter {};
     template<> struct Gray2RGB5x5Converter<6> 
     {
-        static __device__ unsigned short cvt(unsigned int t)
+        static __device__ ushort cvt(uint t)
         {
-            return (unsigned short)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
+            return (ushort)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
         }
     };
     template<> struct Gray2RGB5x5Converter<5> 
     {
-        static __device__ unsigned short cvt(unsigned int t)
+        static __device__ ushort cvt(uint t)
         {
             t >>= 3;
-            return (unsigned short)(t | (t << 5) | (t << 10));
+            return (ushort)(t | (t << 5) | (t << 10));
         }
     };
 
@@ -385,9 +389,9 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            unsigned int src = src_[y * src_step + x];
+            uint src = src_[y * src_step + x];
 
-            *(unsigned short*)(dst_ + y * dst_step + (x << 1)) = Gray2RGB5x5Converter<GREEN_BITS>::cvt(src);
+            *(ushort*)(dst_ + y * dst_step + (x << 1)) = Gray2RGB5x5Converter<GREEN_BITS>::cvt(src);
         }
     }
 }
@@ -421,7 +425,7 @@ namespace cv { namespace gpu { namespace improc
     void Gray2RGB_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream)
     {
         typedef void (*Gray2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
-        static const Gray2RGB_caller_t Gray2RGB_callers[] = {Gray2RGB_caller<unsigned short, 3>, Gray2RGB_caller<unsigned short, 4>};
+        static const Gray2RGB_caller_t Gray2RGB_callers[] = {Gray2RGB_caller<ushort, 3>, Gray2RGB_caller<ushort, 4>};
 
         Gray2RGB_callers[dstcn - 3](src, dst, stream);
     }
@@ -483,16 +487,16 @@ namespace imgproc
     template <int GREEN_BITS> struct RGB5x52GrayConverter {};
     template<> struct RGB5x52GrayConverter<6> 
     {
-        static __device__ unsigned char cvt(unsigned int t)
+        static __device__ uchar cvt(uint t)
         {
-            return (unsigned char)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 3) & 0xfc) * G2Y + ((t >> 8) & 0xf8) * R2Y, yuv_shift);
+            return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 3) & 0xfc) * G2Y + ((t >> 8) & 0xf8) * R2Y, yuv_shift);
         }
     };
     template<> struct RGB5x52GrayConverter<5> 
     {
-        static __device__ unsigned char cvt(unsigned int t)
+        static __device__ uchar cvt(uint t)
         {
-            return (unsigned char)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 2) & 0xf8) * G2Y + ((t >> 7) & 0xf8) * R2Y, yuv_shift);
+            return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 2) & 0xf8) * G2Y + ((t >> 7) & 0xf8) * R2Y, yuv_shift);
         }
     };   
 
@@ -504,7 +508,7 @@ namespace imgproc
 
         if (y < rows && x < cols)
         {
-            unsigned int src = *(unsigned short*)(src_ + y * src_step + (x << 1));
+            uint src = *(ushort*)(src_ + y * src_step + (x << 1));
 
             dst_[y * dst_step + x] = RGB5x52GrayConverter<GREEN_BITS>::cvt(src);
         }
@@ -541,7 +545,7 @@ namespace imgproc
         {
             src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
 
-            *(T*)(dst_ + y * dst_step + x * sizeof(T)) = RGB2GrayConvertor<T>::cvt((const T*)(&src), bidx);
+            *(T*)(dst_ + y * dst_step + x * sizeof(T)) = RGB2GrayConvertor<T>::cvt(&src.x, bidx);
         }
     }   
 }
@@ -567,7 +571,7 @@ namespace cv { namespace gpu { namespace improc
     void RGB2Gray_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
         typedef void (*RGB2Gray_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        RGB2Gray_caller_t RGB2Gray_callers[] = {RGB2Gray_caller<unsigned char, 3>, RGB2Gray_caller<unsigned char, 4>};
+        RGB2Gray_caller_t RGB2Gray_callers[] = {RGB2Gray_caller<uchar, 3>, RGB2Gray_caller<uchar, 4>};
 
         RGB2Gray_callers[srccn - 3](src, dst, bidx, stream);
     }
@@ -575,7 +579,7 @@ namespace cv { namespace gpu { namespace improc
     void RGB2Gray_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
         typedef void (*RGB2Gray_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
-        RGB2Gray_caller_t RGB2Gray_callers[] = {RGB2Gray_caller<unsigned short, 3>, RGB2Gray_caller<unsigned short, 4>};
+        RGB2Gray_caller_t RGB2Gray_callers[] = {RGB2Gray_caller<ushort, 3>, RGB2Gray_caller<ushort, 4>};
 
         RGB2Gray_callers[srccn - 3](src, dst, bidx, stream);
     }
@@ -664,7 +668,7 @@ namespace imgproc
             src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
             dst_t dst;
 
-            RGB2YCrCbConverter<T>::cvt(((const T*)(&src)), dst, bidx);
+            RGB2YCrCbConverter<T>::cvt(&src.x, dst, bidx);
             
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
@@ -709,7 +713,7 @@ namespace imgproc
             src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
             dst_t dst;
 
-            YCrCb2RGBConvertor<T>::cvt(src, ((T*)(&dst)), bidx);
+            YCrCb2RGBConvertor<T>::cvt(src, &dst.x, bidx);
             setAlpha(dst, ColorChannel<T>::max());
             
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
@@ -735,7 +739,7 @@ namespace cv { namespace gpu { namespace improc
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void RGB2YCrCb_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
+    void RGB2YCrCb_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2YCrCb_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2][2] = 
@@ -749,13 +753,13 @@ namespace cv { namespace gpu { namespace improc
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void RGB2YCrCb_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
+    void RGB2YCrCb_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2YCrCb_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2][2] = 
         {
-            {RGB2YCrCb_caller<unsigned short, 3, 3>, RGB2YCrCb_caller<unsigned short, 3, 4>},
-            {RGB2YCrCb_caller<unsigned short, 4, 3>, RGB2YCrCb_caller<unsigned short, 4, 4>}
+            {RGB2YCrCb_caller<ushort, 3, 3>, RGB2YCrCb_caller<ushort, 3, 4>},
+            {RGB2YCrCb_caller<ushort, 4, 3>, RGB2YCrCb_caller<ushort, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
@@ -763,7 +767,7 @@ namespace cv { namespace gpu { namespace improc
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void RGB2YCrCb_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const float* coeffs, cudaStream_t stream)
+    void RGB2YCrCb_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2YCrCb_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const RGB2YCrCb_caller_t RGB2YCrCb_callers[2][2] = 
@@ -793,7 +797,7 @@ namespace cv { namespace gpu { namespace improc
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void YCrCb2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
+    void YCrCb2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*YCrCb2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2][2] = 
@@ -807,13 +811,13 @@ namespace cv { namespace gpu { namespace improc
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void YCrCb2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const int* coeffs, cudaStream_t stream)
+    void YCrCb2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*YCrCb2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2][2] = 
         {
-            {YCrCb2RGB_caller<unsigned short, 3, 3>, YCrCb2RGB_caller<unsigned short, 3, 4>},
-            {YCrCb2RGB_caller<unsigned short, 4, 3>, YCrCb2RGB_caller<unsigned short, 4, 4>}
+            {YCrCb2RGB_caller<ushort, 3, 3>, YCrCb2RGB_caller<ushort, 3, 4>},
+            {YCrCb2RGB_caller<ushort, 4, 3>, YCrCb2RGB_caller<ushort, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
@@ -821,7 +825,7 @@ namespace cv { namespace gpu { namespace improc
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
 
-    void YCrCb2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const float* coeffs, cudaStream_t stream)
+    void YCrCb2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*YCrCb2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream);
         static const YCrCb2RGB_caller_t YCrCb2RGB_callers[2][2] = 
@@ -878,7 +882,7 @@ namespace imgproc
             src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
 
             dst_t dst;
-            RGB2XYZConvertor<T>::cvt((const T*)(&src), dst);
+            RGB2XYZConvertor<T>::cvt(&src.x, dst);
             
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
@@ -919,7 +923,7 @@ namespace imgproc
             src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
 
             dst_t dst;
-            XYZ2RGBConvertor<T>::cvt(src, (T*)(&dst));
+            XYZ2RGBConvertor<T>::cvt(src, &dst.x);
             setAlpha(dst, ColorChannel<T>::max());
             
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
@@ -945,7 +949,7 @@ namespace cv { namespace gpu { namespace improc
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void RGB2XYZ_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
+    void RGB2XYZ_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2XYZ_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
         static const RGB2XYZ_caller_t RGB2XYZ_callers[2][2] = 
@@ -959,13 +963,13 @@ namespace cv { namespace gpu { namespace improc
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void RGB2XYZ_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
+    void RGB2XYZ_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2XYZ_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
         static const RGB2XYZ_caller_t RGB2XYZ_callers[2][2] = 
         {
-            {RGB2XYZ_caller<unsigned short, 3, 3>, RGB2XYZ_caller<unsigned short, 3, 4>},
-            {RGB2XYZ_caller<unsigned short, 4, 3>, RGB2XYZ_caller<unsigned short, 4, 4>}
+            {RGB2XYZ_caller<ushort, 3, 3>, RGB2XYZ_caller<ushort, 3, 4>},
+            {RGB2XYZ_caller<ushort, 4, 3>, RGB2XYZ_caller<ushort, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
@@ -973,7 +977,7 @@ namespace cv { namespace gpu { namespace improc
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void RGB2XYZ_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const float* coeffs, cudaStream_t stream)
+    void RGB2XYZ_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*RGB2XYZ_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
         static const RGB2XYZ_caller_t RGB2XYZ_callers[2][2] = 
@@ -1003,7 +1007,7 @@ namespace cv { namespace gpu { namespace improc
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void XYZ2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
+    void XYZ2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*XYZ2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
         static const XYZ2RGB_caller_t XYZ2RGB_callers[2][2] = 
@@ -1017,13 +1021,13 @@ namespace cv { namespace gpu { namespace improc
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void XYZ2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const int* coeffs, cudaStream_t stream)
+    void XYZ2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*XYZ2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
         static const XYZ2RGB_caller_t XYZ2RGB_callers[2][2] = 
         {
-            {XYZ2RGB_caller<unsigned short, 3, 3>, XYZ2RGB_caller<unsigned short, 3, 4>},
-            {XYZ2RGB_caller<unsigned short, 4, 3>, XYZ2RGB_caller<unsigned short, 4, 4>}
+            {XYZ2RGB_caller<ushort, 3, 3>, XYZ2RGB_caller<ushort, 3, 4>},
+            {XYZ2RGB_caller<ushort, 4, 3>, XYZ2RGB_caller<ushort, 4, 4>}
         };
         
         cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
@@ -1031,7 +1035,7 @@ namespace cv { namespace gpu { namespace improc
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
 
-    void XYZ2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const float* coeffs, cudaStream_t stream)
+    void XYZ2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream)
     {
         typedef void (*XYZ2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
         static const XYZ2RGB_caller_t XYZ2RGB_callers[2][2] = 
@@ -1048,1587 +1052,593 @@ namespace cv { namespace gpu { namespace improc
 
 ////////////////////////////////////// RGB <-> HSV ///////////////////////////////////////
 
-//struct RGB2HSV_b
-//{
-//    typedef uchar channel_type;
-//
-//    RGB2HSV_b(int _srccn, int _blueIdx, int _hrange)
-//    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange) {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, bidx = blueIdx, scn = srccn;
-//        const int hsv_shift = 12;
-//
-//        static const int div_table[] = {
-//            0, 1044480, 522240, 348160, 261120, 208896, 174080, 149211,
-//            130560, 116053, 104448, 94953, 87040, 80345, 74606, 69632,
-//            65280, 61440, 58027, 54973, 52224, 49737, 47476, 45412,
-//            43520, 41779, 40172, 38684, 37303, 36017, 34816, 33693,
-//            32640, 31651, 30720, 29842, 29013, 28229, 27486, 26782,
-//            26112, 25475, 24869, 24290, 23738, 23211, 22706, 22223,
-//            21760, 21316, 20890, 20480, 20086, 19707, 19342, 18991,
-//            18651, 18324, 18008, 17703, 17408, 17123, 16846, 16579,
-//            16320, 16069, 15825, 15589, 15360, 15137, 14921, 14711,
-//            14507, 14308, 14115, 13926, 13743, 13565, 13391, 13221,
-//            13056, 12895, 12738, 12584, 12434, 12288, 12145, 12006,
-//            11869, 11736, 11605, 11478, 11353, 11231, 11111, 10995,
-//            10880, 10768, 10658, 10550, 10445, 10341, 10240, 10141,
-//            10043, 9947, 9854, 9761, 9671, 9582, 9495, 9410,
-//            9326, 9243, 9162, 9082, 9004, 8927, 8852, 8777,
-//            8704, 8632, 8561, 8492, 8423, 8356, 8290, 8224,
-//            8160, 8097, 8034, 7973, 7913, 7853, 7795, 7737,
-//            7680, 7624, 7569, 7514, 7461, 7408, 7355, 7304,
-//            7253, 7203, 7154, 7105, 7057, 7010, 6963, 6917,
-//            6872, 6827, 6782, 6739, 6695, 6653, 6611, 6569,
-//            6528, 6487, 6447, 6408, 6369, 6330, 6292, 6254,
-//            6217, 6180, 6144, 6108, 6073, 6037, 6003, 5968,
-//            5935, 5901, 5868, 5835, 5803, 5771, 5739, 5708,
-//            5677, 5646, 5615, 5585, 5556, 5526, 5497, 5468,
-//            5440, 5412, 5384, 5356, 5329, 5302, 5275, 5249,
-//            5222, 5196, 5171, 5145, 5120, 5095, 5070, 5046,
-//            5022, 4998, 4974, 4950, 4927, 4904, 4881, 4858,
-//            4836, 4813, 4791, 4769, 4748, 4726, 4705, 4684,
-//            4663, 4642, 4622, 4601, 4581, 4561, 4541, 4522,
-//            4502, 4483, 4464, 4445, 4426, 4407, 4389, 4370,
-//            4352, 4334, 4316, 4298, 4281, 4263, 4246, 4229,
-//            4212, 4195, 4178, 4161, 4145, 4128, 4112, 4096
-//        };
-//        int hr = hrange, hscale = hr == 180 ? 15 : 21;
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, src += scn )
-//        {
-//            int b = src[bidx], g = src[1], r = src[bidx^2];
-//            int h, s, v = b;
-//            int vmin = b, diff;
-//            int vr, vg;
-//
-//            CV_CALC_MAX_8U( v, g );
-//            CV_CALC_MAX_8U( v, r );
-//            CV_CALC_MIN_8U( vmin, g );
-//            CV_CALC_MIN_8U( vmin, r );
-//
-//            diff = v - vmin;
-//            vr = v == r ? -1 : 0;
-//            vg = v == g ? -1 : 0;
-//
-//            s = diff * div_table[v] >> hsv_shift;
-//            h = (vr & (g - b)) +
-//                (~vr & ((vg & (b - r + 2 * diff)) + ((~vg) & (r - g + 4 * diff))));
-//            h = (h * div_table[diff] * hscale + (1 << (hsv_shift + 6))) >> (7 + hsv_shift);
-//            h += h < 0 ? hr : 0;
-//
-//            dst[i] = (uchar)h;
-//            dst[i+1] = (uchar)s;
-//            dst[i+2] = (uchar)v;
-//        }
-//    }
-//
-//    int srccn, blueIdx, hrange;
-//};
-//
-//
-//struct RGB2HSV_f
-//{
-//    typedef float channel_type;
-//
-//    RGB2HSV_f(int _srccn, int _blueIdx, float _hrange)
-//    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange) {}
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, bidx = blueIdx, scn = srccn;
-//        float hscale = hrange*(1.f/360.f);
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, src += scn )
-//        {
-//            float b = src[bidx], g = src[1], r = src[bidx^2];
-//            float h, s, v;
-//
-//            float vmin, diff;
-//
-//            v = vmin = r;
-//            if( v < g ) v = g;
-//            if( v < b ) v = b;
-//            if( vmin > g ) vmin = g;
-//            if( vmin > b ) vmin = b;
-//
-//            diff = v - vmin;
-//            s = diff/(float)(fabs(v) + FLT_EPSILON);
-//            diff = (float)(60./(diff + FLT_EPSILON));
-//            if( v == r )
-//                h = (g - b)*diff;
-//            else if( v == g )
-//                h = (b - r)*diff + 120.f;
-//            else
-//                h = (r - g)*diff + 240.f;
-//
-//            if( h < 0 ) h += 360.f;
-//
-//            dst[i] = h*hscale;
-//            dst[i+1] = s;
-//            dst[i+2] = v;
-//        }
-//    }
-//
-//    int srccn, blueIdx;
-//    float hrange;
-//};
-//
-//
-//struct HSV2RGB_f
-//{
-//    typedef float channel_type;
-//
-//    HSV2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-//    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {}
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, bidx = blueIdx, dcn = dstcn;
-//        float _hscale = hscale;
-//        float alpha = ColorChannel<float>::max();
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, dst += dcn )
-//        {
-//            float h = src[i], s = src[i+1], v = src[i+2];
-//            float b, g, r;
-//
-//            if( s == 0 )
-//                b = g = r = v;
-//            else
-//            {
-//                static const int sector_data[][3]=
-//                    {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
-//                float tab[4];
-//                int sector;
-//                h *= _hscale;
-//                if( h < 0 )
-//                    do h += 6; while( h < 0 );
-//                else if( h >= 6 )
-//                    do h -= 6; while( h >= 6 );
-//                sector = cvFloor(h);
-//                h -= sector;
-//
-//                tab[0] = v;
-//                tab[1] = v*(1.f - s);
-//                tab[2] = v*(1.f - s*h);
-//                tab[3] = v*(1.f - s*(1.f - h));
-//
-//                b = tab[sector_data[sector][0]];
-//                g = tab[sector_data[sector][1]];
-//                r = tab[sector_data[sector][2]];
-//            }
-//
-//            dst[bidx] = b;
-//            dst[1] = g;
-//            dst[bidx^2] = r;
-//            if( dcn == 4 )
-//                dst[3] = alpha;
-//        }
-//    }
-//
-//    int dstcn, blueIdx;
-//    float hscale;
-//};
-//
-//
-//struct HSV2RGB_b
-//{
-//    typedef uchar channel_type;
-//
-//    HSV2RGB_b(int _dstcn, int _blueIdx, int _hrange)
-//    : dstcn(_dstcn), cvt(3, _blueIdx, _hrange)
-//    {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, j, dcn = dstcn;
-//        uchar alpha = ColorChannel<uchar>::max();
-//        float buf[3*BLOCK_SIZE];
-//
-//        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
-//        {
-//            int dn = std::min(n - i, (int)BLOCK_SIZE);
-//
-//            for( j = 0; j < dn*3; j += 3 )
-//            {
-//                buf[j] = src[j];
-//                buf[j+1] = src[j+1]*(1.f/255.f);
-//                buf[j+2] = src[j+2]*(1.f/255.f);
-//            }
-//            cvt(buf, buf, dn);
-//
-//            for( j = 0; j < dn*3; j += 3, dst += dcn )
-//            {
-//                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
-//                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
-//                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
-//                if( dcn == 4 )
-//                    dst[3] = alpha;
-//            }
-//        }
-//    }
-//
-//    int dstcn;
-//    HSV2RGB_f cvt;
-//};
-//
-//
+namespace imgproc
+{
+    __constant__ int cHsvDivTable[256];
+
+    template<typename T, int HR> struct RGB2HSVConvertor;
+    template<int HR> struct RGB2HSVConvertor<uchar, HR>
+    {
+        template <typename D>
+        static __device__ void cvt(const uchar* src, D& dst, int bidx)
+        {
+            const int hsv_shift = 12;
+            const int hscale = HR == 180 ? 15 : 21;
+
+            int b = src[bidx], g = src[1], r = src[bidx^2];
+            int h, s, v = b;
+            int vmin = b, diff;
+            int vr, vg;
+
+            v = max(v, g);
+            v = max(v, r);
+            vmin = min(vmin, g);
+            vmin = min(vmin, r);
+
+            diff = v - vmin;
+            vr = v == r ? -1 : 0;
+            vg = v == g ? -1 : 0;
+
+            s = diff * cHsvDivTable[v] >> hsv_shift;
+            h = (vr & (g - b)) + (~vr & ((vg & (b - r + 2 * diff)) + ((~vg) & (r - g + 4 * diff))));
+            h = (h * cHsvDivTable[diff] * hscale + (1 << (hsv_shift + 6))) >> (7 + hsv_shift);
+            h += h < 0 ? HR : 0;
+
+            dst.x = (uchar)h;
+            dst.y = (uchar)s;
+            dst.z = (uchar)v;
+        }
+    };
+    template<int HR> struct RGB2HSVConvertor<float, HR>
+    {
+        template <typename D>
+        static __device__ void cvt(const float* src, D& dst, int bidx)
+        {
+            const float hscale = HR * (1.f / 360.f);
+
+            float b = src[bidx], g = src[1], r = src[bidx^2];
+            float h, s, v;
+
+            float vmin, diff;
+
+            v = vmin = r;
+            v = fmax(v, g);
+            v = fmax(v, b);
+            vmin = fmin(vmin, g);
+            vmin = fmin(vmin, b);
+
+            diff = v - vmin;
+            s = diff / (float)(fabs(v) + FLT_EPSILON);
+            diff = (float)(60. / (diff + FLT_EPSILON));
+
+            if (v == r)
+                h = (g - b) * diff;
+            else if (v == g)
+                h = (b - r) * diff + 120.f;
+            else
+                h = (r - g) * diff + 240.f;
+
+            if (h < 0) h += 360.f;
+
+            dst.x = h * hscale;
+            dst.y = s;
+            dst.z = v;
+        }
+    };
+
+    template <int SRCCN, int DSTCN, int HR, typename T>
+    __global__ void RGB2HSV(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
+    {
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
+
+		const int x = blockDim.x * blockIdx.x + threadIdx.x;
+		const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
+
+            dst_t dst;
+            RGB2HSVConvertor<T, HR>::cvt(&src.x, dst, bidx);
+            
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
+        }
+    }
+
+    __constant__ int cHsvSectorData[6][3];
+
+    template<typename T, int HR> struct HSV2RGBConvertor;    
+    template<int HR> struct HSV2RGBConvertor<float, HR>
+    {
+        template <typename T>
+        static __device__ void cvt(const T& src, float* dst, int bidx)
+        {
+            const float hscale = 6.f / HR;
+            
+            float h = src.x, s = src.y, v = src.z;
+            float b, g, r;
+
+            if( s == 0 )
+                b = g = r = v;
+            else
+            {
+                float tab[4];
+                int sector;
+                h *= hscale;
+                if( h < 0 )
+                    do h += 6; while( h < 0 );
+                else if( h >= 6 )
+                    do h -= 6; while( h >= 6 );
+                sector = __float2int_rd(h);
+                h -= sector;
+
+                tab[0] = v;
+                tab[1] = v*(1.f - s);
+                tab[2] = v*(1.f - s*h);
+                tab[3] = v*(1.f - s*(1.f - h));
+
+                b = tab[cHsvSectorData[sector][0]];
+                g = tab[cHsvSectorData[sector][1]];
+                r = tab[cHsvSectorData[sector][2]];
+            }
+
+            dst[bidx] = b;
+            dst[1] = g;
+            dst[bidx^2] = r;
+        }
+    };
+    template<int HR> struct HSV2RGBConvertor<uchar, HR>
+    {
+        template <typename T>
+        static __device__ void cvt(const T& src, uchar* dst, int bidx)
+        {
+            float3 buf;
+
+            buf.x = src.x;
+            buf.y = src.y * (1.f/255.f);
+            buf.z = src.z * (1.f/255.f);
+
+            HSV2RGBConvertor<float, HR>::cvt(buf, &buf.x, bidx);
+
+            dst[0] = saturate_cast<uchar>(buf.x * 255.f);
+            dst[1] = saturate_cast<uchar>(buf.y * 255.f);
+            dst[2] = saturate_cast<uchar>(buf.z * 255.f);
+        }
+    };
+
+    template <int SRCCN, int DSTCN, int HR, typename T>
+    __global__ void HSV2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
+    {
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
+
+		const int x = blockDim.x * blockIdx.x + threadIdx.x;
+		const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
+
+            dst_t dst;
+            HSV2RGBConvertor<T, HR>::cvt(src, &dst.x, bidx);
+            setAlpha(dst, ColorChannel<T>::max());
+            
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
+        }
+    }
+}
+
+namespace cv { namespace gpu { namespace improc
+{
+    template <typename T, int SRCCN, int DSTCN>
+    void RGB2HSV_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        if (hrange == 180)
+            imgproc::RGB2HSV<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+        else
+            imgproc::RGB2HSV<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void RGB2HSV_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*RGB2HSV_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const RGB2HSV_caller_t RGB2HSV_callers[2][2] = 
+        {
+            {RGB2HSV_caller<uchar, 3, 3>, RGB2HSV_caller<uchar, 3, 4>},
+            {RGB2HSV_caller<uchar, 4, 3>, RGB2HSV_caller<uchar, 4, 4>}
+        };
+
+        static const int div_table[] = 
+        {
+            0, 1044480, 522240, 348160, 261120, 208896, 174080, 149211,
+            130560, 116053, 104448, 94953, 87040, 80345, 74606, 69632,
+            65280, 61440, 58027, 54973, 52224, 49737, 47476, 45412,
+            43520, 41779, 40172, 38684, 37303, 36017, 34816, 33693,
+            32640, 31651, 30720, 29842, 29013, 28229, 27486, 26782,
+            26112, 25475, 24869, 24290, 23738, 23211, 22706, 22223,
+            21760, 21316, 20890, 20480, 20086, 19707, 19342, 18991,
+            18651, 18324, 18008, 17703, 17408, 17123, 16846, 16579,
+            16320, 16069, 15825, 15589, 15360, 15137, 14921, 14711,
+            14507, 14308, 14115, 13926, 13743, 13565, 13391, 13221,
+            13056, 12895, 12738, 12584, 12434, 12288, 12145, 12006,
+            11869, 11736, 11605, 11478, 11353, 11231, 11111, 10995,
+            10880, 10768, 10658, 10550, 10445, 10341, 10240, 10141,
+            10043, 9947, 9854, 9761, 9671, 9582, 9495, 9410,
+            9326, 9243, 9162, 9082, 9004, 8927, 8852, 8777,
+            8704, 8632, 8561, 8492, 8423, 8356, 8290, 8224,
+            8160, 8097, 8034, 7973, 7913, 7853, 7795, 7737,
+            7680, 7624, 7569, 7514, 7461, 7408, 7355, 7304,
+            7253, 7203, 7154, 7105, 7057, 7010, 6963, 6917,
+            6872, 6827, 6782, 6739, 6695, 6653, 6611, 6569,
+            6528, 6487, 6447, 6408, 6369, 6330, 6292, 6254,
+            6217, 6180, 6144, 6108, 6073, 6037, 6003, 5968,
+            5935, 5901, 5868, 5835, 5803, 5771, 5739, 5708,
+            5677, 5646, 5615, 5585, 5556, 5526, 5497, 5468,
+            5440, 5412, 5384, 5356, 5329, 5302, 5275, 5249,
+            5222, 5196, 5171, 5145, 5120, 5095, 5070, 5046,
+            5022, 4998, 4974, 4950, 4927, 4904, 4881, 4858,
+            4836, 4813, 4791, 4769, 4748, 4726, 4705, 4684,
+            4663, 4642, 4622, 4601, 4581, 4561, 4541, 4522,
+            4502, 4483, 4464, 4445, 4426, 4407, 4389, 4370,
+            4352, 4334, 4316, 4298, 4281, 4263, 4246, 4229,
+            4212, 4195, 4178, 4161, 4145, 4128, 4112, 4096
+        };
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHsvDivTable, div_table, sizeof(div_table)) );
+
+        RGB2HSV_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+
+    void RGB2HSV_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*RGB2HSV_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const RGB2HSV_caller_t RGB2HSV_callers[2][2] = 
+        {
+            {RGB2HSV_caller<float, 3, 3>, RGB2HSV_caller<float, 3, 4>},
+            {RGB2HSV_caller<float, 4, 3>, RGB2HSV_caller<float, 4, 4>}
+        };
+        
+        RGB2HSV_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+
+    
+    template <typename T, int SRCCN, int DSTCN>
+    void HSV2RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        if (hrange == 180)
+            imgproc::HSV2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+        else
+            imgproc::HSV2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void HSV2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*HSV2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const HSV2RGB_caller_t HSV2RGB_callers[2][2] = 
+        {
+            {HSV2RGB_caller<uchar, 3, 3>, HSV2RGB_caller<uchar, 3, 4>},
+            {HSV2RGB_caller<uchar, 4, 3>, HSV2RGB_caller<uchar, 4, 4>}
+        };
+
+        static const int sector_data[][3] =
+            {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
+
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHsvSectorData, sector_data, sizeof(sector_data)) );
+
+        HSV2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+
+    void HSV2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*HSV2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const HSV2RGB_caller_t HSV2RGB_callers[2][2] = 
+        {
+            {HSV2RGB_caller<float, 3, 3>, HSV2RGB_caller<float, 3, 4>},
+            {HSV2RGB_caller<float, 4, 3>, HSV2RGB_caller<float, 4, 4>}
+        };
+        
+        static const int sector_data[][3] =
+            {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
+
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHsvSectorData, sector_data, sizeof(sector_data)) );
+        
+        HSV2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+}}}
+
 /////////////////////////////////////// RGB <-> HLS ////////////////////////////////////////
-//
-//struct RGB2HLS_f
-//{
-//    typedef float channel_type;
-//
-//    RGB2HLS_f(int _srccn, int _blueIdx, float _hrange)
-//    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange) {}
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, bidx = blueIdx, scn = srccn;
-//        float hscale = hrange*(1.f/360.f);
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, src += scn )
-//        {
-//            float b = src[bidx], g = src[1], r = src[bidx^2];
-//            float h = 0.f, s = 0.f, l;
-//            float vmin, vmax, diff;
-//
-//            vmax = vmin = r;
-//            if( vmax < g ) vmax = g;
-//            if( vmax < b ) vmax = b;
-//            if( vmin > g ) vmin = g;
-//            if( vmin > b ) vmin = b;
-//
-//            diff = vmax - vmin;
-//            l = (vmax + vmin)*0.5f;
-//
-//            if( diff > FLT_EPSILON )
-//            {
-//                s = l < 0.5f ? diff/(vmax + vmin) : diff/(2 - vmax - vmin);
-//                diff = 60.f/diff;
-//
-//                if( vmax == r )
-//                    h = (g - b)*diff;
-//                else if( vmax == g )
-//                    h = (b - r)*diff + 120.f;
-//                else
-//                    h = (r - g)*diff + 240.f;
-//
-//                if( h < 0.f ) h += 360.f;
-//            }
-//
-//            dst[i] = h*hscale;
-//            dst[i+1] = l;
-//            dst[i+2] = s;
-//        }
-//    }
-//
-//    int srccn, blueIdx;
-//    float hrange;
-//};
-//
-//
-//struct RGB2HLS_b
-//{
-//    typedef uchar channel_type;
-//
-//    RGB2HLS_b(int _srccn, int _blueIdx, int _hrange)
-//    : srccn(_srccn), cvt(3, _blueIdx, (float)_hrange) {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, j, scn = srccn;
-//        float buf[3*BLOCK_SIZE];
-//
-//        for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
-//        {
-//            int dn = std::min(n - i, (int)BLOCK_SIZE);
-//
-//            for( j = 0; j < dn*3; j += 3, src += scn )
-//            {
-//                buf[j] = src[0]*(1.f/255.f);
-//                buf[j+1] = src[1]*(1.f/255.f);
-//                buf[j+2] = src[2]*(1.f/255.f);
-//            }
-//            cvt(buf, buf, dn);
-//
-//            for( j = 0; j < dn*3; j += 3 )
-//            {
-//                dst[j] = saturate_cast<uchar>(buf[j]);
-//                dst[j+1] = saturate_cast<uchar>(buf[j+1]*255.f);
-//                dst[j+2] = saturate_cast<uchar>(buf[j+2]*255.f);
-//            }
-//        }
-//    }
-//
-//    int srccn;
-//    RGB2HLS_f cvt;
-//};
-//
-//
-//struct HLS2RGB_f
-//{
-//    typedef float channel_type;
-//
-//    HLS2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-//    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {}
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, bidx = blueIdx, dcn = dstcn;
-//        float _hscale = hscale;
-//        float alpha = ColorChannel<float>::max();
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, dst += dcn )
-//        {
-//            float h = src[i], l = src[i+1], s = src[i+2];
-//            float b, g, r;
-//
-//            if( s == 0 )
-//                b = g = r = l;
-//            else
-//            {
-//                static const int sector_data[][3]=
-//                {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
-//                float tab[4];
-//                int sector;
-//
-//                float p2 = l <= 0.5f ? l*(1 + s) : l + s - l*s;
-//                float p1 = 2*l - p2;
-//
-//                h *= _hscale;
-//                if( h < 0 )
-//                    do h += 6; while( h < 0 );
-//                else if( h >= 6 )
-//                    do h -= 6; while( h >= 6 );
-//
-//                assert( 0 <= h && h < 6 );
-//                sector = cvFloor(h);
-//                h -= sector;
-//
-//                tab[0] = p2;
-//                tab[1] = p1;
-//                tab[2] = p1 + (p2 - p1)*(1-h);
-//                tab[3] = p1 + (p2 - p1)*h;
-//
-//                b = tab[sector_data[sector][0]];
-//                g = tab[sector_data[sector][1]];
-//                r = tab[sector_data[sector][2]];
-//            }
-//
-//            dst[bidx] = b;
-//            dst[1] = g;
-//            dst[bidx^2] = r;
-//            if( dcn == 4 )
-//                dst[3] = alpha;
-//        }
-//    }
-//
-//    int dstcn, blueIdx;
-//    float hscale;
-//};
-//
-//
-//struct HLS2RGB_b
-//{
-//    typedef uchar channel_type;
-//
-//    HLS2RGB_b(int _dstcn, int _blueIdx, int _hrange)
-//    : dstcn(_dstcn), cvt(3, _blueIdx, _hrange)
-//    {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, j, dcn = dstcn;
-//        uchar alpha = ColorChannel<uchar>::max();
-//        float buf[3*BLOCK_SIZE];
-//
-//        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
-//        {
-//            int dn = std::min(n - i, (int)BLOCK_SIZE);
-//
-//            for( j = 0; j < dn*3; j += 3 )
-//            {
-//                buf[j] = src[j];
-//                buf[j+1] = src[j+1]*(1.f/255.f);
-//                buf[j+2] = src[j+2]*(1.f/255.f);
-//            }
-//            cvt(buf, buf, dn);
-//
-//            for( j = 0; j < dn*3; j += 3, dst += dcn )
-//            {
-//                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
-//                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
-//                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
-//                if( dcn == 4 )
-//                    dst[3] = alpha;
-//            }
-//        }
-//    }
-//
-//    int dstcn;
-//    HLS2RGB_f cvt;
-//};
-//
-//
-/////////////////////////////////////// RGB <-> L*a*b* /////////////////////////////////////
-//
-//static const float D65[] = { 0.950456f, 1.f, 1.088754f };
-//
-//enum { LAB_CBRT_TAB_SIZE = 1024, GAMMA_TAB_SIZE = 1024 };
-//static float LabCbrtTab[LAB_CBRT_TAB_SIZE*4];
-//static const float LabCbrtTabScale = LAB_CBRT_TAB_SIZE/1.5f;
-//
-//static float sRGBGammaTab[GAMMA_TAB_SIZE*4], sRGBInvGammaTab[GAMMA_TAB_SIZE*4];
-//static const float GammaTabScale = (float)GAMMA_TAB_SIZE;
-//
-//static unsigned short sRGBGammaTab_b[256], linearGammaTab_b[256];
-//#undef lab_shift
-//#define lab_shift xyz_shift
-//#define gamma_shift 3
-//#define lab_shift2 (lab_shift + gamma_shift)
-//#define LAB_CBRT_TAB_SIZE_B (256*3/2*(1<<gamma_shift))
-//static unsigned short LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
-//
-//static void initLabTabs()
-//{
-//    static bool initialized = false;
-//    if(!initialized)
-//    {
-//        float f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE], ig[GAMMA_TAB_SIZE], scale = 1.f/LabCbrtTabScale;
-//        int i;
-//        for(i = 0; i <= LAB_CBRT_TAB_SIZE; i++)
-//        {
-//            float x = i*scale;
-//            f[i] = x < 0.008856f ? x*7.787f + 0.13793103448275862f : cvCbrt(x);
-//        }
-//        splineBuild(f, LAB_CBRT_TAB_SIZE, LabCbrtTab);
-//
-//        scale = 1.f/GammaTabScale;
-//        for(i = 0; i <= GAMMA_TAB_SIZE; i++)
-//        {
-//            float x = i*scale;
-//            g[i] = x <= 0.04045f ? x*(1.f/12.92f) : (float)pow((double)(x + 0.055)*(1./1.055), 2.4);
-//            ig[i] = x <= 0.0031308 ? x*12.92f : (float)(1.055*pow((double)x, 1./2.4) - 0.055);
-//        }
-//        splineBuild(g, GAMMA_TAB_SIZE, sRGBGammaTab);
-//        splineBuild(ig, GAMMA_TAB_SIZE, sRGBInvGammaTab);
-//
-//        for(i = 0; i < 256; i++)
-//        {
-//            float x = i*(1.f/255.f);
-//            sRGBGammaTab_b[i] = saturate_cast<unsigned short>(255.f*(1 << gamma_shift)*(x <= 0.04045f ? x*(1.f/12.92f) : (float)pow((double)(x + 0.055)*(1./1.055), 2.4)));
-//            linearGammaTab_b[i] = (unsigned short)(i*(1 << gamma_shift));
-//        }
-//
-//        for(i = 0; i < LAB_CBRT_TAB_SIZE_B; i++)
-//        {
-//            float x = i*(1.f/(255.f*(1 << gamma_shift)));
-//            LabCbrtTab_b[i] = saturate_cast<unsigned short>((1 << lab_shift2)*(x < 0.008856f ? x*7.787f + 0.13793103448275862f : cvCbrt(x)));
-//        }
-//        initialized = true;
-//    }
-//}
-//
-//
-//struct RGB2Lab_b
-//{
-//    typedef uchar channel_type;
-//
-//    RGB2Lab_b(int _srccn, int blueIdx, const float* _coeffs,
-//              const float* _whitept, bool _srgb)
-//    : srccn(_srccn), srgb(_srgb)
-//    {
-//        initLabTabs();
-//
-//        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
-//        if(!_whitept) _whitept = D65;
-//        float scale[] =
-//        {
-//            (1 << lab_shift)/_whitept[0],
-//            (float)(1 << lab_shift),
-//            (1 << lab_shift)/_whitept[2]
-//        };
-//
-//        for( int i = 0; i < 3; i++ )
-//        {
-//            coeffs[i*3+(blueIdx^2)] = cvRound(_coeffs[i*3]*scale[i]);
-//            coeffs[i*3+1] = cvRound(_coeffs[i*3+1]*scale[i]);
-//            coeffs[i*3+blueIdx] = cvRound(_coeffs[i*3+2]*scale[i]);
-//            CV_Assert( coeffs[i] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-//                      coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift) );
-//        }
-//    }
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        const int Lscale = (116*255+50)/100;
-//        const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
-//        const unsigned short* tab = srgb ? sRGBGammaTab_b : linearGammaTab_b;
-//        int i, scn = srccn;
-//        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-//            C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-//            C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, src += scn )
-//        {
-//            int R = tab[src[0]], G = tab[src[1]], B = tab[src[2]];
-//            int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];
-//            int fY = LabCbrtTab_b[CV_DESCALE(R*C3 + G*C4 + B*C5, lab_shift)];
-//            int fZ = LabCbrtTab_b[CV_DESCALE(R*C6 + G*C7 + B*C8, lab_shift)];
-//
-//            int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );
-//            int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );
-//            int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );
-//
-//            dst[i] = saturate_cast<uchar>(L);
-//            dst[i+1] = saturate_cast<uchar>(a);
-//            dst[i+2] = saturate_cast<uchar>(b);
-//        }
-//    }
-//
-//    int srccn;
-//    int coeffs[9];
-//    bool srgb;
-//};
-//
-//
-//struct RGB2Lab_f
-//{
-//    typedef float channel_type;
-//
-//    RGB2Lab_f(int _srccn, int blueIdx, const float* _coeffs,
-//              const float* _whitept, bool _srgb)
-//    : srccn(_srccn), srgb(_srgb)
-//    {
-//        initLabTabs();
-//
-//        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
-//        if(!_whitept) _whitept = D65;
-//        float scale[] = { LabCbrtTabScale/_whitept[0], LabCbrtTabScale, LabCbrtTabScale/_whitept[2] };
-//
-//        for( int i = 0; i < 3; i++ )
-//        {
-//            coeffs[i*3+(blueIdx^2)] = _coeffs[i*3]*scale[i];
-//            coeffs[i*3+1] = _coeffs[i*3+1]*scale[i];
-//            coeffs[i*3+blueIdx] = _coeffs[i*3+2]*scale[i];
-//            CV_Assert( coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-//                       coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 1.5f*LabCbrtTabScale );
-//        }
-//    }
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, scn = srccn;
-//        float gscale = GammaTabScale;
-//        const float* gammaTab = srgb ? sRGBGammaTab : 0;
-//        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-//              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-//              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, src += scn )
-//        {
-//            float R = src[0], G = src[1], B = src[2];
-//            if( gammaTab )
-//            {
-//                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
-//            }
-//            float fX = splineInterpolate(R*C0 + G*C1 + B*C2, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-//            float fY = splineInterpolate(R*C3 + G*C4 + B*C5, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-//            float fZ = splineInterpolate(R*C6 + G*C7 + B*C8, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-//
-//            float L = 116.f*fY - 16.f;
-//            float a = 500.f*(fX - fY);
-//            float b = 200.f*(fY - fZ);
-//
-//            dst[i] = L; dst[i+1] = a; dst[i+2] = b;
-//        }
-//    }
-//
-//    int srccn;
-//    float coeffs[9];
-//    bool srgb;
-//};
-//
-//
-//struct Lab2RGB_f
-//{
-//    typedef float channel_type;
-//
-//    Lab2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
-//               const float* _whitept, bool _srgb )
-//    : dstcn(_dstcn), srgb(_srgb)
-//    {
-//        initLabTabs();
-//
-//        if(!_coeffs) _coeffs = XYZ2sRGB_D65;
-//        if(!_whitept) _whitept = D65;
-//
-//        for( int i = 0; i < 3; i++ )
-//        {
-//            coeffs[i+(blueIdx^2)*3] = _coeffs[i]*_whitept[i];
-//            coeffs[i+3] = _coeffs[i+3]*_whitept[i];
-//            coeffs[i+blueIdx*3] = _coeffs[i+6]*_whitept[i];
-//        }
-//    }
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, dcn = dstcn;
-//        const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
-//        float gscale = GammaTabScale;
-//        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-//              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-//              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-//        float alpha = ColorChannel<float>::max();
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, dst += dcn )
-//        {
-//            float L = src[i], a = src[i+1], b = src[i+2];
-//            float Y = (L + 16.f)*(1.f/116.f);
-//            float X = (Y + a*0.002f);
-//            float Z = (Y - b*0.005f);
-//            Y = Y*Y*Y;
-//            X = X*X*X;
-//            Z = Z*Z*Z;
-//
-//            float R = X*C0 + Y*C1 + Z*C2;
-//            float G = X*C3 + Y*C4 + Z*C5;
-//            float B = X*C6 + Y*C7 + Z*C8;
-//
-//            if( gammaTab )
-//            {
-//                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
-//            }
-//
-//            dst[0] = R; dst[1] = G; dst[2] = B;
-//            if( dcn == 4 )
-//                dst[3] = alpha;
-//        }
-//    }
-//
-//    int dstcn;
-//    float coeffs[9];
-//    bool srgb;
-//};
-//
-//
-//struct Lab2RGB_b
-//{
-//    typedef uchar channel_type;
-//
-//    Lab2RGB_b( int _dstcn, int blueIdx, const float* _coeffs,
-//               const float* _whitept, bool _srgb )
-//    : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb ) {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, j, dcn = dstcn;
-//        uchar alpha = ColorChannel<uchar>::max();
-//        float buf[3*BLOCK_SIZE];
-//
-//        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
-//        {
-//            int dn = std::min(n - i, (int)BLOCK_SIZE);
-//
-//            for( j = 0; j < dn*3; j += 3 )
-//            {
-//                buf[j] = src[j]*(100.f/255.f);
-//                buf[j+1] = (float)(src[j+1] - 128);
-//                buf[j+2] = (float)(src[j+2] - 128);
-//            }
-//            cvt(buf, buf, dn);
-//
-//            for( j = 0; j < dn*3; j += 3, dst += dcn )
-//            {
-//                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
-//                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
-//                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
-//                if( dcn == 4 )
-//                    dst[3] = alpha;
-//            }
-//        }
-//    }
-//
-//    int dstcn;
-//    Lab2RGB_f cvt;
-//};
-//
-//
-/////////////////////////////////////// RGB <-> L*u*v* /////////////////////////////////////
-//
-//struct RGB2Luv_f
-//{
-//    typedef float channel_type;
-//
-//    RGB2Luv_f( int _srccn, int blueIdx, const float* _coeffs,
-//               const float* whitept, bool _srgb )
-//    : srccn(_srccn), srgb(_srgb)
-//    {
-//        initLabTabs();
-//
-//        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
-//        if(!whitept) whitept = D65;
-//
-//        for( int i = 0; i < 3; i++ )
-//        {
-//            coeffs[i*3+(blueIdx^2)] = _coeffs[i*3];
-//            coeffs[i*3+1] = _coeffs[i*3+1];
-//            coeffs[i*3+blueIdx] = _coeffs[i*3+2];
-//            CV_Assert( coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-//                      coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 1.5f );
-//        }
-//
-//        float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
-//        un = 4*whitept[0]*d;
-//        vn = 9*whitept[1]*d;
-//
-//        CV_Assert(whitept[1] == 1.f);
-//    }
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, scn = srccn;
-//        float gscale = GammaTabScale;
-//        const float* gammaTab = srgb ? sRGBGammaTab : 0;
-//        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-//              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-//              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-//        float _un = 13*un, _vn = 13*vn;
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, src += scn )
-//        {
-//            float R = src[0], G = src[1], B = src[2];
-//            if( gammaTab )
-//            {
-//                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
-//            }
-//
-//            float X = R*C0 + G*C1 + B*C2;
-//            float Y = R*C3 + G*C4 + B*C5;
-//            float Z = R*C6 + G*C7 + B*C8;
-//
-//            float L = splineInterpolate(Y*LabCbrtTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-//            L = 116.f*L - 16.f;
-//
-//            float d = (4*13) / std::max(X + 15 * Y + 3 * Z, FLT_EPSILON);
-//            float u = L*(X*d - _un);
-//            float v = L*((9*0.25)*Y*d - _vn);
-//
-//            dst[i] = L; dst[i+1] = u; dst[i+2] = v;
-//        }
-//    }
-//
-//    int srccn;
-//    float coeffs[9], un, vn;
-//    bool srgb;
-//};
-//
-//
-//struct Luv2RGB_f
-//{
-//    typedef float channel_type;
-//
-//    Luv2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
-//              const float* whitept, bool _srgb )
-//    : dstcn(_dstcn), srgb(_srgb)
-//    {
-//        initLabTabs();
-//
-//        if(!_coeffs) _coeffs = XYZ2sRGB_D65;
-//        if(!whitept) whitept = D65;
-//
-//        for( int i = 0; i < 3; i++ )
-//        {
-//            coeffs[i+(blueIdx^2)*3] = _coeffs[i];
-//            coeffs[i+3] = _coeffs[i+3];
-//            coeffs[i+blueIdx*3] = _coeffs[i+6];
-//        }
-//
-//        float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
-//        un = 4*whitept[0]*d;
-//        vn = 9*whitept[1]*d;
-//
-//        CV_Assert(whitept[1] == 1.f);
-//    }
-//
-//    void operator()(const float* src, float* dst, int n) const
-//    {
-//        int i, dcn = dstcn;
-//        const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
-//        float gscale = GammaTabScale;
-//        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-//              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-//              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-//        float alpha = ColorChannel<float>::max();
-//        float _un = un, _vn = vn;
-//        n *= 3;
-//
-//        for( i = 0; i < n; i += 3, dst += dcn )
-//        {
-//            float L = src[i], u = src[i+1], v = src[i+2], d, X, Y, Z;
-//            Y = (L + 16.f) * (1.f/116.f);
-//            Y = Y*Y*Y;
-//            d = (1.f/13.f)/L;
-//            u = u*d + _un;
-//            v = v*d + _vn;
-//            float iv = 1.f/v;
-//            X = 2.25f * u * Y * iv ;
-//            Z = (12 - 3 * u - 20 * v) * Y * 0.25 * iv;
-//
-//            float R = X*C0 + Y*C1 + Z*C2;
-//            float G = X*C3 + Y*C4 + Z*C5;
-//            float B = X*C6 + Y*C7 + Z*C8;
-//
-//            if( gammaTab )
-//            {
-//                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-//                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
-//            }
-//
-//            dst[0] = R; dst[1] = G; dst[2] = B;
-//            if( dcn == 4 )
-//                dst[3] = alpha;
-//        }
-//    }
-//
-//    int dstcn;
-//    float coeffs[9], un, vn;
-//    bool srgb;
-//};
-//
-//
-//struct RGB2Luv_b
-//{
-//    typedef uchar channel_type;
-//
-//    RGB2Luv_b( int _srccn, int blueIdx, const float* _coeffs,
-//               const float* _whitept, bool _srgb )
-//    : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb) {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, j, scn = srccn;
-//        float buf[3*BLOCK_SIZE];
-//
-//        for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
-//        {
-//            int dn = std::min(n - i, (int)BLOCK_SIZE);
-//
-//            for( j = 0; j < dn*3; j += 3, src += scn )
-//            {
-//                buf[j] = src[0]*(1.f/255.f);
-//                buf[j+1] = (float)(src[1]*(1.f/255.f));
-//                buf[j+2] = (float)(src[2]*(1.f/255.f));
-//            }
-//            cvt(buf, buf, dn);
-//
-//            for( j = 0; j < dn*3; j += 3 )
-//            {
-//                dst[j] = saturate_cast<uchar>(buf[j]*2.55f);
-//                dst[j+1] = saturate_cast<uchar>(buf[j+1]*0.72033898305084743f + 96.525423728813564f);
-//                dst[j+2] = saturate_cast<uchar>(buf[j+2]*0.99609375f + 139.453125f);
-//            }
-//        }
-//    }
-//
-//    int srccn;
-//    RGB2Luv_f cvt;
-//};
-//
-//
-//struct Luv2RGB_b
-//{
-//    typedef uchar channel_type;
-//
-//    Luv2RGB_b( int _dstcn, int blueIdx, const float* _coeffs,
-//               const float* _whitept, bool _srgb )
-//    : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb ) {}
-//
-//    void operator()(const uchar* src, uchar* dst, int n) const
-//    {
-//        int i, j, dcn = dstcn;
-//        uchar alpha = ColorChannel<uchar>::max();
-//        float buf[3*BLOCK_SIZE];
-//
-//        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
-//        {
-//            int dn = std::min(n - i, (int)BLOCK_SIZE);
-//
-//            for( j = 0; j < dn*3; j += 3 )
-//            {
-//                buf[j] = src[j]*(100.f/255.f);
-//                buf[j+1] = (float)(src[j+1]*1.388235294117647f - 134.f);
-//                buf[j+2] = (float)(src[j+2]*1.003921568627451f - 140.f);
-//            }
-//            cvt(buf, buf, dn);
-//
-//            for( j = 0; j < dn*3; j += 3, dst += dcn )
-//            {
-//                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
-//                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
-//                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
-//                if( dcn == 4 )
-//                    dst[3] = alpha;
-//            }
-//        }
-//    }
-//
-//    int dstcn;
-//    Luv2RGB_f cvt;
-//};
-//
-//
-////////////////////////////// Bayer Pattern -> RGB conversion /////////////////////////////
-//
-//static void Bayer2RGB_8u( const Mat& srcmat, Mat& dstmat, int code )
-//{
-//    const uchar* bayer0 = srcmat.data;
-//    int bayer_step = (int)srcmat.step;
-//    uchar* dst0 = dstmat.data;
-//    int dst_step = (int)dstmat.step;
-//    Size size = srcmat.size();
-//    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-//    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
-//
-//    memset( dst0, 0, size.width*3*sizeof(dst0[0]) );
-//    memset( dst0 + (size.height - 1)*dst_step, 0, size.width*3*sizeof(dst0[0]) );
-//    dst0 += dst_step + 3 + 1;
-//    size.height -= 2;
-//    size.width -= 2;
-//
-//    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
-//    {
-//        int t0, t1;
-//        const uchar* bayer = bayer0;
-//        uchar* dst = dst0;
-//        const uchar* bayer_end = bayer + size.width;
-//
-//        dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-//            dst[size.width*3] = dst[size.width*3+1] = 0;
-//
-//        if( size.width <= 0 )
-//            continue;
-//
-//        if( start_with_green )
-//        {
-//            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
-//            t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
-//            dst[-blue] = (uchar)t0;
-//            dst[0] = bayer[bayer_step+1];
-//            dst[blue] = (uchar)t1;
-//            bayer++;
-//            dst += 3;
-//        }
-//
-//        if( blue > 0 )
-//        {
-//            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-//            {
-//                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-//                      bayer[bayer_step*2+2] + 2) >> 2;
-//                t1 = (bayer[1] + bayer[bayer_step] +
-//                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-//                dst[-1] = (uchar)t0;
-//                dst[0] = (uchar)t1;
-//                dst[1] = bayer[bayer_step+1];
-//
-//                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-//                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-//                dst[2] = (uchar)t0;
-//                dst[3] = bayer[bayer_step+2];
-//                dst[4] = (uchar)t1;
-//            }
-//        }
-//        else
-//        {
-//            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-//            {
-//                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-//                      bayer[bayer_step*2+2] + 2) >> 2;
-//                t1 = (bayer[1] + bayer[bayer_step] +
-//                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-//                dst[1] = (uchar)t0;
-//                dst[0] = (uchar)t1;
-//                dst[-1] = bayer[bayer_step+1];
-//
-//                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-//                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-//                dst[4] = (uchar)t0;
-//                dst[3] = bayer[bayer_step+2];
-//                dst[2] = (uchar)t1;
-//            }
-//        }
-//
-//        if( bayer < bayer_end )
-//        {
-//            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-//                  bayer[bayer_step*2+2] + 2) >> 2;
-//            t1 = (bayer[1] + bayer[bayer_step] +
-//                  bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-//            dst[-blue] = (uchar)t0;
-//            dst[0] = (uchar)t1;
-//            dst[blue] = bayer[bayer_step+1];
-//            bayer++;
-//            dst += 3;
-//        }
-//
-//        blue = -blue;
-//        start_with_green = !start_with_green;
-//    }
-//}
-//
-//
-///////////////////// Demosaicing using Variable Number of Gradients ///////////////////////
-//
-//static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
-//{
-//    const uchar* bayer = srcmat.data;
-//    int bstep = (int)srcmat.step;
-//    uchar* dst = dstmat.data;
-//    int dststep = (int)dstmat.step;
-//    Size size = srcmat.size();
-//
-//    int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
-//    bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
-//
-//    // for too small images use the simple interpolation algorithm
-//    if( MIN(size.width, size.height) < 8 )
-//    {
-//        Bayer2RGB_8u( srcmat, dstmat, code );
-//        return;
-//    }
-//
-//    const int brows = 3, bcn = 7;
-//    int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
-//    int i, bufstep = N7*bcn;
-//    cv::AutoBuffer<unsigned short> _buf(bufstep*brows);
-//    unsigned short* buf = (unsigned short*)_buf;
-//
-//    bayer += bstep*2;
-//
-//#if CV_SSE2
-//    bool haveSSE = cv::checkHardwareSupport(CV_CPU_SSE2);
-//    #define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
-//#endif
-//
-//    for( int y = 2; y < size.height - 4; y++ )
-//    {
-//        uchar* dstrow = dst + dststep*y + 6;
-//        const uchar* srow;
-//
-//        for( int dy = (y == 2 ? -1 : 1); dy <= 1; dy++ )
-//        {
-//            unsigned short* brow = buf + ((y + dy - 1)%brows)*bufstep + 1;
-//            srow = bayer + (y+dy)*bstep + 1;
-//
-//            for( i = 0; i < bcn; i++ )
-//                brow[N*i-1] = brow[(N-2) + N*i] = 0;
-//
-//            i = 1;
-//
-//#if CV_SSE2
-//            if( haveSSE )
-//            {
-//                __m128i z = _mm_setzero_si128();
-//                for( ; i <= N-9; i += 8, srow += 8, brow += 8 )
-//                {
-//                    __m128i s1, s2, s3, s4, s6, s7, s8, s9;
-//
-//                    s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1-bstep)),z);
-//                    s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)),z);
-//                    s3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1-bstep)),z);
-//
-//                    s4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)),z);
-//                    s6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)),z);
-//
-//                    s7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1+bstep)),z);
-//                    s8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)),z);
-//                    s9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1+bstep)),z);
-//
-//                    __m128i b0, b1, b2, b3, b4, b5, b6;
-//
-//                    b0 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s2,s8),1),
-//                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s7),
-//                                                       _mm_absdiff_epu16(s3, s9)));
-//                    b1 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s4,s6),1),
-//                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s3),
-//                                                       _mm_absdiff_epu16(s7, s9)));
-//                    b2 = _mm_slli_epi16(_mm_absdiff_epu16(s3,s7),1);
-//                    b3 = _mm_slli_epi16(_mm_absdiff_epu16(s1,s9),1);
-//
-//                    _mm_storeu_si128((__m128i*)brow, b0);
-//                    _mm_storeu_si128((__m128i*)(brow + N), b1);
-//                    _mm_storeu_si128((__m128i*)(brow + N2), b2);
-//                    _mm_storeu_si128((__m128i*)(brow + N3), b3);
-//
-//                    b4 = _mm_adds_epu16(b2,_mm_adds_epu16(_mm_absdiff_epu16(s2, s4),
-//                                                          _mm_absdiff_epu16(s6, s8)));
-//                    b5 = _mm_adds_epu16(b3,_mm_adds_epu16(_mm_absdiff_epu16(s2, s6),
-//                                                          _mm_absdiff_epu16(s4, s8)));
-//                    b6 = _mm_adds_epu16(_mm_adds_epu16(s2, s4), _mm_adds_epu16(s6, s8));
-//                    b6 = _mm_srli_epi16(b6, 1);
-//
-//                    _mm_storeu_si128((__m128i*)(brow + N4), b4);
-//                    _mm_storeu_si128((__m128i*)(brow + N5), b5);
-//                    _mm_storeu_si128((__m128i*)(brow + N6), b6);
-//                }
-//            }
-//#endif
-//
-//            for( ; i < N-1; i++, srow++, brow++ )
-//            {
-//                brow[0] = (unsigned short)(std::abs(srow[-1-bstep] - srow[-1+bstep]) +
-//                                   std::abs(srow[-bstep] - srow[+bstep])*2 +
-//                                   std::abs(srow[1-bstep] - srow[1+bstep]));
-//                brow[N] = (unsigned short)(std::abs(srow[-1-bstep] - srow[1-bstep]) +
-//                                   std::abs(srow[-1] - srow[1])*2 +
-//                                   std::abs(srow[-1+bstep] - srow[1+bstep]));
-//                brow[N2] = (unsigned short)(std::abs(srow[+1-bstep] - srow[-1+bstep])*2);
-//                brow[N3] = (unsigned short)(std::abs(srow[-1-bstep] - srow[1+bstep])*2);
-//                brow[N4] = (unsigned short)(brow[N2] + std::abs(srow[-bstep] - srow[-1]) +
-//                                    std::abs(srow[+bstep] - srow[1]));
-//                brow[N5] = (unsigned short)(brow[N3] + std::abs(srow[-bstep] - srow[1]) +
-//                                    std::abs(srow[+bstep] - srow[-1]));
-//                brow[N6] = (unsigned short)((srow[-bstep] + srow[-1] + srow[1] + srow[+bstep])>>1);
-//            }
-//        }
-//
-//        const unsigned short* brow0 = buf + ((y - 2) % brows)*bufstep + 2;
-//        const unsigned short* brow1 = buf + ((y - 1) % brows)*bufstep + 2;
-//        const unsigned short* brow2 = buf + (y % brows)*bufstep + 2;
-//        static const float scale[] = { 0.f, 0.5f, 0.25f, 0.1666666666667f, 0.125f, 0.1f, 0.08333333333f, 0.0714286f, 0.0625f };
-//        srow = bayer + y*bstep + 2;
-//        bool greenCell = greenCell0;
-//
-//        i = 2;
-//#if CV_SSE2
-//        int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
-//#else
-//        int limit = N - 2;
-//#endif
-//
-//        do
-//        {
-//            for( ; i < limit; i++, srow++, brow0++, brow1++, brow2++, dstrow += 3 )
-//            {
-//                int gradN = brow0[0] + brow1[0];
-//                int gradS = brow1[0] + brow2[0];
-//                int gradW = brow1[N-1] + brow1[N];
-//                int gradE = brow1[N] + brow1[N+1];
-//                int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
-//                int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
-//                int R, G, B;
-//
-//                if( !greenCell )
-//                {
-//                    int gradNE = brow0[N4+1] + brow1[N4];
-//                    int gradSW = brow1[N4] + brow2[N4-1];
-//                    int gradNW = brow0[N5-1] + brow1[N5];
-//                    int gradSE = brow1[N5] + brow2[N5+1];
-//
-//                    minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
-//                    maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-//                    int T = minGrad + maxGrad/2;
-//
-//                    int Rs = 0, Gs = 0, Bs = 0, ng = 0;
-//                    if( gradN < T )
-//                    {
-//                        Rs += srow[-bstep*2] + srow[0];
-//                        Gs += srow[-bstep]*2;
-//                        Bs += srow[-bstep-1] + srow[-bstep+1];
-//                        ng++;
-//                    }
-//                    if( gradS < T )
-//                    {
-//                        Rs += srow[bstep*2] + srow[0];
-//                        Gs += srow[bstep]*2;
-//                        Bs += srow[bstep-1] + srow[bstep+1];
-//                        ng++;
-//                    }
-//                    if( gradW < T )
-//                    {
-//                        Rs += srow[-2] + srow[0];
-//                        Gs += srow[-1]*2;
-//                        Bs += srow[-bstep-1] + srow[bstep-1];
-//                        ng++;
-//                    }
-//                    if( gradE < T )
-//                    {
-//                        Rs += srow[2] + srow[0];
-//                        Gs += srow[1]*2;
-//                        Bs += srow[-bstep+1] + srow[bstep+1];
-//                        ng++;
-//                    }
-//                    if( gradNE < T )
-//                    {
-//                        Rs += srow[-bstep*2+2] + srow[0];
-//                        Gs += brow0[N6+1];
-//                        Bs += srow[-bstep+1]*2;
-//                        ng++;
-//                    }
-//                    if( gradSW < T )
-//                    {
-//                        Rs += srow[bstep*2-2] + srow[0];
-//                        Gs += brow2[N6-1];
-//                        Bs += srow[bstep-1]*2;
-//                        ng++;
-//                    }
-//                    if( gradNW < T )
-//                    {
-//                        Rs += srow[-bstep*2-2] + srow[0];
-//                        Gs += brow0[N6-1];
-//                        Bs += srow[-bstep+1]*2;
-//                        ng++;
-//                    }
-//                    if( gradSE < T )
-//                    {
-//                        Rs += srow[bstep*2+2] + srow[0];
-//                        Gs += brow2[N6+1];
-//                        Bs += srow[-bstep+1]*2;
-//                        ng++;
-//                    }
-//                    R = srow[0];
-//                    G = R + cvRound((Gs - Rs)*scale[ng]);
-//                    B = R + cvRound((Bs - Rs)*scale[ng]);
-//                }
-//                else
-//                {
-//                    int gradNE = brow0[N2] + brow0[N2+1] + brow1[N2] + brow1[N2+1];
-//                    int gradSW = brow1[N2] + brow1[N2-1] + brow2[N2] + brow2[N2-1];
-//                    int gradNW = brow0[N3] + brow0[N3-1] + brow1[N3] + brow1[N3-1];
-//                    int gradSE = brow1[N3] + brow1[N3+1] + brow2[N3] + brow2[N3+1];
-//
-//                    minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
-//                    maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-//                    int T = minGrad + maxGrad/2;
-//
-//                    int Rs = 0, Gs = 0, Bs = 0, ng = 0;
-//                    if( gradN < T )
-//                    {
-//                        Rs += srow[-bstep*2-1] + srow[-bstep*2+1];
-//                        Gs += srow[-bstep*2] + srow[0];
-//                        Bs += srow[-bstep]*2;
-//                        ng++;
-//                    }
-//                    if( gradS < T )
-//                    {
-//                        Rs += srow[bstep*2-1] + srow[bstep*2+1];
-//                        Gs += srow[bstep*2] + srow[0];
-//                        Bs += srow[bstep]*2;
-//                        ng++;
-//                    }
-//                    if( gradW < T )
-//                    {
-//                        Rs += srow[-1]*2;
-//                        Gs += srow[-2] + srow[0];
-//                        Bs += srow[-bstep-2]+srow[bstep-2];
-//                        ng++;
-//                    }
-//                    if( gradE < T )
-//                    {
-//                        Rs += srow[1]*2;
-//                        Gs += srow[2] + srow[0];
-//                        Bs += srow[-bstep+2]+srow[bstep+2];
-//                        ng++;
-//                    }
-//                    if( gradNE < T )
-//                    {
-//                        Rs += srow[-bstep*2+1] + srow[1];
-//                        Gs += srow[-bstep+1]*2;
-//                        Bs += srow[-bstep] + srow[-bstep+2];
-//                        ng++;
-//                    }
-//                    if( gradSW < T )
-//                    {
-//                        Rs += srow[bstep*2-1] + srow[-1];
-//                        Gs += srow[bstep-1]*2;
-//                        Bs += srow[bstep] + srow[bstep-2];
-//                        ng++;
-//                    }
-//                    if( gradNW < T )
-//                    {
-//                        Rs += srow[-bstep*2-1] + srow[-1];
-//                        Gs += srow[-bstep-1]*2;
-//                        Bs += srow[-bstep-2]+srow[-bstep];
-//                        ng++;
-//                    }
-//                    if( gradSE < T )
-//                    {
-//                        Rs += srow[bstep*2+1] + srow[1];
-//                        Gs += srow[bstep+1]*2;
-//                        Bs += srow[bstep+2]+srow[bstep];
-//                        ng++;
-//                    }
-//                    G = srow[0];
-//                    R = G + cvRound((Rs - Gs)*scale[ng]);
-//                    B = G + cvRound((Bs - Gs)*scale[ng]);
-//                }
-//                dstrow[blueIdx] = CV_CAST_8U(B);
-//                dstrow[1] = CV_CAST_8U(G);
-//                dstrow[blueIdx^2] = CV_CAST_8U(R);
-//                greenCell = !greenCell;
-//            }
-//
-//#if CV_SSE2
-//            if( !haveSSE )
-//                break;
-//
-//            __m128i emask = _mm_set1_epi32(0x0000ffff),
-//            omask = _mm_set1_epi32(0xffff0000),
-//            z = _mm_setzero_si128();
-//            __m128 _0_5 = _mm_set1_ps(0.5f);
-//
-//            #define _mm_merge_epi16(a, b) _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask))
-//            #define _mm_cvtloepi16_ps(a)  _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(a,a), 16))
-//            #define _mm_cvthiepi16_ps(a)  _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(a,a), 16))
-//
-//            // process 8 pixels at once
-//            for( ; i <= N - 10; i += 8, srow += 8, brow0 += 8, brow1 += 8, brow2 += 8 )
-//            {
-//                __m128i gradN, gradS, gradW, gradE, gradNE, gradSW, gradNW, gradSE;
-//                gradN = _mm_adds_epu16(_mm_loadu_si128((__m128i*)brow0),
-//                                       _mm_loadu_si128((__m128i*)brow1));
-//                gradS = _mm_adds_epu16(_mm_loadu_si128((__m128i*)brow1),
-//                                       _mm_loadu_si128((__m128i*)brow2));
-//                gradW = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N-1)),
-//                                       _mm_loadu_si128((__m128i*)(brow1+N)));
-//                gradE = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N+1)),
-//                                       _mm_loadu_si128((__m128i*)(brow1+N)));
-//
-//                __m128i minGrad, maxGrad, T;
-//                minGrad = _mm_min_epi16(_mm_min_epi16(_mm_min_epi16(gradN, gradS), gradW), gradE);
-//                maxGrad = _mm_max_epi16(_mm_max_epi16(_mm_max_epi16(gradN, gradS), gradW), gradE);
-//
-//                __m128i grad0, grad1;
-//
-//                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N4+1)),
-//                                       _mm_loadu_si128((__m128i*)(brow1+N4)));
-//                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N2)),
-//                                                      _mm_loadu_si128((__m128i*)(brow0+N2+1))),
-//                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N2)),
-//                                                      _mm_loadu_si128((__m128i*)(brow1+N2+1))));
-//                gradNE = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
-//
-//                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N4-1)),
-//                                       _mm_loadu_si128((__m128i*)(brow1+N4)));
-//                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N2)),
-//                                                      _mm_loadu_si128((__m128i*)(brow2+N2-1))),
-//                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N2)),
-//                                                      _mm_loadu_si128((__m128i*)(brow1+N2-1))));
-//                gradSW = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
-//
-//                minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNE), gradSW);
-//                maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNE), gradSW);
-//
-//                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N5-1)),
-//                                       _mm_loadu_si128((__m128i*)(brow1+N5)));
-//                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N3)),
-//                                                      _mm_loadu_si128((__m128i*)(brow0+N3-1))),
-//                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N3)),
-//                                                      _mm_loadu_si128((__m128i*)(brow1+N3-1))));
-//                gradNW = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
-//
-//                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N5+1)),
-//                                       _mm_loadu_si128((__m128i*)(brow1+N5)));
-//                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N3)),
-//                                                      _mm_loadu_si128((__m128i*)(brow2+N3+1))),
-//                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N3)),
-//                                                      _mm_loadu_si128((__m128i*)(brow1+N3+1))));
-//                gradSE = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
-//
-//                minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNW), gradSE);
-//                maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNW), gradSE);
-//
-//                T = _mm_add_epi16(_mm_srli_epi16(maxGrad, 1), minGrad);
-//                __m128i RGs = z, GRs = z, Bs = z, ng = z, mask;
-//
-//                __m128i t0, t1, x0, x1, x2, x3, x4, x5, x6, x7, x8,
-//                x9, x10, x11, x12, x13, x14, x15, x16;
-//
-//                x0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)srow), z);
-//
-//                x1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep-1)), z);
-//                x2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2-1)), z);
-//                x3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)), z);
-//                x4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2+1)), z);
-//                x5 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep+1)), z);
-//                x6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep+2)), z);
-//                x7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)), z);
-//                x8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep+2)), z);
-//                x9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep+1)), z);
-//                x10 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2+1)), z);
-//                x11 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)), z);
-//                x12 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2-1)), z);
-//                x13 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep-1)), z);
-//                x14 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep-2)), z);
-//                x15 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)), z);
-//                x16 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep-2)), z);
-//
-//                // gradN
-//                mask = _mm_cmpgt_epi16(T, gradN);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x3, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x2,x4)), mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x1,x5), t0), mask));
-//
-//                // gradNE
-//                mask = _mm_cmpgt_epi16(T, gradNE);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x5, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2+2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6+1)),
-//                                                                        _mm_adds_epu16(x4,x7)), mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x3,x6)), mask));
-//
-//                // gradE
-//                mask = _mm_cmpgt_epi16(T, gradE);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x7, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(t0, mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x5,x9),
-//                                                                      _mm_adds_epu16(x6,x8)), mask));
-//
-//                // gradSE
-//                mask = _mm_cmpgt_epi16(T, gradSE);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x9, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2+2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6+1)),
-//                                                                        _mm_adds_epu16(x7,x10)), mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x8,x11)), mask));
-//
-//                // gradS
-//                mask = _mm_cmpgt_epi16(T, gradS);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x11, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x10,x12)), mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x9,x13), t0), mask));
-//
-//                // gradSW
-//                mask = _mm_cmpgt_epi16(T, gradSW);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x13, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2-2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6-1)),
-//                                                                        _mm_adds_epu16(x12,x15)), mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x11,x14)), mask));
-//
-//                // gradW
-//                mask = _mm_cmpgt_epi16(T, gradW);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                t0 = _mm_slli_epi16(x15, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(t0, mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x1,x13),
-//                                                                      _mm_adds_epu16(x14,x16)), mask));
-//
-//                // gradNW
-//                mask = _mm_cmpgt_epi16(T, gradNW);
-//                ng = _mm_sub_epi16(ng, mask);
-//
-//                __m128 ngf0, ngf1;
-//                ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
-//                ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
-//
-//                t0 = _mm_slli_epi16(x1, 1);
-//                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2-2)), z), x0);
-//
-//                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-//                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6-1)),
-//                                                                        _mm_adds_epu16(x2,x15)), mask));
-//                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x3,x16)), mask));
-//
-//                // now interpolate r, g & b
-//                t0 = _mm_sub_epi16(GRs, RGs);
-//                t1 = _mm_sub_epi16(Bs, RGs);
-//
-//                t0 = _mm_add_epi16(x0, _mm_packs_epi32(
-//                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t0), ngf0)),
-//                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvthiepi16_ps(t0), ngf1))));
-//
-//                t1 = _mm_add_epi16(x0, _mm_packs_epi32(
-//                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t1), ngf0)),
-//                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvthiepi16_ps(t1), ngf1))));
-//
-//                x1 = _mm_merge_epi16(x0, t0);
-//                x2 = _mm_merge_epi16(t0, x0);
-//
-//                uchar R[8], G[8], B[8];
-//
-//                _mm_storel_epi64(blueIdx ? (__m128i*)B : (__m128i*)R, _mm_packus_epi16(x1, z));
-//                _mm_storel_epi64((__m128i*)G, _mm_packus_epi16(x2, z));
-//                _mm_storel_epi64(blueIdx ? (__m128i*)R : (__m128i*)B, _mm_packus_epi16(t1, z));
-//
-//                for( int j = 0; j < 8; j++, dstrow += 3 )
-//                {
-//                    dstrow[0] = B[j]; dstrow[1] = G[j]; dstrow[2] = R[j];
-//                }
-//            }
-//#endif
-//
-//            limit = N - 2;
-//        }
-//        while( i < N - 2 );
-//
-//        for( i = 0; i < 6; i++ )
-//        {
-//            dst[dststep*y + 5 - i] = dst[dststep*y + 8 - i];
-//            dst[dststep*y + (N - 2)*3 + i] = dst[dststep*y + (N - 3)*3 + i];
-//        }
-//
-//        greenCell0 = !greenCell0;
-//        blueIdx ^= 2;
-//    }
-//
-//    for( i = 0; i < size.width*3; i++ )
-//    {
-//        dst[i] = dst[i + dststep] = dst[i + dststep*2];
-//        dst[i + dststep*(size.height-4)] =
-//        dst[i + dststep*(size.height-3)] =
-//        dst[i + dststep*(size.height-2)] =
-//        dst[i + dststep*(size.height-1)] = dst[i + dststep*(size.height-5)];
-//    }
-//}
+
+namespace imgproc
+{
+    template<typename T, int HR> struct RGB2HLSConvertor;
+    template<int HR> struct RGB2HLSConvertor<float, HR>
+    {
+        template <typename D>
+        static __device__ void cvt(const float* src, D& dst, int bidx)
+        {
+            const float hscale = HR * (1.f/360.f);
+
+            float b = src[bidx], g = src[1], r = src[bidx^2];
+            float h = 0.f, s = 0.f, l;
+            float vmin, vmax, diff;
+
+            vmax = vmin = r;
+            vmax = fmax(vmax, g);
+            vmax = fmax(vmax, b);
+            vmin = fmin(vmin, g);
+            vmin = fmin(vmin, b);
+
+            diff = vmax - vmin;
+            l = (vmax + vmin) * 0.5f;
+
+            if (diff > FLT_EPSILON)
+            {
+                s = l < 0.5f ? diff / (vmax + vmin) : diff / (2.0f - vmax - vmin);
+                diff = 60.f / diff;
+
+                if (vmax == r)
+                    h = (g - b)*diff;
+                else if (vmax == g)
+                    h = (b - r)*diff + 120.f;
+                else
+                    h = (r - g)*diff + 240.f;
+
+                if (h < 0.f) h += 360.f;
+            }
+
+            dst.x = h * hscale;
+            dst.y = l;
+            dst.z = s;
+        }
+    };
+    template<int HR> struct RGB2HLSConvertor<uchar, HR>
+    {
+        template <typename D>
+        static __device__ void cvt(const uchar* src, D& dst, int bidx)
+        {
+            float3 buf;
+
+            buf.x = src[0]*(1.f/255.f);
+            buf.y = src[1]*(1.f/255.f);
+            buf.z = src[2]*(1.f/255.f);
+
+            RGB2HLSConvertor<float, HR>::cvt(&buf.x, buf, bidx);
+
+            dst.x = saturate_cast<uchar>(buf.x);
+            dst.y = saturate_cast<uchar>(buf.y*255.f);
+            dst.z = saturate_cast<uchar>(buf.z*255.f);
+        }
+    };
+
+    template <int SRCCN, int DSTCN, int HR, typename T>
+    __global__ void RGB2HLS(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
+    {
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
+
+		const int x = blockDim.x * blockIdx.x + threadIdx.x;
+		const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
+
+            dst_t dst;
+            RGB2HLSConvertor<T, HR>::cvt(&src.x, dst, bidx);
+            
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
+        }
+    }
+    
+    __constant__ int cHlsSectorData[6][3];
+
+    template<typename T, int HR> struct HLS2RGBConvertor;    
+    template<int HR> struct HLS2RGBConvertor<float, HR>
+    {
+        template <typename T>
+        static __device__ void cvt(const T& src, float* dst, int bidx)
+        {
+            const float hscale = 6.0f / HR;
+
+            float h = src.x, l = src.y, s = src.z;
+            float b, g, r;
+
+            if (s == 0)
+                b = g = r = l;
+            else
+            {
+                float tab[4];
+                int sector;
+
+                float p2 = l <= 0.5f ? l * (1 + s) : l + s - l * s;
+                float p1 = 2 * l - p2;
+
+                h *= hscale;
+
+                if( h < 0 )
+                    do h += 6; while( h < 0 );
+                else if( h >= 6 )
+                    do h -= 6; while( h >= 6 );
+
+                sector = __float2int_rd(h);
+                h -= sector;
+
+                tab[0] = p2;
+                tab[1] = p1;
+                tab[2] = p1 + (p2 - p1) * (1 - h);
+                tab[3] = p1 + (p2 - p1) * h;
+
+                b = tab[cHlsSectorData[sector][0]];
+                g = tab[cHlsSectorData[sector][1]];
+                r = tab[cHlsSectorData[sector][2]];
+            }
+
+            dst[bidx] = b;
+            dst[1] = g;
+            dst[bidx^2] = r;
+        }
+    };
+    template<int HR> struct HLS2RGBConvertor<uchar, HR>
+    {
+        template <typename T>
+        static __device__ void cvt(const T& src, uchar* dst, int bidx)
+        {
+            float3 buf;
+
+            buf.x = src.x;
+            buf.y = src.y*(1.f/255.f);
+            buf.z = src.z*(1.f/255.f);
+
+            HLS2RGBConvertor<float, HR>::cvt(buf, &buf.x, bidx);
+
+            dst[0] = saturate_cast<uchar>(buf.x*255.f);
+            dst[1] = saturate_cast<uchar>(buf.y*255.f);
+            dst[2] = saturate_cast<uchar>(buf.z*255.f);
+        }
+    };
+
+    template <int SRCCN, int DSTCN, int HR, typename T>
+    __global__ void HLS2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
+    {
+        typedef typename TypeVec<T, SRCCN>::vec_t src_t;
+        typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
+
+		const int x = blockDim.x * blockIdx.x + threadIdx.x;
+		const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (y < rows && x < cols)
+        {
+            src_t src = *(const src_t*)(src_ + y * src_step + x * SRCCN * sizeof(T));
+
+            dst_t dst;
+            HLS2RGBConvertor<T, HR>::cvt(src, &dst.x, bidx);
+            setAlpha(dst, ColorChannel<T>::max());
+            
+            *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
+        }
+    }
+}
+
+namespace cv { namespace gpu { namespace improc
+{
+    template <typename T, int SRCCN, int DSTCN>
+    void RGB2HLS_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        if (hrange == 180)
+            imgproc::RGB2HLS<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+        else
+            imgproc::RGB2HLS<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void RGB2HLS_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*RGB2HLS_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const RGB2HLS_caller_t RGB2HLS_callers[2][2] = 
+        {
+            {RGB2HLS_caller<uchar, 3, 3>, RGB2HLS_caller<uchar, 3, 4>},
+            {RGB2HLS_caller<uchar, 4, 3>, RGB2HLS_caller<uchar, 4, 4>}
+        };
+
+        RGB2HLS_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+
+    void RGB2HLS_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*RGB2HLS_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const RGB2HLS_caller_t RGB2HLS_callers[2][2] = 
+        {
+            {RGB2HLS_caller<float, 3, 3>, RGB2HLS_caller<float, 3, 4>},
+            {RGB2HLS_caller<float, 4, 3>, RGB2HLS_caller<float, 4, 4>}
+        };
+        
+        RGB2HLS_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+
+    
+    template <typename T, int SRCCN, int DSTCN>
+    void HLS2RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(src.cols, threads.x);
+        grid.y = divUp(src.rows, threads.y);
+
+        if (hrange == 180)
+            imgproc::HLS2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+        else
+            imgproc::HLS2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+                dst.ptr, dst.step, src.rows, src.cols, bidx);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    void HLS2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*HLS2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const HLS2RGB_caller_t HLS2RGB_callers[2][2] = 
+        {
+            {HLS2RGB_caller<uchar, 3, 3>, HLS2RGB_caller<uchar, 3, 4>},
+            {HLS2RGB_caller<uchar, 4, 3>, HLS2RGB_caller<uchar, 4, 4>}
+        };
+        
+        static const int sector_data[][3]=
+            {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
+
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHlsSectorData, sector_data, sizeof(sector_data)) );
+
+        HLS2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+
+    void HLS2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream)
+    {
+        typedef void (*HLS2RGB_caller_t)(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream);
+        static const HLS2RGB_caller_t HLS2RGB_callers[2][2] = 
+        {
+            {HLS2RGB_caller<float, 3, 3>, HLS2RGB_caller<float, 3, 4>},
+            {HLS2RGB_caller<float, 4, 3>, HLS2RGB_caller<float, 4, 4>}
+        };
+        
+        static const int sector_data[][3]=
+            {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
+
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHlsSectorData, sector_data, sizeof(sector_data)) );
+                
+        HLS2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
+    }
+}}}
