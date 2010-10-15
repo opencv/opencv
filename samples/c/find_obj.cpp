@@ -171,7 +171,7 @@ locatePlanarObject( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors
     findPairs( objectKeypoints, objectDescriptors, imageKeypoints, imageDescriptors, ptpairs );
 #endif
 
-    n = ptpairs.size()/2;
+    n = (int)(ptpairs.size()/2);
     if( n < 4 )
         return 0;
 

@@ -1,5 +1,5 @@
-#ifndef SVM_ERROR
-#define SVM_ERROR
+#ifndef LSVM_ERROR
+#define LSVM_ERROR
 
 #define LATENT_SVM_OK 0
 #define DISTANCE_TRANSFORM_OK 1

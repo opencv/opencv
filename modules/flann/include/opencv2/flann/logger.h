@@ -40,7 +40,7 @@ using namespace std;
 namespace cvflann
 {
 
-class Logger
+class CV_EXPORTS Logger
 {
     FILE* stream;
     int logLevel;
@@ -84,7 +84,7 @@ public:
     int info(const char* fmt, ...);
 };
 
-extern Logger logger;
+CV_EXPORTS Logger& logger();
 
 } // namespace cvflann
 

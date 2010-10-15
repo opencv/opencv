@@ -58,12 +58,12 @@ struct CompositeIndexParams : public IndexParams {
 
 	void print() const
 	{
-		logger.info("Index type: %d\n",(int)algorithm);
-		logger.info("Trees: %d\n", trees);
-		logger.info("Branching: %d\n", branching);
-		logger.info("Iterations: %d\n", iterations);
-		logger.info("Centres initialisation: %d\n", centers_init);
-		logger.info("Cluster boundary weight: %g\n", cb_index);
+		logger().info("Index type: %d\n",(int)algorithm);
+		logger().info("Trees: %d\n", trees);
+		logger().info("Branching: %d\n", branching);
+		logger().info("Iterations: %d\n", iterations);
+		logger().info("Centres initialisation: %d\n", centers_init);
+		logger().info("Cluster boundary weight: %g\n", cb_index);
 	}
 };
 
@@ -124,9 +124,9 @@ public:
 
 	void buildIndex()
 	{
-		logger.info("Building kmeans tree...\n");
+		logger().info("Building kmeans tree...\n");
 		kmeans->buildIndex();
-		logger.info("Building kdtree tree...\n");
+		logger().info("Building kdtree tree...\n");
 		kdtree->buildIndex();
 	}
 

@@ -70,7 +70,7 @@ T* allocate(size_t count = 1)
 const size_t     WORDSIZE=16;
 const  size_t     BLOCKSIZE=8192;
 
-class PooledAllocator
+class CV_EXPORTS PooledAllocator
 {
 	/* We maintain memory alignment to word boundaries by requiring that all
 		allocations be in multiples of the machine wordsize.  */

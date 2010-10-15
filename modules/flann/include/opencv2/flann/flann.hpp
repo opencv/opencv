@@ -74,7 +74,7 @@ using ::cvflann::SearchParams;
 
 
 template <typename T>
-class Index_ {
+class CV_EXPORTS Index_ {
 	::cvflann::Index<T>* nnIndex;
 
 public:

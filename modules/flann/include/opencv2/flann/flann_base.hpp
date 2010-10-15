@@ -55,7 +55,7 @@ Sets the log level used for all flann functions
 Params:
     level = verbosity level
 */
-void log_verbosity(int level);
+CV_EXPORTS void log_verbosity(int level);
 
 
 /**
@@ -63,10 +63,10 @@ void log_verbosity(int level);
  * If distance type specified is MINKOWSKI, the second argument
  * specifies which order the minkowski distance should have.
  */
-void set_distance_type(flann_distance_t distance_type, int order);
+CV_EXPORTS void set_distance_type(flann_distance_t distance_type, int order);
 
 
-struct SavedIndexParams : public IndexParams {
+struct CV_EXPORTS SavedIndexParams : public IndexParams {
 	SavedIndexParams(std::string filename_) : IndexParams(SAVED), filename(filename_) {}
 
 	std::string filename;		// filename of the stored index
@@ -75,13 +75,13 @@ struct SavedIndexParams : public IndexParams {
 
 	void print() const
 	{
-		logger.info("Index type: %d\n",(int)algorithm);
-		logger.info("Filename: %s\n", filename.c_str());
+		logger().info("Index type: %d\n",(int)algorithm);
+		logger().info("Filename: %s\n", filename.c_str());
 	}
 };
 
 template<typename T>
-class Index {
+class CV_EXPORTS Index {
 	NNIndex<T>* nnIndex;
     bool built;
 
@@ -178,7 +178,7 @@ void Index<T>::knnSearch(const Matrix<T>& queries, Matrix<int>& indices, Matrix<
 
     for (size_t i = 0; i < queries.rows; i++) {
         T* target = queries[i];
-        resultSet.init(target, queries.cols);
+        resultSet.init(target, (int)queries.cols);
 
         nnIndex->findNeighbors(resultSet, target, searchParams);
 
@@ -202,7 +202,7 @@ int Index<T>::radiusSearch(const Matrix<T>& query, Matrix<int>& indices, Matrix<
 	assert(query.cols==nnIndex->veclen());
 
 	RadiusResultSet<T> resultSet(radius);
-	resultSet.init(query.data, query.cols);
+	resultSet.init(query.data, (int)query.cols);
 	nnIndex->findNeighbors(resultSet,query.data,searchParams);
 
 	// TODO: optimise here
@@ -217,7 +217,7 @@ int Index<T>::radiusSearch(const Matrix<T>& query, Matrix<int>& indices, Matrix<
 		dists[0][i] = distances[i];
 	}
 
-	return count_nn;
+	return (int)count_nn;
 }
 
 

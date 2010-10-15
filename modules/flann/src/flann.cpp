@@ -26,19 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#include <cstdio>
-#include <cstdarg>
-#include <sstream>
-
-#include "opencv2/flann/dist.h"
-#include "opencv2/flann/index_testing.h"
-#include "opencv2/flann/logger.h"
-#include "opencv2/flann/logger.h"
-#include "opencv2/flann/saving.h"
-#include "opencv2/flann/general.h"
-
-// index types
-#include "opencv2/flann/all_indices.h"
+#include "precomp.hpp"
 
 namespace cvflann
 {
@@ -47,17 +35,20 @@ namespace cvflann
 /** Global variable indicating the distance metric
  * to be used.
  */
-flann_distance_t flann_distance_type = EUCLIDEAN;
+flann_distance_t flann_distance_type_ = EUCLIDEAN;
+flann_distance_t flann_distance_type() { return flann_distance_type_; }
 
 /**
  * Zero iterator that emulates a zero feature.
  */
-ZeroIterator<float> zero;
+ZeroIterator<float> zero_;
+ZeroIterator<float>& zero() { return zero_; }
 
 /**
  * Order of Minkowski distance to use.
  */
-int flann_minkowski_order;
+int flann_minkowski_order_;
+int flann_minkowski_order() { return flann_minkowski_order_; }
 
 
 double euclidean_dist(const unsigned char* first1, const unsigned char* last1, unsigned char* first2, double acc)
@@ -98,9 +89,11 @@ int countCorrectMatches(int* neighbors, int* groundTruth, int n)
     return count;
 }
 
-// ----------------------- logger.cpp ---------------------------
+// ----------------------- logger().cpp ---------------------------
 
-Logger logger;
+Logger logger_;
+
+Logger& logger() { return logger_; }
 
 int Logger::log(int level, const char* fmt, ...)
 {
@@ -163,20 +156,22 @@ int rand_int(int high, int low)
 
 // ----------------------- saving.cpp ---------------------------
 
-const char FLANN_SIGNATURE[] = "FLANN_INDEX";
-const char FLANN_VERSION[] = "1.5.0";
+const char FLANN_SIGNATURE_[] = "FLANN_INDEX";
+const char FLANN_VERSION_[] = "1.5.0";
 
+const char* FLANN_SIGNATURE() { return FLANN_SIGNATURE_; }
+const char* FLANN_VERSION() { return FLANN_VERSION_; }
 
 IndexHeader load_header(FILE* stream)
 {
 	IndexHeader header;
-	int read_size = fread(&header,sizeof(header),1,stream);
+	size_t read_size = fread(&header,sizeof(header),1,stream);
 
 	if (read_size!=1) {
 		throw FLANNException("Invalid index file, cannot read");
 	}
 
-	if (strcmp(header.signature,FLANN_SIGNATURE)!=0) {
+	if (strcmp(header.signature,FLANN_SIGNATURE())!=0) {
 		throw FLANNException("Invalid index file, wrong signature");
 	}
 
@@ -190,14 +185,14 @@ IndexHeader load_header(FILE* stream)
 void log_verbosity(int level)
 {
     if (level>=0) {
-        logger.setLevel(level);
+        logger().setLevel(level);
     }
 }
 
 void set_distance_type(flann_distance_t distance_type, int order)
 {
-	flann_distance_type = distance_type;
-	flann_minkowski_order = order;
+	flann_distance_type_ = distance_type;
+	flann_minkowski_order_ = order;
 }
 
 class StaticInit

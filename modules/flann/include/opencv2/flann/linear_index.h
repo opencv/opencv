@@ -38,14 +38,14 @@
 namespace cvflann
 {
 
-struct LinearIndexParams : public IndexParams {
+struct CV_EXPORTS LinearIndexParams : public IndexParams {
 	LinearIndexParams() : IndexParams(LINEAR) {};
 
 	flann_algorithm_t getIndexType() const { return algorithm; }
 
 	void print() const
 	{
-		logger.info("Index type: %d\n",(int)algorithm);
+		logger().info("Index type: %d\n",(int)algorithm);
 	}
 };
 

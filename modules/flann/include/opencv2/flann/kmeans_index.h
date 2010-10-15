@@ -52,7 +52,7 @@ namespace cvflann
 {
 
 
-struct KMeansIndexParams : public IndexParams {
+struct CV_EXPORTS KMeansIndexParams : public IndexParams {
 	KMeansIndexParams(int branching_ = 32, int iterations_ = 11,
 			flann_centers_init_t centers_init_ = CENTERS_RANDOM, float cb_index_ = 0.2 ) :
 		IndexParams(KMEANS),
@@ -70,11 +70,11 @@ struct KMeansIndexParams : public IndexParams {
 
 	void print() const
 	{
-		logger.info("Index type: %d\n",(int)algorithm);
-		logger.info("Branching: %d\n", branching);
-		logger.info("Iterations: %d\n", iterations);
-		logger.info("Centres initialisation: %d\n", centers_init);
-		logger.info("Cluster boundary weight: %g\n", cb_index);
+		logger().info("Index type: %d\n",(int)algorithm);
+		logger().info("Branching: %d\n", branching);
+		logger().info("Iterations: %d\n", iterations);
+		logger().info("Centres initialisation: %d\n", centers_init);
+		logger().info("Cluster boundary weight: %g\n", cb_index);
 	}
 
 };
@@ -578,7 +578,7 @@ public:
 
         int clusterCount = getMinVarianceClusters(root, clusters, numClusters, variance);
 
-//         logger.info("Clusters requested: %d, returning %d\n",numClusters, clusterCount);
+//         logger().info("Clusters requested: %d, returning %d\n",numClusters, clusterCount);
 
 
         for (int i=0;i<clusterCount;++i) {
@@ -671,13 +671,13 @@ private:
             for (size_t j=0;j<veclen_;++j) {
                 mean[j] += vec[j];
             }
-			variance += flann_dist(vec,vec+veclen_,zero);
+			variance += flann_dist(vec,vec+veclen_,zero());
 		}
 		for (size_t j=0;j<veclen_;++j) {
 			mean[j] /= size_;
 		}
 		variance /= size_;
-		variance -= flann_dist(mean,mean+veclen_,zero);
+		variance -= flann_dist(mean,mean+veclen_,zero());
 
 		DIST_TYPE tmp = 0;
 		for (int i=0;i<indices_length;++i) {
@@ -856,7 +856,7 @@ private:
 			float mean_radius =0;
 			for (int i=0;i<indices_length;++i) {
 				if (belongs_to[i]==c) {
-					float d = flann_dist(dataset[indices[i]],dataset[indices[i]]+veclen_,zero);
+					float d = flann_dist(dataset[indices[i]],dataset[indices[i]]+veclen_,zero());
 					variance += d;
 					mean_radius += sqrt(d);
 					swap(indices[i],indices[end]);
@@ -866,7 +866,7 @@ private:
 			}
 			variance /= s;
 			mean_radius /= s;
-			variance -= flann_dist(centers[c],centers[c]+veclen_,zero);
+			variance -= flann_dist(centers[c],centers[c]+veclen_,zero());
 
 			node->childs[c] = pool.allocate<KMeansNodeSt>();
 			node->childs[c]->radius = radiuses[c];

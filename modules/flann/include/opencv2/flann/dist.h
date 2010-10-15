@@ -82,7 +82,7 @@ double euclidean_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, doubl
 	return distsq;
 }
 
-double euclidean_dist(const unsigned char* first1, const unsigned char* last1, unsigned char* first2, double acc);
+CV_EXPORTS double euclidean_dist(const unsigned char* first1, const unsigned char* last1, unsigned char* first2, double acc);
 
 
 /**
@@ -117,7 +117,7 @@ double manhattan_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, doubl
 }
 
 
-extern int flann_minkowski_order;
+CV_EXPORTS int flann_minkowski_order();
 /**
  *  Compute the Minkowski (L_p) distance between two vectors.
  *
@@ -134,7 +134,7 @@ double minkowski_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, doubl
 	double diff0, diff1, diff2, diff3;
 	Iterator1 lastgroup = last1 - 3;
 
-	int p = flann_minkowski_order;
+	int p = flann_minkowski_order();
 
 	/* Process 4 items with each loop for efficiency. */
 	while (first1 < lastgroup) {
@@ -293,7 +293,7 @@ double kl_divergence(Iterator1 first1, Iterator1 last1, Iterator2 first2, double
 
 
 
-extern flann_distance_t flann_distance_type;
+CV_EXPORTS flann_distance_t flann_distance_type();
 /**
  * Custom distance function. The distance computed is dependent on the value
  * of the 'flann_distance_type' global variable.
@@ -304,7 +304,7 @@ extern flann_distance_t flann_distance_type;
 template <typename Iterator1, typename Iterator2>
 double custom_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
 {
-	switch (flann_distance_type) {
+	switch (flann_distance_type()) {
 	case EUCLIDEAN:
 		return euclidean_dist(first1, last1, first2, acc);
 	case MANHATTAN:
@@ -353,7 +353,8 @@ struct ZeroIterator {
 	}
 
 };
-extern ZeroIterator<float> zero;
+
+CV_EXPORTS ZeroIterator<float>& zero();
 
 } // namespace cvflann
 

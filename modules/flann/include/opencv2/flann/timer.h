@@ -42,7 +42,7 @@ namespace cvflann
  *
  * Can be used to time portions of code.
  */
-class StartStopTimer
+class CV_EXPORTS StartStopTimer
 {
     clock_t startTime;
 

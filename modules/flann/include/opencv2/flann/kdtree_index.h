@@ -51,7 +51,7 @@ using namespace std;
 namespace cvflann
 {
 
-struct KDTreeIndexParams : public IndexParams {
+struct CV_EXPORTS KDTreeIndexParams : public IndexParams {
 	KDTreeIndexParams(int trees_ = 4) : IndexParams(KDTREE), trees(trees_) {};
 
 	int trees;                 // number of randomized trees to use (for kdtree)
@@ -60,8 +60,8 @@ struct KDTreeIndexParams : public IndexParams {
 
 	void print() const
 	{
-		logger.info("Index type: %d\n",(int)algorithm);
-		logger.info("Trees: %d\n", trees);
+		logger().info("Index type: %d\n",(int)algorithm);
+		logger().info("Trees: %d\n", trees);
 	}
 
 };

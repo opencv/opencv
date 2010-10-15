@@ -43,17 +43,17 @@ namespace cvflann
 /**
  * Seeds the random number generator
  */
-void seed_random(unsigned int seed);
+CV_EXPORTS void seed_random(unsigned int seed);
 
 /*
  * Generates a random double value.
  */
-double rand_double(double high = 1.0, double low=0);
+CV_EXPORTS double rand_double(double high = 1.0, double low=0);
 
 /*
  * Generates a random integer value.
  */
-int rand_int(int high = RAND_MAX, int low = 0);
+CV_EXPORTS int rand_int(int high = RAND_MAX, int low = 0);
 
 
 /**
@@ -63,7 +63,7 @@ int rand_int(int high = RAND_MAX, int low = 0);
  * TODO: improve on this to use a generator function instead of an
  * array of randomly permuted numbers
  */
-class UniqueRandom
+class CV_EXPORTS UniqueRandom
 {
 	int* vals;
     int size;

@@ -31,9 +31,16 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#ifdef __cplusplus
+
+#include <stdexcept>
+#include <cassert>
+#include "opencv2/flann/object_factory.h"
+
+namespace cvflann {
+
+#undef ARRAY_LEN
 #define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
-
-
 
 /* Nearest neighbour index algorithms */
 enum flann_algorithm_t {
@@ -85,17 +92,6 @@ enum flann_datatype_t {
 	FLOAT64 = 9
 };
 
-
-
-#ifdef __cplusplus
-
-#include <stdexcept>
-#include <cassert>
-#include "opencv2/flann/object_factory.h"
-
-namespace cvflann {
-
-
 template <typename ELEM_TYPE>
 struct DistType
 {
@@ -123,7 +119,7 @@ class FLANNException : public std::runtime_error {
  };
 
 
-struct IndexParams {
+struct CV_EXPORTS IndexParams {
 protected:
 	IndexParams(flann_algorithm_t algorithm_) : algorithm(algorithm_) {};
 
@@ -139,7 +135,7 @@ public:
 typedef ObjectFactory<IndexParams, flann_algorithm_t> ParamsFactory;
 
 
-struct SearchParams {
+struct CV_EXPORTS SearchParams {
 	SearchParams(int checks_ = 32) :
 		checks(checks_) {};
 

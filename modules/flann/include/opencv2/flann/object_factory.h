@@ -31,6 +31,7 @@
 #ifndef OBJECT_FACTORY_H_
 #define OBJECT_FACTORY_H_
 
+#include "opencv2/core/types_c.h"
 #include <map>
 
 namespace cvflann

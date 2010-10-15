@@ -47,13 +47,13 @@ template<> struct Datatype<float> { static flann_datatype_t type() { return FLOA
 template<> struct Datatype<double> { static flann_datatype_t type() { return FLOAT64; } };
 
 
-extern const char FLANN_SIGNATURE[];
-extern const char FLANN_VERSION[];
+CV_EXPORTS const char* FLANN_SIGNATURE();
+CV_EXPORTS const char* FLANN_VERSION();
 
 /**
  * Structure representing the index header.
  */
-struct IndexHeader
+struct CV_EXPORTS IndexHeader
 {
 	char signature[16];
 	char version[16];
@@ -74,12 +74,12 @@ void save_header(FILE* stream, const NNIndex<ELEM_TYPE>& index)
 {
 	IndexHeader header;
 	memset(header.signature, 0 , sizeof(header.signature));
-	strcpy(header.signature, FLANN_SIGNATURE);
+	strcpy(header.signature, FLANN_SIGNATURE());
 	memset(header.version, 0 , sizeof(header.version));
-	strcpy(header.version, FLANN_VERSION);
+	strcpy(header.version, FLANN_VERSION());
 	header.data_type = Datatype<ELEM_TYPE>::type();
 	header.index_type = index.getType();
-	header.rows = index.size();
+	header.rows = (int)index.size();
 	header.cols = index.veclen();
 
 	std::fwrite(&header, sizeof(header),1,stream);
@@ -91,7 +91,7 @@ void save_header(FILE* stream, const NNIndex<ELEM_TYPE>& index)
  * @param stream - Stream to load from
  * @return Index header
  */
-IndexHeader load_header(FILE* stream);
+CV_EXPORTS IndexHeader load_header(FILE* stream);
 
 
 template<typename T>
