@@ -232,10 +232,12 @@ public:
             : pt(x, y), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
     //! converts vector of keypoints to vector of points
-    static void convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,
+    static void convert(const std::vector<KeyPoint>& keypoints,
+                        CV_OUT std::vector<Point2f>& points2f,
                         const std::vector<int>& keypointIndexes=std::vector<int>());
     //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
-    static void convert(const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
+    static void convert(const std::vector<Point2f>& points2f,
+                        CV_OUT std::vector<KeyPoint>& keypoints,
                         float size=1, float response=1, int octave=0, int class_id=-1);
 
     //! computes overlap for pair of keypoints;
@@ -254,7 +256,7 @@ public:
 //! writes vector of keypoints to the file storage
 CV_EXPORTS void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
 //! reads vector of keypoints from the specified file storage node
-CV_EXPORTS void read(const FileNode& node, vector<KeyPoint>& keypoints);    
+CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
 
 /*!
  SIFT implementation.
@@ -357,12 +359,12 @@ public:
     //! returns the descriptor size in float's (64 or 128)
     int descriptorSize() const;
     //! finds the keypoints using fast hessian detector used in SURF
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints) const;
+    CV_WRAP_AS(detect) void operator()(const Mat& img, const Mat& mask,
+                    CV_OUT vector<KeyPoint>& keypoints) const;
     //! finds the keypoints and computes their descriptors. Optionally it can compute descriptors for the user-provided keypoints
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints,
-                    vector<float>& descriptors,
+    CV_WRAP_AS(detect) void operator()(const Mat& img, const Mat& mask,
+                    CV_OUT vector<KeyPoint>& keypoints,
+                    CV_OUT vector<float>& descriptors,
                     bool useProvidedKeypoints=false) const;
 };
 
@@ -386,7 +388,8 @@ public:
           int _max_evolution, double _area_threshold,
           double _min_margin, int _edge_blur_size );
     //! the operator that extracts the MSERs from the image or the specific part of it
-    void operator()( const Mat& image, vector<vector<Point> >& msers, const Mat& mask ) const;
+    CV_WRAP_AS(detect) void operator()( const Mat& image,
+        CV_OUT vector<vector<Point> >& msers, const Mat& mask ) const;
 };
 
 /*!
@@ -405,11 +408,13 @@ public:
                  int _lineThresholdBinarized,
                  int _suppressNonmaxSize);
     //! finds the keypoints in the image
-    void operator()(const Mat& image, vector<KeyPoint>& keypoints) const;
+    CV_WRAP_AS(detect) void operator()(const Mat& image,
+                CV_OUT vector<KeyPoint>& keypoints) const;
 };
 
 //! detects corners using FAST algorithm by E. Rosten
-CV_EXPORTS void FAST( const Mat& image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true );
+CV_EXPORTS void FAST( const Mat& image, CV_OUT vector<KeyPoint>& keypoints,
+                      int threshold, bool nonmaxSupression=true );
 
 /*!
  The Patch Generator class 
@@ -423,13 +428,14 @@ public:
                    double _lambdaMin=0.6, double _lambdaMax=1.5,
                    double _thetaMin=-CV_PI, double _thetaMax=CV_PI,
                    double _phiMin=-CV_PI, double _phiMax=CV_PI );
-    void operator()(const Mat& image, Point2f pt, Mat& patch, Size patchSize, RNG& rng) const;
-    void operator()(const Mat& image, const Mat& transform, Mat& patch,
+    CV_WRAP_AS(generate) void operator()(const Mat& image, Point2f pt, Mat& patch, Size patchSize, RNG& rng) const;
+    CV_WRAP_AS(generate) void operator()(const Mat& image, const Mat& transform, Mat& patch,
                     Size patchSize, RNG& rng) const;
     void warpWholeImage(const Mat& image, Mat& matT, Mat& buf,
-                        Mat& warped, int border, RNG& rng) const;
+                        CV_OUT Mat& warped, int border, RNG& rng) const;
     void generateRandomTransform(Point2f srcCenter, Point2f dstCenter,
-                                 Mat& transform, RNG& rng, bool inverse=false) const;
+                                 CV_OUT Mat& transform, RNG& rng,
+                                 bool inverse=false) const;
     void setAffineParam(double lambda, double theta, double phi);
     
     double backgroundMin, backgroundMax;
@@ -447,9 +453,13 @@ public:
     LDetector();
     LDetector(int _radius, int _threshold, int _nOctaves,
               int _nViews, double _baseFeatureSize, double _clusteringDistance);
-    void operator()(const Mat& image, vector<KeyPoint>& keypoints, int maxCount=0, bool scaleCoords=true) const;
-    void operator()(const vector<Mat>& pyr, vector<KeyPoint>& keypoints, int maxCount=0, bool scaleCoords=true) const;
-    void getMostStable2D(const Mat& image, vector<KeyPoint>& keypoints,
+    CV_WRAP_AS(detect) void operator()(const Mat& image,
+                    CV_OUT vector<KeyPoint>& keypoints,
+                    int maxCount=0, bool scaleCoords=true) const;
+    CV_WRAP_AS(detect) void operator()(const vector<Mat>& pyr,
+                    CV_OUT vector<KeyPoint>& keypoints,
+                    int maxCount=0, bool scaleCoords=true) const;
+    void getMostStable2D(const Mat& image, CV_OUT vector<KeyPoint>& keypoints,
                          int maxCount, const PatchGenerator& patchGenerator) const;
     void setVerbose(bool verbose);
     
@@ -561,6 +571,7 @@ protected:
     vector<float> posteriors;
 };
 
+
 class CV_EXPORTS PlanarObjectDetector
 {
 public:
@@ -596,9 +607,10 @@ public:
     
     void read(const FileNode& node);
     void write(FileStorage& fs, const String& name=String()) const;
-    bool operator()(const Mat& image, Mat& H, vector<Point2f>& corners) const;
-    bool operator()(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
-                    Mat& H, vector<Point2f>& corners, vector<int>* pairs=0) const;
+    CV_WRAP_AS(detect) bool operator()(const Mat& image, CV_OUT Mat& H, CV_OUT vector<Point2f>& corners) const;
+    CV_WRAP_AS(detect) bool operator()(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
+                                       CV_OUT Mat& H, CV_OUT vector<Point2f>& corners,
+                                       CV_OUT vector<int>* pairs=0) const;
     
 protected:
     bool verbose;
@@ -735,7 +747,6 @@ struct CV_EXPORTS RTreeNode
   short offset1, offset2;
 
   RTreeNode() {}
-
   RTreeNode(uchar x1, uchar y1, uchar x2, uchar y2)
     : offset1(y1*RandomizedTree::PATCH_SIZE + x1),
       offset2(y2*RandomizedTree::PATCH_SIZE + x2)
@@ -755,7 +766,6 @@ public:
   static const size_t DEFAULT_NUM_QUANT_BITS = 4;
 
   RTreeClassifier();
-
   void train(std::vector<BaseKeypoint> const& base_set,
              RNG &rng,
              int num_trees = RTreeClassifier::DEFAULT_TREES,

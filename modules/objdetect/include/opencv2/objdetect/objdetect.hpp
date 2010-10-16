@@ -271,7 +271,7 @@ namespace cv
 ///////////////////////////// Object Detection ////////////////////////////
 
 CV_EXPORTS void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
-CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
         
 class CV_EXPORTS FeatureEvaluator
 {
@@ -328,7 +328,7 @@ public:
     bool load(const string& filename);
     bool read(const FileNode& node);
     void detectMultiScale( const Mat& image,
-                           vector<Rect>& objects,
+                           CV_OUT vector<Rect>& objects,
                            double scaleFactor=1.1,
                            int minNeighbors=3, int flags=0,
                            Size minSize=Size());
@@ -401,18 +401,18 @@ public:
     virtual void copyTo(HOGDescriptor& c) const;
     
     virtual void compute(const Mat& img,
-                         vector<float>& descriptors,
+                         CV_OUT vector<float>& descriptors,
                          Size winStride=Size(), Size padding=Size(),
                          const vector<Point>& locations=vector<Point>()) const;
-    virtual void detect(const Mat& img, vector<Point>& foundLocations,
+    virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
                         double hitThreshold=0, Size winStride=Size(),
                         Size padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
-    virtual void detectMultiScale(const Mat& img, vector<Rect>& foundLocations,
+    virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
                                   double hitThreshold=0, Size winStride=Size(),
                                   Size padding=Size(), double scale=1.05,
                                   int groupThreshold=2) const;
-    virtual void computeGradient(const Mat& img, Mat& grad, Mat& angleOfs,
+    virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL=Size(), Size paddingBR=Size()) const;
     
     static vector<float> getDefaultPeopleDetector();

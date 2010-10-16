@@ -56,9 +56,22 @@ CvBGStatModel* cvCreateBGStatModel( IplImage* first_frame, int model_type, void*
     return bg_model;
 }
 
+void cvReleaseBGStatModel( CvBGStatModel** bg_model )
+{
+    if( bg_model && *bg_model && (*bg_model)->release )
+        (*bg_model)->release( bg_model );
+}
+
+int cvUpdateBGStatModel( IplImage* current_frame,
+                         CvBGStatModel*  bg_model,
+                         double learningRate )
+{
+    return bg_model && bg_model->update ? bg_model->update( current_frame, bg_model, learningRate ) : 0;
+}
+
 
 /* FOREGROUND DETECTOR INTERFACE */
-class CvFGDetectorBase:public CvFGDetector
+class CvFGDetectorBase : public CvFGDetector
 {
 protected:
     CvBGStatModel*  m_pFG;

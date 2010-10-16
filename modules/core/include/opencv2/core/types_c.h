@@ -158,9 +158,12 @@ typedef unsigned short ushort;
 typedef signed char schar;
 
 /* special informative macros for wrapper generators */
-#define CV_OUT
 #define CV_CARRAY(counter)
+#define CV_CUSTOM_CARRAY(args)
 #define CV_METHOD
+#define CV_NO_WRAP
+#define CV_OUT
+#define CV_WRAP_AS(synonym)
 
 /* CvArr* is used to pass arbitrary
  * array-like data structures

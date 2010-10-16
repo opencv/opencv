@@ -112,17 +112,11 @@ typedef struct CvBGStatModel
 // 
 
 // Releases memory used by BGStatModel
-CV_INLINE void cvReleaseBGStatModel( CvBGStatModel** bg_model )
-{
-    if( bg_model && *bg_model && (*bg_model)->release )
-        (*bg_model)->release( bg_model );
-}
+CVAPI(void) cvReleaseBGStatModel( CvBGStatModel** bg_model );
 
 // Updates statistical model and returns number of found foreground regions
-CV_INLINE int cvUpdateBGStatModel( IplImage* current_frame, CvBGStatModel*  bg_model, double learningRate CV_DEFAULT(-1))
-{
-    return bg_model && bg_model->update ? bg_model->update( current_frame, bg_model, learningRate ) : 0;
-}
+CVAPI(int) cvUpdateBGStatModel( IplImage* current_frame, CvBGStatModel*  bg_model,
+                                double learningRate CV_DEFAULT(-1));
 
 // Performs FG post-processing using segmentation
 // (all pixels of a region will be classified as foreground if majority of pixels of the region are FG).
@@ -365,7 +359,8 @@ public:
     //! the virtual destructor
     virtual ~BackgroundSubtractor();
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    virtual void operator()(const Mat& image, Mat& fgmask, double learningRate=0);
+    virtual CV_WRAP_AS(apply) void operator()(const Mat& image, CV_OUT Mat& fgmask,
+                                              double learningRate=0);
 };
 
 

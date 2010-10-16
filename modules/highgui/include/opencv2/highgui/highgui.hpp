@@ -106,7 +106,7 @@ CV_EXPORTS bool imwrite( const string& filename, const Mat& img,
               const vector<int>& params=vector<int>());
 CV_EXPORTS Mat imdecode( const Mat& buf, int flags );
 CV_EXPORTS bool imencode( const string& ext, const Mat& img,
-                          vector<uchar>& buf,
+                          CV_OUT vector<uchar>& buf,
                           const vector<int>& params=vector<int>());
 
 CV_EXPORTS int waitKey(int delay=0);
@@ -130,8 +130,8 @@ public:
     virtual void release();
     
     virtual bool grab();
-    virtual bool retrieve(Mat& image, int channel=0);
-    virtual VideoCapture& operator >> (Mat& image);
+    virtual bool retrieve(CV_OUT Mat& image, int channel=0);
+    virtual CV_WRAP_AS(query) VideoCapture& operator >> (Mat& image);
     
     virtual bool set(int propId, double value);
     virtual double get(int propId);
@@ -145,12 +145,14 @@ class CV_EXPORTS VideoWriter
 {
 public:    
     VideoWriter();
-    VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true);
+    VideoWriter(const string& filename, int fourcc, double fps,
+                Size frameSize, bool isColor=true);
     
     virtual ~VideoWriter();
-    virtual bool open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true);
+    virtual bool open(const string& filename, int fourcc, double fps,
+                      Size frameSize, bool isColor=true);
     virtual bool isOpened() const;
-    virtual VideoWriter& operator << (const Mat& image);
+    virtual CV_WRAP_AS(write) VideoWriter& operator << (const Mat& image);
     
 protected:
     Ptr<CvVideoWriter> writer;

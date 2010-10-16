@@ -247,23 +247,21 @@ public:
     CvNormalBayesClassifier();
     virtual ~CvNormalBayesClassifier();
 
-    CvNormalBayesClassifier( const CvMat* _train_data, const CvMat* _responses,
+    CV_NO_WRAP CvNormalBayesClassifier( const CvMat* _train_data, const CvMat* _responses,
         const CvMat* _var_idx=0, const CvMat* _sample_idx=0 );
     
-    virtual bool train( const CvMat* _train_data, const CvMat* _responses,
+    CV_NO_WRAP virtual bool train( const CvMat* _train_data, const CvMat* _responses,
         const CvMat* _var_idx = 0, const CvMat* _sample_idx=0, bool update=false );
    
-    virtual float predict( const CvMat* _samples, CvMat* results=0 ) const;
+    CV_NO_WRAP virtual float predict( const CvMat* _samples, CvMat* results=0 ) const;
     virtual void clear();
 
-#ifndef SWIG
     CvNormalBayesClassifier( const cv::Mat& _train_data, const cv::Mat& _responses,
                             const cv::Mat& _var_idx=cv::Mat(), const cv::Mat& _sample_idx=cv::Mat() );
     virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
                        const cv::Mat& _var_idx = cv::Mat(), const cv::Mat& _sample_idx=cv::Mat(),
                        bool update=false );
     virtual float predict( const cv::Mat& _samples, cv::Mat* results=0 ) const;
-#endif
     
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );

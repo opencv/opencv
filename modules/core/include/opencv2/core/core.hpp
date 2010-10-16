@@ -212,7 +212,7 @@ CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback,
 #define CV_DbgAssert(expr)
 #endif
 
-CV_EXPORTS void setNumThreads(int);
+CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
@@ -330,7 +330,7 @@ static inline size_t alignSize(size_t sz, int n)
   \note{Since optimization may imply using special data structures, it may be unsafe
   to call this function anywhere in the code. Instead, call it somewhere at the top level.}
 */  
-CV_EXPORTS void setUseOptimized(bool);
+CV_EXPORTS void setUseOptimized(bool onoff);
 
 /*!
   Returns the current optimization status
