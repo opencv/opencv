@@ -12,5 +12,6 @@
 #define FILTER_OUT_OF_BOUNDARIES -7
 #define FFT_OK 2
 #define FFT_ERROR -8
+#define LSVM_PARSER_FILE_NOT_FOUND -9
 
 #endif

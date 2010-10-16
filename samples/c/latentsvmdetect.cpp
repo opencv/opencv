@@ -6,7 +6,7 @@
 using namespace cv;
 
 const char* model_filename = "cat.xml";
-const char* image_filename = "000028.jpg";
+const char* image_filename = "cat.jpg";
 
 void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detector)
 {
@@ -35,8 +35,26 @@ void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detector)
 
 int main(int argc, char* argv[])
 {
+	if (argc > 2)
+	{
+		image_filename = argv[1];
+		model_filename = argv[2];
+	}
 	IplImage* image = cvLoadImage(image_filename);
+	if (!image)
+	{
+		printf( "Unable to load the image\n"
+                "Pass it as the first parameter: latentsvmdetect <path to cat.jpg> <path to cat.xml>\n" );
+		return -1;
+	}
     CvLatentSvmDetector* detector = cvLoadLatentSvmDetector(model_filename);
+	if (!detector)
+	{
+		printf( "Unable to load the model\n"
+                "Pass it as the second parameter: latentsvmdetect <path to cat.jpg> <path to cat.xml>\n" );
+		cvReleaseImage( &image );
+		return -1;
+	}
     detect_and_draw_objects( image, detector );
     cvNamedWindow( "test", 0 );
     cvShowImage( "test", image );

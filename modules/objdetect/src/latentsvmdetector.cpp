@@ -22,8 +22,10 @@ CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename)
 	int* kPartFilters = 0;
 	float* b = 0;
 	float scoreThreshold = 0.f;
+	int err_code = 0;
 
-	loadModel(filename, &filters, &kFilters, &kComponents, &kPartFilters, &b, &scoreThreshold);
+	err_code = loadModel(filename, &filters, &kFilters, &kComponents, &kPartFilters, &b, &scoreThreshold);
+	if (err_code != LATENT_SVM_OK) return 0;
 
 	detector = (CvLatentSvmDetector*)malloc(sizeof(CvLatentSvmDetector));
 	detector->filters = filters;

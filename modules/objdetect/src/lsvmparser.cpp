@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "string.h"
 #include "_lsvmparser.h"
+#include "_lsvm_error.h"
 
 int isMODEL    (char *str){
     char stag [] = "<Model>";
@@ -736,7 +737,7 @@ int LSVMparser(const char * filename, filterObject *** model, int *last, int *ma
 
     xmlf = fopen(filename, "rb");
 	if(xmlf == NULL){
-		return -1;
+		return LSVM_PARSER_FILE_NOT_FOUND;
 	}
     
     i   = 0;
@@ -767,7 +768,7 @@ int LSVMparser(const char * filename, filterObject *** model, int *last, int *ma
             }
         }        
     }
-	return 0;
+	return LATENT_SVM_OK;
 }
 
 int loadModel(
@@ -789,8 +790,8 @@ int loadModel(
     //printf("start_parse\n\n");
 
     err = LSVMparser(modelPath, filters, &last, &max, &comp, b, &count, &score);
-	if(err != 0){
-		return -1;
+	if(err != LATENT_SVM_OK){
+		return err;
 	}
     (*kFilters)       = last + 1;
     (*kComponents)    = count;
