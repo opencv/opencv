@@ -43,9 +43,18 @@
 
 CvTS test_system;
 
+const char* blacklist[] =
+{
+    "morph-ex",
+    "operations",
+    "stereobm",
+    "stereosgbm",
+    0
+};
+
 int main(int argC,char *argV[])
 {
-    return test_system.run( argC, argV );
+    return test_system.run( argC, argV, blacklist );
 }
 
 /* End of file. */
