@@ -94,6 +94,7 @@ class CV_EXPORTS VectorArg;
 class CV_EXPORTS MatArg;
 class CV_EXPORTS MatConstIterator;
 
+template<typename _Tp> class CV_EXPORTS Mat_;
 template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
@@ -1600,7 +1601,22 @@ public:
     void deallocate();
     //! internal use function; properly re-allocates _size, _step arrays
     void copySize(const Mat& m);
-
+    
+    //! reserves enough space to fit sz hyper-planes
+    void reserve(size_t sz);
+    //! resizes matrix to the specified number of hyper-planes
+    void resize(size_t sz);
+    //! resizes matrix to the specified number of hyper-planes; initializes the newly added elements
+    void resize(size_t sz, const Scalar& s);
+    //! internal function
+    void push_back_(const void* elem);
+    //! adds element to the end of 1d matrix (or possibly multiple elements when _Tp=Mat)
+    template<typename _Tp> void push_back(const _Tp& elem);
+    template<typename _Tp> void push_back(const Mat_<_Tp>& elem);
+    void push_back(const Mat& m);
+    //! removes several hyper-planes from bottom of the matrix
+    void pop_back(size_t nelems);
+    
     //! locates matrix header within a parent matrix. See below
     void locateROI( Size& wholeSize, Point& ofs ) const;
     //! moves/resizes the current matrix ROI inside the parent matrix.
@@ -1626,6 +1642,10 @@ public:
     // (i.e. when there are no gaps between successive rows).
     // similar to CV_IS_MAT_CONT(cvmat->type)
     bool isContinuous() const;
+    
+    //! returns true if the matrix is a submatrix of another matrix
+    bool isSubmatrix() const;
+    
     //! returns element size in bytes,
     // similar to CV_ELEM_SIZE(cvmat->type)
     size_t elemSize() const;
@@ -1707,7 +1727,7 @@ public:
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
-    enum { MAGIC_VAL=0x42FF0000, AUTO_STEP=0, CONTINUOUS_FLAG=CV_MAT_CONT_FLAG };
+    enum { MAGIC_VAL=0x42FF0000, AUTO_STEP=0, CONTINUOUS_FLAG=CV_MAT_CONT_FLAG, SUBMATRIX_FLAG=CV_SUBMAT_FLAG };
 
     /*! includes several bit-fields:
          - the magic signature
@@ -1730,6 +1750,8 @@ public:
     //! helper fields used in locateROI and adjustROI
     uchar* datastart;
     uchar* dataend;
+    uchar* datalimit;
+    
     //! custom allocator
     ArrayAllocator* allocator;
     
@@ -2252,13 +2274,13 @@ CV_EXPORTS void fillConvexPoly(Mat& img, CV_CARRAY(npts) const Point* pts, int n
                                int shift=0);
 
 //! fills an area bounded by one or more polygons
-CV_EXPORTS void fillPoly(Mat& img, CV_CARRAY(ncontours) const Point** pts,
+CV_EXPORTS void fillPoly(Mat& img, CV_CARRAY(ncontours.npts) const Point** pts,
                          CV_CARRAY(ncontours) const int* npts, int ncontours,
                          const Scalar& color, int lineType=8, int shift=0,
                          Point offset=Point() );
 
 //! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, CV_CARRAY(ncontours) const Point** pts, CV_CARRAY(ncontours) const int* npts,
+CV_EXPORTS void polylines(Mat& img, CV_CARRAY(ncontours.npts) const Point** pts, CV_CARRAY(ncontours) const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
 

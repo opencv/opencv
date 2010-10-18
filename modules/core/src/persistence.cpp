@@ -3328,7 +3328,7 @@ cvGetFileNodeName( const CvFileNode* file_node )
 static int
 icvIsMat( const void* ptr )
 {
-    return CV_IS_MAT_HDR(ptr);
+    return CV_IS_MAT_HDR_Z(ptr);
 }
 
 static void
@@ -3340,7 +3340,7 @@ icvWriteMat( CvFileStorage* fs, const char* name,
     CvSize size;
     int y;
 
-    assert( CV_IS_MAT(mat) );
+    assert( CV_IS_MAT_HDR_Z(mat) );
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_MAT );
     cvWriteInt( fs, "rows", mat->rows );
@@ -3349,14 +3349,17 @@ icvWriteMat( CvFileStorage* fs, const char* name,
     cvStartWriteStruct( fs, "data", CV_NODE_SEQ + CV_NODE_FLOW );
 
     size = cvGetSize(mat);
-    if( CV_IS_MAT_CONT(mat->type) )
+    if( size.height > 0 && size.width > 0 && mat->data.ptr )
     {
-        size.width *= size.height;
-        size.height = 1;
-    }
+        if( CV_IS_MAT_CONT(mat->type) )
+        {
+            size.width *= size.height;
+            size.height = 1;
+        }
 
-    for( y = 0; y < size.height; y++ )
-        cvWriteRawData( fs, mat->data.ptr + y*mat->step, size.width, dt );
+        for( y = 0; y < size.height; y++ )
+            cvWriteRawData( fs, mat->data.ptr + y*mat->step, size.width, dt );
+    }
     cvEndWriteStruct( fs );
     cvEndWriteStruct( fs );
 }
@@ -3379,11 +3382,11 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
     CvFileNode* data;
     int rows, cols, elem_type;
 
-    rows = cvReadIntByName( fs, node, "rows", 0 );
-    cols = cvReadIntByName( fs, node, "cols", 0 );
+    rows = cvReadIntByName( fs, node, "rows", -1 );
+    cols = cvReadIntByName( fs, node, "cols", -1 );
     dt = cvReadStringByName( fs, node, "dt", 0 );
 
-    if( rows == 0 || cols == 0 || dt == 0 )
+    if( rows < 0 || cols < 0 || dt < 0 )
         CV_Error( CV_StsError, "Some of essential matrix attributes are absent" );
 
     elem_type = icvDecodeSimpleFormat( dt );
@@ -3391,13 +3394,19 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
     data = cvGetFileNodeByName( fs, node, "data" );
     if( !data )
         CV_Error( CV_StsError, "The matrix data is not found in file storage" );
-
-    if( icvFileNodeSeqLen( data ) != rows*cols*CV_MAT_CN(elem_type) )
+    
+    int nelems = icvFileNodeSeqLen( data );
+    if( nelems > 0 && nelems != rows*cols*CV_MAT_CN(elem_type) )
         CV_Error( CV_StsUnmatchedSizes,
-        "The matrix size does not match to the number of stored elements" );
-
-    mat = cvCreateMat( rows, cols, elem_type );
-    cvReadRawData( fs, data, mat->data.ptr, dt );
+                 "The matrix size does not match to the number of stored elements" );
+    
+    if( nelems > 0 )
+    {
+        mat = cvCreateMat( rows, cols, elem_type );
+        cvReadRawData( fs, data, mat->data.ptr, dt );
+    }
+    else
+        mat = cvCreateMatHeader( rows, cols, elem_type );
 
     ptr = mat;
     return ptr;
@@ -3409,7 +3418,7 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
 static int
 icvIsMatND( const void* ptr )
 {
-    return CV_IS_MATND(ptr);
+    return CV_IS_MATND_HDR(ptr);
 }
 
 
@@ -3417,13 +3426,13 @@ static void
 icvWriteMatND( CvFileStorage* fs, const char* name,
                const void* struct_ptr, CvAttrList /*attr*/ )
 {
-    void* mat = (void*)struct_ptr;
+    CvMatND* mat = (CvMatND*)struct_ptr;
     CvMatND stub;
     CvNArrayIterator iterator;
     int dims, sizes[CV_MAX_DIM];
     char dt[16];
 
-    assert( CV_IS_MATND(mat) );
+    assert( CV_IS_MATND_HDR(mat) );
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_MATND );
     dims = cvGetDims( mat, sizes );
@@ -3433,11 +3442,14 @@ icvWriteMatND( CvFileStorage* fs, const char* name,
     cvWriteString( fs, "dt", icvEncodeFormat( cvGetElemType(mat), dt ), 0 );
     cvStartWriteStruct( fs, "data", CV_NODE_SEQ + CV_NODE_FLOW );
 
-    cvInitNArrayIterator( 1, &mat, 0, &stub, &iterator );
+    if( mat->dim[0].size > 0 && mat->data.ptr )
+    {
+        cvInitNArrayIterator( 1, (CvArr**)&mat, 0, &stub, &iterator );
 
-    do
-        cvWriteRawData( fs, iterator.ptr[0], iterator.size.width, dt );
-    while( cvNextNArraySlice( &iterator ));
+        do
+            cvWriteRawData( fs, iterator.ptr[0], iterator.size.width, dt );
+        while( cvNextNArraySlice( &iterator ));
+    }
     cvEndWriteStruct( fs );
     cvEndWriteStruct( fs );
 }
@@ -3472,16 +3484,25 @@ icvReadMatND( CvFileStorage* fs, CvFileNode* node )
     data = cvGetFileNodeByName( fs, node, "data" );
     if( !data )
         CV_Error( CV_StsError, "The matrix data is not found in file storage" );
-
+    
+    
+    
     for( total_size = CV_MAT_CN(elem_type), i = 0; i < dims; i++ )
         total_size *= sizes[i];
-
-    if( icvFileNodeSeqLen( data ) != total_size )
+    
+    int nelems = icvFileNodeSeqLen( data );
+    
+    if( nelems > 0 && nelems != total_size )
         CV_Error( CV_StsUnmatchedSizes,
-        "The matrix size does not match to the number of stored elements" );
-
-    mat = cvCreateMatND( dims, sizes, elem_type );
-    cvReadRawData( fs, data, mat->data.ptr, dt );
+                 "The matrix size does not match to the number of stored elements" );
+    
+    if( nelems > 0 )
+    {
+        mat = cvCreateMatND( dims, sizes, elem_type );
+        cvReadRawData( fs, data, mat->data.ptr, dt );
+    }
+    else
+        mat = cvCreateMatNDHeader( dims, sizes, elem_type );
 
     ptr = mat;
     return ptr;
@@ -5304,12 +5325,12 @@ void read( const FileNode& node, Mat& mat, const Mat& default_mat )
         return;
     }
     void* obj = cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
-    if(CV_IS_MAT(obj))
+    if(CV_IS_MAT_HDR_Z(obj))
     {
         Mat((const CvMat*)obj).copyTo(mat);
         cvReleaseMat((CvMat**)&obj);
     }
-    else if(CV_IS_MATND(obj))
+    else if(CV_IS_MATND_HDR(obj))
     {
         Mat((const CvMatND*)obj).copyTo(mat);
         cvReleaseMatND((CvMatND**)&obj);

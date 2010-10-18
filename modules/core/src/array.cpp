@@ -109,7 +109,7 @@ cvCreateMatHeader( int rows, int cols, int type )
 {
     type = CV_MAT_TYPE(type);
 
-    if( rows <= 0 || cols <= 0 )
+    if( rows < 0 || cols <= 0 )
         CV_Error( CV_StsBadSize, "Non-positive width or height" );
 
     int min_step = CV_ELEM_SIZE(type)*cols;
@@ -142,7 +142,7 @@ cvInitMatHeader( CvMat* arr, int rows, int cols,
     if( (unsigned)CV_MAT_DEPTH(type) > CV_DEPTH_MAX )
         CV_Error( CV_BadNumChannels, "" );
 
-    if( rows <= 0 || cols <= 0 )
+    if( rows < 0 || cols <= 0 )
         CV_Error( CV_StsBadSize, "Non-positive cols or rows" );
  
     type = CV_MAT_TYPE( type );
@@ -174,12 +174,6 @@ cvInitMatHeader( CvMat* arr, int rows, int cols,
     return arr;
 }
 
-
-#undef CV_IS_MAT_HDR_Z
-#define CV_IS_MAT_HDR_Z(mat) \
-    ((mat) != NULL && \
-    (((const CvMat*)(mat))->type & CV_MAGIC_MASK) == CV_MAT_MAGIC_VAL && \
-    ((const CvMat*)(mat))->cols >= 0 && ((const CvMat*)(mat))->rows >= 0)
 
 // Deallocates the CvMat structure and underlying data
 CV_IMPL void
@@ -248,7 +242,7 @@ cvInitMatNDHeader( CvMatND* mat, int dims, const int* sizes,
 
     for( int i = dims - 1; i >= 0; i-- )
     {
-        if( sizes[i] <= 0 )
+        if( sizes[i] < 0 )
             CV_Error( CV_StsBadSize, "one of dimesion sizes is non-positive" );
         mat->dim[i].size = sizes[i];
         if( step > INT_MAX )
@@ -795,12 +789,15 @@ icvDeleteNode( CvSparseMat* mat, const int* idx, unsigned* precalc_hashval )
 CV_IMPL void
 cvCreateData( CvArr* arr )
 {
-    if( CV_IS_MAT_HDR( arr ))
+    if( CV_IS_MAT_HDR_Z( arr ))
     {
         size_t step, total_size;
         CvMat* mat = (CvMat*)arr;
         step = mat->step;
 
+        if( mat->rows == 0 || mat->cols == 0 )
+            return;
+        
         if( mat->data.ptr != 0 )
             CV_Error( CV_StsError, "Data is already allocated" );
 
@@ -849,6 +846,9 @@ cvCreateData( CvArr* arr )
         CvMatND* mat = (CvMatND*)arr;
         int i;
         size_t total_size = CV_ELEM_SIZE(mat->type);
+        
+        if( mat->dim[0].size == 0 )
+            return;
 
         if( mat->data.ptr != 0 )
             CV_Error( CV_StsError, "Data is already allocated" );
@@ -1207,7 +1207,7 @@ cvGetSize( const CvArr* arr )
 {
     CvSize size = { 0, 0 };
 
-    if( CV_IS_MAT_HDR( arr ))
+    if( CV_IS_MAT_HDR_Z( arr ))
     {
         CvMat *mat = (CvMat*)arr;
 

@@ -94,12 +94,12 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
     if( !_sz )
         return;
     
-    size_t esz = m.elemSize(), total = esz;
+    size_t esz = CV_ELEM_SIZE(m.flags), total = esz;
     int i;
     for( i = _dims-1; i >= 0; i-- )
     {
         int s = _sz[i];
-        CV_Assert( s > 0 );
+        CV_Assert( s >= (i == 0 ? 0 : 1) );
         m.size.p[i] = s;
         
         if( _steps )
@@ -121,11 +121,10 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
         m.step[1] = esz;
     }
 }
-    
-static void finalizeHdr(Mat& m)
+   
+static void updateContinuityFlag(Mat& m)
 {
     int i, j;
-    
     for( i = 0; i < m.dims; i++ )
     {
         if( m.size[i] > 1 )
@@ -137,19 +136,33 @@ static void finalizeHdr(Mat& m)
         if( m.step[j]*m.size[j] < m.step[j-1] )
             break;
     }
-    m.flags &= ~Mat::CONTINUOUS_FLAG;
-    int64 t = (int64)(m.step[0]/m.elemSize())*m.size[0];
+    
+    int64 t = (int64)(m.step[0]/CV_ELEM_SIZE(m.flags))*m.size[0];
     if( j <= i && t == (int)t )
         m.flags |= Mat::CONTINUOUS_FLAG;
+    else
+        m.flags &= ~Mat::CONTINUOUS_FLAG;
+}
     
+static void finalizeHdr(Mat& m)
+{
+    updateContinuityFlag(m);
     if( m.dims > 2 )
         m.rows = m.cols = -1;
     if( m.data )
     {
-        m.dataend = m.data;
-        for( i = 0; i < m.dims; i++ )
-            m.dataend += (m.size[i] - 1)*m.step[i];
+        m.datalimit = m.datastart + m.size[0]*m.step[0];
+        if( m.size[0] > 0 )
+        {
+            m.dataend = m.data;
+            for( int i = 0; i < m.dims; i++ )
+                m.dataend += (m.size[i] - 1)*m.step[i];
+        }
+        else
+            m.dataend = m.datalimit;
     }
+    else
+        m.dataend = m.datalimit = 0;
 }
     
     
@@ -176,17 +189,20 @@ void Mat::create(int d, const int* _sizes, int _type)
     flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
     setSize(*this, d, _sizes, 0, allocator == 0);
     
-    if( !allocator )
+    if( size.p[0] > 0 )
     {
-        size_t total = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
-        data = datastart = (uchar*)fastMalloc(total + (int)sizeof(*refcount));
-        refcount = (int*)(data + total);
-        *refcount = 1;
-    }
-    else
-    {
-        allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
-        CV_Assert( step[dims-1] == elemSize() );
+        if( !allocator )
+        {
+            size_t total = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
+            data = datastart = (uchar*)fastMalloc(total + (int)sizeof(*refcount));
+            refcount = (int*)(data + total);
+            *refcount = 1;
+        }
+        else
+        {
+            allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
+            CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
+        }
     }
     
     finalizeHdr(*this);
@@ -216,7 +232,7 @@ void Mat::deallocate()
     
 Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
@@ -231,19 +247,21 @@ Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
     }
     
     *this = m;
-    if( rowRange != Range::all() )
+    if( rowRange != Range::all() && rowRange != Range(0,rows) )
     {
         CV_Assert( 0 <= rowRange.start && rowRange.start <= rowRange.end && rowRange.end <= m.rows );
         rows = rowRange.size();
         data += step*rowRange.start;
+        flags |= SUBMATRIX_FLAG;
     }
     
-    if( colRange != Range::all() )
+    if( colRange != Range::all() && colRange != Range(0,cols) )
     {
         CV_Assert( 0 <= colRange.start && colRange.start <= colRange.end && colRange.end <= m.cols );
         cols = colRange.size();
         data += colRange.start*elemSize();
         flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
+        flags |= SUBMATRIX_FLAG;
     }
     
     if( rows == 1 )
@@ -262,18 +280,21 @@ Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
 Mat::Mat(const Mat& m, const Rect& roi)
     : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
     data(m.data + roi.y*m.step[0]), refcount(m.refcount),
-    datastart(m.datastart), dataend(m.dataend), allocator(m.allocator), size(&rows)
+    datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit),
+    allocator(m.allocator), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
     flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
     flags |= roi.height == 1 ? CONTINUOUS_FLAG : 0;
     
-    size_t esz = elemSize();
+    size_t esz = CV_ELEM_SIZE(flags);
     data += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
     if( refcount )
         CV_XADD(refcount, 1);
+    if( roi.width < m.cols || roi.height < m.rows )
+        flags |= SUBMATRIX_FLAG;
     
     step[0] = m.step[0]; step[1] = esz;
     
@@ -286,9 +307,10 @@ Mat::Mat(const Mat& m, const Rect& roi)
 
     
 Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL|CV_MAT_TYPE(_type)), dims(0), rows(0), cols(0),
-    data((uchar*)_data), refcount(0),
-    datastart((uchar*)_data), dataend((uchar*)_data), allocator(0), size(&rows)
+    : flags(MAGIC_VAL|CV_MAT_TYPE(_type)), dims(0),
+    rows(0), cols(0), data((uchar*)_data), refcount(0),
+    datastart((uchar*)_data), dataend((uchar*)_data), datalimit((uchar*)_data),
+    allocator(0), size(&rows)
 {
     setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
@@ -297,7 +319,7 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
     
 Mat::Mat(const Mat& m, const Range* ranges)
     : flags(m.flags), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     int i, d = m.dims;
     
@@ -311,21 +333,21 @@ Mat::Mat(const Mat& m, const Range* ranges)
     for( i = 0; i < d; i++ )
     {
         Range r = ranges[i];
-        if( r != Range::all() )
+        if( r != Range::all() && r != Range(0, size.p[i]))
         {
-            size[i] = r.end - r.start;
-            data += r.start*step[i];
+            size.p[i] = r.end - r.start;
+            data += r.start*step.p[i];
+            flags |= SUBMATRIX_FLAG;
         }
     }
-    
-    finalizeHdr(*this);
+    updateContinuityFlag(*this);
 }
  
     
 Mat::Mat(const CvMatND* m, bool copyData)
     : flags(MAGIC_VAL|CV_MAT_TYPE(m->type)), dims(0), rows(0), cols(0),
     data((uchar*)m->data.ptr), refcount(0),
-    datastart((uchar*)m->data.ptr), dataend((uchar*)m->data.ptr), allocator(0),
+    datastart((uchar*)m->data.ptr), allocator(0),
     size(&rows)
 {
     int _sizes[CV_MAX_DIM];
@@ -376,6 +398,10 @@ Mat Mat::diag(int d) const
         m.flags &= ~CONTINUOUS_FLAG;
     else
         m.flags |= CONTINUOUS_FLAG;
+    
+    if( size() != Size(1,1) )
+        m.flags |= SUBMATRIX_FLAG;
+    
     return m;
 }
     
@@ -396,7 +422,7 @@ Mat::Mat(const IplImage* img, bool copyData)
         flags = MAGIC_VAL + CV_MAKETYPE(depth, img->nChannels);
         rows = img->height; cols = img->width;
         datastart = data = (uchar*)img->imageData;
-        esz = elemSize(); 
+        esz = CV_ELEM_SIZE(flags);
     }
     else
     {
@@ -404,13 +430,14 @@ Mat::Mat(const IplImage* img, bool copyData)
         bool selectedPlane = img->roi->coi && img->dataOrder == IPL_DATA_ORDER_PLANE;
         flags = MAGIC_VAL + CV_MAKETYPE(depth, selectedPlane ? 1 : img->nChannels);
         rows = img->roi->height; cols = img->roi->width;
-        esz = elemSize();
+        esz = CV_ELEM_SIZE(flags);
         data = datastart = (uchar*)img->imageData +
 			(selectedPlane ? (img->roi->coi - 1)*step*img->height : 0) +
 			img->roi->yOffset*step[0] + img->roi->xOffset*esz;        
     }
-    dataend = datastart + step*(rows-1) + esz*cols;
-    flags |= (cols*esz == step || rows == 1 ? CONTINUOUS_FLAG : 0);
+    datalimit = datastart + step.p[0]*rows;
+    dataend = datastart + step.p[0]*(rows-1) + esz*cols;
+    flags |= (cols*esz == step.p[0] || rows == 1 ? CONTINUOUS_FLAG : 0);
     step[1] = esz;
 
     if( copyData )
@@ -438,7 +465,132 @@ Mat::operator IplImage() const
     cvSetData(&img, data, (int)step[0]);
     return img;
 }
+
     
+void Mat::pop_back(size_t nelems)
+{
+    CV_Assert( nelems <= (size_t)size.p[0] );
+    
+    if( isSubmatrix() )
+        *this = rowRange(0, size.p[0] - (int)nelems);
+    else
+    {
+        size.p[0] -= (int)nelems;
+        dataend -= nelems*step.p[0];
+        /*if( size.p[0] <= 1 )
+        {
+            if( dims <= 2 )
+                flags |= CONTINUOUS_FLAG;
+            else
+                updateContinuityFlag(*this);
+        }*/
+    }
+}
+    
+    
+void Mat::push_back_(const void* elem)
+{
+    int r = size.p[0];
+    if( isSubmatrix() || dataend + step.p[0] > datalimit )
+        reserve( std::max(r + 1, (r*3+1)/2) );
+    
+    size_t esz = elemSize();
+    memcpy(data + r*step.p[0], elem, esz);
+    size.p[0] = r + 1;
+    dataend += step.p[0];
+    if( esz < step.p[0] )
+        flags &= ~CONTINUOUS_FLAG;
+}
+
+void Mat::reserve(size_t nelems)
+{
+    const size_t MIN_SIZE = 64;
+    
+    CV_Assert( (int)nelems >= 0 );
+    if( !isSubmatrix() && data + step.p[0]*nelems <= datalimit )
+        return;
+    
+    int r = size.p[0];
+    size.p[0] = std::max((int)nelems, 1);
+    size_t newsize = total()*elemSize();
+    
+    if( newsize < MIN_SIZE )
+        size.p[0] = (int)((MIN_SIZE + newsize - 1)*nelems/newsize);
+    
+    Mat m(dims, size.p, type());
+    size.p[0] = r;
+    if( r > 0 )
+    {
+        Mat mpart = m.rowRange(0, r);
+        copyTo(mpart);
+    }
+    
+    *this = m;
+    size.p[0] = r;
+    dataend = data + step.p[0]*r;
+}
+
+    
+void Mat::resize(size_t nelems)
+{
+    int saveRows = size.p[0];
+    CV_Assert( (int)nelems >= 0 );
+    
+    if( isSubmatrix() || data + step.p[0]*nelems > datalimit )
+        reserve(nelems);
+    
+    size.p[0] = (int)nelems;
+    dataend += (size.p[0] - saveRows)*step.p[0];
+    
+    //updateContinuityFlag(*this);
+}    
+
+    
+void Mat::resize(size_t nelems, const Scalar& s)
+{
+    int saveRows = size.p[0];
+    resize(nelems);
+    
+    if( size.p[0] > saveRows )
+    {
+        Mat part = rowRange(saveRows, size.p[0]);
+        part = s;
+    }
+}    
+    
+void Mat::push_back(const Mat& elems)
+{
+    int r = size.p[0], delta = elems.size.p[0];
+    if( delta == 0 )
+        return;
+    if( this != &elems )
+    {
+        size.p[0] = elems.size.p[0];
+        bool eq = size == elems.size;
+        size.p[0] = r;
+        if( !eq )
+            CV_Error(CV_StsUnmatchedSizes, "");
+        if( type() != elems.type() )
+            CV_Error(CV_StsUnmatchedFormats, "");
+    }
+    
+    if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
+        reserve( std::max(r + delta, (r*3+1)/2) );
+    
+    size.p[0] += delta;
+    dataend += step.p[0]*delta;
+    
+    //updateContinuityFlag(*this);
+    
+    if( isContinuous() && elems.isContinuous() )
+        memcpy(data + r*step.p[0], elems.data, elems.total()*elems.elemSize());
+    else
+    {
+        Mat part = rowRange(r, r + delta);
+        elems.copyTo(part);
+    }
+}
+
     
 Mat cvarrToMat(const CvArr* arr, bool copyData,
                bool allowND, int coiMode)

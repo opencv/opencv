@@ -57,20 +57,20 @@ namespace cv
 
 inline Mat::Mat()
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
 }
 
 inline Mat::Mat(int _rows, int _cols, int _type)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     create(_rows, _cols, _type);
 }
 
 inline Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     create(_rows, _cols, _type);
     *this = _s;
@@ -78,14 +78,14 @@ inline Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
 
 inline Mat::Mat(Size _sz, int _type)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     create( _sz.height, _sz.width, _type );
 }
     
 inline Mat::Mat(Size _sz, int _type, const Scalar& _s)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     create(_sz.height, _sz.width, _type);
     *this = _s;
@@ -93,14 +93,14 @@ inline Mat::Mat(Size _sz, int _type, const Scalar& _s)
     
 inline Mat::Mat(int _dims, const int* _sz, int _type)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     create(_dims, _sz, _type);
 }
 
 inline Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), allocator(0), size(&rows)
+    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     create(_dims, _sz, _type);
     *this = _s;
@@ -109,7 +109,7 @@ inline Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
 inline Mat::Mat(const Mat& m)
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
     refcount(m.refcount), datastart(m.datastart), dataend(m.dataend),
-    allocator(m.allocator), size(&rows)
+    datalimit(m.datalimit), allocator(m.allocator), size(&rows)
 {
     if( refcount )
         CV_XADD(refcount, 1);
@@ -126,10 +126,10 @@ inline Mat::Mat(const Mat& m)
 
 inline Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_rows), cols(_cols),
-    data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend((uchar*)_data),
-    allocator(0), size(&rows)
+    data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0),
+    datalimit(0), allocator(0), size(&rows)
 {
-    size_t minstep = cols*elemSize();
+    size_t esz = CV_ELEM_SIZE(_type), minstep = cols*esz;
     if( _step == AUTO_STEP )
     {
         _step = minstep;
@@ -141,16 +141,17 @@ inline Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
         CV_DbgAssert( _step >= minstep );
         flags |= _step == minstep ? CONTINUOUS_FLAG : 0;
     }
-    step[0] = _step; step[1] = elemSize();
-    dataend += _step*(rows-1) + minstep;
+    step[0] = _step; step[1] = esz;
+    datalimit = datastart + _step*rows;
+    dataend = datalimit - _step + minstep;
 }
 
 inline Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_sz.height), cols(_sz.width),
-    data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend((uchar*)_data),
-    allocator(0), size(&rows)
+    data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0),
+    datalimit(0), allocator(0), size(&rows)
 {
-    size_t minstep = cols*elemSize();
+    size_t esz = CV_ELEM_SIZE(_type), minstep = cols*esz;
     if( _step == AUTO_STEP )
     {
         _step = minstep;
@@ -162,23 +163,25 @@ inline Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
         CV_DbgAssert( _step >= minstep );
         flags |= _step == minstep ? CONTINUOUS_FLAG : 0;
     }
-    step[0] = _step; step[1] = elemSize();
-    dataend += _step*(rows-1) + minstep;
+    step[0] = _step; step[1] = esz;
+    datalimit = datastart + _step*rows;
+    dataend = datalimit - _step + minstep;
 }
 
     
 inline Mat::Mat(const CvMat* m, bool copyData)
     : flags(MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG))),
     dims(2), rows(m->rows), cols(m->cols), data(m->data.ptr), refcount(0),
-    datastart(m->data.ptr), dataend(m->data.ptr),
+    datastart(0), dataend(0),
     allocator(0), size(&rows)
 {
     if( !copyData )
     {
-        size_t esz = elemSize(), minstep = cols*esz, _step = m->step;
+        size_t esz = CV_ELEM_SIZE(m->type), minstep = cols*esz, _step = m->step;
         if( _step == 0 )
             _step = minstep;
-        dataend += _step*(rows-1) + minstep;
+        datalimit = datastart + _step*rows;
+        dataend = datalimit - _step + minstep;
         step[0] = _step; step[1] = esz;
     }
     else
@@ -199,7 +202,7 @@ template<typename _Tp> inline Mat::Mat(const vector<_Tp>& vec, bool copyData)
     {
         step[0] = step[1] = sizeof(_Tp);
         data = datastart = (uchar*)&vec[0];
-        dataend = datastart + rows*step[0];
+        datalimit = dataend = datastart + rows*step[0];
     }
     else
         Mat((int)vec.size(), 1, DataType<_Tp>::type, (uchar*)&vec[0]).copyTo(*this);
@@ -215,7 +218,7 @@ template<typename _Tp, int n> inline Mat::Mat(const Vec<_Tp, n>& vec, bool copyD
     {
         step[0] = step[1] = sizeof(_Tp);
         data = datastart = (uchar*)vec.val;
-        dataend = datastart + rows*step[0];
+        datalimit = dataend = datastart + rows*step[0];
     }
     else
         Mat(n, 1, DataType<_Tp>::type, (void*)vec.val).copyTo(*this);
@@ -232,7 +235,7 @@ template<typename _Tp, int m, int n> inline Mat::Mat(const Matx<_Tp,m,n>& M, boo
         step[0] = cols*sizeof(_Tp);
         step[1] = sizeof(_Tp);
         data = datastart = (uchar*)M.val;
-        dataend = datastart + rows*step[0];
+        datalimit = dataend = datastart + rows*step[0];
     }
     else
         Mat(m, n, DataType<_Tp>::type, (uchar*)M.val).copyTo(*this);    
@@ -248,7 +251,7 @@ template<typename _Tp> inline Mat::Mat(const Point_<_Tp>& pt, bool copyData)
     {
         step[0] = step[1] = sizeof(_Tp);
         data = datastart = (uchar*)&pt.x;
-        dataend = datastart + rows*step[0];
+        datalimit = dataend = datastart + rows*step[0];
     }
     else
     {
@@ -268,7 +271,7 @@ template<typename _Tp> inline Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     {
         step[0] = step[1] = sizeof(_Tp);
         data = datastart = (uchar*)&pt.x;
-        dataend = datastart + rows*step[0];
+        datalimit = dataend = datastart + rows*step[0];
     }
     else
     {
@@ -314,7 +317,9 @@ inline Mat& Mat::operator = (const Mat& m)
         else
             copySize(m);
         data = m.data;
-        datastart = m.datastart; dataend = m.dataend;
+        datastart = m.datastart;
+        dataend = m.dataend;
+        datalimit = m.datalimit;
         refcount = m.refcount;
         allocator = m.allocator;
     }
@@ -375,8 +380,8 @@ inline void Mat::release()
 {
     if( refcount && CV_XADD(refcount, -1) == 1 )
         deallocate();
-    data = datastart = dataend = 0;
-    rows = cols = 0;
+    data = datastart = dataend = datalimit = 0;
+    size.p[0] = 0;
     refcount = 0;
 }
 
@@ -403,13 +408,14 @@ inline Mat::operator CvMat() const
 }
 
 inline bool Mat::isContinuous() const { return (flags & CONTINUOUS_FLAG) != 0; }
-inline size_t Mat::elemSize() const { return CV_ELEM_SIZE(flags); }
+inline bool Mat::isSubmatrix() const { return (flags & SUBMATRIX_FLAG) != 0; }
+inline size_t Mat::elemSize() const { return step.p[dims-1]; }
 inline size_t Mat::elemSize1() const { return CV_ELEM_SIZE1(flags); }
 inline int Mat::type() const { return CV_MAT_TYPE(flags); }
 inline int Mat::depth() const { return CV_MAT_DEPTH(flags); }
 inline int Mat::channels() const { return CV_MAT_CN(flags); }
 inline size_t Mat::step1(int i) const { return step.p[i]/elemSize1(); }
-inline bool Mat::empty() const { return data == 0; }
+inline bool Mat::empty() const { return data == 0 || size.p[0] == 0; }
 inline size_t Mat::total() const
 {
     if( dims <= 2 )
@@ -581,7 +587,7 @@ template<typename _Tp> inline MatIterator_<_Tp> Mat::end()
 
 template<typename _Tp> inline Mat::operator vector<_Tp>() const
 {
-    if( !data )
+    if( empty() )
         return vector<_Tp>();
     CV_Assert( dims >= 1 && DataType<_Tp>::channels == channels());
     vector<_Tp> v(total());
@@ -611,10 +617,34 @@ template<typename _Tp, int m, int n> inline Mat::operator Matx<_Tp, m, n>() cons
     Matx<_Tp, m, n> mtx; Mat tmp(rows, cols, DataType<_Tp>::type, mtx.val);
     convertTo(tmp, tmp.type());
     return mtx;
-}    
+}
 
+
+template<typename _Tp> inline void Mat::push_back(const _Tp& elem)
+{
+    CV_Assert(DataType<_Tp>::type == type() && cols == 1
+              /* && dims == 2 (cols == 1 implies dims == 2) */);
+    uchar* tmp = dataend + step[0];
+    if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
+    {
+        *(_Tp*)(data + (size.p[0]++)*step.p[0]) = elem;
+        dataend = tmp;
+    }
+    else
+        push_back_(&elem);
+}
+    
+template<typename _Tp> inline void Mat::push_back(const Mat_<_Tp>& m)
+{
+    push_back((const Mat&)m);
+}    
+    
 inline Mat::MSize::MSize(int* _p) : p(_p) {}
-inline Size Mat::MSize::operator()() const { return Size(p[1], p[0]); }
+inline Size Mat::MSize::operator()() const
+{
+    CV_DbgAssert(p[-1] <= 2); 
+    return Size(p[1], p[0]);
+}
 inline int Mat::MSize::operator[](int i) const { return p[i]; }
 inline int& Mat::MSize::operator[](int i) { return p[i]; }
 inline Mat::MSize::operator const int*() const { return p; }
@@ -642,8 +672,17 @@ inline Mat::MStep::MStep() { p = buf; p[0] = p[1] = 0; }
 inline Mat::MStep::MStep(size_t s) { p = buf; p[0] = s; p[1] = 0; }
 inline size_t Mat::MStep::operator[](int i) const { return p[i]; }
 inline size_t& Mat::MStep::operator[](int i) { return p[i]; }
-inline Mat::MStep::operator size_t() const { return p[0]; }
-inline Mat::MStep& Mat::MStep::operator = (size_t s) { p[0] = s; return *this; }
+inline Mat::MStep::operator size_t() const
+{
+    CV_DbgAssert( p == buf );
+    return buf[0];
+}
+inline Mat::MStep& Mat::MStep::operator = (size_t s)
+{
+    CV_DbgAssert( p == buf );
+    buf[0] = s;
+    return *this;
+}
     
 static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMode=0)
 {

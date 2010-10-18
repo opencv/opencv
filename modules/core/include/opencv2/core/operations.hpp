@@ -2692,7 +2692,6 @@ operator << ( FileStorage& fs, const vector<_Tp>& vec )
 }
 
 CV_EXPORTS void write( FileStorage& fs, const string& name, const Mat& value );
-CV_EXPORTS void write( FileStorage& fs, const string& name, const MatND& value );
 CV_EXPORTS void write( FileStorage& fs, const string& name, const SparseMat& value );
 
 template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)

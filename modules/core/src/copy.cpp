@@ -166,38 +166,45 @@ static SetMaskFunc setMaskFuncTab[] =
 /* dst = src */
 void Mat::copyTo( Mat& dst ) const
 {
-    if( data == dst.data )
+    if( data == dst.data && data != 0 )
         return;
     
     if( dims > 2 )
     {
         dst.create( dims, size, type() );
-        const Mat* arrays[] = { this, &dst, 0 };
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        CV_DbgAssert(it.planes[0].isContinuous() &&
-                     it.planes[1].isContinuous());
-        size_t planeSize = it.planes[0].elemSize()*it.planes[0].rows*it.planes[0].cols;
-    
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            memcpy(it.planes[1].data, it.planes[0].data, planeSize);
+        if( total() != 0 )
+        {
+            const Mat* arrays[] = { this, &dst, 0 };
+            Mat planes[2];
+            NAryMatIterator it(arrays, planes);
+            CV_DbgAssert(it.planes[0].isContinuous() &&
+                         it.planes[1].isContinuous());
+            size_t planeSize = it.planes[0].elemSize()*it.planes[0].rows*it.planes[0].cols;
+        
+            for( int i = 0; i < it.nplanes; i++, ++it )
+                memcpy(it.planes[1].data, it.planes[0].data, planeSize);
+        }
         return;
     }
     
     dst.create( rows, cols, type() );
     Size sz = size();
-    const uchar* sptr = data;
-    uchar* dptr = dst.data;
-
-    sz.width *= (int)elemSize();
-    if( isContinuous() && dst.isContinuous() )
+    
+    if( rows > 0 && cols > 0 )
     {
-        sz.width *= sz.height;
-        sz.height = 1;
-    }
+        const uchar* sptr = data;
+        uchar* dptr = dst.data;
 
-    for( ; sz.height--; sptr += step, dptr += dst.step )
-        memcpy( dptr, sptr, sz.width );
+        size_t width = sz.width*elemSize();
+        if( isContinuous() && dst.isContinuous() )
+        {
+            width *= sz.height;
+            sz.height = 1;
+        }
+
+        for( ; sz.height--; sptr += step, dptr += dst.step )
+            memcpy( dptr, sptr, width );
+    }
 }
 
 void Mat::copyTo( Mat& dst, const Mat& mask ) const
