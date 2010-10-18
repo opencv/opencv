@@ -432,7 +432,7 @@ void icvRandomQuad( int width, int height, double quad[4][2],
     d = distfactor * width;
 */
 
-    cvRodrigues2( &rotMat, &rotVect );
+    cvRodrigues2( &rotVect, &rotMat );
 
     halfw = 0.5 * width;
     halfh = 0.5 * height;
