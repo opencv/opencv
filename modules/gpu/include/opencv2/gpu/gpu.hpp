@@ -452,20 +452,44 @@ namespace cv
         //! supports only CV_32FC1 type
         CV_EXPORTS void log(const GpuMat& a, GpuMat& b);
 
-        //! computes magnitude of each (x(i), y(i)) vector
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
         //! computes magnitude of complex (x(i).re, x(i).im) vector
         //! supports only CV_32FC2 type
         CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude);
 
-        //! computes squared magnitude of each (x(i), y(i)) vector
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
         //! computes squared magnitude of complex (x(i).re, x(i).im) vector
         //! supports only CV_32FC2 type
         CV_EXPORTS void magnitudeSqr(const GpuMat& x, GpuMat& magnitude);
 
+        //! computes magnitude of each (x(i), y(i)) vector
+        //! supports only floating-point source
+        CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
+        //! Acync version
+        CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream);
+        
+        //! computes squared magnitude of each (x(i), y(i)) vector
+        //! supports only floating-point source
+        CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
+        //! Acync version
+        CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream);
+
+        //! computes angle (angle(i)) of each (x(i), y(i)) vector
+        //! supports only floating-point source
+        CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees = false);
+        //! Acync version
+        CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees, const Stream& stream);
+
+        //! converts Cartesian coordinates to polar
+        //! supports only floating-point source
+        CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees = false);
+        //! Acync version
+        CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees, const Stream& stream);
+
+        //! converts polar coordinates to Cartesian
+        //! supports only floating-point source
+        CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false);
+        //! Acync version
+        CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream);
+        
         ////////////////////////////// Image processing //////////////////////////////
 
         //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.

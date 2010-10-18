@@ -81,7 +81,7 @@ int CV_GpuArithmTest::CheckNorm(const Mat& m1, const Mat& m2)
 {
     double ret = norm(m1, m2, NORM_INF);
 
-    if (ret < std::numeric_limits<double>::epsilon())
+    if (ret < 1e-5)
         return CvTS::OK;
 
     ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
@@ -99,7 +99,7 @@ int CV_GpuArithmTest::CheckNorm(double d1, double d2)
 {
     double ret = ::fabs(d1 - d2);
 
-    if (ret < std::numeric_limits<double>::epsilon())
+    if (ret < 1e-5)
         return CvTS::OK;
 
     ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
@@ -605,6 +605,91 @@ struct CV_GpuNppImageMagnitudeTest : public CV_GpuArithmTest
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// phase
+struct CV_GpuNppImagePhaseTest : public CV_GpuArithmTest
+{
+    CV_GpuNppImagePhaseTest() : CV_GpuArithmTest( "GPU-NppImagePhase", "phase" ) {}
+
+    int test( const Mat& mat1, const Mat& mat2 )
+    {
+        if (mat1.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::Mat cpuRes;
+        cv::phase(mat1, mat2, cpuRes);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpu2(mat2);
+        GpuMat gpuRes;
+        cv::gpu::phase(gpu1, gpu2, gpuRes);
+
+        return CheckNorm(cpuRes, gpuRes);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// cartToPolar
+struct CV_GpuNppImageCartToPolarTest : public CV_GpuArithmTest
+{
+    CV_GpuNppImageCartToPolarTest() : CV_GpuArithmTest( "GPU-NppImageCartToPolar", "cartToPolar" ) {}
+
+    int test( const Mat& mat1, const Mat& mat2 )
+    {
+        if (mat1.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::Mat cpuMag, cpuAngle;
+        cv::cartToPolar(mat1, mat2, cpuMag, cpuAngle);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpu2(mat2);
+        GpuMat gpuMag, gpuAngle;
+        cv::gpu::cartToPolar(gpu1, gpu2, gpuMag, gpuAngle);
+
+        int magRes = CheckNorm(cpuMag, gpuMag);
+        int angleRes = CheckNorm(cpuAngle, gpuAngle);
+
+        return magRes == CvTS::OK && angleRes == CvTS::OK ? CvTS::OK : CvTS::FAIL_GENERIC;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// polarToCart
+struct CV_GpuNppImagePolarToCartTest : public CV_GpuArithmTest
+{
+    CV_GpuNppImagePolarToCartTest() : CV_GpuArithmTest( "GPU-NppImagePolarToCart", "polarToCart" ) {}
+
+    int test( const Mat& mat1, const Mat& mat2 )
+    {
+        if (mat1.type() != CV_32FC1)
+        {
+            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            return CvTS::OK;
+        }
+
+        cv::Mat cpuX, cpuY;
+        cv::polarToCart(mat1, mat2, cpuX, cpuY);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpu2(mat2);
+        GpuMat gpuX, gpuY;
+        cv::gpu::polarToCart(gpu1, gpu2, gpuX, gpuY);
+
+        int xRes = CheckNorm(cpuX, gpuX);
+        int yRes = CheckNorm(cpuY, gpuY);
+
+        return xRes == CvTS::OK && yRes == CvTS::OK ? CvTS::OK : CvTS::FAIL_GENERIC;
+    }
+};
+
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -629,3 +714,6 @@ CV_GpuNppImageLUTTest CV_GpuNppImageLUT_test;
 CV_GpuNppImageExpTest CV_GpuNppImageExp_test;
 CV_GpuNppImageLogTest CV_GpuNppImageLog_test;
 CV_GpuNppImageMagnitudeTest CV_GpuNppImageMagnitude_test;
+CV_GpuNppImagePhaseTest CV_GpuNppImagePhase_test;
+CV_GpuNppImageCartToPolarTest CV_GpuNppImageCartToPolar_test;
+CV_GpuNppImagePolarToCartTest CV_GpuNppImagePolarToCart_test;
