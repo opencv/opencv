@@ -293,7 +293,11 @@ This section documents OpenCV's interface to the FLANN\footnote{http://people.cs
 contains a collection of algorithms optimized for fast nearest neighbor search in large datasets and for high dimensional features. More 
 information about FLANN can be found in \cite{muja_flann_2009}.
 
+\ifplastex
 \cvclass{cv::flann::Index_}
+\else
+\subsubsection{cv::flann::Index\_}\label{cvflann.Index}
+\fi
 The FLANN nearest neighbor index class. This class is templated with the type of elements for which the index is built.
 
 \begin{lstlisting}
@@ -345,10 +349,14 @@ namespace flann
 } } // namespace cv::flann
 \end{lstlisting}
 
+\ifplastex
 \cvCppFunc{cv::flann::Index_<T>::Index_}
+\else
+\subsubsection{cvflann::Index\_$<T>$::Index\_}\label{cvflann.Index.Index}
+\fi
 Constructs a nearest neighbor search index for a given dataset.
 
-\cvdefCpp{Index_<T>::Index_(const Mat\& features, const IndexParams\& params);}
+\cvdefCpp{Index\_<T>::Index\_(const Mat\& features, const IndexParams\& params);}
 \begin{description}
 \cvarg{features}{ Matrix of containing the features(points) to index. The size of the matrix is num\_features x feature\_dimensionality and 
 the data type of the elements in the matrix must coincide with the type of the index.}
@@ -439,13 +447,21 @@ struct SavedIndexParams : public IndexParams
 \end{description}
 \end{description}
 
+\ifplastex
 \cvCppFunc{cv::flann::Index_<T>::knnSearch}
+\else
+\subsubsection{cv::flann::Index\_$<T>$::knnSearch}\label{cvflann.Index.knnSearch}
+\fi
 Performs a K-nearest neighbor search for a given query point using the index.
-\cvdefCpp{void Index_<T>::knnSearch(const vector<T>\& query, \par
+\cvdefCpp{
+void Index\_<T>::knnSearch(const vector<T>\& query, \par
 		vector<int>\& indices, \par
 		vector<float>\& dists, \par
 		int knn, \par
-		const SearchParams\& params);}
+		const SearchParams\& params);\newline
+void Index\_<T>::knnSearch(const Mat\& queries,\par
+	    Mat\& indices, Mat\& dists,\par
+	    int knn, const SearchParams\& params);}
 \begin{description}
 \cvarg{query}{The query point}
 \cvarg{indices}{Vector that will contain the indices of the K-nearest neighbors found. It must have at least knn size.}
@@ -462,27 +478,21 @@ Performs a K-nearest neighbor search for a given query point using the index.
 \end{description}
 \end{description}
 
-\cvCppFunc{cv::flann::Index_<T>::knnSearch}
-Performs a K-nearest neighbor search for multiple query points.
-
-\cvdefCpp{void Index_<T>::knnSearch(const Mat\& queries,\par
-		Mat\& indices, Mat\& dists,\par
-		int knn, const SearchParams\& params);}
-
-\begin{description}
-\cvarg{queries}{The query points, one per row. The type of queries must match the index type.}
-\cvarg{indices}{Indices of the nearest neighbors found }
-\cvarg{dists}{Distances to the nearest neighbors found}
-\cvarg{knn}{Number of nearest neighbors to search for}
-\cvarg{params}{Search parameters}
-\end{description}
-
-
+\ifplastex
 \cvCppFunc{cv::flann::Index_<T>::radiusSearch}
+\else
+\subsubsection{cv::flann::Index\_$<T>$::radiusSearch}\label{cvflann.Index.radiusSearch}
+\fi
 Performs a radius nearest neighbor search for a given query point.
-\cvdefCpp{int Index_<T>::radiusSearch(const vector<T>\& query, \par
+\cvdefCpp{
+int Index\_<T>::radiusSearch(const vector<T>\& query, \par
 		  vector<int>\& indices, \par
 		  vector<float>\& dists, \par
+		  float radius, \par
+		  const SearchParams\& params);\newline
+int Index\_<T>::radiusSearch(const Mat\& query, \par
+		  Mat\& indices, \par
+		  Mat\& dists, \par
 		  float radius, \par
 		  const SearchParams\& params);}
 \begin{description}
@@ -493,33 +503,26 @@ Performs a radius nearest neighbor search for a given query point.
 \cvarg{params}{Search parameters}
 \end{description}
 
-
-\cvCppFunc{cv::flann::Index_<T>::radiusSearch}
-Performs a radius nearest neighbor search for multiple query points.
-\cvdefCpp{int Index_<T>::radiusSearch(const Mat\& query, \par
-		  Mat\& indices, \par
-		  Mat\& dists, \par
-		  float radius, \par
-		  const SearchParams\& params);}
-\begin{description}
-\cvarg{queries}{The query points, one per row}
-\cvarg{indices}{Indices of the nearest neighbors found}
-\cvarg{dists}{Distances to the nearest neighbors found}
-\cvarg{radius}{The search radius}
-\cvarg{params}{Search parameters}
-\end{description}
-
-
+\ifplastex 
 \cvCppFunc{cv::flann::Index_<T>::save}
+\else
+\subsubsection{cv::flann::Index\_$<T>$::save}\label{cvflann.Index.save}
+\fi
+
 Saves the index to a file.
-\cvdefCpp{void Index_<T>::save(std::string filename);}
+\cvdefCpp{void Index\_<T>::save(std::string filename);}
 \begin{description}
 \cvarg{filename}{The file to save the index to}
 \end{description}
 
+\ifplastex 
 \cvCppFunc{cv::flann::Index_<T>::getIndexParameters}
+\else
+\subsubsection{cv::flann::Index\_$<T>$::getIndexParameters}\label{cvflann.Index.getIndexParameters}
+\fi
+
 Returns the index paramreters. This is usefull in case of autotuned indices, when the parameters computed can be retrived using this method.
-\cvdefCpp{const IndexParams* Index_<T>::getIndexParameters();}
+\cvdefCpp{const IndexParams* Index\_<T>::getIndexParameters();}
 
 
 \cvCppFunc{cv::flann::hierarchicalClustering<ET,DT>}
