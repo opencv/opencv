@@ -133,7 +133,7 @@ bool CvCascadeBoostParams::scanAttr( const String prmName, const String val)
     }
     else if( !prmName.compare( "-maxFalseAlarmRate" ) )
     {
-        weight_trim_rate = (float) atof( val.c_str() );
+        maxFalseAlarm = (float) atof( val.c_str() );
     }
     else if( !prmName.compare( "-weightTrimRate" ) )
     {
