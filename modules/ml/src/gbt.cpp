@@ -601,8 +601,8 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
     case ABSOLUTE_LOSS:
         {
             float* residuals = new float[n];
-            for (int i=0; i<n; ++i)
-                residuals[i] = (resp_data[*idx] - cur_data[*idx++]);
+            for (int i=0; i<n; ++i, ++idx)
+                residuals[i] = (resp_data[*idx] - cur_data[*idx]);
             icvSortFloat(residuals, n, 0.0f);
             if (n % 2) 
                 gamma = residuals[n/2];
@@ -613,8 +613,8 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
     case HUBER_LOSS:
         {
             float* residuals = new float[n];
-            for (int i=0; i<n; ++i)
-                residuals[i] = (resp_data[*idx] - cur_data[*idx++]);
+            for (int i=0; i<n; ++i, ++idx)
+                residuals[i] = (resp_data[*idx] - cur_data[*idx]);
             icvSortFloat(residuals, n, 0.0f);
 
             int n_half = n >> 1;
@@ -781,9 +781,6 @@ float CvGBTrees::predict( const CvMat* _sample, const CvMat* _missing,
 
 void CvGBTrees::write_params( CvFileStorage* fs ) const
 {
-    CV_FUNCNAME( "CvGBTrees::write_params" );
-    __BEGIN__;
-    
     const char* loss_function_type_str =
         params.loss_function_type == SQUARED_LOSS ? "SquaredLoss" :
         params.loss_function_type == ABSOLUTE_LOSS ? "AbsoluteLoss" :
@@ -806,8 +803,6 @@ void CvGBTrees::write_params( CvFileStorage* fs ) const
     data->is_classifier = !problem_type();
     data->write_params( fs );
     data->is_classifier = 0;
-
-    __END__;
 }
 
 
