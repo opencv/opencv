@@ -390,6 +390,7 @@ template<typename _Tp> class CV_EXPORTS DataDepth { public: enum { value = -1, f
 template<> class DataDepth<bool> { public: enum { value = CV_8U, fmt=(int)'u' }; };
 template<> class DataDepth<uchar> { public: enum { value = CV_8U, fmt=(int)'u' }; };
 template<> class DataDepth<schar> { public: enum { value = CV_8S, fmt=(int)'c' }; };
+template<> class DataDepth<char> { public: enum { value = CV_8S, fmt=(int)'c' }; };
 template<> class DataDepth<ushort> { public: enum { value = CV_16U, fmt=(int)'w' }; };
 template<> class DataDepth<short> { public: enum { value = CV_16S, fmt=(int)'s' }; };
 template<> class DataDepth<int> { public: enum { value = CV_32S, fmt=(int)'i' }; };
@@ -969,9 +970,6 @@ public:
     typedef value_type work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
-           fmt=DataDepth<channel_type>::fmt,
-           type = CV_MAKETYPE(depth, channels) };
 };
 
 template<> class DataType<bool>
@@ -999,6 +997,18 @@ public:
 };
 
 template<> class DataType<schar>
+{
+public:
+    typedef schar value_type;
+    typedef int work_type;
+    typedef value_type channel_type;
+    typedef value_type vec_type;
+    enum { depth = DataDepth<channel_type>::value, channels = 1,
+           fmt=DataDepth<channel_type>::fmt,
+           type = CV_MAKETYPE(depth, channels) };
+};
+
+template<> class DataType<char>
 {
 public:
     typedef schar value_type;
