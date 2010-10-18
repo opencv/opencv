@@ -118,13 +118,13 @@ int clippingBoxes(int width, int height,
 // RESULT
 // Feature pyramid with nullable border
 */
-featurePyramid* createFeaturePyramidWithBorder(IplImage *image,
+CvLSVMFeaturePyramid* createFeaturePyramidWithBorder(IplImage *image,
                                                int maxXBorder, int maxYBorder)
 {
     int opResult;
     int bx, by;
     int level;
-    featurePyramid *H;
+    CvLSVMFeaturePyramid *H;
 
     // Obtaining feature pyramid
     opResult = getFeaturePyramid(image, LAMBDA, SIDE_LENGTH, 0, 0, 
@@ -175,7 +175,7 @@ featurePyramid* createFeaturePyramidWithBorder(IplImage *image,
 // RESULT
 // Error status
 */
-int searchObject(const featurePyramid *H, const filterObject **all_F, 
+int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F, 
                  int n, float b, 
                  int maxXBorder,
                  int maxYBorder,  
@@ -265,8 +265,8 @@ int estimateBoxes(CvPoint *points, int *levels, int kPoints,
 // RESULT
 // Error status
 */
-int searchObjectThreshold(const featurePyramid *H, 
-                          const filterObject **all_F, int n,
+int searchObjectThreshold(const CvLSVMFeaturePyramid *H, 
+                          const CvLSVMFilterObject **all_F, int n,
                           float b, 
                           int maxXBorder, int maxYBorder, 
                           float scoreThreshold,
@@ -356,7 +356,7 @@ int getOppositePoint(CvPoint point,
 // Error status
 */
 int showRootFilterBoxes(IplImage *image,
-                        const filterObject *filter, 
+                        const CvLSVMFilterObject *filter, 
                         CvPoint *points, int *levels, int kPoints,
                         CvScalar color, int thickness, 
                         int line_type, int shift)
@@ -404,7 +404,7 @@ int showRootFilterBoxes(IplImage *image,
 // Error status
 */
 int showPartFilterBoxes(IplImage *image,
-                        const filterObject **filters,
+                        const CvLSVMFilterObject **filters,
                         int n, CvPoint **partsDisplacement, 
                         int *levels, int kPoints,
                         CvScalar color, int thickness, 
@@ -484,7 +484,7 @@ int showBoxes(IplImage *img,
 // RESULT
 // Error status
 */
-int getMaxFilterDims(const filterObject **filters, int kComponents,
+int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
                      const int *kPartFilters, 
                      unsigned int *maxXBorder, unsigned int *maxYBorder)
 {
@@ -532,8 +532,8 @@ int getMaxFilterDims(const filterObject **filters, int kComponents,
 // RESULT
 // Error status
 */
-int searchObjectThresholdSomeComponents(const featurePyramid *H,
-                                        const filterObject **filters, 
+int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
+                                        const CvLSVMFilterObject **filters, 
                                         int kComponents, const int *kPartFilters,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,

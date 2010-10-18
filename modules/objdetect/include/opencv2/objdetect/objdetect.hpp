@@ -153,7 +153,7 @@ typedef struct
     unsigned int x;
     unsigned int y;
     unsigned int l;
-} position;
+} CvLSVMFilterPosition;
 
 // DataType: STRUCT filterObject
 // Description of the filter, which corresponds to the part of the object
@@ -173,14 +173,14 @@ typedef struct
 //                   size of row in feature vectors 
 //                   (yp = (int) (p / xp); p = xp * yp)
 typedef struct{
-    position V;
+    CvLSVMFilterPosition V;
     float fineFunction[4];
     unsigned int sizeX;
     unsigned int sizeY;
     unsigned int p;
     unsigned int xp;
     float *H;
-} filterObject;
+} CvLSVMFilterObject;
 
 // data type: STRUCT CvLatentSvmDetector
 // structure contains internal representation of trained Latent SVM detector
@@ -195,7 +195,7 @@ typedef struct CvLatentSvmDetector
 	int num_filters;
 	int num_components;
 	int* num_part_filters;
-	filterObject** filters;
+	CvLSVMFilterObject** filters;
 	float* b;
 	float score_threshold;
 }

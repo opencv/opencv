@@ -25,7 +25,7 @@
 // RESULT
 // Error status
 */
-int convolution(const filterObject *Fi, const featureMap *map, float *f);
+int convolution(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *map, float *f);
 
 /*
 // Computation multiplication of FFT images
@@ -97,9 +97,9 @@ int addNullableBars(float *rot2PIFilter, int dimX, int dimY,
 // RESULT
 // Error status
 */
-int getFFTImageFilterObject(const filterObject *filter, 
+int getFFTImageFilterObject(const CvLSVMFilterObject *filter, 
                             int mapDimX, int mapDimY,
-                            fftImage **image);
+                            CvLSVMFftImage **image);
 
 /*
 // Computation FFT image for feature map
@@ -111,7 +111,7 @@ int getFFTImageFilterObject(const filterObject *filter,
 // RESULT
 // Error status
 */
-int getFFTImageFeatureMap(const featureMap *map, fftImage **image);
+int getFFTImageFeatureMap(const CvLSVMFeatureMap *map, CvLSVMFftImage **image);
 
 /*
 // Function for convolution computation using FFT
@@ -128,7 +128,7 @@ int getFFTImageFeatureMap(const featureMap *map, fftImage **image);
 // RESULT
 // Error status
 */
-int convFFTConv2d(const fftImage *featMapImage, const fftImage *filterImage, 
+int convFFTConv2d(const CvLSVMFftImage *featMapImage, const CvLSVMFftImage *filterImage, 
                   int filterDimX, int filterDimY, float **conv);
 
 /*
@@ -149,7 +149,7 @@ int convFFTConv2d(const fftImage *featMapImage, const fftImage *filterImage,
 // RESULT
 // Error status
 */
-int filterDispositionLevel(const filterObject *Fi, const featureMap *pyramid,
+int filterDispositionLevel(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *pyramid,
                            float **scoreFi, 
                            int **pointsX, int **pointsY);
 
@@ -171,7 +171,7 @@ int filterDispositionLevel(const filterObject *Fi, const featureMap *pyramid,
 // RESULT
 // Error status
 */
-int filterDispositionLevelFFT(const filterObject *Fi, const fftImage *featMapImage,
+int filterDispositionLevelFFT(const CvLSVMFilterObject *Fi, const CvLSVMFftImage *featMapImage,
                               float **scoreFi, 
                               int **pointsX, int **pointsY);
 
@@ -204,7 +204,7 @@ int computeBorderSize(int maxXBorder, int maxYBorder, int *bx, int *by);
 // RESULT
 // Error status
 */
-int addNullableBorder(featureMap *map, int bx, int by);
+int addNullableBorder(CvLSVMFeatureMap *map, int bx, int by);
 
 /*
 // Computation the maximum of the score function at the level
@@ -234,8 +234,8 @@ int addNullableBorder(featureMap *map, int bx, int by);
 // RESULT
 // Error status
 */
-int maxFunctionalScoreFixedLevel(const filterObject **all_F, int n, 
-                                 const featurePyramid *H, 
+int maxFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n, 
+                                 const CvLSVMFeaturePyramid *H, 
                                  int level, float b, 
                                  int maxXBorder, int maxYBorder,                                 
                                  float *score, CvPoint **points, int *kPoints,
@@ -271,8 +271,8 @@ int maxFunctionalScoreFixedLevel(const filterObject **all_F, int n,
 // RESULT
 // Error status
 */
-int thresholdFunctionalScoreFixedLevel(const filterObject **all_F, int n, 
-                                       const featurePyramid *H, 
+int thresholdFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n, 
+                                       const CvLSVMFeaturePyramid *H, 
                                        int level, float b, 
                                        int maxXBorder, int maxYBorder,
                                        float scoreThreshold,
@@ -306,8 +306,8 @@ int thresholdFunctionalScoreFixedLevel(const filterObject **all_F, int n,
 // RESULT
 // Error status
 */
-int maxFunctionalScore(const filterObject **all_F, int n, 
-                       const featurePyramid *H, float b, 
+int maxFunctionalScore(const CvLSVMFilterObject **all_F, int n, 
+                       const CvLSVMFeaturePyramid *H, float b, 
                        int maxXBorder, int maxYBorder,
                        float *score, 
                        CvPoint **points, int **levels, int *kPoints,
@@ -343,8 +343,8 @@ int maxFunctionalScore(const filterObject **all_F, int n,
 // RESULT
 // Error status
 */
-int thresholdFunctionalScore(const filterObject **all_F, int n, 
-                             const featurePyramid *H, 
+int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n, 
+                             const CvLSVMFeaturePyramid *H, 
                              float b, 
                              int maxXBorder, int maxYBorder,
                              float scoreThreshold,
@@ -389,7 +389,7 @@ int nonMaximumSuppression(int numBoxes, const CvPoint *points,
 #ifdef __cplusplus
 extern "C"
 #endif
-int getMaxFilterDims(const filterObject **filters, int kComponents,
+int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
                      const int *kPartFilters, 
                      unsigned int *maxXBorder, unsigned int *maxYBorder);
 //}

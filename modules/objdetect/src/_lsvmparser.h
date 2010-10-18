@@ -46,7 +46,8 @@
 #define EBTAG     (STEP_END + BTAG)
 
 //extern "C" {
-    int LSVMparser(const char * filename, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score);
+    int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, int *max,
+                   int **comp, float **b, int *count, float * score);
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -54,7 +55,7 @@ extern "C"
              
               const char *modelPath,
              
-              filterObject ***filters,
+              CvLSVMFilterObject ***filters,
               int *kFilters,
               int *kComponents,
               int **kPartFilters,

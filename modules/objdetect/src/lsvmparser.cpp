@@ -163,23 +163,23 @@ int getTeg(char *str){
     return sum;
 }
 
-void addFilter(filterObject *** model, int *last, int *max){
-    filterObject ** nmodel;
+void addFilter(CvLSVMFilterObject *** model, int *last, int *max){
+    CvLSVMFilterObject ** nmodel;
     int i;
     (*last) ++;
     if((*last) >= (*max)){
         (*max) += 10;
-        nmodel = (filterObject **)malloc(sizeof(filterObject *) * (*max));
+        nmodel = (CvLSVMFilterObject **)malloc(sizeof(CvLSVMFilterObject *) * (*max));
         for(i = 0; i < *last; i++){
             nmodel[i] = (* model)[i];
         }
         free(* model);
         (*model) = nmodel;
     }
-    (*model) [(*last)] = (filterObject *)malloc(sizeof(filterObject));
+    (*model) [(*last)] = (CvLSVMFilterObject *)malloc(sizeof(CvLSVMFilterObject));
 }
 
-void parserRFilter  (FILE * xmlf, int p, filterObject * model, float *b){
+void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
     int st = 0;
     int sizeX, sizeY;
     int tag;
@@ -278,7 +278,7 @@ void parserRFilter  (FILE * xmlf, int p, filterObject * model, float *b){
     }
 }
 
-void parserV  (FILE * xmlf, int p, filterObject * model){
+void parserV  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     int st = 0;
     int tag;
     int tagVal;
@@ -341,7 +341,7 @@ void parserV  (FILE * xmlf, int p, filterObject * model){
         }        
     }
 }
-void parserD  (FILE * xmlf, int p, filterObject * model){
+void parserD  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     int st = 0;
     int tag;
     int tagVal;
@@ -430,7 +430,7 @@ void parserD  (FILE * xmlf, int p, filterObject * model){
     }
 }
 
-void parserPFilter  (FILE * xmlf, int p, int N_path, filterObject * model){
+void parserPFilter  (FILE * xmlf, int p, int N_path, CvLSVMFilterObject * model){
     int st = 0;
     int sizeX, sizeY;
     int tag;
@@ -524,7 +524,7 @@ void parserPFilter  (FILE * xmlf, int p, int N_path, filterObject * model){
         }        
     }
 }
-void parserPFilterS (FILE * xmlf, int p, filterObject *** model, int *last, int *max){
+void parserPFilterS (FILE * xmlf, int p, CvLSVMFilterObject *** model, int *last, int *max){
     int st = 0;
     int N_path = 0;
     int tag;
@@ -573,7 +573,7 @@ void parserPFilterS (FILE * xmlf, int p, filterObject *** model, int *last, int 
         }        
     }
 }
-void parserComp (FILE * xmlf, int p, int *N_comp, filterObject *** model, float *b, int *last, int *max){
+void parserComp (FILE * xmlf, int p, int *N_comp, CvLSVMFilterObject *** model, float *b, int *last, int *max){
     int st = 0;
     int tag;
     int tagVal;
@@ -623,7 +623,7 @@ void parserComp (FILE * xmlf, int p, int *N_comp, filterObject *** model, float 
         }        
     }
 }
-void parserModel(FILE * xmlf, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
+void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
     int p = 0;
     int N_comp = 0;
     int * cmp;
@@ -720,7 +720,7 @@ void parserModel(FILE * xmlf, filterObject *** model, int *last, int *max, int *
     }
 }
 
-int LSVMparser(const char * filename, filterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
+int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
     int st = 0;
     int tag;
     char ch;
@@ -731,7 +731,7 @@ int LSVMparser(const char * filename, filterObject *** model, int *last, int *ma
 
     (*max) = 10;
     (*last) = -1;
-    (*model) = (filterObject ** )malloc((sizeof(filterObject * )) * (*max));
+    (*model) = (CvLSVMFilterObject ** )malloc((sizeof(CvLSVMFilterObject * )) * (*max));
 
     //printf("parse : %s\n", filename);
 
@@ -773,8 +773,7 @@ int LSVMparser(const char * filename, filterObject *** model, int *last, int *ma
 
 int loadModel(
               const char *modelPath,
-             
-              filterObject ***filters,
+              CvLSVMFilterObject ***filters,
               int *kFilters, 
               int *kComponents, 
               int **kPartFilters, 

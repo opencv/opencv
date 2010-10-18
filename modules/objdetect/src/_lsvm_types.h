@@ -1,17 +1,19 @@
 #ifndef SVM_TYPE
 #define SVM_TYPE
 
+#include "float.h"
+
 //#define FFT_CONV
 
 // «начение числа PI
-#define PI    3.1415926535897932384626433832795  
+#define PI    CV_PI
 
 // “очность сравнени€ пары вещественных чисел
 #define EPS 0.000001
 
 // ћинимальное и максимальное значение дл€ вещественного типа данных
-#define F_MAX 3.402823466e+38
-#define F_MIN -3.402823465e+38
+#define F_MAX FLT_MAX
+#define F_MIN -FLT_MAX
 
 // The number of elements in bin
 // The number of sectors in gradient histogram building
@@ -46,7 +48,7 @@ typedef struct{
     int p;
     int xp;
     float *Map;
-} featureMap;
+} CvLSVMFeatureMap;
 
 // DataType: STRUCT featurePyramid
 //
@@ -56,8 +58,8 @@ typedef struct{
 typedef struct{
     int countLevel;
     int lambda;
-    featureMap **pyramid;
-} featurePyramid;
+    CvLSVMFeatureMap **pyramid;
+} CvLSVMFeaturePyramid;
 
 // DataType: STRUCT filterDisposition
 // The structure stores preliminary results in optimization process
@@ -70,7 +72,7 @@ typedef struct{
     float *score;
     int *x;
     int *y;
-} filterDisposition;
+} CvLSVMFilterDisposition;
 
 // DataType: STRUCT fftImage
 // The structure stores FFT image
@@ -84,6 +86,6 @@ typedef struct{
     unsigned int dimX;
     unsigned int dimY;
     float **channels;
-} fftImage;
+} CvLSVMFftImage;
 
 #endif

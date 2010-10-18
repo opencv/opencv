@@ -29,7 +29,7 @@ int sign(float r){
 // RESULT
 // Error status
 */
-int getFeatureMaps_dp(const IplImage * image,const int k, featureMap **map)
+int getFeatureMaps_dp(const IplImage * image,const int k, CvLSVMFeatureMap **map)
 {
     int sizeX, sizeY;
     int p, px, strsz;
@@ -226,7 +226,7 @@ int getFeatureMaps_dp(const IplImage * image,const int k, featureMap **map)
 // RESULT
 // Error status
 */
-int normalizationAndTruncationFeatureMaps(featureMap *map, const float alfa)
+int normalizationAndTruncationFeatureMaps(CvLSVMFeatureMap *map, const float alfa)
 {
     int i,j, ii;
     int sizeX, sizeY, p, pos, pp, xp, pos1, pos2;
@@ -351,7 +351,7 @@ int normalizationAndTruncationFeatureMaps(featureMap *map, const float alfa)
 // RESULT
 // Error status
 */
-int PCAFeatureMaps(featureMap *map)
+int PCAFeatureMaps(CvLSVMFeatureMap *map)
 { 
     int i,j, ii, jj, k;
     int sizeX, sizeY, p,  pp, xp, yp, pos1, pos2;
@@ -447,7 +447,7 @@ int PCAFeatureMaps(featureMap *map)
 int getFeaturePyramid(IplImage * image,
                       const int lambda, const int k, 
                       const int startX, const int startY, 
-                      const int W, const int H, featurePyramid **maps)
+                      const int W, const int H, CvLSVMFeaturePyramid **maps)
 {
     IplImage *img2, *imgTmp, *imgResize;
     float   step, tmp;
@@ -455,7 +455,7 @@ int getFeaturePyramid(IplImage * image,
     int      maxcall;
     int i;
     int err;
-    featureMap *map;
+    CvLSVMFeatureMap *map;
     
     //geting subimage
     cvSetImageROI(image, cvRect(startX, startY, W, H));
@@ -534,7 +534,7 @@ int getFeaturePyramid(IplImage * image,
 // RESULT
 // Error status
 */
-int addBordersToFeatureMaps(featureMap *map, const int bX, const int bY){
+int addBordersToFeatureMaps(CvLSVMFeatureMap *map, const int bX, const int bY){
     int i,j, jj;
     int sizeX, sizeY, p, pos1, pos2;
     float * new_data;

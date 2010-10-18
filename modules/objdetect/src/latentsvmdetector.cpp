@@ -16,7 +16,7 @@
 CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename)
 {
 	CvLatentSvmDetector* detector = 0;
-	filterObject** filters = 0;
+	CvLSVMFilterObject** filters = 0;
 	int kFilters = 0;
 	int kComponents = 0;
 	int* kPartFilters = 0;
@@ -84,7 +84,7 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
 								CvMemStorage* storage, 
 								float overlap_threshold)
 {
-	featurePyramid *H = 0;
+	CvLSVMFeaturePyramid *H = 0;
     CvPoint *points = 0, *oppPoints = 0;
     int kPoints = 0;
     float *score = 0;    
@@ -97,11 +97,11 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
 
     cvConvertImage(image, image, CV_CVTIMG_SWAP_RB);
     // Getting maximum filter dimensions
-	getMaxFilterDims((const filterObject**)(detector->filters), detector->num_components, detector->num_part_filters, &maxXBorder, &maxYBorder);
+	getMaxFilterDims((const CvLSVMFilterObject**)(detector->filters), detector->num_components, detector->num_part_filters, &maxXBorder, &maxYBorder);
     // Create feature pyramid with nullable border
     H = createFeaturePyramidWithBorder(image, maxXBorder, maxYBorder);
     // Search object
-    searchObjectThresholdSomeComponents(H, (const filterObject**)(detector->filters), detector->num_components, 
+    searchObjectThresholdSomeComponents(H, (const CvLSVMFilterObject**)(detector->filters), detector->num_components, 
 		detector->num_part_filters, detector->b, detector->score_threshold, 
                 &points, &oppPoints, &score, &kPoints);
     // Clipping boxes

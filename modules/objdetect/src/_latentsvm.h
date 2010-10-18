@@ -40,7 +40,7 @@
 int getFeaturePyramid(IplImage * image, 
                       const int lambda, const int k, 
                       const int startX, const int startY, 
-                      const int W, const int H, featurePyramid **maps);
+                      const int W, const int H, CvLSVMFeaturePyramid **maps);
 
 /*
 // Getting feature map for the selected subimage  
@@ -55,7 +55,7 @@ int getFeaturePyramid(IplImage * image,
 // RESULT
 // Error status
 */
-int getFeatureMaps_dp(const IplImage * image, const int k, featureMap **map);
+int getFeatureMaps_dp(const IplImage * image, const int k, CvLSVMFeatureMap **map);
 
 
 /*
@@ -71,7 +71,7 @@ int getFeatureMaps_dp(const IplImage * image, const int k, featureMap **map);
 // RESULT
 // Error status
 */
-int normalizationAndTruncationFeatureMaps(featureMap *map, const float alfa);
+int normalizationAndTruncationFeatureMaps(CvLSVMFeatureMap *map, const float alfa);
 
 /*
 // Feature map reduction
@@ -87,7 +87,7 @@ int normalizationAndTruncationFeatureMaps(featureMap *map, const float alfa);
 // RESULT
 // Error status
 */
-int PCAFeatureMaps(featureMap *map);
+int PCAFeatureMaps(CvLSVMFeatureMap *map);
 
 //////////////////////////////////////////////////////////////
 // search object
@@ -172,7 +172,7 @@ int clippingBoxes(int width, int height,
 #ifdef __cplusplus
 extern "C"
 #endif
-featurePyramid* createFeaturePyramidWithBorder(IplImage *image,
+CvLSVMFeaturePyramid* createFeaturePyramidWithBorder(IplImage *image,
                                                int maxXBorder, int maxYBorder);
 
 /*
@@ -204,7 +204,7 @@ featurePyramid* createFeaturePyramidWithBorder(IplImage *image,
 // RESULT
 // Error status
 */
-int searchObject(const featurePyramid *H, const filterObject **all_F, int n, 
+int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F, int n, 
                  float b, 
                  int maxXBorder,
                  int maxYBorder, 
@@ -242,8 +242,8 @@ int searchObject(const featurePyramid *H, const filterObject **all_F, int n,
 // RESULT
 // Error status
 */
-int searchObjectThreshold(const featurePyramid *H, 
-                          const filterObject **all_F, int n,
+int searchObjectThreshold(const CvLSVMFeaturePyramid *H, 
+                          const CvLSVMFilterObject **all_F, int n,
                           float b, 
                           int maxXBorder, int maxYBorder, 
                           float scoreThreshold,
@@ -278,8 +278,8 @@ int searchObjectThreshold(const featurePyramid *H,
 #ifdef __cplusplus
 extern "C"
 #endif
-int searchObjectThresholdSomeComponents(const featurePyramid *H,
-                                        const filterObject **filters, 
+int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
+                                        const CvLSVMFilterObject **filters, 
                                         int kComponents, const int *kPartFilters,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,
@@ -336,7 +336,7 @@ int getOppositePoint(CvPoint point,
 // Error status
 */
 int showRootFilterBoxes(IplImage *image,
-                        const filterObject *filter, 
+                        const CvLSVMFilterObject *filter, 
                         CvPoint *points, int *levels, int kPoints,
                         CvScalar color, int thickness, 
                         int line_type, int shift);
@@ -367,7 +367,7 @@ int showRootFilterBoxes(IplImage *image,
 // Error status
 */
 int showPartFilterBoxes(IplImage *image,
-                        const filterObject **filters,
+                        const CvLSVMFilterObject **filters,
                         int n, CvPoint **partsDisplacement, 
                         int *levels, int kPoints,
                         CvScalar color, int thickness, 
