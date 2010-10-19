@@ -172,5 +172,5 @@ void CV_RigidTransform_Test::run( int start_from )
     ts->set_failed_test_info(CvTS::OK);
 }
 
-//CV_RigidTransform_Test CV_RigidTransform_test;
+CV_RigidTransform_Test CV_RigidTransform_test;
 

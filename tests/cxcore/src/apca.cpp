@@ -305,4 +305,4 @@ exit_func:
 
 #endif
 
-//CV_PCATest pca_test;
+CV_PCATest pca_test;

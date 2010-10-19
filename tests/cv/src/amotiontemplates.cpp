@@ -635,5 +635,5 @@ int CV_MHIGlobalOrientTest::validate_test_results( int test_case_idx )
 }
 
 
-//CV_MHIGlobalOrientTest mhi_global_orient_test;
+CV_MHIGlobalOrientTest mhi_global_orient_test;
 

@@ -795,7 +795,7 @@ void CV_CameraCalibrationTest_CPP::project( int pointCount, CvPoint3D64f* _objec
 	}
 }
 
-//CV_CameraCalibrationTest_CPP calibrate_test_cpp;
+CV_CameraCalibrationTest_CPP calibrate_test_cpp;
 
 //----------------------------------------- CV_CalibrationMatrixValuesTest --------------------------------
 
@@ -1656,7 +1656,7 @@ bool CV_StereoCalibrationTest_C::rectifyUncalibrated( const Mat& points1,
 	return cvStereoRectifyUncalibrated(&_pt1, &_pt2, pF, imgSize, &_H1, &_H2, threshold) > 0;
 }
 
-//CV_StereoCalibrationTest_C stereocalib_test_c;
+CV_StereoCalibrationTest_C stereocalib_test_c;
 
 //-------------------------------- CV_StereoCalibrationTest_CPP ------------------------------
 

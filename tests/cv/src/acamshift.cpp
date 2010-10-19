@@ -383,7 +383,7 @@ _exit_:
 }
 
 
-//CV_CamShiftTest camshift_test;
+CV_CamShiftTest camshift_test;
 
 
 ///////////////////////// MeanShift //////////////////////////////

@@ -45,7 +45,9 @@ CvTS test_system("ml");
 
 const char* blacklist[] =
 {
-    "kmeans",
+    "kmeans",      //ticket 616
+    "artrees",     //ticket 460
+    "aboost",      //ticket 474
     0
 };
 

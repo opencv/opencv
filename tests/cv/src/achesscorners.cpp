@@ -408,6 +408,6 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
     return res;
 }
 
-//CV_ChessboardDetectorTest chessboard_detector_test;
+CV_ChessboardDetectorTest chessboard_detector_test;
 
 /* End of file. */

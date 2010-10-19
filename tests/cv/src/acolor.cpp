@@ -1375,7 +1375,7 @@ void CV_ColorLuvTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
 }
 
 
-//CV_ColorLuvTest color_luv_test;
+CV_ColorLuvTest color_luv_test;
 
 
 

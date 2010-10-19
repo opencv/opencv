@@ -465,5 +465,5 @@ int CV_HOGDetectorTest::detectMultiScale( int di, const Mat& img,
 	return CvTS::OK;
 }
 
-//CV_CascadeDetectorTest cascadeTest("cascade-detector");
-//CV_HOGDetectorTest hogTest("hog-detector");
+CV_CascadeDetectorTest cascadeTest("cascade-detector");
+CV_HOGDetectorTest hogTest("hog-detector");

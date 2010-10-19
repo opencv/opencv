@@ -119,4 +119,4 @@ void CV_InpaintTest::run( int )
     ts->set_failed_test_info(CvTS::OK);
 }
 
-//CV_InpaintTest inpaint_test;
+CV_InpaintTest inpaint_test;

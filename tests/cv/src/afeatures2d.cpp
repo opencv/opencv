@@ -172,7 +172,7 @@ CV_FeatureDetectorTest harrisTest( "detector_harris", createFeatureDetector("HAR
 CV_FeatureDetectorTest mserTest( "detector_mser", createFeatureDetector("MSER") );
 CV_FeatureDetectorTest siftTest( "detector_sift", createFeatureDetector("SIFT") );
 CV_FeatureDetectorTest starTest( "detector_star", createFeatureDetector("STAR") );
-//CV_FeatureDetectorTest surfTest( "detector_surf", createFeatureDetector("SURF") );
+CV_FeatureDetectorTest surfTest( "detector_surf", createFeatureDetector("SURF") );
 
 /****************************************************************************************\
 *                     Regression tests for descriptor extractors.                        *
@@ -320,10 +320,10 @@ public:
     }
 };
 
-//CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_sift", 0.001f,
-//                                                createDescriptorExtractor("SIFT"), 8.06652f  );
-//CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_surf",  0.004f,
-//                                                createDescriptorExtractor("SURF"), 0.147372f );
+CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_sift", 0.001f,
+                                                createDescriptorExtractor("SIFT"), 8.06652f  );
+CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_surf",  0.004f,
+                                                createDescriptorExtractor("SURF"), 0.147372f );
 //CV_DescriptorExtractorTest siftDescriptorTest( "descriptor_opponent_sift", 0.001f,
 //                                                createDescriptorExtractor("OpponentSIFT"), 8.06652f  );
 //CV_DescriptorExtractorTest surfDescriptorTest( "descriptor_opponent_surf",  0.004f,

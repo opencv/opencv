@@ -789,7 +789,7 @@ _exit_:
 }
 
 
-//CV_MinAreaRectTest shape_minarearect_test;
+CV_MinAreaRectTest shape_minarearect_test;
 
 
 /****************************************************************************************\

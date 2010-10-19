@@ -45,10 +45,38 @@ CvTS test_system("cv");
 
 const char* blacklist[] =
 {
-    "morph-ex",
-    "operations",
-    "stereobm",
-    "stereosgbm",
+    "morph-ex",                    //ticket 612
+    "operations",                  //ticket 613
+    "stereobm",                    //ticket 614
+    "stereosgbm",                  //ticket 615
+    "cascade-detector",            //ticket 432
+    "hog-detector",                //ticket 428
+    "warp-resize",                 //ticket 429
+    "posit",                       //ticket 430
+    "optflow-estimate-rigid",      //ticket 433
+    "shape-minarearect",           //ticket 436
+    "MSER",                        //ticket 437
+    "stereogc",                    //ticket 439
+    "subdiv",                      //ticket 454
+    "mhi-global",                  //ticket 457
+    "segmentation-pyramid",        //ticket 464
+    "calibrate-camera-artificial", //ticket 472
+    "chessboard-subpixel",         //ticket 473
+    "track-camshift",              //ticket 483
+    "_3d-fundam",                  //ticket 484
+    "color-luv",                   //ticket 502
+    "calibrate-camera-cpp",        //ticket 564
+    "calibrate-stereo-c",          //ticket 565
+    "descriptor_sift",             //ticket 567
+    "descriptor_surf",             //ticket 568
+    "chessboard-detector",         //ticket 569
+    "inpaint",                     //ticket 570
+    "warp-affine",                 //ticket 572
+    "warp-perspective",            //ticket 575
+    "warp-remap",                  //ticket 576
+    "warp-undistort",              //ticket 577
+    "detector_surf",               //ticket 578
+    "hist-backproj",               //ticket 579
     0
 };
 

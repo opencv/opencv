@@ -240,6 +240,6 @@ void CV_ChessboardSubpixelTest::generateIntrinsicParams()
     distortion_coeffs_ = (Mat_<double>(1, 5) << k1, k2, p1, p2, k3);
 }
 
-//CV_ChessboardSubpixelTest chessboard_subpixel_test;
+CV_ChessboardSubpixelTest chessboard_subpixel_test;
 
 /* End of file. */
