@@ -1,6 +1,5 @@
 \section{Object detection and descriptors}
 \ifCpp
-
 \cvclass{RandomizedTree}
 The class contains base structure for \texttt{RTreeClassifier}
 
@@ -95,7 +94,7 @@ void train(std::vector<BaseKeypoint> const\& base\_set, cv::RNG \&rng,
 \cvarg{num\_quant\_bits} {Number of bits are used for quantization}
 \end{description}		
 
-\cvCppFunc {RandomizedTree::read}
+\cvCppFunc{RandomizedTree::read}
 Reads pre-saved randomized tree from file or stream
 \cvdefCpp{read(const char* file\_name, int num\_quant\_bits)}	
 \cvdefCpp{read(std::istream \&is, int num\_quant\_bits)}	
@@ -105,7 +104,7 @@ Reads pre-saved randomized tree from file or stream
 \cvarg{num\_quant\_bits} {Number of bits are used for quantization}
 \end{description}
 
-\cvCppFunc {RandomizedTree::write}
+\cvCppFunc{RandomizedTree::write}
 Writes current randomized tree to a file or stream
 \cvdefCpp{void write(const char* file\_name) const;}	
 \cvdefCpp{void write(std::ostream \&os) const;}	
@@ -115,7 +114,7 @@ Writes current randomized tree to a file or stream
 \end{description}
 
 
-\cvCppFunc {RandomizedTree::applyQuantization}
+\cvCppFunc{RandomizedTree::applyQuantization}
 Applies quantization to the current randomized tree
 \cvdefCpp{void applyQuantization(int num\_quant\_bits)}
 \begin{description}
@@ -285,7 +284,7 @@ static int countNonZeroElements(float *vec, int n, double tol=1e-10);
 \cvarg{tol} {The threshold used for elements counting. We take all elements are less than \texttt{tol} as zero elements}
 \end{description}
 
-\cvCppFunc {RTreeClassifier::read}
+\cvCppFunc{RTreeClassifier::read}
 Reads pre-saved RTreeClassifier from file or stream
 \cvdefCpp{read(const char* file\_name)}	
 \cvdefCpp{read(std::istream \&is)}	
@@ -294,7 +293,7 @@ Reads pre-saved RTreeClassifier from file or stream
 \cvarg{is}{Input stream associated with file contains randomized tree data}
 \end{description}
 
-\cvCppFunc {RTreeClassifier::write}
+\cvCppFunc{RTreeClassifier::write}
 Writes current RTreeClassifier to a file or stream
 \cvdefCpp{void write(const char* file\_name) const;}	
 \cvdefCpp{void write(std::ostream \&os) const;}	
@@ -304,7 +303,7 @@ Writes current RTreeClassifier to a file or stream
 \end{description}
 
 
-\cvCppFunc {RTreeClassifier::setQuantization}
+\cvCppFunc{RTreeClassifier::setQuantization}
 Applies quantization to the current randomized tree
 \cvdefCpp{void setQuantization(int num\_quant\_bits)}
 \begin{description}
@@ -400,5 +399,4 @@ for(i=0; i < imageKeypoints->total; i++)
 }
 	
 \end{lstlisting}
-
 \fi

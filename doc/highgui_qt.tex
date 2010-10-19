@@ -523,7 +523,7 @@ cvAddText( img1, ``Hello World !'', cvPoint(50,50), font);
 \end{lstlisting}
 
 
-\cvCPyFunc{addText}
+\cvCPyFunc{AddText}
 Create the font to be used to draw text on an image 
 \cvdefC{void cvAddText(const CvArr* img, const char* text, CvPoint location, CvFont *font);}
 
@@ -538,7 +538,7 @@ The function \texttt{cvAddText} draw \emph{text} on the image \emph{img} using a
 
 
 %CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delay);
-\cvCPyFunc{displayOverlay}
+\cvCPyFunc{DisplayOverlay}
 Display text on the window's image as an overlay for delay milliseconds. This is not editing the image's data. The text is display on the top of the image.
 \cvdefC{void cvDisplayOverlay(const char* name, const char* text, int delay);}
 
@@ -552,7 +552,7 @@ The function \texttt{cvDisplayOverlay} aims at displaying useful information/tip
 
 
 %CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms);
-\cvCPyFunc{displayStatusBar}
+\cvCPyFunc{DisplayStatusBar}
 Display text on the window's statusbar as for delay milliseconds.
 \cvdefC{void cvDisplayStatusBar(const char* name, const char* text, int delayms);}
 
@@ -567,7 +567,7 @@ The function \texttt{cvDisplayOverlay} aims at displaying useful information/tip
 
 
 %CVAPI(void) cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1));
-\cvCPyFunc{createOpenGLCallback}
+\cvCPyFunc{CreateOpenGLCallback}
 Create a callback function called to draw OpenGL on top the the image display by \emph{window\_name}.
 \cvdefC{void cvCreateOpenGLCallback( const char* window\_name, CvOpenGLCallback callbackOpenGL, void* userdata CV\_DEFAULT(NULL), double angle CV\_DEFAULT(-1), double zmin CV\_DEFAULT(-1), double zmax CV\_DEFAULT(-1);}
 
@@ -621,7 +621,7 @@ CV_EXTERN_C_FUNCPTR( *CvOpenGLCallback)(void* userdata));
 
 
 %CVAPI(void) cvSaveWindowParameters(const char* name);
-\cvCPyFunc{saveWindowParameters}
+\cvCPyFunc{SaveWindowParameters}
 Save parameters of the window \emph{window\_name}.
 \cvdefC{void cvSaveWindowParameters(const char* name);}
 
@@ -633,7 +633,7 @@ The function \texttt{cvSaveWindowParameters} saves size, location, flags,  track
 
 
 %CVAPI(void) cvLoadWindowParameters(const char* name);
-\cvCPyFunc{loadWindowParameters}
+\cvCPyFunc{LoadWindowParameters}
 Load parameters of the window \emph{window\_name}.
 \cvdefC{void cvLoadWindowParameters(const char* name);}
 
@@ -645,7 +645,7 @@ The function \texttt{cvLoadWindowParameters} load size, location, flags,  trackb
 
 
 %CVAPI(int) cvCreateButton( const char* button_name CV_DEFAULT(NULL),CvButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0));
-\cvCPyFunc{createButton}
+\cvCPyFunc{CreateButton}
 Create a callback function called to draw OpenGL on top the the image display by \emph{window\_name}.
 \cvdefC{cvCreateButton( const char* button\_name CV\_DEFAULT(NULL),CvButtonCallback on\_change CV\_DEFAULT(NULL), void* userdata CV\_DEFAULT(NULL) , int button\_type CV\_DEFAULT(CV\_PUSH\_BUTTON), int initial\_button\_state CV\_DEFAULT(0);}
 
