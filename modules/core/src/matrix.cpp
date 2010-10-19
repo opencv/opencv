@@ -511,6 +511,10 @@ void Mat::reserve(size_t nelems)
         return;
     
     int r = size.p[0];
+    
+    if( (size_t)r >= nelems )
+        return;
+    
     size.p[0] = std::max((int)nelems, 1);
     size_t newsize = total()*elemSize();
     
@@ -534,6 +538,8 @@ void Mat::reserve(size_t nelems)
 void Mat::resize(size_t nelems)
 {
     int saveRows = size.p[0];
+    if( saveRows == (int)nelems )
+        return;
     CV_Assert( (int)nelems >= 0 );
     
     if( isSubmatrix() || data + step.p[0]*nelems > datalimit )
@@ -725,12 +731,17 @@ Mat Mat::reshape(int new_cn, int new_rows) const
 
     hdr.cols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+    hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
     return hdr;
 }
 
+    
+/*************************************************************************************************\
+                                        Matrix Operations
+\*************************************************************************************************/
 
-void
-setIdentity( Mat& m, const Scalar& s )
+//////////////////////////////////////// set identity ////////////////////////////////////////////
+void setIdentity( Mat& m, const Scalar& s )
 {
     CV_Assert( m.dims <= 2 );
     int i, j, rows = m.rows, cols = m.cols, type = m.type();
@@ -768,6 +779,8 @@ setIdentity( Mat& m, const Scalar& s )
     }
 }
 
+//////////////////////////////////////////// trace ///////////////////////////////////////////    
+    
 Scalar trace( const Mat& m )
 {
     CV_Assert( m.dims <= 2 );
@@ -797,10 +810,8 @@ Scalar trace( const Mat& m )
     return cv::sum(m.diag());
 }
 
-/****************************************************************************************\
-*                                       transpose                                        *
-\****************************************************************************************/
-
+////////////////////////////////////// transpose /////////////////////////////////////////
+    
 template<typename T> static void
 transposeI_( Mat& mat )
 {
@@ -968,9 +979,7 @@ Mat Mat::cross(const Mat& m) const
 }
 
 
-/****************************************************************************************\
-*                                Reduce Mat to vector                                 *
-\****************************************************************************************/
+////////////////////////////////////////// reduce ////////////////////////////////////////////
 
 template<typename T, typename ST, class Op> static void
 reduceR_( const Mat& srcmat, Mat& dstmat )
@@ -1178,6 +1187,8 @@ void reduce(const Mat& src, Mat& dst, int dim, int op, int dtype)
         temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
 }
 
+    
+//////////////////////////////////////// sort ///////////////////////////////////////////
 
 template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
@@ -1307,6 +1318,10 @@ void sortIdx( const Mat& src, Mat& dst, int flags )
     func( src, dst, flags );
 }
 
+    
+    
+////////////////////////////////////////// kmeans ////////////////////////////////////////////
+    
 static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& rng)
 {
     size_t j, dims = box.size();
@@ -2850,7 +2865,6 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
     src.convertTo( dst, -1, scale );
 }
     
-    
 }
-
+ 
 /* End of file. */

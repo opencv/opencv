@@ -304,7 +304,11 @@ cvCloneMatND( const CvMatND* src )
     if( src->data.ptr )
     {
         cvCreateData( dst );
-        cvCopy( src, dst );
+        cv::Mat _src(src), _dst(dst);
+        uchar* data0 = dst->data.ptr;
+        _src.copyTo(_dst);
+        CV_Assert(_dst.data == data0);
+        //cvCopy( src, dst );
     }
 
     return dst;

@@ -90,7 +90,6 @@ typedef Mat MatND;
 
 class CV_EXPORTS MatExpr;
 class CV_EXPORTS MatOp_Base;
-class CV_EXPORTS VectorArg;
 class CV_EXPORTS MatArg;
 class CV_EXPORTS MatConstIterator;
 
@@ -1257,11 +1256,11 @@ static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
    Custom array allocator
  
 */
-class CV_EXPORTS ArrayAllocator
+class CV_EXPORTS MatAllocator
 {
 public:
-    ArrayAllocator() {}
-    virtual ~ArrayAllocator() {}
+    MatAllocator() {}
+    virtual ~MatAllocator() {}
     virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
                           uchar*& datastart, uchar*& data, size_t* step) = 0;
     virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
@@ -1763,7 +1762,7 @@ public:
     uchar* datalimit;
     
     //! custom allocator
-    ArrayAllocator* allocator;
+    MatAllocator* allocator;
     
     struct CV_EXPORTS MSize
     {
@@ -1797,7 +1796,7 @@ public:
     MStep step;
 };
 
-
+ 
 /*!
    Random Number Generator
  
@@ -1836,6 +1835,9 @@ public:
 
     uint64 state;
 };
+    
+    
+
 
 /*!
  Termination criteria in iterative algorithms
@@ -2331,7 +2333,8 @@ public:
 
 //! converts elliptic arc to a polygonal curve
 CV_EXPORTS void ellipse2Poly( Point center, Size axes, int angle,
-                              int arcStart, int arcEnd, int delta, CV_OUT vector<Point>& pts );
+                              int arcStart, int arcEnd, int delta,
+                              CV_OUT vector<Point>& pts );
 
 enum
 {
