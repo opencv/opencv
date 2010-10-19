@@ -20,35 +20,55 @@
 \tableofcontents
 
 %%% Chapters %%%
-\input{cxcore_introduction}
+\input{core_introduction}
 
-\chapter{cxcore. The Core Functionality}
-\input{cxcore_basic_structures}
-\input{cxcore_array_operations}
-\input{cxcore_dynamic_structures}
-\input{cxcore_drawing_functions}
-\input{cxcore_persistence}
-\input{cxcore_clustering_search}
-\input{cxcore_utilities_system_functions}
+\chapter{core. The Core Functionality}
+\input{core_basic_structures}
+\input{core_array_operations}
+\input{core_dynamic_structures}
+\input{core_drawing_functions}
+\input{core_persistence}
+\input{core_clustering_search}
+\input{core_utilities_system_functions}
 
-\chapter{cv. Image Processing and Computer Vision}
-\input{cv_image_filtering}
-\input{cv_image_warping}
-\input{cv_image_transform}
-\input{cv_histograms}
-\input{cv_feature_detection}
-\input{cv_motion_tracking}
-\input{cv_struct_shape_analysis}
-\input{cv_planar_subdivisions}
-\input{cv_object_detection}
-\input{cv_calibration_3d}
-\input{cv_object_recognition}
 
-\chapter{highgui. High-level GUI and Media IO}
-\input{HighGui}
+\chapter{imgproc. Image Processing}
+\input{imgproc_histograms}
+\input{imgproc_image_filtering}
+\input{imgproc_image_warping}
+\input{imgproc_image_transform}
+\input{imgproc_struct_shape_analysis}
+\input{imgproc_planar_subdivisions}
+\input{imgproc_motion_tracking}
+\input{imgproc_feature_detection}
+
+\chapter{features2d. Feature Detection and Descriptor Extraction}
+\input{features2d_feature_detection}
+%\input{features2d_object_recognition}
+%\input{features2d_object_detection}
+
+\chapter{flann. Clustering and Search in Multi-Dimensional Spaces}
+\input{flann}
+
+\chapter{objdetect. Object Detection}
+\input{objdetect}
+
+\chapter{video. Video Analysis}
+\input{video_motion_tracking}
+
+\chapter{highgui. High-level GUI and Media I/O}
+\input{highgui}
+\ifPy     %Qt is for C and Cpp, so do nothing
+\else
+\input{highgui_qt}
+\fi
+
+\chapter{calib3d. Camera Calibration, Pose Estimation and Stereo}
+\input{calib3d}
+
 
 \chapter{ml. Machine Learning}
-\input{MachineLearning}
+\input{ml}
 %%%%%%%%%%%%%%%%
 
 \end{document}             % End of document.

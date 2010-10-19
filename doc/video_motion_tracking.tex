@@ -2,24 +2,6 @@
 
 \ifCPy
 
-\cvCPyFunc{Acc}
-Adds a frame to an accumulator.
-
-\cvdefC{
-void cvAcc( \par const CvArr* image,\par CvArr* sum,\par const CvArr* mask=NULL );
-}
-\cvdefPy{Acc(image,sum,mask=NULL)-> None}
-
-\begin{description}
-\cvarg{image}{Input image, 1- or 3-channel, 8-bit or 32-bit floating point. (each channel of multi-channel image is processed independently)}
-\cvarg{sum}{Accumulator with the same number of channels as input image, 32-bit or 64-bit floating-point}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function adds the whole image \texttt{image} or its selected region to the accumulator \texttt{sum}:
-
-\[ \texttt{sum}(x,y) \leftarrow \texttt{sum}(x,y) + \texttt{image}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
 \cvCPyFunc{CalcGlobalOrientation}
 Calculates the global motion orientation of some selected region.
 
@@ -620,25 +602,6 @@ iterations are made until the search window center moves by less than
 the given value and/or until the function has done the maximum number
 of iterations. The function returns the number of iterations made.
 
-\cvCPyFunc{MultiplyAcc}
-Adds the product of two input images to the accumulator.
-
-\cvdefC{
-void cvMultiplyAcc( \par const CvArr* image1,\par const CvArr* image2,\par CvArr* acc,\par const CvArr* mask=NULL );
-}
-\cvdefPy{MultiplyAcc(image1,image2,acc,mask=NULL)-> None}
-
-\begin{description}
-\cvarg{image1}{First input image, 1- or 3-channel, 8-bit or 32-bit floating point (each channel of multi-channel image is processed independently)}
-\cvarg{image2}{Second input image, the same format as the first one}
-\cvarg{acc}{Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function adds the product of 2 images or their selected regions to the accumulator \texttt{acc}:
-
-\[ \texttt{acc}(x,y) \leftarrow \texttt{acc}(x,y) + \texttt{image1}(x,y) \cdot \texttt{image2}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
 \ifC % {
 \cvCPyFunc{ReleaseConDensation}
 Deallocates the ConDensation filter structure.
@@ -671,30 +634,6 @@ void cvReleaseKalman( \par CvKalman** kalman );
 The function releases the structure \cvCPyCross{CvKalman} and all of the underlying matrices.
 
 \fi % }
-
-\cvCPyFunc{RunningAvg}
-Updates the running average.
-
-\cvdefC{
-void cvRunningAvg( \par const CvArr* image,\par CvArr* acc,\par double alpha,\par const CvArr* mask=NULL );
-}
-\cvdefPy{RunningAvg(image,acc,alpha,mask=NULL)-> None}
-
-\begin{description}
-\cvarg{image}{Input image, 1- or 3-channel, 8-bit or 32-bit floating point (each channel of multi-channel image is processed independently)}
-\cvarg{acc}{Accumulator with the same number of channels as input image, 32-bit or 64-bit floating-point}
-\cvarg{alpha}{Weight of input image}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function calculates the weighted sum of the input image
-\texttt{image} and the accumulator \texttt{acc} so that \texttt{acc}
-becomes a running average of frame sequence:
-
-\[ \texttt{acc}(x,y) \leftarrow (1-\alpha) \cdot \texttt{acc}(x,y) + \alpha \cdot \texttt{image}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
-where $\alpha$ regulates the update speed (how fast the accumulator forgets about previous frames).
-
 
 \cvCPyFunc{SegmentMotion}
 Segments a whole motion into separate moving parts.
@@ -772,23 +711,6 @@ than \texttt{criteria.epsilon} or the function performed
 The function returns the updated list of points.
 \fi
 
-\cvCPyFunc{SquareAcc}
-Adds the square of the source image to the accumulator.
-
-\cvdefC{
-void cvSquareAcc( \par const CvArr* image,\par CvArr* sqsum,\par const CvArr* mask=NULL );
-}\cvdefPy{SquareAcc(image,sqsum,mask=NULL)-> None}
-
-\begin{description}
-\cvarg{image}{Input image, 1- or 3-channel, 8-bit or 32-bit floating point (each channel of multi-channel image is processed independently)}
-\cvarg{sqsum}{Accumulator with the same number of channels as input image, 32-bit or 64-bit floating-point}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function adds the input image \texttt{image} or its selected region, raised to power 2, to the accumulator \texttt{sqsum}:
-
-\[ \texttt{sqsum}(x,y) \leftarrow \texttt{sqsum}(x,y) + \texttt{image}(x,y)^2 \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
 \cvCPyFunc{UpdateMotionHistory}
 Updates the motion history image by a moving silhouette.
 
@@ -816,87 +738,6 @@ That is, MHI pixels where motion occurs are set to the current timestamp, while 
 \fi
 
 \ifCpp
-
-\cvCppFunc{accumulate}
-Adds image to the accumulator.
-
-\cvdefCpp{void accumulate( const Mat\& src, Mat\& dst, const Mat\& mask=Mat() );}
-\begin{description}
-\cvarg{src}{The input image, 1- or 3-channel, 8-bit or 32-bit floating point}
-\cvarg{dst}{The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function adds \texttt{src}, or some of its elements, to \texttt{dst}:
-
-\[ \texttt{dst}(x,y) \leftarrow \texttt{dst}(x,y) + \texttt{src}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
-The function supports multi-channel images; each channel is processed independently.
-
-The functions \texttt{accumulate*} can be used, for example, to collect statistic of background of a scene, viewed by a still camera, for the further foreground-background segmentation.
-
-See also: \cvCppCross{accumulateSquare}, \cvCppCross{accumulateProduct}, \cvCppCross{accumulateWeighted}
-
-\cvCppFunc{accumulateSquare}
-Adds the square of the source image to the accumulator.
-
-\cvdefCpp{void accumulateSquare( const Mat\& src, Mat\& dst, \par const Mat\& mask=Mat() );}
-\begin{description}
-\cvarg{src}{The input image, 1- or 3-channel, 8-bit or 32-bit floating point}
-\cvarg{dst}{The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function adds the input image \texttt{src} or its selected region, raised to power 2, to the accumulator \texttt{dst}:
-
-\[ \texttt{dst}(x,y) \leftarrow \texttt{dst}(x,y) + \texttt{src}(x,y)^2 \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
-The function supports multi-channel images; each channel is processed independently.
-
-See also: \cvCppCross{accumulateSquare}, \cvCppCross{accumulateProduct}, \cvCppCross{accumulateWeighted}
-
-\cvCppFunc{accumulateProduct}
-Adds the per-element product of two input images to the accumulator.
-
-\cvdefCpp{void accumulateProduct( const Mat\& src1, const Mat\& src2,\par
-                        Mat\& dst, const Mat\& mask=Mat() );}
-\begin{description}
-\cvarg{src1}{The first input image, 1- or 3-channel, 8-bit or 32-bit floating point}
-\cvarg{src2}{The second input image of the same type and the same size as \texttt{src1}}
-\cvarg{dst}{Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function adds the product of 2 images or their selected regions to the accumulator \texttt{dst}:
-
-\[ \texttt{dst}(x,y) \leftarrow \texttt{dst}(x,y) + \texttt{src1}(x,y) \cdot \texttt{src2}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
-The function supports multi-channel images; each channel is processed independently.
-
-See also: \cvCppCross{accumulate}, \cvCppCross{accumulateSquare}, \cvCppCross{accumulateWeighted}
-
-\cvCppFunc{accumulateWeighted}
-Updates the running average.
-
-\cvdefCpp{void accumulateWeighted( const Mat\& src, Mat\& dst,\par
-                         double alpha, const Mat\& mask=Mat() );}
-\begin{description}
-\cvarg{src}{The input image, 1- or 3-channel, 8-bit or 32-bit floating point}
-\cvarg{dst}{The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point}
-\cvarg{alpha}{Weight of the input image}
-\cvarg{mask}{Optional operation mask}
-\end{description}
-
-The function calculates the weighted sum of the input image
-\texttt{src} and the accumulator \texttt{dst} so that \texttt{dst}
-becomes a running average of frame sequence:
-
-\[ \texttt{dst}(x,y) \leftarrow (1-\texttt{alpha}) \cdot \texttt{dst}(x,y) + \texttt{alpha} \cdot \texttt{src}(x,y) \quad \text{if} \quad \texttt{mask}(x,y) \ne 0 \]
-
-that is, \texttt{alpha} regulates the update speed (how fast the accumulator "forgets" about earlier images).
-The function supports multi-channel images; each channel is processed independently.
-
-See also: \cvCppCross{accumulate}, \cvCppCross{accumulateSquare}, \cvCppCross{accumulateProduct}
 
 \cvCppFunc{calcOpticalFlowPyrLK}
 Calculates the optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids
