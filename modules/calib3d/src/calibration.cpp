@@ -1279,10 +1279,10 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
             _RRt = cvMat( 3, 4, CV_64F, LV + 11*12 );
             cvGetCols( &_RRt, &_RR, 0, 3 );
             cvGetCol( &_RRt, &_tt, 3 );
+            if( cvDet(&_RR) < 0 )
+                cvScale( &_RRt, &_RRt, -1 );
             sc = cvNorm(&_RR);
             cvSVD( &_RR, &matW, &matU, &matV, CV_SVD_MODIFY_A + CV_SVD_U_T + CV_SVD_V_T );
-            if( W[0]*W[1]*W[2] < 0 )
-                sc = -sc;
             cvGEMM( &matU, &matV, 1, 0, 0, &matR, CV_GEMM_A_T );
             cvScale( &_tt, &_t, cvNorm(&matR)/sc );
             cvRodrigues2( &matR, &_r );
