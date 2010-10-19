@@ -41,7 +41,7 @@
 
 #include "mltest.h"
 
-CvTS test_system;
+CvTS test_system("ml");
 
 const char* blacklist[] =
 {

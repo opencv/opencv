@@ -268,7 +268,7 @@ class CV_EXPORTS CvTS
 public:
 
     // constructor(s) and destructor
-    CvTS();
+    CvTS(const char* _module_name=0);
     virtual ~CvTS();
 
     enum
@@ -433,7 +433,7 @@ protected:
     virtual int read_params( CvFileStorage* fs );
     
     // checks, whether the test needs to be run (1) or not (0); called from run()
-    virtual int filter( CvTest* test, const char** blacklist=0 );
+    virtual int filter( CvTest* test, int& filter_state, const char** blacklist=0 );
 
     // makes base name of output files
     virtual void make_output_stream_base_name( const char* config_name );
@@ -537,6 +537,8 @@ protected:
 
     // name of config file
     const char* config_name;
+    
+    const char* module_name;
 
     // information about the current test
     CvTestInfo current_test_info;

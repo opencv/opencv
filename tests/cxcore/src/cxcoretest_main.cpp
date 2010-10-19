@@ -41,7 +41,7 @@
 
 #include "cxcoretest.h"
 
-CvTS test_system;
+CvTS test_system("core");
 
 const char* blacklist[] =
 {

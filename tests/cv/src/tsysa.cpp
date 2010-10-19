@@ -41,7 +41,7 @@
 
 #include "cvtest.h"
 
-CvTS test_system;
+CvTS test_system("cv");
 
 const char* blacklist[] =
 {

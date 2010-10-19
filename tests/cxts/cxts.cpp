@@ -1035,8 +1035,9 @@ int CvBadArgTest::run_test_case( int expected_code, const char* descr )
 
 /******************************** Constructors/Destructors ******************************/
 
-CvTS::CvTS()
+CvTS::CvTS(const char* _module_name)
 {
+    module_name = _module_name;
     start_time = 0;
     version = CV_TS_VERSION;
     memory_manager = 0;
@@ -1361,34 +1362,18 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
         }
     }
 
-#if 0
-//#if !defined WIN32 && !defined _WIN32
-    if (! config_name )
-    {    
-      char * confname = getenv("configname");
-      if (confname)
-        config_name = confname;
-    }
-    
-    if( !params.data_path || !params.data_path[0] )
-    {
-        char* datapath = getenv("datapath");
-        if( datapath )
-            set_data_path(datapath);
-    }
-    
     // this is the fallback for the current OpenCV autotools setup
     if( !params.data_path || !params.data_path[0] )
     {
-        char* srcdir = getenv("srcdir");
+        char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
         char buf[1024];
-        if( srcdir )
+        if( datapath_dir )
         {
-            sprintf( buf, "%s/../../opencv_extra/testdata/", srcdir );
+            sprintf( buf, "%s/%s", datapath_dir, module_name ? module_name : "" );
+            printf( LOG + CONSOLE + SUMMARY, "Data Path = %s\n", buf);
             set_data_path(buf);
         }
     }
-#endif
 
     if( write_params )
     {
@@ -1467,6 +1452,8 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
         }
     }
 
+    int filter_state = 0;
+    
     // 4. traverse through the list of all registered tests.
     // Initialize the selected tests and put them into the separate sequence
     for( i = 0; i < all_tests.size(); i++ )
@@ -1475,7 +1462,7 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
         if( !(test->get_support_testing_modes() & get_testing_mode()) )
             continue;
 
-        if( strcmp( test->get_func_list(), "" ) != 0 && filter(test, blacklist) )
+        if( strcmp( test->get_func_list(), "" ) != 0 && filter(test, filter_state, blacklist) )
         {
             if( test->init(this) >= 0 )
             {
@@ -1875,11 +1862,12 @@ static char* cv_strnstr( const char* str, int len,
 }
 
 
-int CvTS::filter( CvTest* test, const char** blacklist )
+int CvTS::filter( CvTest* test, int& filter_state, const char** blacklist )
 {
     const char* pattern = params.test_filter_pattern;
     const char* test_name = test->get_name();
     int inverse = 0;
+    int greater_or_equal = 0;
 
     if( blacklist )
     {
@@ -1895,7 +1883,18 @@ int CvTS::filter( CvTest* test, const char** blacklist )
         inverse = 1;
         pattern++;
     }
-
+    
+    if( pattern && pattern[0] == '>' )
+    {
+        greater_or_equal = 1;
+        pattern++;
+        if( pattern[0] == '=' )
+        {
+            greater_or_equal = 2;
+            pattern++;
+        }
+    }
+    
     if( !pattern || strcmp( pattern, "" ) == 0 || strcmp( pattern, "*" ) == 0 )
         return 1 ^ inverse;
     
@@ -1939,7 +1938,22 @@ int CvTS::filter( CvTest* test, const char** blacklist )
                 break;
         }
 
-        return found ^ inverse;
+        if( greater_or_equal == 0 )
+            return found ^ inverse;
+        if( filter_state )
+            return inverse^1;
+        if( !found )
+            return inverse;
+        if( greater_or_equal == 1 )
+        {
+            filter_state = 1;
+            return inverse;
+        }
+        if( greater_or_equal == 2 )
+        {
+            filter_state = 1;
+            return inverse ^ 1;
+        }
     }
     else
     {
