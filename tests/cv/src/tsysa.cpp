@@ -77,6 +77,9 @@ const char* blacklist[] =
     "warp-undistort",              //ticket 577
     "detector_surf",               //ticket 578
     "hist-backproj",               //ticket 579
+    "flann_saved",                 //ticket 618
+    "hist-bayesianprob",           //ticket 619
+    "hist-backprojpatch",          //ticket 620
     0
 };
 
