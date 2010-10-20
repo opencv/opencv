@@ -1347,7 +1347,7 @@ void VocData::initVoc2007to2010( const string& vocPath, const bool useTestDatase
     m_vocName = getVocName( vocPath );
 
     CV_Assert( !m_vocName.compare("VOC2007") || !m_vocName.compare("VOC2008") ||
-               !m_vocName.compare("VOC2009") || !m_vocName.compare("VOC2010") )
+               !m_vocName.compare("VOC2009") || !m_vocName.compare("VOC2010") );
 
     m_vocPath = checkFilenamePathsep( vocPath, true );
 
