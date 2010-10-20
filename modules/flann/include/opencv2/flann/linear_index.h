@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef LINEARSEARCH_H
-#define LINEARSEARCH_H
+#ifndef _OPENCV_LINEARSEARCH_H_
+#define _OPENCV_LINEARSEARCH_H_
 
 #include "opencv2/flann/general.h"
 #include "opencv2/flann/nn_index.h"
@@ -117,4 +117,4 @@ public:
 
 } // namespace cvflann
 
-#endif // LINEARSEARCH_H
+#endif // _OPENCV_LINEARSEARCH_H_

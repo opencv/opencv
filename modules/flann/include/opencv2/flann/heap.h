@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef HEAP_H
-#define HEAP_H
+#ifndef _OPENCV_HEAP_H_
+#define _OPENCV_HEAP_H_
 
 
 #include <algorithm>
@@ -206,4 +206,4 @@ public:
 
 } // namespace cvflann
 
-#endif //HEAP_H
+#endif //_OPENCV_HEAP_H_

@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef DATASET_H
-#define DATASET_H
+#ifndef _OPENCV_DATASET_H_
+#define _OPENCV_DATASET_H_
 
 #include <stdio.h>
 
@@ -115,4 +115,4 @@ public:
 
 } // namespace cvflann
 
-#endif //DATASET_H
+#endif //_OPENCV_DATASET_H_

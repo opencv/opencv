@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef COMPOSITETREE_H
-#define COMPOSITETREE_H
+#ifndef _OPENCV_COMPOSITETREE_H_
+#define _OPENCV_COMPOSITETREE_H_
 
 #include "opencv2/flann/general.h"
 #include "opencv2/flann/nn_index.h"
@@ -160,4 +160,4 @@ public:
 
 } // namespace cvflann
 
-#endif //COMPOSITETREE_H
+#endif //_OPENCV_COMPOSITETREE_H_

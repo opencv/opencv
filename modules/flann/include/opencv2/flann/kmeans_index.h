@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef KMEANSTREE_H
-#define KMEANSTREE_H
+#ifndef _OPENCV_KMEANSTREE_H_
+#define _OPENCV_KMEANSTREE_H_
 
 #include <algorithm>
 #include <string>
@@ -1114,4 +1114,4 @@ private:
 
 } // namespace cvflann
 
-#endif //KMEANSTREE_H
+#endif //_OPENCV_KMEANSTREE_H_

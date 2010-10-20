@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef NNINDEX_H
-#define NNINDEX_H
+#ifndef _OPENCV_NNINDEX_H_
+#define _OPENCV_NNINDEX_H_
 
 #include <string>
 
@@ -105,4 +105,4 @@ public:
 
 } // namespace cvflann
 
-#endif //NNINDEX_H
+#endif //_OPENCV_NNINDEX_H_

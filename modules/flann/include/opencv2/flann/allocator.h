@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef ALLOCATOR_H
-#define ALLOCATOR_H
+#ifndef _OPENCV_ALLOCATOR_H_
+#define _OPENCV_ALLOCATOR_H_
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -184,4 +184,4 @@ public:
 
 } // namespace cvflann
 
-#endif //ALLOCATOR_H
+#endif //_OPENCV_ALLOCATOR_H_

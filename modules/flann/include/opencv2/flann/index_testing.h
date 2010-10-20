@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef TESTING_H
-#define TESTING_H
+#ifndef _OPENCV_TESTING_H_
+#define _OPENCV_TESTING_H_
 
 #include <cstring>
 #include <cassert>
@@ -289,4 +289,4 @@ float test_index_precisions(NNIndex<ELEM_TYPE>& index, const Matrix<ELEM_TYPE>& 
 
 } // namespace cvflann
 
-#endif //TESTING_H
+#endif //_OPENCV_TESTING_H_

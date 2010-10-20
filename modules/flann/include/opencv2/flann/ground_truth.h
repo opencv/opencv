@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef GROUND_TRUTH_H
-#define GROUND_TRUTH_H
+#ifndef _OPENCV_GROUND_TRUTH_H_
+#define _OPENCV_GROUND_TRUTH_H_
 
 #include "opencv2/flann/dist.h"
 #include "opencv2/flann/matrix.h"
@@ -92,4 +92,4 @@ void compute_ground_truth(const Matrix<T>& dataset, const Matrix<T>& testset, Ma
 
 } // namespace cvflann
 
-#endif //GROUND_TRUTH_H
+#endif //_OPENCV_GROUND_TRUTH_H_

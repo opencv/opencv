@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef SIMPLEX_DOWNHILL_H
-#define SIMPLEX_DOWNHILL_H
+#ifndef _OPENCV_SIMPLEX_DOWNHILL_H_
+#define _OPENCV_SIMPLEX_DOWNHILL_H_
 
 namespace cvflann
 {
@@ -183,4 +183,4 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
 
 } // namespace cvflann
 
-#endif //SIMPLEX_DOWNHILL_H
+#endif //_OPENCV_SIMPLEX_DOWNHILL_H_

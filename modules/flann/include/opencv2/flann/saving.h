@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef SAVING_H_
-#define SAVING_H_
+#ifndef _OPENCV_SAVING_H_
+#define _OPENCV_SAVING_H_
 
 #include "opencv2/flann/general.h"
 #include "opencv2/flann/nn_index.h"
@@ -112,4 +112,4 @@ void load_value(FILE* stream, T& value, int count = 1)
 
 } // namespace cvflann
 
-#endif /* SAVING_H_ */
+#endif /* _OPENCV_SAVING_H_ */

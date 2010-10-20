@@ -27,8 +27,8 @@
  *************************************************************************/
 
 
-#ifndef IO_H_
-#define IO_H_
+#ifndef _OPENCV_HDF5_H_
+#define _OPENCV_HDF5_H_
 
 #include <H5Cpp.h>
 
@@ -160,4 +160,4 @@ void load_from_file(cvflann::Matrix<T>& flann_dataset, const std::string& filena
 
 } // namespace cvflann
 
-#endif /* IO_H_ */
+#endif /* _OPENCV_HDF5_H_ */

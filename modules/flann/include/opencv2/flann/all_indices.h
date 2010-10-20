@@ -27,8 +27,8 @@
  *************************************************************************/
 
 
-#ifndef ALL_INDICES_H_
-#define ALL_INDICES_H_
+#ifndef _OPENCV_ALL_INDICES_H_
+#define _OPENCV_ALL_INDICES_H_
 
 #include "opencv2/flann/general.h"
 
@@ -73,4 +73,4 @@ NNIndex<T>* create_index_by_type(const Matrix<T>& dataset, const IndexParams& pa
 
 } //namespace cvflann
 
-#endif /* ALL_INDICES_H_ */
+#endif /* _OPENCV_ALL_INDICES_H_ */

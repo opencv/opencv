@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_FLANN_HPP__
-#define __OPENCV_FLANN_HPP__
+#ifndef _OPENCV_FLANN_HPP_
+#define _OPENCV_FLANN_HPP_
 
 #ifdef __cplusplus
 

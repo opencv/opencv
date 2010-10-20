@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef AUTOTUNEDINDEX_H_
-#define AUTOTUNEDINDEX_H_
+#ifndef _OPENCV_AUTOTUNEDINDEX_H_
+#define _OPENCV_AUTOTUNEDINDEX_H_
 
 #include "opencv2/flann/general.h"
 #include "opencv2/flann/nn_index.h"
@@ -611,4 +611,4 @@ private:
 
 } // namespace cvflann
 
-#endif /* AUTOTUNEDINDEX_H_ */
+#endif /* _OPENCV_AUTOTUNEDINDEX_H_ */

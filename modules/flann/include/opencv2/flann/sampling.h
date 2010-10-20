@@ -27,8 +27,8 @@
  *************************************************************************/
 
 
-#ifndef SAMPLING_H_
-#define SAMPLING_H_
+#ifndef _OPENCV_SAMPLING_H_
+#define _OPENCV_SAMPLING_H_
 
 
 #include "opencv2/flann/matrix.h"
@@ -91,4 +91,4 @@ Matrix<T> random_sample(const Matrix<T>& srcMatrix, size_t size)
 
 } // namespace cvflann
 
-#endif /* SAMPLING_H_ */
+#endif /* _OPENCV_SAMPLING_H_ */

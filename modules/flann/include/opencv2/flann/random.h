@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef RANDOM_H
-#define RANDOM_H
+#ifndef _OPENCV_RANDOM_H_
+#define _OPENCV_RANDOM_H_
 
 #include <algorithm>
 #include <cstdlib>
@@ -131,4 +131,4 @@ public:
 
 } // namespace cvflann
 
-#endif //RANDOM_H
+#endif //_OPENCV_RANDOM_H_

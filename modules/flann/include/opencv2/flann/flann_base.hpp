@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_HPP_
-#define FLANN_HPP_
+#ifndef _OPENCV_FLANN_BASE_HPP_
+#define _OPENCV_FLANN_BASE_HPP_
 
 #include <vector>
 #include <string>
@@ -258,4 +258,4 @@ int hierarchicalClustering(const Matrix<ELEM_TYPE>& features, Matrix<DIST_TYPE>&
 }
 
 } // namespace cvflann
-#endif /* FLANN_HPP_ */
+#endif /* _OPENCV_FLANN_BASE_HPP_ */

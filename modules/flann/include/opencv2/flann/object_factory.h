@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_OBJECT_FACTORY_H_
-#define OPENCV_OBJECT_FACTORY_H_
+#ifndef _OPENCV_OBJECT_FACTORY_H_
+#define _OPENCV_OBJECT_FACTORY_H_
 
 #include "opencv2/core/types_c.h"
 #include <map>

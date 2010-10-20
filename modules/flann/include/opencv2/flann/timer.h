@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef _OPENCV_TIMER_H_
+#define _OPENCV_TIMER_H_
 
 #include <time.h>
 
@@ -87,4 +87,4 @@ public:
 
 }// namespace cvflann
 
-#endif // TIMER_H
+#endif // _OPENCV_TIMER_H_

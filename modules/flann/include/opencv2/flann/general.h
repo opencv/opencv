@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_CONSTANTS_H
-#define OPENCV_CONSTANTS_H
+#ifndef _OPENCV_GENERAL_H_
+#define _OPENCV_GENERAL_H_
 
 #ifdef __cplusplus
 
@@ -146,4 +146,4 @@ struct CV_EXPORTS SearchParams {
 
 #endif
 
-#endif  /* OPENCV_CONSTANTS_H */
+#endif  /* _OPENCV_GENERAL_H_ */

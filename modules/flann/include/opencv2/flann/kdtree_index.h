@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef KDTREE_H
-#define KDTREE_H
+#ifndef _OPENCV_KDTREE_H_
+#define _OPENCV_KDTREE_H_
 
 #include <algorithm>
 #include <map>
@@ -619,4 +619,4 @@ private:
 
 } // namespace cvflann
 
-#endif //KDTREE_H
+#endif //_OPENCV_KDTREE_H_

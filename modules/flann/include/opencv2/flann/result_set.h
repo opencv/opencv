@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef RESULTSET_H
-#define RESULTSET_H
+#ifndef _OPENCV_RESULTSET_H_
+#define _OPENCV_RESULTSET_H_
 
 
 #include <algorithm>
@@ -317,4 +317,4 @@ public:
 
 } // namespace cvflann
 
-#endif //RESULTSET_H
+#endif //_OPENCV_RESULTSET_H_

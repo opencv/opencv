@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef DIST_H
-#define DIST_H
+#ifndef _OPENCV_DIST_H_
+#define _OPENCV_DIST_H_
 
 #include <cmath>
 using namespace std;
@@ -358,4 +358,4 @@ CV_EXPORTS ZeroIterator<float>& zero();
 
 } // namespace cvflann
 
-#endif //DIST_H
+#endif //_OPENCV_DIST_H_
