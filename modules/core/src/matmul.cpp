@@ -2878,7 +2878,7 @@ CV_IMPL void cvScaleAdd( const CvArr* srcarr1, CvScalar scale,
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
 
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     cv::scaleAdd( src1, scale.val[0], cv::cvarrToMat(srcarr2), dst );
 }
 

@@ -970,7 +970,7 @@ cvMerge( const void* srcarr0, const void* srcarr1, const void* srcarr2,
         if( sptrs[i] != 0 )
         {
             svec[j] = cv::cvarrToMat(sptrs[i]);
-            CV_Assert( svec[j].size() == dst.size() &&
+            CV_Assert( svec[j].size == dst.size &&
                 svec[j].depth() == dst.depth() &&
                 svec[j].channels() == 1 && i < dst.channels() );
             pairs[j*2] = j;
@@ -1008,7 +1008,7 @@ cvConvertScaleAbs( const void* srcarr, void* dstarr,
                    double scale, double shift )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.size() == dst.size() && dst.type() == CV_8UC(src.channels()));
+    CV_Assert( src.size == dst.size && dst.type() == CV_8UC(src.channels()));
     cv::convertScaleAbs( src, dst, scale, shift );
 }
 
@@ -1018,7 +1018,7 @@ cvConvertScale( const void* srcarr, void* dstarr,
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
     
-    CV_Assert( src.size() == dst.size() && src.channels() == dst.channels() );
+    CV_Assert( src.size == dst.size && src.channels() == dst.channels() );
     src.convertTo(dst, dst.type(), scale, shift);
 }
 

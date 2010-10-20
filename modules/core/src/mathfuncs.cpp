@@ -2171,21 +2171,21 @@ cvPolarToCart( const CvArr* magarr, const CvArr* anglearr,
 CV_IMPL void cvExp( const CvArr* srcarr, CvArr* dstarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() && src.size() == dst.size() );
+    CV_Assert( src.type() == dst.type() && src.size == dst.size );
     cv::exp( src, dst );
 }
 
 CV_IMPL void cvLog( const CvArr* srcarr, CvArr* dstarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() && src.size() == dst.size() );
+    CV_Assert( src.type() == dst.type() && src.size == dst.size );
     cv::log( src, dst );
 }
 
 CV_IMPL void cvPow( const CvArr* srcarr, CvArr* dstarr, double power )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() && src.size() == dst.size() );
+    CV_Assert( src.type() == dst.type() && src.size == dst.size );
     cv::pow( src, power, dst );
 }
 

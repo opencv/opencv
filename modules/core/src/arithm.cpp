@@ -1700,7 +1700,7 @@ CV_IMPL void
 cvNot( const CvArr* srcarr, CvArr* dstarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
+    CV_Assert( src.size == dst.size && src.type() == dst.type() );
     cv::bitwise_not( src, dst );
 }
 
@@ -1710,7 +1710,7 @@ cvAnd( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* m
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_and( src1, src2, dst, mask );
@@ -1721,7 +1721,7 @@ cvOr( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* ma
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_or( src1, src2, dst, mask );
@@ -1733,7 +1733,7 @@ cvXor( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* m
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_xor( src1, src2, dst, mask );
@@ -1744,7 +1744,7 @@ CV_IMPL void
 cvAndS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
+    CV_Assert( src.size == dst.size && src.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_and( src, s, dst, mask );
@@ -1755,7 +1755,7 @@ CV_IMPL void
 cvOrS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
+    CV_Assert( src.size == dst.size && src.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_or( src, s, dst, mask );
@@ -1766,7 +1766,7 @@ CV_IMPL void
 cvXorS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
+    CV_Assert( src.size == dst.size && src.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_xor( src, s, dst, mask );
@@ -1776,7 +1776,7 @@ CV_IMPL void cvAdd( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, c
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::add( src1, src2, dst, mask );
@@ -1786,7 +1786,7 @@ CV_IMPL void cvSub( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, c
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::subtract( src1, src2, dst, mask );
@@ -1796,7 +1796,7 @@ CV_IMPL void cvAddS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const 
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::add( src1, value, dst, mask );
@@ -1806,7 +1806,7 @@ CV_IMPL void cvSubRS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     cv::subtract( value, src1, dst, mask );
@@ -1817,7 +1817,7 @@ CV_IMPL void cvMul( const CvArr* srcarr1, const CvArr* srcarr2,
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     cv::multiply( src1, src2, dst, scale );
 }
 
@@ -1826,7 +1826,7 @@ CV_IMPL void cvDiv( const CvArr* srcarr1, const CvArr* srcarr2,
 {
     cv::Mat src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src2.size() == dst.size() && src2.type() == dst.type() );
+    CV_Assert( src2.size == dst.size && src2.type() == dst.type() );
 
     if( srcarr1 )
         cv::divide( cv::cvarrToMat(srcarr1), src2, dst, scale );
@@ -1842,7 +1842,7 @@ cvAddWeighted( const CvArr* srcarr1, double alpha,
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     cv::addWeighted( src1, alpha, src2, beta, gamma, dst );
 }
 
@@ -1851,7 +1851,7 @@ CV_IMPL  void
 cvAbsDiff( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
     cv::absdiff( src1, cv::cvarrToMat(srcarr2), dst );
 }
@@ -1861,7 +1861,7 @@ CV_IMPL void
 cvAbsDiffS( const CvArr* srcarr1, CvArr* dstarr, CvScalar scalar )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
     cv::absdiff( src1, scalar, dst );
 }
@@ -1871,7 +1871,7 @@ cvInRange( const void* srcarr1, const void* srcarr2,
            const void* srcarr3, void* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && dst.type() == CV_8U );
+    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
     cv::inRange( src1, cv::cvarrToMat(srcarr2), cv::cvarrToMat(srcarr3), dst );
 }
@@ -1880,7 +1880,7 @@ CV_IMPL void
 cvInRangeS( const void* srcarr1, CvScalar lowerb, CvScalar upperb, void* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && dst.type() == CV_8U );
+    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
     cv::inRange( src1, lowerb, upperb, dst );
 }
@@ -1890,7 +1890,7 @@ CV_IMPL void
 cvCmp( const void* srcarr1, const void* srcarr2, void* dstarr, int cmp_op )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && dst.type() == CV_8U );
+    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
     cv::compare( src1, cv::cvarrToMat(srcarr2), dst, cmp_op );
 }
@@ -1900,7 +1900,7 @@ CV_IMPL void
 cvCmpS( const void* srcarr1, double value, void* dstarr, int cmp_op )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && dst.type() == CV_8U );
+    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
     cv::compare( src1, value, dst, cmp_op );
 }
@@ -1910,7 +1910,7 @@ CV_IMPL void
 cvMin( const void* srcarr1, const void* srcarr2, void* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
     cv::min( src1, cv::cvarrToMat(srcarr2), dst );
 }
@@ -1920,7 +1920,7 @@ CV_IMPL void
 cvMax( const void* srcarr1, const void* srcarr2, void* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
     cv::max( src1, cv::cvarrToMat(srcarr2), dst );
 }
@@ -1929,7 +1929,7 @@ CV_IMPL void
 cvMinS( const void* srcarr1, double value, void* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
     cv::min( src1, value, dst );
 }
@@ -1939,7 +1939,7 @@ CV_IMPL void
 cvMaxS( const void* srcarr1, double value, void* dstarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size() == dst.size() && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
     cv::max( src1, value, dst );
 }

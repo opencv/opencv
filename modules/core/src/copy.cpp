@@ -522,7 +522,7 @@ cvCopy( const void* srcarr, void* dstarr, const void* maskarr )
         return;
     }
     cv::Mat src = cv::cvarrToMat(srcarr, false, true, 1), dst = cv::cvarrToMat(dstarr, false, true, 1);
-    CV_Assert( src.depth() == dst.depth() && src.size() == dst.size() );
+    CV_Assert( src.depth() == dst.depth() && src.size == dst.size );
     
     int coi1 = 0, coi2 = 0;
     if( CV_IS_IMAGE(srcarr) )
