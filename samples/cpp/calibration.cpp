@@ -448,7 +448,7 @@ int main( int argc, char** argv )
         }
 
         imshow("Image View", view);
-        int key = waitKey(capture.isOpened() ? 50 : 500);
+        int key = 0xff & waitKey(capture.isOpened() ? 50 : 500);
 
         if( (key & 255) == 27 )
             break;
@@ -491,7 +491,7 @@ int main( int argc, char** argv )
             //undistort( view, rview, cameraMatrix, distCoeffs, cameraMatrix );
             remap(view, rview, map1, map2, INTER_LINEAR);
             imshow("Image View", rview);
-            int c = waitKey();
+            int c = 0xff & waitKey();
             if( (c & 255) == 27 || c == 'q' || c == 'Q' )
                 break;
         }
