@@ -793,18 +793,38 @@ template<typename _Tp> inline Mat_<_Tp>::Mat_(const Mat_& m, const Rect& roi)
     : Mat(m, roi) {}
 
 template<typename _Tp> template<int n> inline
-    Mat_<_Tp>::Mat_(const Vec<_Tp, n>& vec, bool copyData)
-    : Mat(vec, copyData) {}
+    Mat_<_Tp>::Mat_(const Vec<typename DataType<_Tp>::channel_type, n>& vec, bool copyData)
+    : Mat(n/DataType<_Tp>::channels, 1, DataType<_Tp>::type, &vec)
+{
+    CV_Assert(n%DataType<_Tp>::channels == 0);
+    if( copyData )
+        *this = clone();
+}
 
 template<typename _Tp> template<int m, int n> inline
-    Mat_<_Tp>::Mat_(const Matx<_Tp,m,n>& M, bool copyData)
-    : Mat(M, copyData) {}    
+    Mat_<_Tp>::Mat_(const Matx<typename DataType<_Tp>::channel_type,m,n>& M, bool copyData)
+    : Mat(m, n/DataType<_Tp>::channels, DataType<_Tp>::type, &M)
+{
+    CV_Assert(n % DataType<_Tp>::channels == 0);
+    if( copyData )
+        *this = clone();
+}
     
-template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point_<_Tp>& pt, bool copyData)
-    : Mat(pt, copyData) {}
+template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point_<typename DataType<_Tp>::channel_type>& pt, bool copyData)
+    : Mat(2/DataType<_Tp>::channels, 1, DataType<_Tp>::type, &pt)
+{
+    CV_Assert(2 % DataType<_Tp>::channels == 0);
+    if( copyData )
+        *this = clone();
+}
 
-template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point3_<_Tp>& pt, bool copyData)
-    : Mat(pt, copyData) {}
+template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData)
+    : Mat(3/DataType<_Tp>::channels, 1, DataType<_Tp>::type, &pt)
+{
+    CV_Assert(3 % DataType<_Tp>::channels == 0);
+    if( copyData )
+        *this = clone();
+}
 
 template<typename _Tp> inline Mat_<_Tp>::Mat_(const MatCommaInitializer_<_Tp>& commaInitializer)
     : Mat(commaInitializer) {}
@@ -994,14 +1014,16 @@ template<typename _Tp> inline Mat_<_Tp>::operator vector<_Tp>() const
     return this->Mat::operator vector<_Tp>();
 }
 
-template<typename _Tp> template<int n> inline Mat_<_Tp>::operator Vec<_Tp, n>() const
+template<typename _Tp> template<int n> inline Mat_<_Tp>::operator Vec<typename DataType<_Tp>::channel_type, n>() const
 {
-    return this->Mat::operator Vec<_Tp, n>();
+    CV_Assert(n % DataType<_Tp>::channels == 0);
+    return this->Mat::operator Vec<typename DataType<_Tp>::channel_type, n>();
 }
 
-template<typename _Tp> template<int m, int n> inline Mat_<_Tp>::operator Matx<_Tp, m, n>() const
+template<typename _Tp> template<int m, int n> inline Mat_<_Tp>::operator Matx<typename DataType<_Tp>::channel_type, m, n>() const
 {
-    return this->Mat::operator Matx<_Tp, m, n>();
+    CV_Assert(n % DataType<_Tp>::channels == 0);
+    return this->Mat::operator Matx<typename DataType<_Tp>::channel_type, m, n>();
 }    
     
 template<typename T1, typename T2, typename Op> inline void

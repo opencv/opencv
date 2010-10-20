@@ -699,15 +699,15 @@ void randShuffle( Mat& dst, double iterFactor, RNG* _rng )
         0,
         randShuffle_<Vec<ushort,3> >, // 6
         0,
-        randShuffle_<int64>, // 8
+        randShuffle_<Vec<int,2> >, // 8
         0, 0, 0,
         randShuffle_<Vec<int,3> >, // 12
         0, 0, 0,
-        randShuffle_<Vec<int64,2> >, // 16
+        randShuffle_<Vec<int,4> >, // 16
         0, 0, 0, 0, 0, 0, 0,
-        randShuffle_<Vec<int64,3> >, // 24
+        randShuffle_<Vec<int,6> >, // 24
         0, 0, 0, 0, 0, 0, 0,
-        randShuffle_<Vec<int64,4> > // 32
+        randShuffle_<Vec<int,8> > // 32
     };
 
     RNG& rng = _rng ? *_rng : theRNG();

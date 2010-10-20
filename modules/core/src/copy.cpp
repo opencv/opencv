@@ -130,15 +130,15 @@ CopyMaskFunc g_copyMaskFuncTab[] =
     0,
     copyMask_<Vec<ushort,3> >, // 6
     0,
-    copyMask_<int64>, // 8
+    copyMask_<Vec<int,2> >, // 8
     0, 0, 0,
     copyMask_<Vec<int,3> >, // 12
     0, 0, 0,
-    copyMask_<Vec<int64,2> >, // 16
+    copyMask_<Vec<int,4> >, // 16
     0, 0, 0, 0, 0, 0, 0,
-    copyMask_<Vec<int64,3> >, // 24
+    copyMask_<Vec<int,6> >, // 24
     0, 0, 0, 0, 0, 0, 0,
-    copyMask_<Vec<int64,4> > // 32
+    copyMask_<Vec<int,8> > // 32
 };
 
 static SetMaskFunc setMaskFuncTab[] =
@@ -151,15 +151,15 @@ static SetMaskFunc setMaskFuncTab[] =
     0,
     setMask_<Vec<ushort,3> >, // 6
     0,
-    setMask_<int64>, // 8
+    setMask_<Vec<int,2> >, // 8
     0, 0, 0,
     setMask_<Vec<int,3> >, // 12
     0, 0, 0,
-    setMask_<Vec<int64,2> >, // 16
+    setMask_<Vec<int,4> >, // 16
     0, 0, 0, 0, 0, 0, 0,
-    setMask_<Vec<int64,3> >, // 24
+    setMask_<Vec<int,6> >, // 24
     0, 0, 0, 0, 0, 0, 0,
-    setMask_<Vec<int64,4> > // 32
+    setMask_<Vec<int,8> > // 32
 };
 
 
@@ -424,15 +424,15 @@ void flip( const Mat& src, Mat& dst, int flip_mode )
         0,
         flipHoriz_<Vec<ushort,3> >, // 6
         0,
-        flipHoriz_<int64>, // 8
+        flipHoriz_<Vec<int,2> >, // 8
         0, 0, 0,
         flipHoriz_<Vec<int,3> >, // 12
         0, 0, 0,
-        flipHoriz_<Vec<int64,2> >, // 16
+        flipHoriz_<Vec<int,4> >, // 16
         0, 0, 0, 0, 0, 0, 0,
-        flipHoriz_<Vec<int64,3> >, // 24
+        flipHoriz_<Vec<int,6> >, // 24
         0, 0, 0, 0, 0, 0, 0,
-        flipHoriz_<Vec<int64,4> > // 32
+        flipHoriz_<Vec<int,8> > // 32
     };
     
     CV_Assert( src.dims <= 2 );

@@ -859,15 +859,15 @@ void transpose( const Mat& src, Mat& dst )
         0,
         transposeI_<Vec<ushort,3> >, // 6
         0,
-        transposeI_<int64>, // 8
+        transposeI_<Vec<int,2> >, // 8
         0, 0, 0,
         transposeI_<Vec<int,3> >, // 12
         0, 0, 0,
-        transposeI_<Vec<int64,2> >, // 16
+        transposeI_<Vec<int,4> >, // 16
         0, 0, 0, 0, 0, 0, 0,
-        transposeI_<Vec<int64,3> >, // 24
+        transposeI_<Vec<int,6> >, // 24
         0, 0, 0, 0, 0, 0, 0,
-        transposeI_<Vec<int64,4> > // 32
+        transposeI_<Vec<int,8> > // 32
     };
 
     TransposeFunc tab[] =
@@ -880,15 +880,15 @@ void transpose( const Mat& src, Mat& dst )
         0,
         transpose_<Vec<ushort,3> >, // 6
         0,
-        transpose_<int64>, // 8
+        transpose_<Vec<int,2> >, // 8
         0, 0, 0,
         transpose_<Vec<int,3> >, // 12
         0, 0, 0,
-        transpose_<Vec<int64,2> >, // 16
+        transpose_<Vec<int,4> >, // 16
         0, 0, 0, 0, 0, 0, 0,
-        transpose_<Vec<int64,3> >, // 24
+        transpose_<Vec<int,6> >, // 24
         0, 0, 0, 0, 0, 0, 0,
-        transpose_<Vec<int64,4> > // 32
+        transpose_<Vec<int,8> > // 32
     };
 
     size_t esz = src.elemSize();
