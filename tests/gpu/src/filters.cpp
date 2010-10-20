@@ -166,6 +166,8 @@ struct CV_GpuNppImageSobelTest : public CV_GpuNppFilterTest
 
     int test(const Mat& img)
     {
+        if (img.type() != CV_8UC1)
+            return CvTS::OK;
         int ksizes[] = {3, 5, 7};
         int ksizes_num = sizeof(ksizes) / sizeof(int);
 
@@ -181,8 +183,10 @@ struct CV_GpuNppImageSobelTest : public CV_GpuNppFilterTest
             cv::Sobel(img, cpudst, -1, dx, dy, ksizes[i]);
 
             GpuMat gpu1(img);
+            gpu1.convertTo(gpu1, CV_32S);
             GpuMat gpudst;
             cv::gpu::Sobel(gpu1, gpudst, -1, dx, dy, ksizes[i]);
+            gpudst.convertTo(gpudst, CV_8U);
 
             if (CheckNorm(cpudst, gpudst, Size(ksizes[i], ksizes[i])) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
@@ -200,15 +204,20 @@ struct CV_GpuNppImageScharrTest : public CV_GpuNppFilterTest
 
     int test(const Mat& img)
     {
+        if (img.type() != CV_8UC1)
+            return CvTS::OK;
+
         int dx = 1, dy = 0;
 
         Mat cpudst;
         cv::Scharr(img, cpudst, -1, dx, dy);
 
         GpuMat gpu1(img);
+        gpu1.convertTo(gpu1, CV_32S);
         GpuMat gpudst;
         cv::gpu::Scharr(gpu1, gpudst, -1, dx, dy);
-
+        gpudst.convertTo(gpudst, CV_8U);
+        
         return CheckNorm(cpudst, gpudst, Size(3, 3));
     }
 };

@@ -577,15 +577,31 @@ void cv::gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& ke
 
 namespace cv { namespace gpu { namespace filters
 {
-    void linearRowFilter_gpu_32s32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
-    void linearRowFilter_gpu_32s32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
-    void linearRowFilter_gpu_32f32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
-    void linearRowFilter_gpu_32f32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_8u_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_8u_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_8s_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_8s_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_16u_16u_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_16u_16s_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_16s_16u_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_16s_16s_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_32s_32s_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_32s_32f_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_32f_32s_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearRowFilter_gpu_32f_32f_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
 
-    void linearColumnFilter_gpu_32s32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
-    void linearColumnFilter_gpu_32s32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
-    void linearColumnFilter_gpu_32f32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
-    void linearColumnFilter_gpu_32f32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_8u_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_8u_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_8s_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_8s_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_16u_16u_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_16u_16s_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_16s_16u_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_16s_16s_c2(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_32s_32s_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_32s_32f_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_32f_32s_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    void linearColumnFilter_gpu_32f_32f_c1(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
 }}}
 
 namespace
@@ -637,15 +653,15 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
     static const gpuFilter1D_t gpuFilter1D_callers[6][6] =
     {
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,linearRowFilter_gpu_32s32s, linearRowFilter_gpu_32s32f},
-        {0,0,0,0,linearRowFilter_gpu_32f32s, linearRowFilter_gpu_32f32f}
+        {linearRowFilter_gpu_8u_8u_c4,linearRowFilter_gpu_8u_8s_c4,0,0,0,0},
+        {linearRowFilter_gpu_8s_8u_c4,linearRowFilter_gpu_8s_8s_c4,0,0,0,0},
+        {0,0,linearRowFilter_gpu_16u_16u_c2,linearRowFilter_gpu_16u_16s_c2,0,0},
+        {0,0,linearRowFilter_gpu_16s_16u_c2,linearRowFilter_gpu_16s_16s_c2,0,0},
+        {0,0,0,0,linearRowFilter_gpu_32s_32s_c1, linearRowFilter_gpu_32s_32f_c1},
+        {0,0,0,0,linearRowFilter_gpu_32f_32s_c1, linearRowFilter_gpu_32f_32f_c1}
     };
     
-    if ((srcType == CV_8UC1 || srcType == CV_8UC4) && bufType == srcType)
+    if ((bufType == srcType) && (srcType == CV_8UC1 || srcType == CV_8UC4))
     {
         GpuMat gpu_row_krnl;
         int nDivisor;
@@ -657,21 +673,19 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
         return Ptr<BaseRowFilter_GPU>(new NppLinearRowFilter(ksize, anchor, gpu_row_krnl, nDivisor,
             nppFilter1D_callers[CV_MAT_CN(srcType)]));
     }
-    else if ((srcType == CV_32SC1 || srcType == CV_32FC1) && (bufType == CV_32SC1 || bufType == CV_32FC1))
-    {
-        Mat temp(rowKernel.size(), CV_32FC1);
-        rowKernel.convertTo(temp, CV_32FC1);
-        Mat cont_krnl = temp.reshape(1, 1);
 
-        int ksize = cont_krnl.cols;
-        normalizeAnchor(anchor, ksize);
+    CV_Assert(srcType == CV_8UC4 || srcType == CV_8SC4 || srcType == CV_16UC2 || srcType == CV_16SC2 || srcType == CV_32SC1 || srcType == CV_32FC1);
+    CV_Assert(bufType == CV_8UC4 || bufType == CV_8SC4 || bufType == CV_16UC2 || bufType == CV_16SC2 || bufType == CV_32SC1 || bufType == CV_32FC1);
 
-        return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, cont_krnl, 
-            gpuFilter1D_callers[CV_MAT_DEPTH(srcType)][CV_MAT_DEPTH(bufType)]));
-    }
+    Mat temp(rowKernel.size(), CV_32FC1);
+    rowKernel.convertTo(temp, CV_32FC1);
+    Mat cont_krnl = temp.reshape(1, 1);
 
-    CV_Assert(!"Unsupported types");  
-    return Ptr<BaseRowFilter_GPU>(0);
+    int ksize = cont_krnl.cols;
+    normalizeAnchor(anchor, ksize);
+
+    return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, cont_krnl, 
+        gpuFilter1D_callers[CV_MAT_DEPTH(srcType)][CV_MAT_DEPTH(bufType)]));
 }
 
 namespace
@@ -718,15 +732,18 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R};
     static const gpuFilter1D_t gpuFilter1D_callers[6][6] =
     {
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0},
-        {0,0,0,0,linearColumnFilter_gpu_32s32s, linearColumnFilter_gpu_32s32f},
-        {0,0,0,0,linearColumnFilter_gpu_32f32s, linearColumnFilter_gpu_32f32f}
+        {linearColumnFilter_gpu_8u_8u_c4,linearColumnFilter_gpu_8u_8s_c4,0,0,0,0},
+        {linearColumnFilter_gpu_8s_8u_c4,linearColumnFilter_gpu_8s_8s_c4,0,0,0,0},
+        {0,0,linearColumnFilter_gpu_16u_16u_c2,linearColumnFilter_gpu_16u_16s_c2,0,0},
+        {0,0,linearColumnFilter_gpu_16s_16u_c2,linearColumnFilter_gpu_16s_16s_c2,0,0},
+        {0,0,0,0,linearColumnFilter_gpu_32s_32s_c1, linearColumnFilter_gpu_32s_32f_c1},
+        {0,0,0,0,linearColumnFilter_gpu_32f_32s_c1, linearColumnFilter_gpu_32f_32f_c1}
     };
     
-    if ((bufType == CV_8UC1 || bufType == CV_8UC4) && dstType == bufType)
+    double kernelMin;
+    minMaxLoc(columnKernel, &kernelMin);
+    
+    if ((bufType == dstType) && (bufType == CV_8UC1 || bufType == CV_8UC4))
     {
         GpuMat gpu_col_krnl;
         int nDivisor;
@@ -738,21 +755,19 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
         return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor, 
             nppFilter1D_callers[CV_MAT_CN(bufType)]));
     }
-    else if ((bufType == CV_32SC1 || bufType == CV_32FC1) && (dstType == CV_32SC1 || dstType == CV_32FC1))
-    {
-        Mat temp(columnKernel.size(), CV_32FC1);
-        columnKernel.convertTo(temp, CV_32FC1);
-        Mat cont_krnl = temp.reshape(1, 1);
 
-        int ksize = cont_krnl.cols;
-        normalizeAnchor(anchor, ksize);
+    CV_Assert(dstType == CV_8UC4 || dstType == CV_8SC4 || dstType == CV_16UC2 || dstType == CV_16SC2 || dstType == CV_32SC1 || dstType == CV_32FC1);
+    CV_Assert(bufType == CV_8UC4 || bufType == CV_8SC4 || bufType == CV_16UC2 || bufType == CV_16SC2 || bufType == CV_32SC1 || bufType == CV_32FC1);
 
-        return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, cont_krnl, 
-            gpuFilter1D_callers[CV_MAT_DEPTH(bufType)][CV_MAT_DEPTH(dstType)]));
-    }
+    Mat temp(columnKernel.size(), CV_32FC1);
+    columnKernel.convertTo(temp, CV_32FC1);
+    Mat cont_krnl = temp.reshape(1, 1);
 
-    CV_Assert(!"Unsupported types");  
-    return Ptr<BaseColumnFilter_GPU>(0);
+    int ksize = cont_krnl.cols;
+    normalizeAnchor(anchor, ksize);
+
+    return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, cont_krnl, 
+        gpuFilter1D_callers[CV_MAT_DEPTH(bufType)][CV_MAT_DEPTH(dstType)]));
 }
 
 Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel, 

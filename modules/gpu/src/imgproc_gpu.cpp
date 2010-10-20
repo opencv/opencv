@@ -652,7 +652,7 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const 
 
 double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh) 
 { 
-    CV_Assert(src.type() == CV_32FC1)
+    CV_Assert(src.type() == CV_32FC1);
 
     dst.create( src.size(), src.type() );
 

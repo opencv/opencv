@@ -163,7 +163,7 @@ void cv::gpu::Stream::waitForCompletion() { cudaSafeCall( cudaStreamSynchronize(
 void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
 {
     // if not -> allocation will be done, but after that dst will not point to page locked memory
-    CV_Assert(src.cols == dst.cols && src.rows == dst.rows && src.type() == dst.type() )
+    CV_Assert(src.cols == dst.cols && src.rows == dst.rows && src.type() == dst.type() );
     devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost);
 }
 void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); }
