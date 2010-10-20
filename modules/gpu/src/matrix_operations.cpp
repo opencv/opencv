@@ -77,6 +77,22 @@ namespace cv
 
 #else /* !defined (HAVE_CUDA) */
 
+namespace cv 
+{
+    namespace gpu
+    {
+        namespace matrix_operations
+        {            
+            void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
+
+            void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);
+            void set_to_with_mask    (DevMem2D dst, int depth, const double *scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
+
+            void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream = 0);
+        }
+    }
+}
+
 void cv::gpu::GpuMat::upload(const Mat& m)
 {
     CV_DbgAssert(!m.empty());

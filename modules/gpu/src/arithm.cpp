@@ -316,9 +316,9 @@ void cv::gpu::absdiff(const GpuMat& src, const Scalar& s, GpuMat& dst)
 ////////////////////////////////////////////////////////////////////////
 // compare
 
-namespace cv { namespace gpu { namespace matrix_operations
+namespace cv { namespace gpu { namespace mathfunc
 {
-    void compare_ne_8u(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst);
+    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst);
     void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst);
 }}}
 
@@ -346,7 +346,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         }
         else
         {
-            matrix_operations::compare_ne_8u(src1, src2, dst);
+            mathfunc::compare_ne_8uc4(src1, src2, dst);
         }
     }
     else
@@ -359,7 +359,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         }
         else
         {
-            matrix_operations::compare_ne_32f(src1, src2, dst);
+            mathfunc::compare_ne_32f(src1, src2, dst);
         }
     }
 }

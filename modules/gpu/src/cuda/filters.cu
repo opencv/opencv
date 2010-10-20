@@ -43,12 +43,234 @@
 #include "opencv2/gpu/devmem2d.hpp"
 #include "saturate_cast.hpp"
 #include "safe_call.hpp"
+#include "cuda_shared.hpp"
 
 using namespace cv::gpu;
 
 #ifndef FLT_MAX
 #define FLT_MAX 3.402823466e+30F
 #endif
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Linear filters
+
+#define MAX_KERNEL_SIZE 16
+
+namespace filter_krnls
+{
+    __constant__ float cLinearKernel[MAX_KERNEL_SIZE];
+}
+
+namespace cv { namespace gpu { namespace filters
+{
+    void loadLinearKernel(const float kernel[], int ksize)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(filter_krnls::cLinearKernel, kernel, ksize * sizeof(float)) );
+    }
+}}}
+
+namespace filter_krnls
+{
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int KERNEL_SIZE, typename T, typename D>
+    __global__ void linearRowFilter(const T* src, size_t src_step, D* dst, size_t dst_step, int anchor, int width, int height)
+    {
+        __shared__ T smem[BLOCK_DIM_Y * BLOCK_DIM_X * 3];
+        
+        const int blockStartX = blockDim.x * blockIdx.x;
+        const int blockStartY = blockDim.y * blockIdx.y;
+
+		const int threadX = blockStartX + threadIdx.x;
+        const int prevThreadX = threadX - blockDim.x;
+        const int nextThreadX = threadX + blockDim.x;
+
+		const int threadY = blockStartY + threadIdx.y;
+
+        T* sDataRow = smem + threadIdx.y * blockDim.x * 3;
+
+        if (threadY < height)
+        {
+            const T* rowSrc = src + threadY * src_step;
+
+            sDataRow[threadIdx.x + blockDim.x] = threadX < width ? rowSrc[threadX] : 0;
+
+            sDataRow[threadIdx.x] = prevThreadX >= 0 ? rowSrc[prevThreadX] : 0;
+
+            sDataRow[(blockDim.x << 1) + threadIdx.x] = nextThreadX < width ? rowSrc[nextThreadX] : 0;
+
+            __syncthreads();
+
+            if (threadX < width)
+            {
+                float sum = 0;
+
+                sDataRow += threadIdx.x + blockDim.x - anchor;
+
+                #pragma unroll
+                for(int i = 0; i < KERNEL_SIZE; ++i)
+                    sum += cLinearKernel[i] * sDataRow[i];
+
+                dst[threadY * dst_step + threadX] = saturate_cast<D>(sum);
+            }
+        }
+    }
+}
+
+namespace cv { namespace gpu { namespace filters
+{
+    template <int KERNEL_SIZE, typename T, typename D>
+    void linearRowFilter_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor)
+    {
+        const int BLOCK_DIM_X = 16;
+        const int BLOCK_DIM_Y = 16;
+
+        dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
+        dim3 blocks(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
+
+        filter_krnls::linearRowFilter<BLOCK_DIM_X, BLOCK_DIM_Y, KERNEL_SIZE><<<blocks, threads>>>(src.ptr, src.elem_step, 
+            dst.ptr, dst.elem_step, anchor, src.cols, src.rows);
+
+        cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    template <typename T, typename D>
+    inline void linearRowFilter_gpu(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor);
+        static const caller_t callers[] = 
+        {linearRowFilter_caller<0 , T, D>, linearRowFilter_caller<1 , T, D>, 
+         linearRowFilter_caller<2 , T, D>, linearRowFilter_caller<3 , T, D>, 
+         linearRowFilter_caller<4 , T, D>, linearRowFilter_caller<5 , T, D>, 
+         linearRowFilter_caller<6 , T, D>, linearRowFilter_caller<7 , T, D>, 
+         linearRowFilter_caller<8 , T, D>, linearRowFilter_caller<9 , T, D>, 
+         linearRowFilter_caller<10, T, D>, linearRowFilter_caller<11, T, D>, 
+         linearRowFilter_caller<12, T, D>, linearRowFilter_caller<13, T, D>, 
+         linearRowFilter_caller<14, T, D>, linearRowFilter_caller<15, T, D>};
+
+        loadLinearKernel(kernel, ksize);
+        callers[ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor);
+    }
+
+    void linearRowFilter_gpu_32s32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearRowFilter_gpu<int, int>(src, dst, kernel, ksize, anchor);
+    }
+    void linearRowFilter_gpu_32s32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearRowFilter_gpu<int, float>(src, dst, kernel, ksize, anchor);
+    }
+    void linearRowFilter_gpu_32f32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearRowFilter_gpu<float, int>(src, dst, kernel, ksize, anchor);
+    }
+    void linearRowFilter_gpu_32f32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearRowFilter_gpu<float, float>(src, dst, kernel, ksize, anchor);
+    }
+}}}
+
+namespace filter_krnls
+{
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int KERNEL_SIZE, typename T, typename D>
+    __global__ void linearColumnFilter(const T* src, size_t src_step, D* dst, size_t dst_step, int anchor, int width, int height)
+    {
+        __shared__ T smem[BLOCK_DIM_Y * BLOCK_DIM_X * 3];
+        
+        const int blockStartX = blockDim.x * blockIdx.x;
+        const int blockStartY = blockDim.y * blockIdx.y;
+
+		const int threadX = blockStartX + threadIdx.x;
+
+		const int threadY = blockStartY + threadIdx.y;
+        const int prevThreadY = threadY - blockDim.y;
+        const int nextThreadY = threadY + blockDim.y;
+
+        const int smem_step = blockDim.x;
+
+        T* sDataColumn = smem + threadIdx.x;
+
+        if (threadX < width)
+        {
+            const T* colSrc = src + threadX;
+
+            sDataColumn[(threadIdx.y + blockDim.y) * smem_step] = threadY < height ? colSrc[threadY * src_step] : 0;
+
+            sDataColumn[threadIdx.y * smem_step] = prevThreadY >= 0 ? colSrc[prevThreadY * src_step] : 0;
+
+            sDataColumn[(threadIdx.y + (blockDim.y << 1)) * smem_step] = nextThreadY < height ? colSrc[nextThreadY * src_step] : 0;
+
+            __syncthreads();
+
+            if (threadY < height)
+            {
+                float sum = 0;
+
+                sDataColumn += (threadIdx.y + blockDim.y - anchor)* smem_step;
+
+                #pragma unroll
+                for(int i = 0; i < KERNEL_SIZE; ++i)
+                    sum += cLinearKernel[i] * sDataColumn[i * smem_step];
+
+                dst[threadY * dst_step + threadX] = saturate_cast<D>(sum);
+            }
+        }
+    }
+}
+
+namespace cv { namespace gpu { namespace filters
+{
+    template <int KERNEL_SIZE, typename T, typename D>
+    void linearColumnFilter_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor)
+    {
+        const int BLOCK_DIM_X = 16;
+        const int BLOCK_DIM_Y = 16;
+
+        dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
+        dim3 blocks(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
+
+        filter_krnls::linearColumnFilter<BLOCK_DIM_X, BLOCK_DIM_Y, KERNEL_SIZE><<<blocks, threads>>>(src.ptr, src.elem_step, 
+            dst.ptr, dst.elem_step, anchor, src.cols, src.rows);
+
+        cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    template <typename T, typename D>
+    inline void linearColumnFilter_gpu(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor);
+        static const caller_t callers[] = 
+        {linearColumnFilter_caller<0 , T, D>, linearColumnFilter_caller<1 , T, D>, 
+         linearColumnFilter_caller<2 , T, D>, linearColumnFilter_caller<3 , T, D>, 
+         linearColumnFilter_caller<4 , T, D>, linearColumnFilter_caller<5 , T, D>, 
+         linearColumnFilter_caller<6 , T, D>, linearColumnFilter_caller<7 , T, D>, 
+         linearColumnFilter_caller<8 , T, D>, linearColumnFilter_caller<9 , T, D>, 
+         linearColumnFilter_caller<10, T, D>, linearColumnFilter_caller<11, T, D>, 
+         linearColumnFilter_caller<12, T, D>, linearColumnFilter_caller<13, T, D>, 
+         linearColumnFilter_caller<14, T, D>, linearColumnFilter_caller<15, T, D>};
+
+        loadLinearKernel(kernel, ksize);
+        callers[ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor);
+    }
+
+    void linearColumnFilter_gpu_32s32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearColumnFilter_gpu<int, int>(src, dst, kernel, ksize, anchor);
+    }
+    void linearColumnFilter_gpu_32s32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearColumnFilter_gpu<int, float>(src, dst, kernel, ksize, anchor);
+    }
+    void linearColumnFilter_gpu_32f32s(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearColumnFilter_gpu<float, int>(src, dst, kernel, ksize, anchor);
+    }
+    void linearColumnFilter_gpu_32f32f(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    {
+        linearColumnFilter_gpu<float, float>(src, dst, kernel, ksize, anchor);
+    }
+}}}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Bilateral filters
 
 namespace bf_krnls
 {

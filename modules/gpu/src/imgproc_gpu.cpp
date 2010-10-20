@@ -75,7 +75,7 @@ void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); 
 
 namespace cv { namespace gpu 
 { 
-    namespace improc 
+    namespace imgproc 
     {
         void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
         void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
@@ -142,7 +142,7 @@ namespace cv { namespace gpu
 void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
 {
     typedef void (*remap_gpu_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
-    static const remap_gpu_t callers[] = {improc::remap_gpu_1c, 0, improc::remap_gpu_3c};
+    static const remap_gpu_t callers[] = {imgproc::remap_gpu_1c, 0, imgproc::remap_gpu_3c};
 
     CV_Assert((src.type() == CV_8U || src.type() == CV_8UC3) && xmap.type() == CV_32F && ymap.type() == CV_32F);
 
@@ -180,7 +180,7 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
         eps = 1.f;
     eps = (float)std::max(criteria.epsilon, 0.0);        
 
-    improc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
+    imgproc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -207,7 +207,7 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
         eps = 1.f;
     eps = (float)std::max(criteria.epsilon, 0.0);        
 
-    improc::meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps);    
+    imgproc::meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps);    
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -223,7 +223,7 @@ namespace
             out = dst;
         out.create(src.size(), CV_8UC4);
 
-        improc::drawColorDisp_gpu((DevMem2D_<T>)src, out, ndisp, stream);
+        imgproc::drawColorDisp_gpu((DevMem2D_<T>)src, out, ndisp, stream);
 
         dst = out;
     }
@@ -256,7 +256,7 @@ namespace
     void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream)
     {        
         xyzw.create(disp.rows, disp.cols, CV_32FC4);
-        improc::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
+        imgproc::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
     }
     
     typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream);
@@ -313,7 +313,7 @@ namespace
             case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:                
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::RGB2RGB_gpu_8u, 0, improc::RGB2RGB_gpu_16u, 0, 0, improc::RGB2RGB_gpu_32f};
+                    static const func_t funcs[] = {imgproc::RGB2RGB_gpu_8u, 0, imgproc::RGB2RGB_gpu_16u, 0, 0, imgproc::RGB2RGB_gpu_32f};
 
                     CV_Assert(scn == 3 || scn == 4);
 
@@ -338,7 +338,7 @@ namespace
 
                     dst.create(sz, CV_8UC2);
 
-                    improc::RGB2RGB5x5_gpu(src, scn, dst, green_bits, bidx, stream);
+                    imgproc::RGB2RGB5x5_gpu(src, scn, dst, green_bits, bidx, stream);
                     break;
                 }
             
@@ -356,14 +356,14 @@ namespace
 
                     dst.create(sz, CV_MAKETYPE(depth, dcn));
 
-                    improc::RGB5x52RGB_gpu(src, green_bits, dst, dcn, bidx, stream);
+                    imgproc::RGB5x52RGB_gpu(src, green_bits, dst, dcn, bidx, stream);
                     break;
                 }
                         
             case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::RGB2Gray_gpu_8u, 0, improc::RGB2Gray_gpu_16u, 0, 0, improc::RGB2Gray_gpu_32f};
+                    static const func_t funcs[] = {imgproc::RGB2Gray_gpu_8u, 0, imgproc::RGB2Gray_gpu_16u, 0, 0, imgproc::RGB2Gray_gpu_32f};
 
                     CV_Assert(scn == 3 || scn == 4);
                     
@@ -383,14 +383,14 @@ namespace
 
                     dst.create(sz, CV_8UC1);
 
-                    improc::RGB5x52Gray_gpu(src, green_bits, dst, stream);
+                    imgproc::RGB5x52Gray_gpu(src, green_bits, dst, stream);
                     break;
                 }
             
             case CV_GRAY2BGR: case CV_GRAY2BGRA:
                 {
                     typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::Gray2RGB_gpu_8u, 0, improc::Gray2RGB_gpu_16u, 0, 0, improc::Gray2RGB_gpu_32f};
+                    static const func_t funcs[] = {imgproc::Gray2RGB_gpu_8u, 0, imgproc::Gray2RGB_gpu_16u, 0, 0, imgproc::Gray2RGB_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
 
@@ -410,7 +410,7 @@ namespace
 
                     dst.create(sz, CV_8UC2);
                     
-                    improc::Gray2RGB5x5_gpu(src, dst, green_bits, stream);
+                    imgproc::Gray2RGB5x5_gpu(src, dst, green_bits, stream);
                     break;
                 }
 
@@ -419,7 +419,7 @@ namespace
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
                         const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::RGB2YCrCb_gpu_8u, 0, improc::RGB2YCrCb_gpu_16u, 0, 0, improc::RGB2YCrCb_gpu_32f};
+                    static const func_t funcs[] = {imgproc::RGB2YCrCb_gpu_8u, 0, imgproc::RGB2YCrCb_gpu_16u, 0, 0, imgproc::RGB2YCrCb_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
                     CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
@@ -456,7 +456,7 @@ namespace
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
                         const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::YCrCb2RGB_gpu_8u, 0, improc::YCrCb2RGB_gpu_16u, 0, 0, improc::YCrCb2RGB_gpu_32f};
+                    static const func_t funcs[] = {imgproc::YCrCb2RGB_gpu_8u, 0, imgproc::YCrCb2RGB_gpu_16u, 0, 0, imgproc::YCrCb2RGB_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
 
@@ -485,7 +485,7 @@ namespace
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, 
                         const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::RGB2XYZ_gpu_8u, 0, improc::RGB2XYZ_gpu_16u, 0, 0, improc::RGB2XYZ_gpu_32f};
+                    static const func_t funcs[] = {imgproc::RGB2XYZ_gpu_8u, 0, imgproc::RGB2XYZ_gpu_16u, 0, 0, imgproc::RGB2XYZ_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
 
@@ -534,7 +534,7 @@ namespace
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, 
                         const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {improc::XYZ2RGB_gpu_8u, 0, improc::XYZ2RGB_gpu_16u, 0, 0, improc::XYZ2RGB_gpu_32f};
+                    static const func_t funcs[] = {imgproc::XYZ2RGB_gpu_8u, 0, imgproc::XYZ2RGB_gpu_16u, 0, 0, imgproc::XYZ2RGB_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
 
@@ -584,8 +584,8 @@ namespace
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
                         int hrange, cudaStream_t stream);
-                    static const func_t funcs_hsv[] = {improc::RGB2HSV_gpu_8u, 0, 0, 0, 0, improc::RGB2HSV_gpu_32f};
-                    static const func_t funcs_hls[] = {improc::RGB2HLS_gpu_8u, 0, 0, 0, 0, improc::RGB2HLS_gpu_32f};
+                    static const func_t funcs_hsv[] = {imgproc::RGB2HSV_gpu_8u, 0, 0, 0, 0, imgproc::RGB2HSV_gpu_32f};
+                    static const func_t funcs_hls[] = {imgproc::RGB2HLS_gpu_8u, 0, 0, 0, 0, imgproc::RGB2HLS_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
 
@@ -610,8 +610,8 @@ namespace
                 {
                     typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
                         int hrange, cudaStream_t stream);
-                    static const func_t funcs_hsv[] = {improc::HSV2RGB_gpu_8u, 0, 0, 0, 0, improc::HSV2RGB_gpu_32f};
-                    static const func_t funcs_hls[] = {improc::HLS2RGB_gpu_8u, 0, 0, 0, 0, improc::HLS2RGB_gpu_32f};
+                    static const func_t funcs_hsv[] = {imgproc::HSV2RGB_gpu_8u, 0, 0, 0, 0, imgproc::HSV2RGB_gpu_32f};
+                    static const func_t funcs_hls[] = {imgproc::HLS2RGB_gpu_8u, 0, 0, 0, 0, imgproc::HLS2RGB_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
 

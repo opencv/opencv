@@ -636,7 +636,7 @@ namespace cv
 
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter, 
-            const Ptr<BaseColumnFilter_GPU>& columnFilter, bool rowFilterFirst = true);
+            const Ptr<BaseColumnFilter_GPU>& columnFilter);
 
         //! returns horizontal 1D box filter
         //! supports only CV_8UC1 source type and CV_32FC1 sum type
@@ -658,7 +658,7 @@ namespace cv
         //! only MORPH_ERODE and MORPH_DILATE are supported
         //! supports CV_8UC1 and CV_8UC4 types
         //! kernel must have CV_8UC1 type, one rows and cols == ksize.width * ksize.height
-        CV_EXPORTS Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const GpuMat& kernel, const Size& ksize, 
+        CV_EXPORTS Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, 
             Point anchor=Point(-1,-1));
 
         //! returns morphological filter engine. Only MORPH_ERODE and MORPH_DILATE are supported.
@@ -667,25 +667,24 @@ namespace cv
 
         //! returns 2D filter with the specified kernel
         //! supports CV_8UC1 and CV_8UC4 types
-        //! kernel must have CV_8UC1 type, one rows and cols == ksize.width * ksize.height
-        CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const GpuMat& kernel, const Size& ksize, 
-            Point anchor = Point(-1, -1), int nDivisor = 1);
+        CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize, 
+            Point anchor = Point(-1, -1));
 
         //! returns the non-separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, 
             const Point& anchor = Point(-1,-1));
 
         //! returns the primitive row filter with the specified kernel
-        CV_EXPORTS Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType, int bufType, const GpuMat& rowKernel, 
-            int anchor = -1, int nDivisor = 1);
+        CV_EXPORTS Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, 
+            int anchor = -1);
 
         //! returns the primitive column filter with the specified kernel
-        CV_EXPORTS Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType, int dstType, const GpuMat& columnKernel, 
-            int anchor = -1, int nDivisor = 1);
+        CV_EXPORTS Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, 
+            int anchor = -1);
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, 
-            const Mat& columnKernel, const Point& anchor = Point(-1,-1), bool rowFilterFirst = true);
+            const Mat& columnKernel, const Point& anchor = Point(-1,-1));
 
         //! returns filter engine for the generalized Sobel operator
         CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize);
@@ -720,7 +719,7 @@ namespace cv
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, 
-            Point anchor = Point(-1,-1), bool rowFilterFirst = true);
+            Point anchor = Point(-1,-1));
 
         //! applies generalized Sobel operator to the image
         CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1);

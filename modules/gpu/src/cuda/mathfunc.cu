@@ -41,12 +41,18 @@
 //M*/
 
 #include "cuda_shared.hpp"
+#include "saturate_cast.hpp"
+#include "transform.hpp"
+#include "vecmath.hpp"
 
 using namespace cv::gpu;
 
 #ifndef CV_PI
 #define CV_PI   3.1415926535897932384626433832795f
 #endif
+
+//////////////////////////////////////////////////////////////////////////////////////
+// Cart <-> Polar
 
 namespace mathfunc_krnls 
 {
@@ -143,8 +149,8 @@ namespace cv { namespace gpu { namespace mathfunc
         const float scale = angleInDegrees ? (float)(180.0f / CV_PI) : 1.f;
 
         mathfunc_krnls::cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
-            x.ptr, x.step / sizeof(float), y.ptr, y.step / sizeof(float), 
-            mag.ptr, mag.step / sizeof(float), angle.ptr, angle.step / sizeof(float), scale, x.cols, x.rows);
+            x.ptr, x.elem_step, y.ptr, y.elem_step, 
+            mag.ptr, mag.elem_step, angle.ptr, angle.elem_step, scale, x.cols, x.rows);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -191,8 +197,8 @@ namespace cv { namespace gpu { namespace mathfunc
         
         const float scale = angleInDegrees ? (float)(CV_PI / 180.0f) : 1.0f;
 
-        mathfunc_krnls::polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.ptr, mag.step / sizeof(float), 
-            angle.ptr, angle.step / sizeof(float), scale, x.ptr, x.step / sizeof(float), y.ptr, y.step / sizeof(float), mag.cols, mag.rows);
+        mathfunc_krnls::polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.ptr, mag.elem_step, 
+            angle.ptr, angle.elem_step, scale, x.ptr, x.elem_step, y.ptr, y.elem_step, mag.cols, mag.rows);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -208,5 +214,39 @@ namespace cv { namespace gpu { namespace mathfunc
         };
 
         callers[mag.ptr == 0](mag, angle, x, y, angleInDegrees, stream);
+    }
+}}}
+
+//////////////////////////////////////////////////////////////////////////////////////
+// Compare
+
+namespace mathfunc_krnls 
+{
+    template <typename T1, typename T2>
+    struct NotEqual
+    {
+        __device__ uchar operator()(const T1& src1, const T2& src2, int, int)
+        {
+            return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
+        }
+    };
+}
+
+namespace cv { namespace gpu { namespace mathfunc 
+{
+    template <typename T1, typename T2>
+    inline void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+    {
+        mathfunc_krnls::NotEqual<T1, T2> op;
+        transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), dst, op, 0);
+    }
+
+    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+    {
+        compare_ne<uint, uint>(src1, src2, dst);
+    }
+    void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+    {
+        compare_ne<float, float>(src1, src2, dst);
     }
 }}}

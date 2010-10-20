@@ -50,7 +50,7 @@ namespace cv
         // Simple lightweight structure that encapsulates image ptr on device, its pitch and its sizes.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template<typename T = unsigned char>
+        template <typename T>
         struct DevMem2D_
         {
             typedef T elem_t;
@@ -60,16 +60,21 @@ namespace cv
             int rows;
             T* ptr;
             size_t step;
+            size_t elem_step;
 
-            DevMem2D_() : cols(0), rows(0), ptr(0), step(0) {}
+            DevMem2D_() : cols(0), rows(0), ptr(0), step(0), elem_step(0) {}
 
             DevMem2D_(int rows_, int cols_, T *ptr_, size_t step_)
-                : cols(cols_), rows(rows_), ptr(ptr_), step(step_) {}
+                : cols(cols_), rows(rows_), ptr(ptr_), step(step_), elem_step(step_ / sizeof(T)) {}
+            
+            template <typename U>
+            explicit DevMem2D_(const DevMem2D_<U>& d)
+                : cols(d.cols), rows(d.rows), ptr((T*)d.ptr), step(d.step), elem_step(d.step / sizeof(T)) {}
 
             size_t elemSize() const { return elem_size; }
         };
 
-        typedef DevMem2D_<> DevMem2D;
+        typedef DevMem2D_<unsigned char> DevMem2D;
         typedef DevMem2D_<float> DevMem2Df;
         typedef DevMem2D_<int> DevMem2Di;
     }

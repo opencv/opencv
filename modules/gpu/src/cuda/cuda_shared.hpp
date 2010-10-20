@@ -58,19 +58,8 @@ namespace cv
 
         static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
 
-        namespace matrix_operations
-        {            
-            extern "C" void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
-
-            extern "C" void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);
-            extern "C" void set_to_with_mask    (DevMem2D dst, int depth, const double *scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
-
-            extern "C" void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream = 0);
-        }
-
         template<class T> 
-        inline void uploadConstant(const char* name, const T& value) { cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); }
-
+        static inline void uploadConstant(const char* name, const T& value) { cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); }
     }
 }
 

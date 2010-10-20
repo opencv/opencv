@@ -42,6 +42,7 @@
 
 #include "cuda_shared.hpp"
 #include "saturate_cast.hpp"
+#include "vecmath.hpp"
 
 using namespace cv::gpu;
 
@@ -53,16 +54,8 @@ using namespace cv::gpu;
 #define FLT_EPSILON     1.192092896e-07F
 #endif
 
-namespace imgproc
+namespace imgproc_krnls
 {
-    template<typename T, int N> struct TypeVec {};
-    template<> struct TypeVec<uchar, 3> { typedef uchar3 vec_t; };
-    template<> struct TypeVec<uchar, 4> { typedef uchar4 vec_t; };
-    template<> struct TypeVec<ushort, 3> { typedef ushort3 vec_t; };
-    template<> struct TypeVec<ushort, 4> { typedef ushort4 vec_t; };
-    template<> struct TypeVec<float, 3> { typedef float3 vec_t; };
-    template<> struct TypeVec<float, 4> { typedef float4 vec_t; };
-
     template<typename T> struct ColorChannel {};
     template<> struct ColorChannel<uchar>
     {
@@ -106,7 +99,7 @@ namespace imgproc
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     template <int SRCCN, int DSTCN, typename T>
     __global__ void RGB2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
@@ -132,7 +125,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int SRCCN, int DSTCN>
     void RGB2RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
@@ -143,7 +136,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -189,7 +182,7 @@ namespace cv { namespace gpu { namespace improc
 
 /////////// Transforming 16-bit (565 or 555) RGB to/from 24/32-bit (888[8]) RGB //////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     template <int GREEN_BITS, int DSTCN> struct RGB5x52RGBConverter {};    
     template <int DSTCN> struct RGB5x52RGBConverter<5, DSTCN>
@@ -281,7 +274,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <int GREEN_BITS, int DSTCN>
     void RGB5x52RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
@@ -292,7 +285,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB5x52RGB<GREEN_BITS, DSTCN><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB5x52RGB<GREEN_BITS, DSTCN><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -320,7 +313,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2RGB5x5<SRCCN, GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB2RGB5x5<SRCCN, GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -342,7 +335,7 @@ namespace cv { namespace gpu { namespace improc
 
 ///////////////////////////////// Grayscale to Color ////////////////////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     template <int DSTCN, typename T>
     __global__ void Gray2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
@@ -396,7 +389,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int DSTCN>
     void Gray2RGB_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
@@ -407,7 +400,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::Gray2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::Gray2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
@@ -447,7 +440,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::Gray2RGB5x5<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::Gray2RGB5x5<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
@@ -468,7 +461,7 @@ namespace cv { namespace gpu { namespace improc
 
 ///////////////////////////////// Color to Grayscale ////////////////////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     #undef R2Y
     #undef G2Y
@@ -550,7 +543,7 @@ namespace imgproc
     }   
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int SRCCN>
     void RGB2Gray_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
@@ -561,7 +554,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2Gray<SRCCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB2Gray<SRCCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -601,7 +594,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB5x52Gray<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB5x52Gray<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
@@ -622,7 +615,7 @@ namespace cv { namespace gpu { namespace improc
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     __constant__ float cYCrCbCoeffs_f[5];
     __constant__ int cYCrCbCoeffs_i[5];
@@ -721,7 +714,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int SRCCN, int DSTCN>
     void RGB2YCrCb_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
@@ -732,7 +725,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2YCrCb<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB2YCrCb<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -748,7 +741,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB2YCrCb_caller<uchar, 4, 3>, RGB2YCrCb_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
 
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -762,7 +755,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB2YCrCb_caller<ushort, 4, 3>, RGB2YCrCb_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
 
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -776,7 +769,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB2YCrCb_caller<float, 4, 3>, RGB2YCrCb_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_f, coeffs, 5 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cYCrCbCoeffs_f, coeffs, 5 * sizeof(float)) );
 
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -790,7 +783,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::YCrCb2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::YCrCb2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -806,7 +799,7 @@ namespace cv { namespace gpu { namespace improc
             {YCrCb2RGB_caller<uchar, 4, 3>, YCrCb2RGB_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
 
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -820,7 +813,7 @@ namespace cv { namespace gpu { namespace improc
             {YCrCb2RGB_caller<ushort, 4, 3>, YCrCb2RGB_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
 
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -834,7 +827,7 @@ namespace cv { namespace gpu { namespace improc
             {YCrCb2RGB_caller<float, 4, 3>, YCrCb2RGB_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cYCrCbCoeffs_f, coeffs, 4 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cYCrCbCoeffs_f, coeffs, 4 * sizeof(float)) );
 
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -842,7 +835,7 @@ namespace cv { namespace gpu { namespace improc
 
 ////////////////////////////////////// RGB <-> XYZ ///////////////////////////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     __constant__ float cXYZ_D65f[9];
     __constant__ int cXYZ_D65i[9];
@@ -931,7 +924,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int SRCCN, int DSTCN>
     void RGB2XYZ_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
@@ -942,7 +935,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::RGB2XYZ<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::RGB2XYZ<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
@@ -958,7 +951,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB2XYZ_caller<uchar, 4, 3>, RGB2XYZ_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -972,7 +965,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB2XYZ_caller<ushort, 4, 3>, RGB2XYZ_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -986,7 +979,7 @@ namespace cv { namespace gpu { namespace improc
             {RGB2XYZ_caller<float, 4, 3>, RGB2XYZ_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
 
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -1000,7 +993,7 @@ namespace cv { namespace gpu { namespace improc
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        imgproc::XYZ2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+        imgproc_krnls::XYZ2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
             dst.ptr, dst.step, src.rows, src.cols);
 
         if (stream == 0)
@@ -1016,7 +1009,7 @@ namespace cv { namespace gpu { namespace improc
             {XYZ2RGB_caller<uchar, 4, 3>, XYZ2RGB_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -1030,7 +1023,7 @@ namespace cv { namespace gpu { namespace improc
             {XYZ2RGB_caller<ushort, 4, 3>, XYZ2RGB_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -1044,7 +1037,7 @@ namespace cv { namespace gpu { namespace improc
             {XYZ2RGB_caller<float, 4, 3>, XYZ2RGB_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
 
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -1052,7 +1045,7 @@ namespace cv { namespace gpu { namespace improc
 
 ////////////////////////////////////// RGB <-> HSV ///////////////////////////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     __constant__ int cHsvDivTable[256];
 
@@ -1229,7 +1222,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int SRCCN, int DSTCN>
     void RGB2HSV_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
@@ -1241,10 +1234,10 @@ namespace cv { namespace gpu { namespace improc
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            imgproc::RGB2HSV<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::RGB2HSV<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
         else
-            imgproc::RGB2HSV<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::RGB2HSV<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -1295,7 +1288,7 @@ namespace cv { namespace gpu { namespace improc
             4352, 4334, 4316, 4298, 4281, 4263, 4246, 4229,
             4212, 4195, 4178, 4161, 4145, 4128, 4112, 4096
         };
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHsvDivTable, div_table, sizeof(div_table)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cHsvDivTable, div_table, sizeof(div_table)) );
 
         RGB2HSV_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1323,10 +1316,10 @@ namespace cv { namespace gpu { namespace improc
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            imgproc::HSV2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::HSV2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
         else
-            imgproc::HSV2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::HSV2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -1345,7 +1338,7 @@ namespace cv { namespace gpu { namespace improc
         static const int sector_data[][3] =
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHsvSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cHsvSectorData, sector_data, sizeof(sector_data)) );
 
         HSV2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1362,7 +1355,7 @@ namespace cv { namespace gpu { namespace improc
         static const int sector_data[][3] =
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHsvSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cHsvSectorData, sector_data, sizeof(sector_data)) );
         
         HSV2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1370,7 +1363,7 @@ namespace cv { namespace gpu { namespace improc
 
 /////////////////////////////////////// RGB <-> HLS ////////////////////////////////////////
 
-namespace imgproc
+namespace imgproc_krnls
 {
     template<typename T, int HR> struct RGB2HLSConvertor;
     template<int HR> struct RGB2HLSConvertor<float, HR>
@@ -1541,7 +1534,7 @@ namespace imgproc
     }
 }
 
-namespace cv { namespace gpu { namespace improc
+namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int SRCCN, int DSTCN>
     void RGB2HLS_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
@@ -1553,10 +1546,10 @@ namespace cv { namespace gpu { namespace improc
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            imgproc::RGB2HLS<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::RGB2HLS<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
         else
-            imgproc::RGB2HLS<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::RGB2HLS<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -1598,10 +1591,10 @@ namespace cv { namespace gpu { namespace improc
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            imgproc::HLS2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::HLS2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
         else
-            imgproc::HLS2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
+            imgproc_krnls::HLS2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
                 dst.ptr, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
@@ -1620,7 +1613,7 @@ namespace cv { namespace gpu { namespace improc
         static const int sector_data[][3]=
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHlsSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cHlsSectorData, sector_data, sizeof(sector_data)) );
 
         HLS2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1637,7 +1630,7 @@ namespace cv { namespace gpu { namespace improc
         static const int sector_data[][3]=
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc::cHlsSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cHlsSectorData, sector_data, sizeof(sector_data)) );
                 
         HLS2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }

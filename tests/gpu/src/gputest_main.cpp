@@ -53,7 +53,6 @@ const char* blacklist[] =
     //"GPU-NppImageMeanStdDev",       // different precision
     //"GPU-NppImageExp",              // different precision
     //"GPU-NppImageLog",              // different precision
-    //"GPU-NppImageMagnitude",        // different precision
     
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
     //"GPU-NppImageResize",           // different precision
@@ -61,8 +60,8 @@ const char* blacklist[] =
     //"GPU-NppImageWarpPerspective",  // different precision
     //"GPU-NppImageIntegral",         // different precision
     
-    //"GPU-NppImageSobel",            // ???
-    //"GPU-NppImageScharr",           // ???    
+    //"GPU-NppImageSobel",            // sign error
+    //"GPU-NppImageScharr",           // sign error    
     //"GPU-NppImageGaussianBlur",     // different precision 
     0
 };

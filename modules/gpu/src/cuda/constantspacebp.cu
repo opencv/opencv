@@ -54,20 +54,18 @@ using namespace cv::gpu;
 #define SHRT_MAX 32767
 #endif
 
-template <typename T>
-struct TypeLimits {};
-
-template <>
-struct TypeLimits<short>
+namespace csbp_krnls
 {
-    static __device__ short max() {return SHRT_MAX;}
-};
-
-template <>
-struct TypeLimits<float>
-{
-    static __device__ float max() {return FLT_MAX;}
-};
+    template <typename T> struct TypeLimits;
+    template <> struct TypeLimits<short>
+    {
+        static __device__ short max() {return SHRT_MAX;}
+    };
+    template <> struct TypeLimits<float>
+    {
+        static __device__ float max() {return FLT_MAX;}
+    };
+}
 
 ///////////////////////////////////////////////////////////////
 /////////////////////// load constants ////////////////////////
