@@ -310,7 +310,7 @@ void CV_CameraCalibrationTest::run( int start_from )
     CvMatr64d       goodRotMatrs;
 
     double          cameraMatrix[3*3];
-    double          distortion[4];
+    double          distortion[5]={0,0,0,0,0};
 
     double          goodDistortion[4];
 
@@ -487,12 +487,15 @@ void CV_CameraCalibrationTest::run( int start_from )
                 fscanf(file, "%lf", goodTransVects + currImage * 3 + i);
         }
 
-        calibFlags =
-                     //CV_CALIB_FIX_PRINCIPAL_POINT +
-                     //CV_CALIB_ZERO_TANGENT_DIST +
-                     //CV_CALIB_FIX_ASPECT_RATIO +
-                     //CV_CALIB_USE_INTRINSIC_GUESS +
-                     CV_CALIB_FIX_K3;
+        calibFlags = 0
+                     // + CV_CALIB_FIX_PRINCIPAL_POINT
+                     // + CV_CALIB_ZERO_TANGENT_DIST
+                     // + CV_CALIB_FIX_ASPECT_RATIO
+                     // + CV_CALIB_USE_INTRINSIC_GUESS
+                     + CV_CALIB_FIX_K3
+                     + CV_CALIB_FIX_K4+CV_CALIB_FIX_K5
+                     + CV_CALIB_FIX_K6
+                    ;
         memset( cameraMatrix, 0, 9*sizeof(cameraMatrix[0]) );
         cameraMatrix[0] = cameraMatrix[4] = 807.;
         cameraMatrix[2] = (imageSize.width - 1)*0.5;
@@ -564,25 +567,25 @@ void CV_CameraCalibrationTest::run( int start_from )
         /* ========= Compare parameters ========= */
 
         /* ----- Compare focal lengths ----- */
-        code = compare(cameraMatrix+0,&goodFcx,1,0.01,"fx");
+        code = compare(cameraMatrix+0,&goodFcx,1,0.1,"fx");
         if( code < 0 )
             goto _exit_;
 
-        code = compare(cameraMatrix+4,&goodFcy,1,0.01,"fy");
+        code = compare(cameraMatrix+4,&goodFcy,1,0.1,"fy");
         if( code < 0 )
             goto _exit_;
 
         /* ----- Compare principal points ----- */
-        code = compare(cameraMatrix+2,&goodCx,1,0.01,"cx");
+        code = compare(cameraMatrix+2,&goodCx,1,0.1,"cx");
         if( code < 0 )
             goto _exit_;
 
-        code = compare(cameraMatrix+5,&goodCy,1,0.01,"cy");
+        code = compare(cameraMatrix+5,&goodCy,1,0.1,"cy");
         if( code < 0 )
             goto _exit_;
 
         /* ----- Compare distortion ----- */
-        code = compare(distortion,goodDistortion,4,0.01,"[k1,k2,p1,p2]");
+        code = compare(distortion,goodDistortion,4,0.1,"[k1,k2,p1,p2]");
         if( code < 0 )
             goto _exit_;
 
@@ -592,7 +595,7 @@ void CV_CameraCalibrationTest::run( int start_from )
             goto _exit_;
 
         /* ----- Compare rot matrixs ----- */
-        code = compare(transVects,goodTransVects, 3*numImages,0.05,"translation vectors");
+        code = compare(transVects,goodTransVects, 3*numImages,0.1,"translation vectors");
         if( code < 0 )
             goto _exit_;
 
@@ -1443,6 +1446,8 @@ void CV_StereoCalibrationTest::run( int )
 			//+ CV_CALIB_FIX_ASPECT_RATIO
 			+ CV_CALIB_FIX_PRINCIPAL_POINT
 			+ CV_CALIB_ZERO_TANGENT_DIST
+            + CV_CALIB_FIX_K3
+            + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5 //+ CV_CALIB_FIX_K6
 			);
 		err /= nframes*npoints;
 		if( err > maxReprojErr )
