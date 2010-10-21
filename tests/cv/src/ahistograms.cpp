@@ -174,7 +174,7 @@ void CV_BaseHistTest::get_hist_params( int /*test_case_idx*/ )
     
     for( i = 0; i < cdims; i++ )
     {
-        dims[i] = cvTsRandInt(rng) % (max_dim_size + 1) + 1;
+        dims[i] = cvTsRandInt(rng) % (max_dim_size + 2) + 2;
         if( !uniform )
             dims[i] = MIN(dims[i], max_ni_dim_size);    
         total_size *= dims[i];
