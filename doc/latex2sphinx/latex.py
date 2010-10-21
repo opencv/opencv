@@ -51,6 +51,7 @@ class SphinxWriter:
         self.function_props = {}
         self.covered = set()        # covered functions, used for error report
         self.description = ""
+        self.cur_module = ""
 
     def write(self, s):
         self.freshline = len(s) > 0 and (s[-1] == '\n')
@@ -144,6 +145,15 @@ class SphinxWriter:
         filename = os.path.join('..', '..', str(c.params[0]))
         print >>self, "\n\n.. image:: %s\n\n" % filename
 
+    def cmd_renewcommand(self, c):
+        self.indent = 0
+        command = self.render(c.params[0].str)
+	if command == 'curModule':
+		self.cur_module = self.render(c.params[1].str)
+
+    def wikiLink(self, name):
+        return '*Comments on* `wiki <http://opencv.willowgarage.com/wiki/documentation/%s/%s/%s>`__' % (self.language, self.cur_module, name)
+	
     def cmd_cvCppCross(self, c):
         self.write(":func:`%s`" % str(c.params[0]))
 
@@ -164,6 +174,8 @@ class SphinxWriter:
         print >>self, ".. _%s:\n" % nm
         print >>self, nm
         print >>self, '-' * len(nm)
+        print >>self
+        print >>self, self.wikiLink(nm)
         print >>self
         if self.language == 'py':
             print >>self, ".. class:: " + nm + "\n"
@@ -201,6 +213,8 @@ class SphinxWriter:
         print >>self, nm
         print >>self, '-' * len(nm)
         print >>self
+        print >>self, self.wikiLink(nm)
+        print >>self
         self.state = 'fpreamble'
         if self.description != "":
             self.report_error(c, "overflow - preceding cvfunc (starting %s) not terminated?" % repr(self.description[:30]))
@@ -219,6 +233,8 @@ class SphinxWriter:
         print >>self
         print >>self, 'cv::%s' % nm
         print >>self, '-' * (4+len(nm))
+        print >>self
+        print >>self, self.wikiLink(nm)
         print >>self
         self.state = 'fpreamble'
         if self.description != "":

@@ -19,34 +19,37 @@ showtabs=false,                 % show tabs within strings adding particular und
 %escapeinside={\%*}{*)}          % if you want to add a comment within your code
 }
 
+\newcommand{\wikiHref}[1]{\hspace{0.1in}\href{http://opencv.willowgarage.com/wiki/documentation/\targetlang/\curModule/#1}{wiki}}
+\newcommand{\curModule}{}
+
 \newcommand{\cvclass}[1]{
 \ifthenelse{\equal{\targetlang}{cpp}}
 {
-\subsection{cv::#1}
+\subsection[cv::#1]{cv::#1\wikiHref{#1}}
 %\addcontentsline{toc}{subsection}{#1} 
 \index{cv...!#1}
 }
 {
-\subsection{#1}
+\subsection[#1]{#1\wikiHref{#1}}
 %\addcontentsline{toc}{subsection}{#1} 
 \index{cv...!#1}
 }
 }
 
 \newcommand{\cvfunc}[1]{
-\subsection{#1}
+\subsection[#1]{#1\wikiHref{#1}}
 %\addcontentsline{toc}{subsection}{#1} 
 \index{cv...!#1}
 }
 
 \newcommand{\cvstruct}[1]{
-\subsection{#1}
+\subsection[#1]{#1\wikiHref{#1}}
 %\addcontentsline{toc}{subsection}{#1} 
 \index{cv...!#1}
 }
 
 \newcommand{\cvmacro}[1]{
-\subsection{#1}
+\subsection[#1]{#1\wikiHref{#1}}
 %\addcontentsline{toc}{subsection}{#1} 
 \index{cv...!#1}
 }
@@ -55,12 +58,13 @@ showtabs=false,                 % show tabs within strings adding particular und
 \item[\texttt{#1}] #2
 }
 
+
 \newcommand{\cvFunc}[2]{
 \ifthenelse{\equal{\targetlang}{c}}
-{\subsection{cv#1}\index{cv#1}\label{cfunc.#1}}
+{\subsection[cv::#1]{cv#1\wikiHref{#1}}\index{cv#1}\label{cfunc.#1}}
 {\ifthenelse{\equal{\targetlang}{cpp}}
-{\subsection{cv::#2}\index{cv::#2}\label{cppfunc.#2}}
-{\subsection{cv.#1}\index{cv.#1}\label{pyfunc.#1}}}}
+{\subsection[cv::#2]{cv::#2\wikiHref{#2}}\index{cv::#2}\label{cppfunc.#2}}
+{\subsection[cv::#1]{cv.#1\wikiHref{#1}}\index{cv.#1}\label{pyfunc.#1}}}}
 
 \newcommand{\cvCPyFunc}[1]{\cvFunc{#1}{}}
 \newcommand{\cvCppFunc}[1]{\cvFunc{}{#1}}
