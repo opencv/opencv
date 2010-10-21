@@ -62,7 +62,7 @@ void drawCircles(Mat& img, const vector<Point2f>& corners, const vector<float>& 
     }
 }
     
-int histQuantile(const MatND& hist, float quantile)
+int histQuantile(const Mat& hist, float quantile)
 {
     if(hist.dims > 1) return -1; // works for 1D histograms only
     
@@ -71,7 +71,7 @@ int histQuantile(const MatND& hist, float quantile)
     float quantile_sum = total_sum*quantile;
     for(int j = 0; j < hist.size[0]; j++)
     {
-        cur_sum += (float)hist.at<double>(j);
+        cur_sum += (float)hist.at<float>(j);
         if(cur_sum > quantile_sum)
         {
             return j;
@@ -173,7 +173,7 @@ void findCorner(const vector<Point2f>& contour, Point2f point, Point2f& corner)
     return;
 }
     
-int segment_hist_max(const MatND& hist, int& low_thresh, int& high_thresh)
+int segment_hist_max(const Mat& hist, int& low_thresh, int& high_thresh)
 {
     Mat bw;
     //const double max_bell_width = 20; // we expect two bells with width bounded above
@@ -194,7 +194,7 @@ int segment_hist_max(const MatND& hist, int& low_thresh, int& high_thresh)
     const double out_of_bells_fraction = 0.1;
     for(int x = 0; x < hist.size[0]; x++)
     {
-        quantile_sum += hist.at<double>(x);
+        quantile_sum += hist.at<float>(x);
         if(quantile_sum < 0.2*total_sum) continue;
         
         if(quantile_sum - low_sum > out_of_bells_fraction*total_sum)
@@ -228,7 +228,7 @@ bool find4QuadCornerSubpix(const Mat& img, std::vector<Point2f>& corners, Size r
     const int nbins = 256;
     float ranges[] = {0, 256};
     const float* _ranges = ranges;
-    MatND hist;
+    Mat hist;
     
 #if defined(_SUBPIX_VERBOSE)
     vector<float> radius;
