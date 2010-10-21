@@ -45,10 +45,10 @@ CvTS test_system("core");
 
 const char* blacklist[] =
 {
-    "matrix-dotproduct",          //ticket 447
-    "ds-graphscan",               //ticket 504
-    "matrix-invert",              //ticket 536
-    "pca",                        //ticket 566
+    //"matrix-dotproduct",          //ticket 447
+    //"ds-graphscan",               //ticket 504
+    //"matrix-invert",              //ticket 536
+    //"pca",                        //ticket 566
     0
 };
 
