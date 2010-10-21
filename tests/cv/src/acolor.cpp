@@ -1221,7 +1221,7 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
 }
 
 
-//CV_ColorLabTest color_lab_test;
+CV_ColorLabTest color_lab_test;
 
 
 //// rgb <=> L*u*v*
