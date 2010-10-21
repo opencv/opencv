@@ -99,7 +99,7 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
     for( i = _dims-1; i >= 0; i-- )
     {
         int s = _sz[i];
-        CV_Assert( s >= (i == 0 ? 0 : 1) );
+        CV_Assert( s >= 0 );
         m.size.p[i] = s;
         
         if( _steps )
