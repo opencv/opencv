@@ -1370,7 +1370,7 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
         if( datapath_dir )
         {
             sprintf( buf, "%s/%s", datapath_dir, module_name ? module_name : "" );
-            printf( LOG + CONSOLE + SUMMARY, "Data Path = %s\n", buf);
+            printf( LOG + SUMMARY, "Data Path = %s\n", buf);
             set_data_path(buf);
         }
     }
@@ -1949,8 +1949,9 @@ int CvTS::filter( CvTest* test, int& filter_state, const char** blacklist )
             filter_state = 1;
             return inverse;
         }
-        if( greater_or_equal == 2 )
+        else
         {
+            assert(filter_state == 2);
             filter_state = 1;
             return inverse ^ 1;
         }
