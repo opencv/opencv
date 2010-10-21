@@ -2009,7 +2009,7 @@ void CxCore_GraphTest::run( int )
         struct_idx = iter = -1;
         t = cvTsRandReal(rng)*(max_log_storage_block_size - min_log_storage_block_size) + min_log_storage_block_size;
         int block_size = cvRound( exp(t * CV_LOG2) );
-        block_size = MAX(block_size, (int)(sizeof(CvGraph) + sizeof(CvMemBlock)));
+        block_size = MAX(block_size, (int)(sizeof(CvGraph) + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
         
         storage = cvCreateMemStorage(block_size);
 
@@ -2138,7 +2138,11 @@ void CxCore_GraphScanTest::run( int )
     {
         struct_idx = iter = -1;
         t = cvTsRandReal(rng)*(max_log_storage_block_size - min_log_storage_block_size) + min_log_storage_block_size;
-        storage = cvCreateMemStorage( cvRound( exp(t * CV_LOG2) ) );
+        int storage_blocksize = cvRound( exp(t * CV_LOG2) );
+        storage_blocksize = MAX(storage_blocksize, (int)(sizeof(CvGraph) + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
+        storage_blocksize = MAX(storage_blocksize, (int)(sizeof(CvGraphEdge) + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
+        storage_blocksize = MAX(storage_blocksize, (int)(sizeof(CvGraphVtx) + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
+        storage = cvCreateMemStorage(storage_blocksize);
 
         if( gen == 0 )
         {
