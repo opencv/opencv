@@ -488,7 +488,7 @@ double invert( const Mat& src, Mat& dst, int method )
             result = LU((float*)src1.data, n, (float*)dst1.data, n);
         else if( method == DECOMP_LU && type == CV_64F )
             result = LU((double*)src1.data, n, (double*)dst1.data, n);
-        else if( method == DECOMP_LU && type == CV_32F )
+        else if( method == DECOMP_CHOLESKY && type == CV_32F )
             result = Cholesky((float*)src1.data, n, (float*)dst1.data, n);
         else
             result = Cholesky((double*)src1.data, n, (double*)dst1.data, n);
