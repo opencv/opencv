@@ -1804,11 +1804,11 @@ template<typename _Tp> inline MatIterator_<_Tp> MatIterator_<_Tp>::operator ++(i
     return b;
 }
 
-// Fixing a back compatibility problem -- to be reviewed by Vadim
 template<typename _Tp> inline Point MatConstIterator_<_Tp>::pos() const
 {
     if( !m )
         return Point();
+    CV_DbgAssert( m->dims <= 2 );
     if( m->isContinuous() )
     {
         ptrdiff_t ofs = ptr - (_Tp*)m->data;
