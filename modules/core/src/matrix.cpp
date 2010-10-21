@@ -147,15 +147,16 @@ static void updateContinuityFlag(Mat& m)
 static void finalizeHdr(Mat& m)
 {
     updateContinuityFlag(m);
-    if( m.dims > 2 )
+    int d = m.dims;
+    if( d > 2 )
         m.rows = m.cols = -1;
     if( m.data )
     {
         m.datalimit = m.datastart + m.size[0]*m.step[0];
         if( m.size[0] > 0 )
         {
-            m.dataend = m.data;
-            for( int i = 0; i < m.dims; i++ )
+            m.dataend = m.data + m.size[d-1]*m.step[d-1];
+            for( int i = 0; i < d-1; i++ )
                 m.dataend += (m.size[i] - 1)*m.step[i];
         }
         else
@@ -599,7 +600,7 @@ void Mat::push_back(const Mat& elems)
 
     
 Mat cvarrToMat(const CvArr* arr, bool copyData,
-               bool allowND, int coiMode)
+               bool /*allowND*/, int coiMode)
 {
     if( !arr )
         return Mat();

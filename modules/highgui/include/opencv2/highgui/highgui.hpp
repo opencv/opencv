@@ -131,7 +131,7 @@ public:
     
     virtual bool grab();
     virtual bool retrieve(CV_OUT Mat& image, int channel=0);
-    virtual CV_WRAP_AS(query) VideoCapture& operator >> (Mat& image);
+    virtual VideoCapture& operator >> (Mat& image);
     
     virtual bool set(int propId, double value);
     virtual double get(int propId);
@@ -152,7 +152,7 @@ public:
     virtual bool open(const string& filename, int fourcc, double fps,
                       Size frameSize, bool isColor=true);
     virtual bool isOpened() const;
-    virtual CV_WRAP_AS(write) VideoWriter& operator << (const Mat& image);
+    virtual VideoWriter& operator << (const Mat& image);
     
 protected:
     Ptr<CvVideoWriter> writer;

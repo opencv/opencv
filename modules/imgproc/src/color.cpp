@@ -939,7 +939,7 @@ struct HSV2RGB_b
     typedef uchar channel_type;
     
     HSV2RGB_b(int _dstcn, int _blueIdx, int _hrange)
-    : dstcn(_dstcn), cvt(3, _blueIdx, _hrange)
+    : dstcn(_dstcn), cvt(3, _blueIdx, (float)_hrange)
     {}
     
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -1139,7 +1139,7 @@ struct HLS2RGB_b
     typedef uchar channel_type;
     
     HLS2RGB_b(int _dstcn, int _blueIdx, int _hrange)
-    : dstcn(_dstcn), cvt(3, _blueIdx, _hrange)
+    : dstcn(_dstcn), cvt(3, _blueIdx, (float)_hrange)
     {}
     
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -1528,7 +1528,7 @@ struct RGB2Luv_f
             
             float d = (4*13) / std::max(X + 15 * Y + 3 * Z, FLT_EPSILON);            
             float u = L*(X*d - _un);
-            float v = L*((9*0.25)*Y*d - _vn);
+            float v = L*((9*0.25f)*Y*d - _vn);
             
             dst[i] = L; dst[i+1] = u; dst[i+2] = v;
         }
@@ -1589,7 +1589,7 @@ struct Luv2RGB_f
             v = v*d + _vn;
             float iv = 1.f/v;
             X = 2.25f * u * Y * iv ;
-            Z = (12 - 3 * u - 20 * v) * Y * 0.25 * iv;                
+            Z = (12 - 3 * u - 20 * v) * Y * 0.25f * iv;                
                         
             float R = X*C0 + Y*C1 + Z*C2;
             float G = X*C3 + Y*C4 + Z*C5;
