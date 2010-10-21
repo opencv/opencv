@@ -803,6 +803,5 @@ int loadModel(
     }
     (*kPartFilters)[0] = comp[0];
 
-    //printf("end_parse\n");
     return 0;
 }

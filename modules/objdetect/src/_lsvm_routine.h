@@ -1,5 +1,5 @@
-#ifndef _LSVM_ROUTINE_H
-#define _LSVM_ROUTINE_H
+#ifndef _LSVM_ROUTINE_H_
+#define _LSVM_ROUTINE_H_
 
 #include "_lsvm_types.h"
 #include "_lsvm_error.h"

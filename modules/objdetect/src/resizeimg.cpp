@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <math.h>
 
-
 IplImage * resize_opencv (IplImage * img, float scale){
     IplImage * imgTmp;
 
@@ -242,3 +241,4 @@ IplImage * resize_opencv (IplImage * img, float scale){
 //    free(tmp);
 //    return imgTmp;
 //}
+//

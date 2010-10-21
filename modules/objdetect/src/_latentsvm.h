@@ -2,8 +2,8 @@
 /*                      Latent SVM prediction API                            */
 /*****************************************************************************/
 
-#ifndef SVM_LATENTSVM
-#define SVM_LATENTSVM
+#ifndef _LATENTSVM_H_
+#define _LATENTSVM_H_
 
 #include <stdio.h>
 #include "_lsvm_types.h"

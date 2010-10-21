@@ -1,5 +1,5 @@
-#ifndef RESIZEIMG
-#define RESIZEIMG
+#ifndef _LSVM_RESIZEIMG_H_
+#define _LSVM_RESIZEIMG_H_
 
 #include "_lsvm_types.h"
 

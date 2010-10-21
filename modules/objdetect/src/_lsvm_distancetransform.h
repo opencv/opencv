@@ -1,5 +1,5 @@
-#ifndef LSVM_DIST_TRANSFORM
-#define LSVM_DIST_TRANSFORM
+#ifndef _LSVM_DIST_TRANSFORM_H_
+#define _LSVM_DIST_TRANSFORM_H_
 
 #include "_lsvm_types.h"
 #include "_lsvm_error.h"

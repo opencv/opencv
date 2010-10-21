@@ -1,5 +1,5 @@
-#ifndef _LSVM_FFT_H
-#define _LSVM_FFT_H
+#ifndef _LSVM_FFT_H_
+#define _LSVM_FFT_H_
 
 #include "_lsvm_types.h"
 #include "_lsvm_error.h"

@@ -91,7 +91,7 @@ int allocFFTImage(CvLSVMFftImage **image, int p, int dimX, int dimY)
 
 int freeFFTImage(CvLSVMFftImage **image)
 {
-    unsigned int i;
+    unsigned i;
     if (*image == NULL) return LATENT_SVM_OK;
     for (i = 0; i < (*image)->p; i++)
     {

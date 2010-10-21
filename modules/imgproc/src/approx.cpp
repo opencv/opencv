@@ -591,7 +591,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
             for( i = slice.start_index + 1; i < slice.end_index; i++ )
             {
                 CV_READ_SEQ_ELEM( pt, reader );
-                dist = abs((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
+                dist = fabs((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
 
                 if( dist > max_dist )
                 {
@@ -647,7 +647,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
 
         dx = end_pt.x - start_pt.x;
         dy = end_pt.y - start_pt.y;
-        dist = abs((pt.x - start_pt.x)*dy - (pt.y - start_pt.y)*dx);
+        dist = fabs((pt.x - start_pt.x)*dy - (pt.y - start_pt.y)*dx);
         if( dist * dist <= 0.5*eps*(dx*dx + dy*dy) && dx != 0 && dy != 0 )
         {
             new_count--;

@@ -9,7 +9,7 @@
 // CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename);
 // INPUT
 // filename				- path to the file containing the parameters of
-						- trained Latent SVM detector
+//						- trained Latent SVM detector
 // OUTPUT
 // trained Latent SVM detector in internal representation
 */

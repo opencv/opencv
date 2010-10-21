@@ -7,6 +7,7 @@
 //      a(y - q1) + b(q1 - y)(q1 - y) + f[q1]
 //      a(y - q2) + b(q2 - y)(q2 - y) + f[q2]
 //
+//
 // API
 // int GetPointOfIntersection(const float *f, 
                               const float a, const float b,           

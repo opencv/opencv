@@ -122,8 +122,9 @@ class FLANNException : public std::runtime_error {
 struct CV_EXPORTS IndexParams {
 protected:
 	IndexParams(flann_algorithm_t algorithm_) : algorithm(algorithm_) {};
-
+	
 public:
+	virtual ~IndexParams() {}
 	virtual flann_algorithm_t getIndexType() const = 0;
 
 	virtual void print() const = 0;

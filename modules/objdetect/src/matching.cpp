@@ -256,7 +256,7 @@ int convFFTConv2d(const CvLSVMFftImage *featMapImage, const CvLSVMFftImage *filt
     imagesMultRes = (float *)malloc(sizeof(float) * size);
     fftImagesMulti(featMapImage->channels[0], filterImage->channels[0], 
             featMapImage->dimY, featMapImage->dimX, imagesMultRes);
-    for (i = 1; (i < featMapImage->p) && (i < filterImage->p); i++)
+    for (i = 1; (i < (int)featMapImage->p) && (i < (int)filterImage->p); i++)
     {
         fftImagesMulti(featMapImage->channels[i],filterImage->channels[i], 
             featMapImage->dimY, featMapImage->dimX, imagesMult);

@@ -2,8 +2,8 @@
 /*                      Matching procedure API                               */
 /*****************************************************************************/
 //
-#ifndef SVM_MATCHING
-#define SVM_MATCHING
+#ifndef _LSVM_MATCHING_H_
+#define _LSVM_MATCHING_H_
 
 #include "_latentsvm.h"
 #include "_lsvm_error.h"

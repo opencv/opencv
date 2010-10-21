@@ -10,7 +10,7 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-int sign(float r){
+static inline int sign(float r){
     if(r >  0.0001f) return  1;
     if(r < -0.0001f) return -1;
     return 0;
