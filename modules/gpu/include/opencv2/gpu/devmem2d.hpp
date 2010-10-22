@@ -47,30 +47,52 @@ namespace cv
 {    
     namespace gpu
     {
-        // Simple lightweight structure that encapsulates image ptr on device, its pitch and its sizes.
+        // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template <typename T>
-        struct DevMem2D_
+        template<typename T> struct PtrStep_
         {
-            typedef T elem_t;
-            enum { elem_size = sizeof(elem_t) };
+            T* ptr;
+            size_t step;
 
+            typedef T elem_type;
+            enum { elem_size = sizeof(elem_type) };
+
+#if defined(__CUDACC__) 
+            __host__ __device__ 
+#endif
+            size_t elemSize() const { return elem_size; }            
+        };
+        
+        template <typename T> struct DevMem2D_
+        {            
             int cols;
             int rows;
             T* ptr;
             size_t step;
             size_t elem_step;
 
+            /*__host__*/
             DevMem2D_() : cols(0), rows(0), ptr(0), step(0), elem_step(0) {}
 
+            /*__host__*/
             DevMem2D_(int rows_, int cols_, T *ptr_, size_t step_)
                 : cols(cols_), rows(rows_), ptr(ptr_), step(step_), elem_step(step_ / sizeof(T)) {}
             
             template <typename U>
+            /*__host__*/
             explicit DevMem2D_(const DevMem2D_<U>& d)
                 : cols(d.cols), rows(d.rows), ptr((T*)d.ptr), step(d.step), elem_step(d.step / sizeof(T)) {}
 
+            template <typename U>
+            /*__host__*/
+            operator PtrStep_<U>() const { PtrStep_<U> dt; dt.ptr = ptr; dt.step = step; return dt; }
+
+            typedef typename PtrStep_<T>::elem_type elem_type;
+            enum { elem_size = PtrStep_<T>::elem_size };
+#if defined(__CUDACC__) 
+            __host__ __device__ 
+#endif
             size_t elemSize() const { return elem_size; }
         };
 
