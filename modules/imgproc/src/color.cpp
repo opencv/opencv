@@ -1235,7 +1235,6 @@ static void initLabTabs()
     }
 }
 
-
 struct RGB2Lab_b
 {
     typedef uchar channel_type;
@@ -1244,6 +1243,7 @@ struct RGB2Lab_b
               const float* _whitept, bool _srgb)
     : srccn(_srccn), srgb(_srgb)
     {
+        static volatile int _3 = 3;
         initLabTabs();
         
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
@@ -1255,11 +1255,12 @@ struct RGB2Lab_b
             (1 << lab_shift)/_whitept[2]
         };
         
-        for( int i = 0; i < 3; i++ )
+        for( int i = 0; i < _3; i++ )
         {
             coeffs[i*3+(blueIdx^2)] = cvRound(_coeffs[i*3]*scale[i]);
             coeffs[i*3+1] = cvRound(_coeffs[i*3+1]*scale[i]);
             coeffs[i*3+blueIdx] = cvRound(_coeffs[i*3+2]*scale[i]);
+            
             CV_Assert( coeffs[i] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
                       coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift) );
         }
@@ -1307,13 +1308,14 @@ struct RGB2Lab_f
               const float* _whitept, bool _srgb)
     : srccn(_srccn), srgb(_srgb)
     {
+        volatile int _3 = 3;
         initLabTabs();
         
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
         if(!_whitept) _whitept = D65;
         float scale[] = { LabCbrtTabScale/_whitept[0], LabCbrtTabScale, LabCbrtTabScale/_whitept[2] };
         
-        for( int i = 0; i < 3; i++ )
+        for( int i = 0; i < _3; i++ )
         {
             coeffs[i*3+(blueIdx^2)] = _coeffs[i*3]*scale[i];
             coeffs[i*3+1] = _coeffs[i*3+1]*scale[i];
@@ -1484,9 +1486,11 @@ struct RGB2Luv_f
         
         for( int i = 0; i < 3; i++ )
         {
-            coeffs[i*3+(blueIdx^2)] = _coeffs[i*3];
+            coeffs[i*3] = _coeffs[i*3];
             coeffs[i*3+1] = _coeffs[i*3+1];
-            coeffs[i*3+blueIdx] = _coeffs[i*3+2];
+            coeffs[i*3+2] = _coeffs[i*3+2];
+            if( blueIdx == 0 )
+                std::swap(coeffs[i*3], coeffs[i*3+2]);
             CV_Assert( coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
                       coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 1.5f );
         }
@@ -2343,7 +2347,7 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
     int scn = src.channels(), depth = src.depth(), bidx;
     
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
-        
+    
     switch( code )
     {
         case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
