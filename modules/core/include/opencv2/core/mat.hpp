@@ -1704,7 +1704,7 @@ template<typename _Tp> inline MatConstIterator_<_Tp>&
     return *this;
 }
 
-template<typename _Tp> inline _Tp MatConstIterator_<_Tp>::operator *() const { return *ptr; }
+template<typename _Tp> inline _Tp MatConstIterator_<_Tp>::operator *() const { return *(_Tp*)(this->ptr); }
 
 template<typename _Tp> inline MatConstIterator_<_Tp>& MatConstIterator_<_Tp>::operator += (ptrdiff_t ofs)
 {
