@@ -50,7 +50,7 @@ const char* blacklist[] =
     "calibrate-camera-artificial", //ticket 472
     //"calibrate-camera-cpp",        //ticket 564
     //"calibrate-stereo-c",          //ticket 565
-    "cascade-detector",            //ticket 432
+    //"cascade-detector",            //ticket 432
     "chessboard-detector",         //ticket 569
     "chessboard-subpixel",         //ticket 473
     //"color-luv",                   //ticket 502
@@ -65,7 +65,7 @@ const char* blacklist[] =
     //"hist-backproj",               //ticket 579
     //"hist-bayesianprob",           //ticket 619
     //"hist-backprojpatch",          //ticket 620
-    "hog-detector",                //ticket 428
+    //"hog-detector",                //ticket 428
    
     "inpaint",                     //ticket 570
     
