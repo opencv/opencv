@@ -10,7 +10,7 @@
 #    here:
 #          http://www.crystax.net/android/ndk-r4.php
 #
-#   - initial version August 2010 Ethan Rublee ethan.ruble@gmail.com
+#   - initial version August 2010 Ethan Rublee ethan.rublee@gmail.com
 #
 # ----------------------------------------------------------------------------
 
