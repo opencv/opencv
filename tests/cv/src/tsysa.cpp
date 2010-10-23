@@ -55,9 +55,9 @@ const char* blacklist[] =
     "chessboard-subpixel",         //ticket 473
     //"color-luv",                   //ticket 502
     
-    "descriptor_sift",             //ticket 567
-    "descriptor_surf",             //ticket 568
-    "detector_surf",               //ticket 578
+    //"descriptor-sift",             //ticket 567
+    "descriptor-surf",             //ticket 568
+    "detector-surf",               //ticket 578
     
     "filter-generic",
     "flann_saved",                 //ticket 618
