@@ -56,7 +56,7 @@ const char* blacklist[] =
     //"color-luv",                   //ticket 502
     
     //"descriptor-sift",             //ticket 567
-    "descriptor-surf",             //ticket 568
+    //"descriptor-surf",             //ticket 568
     "detector-surf",               //ticket 578
     
     "filter-generic",

@@ -68,7 +68,7 @@ protected:
         const float maxResponseDif = 0.1f;
 
         string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
-        string resFilename = string(ts->get_data_path()) + DETECTOR_DIR + "/" + string(name) + "_res.xml.gz";
+        string resFilename = string(ts->get_data_path()) + DETECTOR_DIR + "/" + string(name) + ".xml.gz";
 
         if( fdetector.empty() )
         {
@@ -322,11 +322,11 @@ public:
 
 CV_DescriptorExtractorTest siftDescriptorTest( "descriptor-sift", 0.008f,
                                                 createDescriptorExtractor("SIFT"), 8.06652f  );
-CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-surf",  0.004f,
+CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-surf",  0.02f,
                                                 createDescriptorExtractor("SURF"), 0.147372f );
-//CV_DescriptorExtractorTest siftDescriptorTest( "descriptor-opponent_sift", 0.001f,
+//CV_DescriptorExtractorTest oppSiftDescriptorTest( "descriptor-opponent-sift", 0.008f,
 //                                                createDescriptorExtractor("OpponentSIFT"), 8.06652f  );
-//CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-opponent_surf",  0.004f,
+//CV_DescriptorExtractorTest oppurfDescriptorTest( "descriptor-opponent-surf",  0.02f,
 //                                                createDescriptorExtractor("OpponentSURF"), 0.147372f );
 
 #if CV_SSE2
