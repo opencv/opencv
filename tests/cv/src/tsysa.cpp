@@ -53,7 +53,7 @@ const char* blacklist[] =
     //"cascade-detector",            //ticket 432
     "chessboard-detector",         //ticket 569
     "chessboard-subpixel",         //ticket 473
-    //"color-luv",                   //ticket 502
+    "color-luv",                   //ticket 502
     
     //"descriptor-sift",             //ticket 567
     //"descriptor-surf",             //ticket 568
@@ -90,7 +90,7 @@ const char* blacklist[] =
     "warp-remap",                  //ticket 576
     "warp-resize",                 //ticket 429
     "warp-undistort",              //ticket 577
-    //"color-lab",                   //ticket 627
+    "color-lab",                   //ticket 627
     0
 };
 

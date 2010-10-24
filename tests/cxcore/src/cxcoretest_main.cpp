@@ -49,6 +49,7 @@ const char* blacklist[] =
     //"ds-graphscan",               //ticket 504
     //"matrix-invert",              //ticket 536
     //"pca",                        //ticket 566
+    "rand",                         //ticket 449
     0
 };
 
