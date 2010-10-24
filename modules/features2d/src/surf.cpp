@@ -199,7 +199,16 @@ icvInterpolateKeypoint( float N9[3][9], int dx, int dy, int ds, CvSURFPoint *poi
     {
         point->pt.x += x[0]*dx;
         point->pt.y += x[1]*dy;
-        point->size = cvRound( point->size + x[2]*ds ); 
+	// TBD quick fix to be reviewed
+	if(x[2]*ds/point->size > 10)
+	{
+	  //printf("Replacing point size %d with %f\n", point->size, x[2]*ds);
+	  
+	}
+	else
+	{
+          point->size = cvRound( point->size + x[2]*ds ); 
+	}
     }
     return solve_ok;
 }
@@ -267,7 +276,6 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
             icvResizeHaarPattern( dx_s, Dx, NX, 9, size, sum->cols );
             icvResizeHaarPattern( dy_s, Dy, NY, 9, size, sum->cols );
             icvResizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum->cols );
-            /*printf( "octave=%d layer=%d size=%d rows=%d cols=%d\n", octave, layer, size, rows, cols );*/
             
             margin = (size/2)/sampleStep;
             for( sum_i=0, i=margin; sum_i<=(sum->rows-1)-size; sum_i+=sampleStep, i++ )
@@ -434,7 +442,9 @@ struct SURFInvoker
         int maxSize = 0;
         
         for( k = k1; k < k2; k++ )
+	{
             maxSize = std::max(maxSize, ((CvSURFPoint*)cvGetSeqElem( keypoints, k ))->size);
+	}
         
         maxSize = cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f);
         Ptr<CvMat> winbuf = cvCreateMat( 1, maxSize > 0 ? maxSize*maxSize : 1, CV_8U );
