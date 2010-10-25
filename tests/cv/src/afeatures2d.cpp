@@ -320,9 +320,9 @@ public:
     }
 };
 
-CV_DescriptorExtractorTest siftDescriptorTest( "descriptor-sift", 0.008f,
+CV_DescriptorExtractorTest siftDescriptorTest( "descriptor-sift", 0.03f,
                                                 createDescriptorExtractor("SIFT"), 8.06652f  );
-CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-surf",  0.02f,
+CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-surf",  0.035f,
                                                 createDescriptorExtractor("SURF"), 0.147372f );
 //CV_DescriptorExtractorTest oppSiftDescriptorTest( "descriptor-opponent-sift", 0.008f,
 //                                                createDescriptorExtractor("OpponentSIFT"), 8.06652f  );

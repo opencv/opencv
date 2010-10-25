@@ -353,7 +353,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
     if( imageIdx < (int)imageFilenames.size() )
     {
         char msg[500];
-        sprintf( msg, "detector %s has overrated count of rectangles without pair on %s-image",
+        sprintf( msg, "detector %s has overrated count of rectangles without pair on %s-image\n",
             detectorNames[detectorIdx].c_str(), imageFilenames[imageIdx].c_str() );
         ts->printf( CvTS::LOG, msg );
         return CvTS::FAIL_BAD_ACCURACY;
