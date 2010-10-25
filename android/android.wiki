@@ -1,0 +1,156 @@
+= Android =
+Android is awesome, and so is OpenCV, so wouldn't it be awesomer if they could work together?  Well they can, and its now officially supported in opencv trunk.
+= quick ubuntu opencv static libs build =
+ * install swig {{{sudo apt-get install swig}}}
+ * unzip the crystax ndk r4 to your home directory http://www.crystax.net/android/ndk-r4.php
+ * svn up your opencv - from https://code.ros.org/svn/opencv/trunk/opencv
+{{{
+cd opencv/android
+mkdir build
+cd build
+cmake ..
+make
+}}}
+= Prerequisites =
+ * swig 1.3 - stable version in your package manager or from cygwin or from http://swig.org/
+ * crystax ndk r4 -  http://www.crystax.net/android/ndk-r4.php - unzip/untar to your home directory for easy cmake locating
+ * android sdk latest - http://developer.android.com/sdk/index.html
+ * ant build system - for compiling android apps on command line
+ * (optional) eclipse android sdk adt plugin and eclipse cdt http://developer.android.com/sdk/eclipse-adt.html
+ * latest code from opencv svn trunk - from https://code.ros.org/svn/opencv/trunk/opencv
+= android ndk =
+This will not work with the official release of the android ndk.  
+The official android ndk does not support c++ concepts fully like RTTI, exceptions, and most of the stl.
+Make sure you use the modified android ndk from crystax available at http://www.crystax.net/android/ndk-r4.php
+
+The android ndk, now referred to as the ndk, is the gcc toolchain for android, and is what creates the shared
+libraries for android that are loadable by android apps through a the Java Native Interface(JNI)
+
+Recommended install of the ndk is to unzip it to your home directory
+
+For example this is what mine looks like:
+{{{
+erublee@bde:~/android-ndk-r4-crystax$ ls
+build  docs  GNUmakefile  ndk-build  ndk-gdb  README.TXT  samples  sources
+}}}
+
+= Android SDK =
+Please read the very well documented android sdk getting started instructions - http://developer.android.com/sdk/index.html and at least build and install a hello world app on your Android phone.
+
+== Android SDK tips ==
+I always add the android sdk tools directory to my path so i can run the adb from any where.
+
+On ubuntu, add the following to your {{{~/.bashrc}}}
+{{{
+export PATH=~/android-sdk-linux_x86/tools:$PATH
+}}} 
+
+Install ant so that you can build from command line.
+
+Make sure your udev permissions are set for usb debug and that the phone itself is set to allow debugging
+http://developer.android.com/guide/developing/device.html#setting-up
+
+Nexus one users on ubuntu lucid should have the following udev file:
+
+{{{
+/etc/udev/rules.d/51-android.rules 
+SUBSYSTEM=="usb", SYSFS{idVendor}=="18d1", MODE="0666"
+}}}
+
+see the following blog post on why http://alan.lamielle.net/2010/01/22/nexus-one-usb-in-ubuntu-9-10
+
+= How and What =
+The android port involves high jacking the existing cmake build files and replacing the define_opencv_module with android specific build commands.
+
+In particular the cmake based build creates android ndk build files and calls the android ndk to build opencv.
+
+== OpenCV static libs ==
+The main cmake build of opencv generates a static lib for each module and some of the 3rdparty libraries.  These can then be linked against in your own android projects.
+
+the cmake build will also generate an android-opencv.mk file in the build folder.  Include this file in your Android.mk files to link against the static libs.
+
+this would go in your Android.mk file. See the docs in the ndk for an explanation of LOCAL_LDLIBS and LOCAL_C_INCLUDES.
+{{{
+#define OPENCV_INCLUDES and OPENCV_LIBS
+include $(PATH_TO_OPENCV_ANDROID_BUILD)/android-opencv.mk
+
+LOCAL_LDLIBS += $(OPENCV_LIBS)
+    
+LOCAL_C_INCLUDES +=  $(OPENCV_INCLUDES)
+}}}
+== OpenCV shared library ==
+There is an attempt at a library that is more generally useful for android that could also be linked against in your on projects.  This project is under 
+opencv/android/android-jni
+
+This uses swig to expose some functions to java.  Also it implements a live camera preview interface, so that you can have access to the Android camera for live vision apps.
+
+== Apps ==
+A few sample apps that use the library are under opencv/android/apps
+ *  CVCamera is a complete example that uses the opencv static libs and the android-jni project
+ *  Calibration is a stand alone camera calibration app for your Android that is pure java and links against the android-jni project - use this app to make a camera.yml calibration file in your sdcard's home directory
+ *  more to come ...
+= steps =
+=== Static libs ===
+{{{
+cd opencv/android
+mkdir build
+cd build
+cmake ..
+make
+}}}
+this may take a while
+=== android-jni ===
+After the static libs are built, run make in the android-jni folder
+{{{
+cd opencv/android/android-jni
+make
+}}}
+That creates the swig wrappers and compiles the shared library.
+
+now run the ant based java build
+{{{
+sh ./project_create.sh
+ant debug
+}}}
+
+Now you're ready to use it in a sample
+=== CVCamera ===
+{{{
+cd opencv/android/apps/CVCamera
+sh build.sh
+}}}
+That builds the swig wrappers and shared library.
+
+Build the android apk ( the thing that gets installed on the phone )
+{{{
+sh project_create.sh
+ant debug
+}}}
+
+Now if everything worked, try to install it.  Connect your device and run the following
+{{{
+ant install
+}}}
+
+Run it, press menu to see options - right now it can draw fast, star, and surf feature points on the live preview image.
+=== Calibration ===
+{{{
+sh project_create.sh
+ant debug
+ant install
+}}}
+
+To run the app, make sure that the sdcard is not mounted on your computer and point the phone at a calibration pattern and snap away. When you have taken enough chessboards to satisfy yourself
+press the save button to have the camera calibarted.  The calibration will be saved to /sdcard/opencv/calibration.yml
+
+Also see this app for how to make a slightly nicer camera ui than CVCamera.
+=== Troubles ===
+try to edit the local.env.mk file's that get created in CVCamera and android-jni to reflect your system.
+
+Also using cmake-gui or ccmake are good options to set up where your ndk directory are.
+
+Send questions/comments to Ethan Rublee ethan.rublee@gmail.com
+
+= Programming your own apps =
+Try to look at the samples - like CVCamera, for how to do this. A tutorial may be forth coming.
+
