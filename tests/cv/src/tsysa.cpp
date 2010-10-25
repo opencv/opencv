@@ -90,7 +90,7 @@ const char* blacklist[] =
     "warp-remap",                  //ticket 576
     "warp-resize",                 //ticket 429
     "warp-undistort",              //ticket 577
-    "color-lab",                   //ticket 627
+    //"color-lab",                   //ticket 627
     0
 };
 

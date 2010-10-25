@@ -1200,7 +1200,7 @@ static void initLabTabs()
     static bool initialized = false;
     if(!initialized)
     {
-        float f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE], ig[GAMMA_TAB_SIZE], scale = 1.f/LabCbrtTabScale;
+        float f[LAB_CBRT_TAB_SIZE+1], g[GAMMA_TAB_SIZE+1], ig[GAMMA_TAB_SIZE+1], scale = 1.f/LabCbrtTabScale;
         int i;
         for(i = 0; i <= LAB_CBRT_TAB_SIZE; i++)
         {
