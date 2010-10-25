@@ -955,7 +955,7 @@ IF(NOT BUILD_SHARED_LIBS)
         set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
     endif()
 
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} flann zlib opencv_lapack)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_flann zlib opencv_lapack)
 endif()
 
 
