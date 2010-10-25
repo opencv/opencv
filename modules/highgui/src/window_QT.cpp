@@ -723,7 +723,7 @@ GuiReceiver::~GuiReceiver()
 
 void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
 {
-	CV_Assert(arr)
+	CV_Assert(arr);
 
 	CvMat * mat, stub;
 	int origin=0;
@@ -2349,7 +2349,7 @@ void ViewPort::updateImage(const CvArr *arr)
 {
 	//if (!arr)
 	//CV_Error(CV_StsNullPtr, "NULL arr pointer (in showImage)" );
-	CV_Assert(arr)
+	CV_Assert(arr);
 
 	CvMat * mat, stub;
 	int origin=0;
