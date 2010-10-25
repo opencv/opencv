@@ -11,6 +11,9 @@ using namespace std;
 #define CV_CMP_FLOAT(a,b) ((a) < (b))
 static CV_IMPLEMENT_QSORT_EX( icvSortFloat, float, CV_CMP_FLOAT, float)
 
+#if ANDROID
+#define expl(x) exp(x)
+#endif
 
 //===========================================================================
 string ToString(int i)
