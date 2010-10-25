@@ -1,5 +1,7 @@
 {% extends "basic/layout.html" %}
 
+{% set script_files = script_files + [pathto("_static/insertIframe.js", 1)] %}
+
 {% block document %}
       <div class="documentwrapper">
       {%- if not embedded %}{% if not theme_nosidebar|tobool %}

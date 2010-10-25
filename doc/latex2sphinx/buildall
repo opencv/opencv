@@ -12,4 +12,13 @@ do
   mkdir -p $D
   cp conf.py $D
   TEXINPUTS=$PWD: sphinx-build -w $D/sphinx.errors -D "lang=$D" -b html -d _build/doctrees/$D $D _build/html/$D
+
+  #Insert javascript links to load the Wiki in a frame
+  for file in `ls _build/html/$D/*.html`
+  do
+    cat $file | sed "/Comments from the Wiki/s/href=\"\(.*\)\">id=0.\([0-9]*\) /href=\"javascript:void\(0\)\" onclick=\"insertIframe\('\2', '\1'\)\" id=\"\2\">/" > tmp.html
+    mv 'tmp.html' "$file"
+  done
 done
+
+
