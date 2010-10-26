@@ -45,9 +45,10 @@ CvTS test_system("ml");
 
 const char* blacklist[] =
 {
-    "kmeans",      //ticket 616
-    "artrees",     //ticket 460
-    "aboost",      //ticket 474
+    "kmeans",          //ticket 616
+    "artrees",         //ticket 460
+    "aboost",          //ticket 474
+    "CvGBTrees_test",  //ticket 630
     0
 };
 
