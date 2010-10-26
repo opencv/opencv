@@ -378,7 +378,8 @@ inline void Mat::addref()
 inline void Mat::release()
 {
     if( refcount && CV_XADD(refcount, -1) == 1 )
-        deallocate();
+        //deallocate();
+        fastFree(datastart);
     data = datastart = dataend = datalimit = 0;
     size.p[0] = 0;
     refcount = 0;
