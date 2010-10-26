@@ -34,7 +34,7 @@ file(GLOB module_includes "${opencv_root}/modules/[a-zA-Z]*")
 
 list(REMOVE_ITEM module_includes ${opencv_root}/modules/CMakeLists.txt)
 
-set(module_includes ${module_includes} ${CMAKE_SOURCE_DIR}/../3rdparty $(OPENCV_BUILD_ROOT) )
+set(module_includes ${module_includes} ${CMAKE_SOURCE_DIR}/../3rdparty $(OPENCV_BUILD_ROOT) ${opencv_root} )
 foreach(mdir ${module_includes})
     string(REPLACE "${opencv_root}" "$(OPENCV_ROOT)" n_f ${mdir})	
     set(android_module_include_dirs "${android_module_include_dirs} ${n_f}/include")
