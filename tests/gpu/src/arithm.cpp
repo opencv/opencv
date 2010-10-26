@@ -620,12 +620,12 @@ struct CV_GpuNppImagePhaseTest : public CV_GpuArithmTest
         }
 
         cv::Mat cpuRes;
-        cv::phase(mat1, mat2, cpuRes);
+        cv::phase(mat1, mat2, cpuRes, true);
 
         GpuMat gpu1(mat1);
         GpuMat gpu2(mat2);
         GpuMat gpuRes;
-        cv::gpu::phase(gpu1, gpu2, gpuRes);
+        cv::gpu::phase(gpu1, gpu2, gpuRes, true);
 
         return CheckNorm(cpuRes, gpuRes);
     }

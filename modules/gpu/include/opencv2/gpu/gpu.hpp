@@ -557,7 +557,7 @@ namespace cv
         
         //! computes the integral image and integral for the squared image
         //! sum will have CV_32S type, sqsum - CV32F type
-        //! supports only CV_32FC1 source type
+        //! supports only CV_8UC1 source type
         CV_EXPORTS void integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum);
 
         //! computes the standard deviation of integral images
