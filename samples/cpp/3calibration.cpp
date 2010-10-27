@@ -305,7 +305,7 @@ int main( int argc, char** argv )
     Mat Q;
     
     // step 3: find rectification transforms
-    double ratio = rectify3(cameraMatrix[0], distCoeffs[0], cameraMatrix[1],
+    double ratio = rectify3Collinear(cameraMatrix[0], distCoeffs[0], cameraMatrix[1],
              distCoeffs[1], cameraMatrix[2], distCoeffs[2],
              imgpt[0], imgpt[2],
              imageSize, R12, T12, R13, T13,
