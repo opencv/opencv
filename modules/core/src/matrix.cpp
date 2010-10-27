@@ -268,8 +268,6 @@ Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
     if( rows == 1 )
         flags |= CONTINUOUS_FLAG;
     
-    if( refcount )
-        CV_XADD(refcount, 1);
     if( rows <= 0 || cols <= 0 )
     {
         release();
@@ -736,6 +734,16 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
+    
+int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
+{
+    return (depth() == _depth || _depth <= 0) &&
+        (isContinuous() || !_requireContinuous) &&
+        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) || (cols == _elemChannels))) ||
+        (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
+         (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
+    ? (int)(total()*channels()/_elemChannels) : -1;
+}
     
 /*************************************************************************************************\
                                         Matrix Operations

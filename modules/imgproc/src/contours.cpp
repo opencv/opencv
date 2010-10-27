@@ -1627,12 +1627,11 @@ void cv::drawContours( Mat& image, const vector<vector<Point> >& contours,
                    -maxLevel : maxLevel, thickness, lineType, offset );
 }
 
+
 void cv::approxPolyDP( const Mat& curve, vector<Point>& approxCurve,
                        double epsilon, bool closed )
 {
-    CV_Assert(curve.isContinuous() && curve.depth() == CV_32S &&
-              ((curve.rows == 1 && curve.channels() == 2) ||
-               curve.cols*curve.channels() == 2));
+    CV_Assert(curve.checkVector(2, CV_32S) >= 0);
     CvMat _curve = curve;
     MemStorage storage(cvCreateMemStorage());
     Seq<Point> seq(cvApproxPoly(&_curve, sizeof(CvContour), storage, CV_POLY_APPROX_DP, epsilon, closed));
@@ -1642,9 +1641,7 @@ void cv::approxPolyDP( const Mat& curve, vector<Point>& approxCurve,
 void cv::approxPolyDP( const Mat& curve, vector<Point2f>& approxCurve,
                        double epsilon, bool closed )
 {
-    CV_Assert(curve.isContinuous() && curve.depth() == CV_32F &&
-              ((curve.rows == 1 && curve.channels() == 2) ||
-               curve.cols*curve.channels() == 2));
+    CV_Assert(curve.checkVector(2, CV_32F) >= 0);
     CvMat _curve = curve;
     MemStorage storage(cvCreateMemStorage());
     Seq<Point2f> seq(cvApproxPoly(&_curve, sizeof(CvContour), storage, CV_POLY_APPROX_DP, epsilon, closed));
@@ -1653,10 +1650,7 @@ void cv::approxPolyDP( const Mat& curve, vector<Point2f>& approxCurve,
 
 double cv::arcLength( const Mat& curve, bool closed )
 {
-    CV_Assert(curve.isContinuous() &&
-              (curve.depth() == CV_32S || curve.depth() == CV_32F) &&
-              ((curve.rows == 1 && curve.channels() == 2) ||
-               curve.cols*curve.channels() == 2));
+    CV_Assert(curve.checkVector(2) >= 0 && (curve.depth() == CV_32F || curve.depth() == CV_32S));
     CvMat _curve = curve;
     return cvArcLength(&_curve, CV_WHOLE_SEQ, closed);
 }
@@ -1664,10 +1658,7 @@ double cv::arcLength( const Mat& curve, bool closed )
 
 cv::Rect cv::boundingRect( const Mat& points )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
     CvMat _points = points;
     return cvBoundingRect(&_points, 0);
 }
@@ -1675,10 +1666,7 @@ cv::Rect cv::boundingRect( const Mat& points )
 
 double cv::contourArea( const Mat& contour, bool oriented )
 {
-    CV_Assert(contour.isContinuous() &&
-              (contour.depth() == CV_32S || contour.depth() == CV_32F) &&
-              ((contour.rows == 1 && contour.channels() == 2) ||
-               contour.cols*contour.channels() == 2));
+    CV_Assert(contour.checkVector(2) >= 0 && (contour.depth() == CV_32F || contour.depth() == CV_32S));
     CvMat _contour = contour;
     return cvContourArea(&_contour, CV_WHOLE_SEQ, oriented);
 }
@@ -1686,10 +1674,7 @@ double cv::contourArea( const Mat& contour, bool oriented )
 
 cv::RotatedRect cv::minAreaRect( const Mat& points )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
     CvMat _points = points;
     return cvMinAreaRect2(&_points, 0);
 }
@@ -1698,10 +1683,7 @@ cv::RotatedRect cv::minAreaRect( const Mat& points )
 void cv::minEnclosingCircle( const Mat& points,
                              Point2f& center, float& radius )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
     CvMat _points = points;
     cvMinEnclosingCircle( &_points, (CvPoint2D32f*)&center, &radius );
 }
@@ -1711,13 +1693,9 @@ double cv::matchShapes( const Mat& contour1,
                         const Mat& contour2,
                         int method, double parameter )
 {
-    CV_Assert(contour1.isContinuous() && contour2.isContinuous() &&
-              (contour1.depth() == CV_32S || contour1.depth() == CV_32F) &&
-              contour1.depth() == contour2.depth() &&
-              ((contour1.rows == 1 && contour1.channels() == 2 &&
-                contour2.rows == 1 && contour2.channels() == 2) ||
-               (contour1.cols*contour1.channels() == 2 &&
-                contour2.cols*contour2.channels() == 2)));
+    CV_Assert(contour1.checkVector(2) >= 0 && contour2.checkVector(2) >= 0 &&
+              (contour1.depth() == CV_32F || contour1.depth() == CV_32S) &&
+              contour1.depth() == contour2.depth());
     
     CvMat c1 = Mat(contour1), c2 = Mat(contour2);
     return cvMatchShapes(&c1, &c2, method, parameter);
@@ -1726,10 +1704,7 @@ double cv::matchShapes( const Mat& contour1,
 
 void cv::convexHull( const Mat& points, vector<int>& hull, bool clockwise )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
     hull.resize(points.cols*points.rows*points.channels()/2);
     CvMat _points = Mat(points), _hull=Mat(hull);
     cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 0);
@@ -1740,9 +1715,7 @@ void cv::convexHull( const Mat& points, vector<int>& hull, bool clockwise )
 void cv::convexHull( const Mat& points,
                      vector<Point>& hull, bool clockwise )
 {
-    CV_Assert(points.isContinuous() && points.depth() == CV_32S &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2, CV_32S) >= 0);
     hull.resize(points.cols*points.rows*points.channels()/2);
     CvMat _points = Mat(points), _hull=Mat(hull);
     cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 1);
@@ -1753,9 +1726,7 @@ void cv::convexHull( const Mat& points,
 void cv::convexHull( const Mat& points,
                      vector<Point2f>& hull, bool clockwise )
 {
-    CV_Assert(points.isContinuous() && points.depth() == CV_32F &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2, CV_32F) >= 0);
     hull.resize(points.cols*points.rows*points.channels()/2);
     CvMat _points = Mat(points), _hull=Mat(hull);
     cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 1);
@@ -1764,20 +1735,16 @@ void cv::convexHull( const Mat& points,
 
 bool cv::isContourConvex( const Mat& contour )
 {
-    CV_Assert(contour.isContinuous() &&
-              (contour.depth() == CV_32S || contour.depth() == CV_32F) &&
-              ((contour.rows == 1 && contour.channels() == 2) ||
-               contour.cols*contour.channels() == 2));
+    CV_Assert(contour.checkVector(2) >= 0 &&
+              (contour.depth() == CV_32F || contour.depth() == CV_32S));
     CvMat c = Mat(contour);
     return cvCheckContourConvexity(&c) > 0;
 }
 
 cv::RotatedRect cv::fitEllipse( const Mat& points )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 &&
+              (points.depth() == CV_32F || points.depth() == CV_32S));
     CvMat _points = points;
     return cvFitEllipse2(&_points);
 }
@@ -1786,10 +1753,8 @@ cv::RotatedRect cv::fitEllipse( const Mat& points )
 void cv::fitLine( const Mat& points, Vec4f& line, int distType,
                   double param, double reps, double aeps )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 &&
+              (points.depth() == CV_32F || points.depth() == CV_32S));
     CvMat _points = points;
     cvFitLine(&_points, distType, param, reps, aeps, &line[0]);
 }
@@ -1798,10 +1763,8 @@ void cv::fitLine( const Mat& points, Vec4f& line, int distType,
 void cv::fitLine( const Mat& points, Vec6f& line, int distType,
                   double param, double reps, double aeps )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 3) ||
-               points.cols*points.channels() == 3));
+    CV_Assert(points.checkVector(3) >= 0 &&
+              (points.depth() == CV_32F || points.depth() == CV_32S));
     CvMat _points = points;
     cvFitLine(&_points, distType, param, reps, aeps, &line[0]);
 }
@@ -1809,10 +1772,8 @@ void cv::fitLine( const Mat& points, Vec6f& line, int distType,
 double cv::pointPolygonTest( const Mat& contour,
                              Point2f pt, bool measureDist )
 {
-    CV_Assert(contour.isContinuous() &&
-              (contour.depth() == CV_32S || contour.depth() == CV_32F) &&
-              ((contour.rows == 1 && contour.channels() == 2) ||
-               contour.cols*contour.channels() == 2));
+    CV_Assert(contour.checkVector(2) >= 0 &&
+              (contour.depth() == CV_32F || contour.depth() == CV_32S));
     CvMat c = Mat(contour);
     return cvPointPolygonTest( &c, pt, measureDist );
 }

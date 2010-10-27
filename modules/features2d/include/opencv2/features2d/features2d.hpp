@@ -254,9 +254,9 @@ public:
 };
 
 //! writes vector of keypoints to the file storage
-CV_EXPORTS void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
+CV_EXPORTS_W void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
 //! reads vector of keypoints from the specified file storage node
-CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
+CV_EXPORTS_W void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
 
 /*!
  SIFT implementation.
@@ -347,17 +347,17 @@ protected:
  
  The class implements SURF algorithm by H. Bay et al.
  */
-class CV_EXPORTS SURF : public CvSURFParams
+class CV_EXPORTS_W SURF : public CvSURFParams
 {
 public:
     //! the default constructor
-    SURF();
+    CV_WRAP SURF();
     //! the full constructor taking all the necessary parameters
-    SURF(double _hessianThreshold, int _nOctaves=4,
+    CV_WRAP SURF(double _hessianThreshold, int _nOctaves=4,
          int _nOctaveLayers=2, bool _extended=false);
 
     //! returns the descriptor size in float's (64 or 128)
-    int descriptorSize() const;
+    CV_WRAP int descriptorSize() const;
     //! finds the keypoints using fast hessian detector used in SURF
     CV_WRAP_AS(detect) void operator()(const Mat& img, const Mat& mask,
                     CV_OUT vector<KeyPoint>& keypoints) const;
@@ -377,13 +377,13 @@ public:
  
  It returns the regions, each of those is encoded as a contour.
 */
-class CV_EXPORTS MSER : public CvMSERParams
+class CV_EXPORTS_W MSER : public CvMSERParams
 {
 public:
     //! the default constructor
-    MSER();
+    CV_WRAP MSER();
     //! the full constructor
-    MSER( int _delta, int _min_area, int _max_area,
+    CV_WRAP MSER( int _delta, int _min_area, int _max_area,
           double _max_variation, double _min_diversity,
           int _max_evolution, double _area_threshold,
           double _min_margin, int _edge_blur_size );
@@ -397,13 +397,13 @@ public:
  
  The class implements the keypoint detector introduced by K. Konolige.
 */
-class CV_EXPORTS StarDetector : public CvStarDetectorParams
+class CV_EXPORTS_W StarDetector : public CvStarDetectorParams
 {
 public:
     //! the default constructor
-    StarDetector();
+    CV_WRAP StarDetector();
     //! the full constructor
-    StarDetector(int _maxSize, int _responseThreshold,
+    CV_WRAP StarDetector(int _maxSize, int _responseThreshold,
                  int _lineThresholdProjected,
                  int _lineThresholdBinarized,
                  int _suppressNonmaxSize);
@@ -428,8 +428,8 @@ public:
                    double _lambdaMin=0.6, double _lambdaMax=1.5,
                    double _thetaMin=-CV_PI, double _thetaMax=CV_PI,
                    double _phiMin=-CV_PI, double _phiMax=CV_PI );
-    CV_WRAP_AS(generate) void operator()(const Mat& image, Point2f pt, Mat& patch, Size patchSize, RNG& rng) const;
-    CV_WRAP_AS(generate) void operator()(const Mat& image, const Mat& transform, Mat& patch,
+    void operator()(const Mat& image, Point2f pt, Mat& patch, Size patchSize, RNG& rng) const;
+    void operator()(const Mat& image, const Mat& transform, Mat& patch,
                     Size patchSize, RNG& rng) const;
     void warpWholeImage(const Mat& image, Mat& matT, Mat& buf,
                         CV_OUT Mat& warped, int border, RNG& rng) const;
@@ -453,10 +453,10 @@ public:
     LDetector();
     LDetector(int _radius, int _threshold, int _nOctaves,
               int _nViews, double _baseFeatureSize, double _clusteringDistance);
-    CV_WRAP_AS(detect) void operator()(const Mat& image,
+    void operator()(const Mat& image,
                     CV_OUT vector<KeyPoint>& keypoints,
                     int maxCount=0, bool scaleCoords=true) const;
-    CV_WRAP_AS(detect) void operator()(const vector<Mat>& pyr,
+    void operator()(const vector<Mat>& pyr,
                     CV_OUT vector<KeyPoint>& keypoints,
                     int maxCount=0, bool scaleCoords=true) const;
     void getMostStable2D(const Mat& image, CV_OUT vector<KeyPoint>& keypoints,
@@ -607,8 +607,8 @@ public:
     
     void read(const FileNode& node);
     void write(FileStorage& fs, const String& name=String()) const;
-    CV_WRAP_AS(detect) bool operator()(const Mat& image, CV_OUT Mat& H, CV_OUT vector<Point2f>& corners) const;
-    CV_WRAP_AS(detect) bool operator()(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
+    bool operator()(const Mat& image, CV_OUT Mat& H, CV_OUT vector<Point2f>& corners) const;
+    bool operator()(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
                                        CV_OUT Mat& H, CV_OUT vector<Point2f>& corners,
                                        CV_OUT vector<int>* pairs=0) const;
     

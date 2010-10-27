@@ -2494,10 +2494,10 @@ template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
     
 //////////////////////////////////////// XML & YAML I/O ////////////////////////////////////
 
-CV_EXPORTS void write( FileStorage& fs, const string& name, int value );
-CV_EXPORTS void write( FileStorage& fs, const string& name, float value );
-CV_EXPORTS void write( FileStorage& fs, const string& name, double value );
-CV_EXPORTS void write( FileStorage& fs, const string& name, const string& value );
+CV_EXPORTS_W void write( FileStorage& fs, const string& name, int value );
+CV_EXPORTS_W void write( FileStorage& fs, const string& name, float value );
+CV_EXPORTS_W void write( FileStorage& fs, const string& name, double value );
+CV_EXPORTS_W void write( FileStorage& fs, const string& name, const string& value );
 
 template<typename _Tp> inline void write(FileStorage& fs, const _Tp& value)
 { write(fs, string(), value); }
@@ -2691,7 +2691,7 @@ operator << ( FileStorage& fs, const vector<_Tp>& vec )
     return fs;
 }
 
-CV_EXPORTS void write( FileStorage& fs, const string& name, const Mat& value );
+CV_EXPORTS_W void write( FileStorage& fs, const string& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const string& name, const SparseMat& value );
 
 template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)
@@ -2792,7 +2792,7 @@ static inline void read(const FileNode& node, string& value, const string& defau
     value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? string(node.node->data.str.ptr) : string("");
 }
 
-CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
+CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );    
     
 inline FileNode::operator int() const

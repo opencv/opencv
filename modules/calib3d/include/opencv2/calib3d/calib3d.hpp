@@ -429,10 +429,10 @@ namespace cv
 {
 
 //! converts rotation vector to rotation matrix or vice versa using Rodrigues transformation
-CV_EXPORTS void Rodrigues(const Mat& src, Mat& dst);
+CV_EXPORTS_W void Rodrigues(const Mat& src, CV_OUT Mat& dst);
     
 //! converts rotation vector to rotation matrix or vice versa using Rodrigues transformation. Also computes the Jacobian matrix
-CV_EXPORTS void Rodrigues(const Mat& src, Mat& dst, Mat& jacobian);
+CV_EXPORTS_AS(RodriguesJ) void Rodrigues(const Mat& src, CV_OUT Mat& dst, CV_OUT Mat& jacobian);
 
 //! type of the robust estimation algorithm
 enum
@@ -442,9 +442,9 @@ enum
 };
 
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
-CV_EXPORTS Mat findHomography( const Mat& srcPoints,
+CV_EXPORTS_AS(findHomographyAndOutliers) Mat findHomography( const Mat& srcPoints,
                                const Mat& dstPoints,
-                               Mat& mask, int method=0,
+                               CV_OUT Mat& mask, int method=0,
                                double ransacReprojThreshold=3 );
 
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
@@ -454,7 +454,7 @@ CV_EXPORTS Mat findHomography( const Mat& srcPoints,
                                double ransacReprojThreshold=3 );
 
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
-CV_EXPORTS Mat findHomography( const Mat& srcPoints,
+CV_EXPORTS_W Mat findHomography( const Mat& srcPoints,
                                const Mat& dstPoints,
                                int method=0, double ransacReprojThreshold=3 );
 
@@ -462,60 +462,60 @@ CV_EXPORTS Mat findHomography( const Mat& srcPoints,
 CV_EXPORTS void RQDecomp3x3( const Mat& M, Mat& R, Mat& Q );
     
 //! Computes RQ decomposition of 3x3 matrix. Also, decomposes the output orthogonal matrix into the 3 primitive rotation matrices
-CV_EXPORTS Vec3d RQDecomp3x3( const Mat& M, Mat& R, Mat& Q,
-                              Mat& Qx, Mat& Qy, Mat& Qz );
+CV_EXPORTS_W Vec3d RQDecomp3x3( const Mat& M, Mat& R, Mat& Q,
+                              CV_OUT Mat& Qx, CV_OUT Mat& Qy, CV_OUT Mat& Qz );
 
 //! Decomposes the projection matrix into camera matrix and the rotation martix and the translation vector
 CV_EXPORTS void decomposeProjectionMatrix( const Mat& projMatrix, Mat& cameraMatrix,
                                            Mat& rotMatrix, Mat& transVect );
     
 //! Decomposes the projection matrix into camera matrix and the rotation martix and the translation vector. The rotation matrix is further decomposed
-CV_EXPORTS void decomposeProjectionMatrix( const Mat& projMatrix, Mat& cameraMatrix,
-                                           Mat& rotMatrix, Mat& transVect,
-                                           Mat& rotMatrixX, Mat& rotMatrixY,
-                                           Mat& rotMatrixZ, Vec3d& eulerAngles );
+CV_EXPORTS_W void decomposeProjectionMatrix( const Mat& projMatrix, CV_OUT Mat& cameraMatrix,
+                                           CV_OUT Mat& rotMatrix, CV_OUT Mat& transVect,
+                                           CV_OUT Mat& rotMatrixX, CV_OUT Mat& rotMatrixY,
+                                           CV_OUT Mat& rotMatrixZ, CV_OUT Vec3d& eulerAngles );
 
 //! computes derivatives of the matrix product w.r.t each of the multiplied matrix coefficients
-CV_EXPORTS void matMulDeriv( const Mat& A, const Mat& B, Mat& dABdA, Mat& dABdB );
+CV_EXPORTS_W void matMulDeriv( const Mat& A, const Mat& B, CV_OUT Mat& dABdA, CV_OUT Mat& dABdB );
 
 //! composes 2 [R|t] transformations together
-CV_EXPORTS void composeRT( const Mat& rvec1, const Mat& tvec1,
+CV_EXPORTS_W void composeRT( const Mat& rvec1, const Mat& tvec1,
                            const Mat& rvec2, const Mat& tvec2,
-                           Mat& rvec3, Mat& tvec3 );
+                           CV_OUT Mat& rvec3, CV_OUT Mat& tvec3 );
 
 //! composes 2 [R|t] transformations together. Also computes the derivatives of the result w.r.t the arguments
-CV_EXPORTS void composeRT( const Mat& rvec1, const Mat& tvec1,
+CV_EXPORTS_AS(composeRT_J) void composeRT( const Mat& rvec1, const Mat& tvec1,
                            const Mat& rvec2, const Mat& tvec2,
-                           Mat& rvec3, Mat& tvec3,
-                           Mat& dr3dr1, Mat& dr3dt1,
-                           Mat& dr3dr2, Mat& dr3dt2,
-                           Mat& dt3dr1, Mat& dt3dt1,
-                           Mat& dt3dr2, Mat& dt3dt2 );
+                           CV_OUT Mat& rvec3, CV_OUT Mat& tvec3,
+                           CV_OUT Mat& dr3dr1, CV_OUT Mat& dr3dt1,
+                           CV_OUT Mat& dr3dr2, CV_OUT Mat& dr3dt2,
+                           CV_OUT Mat& dt3dr1, CV_OUT Mat& dt3dt1,
+                           CV_OUT Mat& dt3dr2, CV_OUT Mat& dt3dt2 );
 
 //! projects points from the model coordinate space to the image coordinates. Takes the intrinsic and extrinsic camera parameters into account
 CV_EXPORTS void projectPoints( const Mat& objectPoints,
                                const Mat& rvec, const Mat& tvec,
                                const Mat& cameraMatrix,
                                const Mat& distCoeffs,
-                               vector<Point2f>& imagePoints );
+                               CV_OUT vector<Point2f>& imagePoints );
 
 //! projects points from the model coordinate space to the image coordinates. Also computes derivatives of the image coordinates w.r.t the intrinsic and extrinsic camera parameters
 CV_EXPORTS void projectPoints( const Mat& objectPoints,
                                const Mat& rvec, const Mat& tvec,
                                const Mat& cameraMatrix,
                                const Mat& distCoeffs,
-                               vector<Point2f>& imagePoints,
-                               Mat& dpdrot, Mat& dpdt, Mat& dpdf,
-                               Mat& dpdc, Mat& dpddist,
+                               CV_OUT vector<Point2f>& imagePoints,
+                               CV_OUT Mat& dpdrot, CV_OUT Mat& dpdt, CV_OUT Mat& dpdf,
+                               CV_OUT Mat& dpdc, CV_OUT Mat& dpddist,
                                double aspectRatio=0 );
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are not handled.
-CV_EXPORTS void solvePnP( const Mat& objectPoints,
-                          const Mat& imagePoints,
-                          const Mat& cameraMatrix,
-                          const Mat& distCoeffs,
-                          Mat& rvec, Mat& tvec,
-                          bool useExtrinsicGuess=false );
+CV_EXPORTS_W void solvePnP( const Mat& objectPoints,
+                            const Mat& imagePoints,
+                            const Mat& cameraMatrix,
+                            const Mat& distCoeffs,
+                            CV_OUT Mat& rvec, CV_OUT Mat& tvec,
+                            bool useExtrinsicGuess=false );
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS Mat initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints,
@@ -528,14 +528,14 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1, CALIB_CB_NORMALIZE_IMAGE = 2,
 
 //! finds checkerboard pattern of the specified size in the image
 CV_EXPORTS bool findChessboardCorners( const Mat& image, Size patternSize,
-                                       vector<Point2f>& corners,
+                                       CV_OUT vector<Point2f>& corners,
                                        int flags=CALIB_CB_ADAPTIVE_THRESH+
-                                            CALIB_CB_NORMALIZE_IMAGE );
+                                              CALIB_CB_NORMALIZE_IMAGE );
 
 //! draws the checkerboard pattern (found or partly found) in the image
-CV_EXPORTS void drawChessboardCorners( Mat& image, Size patternSize,
-                                       const Mat& corners,
-                                       bool patternWasFound );
+CV_EXPORTS_W void drawChessboardCorners( Mat& image, Size patternSize,
+                                         const Mat& corners,
+                                         bool patternWasFound );
 
 enum
 {
@@ -559,78 +559,83 @@ enum
 
 //! finds intrinsic and extrinsic camera parameters from several fews of a known calibration pattern.
 CV_EXPORTS double calibrateCamera( const vector<vector<Point3f> >& objectPoints,
-                                 const vector<vector<Point2f> >& imagePoints,
-                                 Size imageSize,
-                                 Mat& cameraMatrix, Mat& distCoeffs,
-                                 vector<Mat>& rvecs, vector<Mat>& tvecs,
-                                 int flags=0 );
+                                     const vector<vector<Point2f> >& imagePoints,
+                                     Size imageSize,
+                                     CV_IN_OUT Mat& cameraMatrix,
+                                     CV_IN_OUT Mat& distCoeffs,
+                                     CV_OUT vector<Mat>& rvecs, CV_OUT vector<Mat>& tvecs,
+                                     int flags=0 );
 
 //! computes several useful camera characteristics from the camera matrix, camera frame resolution and the physical sensor size.
-CV_EXPORTS void calibrationMatrixValues( const Mat& cameraMatrix,
+CV_EXPORTS_W void calibrationMatrixValues( const Mat& cameraMatrix,
                                 Size imageSize,
                                 double apertureWidth,
                                 double apertureHeight,
-                                double& fovx,
-                                double& fovy,
-                                double& focalLength,
-                                Point2d& principalPoint,
-                                double& aspectRatio );
+                                CV_OUT double& fovx,
+                                CV_OUT double& fovy,
+                                CV_OUT double& focalLength,
+                                CV_OUT Point2d& principalPoint,
+                                CV_OUT double& aspectRatio );
 
 //! finds intrinsic and extrinsic parameters of a stereo camera
 CV_EXPORTS double stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
-                                 const vector<vector<Point2f> >& imagePoints1,
-                                 const vector<vector<Point2f> >& imagePoints2,
-                                 Mat& cameraMatrix1, Mat& distCoeffs1,
-                                 Mat& cameraMatrix2, Mat& distCoeffs2,
-                                 Size imageSize, Mat& R, Mat& T,
-                                 Mat& E, Mat& F,
-                                 TermCriteria criteria = TermCriteria(TermCriteria::COUNT+
-                                    TermCriteria::EPS, 30, 1e-6),
-                                 int flags=CALIB_FIX_INTRINSIC );
+                                     const vector<vector<Point2f> >& imagePoints1,
+                                     const vector<vector<Point2f> >& imagePoints2,
+                                     CV_IN_OUT Mat& cameraMatrix1, CV_IN_OUT Mat& distCoeffs1,
+                                     CV_IN_OUT Mat& cameraMatrix2, CV_IN_OUT Mat& distCoeffs2,
+                                     Size imageSize, CV_OUT Mat& R, CV_OUT Mat& T,
+                                     CV_OUT Mat& E, CV_OUT Mat& F,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+
+                                         TermCriteria::EPS, 30, 1e-6),
+                                     int flags=CALIB_FIX_INTRINSIC );
 
+    
 //! computes the rectification transformation for a stereo camera from its intrinsic and extrinsic parameters
 CV_EXPORTS void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
                                const Mat& cameraMatrix2, const Mat& distCoeffs2,
                                Size imageSize, const Mat& R, const Mat& T,
-                               Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q,
+                               CV_OUT Mat& R1, CV_OUT Mat& R2,
+                               CV_OUT Mat& P1, CV_OUT Mat& P2, CV_OUT Mat& Q,
                                int flags=CALIB_ZERO_DISPARITY );
 
 //! computes the rectification transformation for a stereo camera from its intrinsic and extrinsic parameters
-CV_EXPORTS void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
-                              const Mat& cameraMatrix2, const Mat& distCoeffs2,
-                              Size imageSize, const Mat& R, const Mat& T,
-                              Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q,
-                              double alpha, Size newImageSize=Size(),
-                              Rect* validPixROI1=0, Rect* validPixROI2=0,
-                              int flags=CALIB_ZERO_DISPARITY );
+CV_EXPORTS_W void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+                                 const Mat& cameraMatrix2, const Mat& distCoeffs2,
+                                 Size imageSize, const Mat& R, const Mat& T,
+                                 CV_OUT Mat& R1, CV_OUT Mat& R2,
+                                 CV_OUT Mat& P1, CV_OUT Mat& P2, CV_OUT Mat& Q,
+                                 double alpha, Size newImageSize=Size(),
+                                 CV_OUT Rect* validPixROI1=0, CV_OUT Rect* validPixROI2=0,
+                                 int flags=CALIB_ZERO_DISPARITY );
 
 //! computes the rectification transformation for an uncalibrated stereo camera (zero distortion is assumed)
-CV_EXPORTS bool stereoRectifyUncalibrated( const Mat& points1,
-                                           const Mat& points2,
-                                           const Mat& F, Size imgSize,
-                                           Mat& H1, Mat& H2,
-                                           double threshold=5 );
+CV_EXPORTS_W bool stereoRectifyUncalibrated( const Mat& points1, const Mat& points2,
+                                             const Mat& F, Size imgSize,
+                                             CV_OUT Mat& H1, CV_OUT Mat& H2,
+                                             double threshold=5 );
 
-//! computes the rectification transformations for 3-head camera, where the heads are on the same line.
-CV_EXPORTS float rectify3( const Mat& cameraMatrix1, const Mat& distCoeffs1,
-                   const Mat& cameraMatrix2, const Mat& distCoeffs2,
-                   const Mat& cameraMatrix3, const Mat& distCoeffs3,
-                   const vector<vector<Point2f> >& imgpt1,
-                   const vector<vector<Point2f> >& imgpt3,
-                   Size imageSize, const Mat& R12, const Mat& T12, const Mat& R13, const Mat& T13,
-                   Mat& R1, Mat& R2, Mat& R3, Mat& P1, Mat& P2, Mat& P3, Mat& Q,
-                   double alpha, Size newImgSize,
-                   Rect* roi1, Rect* roi2, int flags );
+//! computes the rectification transformations for 3-head camera, where all the heads are on the same line.
+CV_EXPORTS float rectify3Collinear( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+                                      const Mat& cameraMatrix2, const Mat& distCoeffs2,
+                                      const Mat& cameraMatrix3, const Mat& distCoeffs3,
+                                      const vector<vector<Point2f> >& imgpt1,
+                                      const vector<vector<Point2f> >& imgpt3,
+                                      Size imageSize, const Mat& R12, const Mat& T12,
+                                      const Mat& R13, const Mat& T13,
+                                      CV_OUT Mat& R1, CV_OUT Mat& R2, CV_OUT Mat& R3,
+                                      CV_OUT Mat& P1, CV_OUT Mat& P2, CV_OUT Mat& P3, CV_OUT Mat& Q,
+                                      double alpha, Size newImgSize,
+                                      CV_OUT Rect* roi1, CV_OUT Rect* roi2, int flags );
     
 //! returns the optimal new camera matrix
-CV_EXPORTS Mat getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs,
-                                          Size imageSize, double alpha, Size newImgSize=Size(),
-                                          Rect* validPixROI=0);
+CV_EXPORTS_W Mat getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs,
+                                            Size imageSize, double alpha, Size newImgSize=Size(),
+                                            CV_OUT Rect* validPixROI=0);
 
 //! converts point coordinates from normal pixel coordinates to homogeneous coordinates ((x,y)->(x,y,1))
-CV_EXPORTS void convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst );
+CV_EXPORTS void convertPointsHomogeneous( const Mat& src, CV_OUT vector<Point3f>& dst );
 //! converts point coordinates from homogeneous to normal pixel coordinates ((x,y,z)->(x/z, y/z))
-CV_EXPORTS void convertPointsHomogeneous( const Mat& src, vector<Point2f>& dst );
+CV_EXPORTS void convertPointsHomogeneous( const Mat& src, CV_OUT vector<Point2f>& dst );
 
 //! the algorithm for finding fundamental matrix
 enum
@@ -643,18 +648,18 @@ enum
 
 //! finds fundamental matrix from a set of corresponding 2D points
 CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
-                                   vector<uchar>& mask, int method=FM_RANSAC,
-                                   double param1=3., double param2=0.99 );
+                                     CV_OUT vector<uchar>& mask, int method=FM_RANSAC,
+                                     double param1=3., double param2=0.99 );
 
 //! finds fundamental matrix from a set of corresponding 2D points
-CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
-                                   int method=FM_RANSAC,
-                                   double param1=3., double param2=0.99 );
+CV_EXPORTS_W Mat findFundamentalMat( const Mat& points1, const Mat& points2,
+                                     int method=FM_RANSAC,
+                                     double param1=3., double param2=0.99 );
 
 //! finds coordinates of epipolar lines corresponding the specified points
 CV_EXPORTS void computeCorrespondEpilines( const Mat& points1,
-                                           int whichImage, const Mat& F,
-                                           vector<Vec3f>& lines );
+                                             int whichImage, const Mat& F,
+                                             CV_OUT vector<Vec3f>& lines );
 
 template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
 
@@ -663,20 +668,20 @@ template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
  
  The class implements BM stereo correspondence algorithm by K. Konolige.
 */
-class CV_EXPORTS StereoBM
+class CV_EXPORTS_W StereoBM
 {
 public:
     enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1,
         BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
 
     //! the default constructor
-    StereoBM();
+    CV_WRAP StereoBM();
     //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size
-    StereoBM(int preset, int ndisparities=0, int SADWindowSize=21);
+    CV_WRAP StereoBM(int preset, int ndisparities=0, int SADWindowSize=21);
     //! the method that reinitializes the state. The previous content is destroyed
     void init(int preset, int ndisparities=0, int SADWindowSize=21);
     //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-    void operator()( const Mat& left, const Mat& right, Mat& disparity, int disptype=CV_16S );
+    CV_WRAP_AS(compute) void operator()( const Mat& left, const Mat& right, Mat& disparity, int disptype=CV_16S );
 
     //! pointer to the underlying CvStereoBMState
     Ptr<CvStereoBMState> state;
@@ -688,16 +693,16 @@ public:
  
  The class implements the original SGBM stereo correspondence algorithm by H. Hirschmuller and some its modification.
  */
-class CV_EXPORTS StereoSGBM
+class CV_EXPORTS_W StereoSGBM
 {
 public:
     enum { DISP_SHIFT=4, DISP_SCALE = (1<<DISP_SHIFT) };
 
     //! the default constructor
-    StereoSGBM();
+    CV_WRAP StereoSGBM();
     
     //! the full constructor taking all the necessary algorithm parameters
-    StereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+    CV_WRAP StereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
                int P1=0, int P2=0, int disp12MaxDiff=0,
                int preFilterCap=0, int uniquenessRatio=0,
                int speckleWindowSize=0, int speckleRange=0,
@@ -706,40 +711,41 @@ public:
     virtual ~StereoSGBM();
 
     //! the stereo correspondence operator that computes disparity map for the specified rectified stereo pair
-    virtual void operator()(const Mat& left, const Mat& right, Mat& disp);
+    CV_WRAP_AS(compute) virtual void operator()(const Mat& left, const Mat& right, Mat& disp);
 
-    int minDisparity;
-    int numberOfDisparities;
-    int SADWindowSize;
-    int preFilterCap;
-    int uniquenessRatio;
-    int P1, P2;
-    int speckleWindowSize;
-    int speckleRange;
-    int disp12MaxDiff;
-    bool fullDP;
+    CV_PROP_RW int minDisparity;
+    CV_PROP_RW int numberOfDisparities;
+    CV_PROP_RW int SADWindowSize;
+    CV_PROP_RW int preFilterCap;
+    CV_PROP_RW int uniquenessRatio;
+    CV_PROP_RW int P1;
+    CV_PROP_RW int P2;
+    CV_PROP_RW int speckleWindowSize;
+    CV_PROP_RW int speckleRange;
+    CV_PROP_RW int disp12MaxDiff;
+    CV_PROP_RW bool fullDP;
 
 protected:
     Mat buffer;
 };
 
 //! filters off speckles (small regions of incorrectly computed disparity)
-CV_EXPORTS void filterSpeckles( Mat& img, double newVal, int maxSpeckleSize, double maxDiff, Mat& buf );
+CV_EXPORTS_W void filterSpeckles( Mat& img, double newVal, int maxSpeckleSize, double maxDiff, Mat& buf );
 
 //! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by cv::stereoRectify())
-CV_EXPORTS Rect getValidDisparityROI( Rect roi1, Rect roi2,
-                                int minDisparity, int numberOfDisparities,
-                                int SADWindowSize );
+CV_EXPORTS_W Rect getValidDisparityROI( Rect roi1, Rect roi2,
+                                        int minDisparity, int numberOfDisparities,
+                                        int SADWindowSize );
 
 //! validates disparity using the left-right check. The matrix "cost" should be computed by the stereo correspondence algorithm
-CV_EXPORTS void validateDisparity( Mat& disparity, const Mat& cost,
-                                   int minDisparity, int numberOfDisparities,
-                                   int disp12MaxDisp=1 );
+CV_EXPORTS_W void validateDisparity( Mat& disparity, const Mat& cost,
+                                     int minDisparity, int numberOfDisparities,
+                                     int disp12MaxDisp=1 );
 
 //! reprojects disparity image to 3D: (x,y,d)->(X,Y,Z) using the matrix Q returned by cv::stereoRectify
-CV_EXPORTS void reprojectImageTo3D( const Mat& disparity,
-                                    Mat& _3dImage, const Mat& Q,
-                                    bool handleMissingValues=false );
+CV_EXPORTS_W void reprojectImageTo3D( const Mat& disparity,
+                                      CV_OUT Mat& _3dImage, const Mat& Q,
+                                      bool handleMissingValues=false );
     
 }
 

@@ -1074,12 +1074,9 @@ static Mat _findFundamentalMat( const Mat& points1, const Mat& points2,
                                int method, double param1, double param2,
                                vector<uchar>* mask )
 {
-    CV_Assert(points1.isContinuous() && points2.isContinuous() &&
-              points1.type() == points2.type() &&
-              ((points1.rows == 1 && points1.channels() == 2) ||
-               points1.cols*points1.channels() == 2) &&
-              ((points2.rows == 1 && points2.channels() == 2) ||
-               points2.cols*points2.channels() == 2));
+    CV_Assert(points1.checkVector(2) >= 0 && points2.checkVector(2) >= 0 &&
+              (points1.depth() == CV_32F || points1.depth() == CV_32S) &&
+              points1.depth() == points2.depth());
     
     Mat F(3, 3, CV_64F);
     CvMat _pt1 = Mat(points1), _pt2 = Mat(points2);
@@ -1127,10 +1124,8 @@ cv::Mat cv::findFundamentalMat( const Mat& points1, const Mat& points2,
 void cv::computeCorrespondEpilines( const Mat& points, int whichImage,
                                     const Mat& F, vector<Vec3f>& lines )
 {
-    CV_Assert(points.isContinuous() &&
-              (points.depth() == CV_32S || points.depth() == CV_32F) &&
-              ((points.rows == 1 && points.channels() == 2) ||
-               points.cols*points.channels() == 2));
+    CV_Assert(points.checkVector(2) >= 0 &&
+              (points.depth() == CV_32F || points.depth() == CV_32S));
     
     lines.resize(points.cols*points.rows*points.channels()/2);
     CvMat _points = points, _lines = Mat(lines), matF = F;
@@ -1139,10 +1134,8 @@ void cv::computeCorrespondEpilines( const Mat& points, int whichImage,
 
 void cv::convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst )
 {
-    CV_Assert(src.isContinuous() &&
-              (src.depth() == CV_32S || src.depth() == CV_32F) &&
-              ((src.rows == 1 && src.channels() == 2) ||
-               src.cols*src.channels() == 2));
+    CV_Assert(src.checkVector(2) >= 0 &&
+              (src.depth() == CV_32F || src.depth() == CV_32S));
     
     dst.resize(src.cols*src.rows*src.channels()/2);
     CvMat _src = src, _dst = Mat(dst);
@@ -1151,10 +1144,8 @@ void cv::convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst )
 
 void cv::convertPointsHomogeneous( const Mat& src, vector<Point2f>& dst )
 {
-    CV_Assert(src.isContinuous() &&
-              (src.depth() == CV_32S || src.depth() == CV_32F) &&
-              ((src.rows == 1 && src.channels() == 3) ||
-               src.cols*src.channels() == 3));
+    CV_Assert(src.checkVector(3) >= 0 &&
+              (src.depth() == CV_32F || src.depth() == CV_32S));
     
     dst.resize(src.cols*src.rows*src.channels()/3);
     CvMat _src = Mat(src), _dst = Mat(dst);

@@ -1530,8 +1530,6 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
         binarySOpC1_<CmpGE<double> >, 0},
     };
 
-    dst.create(src1.rows, src1.cols, CV_8U);
-    CV_Assert(src1.channels() == 1);
     int depth = src1.depth();
     bool invflag = false;
 
@@ -1562,7 +1560,7 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
     
     if( src1.dims > 2 )
     {
-        dst.create(src1.dims, src1.size, CV_8U);
+        dst.create(src1.dims, src1.size, CV_8UC(src1.channels()));
         const Mat* arrays[] = {&src1, &dst, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
@@ -1576,6 +1574,7 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
         return;
     }
     
+    dst.create(src1.rows, src1.cols, CV_8UC(src1.channels()));
     func( src1, dst, value );
     if( invflag )
         bitwise_not(dst, dst);

@@ -1894,10 +1894,6 @@ float CvBoost::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
 
 void CvBoost::write_params( CvFileStorage* fs ) const
 {
-    CV_FUNCNAME( "CvBoost::write_params" );
-
-    __BEGIN__;
-
     const char* boost_type_str =
         params.boost_type == DISCRETE ? "DiscreteAdaboost" :
         params.boost_type == REAL ? "RealAdaboost" :
@@ -1924,8 +1920,6 @@ void CvBoost::write_params( CvFileStorage* fs ) const
     cvWriteReal( fs, "weight_trimming_rate", params.weight_trim_rate );
 
     data->write_params( fs );
-
-    __END__;
 }
 
 

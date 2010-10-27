@@ -608,14 +608,25 @@ template<typename _Tp> inline MatIterator_<_Tp> Mat::end()
     return it;
 }
 
+    
+template<typename _Tp> inline void Mat::copyTo(vector<_Tp>& v) const
+{
+    int n = checkVector(DataType<_Tp>::channels);
+    if( empty() || n == 0 )
+    {
+        v.clear();
+        return;
+    }
+    CV_Assert( n > 0 );
+    v.resize(n);
+    Mat temp(dims, size.p, DataType<_Tp>::type, &v[0]);
+    convertTo(temp, DataType<_Tp>::type);
+}    
+    
 template<typename _Tp> inline Mat::operator vector<_Tp>() const
 {
-    if( empty() )
-        return vector<_Tp>();
-    CV_Assert( dims >= 1 && DataType<_Tp>::channels == channels());
-    vector<_Tp> v(total());
-    Mat temp(dims, size.p, type(), &v[0]);
-    convertTo(temp, DataType<_Tp>::type);
+    vector<_Tp> v;
+    copyTo(v);
     return v;
 }
 
@@ -1011,7 +1022,9 @@ template<typename _Tp> inline const _Tp& Mat_<_Tp>::operator ()(int i0, int i1, 
     
 template<typename _Tp> inline Mat_<_Tp>::operator vector<_Tp>() const
 {
-    return this->Mat::operator vector<_Tp>();
+    vector<_Tp> v;
+    copyTo(v);
+    return v;
 }
 
 template<typename _Tp> template<int n> inline Mat_<_Tp>::operator Vec<typename DataType<_Tp>::channel_type, n>() const
@@ -1025,7 +1038,7 @@ template<typename _Tp> template<int m, int n> inline Mat_<_Tp>::operator Matx<ty
     CV_Assert(n % DataType<_Tp>::channels == 0);
     return this->Mat::operator Matx<typename DataType<_Tp>::channel_type, m, n>();
 }    
-    
+
 template<typename T1, typename T2, typename Op> inline void
 process( const Mat_<T1>& m1, Mat_<T2>& m2, Op op )
 {
@@ -1522,26 +1535,10 @@ operator ^= (const Mat_<_Tp>& a, const Scalar& s)
 }        
 
 /////////////////////////////// Miscellaneous operations //////////////////////////////
-
-static inline void merge(const vector<Mat>& mv, Mat& dst)
-{ merge(&mv[0], mv.size(), dst); }
-
-static inline void split(const Mat& m, vector<Mat>& mv)
-{
-    mv.resize(m.channels());
-    if(m.channels() > 0)
-        split(m, &mv[0]);
-}    
     
 template<typename _Tp> void split(const Mat& src, vector<Mat_<_Tp> >& mv)
 { split(src, (vector<Mat>&)mv ); }
 
-static inline void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
-                               const int* fromTo, int npairs)
-{
-    mixChannels(&src[0], (int)src.size(), &dst[0], (int)dst.size(), fromTo, npairs);
-}
- 
 //////////////////////////////////////////////////////////////
     
 template<typename _Tp> inline MatExpr Mat_<_Tp>::zeros(int rows, int cols)

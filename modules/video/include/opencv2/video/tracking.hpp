@@ -244,28 +244,28 @@ namespace cv
 {
     
 //! updates motion history image using the current silhouette
-CV_EXPORTS void updateMotionHistory( const Mat& silhouette, Mat& mhi,
+CV_EXPORTS_W void updateMotionHistory( const Mat& silhouette, Mat& mhi,
                                      double timestamp, double duration );
 
 //! computes the motion gradient orientation image from the motion history image
-CV_EXPORTS void calcMotionGradient( const Mat& mhi, CV_OUT Mat& mask,
-                                    CV_OUT Mat& orientation,
-                                    double delta1, double delta2,
-                                    int apertureSize=3 );
+CV_EXPORTS_W void calcMotionGradient( const Mat& mhi, CV_OUT Mat& mask,
+                                      CV_OUT Mat& orientation,
+                                      double delta1, double delta2,
+                                      int apertureSize=3 );
 
 //! computes the global orientation of the selected motion history image part
-CV_EXPORTS double calcGlobalOrientation( const Mat& orientation, const Mat& mask,
-                                         const Mat& mhi, double timestamp,
-                                         double duration );
+CV_EXPORTS_W double calcGlobalOrientation( const Mat& orientation, const Mat& mask,
+                                           const Mat& mhi, double timestamp,
+                                           double duration );
 // TODO: need good API for cvSegmentMotion
 
 //! updates the object tracking window using CAMSHIFT algorithm
-CV_EXPORTS RotatedRect CamShift( const Mat& probImage, CV_OUT Rect& window,
-                                 TermCriteria criteria );
+CV_EXPORTS_W RotatedRect CamShift( const Mat& probImage, CV_OUT Rect& window,
+                                   TermCriteria criteria );
 
 //! updates the object tracking window using meanshift algorithm
-CV_EXPORTS int meanShift( const Mat& probImage, CV_OUT Rect& window,
-                          TermCriteria criteria );
+CV_EXPORTS_W int meanShift( const Mat& probImage, CV_OUT Rect& window,
+                            TermCriteria criteria );
 
 /*!
  Kalman filter.
@@ -274,20 +274,20 @@ CV_EXPORTS int meanShift( const Mat& probImage, CV_OUT Rect& window,
  However, you can modify KalmanFilter::transitionMatrix, KalmanFilter::controlMatrix and
  KalmanFilter::measurementMatrix to get the extended Kalman filter functionality.
 */
-class CV_EXPORTS KalmanFilter
+class CV_EXPORTS_W KalmanFilter
 {
 public:
     //! the default constructor
-    KalmanFilter();
+    CV_WRAP KalmanFilter();
     //! the full constructor taking the dimensionality of the state, of the measurement and of the control vector
-    KalmanFilter(int dynamParams, int measureParams, int controlParams=0);
+    CV_WRAP KalmanFilter(int dynamParams, int measureParams, int controlParams=0);
     //! re-initializes Kalman filter. The previous content is destroyed.
     void init(int dynamParams, int measureParams, int controlParams=0);
 
     //! computes predicted state
-    const Mat& predict(const Mat& control=Mat());
+    CV_WRAP const Mat& predict(const Mat& control=Mat());
     //! updates the predicted state from the measurement
-    const Mat& correct(const Mat& measurement);
+    CV_WRAP const Mat& correct(const Mat& measurement);
 
     Mat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
     Mat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
@@ -312,7 +312,7 @@ public:
 enum { OPTFLOW_USE_INITIAL_FLOW=4, OPTFLOW_FARNEBACK_GAUSSIAN=256 };
 
 //! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
-CV_EXPORTS void calcOpticalFlowPyrLK( const Mat& prevImg, const Mat& nextImg,
+CV_EXPORTS_W void calcOpticalFlowPyrLK( const Mat& prevImg, const Mat& nextImg,
                            const vector<Point2f>& prevPts, CV_OUT vector<Point2f>& nextPts,
                            CV_OUT vector<uchar>& status, CV_OUT vector<float>& err,
                            Size winSize=Size(15,15), int maxLevel=3,
@@ -323,7 +323,7 @@ CV_EXPORTS void calcOpticalFlowPyrLK( const Mat& prevImg, const Mat& nextImg,
                            int flags=0 );
 
 //! computes dense optical flow using Farneback algorithm
-CV_EXPORTS void calcOpticalFlowFarneback( const Mat& prev, const Mat& next,
+CV_EXPORTS_W void calcOpticalFlowFarneback( const Mat& prev, const Mat& next,
                            CV_OUT Mat& flow, double pyr_scale, int levels, int winsize,
                            int iterations, int poly_n, double poly_sigma, int flags );
 

@@ -353,13 +353,13 @@ namespace cv
  The class is only used to define the common interface for
  the whole family of background/foreground segmentation algorithms.
 */
-class CV_EXPORTS BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractor
 {
 public:
     //! the virtual destructor
     virtual ~BackgroundSubtractor();
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    virtual CV_WRAP_AS(apply) void operator()(const Mat& image, CV_OUT Mat& fgmask,
+    CV_WRAP_AS(apply) virtual void operator()(const Mat& image, CV_OUT Mat& fgmask,
                                               double learningRate=0);
 };
 
@@ -374,13 +374,13 @@ public:
  http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
  
 */
-class CV_EXPORTS BackgroundSubtractorMOG : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG : public BackgroundSubtractor
 {
 public:
     //! the default constructor
-    BackgroundSubtractorMOG();
+    CV_WRAP BackgroundSubtractorMOG();
     //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
-    BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0);
+    CV_WRAP BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0);
     //! the destructor
     virtual ~BackgroundSubtractorMOG();
     //! the update operator

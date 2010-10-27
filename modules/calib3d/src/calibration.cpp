@@ -3097,6 +3097,7 @@ static void collectCalibrationData( const vector<vector<Point3f> >& objectPoints
             std::copy(imagePoints2[i].begin(), imagePoints2[i].end(), imgPtData2 + j);
     }
 }
+
     
 static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype)
 {
@@ -3293,9 +3294,9 @@ double cv::calibrateCamera( const vector<vector<Point3f> >& objectPoints,
     CvMat _cameraMatrix = cameraMatrix, _distCoeffs = distCoeffs;
     CvMat _rvecM = rvecM, _tvecM = tvecM;
 
-    double reprojErr = cvCalibrateCamera2(
-        &_objPt, &_imgPt, &_npoints, imageSize, &_cameraMatrix,
-        &_distCoeffs, &_rvecM, &_tvecM, flags );
+    double reprojErr = cvCalibrateCamera2(&_objPt, &_imgPt, &_npoints, imageSize,
+                                          &_cameraMatrix, &_distCoeffs, &_rvecM,
+                                          &_tvecM, flags );
     rvecs.resize(nimages);
     tvecs.resize(nimages);
     for( i = 0; i < nimages; i++ )
@@ -3305,6 +3306,7 @@ double cv::calibrateCamera( const vector<vector<Point3f> >& objectPoints,
     }
     return reprojErr;
 }
+
 
 void cv::calibrationMatrixValues( const Mat& cameraMatrix, Size imageSize,
                                   double apertureWidth, double apertureHeight,
@@ -3348,6 +3350,7 @@ double cv::stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
         &_distCoeffs1, &_cameraMatrix2, &_distCoeffs2, imageSize,
         &matR, &matT, &matE, &matF, criteria, flags );
 }
+
 
 void cv::stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
                         const Mat& cameraMatrix2, const Mat& distCoeffs2,
@@ -3539,7 +3542,7 @@ static void adjust3rdMatrix(const vector<vector<Point2f> >& imgpt1_0,
 
 }
 
-float cv::rectify3( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+float cv::rectify3Collinear( const Mat& cameraMatrix1, const Mat& distCoeffs1,
                    const Mat& cameraMatrix2, const Mat& distCoeffs2,
                    const Mat& cameraMatrix3, const Mat& distCoeffs3,
                    const vector<vector<Point2f> >& imgpt1,

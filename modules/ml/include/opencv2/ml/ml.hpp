@@ -188,7 +188,7 @@ CV_INLINE CvParamLattice cvDefaultParamLattice( void )
 #define CV_TRAIN_ERROR  0
 #define CV_TEST_ERROR   1
 
-class CV_EXPORTS CvStatModel
+class CV_EXPORTS_AS(StatModel) CvStatModel
 {
 public:
     CvStatModel();
@@ -196,8 +196,8 @@ public:
 
     virtual void clear();
 
-    virtual void save( const char* filename, const char* name=0 ) const;
-    virtual void load( const char* filename, const char* name=0 );
+    CV_WRAP virtual void save( const char* filename, const char* name=0 ) const;
+    CV_WRAP virtual void load( const char* filename, const char* name=0 );
 
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );
@@ -241,27 +241,29 @@ struct CV_EXPORTS CvParamGrid
     double step;
 };
 
-class CV_EXPORTS CvNormalBayesClassifier : public CvStatModel
+class CV_EXPORTS_AS(NormalBayesClassifier) CvNormalBayesClassifier : public CvStatModel
 {
 public:
-    CvNormalBayesClassifier();
+    CV_WRAP CvNormalBayesClassifier();
     virtual ~CvNormalBayesClassifier();
 
-    CV_NO_WRAP CvNormalBayesClassifier( const CvMat* _train_data, const CvMat* _responses,
+    CvNormalBayesClassifier( const CvMat* _train_data, const CvMat* _responses,
         const CvMat* _var_idx=0, const CvMat* _sample_idx=0 );
     
-    CV_NO_WRAP virtual bool train( const CvMat* _train_data, const CvMat* _responses,
+    virtual bool train( const CvMat* _train_data, const CvMat* _responses,
         const CvMat* _var_idx = 0, const CvMat* _sample_idx=0, bool update=false );
    
-    CV_NO_WRAP virtual float predict( const CvMat* _samples, CvMat* results=0 ) const;
-    virtual void clear();
+    virtual float predict( const CvMat* _samples, CV_OUT CvMat* results=0 ) const;
+    CV_WRAP virtual void clear();
 
-    CvNormalBayesClassifier( const cv::Mat& _train_data, const cv::Mat& _responses,
+#ifndef SWIG
+    CV_WRAP CvNormalBayesClassifier( const cv::Mat& _train_data, const cv::Mat& _responses,
                             const cv::Mat& _var_idx=cv::Mat(), const cv::Mat& _sample_idx=cv::Mat() );
-    virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
                        const cv::Mat& _var_idx = cv::Mat(), const cv::Mat& _sample_idx=cv::Mat(),
                        bool update=false );
-    virtual float predict( const cv::Mat& _samples, cv::Mat* results=0 ) const;
+    CV_WRAP virtual float predict( const cv::Mat& _samples, cv::Mat* results=0 ) const;
+#endif
     
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );
@@ -285,11 +287,11 @@ protected:
 \****************************************************************************************/
 
 // k Nearest Neighbors
-class CV_EXPORTS CvKNearest : public CvStatModel
+class CV_EXPORTS_AS(KNearest) CvKNearest : public CvStatModel
 {
 public:
 
-    CvKNearest();
+    CV_WRAP CvKNearest();
     virtual ~CvKNearest();
 
     CvKNearest( const CvMat* _train_data, const CvMat* _responses,
@@ -299,18 +301,18 @@ public:
                         const CvMat* _sample_idx=0, bool is_regression=false,
                         int _max_k=32, bool _update_base=false );
     
-    virtual float find_nearest( const CvMat* _samples, int k, CvMat* results=0,
-        const float** neighbors=0, CvMat* neighbor_responses=0, CvMat* dist=0 ) const;
+    virtual float find_nearest( const CvMat* _samples, int k, CV_OUT CvMat* results=0,
+        const float** neighbors=0, CV_OUT CvMat* neighbor_responses=0, CV_OUT CvMat* dist=0 ) const;
     
 #ifndef SWIG
-    CvKNearest( const cv::Mat& _train_data, const cv::Mat& _responses,
+    CV_WRAP CvKNearest( const cv::Mat& _train_data, const cv::Mat& _responses,
                const cv::Mat& _sample_idx=cv::Mat(), bool _is_regression=false, int max_k=32 );
     
-    virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
                        const cv::Mat& _sample_idx=cv::Mat(), bool is_regression=false,
                        int _max_k=32, bool _update_base=false );    
     
-    virtual float find_nearest( const cv::Mat& _samples, int k, cv::Mat* results=0,
+    CV_WRAP virtual float find_nearest( const cv::Mat& _samples, int k, cv::Mat* results=0,
                                 const float** neighbors=0,
                                 cv::Mat* neighbor_responses=0,
                                 cv::Mat* dist=0 ) const;
@@ -343,7 +345,7 @@ protected:
 \****************************************************************************************/
 
 // SVM training parameters
-struct CV_EXPORTS CvSVMParams
+struct CV_EXPORTS_AS_MAP CvSVMParams
 {
     CvSVMParams();
     CvSVMParams( int _svm_type, int _kernel_type,
@@ -506,7 +508,7 @@ struct CvSVMDecisionFunc
 
 
 // SVM model
-class CV_EXPORTS CvSVM : public CvStatModel
+class CV_EXPORTS_AS(SVM) CvSVM : public CvStatModel
 {
 public:
     // SVM type
@@ -518,7 +520,7 @@ public:
     // SVM params type
     enum { C=0, GAMMA=1, P=2, NU=3, COEF=4, DEGREE=5 };
 
-    CvSVM();
+    CV_WRAP CvSVM();
     virtual ~CvSVM();
 
     CvSVM( const CvMat* _train_data, const CvMat* _responses,
@@ -542,15 +544,15 @@ public:
     virtual float predict( const CvMat* _sample, bool returnDFVal=false ) const;
 
 #ifndef SWIG
-    CvSVM( const cv::Mat& _train_data, const cv::Mat& _responses,
+    CV_WRAP CvSVM( const cv::Mat& _train_data, const cv::Mat& _responses,
           const cv::Mat& _var_idx=cv::Mat(), const cv::Mat& _sample_idx=cv::Mat(),
           CvSVMParams _params=CvSVMParams() );
     
-    virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, const cv::Mat& _responses,
                        const cv::Mat& _var_idx=cv::Mat(), const cv::Mat& _sample_idx=cv::Mat(),
                        CvSVMParams _params=CvSVMParams() );
     
-    virtual bool train_auto( const cv::Mat& _train_data, const cv::Mat& _responses,
+    CV_WRAP virtual bool train_auto( const cv::Mat& _train_data, const cv::Mat& _responses,
                             const cv::Mat& _var_idx, const cv::Mat& _sample_idx, CvSVMParams _params,
                             int k_fold = 10,
                             CvParamGrid C_grid      = get_default_grid(CvSVM::C),
@@ -559,19 +561,19 @@ public:
                             CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),
                             CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),
                             CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) );
-    virtual float predict( const cv::Mat& _sample, bool returnDFVal=false ) const;    
+    CV_WRAP virtual float predict( const cv::Mat& _sample, bool returnDFVal=false ) const;    
 #endif
     
-    virtual int get_support_vector_count() const;
+    CV_WRAP virtual int get_support_vector_count() const;
     virtual const float* get_support_vector(int i) const;
-    virtual CvSVMParams get_params() const { return params; };
-    virtual void clear();
+    CV_WRAP virtual CvSVMParams get_params() const { return params; };
+    CV_WRAP virtual void clear();
 
     static CvParamGrid get_default_grid( int param_id );
 
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );
-    int get_var_count() const { return var_idx ? var_idx->cols : var_all; }
+    CV_WRAP int get_var_count() const { return var_idx ? var_idx->cols : var_all; }
 
 protected:
 
@@ -607,7 +609,7 @@ protected:
 *                              Expectation - Maximization                                *
 \****************************************************************************************/
 
-struct CV_EXPORTS CvEMParams
+struct CV_EXPORTS_AS_MAP CvEMParams
 {
     CvEMParams() : nclusters(10), cov_mat_type(1/*CvEM::COV_MAT_DIAGONAL*/),
         start_step(0/*CvEM::START_AUTO_STEP*/), probs(0), weights(0), means(0), covs(0)
@@ -634,7 +636,7 @@ struct CV_EXPORTS CvEMParams
 };
 
 
-class CV_EXPORTS CvEM : public CvStatModel
+class CV_EXPORTS_AS(EM) CvEM : public CvStatModel
 {
 public:
     // Type of covariation matrices
@@ -643,37 +645,38 @@ public:
     // The initial step
     enum { START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0 };
 
-    CvEM();
+    CV_WRAP CvEM();
     CvEM( const CvMat* samples, const CvMat* sample_idx=0,
           CvEMParams params=CvEMParams(), CvMat* labels=0 );
-    //CvEM (CvEMParams params, CvMat * means, CvMat ** covs, CvMat * weights, CvMat * probs, CvMat * log_weight_div_det, CvMat * inv_eigen_values, CvMat** cov_rotate_mats);
+    //CvEM (CvEMParams params, CvMat * means, CvMat ** covs, CvMat * weights,
+    // CvMat * probs, CvMat * log_weight_div_det, CvMat * inv_eigen_values, CvMat** cov_rotate_mats);
 
     virtual ~CvEM();
 
     virtual bool train( const CvMat* samples, const CvMat* sample_idx=0,
                         CvEMParams params=CvEMParams(), CvMat* labels=0 );
 
-    virtual float predict( const CvMat* sample, CvMat* probs ) const;
+    virtual float predict( const CvMat* sample, CV_OUT CvMat* probs ) const;
 
 #ifndef SWIG
-    CvEM( const cv::Mat& samples, const cv::Mat& sample_idx=cv::Mat(),
+    CV_WRAP CvEM( const cv::Mat& samples, const cv::Mat& sample_idx=cv::Mat(),
          CvEMParams params=CvEMParams(), cv::Mat* labels=0 );
     
-    virtual bool train( const cv::Mat& samples, const cv::Mat& sample_idx=cv::Mat(),
+    CV_WRAP virtual bool train( const cv::Mat& samples, const cv::Mat& sample_idx=cv::Mat(),
                        CvEMParams params=CvEMParams(), cv::Mat* labels=0 );
     
-    virtual float predict( const cv::Mat& sample, cv::Mat* probs ) const;
+    CV_WRAP virtual float predict( const cv::Mat& sample, cv::Mat* probs ) const;
 #endif
     
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
-    int           get_nclusters() const;
-    const CvMat*  get_means()     const;
-    const CvMat** get_covs()      const;
-    const CvMat*  get_weights()   const;
-    const CvMat*  get_probs()     const;
+    CV_WRAP int           get_nclusters() const;
+    CV_WRAP const CvMat*  get_means()     const;
+    CV_WRAP const CvMat** get_covs()      const;
+    CV_WRAP const CvMat*  get_weights()   const;
+    CV_WRAP const CvMat*  get_probs()     const;
 
-    inline double         get_log_likelihood     () const { return log_likelihood;     };
+    CV_WRAP inline double         get_log_likelihood     () const { return log_likelihood;     };
     
 //    inline const CvMat *  get_log_weight_div_det () const { return log_weight_div_det; };
 //    inline const CvMat *  get_inv_eigen_values   () const { return inv_eigen_values;   };
@@ -769,7 +772,7 @@ struct CvDTreeNode
 };
 
 
-struct CV_EXPORTS CvDTreeParams
+struct CV_EXPORTS_AS_MAP CvDTreeParams
 {
     int   max_categories;
     int   max_depth;
@@ -912,10 +915,10 @@ namespace cv
     struct ForestTreeBestSplitFinder;
 }
 
-class CV_EXPORTS CvDTree : public CvStatModel
+class CV_EXPORTS_AS(DTree) CvDTree : public CvStatModel
 {
 public:
-    CvDTree();
+    CV_WRAP CvDTree();
     virtual ~CvDTree();
 
     virtual bool train( const CvMat* _train_data, int _tflag,
@@ -934,18 +937,18 @@ public:
                                   bool preprocessed_input=false ) const;
 
 #ifndef SWIG
-    virtual bool train( const cv::Mat& _train_data, int _tflag,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, int _tflag,
                        const cv::Mat& _responses, const cv::Mat& _var_idx=cv::Mat(),
                        const cv::Mat& _sample_idx=cv::Mat(), const cv::Mat& _var_type=cv::Mat(),
                        const cv::Mat& _missing_mask=cv::Mat(),
                        CvDTreeParams params=CvDTreeParams() );
     
-    virtual CvDTreeNode* predict( const cv::Mat& _sample, const cv::Mat& _missing_data_mask=cv::Mat(),
+    CV_WRAP virtual CvDTreeNode* predict( const cv::Mat& _sample, const cv::Mat& _missing_data_mask=cv::Mat(),
                                   bool preprocessed_input=false ) const;
 #endif
     
-    virtual const CvMat* get_var_importance();
-    virtual void clear();
+    CV_WRAP virtual const CvMat* get_var_importance();
+    CV_WRAP virtual void clear();
 
     virtual void read( CvFileStorage* fs, CvFileNode* node );
     virtual void write( CvFileStorage* fs, const char* name ) const;
@@ -1044,7 +1047,7 @@ protected:
 };
 
 
-struct CV_EXPORTS CvRTParams : public CvDTreeParams
+struct CV_EXPORTS_AS_MAP CvRTParams : public CvDTreeParams
 {
     //Parameters for the forest
     bool calc_var_importance; // true <=> RF processes variable importance
@@ -1074,10 +1077,10 @@ struct CV_EXPORTS CvRTParams : public CvDTreeParams
 };
 
 
-class CV_EXPORTS CvRTrees : public CvStatModel
+class CV_EXPORTS_AS(RTrees) CvRTrees : public CvStatModel
 {
 public:
-    CvRTrees();
+    CV_WRAP CvRTrees();
     virtual ~CvRTrees();
     virtual bool train( const CvMat* _train_data, int _tflag,
                         const CvMat* _responses, const CvMat* _var_idx=0,
@@ -1090,18 +1093,18 @@ public:
     virtual float predict_prob( const CvMat* sample, const CvMat* missing = 0 ) const;
 
 #ifndef SWIG
-    virtual bool train( const cv::Mat& _train_data, int _tflag,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, int _tflag,
                        const cv::Mat& _responses, const cv::Mat& _var_idx=cv::Mat(),
                        const cv::Mat& _sample_idx=cv::Mat(), const cv::Mat& _var_type=cv::Mat(),
                        const cv::Mat& _missing_mask=cv::Mat(),
                        CvRTParams params=CvRTParams() );
-    virtual float predict( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const;
-    virtual float predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const;
+    CV_WRAP virtual float predict( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const;
+    CV_WRAP virtual float predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const;
 #endif
     
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
-    virtual const CvMat* get_var_importance();
+    CV_WRAP virtual const CvMat* get_var_importance();
     virtual float get_proximity( const CvMat* sample1, const CvMat* sample2,
         const CvMat* missing1 = 0, const CvMat* missing2 = 0 ) const;
     
@@ -1173,10 +1176,10 @@ protected:
     virtual void split_node_data( CvDTreeNode* n );
 };
 
-class CV_EXPORTS CvERTrees : public CvRTrees
+class CV_EXPORTS_AS(ERTrees) CvERTrees : public CvRTrees
 {
 public:
-    CvERTrees();
+    CV_WRAP CvERTrees();
     virtual ~CvERTrees();
     virtual bool train( const CvMat* _train_data, int _tflag,
                         const CvMat* _responses, const CvMat* _var_idx=0,
@@ -1184,7 +1187,7 @@ public:
                         const CvMat* _missing_mask=0,
                         CvRTParams params=CvRTParams());
 #ifndef SWIG
-    virtual bool train( const cv::Mat& _train_data, int _tflag,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, int _tflag,
                        const cv::Mat& _responses, const cv::Mat& _var_idx=cv::Mat(),
                        const cv::Mat& _sample_idx=cv::Mat(), const cv::Mat& _var_type=cv::Mat(),
                        const cv::Mat& _missing_mask=cv::Mat(),
@@ -1200,7 +1203,7 @@ protected:
 *                                   Boosted tree classifier                              *
 \****************************************************************************************/
 
-struct CV_EXPORTS CvBoostParams : public CvDTreeParams
+struct CV_EXPORTS_AS_MAP CvBoostParams : public CvDTreeParams
 {
     int boost_type;
     int weak_count;
@@ -1262,7 +1265,7 @@ protected:
 };
 
 
-class CV_EXPORTS CvBoost : public CvStatModel
+class CV_EXPORTS_AS(Boost) CvBoost : public CvStatModel
 {
 public:
     // Boosting type
@@ -1271,7 +1274,7 @@ public:
     // Splitting criteria
     enum { DEFAULT=0, GINI=1, MISCLASS=3, SQERR=4 };
 
-    CvBoost();
+    CV_WRAP CvBoost();
     virtual ~CvBoost();
 
     CvBoost( const CvMat* _train_data, int _tflag,
@@ -1296,29 +1299,29 @@ public:
                            bool raw_mode=false, bool return_sum=false ) const;
 
 #ifndef SWIG
-    CvBoost( const cv::Mat& _train_data, int _tflag,
+    CV_WRAP CvBoost( const cv::Mat& _train_data, int _tflag,
             const cv::Mat& _responses, const cv::Mat& _var_idx=cv::Mat(),
             const cv::Mat& _sample_idx=cv::Mat(), const cv::Mat& _var_type=cv::Mat(),
             const cv::Mat& _missing_mask=cv::Mat(),
             CvBoostParams params=CvBoostParams() );
     
-    virtual bool train( const cv::Mat& _train_data, int _tflag,
+    CV_WRAP virtual bool train( const cv::Mat& _train_data, int _tflag,
                        const cv::Mat& _responses, const cv::Mat& _var_idx=cv::Mat(),
                        const cv::Mat& _sample_idx=cv::Mat(), const cv::Mat& _var_type=cv::Mat(),
                        const cv::Mat& _missing_mask=cv::Mat(),
                        CvBoostParams params=CvBoostParams(),
                        bool update=false );
     
-    virtual float predict( const cv::Mat& _sample, const cv::Mat& _missing=cv::Mat(),
+    CV_WRAP virtual float predict( const cv::Mat& _sample, const cv::Mat& _missing=cv::Mat(),
                           cv::Mat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ,
                           bool raw_mode=false, bool return_sum=false ) const;
 #endif
     
     virtual float calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 ); // type in {CV_TRAIN_ERROR, CV_TEST_ERROR}
 
-    virtual void prune( CvSlice slice );
+    CV_WRAP virtual void prune( CvSlice slice );
 
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );
@@ -1379,7 +1382,7 @@ protected:
 //                       Each tree prediction is multiplied on shrinkage value.
 
 
-struct CV_EXPORTS CvGBTreesParams : public CvDTreeParams
+struct CV_EXPORTS_AS_MAP CvGBTreesParams : public CvDTreeParams
 {
     int weak_count;
     int loss_function_type;
@@ -1439,7 +1442,7 @@ struct CV_EXPORTS CvGBTreesParams : public CvDTreeParams
 
 
 
-class CV_EXPORTS CvGBTrees : public CvStatModel
+class CV_EXPORTS_AS(GBTrees) CvGBTrees : public CvStatModel
 {
 public:
 
@@ -1480,7 +1483,7 @@ public:
     // OUTPUT
     // RESULT
     */
-    CvGBTrees();
+    CV_WRAP CvGBTrees();
 
 
     /*
@@ -1520,7 +1523,7 @@ public:
     // OUTPUT
     // RESULT
     */
-    CvGBTrees( const CvMat* _train_data, int _tflag,
+    CV_WRAP CvGBTrees( const CvMat* _train_data, int _tflag,
              const CvMat* _responses, const CvMat* _var_idx=0,
              const CvMat* _sample_idx=0, const CvMat* _var_type=0,
              const CvMat* _missing_mask=0,
@@ -1572,7 +1575,7 @@ public:
     // RESULT
     // Error state.
     */
-    virtual bool train( const CvMat* _train_data, int _tflag,
+    CV_WRAP virtual bool train( const CvMat* _train_data, int _tflag,
              const CvMat* _responses, const CvMat* _var_idx=0,
              const CvMat* _sample_idx=0, const CvMat* _var_type=0,
              const CvMat* _missing_mask=0,
@@ -1628,7 +1631,7 @@ public:
     // RESULT
     // Predicted value.
     */
-    virtual float predict( const CvMat* _sample, const CvMat* _missing=0,
+    CV_WRAP virtual float predict( const CvMat* _sample, const CvMat* _missing=0,
             CvMat* weak_responses=0, CvSlice slice = CV_WHOLE_SEQ,
             int k=-1 ) const;
 
@@ -1646,7 +1649,7 @@ public:
     // delta = 0.0
     // RESULT
     */
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
     /*
     // Compute error on the train/test set.
@@ -1890,7 +1893,7 @@ protected:
 
 /////////////////////////////////// Multi-Layer Perceptrons //////////////////////////////
 
-struct CV_EXPORTS CvANN_MLP_TrainParams
+struct CV_EXPORTS_AS_MAP CvANN_MLP_TrainParams
 {
     CvANN_MLP_TrainParams();
     CvANN_MLP_TrainParams( CvTermCriteria term_crit, int train_method,
@@ -1910,10 +1913,10 @@ struct CV_EXPORTS CvANN_MLP_TrainParams
 };
 
 
-class CV_EXPORTS CvANN_MLP : public CvStatModel
+class CV_EXPORTS_AS(ANN_MLP) CvANN_MLP : public CvStatModel
 {
 public:
-    CvANN_MLP();
+    CV_WRAP CvANN_MLP();
     CvANN_MLP( const CvMat* _layer_sizes,
                int _activ_func=SIGMOID_SYM,
                double _f_param1=0, double _f_param2=0 );
@@ -1928,26 +1931,26 @@ public:
                        const CvMat* _sample_weights, const CvMat* _sample_idx=0,
                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),
                        int flags=0 );
-    virtual float predict( const CvMat* _inputs, CvMat* _outputs ) const;
+    virtual float predict( const CvMat* _inputs, CV_OUT CvMat* _outputs ) const;
     
 #ifndef SWIG
-    CvANN_MLP( const cv::Mat& _layer_sizes,
+    CV_WRAP CvANN_MLP( const cv::Mat& _layer_sizes,
               int _activ_func=SIGMOID_SYM,
               double _f_param1=0, double _f_param2=0 );
     
-    virtual void create( const cv::Mat& _layer_sizes,
+    CV_WRAP virtual void create( const cv::Mat& _layer_sizes,
                         int _activ_func=SIGMOID_SYM,
                         double _f_param1=0, double _f_param2=0 );    
     
-    virtual int train( const cv::Mat& _inputs, const cv::Mat& _outputs,
+    CV_WRAP virtual int train( const cv::Mat& _inputs, const cv::Mat& _outputs,
                       const cv::Mat& _sample_weights, const cv::Mat& _sample_idx=cv::Mat(),
                       CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),
                       int flags=0 );    
     
-    virtual float predict( const cv::Mat& _inputs, cv::Mat& _outputs ) const;
+    CV_WRAP virtual float predict( const cv::Mat& _inputs, cv::Mat& _outputs ) const;
 #endif
     
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
     // possible activation functions
     enum { IDENTITY = 0, SIGMOID_SYM = 1, GAUSSIAN = 2 };
@@ -2002,293 +2005,6 @@ protected:
     CvANN_MLP_TrainParams params;
     CvRNG rng;
 };
-
-#if 0
-/****************************************************************************************\
-*                            Convolutional Neural Network                                *
-\****************************************************************************************/
-typedef struct CvCNNLayer CvCNNLayer;
-typedef struct CvCNNetwork CvCNNetwork;
-
-#define CV_CNN_LEARN_RATE_DECREASE_HYPERBOLICALLY  1
-#define CV_CNN_LEARN_RATE_DECREASE_SQRT_INV        2
-#define CV_CNN_LEARN_RATE_DECREASE_LOG_INV         3
-
-#define CV_CNN_GRAD_ESTIM_RANDOM        0
-#define CV_CNN_GRAD_ESTIM_BY_WORST_IMG  1
-
-#define ICV_CNN_LAYER                0x55550000
-#define ICV_CNN_CONVOLUTION_LAYER    0x00001111
-#define ICV_CNN_SUBSAMPLING_LAYER    0x00002222
-#define ICV_CNN_FULLCONNECT_LAYER    0x00003333
-
-#define ICV_IS_CNN_LAYER( layer )                                          \
-    ( ((layer) != NULL) && ((((CvCNNLayer*)(layer))->flags & CV_MAGIC_MASK)\
-        == ICV_CNN_LAYER ))
-
-#define ICV_IS_CNN_CONVOLUTION_LAYER( layer )                              \
-    ( (ICV_IS_CNN_LAYER( layer )) && (((CvCNNLayer*) (layer))->flags       \
-        & ~CV_MAGIC_MASK) == ICV_CNN_CONVOLUTION_LAYER )
-
-#define ICV_IS_CNN_SUBSAMPLING_LAYER( layer )                              \
-    ( (ICV_IS_CNN_LAYER( layer )) && (((CvCNNLayer*) (layer))->flags       \
-        & ~CV_MAGIC_MASK) == ICV_CNN_SUBSAMPLING_LAYER )
-
-#define ICV_IS_CNN_FULLCONNECT_LAYER( layer )                              \
-    ( (ICV_IS_CNN_LAYER( layer )) && (((CvCNNLayer*) (layer))->flags       \
-        & ~CV_MAGIC_MASK) == ICV_CNN_FULLCONNECT_LAYER )
-
-typedef void (CV_CDECL *CvCNNLayerForward)
-    ( CvCNNLayer* layer, const CvMat* input, CvMat* output );
-
-typedef void (CV_CDECL *CvCNNLayerBackward)
-    ( CvCNNLayer* layer, int t, const CvMat* X, const CvMat* dE_dY, CvMat* dE_dX );
-
-typedef void (CV_CDECL *CvCNNLayerRelease)
-    (CvCNNLayer** layer);
-
-typedef void (CV_CDECL *CvCNNetworkAddLayer)
-    (CvCNNetwork* network, CvCNNLayer* layer);
-
-typedef void (CV_CDECL *CvCNNetworkRelease)
-    (CvCNNetwork** network);
-
-#define CV_CNN_LAYER_FIELDS()           \
-    /* Indicator of the layer's type */ \
-    int flags;                          \
-                                        \
-    /* Number of input images */        \
-    int n_input_planes;                 \
-    /* Height of each input image */    \
-    int input_height;                   \
-    /* Width of each input image */     \
-    int input_width;                    \
-                                        \
-    /* Number of output images */       \
-    int n_output_planes;                \
-    /* Height of each output image */   \
-    int output_height;                  \
-    /* Width of each output image */    \
-    int output_width;                   \
-                                        \
-    /* Learning rate at the first iteration */                      \
-    float init_learn_rate;                                          \
-    /* Dynamics of learning rate decreasing */                      \
-    int learn_rate_decrease_type;                                   \
-    /* Trainable weights of the layer (including bias) */           \
-    /* i-th row is a set of weights of the i-th output plane */     \
-    CvMat* weights;                                                 \
-                                                                    \
-    CvCNNLayerForward  forward;                                     \
-    CvCNNLayerBackward backward;                                    \
-    CvCNNLayerRelease  release;                                     \
-    /* Pointers to the previous and next layers in the network */   \
-    CvCNNLayer* prev_layer;                                         \
-    CvCNNLayer* next_layer
-
-typedef struct CvCNNLayer
-{
-    CV_CNN_LAYER_FIELDS();
-}CvCNNLayer;
-
-typedef struct CvCNNConvolutionLayer
-{
-    CV_CNN_LAYER_FIELDS();
-    // Kernel size (height and width) for convolution.
-    int K;
-    // connections matrix, (i,j)-th element is 1 iff there is a connection between
-    // i-th plane of the current layer and j-th plane of the previous layer;
-    // (i,j)-th element is equal to 0 otherwise
-    CvMat *connect_mask;
-    // value of the learning rate for updating weights at the first iteration
-}CvCNNConvolutionLayer;
-
-typedef struct CvCNNSubSamplingLayer
-{
-    CV_CNN_LAYER_FIELDS();
-    // ratio between the heights (or widths - ratios are supposed to be equal)
-    // of the input and output planes
-    int sub_samp_scale;
-    // amplitude of sigmoid activation function
-    float a;
-    // scale parameter of sigmoid activation function
-    float s;
-    // exp2ssumWX = exp(2<s>*(bias+w*(x1+...+x4))), where x1,...x4 are some elements of X
-    // - is the vector used in computing of the activation function in backward
-    CvMat* exp2ssumWX;
-    // (x1+x2+x3+x4), where x1,...x4 are some elements of X
-    // - is the vector used in computing of the activation function in backward
-    CvMat* sumX;
-}CvCNNSubSamplingLayer;
-
-// Structure of the last layer.
-typedef struct CvCNNFullConnectLayer
-{
-    CV_CNN_LAYER_FIELDS();
-    // amplitude of sigmoid activation function
-    float a;
-    // scale parameter of sigmoid activation function
-    float s;
-    // exp2ssumWX = exp(2*<s>*(W*X)) - is the vector used in computing of the
-    // activation function and it's derivative by the formulae
-    // activ.func. = <a>(exp(2<s>WX)-1)/(exp(2<s>WX)+1) == <a> - 2<a>/(<exp2ssumWX> + 1)
-    // (activ.func.)' = 4<a><s>exp(2<s>WX)/(exp(2<s>WX)+1)^2
-    CvMat* exp2ssumWX;
-}CvCNNFullConnectLayer;
-
-typedef struct CvCNNetwork
-{
-    int n_layers;
-    CvCNNLayer* layers;
-    CvCNNetworkAddLayer add_layer;
-    CvCNNetworkRelease release;
-}CvCNNetwork;
-
-typedef struct CvCNNStatModel
-{
-    CV_STAT_MODEL_FIELDS();
-    CvCNNetwork* network;
-    // etalons are allocated as rows, the i-th etalon has label cls_labeles[i]
-    CvMat* etalons;
-    // classes labels
-    CvMat* cls_labels;
-}CvCNNStatModel;
-
-typedef struct CvCNNStatModelParams
-{
-    CV_STAT_MODEL_PARAM_FIELDS();
-    // network must be created by the functions cvCreateCNNetwork and <add_layer>
-    CvCNNetwork* network;
-    CvMat* etalons;
-    // termination criteria
-    int max_iter;
-    int start_iter;
-    int grad_estim_type;
-}CvCNNStatModelParams;
-
-CVAPI(CvCNNLayer*) cvCreateCNNConvolutionLayer(
-    int n_input_planes, int input_height, int input_width,
-    int n_output_planes, int K,
-    float init_learn_rate, int learn_rate_decrease_type,
-    CvMat* connect_mask CV_DEFAULT(0), CvMat* weights CV_DEFAULT(0) );
-
-CVAPI(CvCNNLayer*) cvCreateCNNSubSamplingLayer(
-    int n_input_planes, int input_height, int input_width,
-    int sub_samp_scale, float a, float s,
-    float init_learn_rate, int learn_rate_decrease_type, CvMat* weights CV_DEFAULT(0) );
-
-CVAPI(CvCNNLayer*) cvCreateCNNFullConnectLayer(
-    int n_inputs, int n_outputs, float a, float s,
-    float init_learn_rate, int learning_type, CvMat* weights CV_DEFAULT(0) );
-
-CVAPI(CvCNNetwork*) cvCreateCNNetwork( CvCNNLayer* first_layer );
-
-CVAPI(CvStatModel*) cvTrainCNNClassifier(
-            const CvMat* train_data, int tflag,
-            const CvMat* responses,
-            const CvStatModelParams* params,
-            const CvMat* CV_DEFAULT(0),
-            const CvMat* sample_idx CV_DEFAULT(0),
-            const CvMat* CV_DEFAULT(0), const CvMat* CV_DEFAULT(0) );
-
-/****************************************************************************************\
-*                               Estimate classifiers algorithms                          *
-\****************************************************************************************/
-typedef const CvMat* (CV_CDECL *CvStatModelEstimateGetMat)
-                    ( const CvStatModel* estimateModel );
-
-typedef int (CV_CDECL *CvStatModelEstimateNextStep)
-                    ( CvStatModel* estimateModel );
-
-typedef void (CV_CDECL *CvStatModelEstimateCheckClassifier)
-                    ( CvStatModel* estimateModel,
-                const CvStatModel* model,
-                const CvMat*       features,
-                      int          sample_t_flag,
-                const CvMat*       responses );
-
-typedef void (CV_CDECL *CvStatModelEstimateCheckClassifierEasy)
-                    ( CvStatModel* estimateModel,
-                const CvStatModel* model );
-
-typedef float (CV_CDECL *CvStatModelEstimateGetCurrentResult)
-                    ( const CvStatModel* estimateModel,
-                            float*       correlation );
-
-typedef void (CV_CDECL *CvStatModelEstimateReset)
-                    ( CvStatModel* estimateModel );
-
-//-------------------------------- Cross-validation --------------------------------------
-#define CV_CROSS_VALIDATION_ESTIMATE_CLASSIFIER_PARAM_FIELDS()    \
-    CV_STAT_MODEL_PARAM_FIELDS();                                 \
-    int     k_fold;                                               \
-    int     is_regression;                                        \
-    CvRNG*  rng
-
-typedef struct CvCrossValidationParams
-{
-    CV_CROSS_VALIDATION_ESTIMATE_CLASSIFIER_PARAM_FIELDS();
-} CvCrossValidationParams;
-
-#define CV_CROSS_VALIDATION_ESTIMATE_CLASSIFIER_FIELDS()    \
-    CvStatModelEstimateGetMat               getTrainIdxMat; \
-    CvStatModelEstimateGetMat               getCheckIdxMat; \
-    CvStatModelEstimateNextStep             nextStep;       \
-    CvStatModelEstimateCheckClassifier      check;          \
-    CvStatModelEstimateGetCurrentResult     getResult;      \
-    CvStatModelEstimateReset                reset;          \
-    int     is_regression;                                  \
-    int     folds_all;                                      \
-    int     samples_all;                                    \
-    int*    sampleIdxAll;                                   \
-    int*    folds;                                          \
-    int     max_fold_size;                                  \
-    int         current_fold;                               \
-    int         is_checked;                                 \
-    CvMat*      sampleIdxTrain;                             \
-    CvMat*      sampleIdxEval;                              \
-    CvMat*      predict_results;                            \
-    int     correct_results;                                \
-    int     all_results;                                    \
-    double  sq_error;                                       \
-    double  sum_correct;                                    \
-    double  sum_predict;                                    \
-    double  sum_cc;                                         \
-    double  sum_pp;                                         \
-    double  sum_cp
-
-typedef struct CvCrossValidationModel
-{
-    CV_STAT_MODEL_FIELDS();
-    CV_CROSS_VALIDATION_ESTIMATE_CLASSIFIER_FIELDS();
-} CvCrossValidationModel;
-
-CVAPI(CvStatModel*)
-cvCreateCrossValidationEstimateModel
-           ( int                samples_all,
-       const CvStatModelParams* estimateParams CV_DEFAULT(0),
-       const CvMat*             sampleIdx CV_DEFAULT(0) );
-
-CVAPI(float)
-cvCrossValidation( const CvMat*             trueData,
-                         int                tflag,
-                   const CvMat*             trueClasses,
-                         CvStatModel*     (*createClassifier)( const CvMat*,
-                                                                     int,
-                                                               const CvMat*,
-                                                               const CvStatModelParams*,
-                                                               const CvMat*,
-                                                               const CvMat*,
-                                                               const CvMat*,
-                                                               const CvMat* ),
-                   const CvStatModelParams* estimateParams CV_DEFAULT(0),
-                   const CvStatModelParams* trainParams CV_DEFAULT(0),
-                   const CvMat*             compIdx CV_DEFAULT(0),
-                   const CvMat*             sampleIdx CV_DEFAULT(0),
-                         CvStatModel**      pCrValModel CV_DEFAULT(0),
-                   const CvMat*             typeMask CV_DEFAULT(0),
-                   const CvMat*             missedMeasurementMask CV_DEFAULT(0) );
-#endif
 
 /****************************************************************************************\
 *                           Auxilary functions declarations                              *
@@ -2461,7 +2177,7 @@ typedef CvBoostTree BoostTree;
 typedef CvBoost Boost;
 typedef CvANN_MLP_TrainParams ANN_MLP_TrainParams;
 typedef CvANN_MLP NeuralNet_MLP;
-typedef CvGBTreesParams GradientBoostingTreesParams;
+typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
     
 }

@@ -160,10 +160,16 @@ typedef signed char schar;
 /* special informative macros for wrapper generators */
 #define CV_CARRAY(counter)
 #define CV_CUSTOM_CARRAY(args)
-#define CV_METHOD
-#define CV_NO_WRAP
+#define CV_EXPORTS_W CV_EXPORTS
+#define CV_EXPORTS_AS(synonym) CV_EXPORTS
+#define CV_EXPORTS_AS_MAP CV_EXPORTS
+#define CV_IN_OUT
 #define CV_OUT
+#define CV_PROP
+#define CV_PROP_RW
+#define CV_WRAP
 #define CV_WRAP_AS(synonym)
+#define CV_WRAP_DEFAULT(value)
 
 /* CvArr* is used to pass arbitrary
  * array-like data structures

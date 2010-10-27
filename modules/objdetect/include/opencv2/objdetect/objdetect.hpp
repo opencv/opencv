@@ -270,8 +270,8 @@ namespace cv
 	
 ///////////////////////////// Object Detection ////////////////////////////
 
-CV_EXPORTS void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
-CV_EXPORTS void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
         
 class CV_EXPORTS FeatureEvaluator
 {
@@ -293,7 +293,7 @@ public:
 
 template<> CV_EXPORTS void Ptr<CvHaarClassifierCascade>::delete_obj();
    
-class CV_EXPORTS CascadeClassifier
+class CV_EXPORTS_W CascadeClassifier
 {
 public:
     struct CV_EXPORTS DTreeNode
@@ -320,14 +320,14 @@ public:
     enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
            FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
 
-    CascadeClassifier();
-    CascadeClassifier(const string& filename);
+    CV_WRAP CascadeClassifier();
+    CV_WRAP CascadeClassifier(const string& filename);
     ~CascadeClassifier();
     
-    bool empty() const;
-    bool load(const string& filename);
+    CV_WRAP bool empty() const;
+    CV_WRAP bool load(const string& filename);
     bool read(const FileNode& node);
-    void detectMultiScale( const Mat& image,
+    CV_WRAP void detectMultiScale( const Mat& image,
                            CV_OUT vector<Rect>& objects,
                            double scaleFactor=1.1,
                            int minNeighbors=3, int flags=0,
@@ -356,17 +356,17 @@ public:
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
-struct CV_EXPORTS HOGDescriptor
+struct CV_EXPORTS_W HOGDescriptor
 {
 public:
     enum { L2Hys=0 };
     
-    HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
+    CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
     	cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
     	histogramNormType(L2Hys), L2HysThreshold(0.2), gammaCorrection(true)
     {}
     
-    HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
+    CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
                   Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
                   int _histogramNormType=L2Hys, double _L2HysThreshold=0.2, bool _gammaCorrection=false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
@@ -375,7 +375,7 @@ public:
     gammaCorrection(_gammaCorrection)
     {}
     
-    HOGDescriptor(const String& filename)
+    CV_WRAP HOGDescriptor(const String& filename)
     {
         load(filename);
     }
@@ -387,47 +387,47 @@ public:
     
     virtual ~HOGDescriptor() {}
     
-    size_t getDescriptorSize() const;
-    bool checkDetectorSize() const;
-    double getWinSigma() const;
+    CV_WRAP size_t getDescriptorSize() const;
+    CV_WRAP bool checkDetectorSize() const;
+    CV_WRAP double getWinSigma() const;
     
-    virtual void setSVMDetector(const vector<float>& _svmdetector);
+    CV_WRAP virtual void setSVMDetector(const vector<float>& _svmdetector);
     
     virtual bool read(FileNode& fn);
     virtual void write(FileStorage& fs, const String& objname) const;
     
-    virtual bool load(const String& filename, const String& objname=String());
-    virtual void save(const String& filename, const String& objname=String()) const;
+    CV_WRAP virtual bool load(const String& filename, const String& objname=String());
+    CV_WRAP virtual void save(const String& filename, const String& objname=String()) const;
     virtual void copyTo(HOGDescriptor& c) const;
     
-    virtual void compute(const Mat& img,
+    CV_WRAP virtual void compute(const Mat& img,
                          CV_OUT vector<float>& descriptors,
                          Size winStride=Size(), Size padding=Size(),
                          const vector<Point>& locations=vector<Point>()) const;
-    virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
+    CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
                         double hitThreshold=0, Size winStride=Size(),
                         Size padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
-    virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
+    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
                                   double hitThreshold=0, Size winStride=Size(),
                                   Size padding=Size(), double scale=1.05,
                                   int groupThreshold=2) const;
-    virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
+    CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL=Size(), Size paddingBR=Size()) const;
     
     static vector<float> getDefaultPeopleDetector();
     
-    Size winSize;
-    Size blockSize;
-    Size blockStride;
-    Size cellSize;
-    int nbins;
-    int derivAperture;
-    double winSigma;
-    int histogramNormType;
-    double L2HysThreshold;
-    bool gammaCorrection;
-    vector<float> svmDetector;
+    CV_PROP Size winSize;
+    CV_PROP Size blockSize;
+    CV_PROP Size blockStride;
+    CV_PROP Size cellSize;
+    CV_PROP int nbins;
+    CV_PROP int derivAperture;
+    CV_PROP double winSigma;
+    CV_PROP int histogramNormType;
+    CV_PROP double L2HysThreshold;
+    CV_PROP bool gammaCorrection;
+    CV_PROP vector<float> svmDetector;
 };
 
 	
