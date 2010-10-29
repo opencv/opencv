@@ -1736,7 +1736,7 @@ protected:
      * Class to work with descriptors from several images as with one merged matrix.
      * It is used e.g. in FlannBasedMatcher
      */
-    class DescriptorCollection
+    class CV_EXPORTS DescriptorCollection
     {
     public:
         DescriptorCollection() {}
@@ -2227,7 +2227,7 @@ typedef FernDescriptorMatcher FernDescriptorMatch;
 class CV_EXPORTS FernDescriptorMatcher : public GenericDescriptorMatcher
 {
 public:
-    class Params
+    class CV_EXPORTS Params
     {
     public:
         Params( int _nclasses=0,
