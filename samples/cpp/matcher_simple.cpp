@@ -35,9 +35,8 @@ int main(int argc, char** argv)
 
 	// matching descriptors
 	BruteForceMatcher<L2<float> > matcher;
-	vector<int> matches;
-	matcher.add(descriptors2);
-	matcher.match(descriptors1, matches);
+    vector<DMatch> matches;
+    matcher.match(descriptors1, descriptors2, matches);
 
 	// drawing the results
 	namedWindow("matches", 1);

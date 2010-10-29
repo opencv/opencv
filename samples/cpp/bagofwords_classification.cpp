@@ -948,7 +948,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
 
     /* prepare variables related to calculating recall if using the recall threshold */
     int retrieved_hits = 0;
-    int total_relevant;
+    int total_relevant = 0;
     if (cond == CV_VOC_CCOND_RECALL)
     {
         vector<char> ground_truth;
@@ -2200,7 +2200,7 @@ bool writeBowImageDescriptor( const string& file, const Mat& bowImageDescriptor 
 
 // Load in the bag of words vectors for a set of images, from file if possible
 void calculateImageDescriptors( const vector<ObdImage>& images, vector<Mat>& imageDescriptors,
-                                const Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
+                                Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                                 const string& resPath )
 {
     CV_Assert( !bowExtractor->getVocabulary().empty() );
@@ -2343,7 +2343,7 @@ void setSVMTrainAutoParams( CvParamGrid& c_grid, CvParamGrid& gamma_grid,
 }
 
 void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
-                         const Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
+                         Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
 {
     /* first check if a previously trained svm for the current class has been saved to file */
@@ -2418,7 +2418,7 @@ void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, cons
 }
 
 void computeConfidences( CvSVM& svm, const string& objClassName, VocData& vocData,
-                         const Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
+                         Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
 {
     cout << "*** CALCULATING CONFIDENCES FOR CLASS " << objClassName << " ***" << endl;
@@ -2437,7 +2437,7 @@ void computeConfidences( CvSVM& svm, const string& objClassName, VocData& vocDat
     // Use the bag of words vectors to calculate classifier output for each image in test set
     cout << "CALCULATING CONFIDENCE SCORES FOR CLASS " << objClassName << "..." << endl;
     vector<float> confidences( images.size() );
-    float signMul;
+    float signMul = 1.f;
     for( size_t imageIdx = 0; imageIdx < images.size(); imageIdx++ )
     {
         if( imageIdx == 0 )

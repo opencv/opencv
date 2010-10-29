@@ -67,6 +67,13 @@ struct RoiPredicate
     float minX, minY, maxX, maxY;
 };
 
+void DescriptorExtractor::compute( const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, vector<Mat>& descCollection ) const
+{
+    descCollection.resize( imageCollection.size() );
+    for( size_t i = 0; i < imageCollection.size(); i++ )
+        compute( imageCollection[i], pointCollection[i], descCollection[i] );
+}
+
 void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
                                                  Size imageSize, int borderPixels )
 {

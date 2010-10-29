@@ -166,33 +166,6 @@ static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
 }
 
 void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
-                  const Mat& img2,const vector<KeyPoint>& keypoints2,
-                  const vector<int>& matches1to2, Mat& outImg,
-                  const Scalar& matchColor, const Scalar& singlePointColor,
-                  const vector<char>& matchesMask, int flags )
-{
-    if( matches1to2.size() != keypoints1.size() )
-        CV_Error( CV_StsBadSize, "matches1to2 must have the same size as keypoints1" );
-    if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
-        CV_Error( CV_StsBadSize, "matchesMask must have the same size as matches1to2" );
-
-    Mat outImg1, outImg2;
-    _prepareImgAndDrawKeypoints( img1, keypoints1, img2, keypoints2,
-                                 outImg, outImg1, outImg2, singlePointColor, flags );
-
-    // draw matches
-    for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
-    {
-        int i2 = matches1to2[i1];
-        if( (matchesMask.empty() || matchesMask[i1] ) && i2 >= 0 )
-        {
-            const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
-            _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
-        }
-    }
-}
-
-void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
                   const Mat& img2, const vector<KeyPoint>& keypoints2,
                   const vector<DMatch>& matches1to2, Mat& outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
@@ -208,8 +181,8 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
     // draw matches
     for( size_t m = 0; m < matches1to2.size(); m++ )
     {
-        int i1 = matches1to2[m].indexQuery;
-        int i2 = matches1to2[m].indexTrain;
+        int i1 = matches1to2[m].queryIdx;
+        int i2 = matches1to2[m].trainIdx;
         if( matchesMask.empty() || matchesMask[m] )
         {
             const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
@@ -236,8 +209,8 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
     {
         for( size_t j = 0; j < matches1to2[i].size(); j++ )
         {
-            int i1 = matches1to2[i][j].indexQuery;
-            int i2 = matches1to2[i][j].indexTrain;
+            int i1 = matches1to2[i][j].queryIdx;
+            int i2 = matches1to2[i][j].trainIdx;
             if( matchesMask.empty() || matchesMask[i][j] )
             {
                 const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];

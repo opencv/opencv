@@ -517,10 +517,10 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
                                            vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
                                            vector<vector<DMatch> >* _matches1to2, vector<vector<uchar> >* _correctMatches1to2Mask,
                                            vector<Point2f>& recallPrecisionCurve,
-                                           const Ptr<GenericDescriptorMatch>& _dmatch )
+                                           const Ptr<GenericDescriptorMatcher>& _dmatcher )
 {
-    Ptr<GenericDescriptorMatch> dmatch = _dmatch;
-    dmatch->clear();
+    Ptr<GenericDescriptorMatcher> dmatcher = _dmatcher;
+    dmatcher->clear();
 
     vector<vector<DMatch> > *matches1to2, buf1;
     matches1to2 = _matches1to2 != 0 ? _matches1to2 : &buf1;
@@ -531,7 +531,7 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
     if( keypoints1.empty() )
         CV_Error( CV_StsBadArg, "keypoints1 must be no empty" );
 
-    if( matches1to2->empty() && dmatch.empty() )
+    if( matches1to2->empty() && dmatcher.empty() )
         CV_Error( CV_StsBadArg, "dmatch must be no empty when matches1to2 is empty" );
 
     bool computeKeypoints2ByPrj = keypoints2.empty();
@@ -543,10 +543,8 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
 
     if( matches1to2->empty() || computeKeypoints2ByPrj )
     {
-        dmatch->clear();
-        dmatch->add( img2, keypoints2 );
-        // TODO: use more sophisticated strategy to choose threshold
-        dmatch->match( img1, keypoints1, *matches1to2, std::numeric_limits<float>::max() );
+        dmatcher->clear();
+        dmatcher->radiusMatch( img1, keypoints1, img2, keypoints2, *matches1to2, std::numeric_limits<float>::max() );
     }
     float repeatability;
     int correspCount;
@@ -559,8 +557,8 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
         (*correctMatches1to2Mask)[i].resize((*matches1to2)[i].size());
         for( size_t j = 0;j < (*matches1to2)[i].size(); j++ )
         {
-            int indexQuery = (*matches1to2)[i][j].indexQuery;
-            int indexTrain = (*matches1to2)[i][j].indexTrain;
+            int indexQuery = (*matches1to2)[i][j].queryIdx;
+            int indexTrain = (*matches1to2)[i][j].trainIdx;
             (*correctMatches1to2Mask)[i][j] = thresholdedOverlapMask.at<uchar>( indexQuery, indexTrain );
         }
     }

@@ -166,14 +166,6 @@ protected:
     Ptr<FeatureDetector> fdetector;
 };
 
-CV_FeatureDetectorTest fastTest( "detector-fast", createFeatureDetector("FAST") );
-CV_FeatureDetectorTest gfttTest( "detector-gftt", createFeatureDetector("GFTT") );
-CV_FeatureDetectorTest harrisTest( "detector-harris", createFeatureDetector("HARRIS") );
-CV_FeatureDetectorTest mserTest( "detector-mser", createFeatureDetector("MSER") );
-CV_FeatureDetectorTest siftTest( "detector-sift", createFeatureDetector("SIFT") );
-CV_FeatureDetectorTest starTest( "detector-star", createFeatureDetector("STAR") );
-CV_FeatureDetectorTest surfTest( "detector-surf", createFeatureDetector("SURF") );
-
 /****************************************************************************************\
 *                     Regression tests for descriptor extractors.                        *
 \****************************************************************************************/
@@ -320,6 +312,413 @@ public:
     }
 };
 
+/****************************************************************************************\
+*                       Algorithmic tests for descriptor matchers                        *
+\****************************************************************************************/
+class CV_DescriptorMatcherTest : public CvTest
+{
+public:
+    CV_DescriptorMatcherTest( const char* testName, const Ptr<DescriptorMatcher>& _dmatcher, float _badPart ) :
+        CvTest( testName, "cv::DescritorMatcher::[,knn,radius]match()"), badPart(_badPart), dmatcher(_dmatcher)
+        { CV_Assert( queryDescCount % 2 == 0 ); // because we split train data in same cases in two
+          CV_Assert( countFactor == 4); }
+protected:
+    static const int dim = 500;
+    static const int queryDescCount = 300;
+    static const int countFactor = 4;
+    const float badPart;
+
+    virtual void run( int );
+    void generateData( Mat& query, Mat& train );
+
+    int testMatch( const Mat& query, const Mat& train );
+    int testKnnMatch( const Mat& query, const Mat& train );
+    int testRadiusMatch( const Mat& query, const Mat& train );
+
+    Ptr<DescriptorMatcher> dmatcher;
+};
+
+void CV_DescriptorMatcherTest::generateData( Mat& query, Mat& train )
+{
+    RNG& rng = theRNG();
+
+    // Generate query descriptors randomly.
+    // Descriptor vector elements are integer values.
+    Mat buf( queryDescCount, dim, CV_32SC1 );
+    rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
+    buf.convertTo( query, CV_32FC1 );
+
+    // Generate train decriptors as follows:
+    // copy each query descriptor to train set countFactor times
+    // and perturb some one element of the copied descriptors in
+    // in ascending order. General boundaries of the perturbation
+    // are (0.f, 1.f).
+    train.create( query.rows*countFactor, query.cols, CV_32FC1 );
+    float step = 1.f / countFactor;
+    for( int qIdx = 0; qIdx < query.rows; qIdx++ )
+    {
+        Mat queryDescriptor = query.row(qIdx);
+        for( int c = 0; c < countFactor; c++ )
+        {
+            int tIdx = qIdx * countFactor + c;
+            Mat trainDescriptor = train.row(tIdx);
+            queryDescriptor.copyTo( trainDescriptor );
+            int elem = rng(dim);
+            float diff = rng.uniform( step*c, step*(c+1) );
+            trainDescriptor.at<float>(0, elem) += diff;
+        }
+    }
+}
+
+int CV_DescriptorMatcherTest::testMatch( const Mat& query, const Mat& train )
+{
+    dmatcher->clear();
+
+    // test const version of match()
+    int res = CvTS::OK;
+    {
+        vector<DMatch> matches;
+        dmatcher->match( query, train, matches );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (1)\n");
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                DMatch match = matches[i];
+                if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
+                    badCount++;
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                curRes = CvTS::FAIL_INVALID_OUTPUT;
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (1)\n",
+                            (float)badCount/(float)queryDescCount );
+            }
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+    }
+
+    // test version of match() with add()
+    {
+        vector<DMatch> matches;
+        // make add() twice to test such case
+        dmatcher->add( vector<Mat>(1,train.rowRange(0, train.rows/2)) );
+        dmatcher->add( vector<Mat>(1,train.rowRange(train.rows/2, train.rows)) );
+        // prepare masks (make first nearest match illegal)
+        vector<Mat> masks(2);
+        for(int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = Mat(query.rows, train.rows/2, CV_8UC1, Scalar::all(1));
+            for( int di = 0; di < queryDescCount/2; di++ )
+                masks[mi].col(di*countFactor).setTo(Scalar::all(0));
+        }
+
+        dmatcher->match( query, matches, masks );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (2)\n");
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                DMatch match = matches[i];
+                int shift = dmatcher->supportMask() ? 1 : 0;
+                {
+                    if( i < queryDescCount/2 )
+                    {
+                        if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor + shift) || (match.imgIdx != 0) )
+                            badCount++;
+                    }
+                    else
+                    {
+                        if( (match.queryIdx != (int)i) || (match.trainIdx != ((int)i-queryDescCount/2)*countFactor + shift) || (match.imgIdx != 1) )
+                            badCount++;
+                    }
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (2)\n",
+                            (float)badCount/(float)queryDescCount );
+            }
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+    }
+    return res;
+}
+
+int CV_DescriptorMatcherTest::testKnnMatch( const Mat& query, const Mat& train )
+{
+    dmatcher->clear();
+
+    // test const version of knnMatch()
+    int res = CvTS::OK;
+    {
+        const int knn = 3;
+
+        vector<vector<DMatch> > matches;
+        dmatcher->knnMatch( query, train, matches, knn );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (1)\n");
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                if( (int)matches[i].size() != knn )
+                    badCount++;
+                else
+                {
+                    int localBadCount = 0;
+                    for( int k = 0; k < knn; k++ )
+                    {
+                        DMatch match = matches[i][k];
+                        if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor+k) || (match.imgIdx != 0) )
+                            localBadCount++;
+                    }
+                    badCount += localBadCount > 0 ? 1 : 0;
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                curRes = CvTS::FAIL_INVALID_OUTPUT;
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (1)\n",
+                            (float)badCount/(float)queryDescCount );
+            }
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+    }
+
+    // test version of knnMatch() with add()
+    {
+        const int knn = 2;
+        vector<vector<DMatch> > matches;
+        // make add() twice to test such case
+        dmatcher->add( vector<Mat>(1,train.rowRange(0, train.rows/2)) );
+        dmatcher->add( vector<Mat>(1,train.rowRange(train.rows/2, train.rows)) );
+        // prepare masks (make first nearest match illegal)
+        vector<Mat> masks(2);
+        for(int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = Mat(query.rows, train.rows/2, CV_8UC1, Scalar::all(1));
+            for( int di = 0; di < queryDescCount/2; di++ )
+                masks[mi].col(di*countFactor).setTo(Scalar::all(0));
+        }
+
+        dmatcher->knnMatch( query, matches, knn, masks );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (2)\n");
+        }
+        else
+        {
+            int badCount = 0;
+            int shift = dmatcher->supportMask() ? 1 : 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                if( (int)matches[i].size() != knn )
+                    badCount++;
+                else
+                {
+                    int localBadCount = 0;
+                    for( int k = 0; k < knn; k++ )
+                    {
+                        DMatch match = matches[i][k];
+                        {
+                            if( i < queryDescCount/2 )
+                            {
+                                if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor + k + shift) ||
+                                    (match.imgIdx != 0) )
+                                    localBadCount++;
+                            }
+                            else
+                            {
+                                if( (match.queryIdx != (int)i) || (match.trainIdx != ((int)i-queryDescCount/2)*countFactor + k + shift) ||
+                                    (match.imgIdx != 1) )
+                                    localBadCount++;
+                            }
+                        }
+                    }
+                    badCount += localBadCount > 0 ? 1 : 0;
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (2)\n",
+                            (float)badCount/(float)queryDescCount );
+            }
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+    }
+    return res;
+}
+
+int CV_DescriptorMatcherTest::testRadiusMatch( const Mat& query, const Mat& train )
+{
+    dmatcher->clear();
+    // test const version of match()
+    int res = CvTS::OK;
+    {
+        const float radius = 1.f/countFactor;
+        vector<vector<DMatch> > matches;
+        dmatcher->radiusMatch( query, train, matches, radius );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1)\n");
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                if( (int)matches[i].size() != 1 )
+                    badCount++;
+                else
+                {
+                    DMatch match = matches[i][0];
+                    if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
+                        badCount++;
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                curRes = CvTS::FAIL_INVALID_OUTPUT;
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1)\n",
+                            (float)badCount/(float)queryDescCount );
+            }
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+    }
+
+    // test version of match() with add()
+    {
+        int n = 3;
+        const float radius = 1.f/countFactor * n;
+        vector<vector<DMatch> > matches;
+        // make add() twice to test such case
+        dmatcher->add( vector<Mat>(1,train.rowRange(0, train.rows/2)) );
+        dmatcher->add( vector<Mat>(1,train.rowRange(train.rows/2, train.rows)) );
+        // prepare masks (make first nearest match illegal)
+        vector<Mat> masks(2);
+        for(int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = Mat(query.rows, train.rows/2, CV_8UC1, Scalar::all(1));
+            for( int di = 0; di < queryDescCount/2; di++ )
+                masks[mi].col(di*countFactor).setTo(Scalar::all(0));
+        }
+
+        dmatcher->radiusMatch( query, matches, radius, masks );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1)\n");
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+
+        int badCount = 0;
+        int shift = dmatcher->supportMask() ? 1 : 0;
+        int needMatchCount = dmatcher->supportMask() ? n-1 : n;
+        for( size_t i = 0; i < matches.size(); i++ )
+        {
+            if( (int)matches[i].size() != needMatchCount )
+                badCount++;
+            else
+            {
+                int localBadCount = 0;
+                for( int k = 0; k < needMatchCount; k++ )
+                {
+                    DMatch match = matches[i][k];
+                    {
+                        if( i < queryDescCount/2 )
+                        {
+                            if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor + k + shift) ||
+                                (match.imgIdx != 0) )
+                                localBadCount++;
+                        }
+                        else
+                        {
+                            if( (match.queryIdx != (int)i) || (match.trainIdx != ((int)i-queryDescCount/2)*countFactor + k + shift) ||
+                                (match.imgIdx != 1) )
+                                localBadCount++;
+                        }
+                    }
+                }
+                badCount += localBadCount > 0 ? 1 : 0;
+            }
+        }
+        if( (float)badCount > (float)queryDescCount*badPart )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (2)\n",
+                        (float)badCount/(float)queryDescCount );
+        }
+        res = curRes != CvTS::OK ? curRes : res;
+    }
+    return res;
+}
+
+void CV_DescriptorMatcherTest::run( int )
+{
+    Mat query, train;
+    generateData( query, train );
+
+    int res = CvTS::OK, curRes;
+
+    curRes = testMatch( query, train );
+    res = curRes != CvTS::OK ? curRes : res;
+
+    curRes = testKnnMatch( query, train );
+    res = curRes != CvTS::OK ? curRes : res;
+
+    curRes = testRadiusMatch( query, train );
+    res = curRes != CvTS::OK ? curRes : res;
+
+    ts->set_failed_test_info( res );
+}
+
+/****************************************************************************************\
+*                                Tests registrations                                     *
+\****************************************************************************************/
+
+/*
+ * Detectors
+ */
+CV_FeatureDetectorTest fastTest( "detector-fast", createFeatureDetector("FAST") );
+CV_FeatureDetectorTest gfttTest( "detector-gftt", createFeatureDetector("GFTT") );
+CV_FeatureDetectorTest harrisTest( "detector-harris", createFeatureDetector("HARRIS") );
+CV_FeatureDetectorTest mserTest( "detector-mser", createFeatureDetector("MSER") );
+CV_FeatureDetectorTest siftTest( "detector-sift", createFeatureDetector("SIFT") );
+CV_FeatureDetectorTest starTest( "detector-star", createFeatureDetector("STAR") );
+CV_FeatureDetectorTest surfTest( "detector-surf", createFeatureDetector("SURF") );
+
+/*
+ * Descriptors
+ */
 CV_DescriptorExtractorTest siftDescriptorTest( "descriptor-sift", 0.03f,
                                                 createDescriptorExtractor("SIFT"), 8.06652f  );
 CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-surf",  0.035f,
@@ -337,3 +736,11 @@ CV_CalonderDescriptorExtractorTest<float> floatCalonderTest( "descriptor-calonde
                                                              std::numeric_limits<float>::epsilon(),
                                                              0.0221308f );
 #endif // CV_SSE2
+
+/*
+ * Matchers
+ */
+CV_DescriptorMatcherTest bruteForceMatcherTest( "descriptor-matcher-brute-force",
+                                                new BruteForceMatcher<L2<float> >, 0.01 );
+CV_DescriptorMatcherTest flannBasedMatcherTest( "descriptor-matcher-flann-based",
+                                                new FlannBasedMatcher, 0.02 );

@@ -108,11 +108,11 @@ void BOWImgDescriptorExtractor::setVocabulary( const Mat& _vocabulary )
 {
     dmatcher->clear();
     vocabulary = _vocabulary;
-    dmatcher->add( vocabulary );
+    dmatcher->add( vector<Mat>(1, vocabulary) );
 }
 
 void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
-                                         vector<vector<int> >* pointIdxsOfClusters ) const
+                                         vector<vector<int> >* pointIdxsOfClusters )
 {
     imgDescriptor.release();
 
@@ -140,8 +140,8 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& key
     float *dptr = (float*)imgDescriptor.data;
     for( size_t i = 0; i < matches.size(); i++ )
     {
-        int queryIdx = matches[i].indexQuery;
-        int trainIdx = matches[i].indexTrain; // cluster index
+        int queryIdx = matches[i].queryIdx;
+        int trainIdx = matches[i].trainIdx; // cluster index
         CV_Assert( queryIdx == (int)i );
 
         dptr[trainIdx] = dptr[trainIdx] + 1.f;

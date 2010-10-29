@@ -61,6 +61,13 @@ struct MaskPredicate
     const Mat& mask;
 };
 
+void FeatureDetector::detect(const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, const vector<Mat>& masks ) const
+{
+    pointCollection.resize( imageCollection.size() );
+    for( size_t i = 0; i < imageCollection.size(); i++ )
+        detect( imageCollection[i], pointCollection[i], masks.empty() ? Mat() : masks[i] );
+}
+
 void FeatureDetector::removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints )
 {
     if( mask.empty() )
@@ -88,7 +95,7 @@ void FastFeatureDetector::write (FileStorage& fs) const
     fs << "nonmaxSuppression" << nonmaxSuppression;
 }
 
-void FastFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints) const
+void FastFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -126,8 +133,7 @@ void GoodFeaturesToTrackDetector::write (FileStorage& fs) const
     fs << "k" << k;
 }
 
-void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, const Mat& mask,
-                                              vector<KeyPoint>& keypoints ) const
+void GoodFeaturesToTrackDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -192,7 +198,7 @@ void MserFeatureDetector::write (FileStorage& fs) const
 }
 
 
-void MserFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
+void MserFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     vector<vector<Point> > msers;
 
@@ -246,7 +252,7 @@ void StarFeatureDetector::write (FileStorage& fs) const
     fs << "suppressNonmaxSize" << star.suppressNonmaxSize;
 }
 
-void StarFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints) const
+void StarFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -291,8 +297,7 @@ void SiftFeatureDetector::write (FileStorage& fs) const
 }
 
 
-void SiftFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
-                                      vector<KeyPoint>& keypoints) const
+void SiftFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -325,8 +330,7 @@ void SurfFeatureDetector::write (FileStorage& fs) const
     fs << "octaveLayers" << surf.nOctaveLayers;
 }
 
-void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
-                                      vector<KeyPoint>& keypoints) const
+void SurfFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -337,7 +341,7 @@ void SurfFeatureDetector::detectImpl( const Mat& image, const Mat& mask,
 /*
  *  DenseFeatureDetector
  */
-void DenseFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
+void DenseFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     keypoints.clear();
 
@@ -388,8 +392,7 @@ void keepStrongest( int N, vector<KeyPoint>& keypoints )
     }
 }
 
-void GridAdaptedFeatureDetector::detectImpl( const Mat &image, const Mat &mask,
-                                             vector<KeyPoint> &keypoints ) const
+void GridAdaptedFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     keypoints.clear();
     keypoints.reserve(maxTotalKeypoints);
@@ -428,7 +431,7 @@ PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureD
     : detector(_detector), levels(_levels)
 {}
 
-void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints ) const
+void PyramidAdaptedFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat src = image;
     for( int l = 0, multiplier = 1; l <= levels; ++l, multiplier *= 2 )

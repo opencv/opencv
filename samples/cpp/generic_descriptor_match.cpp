@@ -8,7 +8,7 @@
 using namespace cv;
 
 IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
-                              const vector<KeyPoint>& features2, const vector<int>& desc_idx);
+                              const vector<KeyPoint>& features2, const vector<DMatch>& desc_idx);
 
 int main(int argc, char** argv)
 {
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     std::string alg_name = std::string(argv[3]);
     std::string params_filename = std::string(argv[4]);
 
-    GenericDescriptorMatch *descriptorMatcher = createGenericDescriptorMatcher(alg_name, params_filename);
+    Ptr<GenericDescriptorMatcher> descriptorMatcher = createGenericDescriptorMatcher(alg_name, params_filename);
     if( descriptorMatcher == 0 )
     {
         printf ("Cannot create descriptor\n");
@@ -50,10 +50,8 @@ int main(int argc, char** argv)
 
     printf("Finding nearest neighbors... \n");
     // find NN for each of keypoints2 in keypoints1
-    descriptorMatcher->add( img1, keypoints1 );
-    vector<int> matches2to1;
-    matches2to1.resize(keypoints2.size());
-    descriptorMatcher->match( img2, keypoints2, matches2to1 );
+    vector<DMatch> matches2to1;
+    descriptorMatcher->match( img2, keypoints2, img1, keypoints1, matches2to1 );
     printf("Done\n");
 
     IplImage* img_corr = DrawCorrespondences(img1, keypoints1, img2, keypoints2, matches2to1);
@@ -65,11 +63,10 @@ int main(int argc, char** argv)
     cvReleaseImage(&img1);
     cvReleaseImage(&img2);
     cvReleaseImage(&img_corr);
-    delete descriptorMatcher;
 }
 
 IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
-                              const vector<KeyPoint>& features2, const vector<int>& desc_idx)
+                              const vector<KeyPoint>& features2, const vector<DMatch>& desc_idx)
 {
     IplImage* img_corr = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
                                        IPL_DEPTH_8U, 3);
@@ -88,7 +85,7 @@ IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1,
     {
         CvPoint pt = cvPoint(cvRound(features2[i].pt.x + img1->width), cvRound(features2[i].pt.y));
         cvCircle(img_corr, pt, 3, CV_RGB(255, 0, 0));
-        cvLine(img_corr, features1[desc_idx[i]].pt, pt, CV_RGB(0, 255, 0));
+        cvLine(img_corr, features1[desc_idx[i].trainIdx].pt, pt, CV_RGB(0, 255, 0));
     }
 
     return img_corr;

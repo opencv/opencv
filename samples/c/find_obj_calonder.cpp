@@ -109,19 +109,17 @@ void testCalonderClassifier( const string& classifierFilename, const string& img
 
     // Match descriptors
     BruteForceMatcher<L1<float> > matcher;
-    matcher.add( descriptors2 );
-    vector<int> matches;
-    matcher.match( descriptors1, matches );
+    vector<DMatch> matches;
+    matcher.match( descriptors1, descriptors2, matches );
 
     // Prepare inlier mask
     vector<char> matchesMask( matches.size(), 0 );
     vector<Point2f> points1; KeyPoint::convert( keypoints1, points1 );
     vector<Point2f> points2; KeyPoint::convert( keypoints2, points2 );
     Mat points1t; perspectiveTransform(Mat(points1), points1t, H12);
-    vector<int>::const_iterator mit = matches.begin();
     for( size_t mi = 0; mi < matches.size(); mi++ )
     {
-        if( norm(points2[matches[mi]] - points1t.at<Point2f>(mi,0)) < 4 ) // inlier
+        if( norm(points2[matches[mi].trainIdx] - points1t.at<Point2f>(mi,0)) < 4 ) // inlier
             matchesMask[mi] = 1;
     }
 

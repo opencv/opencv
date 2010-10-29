@@ -1028,7 +1028,7 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
        return;
     }
 
-    Ptr<GenericDescriptorMatch> descMatch = commRunParams[di].isActiveParams ? specificDescMatcher : defaultDescMatcher;
+    Ptr<GenericDescriptorMatcher> descMatch = commRunParams[di].isActiveParams ? specificDescMatcher : defaultDescMatcher;
     calcQuality[di].resize(TEST_CASE_COUNT);
 
     vector<KeyPoint> keypoints1;
@@ -1165,7 +1165,7 @@ void OneWayDescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int da
 //DetectorQualityTest siftDetectorQuality = DetectorQualityTest( "SIFT", "quality-detector-sift" );
 //DetectorQualityTest surfDetectorQuality = DetectorQualityTest( "SURF", "quality-detector-surf" );
 
-// Detectors
+// Descriptors
 //DescriptorQualityTest siftDescriptorQuality = DescriptorQualityTest( "SIFT", "quality-descriptor-sift", "BruteForce" );
 //DescriptorQualityTest surfDescriptorQuality = DescriptorQualityTest( "SURF", "quality-descriptor-surf", "BruteForce" );
 //DescriptorQualityTest fernDescriptorQualityTest( "FERN", "quality-descriptor-fern");
@@ -1173,7 +1173,7 @@ void OneWayDescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int da
 
 
 
-// Don't run them because of bug in OneWayDescriptorBase many to many matching. TODO: fix this bug.
+// Don't run it because of bug in OneWayDescriptorBase many to many matching. TODO: fix this bug.
 //OneWayDescriptorQualityTest oneWayDescriptorQuality;
 
 // Don't run them (will validate and save results as "quality-descriptor-sift" and "quality-descriptor-surf" test data).

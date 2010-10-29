@@ -72,7 +72,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     {
         cout << "< Evaluate descriptor match..." << endl;
         vector<Point2f> curve;
-        Ptr<GenericDescriptorMatch> gdm = new VectorDescriptorMatch( descriptorExtractor, descriptorMatcher );
+        Ptr<GenericDescriptorMatcher> gdm = new VectorDescriptorMatcher( descriptorExtractor, descriptorMatcher );
         evaluateGenericDescriptorMatcher( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
         for( float l_p = 0; l_p < 1 - FLT_EPSILON; l_p+=0.1 )
             cout << "1-precision = " << l_p << "; recall = " << getRecall( curve, l_p ) << endl;
@@ -81,7 +81,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
 
     vector<int> trainIdxs( matches.size() );
     for( size_t i = 0; i < matches.size(); i++ )
-        trainIdxs[i] = matches[i].indexTrain;
+        trainIdxs[i] = matches[i].trainIdx;
 
     if( !isWarpPerspective && ransacReprojThreshold >= 0 )
     {
