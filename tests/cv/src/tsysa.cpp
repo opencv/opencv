@@ -80,7 +80,7 @@ const char* blacklist[] =
     "shape-minarearect",           //ticket 436
     //"stereobm",                    //ticket 614
     //"stereosgbm",                  //ticket 615
-    //"stereogc",                    //ticket 439
+    "stereogc",                    //ticket 439
     "subdiv",                      //ticket 454
     
     "track-camshift",              //ticket 483
