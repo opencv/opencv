@@ -565,15 +565,15 @@ CV_EXPORTS_AS(integral2) void integral( const Mat& src, CV_OUT Mat& sum, CV_OUT 
 CV_EXPORTS_AS(integral3) void integral( const Mat& src, CV_OUT Mat& sum, CV_OUT Mat& sqsum, CV_OUT Mat& tilted, int sdepth=-1 );
 
 //! adds image to the accumulator (dst += src). Unlike cv::add, dst and src can have different types.
-CV_EXPORTS_W void accumulate( const Mat& src, CV_OUT Mat& dst, const Mat& mask=Mat() );
+CV_EXPORTS_W void accumulate( const Mat& src, CV_IN_OUT Mat& dst, const Mat& mask=Mat() );
 //! adds squared src image to the accumulator (dst += src*src).
-CV_EXPORTS_W void accumulateSquare( const Mat& src, CV_OUT Mat& dst, const Mat& mask=Mat() );
+CV_EXPORTS_W void accumulateSquare( const Mat& src, CV_IN_OUT Mat& dst, const Mat& mask=Mat() );
 //! adds product of the 2 images to the accumulator (dst += src1*src2).
 CV_EXPORTS_W void accumulateProduct( const Mat& src1, const Mat& src2,
-                                   CV_OUT Mat& dst, const Mat& mask=Mat() );
+                                   CV_IN_OUT Mat& dst, const Mat& mask=Mat() );
 //! updates the running average (dst = dst*(1-alpha) + src*alpha)
-CV_EXPORTS_W void accumulateWeighted( const Mat& src, CV_OUT Mat& dst,
-                                    double alpha, const Mat& mask=Mat() );
+CV_EXPORTS_W void accumulateWeighted( const Mat& src, CV_IN_OUT Mat& dst,
+                                      double alpha, const Mat& mask=Mat() );
     
 //! type of the threshold operation
 enum { THRESH_BINARY=0, THRESH_BINARY_INV=1, THRESH_TRUNC=2, THRESH_TOZERO=3,

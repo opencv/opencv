@@ -2202,11 +2202,11 @@ public:
     SVD& operator ()( const Mat& src, int flags=0 );
 
     //! decomposes matrix and stores the results to user-provided matrices
-    CV_WRAP_AS(SVDecomp) static void compute( const Mat& src, CV_OUT Mat& w, CV_OUT Mat& u, CV_OUT Mat& vt, int flags=0 );
+    static void compute( const Mat& src, CV_OUT Mat& w, CV_OUT Mat& u, CV_OUT Mat& vt, int flags=0 );
     //! computes singular values of a matrix
-    CV_WRAP_AS(SVDecomp) static void compute( const Mat& src, CV_OUT Mat& w, int flags=0 );
+    static void compute( const Mat& src, CV_OUT Mat& w, int flags=0 );
     //! performs back substitution
-    CV_WRAP_AS(SVBackSubst) static void backSubst( const Mat& w, const Mat& u, const Mat& vt,
+    static void backSubst( const Mat& w, const Mat& u, const Mat& vt,
                            const Mat& rhs, CV_OUT Mat& dst );
     
     template<typename _Tp, int m, int n, int nm> static void compute( const Matx<_Tp, m, n>& a,
@@ -3757,7 +3757,7 @@ public:
     void writeObj( const string& name, const void* obj );
 
     //! returns the normalized object name for the specified file name
-    CV_WRAP static string getDefaultObjectName(const string& filename);
+    static string getDefaultObjectName(const string& filename);
 
     Ptr<CvFileStorage> fs; //!< the underlying C FileStorage structure
     string elname; //!< the currently written element

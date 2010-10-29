@@ -260,11 +260,11 @@ CV_EXPORTS_W double calcGlobalOrientation( const Mat& orientation, const Mat& ma
 // TODO: need good API for cvSegmentMotion
 
 //! updates the object tracking window using CAMSHIFT algorithm
-CV_EXPORTS_W RotatedRect CamShift( const Mat& probImage, CV_OUT Rect& window,
+CV_EXPORTS_W RotatedRect CamShift( const Mat& probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
 
 //! updates the object tracking window using meanshift algorithm
-CV_EXPORTS_W int meanShift( const Mat& probImage, CV_OUT Rect& window,
+CV_EXPORTS_W int meanShift( const Mat& probImage, CV_IN_OUT Rect& window,
                             TermCriteria criteria );
 
 /*!

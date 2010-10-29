@@ -1,22 +1,23 @@
 import os, sys, re
 
-hdr_list = [
+opencv_hdr_list = [
 "../core/include/opencv2/core/core.hpp",
-"../core/include/opencv2/core/core_c.h",
+#"../core/include/opencv2/core/core_c.h",
 "../ml/include/opencv2/ml/ml.hpp",
 "../imgproc/include/opencv2/imgproc/imgproc.hpp",
-"../imgproc/include/opencv2/imgproc/imgproc_c.h",
+#"../imgproc/include/opencv2/imgproc/imgproc_c.h",
 "../calib3d/include/opencv2/calib3d/calib3d.hpp",
 "../features2d/include/opencv2/features2d/features2d.hpp",
 "../video/include/opencv2/video/tracking.hpp",
 "../video/include/opencv2/video/background_segm.hpp",
 "../objdetect/include/opencv2/objdetect/objdetect.hpp",
 "../highgui/include/opencv2/highgui/highgui.hpp",
-"../highgui/include/opencv2/highgui/highgui_c.h",
+#"../highgui/include/opencv2/highgui/highgui_c.h",
+"opencv_api_extra.hpp",
 ]
 
 """
-Each declaration is [funcname, return_value_type /* in C, not in Python */, <list_of_arguments>],
+Each declaration is [funcname, return_value_type /* in C, not in Python */, <list_of_modifiers>, <list_of_arguments>],
 where each element of <list_of_arguments> is 4-element list itself:
 [argtype, argname, default_value /* or "" if none */, <list_of_modifiers>]
 where the list of modifiers is yet another nested list of strings
@@ -38,6 +39,27 @@ class CppHeaderParser(object):
             s = s.replace(before, after)
         return s
     
+    def get_macro_arg(self, arg_str, npos):
+        
+        npos2 = npos3 = arg_str.find("(", npos)
+        if npos2 < 0:
+            print "Error: no arguments for the macro at %d" % (self.lineno,)
+            sys.exit(-1)
+        balance = 1        
+        while 1:
+            t, npos3 = self.find_next_token(arg_str, ['(', ')'], npos3+1)
+            if npos3 < 0:
+                print "Error: no matching ')' in the macro call at %d" % (self.lineno,)
+                sys.exit(-1)
+            if t == '(':
+                balance += 1
+            if t == ')':
+                balance -= 1
+                if balance == 0:
+                    break
+                    
+        return arg_str[npos2+1:npos3].strip(), npos3
+    
     def parse_arg(self, arg_str, argno):
         """
         Parses <arg_type> [arg_name]
@@ -53,21 +75,26 @@ class CppHeaderParser(object):
         if "CV_OUT" in arg_str:
             modlist.append("/O")
             arg_str = arg_str.replace("CV_OUT", "")
+            
+        if "CV_IN_OUT" in arg_str:
+            modlist.append("/IO")
+            arg_str = arg_str.replace("CV_IN_OUT", "")
 
         isarray = False
         npos = arg_str.find("CV_CARRAY")
         if npos >= 0:
             isarray = True
-            npos2 = arg_str.find("(", npos)
-            npos3 = arg_str.find(")", npos)
-            if (npos2 < 0) or (npos3 <= npos2):
-                print "Error: no arguments for CV_CARRAY macro at %d" % (self.lineno,)
-                sys.exit(-1)
-            counter_str = arg_str[npos2+1:npos3]
-            if "(" in counter_str:
-                npos3 = arg_str.find(")", npos3+1)
-                counter_str = arg_str[npos2+1:npos3]
-            modlist.append("/A " + counter_str.strip() + ";")
+            macro_arg, npos3 = self.get_macro_arg(arg_str, npos)
+            
+            modlist.append("/A " + macro_arg)
+            arg_str = arg_str[:npos] + arg_str[npos3+1:]
+            
+        npos = arg_str.find("CV_CUSTOM_CARRAY")
+        if npos >= 0:
+            isarray = True
+            macro_arg, npos3 = self.get_macro_arg(arg_str, npos)
+            
+            modlist.append("/CA " + macro_arg)
             arg_str = arg_str[:npos] + arg_str[npos3+1:]
         
         arg_str = arg_str.strip()        
@@ -139,7 +166,8 @@ class CppHeaderParser(object):
         
         counter_str = ""
         add_star = False
-        if "[" in arg_name:
+        if ("[" in arg_name) and not ("operator" in arg_str):
+            #print arg_str
             p1 = arg_name.find("[")
             p2 = arg_name.find("]",p1+1)
             if p2 < 0:
@@ -170,6 +198,25 @@ class CppHeaderParser(object):
             
         return arg_type, arg_name, modlist, argno
         
+    def parse_enum(self, decl_str):
+        l = decl_str
+        ll = l.split(",")
+        prev_val = ""
+        prev_val_delta = -1
+        decl = []
+        for pair in ll:
+            pv = pair.split("=")
+            if len(pv) == 1:
+                prev_val_delta += 1
+                val = ""
+                if prev_val:
+                    val = prev_val + "+"
+                val += str(prev_val_delta)
+            else:
+                prev_val_delta = 0
+                prev_val = val = pv[1].strip()
+            decl.append(["const " + self.get_dotted_name(pv[0].strip()), val, [], []])
+        return decl
         
     def parse_class_decl(self, decl_str):
         """
@@ -177,12 +224,23 @@ class CppHeaderParser(object):
            {class|struct} [CV_EXPORTS] <class_name> [: public <base_class1> [, ...]]
         Returns class_name1, <list of base_classes>
         """
-        l = self.batch_replace(decl_str, [("CV_EXPORTS", ""), ("public ", " "), ("::", ".")]).strip()
+        l = decl_str
+        modlist = []
+        if "CV_EXPORTS_AS_MAP" in l:
+            l = l.replace("CV_EXPORTS_AS_MAP", "")
+            modlist.append("/Map")
+        npos = l.find("CV_EXPORTS_AS")
+        if npos >= 0:
+            macro_arg, npos3 = self.get_macro_arg(l, npos)
+            modlist.append("=" + macro_arg)
+            l = l[:npos] + l[npos3+1:]
+            
+        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("public ", " "), ("::", ".")]).strip()
         ll = re.split(r'\s*[,:]?\s*', l)
         ll = [le for le in ll if le]
         classname = ll[1]
         bases = ll[2:]
-        return classname, bases
+        return classname, bases, modlist
 
     def parse_func_decl(self, decl_str):
         """
@@ -196,12 +254,27 @@ class CppHeaderParser(object):
         [<function_name>, <rettype>, <the_list_of_argument_descriptions>] (see above)
         """
         
+        if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
+            ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
+            return []
+        
+        func_modlist = []
+        
+        npos = decl_str.find("CV_EXPORTS_AS")
+        if npos >= 0:
+            arg, npos3 = self.get_macro_arg(decl_str, npos)
+            func_modlist.append("="+arg)
+            decl_str = decl_str[:npos] + decl_str[npos3+1:]
+        npos = decl_str.find("CV_WRAP_AS")
+        if npos >= 0:
+            arg, npos3 = self.get_macro_arg(decl_str, npos)
+            func_modlist.append("="+arg)
+            decl_str = decl_str[:npos] + decl_str[npos3+1:]
         # filter off some common prefixes, which are meaningless for Python wrappers.
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
-        for prefix in ["virtual", "static inline", "inline", "CV_EXPORTS", "static CV_INLINE", "CV_INLINE"]:
-            if decl_str.startswith(prefix):
-                decl_str = decl_str[len(prefix):].lstrip()
+        decl_str = self.batch_replace(decl_str, [("virtual", ""), ("static inline", ""), ("inline", ""),\
+            ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_WRAP ", " "), ("static CV_INLINE", ""), ("CV_INLINE", "")]).strip()
 
         static_method = False
         context = self.block_stack[-1][0]
@@ -290,14 +363,13 @@ class CppHeaderParser(object):
                     else:
                         eqpos = a.find("CV_DEFAULT")
                         if eqpos >= 0:
-                            pos2 = a.find("(",eqpos)
-                            pos3 = a.rfind(")")
-                            if pos2 < 0 or pos3 < 0:
-                                print "Error at %d. no arguments for CV_DEFAULT macro"
-                                sys.exit(-1)
-                            defval = a[pos2+1:pos3].strip()
-                            if defval == "NULL":
-                                defval = "0"
+                            defval, pos3 = self.get_macro_arg(a, eqpos)
+                        else:
+                            eqpos = a.find("CV_WRAP_DEFAULT")
+                            if eqpos >= 0:
+                                defval, pos3 = self.get_macro_arg(a, eqpos)
+                    if defval == "NULL":
+                        defval = "0"
                     if eqpos >= 0:
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
@@ -312,7 +384,7 @@ class CppHeaderParser(object):
         if static_method:
             rettype = " ".join([rettype, "/S"])
                
-        return [funcname, rettype, args]
+        return [funcname, rettype, func_modlist, args]
 
     def get_dotted_name(self, name):
         """
@@ -332,7 +404,7 @@ class CppHeaderParser(object):
         n = ""
         for b in self.block_stack:
             block_type, block_name = b[self.BLOCK_TYPE], b[self.BLOCK_NAME]
-            if block_type == "file":
+            if block_type in ["file", "enum"]:
                 continue
             if block_type not in ["struct", "class", "namespace"]:
                 print "Error at %d: there are non-valid entries in the current block stack " % (self.lineno, self.block_stack)
@@ -377,21 +449,30 @@ class CppHeaderParser(object):
         # do not process hidden class members and template classes/functions
         if not stack_top[self.PUBLIC_SECTION] or stmt.startswith("template"):
             return stmt_type, "", False, None
-
-        if end_token == "{" and (stmt.startswith("class") or stmt.startswith("struct")):
-            stmt_type = stmt.split()[0]
-            classname, bases = self.parse_class_decl(stmt)
-            decl = [stmt_type + " " + self.get_dotted_name(classname), "", []]
-            if bases:
-                decl[1] = ": " + " ".join(bases)
-            return [stmt_type, classname, True, decl]
-        
+            
         if end_token == "{":
+            if stmt.startswith("class") or stmt.startswith("struct"):
+                stmt_type = stmt.split()[0]
+                classname, bases, modlist = self.parse_class_decl(stmt)
+                decl = []
+                if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt):
+                    decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
+                    if bases:
+                        decl[1] = ": " + " ".join(bases)
+                return stmt_type, classname, True, decl
+            
+            if stmt.startswith("enum"):
+                return "enum", "", True, None
+            
             if stmt.startswith("namespace"):
                 stmt_list = stmt.split()
                 return stmt_list[0], stmt_list[1], True, None
             if stmt.startswith("extern") and "\"C\"" in stmt:
                 return "namespace", "", True, None
+                
+        if end_token == "}" and context == "enum":
+            decl = self.parse_enum(stmt)
+            return "enum", "", False, decl
 
         if end_token == ";" and stmt.startswith("typedef"):
             # TODO: handle typedef's more intelligently
@@ -410,12 +491,18 @@ class CppHeaderParser(object):
 
         if (context == "struct" or context == "class") and end_token == ";" and stmt:
             # looks like it's member declaration; append the members to the class declaration
-            var_list = stmt.split(",")
-            var_type, var_name1, modlist, argno = self.parse_arg(var_list[0], -1)
-            var_list = [var_name1] + [i.strip() for i in var_list[1:]]
             class_decl = stack_top[self.CLASS_DECL]
-            for v in var_list:
-                class_decl[2].append([var_type, v, "", []])
+            if ("CV_PROP" in stmt) or (class_decl and ("/Map" in class_decl[2])):
+                var_modlist = []
+                if "CV_PROP_RW" in stmt:
+                    var_modlist.append("/RW")
+                stmt = self.batch_replace(stmt, [("CV_PROP_RW", ""), ("CV_PROP", "")]).strip()
+                var_list = stmt.split(",")
+                var_type, var_name1, modlist, argno = self.parse_arg(var_list[0], -1)
+                var_list = [var_name1] + [i.strip() for i in var_list[1:]]
+                
+                for v in var_list:
+                    class_decl[3].append([var_type, v, "", var_modlist])
             return stmt_type, "", False, None
         
         # something unknown
@@ -529,7 +616,11 @@ class CppHeaderParser(object):
                     # since it can start with "public:"
                     stmt_type, name, parse_flag, decl = self.parse_stmt(stmt, token)
                     if decl:
-                        decls.append(decl)
+                        if stmt_type == "enum":
+                            for d in decl:
+                                decls.append(d)
+                        else:
+                            decls.append(decl)
                 else:
                     stmt_type, name, parse_flag = "block", "", False
             
@@ -557,17 +648,36 @@ class CppHeaderParser(object):
         Prints the list of declarations, retrieived by the parse() method
         """
         for d in decls:
-            print d[0], d[1]
-            for a in d[2]:
+            print d[0], d[1], ";".join(d[2])
+            for a in d[3]:
                 print "   ", a[0], a[1], a[2], 
                 if a[3]:
                     print "; ".join(a[3])
                 else:
                     print
 
-parser = CppHeaderParser()
+def parse_all():
+    parser = CppHeaderParser()
+    decls = [] 
+    for hname in opencv_hdr_list:
+        decls += parser.parse(hname)
+    return decls
 
-decls = [] 
-for hname in hdr_list:
-    decls += parser.parse(hname)
-parser.print_decls(decls)
+if __name__ == '__main__':
+    parser = CppHeaderParser()
+    decls = parse_all()
+    if 0:
+        pass
+    elif 1:
+        CppHeaderParser().print_decls(decls)
+        print len(decls)
+    else:
+        fcounts = {}
+        for f in decls:
+            fname = f[0]
+            fcounts[fname] = fcounts.get(fname, []) + [f]
+        items = fcounts.items()
+        items.sort()
+        for fname, flist in items:
+            if len(flist) > 1:
+                parser.print_decls(flist)
