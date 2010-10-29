@@ -3847,10 +3847,21 @@ static int zero = 0;
 
 #include "generated0.i"
 
+#include "opencv2x.h"
+
 static PyMethodDef methods[] = {
 
 #if PYTHON_USE_NUMPY
-  {"fromarray", (PyCFunction)pycvfromarray, METH_KEYWORDS, "fromarray(array) -> cvmatnd"},
+    {"fromarray", (PyCFunction)pycvfromarray, METH_KEYWORDS, "fromarray(array) -> cvmatnd"},
+  
+    {"absdiff", (PyCFunction)cv::pyopencv_absdiff, METH_KEYWORDS, "absdiff(src1,src2,dst=None) -> dst"},    
+    {"add", (PyCFunction)cv::pyopencv_add, METH_KEYWORDS, "add(src1,src2,dst=None,mask=None) -> dst"},
+    {"bitwise_and", (PyCFunction)cv::pyopencv_and, METH_KEYWORDS, "bitwise_and(src1,src2,dst=None,mask=None) -> dst"},
+    {"bitwise_or", (PyCFunction)cv::pyopencv_or, METH_KEYWORDS, "bitwise_or(src1,src2,dst=None,mask=None) -> dst"},
+    {"bitwise_xor", (PyCFunction)cv::pyopencv_xor, METH_KEYWORDS, "bitwise_xor(src1,src2,dst=None,mask=None) -> dst"},
+    {"max", (PyCFunction)cv::pyopencv_max, METH_KEYWORDS, "max(src1,src2,dst=None) -> dst"},
+    {"min", (PyCFunction)cv::pyopencv_min, METH_KEYWORDS, "min(src1,src2,dst=None) -> dst"},
+    {"subtract", (PyCFunction)cv::pyopencv_subtract, METH_KEYWORDS, "subtract(src1,src2,dst=None,mask=None) -> dst"},
 #endif
 
   //{"CalcOpticalFlowFarneback", (PyCFunction)pycvCalcOpticalFlowFarneback, METH_KEYWORDS, "CalcOpticalFlowFarneback(prev, next, flow, pyr_scale=0.5, levels=3, win_size=15, iterations=3, poly_n=7, poly_sigma=1.5, flags=0) -> None"},
@@ -3887,6 +3898,10 @@ __declspec(dllexport)
 
 void initcv()
 {
+#if PYTHON_USE_NUMPY
+    import_array();
+#endif
+    
   PyObject *m, *d;
 
   cvSetErrMode(CV_ErrModeParent);
