@@ -45,52 +45,39 @@ CvTS test_system("cv");
 
 const char* blacklist[] =
 {
-    "_3d-fundam",                  //ticket 484
+    "_3d-fundam",                     //ticket 484
     
-    "calibrate-camera-artificial", //ticket 472
-    //"calibrate-camera-cpp",        //ticket 564
-    //"calibrate-stereo-c",          //ticket 565
-    //"cascade-detector",            //ticket 432
-    "chessboard-detector",         //ticket 569
-    "chessboard-subpixel",         //ticket 473
-    "color-luv",                   //ticket 502
-    
-    //"descriptor-sift",             //ticket 567
-    //"descriptor-surf",             //ticket 568
-    //"detector-surf",               //ticket 578
-    
+    "calibrate-camera-artificial",    //ticket 472
+    "chessboard-detector",            //ticket 569
+    "chessboard-subpixel",            //ticket 473
+    "color-luv",                      //ticket 502
+
     "filter-generic",
-    "flann_saved",                 //ticket 618
-    
-    //"hist-backproj",               //ticket 579
-    //"hist-bayesianprob",           //ticket 619
-    //"hist-backprojpatch",          //ticket 620
-    //"hog-detector",                //ticket 428
-   
-    "inpaint",                     //ticket 570
-    
-    "mhi-global",                  //ticket 457
-    "morph-ex",                    //ticket 612
-    "MSER",                        //ticket 437
-    "operations",                  //ticket 613
-    "optflow-estimate-rigid",      //ticket 433
-    "posit",                       //ticket 430
-    
-    "segmentation-pyramid",        //ticket 464
-    "shape-minarearect",           //ticket 436
-    //"stereobm",                    //ticket 614
-    //"stereosgbm",                  //ticket 615
-    "stereogc",                    //ticket 439
-    "subdiv",                      //ticket 454
-    
-    "track-camshift",              //ticket 483
-    
-    "warp-affine",                 //ticket 572
-    "warp-perspective",            //ticket 575
-    "warp-remap",                  //ticket 576
-    "warp-resize",                 //ticket 429
-    "warp-undistort",              //ticket 577
-    //"color-lab",                   //ticket 627
+    "flann_saved",                    //ticket 618
+
+    "inpaint",                        //ticket 570
+
+    "mhi-global",                     //ticket 457
+    "morph-ex",                       //ticket 612
+    "MSER",                           //ticket 437
+    "operations",                     //ticket 613
+    "optflow-estimate-rigid",         //ticket 433
+    "posit",                          //ticket 430
+
+    "segmentation-pyramid",           //ticket 464
+    "shape-minarearect",              //ticket 436
+    "stereogc",                       //ticket 439
+    "subdiv",                         //ticket 454
+
+    "track-camshift",                 //ticket 483
+
+    "warp-affine",                    //ticket 572
+    "warp-perspective",               //ticket 575
+    "warp-remap",                     //ticket 576
+    "warp-resize",                    //ticket 429
+    "warp-undistort",                 //ticket 577
+
+    "descriptor-matcher-flann-based", //ticket 637
     0
 };
 
