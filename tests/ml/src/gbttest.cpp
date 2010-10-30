@@ -44,7 +44,7 @@ int _get_len(const CvMat* mat)
 
 
 CV_GBTreesTest::CV_GBTreesTest() :
-                CvTest( "CvGBTrees_test",
+                CvTest( "gbtrees",
                         "all public methods (train, predict, save, load)" )
 {
     datasets = 0;
@@ -140,8 +140,8 @@ int CV_GBTreesTest::checkPredictError(int test_num)
     if (!gtb)
         return CvTS::FAIL_GENERIC;
         
-    float mean[] = {5.3555f, 11.2241f, 11.9212f, 12.0848f};
-    float sigma[] = {0.362127f, 3.4906f, 3.4906f, 3.64994f};
+    float mean[] = {5.430247f, 13.5654f, 12.6569f, 13.1661f};
+    float sigma[] = {0.4162694f, 3.21161f, 3.43297f, 3.00624f};
     
     float current_error = gtb->calc_error(data, CV_TEST_ERROR);
     
