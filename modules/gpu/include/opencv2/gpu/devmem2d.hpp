@@ -95,17 +95,17 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step); }
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step); }
         };
+
+        template <bool> struct StaticCheck;
+        template <> struct StaticCheck<true>{};            
        
         template<typename T> struct PtrElemStep_ : public PtrStep_<T>
         {                   
             PtrElemStep_(const DevMem2D_<T>& mem) : PtrStep_<T>(mem) 
             {
-                step /= elem_size;             
+                this->step /= PtrStep_<T>::elem_size;             
             }
         private:            
-            template <bool> struct StaticCheck;
-            template <> struct StaticCheck<true>{};            
-
             StaticCheck<256 % sizeof(T) == 0>  ElemStepTypeCheck;
         };
 
