@@ -45,7 +45,7 @@
 using namespace cv::gpu;
 
 /////////////////////////////////// Remap ///////////////////////////////////////////////
-namespace imgproc_krnls
+namespace cv { namespace gpu { namespace imgproc
 {
     texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap;
 
@@ -121,10 +121,7 @@ namespace imgproc_krnls
             *(dst + y * dst_step + 3 * x + 2) = out.z;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace imgproc 
-{
     void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
     {
         dim3 threads(16, 16, 1);
@@ -132,15 +129,15 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(dst.cols, threads.x);
         grid.y = divUp(dst.rows, threads.y);
 
-        imgproc_krnls::tex_remap.filterMode = cudaFilterModeLinear;	    
-        imgproc_krnls::tex_remap.addressMode[0] = imgproc_krnls::tex_remap.addressMode[1] = cudaAddressModeWrap;
+        tex_remap.filterMode = cudaFilterModeLinear;	    
+        tex_remap.addressMode[0] = tex_remap.addressMode[1] = cudaAddressModeWrap;
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D(0, imgproc_krnls::tex_remap, src.ptr, desc, src.cols, src.rows, src.step) );
+        cudaSafeCall( cudaBindTexture2D(0, tex_remap, src.data, desc, src.cols, src.rows, src.step) );
 
-        imgproc_krnls::remap_1c<<<grid, threads>>>(xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
+        remap_1c<<<grid, threads>>>(xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
 
         cudaSafeCall( cudaThreadSynchronize() );  
-        cudaSafeCall( cudaUnbindTexture(imgproc_krnls::tex_remap) );
+        cudaSafeCall( cudaUnbindTexture(tex_remap) );
     }
     
     void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
@@ -150,17 +147,13 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(dst.cols, threads.x);
         grid.y = divUp(dst.rows, threads.y);
 
-        imgproc_krnls::remap_3c<<<grid, threads>>>(src.ptr, src.step, xmap.ptr, ymap.ptr, xmap.step, dst.ptr, dst.step, dst.cols, dst.rows);
+        remap_3c<<<grid, threads>>>(src.data, src.step, xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
 
         cudaSafeCall( cudaThreadSynchronize() ); 
     }
-}}}
-
 
 /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
 
-namespace imgproc_krnls
-{
     texture<uchar4, 2> tex_meanshift;
 
     __device__ short2 do_mean_shift(int x0, int y0, unsigned char* out, 
@@ -252,10 +245,7 @@ namespace imgproc_krnls
             *(short2*)(outsp + basesp) = do_mean_shift(x0, y0, outr, outrstep, cols, rows, sp, sr, maxIter, eps);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace imgproc 
-{
     extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
     {                        
         dim3 grid(1, 1, 1);
@@ -264,11 +254,11 @@ namespace cv { namespace gpu { namespace imgproc
         grid.y = divUp(src.rows, threads.y);
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-        cudaSafeCall( cudaBindTexture2D( 0, imgproc_krnls::tex_meanshift, src.ptr, desc, src.cols, src.rows, src.step ) );
+        cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
-        imgproc_krnls::meanshift_kernel<<< grid, threads >>>( dst.ptr, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
+        meanshift_kernel<<< grid, threads >>>( dst.data, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaThreadSynchronize() );
-        cudaSafeCall( cudaUnbindTexture( imgproc_krnls::tex_meanshift ) );        
+        cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
     extern "C" void meanShiftProc_gpu(const DevMem2D& src, DevMem2D dstr, DevMem2D dstsp, int sp, int sr, int maxIter, float eps) 
     {
@@ -278,18 +268,15 @@ namespace cv { namespace gpu { namespace imgproc
         grid.y = divUp(src.rows, threads.y);
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-        cudaSafeCall( cudaBindTexture2D( 0, imgproc_krnls::tex_meanshift, src.ptr, desc, src.cols, src.rows, src.step ) );
+        cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
-        imgproc_krnls::meanshiftproc_kernel<<< grid, threads >>>( dstr.ptr, dstr.step, dstsp.ptr, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
+        meanshiftproc_kernel<<< grid, threads >>>( dstr.data, dstr.step, dstsp.data, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaThreadSynchronize() );
-        cudaSafeCall( cudaUnbindTexture( imgproc_krnls::tex_meanshift ) );        
+        cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
-}}}
 
 /////////////////////////////////// drawColorDisp ///////////////////////////////////////////////
 
-namespace imgproc_krnls
-{
     template <typename T>
     __device__ unsigned int cvtPixel(T d, int ndisp, float S = 1, float V = 1)
     {        
@@ -389,10 +376,8 @@ namespace imgproc_krnls
             line[x >> 1] = res;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace imgproc 
-{
+
     void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
     {
         dim3 threads(16, 16, 1);
@@ -400,7 +385,7 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(src.cols, threads.x << 2);
         grid.y = divUp(src.rows, threads.y);
          
-        imgproc_krnls::drawColorDisp<<<grid, threads, 0, stream>>>(src.ptr, src.step, dst.ptr, dst.step, src.cols, src.rows, ndisp);
+        drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step, dst.data, dst.step, src.cols, src.rows, ndisp);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() ); 
@@ -413,17 +398,14 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(src.cols, threads.x << 1);
         grid.y = divUp(src.rows, threads.y);
          
-        imgproc_krnls::drawColorDisp<<<grid, threads, 0, stream>>>(src.ptr, src.step / sizeof(short), dst.ptr, dst.step, src.cols, src.rows, ndisp);
+        drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(short), dst.data, dst.step, src.cols, src.rows, ndisp);
         
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
-}}}
 
 /////////////////////////////////// reprojectImageTo3D ///////////////////////////////////////////////
 
-namespace imgproc_krnls
-{
     __constant__ float cq[16];
 
     template <typename T>
@@ -455,10 +437,7 @@ namespace imgproc_krnls
             *(float4*)(xyzw + xyzw_step * y + (x * 4)) = v;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace imgproc 
-{
     template <typename T>
     inline void reprojectImageTo3D_caller(const DevMem2D_<T>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
     {
@@ -467,9 +446,9 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(disp.cols, threads.x);
         grid.y = divUp(disp.rows, threads.y);
 
-        cudaSafeCall( cudaMemcpyToSymbol(imgproc_krnls::cq, q, 16 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cq, q, 16 * sizeof(float)) );
 
-        imgproc_krnls::reprojectImageTo3D<<<grid, threads, 0, stream>>>(disp.ptr, disp.step / sizeof(T), xyzw.ptr, xyzw.step / sizeof(float), disp.rows, disp.cols);
+        reprojectImageTo3D<<<grid, threads, 0, stream>>>(disp.data, disp.step / sizeof(T), xyzw.data, xyzw.step / sizeof(float), disp.rows, disp.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );

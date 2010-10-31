@@ -54,7 +54,7 @@ using namespace cv::gpu;
 #define FLT_EPSILON     1.192092896e-07F
 #endif
 
-namespace color_krnls
+namespace cv { namespace gpu { namespace color
 {
     template<typename T> struct ColorChannel {};
     template<> struct ColorChannel<uchar>
@@ -95,12 +95,9 @@ namespace color_krnls
     {
         return vec.w;
     }
-}
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
-namespace color_krnls
-{
     template <int SRCCN, int DSTCN, typename T>
     __global__ void RGB2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols, int bidx)
     {
@@ -123,10 +120,7 @@ namespace color_krnls
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int SRCCN, int DSTCN>
     void RGB2RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
@@ -136,8 +130,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols, bidx);
+        RGB2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -178,12 +172,9 @@ namespace cv { namespace gpu { namespace color
 
         RGB2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
-}}}
 
 /////////// Transforming 16-bit (565 or 555) RGB to/from 24/32-bit (888[8]) RGB //////////
 
-namespace color_krnls
-{
     template <int GREEN_BITS, int DSTCN> struct RGB5x52RGBConverter {};    
     template <int DSTCN> struct RGB5x52RGBConverter<5, DSTCN>
     {
@@ -272,10 +263,7 @@ namespace color_krnls
             *(ushort*)(dst_ + y * dst_step + (x << 1)) = RGB2RGB5x5Converter<SRCCN, GREEN_BITS>::cvt(&src.x, bidx);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <int GREEN_BITS, int DSTCN>
     void RGB5x52RGB_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
@@ -285,8 +273,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB5x52RGB<GREEN_BITS, DSTCN><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols, bidx);
+        RGB5x52RGB<GREEN_BITS, DSTCN><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -313,8 +301,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB2RGB5x5<SRCCN, GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols, bidx);
+        RGB2RGB5x5<SRCCN, GREEN_BITS><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -331,12 +319,9 @@ namespace cv { namespace gpu { namespace color
 
         RGB2RGB5x5_callers[srccn - 3][green_bits - 5](src, dst, bidx, stream);
     }
-}}}
 
 ///////////////////////////////// Grayscale to Color ////////////////////////////////
 
-namespace color_krnls
-{
     template <int DSTCN, typename T>
     __global__ void Gray2RGB(const uchar* src_, size_t src_step, uchar* dst_, size_t dst_step, int rows, int cols)
     {
@@ -387,10 +372,7 @@ namespace color_krnls
             *(ushort*)(dst_ + y * dst_step + (x << 1)) = Gray2RGB5x5Converter<GREEN_BITS>::cvt(src);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int DSTCN>
     void Gray2RGB_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
     {
@@ -400,8 +382,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::Gray2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols);
+        Gray2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -440,8 +422,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::Gray2RGB5x5<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols);
+        Gray2RGB5x5<GREEN_BITS><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -457,12 +439,9 @@ namespace cv { namespace gpu { namespace color
 
         Gray2RGB5x5_callers[green_bits - 5](src, dst, stream);
     }
-}}}
 
 ///////////////////////////////// Color to Grayscale ////////////////////////////////
 
-namespace color_krnls
-{
     #undef R2Y
     #undef G2Y
     #undef B2Y
@@ -541,10 +520,7 @@ namespace color_krnls
             *(T*)(dst_ + y * dst_step + x * sizeof(T)) = RGB2GrayConvertor<T>::cvt(&src.x, bidx);
         }
     }   
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int SRCCN>
     void RGB2Gray_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
@@ -554,8 +530,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB2Gray<SRCCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols, bidx);
+        RGB2Gray<SRCCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -594,8 +570,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB5x52Gray<GREEN_BITS><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols);
+        RGB5x52Gray<GREEN_BITS><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -611,12 +587,9 @@ namespace cv { namespace gpu { namespace color
 
         RGB5x52Gray_callers[green_bits - 5](src, dst, stream);
     }
-}}}
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
-namespace color_krnls
-{
     __constant__ float cYCrCbCoeffs_f[5];
     __constant__ int cYCrCbCoeffs_i[5];
 
@@ -712,10 +685,7 @@ namespace color_krnls
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int SRCCN, int DSTCN>
     void RGB2YCrCb_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, cudaStream_t stream)
     {
@@ -725,8 +695,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB2YCrCb<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols, bidx);
+        RGB2YCrCb<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -741,7 +711,7 @@ namespace cv { namespace gpu { namespace color
             {RGB2YCrCb_caller<uchar, 4, 3>, RGB2YCrCb_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
 
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -755,7 +725,7 @@ namespace cv { namespace gpu { namespace color
             {RGB2YCrCb_caller<ushort, 4, 3>, RGB2YCrCb_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cYCrCbCoeffs_i, coeffs, 5 * sizeof(int)) );
 
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -769,7 +739,7 @@ namespace cv { namespace gpu { namespace color
             {RGB2YCrCb_caller<float, 4, 3>, RGB2YCrCb_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cYCrCbCoeffs_f, coeffs, 5 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cYCrCbCoeffs_f, coeffs, 5 * sizeof(float)) );
 
         RGB2YCrCb_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -783,8 +753,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::YCrCb2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols, bidx);
+        YCrCb2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -799,7 +769,7 @@ namespace cv { namespace gpu { namespace color
             {YCrCb2RGB_caller<uchar, 4, 3>, YCrCb2RGB_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
 
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -813,7 +783,7 @@ namespace cv { namespace gpu { namespace color
             {YCrCb2RGB_caller<ushort, 4, 3>, YCrCb2RGB_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cYCrCbCoeffs_i, coeffs, 4 * sizeof(int)) );
 
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
@@ -827,16 +797,13 @@ namespace cv { namespace gpu { namespace color
             {YCrCb2RGB_caller<float, 4, 3>, YCrCb2RGB_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cYCrCbCoeffs_f, coeffs, 4 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cYCrCbCoeffs_f, coeffs, 4 * sizeof(float)) );
 
         YCrCb2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, stream);
     }
-}}}
 
 ////////////////////////////////////// RGB <-> XYZ ///////////////////////////////////////
 
-namespace color_krnls
-{
     __constant__ float cXYZ_D65f[9];
     __constant__ int cXYZ_D65i[9];
 
@@ -922,10 +889,7 @@ namespace color_krnls
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int SRCCN, int DSTCN>
     void RGB2XYZ_caller(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
     {
@@ -935,8 +899,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::RGB2XYZ<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols);
+        RGB2XYZ<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -951,7 +915,7 @@ namespace cv { namespace gpu { namespace color
             {RGB2XYZ_caller<uchar, 4, 3>, RGB2XYZ_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -965,7 +929,7 @@ namespace cv { namespace gpu { namespace color
             {RGB2XYZ_caller<ushort, 4, 3>, RGB2XYZ_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -979,7 +943,7 @@ namespace cv { namespace gpu { namespace color
             {RGB2XYZ_caller<float, 4, 3>, RGB2XYZ_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cXYZ_D65f, coeffs, 9 * sizeof(float)) );
 
         RGB2XYZ_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -993,8 +957,8 @@ namespace cv { namespace gpu { namespace color
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
-        color_krnls::XYZ2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-            dst.ptr, dst.step, src.rows, src.cols);
+        XYZ2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+            dst.data, dst.step, src.rows, src.cols);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1009,7 +973,7 @@ namespace cv { namespace gpu { namespace color
             {XYZ2RGB_caller<uchar, 4, 3>, XYZ2RGB_caller<uchar, 4, 4>}
         };
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -1023,7 +987,7 @@ namespace cv { namespace gpu { namespace color
             {XYZ2RGB_caller<ushort, 4, 3>, XYZ2RGB_caller<ushort, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cXYZ_D65i, coeffs, 9 * sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cXYZ_D65i, coeffs, 9 * sizeof(int)) );
 
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
@@ -1037,16 +1001,13 @@ namespace cv { namespace gpu { namespace color
             {XYZ2RGB_caller<float, 4, 3>, XYZ2RGB_caller<float, 4, 4>}
         };
         
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cXYZ_D65f, coeffs, 9 * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cXYZ_D65f, coeffs, 9 * sizeof(float)) );
 
         XYZ2RGB_callers[srccn-3][dstcn-3](src, dst, stream);
     }
-}}}
 
 ////////////////////////////////////// RGB <-> HSV ///////////////////////////////////////
 
-namespace color_krnls
-{
     __constant__ int cHsvDivTable[256];
 
     template<typename T, int HR> struct RGB2HSVConvertor;
@@ -1220,10 +1181,7 @@ namespace color_krnls
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int SRCCN, int DSTCN>
     void RGB2HSV_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
     {
@@ -1234,11 +1192,11 @@ namespace cv { namespace gpu { namespace color
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            color_krnls::RGB2HSV<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            RGB2HSV<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
         else
-            color_krnls::RGB2HSV<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            RGB2HSV<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1288,7 +1246,7 @@ namespace cv { namespace gpu { namespace color
             4352, 4334, 4316, 4298, 4281, 4263, 4246, 4229,
             4212, 4195, 4178, 4161, 4145, 4128, 4112, 4096
         };
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cHsvDivTable, div_table, sizeof(div_table)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cHsvDivTable, div_table, sizeof(div_table)) );
 
         RGB2HSV_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1316,11 +1274,11 @@ namespace cv { namespace gpu { namespace color
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            color_krnls::HSV2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            HSV2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
         else
-            color_krnls::HSV2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            HSV2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1338,7 +1296,7 @@ namespace cv { namespace gpu { namespace color
         static const int sector_data[][3] =
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cHsvSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cHsvSectorData, sector_data, sizeof(sector_data)) );
 
         HSV2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1355,16 +1313,13 @@ namespace cv { namespace gpu { namespace color
         static const int sector_data[][3] =
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cHsvSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cHsvSectorData, sector_data, sizeof(sector_data)) );
         
         HSV2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
-}}}
 
 /////////////////////////////////////// RGB <-> HLS ////////////////////////////////////////
 
-namespace color_krnls
-{
     template<typename T, int HR> struct RGB2HLSConvertor;
     template<int HR> struct RGB2HLSConvertor<float, HR>
     {
@@ -1532,10 +1487,7 @@ namespace color_krnls
             *(dst_t*)(dst_ + y * dst_step + x * DSTCN * sizeof(T)) = dst;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace color
-{
     template <typename T, int SRCCN, int DSTCN>
     void RGB2HLS_caller(const DevMem2D& src, const DevMem2D& dst, int bidx, int hrange, cudaStream_t stream)
     {
@@ -1546,11 +1498,11 @@ namespace cv { namespace gpu { namespace color
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            color_krnls::RGB2HLS<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            RGB2HLS<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
         else
-            color_krnls::RGB2HLS<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            RGB2HLS<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1591,11 +1543,11 @@ namespace cv { namespace gpu { namespace color
         grid.y = divUp(src.rows, threads.y);
 
         if (hrange == 180)
-            color_krnls::HLS2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            HLS2RGB<SRCCN, DSTCN, 180, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
         else
-            color_krnls::HLS2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.ptr, src.step, 
-                dst.ptr, dst.step, src.rows, src.cols, bidx);
+            HLS2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
+                dst.data, dst.step, src.rows, src.cols, bidx);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1613,7 +1565,7 @@ namespace cv { namespace gpu { namespace color
         static const int sector_data[][3]=
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cHlsSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cHlsSectorData, sector_data, sizeof(sector_data)) );
 
         HLS2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }
@@ -1630,7 +1582,7 @@ namespace cv { namespace gpu { namespace color
         static const int sector_data[][3]=
             {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
 
-        cudaSafeCall( cudaMemcpyToSymbol(color_krnls::cHlsSectorData, sector_data, sizeof(sector_data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cHlsSectorData, sector_data, sizeof(sector_data)) );
                 
         HLS2RGB_callers[srccn-3][dstcn-3](src, dst, bidx, hrange, stream);
     }

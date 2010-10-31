@@ -50,56 +50,79 @@ namespace cv
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template<typename T> struct PtrStep_
-        {
-            T* ptr;
-            size_t step;
-
-            typedef T elem_type;
-            enum { elem_size = sizeof(elem_type) };
-
 #if defined(__CUDACC__) 
-            __host__ __device__ 
+    #define __CV_GPU_HOST_DEVICE__ __host__ __device__ 
+#else
+    #define __CV_GPU_HOST_DEVICE__
 #endif
-            size_t elemSize() const { return elem_size; }            
-        };
         
         template <typename T> struct DevMem2D_
         {            
             int cols;
             int rows;
-            T* ptr;
+            T* data;
             size_t step;
-            size_t elem_step;
-
-            /*__host__*/
-            DevMem2D_() : cols(0), rows(0), ptr(0), step(0), elem_step(0) {}
-
-            /*__host__*/
-            DevMem2D_(int rows_, int cols_, T *ptr_, size_t step_)
-                : cols(cols_), rows(rows_), ptr(ptr_), step(step_), elem_step(step_ / sizeof(T)) {}
             
-            template <typename U>
-            /*__host__*/
+            DevMem2D_() : cols(0), rows(0), data(0), step(0) {}
+            
+            DevMem2D_(int rows_, int cols_, T *data_, size_t step_)
+                : cols(cols_), rows(rows_), data(data_), step(step_) {}
+            
+            template <typename U>            
             explicit DevMem2D_(const DevMem2D_<U>& d)
-                : cols(d.cols), rows(d.rows), ptr((T*)d.ptr), step(d.step), elem_step(d.step / sizeof(T)) {}
+                : cols(d.cols), rows(d.rows), data((T*)d.data), step(d.step) {}
+            
+            typedef T elem_type;
+            enum { elem_size = sizeof(elem_type) };
 
-            template <typename U>
-            /*__host__*/
-            operator PtrStep_<U>() const { PtrStep_<U> dt; dt.ptr = ptr; dt.step = step; return dt; }
+            __CV_GPU_HOST_DEVICE__ size_t elemSize() const { return elem_size; }
+            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step ); }
+            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step ); }            
+        };
+ 
+        template<typename T> struct PtrStep_
+        {
+            T* data;
+            size_t step;
 
-            typedef typename PtrStep_<T>::elem_type elem_type;
-            enum { elem_size = PtrStep_<T>::elem_size };
-#if defined(__CUDACC__) 
-            __host__ __device__ 
-#endif
-            size_t elemSize() const { return elem_size; }
+            PtrStep_() : data(0), step(0) {}            
+            PtrStep_(const DevMem2D_<T>& mem) : data(mem.data), step(mem.step) {}
+
+            typedef T elem_type;
+            enum { elem_size = sizeof(elem_type) };
+
+            __CV_GPU_HOST_DEVICE__ size_t elemSize() const { return elem_size; }
+            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step); }
+            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step); }
+        };
+       
+        template<typename T> struct PtrElemStep_ : public PtrStep_<T>
+        {                   
+            PtrElemStep_(const DevMem2D_<T>& mem) : PtrStep_<T>(mem) 
+            {
+                step /= elem_size;             
+            }
+        private:            
+            template <bool> struct StaticCheck;
+            template <> struct StaticCheck<true>{};            
+
+            StaticCheck<256 % sizeof(T) == 0>  ElemStepTypeCheck;
         };
 
         typedef DevMem2D_<unsigned char> DevMem2D;
         typedef DevMem2D_<float> DevMem2Df;
         typedef DevMem2D_<int> DevMem2Di;
-    }
+
+        typedef PtrStep_<unsigned char> PtrStep;
+        typedef PtrStep_<float> PtrStepf;
+        typedef PtrStep_<int> PtrStepi;
+
+        typedef PtrElemStep_<unsigned char> PtrElemStep;
+        typedef PtrElemStep_<float> PtrElemStepf;
+        typedef PtrElemStep_<int> PtrElemStepi;
+
+#undef __CV_GPU_HOST_DEVICE__
+    }    
 }
 
 #endif /* __OPENCV_GPU_DEVMEM2D_HPP__ */

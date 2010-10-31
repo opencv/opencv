@@ -54,9 +54,9 @@ namespace cv
         typedef unsigned char uchar;
         typedef signed char schar;
         typedef unsigned short ushort;
-        typedef unsigned int uint;
+        typedef unsigned int uint;        
 
-        static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
+        static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
 
         template<class T> 
         static inline void uploadConstant(const char* name, const T& value) { cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); }

@@ -54,8 +54,9 @@ using namespace cv::gpu;
 #define SHRT_MAX 32767
 #endif
 
-namespace csbp_krnls
+namespace cv { namespace gpu { namespace csbp
 {
+
     template <typename T> struct TypeLimits;
     template <> struct TypeLimits<short>
     {
@@ -65,14 +66,11 @@ namespace csbp_krnls
     {
         static __device__ float max() {return FLT_MAX;}
     };
-}
 
 ///////////////////////////////////////////////////////////////
 /////////////////////// load constants ////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace csbp_krnls
-{
     __constant__ int cndisp;
 
     __constant__ float cmax_data_term;
@@ -91,36 +89,30 @@ namespace csbp_krnls
     __constant__ uchar* cleft;
     __constant__ uchar* cright;
     __constant__ uchar* ctemp;
-}
 
-namespace cv { namespace gpu { namespace csbp
-{
+
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
                         const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cndisp, &ndisp, sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
 
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmax_data_term,    &max_data_term,    sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdata_weight,      &data_weight,      sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmax_disc_term,    &max_disc_term,    sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisc_single_jump, &disc_single_jump, sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
 
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cth, &min_disp_th, sizeof(int)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cth, &min_disp_th, sizeof(int)) );
 
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cimg_step, &left.step, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cimg_step, &left.step, sizeof(size_t)) );
 
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cleft,  &left.ptr,  sizeof(left.ptr)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cright, &right.ptr, sizeof(right.ptr)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::ctemp, &temp.ptr, sizeof(temp.ptr)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cleft,  &left.data,  sizeof(left.data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cright, &right.data, sizeof(right.data)) );
+        cudaSafeCall( cudaMemcpyToSymbol(ctemp, &temp.data, sizeof(temp.data)) );
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 /////////////////////// init data cost ////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace csbp_krnls
-{
     template <int channels>
     struct DataCostPerPixel
     {
@@ -334,10 +326,8 @@ namespace csbp_krnls
                 data_cost[cdisp_step1 * d] = saturate_cast<T>(dline[0]);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace csbp
-{
+
     template <typename T>
     void init_data_cost_caller_(int /*rows*/, int /*cols*/, int h, int w, int level, int /*ndisp*/, int channels, cudaStream_t stream)
     {
@@ -349,8 +339,8 @@ namespace cv { namespace gpu { namespace csbp
 
         switch (channels)
         {
-        case 1: csbp_krnls::init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
-        case 3: csbp_krnls::init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
+        case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
+        case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
@@ -367,8 +357,8 @@ namespace cv { namespace gpu { namespace csbp
 
         switch (channels)
         {
-        case 1: csbp_krnls::init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
-        case 3: csbp_krnls::init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
+        case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
+        case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
@@ -388,8 +378,8 @@ namespace cv { namespace gpu { namespace csbp
         };
 
         size_t disp_step = msg_step * h;
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step1, &disp_step, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step1,  &msg_step,  sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
 
         init_data_cost_callers[level](rows, cols, h, w, level, ndisp, channels, stream);
         if (stream == 0)
@@ -402,9 +392,9 @@ namespace cv { namespace gpu { namespace csbp
         grid.y = divUp(h, threads.y);
 
         if (use_local_init_data_cost == true)
-            csbp_krnls::get_first_k_initial_local<<<grid, threads, 0, stream>>> (data_cost_selected, disp_selected_pyr, h, w, nr_plane);
+            get_first_k_initial_local<<<grid, threads, 0, stream>>> (data_cost_selected, disp_selected_pyr, h, w, nr_plane);
         else
-            csbp_krnls::get_first_k_initial_global<<<grid, threads, 0, stream>>>(data_cost_selected, disp_selected_pyr, h, w, nr_plane);
+            get_first_k_initial_global<<<grid, threads, 0, stream>>>(data_cost_selected, disp_selected_pyr, h, w, nr_plane);
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -421,14 +411,10 @@ namespace cv { namespace gpu { namespace csbp
           init_data_cost_tmpl(rows, cols, disp_selected_pyr, data_cost_selected, msg_step, h, w, level, nr_plane, ndisp, channels, use_local_init_data_cost, stream);
       }
 
-}}}
-
 ///////////////////////////////////////////////////////////////
 ////////////////////// compute data cost //////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace csbp_krnls
-{
     template <typename T, int channels>
     __global__ void compute_data_cost(const T* selected_disp_pyr, T* data_cost_, int h, int w, int level, int nr_plane)
     {
@@ -536,10 +522,7 @@ namespace csbp_krnls
                 data_cost[cdisp_step1 * d] = saturate_cast<T>(dline[0]);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace csbp
-{
     template <typename T>
     void compute_data_cost_caller_(const T* disp_selected_pyr, T* data_cost, int /*rows*/, int /*cols*/,
                                   int h, int w, int level, int nr_plane, int channels, cudaStream_t stream)
@@ -552,8 +535,8 @@ namespace cv { namespace gpu { namespace csbp
 
         switch(channels)
         {
-        case 1: csbp_krnls::compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
-        case 3: csbp_krnls::compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
+        case 1: compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
+        case 3: compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
@@ -571,12 +554,11 @@ namespace cv { namespace gpu { namespace csbp
 
         switch (channels)
         {
-        case 1: csbp_krnls::compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
-        case 3: csbp_krnls::compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
+        case 1: compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
+        case 3: compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
-
 
     template<class T>
     void compute_data_cost_tmpl(const T* disp_selected_pyr, T* data_cost, size_t msg_step1, size_t msg_step2,
@@ -594,10 +576,10 @@ namespace cv { namespace gpu { namespace csbp
 
         size_t disp_step1 = msg_step1 * h;
         size_t disp_step2 = msg_step2 * h2;
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step1, &disp_step1, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step2, &disp_step2, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step1,  &msg_step1,  sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step2,  &msg_step2,  sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step1,  sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step2,  &msg_step2,  sizeof(size_t)) );
 
         callers[level](disp_selected_pyr, data_cost, rows, cols, h, w, level, nr_plane, channels, stream);
 
@@ -616,15 +598,12 @@ namespace cv { namespace gpu { namespace csbp
          compute_data_cost_tmpl(disp_selected_pyr, data_cost, msg_step1, msg_step2, rows, cols, h, w, h2, level, nr_plane, channels, stream);
      }
 
-}}}
-
 ///////////////////////////////////////////////////////////////
 //////////////////////// init message /////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace csbp_krnls
-{
-    template <typename T>
+ 
+     template <typename T>
     __device__ void get_first_k_element_increase(T* u_new, T* d_new, T* l_new, T* r_new,
                                                  const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
                                                  T* data_cost_selected, T* disparity_selected_new, T* data_cost_new,
@@ -705,10 +684,8 @@ namespace csbp_krnls
                                          data_cost, disparity_selected_cur, nr_plane, nr_plane2);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace csbp
-{
+
     template<class T>
     void init_message_tmpl(T* u_new, T* d_new, T* l_new, T* r_new,
                       const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
@@ -719,10 +696,10 @@ namespace cv { namespace gpu { namespace csbp
 
         size_t disp_step1 = msg_step1 * h;
         size_t disp_step2 = msg_step2 * h2;
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step1, &disp_step1, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step2, &disp_step2, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step1,   &msg_step1, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step2,   &msg_step2, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,   &msg_step1, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step2,   &msg_step2, sizeof(size_t)) );
 
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -730,7 +707,7 @@ namespace cv { namespace gpu { namespace csbp
         grid.x = divUp(w, threads.x);
         grid.y = divUp(h, threads.y);
 
-        csbp_krnls::init_message<<<grid, threads, 0, stream>>>(u_new, d_new, l_new, r_new,
+        init_message<<<grid, threads, 0, stream>>>(u_new, d_new, l_new, r_new,
                                                          u_cur, d_cur, l_cur, r_cur,
                                                          selected_disp_pyr_new, selected_disp_pyr_cur,
                                                          data_cost_selected, data_cost,
@@ -761,14 +738,11 @@ namespace cv { namespace gpu { namespace csbp
                       selected_disp_pyr_new, selected_disp_pyr_cur, data_cost_selected, data_cost, msg_step1, msg_step2,
                       h, w, nr_plane, h2, w2, nr_plane2, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace csbp_krnls
-{
     template <typename T>
     __device__ void message_per_pixel(const T* data, T* msg_dst, const T* msg1, const T* msg2, const T* msg3,
                                       const T* dst_disp, const T* src_disp, int nr_plane, T* temp)
@@ -829,17 +803,15 @@ namespace csbp_krnls
             message_per_pixel(data, r, u + cmsg_step1, d - cmsg_step1, r - 1, disp, disp + 1, nr_plane, temp);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace csbp
-{
+
     template<class T>
     void calc_all_iterations_tmpl(T* u, T* d, T* l, T* r, const T* data_cost_selected,
         const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream)
     {
         size_t disp_step = msg_step * h;
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step1, &disp_step, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step1,  &msg_step,  sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
 
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -849,7 +821,7 @@ namespace cv { namespace gpu { namespace csbp
 
         for(int t = 0; t < iters; ++t)
         {
-            csbp_krnls::compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
+            compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
@@ -868,14 +840,12 @@ namespace cv { namespace gpu { namespace csbp
         calc_all_iterations_tmpl(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, msg_step, h, w, nr_plane, iters, stream);
     }
 
-}}}
 
 ///////////////////////////////////////////////////////////////
 /////////////////////////// output ////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace csbp_krnls
-{
+
     template <typename T>
     __global__ void compute_disp(const T* u_, const T* d_, const T* l_, const T* r_,
                                  const T* data_cost_selected, const T* disp_selected_pyr,
@@ -910,17 +880,15 @@ namespace csbp_krnls
             disp[res_step * y + x] = best;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace csbp
-{
+
     template<class T>
     void compute_disp_tmpl(const T* u, const T* d, const T* l, const T* r, const T* data_cost_selected, const T* disp_selected, size_t msg_step,
         const DevMem2D_<short>& disp, int nr_plane, cudaStream_t stream)
     {
         size_t disp_step = disp.rows * msg_step;
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cdisp_step1, &disp_step, sizeof(size_t)) );
-        cudaSafeCall( cudaMemcpyToSymbol(csbp_krnls::cmsg_step1,  &msg_step,  sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
 
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -928,8 +896,8 @@ namespace cv { namespace gpu { namespace csbp
         grid.x = divUp(disp.cols, threads.x);
         grid.y = divUp(disp.rows, threads.y);
 
-        csbp_krnls::compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected,
-                                                         disp.ptr, disp.step / disp.elemSize(), disp.cols, disp.rows, nr_plane);
+        compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected,
+                                                         disp.data, disp.step / disp.elemSize(), disp.cols, disp.rows, nr_plane);
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }

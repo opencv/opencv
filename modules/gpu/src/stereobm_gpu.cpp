@@ -61,9 +61,9 @@ namespace cv { namespace gpu
     namespace bm
     {
         //extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
-        extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, const cudaStream_t & stream);
-        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap /*= 31*/, const cudaStream_t & stream);
-        extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, const cudaStream_t & stream);
+        extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, cudaStream_t & stream);
+        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D output, int prefilterCap /*= 31*/, cudaStream_t & stream);
+        extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, cudaStream_t & stream);
     }
 }}
 
@@ -98,7 +98,7 @@ bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable()
     return false;
 }
 
-static void stereo_bm_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  riBuf,  int preset, int ndisp, int winSize, float avergeTexThreshold, const GpuMat& left, const GpuMat& right, GpuMat& disparity, const cudaStream_t & stream)
+static void stereo_bm_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  riBuf,  int preset, int ndisp, int winSize, float avergeTexThreshold, const GpuMat& left, const GpuMat& right, GpuMat& disparity, cudaStream_t stream)
 {
     CV_DbgAssert(left.rows == right.rows && left.cols == right.cols);
     CV_DbgAssert(left.type() == CV_8UC1);

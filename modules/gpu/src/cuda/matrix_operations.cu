@@ -40,16 +40,11 @@
 //
 //M*/
 
-#include <stddef.h>
-#include <stdio.h>
 #include "cuda_shared.hpp"
-#include "cuda_runtime.h"
 #include "saturate_cast.hpp"
 
-using namespace cv::gpu;
+namespace cv { namespace gpu { namespace matrix_operations {
 
-namespace matop_krnls
-{
     template <typename T> struct shift_and_sizeof;
     template <> struct shift_and_sizeof<char> { enum { shift = 0 }; };
     template <> struct shift_and_sizeof<unsigned char> { enum { shift = 0 }; };
@@ -115,14 +110,11 @@ namespace matop_krnls
         typedef int2 read_type;
         typedef short2 write_type;
     };
-}
 
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-namespace matop_krnls
-{
     template<typename T>
     __global__ void copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, int step_mat, int step_mask, int channels)
     {
@@ -136,10 +128,6 @@ namespace matop_krnls
                 mat_dst[idx] = mat_src[idx];
             }
     }
-}
-
-namespace cv { namespace gpu { namespace matrix_operations
-{
     typedef void (*CopyToFunc)(const DevMem2D& mat_src, const DevMem2D& mat_dst, const DevMem2D& mask, int channels, const cudaStream_t & stream);
 
     template<typename T>
@@ -147,17 +135,12 @@ namespace cv { namespace gpu { namespace matrix_operations
     {
         dim3 threadsPerBlock(16,16, 1);
         dim3 numBlocks ( divUp(mat_src.cols * channels , threadsPerBlock.x) , divUp(mat_src.rows , threadsPerBlock.y), 1);
+
+        copy_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>
+                ((T*)mat_src.data, (T*)mat_dst.data, (unsigned char*)mask.data, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
+
         if (stream == 0)
-        {
-            ::matop_krnls::copy_to_with_mask<T><<<numBlocks,threadsPerBlock>>>
-                ((T*)mat_src.ptr, (T*)mat_dst.ptr, (unsigned char*)mask.ptr, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
-            cudaSafeCall ( cudaThreadSynchronize() );
-        }
-        else
-        {
-            ::matop_krnls::copy_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>
-                ((T*)mat_src.ptr, (T*)mat_dst.ptr, (unsigned char*)mask.ptr, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
-        }
+            cudaSafeCall ( cudaThreadSynchronize() );        
     }
 
     void copy_to_with_mask(const DevMem2D& mat_src, DevMem2D mat_dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream)
@@ -180,14 +163,11 @@ namespace cv { namespace gpu { namespace matrix_operations
 
         func(mat_src, mat_dst, mask, channels, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// SetTo //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-namespace matop_krnls
-{
     __constant__ double scalar_d[4]; 
 
     template<typename T>
@@ -216,10 +196,6 @@ namespace matop_krnls
                 mat[idx] = scalar_d[ x % channels ];
             }
     }
-}
-
-namespace cv { namespace gpu {  namespace matrix_operations
-{
     typedef void (*SetToFunc_with_mask)(const DevMem2D& mat, const DevMem2D& mask, int channels, const cudaStream_t & stream);
     typedef void (*SetToFunc_without_mask)(const DevMem2D& mat, int channels, const cudaStream_t & stream);
 
@@ -229,16 +205,9 @@ namespace cv { namespace gpu {  namespace matrix_operations
         dim3 threadsPerBlock(32, 8, 1);
         dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
 
+        set_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.data, (unsigned char *)mask.data, mat.cols, mat.rows, mat.step, channels, mask.step);
         if (stream == 0)
-        {
-            ::matop_krnls::set_to_with_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, channels, mask.step);
             cudaSafeCall ( cudaThreadSynchronize() );
-        }
-        else
-        {
-            ::matop_krnls::set_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.ptr, (unsigned char *)mask.ptr, mat.cols, mat.rows, mat.step, channels, mask.step);
-        }
-
     }
 
     template <typename T>
@@ -247,20 +216,15 @@ namespace cv { namespace gpu {  namespace matrix_operations
         dim3 threadsPerBlock(32, 8, 1);
         dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
 
+        set_to_without_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.data, mat.cols, mat.rows, mat.step, channels);
+
         if (stream == 0)
-        {
-            matop_krnls::set_to_without_mask<T><<<numBlocks,threadsPerBlock>>>((T*)mat.ptr, mat.cols, mat.rows, mat.step, channels);
             cudaSafeCall ( cudaThreadSynchronize() );
-        }
-        else
-        {
-            matop_krnls::set_to_without_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.ptr, mat.cols, mat.rows, mat.step, channels);
-        }
     }
 
     void set_to_without_mask(DevMem2D mat, int depth, const double *scalar, int channels, const cudaStream_t & stream)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(matop_krnls::scalar_d, scalar, sizeof(double) * 4));
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_d, scalar, sizeof(double) * 4));
 
         static SetToFunc_without_mask tab[8] =
         {
@@ -284,7 +248,7 @@ namespace cv { namespace gpu {  namespace matrix_operations
 
     void set_to_with_mask(DevMem2D mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(matop_krnls::scalar_d, scalar, sizeof(double) * 4));
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_d, scalar, sizeof(double) * 4));
 
         static SetToFunc_with_mask tab[8] =
         {
@@ -305,14 +269,11 @@ namespace cv { namespace gpu {  namespace matrix_operations
 
         func(mat, mask, channels, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-namespace matop_krnls
-{
     template <typename T, typename DT>
     __global__ static void convert_to(uchar* srcmat, size_t src_step, uchar* dstmat, size_t dst_step, size_t width, size_t height, double alpha, double beta)
     {
@@ -348,29 +309,20 @@ namespace matop_krnls
             }
         }
     }    
-}
 
-namespace cv { namespace gpu { namespace matrix_operations
-{
     typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream);
 
     template<typename T, typename DT>
     void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream)
     {
-        const int shift = ::matop_krnls::ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
+        const int shift = ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
 
         dim3 block(32, 8);
         dim3 grid(divUp(width, block.x * shift), divUp(height, block.y));
 
+        convert_to<T, DT><<<grid, block, 0, stream>>>(src.data, src.step, dst.data, dst.step, width, height, alpha, beta);
         if (stream == 0)
-        {
-            matop_krnls::convert_to<T, DT><<<grid, block>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
             cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            matop_krnls::convert_to<T, DT><<<grid, block, 0, stream>>>(src.ptr, src.step, dst.ptr, dst.step, width, height, alpha, beta);
-        }
     }
 
     void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream)

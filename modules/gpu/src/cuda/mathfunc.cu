@@ -41,9 +41,7 @@
 //M*/
 
 #include "cuda_shared.hpp"
-#include "saturate_cast.hpp"
 #include "transform.hpp"
-#include "vecmath.hpp"
 
 using namespace cv::gpu;
 
@@ -54,7 +52,7 @@ using namespace cv::gpu;
 //////////////////////////////////////////////////////////////////////////////////////
 // Cart <-> Polar
 
-namespace mathfunc_krnls 
+namespace cv { namespace gpu { namespace mathfunc
 {
     struct Nothing
     {
@@ -133,10 +131,7 @@ namespace mathfunc_krnls
             yptr[y * y_step + x] = mag_data * sin_a;
         }
     }
-}
 
-namespace cv { namespace gpu { namespace mathfunc 
-{
     template <typename Mag, typename Angle>
     void cartToPolar_caller(const DevMem2Df& x, const DevMem2Df& y, const DevMem2Df& mag, const DevMem2Df& angle, bool angleInDegrees, cudaStream_t stream)
     {
@@ -148,9 +143,9 @@ namespace cv { namespace gpu { namespace mathfunc
         
         const float scale = angleInDegrees ? (float)(180.0f / CV_PI) : 1.f;
 
-        mathfunc_krnls::cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
-            x.ptr, x.elem_step, y.ptr, y.elem_step, 
-            mag.ptr, mag.elem_step, angle.ptr, angle.elem_step, scale, x.cols, x.rows);
+        cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
+            x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), 
+            mag.data, mag.step/mag.elemSize(), angle.data, angle.step/angle.elemSize(), scale, x.cols, x.rows);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -163,27 +158,27 @@ namespace cv { namespace gpu { namespace mathfunc
         {
             {
                 {
-                    cartToPolar_caller<mathfunc_krnls::Magnitude, mathfunc_krnls::Atan2>,
-                    cartToPolar_caller<mathfunc_krnls::Magnitude, mathfunc_krnls::Nothing>
+                    cartToPolar_caller<Magnitude, Atan2>,
+                    cartToPolar_caller<Magnitude, Nothing>
                 },
                 {
-                    cartToPolar_caller<mathfunc_krnls::MagnitudeSqr, mathfunc_krnls::Atan2>,
-                    cartToPolar_caller<mathfunc_krnls::MagnitudeSqr, mathfunc_krnls::Nothing>,
+                    cartToPolar_caller<MagnitudeSqr, Atan2>,
+                    cartToPolar_caller<MagnitudeSqr, Nothing>,
                 }
             },
             {
                 {
-                    cartToPolar_caller<mathfunc_krnls::Nothing, mathfunc_krnls::Atan2>,
-                    cartToPolar_caller<mathfunc_krnls::Nothing, mathfunc_krnls::Nothing>
+                    cartToPolar_caller<Nothing, Atan2>,
+                    cartToPolar_caller<Nothing, Nothing>
                 },
                 {
-                    cartToPolar_caller<mathfunc_krnls::Nothing, mathfunc_krnls::Atan2>,
-                    cartToPolar_caller<mathfunc_krnls::Nothing, mathfunc_krnls::Nothing>,
+                    cartToPolar_caller<Nothing, Atan2>,
+                    cartToPolar_caller<Nothing, Nothing>,
                 }
             }
         };
 
-        callers[mag.ptr == 0][magSqr][angle.ptr == 0](x, y, mag, angle, angleInDegrees, stream);
+        callers[mag.data == 0][magSqr][angle.data == 0](x, y, mag, angle, angleInDegrees, stream);
     }
 
     template <typename Mag>
@@ -197,8 +192,8 @@ namespace cv { namespace gpu { namespace mathfunc
         
         const float scale = angleInDegrees ? (float)(CV_PI / 180.0f) : 1.0f;
 
-        mathfunc_krnls::polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.ptr, mag.elem_step, 
-            angle.ptr, angle.elem_step, scale, x.ptr, x.elem_step, y.ptr, y.elem_step, mag.cols, mag.rows);
+        polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(), 
+            angle.data, angle.step/angle.elemSize(), scale, x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), mag.cols, mag.rows);
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -209,19 +204,16 @@ namespace cv { namespace gpu { namespace mathfunc
         typedef void (*caller_t)(const DevMem2Df& mag, const DevMem2Df& angle, const DevMem2Df& x, const DevMem2Df& y, bool angleInDegrees, cudaStream_t stream);
         static const caller_t callers[2] = 
         {
-            polarToCart_caller<mathfunc_krnls::NonEmptyMag>,
-            polarToCart_caller<mathfunc_krnls::EmptyMag>
+            polarToCart_caller<NonEmptyMag>,
+            polarToCart_caller<EmptyMag>
         };
 
-        callers[mag.ptr == 0](mag, angle, x, y, angleInDegrees, stream);
+        callers[mag.data == 0](mag, angle, x, y, angleInDegrees, stream);
     }
-}}}
 
 //////////////////////////////////////////////////////////////////////////////////////
 // Compare
 
-namespace mathfunc_krnls 
-{
     template <typename T1, typename T2>
     struct NotEqual
     {
@@ -230,14 +222,11 @@ namespace mathfunc_krnls
             return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
         }
     };
-}
 
-namespace cv { namespace gpu { namespace mathfunc 
-{
     template <typename T1, typename T2>
     inline void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
     {
-        mathfunc_krnls::NotEqual<T1, T2> op;
+        NotEqual<T1, T2> op;
         transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), dst, op, 0);
     }
 

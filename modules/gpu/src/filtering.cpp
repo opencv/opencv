@@ -577,7 +577,10 @@ void cv::gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& ke
 
 namespace cv { namespace gpu { namespace filters
 {
-    void linearRowFilter_gpu_8u_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+    template <int CN, typename T, typename D>
+    void linearRowFilter_gpu(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
+
+    //void linearRowFilter_gpu_8u_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
     void linearRowFilter_gpu_8u_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
     void linearRowFilter_gpu_8s_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
     void linearRowFilter_gpu_8s_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor);
@@ -653,7 +656,8 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
     static const gpuFilter1D_t gpuFilter1D_callers[6][6] =
     {
-        {linearRowFilter_gpu_8u_8u_c4,linearRowFilter_gpu_8u_8s_c4,0,0,0,0},
+        {linearRowFilter_gpu<4, uchar4, uchar4>/*linearRowFilter_gpu_8u_8u_c4*/,linearRowFilter_gpu_8u_8s_c4,0,0,0,0},
+
         {linearRowFilter_gpu_8s_8u_c4,linearRowFilter_gpu_8s_8s_c4,0,0,0,0},
         {0,0,linearRowFilter_gpu_16u_16u_c2,linearRowFilter_gpu_16u_16s_c2,0,0},
         {0,0,linearRowFilter_gpu_16s_16u_c2,linearRowFilter_gpu_16s_16s_c2,0,0},

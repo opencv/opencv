@@ -230,9 +230,9 @@ namespace cv { namespace gpu { namespace split_merge {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
         mergeC2_<T><<<gridDim, blockDim, 0, stream>>>(
-                src[0].ptr, src[0].step,
-                src[1].ptr, src[1].step,
-                dst.rows, dst.cols, dst.ptr, dst.step);
+                src[0].data, src[0].step,
+                src[1].data, src[1].step,
+                dst.rows, dst.cols, dst.data, dst.step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -244,10 +244,10 @@ namespace cv { namespace gpu { namespace split_merge {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
         mergeC3_<T><<<gridDim, blockDim, 0, stream>>>(
-                src[0].ptr, src[0].step,
-                src[1].ptr, src[1].step,
-                src[2].ptr, src[2].step,
-                dst.rows, dst.cols, dst.ptr, dst.step);
+                src[0].data, src[0].step,
+                src[1].data, src[1].step,
+                src[2].data, src[2].step,
+                dst.rows, dst.cols, dst.data, dst.step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -259,11 +259,11 @@ namespace cv { namespace gpu { namespace split_merge {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
         mergeC4_<T><<<gridDim, blockDim, 0, stream>>>(
-                src[0].ptr, src[0].step,
-                src[1].ptr, src[1].step,
-                src[2].ptr, src[2].step,
-                src[3].ptr, src[3].step,
-                dst.rows, dst.cols, dst.ptr, dst.step);
+                src[0].data, src[0].step,
+                src[1].data, src[1].step,
+                src[2].data, src[2].step,
+                src[3].data, src[3].step,
+                dst.rows, dst.cols, dst.data, dst.step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -433,9 +433,9 @@ namespace cv { namespace gpu { namespace split_merge {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
         splitC2_<T><<<gridDim, blockDim, 0, stream>>>(
-                src.ptr, src.step, src.rows, src.cols,
-                dst[0].ptr, dst[0].step,
-                dst[1].ptr, dst[1].step);
+                src.data, src.step, src.rows, src.cols,
+                dst[0].data, dst[0].step,
+                dst[1].data, dst[1].step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -447,10 +447,10 @@ namespace cv { namespace gpu { namespace split_merge {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
         splitC3_<T><<<gridDim, blockDim, 0, stream>>>(
-                src.ptr, src.step, src.rows, src.cols,
-                dst[0].ptr, dst[0].step,
-                dst[1].ptr, dst[1].step,
-                dst[2].ptr, dst[2].step);
+                src.data, src.step, src.rows, src.cols,
+                dst[0].data, dst[0].step,
+                dst[1].data, dst[1].step,
+                dst[2].data, dst[2].step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -462,11 +462,11 @@ namespace cv { namespace gpu { namespace split_merge {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
         splitC4_<T><<<gridDim, blockDim, 0, stream>>>(
-                 src.ptr, src.step, src.rows, src.cols,
-                 dst[0].ptr, dst[0].step,
-                 dst[1].ptr, dst[1].step,
-                 dst[2].ptr, dst[2].step,
-                 dst[3].ptr, dst[3].step);
+                 src.data, src.step, src.rows, src.cols,
+                 dst[0].data, dst[0].step,
+                 dst[1].data, dst[1].step,
+                 dst[2].data, dst[2].step,
+                 dst[3].data, dst[3].step);
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }

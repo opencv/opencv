@@ -384,7 +384,14 @@ namespace cv
 
         template <typename VecD, typename VecS> static __device__ VecD saturate_cast_caller(const VecS& v)
         {
-            SatCast<VecTraits<VecD>::cn, VecD> cast;
+            SatCast<
+                
+                VecTraits<VecD>::cn, 
+                
+                VecD
+            > 
+            
+            cast;
             return cast(v);
         }
 

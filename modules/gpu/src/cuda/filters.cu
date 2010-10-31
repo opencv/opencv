@@ -128,8 +128,8 @@ namespace cv { namespace gpu { namespace filters
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
         dim3 blocks(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
 
-        filter_krnls::linearRowFilter<BLOCK_DIM_X, BLOCK_DIM_Y, KERNEL_SIZE, CN><<<blocks, threads>>>(src.ptr, src.elem_step, 
-            dst.ptr, dst.elem_step, anchor, src.cols, src.rows);
+        filter_krnls::linearRowFilter<BLOCK_DIM_X, BLOCK_DIM_Y, KERNEL_SIZE, CN><<<blocks, threads>>>(src.data, src.step/src.elemSize(), 
+            dst.data, dst.step/dst.elemSize(), anchor, src.cols, src.rows);
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -152,10 +152,12 @@ namespace cv { namespace gpu { namespace filters
         callers[ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor);
     }
 
-    void linearRowFilter_gpu_8u_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
+    template void linearRowFilter_gpu<4, uchar4, uchar4>(const DevMem2D&, const DevMem2D&, const float[], int , int);
+
+  /*  void linearRowFilter_gpu_8u_8u_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
     {
         linearRowFilter_gpu<4, uchar4, uchar4>(src, dst, kernel, ksize, anchor);
-    }
+    }*/
     void linearRowFilter_gpu_8u_8s_c4(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor)
     {
         linearRowFilter_gpu<4, uchar4, char4>(src, dst, kernel, ksize, anchor);
@@ -262,8 +264,8 @@ namespace cv { namespace gpu { namespace filters
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
         dim3 blocks(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
 
-        filter_krnls::linearColumnFilter<BLOCK_DIM_X, BLOCK_DIM_Y, KERNEL_SIZE, CN><<<blocks, threads>>>(src.ptr, src.elem_step, 
-            dst.ptr, dst.elem_step, anchor, src.cols, src.rows);
+        filter_krnls::linearColumnFilter<BLOCK_DIM_X, BLOCK_DIM_Y, KERNEL_SIZE, CN><<<blocks, threads>>>(src.data, src.step/src.elemSize(), 
+            dst.data, dst.step/dst.elemSize(), anchor, src.cols, src.rows);
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -357,7 +359,7 @@ namespace cv { namespace gpu { namespace bf
     void load_constants(float* table_color, const DevMem2Df& table_space, int ndisp, int radius, short edge_disc, short max_disc)
     {
         cudaSafeCall( cudaMemcpyToSymbol(bf_krnls::ctable_color, &table_color, sizeof(table_color)) );
-        cudaSafeCall( cudaMemcpyToSymbol(bf_krnls::ctable_space, &table_space.ptr, sizeof(table_space.ptr)) );
+        cudaSafeCall( cudaMemcpyToSymbol(bf_krnls::ctable_space, &table_space.data, sizeof(table_space.data)) );
         size_t table_space_step = table_space.step / sizeof(float);
         cudaSafeCall( cudaMemcpyToSymbol(bf_krnls::ctable_space_step, &table_space_step, sizeof(size_t)) );
         
@@ -491,15 +493,15 @@ namespace cv { namespace gpu { namespace bf
         case 1:
             for (int i = 0; i < iters; ++i)
             {
-                bf_krnls::bilateral_filter<1><<<grid, threads, 0, stream>>>(0, disp.ptr, disp.step/sizeof(T), img.ptr, img.step, disp.rows, disp.cols);
-                bf_krnls::bilateral_filter<1><<<grid, threads, 0, stream>>>(1, disp.ptr, disp.step/sizeof(T), img.ptr, img.step, disp.rows, disp.cols);
+                bf_krnls::bilateral_filter<1><<<grid, threads, 0, stream>>>(0, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
+                bf_krnls::bilateral_filter<1><<<grid, threads, 0, stream>>>(1, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
             }
             break;
         case 3:
             for (int i = 0; i < iters; ++i)
             {
-                bf_krnls::bilateral_filter<3><<<grid, threads, 0, stream>>>(0, disp.ptr, disp.step/sizeof(T), img.ptr, img.step, disp.rows, disp.cols);
-                bf_krnls::bilateral_filter<3><<<grid, threads, 0, stream>>>(1, disp.ptr, disp.step/sizeof(T), img.ptr, img.step, disp.rows, disp.cols);
+                bf_krnls::bilateral_filter<3><<<grid, threads, 0, stream>>>(0, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
+                bf_krnls::bilateral_filter<3><<<grid, threads, 0, stream>>>(1, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
             }
             break;
         default:

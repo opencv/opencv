@@ -43,8 +43,7 @@
 //#include "cuda_shared.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
-static inline int divUp(int a, int b) { return (a % b == 0) ? a/b : a/b + 1; }
-
+static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
 
 
 using namespace cv::gpu;
@@ -55,7 +54,7 @@ using namespace cv::gpu;
 
 #define ROWSperTHREAD 21     // the number of rows a thread will process
 
-namespace stereobm_gpu
+namespace cv { namespace gpu  { namespace bm
 {
 
 #define BLOCK_W 128          // the thread block width (464)
@@ -233,7 +232,7 @@ __device__ void InitColSSD(int x_tex, int y_tex, int im_pitch, unsigned char* im
 }
 
 template<int RADIUS>
-__global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t img_step, unsigned char* disp, size_t disp_pitch, int maxdisp)
+__global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t img_step, PtrStep disp, int maxdisp)
 {
     extern __shared__ unsigned int col_ssd_cache[];
     volatile unsigned int *col_ssd = col_ssd_cache + BLOCK_W + threadIdx.x;
@@ -246,7 +245,7 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
     //int Y = blockIdx.y * ROWSperTHREAD + RADIUS;
 
     unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
-    unsigned char* disparImage = disp + X + Y * disp_pitch;
+    unsigned char* disparImage = disp.data + X + Y * disp.step;
  /*   if (X < cwidth)
     {
         unsigned int *minSSDImage_end = minSSDImage + min(ROWSperTHREAD, cheight - Y) * minssd_step;
@@ -305,7 +304,7 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
                 uint2 minSSD = MinSSD<RADIUS>(col_ssd_cache + threadIdx.x, col_ssd);
                 if (minSSD.x < minSSDImage[idx])
                 {
-                    disparImage[disp_pitch * row] = (unsigned char)(d + minSSD.y);
+                    disparImage[disp.step * row] = (unsigned char)(d + minSSD.y);
                     minSSDImage[idx] = minSSD.x;
                 }
             }
@@ -313,88 +312,73 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
     } // for d loop
 }
 
-}
 
-
-namespace cv { namespace gpu { namespace bm
+template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, cudaStream_t & stream)
 {
-    template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, const cudaStream_t & stream)
-    {
-        dim3 grid(1,1,1);
-        dim3 threads(BLOCK_W, 1, 1);
+    dim3 grid(1,1,1);
+    dim3 threads(BLOCK_W, 1, 1);
 
-        grid.x = divUp(left.cols - maxdisp - 2 * RADIUS, BLOCK_W);
-        grid.y = divUp(left.rows - 2 * RADIUS, ROWSperTHREAD);
+    grid.x = divUp(left.cols - maxdisp - 2 * RADIUS, BLOCK_W);
+    grid.y = divUp(left.rows - 2 * RADIUS, ROWSperTHREAD);
 
-        //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * RADIUS)
-        size_t smem_size = (BLOCK_W + N_DISPARITIES * (BLOCK_W + 2 * RADIUS)) * sizeof(unsigned int);
+    //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * RADIUS)
+    size_t smem_size = (BLOCK_W + N_DISPARITIES * (BLOCK_W + 2 * RADIUS)) * sizeof(unsigned int);
 
-        if (stream == 0)
-        {
-            stereobm_gpu::stereoKernel<RADIUS><<<grid, threads, smem_size>>>(left.ptr, right.ptr, left.step, disp.ptr, disp.step, maxdisp);
-            cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            stereobm_gpu::stereoKernel<RADIUS><<<grid, threads, smem_size, stream>>>(left.ptr, right.ptr, left.step, disp.ptr, disp.step, maxdisp);
-        }
+    stereoKernel<RADIUS><<<grid, threads, smem_size, stream>>>(left.data, right.data, left.step, disp, maxdisp);
+    if (stream == 0)        
+        cudaSafeCall( cudaThreadSynchronize() );
+};
 
-    };
+typedef void (*kernel_caller_t)(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, cudaStream_t & stream);
 
-    typedef void (*kernel_caller_t)(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, const cudaStream_t & stream);
+const static kernel_caller_t callers[] =
+{
+    0,
+    kernel_caller< 1>, kernel_caller< 2>, kernel_caller< 3>, kernel_caller< 4>, kernel_caller< 5>,
+    kernel_caller< 6>, kernel_caller< 7>, kernel_caller< 8>, kernel_caller< 9>, kernel_caller<10>,
+    kernel_caller<11>, kernel_caller<12>, kernel_caller<13>, kernel_caller<15>, kernel_caller<15>,
+    kernel_caller<16>, kernel_caller<17>, kernel_caller<18>, kernel_caller<19>, kernel_caller<20>,
+    kernel_caller<21>, kernel_caller<22>, kernel_caller<23>, kernel_caller<24>, kernel_caller<25>
 
-    const static kernel_caller_t callers[] =
-    {
-        0,
-        kernel_caller< 1>, kernel_caller< 2>, kernel_caller< 3>, kernel_caller< 4>, kernel_caller< 5>,
-        kernel_caller< 6>, kernel_caller< 7>, kernel_caller< 8>, kernel_caller< 9>, kernel_caller<10>,
-        kernel_caller<11>, kernel_caller<12>, kernel_caller<13>, kernel_caller<15>, kernel_caller<15>,
-        kernel_caller<16>, kernel_caller<17>, kernel_caller<18>, kernel_caller<19>, kernel_caller<20>,
-        kernel_caller<21>, kernel_caller<22>, kernel_caller<23>, kernel_caller<24>, kernel_caller<25>
+    //0,0,0, 0,0,0, 0,0,kernel_caller<9>
+};
+const int calles_num = sizeof(callers)/sizeof(callers[0]);
 
-        //0,0,0, 0,0,0, 0,0,kernel_caller<9>
-    };
-    const int calles_num = sizeof(callers)/sizeof(callers[0]);
+extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t& stream)
+{
+    int winsz2 = winsz >> 1;
 
-    extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, const cudaStream_t & stream)
-    {
-        int winsz2 = winsz >> 1;
+    if (winsz2 == 0 || winsz2 >= calles_num)
+        cv::gpu::error("Unsupported window size", __FILE__, __LINE__);
 
-        if (winsz2 == 0 || winsz2 >= calles_num)
-            cv::gpu::error("Unsupported window size", __FILE__, __LINE__);
+    //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
+    //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );
 
-        //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
-        //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );
+    cudaSafeCall( cudaMemset2D(disp.data, disp.step, 0, disp.cols, disp.rows) );
+    cudaSafeCall( cudaMemset2D(minSSD_buf.data, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp.rows) );
 
-        cudaSafeCall( cudaMemset2D(disp.ptr, disp.step, 0, disp.cols, disp.rows) );
-        cudaSafeCall( cudaMemset2D(minSSD_buf.ptr, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp.rows) );
+    cudaSafeCall( cudaMemcpyToSymbol(  cwidth, &left.cols, sizeof(left.cols) ) );
+    cudaSafeCall( cudaMemcpyToSymbol( cheight, &left.rows, sizeof(left.rows) ) );
+    cudaSafeCall( cudaMemcpyToSymbol( cminSSDImage, &minSSD_buf.data, sizeof(minSSD_buf.data) ) );
 
-        cudaSafeCall( cudaMemcpyToSymbol(  stereobm_gpu::cwidth, &left.cols, sizeof(left.cols) ) );
-        cudaSafeCall( cudaMemcpyToSymbol( stereobm_gpu::cheight, &left.rows, sizeof(left.rows) ) );
-        cudaSafeCall( cudaMemcpyToSymbol( stereobm_gpu::cminSSDImage, &minSSD_buf.ptr, sizeof(minSSD_buf.ptr) ) );
+    size_t minssd_step = minSSD_buf.step/minSSD_buf.elemSize();
+    cudaSafeCall( cudaMemcpyToSymbol( cminSSD_step,  &minssd_step, sizeof(minssd_step) ) );
 
-        size_t minssd_step = minSSD_buf.step/minSSD_buf.elemSize();
-        cudaSafeCall( cudaMemcpyToSymbol( stereobm_gpu::cminSSD_step,  &minssd_step, sizeof(minssd_step) ) );
-
-        callers[winsz2](left, right, disp, maxdisp, stream);
-    }
-}}}
+    callers[winsz2](left, right, disp, maxdisp, stream);
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////// Sobel Prefiler ///////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-namespace stereobm_gpu
-{
-
 texture<unsigned char, 2, cudaReadModeElementType> texForSobel;
 
-extern "C" __global__ void prefilter_kernel(unsigned char *output, size_t step, int width, int height, int prefilterCap)
+extern "C" __global__ void prefilter_kernel(DevMem2D output, int prefilterCap)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-    if (x < width && y < height)
+    if (x < output.cols && y < output.rows)
     {
         int conv = (int)tex2D(texForSobel, x - 1, y - 1) * (-1) + (int)tex2D(texForSobel, x + 1, y - 1) * (1) +
                    (int)tex2D(texForSobel, x - 1, y    ) * (-2) + (int)tex2D(texForSobel, x + 1, y    ) * (2) +
@@ -402,47 +386,34 @@ extern "C" __global__ void prefilter_kernel(unsigned char *output, size_t step, 
 
 
         conv = min(min(max(-prefilterCap, conv), prefilterCap) + prefilterCap, 255);
-        output[y * step + x] = conv & 0xFF;
+        output.ptr(y)[x] = conv & 0xFF;
     }
 }
 
-}
 
-namespace cv { namespace gpu  { namespace bm
+extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap, cudaStream_t & stream)
 {
-    extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap, const cudaStream_t & stream)
-    {
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D( 0, stereobm_gpu::texForSobel, input.ptr, desc, input.cols, input.rows, input.step ) );
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
+    cudaSafeCall( cudaBindTexture2D( 0, texForSobel, input.data, desc, input.cols, input.rows, input.step ) );
 
-        dim3 threads(16, 16, 1);
-        dim3 grid(1, 1, 1);
+    dim3 threads(16, 16, 1);
+    dim3 grid(1, 1, 1);
 
-        grid.x = divUp(input.cols, threads.x);
-        grid.y = divUp(input.rows, threads.y);
+    grid.x = divUp(input.cols, threads.x);
+    grid.y = divUp(input.rows, threads.y);
 
-        if (stream == 0)
-        {
-			stereobm_gpu::prefilter_kernel<<<grid, threads>>>(output.ptr, output.step, output.cols, output.rows, prefilterCap);
-			cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            stereobm_gpu::prefilter_kernel<<<grid, threads, 0, stream>>>(output.ptr, output.step, output.cols, output.rows, prefilterCap);
-        }
+    prefilter_kernel<<<grid, threads, 0, stream>>>(output, prefilterCap);
 
-        cudaSafeCall( cudaUnbindTexture (stereobm_gpu::texForSobel ) );
+    if (stream == 0)   
+		cudaSafeCall( cudaThreadSynchronize() );    
 
-    }
+    cudaSafeCall( cudaUnbindTexture (texForSobel ) );
+}
 
-}}}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// Textureness filtering ////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
-
-namespace stereobm_gpu
-{
 
 texture<unsigned char, 2, cudaReadModeNormalizedFloat> texForTF;
 
@@ -478,7 +449,7 @@ __device__ float CalcSums(float *cols, float *cols_cache, int winsz)
 
 #define RpT (2 * ROWSperTHREAD)  // got experimentally
 
-extern "C" __global__ void textureness_kernel(unsigned char *disp, size_t disp_step, int winsz, float threshold, int width, int height)
+extern "C" __global__ void textureness_kernel(DevMem2D disp, int winsz, float threshold)
 {
     int winsz2 = winsz/2;
     int n_dirty_pixels = (winsz2) * 2;
@@ -489,9 +460,9 @@ extern "C" __global__ void textureness_kernel(unsigned char *disp, size_t disp_s
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int beg_row = blockIdx.y * RpT;
-    int end_row = min(beg_row + RpT, height);
+    int end_row = min(beg_row + RpT, disp.rows);
 
-    if (x < width)
+    if (x < disp.cols)
     {
         int y = beg_row;
 
@@ -512,7 +483,7 @@ extern "C" __global__ void textureness_kernel(unsigned char *disp, size_t disp_s
 
         float sum_win = CalcSums(cols, cols_cache + threadIdx.x, winsz) * 255;
         if (sum_win < threshold)
-            disp[y * disp_step + x] = 0;
+            disp.data[y * disp.step + x] = 0;
 
         __syncthreads();
 
@@ -530,45 +501,37 @@ extern "C" __global__ void textureness_kernel(unsigned char *disp, size_t disp_s
             __syncthreads();
             float sum_win = CalcSums(cols, cols_cache + threadIdx.x, winsz) * 255;
             if (sum_win < threshold)
-                disp[y * disp_step + x] = 0;
+                disp.data[y * disp.step + x] = 0;
 
             __syncthreads();
         }
     }
 }
+
+extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, cudaStream_t & stream)
+{
+    avgTexturenessThreshold *= winsz * winsz;
+
+    texForTF.filterMode     = cudaFilterModeLinear;
+    texForTF.addressMode[0] = cudaAddressModeWrap;
+    texForTF.addressMode[1] = cudaAddressModeWrap;
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
+    cudaSafeCall( cudaBindTexture2D( 0, texForTF, input.data, desc, input.cols, input.rows, input.step ) );
+
+    dim3 threads(128, 1, 1);
+    dim3 grid(1, 1, 1);
+
+    grid.x = divUp(input.cols, threads.x);
+    grid.y = divUp(input.rows, RpT);
+
+    size_t smem_size = (threads.x + threads.x + (winsz/2) * 2 ) * sizeof(float);
+    textureness_kernel<<<grid, threads, smem_size, stream>>>(disp, winsz, avgTexturenessThreshold);
+
+	if (stream == 0)					
+		cudaSafeCall( cudaThreadSynchronize() );		
+    cudaSafeCall( cudaUnbindTexture (texForTF) );
+
 }
 
-namespace cv { namespace gpu  { namespace bm
-{
-    extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, const cudaStream_t & stream)
-    {
-        avgTexturenessThreshold *= winsz * winsz;
-
-        stereobm_gpu::texForTF.filterMode     = cudaFilterModeLinear;
-        stereobm_gpu::texForTF.addressMode[0] = cudaAddressModeWrap;
-        stereobm_gpu::texForTF.addressMode[1] = cudaAddressModeWrap;
-
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D( 0, stereobm_gpu::texForTF, input.ptr, desc, input.cols, input.rows, input.step ) );
-
-        dim3 threads(128, 1, 1);
-        dim3 grid(1, 1, 1);
-
-        grid.x = divUp(input.cols, threads.x);
-        grid.y = divUp(input.rows, RpT);
-
-        size_t smem_size = (threads.x + threads.x + (winsz/2) * 2 ) * sizeof(float);
-
-		if (stream == 0)
-		{
-			stereobm_gpu::textureness_kernel<<<grid, threads, smem_size>>>(disp.ptr, disp.step, winsz, avgTexturenessThreshold, disp.cols, disp.rows);
-			cudaSafeCall( cudaThreadSynchronize() );
-		}
-		else
-		{
-			stereobm_gpu::textureness_kernel<<<grid, threads, smem_size, stream>>>(disp.ptr, disp.step, winsz, avgTexturenessThreshold, disp.cols, disp.rows);		
-		}
-
-        cudaSafeCall( cudaUnbindTexture (stereobm_gpu::texForTF) );
-    }
 }}}

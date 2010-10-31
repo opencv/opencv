@@ -50,36 +50,32 @@ using namespace cv::gpu;
 #define FLT_MAX 3.402823466e+38F
 #endif
 
+namespace cv { namespace gpu { namespace bp {
+
 ///////////////////////////////////////////////////////////////
 /////////////////////// load constants ////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace bp_kernels
-{
     __constant__ int   cndisp;
     __constant__ float cmax_data_term;
     __constant__ float cdata_weight;
     __constant__ float cmax_disc_term;
     __constant__ float cdisc_single_jump;
-};
 
-namespace cv { namespace gpu { namespace bp {
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(bp_kernels::cndisp,            &ndisp,            sizeof(int  )) );
-        cudaSafeCall( cudaMemcpyToSymbol(bp_kernels::cmax_data_term,    &max_data_term,    sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(bp_kernels::cdata_weight,      &data_weight,      sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(bp_kernels::cmax_disc_term,    &max_disc_term,    sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(bp_kernels::cdisc_single_jump, &disc_single_jump, sizeof(float)) );         
+        cudaSafeCall( cudaMemcpyToSymbol(cndisp,            &ndisp,            sizeof(int  )) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );         
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 ////////////////////////// comp data //////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace bp_kernels
-{
+
     template <typename T>
     __global__ void comp_data_gray(const uchar* l, const uchar* r, size_t step, T* data, size_t data_step, int cols, int rows) 
     {
@@ -145,9 +141,7 @@ namespace bp_kernels
             }
         }
     }
-}
 
-namespace cv { namespace gpu { namespace bp {
     typedef void (*CompDataFunc)(const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream);
 
     template<typename T>
@@ -160,9 +154,9 @@ namespace cv { namespace gpu { namespace bp {
         grid.y = divUp(l.rows, threads.y);
         
         if (channels == 1)
-            bp_kernels::comp_data_gray<T><<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, (T*)mdata.ptr, mdata.step/sizeof(T), l.cols, l.rows);
+            comp_data_gray<T><<<grid, threads, 0, stream>>>(l.data, r.data, l.step, (T*)mdata.data, mdata.step/sizeof(T), l.cols, l.rows);
         else
-            bp_kernels::comp_data_bgr<T><<<grid, threads, 0, stream>>>(l.ptr, r.ptr, l.step, (T*)mdata.ptr, mdata.step/sizeof(T), l.cols, l.rows);
+            comp_data_bgr<T><<<grid, threads, 0, stream>>>(l.data, r.data, l.step, (T*)mdata.data, mdata.step/sizeof(T), l.cols, l.rows);
         
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -187,14 +181,11 @@ namespace cv { namespace gpu { namespace bp {
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(l, r, channels, mdata, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 //////////////////////// data step down ///////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace bp_kernels
-{
     template <typename T>
     __global__ void data_step_down(int dst_cols, int dst_rows, int src_rows, const T* src, size_t src_step, T* dst, size_t dst_step)
     {
@@ -217,9 +208,7 @@ namespace bp_kernels
             }
         }
     }
-}
 
-namespace cv { namespace gpu { namespace bp {
     typedef void (*DataStepDownFunc)(int dst_cols, int dst_rows, int src_rows, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream);
 
     template<typename T>
@@ -231,7 +220,7 @@ namespace cv { namespace gpu { namespace bp {
         grid.x = divUp(dst_cols, threads.x);
         grid.y = divUp(dst_rows, threads.y);
 
-        bp_kernels::data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)src.ptr, src.step/sizeof(T), (T*)dst.ptr, dst.step/sizeof(T));
+        data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)src.data, src.step/sizeof(T), (T*)dst.data, dst.step/sizeof(T));
         
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -256,14 +245,11 @@ namespace cv { namespace gpu { namespace bp {
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(dst_cols, dst_rows, src_rows, src, dst, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 /////////////////// level up messages  ////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace bp_kernels
-{
     template <typename T>
     __global__ void level_up_message(int dst_cols, int dst_rows, int src_rows, const T* src, size_t src_step, T* dst, size_t dst_step)
     {
@@ -282,9 +268,7 @@ namespace bp_kernels
                 dstr[d * dst_disp_step] = srcr[d * src_disp_step];
         }
     }
-}
 
-namespace cv { namespace gpu { namespace bp {
     typedef void (*LevelUpMessagesFunc)(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream);
 
     template<typename T>
@@ -298,10 +282,10 @@ namespace cv { namespace gpu { namespace bp {
 
         int src_idx = (dst_idx + 1) & 1;
 
-        bp_kernels::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mus[src_idx].ptr, mus[src_idx].step/sizeof(T), (T*)mus[dst_idx].ptr, mus[dst_idx].step/sizeof(T));
-        bp_kernels::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mds[src_idx].ptr, mds[src_idx].step/sizeof(T), (T*)mds[dst_idx].ptr, mds[dst_idx].step/sizeof(T));
-        bp_kernels::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mls[src_idx].ptr, mls[src_idx].step/sizeof(T), (T*)mls[dst_idx].ptr, mls[dst_idx].step/sizeof(T));
-        bp_kernels::level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mrs[src_idx].ptr, mrs[src_idx].step/sizeof(T), (T*)mrs[dst_idx].ptr, mrs[dst_idx].step/sizeof(T));
+        level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mus[src_idx].data, mus[src_idx].step/sizeof(T), (T*)mus[dst_idx].data, mus[dst_idx].step/sizeof(T));
+        level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mds[src_idx].data, mds[src_idx].step/sizeof(T), (T*)mds[dst_idx].data, mds[dst_idx].step/sizeof(T));
+        level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mls[src_idx].data, mls[src_idx].step/sizeof(T), (T*)mls[dst_idx].data, mls[dst_idx].step/sizeof(T));
+        level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (const T*)mrs[src_idx].data, mrs[src_idx].step/sizeof(T), (T*)mrs[dst_idx].data, mrs[dst_idx].step/sizeof(T));
         
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -326,14 +310,11 @@ namespace cv { namespace gpu { namespace bp {
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(dst_idx, dst_cols, dst_rows, src_rows, mus, mds, mls, mrs, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace bp_kernels
-{
     template <typename T>
     __device__ void calc_min_linear_penalty(T* dst, size_t step)
     {
@@ -427,9 +408,7 @@ namespace bp_kernels
             message(us + msg_step, ds - msg_step, ls + 1, dt, ls, msg_disp_step, data_disp_step);                
         }
     }
-}
 
-namespace cv { namespace gpu { namespace bp {
     typedef void (*CalcAllIterationFunc)(int cols, int rows, int iters, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream);
 
     template<typename T>
@@ -443,7 +422,7 @@ namespace cv { namespace gpu { namespace bp {
 
         for(int t = 0; t < iters; ++t)
         {
-            bp_kernels::one_iteration<T><<<grid, threads, 0, stream>>>(t, (T*)u.ptr, (T*)d.ptr, (T*)l.ptr, (T*)r.ptr, u.step/sizeof(T), (const T*)data.ptr, data.step/sizeof(T), cols, rows);
+            one_iteration<T><<<grid, threads, 0, stream>>>(t, (T*)u.data, (T*)d.data, (T*)l.data, (T*)r.data, u.step/sizeof(T), (const T*)data.data, data.step/sizeof(T), cols, rows);
             
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
@@ -469,14 +448,11 @@ namespace cv { namespace gpu { namespace bp {
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(cols, rows, iters, u, d, l, r, data, stream);
     }
-}}}
 
 ///////////////////////////////////////////////////////////////
 /////////////////////////// output ////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-namespace bp_kernels
-{
     template <typename T>
     __global__ void output(int cols, int rows, const T* u, const T* d, const T* l, const T* r, const T* data, size_t step, short* disp, size_t res_step) 
     {   
@@ -513,9 +489,7 @@ namespace bp_kernels
             disp[res_step * y + x] = saturate_cast<short>(best);
         }
     }
-}
 
-namespace cv { namespace gpu { namespace bp {
     typedef void (*OutputFunc)(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream);
 
     template<typename T>
@@ -527,7 +501,7 @@ namespace cv { namespace gpu { namespace bp {
         grid.x = divUp(disp.cols, threads.x);
         grid.y = divUp(disp.rows, threads.y);
 
-        bp_kernels::output<T><<<grid, threads, 0, stream>>>(disp.cols, disp.rows, (const T*)u.ptr, (const T*)d.ptr, (const T*)l.ptr, (const T*)r.ptr, (const T*)data.ptr, u.step/sizeof(T), (short*)disp.ptr, disp.step/sizeof(short));
+        output<T><<<grid, threads, 0, stream>>>(disp.cols, disp.rows, (const T*)u.data, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, u.step/sizeof(T), (short*)disp.data, disp.step/sizeof(short));
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -552,4 +526,5 @@ namespace cv { namespace gpu { namespace bp {
             cv::gpu::error("Unsupported message type", __FILE__, __LINE__);
         func(u, d, l, r, data, disp, stream);
     }
+
 }}}

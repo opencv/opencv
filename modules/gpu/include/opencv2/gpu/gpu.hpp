@@ -109,6 +109,7 @@ namespace cv
             //! returns lightweight DevMem2D_ structure for passing to nvcc-compiled code.
             // Contains just image size, data ptr and step.
             template <class T> operator DevMem2D_<T>() const;
+            template <class T> operator PtrStep_<T>() const;
 
             //! pefroms blocking upload data to GpuMat. .
             void upload(const cv::Mat& m);

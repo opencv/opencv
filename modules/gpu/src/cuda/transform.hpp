@@ -44,36 +44,32 @@
 #define __OPENCV_GPU_TRANSFORM_HPP__
 
 #include "cuda_shared.hpp"
-#include "saturate_cast.hpp"
-#include "vecmath.hpp"
 
-namespace cv { namespace gpu { namespace algo_krnls
+namespace cv { namespace gpu { namespace device
 {
     template <typename T, typename D, typename UnOp>
-    static __global__ void transform(const T* src, size_t src_step, 
-                                     D* dst, size_t dst_step, int width, int height, UnOp op)
+    static __global__ void transform(const DevMem2D_<T> src, PtrStep_<D> dst, UnOp op)
     {
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < width && y < height)
+        if (x < src.cols && y < src.rows)
         {
-            T src_data = src[y * src_step + x];
-            dst[y * dst_step + x] = op(src_data, x, y);
+            T src_data = src.ptr(y)[x];
+            dst.ptr(y)[x] = op(src_data, x, y);
         }
     }
     template <typename T1, typename T2, typename D, typename BinOp>
-    static __global__ void transform(const T1* src1, size_t src1_step, const T2* src2, size_t src2_step, 
-                                     D* dst, size_t dst_step, int width, int height, BinOp op)
+    static __global__ void transform(const DevMem2D_<T1> src1, const PtrStep_<T2> src2, PtrStep_<D> dst, BinOp op)
     {
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < width && y < height)
+        if (x < src1.cols && y < src1.rows)
         {
-            T1 src1_data = src1[y * src1_step + x];
-            T2 src2_data = src2[y * src2_step + x];
-            dst[y * dst_step + x] = op(src1_data, src2_data, x, y);
+            T1 src1_data = src1.ptr(y)[x];
+            T2 src2_data = src2.ptr(y)[x];
+            dst.ptr(y)[x] = op(src1_data, src2_data, x, y);
         }
     }
 }}}
@@ -83,7 +79,7 @@ namespace cv
     namespace gpu 
     {
         template <typename T, typename D, typename UnOp>
-        static void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, cudaStream_t stream)
+        static void transform2(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, cudaStream_t stream)
         {
             dim3 threads(16, 16, 1);
             dim3 grid(1, 1, 1);
@@ -91,8 +87,7 @@ namespace cv
             grid.x = divUp(src.cols, threads.x);
             grid.y = divUp(src.rows, threads.y);        
 
-            algo_krnls::transform<<<grid, threads, 0, stream>>>(src.ptr, src.elem_step, 
-                dst.ptr, dst.elem_step, src.cols, src.rows, op);
+            device::transform<T, D, UnOp><<<grid, threads, 0, stream>>>(src, dst, op);
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
@@ -106,11 +101,10 @@ namespace cv
             grid.x = divUp(src1.cols, threads.x);
             grid.y = divUp(src1.rows, threads.y);        
 
-            algo_krnls::transform<<<grid, threads, 0, stream>>>(src1.ptr, src1.elem_step, 
-                src2.ptr, src2.elem_step, dst.ptr, dst.elem_step, src1.cols, src1.rows, op);
+            device::transform<T1, T2, D, BinOp><<<grid, threads, 0, stream>>>(src1, src2, dst, op);
 
             if (stream == 0)
-                cudaSafeCall( cudaThreadSynchronize() );
+                cudaSafeCall( cudaThreadSynchronize() );            
         }
     }
 }
