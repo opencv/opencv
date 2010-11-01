@@ -105,7 +105,7 @@ namespace cv
             {
                 this->step /= PtrStep_<T>::elem_size;             
             }
-            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return data + y * step); }
+            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return data + y * step; }
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return data + y * step; }
         private:            
             StaticCheck<256 % sizeof(T) == 0>  ElemStepTypeCheck;
