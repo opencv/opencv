@@ -79,7 +79,7 @@ namespace cv
     namespace gpu 
     {
         template <typename T, typename D, typename UnOp>
-        static void transform2(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, cudaStream_t stream)
+        static void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, cudaStream_t stream)
         {
             dim3 threads(16, 16, 1);
             dim3 grid(1, 1, 1);
