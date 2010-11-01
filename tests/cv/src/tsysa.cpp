@@ -77,7 +77,7 @@ const char* blacklist[] =
     "warp-resize",                    //ticket 429
     "warp-undistort",                 //ticket 577
 
-    "descriptor-matcher-flann-based", //ticket 637
+    //"descriptor-matcher-flann-based", //ticket 637
     0
 };
 

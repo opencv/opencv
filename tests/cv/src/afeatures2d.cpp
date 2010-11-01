@@ -743,4 +743,4 @@ CV_CalonderDescriptorExtractorTest<float> floatCalonderTest( "descriptor-calonde
 CV_DescriptorMatcherTest bruteForceMatcherTest( "descriptor-matcher-brute-force",
                                                 new BruteForceMatcher<L2<float> >, 0.01 );
 CV_DescriptorMatcherTest flannBasedMatcherTest( "descriptor-matcher-flann-based",
-                                                new FlannBasedMatcher, 0.02 );
+                                                new FlannBasedMatcher, 0.04 );
