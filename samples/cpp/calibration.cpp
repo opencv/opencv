@@ -404,22 +404,27 @@ int main( int argc, char** argv )
             flip( view, view, 0 );
 
         vector<Point2f> pointbuf;
-        bool found = findChessboardCorners( view, boardSize, pointbuf, CV_CALIB_CB_ADAPTIVE_THRESH );
+       
+         
+        cvtColor(view, viewGray, CV_BGR2GRAY); 
+      
+		    
+            bool found = findChessboardCorners( view, boardSize, pointbuf, CV_CALIB_CB_ADAPTIVE_THRESH & CV_CALIB_CB_FAST_CHECK & CV_CALIB_CB_NORMALIZE_IMAGE);
 
-        // improve the found corners' coordinate accuracy
-        cvtColor(view, viewGray, CV_BGR2GRAY);
-        if(found) cornerSubPix( viewGray, pointbuf, Size(11,11),
-            Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+           // improve the found corners' coordinate accuracy
+            if(found) cornerSubPix( viewGray, pointbuf, Size(11,11),
+                Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
 
-        if( mode == CAPTURING && found &&
-           (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
-        {
-            imagePoints.push_back(pointbuf);
-            prevTimestamp = clock();
-            blink = capture.isOpened();
-        }
-
-        if(found) drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
+            if( mode == CAPTURING && found &&
+               (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
+            {
+                imagePoints.push_back(pointbuf);
+                prevTimestamp = clock();
+                blink = capture.isOpened();
+            }
+               if(found) drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
+        
+     
 
         string msg = mode == CAPTURING ? "100/100" :
             mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";

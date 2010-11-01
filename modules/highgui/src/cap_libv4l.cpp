@@ -1261,9 +1261,11 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
   if (capture->is_v4l2_device == 1)
   {
 
-      memcpy((char *)capture->frame.imageData,
-             (char *)capture->buffers[capture->bufferIndex].start,
-             capture->frame.imageSize);
+	  if(capture->buffers[capture->bufferIndex].start){
+		  memcpy((char *)capture->frame.imageData,
+				 (char *)capture->buffers[capture->bufferIndex].start,
+				 capture->frame.imageSize);
+	  }
 
   } else
 #endif /* HAVE_CAMV4L2 */
