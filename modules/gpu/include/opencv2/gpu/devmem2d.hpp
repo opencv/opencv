@@ -103,10 +103,10 @@ namespace cv
         {                   
             PtrElemStep_(const DevMem2D_<T>& mem) : PtrStep_<T>(mem) 
             {
-                this->step /= PtrStep_<T>::elem_size;             
+                PtrStep_<T>::step /= PtrStep_<T>::elem_size;             
             }
-            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return data + y * step; }
-            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return data + y * step; }
+            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return PtrStep_<T>::data + y * PtrStep_<T>::step; }
+            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return PtrStep_<T>::data + y * PtrStep_<T>::step; }
         private:            
             StaticCheck<256 % sizeof(T) == 0>  ElemStepTypeCheck;
         };
