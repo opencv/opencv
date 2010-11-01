@@ -1808,7 +1808,7 @@ inline void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
      size_t imgCount = matcher.trainDescCollection.size();
      vector<Mat> allDists( imgCount ); // distances between one query descriptor and all train descriptors
      for( size_t i = 0; i < imgCount; i++ )
-         allDists[i] = Mat( 1, matcher.trainDescCollection[i].rows, queryDescs.type() );
+         allDists[i] = Mat( 1, matcher.trainDescCollection[i].rows, DataType<DistanceType>::type );
 
      for( int qIdx = 0; qIdx < queryDescs.rows; qIdx++ )
      {
@@ -1836,7 +1836,7 @@ inline void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
                      {
                          const ValueType* d2 = (const ValueType*)(matcher.trainDescCollection[iIdx].data +
                                                                   matcher.trainDescCollection[iIdx].step*tIdx);
-                         allDists[iIdx].at<ValueType>(0, tIdx) = matcher.distance(d1, d2, dimension);
+                         allDists[iIdx].at<DistanceType>(0, tIdx) = matcher.distance(d1, d2, dimension);
                      }
                  }
              }
@@ -1847,6 +1847,7 @@ inline void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
              for( int k = 0; k < knn; k++ )
              {
                  DMatch bestMatch;
+                 bestMatch.distance = std::numeric_limits<DistanceType>::max();
                  for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
                  {
                      double minVal;
@@ -1858,9 +1859,10 @@ inline void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
                  if( bestMatch.trainIdx == -1 )
                      break;
 
-                 allDists[bestMatch.imgIdx].at<ValueType>(0, bestMatch.trainIdx) = std::numeric_limits<DistanceType>::max();
+                 allDists[bestMatch.imgIdx].at<DistanceType>(0, bestMatch.trainIdx) = std::numeric_limits<DistanceType>::max();
                  curMatches->push_back( bestMatch );
              }
+             //TODO should already be sorted at this point?
              std::sort( curMatches->begin(), curMatches->end() );
          }
      }
