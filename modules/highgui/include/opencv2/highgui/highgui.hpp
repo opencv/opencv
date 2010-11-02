@@ -88,7 +88,7 @@ CV_EXPORTS_W void imshow( const string& winname, const Mat& mat );
 
 typedef void (CV_CDECL *TrackbarCallback)(int pos, void* userdata);
 
-CV_EXPORTS_W int createTrackbar( const string& trackbarname, const string& winname,
+CV_EXPORTS int createTrackbar( const string& trackbarname, const string& winname,
                                int* value, int count,
                                TrackbarCallback onChange CV_DEFAULT(0),
                                void* userdata CV_DEFAULT(0));
@@ -99,7 +99,7 @@ CV_EXPORTS_W void setTrackbarPos( const string& trackbarname, const string& winn
 typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
 
 //! assigns callback for mouse events
-CV_EXPORTS_W void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
+CV_EXPORTS void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
     
 CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
 CV_EXPORTS_W bool imwrite( const string& filename, const Mat& img,
@@ -131,7 +131,8 @@ public:
     
     CV_WRAP virtual bool grab();
     CV_WRAP virtual bool retrieve(CV_OUT Mat& image, int channel=0);
-    CV_WRAP_AS(read) virtual VideoCapture& operator >> (CV_OUT Mat& image);
+    virtual VideoCapture& operator >> (CV_OUT Mat& image);
+    CV_WRAP virtual bool read(CV_OUT Mat& image);
     
     CV_WRAP virtual bool set(int propId, double value);
     CV_WRAP virtual double get(int propId);
@@ -152,7 +153,8 @@ public:
     CV_WRAP virtual bool open(const string& filename, int fourcc, double fps,
                       Size frameSize, bool isColor=true);
     CV_WRAP virtual bool isOpened() const;
-    CV_WRAP_AS(write) virtual VideoWriter& operator << (const Mat& image);
+    virtual VideoWriter& operator << (const Mat& image);
+    CV_WRAP virtual void write(const Mat& image);
     
 protected:
     Ptr<CvVideoWriter> writer;

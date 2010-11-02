@@ -2138,11 +2138,10 @@ CvBoost::train( const Mat& _train_data, int _tflag,
 
 float
 CvBoost::predict( const Mat& _sample, const Mat& _missing,
-                 Mat* weak_responses, CvSlice slice,
-                 bool raw_mode, bool return_sum ) const
+                  const Range& slice, bool raw_mode, bool return_sum ) const
 {
-    CvMat sample = _sample, mmask = _missing, wr, *pwr = 0;
-    if( weak_responses )
+    CvMat sample = _sample, mmask = _missing;
+    /*if( weak_responses )
     {
         int weak_count = cvSliceLength( slice, weak );
         if( weak_count >= weak->total )
@@ -2156,8 +2155,10 @@ CvBoost::predict( const Mat& _sample, const Mat& _missing,
               weak_responses->cols + weak_responses->rows - 1 == weak_count) )
             weak_responses->create(weak_count, 1, CV_32FC1);
         pwr = &(wr = *weak_responses);
-    }
-    return predict(&sample, &mmask, pwr, slice, raw_mode, return_sum);
+    }*/
+    return predict(&sample, _missing.empty() ? &mmask : 0, 0,
+                   slice == Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end),
+                   raw_mode, return_sum);
 }
 
 /* End of file. */

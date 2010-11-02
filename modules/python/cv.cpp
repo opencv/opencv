@@ -3848,20 +3848,13 @@ static int zero = 0;
 #include "generated0.i"
 
 #include "opencv2x.h"
+#include "pyopencv_generated_types.h"
+#include "pyopencv_generated_funcs.h"
 
 static PyMethodDef methods[] = {
 
 #if PYTHON_USE_NUMPY
     {"fromarray", (PyCFunction)pycvfromarray, METH_KEYWORDS, "fromarray(array) -> cvmatnd"},
-  
-    {"absdiff", (PyCFunction)cv::pyopencv_absdiff, METH_KEYWORDS, "absdiff(src1,src2,dst=None) -> dst"},    
-    {"add", (PyCFunction)cv::pyopencv_add, METH_KEYWORDS, "add(src1,src2,dst=None,mask=None) -> dst"},
-    {"bitwise_and", (PyCFunction)cv::pyopencv_and, METH_KEYWORDS, "bitwise_and(src1,src2,dst=None,mask=None) -> dst"},
-    {"bitwise_or", (PyCFunction)cv::pyopencv_or, METH_KEYWORDS, "bitwise_or(src1,src2,dst=None,mask=None) -> dst"},
-    {"bitwise_xor", (PyCFunction)cv::pyopencv_xor, METH_KEYWORDS, "bitwise_xor(src1,src2,dst=None,mask=None) -> dst"},
-    {"max", (PyCFunction)cv::pyopencv_max, METH_KEYWORDS, "max(src1,src2,dst=None) -> dst"},
-    {"min", (PyCFunction)cv::pyopencv_min, METH_KEYWORDS, "min(src1,src2,dst=None) -> dst"},
-    {"subtract", (PyCFunction)cv::pyopencv_subtract, METH_KEYWORDS, "subtract(src1,src2,dst=None,mask=None) -> dst"},
 #endif
 
   //{"CalcOpticalFlowFarneback", (PyCFunction)pycvCalcOpticalFlowFarneback, METH_KEYWORDS, "CalcOpticalFlowFarneback(prev, next, flow, pyr_scale=0.5, levels=3, win_size=15, iterations=3, poly_n=7, poly_sigma=1.5, flags=0) -> None"},
@@ -3872,6 +3865,7 @@ static PyMethodDef methods[] = {
   {"temp_test", temp_test, METH_VARARGS},
 
 #include "generated1.i"
+#include "pyopencv_generated_func_tab.h"
 
   {NULL, NULL},
 };
@@ -3887,7 +3881,8 @@ static int to_ok(PyTypeObject *to)
   return (PyType_Ready(to) == 0);
 }
 
-#define MKTYPE(NAME)  do { NAME##_specials(); if (!to_ok(&NAME##_Type)) return; } while (0)
+#define MKTYPE(NAME)  NAME##_specials(); if (!to_ok(&NAME##_Type)) return
+#define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return
 
 using namespace cv;
 
@@ -3923,6 +3918,7 @@ void initcv()
   MKTYPE(memtrack);
 
 #include "generated4.i"
+#include "pyopencv_generated_type_reg.h"
 
   m = Py_InitModule(MODULESTR"", methods);
   d = PyModule_GetDict(m);
@@ -3944,6 +3940,7 @@ void initcv()
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 #define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
+#define PUBLISH2(I, value) PyDict_SetItemString(d, #I, PyLong_FromLong(value))
 
   PUBLISHU(IPL_DEPTH_8U);
   PUBLISHU(IPL_DEPTH_8S);
@@ -4018,6 +4015,7 @@ void initcv()
   PUBLISH(GC_EVAL);
 
 #include "generated2.i"
+#include "pyopencv_generated_const_reg.h"
 
 #if 0
   {

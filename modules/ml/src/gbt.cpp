@@ -1040,3 +1040,49 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
     return err;
 
 }
+
+
+CvGBTrees::CvGBTrees( const cv::Mat& trainData, int tflag,
+          const cv::Mat& responses, const cv::Mat& varIdx,
+          const cv::Mat& sampleIdx, const cv::Mat& varType,
+          const cv::Mat& missingDataMask,
+          CvGBTreesParams params )
+{
+    data = 0;
+    weak = 0;
+    default_model_name = "my_boost_tree";
+    orig_response = sum_response = sum_response_tmp = 0;
+    weak_eval = subsample_train = subsample_test = 0;
+    missing = sample_idx = 0;
+    class_labels = 0;
+    class_count = 1;
+    delta = 0.0f;
+    
+    clear();
+    
+    train(trainData, tflag, responses, varIdx, sampleIdx, varType, missingDataMask, params, false);
+}
+
+bool CvGBTrees::train( const cv::Mat& trainData, int tflag,
+                   const cv::Mat& responses, const cv::Mat& varIdx,
+                   const cv::Mat& sampleIdx, const cv::Mat& varType,
+                   const cv::Mat& missingDataMask,
+                   CvGBTreesParams params,
+                   bool update )
+{
+    CvMat _trainData = trainData, _responses = responses;
+    CvMat _varIdx = varIdx, _sampleIdx = sampleIdx, _varType = _varType;
+    CvMat _missingDataMask = missingDataMask;
+    
+    return train(&_trainData, tflag, &_responses, varIdx.empty() ? &_varIdx : 0,
+          sampleIdx.empty() ? &_sampleIdx : 0, varType.empty() ? &_varType : 0,
+          missingDataMask.empty() ? &_missingDataMask : 0, params, update);
+}
+
+float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& missing,
+                          const cv::Range& slice, int k ) const
+{
+    CvMat _sample = sample, _missing = missing;
+    return predict(&_sample, missing.empty() ? &_missing : 0, 0,
+                   slice==cv::Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end), k);
+}

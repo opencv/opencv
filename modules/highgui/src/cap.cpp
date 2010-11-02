@@ -408,6 +408,15 @@ bool VideoCapture::retrieve(Mat& image, int channel)
     }
     return true;
 }
+
+bool VideoCapture::read(Mat& image)
+{
+    if(!grab())
+        image.release();
+    else
+        retrieve(image);
+    return !image.empty();
+}
     
 VideoCapture& VideoCapture::operator >> (Mat& image)
 {
@@ -451,11 +460,16 @@ bool VideoWriter::isOpened() const
 {
     return !writer.empty();
 }    
-    
-VideoWriter& VideoWriter::operator << (const Mat& image)
+
+void VideoWriter::write(const Mat& image)
 {
     IplImage _img = image;
     cvWriteFrame(writer, &_img);
+}
+    
+VideoWriter& VideoWriter::operator << (const Mat& image)
+{
+    write(image);
     return *this;    
 }
 

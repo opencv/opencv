@@ -3,6 +3,7 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d/calib3d.hpp"
 
 namespace cv
@@ -29,13 +30,19 @@ CV_WRAP_AS(getCPUTickCount) static inline double getCPUTickCount_()
     return (double)getCPUTickCount();
 }
 
+CV_WRAP void randShuffle(const Mat& src, CV_OUT Mat& dst, double iterFactor=1.)
+{
+    src.copyTo(dst);
+    randShuffle(dst, iterFactor, 0);
+}
+
 CV_WRAP static inline void SVDecomp(const Mat& src, CV_OUT Mat& w, CV_OUT Mat& u, CV_OUT Mat& vt, int flags=0 )
 {
     SVD::compute(src, w, u, vt, flags);
 }
 
-CV_WRAP static inline void SVDBackSubst( const Mat& w, const Mat& u, const Mat& vt,
-                                         const Mat& rhs, CV_OUT Mat& dst )
+CV_WRAP static inline void SVBackSubst( const Mat& w, const Mat& u, const Mat& vt,
+                                        const Mat& rhs, CV_OUT Mat& dst )
 {
     SVD::backSubst(w, u, vt, rhs, dst);
 }
@@ -53,10 +60,8 @@ CV_WRAP static inline bool eigen(const Mat& src, bool computeEigenvectors,
                                  CV_OUT Mat& eigenvalues, CV_OUT Mat& eigenvectors,
                                  int lowindex=-1, int highindex=-1)
 {
-    if(computeEigenvectors)
-        eigen(src, eigenvalues, eigenvectors, lowindex, highindex);
-    else
-        eigen(src, eigenvalues, lowindex, highindex);
+    return computeEigenvectors ? eigen(src, eigenvalues, eigenvectors, lowindex, highindex) :
+                                eigen(src, eigenvalues, lowindex, highindex);
 }
 
 CV_WRAP static inline void fillConvexPoly(Mat& img, const Mat& points,
@@ -82,10 +87,10 @@ CV_WRAP static inline void fillPoly(Mat& img, const vector<Mat>& pts,
     {
         const Mat& p = pts[i];
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
-        ptsptr[i] = (const Point*)p.data;
+        ptsptr[i] = (Point*)p.data;
         npts[i] = p.rows*p.cols*p.channels()/2;
     }
-    fillPoly(img, ptsptr, npts, (int)pts.size(), color, lineType, shift, offset);
+    fillPoly(img, (const Point**)ptsptr, npts, (int)pts.size(), color, lineType, shift, offset);
 }
 
 CV_WRAP static inline void polylines(Mat& img, const vector<Mat>& pts,
@@ -103,11 +108,40 @@ CV_WRAP static inline void polylines(Mat& img, const vector<Mat>& pts,
     {
         const Mat& p = pts[i];
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
-        ptsptr[i] = (const Point*)p.data;
+        ptsptr[i] = (Point*)p.data;
         npts[i] = p.rows*p.cols*p.channels()/2;
     }
-    polylines(img, ptsptr, npts, (int)pts.size(), isClosed, color, thickness, lineType, shift);
+    polylines(img, (const Point**)ptsptr, npts, (int)pts.size(), isClosed, color, thickness, lineType, shift);
 }
+
+CV_WRAP static inline void PCACompute(const Mat& data, CV_OUT Mat& mean,
+                                      CV_OUT Mat& eigenvectors, int maxComponents=0)
+{
+    PCA pca;
+    pca.mean = mean;
+    pca.eigenvectors = eigenvectors;
+    pca(data, Mat(), 0, maxComponents);
+    pca.mean.copyTo(mean);
+    pca.eigenvectors.copyTo(eigenvectors);
+}
+    
+CV_WRAP static inline void PCAProject(const Mat& data, const Mat& mean,
+                                      const Mat& eigenvectors, CV_OUT Mat& result)
+{
+    PCA pca;
+    pca.mean = mean;
+    pca.eigenvectors = eigenvectors;
+    pca.project(data, result);
+}
+
+CV_WRAP static inline void PCABackProject(const Mat& data, const Mat& mean,
+                                          const Mat& eigenvectors, CV_OUT Mat& result)
+{
+    PCA pca;
+    pca.mean = mean;
+    pca.eigenvectors = eigenvectors;
+    pca.backProject(data, result);
+}    
 
 /////////////////////////// imgproc /////////////////////////////////
 
@@ -142,9 +176,8 @@ CV_WRAP static inline void calcHist( const vector<Mat>& images, const vector<int
     float* _ranges[CV_MAX_DIM];
     if( rsz > 0 )
     {
-        _all_ranges = _ranges;
-        for( int i = 0; i < rsz/2; i++ )
-            _ranges[i] = &ranges[i*2];
+        for( i = 0; i < rsz/2; i++ )
+            _ranges[i] = (float*)&ranges[i*2];
     }
     calcHist(&images[0], (int)images.size(), csz ? &channels[0] : 0,
             mask, hist, dims, &histSize[0], rsz ? (const float**)_ranges : 0,
@@ -164,11 +197,10 @@ CV_WRAP void calcBackProject( const vector<Mat>& images, const vector<int>& chan
     float* _ranges[CV_MAX_DIM];
     if( rsz > 0 )
     {
-        _all_ranges = _ranges;
-        for( int i = 0; i < rsz/2; i++ )
-            _ranges[i] = &ranges[i*2];
+        for( i = 0; i < rsz/2; i++ )
+            _ranges[i] = (float*)&ranges[i*2];
     }
-    calcHist(&images[0], (int)images.size(), csz ? &channels[0] : 0,
+    calcBackProject(&images[0], (int)images.size(), csz ? &channels[0] : 0,
         hist, dst, rsz ? (const float**)_ranges : 0, scale, true);
 }
 
@@ -283,17 +315,17 @@ CV_WRAP static inline void approxPolyDP( const Mat& curve,
     if( curve.depth() == CV_32S )
     {
         vector<Point> result;
-        approxyPolyDP(curve, result, epsilon, closed);
+        approxPolyDP(curve, result, epsilon, closed);
         Mat(result).copyTo(approxCurve);
     }
     else if( curve.depth() == CV_32F )
     {
         vector<Point2f> result;
-        approxyPolyDP(curve, result, epsilon, closed);
+        approxPolyDP(curve, result, epsilon, closed);
         Mat(result).copyTo(approxCurve);
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "")
+        CV_Error(CV_StsUnsupportedFormat, "");
 }
 
 
@@ -319,22 +351,28 @@ CV_WRAP static inline void convexHull( const Mat& points, CV_OUT Mat& hull, bool
     }
 }
 
-CV_WRAP static inline void fitLine( const Mat& points, CV_OUT CV_CUSTOM_CARRAY(points) float* line,
+CV_WRAP static inline void fitLine( const Mat& points, CV_OUT vector<float>& line,
                       int distType, double param, double reps, double aeps )
 {
     if(points.channels() == 2 || points.cols == 2)
-        fitLine(points, *(Vec4f*)line, distType, param, reps, aeps);
+    {
+        line.resize(4);
+        fitLine(points, *(Vec4f*)&line[0], distType, param, reps, aeps);
+    }
     else
-        fitLine(points, *(Vec6f*)line, distType, param, reps, aeps);
+    {
+        line.resize(6);
+        fitLine(points, *(Vec6f*)&line[0], distType, param, reps, aeps);
+    }
 }
 
 CV_WRAP static inline int estimateAffine3D( const Mat& from, const Mat& to,
                               CV_OUT Mat& dst, CV_OUT Mat& outliers,
                               double param1 = 3.0, double param2 = 0.99 )
 {
-    vector<int> outliers_vec;
+    vector<uchar> outliers_vec;
     int res = estimateAffine3D(from, to, dst, outliers_vec, param1, param2);
-    outliers_vec.copyTo(outliers);
+    Mat(outliers_vec).copyTo(outliers);
     return res;
 }
 
@@ -350,88 +388,10 @@ CV_WRAP static inline void cornerSubPix( const Mat& image, Mat& corners,
         return;
         
     CvMat _image = image;
-    cvCornerSubPix(&_image, (CvPoint2D32f*)corners.data, n, winSize, zeroZone, criteria);
+    cvFindCornerSubPix(&_image, (CvPoint2D32f*)corners.data, n, winSize, zeroZone, criteria);
 }
-
-CV_WRAP static inline void goodFeaturesToTrack( const Mat& image, CV_OUT Mat& corners,
-                                     int maxCorners, double qualityLevel, double minDistance,
-                                     const Mat& mask=Mat(), int blockSize=3,
-                                     bool useHarrisDetector=false, double k=0.04 )
-{
-    vector<Point2f> corners_vec;
-    goodFeaturesToTrack(image, corners_vec, maxCorners, qualityLevel,
-                        minDistance, mask, blockSize, useHarrisDetector, k);
-    Mat(corners_vec).copyTo(corners);
-}
-
-CV_WRAP static inline void HoughLines( const Mat& image, CV_OUT Mat& lines,
-                                       double rho, double theta, int threshold,
-                                       double srn=0, double stn=0 )
-{
-    vector<Vec2f>& lines_vec;
-    HoughLines(image, lines_vec, rho, theta, threshold, srn, stn);
-    Mat(lines_vec).copyTo(lines);
-}
-
-CV_WRAP static inline void HoughLinesP( Mat& image, CV_OUT Mat& lines,
-                                        double rho, double theta, int threshold,
-                                        double minLineLength=0, double maxLineGap=0 )
-{
-    vector<Vec4i>& lines_vec;
-    HoughLinesP(image, lines_vec, rho, theta, threshold, minLineLength, maxLineGap);
-    Mat(lines_vec).copyTo(lines);
-}
-
-CV_WRAP static inline void HoughCircles( const Mat& image, CV_OUT vector<Vec3f>& circles,
-                                         int method, double dp, double minDist,
-                                         double param1=100, double param2=100,
-                                         int minRadius=0, int maxRadius=0 )
-{
-    vector<Vec3f>& circles_vec;
-    HoughCircles(image, circles_vec, method, dp, minDist, param1, param2, minRadius, maxRadius);
-    Mat(circles_vec).copyTo(circles);
-}
-
 
 /////////////////////////////// calib3d ///////////////////////////////////////////
-
-CV_WRAP static inline bool findChessboardCorners( const Mat& image, Size patternSize,
-                                       CV_OUT Mat& corners,
-                                       int flags=CALIB_CB_ADAPTIVE_THRESH+
-                                              CALIB_CB_NORMALIZE_IMAGE )
-{
-    vector<Point2f> corners_vec;
-    bool res = findChessboardCorners(image, patternSize, corners_vec, flags);
-    corners_vec.copyTo(corners);
-    return res;
-}
-
-
-CV_WRAP static inline void projectPoints( const Mat& objectPoints,
-                               const Mat& rvec, const Mat& tvec,
-                               const Mat& cameraMatrix,
-                               const Mat& distCoeffs,
-                               CV_OUT Mat& imagePoints )
-{
-    vector<Point2f> imgpt;
-    projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imgpt);
-    Mat(imgpt).copyTo(imagePoints);
-}
-
-CV_WRAP static inline void projectPointsJ( const Mat& objectPoints,
-                               const Mat& rvec, const Mat& tvec,
-                               const Mat& cameraMatrix,
-                               const Mat& distCoeffs,
-                               CV_OUT Mat& imagePoints,
-                               CV_OUT Mat& dpdrot, CV_OUT Mat& dpdt, CV_OUT Mat& dpdf,
-                               CV_OUT Mat& dpdc, CV_OUT Mat& dpddist,
-                               double aspectRatio=0 )
-{
-    vector<Point2f> imgpt;
-    projectPoints(objectPoints, rvec, tvec, cameraMatri, distCoeffs, imgpt,
-        dpdrot, dpdt, dpdf, dpdc, dpddist, aspectRatio);
-    Mat(imgpt).copyTo(imagePoints);
-}
 
 CV_WRAP static inline void convertPointsHomogeneous( const Mat& src, CV_OUT Mat& dst )
 {
@@ -441,12 +401,12 @@ CV_WRAP static inline void convertPointsHomogeneous( const Mat& src, CV_OUT Mat&
     else if( (n = src.checkVector(3)) >= 0 )
         dst.create(n, 3, src.depth());
     else
-        CV_Assert(CV_StsBadSize, "");
+        CV_Error(CV_StsBadSize, "");
     CvMat _src = src, _dst = dst;
-    cvConvertHomogeneous(&_src, &_dst);
+    cvConvertPointsHomogeneous(&_src, &_dst);
 }
 
-
+/*
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_WRAP static inline Mat initCameraMatrix2D( const vector<Mat>& objectPoints,
                                    const vector<Mat>& imagePoints,
@@ -472,7 +432,7 @@ CV_WRAP static inline double calibrateCamera( const vector<Mat>& objectPoints,
     vector<vector<Point2f> > _imagePoints;
     mv2vv(objectPoints, _objectPoints);
     mv2vv(imagePoints, _imagePoints);
-    return calibrateCamera(_objectPoints, _imagePoints, imageSize, cameraMatrix, distCoeffs, rvec, tvecs, flags);
+    return calibrateCamera(_objectPoints, _imagePoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags);
 }
 
 
@@ -493,12 +453,11 @@ CV_WRAP static inline double stereoCalibrate( const vector<Mat>& objectPoints,
     mv2vv(objectPoints, _objectPoints);
     mv2vv(imagePoints1, _imagePoints1);
     mv2vv(imagePoints2, _imagePoints2);
-    return stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, cameraMatrix1, cameraMatrix2,
-                            imageSize, R, T, E, F, criteria, flags);
+    return stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, cameraMatrix1, distCoeffs1,
+                            cameraMatrix2, distCoeffs2, imageSize, R, T, E, F, criteria, flags);
 }
-    
 
-CV_WRAP static float rectify3Collinear( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+CV_WRAP static inline float rectify3Collinear( const Mat& cameraMatrix1, const Mat& distCoeffs1,
                      const Mat& cameraMatrix2, const Mat& distCoeffs2,
                      const Mat& cameraMatrix3, const Mat& distCoeffs3,
                      const vector<Mat>& imgpt1, const vector<Mat>& imgpt3,
@@ -520,6 +479,8 @@ CV_WRAP static float rectify3Collinear( const Mat& cameraMatrix1, const Mat& dis
                             R12, T12, R13, T13, R1, R2, R3, P1, P2, P3,
                             Q, alpha, newImgSize, roi1, roi2, flags);
 }
-
-
+*/
+ 
 }
+
+#endif

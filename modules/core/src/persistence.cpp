@@ -5130,7 +5130,6 @@ void* FileNode::readObj() const
     return cvRead( (CvFileStorage*)fs, (CvFileNode*)node );
 }
 
-
 FileNodeIterator::FileNodeIterator()
 {
     fs = 0;

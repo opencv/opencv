@@ -161,8 +161,9 @@ typedef signed char schar;
 #define CV_CARRAY(counter)
 #define CV_CUSTOM_CARRAY(args)
 #define CV_EXPORTS_W CV_EXPORTS
+#define CV_EXPORTS_W_SIMPLE CV_EXPORTS
 #define CV_EXPORTS_AS(synonym) CV_EXPORTS
-#define CV_EXPORTS_AS_MAP CV_EXPORTS
+#define CV_EXPORTS_W_MAP CV_EXPORTS
 #define CV_IN_OUT
 #define CV_OUT
 #define CV_PROP

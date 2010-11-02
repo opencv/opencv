@@ -2,9 +2,15 @@
 #define OPENCV2X_PYTHON_WRAPPERS
 
 #include "opencv2/core/core.hpp"
-
-namespace cv
-{
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/ml/ml.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/video/background_segm.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv_extra_api.hpp"
 
 #define ERRWRAP2(expr) \
 try \
@@ -15,6 +21,37 @@ catch (const cv::Exception &e) \
 { \
     PyErr_SetString(opencv_error, e.what()); \
     return 0; \
+}
+
+using namespace cv;
+
+typedef vector<uchar> vector_uchar;
+typedef vector<int> vector_int;
+typedef vector<float> vector_float;
+typedef vector<double> vector_double;
+typedef vector<Point> vector_Point;
+typedef vector<Point2f> vector_Point2f;
+typedef vector<Vec2f> vector_Vec2f;
+typedef vector<Vec3f> vector_Vec3f;
+typedef vector<Vec4i> vector_Vec4i;
+typedef vector<Rect> vector_Rect;
+typedef vector<KeyPoint> vector_KeyPoint;
+typedef vector<Mat> vector_Mat;
+typedef vector<vector<Point> > vector_vector_Point;
+typedef vector<vector<Point2f> > vector_vector_Point2f;
+typedef vector<vector<Point3f> > vector_vector_Point3f;
+
+static PyObject* failmsgp(const char *fmt, ...)
+{
+  char str[1000];
+
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(str, sizeof(str), fmt, ap);
+  va_end(ap);
+
+  PyErr_SetString(PyExc_TypeError, str);
+  return 0;
 }
 
 static size_t REFCOUNT_OFFSET = (size_t)&(((PyObject*)0)->ob_refcnt) +
@@ -40,7 +77,6 @@ public:
                   uchar*& datastart, uchar*& data, size_t* step)
     {
         static int ncalls = 0;
-        printf("NumpyAllocator::allocate: %d\n", ncalls++);
         
         int depth = CV_MAT_DEPTH(type);
         int cn = CV_MAT_CN(type);
@@ -65,7 +101,7 @@ public:
             CV_Error_(CV_StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
         refcount = refcountFromPyObject(o);
         npy_intp* _strides = PyArray_STRIDES(o);
-        for( i = 0; i < dims-1; i++ )
+        for( i = 0; i < dims - (cn > 1); i++ )
             step[i] = (size_t)_strides[i];
         datastart = data = (uchar*)PyArray_DATA(o);
     }
@@ -73,11 +109,11 @@ public:
     void deallocate(int* refcount, uchar* datastart, uchar* data)
     {
         static int ncalls = 0;
-        printf("NumpyAllocator::deallocate: %d\n", ncalls++);
         
         if( !refcount )
             return;
         PyObject* o = pyObjectFromRefcount(refcount);
+        Py_INCREF(o);
         Py_DECREF(o);
     }
 };
@@ -86,16 +122,21 @@ NumpyAllocator g_numpyAllocator;
     
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
-static int pyobjToMat(const PyObject* o, Mat& m, const char* name = "<unknown>", bool allowND=true)
+static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>", bool allowND=true)
 {
     static int call_idx = 0;
-    printf("pyobjToMatND: %d\n", call_idx++);
     
-    if( !PyArray_Check(o) ) {
-        if( o == Py_None )
-            return ARG_NONE;
+    if(!o || o == Py_None)
+    {
+        if( !m.data )
+            m.allocator = &g_numpyAllocator;
+        return true;
+    }
+        
+    if( !PyArray_Check(o) )
+    {
         failmsg("%s is not a numpy array", name);
-        return -1;
+        return false;
     }
     
     int typenum = PyArray_TYPE(o);
@@ -108,18 +149,18 @@ static int pyobjToMat(const PyObject* o, Mat& m, const char* name = "<unknown>",
     if( type < 0 )
     {
         failmsg("%s data type = %d is not supported", name, typenum);
-        return -1;
+        return false;
     }
     
     int ndims = PyArray_NDIM(o);
     if(ndims >= CV_MAX_DIM)
     {
         failmsg("%s dimensionality (=%d) is too high", name, ndims);
-        return -1;
+        return false;
     }
     
     int size[CV_MAX_DIM+1];
-    size_t step[CV_MAX_DIM+1], elemsize = CV_ELEM_SIZE(type);
+    size_t step[CV_MAX_DIM+1], elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(o);
     const npy_intp* _strides = PyArray_STRIDES(o);
     
@@ -135,64 +176,55 @@ static int pyobjToMat(const PyObject* o, Mat& m, const char* name = "<unknown>",
         ndims++;
     }
     
-    m = Mat(ndims, size, type, PyArray_DATA(o), step);
-    
-    if (!allowND)
+    if( ndims == 3 && size[2] <= CV_CN_MAX && step[1] == elemsize*size[2] )
     {
-        if( ndims <= 2 )
-            ;
-        else if( ndims == 3 )
-        {
-            if( size[2] > CV_CN_MAX || step[1] != elemsize*size[2] )
-            {
-                failmsg("%s is not contiguous, thus it can not be interpreted as image", name);
-                return -1;
-            }
-            m.dims--;
-            m.flags = (m.flags & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(type, size[2]);
-        }
-        else
-        {
-            failmsg("%s is not contiguous or has more than 3 dimensions, thus it can not be interpreted as image", name);
-            return -1;
-        }
+        ndims--;
+        type |= CV_MAKETYPE(0, size[2]);
     }
+    
+    if( ndims > 2 && !allowND )
+    {
+        failmsg("%s has more than 2 dimensions", name);
+        return false;
+    }
+    
+    m = Mat(ndims, size, type, PyArray_DATA(o), step);
     
     if( m.data )
     {
         m.refcount = refcountFromPyObject(o);
-        ++*m.refcount; // protect the original numpy array from deallocation
-                       // (since Mat destructor will decrement the reference counter)
+        m.addref(); // protect the original numpy array from deallocation
+                    // (since Mat destructor will decrement the reference counter)
     };
     m.allocator = &g_numpyAllocator;
-    return ARG_MAT;
+    return true;
 }
 
-static void makeEmptyMat(Mat& m)
+static PyObject* pyopencv_from(const Mat& m)
 {
-    m = Mat();
-    m.allocator = &g_numpyAllocator;
+    Mat temp, *p = (Mat*)&m;
+    if(!p->refcount || p->allocator != &g_numpyAllocator)
+    {
+        pyopencv_to(Py_None, temp);
+        m.copyTo(temp);
+        p = &temp;
+    }
+    p->addref();
+    return pyObjectFromRefcount(p->refcount);
 }
 
-static int pyobjToMat(const PyObject* o, Mat& m, const char* name = "<unknown>")
+static bool pyopencv_to(PyObject *o, Scalar& s, const char *name = "<unknown>")
 {
-    Mat temp;
-    int code = pyobjToMat(o, temp, name, false);
-    if(code > 0)
-        m = Mat(temp);
-    return code;
-}
-
-static int pyobjToScalar(PyObject *o, Scalar& s, const char *name = "<unknown>")
-{
+    if(!o || o == Py_None)
+        return true;
     if (PySequence_Check(o)) {
         PyObject *fi = PySequence_Fast(o, name);
         if (fi == NULL)
-            return -1;
+            return false;
         if (4 < PySequence_Fast_GET_SIZE(fi))
         {
             failmsg("Scalar value for argument '%s' is longer than 4", name);
-            return -1;
+            return false;
         }
         for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
             PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -200,7 +232,7 @@ static int pyobjToScalar(PyObject *o, Scalar& s, const char *name = "<unknown>")
                 s[i] = PyFloat_AsDouble(item);
             } else {
                 failmsg("Scalar value for argument '%s' is not numeric", name);
-                return -1;
+                return false;
             }
         }
         Py_DECREF(fi);
@@ -209,148 +241,456 @@ static int pyobjToScalar(PyObject *o, Scalar& s, const char *name = "<unknown>")
             s[0] = PyFloat_AsDouble(o);
         } else {
             failmsg("Scalar value for argument '%s' is not numeric", name);
-            return -1;
+            return false;
         }
     }
-    return ARG_SCALAR;
+    return true;
 }
 
-
-static int pyobjToMatOrScalar(PyObject* obj, Mat& m, Scalar& s, const char* name, bool allowND)
+static inline PyObject* pyopencv_from(const Scalar& src)
 {
-    if( PyArray_Check(obj) || (obj == Py_None))
-        return pyobjToMat(obj, m, name, allowND);
-
-    return pyobjToScalar(obj, s, name);
+    return Py_BuildValue("(dddd)", src[0], src[1], src[2], src[3]);
 }
 
-static void pyc_add_mm(const Mat& a, const Mat& b, Mat& c, const Mat& mask) { add(a, b, c, mask); }
-static void pyc_add_ms(const Mat& a, const Scalar& s, Mat& c, const Mat& mask, bool) { add(a, s, c, mask); }
-static void pyc_subtract_mm(const Mat& a, const Mat& b, Mat& c, const Mat& mask) { subtract(a, b, c, mask); }
-static void pyc_subtract_ms(const Mat& a, const Scalar& s, Mat& c, const Mat& mask, bool rev)
+static PyObject* pyopencv_from(bool value)
 {
-    if( !rev )
-        subtract(a, s, c, mask);
+    return PyBool_FromLong(value);
+}
+
+static bool pyopencv_to(PyObject* obj, bool& value, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    int _val = PyObject_IsTrue(obj);
+    if(_val < 0)
+        return false;
+    value = _val > 0;
+    return true;
+}
+
+static PyObject* pyopencv_from(size_t value)
+{
+    return PyLong_FromUnsignedLong((unsigned long)value);
+}
+
+static PyObject* pyopencv_from(int value)
+{
+    return PyInt_FromLong(value);
+}
+
+static bool pyopencv_to(PyObject* obj, int& value, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    value = (int)PyInt_AsLong(obj);
+    return value != -1 || !PyErr_Occurred();
+}
+
+static PyObject* pyopencv_from(double value)
+{
+    return PyFloat_FromDouble(value);
+}
+
+static bool pyopencv_to(PyObject* obj, double& value, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyInt_CheckExact(obj))
+        value = (double)PyInt_AS_LONG(obj);
     else
-        subtract(s, a, c, mask);
+        value = PyFloat_AsDouble(obj);
+    return !PyErr_Occurred();
 }
 
-static void pyc_and_mm(const Mat& a, const Mat& b, Mat& c, const Mat& mask) { bitwise_and(a, b, c, mask); }
-static void pyc_and_ms(const Mat& a, const Scalar& s, Mat& c, const Mat& mask, bool) { bitwise_and(a, s, c, mask); }
-static void pyc_or_mm(const Mat& a, const Mat& b, Mat& c, const Mat& mask) { bitwise_or(a, b, c, mask); }
-static void pyc_or_ms(const Mat& a, const Scalar& s, Mat& c, const Mat& mask, bool) { bitwise_or(a, s, c, mask); }
-static void pyc_xor_mm(const Mat& a, const Mat& b, Mat& c, const Mat& mask) { bitwise_xor(a, b, c, mask); }
-static void pyc_xor_ms(const Mat& a, const Scalar& s, Mat& c, const Mat& mask, bool) { bitwise_xor(a, s, c, mask); }
-static void pyc_absdiff_mm(const Mat& a, const Mat& b, Mat& c, const Mat&) { absdiff(a, b, c); }
-static void pyc_absdiff_ms(const Mat& a, const Scalar& s, Mat& c, const Mat&, bool) { absdiff(a, s, c); }
-static void pyc_min_mm(const Mat& a, const Mat& b, Mat& c, const Mat&) { min(a, b, c); }
-static void pyc_min_ms(const Mat& a, const Scalar& s, Mat& c, const Mat&, bool)
+static PyObject* pyopencv_from(float value)
 {
-    CV_Assert( s.isReal() );
-    min(a, s[0], c);
-}
-static void pyc_max_mm(const Mat& a, const Mat& b, Mat& c, const Mat&) { max(a, b, c); }
-static void pyc_max_ms(const Mat& a, const Scalar& s, Mat& c, const Mat&, bool)
-{
-    CV_Assert( s.isReal() );
-    max(a, s[0], c);
+    return PyFloat_FromDouble(value);
 }
 
-typedef void (*BinaryOp)(const Mat& a, const Mat& b, Mat& c, const Mat& mask);
-typedef void (*BinaryOpS)(const Mat& a, const Scalar& s, Mat& c, const Mat& mask, bool rev);
-
-static PyObject *pyopencv_binary_op(PyObject* args, PyObject* kw, BinaryOp binOp, BinaryOpS binOpS, bool supportMask)
+static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknown>")
 {
-    PyObject *pysrc1 = 0, *pysrc2 = 0, *pydst = 0, *pymask = 0;
-    Mat src1, src2, dst, mask;
-    Scalar alpha, beta;
-    
-    if( supportMask )
-    {
-        const char *keywords[] = { "src1", "src2", "dst", "mask", 0 };
-        if( !PyArg_ParseTupleAndKeywords(args, kw, "OO|OO", (char**)keywords,
-                                        &pysrc1, &pysrc2, &pydst, &pymask))
-            return 0;
-    }
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyInt_CheckExact(obj))
+        value = (float)PyInt_AS_LONG(obj);
     else
+        value = (float)PyFloat_AsDouble(obj);
+    return !PyErr_Occurred();
+}
+
+static PyObject* pyopencv_from(const string& value)
+{
+    return PyString_FromString(value.empty() ? "" : value.c_str());
+}
+
+static bool pyopencv_to(PyObject* obj, string& value, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    char* str = PyString_AsString(obj);
+    if(!str)
+        return false;
+    value = string(str);
+    return true;
+}
+
+static inline bool pyopencv_to(PyObject* obj, Size& sz, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_Parse(obj, "ii", &sz.width, &sz.height) > 0;
+}
+
+static inline PyObject* pyopencv_from(const Size& sz)
+{
+    return Py_BuildValue("(ii)", sz.width, sz.height);
+}
+
+static inline bool pyopencv_to(PyObject* obj, Rect& r, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_Parse(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
+}
+
+static inline PyObject* pyopencv_from(const Rect& r)
+{
+    return Py_BuildValue("(iiii)", r.x, r.y, r.width, r.height);
+}
+
+static inline bool pyopencv_to(PyObject* obj, Range& r, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyObject_Size(obj) == 0)
     {
-        const char *keywords[] = { "src1", "src2", "dst", 0 };
-        if( !PyArg_ParseTupleAndKeywords(args, kw, "OO|O", (char**)keywords,
-                                         &pysrc1, &pysrc2, &pydst))
-            return 0;
+        r = Range::all();
+        return true;
+    }
+    return PyArg_Parse(obj, "ii", &r.start, &r.end) > 0;
+}
+
+static inline PyObject* pyopencv_from(const Range& r)
+{
+    return Py_BuildValue("(ii)", r.start, r.end);
+}
+
+static inline bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyObject_Size(obj) == 0)
+    {
+        r = CV_WHOLE_SEQ;
+        return true;
+    }
+    return PyArg_Parse(obj, "ii", &r.start_index, &r.end_index) > 0;
+}
+                                                
+static inline PyObject* pyopencv_from(const CvSlice& r)
+{
+    return Py_BuildValue("(ii)", r.start_index, r.end_index);
+}                                                    
+                                                    
+static inline bool pyopencv_to(PyObject* obj, Point& p, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyComplex_CheckExact(obj))
+    {
+        Py_complex c = PyComplex_AsCComplex(obj);
+        p.x = saturate_cast<int>(c.real);
+        p.y = saturate_cast<int>(c.imag);
+        return true;
+    }
+    return PyArg_Parse(obj, "ii", &p.x, &p.y) > 0;
+}
+
+static inline bool pyopencv_to(PyObject* obj, Point2f& p, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyComplex_CheckExact(obj))
+    {
+        Py_complex c = PyComplex_AsCComplex(obj);
+        p.x = saturate_cast<float>(c.real);
+        p.y = saturate_cast<float>(c.imag);
+        return true;
+    }
+    return PyArg_Parse(obj, "ff", &p.x, &p.y) > 0;
+}
+
+static inline PyObject* pyopencv_from(const Point& p)
+{
+    return Py_BuildValue("(ii)", p.x, p.y);
+}
+
+static inline PyObject* pyopencv_from(const Point2f& p)
+{
+    return Py_BuildValue("(dd)", p.x, p.y);
+}
+
+static inline bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name = "<unknown>")
+{
+    if(!obj)
+        return true;
+    return PyArg_Parse(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
+}
+
+static inline PyObject* pyopencv_from(const Vec3d& v)
+{
+    return Py_BuildValue("(ddd)", v[0], v[1], v[2]);
+}
+
+static inline PyObject* pyopencv_from(const Point2d& p)
+{
+    return Py_BuildValue("(dd)", p.x, p.y);
+}
+
+template<typename _Tp> struct pyopencvVecConverter
+{
+    static bool to(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
+    {
+        typedef typename DataType<_Tp>::channel_type _Cp;
+        if(!obj)
+            return true;
+        if (PyArray_Check(obj))
+        {
+            Mat m;
+            pyopencv_to(obj, m, name);
+            m.copyTo(value);
+        }
+        if (!PySequence_Check(obj))
+            return false;
+        PyObject *seq = PySequence_Fast(obj, name);
+        if (seq == NULL)
+            return false;
+        int i, j, n = (int)PySequence_Fast_GET_SIZE(seq);
+        value.resize(n);
+        
+        int type = DataType<_Tp>::type;
+        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+        PyObject** items = PySequence_Fast_ITEMS(seq);
+        
+        for( i = 0; i < n; i++ )
+        {
+            PyObject* item = items[i];
+            PyObject* seq_i = 0;
+            PyObject** items_i = &item;
+            _Cp* data = (_Cp*)&value[i];
+            
+            if( channels == 2 && PyComplex_CheckExact(item) )
+            {
+                Py_complex c = PyComplex_AsCComplex(obj);
+                data[0] = saturate_cast<_Cp>(c.real);
+                data[1] = saturate_cast<_Cp>(c.imag);
+                continue;
+            }
+            if( channels > 1 )
+            {
+                if( PyArray_Check(obj))
+                {
+                    Mat src;
+                    pyopencv_to(obj, src, name);
+                    if( src.dims != 2 || src.channels() != 1 ||
+                       ((src.cols != 1 || src.rows != channels) &&
+                        (src.cols != channels || src.rows != 1)))
+                        break;
+                    Mat dst(src.rows, src.cols, depth, data);
+                    src.convertTo(dst, type);
+                    if( dst.data != (uchar*)data )
+                        break;
+                    continue;
+                }
+                
+                seq_i = PySequence_Fast(item, name);
+                if( !seq_i || (int)PySequence_Fast_GET_SIZE(seq_i) != channels )
+                {
+                    Py_XDECREF(seq_i);
+                    break;
+                }
+                items_i = PySequence_Fast_ITEMS(seq_i);
+            }
+            
+            for( j = 0; j < channels; j++ )
+            {
+                PyObject* item_ij = items_i[j];
+                if( PyInt_Check(item_ij))
+                {
+                    int v = PyInt_AsLong(item_ij);
+                    if( v == -1 && PyErr_Occurred() )
+                        break;
+                    data[j] = saturate_cast<_Cp>(v);
+                }
+                else if( PyFloat_Check(item_ij))
+                {
+                    double v = PyFloat_AsDouble(item_ij);
+                    if( PyErr_Occurred() )
+                        break;
+                    data[j] = saturate_cast<_Cp>(v);
+                }
+                else
+                    break;
+            }
+            Py_XDECREF(seq_i);
+            if( j < channels )
+                break;
+        }
+        Py_DECREF(seq);
+        return i == n;
     }
     
-    int code_src1 = pysrc1 ? pyobjToMatOrScalar(pysrc1, src1, alpha, "src1", true) : -1;
-    int code_src2 = pysrc2 ? pyobjToMatOrScalar(pysrc2, src2, beta, "src2", true) : -1;
-    int code_dst = pydst ? pyobjToMat(pydst, dst, "dst", true) : 0;
-    int code_mask = pymask ? pyobjToMat(pymask, mask, "mask", true) : 0;
-    
-    if( code_src1 < 0 || code_src2 < 0 || code_dst < 0 || code_mask < 0 )
-        return 0;
-    
-    if( code_src1 == ARG_SCALAR && code_src2 == ARG_SCALAR )
+    static PyObject* from(const vector<_Tp>& value)
     {
-        failmsg("Both %s and %s are scalars", "src1", "src2");
+        if(value.empty())
+            return PyTuple_New(0);
+        Mat src((int)value.size(), DataType<_Tp>::channels, DataType<_Tp>::depth, (uchar*)&value[0]);
+        return pyopencv_from(src);
+    }
+};
+
+
+template<typename _Tp> static inline bool pyopencv_to(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
+{
+    return pyopencvVecConverter<_Tp>::to(obj, value, name);
+}
+
+template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& value)
+{
+    return pyopencvVecConverter<_Tp>::from(value);
+}
+
+static PyObject* pyopencv_from(const KeyPoint&);
+static bool pyopencv_from(PyObject*,KeyPoint&,const char*);
+
+template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
+{
+    if (!PySequence_Check(obj))
+        return false;
+    PyObject *seq = PySequence_Fast(obj, name);
+    if (seq == NULL)
+        return false;
+    int i, n = (int)PySequence_Fast_GET_SIZE(seq);
+    value.resize(n);
+    
+    PyObject** items = PySequence_Fast_ITEMS(seq);
+    
+    for( i = 0; i < n; i++ )
+    {
+        PyObject* item = items[i];
+        if(!pyopencv_to(item, value[i], name))
+            break;
+    }
+    Py_DECREF(seq);
+    return i == n;
+}
+
+template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const vector<_Tp>& value)
+{
+    int i, n = (int)value.size();
+    PyObject* seq = PyTuple_New(n);
+    for( i = 0; i < n; i++ )
+    {        
+        PyObject* item = pyopencv_from(value[i]);
+        if(!item)
+            break;
+        PyTuple_SET_ITEM(seq, i, item);
+    }
+    if( i < n )
+    {
+        Py_DECREF(seq);
         return 0;
     }
+    return seq;
+}
+
+
+template<typename _Tp> struct pyopencvVecConverter<vector<_Tp> >
+{
+    static bool to(PyObject* obj, vector<vector<_Tp> >& value, const char* name="<unknown>")
+    {
+        return pyopencv_to_generic_vec(obj, value, name);
+    }
     
-    if( code_dst == 0 )
-        makeEmptyMat(dst);
+    static PyObject* from(const vector<vector<_Tp> >& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
+template<> struct pyopencvVecConverter<Mat>
+{
+    static bool to(PyObject* obj, vector<Mat>& value, const char* name="<unknown>")
+    {
+        return pyopencv_to_generic_vec(obj, value, name);
+    }
     
-    ERRWRAP2(code_src1 != ARG_SCALAR && code_src2 != ARG_SCALAR ? binOp(src1, src2, dst, mask) :
-             code_src1 != ARG_SCALAR ? binOpS(src2, alpha, dst, mask, true) : binOpS(src1, beta, dst, mask, false));
+    static PyObject* from(const vector<Mat>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
+template<> struct pyopencvVecConverter<KeyPoint>
+{
+    static bool to(PyObject* obj, vector<KeyPoint>& value, const char* name="<unknown>")
+    {
+        return pyopencv_to_generic_vec(obj, value, name);
+    }
     
-    PyObject* result = pyObjectFromRefcount(dst.refcount);
-    int D = PyArray_NDIM(result);
-    const npy_intp* sz = PyArray_DIMS(result);
-    
-    printf("Result: check = %d, ndims = %d, size = (%d x %d), typenum=%d\n", PyArray_Check(result),
-           D, (int)sz[0], D >= 2 ? (int)sz[1] : 1, PyArray_TYPE(result));
-    
-    //Py_INCREF(result);
-    return result;
-}
+    static PyObject* from(const vector<KeyPoint>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
 
-static PyObject* pyopencv_add(PyObject* self, PyObject* args, PyObject* kw)
+
+static inline bool pyopencv_to(PyObject *obj, CvTermCriteria& dst, const char *name="<unknown>")
 {
-    return pyopencv_binary_op(args, kw, pyc_add_mm, pyc_add_ms, true);
+    if(!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.max_iter, &dst.epsilon) > 0;
 }
 
-static PyObject* pyopencv_subtract(PyObject* self, PyObject* args, PyObject* kw)
+static inline PyObject* pyopencv_from(const CvTermCriteria& src)
 {
-    return pyopencv_binary_op(args, kw, pyc_subtract_mm, pyc_subtract_ms, true);
+    return Py_BuildValue("(iid)", src.type, src.max_iter, src.epsilon);
 }
 
-static PyObject* pyopencv_and(PyObject* self, PyObject* args, PyObject* kw)
+static inline bool pyopencv_to(PyObject *obj, TermCriteria& dst, const char *name="<unknown>")
 {
-    return pyopencv_binary_op(args, kw, pyc_and_mm, pyc_and_ms, true);
+    if(!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.maxCount, &dst.epsilon) > 0;
 }
 
-static PyObject* pyopencv_or(PyObject* self, PyObject* args, PyObject* kw)
+static inline PyObject* pyopencv_from(const TermCriteria& src)
 {
-    return pyopencv_binary_op(args, kw, pyc_or_mm, pyc_or_ms, true);
+    return Py_BuildValue("(iid)", src.type, src.maxCount, src.epsilon);
 }
 
-static PyObject* pyopencv_xor(PyObject* self, PyObject* args, PyObject* kw)
+static inline bool pyopencv_to(PyObject *obj, RotatedRect& dst, const char *name="<unknown>")
 {
-    return pyopencv_binary_op(args, kw, pyc_xor_mm, pyc_xor_ms, true);
+    if(!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "(ff)(ff)f", &dst.center.x, &dst.center.y, &dst.size.width, &dst.size.height, &dst.angle) > 0;
 }
 
-static PyObject* pyopencv_absdiff(PyObject* self, PyObject* args, PyObject* kw)
+static inline PyObject* pyopencv_from(const RotatedRect& src)
 {
-    return pyopencv_binary_op(args, kw, pyc_absdiff_mm, pyc_absdiff_ms, true);
+    return Py_BuildValue("((ff)(ff)f)", src.center.x, src.center.y, src.size.width, src.size.height, src.angle);
 }
 
-static PyObject* pyopencv_min(PyObject* self, PyObject* args, PyObject* kw)
+static inline PyObject* pyopencv_from(const Moments& m)
 {
-    return pyopencv_binary_op(args, kw, pyc_min_mm, pyc_min_ms, true);
+    return Py_BuildValue("{s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d,s:d}",
+                         "m00", m.m00, "m10", m.m10, "m01", m.m01,
+                         "m20", m.m20, "m11", m.m11, "m02", m.m02,
+                         "m30", m.m30, "m21", m.m21, "m12", m.m12, "m03", m.m03,
+                         "mu20", m.mu20, "mu11", m.mu11, "mu02", m.mu02,
+                         "mu30", m.mu30, "mu21", m.mu21, "mu12", m.mu12, "mu03", m.mu03,
+                         "nu20", m.nu20, "nu11", m.nu11, "nu02", m.nu02,
+                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "mu03", m.nu03);
 }
 
-static PyObject* pyopencv_max(PyObject* self, PyObject* args, PyObject* kw)
-{
-    return pyopencv_binary_op(args, kw, pyc_max_mm, pyc_max_ms, true);
-}
-
-}
-    
 #endif

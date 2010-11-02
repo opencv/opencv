@@ -452,5 +452,12 @@ float CvKNearest::find_nearest( const Mat& _samples, int k, Mat* _results,
     return find_nearest(&s, k, presults, _neighbors, pnresponses, pdist );
 }
 
+
+float CvKNearest::find_nearest( const cv::Mat& samples, int k, CV_OUT cv::Mat& results,
+                                CV_OUT cv::Mat& neighborResponses, CV_OUT cv::Mat& dists) const
+{
+    return find_nearest(samples, k, &results, 0, &neighborResponses, &dists);
+}
+
 /* End of file */
 

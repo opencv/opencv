@@ -1109,14 +1109,13 @@ const CvMat* CvEM::get_probs() const
 
 using namespace cv;
 
-CvEM::CvEM( const Mat& samples, const Mat& sample_idx,
-           CvEMParams params, Mat* labels )
+CvEM::CvEM( const Mat& samples, const Mat& sample_idx, CvEMParams params )
 {
     means = weights = probs = inv_eigen_values = log_weight_div_det = 0;
     covs = cov_rotate_mats = 0;
     
     // just invoke the train() method
-    train(samples, sample_idx, params, labels);
+    train(samples, sample_idx, params);
 }    
 
 bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
@@ -1152,6 +1151,34 @@ CvEM::predict( const Mat& _sample, Mat* _probs ) const
         pprobs = &(probs = *_probs);
     }
     return predict(&sample, pprobs);
+}
+
+int CvEM::getNClusters() const
+{
+    return params.nclusters;
+}
+
+Mat CvEM::getMeans() const
+{
+    return Mat(means);
+}
+
+void CvEM::getCovs(vector<Mat>& _covs) const
+{
+    int i, n = params.nclusters;
+    _covs.resize(n);
+    for( i = 0; i < n; i++ )
+        _covs[i] = Mat(covs[i]);
+}
+
+Mat CvEM::getWeights() const
+{
+    return Mat(weights);
+}
+
+Mat CvEM::getProbs() const
+{
+    return Mat(probs);
 }
 
 

@@ -444,12 +444,6 @@ enum
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
 CV_EXPORTS_AS(findHomographyAndOutliers) Mat findHomography( const Mat& srcPoints,
                                const Mat& dstPoints,
-                               CV_OUT Mat& mask, int method=0,
-                               double ransacReprojThreshold=3 );
-
-//! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
-CV_EXPORTS Mat findHomography( const Mat& srcPoints,
-                               const Mat& dstPoints,
                                vector<uchar>& mask, int method=0,
                                double ransacReprojThreshold=3 );
 
@@ -493,14 +487,14 @@ CV_EXPORTS_AS(composeRT_J) void composeRT( const Mat& rvec1, const Mat& tvec1,
                            CV_OUT Mat& dt3dr2, CV_OUT Mat& dt3dt2 );
 
 //! projects points from the model coordinate space to the image coordinates. Takes the intrinsic and extrinsic camera parameters into account
-CV_EXPORTS void projectPoints( const Mat& objectPoints,
+CV_EXPORTS_W void projectPoints( const Mat& objectPoints,
                                const Mat& rvec, const Mat& tvec,
                                const Mat& cameraMatrix,
                                const Mat& distCoeffs,
                                CV_OUT vector<Point2f>& imagePoints );
 
 //! projects points from the model coordinate space to the image coordinates. Also computes derivatives of the image coordinates w.r.t the intrinsic and extrinsic camera parameters
-CV_EXPORTS void projectPoints( const Mat& objectPoints,
+CV_EXPORTS_AS(projectPointsJ) void projectPoints( const Mat& objectPoints,
                                const Mat& rvec, const Mat& tvec,
                                const Mat& cameraMatrix,
                                const Mat& distCoeffs,
@@ -518,7 +512,7 @@ CV_EXPORTS_W void solvePnP( const Mat& objectPoints,
                             bool useExtrinsicGuess=false );
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
-CV_EXPORTS Mat initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints,
+CV_EXPORTS_W Mat initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints,
                                    const vector<vector<Point2f> >& imagePoints,
                                    Size imageSize, double aspectRatio=1. );
 
@@ -527,9 +521,9 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1, CALIB_CB_NORMALIZE_IMAGE = 2,
        CALIB_CB_FILTER_QUADS = 4, CALIB_CB_FAST_CHECK = 8 };
 
 //! finds checkerboard pattern of the specified size in the image
-CV_EXPORTS bool findChessboardCorners( const Mat& image, Size patternSize,
-                                       CV_OUT vector<Point2f>& corners,
-                                       int flags=CALIB_CB_ADAPTIVE_THRESH+
+CV_EXPORTS_W bool findChessboardCorners( const Mat& image, Size patternSize,
+                                         CV_OUT vector<Point2f>& corners,
+                                         int flags=CALIB_CB_ADAPTIVE_THRESH+
                                               CALIB_CB_NORMALIZE_IMAGE );
 
 //! draws the checkerboard pattern (found or partly found) in the image
@@ -558,7 +552,7 @@ enum
 };
 
 //! finds intrinsic and extrinsic camera parameters from several fews of a known calibration pattern.
-CV_EXPORTS double calibrateCamera( const vector<vector<Point3f> >& objectPoints,
+CV_EXPORTS_W double calibrateCamera( const vector<vector<Point3f> >& objectPoints,
                                      const vector<vector<Point2f> >& imagePoints,
                                      Size imageSize,
                                      CV_IN_OUT Mat& cameraMatrix,
@@ -578,7 +572,7 @@ CV_EXPORTS_W void calibrationMatrixValues( const Mat& cameraMatrix,
                                 CV_OUT double& aspectRatio );
 
 //! finds intrinsic and extrinsic parameters of a stereo camera
-CV_EXPORTS double stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
+CV_EXPORTS_W double stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
                                      const vector<vector<Point2f> >& imagePoints1,
                                      const vector<vector<Point2f> >& imagePoints2,
                                      CV_IN_OUT Mat& cameraMatrix1, CV_IN_OUT Mat& distCoeffs1,
@@ -615,7 +609,7 @@ CV_EXPORTS_W bool stereoRectifyUncalibrated( const Mat& points1, const Mat& poin
                                              double threshold=5 );
 
 //! computes the rectification transformations for 3-head camera, where all the heads are on the same line.
-CV_EXPORTS float rectify3Collinear( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+CV_EXPORTS_W float rectify3Collinear( const Mat& cameraMatrix1, const Mat& distCoeffs1,
                                       const Mat& cameraMatrix2, const Mat& distCoeffs2,
                                       const Mat& cameraMatrix3, const Mat& distCoeffs3,
                                       const vector<vector<Point2f> >& imgpt1,

@@ -972,7 +972,7 @@ public:
     typedef value_type channel_type;
     typedef value_type vec_type;
     
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 1, depth = DataDepth<channel_type>::value, channels = 1,
         fmt=DataDepth<channel_type>::fmt,
         type = CV_MAKETYPE(depth, channels) };
 };
@@ -984,7 +984,7 @@ public:
     typedef int work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -996,7 +996,7 @@ public:
     typedef int work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1008,7 +1008,7 @@ public:
     typedef int work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1020,7 +1020,7 @@ public:
     typedef int work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1032,7 +1032,7 @@ public:
     typedef int work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1044,7 +1044,7 @@ public:
     typedef int work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1056,7 +1056,7 @@ public:
     typedef value_type work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1068,7 +1068,7 @@ public:
     typedef value_type work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1080,7 +1080,7 @@ public:
     typedef value_type work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 1,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 1,
            fmt=DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1092,7 +1092,7 @@ public:
     typedef Vec<typename DataType<_Tp>::work_type, cn> work_type;
     typedef _Tp channel_type;
     typedef value_type vec_type;
-    enum { depth = DataDepth<channel_type>::value, channels = cn,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = cn,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
 };
@@ -1103,7 +1103,7 @@ public:
     typedef std::complex<_Tp> value_type;
     typedef value_type work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 2,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 2,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1115,7 +1115,7 @@ public:
     typedef Complex<_Tp> value_type;
     typedef value_type work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 2,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 2,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1127,7 +1127,7 @@ public:
     typedef Point_<_Tp> value_type;
     typedef Point_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 2,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 2,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1139,7 +1139,7 @@ public:
     typedef Point3_<_Tp> value_type;
     typedef Point3_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 3,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 3,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1151,7 +1151,7 @@ public:
     typedef Size_<_Tp> value_type;
     typedef Size_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 2,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 2,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1163,7 +1163,7 @@ public:
     typedef Rect_<_Tp> value_type;
     typedef Rect_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 4,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 4,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1175,7 +1175,7 @@ public:
     typedef Scalar_<_Tp> value_type;
     typedef Scalar_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 4,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 4,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -1187,7 +1187,7 @@ public:
     typedef Range value_type;
     typedef value_type work_type;
     typedef int channel_type;
-    enum { depth = DataDepth<channel_type>::value, channels = 2,
+    enum { generic = 0, depth = DataDepth<channel_type>::value, channels = 2,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
@@ -2154,27 +2154,27 @@ CV_EXPORTS_W void calcCovarMatrix( const Mat& samples, CV_OUT Mat& covar, CV_OUT
     }
     \endcode
 */
-class CV_EXPORTS_W PCA
+class CV_EXPORTS PCA
 {
 public:
     //! default constructor
-    CV_WRAP PCA();
+    PCA();
     //! the constructor that performs PCA
-    CV_WRAP PCA(const Mat& data, const Mat& mean, int flags, int maxComponents=0);
+    PCA(const Mat& data, const Mat& mean, int flags, int maxComponents=0);
     //! operator that performs PCA. The previously stored data, if any, is released
-    CV_WRAP_AS(compute) PCA& operator()(const Mat& data, const Mat& mean, int flags, int maxComponents=0);
+    PCA& operator()(const Mat& data, const Mat& mean, int flags, int maxComponents=0);
     //! projects vector from the original space to the principal components subspace
     Mat project(const Mat& vec) const;
     //! projects vector from the original space to the principal components subspace
-    CV_WRAP void project(const Mat& vec, CV_OUT Mat& result) const;
+    void project(const Mat& vec, CV_OUT Mat& result) const;
     //! reconstructs the original vector from the projection
     Mat backProject(const Mat& vec) const;
     //! reconstructs the original vector from the projection
-    CV_WRAP void backProject(const Mat& vec, CV_OUT Mat& result) const;
+    void backProject(const Mat& vec, CV_OUT Mat& result) const;
 
-    CV_PROP Mat eigenvectors; //!< eigenvectors of the covariation matrix
-    CV_PROP Mat eigenvalues; //!< eigenvalues of the covariation matrix
-    CV_PROP Mat mean; //!< mean value subtracted before the projection and added after the back projection
+    Mat eigenvectors; //!< eigenvectors of the covariation matrix
+    Mat eigenvalues; //!< eigenvalues of the covariation matrix
+    Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
 /*!
@@ -2273,7 +2273,7 @@ CV_WRAP static inline void randn(CV_OUT Mat& dst, const Scalar& mean, const Scal
 { theRNG().fill(dst, RNG::NORMAL, mean, stddev); }
 
 //! shuffles the input array elements
-CV_EXPORTS_W void randShuffle(Mat& dst, double iterFactor=1., RNG* rng=0);
+CV_EXPORTS void randShuffle(Mat& dst, double iterFactor=1., RNG* rng=0);
 
 //! draws the line segment (pt1, pt2) in the image
 CV_EXPORTS_W void line(Mat& img, Point pt1, Point pt2, const Scalar& color,
@@ -3576,30 +3576,46 @@ public:
     CV_WRAP KDTree();
     //! the full constructor that builds the search tree
     CV_WRAP KDTree(const Mat& _points, bool copyAndReorderPoints=false);
+    //! the full constructor that builds the search tree
+    CV_WRAP KDTree(const Mat& _points, const Mat& _labels, bool copyAndReorderPoints=false);
     //! builds the search tree
     CV_WRAP void build(const Mat& _points, bool copyAndReorderPoints=false);
+    //! builds the search tree
+    CV_WRAP void build(const Mat& _points, const Mat& _labels, bool copyAndReorderPoints=false);
     //! finds the K nearest neighbors of "vec" while looking at Emax (at most) leaves
     int findNearest(const float* vec,
                     int K, int Emax, int* neighborsIdx,
-                    Mat* neighbors=0, float* dist=0) const;
+                    Mat* neighbors=0, float* dist=0, int* labels=0) const;
     //! finds the K nearest neighbors while looking at Emax (at most) leaves
     int findNearest(const float* vec, int K, int Emax,
                     vector<int>* neighborsIdx,
-                    Mat* neighbors=0, vector<float>* dist=0) const;
+                    Mat* neighbors=0,
+                    vector<float>* dist=0,
+                    vector<int>* labels=0) const;
+    CV_WRAP int findNearest(const vector<float>& vec, int K, int Emax,
+                    CV_OUT vector<int>* neighborsIdx,
+                    CV_OUT Mat* neighbors=0,
+                    CV_OUT vector<float>* dist=0,
+                    CV_OUT vector<int>* labels=0) const;
     //! finds all the points from the initial set that belong to the specified box 
     void findOrthoRange(const float* minBounds, const float* maxBounds,
-                        vector<int>* neighborsIdx, Mat* neighbors=0) const;
+                        vector<int>* neighborsIdx, Mat* neighbors=0,
+                        vector<int>* labels=0) const;
+    CV_WRAP void findOrthoRange(const vector<float>& minBounds, const vector<float>& maxBounds,
+                                CV_OUT vector<int>* neighborsIdx, CV_OUT Mat* neighbors=0,
+                                CV_OUT vector<int>* labels=0) const;
     //! returns vectors with the specified indices
-    void getPoints(const int* idx, size_t nidx, Mat& pts) const;
+    void getPoints(const int* idx, size_t nidx, Mat& pts, vector<int>* labels=0) const;
     //! returns vectors with the specified indices
-    void getPoints(const Mat& idxs, Mat& pts) const;
+    CV_WRAP void getPoints(const vector<int>& idxs, Mat& pts, CV_OUT vector<int>* labels=0) const;
     //! return a vector with the specified index
-    const float* getPoint(int ptidx) const;
+    const float* getPoint(int ptidx, int* label=0) const;
     //! returns the search space dimensionality
     CV_WRAP int dims() const;
 
     vector<Node> nodes; //!< all the tree nodes
     CV_PROP Mat points; //!< all the points. It can be a reordered copy of the input vector set or the original vector set.
+    CV_PROP vector<int> labels; //!< the parallel array of labels.
     CV_PROP int maxDepth; //!< maximum depth of the search tree. Do not modify it
     CV_PROP_RW int normType; //!< type of the distance (cv::NORM_L1 or cv::NORM_L2) used for search. Initially set to cv::NORM_L2, but you can modify it
 };
@@ -3743,7 +3759,7 @@ public:
     //! returns the top-level mapping. YAML supports multiple streams
     CV_WRAP FileNode root(int streamidx=0) const;
     //! returns the specified element of the top-level mapping
-    CV_WRAP FileNode operator[](const string& nodename) const;
+    FileNode operator[](const string& nodename) const;
     //! returns the specified element of the top-level mapping
     CV_WRAP FileNode operator[](const char* nodename) const;
 
@@ -3777,7 +3793,7 @@ class CV_EXPORTS FileNodeIterator;
  Note that file nodes are only used for navigating file storages opened for reading.
  When a file storage is opened for writing, no data is stored in memory after it is written.
 */
-class CV_EXPORTS_W FileNode
+class CV_EXPORTS_W_SIMPLE FileNode
 {
 public:
     //! type of the file storage node
@@ -3813,7 +3829,6 @@ public:
     //! returns type of the node
     CV_WRAP int type() const;
 
-    CV_WRAP int rawDataSize(const string& fmt) const;
     //! returns true if the node is empty 
     CV_WRAP bool empty() const;
     //! returns true if the node is a "none" object 
@@ -3835,13 +3850,13 @@ public:
     //! returns the number of elements in the node, if it is a sequence or mapping, or 1 otherwise.
     CV_WRAP size_t size() const;
     //! returns the node content as an integer. If the node stores floating-point number, it is rounded.
-    CV_WRAP operator int() const;
+    operator int() const;
     //! returns the node content as float
-    CV_WRAP operator float() const;
+    operator float() const;
     //! returns the node content as double
-    CV_WRAP operator double() const;
+    operator double() const;
     //! returns the node content as text string
-    CV_WRAP operator string() const;
+    operator string() const;
     
     //! returns pointer to the underlying file node
     CvFileNode* operator *();

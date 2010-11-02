@@ -3555,6 +3555,13 @@ KDTree::KDTree(const Mat& _points, bool _copyData)
     build(_points, _copyData);
 }
 
+KDTree::KDTree(const Mat& _points, const Mat& _labels, bool _copyData)
+{
+    maxDepth = -1;
+    normType = NORM_L2;
+    build(_points, _labels, _copyData);
+}    
+    
 struct SubTree
 {
     SubTree() : first(0), last(0), nodeIdx(0), depth(0) {}
@@ -3630,10 +3637,16 @@ computeSums( const Mat& points, const size_t* ofs, int a, int b, double* sums )
     }
 }
 
-
+    
 void KDTree::build(const Mat& _points, bool _copyData)
 {
-    CV_Assert(_points.type() == CV_32F);
+    build(_points, Mat(), _copyData);
+}
+
+
+void KDTree::build(const Mat& _points, const Mat& _labels, bool _copyData)
+{
+    CV_Assert(_points.type() == CV_32F && !_points.empty());
     vector<KDTree::Node>().swap(nodes);
 
     if( !_copyData )
@@ -3643,13 +3656,22 @@ void KDTree::build(const Mat& _points, bool _copyData)
         points.release();
         points.create(_points.size(), _points.type());
     }
-
+    
     int i, j, n = _points.rows, dims = _points.cols, top = 0;
     const float* data = _points.ptr<float>(0);
     float* dstdata = points.ptr<float>(0);
     size_t step = _points.step1();
     size_t dstep = points.step1();
     int ptpos = 0;
+    labels.resize(n);
+    const int* _labels_data = 0;
+    
+    if( !_labels.empty() )
+    {
+        int nlabels = _labels.checkVector(1, CV_32S, true);
+        CV_Assert(nlabels == n);
+        _labels_data = (const int*)_labels.data;
+    }
 
     Mat sumstack(MAX_TREE_DEPTH*2, dims*2, CV_64F);
     SubTree stack[MAX_TREE_DEPTH*2];
@@ -3675,7 +3697,8 @@ void KDTree::build(const Mat& _points, bool _copyData)
 
         if( count == 1 )
         {
-            int idx = _copyData ? ptpos++ : (int)(ptofs[first]/step);
+            int idx0 = (int)(ptofs[first]/step);
+            int idx = _copyData ? ptpos++ : idx0;
             nodes[nidx].idx = ~idx;
             if( _copyData )
             {
@@ -3684,6 +3707,7 @@ void KDTree::build(const Mat& _points, bool _copyData)
                 for( j = 0; j < dims; j++ )
                     dst[j] = src[j];
             }
+            labels[idx] = _labels_data ? _labels_data[idx0] : idx0; 
             _maxDepth = std::max(_maxDepth, depth);
             continue;
         }
@@ -3723,7 +3747,8 @@ void KDTree::build(const Mat& _points, bool _copyData)
 int KDTree::findNearest(const float* vec, int K, int emax,
                          vector<int>* neighborsIdx,
                          Mat* neighbors,
-                         vector<float>* dist) const
+                         vector<float>* dist,
+                         vector<int>* labels) const
 {
     K = std::min(K, points.rows);
     CV_Assert(K > 0);
@@ -3731,15 +3756,44 @@ int KDTree::findNearest(const float* vec, int K, int emax,
         neighborsIdx->resize(K);
     if(dist)
         dist->resize(K);
+    if(labels)
+        labels->resize(K);
     K = findNearest(vec, K, emax, neighborsIdx ? &(*neighborsIdx)[0] : 0,
-                    neighbors, dist ? &(*dist)[0] : 0);
+                    neighbors, dist ? &(*dist)[0] : 0, labels ? &(*labels)[0] : 0);
     if(neighborsIdx)
         neighborsIdx->resize(K);
     if(dist)
         dist->resize(K);
+    if(labels)
+        labels->resize(K);
     return K;
 }
-
+    
+int KDTree::findNearest(const vector<float>& vec, int K, int emax,
+                        vector<int>* neighborsIdx,
+                        Mat* neighbors,
+                        vector<float>* dist,
+                        vector<int>* labels) const
+{
+    CV_Assert((int)vec.size() == points.cols);
+    K = std::min(K, points.rows);
+    CV_Assert(K > 0);
+    if(neighborsIdx)
+        neighborsIdx->resize(K);
+    if(dist)
+        dist->resize(K);
+    if(labels)
+        labels->resize(K);
+    K = findNearest(&vec[0], K, emax, neighborsIdx ? &(*neighborsIdx)[0] : 0,
+                    neighbors, dist ? &(*dist)[0] : 0, labels ? &(*labels)[0] : 0);
+    if(neighborsIdx)
+        neighborsIdx->resize(K);
+    if(dist)
+        dist->resize(K);
+    if(labels)
+        labels->resize(K);
+    return K;
+}    
 
 struct PQueueElem
 {
@@ -3752,7 +3806,7 @@ struct PQueueElem
 
 int KDTree::findNearest(const float* vec, int K, int emax,
                         int* _neighborsIdx, Mat* _neighbors,
-                        float* _dist) const
+                        float* _dist, int* _labels) const
     
 {
     K = std::min(K, points.rows);
@@ -3885,6 +3939,11 @@ int KDTree::findNearest(const float* vec, int K, int emax,
         for( i = 0; i < K; i++ )
             _dist[i] = std::sqrt(dist[i]);
     }
+    if( _labels )
+    {
+        for( i = 0; i < K; i++ )
+            _labels[i] = labels[idx[i]];
+    }
 
     if( _neighbors )
         getPoints(idx, K, *_neighbors);
@@ -3893,7 +3952,8 @@ int KDTree::findNearest(const float* vec, int K, int emax,
 
 
 void KDTree::findOrthoRange(const float* L, const float* R,
-                            vector<int>* neighborsIdx, Mat* neighbors) const
+                            vector<int>* neighborsIdx,
+                            Mat* neighbors, vector<int>* _labels) const
 {
     int dims = points.cols;
     
@@ -3931,48 +3991,73 @@ void KDTree::findOrthoRange(const float* L, const float* R,
     }
 
     if( neighbors )
-        getPoints( &(*idx)[0], idx->size(), *neighbors );
+        getPoints( &(*idx)[0], idx->size(), *neighbors, _labels );
 }
 
     
-void KDTree::getPoints(const int* idx, size_t nidx, Mat& pts) const
+void KDTree::findOrthoRange(const vector<float>& L, const vector<float>& R,
+                            vector<int>* neighborsIdx, Mat* neighbors, vector<int>* _labels) const
+{
+    size_t dims = points.cols;
+    CV_Assert(L.size() == dims && R.size() == dims);
+    findOrthoRange(&L[0], &R[0], neighborsIdx, neighbors, _labels);
+}
+        
+    
+void KDTree::getPoints(const int* idx, size_t nidx, Mat& pts, vector<int>* _labels) const
 {
     int dims = points.cols, n = (int)nidx;
     pts.create( n, dims, points.type());
+    if(_labels)
+        _labels->resize(nidx);
+
     for( int i = 0; i < n; i++ )
     {
         int k = idx[i];
         CV_Assert( (unsigned)k < (unsigned)points.rows );
         const float* src = points.ptr<float>(k);
         std::copy(src, src + dims, pts.ptr<float>(i));
+        if(_labels)
+            (*_labels)[i] = labels[k];
     }
 }
 
 
-void KDTree::getPoints(const Mat& idx, Mat& pts) const
+void KDTree::getPoints(const vector<int>& idx, Mat& pts, vector<int>* _labels) const
 {
-    CV_Assert(idx.type() == CV_32S && idx.isContinuous() &&
-              (idx.cols == 1 || idx.rows == 1));
     int dims = points.cols;
-    int i, nidx = idx.cols + idx.rows - 1;
+    int i, nidx = (int)idx.size();
     pts.create( nidx, dims, points.type());
-    const int* _idx = idx.ptr<int>();
+    
+    if(_labels)
+        _labels->resize(nidx);
     
     for( i = 0; i < nidx; i++ )
     {
-        int k = _idx[i];
+        int k = idx[i];
         CV_Assert( (unsigned)k < (unsigned)points.rows );
         const float* src = points.ptr<float>(k);
         std::copy(src, src + dims, pts.ptr<float>(i));
+        if(_labels) (*_labels)[i] = labels[k];
     }
 }
 
 
-const float* KDTree::getPoint(int ptidx) const
+const float* KDTree::getPoint(int ptidx, int* label) const
 {
     CV_Assert( (unsigned)ptidx < (unsigned)points.rows);
+    if(label)
+        *label = label[ptidx];
     return points.ptr<float>(ptidx);
 }
+
+
+int KDTree::dims() const
+{
+    return !points.empty() ? points.cols : 0;
+}
+    
+////////////////////////////////////////////////////////////////////////////////
     
 schar*  seqPush( CvSeq* seq, const void* element )
 {

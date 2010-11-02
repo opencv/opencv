@@ -1501,6 +1501,17 @@ void CvANN_MLP::read( CvFileStorage* fs, CvFileNode* node )
 
 using namespace cv;
 
+CvANN_MLP::CvANN_MLP( const Mat& _layer_sizes, int _activ_func,
+                      double _f_param1, double _f_param2 )
+{
+    layer_sizes = wbuf = 0;
+    min_val = max_val = min_val1 = max_val1 = 0.;
+    weights = 0;
+    rng = cvRNG(-1);
+    default_model_name = "my_nn";
+    create( _layer_sizes, _activ_func, _f_param1, _f_param2 );
+}
+
 void CvANN_MLP::create( const Mat& _layer_sizes, int _activ_func,
                        double _f_param1, double _f_param2 )
 {

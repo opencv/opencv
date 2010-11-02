@@ -1,19 +1,17 @@
 import os, sys, re
 
+# the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
 "../core/include/opencv2/core/core.hpp",
-#"../core/include/opencv2/core/core_c.h",
 "../ml/include/opencv2/ml/ml.hpp",
 "../imgproc/include/opencv2/imgproc/imgproc.hpp",
-#"../imgproc/include/opencv2/imgproc/imgproc_c.h",
 "../calib3d/include/opencv2/calib3d/calib3d.hpp",
 "../features2d/include/opencv2/features2d/features2d.hpp",
 "../video/include/opencv2/video/tracking.hpp",
 "../video/include/opencv2/video/background_segm.hpp",
 "../objdetect/include/opencv2/objdetect/objdetect.hpp",
 "../highgui/include/opencv2/highgui/highgui.hpp",
-#"../highgui/include/opencv2/highgui/highgui_c.h",
-"opencv_api_extra.hpp",
+"opencv_extra_api.hpp",
 ]
 
 """
@@ -40,7 +38,6 @@ class CppHeaderParser(object):
         return s
     
     def get_macro_arg(self, arg_str, npos):
-        
         npos2 = npos3 = arg_str.find("(", npos)
         if npos2 < 0:
             print "Error: no arguments for the macro at %d" % (self.lineno,)
@@ -226,9 +223,12 @@ class CppHeaderParser(object):
         """
         l = decl_str
         modlist = []
-        if "CV_EXPORTS_AS_MAP" in l:
-            l = l.replace("CV_EXPORTS_AS_MAP", "")
+        if "CV_EXPORTS_W_MAP" in l:
+            l = l.replace("CV_EXPORTS_W_MAP", "")
             modlist.append("/Map")
+        if "CV_EXPORTS_W_SIMPLE" in l:
+            l = l.replace("CV_EXPORTS_W_SIMPLE", "")
+            modlist.append("/Simple")
         npos = l.find("CV_EXPORTS_AS")
         if npos >= 0:
             macro_arg, npos3 = self.get_macro_arg(l, npos)
@@ -258,6 +258,7 @@ class CppHeaderParser(object):
             ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
             return []
         
+        top = self.block_stack[-1]
         func_modlist = []
         
         npos = decl_str.find("CV_EXPORTS_AS")
@@ -270,6 +271,7 @@ class CppHeaderParser(object):
             arg, npos3 = self.get_macro_arg(decl_str, npos)
             func_modlist.append("="+arg)
             decl_str = decl_str[:npos] + decl_str[npos3+1:]
+            
         # filter off some common prefixes, which are meaningless for Python wrappers.
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
@@ -277,7 +279,7 @@ class CppHeaderParser(object):
             ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_WRAP ", " "), ("static CV_INLINE", ""), ("CV_INLINE", "")]).strip()
 
         static_method = False
-        context = self.block_stack[-1][0]
+        context = top[0]
         if decl_str.startswith("static") and (context == "class" or context == "struct"):
             decl_str = decl_str[len("static"):].lstrip()
             static_method = True
@@ -306,7 +308,7 @@ class CppHeaderParser(object):
         rettype, funcname, modlist, argno = self.parse_arg(decl_start, -1)
                 
         if argno >= 0:
-            classname = self.block_stack[-1][1]
+            classname = top[1]
             if rettype == classname or rettype == "~" + classname:
                 rettype, funcname = "", rettype
             else:
@@ -492,7 +494,7 @@ class CppHeaderParser(object):
         if (context == "struct" or context == "class") and end_token == ";" and stmt:
             # looks like it's member declaration; append the members to the class declaration
             class_decl = stack_top[self.CLASS_DECL]
-            if ("CV_PROP" in stmt) or (class_decl and ("/Map" in class_decl[2])):
+            if ("CV_PROP" in stmt): # or (class_decl and ("/Map" in class_decl[2])):
                 var_modlist = []
                 if "CV_PROP_RW" in stmt:
                     var_modlist.append("/RW")
@@ -656,28 +658,10 @@ class CppHeaderParser(object):
                 else:
                     print
 
-def parse_all():
+if __name__ == '__main__':
     parser = CppHeaderParser()
     decls = [] 
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)
-    return decls
-
-if __name__ == '__main__':
-    parser = CppHeaderParser()
-    decls = parse_all()
-    if 0:
-        pass
-    elif 1:
-        CppHeaderParser().print_decls(decls)
-        print len(decls)
-    else:
-        fcounts = {}
-        for f in decls:
-            fname = f[0]
-            fcounts[fname] = fcounts.get(fname, []) + [f]
-        items = fcounts.items()
-        items.sort()
-        for fname, flist in items:
-            if len(flist) > 1:
-                parser.print_decls(flist)
+    parser.print_decls(decls)
+    print len(decls)

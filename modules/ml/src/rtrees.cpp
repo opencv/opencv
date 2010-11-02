@@ -837,5 +837,9 @@ float CvRTrees::predict_prob( const Mat& _sample, const Mat& _missing) const
     return predict_prob(&sample, mmask.data.ptr ? &mmask : 0);
 }
 
+Mat CvRTrees::getVarImportance()
+{
+    return Mat(get_var_importance());
+}
 
 // End of file.

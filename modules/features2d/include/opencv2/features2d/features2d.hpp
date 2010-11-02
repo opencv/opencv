@@ -216,18 +216,18 @@ public:
  (usually represented as a feature vector). The keypoints representing the same object in different images can then be matched using
  cv::KDTree or another method.
 */
-class CV_EXPORTS KeyPoint
+class CV_EXPORTS_W_SIMPLE KeyPoint
 {
 public:
     //! the default constructor
-    KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
+    CV_WRAP KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
     //! the full constructor
     KeyPoint(Point2f _pt, float _size, float _angle=-1,
             float _response=0, int _octave=0, int _class_id=-1)
             : pt(_pt), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
     //! another form of the full constructor
-    KeyPoint(float x, float y, float _size, float _angle=-1,
+    CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1,
             float _response=0, int _octave=0, int _class_id=-1)
             : pt(x, y), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
@@ -245,18 +245,18 @@ public:
     //! area of keypoint regions union (now keypoint region is circle)
     static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
 
-    Point2f pt; //!< coordinates of the keypoints
-    float size; //!< diameter of the meaningfull keypoint neighborhood
-    float angle; //!< computed orientation of the keypoint (-1 if not applicable)
-    float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
-    int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
-    int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to) 
+    CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
+    CV_PROP_RW float size; //!< diameter of the meaningfull keypoint neighborhood
+    CV_PROP_RW float angle; //!< computed orientation of the keypoint (-1 if not applicable)
+    CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
+    CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
+    CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to) 
 };
 
 //! writes vector of keypoints to the file storage
-CV_EXPORTS_W void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
+CV_EXPORTS void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
 //! reads vector of keypoints from the specified file storage node
-CV_EXPORTS_W void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
+CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
 
 /*!
  SIFT implementation.

@@ -567,6 +567,26 @@ void CvNormalBayesClassifier::read( CvFileStorage* fs, CvFileNode* root_node )
 
 using namespace cv;
 
+CvNormalBayesClassifier::CvNormalBayesClassifier( const Mat& _train_data, const Mat& _responses,
+                                    const Mat& _var_idx, const Mat& _sample_idx )
+{
+    var_count = var_all = 0;
+    var_idx = 0;
+    cls_labels = 0;
+    count = 0;
+    sum = 0;
+    productsum = 0;
+    avg = 0;
+    inv_eigen_values = 0;
+    cov_rotate_mats = 0;
+    c = 0;
+    default_model_name = "my_nb";
+    
+    CvMat tdata = _train_data, responses = _responses, vidx = _var_idx, sidx = _sample_idx;
+    train(&tdata, &responses, vidx.data.ptr ? &vidx : 0,
+                 sidx.data.ptr ? &sidx : 0);
+}
+
 bool CvNormalBayesClassifier::train( const Mat& _train_data, const Mat& _responses,
                                     const Mat& _var_idx, const Mat& _sample_idx, bool update )
 {

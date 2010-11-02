@@ -2990,8 +2990,7 @@ template<typename _Tp, class _LT> void sort( vector<_Tp>& vec, _LT LT=_LT() )
     {
         _Tp *lb;
         _Tp *ub;
-    }
-    stack[48];
+    } stack[48];
 
     size_t total = vec.size();
 

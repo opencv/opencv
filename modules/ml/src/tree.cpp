@@ -4074,4 +4074,9 @@ void CvDTree::read( CvFileStorage* fs, CvFileNode* node, CvDTreeTrainData* _data
     __END__;
 }
 
+Mat CvDTree::getVarImportance()
+{
+    return Mat(get_var_importance());
+}
+
 /* End of file. */

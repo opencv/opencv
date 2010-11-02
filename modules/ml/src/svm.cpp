@@ -1985,6 +1985,21 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
 }
 
 
+CvSVM::CvSVM( const Mat& _train_data, const Mat& _responses,
+              const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params )
+{
+    decision_func = 0;
+    class_labels = 0;
+    class_weights = 0;
+    storage = 0;
+    var_idx = 0;
+    kernel = 0;
+    solver = 0;
+    default_model_name = "my_svm";
+    
+    train( _train_data, _responses, _var_idx, _sample_idx, _params );
+}
+
 bool CvSVM::train( const Mat& _train_data, const Mat& _responses,
                   const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params )
 {

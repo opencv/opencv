@@ -459,23 +459,23 @@ CV_EXPORTS void cornerSubPix( const Mat& image, vector<Point2f>& corners,
                               TermCriteria criteria );
 
 //! finds the strong enough corners where the cornerMinEigenVal() or cornerHarris() report the local maxima
-CV_EXPORTS void goodFeaturesToTrack( const Mat& image, CV_OUT vector<Point2f>& corners,
+CV_EXPORTS_W void goodFeaturesToTrack( const Mat& image, CV_OUT vector<Point2f>& corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      const Mat& mask=Mat(), int blockSize=3,
                                      bool useHarrisDetector=false, double k=0.04 );
 
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
-CV_EXPORTS void HoughLines( const Mat& image, CV_OUT vector<Vec2f>& lines,
+CV_EXPORTS_W void HoughLines( const Mat& image, CV_OUT vector<Vec2f>& lines,
                             double rho, double theta, int threshold,
                             double srn=0, double stn=0 );
 
 //! finds line segments in the black-n-white image using probabalistic Hough transform
-CV_EXPORTS void HoughLinesP( Mat& image, CV_OUT vector<Vec4i>& lines,
+CV_EXPORTS_W void HoughLinesP( Mat& image, CV_OUT vector<Vec4i>& lines,
                              double rho, double theta, int threshold,
                              double minLineLength=0, double maxLineGap=0 );
 
 //! finds circles in the grayscale image using 2+1 gradient Hough transform 
-CV_EXPORTS void HoughCircles( const Mat& image, CV_OUT vector<Vec3f>& circles,
+CV_EXPORTS_W void HoughCircles( const Mat& image, CV_OUT vector<Vec3f>& circles,
                               int method, double dp, double minDist,
                               double param1=100, double param2=100,
                               int minRadius=0, int maxRadius=0 );
@@ -716,13 +716,13 @@ enum { FLOODFILL_FIXED_RANGE = 1 << 16,
 
 //! fills the semi-uniform image region starting from the specified seed point
 CV_EXPORTS_W int floodFill( Mat& image,
-                          Point seedPoint, Scalar newVal, Rect* rect=0,
+                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect=0,
                           Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),
                           int flags=4 );
 
 //! fills the semi-uniform image region and/or the mask starting from the specified seed point
 CV_EXPORTS_AS(floodFillMask) int floodFill( Mat& image, Mat& mask,
-                          Point seedPoint, Scalar newVal, Rect* rect=0,
+                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect=0,
                           Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),
                           int flags=4 );
 
@@ -730,7 +730,7 @@ CV_EXPORTS_AS(floodFillMask) int floodFill( Mat& image, Mat& mask,
 CV_EXPORTS_W void cvtColor( const Mat& src, CV_OUT Mat& dst, int code, int dstCn=0 );
 
 //! raster image moments
-class CV_EXPORTS Moments
+class CV_EXPORTS_W_MAP Moments
 {
 public:
     //! the default constructor
@@ -744,11 +744,11 @@ public:
     operator CvMoments() const;
     
     //! spatial moments
-    double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
+    CV_PROP_RW double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
     //! central moments
-    double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
+    CV_PROP_RW double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
     //! central normalized moments
-    double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
+    CV_PROP_RW double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
 };
 
 //! computes moments of the rasterized shape or a vector of points
