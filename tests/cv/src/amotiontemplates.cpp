@@ -181,6 +181,7 @@ CV_MHIBaseTest mhi_base_test( "mhi", "" );
 static void cvTsUpdateMHI( const CvMat* silh, CvMat* mhi, double timestamp, double duration )
 {
     int i, j;
+    float delbound = (float)(timestamp - duration);
     for( i = 0; i < mhi->rows; i++ )
     {
         const uchar* silh_row = silh->data.ptr + i*silh->step;
@@ -190,7 +191,7 @@ static void cvTsUpdateMHI( const CvMat* silh, CvMat* mhi, double timestamp, doub
         {
             if( silh_row[j] )
                 mhi_row[j] = (float)timestamp;
-            else if( mhi_row[j] < timestamp - duration )
+            else if( mhi_row[j] < delbound )
                 mhi_row[j] = 0.f;
         }
     }
