@@ -102,7 +102,7 @@ class SphinxWriter:
         print >>self
 
     def cmd_chapter(self, c):
-        filename = str(c.params[0]).lower().replace(' ', '_').replace('/','_')
+        filename = str(c.params[0]).lower().replace(' ', '_').replace('/','_').replace('.','_')
         self.f_index.write("    %s\n" % filename)
         self.f_chapter = QOpen(os.path.join(self.language, filename + '.rst'), 'wt')
         self.f_section = None
@@ -117,6 +117,8 @@ class SphinxWriter:
 
     def cmd_section(self, c):
         filename = str(c.params[0]).lower().replace(' ', '_').replace('/','_')
+        if len(self.cur_module) > 0:
+            filename = self.cur_module + "_" + filename
         if not self.chapter_intoc:
             self.chapter_intoc = True
             print >>self.f_chapter
