@@ -2059,6 +2059,8 @@ public:
 
     virtual void train() = 0;
 
+    virtual bool supportMask() = 0;
+
     /*
      * Classifies query keypoints.
      * queryImage    The query image
@@ -2202,6 +2204,8 @@ public:
 
     virtual void train();
 
+    virtual bool supportMask() { return false; }
+
     // Reads match object from a file node
     virtual void read( const FileNode &fn );
     
@@ -2271,6 +2275,8 @@ public:
 
     virtual void train();
 
+    virtual bool supportMask() { return false; }
+
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage& fs ) const;
     
@@ -2318,6 +2324,8 @@ public:
     virtual void clear();
 
     virtual void train();
+
+    virtual bool supportMask() { matcher->supportMask(); }
 
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;

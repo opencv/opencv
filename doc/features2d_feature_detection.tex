@@ -1,4 +1,4 @@
-\section{Feature Detection}
+\section{Feature detection and description}
 
 \ifCPy
 
@@ -242,39 +242,53 @@ int main(int argc, char** argv)
 Data structure for salient point detectors
 
 \begin{lstlisting}
-KeyPoint
+class KeyPoint
 {
 public:
-    // default constructor
-    KeyPoint();
-    // two complete constructors
+    // the default constructor
+    KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), 
+				 class_id(-1) {}
+    // the full constructor
     KeyPoint(Point2f _pt, float _size, float _angle=-1,
-            float _response=0, int _octave=0, int _class_id=-1);
+            float _response=0, int _octave=0, int _class_id=-1)
+            : pt(_pt), size(_size), angle(_angle), response(_response), 
+              octave(_octave), class_id(_class_id) {}
+    // another form of the full constructor
     KeyPoint(float x, float y, float _size, float _angle=-1,
-             float _response=0, int _octave=0, int _class_id=-1);
-    // coordinate of the point
-    Point2f pt;
-    // feature size
-    float size;
-    // feature orintation in degrees
-    // (has negative value if the orientation
-    // is not defined/not computed)
-    float angle;
-    // feature strength
-    // (can be used to select only
-    // the most prominent key points)
-    float response;
-    // scale-space octave in which the feature has been found;
-    // may correlate with the size
-    int octave;
-    // point (can be used by feature
-    // classifiers or object detectors)
-    int class_id;
+            float _response=0, int _octave=0, int _class_id=-1)
+            : pt(x, y), size(_size), angle(_angle), response(_response), 
+              octave(_octave), class_id(_class_id) {}
+    // converts vector of keypoints to vector of points
+    static void convert(const std::vector<KeyPoint>& keypoints,
+                        std::vector<Point2f>& points2f,
+                        const std::vector<int>& keypointIndexes=std::vector<int>());
+    // converts vector of points to the vector of keypoints, where each 
+    // keypoint is assigned the same size and the same orientation
+    static void convert(const std::vector<Point2f>& points2f,
+                        std::vector<KeyPoint>& keypoints,
+                        float size=1, float response=1, int octave=0, 
+                        int class_id=-1);
+
+    // computes overlap for pair of keypoints;
+    // overlap is a ratio between area of keypoint regions intersection and
+    // area of keypoint regions union (now keypoint region is circle)
+    static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
+
+    Point2f pt; // coordinates of the keypoints
+    float size; // diameter of the meaningfull keypoint neighborhood
+    float angle; // computed orientation of the keypoint (-1 if not applicable)
+    float response; // the response by which the most strong keypoints 
+					// have been selected. Can be used for the further sorting 
+					// or subsampling
+    int octave; // octave (pyramid layer) from which the keypoint has been extracted
+    int class_id; // object class (if the keypoints need to be clustered by 
+				  // an object they belong to) 
 };
 
-// reading/writing a vector of keypoints to a file storage
+// writes vector of keypoints to the file storage
 void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
-void read(const FileNode& node, vector<KeyPoint>& keypoints);    
+// reads vector of keypoints from the specified file storage node
+void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
 \end{lstlisting}
 
 
@@ -455,43 +469,59 @@ Both detectors and descriptors in OpenCV have wrappers with common interface tha
 between different algorithms solving the same problem. All objects that implement keypoint detectors inherit 
 FeatureDetector interface. Descriptors that are represented as vectors in a multidimensional space can be 
 computed with DescriptorExtractor interface. DescriptorMatcher interface can be used to find matches between 
-two sets of descriptors. GenericDescriptorMatch is a more generic interface for descriptors. It does not make any 
+two sets of descriptors. GenericDescriptorMatcher is a more generic interface for descriptors. It does not make any 
 assumptions about descriptor representation. Every descriptor with DescriptorExtractor interface has a wrapper with 
-GenericDescriptorMatch interface (see VectorDescriptorMatch). There are descriptors such as one way descriptor and 
-ferns that have GenericDescriptorMatch interface implemented, but do not support DescriptorExtractor.
+GenericDescriptorMatcher interface (see VectorDescriptorMatch). There are descriptors such as one way descriptor and 
+ferns that have GenericDescriptorMatcher interface implemented, but do not support DescriptorExtractor.
 
 \cvclass{FeatureDetector}
 Abstract base class for 2D image feature detectors.
 
 \begin{lstlisting}
-class FeatureDetector
+class CV_EXPORTS FeatureDetector
 {
 public:
-    void detect( const Mat& image, vector<KeyPoint>& keypoints, 
-                 const Mat& mask=Mat() ) const;
-                 
-    virtual void read( const FileNode& fn ) {};
-    virtual void write( FileStorage& fs ) const {};
+    virtual ~FeatureDetector() {}
+    
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const = 0;
+    
+    void detect( const vector<Mat>& imageCollection, 
+                 vector<vector<KeyPoint> >& pointCollection, 
+                 const vector<Mat>& masks=vector<Mat>() ) const;
+
+    virtual void read(const FileNode&) {}
+    virtual void write(FileStorage&) const {}
 
 protected:
-    ...
+...
 };
 \end{lstlisting}
 
-
-
-
 \cvCppFunc{FeatureDetector::detect}
-Detect keypoints in an image.
+Detect keypoints in an image (first variant) or image set (second variant).
 
 \cvdefCpp{
-void FeatureDetector::detect( const Mat\& image, vector<KeyPoint>\& keypoints, const Mat\& mask=Mat() ) const;
+void FeatureDetector::detect( const Mat\& image,
+							  \par vector<KeyPoint>\& keypoints, 
+							  \par const Mat\& mask=Mat() ) const;\\
+void FeatureDetector::detect( const vector<Mat>\& imageCollection,
+							  \par vector<vector<KeyPoint> >\& pointCollection, 
+							  \par const vector<Mat>\& masks=vector<Mat>() ) const;
 }
 
 \begin{description}
 \cvarg{image}{The image.}
 \cvarg{keypoints}{The detected keypoints.}
-\cvarg{mask}{Mask specifying where to look for keypoints (optional). Must be a char matrix with non-zero values in the region of interest.}
+\cvarg{mask}{Mask specifying where to look for keypoints (optional). Must be a char matrix 
+		     with non-zero values in the region of interest.}
+\end{description}  
+
+\begin{description}  
+\cvarg{imageCollection}{Image collection.}
+\cvarg{pointCollection}{Collection of keypoints detected in an input images.}
+\cvarg{masks}{Masks for each input image specifying where to look for keypoints (optional). 
+              Each element of \texttt{masks} vector must be a char matrix with non-zero values in the region of interest.}
 \end{description}
 
 \cvCppFunc{FeatureDetector::read}
@@ -523,13 +553,15 @@ Wrapping class for feature detection using \cvCppCross{FAST} method.
 class FastFeatureDetector : public FeatureDetector
 {
 public:
-    FastFeatureDetector( int _threshold = 1, bool _nonmaxSuppression = true );
-    
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
-    
+    FastFeatureDetector( int _threshold=1, bool _nonmaxSuppression=true );
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
 protected:
-	...
+    ...
 };
 \end{lstlisting}
 
@@ -541,15 +573,17 @@ class GoodFeaturesToTrackDetector : public FeatureDetector
 {
 public:
     GoodFeaturesToTrackDetector( int _maxCorners, double _qualityLevel, 
-                                 double _minDistance, int _blockSize=3,
+                                 double _minDistance, int _blockSize=3, 
                                  bool _useHarrisDetector=false, double _k=0.04 );
-                                 
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
-    
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
 protected:
-	...
-}
+    ...
+};
 \end{lstlisting}
 
 \cvclass{MserFeatureDetector}
@@ -559,17 +593,20 @@ Wrapping class for feature detection using \cvCppCross{MSER} class.
 class MserFeatureDetector : public FeatureDetector
 {
 public:
-    MserFeatureDetector( CvMSERParams params = cvMSERParams () );
-    MserFeatureDetector( int delta, int minArea, int maxArea, float maxVariation,
-                         float minDiversity, int maxEvolution, double areaThreshold,
+    MserFeatureDetector( CvMSERParams params=cvMSERParams () );
+    MserFeatureDetector( int delta, int minArea, int maxArea, 
+                         double maxVariation, double minDiversity,
+                         int maxEvolution, double areaThreshold, 
                          double minMargin, int edgeBlurSize );
-                         
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
-    
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
 protected:
-	...
-}
+    ...
+};
 \end{lstlisting}
 
 \cvclass{StarFeatureDetector}
@@ -580,15 +617,17 @@ class StarFeatureDetector : public FeatureDetector
 {
 public:
     StarFeatureDetector( int maxSize=16, int responseThreshold=30, 
-			 int lineThresholdProjected = 10,
+                         int lineThresholdProjected = 10,
                          int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
-    
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
-    
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
 protected:
-	...
-}
+    ...
+};
 \end{lstlisting}
 
 \cvclass{SiftFeatureDetector}
@@ -599,18 +638,20 @@ class SiftFeatureDetector : public FeatureDetector
 {
 public:
     SiftFeatureDetector( double threshold=SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-		 double edgeThreshold=SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD(),
-		 int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
-		 int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-		 int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
-		 int angleMode=SIFT::CommonParams::FIRST_ANGLE );
-    
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
-    
+                double edgeThreshold=SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD(),
+                int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
+                int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
+                int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
+                int angleMode=SIFT::CommonParams::FIRST_ANGLE );
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
 protected:
 	...
-}
+};
 \end{lstlisting}
 
 \cvclass{SurfFeatureDetector}
@@ -622,32 +663,107 @@ class SurfFeatureDetector : public FeatureDetector
 public:
     SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3,
                          int octaveLayers = 4 );
-    
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
-    
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+                         
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
 protected:
 	...
-}
+};
 \end{lstlisting}
 
-\cvclass{DescriptorExtractor}
-Abstract base class for computing descriptors for image keypoints.
+\cvclass{GridAdaptedFeatureDetector}
+Adapts a detector to partition the source image into a grid and detect 
+points in each cell.
 
 \begin{lstlisting}
-class DescriptorExtractor
+class GridAdaptedFeatureDetector : public FeatureDetector
 {
 public:
-    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints,
-                          Mat& descriptors ) const = 0;
+    /*
+     * detector            Detector that will be adapted.
+     * maxTotalKeypoints   Maximum count of keypoints detected on the image. 
+     *                     Only the strongest keypoints will be keeped.
+     * gridRows            Grid rows count.
+     * gridCols            Grid column count.
+     */
+    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, 
+                                int maxTotalKeypoints, int gridRows=4, 
+                                int gridCols=4 );
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
 
-    virtual void read (const FileNode &fn) {};
-    virtual void write (FileStorage &fs) const {};
+    // todo read/write
+    virtual void read( const FileNode& fn ) {}
+    virtual void write( FileStorage& fs ) const {}
 
 protected:
     ...
 };
 \end{lstlisting}
+
+\cvclass{PyramidAdaptedFeatureDetector}
+Adapts a detector to detect points over multiple levels of a Gaussian
+pyramid. Useful for detectors that are not inherently scaled.
+
+\begin{lstlisting}
+class PyramidAdaptedFeatureDetector : public FeatureDetector
+{
+public:
+    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, 
+                                   int levels=2 );
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, 
+                         const Mat& mask=Mat() ) const;
+
+    // todo read/write
+    virtual void read( const FileNode& fn ) {}
+    virtual void write( FileStorage& fs ) const {}
+protected:
+    ...
+};
+\end{lstlisting}
+
+\cvCppFunc{createFeatureDetector}
+Feature detector factory that creates \cvCppCross{FeatureDetector} of given type with 
+default parameters (rather using default constructor).
+
+\begin{lstlisting}
+Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
+\end{lstlisting}
+
+\begin{description}
+\cvarg{detectorType}{Feature detector type, e.g. ''SURF'', ''FAST'', ...}
+\end{description}
+
+\cvclass{DescriptorExtractor}
+Abstract base class for computing descriptors for image keypoints.
+
+\begin{lstlisting}
+class CV_EXPORTS DescriptorExtractor
+{
+public:
+    virtual ~DescriptorExtractor() {}
+    
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints,
+                          Mat& descriptors ) const = 0;
+
+    void compute( const vector<Mat>& imageCollection, 
+                  vector<vector<KeyPoint> >& pointCollection, 
+                  vector<Mat>& descCollection ) const;
+
+    virtual void read( const FileNode& ) {}
+    virtual void write( FileStorage& ) const {}
+
+    virtual int descriptorSize() const = 0;
+    virtual int descriptorType() const = 0;
+
+protected:
+    ...
+};
+\end{lstlisting}
+
 In this interface we assume a keypoint descriptor can be represented as a
 dense, fixed-dimensional vector of some basic type. Most descriptors used
 in practice follow this pattern, as it makes it very easy to compute
@@ -655,16 +771,30 @@ distances between descriptors. Therefore we represent a collection of
 descriptors as a \cvCppCross{Mat}, where each row is one keypoint descriptor.
 
 \cvCppFunc{DescriptorExtractor::compute}
-Compute the descriptors for a set of keypoints in an image. Must be implemented by the subclass.
+Compute the descriptors for a set of keypoints detected in an image or image collection.
 
 \cvdefCpp{
-void DescriptorExtractor::compute( const Mat\& image, vector<KeyPoint>\& keypoints, Mat\& descriptors ) const;
+void DescriptorExtractor::compute( const Mat\& image, 
+                                   \par vector<KeyPoint>\& keypoints, 
+								   \par Mat\& descriptors ) const;\\
+void DescriptorExtractor::compute( const vector<Mat>\& imageCollection, 
+							\par vector<vector<KeyPoint> >\& pointCollection, 
+						    \par vector<Mat>\& descCollection ) const;
 }
 
 \begin{description}
 \cvarg{image}{The image.}
 \cvarg{keypoints}{The keypoints. Keypoints for which a descriptor cannot be computed are removed.}
 \cvarg{descriptors}{The descriptors. Row i is the descriptor for keypoint i.}
+\end{description}
+
+\begin{description}
+\cvarg{imageCollection}{Image collection.}
+\cvarg{pointCollection}{Keypoints collection. pointCollection[i] is keypoints 
+                        detected in imageCollection[i]. Keypoints for which a descriptor 
+                        cannot be computed are removed.}
+\cvarg{descCollection}{Descriptor collection. descCollection[i] is descriptors 
+                       computed for pointCollection[i].}
 \end{description}
 
 \cvCppFunc{DescriptorExtractor::read}
@@ -689,6 +819,7 @@ void DescriptorExtractor::write( FileStorage\& fs ) const;
 \cvarg{fs}{File storage in which detector will be written.}
 \end{description}
 
+
 \cvclass{SiftDescriptorExtractor}
 Wrapping class for descriptors computing using \cvCppCross{SIFT} class.
 
@@ -704,10 +835,13 @@ public:
 	     int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
 	     int angleMode=SIFT::CommonParams::FIRST_ANGLE );
 
-    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, 
+                          Mat& descriptors) const;
 
     virtual void read (const FileNode &fn);
     virtual void write (FileStorage &fs) const;
+    virtual int descriptorSize() const;
+    virtual int descriptorType() const;
 protected:
     ...
 }
@@ -723,75 +857,242 @@ public:
     SurfDescriptorExtractor( int nOctaves=4,
                              int nOctaveLayers=2, bool extended=false );
 
-    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, 
+                          Mat& descriptors) const;
 
     virtual void read (const FileNode &fn);
     virtual void write (FileStorage &fs) const;
-   
+    virtual int descriptorSize() const;
+    virtual int descriptorType() const;
 protected:
     ...
 }
 \end{lstlisting}
 
+\cvclass{CalonderDescriptorExtractor}
+Wrapping class for descriptors computing using \cvCppCross{RTreeClassifier} class.
+
+\begin{lstlisting}
+template<typename T>
+class CalonderDescriptorExtractor : public DescriptorExtractor
+{
+public:
+    CalonderDescriptorExtractor( const string& classifierFile );
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, 
+                          Mat& descriptors ) const;
+    
+    virtual void read( const FileNode &fn );
+    virtual void write( FileStorage &fs ) const;
+    virtual int descriptorSize() const;
+    virtual int descriptorType() const;
+protected:
+    ...
+}
+\end{lstlisting}
+
+\cvclass{DMatch}
+Match between two keypoint descriptors: query descriptor index, 
+train descriptor index, train image index and distance between descriptors.
+
+\begin{lstlisting}
+struct DMatch
+{
+    DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1), 
+               distance(std::numeric_limits<float>::max()) {}
+    DMatch( int _queryIdx, int _trainIdx, float _distance ) :
+            queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1), 
+            distance(_distance) {}
+    DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
+            queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx), 
+            distance(_distance) {}
+
+    int queryIdx; // query descriptor index
+    int trainIdx; // train descriptor index
+    int imgIdx; // train image index
+
+    float distance;
+
+    // less is better
+    bool operator<( const DMatch &m) const;
+};
+\end{lstlisting}
+
 \cvclass{DescriptorMatcher}
-Abstract base class for matching two sets of descriptors.
+Abstract base class for matching keypoint descriptors. It has two groups 
+of match methods: for matching descriptors of one image with other image or
+with image set.
 
 \begin{lstlisting}
 class DescriptorMatcher
 {
 public:
-    void add( const Mat& descriptors );
-    // Index the descriptors training set.
-    void index();
-    void match( const Mat& query, vector<int>& matches ) const;
-    void match( const Mat& query, const Mat& mask,
-	        vector<int>& matches ) const;
+    virtual ~DescriptorMatcher() {}
+    
+    virtual void add( const vector<Mat>& descCollection );
+    const vector<Mat>& getTrainDescCollection() const;
     virtual void clear();
+    virtual bool supportMask() = 0;
+
+    virtual void train() = 0;
+    /*
+     * Group of methods to match descriptors from image pair.
+     */
+    void match( const Mat& queryDescs, const Mat& trainDescs, 
+                vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+    void knnMatch( const Mat& queryDescs, const Mat& trainDescs, 
+                   vector<vector<DMatch> >& matches, int knn,
+                   const Mat& mask=Mat(), bool compactResult=false ) const;
+    void radiusMatch( const Mat& queryDescs, const Mat& trainDescs, 
+                      vector<vector<DMatch> >& matches, float maxDistance,
+                      const Mat& mask=Mat(), bool compactResult=false ) const;
+    /*
+     * Group of methods to match descriptors from one image to image set.
+     */
+    void match( const Mat& queryDescs, vector<DMatch>& matches,
+                const vector<Mat>& masks=vector<Mat>() );
+    void knnMatch( const Mat& queryDescs, vector<vector<DMatch> >& matches, 
+                   int knn, const vector<Mat>& masks=vector<Mat>(), 
+                   bool compactResult=false );
+    void radiusMatch( const Mat& queryDescs, vector<vector<DMatch> >& matches, 
+                      float maxDistance, const vector<Mat>& masks=vector<Mat>(), 
+                      bool compactResult=false );
+
+    virtual void read( const FileNode& ) {}
+    virtual void write( FileStorage& ) const {}
+
 protected:
-   ...
+   
+    vector<Mat> trainDescCollection; 
+    
+    ...
 };
 \end{lstlisting} 
 
 \cvCppFunc{DescriptorMatcher::add}
-Add descriptors to the training set.
+Add descriptors to train descriptor collection. If collection \texttt{trainDescCollection} is not empty
+the new descriptors are added to existing train descriptors.
 
 \cvdefCpp{
-void DescriptorMatcher::add( const Mat\& descriptors );
+void add( const vector<Mat>\& descCollection );
 }
 
 \begin{description}
-\cvarg{descriptors}{Descriptors to add to the training set.}
+\cvarg{descCollection}{Descriptors to add. Each \texttt{trainDescCollection[i]} is from the same train image.}
 \end{description}
 
-\cvCppFunc{DescriptorMatcher::match}
-Find the best match for each descriptor from a query set. In one version 
-of this method the mask is used to describe which descriptors can be matched.
-\texttt{descriptors\_1[i]} can be matched with \texttt{descriptors\_2[j]} only if \texttt{mask.at<char>(i,j)} is non-zero.
+\cvCppFunc{DescriptorMatcher::getTrainDescCollection}
+Returns constant link to the train descriptor collection (i.e. \texttt{trainDescCollection}).
 
 \cvdefCpp{
-void DescriptorMatcher::match( const Mat\& query, vector<int>\& matches ) const;
+const vector<Mat>\& getTrainDescCollection() const;
 }
-\cvdefCpp{
-void DescriptorMatcher::match( const Mat\& query, const Mat\& mask,
-            vector<int>\& matches ) const;
-}
-
-\begin{description}
-\cvarg{query}{The query set of descriptors.}
-\cvarg{matches}{Indices of the closest matches from the training set}
-\cvarg{mask}{Mask specifying permissible matches.}
-\end{description}
 
 \cvCppFunc{DescriptorMatcher::clear}
-Clear training keypoints.
+Clear train descriptor collection.
 
 \cvdefCpp{
 void DescriptorMatcher::clear();
 }
 
+\cvCppFunc{DescriptorMatcher::supportMask}
+Returns true if descriptor matcher supports masking permissible matches.
+
+\cvdefCpp{
+bool DescriptorMatcher::supportMask();
+}
+
+\cvCppFunc{DescriptorMatcher::train}
+Train descriptor matcher (e.g. train flann index).
+
+\cvdefCpp{     
+void DescriptorMatcher::train();
+}
+    
+\cvCppFunc{DescriptorMatcher::match}
+Find the best match for each descriptor from a query set with train descriptors.
+Supposed that the query descriptors are of keypoints detected on the same query image. 
+In first variant of this method train descriptors are set as input argument and 
+supposed that they are of keypoints detected on the same train image. In second variant 
+of the method train descriptors collection that was set using \texttt{add} method is used.
+Optional mask (or masks) can be set to describe which descriptors can be matched. 
+\texttt{descriptors\_1[i]} can be matched with \texttt{descriptors\_2[j]} only if \texttt{mask.at<uchar>(i,j)} is non-zero.
+
+\cvdefCpp{
+void DescriptorMatcher::match( const Mat\& queryDescs, 
+			\par const Mat\& trainDescs, 
+            \par vector<DMatch>\& matches,
+            \par const Mat\& mask=Mat() ) const;
+}
+\cvdefCpp{
+void DescriptorMatcher::match( const Mat\& queryDescs, 
+				\par vector<DMatch>\& matches,
+                \par const vector<Mat>\& masks=vector<Mat>() );
+}
+
+\begin{description}
+\cvarg{queryDescs}{Query set of descriptors.}
+\cvarg{trainDescs}{Train set of descriptors.}
+\cvarg{matches}{Matches. If some query descriptor masked out in \texttt{mask} no match will be added for this descriptor.
+				So \texttt{matches} size may be less query descriptors count.}
+\cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
+\cvarg{masks}{The set of masks. Each \texttt{masks[i]} specifies permissible matches between input query descriptors
+              and stored train descriptors from i-th image (i.e. \texttt{trainDescCollection[i])}.}
+\end{description}
+
+\cvCppFunc{DescriptorMatcher::knnMatch}
+Find the knn best matches for each descriptor from a query set with train descriptors. 
+Found knn (or less if not possible) matches are returned in distance increasing order. 
+Details about query and train descriptors see in \cvCppCross{DescriptorMatcher::match}.
+
+\cvdefCpp{
+void DescriptorMatcher::knnMatch( const Mat\& queryDescs, 
+    \par const Mat\& trainDescs, vector<vector<DMatch> >\& matches, 
+    \par int knn, const Mat\& mask=Mat(), 
+    \par bool compactResult=false ) const;
+}
+\cvdefCpp{
+void DescriptorMatcher::knnMatch( const Mat\& queryDescs, 
+	\par vector<vector<DMatch> >\& matches, int knn,
+    \par const vector<Mat>\& masks=vector<Mat>(), 
+    \par bool compactResult=false );
+}
+
+\begin{description}
+\cvarg{queryDescs, trainDescs, mask, masks}{See in \cvCppCross{DescriptorMatcher::match}.}
+\cvarg{matches}{Mathes. Each \texttt{matches[i]} is knn or less matches for the same query descriptor.}
+\cvarg{knn}{Count of best matches will be found per each query descriptor (or less if it's not possible).}
+\cvarg{compactResult}{It's used when mask (or masks) is not empty. If \texttt{compactResult} is false 
+\texttt{matches} vector will have the same size as \texttt{queryDescs} rows. If \texttt{compactResult} 
+is true \texttt{matches} vector will not contain matches for fully masked out query descriptors.}
+\end{description}
+
+\cvCppFunc{DescriptorMatcher::radiusMatch}
+Find the best matches for each query descriptor which have distance less than given threshold. 
+Found matches are returned in distance increasing order. Details about query and train 
+descriptors see in \cvCppCross{DescriptorMatcher::match}.
+
+\cvdefCpp{
+void DescriptorMatcher::radiusMatch( const Mat\& queryDescs, 
+	\par const Mat\& trainDescs, vector<vector<DMatch> >\& matches, 
+	\par float maxDistance, const Mat\& mask=Mat(), 
+	\par bool compactResult=false ) const;
+}
+\cvdefCpp{
+void DescriptorMatcher::radiusMatch( const Mat\& queryDescs, 
+	\par vector<vector<DMatch> >\& matches, float maxDistance,
+    \par const vector<Mat>\& masks=vector<Mat>(), 
+    \par bool compactResult=false );
+}
+\begin{description}
+\cvarg{queryDescs, trainDescs, mask, masks}{See in \cvCppCross{DescriptorMatcher::match}.}
+\cvarg{matches, compactResult}{See in \cvCppCross{DescriptorMatcher::knnMatch}.}
+\cvarg{maxDistance}{The threshold to found match distances.}
+\end{description}
+
 \cvclass{BruteForceMatcher}
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest
-descriptor in the second set by trying each one.
+descriptor in the second set by trying each one. This descriptor matcher supports masking 
+permissible matches between descriptor sets.
 
 \begin{lstlisting}
 template<class Distance>
@@ -799,6 +1100,10 @@ class BruteForceMatcher : public DescriptorMatcher
 {
 public:
     BruteForceMatcher( Distance d = Distance() ) : distance(d) {}
+    virtual ~BruteForceMatcher() {}
+
+    virtual void train() {}
+    virtual bool supportMask() { return true; }
 
 protected:
     ...
@@ -841,176 +1146,286 @@ struct L2
 };
 \end{lstlisting}
 
-\cvclass{KeyPointCollection}
-A storage for sets of keypoints together with corresponding images and class IDs
+\cvclass{FlannBasedMatcher}
+Flann based descriptor matcher. This matcher trains \cvCppCross{flann::Index} on 
+train descriptor collection and calls it's nearest search methods to find best matches. 
+So this matcher may be faster in cases of matching to large train collection than 
+brute force matcher. \texttt{FlannBasedMatcher} does not support masking permissible 
+matches between descriptor sets, because \cvCppCross{flann::Index} does not 
+support this.
 
 \begin{lstlisting}
-class KeyPointCollection
+class FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    // Adds keypoints from a single image to the storage.
-    // image    Source image
-    // points   A vector of keypoints
-    void add( const Mat& _image, const vector<KeyPoint>& _points );
+    FlannBasedMatcher( 
+      const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
+      const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
 
-    // Returns the total number of keypoints in the collection
-    size_t calcKeypointCount() const;
-
-    // Returns the keypoint by its global index
-    KeyPoint getKeyPoint( int index ) const;
-
-    // Clears images, keypoints and startIndices
-    void clear();
-
-    vector<Mat> images;
-    vector<vector<KeyPoint> > points;
-
-    // global indices of the first points in each image,
-    // startIndices.size() = points.size()
-    vector<int> startIndices;
-};
-\end{lstlisting}
-
-\cvclass{GenericDescriptorMatch}
-Abstract interface for a keypoint descriptor.
-
-\begin{lstlisting}
-class GenericDescriptorMatch
-{
-public:
-    enum IndexType
-    {
-        NoIndex,
-        KDTreeIndex
-    };
-
-    GenericDescriptorMatch() {}
-    virtual ~GenericDescriptorMatch() {}
-
-    virtual void add( KeyPointCollection& keypoints );
-    virtual void add( const Mat& image, vector<KeyPoint>& points ) = 0;
-
-    virtual void classify( const Mat& image, vector<KeyPoint>& points );
-    virtual void match( const Mat& image, vector<KeyPoint>& points,
-                        vector<int>& indices ) = 0;
-    
+    virtual void add( const vector<Mat>& descCollection );
     virtual void clear();
-    virtual void read( const FileNode& fn );
-    virtual void write( FileStorage& fs ) const;
-    
+
+    virtual void train();
+    virtual bool supportMask() { return false; }
 protected:
-    KeyPointCollection collection;
+    ...
 };
-
 \end{lstlisting}
-\cvCppFunc{GenericDescriptorMatch::add}
-Adds keypoints to the training set (descriptors are supposed to be calculated here).
-Keypoints can be passed using \cvCppCross{KeyPointCollection} (with with corresponding images) or as a vector of \cvCppCross{KeyPoint} from a single image.
+
+\cvCppFunc{createDescriptorMatcher}
+Descriptor matcher factory that creates \cvCppCross{DescriptorMatcher} of 
+given type with default parameters (rather using default constructor).
+
+\begin{lstlisting}
+Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
+\end{lstlisting}
+
+\begin{description}
+\cvarg{descriptorMatcherType}{Descriptor matcher type, e. g. ''BruteForce'', ''FlannBased'', ...}
+\end{description}
+
+\cvclass{GenericDescriptorMatcher}
+Abstract interface for a keypoint descriptor extracting and matching. 
+There is \cvCppCross{DescriptorExtractor} and \cvCppCross{DescriptorMatcher} 
+for these purposes too, but their interfaces are intended for descriptors 
+represented as vectors in a multidimensional space. \texttt{GenericDescriptorMatcher} 
+is a more generic interface for descriptors.
+As \cvCppCross{DescriptorMatcher}, \texttt{GenericDescriptorMatcher} has two groups 
+of match methods: for matching keypoints of one image with other image or
+with image set.
+ 
+\begin{lstlisting}
+class GenericDescriptorMatcher
+{
+public:
+    GenericDescriptorMatcher() {}
+    virtual ~GenericDescriptorMatcher() {}
+
+    virtual void add( const vector<Mat>& imgCollection,
+                      vector<vector<KeyPoint> >& pointCollection );
+
+    const vector<Mat>& getTrainImgCollection() const;
+    const vector<vector<KeyPoint> >& getTrainPointCollection() const;
+	virtual void clear();
+
+    virtual void train() = 0;
+
+	virtual bool supportMask() = 0;
+
+    virtual void classify( const Mat& queryImage, 
+                           vector<KeyPoint>& queryPoints,
+                           const Mat& trainImage, 
+                           vector<KeyPoint>& trainPoints ) const;
+    virtual void classify( const Mat& queryImage, 
+                           vector<KeyPoint>& queryPoints );
+
+    /*
+     * Group of methods to match keypoints from image pair.
+     */
+    void match( const Mat& queryImg, vector<KeyPoint>& queryPoints,
+                const Mat& trainImg, vector<KeyPoint>& trainPoints,
+                vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+    void knnMatch( const Mat& queryImg, vector<KeyPoint>& queryPoints,
+                   const Mat& trainImg, vector<KeyPoint>& trainPoints,
+                   vector<vector<DMatch> >& matches, int knn, 
+                   const Mat& mask=Mat(), bool compactResult=false ) const;
+    void radiusMatch( const Mat& queryImg, vector<KeyPoint>& queryPoints,
+                      const Mat& trainImg, vector<KeyPoint>& trainPoints,
+                      vector<vector<DMatch> >& matches, float maxDistance, 
+                      const Mat& mask=Mat(), bool compactResult=false ) const;
+    /*
+     * Group of methods to match keypoints from one image to image set.
+     */
+    void match( const Mat& queryImg, vector<KeyPoint>& queryPoints,
+                vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() );
+    void knnMatch( const Mat& queryImg, vector<KeyPoint>& queryPoints,
+                   vector<vector<DMatch> >& matches, int knn, 
+                   const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
+    void radiusMatch( const Mat& queryImg, vector<KeyPoint>& queryPoints,
+                      vector<vector<DMatch> >& matches, float maxDistance, 
+                      const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
+
+    virtual void read( const FileNode& ) {}
+    virtual void write( FileStorage& ) const {}
+
+protected:
+    ...
+};
+\end{lstlisting}
+
+\cvCppFunc{GenericDescriptorMatcher::add}
+Adds images and keypoints from them to the train collection (descriptors are supposed to be calculated here).
+If train collection is not empty new image and keypoints from them will be added to 
+existing data.
 
 \cvdefCpp{
-void GenericDescriptorMatch::add( KeyPointCollection\& keypoints );
+void GenericDescriptorMatcher::add( const vector<Mat>\& imgCollection,
+                      \par vector<vector<KeyPoint> >\& pointCollection );
 }
 
 \begin{description}
-\cvarg{keypoints}{Keypoints collection with corresponding images.}
+\cvarg{imgCollection}{Image collection.}
+\cvarg{pointCollection}{Point collection. Assumes that \texttt{pointCollection[i]} are keypoints
+                        detected in an image \texttt{imgCollection[i]}. }
 \end{description}
 
+\cvCppFunc{GenericDescriptorMatcher::getTrainImgCollection}
+Returns train image collection.
+
+\begin{lstlisting}
+const vector<Mat>& GenericDescriptorMatcher::getTrainImgCollection() const;
+\end{lstlisting}
+
+\cvCppFunc{GenericDescriptorMatcher::getTrainPointCollection}
+Returns train keypoints collection.
+
+\begin{lstlisting}
+const vector<vector<KeyPoint> >& 
+GenericDescriptorMatcher::getTrainPointCollection() const;
+\end{lstlisting}
+
+\cvCppFunc{GenericDescriptorMatcher::clear}
+Clear train collection (iamges and keypoints).
+
+\begin{lstlisting}
+void GenericDescriptorMatcher::clear();
+\end{lstlisting}
+
+\cvCppFunc{GenericDescriptorMatcher::train}
+Train the object, e.g. tree-based structure to extract descriptors or 
+to optimize descriptors matching.
+
+\begin{lstlisting}
+void GenericDescriptorMatcher::train();
+\end{lstlisting}
+
+\cvCppFunc{GenericDescriptorMatcher::supportMask}
+Returns true if generic descriptor matcher supports masking permissible matches.
+
+\begin{lstlisting}
+void GenericDescriptorMatcher::supportMask();
+\end{lstlisting}
+
+\cvCppFunc{GenericDescriptorMatcher::classify}
+Classifies query keypoints under keypoints of one train image qiven as input argument 
+(first version of the method) or train image collection that set using 
+\cvCppCross{GenericDescriptorMatcher::add} (second version).
 
 \cvdefCpp{
-void GenericDescriptorMatch::add( const Mat\& image, vector<KeyPoint>\& points );
+void GenericDescriptorMatcher::classify( \par const Mat\& queryImage, 
+	\par vector<KeyPoint>\& queryPoints, 
+	\par const Mat\& trainImage, 
+	\par vector<KeyPoint>\& trainPoints ) const;
+}
+\cvdefCpp{
+void GenericDescriptorMatcher::classify( const Mat\& queryImage, 
+	\par vector<KeyPoint>\& queryPoints );
 }
 
 \begin{description}
-\cvarg{image}{The source image.}
-\cvarg{points}{Test keypoints from the source image.}
+\cvarg{queryImage}{The query image.}
+\cvarg{queryPoints}{Keypoints from the query image.}
+\cvarg{trainImage}{The train image.}
+\cvarg{trainPoints}{Keypoints from the train image.}
 \end{description}
 
-\cvCppFunc{GenericDescriptorMatch::classify}
-Classifies test keypoints.
+\cvCppFunc{GenericDescriptorMatcher::match}
+Find best match for query keypoints to the training set. In first version of method 
+one train image and keypoints detected on it - are input arguments. In second version 
+query keypoints are matched to training collectin that set using 
+\cvCppCross{GenericDescriptorMatcher::add}. As in \cvCppCross{DescriptorMatcher::match} 
+the mask can be set.
 
 \cvdefCpp{
-void GenericDescriptorMatch::classify( const Mat\& image, vector<KeyPoint>\& points );
+void GenericDescriptorMatcher::match( 
+	\par const Mat\& queryImg, vector<KeyPoint>\& queryPoints,
+    \par const Mat\& trainImg, vector<KeyPoint>\& trainPoints,
+    \par vector<DMatch>\& matches, const Mat\& mask=Mat() ) const;
 }
 
+\cvdefCpp{
+void GenericDescriptorMatcher::match( 
+	\par const Mat\& queryImg, vector<KeyPoint>\& queryPoints,
+	\par vector<DMatch>\& matches, 
+	\par const vector<Mat>\& masks=vector<Mat>() );
+}
+                
 \begin{description}
-\cvarg{image}{The source image.}
-\cvarg{points}{Test keypoints from the source image.}
+\cvarg{queryImg}{Query image.}
+\cvarg{queryPoints}{Keypoint detected in \texttt{queryImg}.}
+\cvarg{trainImg}{Train image.}
+\cvarg{trainPoints}{Keypoint detected in \texttt{trainImg}.}
+\cvarg{matches}{Matches. If some query descriptor (keypoint) masked out in \texttt{mask} 
+                no match will be added for this descriptor.
+				So \texttt{matches} size may be less query keypoints count.}
+\cvarg{mask}{Mask specifying permissible matches between input query and train keypoints.}
+\cvarg{masks}{The set of masks. Each \texttt{masks[i]} specifies permissible matches between input query keypoints
+              and stored train keypointss from i-th image.}
+
 \end{description}
 
-\cvCppFunc{GenericDescriptorMatch::match}
-Matches test keypoints to the training set.
+\cvCppFunc{GenericDescriptorMatcher::knnMatch}
+Find the knn best matches for each keypoint from a query set with train keypoints. 
+Found knn (or less if not possible) matches are returned in distance increasing order. 
+Details see in \cvCppCross{GenericDescriptorMatcher::match} and \cvCppCross{DescriptorMatcher::knnMatch}.
 
 \cvdefCpp{
-void GenericDescriptorMatch::match( const Mat\& image, vector<KeyPoint>\& points, vector<int>\& indices );
+void GenericDescriptorMatcher::knnMatch( 
+	\par const Mat\& queryImg, vector<KeyPoint>\& queryPoints,
+    \par const Mat\& trainImg, vector<KeyPoint>\& trainPoints,
+    \par vector<vector<DMatch> >\& matches, int knn, 
+    \par const Mat\& mask=Mat(), bool compactResult=false ) const;
 }
-
-\begin{description}
-\cvarg{image}{The source image.}
-\cvarg{points}{Test keypoints from the source image.}
-\cvarg{indices}{A vector to be filled with keypoint class indices.}
-\end{description}
-
-\cvCppFunc{GenericDescriptorMatch::clear}
-Clears keypoints storing in collection
 
 \cvdefCpp{
-void GenericDescriptorMatch::clear();
+void GenericDescriptorMatcher::knnMatch( 
+	\par const Mat\& queryImg, vector<KeyPoint>\& queryPoints,
+    \par vector<vector<DMatch> >\& matches, int knn, 
+    \par const vector<Mat>\& masks=vector<Mat>(), 
+    \par bool compactResult=false );
 }
 
-\cvCppFunc{GenericDescriptorMatch::read}
-Reads match object from a file node
-    
+\cvCppFunc{GenericDescriptorMatcher::radiusMatch}
+Find the best matches for each query keypoint which have distance less than given threshold. 
+Found matches are returned in distance increasing order. Details see in 
+\cvCppCross{GenericDescriptorMatcher::match} and \cvCppCross{DescriptorMatcher::radiusMatch}.
+
 \cvdefCpp{
-void GenericDescriptorMatch::read( const FileNode\& fn );
+void GenericDescriptorMatcher::radiusMatch( 
+	\par const Mat\& queryImg, vector<KeyPoint>\& queryPoints,
+    \par const Mat\& trainImg, vector<KeyPoint>\& trainPoints,
+    \par vector<vector<DMatch> >\& matches, float maxDistance, 
+    \par const Mat\& mask=Mat(), bool compactResult=false ) const;
+                      
+                      
+}
+\cvdefCpp{
+void GenericDescriptorMatcher::radiusMatch( 
+	\par const Mat\& queryImg, vector<KeyPoint>\& queryPoints,
+    \par vector<vector<DMatch> >\& matches, float maxDistance, 
+    \par const vector<Mat>\& masks=vector<Mat>(), 
+    \par bool compactResult=false );
 }
 
-\cvCppFunc{GenericDescriptorMatch::write}
+\cvCppFunc{GenericDescriptorMatcher::read}
+Reads matcher object from a file node.
+
+\cvdefCpp{
+void GenericDescriptorMatcher::read( const FileNode\& fn );
+}
+
+\cvCppFunc{GenericDescriptorMatcher::write}
 Writes match object to a file storage
     
 \cvdefCpp{
-void GenericDescriptorMatch::write( FileStorage\& fs ) const;
+void GenericDescriptorMatcher::write( FileStorage\& fs ) const;
 }
 
-\cvclass{VectorDescriptorMatch}
-Class used for matching descriptors that can be described as vectors in a finite-dimensional space.
-
-\begin{lstlisting}
-template<class Extractor, class Matcher>
-class VectorDescriptorMatch : public GenericDescriptorMatch
-{
-public:
-    VectorDescriptorMatch( const Extractor& _extractor = Extractor(),
-                           const Matcher& _matcher = Matcher() );
-    ~VectorDescriptorMatch();
-
-    // Builds flann index
-    void index();
-
-    // Calculates descriptors for a set of keypoints from a single image
-    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
-
-    // Matches a set of keypoints with the training set
-    virtual void match( const Mat& image, vector<KeyPoint>& points, 
-                        vector<int>& keypointIndices );
-
-    // Clears object (i.e. storing keypoints)
-    virtual void clear();
-
-    // Reads object from file node
-    virtual void read (const FileNode& fn);
-    // Writes object to file storage
-    virtual void write (FileStorage& fs) const;
-protected:
-    Extractor extractor;
-    Matcher matcher;
-};
-\end{lstlisting}
-
-\cvclass{OneWayDescriptorMatch}
+\cvclass{OneWayDescriptorMatcher}
 Wrapping class for computing, matching and classification of descriptors using \cvCppCross{OneWayDescriptorBase} class.
 
 \begin{lstlisting}
-class OneWayDescriptorMatch : public GenericDescriptorMatch
+class OneWayDescriptorMatcher : public GenericDescriptorMatcher
 {
 public:
     class Params
@@ -1025,11 +1440,14 @@ public:
 
         Params( int _poseCount = POSE_COUNT,
                 Size _patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
-                string _pcaFilename = string (),
+                string _pcaFilename = string(),
                 string _trainPath = string(),
                 string _trainImagesList = string(),
                 float _minScale = GET_MIN_SCALE(), float _maxScale = GET_MAX_SCALE(),
-                float _stepScale = GET_STEP_SCALE() );
+                float _stepScale = GET_STEP_SCALE() ) :
+        poseCount(_poseCount), patchSize(_patchSize), pcaFilename(_pcaFilename),
+        trainPath(_trainPath), trainImagesList(_trainImagesList),
+        minScale(_minScale), maxScale(_maxScale), stepScale(_stepScale) {}
 
         int poseCount;
         Size patchSize;
@@ -1040,117 +1458,31 @@ public:
         float minScale, maxScale, stepScale;
     };
 
-    OneWayDescriptorMatch();
-
     // Equivalent to calling PointMatchOneWay() followed by Initialize(_params)
-    OneWayDescriptorMatch( const Params& _params );
-    virtual ~OneWayDescriptorMatch();
+    OneWayDescriptorMatcher( const Params& _params=Params() );
+    virtual ~OneWayDescriptorMatcher();
 
-    // Sets one way descriptor parameters
-    void initialize( const Params& _params, OneWayDescriptorBase *_base = 0 );
-
-    // Calculates one way descriptors for a set of keypoints
-    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
-
-    // Calculates one way descriptors for a set of keypoints
-    virtual void add( KeyPointCollection& keypoints );
-
-    // Matches a set of keypoints from a single image of the training set.
-    // A rectangle with a center in a keypoint and size 
-    // (patch_width/2*scale, patch_height/2*scale) is cropped from the source image
-    // for each keypoint. scale is iterated from DescriptorOneWayParams::min_scale
-    // to DescriptorOneWayParams::max_scale. The minimum distance to each 
-    // training patch with all its affine poses is found over all scales.
-    // The class ID of a match is returned for each keypoint. The distance 
-    // is calculated over PCA components loaded with DescriptorOneWay::Initialize,
-    // kd tree is used for finding minimum distances.
-    virtual void match( const Mat& image, vector<KeyPoint>& points, 
-	                    vector<int>& indices );
-
-    // Classify a set of keypoints. The same as match, but returns point 
-    // classes rather than indices.
-    virtual void classify( const Mat& image, vector<KeyPoint>& points );
-
-    // Clears keypoints storing in collection and OneWayDescriptorBase
-    virtual void clear ();
-
-    // Reads match object from a file node
-    virtual void read (const FileNode &fn);
-    
-    // Writes match object to a file storage
-    virtual void write (FileStorage& fs) const;
-
-protected:
-    Ptr<OneWayDescriptorBase> base;
-    Params params;
-};
-\end{lstlisting}
-
-\cvclass{CalonderDescriptorMatch}
-Wrapping class for computing, matching and classification of descriptors using \cvCppCross{RTreeClassifier} class.
-
-\begin{lstlisting}
-class CV_EXPORTS CalonderDescriptorMatch : public GenericDescriptorMatch
-{
-public:
-    class Params
-    {
-    public:
-        static const int DEFAULT_NUM_TREES = 80;
-        static const int DEFAULT_DEPTH = 9;
-        static const int DEFAULT_VIEWS = 5000;
-        static const size_t DEFAULT_REDUCED_NUM_DIM = 176;
-        static const size_t DEFAULT_NUM_QUANT_BITS = 4;
-        static const int DEFAULT_PATCH_SIZE = PATCH_SIZE;
-
-        Params( const RNG& _rng = RNG(), 
-                const PatchGenerator& _patchGen = PatchGenerator(),
-                int _numTrees=DEFAULT_NUM_TREES,
-                int _depth=DEFAULT_DEPTH,
-                int _views=DEFAULT_VIEWS,
-                size_t _reducedNumDim=DEFAULT_REDUCED_NUM_DIM,
-                int _numQuantBits=DEFAULT_NUM_QUANT_BITS,
-                bool _printStatus=true,
-                int _patchSize=DEFAULT_PATCH_SIZE );
-        Params( const string& _filename );
-
-        RNG rng;
-        PatchGenerator patchGen;
-        int numTrees;
-        int depth;
-        int views;
-        int patchSize;
-        size_t reducedNumDim;
-        int numQuantBits;
-        bool printStatus;
-
-        string filename;
-    };
-
-    CalonderDescriptorMatch();
-    CalonderDescriptorMatch( const Params& _params );
-    virtual ~CalonderDescriptorMatch();
-    void initialize( const Params& _params );
-
-    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
-    virtual void match( const Mat& image, vector<KeyPoint>& keypoints, 
-                        vector<int>& indices );
-    virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
+    void initialize( const Params& _params, 
+          const Ptr<OneWayDescriptorBase>& _base=Ptr<OneWayDescriptorBase>() );
 
     virtual void clear ();
+	virtual void train();
+
+    virtual bool supportMask() { return false; }
+
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage& fs ) const;
-    
+
 protected:
-	...
+    ...
 };
 \end{lstlisting}
 
-\cvclass{FernDescriptorMatch}
+\cvclass{FernDescriptorMatcher}
 Wrapping class for computing, matching and classification of descriptors using \cvCppCross{FernClassifier} class.
 
 \begin{lstlisting}
-class FernDescriptorMatch : public GenericDescriptorMatch
+class FernDescriptorMatcher : public GenericDescriptorMatcher
 {
 public:
     class Params
@@ -1179,17 +1511,15 @@ public:
         string filename;
     };
 
-    FernDescriptorMatch();
-    FernDescriptorMatch( const Params& _params );
-    virtual ~FernDescriptorMatch();
-    void initialize( const Params& _params );
+    FernDescriptorMatcher( const Params& _params=Params() );
+    virtual ~FernDescriptorMatcher();
 
-    virtual void add( const Mat& image, vector<KeyPoint>& keypoints );
-    virtual void match( const Mat& image, vector<KeyPoint>& keypoints, 
-                        vector<int>& indices );
-    virtual void classify( const Mat& image, vector<KeyPoint>& keypoints );
+    virtual void clear();
 
-    virtual void clear ();
+    virtual void train();
+
+    virtual bool supportMask() { return false; }
+
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage& fs ) const;
     
@@ -1198,73 +1528,126 @@ protected:
 };
 \end{lstlisting}
 
+\cvclass{VectorDescriptorMatcher}
+Class used for matching descriptors that can be described as vectors in a finite-dimensional space.
+
+\begin{lstlisting}
+class VectorDescriptorMatcher : public GenericDescriptorMatcher
+{
+public:
+    VectorDescriptorMatcher( const Ptr<DescriptorExtractor>& _extractor, 
+                             const Ptr<DescriptorMatcher>& _matcher ) 
+	    : extractor( _extractor ), matcher( _matcher ) 
+        { CV_Assert( !extractor.empty() && !matcher.empty() ); }
+        
+    virtual ~VectorDescriptorMatcher() {}
+
+    virtual void add( const vector<Mat>& imgCollection,
+                      vector<vector<KeyPoint> >& pointCollection );
+
+    virtual void clear();
+
+    virtual void train();
+
+    virtual bool supportMask() { matcher->supportMask(); }
+
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
+
+protected:
+    ...
+};
+\end{lstlisting}
+
+Example of creating:
+\begin{lstlisting}
+VectorDescriptorMatcher matcher( new SurfDescriptorExtractor, 
+                                 new BruteForceMatcher<L2<float> > );
+\end{lstlisting}
+
 \cvCppFunc{drawMatches}
 This function draws matches of keypints from two images on output image. 
 Match is a line connecting two keypoints (circles).
 
 \cvdefCpp{
 void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,
-		  const Mat\& img2, const vector<KeyPoint>\& keypoints2,
-                  const vector<int>\& matches, Mat\& outImg,
-                  const Scalar\& matchColor = Scalar::all(-1), 
-	          const Scalar\& singlePointColor = Scalar::all(-1),
-                  const vector<char>\& matchesMask = vector<char>(), 
-		  int flags = DrawMatchesFlags::DEFAULT );
+	\par const Mat\& img2, const vector<KeyPoint>\& keypoints2,
+	\par const vector<DMatch>\& matches1to2, Mat\& outImg,
+	\par const Scalar\& matchColor=Scalar::all(-1), 
+	\par const Scalar\& singlePointColor=Scalar::all(-1),
+	\par const vector<char>\& matchesMask=vector<char>(),
+	\par int flags=DrawMatchesFlags::DEFAULT );
+}
+
+\cvdefCpp{
+void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,
+	 \par const Mat\& img2, const vector<KeyPoint>\& keypoints2,
+	 \par const vector<vector<DMatch> >\& matches1to2, Mat\& outImg,
+	 \par const Scalar\& matchColor=Scalar::all(-1), 
+	 \par const Scalar\& singlePointColor=Scalar::all(-1),
+	 \par const vector<vector<char>>\& matchesMask=
+	 \par vector<vector<char> >(),
+	 \par int flags=DrawMatchesFlags::DEFAULT );
 }
 
 \begin{description}
 \cvarg{img1}{First source image.}
-\end{description}
-
-\begin{description}
 \cvarg{keypoints1}{Keypoints from first source image.}
-\end{description}
-
-\begin{description}
-\cvarg{img1}{Second source image.}
-\end{description}
-
-\begin{description}
+\cvarg{img2}{Second source image.}
 \cvarg{keypoints2}{Keypoints from second source image.}
-\end{description}
-
-\begin{description}
-\cvarg{matches}{Matches from first image to second one, i.e. keypoints1[i] has corresponding point keypoints2[matches[i]]}
-\end{description}
-
-\begin{description}
-\cvarg{outImg}{Output image. Its content depends on \texttt{flags} value what is drawn in output image. See below possible \texttt{flags} bit values. }
-\end{description}
-
-\begin{description}
-\cvarg{matchColor}{Color of matches (lines and connected keypoints). If \texttt{matchColor}==Scalar::all(-1) color will be generated randomly.}
-\end{description}
-
-\begin{description}
-\cvarg{singlePointColor}{Color of single keypoints (circles), i.e. keypoints not having the matches. If \texttt{singlePointColor}==Scalar::all(-1) color will be generated randomly.}
-\end{description}
-
-\begin{description}
+\cvarg{matches}{Matches from first image to second one, i.e. \texttt{keypoints1[i]} 
+				has corresponding point \texttt{keypoints2[matches[i]]}. }
+\cvarg{outImg}{Output image. Its content depends on \texttt{flags} value 
+			   what is drawn in output image. See below possible \texttt{flags} bit values. }
+\cvarg{matchColor}{Color of matches (lines and connected keypoints). 
+				   If \texttt{matchColor==Scalar::all(-1)} color will be generated randomly.}
+\cvarg{singlePointColor}{Color of single keypoints (circles), i.e. keypoints not having the matches. 
+					If \texttt{singlePointColor==Scalar::all(-1)} color will be generated randomly.}
 \cvarg{matchesMask}{Mask determining which matches will be drawn. If mask is empty all matches will be drawn. }
-\end{description}
-
-\begin{description}
-\cvarg{flags}{Each bit of \texttt{flags} sets some feature of drawing. Possible \texttt{flags} bit values is defined by DrawMatchesFlags, see below. }
+\cvarg{flags}{Each bit of \texttt{flags} sets some feature of drawing. 
+			  Possible \texttt{flags} bit values is defined by \texttt{DrawMatchesFlags}, see below. }
 \end{description}
 
 \begin{lstlisting}
 struct DrawMatchesFlags
 {
     enum{ DEFAULT = 0, // Output image matrix will be created (Mat::create),
-                       // i.e. existing memory of output image may be reused. 
-                       // Two source image, matches and single keypoints will be drawn.
-          DRAW_OVER_OUTIMG = 1, // Output image matrix will not be created (Mat::create).
-                                // Matches will be drawn on existing content 
-				// of output image.
-          NOT_DRAW_SINGLE_POINTS = 2 // Single keypoints will not be drawn.
+                       // i.e. existing memory of output image may be reused.
+                       // Two source image, matches and single keypoints 
+                       // will be drawn.
+                       // For each keypoint only the center point will be 
+                       // drawn (without the circle around keypoint with 
+                       // keypoint size and orientation).
+          DRAW_OVER_OUTIMG = 1, // Output image matrix will not be 
+                       // created (Mat::create). Matches will be drawn 
+                       // on existing content of output image.
+          NOT_DRAW_SINGLE_POINTS = 2, // Single keypoints will not be drawn.
+          DRAW_RICH_KEYPOINTS = 4 // For each keypoint the circle around 
+                       // keypoint with keypoint size and orientation will 
+                       // be drawn.
         };
 };
-
 \end{lstlisting}
+
+\cvCppFunc{drawKeypoints}
+Draw keypoints.
+
+\cvdefCpp{
+void drawKeypoints( const Mat\& image, 
+	\par const vector<KeyPoint>\& keypoints, 
+	\par Mat\& outImg, const Scalar\& color=Scalar::all(-1), 
+	\par int flags=DrawMatchesFlags::DEFAULT );
+}          
+
+\begin{description}
+\cvarg{image}{Source image.}
+\cvarg{keypoints}{Keypoints from source image.}
+\cvarg{outImg}{Output image. Its content depends on \texttt{flags} value 
+			   what is drawn in output image. See possible \texttt{flags} bit values. }
+\cvarg{color}{Color of keypoints}. 
+\cvarg{flags}{Each bit of \texttt{flags} sets some feature of drawing. 
+			  Possible \texttt{flags} bit values is defined by \texttt{DrawMatchesFlags}, 
+			  see above in \cvCppCross{drawMatches}. }
+\end{description}
 
 \fi
