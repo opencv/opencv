@@ -231,7 +231,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescs, vector<
                                                 const vector<Mat>& masks, bool compactResult )
 {
 #ifndef HAVE_EIGEN2
-    bfKnnMatchImpl<L2<float> >( *this, queryDescs, matches, knn, masks, compactResult );
+    bfKnnMatchImpl( *this, queryDescs, matches, knn, masks, compactResult );
 #else
     CV_Assert( queryDescs.type() == CV_32FC1 ||  queryDescs.empty() );
     CV_Assert( masks.empty() || masks.size() == trainDescCollection.size() );
@@ -319,7 +319,7 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescs, vect
                                                      const vector<Mat>& masks, bool compactResult )
 {
 #ifndef HAVE_EIGEN2
-    bfRadiusMatchImpl<L2<float> >( *this, queryDescs, matches, maxDistance, masks, compactResult );
+    bfRadiusMatchImpl( *this, queryDescs, matches, maxDistance, masks, compactResult );
 #else
     CV_Assert( queryDescs.type() == CV_32FC1 ||  queryDescs.empty() );
     CV_Assert( masks.empty() || masks.size() == trainDescCollection.size() );

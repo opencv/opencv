@@ -425,7 +425,7 @@ void GridAdaptedFeatureDetector::detect( const Mat& image, vector<KeyPoint>& key
 }
 
 /*
- *  GridAdaptedFeatureDetector
+ *  PyramidAdaptedFeatureDetector
  */
 PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _levels )
     : detector(_detector), levels(_levels)

@@ -1252,8 +1252,8 @@ public:
      */
     void detect( const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, const vector<Mat>& masks=vector<Mat>() ) const;
 
-    virtual void read(const FileNode&) {}
-    virtual void write(FileStorage&) const {}
+    virtual void read( const FileNode& ) {}
+    virtual void write( FileStorage& ) const {}
 
 protected:
     /*
@@ -1268,11 +1268,11 @@ protected:
 class CV_EXPORTS FastFeatureDetector : public FeatureDetector
 {
 public:
-    FastFeatureDetector( int _threshold = 1, bool _nonmaxSuppression = true );
+    FastFeatureDetector( int _threshold=1, bool _nonmaxSuppression=true );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     int threshold;
@@ -1287,8 +1287,8 @@ public:
                                  int _blockSize=3, bool _useHarrisDetector=false, double _k=0.04 );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     int maxCorners;
@@ -1302,13 +1302,13 @@ protected:
 class CV_EXPORTS MserFeatureDetector : public FeatureDetector
 {
 public:
-    MserFeatureDetector( CvMSERParams params = cvMSERParams () );
+    MserFeatureDetector( CvMSERParams params=cvMSERParams () );
     MserFeatureDetector( int delta, int minArea, int maxArea, double maxVariation, double minDiversity,
                          int maxEvolution, double areaThreshold, double minMargin, int edgeBlurSize );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     MSER mser;
@@ -1321,8 +1321,8 @@ public:
                          int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     StarDetector star;
@@ -1339,8 +1339,8 @@ public:
                          int angleMode=SIFT::CommonParams::FIRST_ANGLE );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     SIFT sift;
@@ -1351,8 +1351,8 @@ class CV_EXPORTS SurfFeatureDetector : public FeatureDetector
 public:
     SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3, int octaveLayers = 4 );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
-    virtual void read (const FileNode& fn);
-    virtual void write (FileStorage& fs) const;
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     SURF surf;
@@ -1388,10 +1388,20 @@ protected:
 class CV_EXPORTS GridAdaptedFeatureDetector : public FeatureDetector
 {
 public:
-    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _maxTotalKeypoints,
-                                int _gridRows=4, int _gridCols=4 );
+    /*
+     * detector            Detector that will be adapted.
+     * maxTotalKeypoints   Maximum count of keypoints detected on the image. Only the strongest keypoints
+     *                      will be keeped.
+     * gridRows            Grid rows count.
+     * gridCols            Grid column count.
+     */
+    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxTotalKeypoints,
+                                int gridRows=4, int gridCols=4 );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
     // todo read/write
+    virtual void read( const FileNode& fn ) {}
+    virtual void write( FileStorage& fs ) const {}
 
 protected:
     Ptr<FeatureDetector> detector;
@@ -1407,9 +1417,12 @@ protected:
 class PyramidAdaptedFeatureDetector : public FeatureDetector
 {
 public:
-    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _levels=2 );
+    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int levels=2 );
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
     // todo read/write
+    virtual void read( const FileNode& fn ) {}
+    virtual void write( FileStorage& fs ) const {}
 
 protected:
     Ptr<FeatureDetector> detector;
@@ -1663,7 +1676,7 @@ struct CV_EXPORTS DMatch
 
     float distance;
 
-    //less is better
+    // less is better
     bool operator<( const DMatch &m) const
     {
         return distance < m.distance;
@@ -1788,13 +1801,61 @@ protected:
 };
 
 /*
- * Next two functions are used to implement BruteForceMatcher class specialization
+ * Brute-force descriptor matcher.
+ *
+ * For each descriptor in the first set, this matcher finds the closest
+ * descriptor in the second set by trying each one.
+ *
+ * For efficiency, BruteForceMatcher is templated on the distance metric.
+ * For float descriptors, a common choice would be cv::L2<float>.
  */
 template<class Distance>
-class BruteForceMatcher;
+class CV_EXPORTS BruteForceMatcher : public DescriptorMatcher
+{
+public:
+    BruteForceMatcher( Distance d = Distance() ) : distance(d) {}
+    virtual ~BruteForceMatcher() {}
+
+    virtual void train() {}
+    virtual bool supportMask() { return true; }
+
+protected:
+    virtual Ptr<DescriptorMatcher> cloneWithoutData() const { return new BruteForceMatcher(distance); }
+
+    virtual void knnMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
+                               const vector<Mat>& masks, bool compactResult );
+    virtual void radiusMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
+                                  const vector<Mat>& masks, bool compactResult );
+    Distance distance;
+
+private:
+    /*
+     * Next two methods are used to implement specialization
+     */
+    static void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
+                                const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
+                                const vector<Mat>& masks, bool compactResult );
+    static void bfRadiusMatchImpl( BruteForceMatcher<Distance>& matcher,
+                                   const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
+                                   const vector<Mat>& masks, bool compactResult );
+};
 
 template<class Distance>
-inline void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
+void BruteForceMatcher<Distance>::knnMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
+                                                const vector<Mat>& masks, bool compactResult )
+{
+    bfKnnMatchImpl( *this, queryDescs, matches, knn, masks, compactResult );
+}
+
+template<class Distance>
+void BruteForceMatcher<Distance>::radiusMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
+                                                   const vector<Mat>& masks, bool compactResult )
+{
+    bfRadiusMatchImpl( *this, queryDescs, matches, maxDistance, masks, compactResult );
+}
+
+template<class Distance>
+inline void BruteForceMatcher<Distance>::bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
                           const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
                           const vector<Mat>& masks, bool compactResult )
  {
@@ -1869,7 +1930,7 @@ inline void bfKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
 }
 
 template<class Distance>
-inline void bfRadiusMatchImpl( BruteForceMatcher<Distance>& matcher,
+inline void BruteForceMatcher<Distance>::bfRadiusMatchImpl( BruteForceMatcher<Distance>& matcher,
                              const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
                              const vector<Mat>& masks, bool compactResult )
 {
@@ -1918,58 +1979,6 @@ inline void bfRadiusMatchImpl( BruteForceMatcher<Distance>& matcher,
             std::sort( curMatches->begin(), curMatches->end() );
         }
     }
-}
-
-/*
- * Brute-force descriptor matcher.
- *
- * For each descriptor in the first set, this matcher finds the closest
- * descriptor in the second set by trying each one.
- *
- * For efficiency, BruteForceMatcher is templated on the distance metric.
- * For float descriptors, a common choice would be cv::L2<float>.
- */
-template<class Distance>
-class CV_EXPORTS BruteForceMatcher : public DescriptorMatcher
-{
-public:
-    template<class bfDistance>
-    friend void bfKnnMatchImpl( BruteForceMatcher<bfDistance>& matcher,
-                                const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
-                                const vector<Mat>& masks, bool compactResult );
-    template<class bfDistance>
-    friend void bfRadiusMatchImpl( BruteForceMatcher<bfDistance>& matcher,
-                                   const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
-                                   const vector<Mat>& masks, bool compactResult );
-
-    BruteForceMatcher( Distance d = Distance() ) : distance(d) {}
-    virtual ~BruteForceMatcher() {}
-
-    virtual void train() {}
-    virtual bool supportMask() { return true; }
-
-protected:
-    virtual Ptr<DescriptorMatcher> cloneWithoutData() const { return new BruteForceMatcher(distance); }
-
-    virtual void knnMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
-                               const vector<Mat>& masks, bool compactResult );
-    virtual void radiusMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
-                                  const vector<Mat>& masks, bool compactResult );
-    Distance distance;
-};
-
-template<class Distance>
-void BruteForceMatcher<Distance>::knnMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, int knn,
-                                                const vector<Mat>& masks, bool compactResult )
-{
-    bfKnnMatchImpl<Distance>( *this, queryDescs, matches, knn, masks, compactResult );
-}
-
-template<class Distance>
-void BruteForceMatcher<Distance>::radiusMatchImpl( const Mat& queryDescs, vector<vector<DMatch> >& matches, float maxDistance,
-                                                   const vector<Mat>& masks, bool compactResult )
-{
-    bfRadiusMatchImpl<Distance>( *this, queryDescs, matches, maxDistance, masks, compactResult );
 }
 
 /*
