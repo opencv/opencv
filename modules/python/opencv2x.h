@@ -693,4 +693,11 @@ static inline PyObject* pyopencv_from(const Moments& m)
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "mu03", m.nu03);
 }
 
+static inline PyObject* pyopencv_from(const CvDTreeNode* node)
+{
+    double value = node->value;
+    int ivalue = cvRound(value);
+    return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
+}
+
 #endif

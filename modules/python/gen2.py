@@ -49,7 +49,7 @@ static PyObject* pyopencv_from(const ${cname}& r)
 
 static bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name="<unknown>")
 {
-    if( src == NULL or src == Py_None )
+    if( src == NULL || src == Py_None )
         return true;
     if(!PyObject_TypeCheck(src, &pyopencv_${name}_Type))
     {

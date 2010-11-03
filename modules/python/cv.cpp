@@ -1860,7 +1860,7 @@ static int convert_to_floats(PyObject *o, floats *dst, const char *name = "no_na
   } else if (PyNumber_Check(o)) {
     dst->count = 1;
     dst->f = new float[1];
-    dst->f[0] = PyFloat_AsDouble(o);
+    dst->f[0] = (float)PyFloat_AsDouble(o);
   } else {
     return failmsg("Expected list of floats, or float for argument '%s'", name);
   }
@@ -3847,9 +3847,11 @@ static int zero = 0;
 
 #include "generated0.i"
 
+#if PYTHON_USE_NUMPY
 #include "opencv2x.h"
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_funcs.h"
+#endif
 
 static PyMethodDef methods[] = {
 
@@ -3865,7 +3867,10 @@ static PyMethodDef methods[] = {
   {"temp_test", temp_test, METH_VARARGS},
 
 #include "generated1.i"
+
+#if PYTHON_USE_NUMPY
 #include "pyopencv_generated_func_tab.h"
+#endif
 
   {NULL, NULL},
 };
@@ -3918,7 +3923,10 @@ void initcv()
   MKTYPE(memtrack);
 
 #include "generated4.i"
+
+#if PYTHON_USE_NUMPY
 #include "pyopencv_generated_type_reg.h"
+#endif
 
   m = Py_InitModule(MODULESTR"", methods);
   d = PyModule_GetDict(m);
@@ -4015,7 +4023,10 @@ void initcv()
   PUBLISH(GC_EVAL);
 
 #include "generated2.i"
+
+#if PYTHON_USE_NUMPY
 #include "pyopencv_generated_const_reg.h"
+#endif
 
 #if 0
   {

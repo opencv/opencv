@@ -1400,8 +1400,8 @@ public:
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     // todo read/write
-    virtual void read( const FileNode& fn ) {}
-    virtual void write( FileStorage& fs ) const {}
+    virtual void read( const FileNode& ) {}
+    virtual void write( FileStorage& ) const {}
 
 protected:
     Ptr<FeatureDetector> detector;
@@ -1421,8 +1421,8 @@ public:
     virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     // todo read/write
-    virtual void read( const FileNode& fn ) {}
-    virtual void write( FileStorage& fs ) const {}
+    virtual void read( const FileNode& ) {}
+    virtual void write( FileStorage& ) const {}
 
 protected:
     Ptr<FeatureDetector> detector;
