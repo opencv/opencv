@@ -132,7 +132,7 @@ void CV_RandTest::run( int )
         { -1000000, 1000000 }, { -1000, 1000 }, { -1000, 1000 }};
     
     const int MAX_SDIM = 10;
-    const int N = 1200000;
+    const int N = 2000000;
     const int maxSlice = 1000;
     const int MAX_HIST_SIZE = 1000;
     int progress = 0;
@@ -329,10 +329,11 @@ void CV_RandTest::run( int )
             for( sdim += 2; sdim <= SDIM; sdim += 2 )
                 V0 *= 2*CV_PI/sdim;
             
-            if( fabs(V - V0) > 0.2*fabs(V0) )
+            if( fabs(V - V0) > 0.3*fabs(V0) )
             {
                 ts->printf( CvTS::LOG, "RNG failed %d-dim sphere volume test (got %g instead of %g)\n",
                            SDIM, V, V0);
+                ts->printf( CvTS::LOG, "depth = %d, N0 = %d\n", depth, N0);
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
                 return;
             }
