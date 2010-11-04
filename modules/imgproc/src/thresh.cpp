@@ -444,7 +444,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
 
     double mu = 0, scale = 1./(size.width*size.height);
     for( i = 0; i < N; i++ )
-        mu += i*h[i];
+        mu += i*(double)h[i];
     
     mu *= scale;
     double mu1 = 0, q1 = 0;
