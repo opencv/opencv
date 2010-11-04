@@ -2325,7 +2325,7 @@ public:
 
     virtual void train();
 
-    virtual bool supportMask() { matcher->supportMask(); }
+    virtual bool supportMask() { return matcher->supportMask(); }
 
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;

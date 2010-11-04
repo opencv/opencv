@@ -50,11 +50,26 @@ namespace cv {
 
 void swap( Mat& a, Mat& b )
 {
-    int *ap = (int*)&a, *bp = (int*)&b;
+    /*int *ap = (int*)&a, *bp = (int*)&b;
     size_t i, n = sizeof(Mat)/sizeof(ap[0]);
     
     for( i = 0; i < n; i++ )
-        std::swap(ap[i], bp[i]);
+        std::swap(ap[i], bp[i]);*/
+    std::swap(a.flags, b.flags);
+    std::swap(a.dims, b.dims);
+    std::swap(a.rows, b.rows);
+    std::swap(a.cols, b.cols);
+    std::swap(a.data, b.data);
+    std::swap(a.refcount, b.refcount);
+    std::swap(a.datastart, b.datastart);
+    std::swap(a.dataend, b.dataend);
+    std::swap(a.datalimit, b.datalimit);
+    std::swap(a.allocator, b.allocator);
+    
+    std::swap(a.size.p, b.size.p);
+    std::swap(a.step.p, b.step.p);
+    std::swap(a.step.buf[0], b.step.buf[0]);
+    std::swap(a.step.buf[1], b.step.buf[1]);
     
     if( a.step.p == b.step.buf )
     {

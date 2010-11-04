@@ -1938,12 +1938,6 @@ template<typename _Tp> inline MatCommaInitializer_<_Tp>::operator Mat_<_Tp>() co
     return Mat_<_Tp>(*this->it.m);
 }    
     
-template<typename _Tp> inline void
-MatCommaInitializer_<_Tp>::assignTo(Mat& m, int type) const
-{
-    Mat_<_Tp>(*this).assignTo(m, type);
-}
-
 template<typename _Tp, typename T2> static inline MatCommaInitializer_<_Tp>
 operator << (const Mat_<_Tp>& m, T2 val)
 {

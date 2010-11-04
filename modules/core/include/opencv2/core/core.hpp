@@ -2776,12 +2776,9 @@ public:
     MatCommaInitializer_(Mat_<_Tp>* _m);
     //! the operator that takes the next value and put it to the matrix
     template<typename T2> MatCommaInitializer_<_Tp>& operator , (T2 v);
-    //! the conversion operator
-    //operator Mat_<_Tp>() const;
     //! another form of conversion operator
     Mat_<_Tp> operator *() const;
     operator Mat_<_Tp>() const;
-    virtual void assignTo(Mat& m, int type=-1) const;
 protected:
     MatIterator_<_Tp> it;
 };
