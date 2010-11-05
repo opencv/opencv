@@ -75,7 +75,7 @@ int main( int argc, char** argv )
     // step 2) call the function; do not forget unary "&" to form pointers
     cvAddWeighted(&cv_planes_0, contrast_gain, &cv_noise, 1, -128 + brightness_gain, &cv_planes_0);
 #else
-    addWeighted(planes[0], constrast_gain, noise, 1, -128 + brightness_gain, planes[0]);
+    addWeighted(planes[0], contrast_gain, noise, 1, -128 + brightness_gain, planes[0]);
 #endif
     const double color_scale = 0.5;
     // Mat::convertTo() replaces cvConvertScale. One must explicitly specify the output matrix type (we keep it intact - planes[1].type())
