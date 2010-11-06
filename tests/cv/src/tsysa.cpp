@@ -77,7 +77,8 @@ const char* blacklist[] =
     "warp-resize",                    //ticket 429
     "warp-undistort",                 //ticket 577
 
-    //"mhi-update",                     //ticket 639
+    "hist-backproj",                  //ticket 579
+    "projectPoints-c",                //ticket 652
     0
 };
 
