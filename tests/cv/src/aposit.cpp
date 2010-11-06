@@ -92,7 +92,7 @@ void CV_POSITTest::run( int start_from )
     CvMat* true_translation = cvCreateMat( 3, 1, CV_32F );
 
     const float flFocalLength = 760.f;
-    const float flEpsilon = 0.1f;
+    const float flEpsilon = 0.5f;
 
     /* Initilization */
     criteria.type = CV_TERMCRIT_EPS|CV_TERMCRIT_ITER;

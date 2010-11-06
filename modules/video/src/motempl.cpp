@@ -271,7 +271,7 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
 
     // find the maximum index (the dominant orientation)
     cvGetMinMaxHistValue( hist, 0, 0, 0, &base_orient );
-    base_orient *= 360/hist_size;
+    base_orient = cvRound(base_orient*360./hist_size);
 
     // override timestamp with the maximum value in MHI
     cvMinMaxLoc( mhi, 0, &curr_mhi_timestamp, 0, 0, mask );
@@ -325,7 +325,7 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
                 rel_angle += (rel_angle < -180 ? 360 : 0);
                 rel_angle += (rel_angle > 180 ? -360 : 0);
 
-                if( abs(rel_angle) < 90 )
+                if( abs(rel_angle) < 45 )
                 {
                     shift_orient += weight * rel_angle;
                     shift_weight += weight;

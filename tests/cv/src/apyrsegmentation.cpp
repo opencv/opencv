@@ -60,7 +60,7 @@ CV_PyrSegmentationTest::CV_PyrSegmentationTest():
 void CV_PyrSegmentationTest::run( int /*start_from*/ )
 {
     const int level = 5;
-    const double range = 20;
+    const double range = 15;
 
     int code = CvTS::OK;
 
@@ -104,7 +104,7 @@ void CV_PyrSegmentationTest::run( int /*start_from*/ )
 
         if( channels == 1 )
         {
-            int color1 = 30, color2 = 110, color3 = 180;
+            int color1 = 30, color2 = 110, color3 = 190;
 
             cvSet( image, cvScalarAll(color1));
             cvFillPoly( image, &cp, &nPoints, 1, cvScalar(color2));

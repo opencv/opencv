@@ -1014,6 +1014,8 @@ void CV_ProjectPointsTest::run(int)
 
     const float imgPointErr = 1e-3f,
                 dEps = 1e-3f;
+    
+    double err;
 
     Size imgSize( 600, 800 );
     Mat_<float> objPoints( pointCount, 3), rvec( 1, 3), rmat, tvec( 1, 3 ), cameraMatrix( 3, 3 ), distCoeffs( 1, 4 ),
@@ -1100,9 +1102,10 @@ void CV_ProjectPointsTest::run(int)
             rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
 	}
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdrot );
-    if( norm( dpdrot, valDpdrot, NORM_INF ) > 2.5 )
+    err = norm( dpdrot, valDpdrot, NORM_INF );
+    if( err > 3 )
 	{
-		ts->printf( CvTS::LOG, "bad dpdrot\n" );
+		ts->printf( CvTS::LOG, "bad dpdrot: too big difference = %g\n", err );
 		code = CvTS::FAIL_BAD_ACCURACY;
 	}
 

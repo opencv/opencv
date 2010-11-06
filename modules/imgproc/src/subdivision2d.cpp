@@ -189,10 +189,9 @@ static int
 icvIsRightOf( CvPoint2D32f& pt, CvSubdiv2DEdge edge )
 {
     CvSubdiv2DPoint *org = cvSubdiv2DEdgeOrg(edge), *dst = cvSubdiv2DEdgeDst(edge);
-    Cv32suf cw_area;
-    cw_area.f = (float)cvTriangleArea( pt, dst->pt, org->pt );
+    double cw_area = cvTriangleArea( pt, dst->pt, org->pt );
 
-    return (cw_area.i > 0)*2 - (cw_area.i*2 != 0);
+    return (cw_area > 0) - (cw_area < 0);
 }
 
 

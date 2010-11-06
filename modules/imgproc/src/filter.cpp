@@ -2879,14 +2879,14 @@ Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,
 
     anchor = normalizeAnchor(anchor, _kernel.size());
 
-    if( sdepth == CV_8U && ddepth == CV_8U && kdepth == CV_32S )
+    /*if( sdepth == CV_8U && ddepth == CV_8U && kdepth == CV_32S )
         return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, uchar>, FilterVec_8u>
             (_kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits),
             FilterVec_8u(_kernel, bits, delta)));
     if( sdepth == CV_8U && ddepth == CV_16S && kdepth == CV_32S )
         return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, short>, FilterVec_8u16s>
             (_kernel, anchor, delta, FixedPtCastEx<int, short>(bits),
-            FilterVec_8u16s(_kernel, bits, delta)));
+            FilterVec_8u16s(_kernel, bits, delta)));*/
 
     kdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
@@ -2952,21 +2952,21 @@ Ptr<FilterEngine> createLinearFilter( int _srcType, int _dstType, const Mat& _ke
                          const Scalar& _borderValue )
 {
     _srcType = CV_MAT_TYPE(_srcType);
-    _dstType = CV_MAT_TYPE(_dstType);
-    int sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
+    _dstType = CV_MAT_TYPE(_dstType);    
     int cn = CV_MAT_CN(_srcType);
     CV_Assert( cn == CV_MAT_CN(_dstType) );
 
     Mat kernel = _kernel;
-    int ktype = _kernel.depth() == CV_32S ? KERNEL_INTEGER : getKernelType(_kernel, _anchor);
     int bits = 0;
 
+    /*int sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
+    int ktype = _kernel.depth() == CV_32S ? KERNEL_INTEGER : getKernelType(_kernel, _anchor); 
     if( sdepth == CV_8U && (ddepth == CV_8U || ddepth == CV_16S) &&
         _kernel.rows*_kernel.cols <= (1 << 10) )
     {
         bits = (ktype & KERNEL_INTEGER) ? 0 : 11;
         _kernel.convertTo(kernel, CV_32S, 1 << bits);
-    }
+    }*/
     
     Ptr<BaseFilter> _filter2D = getLinearFilter(_srcType, _dstType,
         kernel, _anchor, _delta, bits);

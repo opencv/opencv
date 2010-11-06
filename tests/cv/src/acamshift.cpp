@@ -352,7 +352,7 @@ int CV_CamShiftTest::validate_test_results( int /*test_case_idx*/ )
         goto _exit_;
     }
 
-    if( fabs(comp.area - area0) > area0*0.1 )
+    if( fabs(comp.area - area0) > area0*0.15 )
     {
         ts->printf( CvTS::LOG,
             "Incorrect CvConnectedComp area (=%.1f, should be %d)\n", comp.area, area0 );

@@ -493,7 +493,7 @@ cvTsCalcGlobalOrientation( const CvMat* orient, const CvMat* mask, const CvMat* 
                 if( diff < -180 ) diff += 360;
                 if( diff > 180 ) diff -= 360;
 
-                if( delta_weight > 0 && fabs(diff) < 90 )
+                if( delta_weight > 0 && fabs(diff) < 45 )
                 {
                     delta_orientation += diff*delta_weight;
                     weight += delta_weight;

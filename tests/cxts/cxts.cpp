@@ -1100,7 +1100,8 @@ void CvTS::clear()
     params.rng_seed = 0;
     params.debug_mode = -1;
     params.print_only_failed = 0;
-    params.skip_header = 0;
+    params.skip_header = -1;
+    params.ignore_blacklist = -1;
     params.test_mode = CORRECTNESS_CHECK_MODE;
     params.timing_mode = MIN_TIME;
     params.use_optimized = -1;
@@ -1347,6 +1348,10 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
             set_data_path(argv[++i]);
         else if( strcmp( argv[i], "-nc" ) == 0 )
             params.color_terminal = 0;
+        else if( strcmp( argv[i], "-nh" ) == 0 )
+            params.skip_header = 1;
+        else if( strcmp( argv[i], "-nb" ) == 0 )
+            params.ignore_blacklist = 1;
         else if( strcmp( argv[i], "-r" ) == 0 )
             params.debug_mode = 0;
         else if( strcmp( argv[i], "-tn" ) == 0 )
@@ -1370,7 +1375,7 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
         if( datapath_dir )
         {
             sprintf( buf, "%s/%s", datapath_dir, module_name ? module_name : "" );
-            printf( LOG + SUMMARY, "Data Path = %s\n", buf);
+            //printf( LOG + SUMMARY, "Data Path = %s\n", buf);
             set_data_path(buf);
         }
     }
@@ -1406,7 +1411,8 @@ int CvTS::run( int argc, char** argv, const char** blacklist )
     }
 
     if( !config_name )
-        printf( LOG, "WARNING: config name is not specified, using default parameters\n" );
+        ;
+        //printf( LOG, "WARNING: config name is not specified, using default parameters\n" );
     else
     {
         // 2. read common parameters of test system
@@ -1589,7 +1595,8 @@ void CvTS::print_help()
         "-l - list all the registered tests or subset of the tests,\n"
         "     selected in the config file, and exit\n"
         "-tn - only run a specific test\n"
-        "-nc - do not use colors in the console output\n"     
+        "-nc - do not use colors in the console output\n"
+        "-nh - do not print the header\n"
         "-O{0|1} - disable/enable on-fly detection of IPP and other\n"
         "          supported optimized libs. It's enabled by default\n"
         "-r - continue running tests after OS/Hardware exception occured\n"
@@ -1615,7 +1622,10 @@ int CvTS::read_params( CvFileStorage* fs )
     CvFileNode* node = fs ? cvGetFileNodeByName( fs, 0, "common" ) : 0;
     if(params.debug_mode < 0)
         params.debug_mode = cvReadIntByName( fs, node, "debug_mode", 1 ) != 0;
-    params.skip_header = cvReadIntByName( fs, node, "skip_header", 0 ) != 0;
+    if( params.skip_header < 0 )
+        params.skip_header = cvReadIntByName( fs, node, "skip_header", 0 ) > 0;
+    if( params.ignore_blacklist < 0 )
+        params.ignore_blacklist = cvReadIntByName( fs, node, "ignore_blacklist", 0 ) > 0;
     params.print_only_failed = cvReadIntByName( fs, node, "print_only_failed", 0 ) != 0;
     params.rerun_failed = cvReadIntByName( fs, node, "rerun_failed", 0 ) != 0;
     params.rerun_immediately = cvReadIntByName( fs, node, "rerun_immediately", 0 ) != 0;
@@ -1869,7 +1879,7 @@ int CvTS::filter( CvTest* test, int& filter_state, const char** blacklist )
     int inverse = 0;
     int greater_or_equal = 0;
 
-    if( blacklist )
+    if( blacklist && !params.ignore_blacklist )
     {
         for( ; *blacklist != 0; blacklist++ )
         {

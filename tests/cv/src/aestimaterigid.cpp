@@ -110,7 +110,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
         
         Mat aff_est = estimateRigidTransform(fpts, tpts, true);
                 
-        double thres = 0.03*norm(aff);
+        double thres = 0.1*norm(aff);
         double d = norm(aff_est, aff, NORM_L2);
         if (d > thres)
         {

@@ -371,6 +371,8 @@ int CV_BaseShapeDescrTest::prepare_test_case( int test_case_idx )
             double t;
             CV_SWAP( low.val[i], high.val[i], t );
         }
+        if( high.val[i] < low.val[i] + 1 )
+            high.val[i] += 1;
     }
 
     generate_point_set( points );

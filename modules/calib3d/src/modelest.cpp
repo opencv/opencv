@@ -261,7 +261,7 @@ bool CvModelEstimator2::runLMeDS( const CvMat* m1, const CvMat* m2, CvMat* model
     if( minMedian < DBL_MAX )
     {
         sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*sqrt(minMedian);
-        sigma = MAX( sigma, FLT_EPSILON*100 );
+        sigma = MAX( sigma, 0.001 );
 
         count = findInliers( m1, m2, model, err, mask, sigma );
         result = count >= modelPoints;

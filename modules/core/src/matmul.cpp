@@ -2081,12 +2081,11 @@ void scaleAdd( const Mat& src1, double alpha, const Mat& src2, Mat& dst )
         float* d = (float*)dst.data;
         size_t step1 = src1.step/sizeof(s1[0]), step2 = src2.step/sizeof(s2[0]);
         size_t step = dst.step/sizeof(d[0]);
-        float a = (float)alpha;
 
         if( size.width == 1 )
         {
             for( ; size.height--; s1 += step1, s2 += step2, d += step )
-                d[0] = s1[0]*a + s2[0];
+                d[0] = (float)(s1[0]*alpha + s2[0]);
             return;
         }
 
@@ -2095,18 +2094,18 @@ void scaleAdd( const Mat& src1, double alpha, const Mat& src2, Mat& dst )
             int i;
             for( i = 0; i <= size.width - 4; i += 4 )
             {
-                float t0 = s1[i]*a + s2[i];
-                float t1 = s1[i+1]*a + s2[i+1];
+                float t0 = (float)(s1[i]*alpha + s2[i]);
+                float t1 = (float)(s1[i+1]*alpha + s2[i+1]);
                 d[i] = t0;
                 d[i+1] = t1;
-                t0 = s1[i+2]*a + s2[i+2];
-                t1 = s1[i+3]*a + s2[i+3];
+                t0 = (float)(s1[i+2]*alpha + s2[i+2]);
+                t1 = (float)(s1[i+3]*alpha + s2[i+3]);
                 d[i+2] = t0;
                 d[i+3] = t1;
             }
 
             for( ; i < size.width; i++ )
-                d[i] = s1[i]*a + s2[i];
+                d[i] = (float)(s1[i]*alpha + s2[i]);
         }
     }
     else if( depth == CV_64F )
@@ -2225,12 +2224,13 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
     int type = v1.type(), depth = v1.depth();
     Size sz = v1.size();
     int i, j, len = sz.width*sz.height*v1.channels();
-    AutoBuffer<uchar> buf(len*v1.elemSize());
+    AutoBuffer<double> buf(len);
     double result = 0;
 
     CV_Assert( type == v2.type() && type == icovar.type() &&
         sz == v2.size() && len == icovar.rows && len == icovar.cols );
 
+    sz.width *= v1.channels();
     if( v1.isContinuous() && v2.isContinuous() )
     {
         sz.width *= sz.height;
@@ -2243,7 +2243,7 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
         const float* src2 = (const float*)v2.data;
         size_t step1 = v1.step/sizeof(src1[0]);
         size_t step2 = v2.step/sizeof(src2[0]);
-        float* diff = (float*)(uchar*)buf;
+        double* diff = buf;
         const float* mat = (const float*)icovar.data;
         size_t matstep = icovar.step/sizeof(mat[0]);
 
@@ -2253,7 +2253,7 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
                 diff[i] = src1[i] - src2[i];
         }
 
-        diff = (float*)(uchar*)buf;
+        diff = buf;
         for( i = 0; i < len; i++, mat += matstep )
         {
             double row_sum = 0;
@@ -2271,7 +2271,7 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
         const double* src2 = (const double*)v2.data;
         size_t step1 = v1.step/sizeof(src1[0]);
         size_t step2 = v2.step/sizeof(src2[0]);
-        double* diff = (double*)(uchar*)buf;
+        double* diff = buf;
         const double* mat = (const double*)icovar.data;
         size_t matstep = icovar.step/sizeof(mat[0]);
 
@@ -2281,7 +2281,7 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
                 diff[i] = src1[i] - src2[i];
         }
 
-        diff = (double*)(uchar*)buf;
+        diff = buf;
         for( i = 0; i < len; i++, mat += matstep )
         {
             double row_sum = 0;
@@ -2372,7 +2372,7 @@ MulTransposedR( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
                 const sT *tsrc = src + j;
 
                 for( k = 0; k < size.height; k++, tsrc += srcstep )
-                    s0 += col_buf[k] * tsrc[0];
+                    s0 += (double)col_buf[k] * tsrc[0];
 
                 tdst[j] = (dT)(s0*scale);
             }
@@ -2415,7 +2415,7 @@ MulTransposedR( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
                 const dT *d = delta_buf ? delta_buf : delta + j;
 
                 for( k = 0; k < size.height; k++, tsrc+=srcstep, d+=deltastep )
-                    s0 += col_buf[k] * (tsrc[0] - d[0]);
+                    s0 += (double)col_buf[k] * (tsrc[0] - d[0]);
 
                 tdst[j] = (dT)(s0*scale);
             }
@@ -2446,10 +2446,10 @@ MulTransposedL( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
                 const sT *tsrc2 = src + j*srcstep;
 
                 for( k = 0; k <= size.width - 4; k += 4 )
-                    s += tsrc1[k]*tsrc2[k] + tsrc1[k+1]*tsrc2[k+1] +
-                         tsrc1[k+2]*tsrc2[k+2] + tsrc1[k+3]*tsrc2[k+3];
+                    s += (double)tsrc1[k]*tsrc2[k] + (double)tsrc1[k+1]*tsrc2[k+1] +
+                         (double)tsrc1[k+2]*tsrc2[k+2] + (double)tsrc1[k+3]*tsrc2[k+3];
                 for( ; k < size.width; k++ )
-                    s += tsrc1[k] * tsrc2[k];
+                    s += (double)tsrc1[k] * tsrc2[k];
                 tdst[j] = (dT)(s*scale);
             }
     else
@@ -2483,12 +2483,12 @@ MulTransposedL( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
                     tdelta2 = delta_buf;
                 }
                 for( k = 0; k <= size.width-4; k += 4, tdelta2 += delta_shift )
-                    s += row_buf[k]*(tsrc2[k] - tdelta2[0]) +
-                         row_buf[k+1]*(tsrc2[k+1] - tdelta2[1]) +
-                         row_buf[k+2]*(tsrc2[k+2] - tdelta2[2]) +
-                         row_buf[k+3]*(tsrc2[k+3] - tdelta2[3]);
+                    s += (double)row_buf[k]*(tsrc2[k] - tdelta2[0]) +
+                         (double)row_buf[k+1]*(tsrc2[k+1] - tdelta2[1]) +
+                         (double)row_buf[k+2]*(tsrc2[k+2] - tdelta2[2]) +
+                         (double)row_buf[k+3]*(tsrc2[k+3] - tdelta2[3]);
                 for( ; k < size.width; k++, tdelta2++ )
-                    s += row_buf[k]*(tsrc2[k] - tdelta2[0]);
+                    s += (double)row_buf[k]*(tsrc2[k] - tdelta2[0]);
                 tdst[j] = (dT)(s*scale);
             }
         }

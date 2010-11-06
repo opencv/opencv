@@ -482,8 +482,11 @@ protected:
         // otherwise the system tries to catch the exceptions and continue with other tests
         int debug_mode;
 
-        // if non-zero, the header is not print
-        bool skip_header;
+        // if > 0, the header is not print
+        int skip_header;
+        
+        // if > 0, the blacklist is ignored
+        int ignore_blacklist;
 
         // if non-zero, the system includes only failed tests into summary
         bool print_only_failed;

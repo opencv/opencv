@@ -620,14 +620,14 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
         result = estimator.run7Point(m1, m2, &_F9x3);
     else if( count == 8 || method == CV_FM_8POINT )
         result = estimator.run8Point(m1, m2, &_F3x3);
-    else if( count > 8 )
+    else if( count >= 8 )
     {
         if( param1 <= 0 )
             param1 = 3;
         if( param2 < DBL_EPSILON || param2 > 1 - DBL_EPSILON )
             param2 = 0.99;
         
-        if( (method & ~3) == CV_RANSAC )
+        if( (method & ~3) == CV_RANSAC && count >= 15 )
             result = estimator.runRANSAC(m1, m2, &_F3x3, tempMask, param1, param2 );
         else
             result = estimator.runLMeDS(m1, m2, &_F3x3, tempMask, param2 );
