@@ -195,16 +195,24 @@ void set_distance_type(flann_distance_t distance_type, int order)
 	flann_minkowski_order_ = order;
 }
 
+
+static ParamsFactory the_factory;
+
+ParamsFactory& ParamsFactory_instance()
+{
+    return the_factory;
+}
+
 class StaticInit
 {
 public:
 	StaticInit()
 	{
-		ParamsFactory::instance().register_<LinearIndexParams>(LINEAR);
-		ParamsFactory::instance().register_<KDTreeIndexParams>(KDTREE);
-		ParamsFactory::instance().register_<KMeansIndexParams>(KMEANS);
-		ParamsFactory::instance().register_<CompositeIndexParams>(COMPOSITE);
-		ParamsFactory::instance().register_<AutotunedIndexParams>(AUTOTUNED);
+		ParamsFactory_instance().register_<LinearIndexParams>(LINEAR);
+		ParamsFactory_instance().register_<KDTreeIndexParams>(KDTREE);
+		ParamsFactory_instance().register_<KMeansIndexParams>(KMEANS);
+		ParamsFactory_instance().register_<CompositeIndexParams>(COMPOSITE);
+		ParamsFactory_instance().register_<AutotunedIndexParams>(AUTOTUNED);
 //		ParamsFactory::instance().register_<SavedIndexParams>(SAVED);
 	}
 };

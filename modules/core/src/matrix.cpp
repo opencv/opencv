@@ -759,6 +759,81 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
     ? (int)(total()*channels()/_elemChannels) : -1;
 }
+
+
+void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
+{
+    int i, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(cn <= 4);
+    switch(depth)
+    {
+    case CV_8U:
+        {
+        uchar* buf = (uchar*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<uchar>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        }
+        break;
+    case CV_8S:
+        {
+        schar* buf = (schar*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<schar>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        }
+        break;
+    case CV_16U:
+        {
+        ushort* buf = (ushort*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<ushort>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        }
+        break;
+    case CV_16S:
+        {
+        short* buf = (short*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<short>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        }
+        break;
+    case CV_32S:
+        {
+        int* buf = (int*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<int>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        }
+        break;
+    case CV_32F:
+        {
+        float* buf = (float*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<float>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        }
+        break;
+    case CV_64F:
+        {
+        double* buf = (double*)_buf;
+        for(i = 0; i < cn; i++)
+            buf[i] = saturate_cast<double>(s.val[i]);
+        for(; i < unroll_to; i++)
+            buf[i] = buf[i-cn];
+        break;
+        }
+    default:
+        CV_Error(CV_StsUnsupportedFormat,"");
+    }
+}
     
 /*************************************************************************************************\
                                         Matrix Operations

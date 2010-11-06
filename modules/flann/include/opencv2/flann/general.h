@@ -134,7 +134,7 @@ public:
 
 
 typedef ObjectFactory<IndexParams, flann_algorithm_t> ParamsFactory;
-
+CV_EXPORTS ParamsFactory& ParamsFactory_instance();
 
 struct CV_EXPORTS SearchParams {
 	SearchParams(int checks_ = 32) :

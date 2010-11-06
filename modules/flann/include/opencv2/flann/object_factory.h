@@ -50,7 +50,7 @@ class ObjectFactory
 	std::map<UniqueIdType, CreateObjectFunc> object_registry;
 
 	// singleton class, private constructor
-	ObjectFactory() {};
+	//ObjectFactory() {};
 
 public:
    typedef typename std::map<UniqueIdType, CreateObjectFunc>::iterator Iterator;
@@ -81,11 +81,11 @@ public:
       return ((*iter).second)();
    }
 
-   static ObjectFactory<BaseClass,UniqueIdType>& instance()
+   /*static ObjectFactory<BaseClass,UniqueIdType>& instance()
    {
 	   static ObjectFactory<BaseClass,UniqueIdType> the_factory;
 	   return the_factory;
-   }
+   }*/
 
 };
 

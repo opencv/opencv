@@ -1296,8 +1296,8 @@ inRangeS_( const Mat& srcmat1, const Scalar& _a, const Scalar& _b, Mat& dstmat )
     size_t dstep = dstmat.step;
     Size size = getContinuousSize( srcmat1, dstmat );
     int cn = srcmat1.channels();
-    _a.convertTo((WT1*)&a, cn);
-    _b.convertTo((WT1*)&b, cn);
+    scalarToRawData(_a, &a, CV_MAKETYPE(DataType<WT>::depth, cn));
+    scalarToRawData(_b, &b, CV_MAKETYPE(DataType<WT>::depth, cn));
 
     for( int y = 0; y < size.height; y++, dst += dstep )
     {

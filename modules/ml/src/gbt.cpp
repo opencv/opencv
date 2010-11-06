@@ -188,7 +188,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
               const CvMat* _responses, const CvMat* _var_idx,
               const CvMat* _sample_idx, const CvMat* _var_type,
               const CvMat* _missing_mask,
-              CvGBTreesParams _params, bool _update ) //update is not supported
+              CvGBTreesParams _params, bool /*_update*/ ) //update is not supported
 {
     CvMemStorage* storage = 0;
 
@@ -1071,7 +1071,7 @@ bool CvGBTrees::train( const cv::Mat& trainData, int tflag,
                    bool update )
 {
     CvMat _trainData = trainData, _responses = responses;
-    CvMat _varIdx = varIdx, _sampleIdx = sampleIdx, _varType = _varType;
+    CvMat _varIdx = varIdx, _sampleIdx = sampleIdx, _varType = varType;
     CvMat _missingDataMask = missingDataMask;
     
     return train(&_trainData, tflag, &_responses, varIdx.empty() ? &_varIdx : 0,

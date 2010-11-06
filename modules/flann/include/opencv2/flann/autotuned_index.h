@@ -156,7 +156,7 @@ public:
     {
     	int index_type;
     	load_value(stream,index_type);
-    	IndexParams* params = ParamsFactory::instance().create((flann_algorithm_t)index_type);
+    	IndexParams* params = ParamsFactory_instance().create((flann_algorithm_t)index_type);
     	bestIndex = create_index_by_type(dataset, *params);
     	bestIndex->loadIndex(stream);
     	load_value(stream, bestSearchParams);

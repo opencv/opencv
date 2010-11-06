@@ -123,7 +123,7 @@ NNIndex<T>* load_saved_index(const Matrix<T>& dataset, const string& filename)
 		throw FLANNException("The index saved belongs to a different dataset");
 	}
 
-	IndexParams* params = ParamsFactory::instance().create(header.index_type);
+	IndexParams* params = ParamsFactory_instance().create(header.index_type);
 	NNIndex<T>* nnIndex = create_index_by_type(dataset, *params);
 	nnIndex->loadIndex(fin);
 	fclose(fin);

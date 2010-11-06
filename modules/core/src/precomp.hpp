@@ -325,7 +325,7 @@ binarySOpCn_( const Mat& srcmat, Mat& dstmat, const Scalar& _scalar )
     int cn = dstmat.channels();
     Size size = getContinuousSize( srcmat, dstmat, cn );
     WT scalar[12];
-    _scalar.convertTo(scalar, cn, 12);
+    scalarToRawData(_scalar, scalar, CV_MAKETYPE(DataType<WT>::depth,cn), 12);
 
     for( ; size.height--; src0 += step1, dst0 += step )
     {

@@ -196,470 +196,107 @@ template<> inline unsigned saturate_cast<unsigned>(float v){ return cvRound(v); 
 template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v); }
 
 
-/////////////////////////// short vector (Vec) /////////////////////////////
+//////////////////////////////// Matx /////////////////////////////////
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec()
+
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx()
 {
-    for(int i = 0; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 0; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0)
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0)
 {
     val[0] = v0;
-    for(int i = 1; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 1; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1)
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1)
 {
-    assert(cn >= 2);
+    assert(channels >= 2);
     val[0] = v0; val[1] = v1;
-    for(int i = 2; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 2; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2)
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2)
 {
-    assert(cn >= 3);
+    assert(channels >= 3);
     val[0] = v0; val[1] = v1; val[2] = v2;
-    for(int i = 3; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 3; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
 {
-    assert(cn >= 4);
+    assert(channels >= 4);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
-    for(int i = 4; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 4; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
 {
-    assert(cn >= 5);
+    assert(channels >= 5);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3; val[4] = v4;
-    for(int i = 5; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 5; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5)
 {
-    assert(cn >= 6);
+    assert(channels >= 6);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5;
-    for(int i = 6; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 6; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5, _Tp v6)
 {
-    assert(cn >= 7);
+    assert(channels >= 7);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6;
-    for(int i = 7; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 7; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5, _Tp v6, _Tp v7)
 {
-    assert(cn >= 8);
+    assert(channels >= 8);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
-    for(int i = 8; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 8; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
                                                         _Tp v8)
 {
-    assert(cn >= 9);
+    assert(channels >= 9);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8;
-    for(int i = 9; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 9; i < channels; i++) val[i] = _Tp(0);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
                                                         _Tp v8, _Tp v9)
 {
-    assert(cn >= 10);
+    assert(channels >= 10);
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8; val[9] = v9;
-    for(int i = 10; i < cn; i++) val[i] = _Tp(0);
+    for(int i = 10; i < channels; i++) val[i] = _Tp(0);
 }
 
     
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(const _Tp* values)
-{
-    for( int i = 0; i < cn; i++ ) val[i] = values[i];
-}
-        
-
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& v)
-{
-    for( int i = 0; i < cn; i++ ) val[i] = v.val[i];
-}
-
-template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::all(_Tp alpha)
-{
-    Vec v;
-    for( int i = 0; i < cn; i++ ) v.val[i] = alpha;
-    return v;
-}
-
-template<typename _Tp, int cn> inline _Tp Vec<_Tp, cn>::dot(const Vec<_Tp, cn>& v) const
-{
-    _Tp s = 0;
-    for( int i = 0; i < cn; i++ ) s += val[i]*v.val[i];
-    return s;
-}
-
-    
-template<typename _Tp, int cn> inline double Vec<_Tp, cn>::ddot(const Vec<_Tp, cn>& v) const
-{
-    double s = 0;
-    for( int i = 0; i < cn; i++ ) s += (double)val[i]*v.val[i];
-    return s;
-}
-
-    
-template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::mul(const Vec<_Tp, cn>& v) const
-{
-    Vec<_Tp, cn> w;
-    for( int i = 0; i < cn; i++ ) w.val[i] = saturate_cast<_Tp>(val[i]*v.val[i]);
-    return w;
-}
-
-    
-template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>& v) const
-{
-    CV_Error(CV_StsError, "for arbitrary-size vector there is no cross-product defined");
-    return Vec<_Tp, cn>();
-}
-
-    
-template<typename _Tp, int cn> inline Matx<_Tp, 1, cn> Vec<_Tp, cn>::t() const
-{
-    return (const Matx<_Tp, 1, cn>&)*this;
-}
-
-    
-template<typename _Tp, int cn> template<typename T2>
-inline Vec<_Tp, cn>::operator Vec<T2, cn>() const
-{
-    Vec<T2, cn> v;
-    for( int i = 0; i < cn; i++ ) v.val[i] = saturate_cast<T2>(val[i]);
-    return v;
-}
-
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::operator CvScalar() const
-{
-    CvScalar s = {{0,0,0,0}};
-    int i;
-    for( i = 0; i < std::min(cn, 4); i++ ) s.val[i] = val[i];
-    for( ; i < 4; i++ ) s.val[i] = 0;
-    return s;
-}
-
-template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator [](int i) const
-{
-    CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
-}
-    
-template<typename _Tp, int cn> inline _Tp& Vec<_Tp, cn>::operator [](int i)
-{
-    CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
-}
-
-template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator ()(int i) const
-{
-    CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
-}
-
-template<typename _Tp, int cn> inline _Tp& Vec<_Tp, cn>::operator ()(int i)
-{
-    CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
-}    
-    
-template<typename _Tp1, typename _Tp2, int cn> static inline Vec<_Tp1, cn>&
-operator += (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
-{
-    for( int i = 0; i < cn; i++ )
-        a.val[i] = saturate_cast<_Tp1>(a.val[i] + b.val[i]);
-    return a;
-}    
-
-template<typename _Tp1, typename _Tp2, int cn> static inline Vec<_Tp1, cn>&
-operator -= (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
-{
-    for( int i = 0; i < cn; i++ )
-        a.val[i] = saturate_cast<_Tp1>(a.val[i] - b.val[i]);
-    return a;
-}        
-    
-template<typename _Tp, int cn> static inline Vec<_Tp, cn>
-operator + (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
-{
-    Vec<_Tp, cn> c = a;
-    return c += b;
-}
-
-template<typename _Tp, int cn> static inline Vec<_Tp, cn>
-operator - (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
-{
-    Vec<_Tp, cn> c = a;
-    return c -= b;
-}
-
-template<typename _Tp> static inline
-Vec<_Tp, 2>& operator *= (Vec<_Tp, 2>& a, _Tp alpha)
-{
-    a[0] *= alpha; a[1] *= alpha;
-    return a;
-}
-
-template<typename _Tp> static inline
-Vec<_Tp, 3>& operator *= (Vec<_Tp, 3>& a, _Tp alpha)
-{
-    a[0] *= alpha; a[1] *= alpha; a[2] *= alpha;
-    return a;
-}
-
-template<typename _Tp> static inline
-Vec<_Tp, 4>& operator *= (Vec<_Tp, 4>& a, _Tp alpha)
-{
-    a[0] *= alpha; a[1] *= alpha; a[2] *= alpha; a[3] *= alpha;
-    return a;
-}
-
-template<typename _Tp, int cn> static inline Vec<_Tp, cn>
-operator * (const Vec<_Tp, cn>& a, _Tp alpha)
-{
-    Vec<_Tp, cn> c = a;
-    return c *= alpha;
-}
-
-template<typename _Tp, int cn> static inline Vec<_Tp, cn>
-operator * (_Tp alpha, const Vec<_Tp, cn>& a)
-{
-    return a * alpha;
-}
-    
-
-template<typename _Tp> static inline Vec<_Tp, 4>
-operator * (const Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
-{
-    return Vec<_Tp, 4>(saturate_cast<_Tp>(a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3]),
-                       saturate_cast<_Tp>(a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2]),
-                       saturate_cast<_Tp>(a[0]*b[2] - a[1]*b[3] + a[2]*b[0] - a[3]*b[1]),
-                       saturate_cast<_Tp>(a[0]*b[3] + a[1]*b[2] - a[2]*b[1] - a[3]*b[0]));
-}
-
-    
-template<typename _Tp> static inline Vec<_Tp, 4>&
-operator *= (Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
-{
-    a = a*b;
-    return a;
-}
-    
-
-template<typename _Tp, int cn> static inline Vec<_Tp, cn>
-operator - (const Vec<_Tp, cn>& a)
-{
-    Vec<_Tp,cn> t;
-    for( int i = 0; i < cn; i++ ) t.val[i] = saturate_cast<_Tp>(-a.val[i]);
-    return t;
-}
-
-template<> inline Vec<float, 3> Vec<float, 3>::cross(const Vec<float, 3>& v) const
-{
-    return Vec<float,3>(val[1]*v.val[2] - val[2]*v.val[1],
-                     val[2]*v.val[0] - val[0]*v.val[2],
-                     val[0]*v.val[1] - val[1]*v.val[0]);
-}
-
-template<> inline Vec<double, 3> Vec<double, 3>::cross(const Vec<double, 3>& v) const
-{
-    return Vec<double,3>(val[1]*v.val[2] - val[2]*v.val[1],
-                     val[2]*v.val[0] - val[0]*v.val[2],
-                     val[0]*v.val[1] - val[1]*v.val[0]);
-}
-
-template<typename T1, typename T2> static inline
-Vec<T1, 2>& operator += (Vec<T1, 2>& a, const Vec<T2, 2>& b)
-{
-    a[0] = saturate_cast<T1>(a[0] + b[0]);
-    a[1] = saturate_cast<T1>(a[1] + b[1]);
-    return a;
-}
-
-template<typename T1, typename T2> static inline
-Vec<T1, 3>& operator += (Vec<T1, 3>& a, const Vec<T2, 3>& b)
-{
-    a[0] = saturate_cast<T1>(a[0] + b[0]);
-    a[1] = saturate_cast<T1>(a[1] + b[1]);
-    a[2] = saturate_cast<T1>(a[2] + b[2]);
-    return a;
-}
-
-    
-template<typename T1, typename T2> static inline
-Vec<T1, 4>& operator += (Vec<T1, 4>& a, const Vec<T2, 4>& b)
-{
-    a[0] = saturate_cast<T1>(a[0] + b[0]);
-    a[1] = saturate_cast<T1>(a[1] + b[1]);
-    a[2] = saturate_cast<T1>(a[2] + b[2]);
-    a[3] = saturate_cast<T1>(a[3] + b[3]);
-    return a;
-}
-
-    
-template<typename T1, int n> static inline
-double norm(const Vec<T1, n>& a)
-{
-    double s = 0;
-    for( int i = 0; i < n; i++ )
-        s += (double)a.val[i]*a.val[i];
-    return std::sqrt(s);
-}
-
-    
-template<typename T1, int n> static inline
-double norm(const Vec<T1, n>& a, int normType)
-{
-    if( normType == NORM_INF )
-    {
-        T1 s = 0;
-        for( int i = 0; i < n; i++ )
-            s = std::max(s, std::abs(a.val[i]));
-        return s;
-    }
-    
-    if( normType == NORM_L1 )
-    {
-        T1 s = 0;
-        for( int i = 0; i < n; i++ )
-            s += std::abs(a.val[i]);
-        return s;
-    }
-    
-    CV_DbgAssert( normType == NORM_L2 );
-    return norm(a);
-}
-    
-    
-template<typename T1, int n> static inline
-bool operator == (const Vec<T1, n>& a, const Vec<T1, n>& b)
-{
-    for( int i = 0; i < n; i++ )
-        if( a[i] != b[i] ) return false;
-    return true;
-}
-    
-template<typename T1, int n> static inline
-bool operator != (const Vec<T1, n>& a, const Vec<T1, n>& b)
-{
-    return !(a == b);
-}
-    
-template<typename _Tp, typename _T2, int n> static inline
-VecCommaInitializer<_Tp, n> operator << (const Vec<_Tp, n>& vec, _T2 val)
-{
-    VecCommaInitializer<_Tp, n> commaInitializer((Vec<_Tp, n>*)&vec);
-    return (commaInitializer, val);
-}
-    
-template<typename _Tp, int n> inline
-VecCommaInitializer<_Tp, n>::VecCommaInitializer(Vec<_Tp, n>* _vec)
-    : vec(_vec), idx(0)
-{}
-
-template<typename _Tp, int n> template<typename _T2> inline
-VecCommaInitializer<_Tp, n>& VecCommaInitializer<_Tp, n>::operator , (_T2 value)
-{
-    CV_DbgAssert( idx < n );
-    vec->val[idx++] = saturate_cast<_Tp>(value);
-    return *this;
-}
-
-template<typename _Tp, int n> inline
-Vec<_Tp, n> VecCommaInitializer<_Tp, n>::operator *() const
-{
-    CV_DbgAssert( idx == n );
-    return *vec;
-}
-    
-//////////////////////////////// Matx /////////////////////////////////
-    
-
-template<typename _Tp, int m, int n> Matx<_Tp,m,n>::Matx()
-{}
-    
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0)
-: Matx<_Tp,m,n>::base_type(v0)
-{}
-
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1)
-: Matx<_Tp,m,n>::base_type(v0, v1)
-{}
-
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2)
-{}
-
-template<typename _Tp, int m, int n> Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3)
-{}
-    
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3, v4)
-{}
-
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3, v4, v5)
-{}
-
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3, v4, v5, v6)
-{}
-
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
-                            _Tp v4, _Tp v5, _Tp v6, _Tp v7)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3, v4, v5, v6, v7)
-{}
-    
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2,
-                            _Tp v3, _Tp v4, _Tp v5,
-                            _Tp v6, _Tp v7, _Tp v8)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3, v4, v5, v6, v7, v8)
-{}
-
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4,
-                            _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9)
-: Matx<_Tp,m,n>::base_type(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9)
-{}
-
 template<typename _Tp, int m, int n>
 inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                             _Tp v4, _Tp v5, _Tp v6, _Tp v7,
                             _Tp v8, _Tp v9, _Tp v10, _Tp v11)
 {
-    assert(m*n == 12);
-    this->val[0] = v0; this->val[1] = v1; this->val[2] = v2; this->val[3] = v3;
-    this->val[4] = v4; this->val[5] = v5; this->val[6] = v6; this->val[7] = v7;
-    this->val[8] = v8; this->val[9] = v9; this->val[10] = v10; this->val[11] = v11;
+    assert(channels == 12);
+    val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
+    val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
+    val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
 }
 
 template<typename _Tp, int m, int n>
@@ -668,31 +305,23 @@ inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                            _Tp v8, _Tp v9, _Tp v10, _Tp v11,
                            _Tp v12, _Tp v13, _Tp v14, _Tp v15)
 {
-    assert(m*n == 16);
-    this->val[0] = v0; this->val[1] = v1; this->val[2] = v2; this->val[3] = v3;
-    this->val[4] = v4; this->val[5] = v5; this->val[6] = v6; this->val[7] = v7;
-    this->val[8] = v8; this->val[9] = v9; this->val[10] = v10; this->val[11] = v11;
-    this->val[12] = v12; this->val[13] = v13; this->val[14] = v14; this->val[15] = v15;
+    assert(channels == 16);
+    val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
+    val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
+    val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
+    val[12] = v12; val[13] = v13; val[14] = v14; val[15] = v15;
 }
-    
-    
-template<typename _Tp, int m, int n>
-inline Matx<_Tp,m,n>::Matx(const _Tp* vals)
-: Matx<_Tp,m,n>::base_type(vals)
-{}
 
-        
-template<typename _Tp, int m, int n>
-    inline Matx<_Tp,m,n>::Matx(const Vec<_Tp,m*n>& v)
-: base_type(v)
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(const _Tp* values)
 {
+    for( int i = 0; i < channels; i++ ) val[i] = values[i];
 }
-    
-template<typename _Tp, int m, int n> inline
-Matx<_Tp,m,n> Matx<_Tp,m,n>::all(_Tp alpha)
+
+template<typename _Tp, int m, int n> inline Matx<_Tp, m, n> Matx<_Tp, m, n>::all(_Tp alpha)
 {
-    base_type v = base_type::all(alpha);
-    return (Matx<_Tp,m,n>&)v;
+    Matx<_Tp, m, n> M;
+    for( int i = 0; i < m*n; i++ ) M.val[i] = alpha;
+    return M;
 }
 
 template<typename _Tp, int m, int n> inline
@@ -716,13 +345,30 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::eye()
     return M;
 }
 
+template<typename _Tp, int m, int n> inline _Tp Matx<_Tp, m, n>::dot(const Matx<_Tp, m, n>& M) const
+{
+    _Tp s = 0;
+    for( int i = 0; i < m*n; i++ ) s += val[i]*M.val[i];
+    return s;
+}
+
+    
+template<typename _Tp, int m, int n> inline double Matx<_Tp, m, n>::ddot(const Matx<_Tp, m, n>& M) const
+{
+    double s = 0;
+    for( int i = 0; i < m*n; i++ ) s += (double)val[i]*M.val[i];
+    return s;
+}
+
+
 
 template<typename _Tp, int m, int n> inline
-Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const Vec<_Tp,MIN(m,n)>& d)
+Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const Matx<_Tp,MIN(m,n),1>& d)
 {
     Matx<_Tp,m,n> M;
     for(int i = 0; i < MIN(m,n); i++)
         M(i,i) = d[i];
+    return M;
 }
 
 template<typename _Tp, int m, int n> inline
@@ -746,8 +392,9 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::randn(_Tp a, _Tp b)
 template<typename _Tp, int m, int n> template<typename T2>
 inline Matx<_Tp, m, n>::operator Matx<T2, m, n>() const
 {
-    Vec<T2, m*n> v = *this;
-    return (Matx<T2, m, n>&)v;
+    Matx<T2, m, n> M;
+    for( int i = 0; i < m*n; i++ ) M.val[i] = saturate_cast<T2>(val[i]);
+    return M;
 }
     
 
@@ -776,27 +423,27 @@ template<typename _Tp, int m, int n> inline
 Matx<_Tp, 1, n> Matx<_Tp, m, n>::row(int i) const
 {
     CV_DbgAssert((unsigned)i < (unsigned)m);
-    return (Matx<_Tp, 1, n>&)(*this)(i,0);
+    return Matx<_Tp, 1, n>(&val[i*n]);
 }
 
     
 template<typename _Tp, int m, int n> inline
-Vec<_Tp, m> Matx<_Tp, m, n>::col(int j) const
+Matx<_Tp, m, 1> Matx<_Tp, m, n>::col(int j) const
 {
     CV_DbgAssert((unsigned)j < (unsigned)n);
-    Vec<_Tp, m> v;
+    Matx<_Tp, m, 1> v;
     for( int i = 0; i < m; i++ )
-        v[i] = (*this)(i,j);
+        v[i] = val[i*n + j];
     return v;
 }
 
     
 template<typename _Tp, int m, int n> inline
-Vec<_Tp, MIN(m,n)> Matx<_Tp, m, n>::diag() const
+Matx<_Tp, MIN(m,n), 1> Matx<_Tp, m, n>::diag() const
 {
     diag_type d;
     for( int i = 0; i < MIN(m, n); i++ )
-        d[i] = (*this)(i,i);
+        d.val[i] = val[i*n + i];
     return d;
 }
 
@@ -813,7 +460,7 @@ template<typename _Tp, int m, int n> inline
 _Tp& Matx<_Tp, m, n>::operator ()(int i, int j)
 {
     CV_DbgAssert( (unsigned)i < (unsigned)m && (unsigned)j < (unsigned)n );
-    return this->val[i*n + j];
+    return val[i*n + j];
 }
 
 
@@ -821,7 +468,7 @@ template<typename _Tp, int m, int n> inline
 const _Tp& Matx<_Tp, m, n>::operator ()(int i) const
 {
     CV_DbgAssert( (m == 1 || n == 1) && (unsigned)i < (unsigned)(m+n-1) );
-    return this->val[i];
+    return val[i];
 }
 
 
@@ -829,7 +476,7 @@ template<typename _Tp, int m, int n> inline
 _Tp& Matx<_Tp, m, n>::operator ()(int i)
 {
     CV_DbgAssert( (m == 1 || n == 1) && (unsigned)i < (unsigned)(m+n-1) );
-    return this->val[i];
+    return val[i];
 }
 
     
@@ -855,7 +502,7 @@ template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_AddOp)
 {
     for( int i = 0; i < m*n; i++ )
-        this->val[i] = saturate_cast<_Tp>(a.val[i] + b.val[i]);
+        val[i] = saturate_cast<_Tp>(a.val[i] + b.val[i]);
 }
 
     
@@ -863,7 +510,7 @@ template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_SubOp)
 {
     for( int i = 0; i < m*n; i++ )
-        this->val[i] = saturate_cast<_Tp>(a.val[i] - b.val[i]);
+        val[i] = saturate_cast<_Tp>(a.val[i] - b.val[i]);
 }
     
     
@@ -871,7 +518,7 @@ template<typename _Tp, int m, int n> template<typename _T2> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, _T2 alpha, Matx_ScaleOp)
 {
     for( int i = 0; i < m*n; i++ )
-        this->val[i] = saturate_cast<_Tp>(a.val[i] * alpha);
+        val[i] = saturate_cast<_Tp>(a.val[i] * alpha);
 }
     
     
@@ -879,7 +526,7 @@ template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_MulOp)
 {
     for( int i = 0; i < m*n; i++ )
-        this->val[i] = saturate_cast<_Tp>(a.val[i] * b.val[i]);
+        val[i] = saturate_cast<_Tp>(a.val[i] * b.val[i]);
 }
     
     
@@ -892,7 +539,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_Mat
             _Tp s = 0;
             for( int k = 0; k < l; k++ )
                 s += a(i, k) * b(k, j);
-            this->val[i*n + j] = s;
+            val[i*n + j] = s;
         }
 }
     
@@ -902,7 +549,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, n, m>& a, Matx_TOp)
 {
     for( int i = 0; i < m; i++ )
         for( int j = 0; j < n; j++ )
-            this->val[i*n + j] = a(j, i);
+            val[i*n + j] = a(j, i);
 }
 
     
@@ -991,13 +638,6 @@ Matx<_Tp, m, n> operator * (const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b)
 }
 
     
-template<typename _Tp, int m, int n> static inline
-Vec<_Tp, m> operator * (const Matx<_Tp, m, n>& a, const Vec<_Tp, n>& b)
-{
-    return Matx<_Tp, m, 1>(a, (const Matx<_Tp, n, 1>&)b, Matx_MatMulOp());
-}        
-
-    
 template<typename _Tp> static inline
 Point_<_Tp> operator * (const Matx<_Tp, 2, 2>& a, const Point_<_Tp>& b)
 {
@@ -1020,16 +660,16 @@ Point3_<_Tp> operator * (const Matx<_Tp, 3, 3>& a, const Point_<_Tp>& b)
 
     
 template<typename _Tp> static inline
-Vec<_Tp, 4> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
+Matx<_Tp, 4, 1> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
 {
-    return a*Vec<_Tp,4>(b.x, b.y, b.z, 1);
+    return a*Matx<_Tp, 4, 1>(b.x, b.y, b.z, 1);
 }    
 
     
 template<typename _Tp> static inline
 Scalar operator * (const Matx<_Tp, 4, 4>& a, const Scalar& b)
 {
-    return Scalar(a*Vec<_Tp,4>(b));
+    return Scalar(a*Matx<_Tp, 4, 1>(b));
 }    
     
 
@@ -1259,14 +899,57 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
 
     return ok ? x : Matx<_Tp, n, l>::zeros();
 }
-   
 
-template<typename _Tp, int m, int n> inline
-Vec<_Tp, n> Matx<_Tp, m, n>::solve(const Vec<_Tp, m>& rhs, int method) const
+
+template<typename _Tp, int m, int n> static inline
+double norm(const Matx<_Tp, m, n>& M)
 {
-    return solve(Matx<_Tp, m, 1>(rhs), method);
+    double s = 0;
+    for( int i = 0; i < m*n; i++ )
+        s += (double)M.val[i]*M.val[i];
+    return std::sqrt(s);
 }
-   
+
+    
+template<typename _Tp, int m, int n> static inline
+double norm(const Matx<_Tp, m, n>& M, int normType)
+{
+    if( normType == NORM_INF )
+    {
+        T1 s = 0;
+        for( int i = 0; i < m*n; i++ )
+            s = std::max(s, std::abs(M.val[i]));
+        return s;
+    }
+    
+    if( normType == NORM_L1 )
+    {
+        T1 s = 0;
+        for( int i = 0; i < m*n; i++ )
+            s += std::abs(M.val[i]);
+        return s;
+    }
+    
+    CV_DbgAssert( normType == NORM_L2 );
+    return norm(M);
+}
+    
+    
+template<typename _Tp, int m, int n> static inline
+bool operator == (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
+{
+    for( int i = 0; i < m*n; i++ )
+        if( a[i] != b[i] ) return false;
+    return true;
+}
+    
+template<typename _Tp, int m, int n> static inline
+bool operator != (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
+{
+    return !(a == b);
+}
+
+
 template<typename _Tp, typename _T2, int m, int n> static inline
 MatxCommaInitializer<_Tp, m, n> operator << (const Matx<_Tp, m, n>& mtx, _T2 val)
 {
@@ -1276,20 +959,304 @@ MatxCommaInitializer<_Tp, m, n> operator << (const Matx<_Tp, m, n>& mtx, _T2 val
 
 template<typename _Tp, int m, int n> inline
 MatxCommaInitializer<_Tp, m, n>::MatxCommaInitializer(Matx<_Tp, m, n>* _mtx)
-    : VecCommaInitializer<_Tp, m*n>((Vec<_Tp,m*n>*)_mtx)
+    : dst(_mtx), idx(0)
 {}
 
 template<typename _Tp, int m, int n> template<typename _T2> inline
 MatxCommaInitializer<_Tp, m, n>& MatxCommaInitializer<_Tp, m, n>::operator , (_T2 value)
 {
-    return (MatxCommaInitializer<_Tp, m, n>&)VecCommaInitializer<_Tp, m*n>::operator ,(value);
+    CV_DbgAssert( idx < m*n );
+    dst->val[idx++] = saturate_cast<_Tp>(value);
+    return *this;
 }
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> MatxCommaInitializer<_Tp, m, n>::operator *() const
 {
-    CV_DbgAssert( this->idx == n*m );
-    return (Matx<_Tp, m, n>&)*(this->vec);
+    CV_DbgAssert( idx == n*m );
+    return *dst;
+}    
+
+/////////////////////////// short vector (Vec) /////////////////////////////
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec()
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0)
+    : Matx<_Tp, cn, 1>(v0)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1)
+    : Matx<_Tp, cn, 1>(v0, v1)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2)
+    : Matx<_Tp, cn, 1>(v0, v1, v2)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+                                                        _Tp v4, _Tp v5, _Tp v6)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+                                                        _Tp v4, _Tp v5, _Tp v6, _Tp v7)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+                                                        _Tp v4, _Tp v5, _Tp v6, _Tp v7,
+                                                        _Tp v8)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7, v8)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
+                                                        _Tp v4, _Tp v5, _Tp v6, _Tp v7,
+                                                        _Tp v8, _Tp v9)
+    : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9)
+{}
+    
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(const _Tp* values)
+    : Matx<_Tp, cn, 1>(values)
+{}
+        
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& v)
+    : Matx<_Tp, cn, 1>(v.val)
+{}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::all(_Tp alpha)
+{
+    Vec v;
+    for( int i = 0; i < cn; i++ ) v.val[i] = alpha;
+    return v;
+}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::mul(const Vec<_Tp, cn>& v) const
+{
+    Vec<_Tp, cn> w;
+    for( int i = 0; i < cn; i++ ) w.val[i] = saturate_cast<_Tp>(val[i]*v.val[i]);
+    return w;
+}
+    
+template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>& v) const
+{
+    CV_Error(CV_StsError, "for arbitrary-size vector there is no cross-product defined");
+    return Vec<_Tp, cn>();
+}
+    
+template<typename _Tp, int cn> template<typename T2>
+inline Vec<_Tp, cn>::operator Vec<T2, cn>() const
+{
+    Vec<T2, cn> v;
+    for( int i = 0; i < cn; i++ ) v.val[i] = saturate_cast<T2>(val[i]);
+    return v;
+}
+
+template<typename _Tp, int cn> inline Vec<_Tp, cn>::operator CvScalar() const
+{
+    CvScalar s = {{0,0,0,0}};
+    int i;
+    for( i = 0; i < std::min(cn, 4); i++ ) s.val[i] = val[i];
+    for( ; i < 4; i++ ) s.val[i] = 0;
+    return s;
+}
+
+template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator [](int i) const
+{
+    CV_DbgAssert( (unsigned)i < (unsigned)cn );
+    return val[i];
+}
+    
+template<typename _Tp, int cn> inline _Tp& Vec<_Tp, cn>::operator [](int i)
+{
+    CV_DbgAssert( (unsigned)i < (unsigned)cn );
+    return val[i];
+}
+
+template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator ()(int i) const
+{
+    CV_DbgAssert( (unsigned)i < (unsigned)cn );
+    return val[i];
+}
+
+template<typename _Tp, int cn> inline _Tp& Vec<_Tp, cn>::operator ()(int i)
+{
+    CV_DbgAssert( (unsigned)i < (unsigned)cn );
+    return val[i];
+}    
+    
+template<typename _Tp1, typename _Tp2, int cn> static inline Vec<_Tp1, cn>&
+operator += (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
+{
+    for( int i = 0; i < cn; i++ )
+        a.val[i] = saturate_cast<_Tp1>(a.val[i] + b.val[i]);
+    return a;
+}    
+
+template<typename _Tp1, typename _Tp2, int cn> static inline Vec<_Tp1, cn>&
+operator -= (Vec<_Tp1, cn>& a, const Vec<_Tp2, cn>& b)
+{
+    for( int i = 0; i < cn; i++ )
+        a.val[i] = saturate_cast<_Tp1>(a.val[i] - b.val[i]);
+    return a;
+}        
+    
+template<typename _Tp, int cn> static inline Vec<_Tp, cn>
+operator + (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
+{
+    Vec<_Tp, cn> c = a;
+    return c += b;
+}
+
+template<typename _Tp, int cn> static inline Vec<_Tp, cn>
+operator - (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
+{
+    Vec<_Tp, cn> c = a;
+    return c -= b;
+}
+
+template<typename _Tp> static inline
+Vec<_Tp, 2>& operator *= (Vec<_Tp, 2>& a, _Tp alpha)
+{
+    a[0] *= alpha; a[1] *= alpha;
+    return a;
+}
+
+template<typename _Tp> static inline
+Vec<_Tp, 3>& operator *= (Vec<_Tp, 3>& a, _Tp alpha)
+{
+    a[0] *= alpha; a[1] *= alpha; a[2] *= alpha;
+    return a;
+}
+
+template<typename _Tp> static inline
+Vec<_Tp, 4>& operator *= (Vec<_Tp, 4>& a, _Tp alpha)
+{
+    a[0] *= alpha; a[1] *= alpha; a[2] *= alpha; a[3] *= alpha;
+    return a;
+}
+
+template<typename _Tp, int cn> static inline Vec<_Tp, cn>
+operator * (const Vec<_Tp, cn>& a, _Tp alpha)
+{
+    Vec<_Tp, cn> c = a;
+    return c *= alpha;
+}
+
+template<typename _Tp, int cn> static inline Vec<_Tp, cn>
+operator * (_Tp alpha, const Vec<_Tp, cn>& a)
+{
+    return a * alpha;
+}
+    
+
+template<typename _Tp> static inline Vec<_Tp, 4>
+operator * (const Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
+{
+    return Vec<_Tp, 4>(saturate_cast<_Tp>(a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3]),
+                       saturate_cast<_Tp>(a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2]),
+                       saturate_cast<_Tp>(a[0]*b[2] - a[1]*b[3] + a[2]*b[0] - a[3]*b[1]),
+                       saturate_cast<_Tp>(a[0]*b[3] + a[1]*b[2] - a[2]*b[1] - a[3]*b[0]));
+}
+
+    
+template<typename _Tp> static inline Vec<_Tp, 4>&
+operator *= (Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
+{
+    a = a*b;
+    return a;
+}
+    
+
+template<typename _Tp, int cn> static inline Vec<_Tp, cn>
+operator - (const Vec<_Tp, cn>& a)
+{
+    Vec<_Tp,cn> t;
+    for( int i = 0; i < cn; i++ ) t.val[i] = saturate_cast<_Tp>(-a.val[i]);
+    return t;
+}
+
+template<> inline Vec<float, 3> Vec<float, 3>::cross(const Vec<float, 3>& v) const
+{
+    return Vec<float,3>(val[1]*v.val[2] - val[2]*v.val[1],
+                     val[2]*v.val[0] - val[0]*v.val[2],
+                     val[0]*v.val[1] - val[1]*v.val[0]);
+}
+
+template<> inline Vec<double, 3> Vec<double, 3>::cross(const Vec<double, 3>& v) const
+{
+    return Vec<double,3>(val[1]*v.val[2] - val[2]*v.val[1],
+                     val[2]*v.val[0] - val[0]*v.val[2],
+                     val[0]*v.val[1] - val[1]*v.val[0]);
+}
+
+template<typename T1, typename T2> static inline
+Vec<T1, 2>& operator += (Vec<T1, 2>& a, const Vec<T2, 2>& b)
+{
+    a[0] = saturate_cast<T1>(a[0] + b[0]);
+    a[1] = saturate_cast<T1>(a[1] + b[1]);
+    return a;
+}
+
+template<typename T1, typename T2> static inline
+Vec<T1, 3>& operator += (Vec<T1, 3>& a, const Vec<T2, 3>& b)
+{
+    a[0] = saturate_cast<T1>(a[0] + b[0]);
+    a[1] = saturate_cast<T1>(a[1] + b[1]);
+    a[2] = saturate_cast<T1>(a[2] + b[2]);
+    return a;
+}
+
+    
+template<typename T1, typename T2> static inline
+Vec<T1, 4>& operator += (Vec<T1, 4>& a, const Vec<T2, 4>& b)
+{
+    a[0] = saturate_cast<T1>(a[0] + b[0]);
+    a[1] = saturate_cast<T1>(a[1] + b[1]);
+    a[2] = saturate_cast<T1>(a[2] + b[2]);
+    a[3] = saturate_cast<T1>(a[3] + b[3]);
+    return a;
+}
+
+        
+template<typename _Tp, typename _T2, int cn> static inline
+VecCommaInitializer<_Tp, cn> operator << (const Vec<_Tp, cn>& vec, _T2 val)
+{
+    VecCommaInitializer<_Tp, cn> commaInitializer((Vec<_Tp, cn>*)&vec);
+    return (commaInitializer, val);
+}
+    
+template<typename _Tp, int cn> inline
+VecCommaInitializer<_Tp, cn>::VecCommaInitializer(Vec<_Tp, cn>* _vec)
+    : MatxCommaInitializer(_vec)
+{}
+
+template<typename _Tp, int cn> template<typename _T2> inline
+VecCommaInitializer<_Tp, cn>& VecCommaInitializer<_Tp, cn>::operator , (_T2 value)
+{
+    CV_DbgAssert( idx < cn );
+    vec->val[idx++] = saturate_cast<_Tp>(value);
+    return *this;
+}
+
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn> VecCommaInitializer<_Tp, cn>::operator *() const
+{
+    CV_DbgAssert( this->idx == cn );
+    return *vec;
 }    
 
 //////////////////////////////// Complex //////////////////////////////
@@ -1893,48 +1860,6 @@ template<typename _Tp> static inline bool operator != ( const Scalar_<_Tp>& a, c
     return a.val[0] != b.val[0] || a.val[1] != b.val[1] ||
         a.val[2] != b.val[2] || a.val[3] != b.val[3];
 }
-
-template<typename _Tp> template<typename T2> inline void Scalar_<_Tp>::convertTo(T2* buf, int cn, int unroll_to) const
-{
-    int i;
-    CV_Assert(cn <= 4);
-    for( i = 0; i < cn; i++ )
-        buf[i] = saturate_cast<T2>(this->val[i]);
-    for( ; i < unroll_to; i++ )
-        buf[i] = buf[i-cn];
-}
-
-static inline void scalarToRawData(const Scalar& s, void* buf, int type, int unroll_to=0)
-{
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    switch(depth)
-    {
-    case CV_8U:
-        s.convertTo((uchar*)buf, cn, unroll_to);
-        break;
-    case CV_8S:
-        s.convertTo((schar*)buf, cn, unroll_to);
-        break;
-    case CV_16U:
-        s.convertTo((ushort*)buf, cn, unroll_to);
-        break;
-    case CV_16S:
-        s.convertTo((short*)buf, cn, unroll_to);
-        break;
-    case CV_32S:
-        s.convertTo((int*)buf, cn, unroll_to);
-        break;
-    case CV_32F:
-        s.convertTo((float*)buf, cn, unroll_to);
-        break;
-    case CV_64F:
-        s.convertTo((double*)buf, cn, unroll_to);
-        break;
-    default:
-        CV_Error(CV_StsUnsupportedFormat,"");
-    }
-}
-
 
 template<typename _Tp> static inline Scalar_<_Tp> operator + (const Scalar_<_Tp>& a, const Scalar_<_Tp>& b)
 {

@@ -1873,15 +1873,15 @@ static inline MatConstIterator operator - (const MatConstIterator& a, ptrdiff_t 
     
 template<typename _Tp> static inline MatConstIterator_<_Tp>
 operator + (const MatConstIterator_<_Tp>& a, ptrdiff_t ofs)
-{ return (MatConstIterator_<_Tp>&)((const MatConstIterator&)a + ofs); }
+{ MatConstIterator t = (const MatConstIterator&)a + ofs; return (MatConstIterator_<_Tp>&)t; }
 
 template<typename _Tp> static inline MatConstIterator_<_Tp>
 operator + (ptrdiff_t ofs, const MatConstIterator_<_Tp>& a)
-{ return (MatConstIterator_<_Tp>&)((const MatConstIterator&)a + ofs); }
+{ MatConstIterator t = (const MatConstIterator&)a + ofs; return (MatConstIterator_<_Tp>&)t; }
     
 template<typename _Tp> static inline MatConstIterator_<_Tp>
 operator - (const MatConstIterator_<_Tp>& a, ptrdiff_t ofs)
-{ return (MatConstIterator_<_Tp>&)((const MatConstIterator&)a - ofs); }
+{ MatConstIterator t = (const MatConstIterator&)a - ofs; return (MatConstIterator_<_Tp>&)t; }
 
 inline uchar* MatConstIterator::operator [](ptrdiff_t i) const
 { return *(*this + i); }
@@ -1891,15 +1891,15 @@ template<typename _Tp> inline _Tp MatConstIterator_<_Tp>::operator [](ptrdiff_t 
 
 template<typename _Tp> static inline MatIterator_<_Tp>
 operator + (const MatIterator_<_Tp>& a, ptrdiff_t ofs)
-{ return (MatIterator_<_Tp>&)((const MatConstIterator&)a + ofs); }
+{ MatConstIterator t = (const MatConstIterator&)a + ofs; return (MatIterator_<_Tp>&)t; }
 
 template<typename _Tp> static inline MatIterator_<_Tp>
 operator + (ptrdiff_t ofs, const MatIterator_<_Tp>& a)
-{ return (MatIterator_<_Tp>&)((const MatConstIterator&)a + ofs); }
+{ MatConstIterator t = (const MatConstIterator&)a + ofs; return (MatIterator_<_Tp>&)t; }
 
 template<typename _Tp> static inline MatIterator_<_Tp>
 operator - (const MatIterator_<_Tp>& a, ptrdiff_t ofs)
-{ return (MatIterator_<_Tp>&)((const MatConstIterator&)a - ofs); }
+{ MatConstIterator t = (const MatConstIterator&)a - ofs; return (MatIterator_<_Tp>&)t; }
     
 template<typename _Tp> inline _Tp& MatIterator_<_Tp>::operator [](ptrdiff_t i) const
 { return *(*this + i); }

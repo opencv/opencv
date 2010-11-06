@@ -89,16 +89,17 @@ bool is_smaller(const std::pair<int, float>& p1, const std::pair<int, float>& p2
 void orderContours(const vector<vector<Point> >& contours, Point2f point, vector<std::pair<int, float> >& order)
 {
     order.clear();
-    int i, j, n = (int)contours.size();
+    size_t i, j, n = contours.size();
     for(i = 0; i < n; i++)
     {
+        size_t ni = contours[i].size();
         double min_dist = std::numeric_limits<double>::max();
-        for(j = 0; j < n; j++)
+        for(j = 0; j < ni; j++)
         {
             double dist = norm(Point2f((float)contours[i][j].x, (float)contours[i][j].y) - point);
             min_dist = MIN(min_dist, dist);
         }
-        order.push_back(std::pair<int, float>(i, (float)min_dist));
+        order.push_back(std::pair<int, float>((int)i, (float)min_dist));
     }
     
     std::sort(order.begin(), order.end(), is_smaller);
