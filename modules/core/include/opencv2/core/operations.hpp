@@ -916,7 +916,7 @@ double norm(const Matx<_Tp, m, n>& M, int normType)
 {
     if( normType == NORM_INF )
     {
-        T1 s = 0;
+        _Tp s = 0;
         for( int i = 0; i < m*n; i++ )
             s = std::max(s, std::abs(M.val[i]));
         return s;
@@ -924,7 +924,7 @@ double norm(const Matx<_Tp, m, n>& M, int normType)
     
     if( normType == NORM_L1 )
     {
-        T1 s = 0;
+        _Tp s = 0;
         for( int i = 0; i < m*n; i++ )
             s += std::abs(M.val[i]);
         return s;
@@ -939,7 +939,7 @@ template<typename _Tp, int m, int n> static inline
 bool operator == (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
 {
     for( int i = 0; i < m*n; i++ )
-        if( a[i] != b[i] ) return false;
+        if( a.val[i] != b.val[i] ) return false;
     return true;
 }
     
@@ -1047,7 +1047,7 @@ template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::all(_Tp alpha)
 template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::mul(const Vec<_Tp, cn>& v) const
 {
     Vec<_Tp, cn> w;
-    for( int i = 0; i < cn; i++ ) w.val[i] = saturate_cast<_Tp>(val[i]*v.val[i]);
+    for( int i = 0; i < cn; i++ ) w.val[i] = saturate_cast<_Tp>(this->val[i]*v.val[i]);
     return w;
 }
     
@@ -1061,7 +1061,7 @@ template<typename _Tp, int cn> template<typename T2>
 inline Vec<_Tp, cn>::operator Vec<T2, cn>() const
 {
     Vec<T2, cn> v;
-    for( int i = 0; i < cn; i++ ) v.val[i] = saturate_cast<T2>(val[i]);
+    for( int i = 0; i < cn; i++ ) v.val[i] = saturate_cast<T2>(this->val[i]);
     return v;
 }
 
@@ -1069,7 +1069,7 @@ template<typename _Tp, int cn> inline Vec<_Tp, cn>::operator CvScalar() const
 {
     CvScalar s = {{0,0,0,0}};
     int i;
-    for( i = 0; i < std::min(cn, 4); i++ ) s.val[i] = val[i];
+    for( i = 0; i < std::min(cn, 4); i++ ) s.val[i] = this->val[i];
     for( ; i < 4; i++ ) s.val[i] = 0;
     return s;
 }
@@ -1077,25 +1077,25 @@ template<typename _Tp, int cn> inline Vec<_Tp, cn>::operator CvScalar() const
 template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator [](int i) const
 {
     CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
+    return this->val[i];
 }
     
 template<typename _Tp, int cn> inline _Tp& Vec<_Tp, cn>::operator [](int i)
 {
     CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
+    return this->val[i];
 }
 
 template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator ()(int i) const
 {
     CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
+    return this->val[i];
 }
 
 template<typename _Tp, int cn> inline _Tp& Vec<_Tp, cn>::operator ()(int i)
 {
     CV_DbgAssert( (unsigned)i < (unsigned)cn );
-    return val[i];
+    return this->val[i];
 }    
     
 template<typename _Tp1, typename _Tp2, int cn> static inline Vec<_Tp1, cn>&
@@ -1241,14 +1241,14 @@ VecCommaInitializer<_Tp, cn> operator << (const Vec<_Tp, cn>& vec, _T2 val)
     
 template<typename _Tp, int cn> inline
 VecCommaInitializer<_Tp, cn>::VecCommaInitializer(Vec<_Tp, cn>* _vec)
-    : MatxCommaInitializer(_vec)
+    : MatxCommaInitializer<_Tp, cn, 1>(_vec)
 {}
 
 template<typename _Tp, int cn> template<typename _T2> inline
 VecCommaInitializer<_Tp, cn>& VecCommaInitializer<_Tp, cn>::operator , (_T2 value)
 {
-    CV_DbgAssert( idx < cn );
-    vec->val[idx++] = saturate_cast<_Tp>(value);
+    CV_DbgAssert( this->idx < cn );
+    this->dst->val[this->idx++] = saturate_cast<_Tp>(value);
     return *this;
 }
 
@@ -1256,7 +1256,7 @@ template<typename _Tp, int cn> inline
 Vec<_Tp, cn> VecCommaInitializer<_Tp, cn>::operator *() const
 {
     CV_DbgAssert( this->idx == cn );
-    return *vec;
+    return *this->dst;
 }    
 
 //////////////////////////////// Complex //////////////////////////////
