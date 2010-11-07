@@ -192,7 +192,7 @@ int CV_ImgWarpBaseTestImpl::prepare_test_case( int test_case_idx )
             assert(0);
         }
 
-        switch( depth )
+        /*switch( depth )
         {
         case CV_8U:
             for( j = 0; j < cols*cn; j++ )
@@ -208,7 +208,10 @@ int CV_ImgWarpBaseTestImpl::prepare_test_case( int test_case_idx )
             break;
         default:
             assert(0);
-        }
+        }*/
+        cv::Mat src(1, cols*cn, CV_32F, buffer);
+        cv::Mat dst(1, cols*cn, depth, ptr);
+        src.convertTo(dst, dst.type());        
     }
 
     cvFree( &buffer );
