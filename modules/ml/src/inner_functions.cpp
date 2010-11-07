@@ -431,8 +431,8 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
         if( idx_selected == 0 )
             CV_ERROR( CV_StsOutOfRange, "No components/input_variables is selected!" );
 
-        if( idx_selected == idx_total )
-            EXIT;
+        //if( idx_selected == idx_total )
+        //    EXIT;
         break;
     case CV_32SC1:
         // idx_arr is array of integer indices of selected components
