@@ -2285,7 +2285,7 @@ cvSolveCubic( const CvMat* coeffs, CvMat* roots )
             else
             {
                 // linear equation
-                x0 = a3/a2;
+                x0 = -a3/a2;
                 n = 1;
             }
         }
@@ -2296,9 +2296,18 @@ cvSolveCubic( const CvMat* coeffs, CvMat* roots )
             if( d >= 0 )
             {
                 d = sqrt(d);
-                double q = (-a2 + (a2 < 0 ? -d : d)) * 0.5;
-                x0 = q / a1;
-                x1 = a3 / q;
+                double q1 = (-a2 + d) * 0.5;
+                double q2 = (a2 + d) * -0.5;
+                if( fabs(q1) > fabs(q2) )
+                {
+                    x0 = q1 / a1;
+                    x1 = a3 / q1;
+                }
+                else
+                {
+                    x0 = q2 / a1;
+                    x1 = a3 / q2;
+                }
                 n = d > 0 ? 2 : 1;
             }
         }
