@@ -9,5 +9,5 @@ includedir_new=@includedir@
 Name: OpenCV
 Description: Open Source Computer Vision Library
 Version: @VERSION@
-Libs: -L${libdir} -lopencv_core@OPENCV_DLLVERSION@ -lopencv_imgproc@OPENCV_DLLVERSION@ -lopencv_highgui@OPENCV_DLLVERSION@ -lopencv_ml@OPENCV_DLLVERSION@ -lopencv_video@OPENCV_DLLVERSION@ -lopencv_features2d@OPENCV_DLLVERSION@ -lopencv_calib3d@OPENCV_DLLVERSION@ -lopencv_objdetect@OPENCV_DLLVERSION@ -lopencv_contrib@OPENCV_DLLVERSION@ -lopencv_legacy@OPENCV_DLLVERSION@
+Libs: -L${libdir} -lopencv_core@OPENCV_DLLVERSION@ -lopencv_imgproc@OPENCV_DLLVERSION@ -lopencv_highgui@OPENCV_DLLVERSION@ -lopencv_ml@OPENCV_DLLVERSION@ -lopencv_video@OPENCV_DLLVERSION@ -lopencv_features2d@OPENCV_DLLVERSION@ -lopencv_calib3d@OPENCV_DLLVERSION@ -lopencv_objdetect@OPENCV_DLLVERSION@ -lopencv_contrib@OPENCV_DLLVERSION@ -lopencv_legacy@OPENCV_DLLVERSION@ -lopencv_flann@OPENCV_DLLVERSION@
 Cflags: -I${includedir_old} -I${includedir_new}
