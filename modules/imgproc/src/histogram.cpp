@@ -903,7 +903,7 @@ calcBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
                     for( i = 0; i < dims; i++ )
                     {
                         int idx = cvFloor(*ptrs[i]*uniranges[i*2] + uniranges[i*2+1]);
-                        if( (unsigned)idx >= (unsigned)size[i] )
+                        if( (unsigned)idx >= (unsigned)size[i] || (_ranges && *ptrs[i] >= _ranges[i][1]))
                             break;
                         ptrs[i] += deltas[i*2];
                         Hptr += idx*hstep[i];
