@@ -71,7 +71,9 @@ void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); 
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu {  namespace imgproc 
+#define NPP_VERSION (10 * NPP_VERSION_MAJOR + NPP_VERSION_MINOR)
+
+namespace cv { namespace gpu {  namespace imgproc
 {
     void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
     void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
@@ -83,7 +85,7 @@ namespace cv { namespace gpu {  namespace imgproc
     void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
 
     void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
-    void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);        
+    void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
 }}}
 
 ////////////////////////////////////////////////////////////////////////
@@ -101,9 +103,9 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
         out = dst;
 
     out.create(xmap.size(), src.type());
-    
+
     callers[src.channels() - 1](src, xmap, ymap, out);
-    
+
     dst = out;
 }
 
@@ -111,7 +113,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 // meanShiftFiltering_GPU
 
 void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria)
-{       
+{
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
 
@@ -119,25 +121,25 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
     dst.create( src.size(), CV_8UC4 );
-    
+
     if( !(criteria.type & TermCriteria::MAX_ITER) )
         criteria.maxCount = 5;
-    
+
     int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
-    
+
     float eps;
     if( !(criteria.type & TermCriteria::EPS) )
         eps = 1.f;
-    eps = (float)std::max(criteria.epsilon, 0.0);        
+    eps = (float)std::max(criteria.epsilon, 0.0);
 
-    imgproc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);    
+    imgproc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps);
 }
 
 ////////////////////////////////////////////////////////////////////////
 // meanShiftProc_GPU
 
 void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria)
-{       
+{
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
 
@@ -146,18 +148,18 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
 
     dstr.create( src.size(), CV_8UC4 );
     dstsp.create( src.size(), CV_16SC2 );
-    
+
     if( !(criteria.type & TermCriteria::MAX_ITER) )
         criteria.maxCount = 5;
-    
+
     int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
-    
+
     float eps;
     if( !(criteria.type & TermCriteria::EPS) )
         eps = 1.f;
-    eps = (float)std::max(criteria.epsilon, 0.0);        
+    eps = (float)std::max(criteria.epsilon, 0.0);
 
-    imgproc::meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps);    
+    imgproc::meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -167,7 +169,7 @@ namespace
 {
     template <typename T>
     void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
-    {        
+    {
         GpuMat out;
         if (dst.data != src.data)
             out = dst;
@@ -186,14 +188,14 @@ namespace
 void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp)
 {
     CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
-    
+
     drawColorDisp_callers[src.type()](src, dst, ndisp, 0);
 }
 
 void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, const Stream& stream)
 {
     CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
-    
+
     drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
 }
 
@@ -204,35 +206,35 @@ namespace
 {
     template <typename T>
     void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream)
-    {        
+    {
         xyzw.create(disp.rows, disp.cols, CV_32FC4);
         imgproc::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
     }
-    
+
     typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream);
-    
+
     const reprojectImageTo3D_caller_t reprojectImageTo3D_callers[] = {reprojectImageTo3D_caller<unsigned char>, 0, 0, reprojectImageTo3D_caller<short>, 0, 0, 0, 0};
 }
 
 void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
 {
     CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
-    
+
     reprojectImageTo3D_callers[disp.type()](disp, xyzw, Q, 0);
 }
 
 void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream)
 {
     CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
-    
+
     reprojectImageTo3D_callers[disp.type()](disp, xyzw, Q, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
 // threshold
 
-double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh) 
-{ 
+double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh)
+{
     CV_Assert(src.type() == CV_32FC1);
 
     dst.create( src.size(), src.type() );
@@ -241,7 +243,7 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh)
     sz.width  = src.cols;
     sz.height = src.rows;
 
-    nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step, 
+    nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step,
         dst.ptr<Npp32f>(), dst.step, sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
 
     return thresh;
@@ -298,7 +300,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value) 
+void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value)
 {
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1);
 
@@ -308,32 +310,32 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 	srcsz.width  = src.cols;
 	srcsz.height = src.rows;
     NppiSize dstsz;
-	dstsz.width  = dst.cols;
-	dstsz.height = dst.rows;
+        dstsz.width  = dst.cols;
+        dstsz.height = dst.rows;
 
     switch (src.type())
     {
     case CV_8UC1:
-		{
+                {
             Npp8u nVal = static_cast<Npp8u>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), src.step, srcsz, 
+            nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), src.step, srcsz,
                 dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
             break;
-		}
+                }
     case CV_8UC4:
-		{
+                {
             Npp8u nVal[] = {static_cast<Npp8u>(value[0]), static_cast<Npp8u>(value[1]), static_cast<Npp8u>(value[2]), static_cast<Npp8u>(value[3])};
-            nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), src.step, srcsz, 
+            nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), src.step, srcsz,
                 dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
             break;
-		}
+                }
     case CV_32SC1:
-	    {
+            {
             Npp32s nVal = static_cast<Npp32s>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz, 
+            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz,
                 dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );
             break;
-	    }
+            }
     default:
         CV_Assert(!"Unsupported source type");
     }
@@ -343,26 +345,26 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 // warp
 
 namespace
-{    
-    typedef NppStatus (*npp_warp_8u_t)(const Npp8u* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp8u* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
+{
+    typedef NppStatus (*npp_warp_8u_t)(const Npp8u* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp8u* pDst,
+                                       int dstStep, NppiRect dstRoi, const double coeffs[][3],
                                        int interpolation);
-    typedef NppStatus (*npp_warp_16u_t)(const Npp16u* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp16u* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
+    typedef NppStatus (*npp_warp_16u_t)(const Npp16u* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp16u* pDst,
+                                       int dstStep, NppiRect dstRoi, const double coeffs[][3],
                                        int interpolation);
-    typedef NppStatus (*npp_warp_32s_t)(const Npp32s* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp32s* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
+    typedef NppStatus (*npp_warp_32s_t)(const Npp32s* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp32s* pDst,
+                                       int dstStep, NppiRect dstRoi, const double coeffs[][3],
                                        int interpolation);
-    typedef NppStatus (*npp_warp_32f_t)(const Npp32f* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp32f* pDst, 
-                                       int dstStep, NppiRect dstRoi, const double coeffs[][3], 
+    typedef NppStatus (*npp_warp_32f_t)(const Npp32f* pSrc, NppiSize srcSize, int srcStep, NppiRect srcRoi, Npp32f* pDst,
+                                       int dstStep, NppiRect dstRoi, const double coeffs[][3],
                                        int interpolation);
 
-    void nppWarpCaller(const GpuMat& src, GpuMat& dst, double coeffs[][3], const Size& dsize, int flags, 
-                       npp_warp_8u_t npp_warp_8u[][2], npp_warp_16u_t npp_warp_16u[][2], 
-                       npp_warp_32s_t npp_warp_32s[][2], npp_warp_32f_t npp_warp_32f[][2]) 
+    void nppWarpCaller(const GpuMat& src, GpuMat& dst, double coeffs[][3], const Size& dsize, int flags,
+                       npp_warp_8u_t npp_warp_8u[][2], npp_warp_16u_t npp_warp_16u[][2],
+                       npp_warp_32s_t npp_warp_32s[][2], npp_warp_32f_t npp_warp_32f[][2])
     {
         static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
-    
+
         int interpolation = flags & INTER_MAX;
 
         CV_Assert((src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S || src.depth() == CV_32F) && src.channels() != 2);
@@ -387,19 +389,19 @@ namespace
         switch (src.depth())
         {
         case CV_8U:
-            nppSafeCall( npp_warp_8u[src.channels()][warpInd](src.ptr<Npp8u>(), srcsz, src.step, srcroi, 
+            nppSafeCall( npp_warp_8u[src.channels()][warpInd](src.ptr<Npp8u>(), srcsz, src.step, srcroi,
                 dst.ptr<Npp8u>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_16U:
-            nppSafeCall( npp_warp_16u[src.channels()][warpInd](src.ptr<Npp16u>(), srcsz, src.step, srcroi, 
+            nppSafeCall( npp_warp_16u[src.channels()][warpInd](src.ptr<Npp16u>(), srcsz, src.step, srcroi,
                 dst.ptr<Npp16u>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32S:
-            nppSafeCall( npp_warp_32s[src.channels()][warpInd](src.ptr<Npp32s>(), srcsz, src.step, srcroi, 
+            nppSafeCall( npp_warp_32s[src.channels()][warpInd](src.ptr<Npp32s>(), srcsz, src.step, srcroi,
                 dst.ptr<Npp32s>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32F:
-            nppSafeCall( npp_warp_32f[src.channels()][warpInd](src.ptr<Npp32f>(), srcsz, src.step, srcroi, 
+            nppSafeCall( npp_warp_32f[src.channels()][warpInd](src.ptr<Npp32f>(), srcsz, src.step, srcroi,
                 dst.ptr<Npp32f>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
             break;
         default:
@@ -408,38 +410,38 @@ namespace
     }
 }
 
-void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags) 
+void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags)
 {
-    static npp_warp_8u_t npp_warpAffine_8u[][2] = 
+    static npp_warp_8u_t npp_warpAffine_8u[][2] =
         {
-            {0, 0}, 
-            {nppiWarpAffine_8u_C1R, nppiWarpAffineBack_8u_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_8u_C3R, nppiWarpAffineBack_8u_C3R}, 
+            {0, 0},
+            {nppiWarpAffine_8u_C1R, nppiWarpAffineBack_8u_C1R},
+            {0, 0},
+            {nppiWarpAffine_8u_C3R, nppiWarpAffineBack_8u_C3R},
             {nppiWarpAffine_8u_C4R, nppiWarpAffineBack_8u_C4R}
         };
-    static npp_warp_16u_t npp_warpAffine_16u[][2] = 
+    static npp_warp_16u_t npp_warpAffine_16u[][2] =
         {
-            {0, 0}, 
-            {nppiWarpAffine_16u_C1R, nppiWarpAffineBack_16u_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_16u_C3R, nppiWarpAffineBack_16u_C3R}, 
+            {0, 0},
+            {nppiWarpAffine_16u_C1R, nppiWarpAffineBack_16u_C1R},
+            {0, 0},
+            {nppiWarpAffine_16u_C3R, nppiWarpAffineBack_16u_C3R},
             {nppiWarpAffine_16u_C4R, nppiWarpAffineBack_16u_C4R}
         };
-    static npp_warp_32s_t npp_warpAffine_32s[][2] = 
+    static npp_warp_32s_t npp_warpAffine_32s[][2] =
         {
-            {0, 0}, 
-            {nppiWarpAffine_32s_C1R, nppiWarpAffineBack_32s_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_32s_C3R, nppiWarpAffineBack_32s_C3R}, 
+            {0, 0},
+            {nppiWarpAffine_32s_C1R, nppiWarpAffineBack_32s_C1R},
+            {0, 0},
+            {nppiWarpAffine_32s_C3R, nppiWarpAffineBack_32s_C3R},
             {nppiWarpAffine_32s_C4R, nppiWarpAffineBack_32s_C4R}
         };
-    static npp_warp_32f_t npp_warpAffine_32f[][2] = 
+    static npp_warp_32f_t npp_warpAffine_32f[][2] =
         {
-            {0, 0}, 
-            {nppiWarpAffine_32f_C1R, nppiWarpAffineBack_32f_C1R}, 
-            {0, 0}, 
-            {nppiWarpAffine_32f_C3R, nppiWarpAffineBack_32f_C3R}, 
+            {0, 0},
+            {nppiWarpAffine_32f_C1R, nppiWarpAffineBack_32f_C1R},
+            {0, 0},
+            {nppiWarpAffine_32f_C3R, nppiWarpAffineBack_32f_C3R},
             {nppiWarpAffine_32f_C4R, nppiWarpAffineBack_32f_C4R}
         };
 
@@ -454,36 +456,36 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
 
 void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags)
 {
-    static npp_warp_8u_t npp_warpPerspective_8u[][2] = 
+    static npp_warp_8u_t npp_warpPerspective_8u[][2] =
         {
-            {0, 0}, 
-            {nppiWarpPerspective_8u_C1R, nppiWarpPerspectiveBack_8u_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_8u_C3R, nppiWarpPerspectiveBack_8u_C3R}, 
+            {0, 0},
+            {nppiWarpPerspective_8u_C1R, nppiWarpPerspectiveBack_8u_C1R},
+            {0, 0},
+            {nppiWarpPerspective_8u_C3R, nppiWarpPerspectiveBack_8u_C3R},
             {nppiWarpPerspective_8u_C4R, nppiWarpPerspectiveBack_8u_C4R}
         };
-    static npp_warp_16u_t npp_warpPerspective_16u[][2] = 
+    static npp_warp_16u_t npp_warpPerspective_16u[][2] =
         {
-            {0, 0}, 
-            {nppiWarpPerspective_16u_C1R, nppiWarpPerspectiveBack_16u_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_16u_C3R, nppiWarpPerspectiveBack_16u_C3R}, 
+            {0, 0},
+            {nppiWarpPerspective_16u_C1R, nppiWarpPerspectiveBack_16u_C1R},
+            {0, 0},
+            {nppiWarpPerspective_16u_C3R, nppiWarpPerspectiveBack_16u_C3R},
             {nppiWarpPerspective_16u_C4R, nppiWarpPerspectiveBack_16u_C4R}
         };
-    static npp_warp_32s_t npp_warpPerspective_32s[][2] = 
+    static npp_warp_32s_t npp_warpPerspective_32s[][2] =
         {
-            {0, 0}, 
-            {nppiWarpPerspective_32s_C1R, nppiWarpPerspectiveBack_32s_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_32s_C3R, nppiWarpPerspectiveBack_32s_C3R}, 
+            {0, 0},
+            {nppiWarpPerspective_32s_C1R, nppiWarpPerspectiveBack_32s_C1R},
+            {0, 0},
+            {nppiWarpPerspective_32s_C3R, nppiWarpPerspectiveBack_32s_C3R},
             {nppiWarpPerspective_32s_C4R, nppiWarpPerspectiveBack_32s_C4R}
         };
-    static npp_warp_32f_t npp_warpPerspective_32f[][2] = 
+    static npp_warp_32f_t npp_warpPerspective_32f[][2] =
         {
-            {0, 0}, 
-            {nppiWarpPerspective_32f_C1R, nppiWarpPerspectiveBack_32f_C1R}, 
-            {0, 0}, 
-            {nppiWarpPerspective_32f_C3R, nppiWarpPerspectiveBack_32f_C3R}, 
+            {0, 0},
+            {nppiWarpPerspective_32f_C1R, nppiWarpPerspectiveBack_32f_C1R},
+            {0, 0},
+            {nppiWarpPerspective_32f_C3R, nppiWarpPerspectiveBack_32f_C3R},
             {nppiWarpPerspective_32f_C4R, nppiWarpPerspectiveBack_32f_C4R}
         };
 
@@ -502,7 +504,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
 void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation)
 {
     static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
-    
+
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
@@ -522,12 +524,12 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiRotate_8u_C1R(src.ptr<Npp8u>(), srcsz, src.step, srcroi, 
+        nppSafeCall( nppiRotate_8u_C1R(src.ptr<Npp8u>(), srcsz, src.step, srcroi,
             dst.ptr<Npp8u>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
     }
     else
     {
-        nppSafeCall( nppiRotate_8u_C4R(src.ptr<Npp8u>(), srcsz, src.step, srcroi, 
+        nppSafeCall( nppiRotate_8u_C4R(src.ptr<Npp8u>(), srcsz, src.step, srcroi,
             dst.ptr<Npp8u>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
     }
 }
@@ -538,7 +540,7 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
 void cv::gpu::integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum)
 {
     CV_Assert(src.type() == CV_8UC1);
-    
+
     int w = src.cols + 1, h = src.rows + 1;
 
     sum.create(h, w, CV_32S);
@@ -548,7 +550,7 @@ void cv::gpu::integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum)
     sz.width = src.cols;
     sz.height = src.rows;
 
-    nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(src.ptr<Npp8u>(), src.step, sum.ptr<Npp32s>(), 
+    nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(src.ptr<Npp8u>(), src.step, sum.ptr<Npp32s>(),
         sum.step, sqsum.ptr<Npp32f>(), sqsum.step, sz, 0, 0.0f, h) );
 }
 
@@ -569,7 +571,7 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
     nppRect.y = rect.y;
 
     nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), src.step, sqr.ptr<Npp32f>(), sqr.step,
-		dst.ptr<Npp32f>(), dst.step, sz, nppRect) );
+                dst.ptr<Npp32f>(), dst.step, sz, nppRect) );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -577,6 +579,7 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
 void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
 {
+#if NPP_VERSION >= 32
     CV_Assert(!"disabled until fix crash");
     CV_Assert(image.type() == CV_8UC1);
 
@@ -598,8 +601,11 @@ void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, doubl
     nppSafeCall( nppiCannyGetBufferSize(sz, &bufsz) );
     GpuMat buf(1, bufsz, CV_8UC1);
 
-    nppSafeCall( nppiCanny_32f8u_C1R(srcDx.ptr<Npp32f>(), srcDx.step, srcDy.ptr<Npp32f>(), srcDy.step, 
+    nppSafeCall( nppiCanny_32f8u_C1R(srcDx.ptr<Npp32f>(), srcDx.step, srcDy.ptr<Npp32f>(), srcDy.step,
         edges.ptr<Npp8u>(), edges.step, sz, (Npp32f)threshold1, (Npp32f)threshold2, buf.ptr<Npp8u>()) );
+#else
+    CV_Assert(!"This function doesn't supported");
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -612,7 +618,7 @@ namespace
     template<> struct NPPTypeTraits<CV_16U> { typedef Npp16u npp_type; };
     template<> struct NPPTypeTraits<CV_16S> { typedef Npp16s npp_type; };
     template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
-    
+
     typedef NppStatus (*get_buf_size_c1_t)(NppiSize oSizeROI, int nLevels, int* hpBufferSize);
     typedef NppStatus (*get_buf_size_c4_t)(NppiSize oSizeROI, int nLevels[], int* hpBufferSize);
 
@@ -620,20 +626,20 @@ namespace
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s * pHist, 
+	typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s * pHist,
 		    int nLevels, Npp32s nLowerLevel, Npp32s nUpperLevel, Npp8u * pBuffer);
     };
     template<int SDEPTH> struct NppHistogramEvenFuncC4
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, 
+        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI,
             Npp32s * pHist[4], int nLevels[4], Npp32s nLowerLevel[4], Npp32s nUpperLevel[4], Npp8u * pBuffer);
     };
-    
-    template<int SDEPTH, typename NppHistogramEvenFuncC1<SDEPTH>::func_ptr func, get_buf_size_c1_t get_buf_size> 
+
+    template<int SDEPTH, typename NppHistogramEvenFuncC1<SDEPTH>::func_ptr func, get_buf_size_c1_t get_buf_size>
     struct NppHistogramEvenC1
-    { 
+    {
         typedef typename NppHistogramEvenFuncC1<SDEPTH>::src_t src_t;
 
         static void hist(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
@@ -650,13 +656,13 @@ namespace
 
             get_buf_size(sz, levels, &buf_size);
             buffer.create(1, buf_size, CV_8U);
-            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels, 
+            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels,
                 lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
         }
-    };    
-    template<int SDEPTH, typename NppHistogramEvenFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size> 
+    };
+    template<int SDEPTH, typename NppHistogramEvenFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size>
     struct NppHistogramEvenC4
-    { 
+    {
         typedef typename NppHistogramEvenFuncC4<SDEPTH>::src_t src_t;
 
         static void hist(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
@@ -688,7 +694,7 @@ namespace
         typedef Npp32s level_t;
         enum {LEVEL_TYPE_CODE=CV_32SC1};
 
-        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist, 
+        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist,
             const Npp32s* pLevels, int nLevels, Npp8u* pBuffer);
     };
     template<> struct NppHistogramRangeFuncC1<CV_32F>
@@ -697,7 +703,7 @@ namespace
         typedef Npp32f level_t;
         enum {LEVEL_TYPE_CODE=CV_32FC1};
 
-        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist, 
+        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist,
             const Npp32f* pLevels, int nLevels, Npp8u* pBuffer);
     };
     template<int SDEPTH> struct NppHistogramRangeFuncC4
@@ -706,7 +712,7 @@ namespace
         typedef Npp32s level_t;
         enum {LEVEL_TYPE_CODE=CV_32SC1};
 
-        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist[4], 
+        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist[4],
             const Npp32s* pLevels[4], int nLevels[4], Npp8u* pBuffer);
     };
     template<> struct NppHistogramRangeFuncC4<CV_32F>
@@ -715,19 +721,19 @@ namespace
         typedef Npp32f level_t;
         enum {LEVEL_TYPE_CODE=CV_32FC1};
 
-        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist[4], 
+        typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s* pHist[4],
             const Npp32f* pLevels[4], int nLevels[4], Npp8u* pBuffer);
     };
-        
-    template<int SDEPTH, typename NppHistogramRangeFuncC1<SDEPTH>::func_ptr func, get_buf_size_c1_t get_buf_size> 
+
+    template<int SDEPTH, typename NppHistogramRangeFuncC1<SDEPTH>::func_ptr func, get_buf_size_c1_t get_buf_size>
     struct NppHistogramRangeC1
-    { 
+    {
         typedef typename NppHistogramRangeFuncC1<SDEPTH>::src_t src_t;
         typedef typename NppHistogramRangeFuncC1<SDEPTH>::level_t level_t;
         enum {LEVEL_TYPE_CODE=NppHistogramRangeFuncC1<SDEPTH>::LEVEL_TYPE_CODE};
 
         static void hist(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
-        {            
+        {
             CV_Assert(levels.type() == LEVEL_TYPE_CODE && levels.rows == 1);
 
             hist.create(1, levels.cols - 1, CV_32S);
@@ -743,10 +749,10 @@ namespace
             buffer.create(1, buf_size, CV_8U);
             nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels.ptr<level_t>(), levels.cols, buffer.ptr<Npp8u>()) );
         }
-    }; 
-    template<int SDEPTH, typename NppHistogramRangeFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size> 
+    };
+    template<int SDEPTH, typename NppHistogramRangeFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size>
     struct NppHistogramRangeC4
-    { 
+    {
         typedef typename NppHistogramRangeFuncC4<SDEPTH>::src_t src_t;
         typedef typename NppHistogramRangeFuncC1<SDEPTH>::level_t level_t;
         enum {LEVEL_TYPE_CODE=NppHistogramRangeFuncC1<SDEPTH>::LEVEL_TYPE_CODE};
@@ -778,22 +784,27 @@ namespace
             buffer.create(1, buf_size, CV_8U);
             nppSafeCall( func(src.ptr<src_t>(), src.step, sz, pHist, pLevels, nLevels, buffer.ptr<Npp8u>()) );
         }
-    };    
+    };
 }
 
 void cv::gpu::evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel)
 {
+#if NPP_VERSION >= 32
     Mat host_levels(1, nLevels, CV_32SC1);
     nppSafeCall( nppiEvenLevelsHost_32s(host_levels.ptr<Npp32s>(), nLevels, lowerLevel, upperLevel) );
     levels.upload(host_levels);
+#else
+    CV_Assert(!"This function doesn't supported");
+#endif
 }
 
 void cv::gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
 {
+#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 );
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat& hist, int levels, int lowerLevel, int upperLevel);
-    static const hist_t hist_callers[] = 
+    static const hist_t hist_callers[] =
     {
         NppHistogramEvenC1<CV_8U , nppiHistogramEven_8u_C1R , nppiHistogramEvenGetBufferSize_8u_C1R >::hist,
         0,
@@ -802,14 +813,18 @@ void cv::gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerL
     };
 
     hist_callers[src.depth()](src, hist, histSize, lowerLevel, upperLevel);
+#else
+    CV_Assert(!"This function doesn't supported");
+#endif
 }
 
 void cv::gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
 {
+#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4 || src.type() == CV_16SC4 );
-    
+
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], int levels[4], int lowerLevel[4], int upperLevel[4]);
-    static const hist_t hist_callers[] = 
+    static const hist_t hist_callers[] =
     {
         NppHistogramEvenC4<CV_8U , nppiHistogramEven_8u_C4R , nppiHistogramEvenGetBufferSize_8u_C4R >::hist,
         0,
@@ -818,14 +833,18 @@ void cv::gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int l
     };
 
     hist_callers[src.depth()](src, hist, histSize, lowerLevel, upperLevel);
+#else
+    CV_Assert(!"This function doesn't supported");
+#endif
 }
 
 void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 {
+#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 || src.type() == CV_32FC1);
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat& hist, const GpuMat& levels);
-    static const hist_t hist_callers[] = 
+    static const hist_t hist_callers[] =
     {
         NppHistogramRangeC1<CV_8U , nppiHistogramRange_8u_C1R , nppiHistogramRangeGetBufferSize_8u_C1R >::hist,
         0,
@@ -836,14 +855,18 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
     };
 
     hist_callers[src.depth()](src, hist, levels);
+#else
+    CV_Assert(!"This function doesn't supported");
+#endif
 }
 
 void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
 {
+#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4 || src.type() == CV_16SC4 || src.type() == CV_32FC4);
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4]);
-    static const hist_t hist_callers[] = 
+    static const hist_t hist_callers[] =
     {
         NppHistogramRangeC4<CV_8U , nppiHistogramRange_8u_C4R , nppiHistogramRangeGetBufferSize_8u_C4R >::hist,
         0,
@@ -854,6 +877,9 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     };
 
     hist_callers[src.depth()](src, hist, levels);
+#else
+    CV_Assert(!"This function doesn't supported");
+#endif
 }
 
 #endif /* !defined (HAVE_CUDA) */

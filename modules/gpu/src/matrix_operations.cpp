@@ -77,12 +77,14 @@ namespace cv
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv 
+#define NPP_VERSION (10 * NPP_VERSION_MAJOR + NPP_VERSION_MINOR)
+
+namespace cv
 {
     namespace gpu
     {
         namespace matrix_operations
-        {            
+        {
             void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
             void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);
@@ -162,9 +164,9 @@ namespace
 
         typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, dst_t* pDst, int nDstStep, NppiSize oSizeROI, NppRoundMode eRoundMode);
     };
-    
-    template<int SDEPTH, int DDEPTH, typename NppConvertFunc<SDEPTH, DDEPTH>::func_ptr func> struct NppCvt 
-    { 
+
+    template<int SDEPTH, int DDEPTH, typename NppConvertFunc<SDEPTH, DDEPTH>::func_ptr func> struct NppCvt
+    {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
 
@@ -177,7 +179,7 @@ namespace
         }
     };
     template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> struct NppCvt<CV_32F, DDEPTH, func>
-    { 
+    {
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
 
         static void cvt(const GpuMat& src, GpuMat& dst)
@@ -203,7 +205,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
         rtype = type();
     else
         rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
-    
+
     int scn = channels();
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
     if( sdepth == ddepth && noScale )
@@ -224,7 +226,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
     else
     {
         typedef void (*convert_caller_t)(const GpuMat& src, GpuMat& dst);
-        static const convert_caller_t convert_callers[8][8][4] = 
+        static const convert_caller_t convert_callers[8][8][4] =
         {
             {
                 {0,0,0,0},
@@ -232,7 +234,11 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
                 {NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C4R>::cvt},
                 {NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C4R>::cvt},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+#if NPP_VERSION >= 32
                 {NppCvt<CV_8U, CV_32F, nppiConvert_8u32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+#else
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+#endif
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0}
             },
@@ -251,8 +257,8 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-                {NppCvt<CV_16U, CV_32S, nppiConvert_16u32s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
-                {NppCvt<CV_16U, CV_32F, nppiConvert_16u32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {NppCvt<CV_16U, CV_32S, nppiConvert_16u32s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_16U, CV_32F, nppiConvert_16u32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0}
             },
@@ -261,8 +267,8 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0},
-                {NppCvt<CV_16S, CV_32S, nppiConvert_16s32s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
-                {NppCvt<CV_16S, CV_32F, nppiConvert_16s32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+                {NppCvt<CV_16S, CV_32S, nppiConvert_16s32s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_16S, CV_32F, nppiConvert_16s32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0}
             },
@@ -277,10 +283,14 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
                 {0,0,0,0}
             },
             {
+#if NPP_VERSION >= 32
                 {NppCvt<CV_32F, CV_8U, nppiConvert_32f8u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+#else
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-                {NppCvt<CV_32F, CV_16U, nppiConvert_32f16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
-                {NppCvt<CV_32F, CV_16S, nppiConvert_32f16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller}, 
+#endif
+                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_32F, CV_16U, nppiConvert_32f16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
+                {NppCvt<CV_32F, CV_16S, nppiConvert_32f16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
@@ -325,9 +335,9 @@ namespace
 
         typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI);
     };
-    
-    template<int SDEPTH, int SCN, typename NppSetFunc<SDEPTH, SCN>::func_ptr func> struct NppSet 
-    { 
+
+    template<int SDEPTH, int SCN, typename NppSetFunc<SDEPTH, SCN>::func_ptr func> struct NppSet
+    {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
         static void set(GpuMat& src, const Scalar& s)
@@ -340,7 +350,7 @@ namespace
         }
     };
     template<int SDEPTH, typename NppSetFunc<SDEPTH, 1>::func_ptr func> struct NppSet<SDEPTH, 1, func>
-    { 
+    {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
         static void set(GpuMat& src, const Scalar& s)
@@ -357,7 +367,7 @@ namespace
     {
         matrix_operations::set_to_without_mask(src, src.depth(), s.val, src.channels());
     }
-    
+
     template<int SDEPTH, int SCN> struct NppSetMaskFunc
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
@@ -370,9 +380,9 @@ namespace
 
         typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
     };
-    
+
     template<int SDEPTH, int SCN, typename NppSetMaskFunc<SDEPTH, SCN>::func_ptr func> struct NppSetMask
-    { 
+    {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
         static void set(GpuMat& src, const Scalar& s, const GpuMat& mask)
@@ -385,7 +395,7 @@ namespace
         }
     };
     template<int SDEPTH, typename NppSetMaskFunc<SDEPTH, 1>::func_ptr func> struct NppSetMask<SDEPTH, 1, func>
-    { 
+    {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
         static void set(GpuMat& src, const Scalar& s, const GpuMat& mask)
@@ -397,7 +407,7 @@ namespace
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
         }
     };
-    
+
     void kernelSetMask(GpuMat& src, const Scalar& s, const GpuMat& mask)
     {
         matrix_operations::set_to_with_mask(src, src.depth(), s.val, mask, src.channels());
@@ -409,7 +419,7 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
     CV_Assert(mask.type() == CV_8UC1);
 
     CV_DbgAssert(!this->empty());
-    
+
     NppiSize sz;
     sz.width  = cols;
     sz.height = rows;
@@ -421,17 +431,34 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
         {
             {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set,kernelSet,kernelSet,NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
             {kernelSet,kernelSet,kernelSet,kernelSet},
+#if NPP_VERSION >= 32
             {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set,kernelSet,kernelSet,NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
+#else
+            {kernelSet,kernelSet,kernelSet,kernelSet},
+#endif
+#if NPP_VERSION >= 32
             {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set,kernelSet,kernelSet,NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
+#else
+            {kernelSet,kernelSet,kernelSet,kernelSet},
+#endif
+#if NPP_VERSION >= 32
             {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet,kernelSet,NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
+#else
+            {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet,kernelSet,kernelSet},
+#endif
+#if NPP_VERSION >= 32
             {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet,kernelSet,NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
+#else
+            {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet,kernelSet,kernelSet},
+#endif
             {kernelSet,kernelSet,kernelSet,kernelSet},
             {0,0,0,0}
         };
-        set_callers[depth()][channels()-1](*this, s);     
+        set_callers[depth()][channels()-1](*this, s);
     }
     else
     {
+#if NPP_VERSION >= 32
         typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, const GpuMat& mask);
         static const set_caller_t set_callers[8][4] =
         {
@@ -445,6 +472,9 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
             {0,0,0,0}
         };
         set_callers[depth()][channels()-1](*this, s, mask);
+#else
+        kernelSetMask(*this, s, mask);
+#endif
     }
 
     return *this;
@@ -550,7 +580,7 @@ bool cv::gpu::CudaMem::can_device_map_to_host()
 }
 
 void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
-{   
+{
     if (_alloc_type == ALLOC_ZEROCOPY && !can_device_map_to_host())
             cv::gpu::error("ZeroCopy is not supported by current device", __FILE__, __LINE__);
 
@@ -561,7 +591,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
         release();
     CV_DbgAssert( _rows >= 0 && _cols >= 0 );
     if( _rows > 0 && _cols > 0 )
-    {        
+    {
         flags = Mat::MAGIC_VAL + Mat::CONTINUOUS_FLAG + _type;
         rows = _rows;
         cols = _cols;
@@ -575,7 +605,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
         //datastart = data = (uchar*)fastMalloc(datasize + sizeof(*refcount));
         alloc_type = _alloc_type;
         void *ptr;
-        
+
         switch (alloc_type)
         {
             case ALLOC_PAGE_LOCKED:    cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) ); break;
@@ -603,7 +633,7 @@ GpuMat cv::gpu::CudaMem::createGpuMatHeader () const
     }
     else
         cv::gpu::error("Zero-copy is not supported or memory was allocated without zero-copy flag", __FILE__, __LINE__);
-        
+
     return res;
 }
 
