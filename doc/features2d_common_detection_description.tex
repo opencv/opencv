@@ -1,245 +1,11 @@
-\section{Feature detection and description}
-
-\ifCPy
-
-\ifPy
-\cvclass{CvSURFPoint}
-A SURF keypoint, represented as a tuple \texttt{((x, y), laplacian, size, dir, hessian)}.
-
-\begin{description}
-\cvarg{x}{x-coordinate of the feature within the image}
-\cvarg{y}{y-coordinate of the feature within the image}
-\cvarg{laplacian}{-1, 0 or +1. sign of the laplacian at the point.  Can be used to speedup feature comparison since features with laplacians of different signs can not match}
-\cvarg{size}{size of the feature}
-\cvarg{dir}{orientation of the feature: 0..360 degrees}
-\cvarg{hessian}{value of the hessian (can be used to approximately estimate the feature strengths; see also params.hessianThreshold)}
-\end{description}
-\fi
-
-\cvCPyFunc{ExtractSURF}
-Extracts Speeded Up Robust Features from an image.
-
-\cvdefC{
-void cvExtractSURF( \par const CvArr* image,\par const CvArr* mask,\par CvSeq** keypoints,\par CvSeq** descriptors,\par CvMemStorage* storage,\par CvSURFParams params );
-}
-\cvdefPy{ExtractSURF(image,mask,storage,params)-> (keypoints,descriptors)}
-
-\begin{description}
-\cvarg{image}{The input 8-bit grayscale image}
-\cvarg{mask}{The optional input 8-bit mask. The features are only found in the areas that contain more than 50\% of non-zero mask pixels}
-\ifC
-\cvarg{keypoints}{The output parameter; double pointer to the sequence of keypoints. The sequence of CvSURFPoint structures is as follows:}
-\begin{lstlisting}
- typedef struct CvSURFPoint
- {
-    CvPoint2D32f pt; // position of the feature within the image
-    int laplacian;   // -1, 0 or +1. sign of the laplacian at the point.
-                     // can be used to speedup feature comparison
-                     // (normally features with laplacians of different 
-             // signs can not match)
-    int size;        // size of the feature
-    float dir;       // orientation of the feature: 0..360 degrees
-    float hessian;   // value of the hessian (can be used to 
-             // approximately estimate the feature strengths;
-                     // see also params.hessianThreshold)
- }
- CvSURFPoint;
-\end{lstlisting}
-\cvarg{descriptors}{The optional output parameter; double pointer to the sequence of descriptors. Depending on the params.extended value, each element of the sequence will be either a 64-element or a 128-element floating-point (\texttt{CV\_32F}) vector. If the parameter is NULL, the descriptors are not computed}
-\else
-\cvarg{keypoints}{sequence of keypoints.}
-\cvarg{descriptors}{sequence of descriptors.  Each SURF descriptor is a list of floats, of length 64 or 128.}
-\fi
-\cvarg{storage}{Memory storage where keypoints and descriptors will be stored}
-\ifC
-\cvarg{params}{Various algorithm parameters put to the structure CvSURFParams:}
-\begin{lstlisting}
- typedef struct CvSURFParams
- {
-    int extended; // 0 means basic descriptors (64 elements each),
-                  // 1 means extended descriptors (128 elements each)
-    double hessianThreshold; // only features with keypoint.hessian 
-          // larger than that are extracted.
-                  // good default value is ~300-500 (can depend on the 
-          // average local contrast and sharpness of the image).
-                  // user can further filter out some features based on 
-          // their hessian values and other characteristics.
-    int nOctaves; // the number of octaves to be used for extraction.
-                  // With each next octave the feature size is doubled 
-          // (3 by default)
-    int nOctaveLayers; // The number of layers within each octave 
-          // (4 by default)
- }
- CvSURFParams;
-
- CvSURFParams cvSURFParams(double hessianThreshold, int extended=0); 
-          // returns default parameters
-\end{lstlisting}
-\else
-\cvarg{params}{Various algorithm parameters in a tuple \texttt{(extended, hessianThreshold, nOctaves, nOctaveLayers)}:
-\begin{description}
-\cvarg{extended}{0 means basic descriptors (64 elements each), 1 means extended descriptors (128 elements each)}
-\cvarg{hessianThreshold}{only features with hessian larger than that are extracted.  good default value is ~300-500 (can depend on the average local contrast and sharpness of the image).  user can further filter out some features based on their hessian values and other characteristics.}
-\cvarg{nOctaves}{the number of octaves to be used for extraction.  With each next octave the feature size is doubled (3 by default)}
-\cvarg{nOctaveLayers}{The number of layers within each octave (4 by default)}
-\end{description}}
-\fi
-\end{description}
-
-The function cvExtractSURF finds robust features in the image, as
-described in \cite{Bay06}. For each feature it returns its location, size,
-orientation and optionally the descriptor, basic or extended. The function
-can be used for object tracking and localization, image stitching etc.
-
-\ifC
-See the
-\texttt{find\_obj.cpp} demo in OpenCV samples directory.
-\else
-To extract strong SURF features from an image
-
-\begin{lstlisting}
->>> import cv
->>> im = cv.LoadImageM("building.jpg", cv.CV_LOAD_IMAGE_GRAYSCALE)
->>> (keypoints, descriptors) = cv.ExtractSURF(im, None, cv.CreateMemStorage(), (0, 30000, 3, 1))
->>> print len(keypoints), len(descriptors)
-6 6
->>> for ((x, y), laplacian, size, dir, hessian) in keypoints:
-...     print "x=\%d y=\%d laplacian=\%d size=\%d dir=\%f hessian=\%f" \% (x, y, laplacian, size, dir, hessian)
-x=30 y=27 laplacian=-1 size=31 dir=69.778503 hessian=36979.789062
-x=296 y=197 laplacian=1 size=33 dir=111.081039 hessian=31514.349609
-x=296 y=266 laplacian=1 size=32 dir=107.092300 hessian=31477.908203
-x=254 y=284 laplacian=1 size=31 dir=279.137360 hessian=34169.800781
-x=498 y=525 laplacian=-1 size=33 dir=278.006592 hessian=31002.759766
-x=777 y=281 laplacian=1 size=70 dir=167.940964 hessian=35538.363281
-\end{lstlisting}
-
-\fi
-
-\cvCPyFunc{GetStarKeypoints}
-Retrieves keypoints using the StarDetector algorithm.
-
-\cvdefC{
-CvSeq* cvGetStarKeypoints( \par const CvArr* image,\par CvMemStorage* storage,\par CvStarDetectorParams params=cvStarDetectorParams() );
-}
-\cvdefPy{GetStarKeypoints(image,storage,params)-> keypoints}
-
-\begin{description}
-\cvarg{image}{The input 8-bit grayscale image}
-\cvarg{storage}{Memory storage where the keypoints will be stored}
-\ifC
-\cvarg{params}{Various algorithm parameters given to the structure CvStarDetectorParams:}
-\begin{lstlisting}
- typedef struct CvStarDetectorParams
- {
-    int maxSize; // maximal size of the features detected. The following 
-                 // values of the parameter are supported:
-                 // 4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128
-    int responseThreshold; // threshold for the approximatd laplacian,
-                           // used to eliminate weak features
-    int lineThresholdProjected; // another threshold for laplacian to 
-                // eliminate edges
-    int lineThresholdBinarized; // another threshold for the feature 
-                // scale to eliminate edges
-    int suppressNonmaxSize; // linear size of a pixel neighborhood 
-                // for non-maxima suppression
- }
- CvStarDetectorParams;
-\end{lstlisting}
-\else
-\cvarg{params}{Various algorithm parameters in a tuple \texttt{(maxSize, responseThreshold, lineThresholdProjected, lineThresholdBinarized, suppressNonmaxSize)}:
-\begin{description}
-\cvarg{maxSize}{maximal size of the features detected. The following values of the parameter are supported: 4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128}
-\cvarg{responseThreshold}{threshold for the approximatd laplacian, used to eliminate weak features}
-\cvarg{lineThresholdProjected}{another threshold for laplacian to eliminate edges}
-\cvarg{lineThresholdBinarized}{another threshold for the feature scale to eliminate edges}
-\cvarg{suppressNonmaxSize}{linear size of a pixel neighborhood for non-maxima suppression}
-\end{description}
-}
-\fi
-\end{description}
-
-The function GetStarKeypoints extracts keypoints that are local
-scale-space extremas. The scale-space is constructed by computing
-approximate values of laplacians with different sigma's at each
-pixel. Instead of using pyramids, a popular approach to save computing
-time, all of the laplacians are computed at each pixel of the original
-high-resolution image. But each approximate laplacian value is computed
-in O(1) time regardless of the sigma, thanks to the use of integral
-images. The algorithm is based on the paper 
-Agrawal08
-, but instead
-of a square, hexagon or octagon it uses an 8-end star shape, hence the name,
-consisting of overlapping upright and tilted squares.
-
-\ifC
-Each computed feature is represented by the following structure:
-
-\begin{lstlisting}
-typedef struct CvStarKeypoint
-{
-    CvPoint pt; // coordinates of the feature
-    int size; // feature size, see CvStarDetectorParams::maxSize
-    float response; // the approximated laplacian value at that point.
-}
-CvStarKeypoint;
-
-inline CvStarKeypoint cvStarKeypoint(CvPoint pt, int size, float response);
-\end{lstlisting}
-\else
-Each keypoint is represented by a tuple \texttt{((x, y), size, response)}:
-\begin{description}
-\cvarg{x, y}{Screen coordinates of the keypoint}
-\cvarg{size}{feature size, up to \texttt{maxSize}}
-\cvarg{response}{approximated laplacian value for the keypoint}
-\end{description}
-\fi
-
-\ifC
-Below is the small usage sample:
-
-\begin{lstlisting}
-#include "cv.h"
-#include "highgui.h"
-
-int main(int argc, char** argv)
-{
-    const char* filename = argc > 1 ? argv[1] : "lena.jpg";
-    IplImage* img = cvLoadImage( filename, 0 ), *cimg;
-    CvMemStorage* storage = cvCreateMemStorage(0);
-    CvSeq* keypoints = 0;
-    int i;
-
-    if( !img )
-        return 0;
-    cvNamedWindow( "image", 1 );
-    cvShowImage( "image", img );
-    cvNamedWindow( "features", 1 );
-    cimg = cvCreateImage( cvGetSize(img), 8, 3 );
-    cvCvtColor( img, cimg, CV_GRAY2BGR );
-
-    keypoints = cvGetStarKeypoints( img, storage, cvStarDetectorParams(45) );
-
-    for( i = 0; i < (keypoints ? keypoints->total : 0); i++ )
-    {
-        CvStarKeypoint kpt = *(CvStarKeypoint*)cvGetSeqElem(keypoints, i);
-        int r = kpt.size/2;
-        cvCircle( cimg, kpt.pt, r, CV_RGB(0,255,0));
-        cvLine( cimg, cvPoint(kpt.pt.x + r, kpt.pt.y + r),
-            cvPoint(kpt.pt.x - r, kpt.pt.y - r), CV_RGB(0,255,0));
-        cvLine( cimg, cvPoint(kpt.pt.x - r, kpt.pt.y + r),
-            cvPoint(kpt.pt.x + r, kpt.pt.y - r), CV_RGB(0,255,0));
-    }
-    cvShowImage( "features", cimg );
-    cvWaitKey();
-}
-\end{lstlisting}
-\fi
-
-\fi
 \ifCpp
+\section{Common Interfaces of Feature Detectors}
+Feature detectors in OpenCV have wrappers with common interface that enables to switch easily 
+between different algorithms solving the same problem. All objects that implement keypoint detectors 
+inherit \cvCppCross{FeatureDetector} interface.
 
 \cvclass{KeyPoint}
-Data structure for salient point detectors
+Data structure for salient point detectors.
 
 \begin{lstlisting}
 class KeyPoint
@@ -247,7 +13,7 @@ class KeyPoint
 public:
     // the default constructor
     KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), 
-				 class_id(-1) {}
+                 class_id(-1) {}
     // the full constructor
     KeyPoint(Point2f _pt, float _size, float _angle=-1,
             float _response=0, int _octave=0, int _class_id=-1)
@@ -278,11 +44,11 @@ public:
     float size; // diameter of the meaningfull keypoint neighborhood
     float angle; // computed orientation of the keypoint (-1 if not applicable)
     float response; // the response by which the most strong keypoints 
-					// have been selected. Can be used for the further sorting 
-					// or subsampling
+                    // have been selected. Can be used for the further sorting 
+                    // or subsampling
     int octave; // octave (pyramid layer) from which the keypoint has been extracted
     int class_id; // object class (if the keypoints need to be clustered by 
-				  // an object they belong to) 
+                  // an object they belong to) 
 };
 
 // writes vector of keypoints to the file storage
@@ -290,189 +56,6 @@ void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoint
 // reads vector of keypoints from the specified file storage node
 void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
 \end{lstlisting}
-
-
-\cvclass{MSER}
-Maximally-Stable Extremal Region Extractor
-
-\begin{lstlisting}
-class MSER : public CvMSERParams
-{
-public:
-    // default constructor
-    MSER();
-    // constructor that initializes all the algorithm parameters
-    MSER( int _delta, int _min_area, int _max_area,
-          float _max_variation, float _min_diversity,
-          int _max_evolution, double _area_threshold,
-          double _min_margin, int _edge_blur_size );
-    // runs the extractor on the specified image; returns the MSERs,
-    // each encoded as a contour (vector<Point>, see findContours)
-    // the optional mask marks the area where MSERs are searched for
-    void operator()( const Mat& image, vector<vector<Point> >& msers, const Mat& mask ) const;
-};
-\end{lstlisting}
-
-The class encapsulates all the parameters of MSER (see \url{http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions}) extraction algorithm. 
-
-\cvclass{StarDetector}
-Implements Star keypoint detector
-
-\begin{lstlisting}
-class StarDetector : CvStarDetectorParams
-{
-public:
-    // default constructor
-    StarDetector();
-    // the full constructor initialized all the algorithm parameters:
-    // maxSize - maximum size of the features. The following 
-    //      values of the parameter are supported:
-    //      4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128
-    // responseThreshold - threshold for the approximated laplacian,
-    //      used to eliminate weak features. The larger it is,
-    //      the less features will be retrieved
-    // lineThresholdProjected - another threshold for the laplacian to 
-    //      eliminate edges
-    // lineThresholdBinarized - another threshold for the feature 
-    //      size to eliminate edges.
-    // The larger the 2 threshold, the more points you get.
-    StarDetector(int maxSize, int responseThreshold,
-                 int lineThresholdProjected,
-                 int lineThresholdBinarized,
-                 int suppressNonmaxSize);
-
-    // finds keypoints in an image
-    void operator()(const Mat& image, vector<KeyPoint>& keypoints) const;
-};
-\end{lstlisting}
-
-The class implements a modified version of CenSurE keypoint detector described in
-\cite{Agrawal08}
-
-\cvclass{SIFT}
-Class for extracting keypoints and computing descriptors using approach named Scale Invariant Feature Transform (SIFT).
-
-\begin{lstlisting}
-class CV_EXPORTS SIFT
-{
-public:
-    struct CommonParams
-    {
-        static const int DEFAULT_NOCTAVES = 4;
-        static const int DEFAULT_NOCTAVE_LAYERS = 3;
-        static const int DEFAULT_FIRST_OCTAVE = -1;
-        enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
-
-        CommonParams();
-        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, 
-					  int _angleMode );
-        int nOctaves, nOctaveLayers, firstOctave;
-        int angleMode;
-    };
-
-    struct DetectorParams
-    {
-        static double GET_DEFAULT_THRESHOLD() 
-          { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
-        static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
-
-        DetectorParams();
-        DetectorParams( double _threshold, double _edgeThreshold );
-        double threshold, edgeThreshold;
-    };
-
-    struct DescriptorParams
-    {
-        static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
-        static const bool DEFAULT_IS_NORMALIZE = true;
-        static const int DESCRIPTOR_SIZE = 128;
-
-        DescriptorParams();
-        DescriptorParams( double _magnification, bool _isNormalize, 
-						  bool _recalculateAngles );
-        double magnification;
-        bool isNormalize;
-        bool recalculateAngles;
-    };
-
-    SIFT();
-    //! sift-detector constructor
-    SIFT( double _threshold, double _edgeThreshold,
-          int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
-          int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
-          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
-          int _angleMode=CommonParams::FIRST_ANGLE );
-    //! sift-descriptor constructor
-    SIFT( double _magnification, bool _isNormalize=true,
-          bool _recalculateAngles = true,
-          int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
-          int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
-          int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
-          int _angleMode=CommonParams::FIRST_ANGLE );
-    SIFT( const CommonParams& _commParams,
-          const DetectorParams& _detectorParams = DetectorParams(),
-          const DescriptorParams& _descriptorParams = DescriptorParams() );
-
-    //! returns the descriptor size in floats (128)
-    int descriptorSize() const { return DescriptorParams::DESCRIPTOR_SIZE; }
-    //! finds the keypoints using SIFT algorithm
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints) const;
-    //! finds the keypoints and computes descriptors for them using SIFT algorithm. 
-    //! Optionally it can compute descriptors for the user-provided keypoints
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints,
-                    Mat& descriptors,
-                    bool useProvidedKeypoints=false) const;
-
-    CommonParams getCommonParams () const { return commParams; }
-    DetectorParams getDetectorParams () const { return detectorParams; }
-    DescriptorParams getDescriptorParams () const { return descriptorParams; }
-protected:
-    ...
-};
-\end{lstlisting}
-
-\cvclass{SURF}
-Class for extracting Speeded Up Robust Features from an image.
-
-\begin{lstlisting}
-class SURF : public CvSURFParams
-{
-public:
-    // default constructor
-    SURF();
-    // constructor that initializes all the algorithm parameters
-    SURF(double _hessianThreshold, int _nOctaves=4,
-         int _nOctaveLayers=2, bool _extended=false);
-    // returns the number of elements in each descriptor (64 or 128)
-    int descriptorSize() const;
-    // detects keypoints using fast multi-scale Hessian detector
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints) const;
-    // detects keypoints and computes the SURF descriptors for them
-    void operator()(const Mat& img, const Mat& mask,
-                    vector<KeyPoint>& keypoints,
-                    vector<float>& descriptors,
-                    bool useProvidedKeypoints=false) const;
-};
-\end{lstlisting}
-
-The class \texttt{SURF} implements Speeded Up Robust Features descriptor \cite{Bay06}.
-There is fast multi-scale Hessian keypoint detector that can be used to find the keypoints
-(which is the default option), but the descriptors can be also computed for the user-specified keypoints.
-The function can be used for object tracking and localization, image stitching etc. See the
-\texttt{find\_obj.cpp} demo in OpenCV samples directory.
-
-\section{Common Interfaces for Feature Detection and Descriptor Extraction}
-Both detectors and descriptors in OpenCV have wrappers with common interface that enables to switch easily 
-between different algorithms solving the same problem. All objects that implement keypoint detectors inherit 
-FeatureDetector interface. Descriptors that are represented as vectors in a multidimensional space can be 
-computed with DescriptorExtractor interface. DescriptorMatcher interface can be used to find matches between 
-two sets of descriptors. GenericDescriptorMatcher is a more generic interface for descriptors. It does not make any 
-assumptions about descriptor representation. Every descriptor with DescriptorExtractor interface has a wrapper with 
-GenericDescriptorMatcher interface (see VectorDescriptorMatch). There are descriptors such as one way descriptor and 
-ferns that have GenericDescriptorMatcher interface implemented, but do not support DescriptorExtractor.
 
 \cvclass{FeatureDetector}
 Abstract base class for 2D image feature detectors.
@@ -737,6 +320,14 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
 \cvarg{detectorType}{Feature detector type, e.g. ''SURF'', ''FAST'', ...}
 \end{description}
 
+
+
+\section{Common Interfaces of Descriptor Extractors}
+Extractors of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily 
+between different algorithms solving the same problem. This section is devoted to computing descriptors 
+that are represented as vectors in a multidimensional space. All objects that implement ''vector'' 
+descriptor extractors inherit \cvCppCross{DescriptorExtractor} interface.
+
 \cvclass{DescriptorExtractor}
 Abstract base class for computing descriptors for image keypoints.
 
@@ -890,6 +481,53 @@ protected:
 }
 \end{lstlisting}
 
+\cvclass{OpponentColorDescriptorExtractor}
+Adapts a descriptor extractor to compute descripors in Opponent Color Space
+(refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
+Input RGB image is transformed in Opponent Color Space. Then unadapted descriptor extractor
+(set in constructor) computes descriptors on each of the three channel and concatenate
+them into a single color descriptor.
+
+\begin{lstlisting}
+class OpponentColorDescriptorExtractor : public DescriptorExtractor
+{
+public:
+    OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor );
+
+    virtual void compute( const Mat& image, vector<KeyPoint>& keypoints, 
+                          Mat& descriptors ) const;
+
+    virtual void read( const FileNode& );
+    virtual void write( FileStorage& ) const;
+
+    virtual int descriptorSize() const;
+    virtual int descriptorType() const;
+
+protected:
+    ...
+};
+\end{lstlisting}
+
+\cvCppFunc{createDescriptorExtractor}
+Descriptor extractor factory that creates \cvCppCross{DescriptorExtractor} of given type with 
+default parameters (rather using default constructor).
+
+\begin{lstlisting}
+Ptr<DescriptorExtractor> 
+createDescriptorExtractor( const string& descriptorExtractorType );
+\end{lstlisting}
+
+\begin{description}
+\cvarg{descriptorExtractorType}{Descriptor extractor type, e.g. ''SURF'', ''SIFT'', ...}
+\end{description}
+
+
+\section{Common Interfaces of Descriptor Matchers}
+Matchers of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily 
+between different algorithms solving the same problem. This section is devoted to matching descriptors 
+that are represented as vectors in a multidimensional space. All objects that implement ''vector'' 
+descriptor matchers inherit \cvCppCross{DescriptorMatcher} interface.
+
 \cvclass{DMatch}
 Match between two keypoint descriptors: query descriptor index, 
 train descriptor index, train image index and distance between descriptors.
@@ -1031,7 +669,8 @@ void DescriptorMatcher::match( const Mat\& queryDescs,
 
 \begin{description}
 \cvarg{queryDescs}{Query set of descriptors.}
-\cvarg{trainDescs}{Train set of descriptors.}
+\cvarg{trainDescs}{Train set of descriptors. This will not be added to train descripotors collection 
+				   stored in class object.}
 \cvarg{matches}{Matches. If some query descriptor masked out in \texttt{mask} no match will be added for this descriptor.
 				So \texttt{matches} size may be less query descriptors count.}
 \cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
@@ -1183,6 +822,16 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
 \begin{description}
 \cvarg{descriptorMatcherType}{Descriptor matcher type, e. g. ''BruteForce'', ''FlannBased'', ...}
 \end{description}
+
+\section{Common Interfaces of Generic Descriptor Matchers}
+Matchers of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily 
+between different algorithms solving the same problem. This section is devoted to matching descriptors 
+that can not be represented as vectors in a multidimensional space. \texttt{GenericDescriptorMatcher} 
+is a more generic interface for descriptors. It does not make any assumptions about descriptor representation. 
+Every descriptor with \cvCppCross{DescriptorExtractor} interface has a wrapper with 
+\texttt{GenericDescriptorMatcher} interface (see \cvCppCross{VectorDescriptorMatcher}). 
+There are descriptors such as One way descriptor and Ferns that have \texttt{GenericDescriptorMatcher} 
+interface implemented, but do not support \cvCppCross{DescriptorExtractor}.
 
 \cvclass{GenericDescriptorMatcher}
 Abstract interface for a keypoint descriptor extracting and matching. 
@@ -1352,9 +1001,11 @@ void GenericDescriptorMatcher::match(
                 
 \begin{description}
 \cvarg{queryImg}{Query image.}
-\cvarg{queryPoints}{Keypoint detected in \texttt{queryImg}.}
-\cvarg{trainImg}{Train image.}
-\cvarg{trainPoints}{Keypoint detected in \texttt{trainImg}.}
+\cvarg{queryPoints}{Keypoints detected in \texttt{queryImg}.}
+\cvarg{trainImg}{Train image. This will not be added to train image collection 
+				stored in class object.}
+\cvarg{trainPoints}{Keypoints detected in \texttt{trainImg}. They will not be added to train points collection 
+				   stored in class object.}
 \cvarg{matches}{Matches. If some query descriptor (keypoint) masked out in \texttt{mask} 
                 no match will be added for this descriptor.
 				So \texttt{matches} size may be less query keypoints count.}
@@ -1565,6 +1216,7 @@ VectorDescriptorMatcher matcher( new SurfDescriptorExtractor,
                                  new BruteForceMatcher<L2<float> > );
 \end{lstlisting}
 
+\section{Drawing Function of Keypoints and Matches}
 \cvCppFunc{drawMatches}
 This function draws matches of keypints from two images on output image. 
 Match is a line connecting two keypoints (circles).
