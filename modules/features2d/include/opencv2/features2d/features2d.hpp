@@ -2468,7 +2468,7 @@ public:
     void setVocabulary( const Mat& vocabulary );
     const Mat& getVocabulary() const { return vocabulary; }
     void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
-                  vector<vector<int> >* pointIdxsOfClusters=0 ); //not constant because DescriptorMatcher::match is not constant
+                  vector<vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 ); //not constant because DescriptorMatcher::match is not constant
     int descriptorSize() const { return vocabulary.empty() ? 0 : vocabulary.rows; }
     int descriptorType() const { return CV_32FC1; }
 
