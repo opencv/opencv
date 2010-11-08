@@ -44,25 +44,17 @@
 CvTS test_system;
 
 const char* blacklist[] =
-{    
+{
     "GPU-MatOperatorAsyncCall",     // crash
 
     "GPU-NppImageSum",              // crash, probably npp bug
     "GPU-NppImageMinNax",           // npp bug - don't find min/max near right border
-    //"GPU-NppImageDivide",           // different round mode
-    //"GPU-NppImageMeanStdDev",       // different precision
-    //"GPU-NppImageExp",              // different precision
-    //"GPU-NppImageLog",              // different precision
-    
+    "GPU-NppImageExp",
+    "GPU-NppImageLog",
+
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
-    //"GPU-NppImageResize",           // different precision
-    //"GPU-NppImageWarpAffine",       // different precision
-    //"GPU-NppImageWarpPerspective",  // different precision
-    //"GPU-NppImageIntegral",         // different precision
-    
-    //"GPU-NppImageSobel",            // sign error
-    //"GPU-NppImageScharr",           // sign error    
-    //"GPU-NppImageGaussianBlur",     // different precision 
+    "GPU-NppImageIntegral",
+    "GPU-Histograms",
     0
 };
 

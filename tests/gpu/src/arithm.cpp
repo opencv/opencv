@@ -56,7 +56,7 @@ public:
 
 protected:
     void run(int);
-    
+
     int test(int type);
 
     virtual int test(const Mat& mat1, const Mat& mat2) = 0;
@@ -111,8 +111,8 @@ void CV_GpuArithmTest::run( int )
     int testResult = CvTS::OK;
     try
     {
-        const int types[] = {CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1};
-        const char* type_names[] = {"CV_8UC1", "CV_8UC3", "CV_8UC4", "CV_32SC1", "CV_32FC1"};
+        const int types[] = {CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1};
+        const char* type_names[] = {"CV_8UC1", "CV_8UC3", "CV_8UC4", "CV_32FC1"};
         const int type_count = sizeof(types)/sizeof(types[0]);
 
         //run tests
@@ -126,7 +126,7 @@ void CV_GpuArithmTest::run( int )
             {
                 ts->printf(CvTS::LOG, "FAIL\n");
                 testResult = CvTS::FAIL_MISMATCH;
-            }    
+            }
         }
     }
     catch(const cv::Exception& e)
@@ -146,9 +146,9 @@ struct CV_GpuNppImageAddTest : public CV_GpuArithmTest
 {
     CV_GpuNppImageAddTest() : CV_GpuArithmTest( "GPU-NppImageAdd", "add" ) {}
 
-	virtual int test(const Mat& mat1, const Mat& mat2)
+        virtual int test(const Mat& mat1, const Mat& mat2)
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -174,7 +174,7 @@ struct CV_GpuNppImageSubtractTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -186,7 +186,7 @@ struct CV_GpuNppImageSubtractTest : public CV_GpuArithmTest
         GpuMat gpu1(mat1);
         GpuMat gpu2(mat2);
         GpuMat gpuRes;
-        cv::gpu::subtract(gpu1, gpu2, gpuRes);    
+        cv::gpu::subtract(gpu1, gpu2, gpuRes);
 
         return CheckNorm(cpuRes, gpuRes);
     }
@@ -200,7 +200,7 @@ struct CV_GpuNppImageMultiplyTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -214,7 +214,7 @@ struct CV_GpuNppImageMultiplyTest : public CV_GpuArithmTest
 	    GpuMat gpuRes;
 	    cv::gpu::multiply(gpu1, gpu2, gpuRes);
 
-	    return CheckNorm(cpuRes, gpuRes);
+            return CheckNorm(cpuRes, gpuRes);
     }
 };
 
@@ -226,7 +226,7 @@ struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -240,7 +240,7 @@ struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
 	    GpuMat gpuRes;
 	    cv::gpu::divide(gpu1, gpu2, gpuRes);
 
-	    return CheckNorm(cpuRes, gpuRes);
+            return CheckNorm(cpuRes, gpuRes);
     }
 };
 
@@ -277,7 +277,7 @@ struct CV_GpuNppImageAbsdiffTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& mat2 )
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1 && mat1.type() != CV_32FC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
@@ -349,12 +349,12 @@ struct CV_GpuNppImageMeanStdDevTest : public CV_GpuArithmTest
             return CvTS::OK;
         }
 
-        Scalar cpumean; 
+        Scalar cpumean;
         Scalar cpustddev;
         cv::meanStdDev(mat1, cpumean, cpustddev);
 
         GpuMat gpu1(mat1);
-        Scalar gpumean; 
+        Scalar gpumean;
         Scalar gpustddev;
         cv::gpu::meanStdDev(gpu1, gpumean, gpustddev);
 
@@ -440,7 +440,7 @@ struct CV_GpuNppImageFlipTest : public CV_GpuArithmTest
 
             Mat cpu_res;
             cv::flip(mat1, cpu_res, flip_codes[i]);
-            
+
             GpuMat gpu1(mat1);
             GpuMat gpu_res;
             cv::gpu::flip(gpu1, gpu_res, flip_codes[i]);
@@ -695,7 +695,7 @@ struct CV_GpuNppImagePolarToCartTest : public CV_GpuArithmTest
 /////////////////////////////////////////////////////////////////////////////
 
 // If we comment some tests, we may foget/miss to uncomment it after.
-// Placing all test definitions in one place 
+// Placing all test definitions in one place
 // makes us know about what tests are commented.
 
 CV_GpuNppImageAddTest CV_GpuNppImageAdd_test;

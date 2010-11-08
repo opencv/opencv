@@ -56,7 +56,7 @@ public:
 
 protected:
     void run(int);
-    
+
     int test8UC1 (const Mat& img);
     int test8UC4 (const Mat& img);
     int test32SC1(const Mat& img);
@@ -87,7 +87,7 @@ int CV_GpuImageProcTest::test8UC4(const Mat& img)
 int CV_GpuImageProcTest::test32SC1(const Mat& img)
 {
     cv::Mat img_C1;
-    cvtColor(img, img_C1, CV_BGR2GRAY);    
+    cvtColor(img, img_C1, CV_BGR2GRAY);
     img_C1.convertTo(img_C1, CV_32S);
 
     return test(img_C1);
@@ -269,7 +269,7 @@ struct CV_GpuNppImageCopyMakeBorderTest : public CV_GpuImageProcTest
         cv::copyMakeBorder(img, cpudst, top, botton, left, right, BORDER_CONSTANT, val);
 
         GpuMat gpu1(img);
-        GpuMat gpudst;    
+        GpuMat gpudst;
         cv::gpu::copyMakeBorder(gpu1, gpudst, top, botton, left, right, val);
 
         return CheckNorm(cpudst, gpudst);
@@ -289,10 +289,10 @@ struct CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
         }
-        
-        static const double coeffs[2][3] = 
-        { 
-            {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
+
+        static const double coeffs[2][3] =
+        {
+            {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
             {sin(3.14 / 6), cos(3.14 / 6), -100.0}
         };
         Mat M(2, 3, CV_64F, (void*)coeffs);
@@ -313,7 +313,7 @@ struct CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
             GpuMat gpu1(img);
             GpuMat gpudst;
             cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), flags[i]);
-            
+
             if (CheckNorm(cpudst, gpudst) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
@@ -336,11 +336,11 @@ struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
         }
-        
-        static const double coeffs[3][3] = 
+
+        static const double coeffs[3][3] =
         {
-            {cos(3.14 / 6), -sin(3.14 / 6), 100.0}, 
-            {sin(3.14 / 6), cos(3.14 / 6), -100.0}, 
+            {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
+            {sin(3.14 / 6), cos(3.14 / 6), -100.0},
             {0.0, 0.0, 1.0}
         };
         Mat M(3, 3, CV_64F, (void*)coeffs);
@@ -361,7 +361,7 @@ struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
             GpuMat gpu1(img);
             GpuMat gpudst;
             cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
-            
+
             if (CheckNorm(cpudst, gpudst) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
@@ -447,7 +447,7 @@ public:
 
 protected:
     void run(int);
-    
+
     int CheckNorm(const Mat& m1, const Mat& m2);
 };
 
@@ -456,7 +456,7 @@ int CV_GpuCvtColorTest::CheckNorm(const Mat& m1, const Mat& m2)
 {
     double ret = norm(m1, m2, NORM_INF);
 
-    if (ret <= 2)
+    if (ret <= 3)
     {
         return CvTS::OK;
     }
@@ -483,7 +483,7 @@ void CV_GpuCvtColorTest::run( int )
     try
     {
         int codes[] = { CV_BGR2RGB, CV_RGB2BGRA, CV_BGRA2RGB,
-                        CV_RGB2BGR555, CV_BGR5552BGR, CV_BGR2BGR565, CV_BGR5652RGB, 
+                        CV_RGB2BGR555, CV_BGR5552BGR, CV_BGR2BGR565, CV_BGR5652RGB,
                         CV_RGB2YCrCb, CV_YCrCb2BGR, CV_BGR2YUV, CV_YUV2RGB,
                         CV_RGB2XYZ, CV_XYZ2BGR, CV_BGR2XYZ, CV_XYZ2RGB,
                         CV_RGB2HSV, CV_HSV2BGR, CV_BGR2HSV_FULL, CV_HSV2RGB_FULL,
@@ -491,7 +491,7 @@ void CV_GpuCvtColorTest::run( int )
                         CV_RGB2GRAY, CV_GRAY2BGRA, CV_BGRA2GRAY,
                         CV_GRAY2BGR555, CV_BGR5552GRAY, CV_GRAY2BGR565, CV_BGR5652GRAY};
         const char* codes_str[] = { "CV_BGR2RGB", "CV_RGB2BGRA", "CV_BGRA2RGB",
-                                    "CV_RGB2BGR555", "CV_BGR5552BGR", "CV_BGR2BGR565", "CV_BGR5652RGB", 
+                                    "CV_RGB2BGR555", "CV_BGR5552BGR", "CV_BGR2BGR565", "CV_BGR5652RGB",
                                     "CV_RGB2YCrCb", "CV_YCrCb2BGR", "CV_BGR2YUV", "CV_YUV2RGB",
                                     "CV_RGB2XYZ", "CV_XYZ2BGR", "CV_BGR2XYZ", "CV_XYZ2RGB",
                                     "CV_RGB2HSV", "CV_HSV2RGB", "CV_BGR2HSV_FULL", "CV_HSV2RGB_FULL",
@@ -579,7 +579,7 @@ void CV_GpuHistogramsTest::run( int )
         const float* ranges[] = {hranges};
 
         MatND hist;
-        
+
         int channels[] = {0};
         calcHist(&hsv, 1, channels, Mat(), hist, 1, histSize, ranges);
 
@@ -608,7 +608,7 @@ void CV_GpuHistogramsTest::run( int )
 /////////////////////////////////////////////////////////////////////////////
 
 // If we comment some tests, we may foget/miss to uncomment it after.
-// Placing all test definitions in one place 
+// Placing all test definitions in one place
 // makes us know about what tests are commented.
 
 CV_GpuNppImageThresholdTest CV_GpuNppImageThreshold_test;
