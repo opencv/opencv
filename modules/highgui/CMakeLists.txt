@@ -351,5 +351,5 @@ set(high_gui_android_srcs src/bitstrm.cpp
     src/grfmt_sunras.cpp 
     src/grfmt_pxm.cpp 
     src/window.cpp )
-define_android_manual(highgui "${high_gui_android_srcs}" "$(LOCAL_PATH)/src  $(OPENCV_INCLUDES)")	
+define_android_manual(opencv_highgui "${high_gui_android_srcs}" "$(LOCAL_PATH)/src  $(OPENCV_INCLUDES)")	
 endif()
