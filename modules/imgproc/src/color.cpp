@@ -1479,12 +1479,13 @@ struct RGB2Luv_f
                const float* whitept, bool _srgb )
     : srccn(_srccn), srgb(_srgb)
     {
+		volatile int i;
         initLabTabs();
         
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
         if(!whitept) whitept = D65;
         
-        for( int i = 0; i < 3; i++ )
+        for( i = 0; i < 3; i++ )
         {
             coeffs[i*3] = _coeffs[i*3];
             coeffs[i*3+1] = _coeffs[i*3+1];
