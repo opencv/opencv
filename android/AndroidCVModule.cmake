@@ -19,7 +19,7 @@ endmacro()
 macro(define_opencv_module name)
 	file(GLOB lib_srcs "src/*.cpp")
 	file(GLOB lib_int_hdrs "src/*.h*")
-	define_android_manual(${name} "${lib_srcs}" "$(LOCAL_PATH)/src  $(OPENCV_INCLUDES)")
+	define_android_manual(opencv_${name} "${lib_srcs}" "$(LOCAL_PATH)/src  $(OPENCV_INCLUDES)")
 endmacro()
 
 
