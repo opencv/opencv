@@ -1904,7 +1904,8 @@ bool findChessboardCorners( const Mat& image, Size patternSize,
     CvMat _image = image;
     bool ok = cvFindChessboardCorners(&_image, patternSize,
         (CvPoint2D32f*)&corners[0], &count, flags ) > 0;
-    corners.resize(count);
+    if(count >= 0)
+        corners.resize(count);
     return ok;
 }
 
