@@ -52,7 +52,7 @@ namespace cv
 {
     namespace gpu
     {
-        //////////////////////////////// Initialization ////////////////////////
+        //////////////////////////////// Initialization & Info ////////////////////////
 
         //! This is the only function that do not throw exceptions if the library is compiled without Cuda.
         CV_EXPORTS int getCudaEnabledDeviceCount();
@@ -66,6 +66,11 @@ namespace cv
         CV_EXPORTS int getNumberOfSMs(int device);
 
         CV_EXPORTS void getGpuMemInfo(size_t& free, size_t& total);
+
+        //////////////////////////////// Error handling ////////////////////////
+        
+        CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
+        CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);        
 
         //////////////////////////////// GpuMat ////////////////////////////////
         class Stream;

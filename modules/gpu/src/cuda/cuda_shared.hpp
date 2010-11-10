@@ -58,8 +58,42 @@ namespace cv
 
         static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
 
-        template<class T> 
-        static inline void uploadConstant(const char* name, const T& value) { cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); }
+        template<class T> static inline void uploadConstant(const char* name, const T& value) 
+        { 
+            cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); 
+        }
+
+        template<class T> static inline void uploadConstant(const char* name, const T& value, cudaStream_t stream) 
+        { 
+            cudaSafeCall( cudaMemcpyToSymbolAsyc(name, &value, sizeof(T), 0, cudaMemcpyHostToDevice, stream) ); 
+        }        
+
+        template<class T> static inline void bindTexture(const char* name, const DevMem2D_<T>& img/*, bool normalized = false,
+            enum cudaTextureFilterMode filterMode = cudaFilterModePoint, enum cudaTextureAddressMode addrMode = cudaAddressModeClamp*/)
+        {            
+            //!!!! const_cast is disabled!
+            //!!!! Please use constructor of 'class texture'  instead.
+
+            //textureReference* tex; 
+            //cudaSafeCall( cudaGetTextureReference((const textureReference**)&tex, name) ); 
+            //tex->normalized = normalized;
+            //tex->filterMode = filterMode;
+            //tex->addressMode[0] = addrMode;
+            //tex->addressMode[1] = addrMode;
+            
+            const textureReference* tex; 
+            cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
+
+            cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
+            cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
+        }
+
+        static inline void unbindTexture(const char *name)
+        {
+            const textureReference* tex; 
+            cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
+            cudaSafeCall( cudaUnbindTexture(tex) );
+        }        
     }
 }
 

@@ -129,12 +129,12 @@ namespace cv
             return interpreter.str();
         }
 
-        extern "C" void npp_error( int err, const char *file, const int line, const char *func)
+        void nppError( int err, const char *file, const int line, const char *func)
         {                    
             cv::error( cv::Exception(CV_GpuNppCallError, getNppErrorString(err), func, file, line) );                
         }
 
-        extern "C" void error(const char *error_string, const char *file, const int line, const char *func)
+        void error(const char *error_string, const char *file, const int line, const char *func)
         {                       
             cv::error( cv::Exception(CV_GpuApiCallError, error_string, func, file, line) );
         }

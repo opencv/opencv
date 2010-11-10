@@ -44,7 +44,7 @@
 #define __OPENCV_CUDA_SAFE_CALL_HPP__
 
 #include "cuda_runtime_api.h"
-#include <nppdefs.h>
+//#include <nppdefs.h>
 
 #if defined(__GNUC__)
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
@@ -58,8 +58,8 @@ namespace cv
 {
     namespace gpu
     {
-        extern "C" void error( const char *error_string, const char *file, const int line, const char *func = "");
-        extern "C" void npp_error( int error, const char *file, const int line, const char *func = "");   
+        void error( const char *error_string, const char *file, const int line, const char *func = "");
+        void nppError( int error, const char *file, const int line, const char *func = "");   
 
         static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
         {
@@ -67,10 +67,10 @@ namespace cv
                 cv::gpu::error(cudaGetErrorString(err), file, line, func);
         }
 
-        static inline void ___nppSafeCall(NppStatus err, const char *file, const int line, const char *func = "")
+        static inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
         {
             if (err < 0)
-                cv::gpu::npp_error(err, file, line, func);
+                cv::gpu::nppError(err, file, line, func);
         }
     }
 }
