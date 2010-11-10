@@ -1,5 +1,5 @@
 #include <highgui.h>
-#include <cv.h>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 
 using namespace std;
