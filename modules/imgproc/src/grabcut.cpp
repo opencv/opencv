@@ -51,6 +51,35 @@ This is implementation of image segmentation algorithm GrabCut described in
 Carsten Rother, Vladimir Kolmogorov, Andrew Blake.
  */
 
+class Noise3DGenerator
+{
+public:
+    Noise3DGenerator( float var=0.1f ) : rng(theRNG())
+    {
+        var = std::min( std::max( 0.01f, var ), 1.f ) ;
+
+        double meanData[] = { 0., 0., 0. };
+        double covData[] = { var, 0.,  0.,
+                             0.,  var, 0.,
+                             0.,  0.,  var };
+        Mat( 1, 3, CV_64FC1, meanData ).copyTo( mean );
+        Mat( 3, 3, CV_64FC1, covData ).copyTo( cov );
+    }
+
+    Vec3d generateNoise()
+    {
+        Mat noise( 1, 3, CV_64FC1 );
+        rng.fill( noise, RNG::NORMAL, Scalar::all(0.0), Scalar(1.0) );
+        noise = noise * cov + mean;
+        return Vec3d( noise.ptr<double>() );
+    }
+
+private:
+    RNG& rng;
+    Mat mean;
+    Mat cov;
+};
+
 /*
  GMM - Gaussian Mixture Model
 */
@@ -60,27 +89,30 @@ public:
     static const int componentsCount = 5;
 
     GMM( Mat& _model );
-    float operator()( Vec3f color ) const;
-    float operator()( int ci, Vec3f color ) const;
-    int whichComponent( Vec3f color ) const;
+    double operator()( const Vec3d color ) const;
+    double operator()( int ci, const Vec3d color ) const;
+    int whichComponent( const Vec3d color ) const;
 
     void initLearning();
-    void addSample( int ci, Vec3f color );
+    void addSample( int ci, const Vec3d color );
     void endLearning();
+
 private:
     void calcInverseCovAndDeterm( int ci );
     Mat model;
-    float* coefs;
-    float* mean;
-    float* cov;
+    double* coefs;
+    double* mean;
+    double* cov;
 
-    float inverseCovs[componentsCount][3][3];
-    float covDeterms[componentsCount];
+    double inverseCovs[componentsCount][3][3];
+    double covDeterms[componentsCount];
 
-    float sums[componentsCount][3];
-    float prods[componentsCount][3][3];
+    double sums[componentsCount][3];
+    double prods[componentsCount][3][3];
     int sampleCounts[componentsCount];
     int totalSampleCount;
+
+	Noise3DGenerator noiseGenerator;
 };
 
 GMM::GMM( Mat& _model )
@@ -88,15 +120,15 @@ GMM::GMM( Mat& _model )
     const int modelSize = 3/*mean*/ + 9/*covariance*/ + 1/*component weight*/;
     if( _model.empty() )
     {
-        _model.create( 1, modelSize*componentsCount, CV_32FC1 );
+        _model.create( 1, modelSize*componentsCount, CV_64FC1 );
         _model.setTo(Scalar(0));
     }
-    else if( (_model.type() != CV_32FC1) || (_model.rows != 1) || (_model.cols != modelSize*componentsCount) )
-        CV_Error( CV_StsBadArg, "_model must have CV_32FC1 type, rows == 1 and cols == 13*componentsCount" );
+    else if( (_model.type() != CV_64FC1) || (_model.rows != 1) || (_model.cols != modelSize*componentsCount) )
+        CV_Error( CV_StsBadArg, "_model must have CV_64FC1 type, rows == 1 and cols == 13*componentsCount" );
 
     model = _model;
 
-    coefs = model.ptr<float>(0);
+    coefs = model.ptr<double>(0);
     mean = coefs + componentsCount;
     cov = mean + 3*componentsCount;
 
@@ -105,41 +137,39 @@ GMM::GMM( Mat& _model )
              calcInverseCovAndDeterm( ci );
 }
 
-float GMM::operator()( Vec3f color ) const
+double GMM::operator()( const Vec3d color ) const
 {
-    float res = 0;
+    double res = 0;
     for( int ci = 0; ci < componentsCount; ci++ )
         res += coefs[ci] * (*this)(ci, color );
     return res;
 }
 
-float GMM::operator()( int ci, Vec3f color ) const
+double GMM::operator()( int ci, const Vec3d color ) const
 {
-    float res = 0;
+    double res = 0;
     if( coefs[ci] > 0 )
     {
-        if( covDeterms[ci] > std::numeric_limits<float>::epsilon() )
-        {
-            Vec3f diff = color;
-            float* m = mean + 3*ci;
-            diff[0] -= m[0]; diff[1] -= m[1]; diff[2] -= m[2];
-            float mult = diff[0]*(diff[0]*inverseCovs[ci][0][0] + diff[1]*inverseCovs[ci][1][0] + diff[2]*inverseCovs[ci][2][0])
-                       + diff[1]*(diff[0]*inverseCovs[ci][0][1] + diff[1]*inverseCovs[ci][1][1] + diff[2]*inverseCovs[ci][2][1])
-                       + diff[2]*(diff[0]*inverseCovs[ci][0][2] + diff[1]*inverseCovs[ci][1][2] + diff[2]*inverseCovs[ci][2][2]);
-            res = 1.0f/sqrt(covDeterms[ci]) * exp(-0.5f*mult);
-        }
+		CV_Assert( covDeterms[ci] > std::numeric_limits<double>::epsilon() );
+        Vec3d diff = color;
+        double* m = mean + 3*ci;
+        diff[0] -= m[0]; diff[1] -= m[1]; diff[2] -= m[2];
+        double mult = diff[0]*(diff[0]*inverseCovs[ci][0][0] + diff[1]*inverseCovs[ci][1][0] + diff[2]*inverseCovs[ci][2][0])
+                   + diff[1]*(diff[0]*inverseCovs[ci][0][1] + diff[1]*inverseCovs[ci][1][1] + diff[2]*inverseCovs[ci][2][1])
+                   + diff[2]*(diff[0]*inverseCovs[ci][0][2] + diff[1]*inverseCovs[ci][1][2] + diff[2]*inverseCovs[ci][2][2]);
+        res = 1.0f/sqrt(covDeterms[ci]) * exp(-0.5f*mult);
     }
     return res;
 }
 
-int GMM::whichComponent( Vec3f color ) const
+int GMM::whichComponent( const Vec3d color ) const
 {
     int k = 0;
-    float max = 0;
+    double max = 0;
 
     for( int ci = 0; ci < componentsCount; ci++ )
     {
-        float p = (*this)( ci, color );
+		double p = (*this)( ci, color );
         if( p > max )
         {
             k = ci;
@@ -162,12 +192,13 @@ void GMM::initLearning()
     totalSampleCount = 0;
 }
 
-void GMM::addSample( int ci, Vec3f color )
+void GMM::addSample( int ci, const Vec3d color )
 {
-    sums[ci][0] += color[0]; sums[ci][1] += color[1]; sums[ci][2] += color[2];
-    prods[ci][0][0] += color[0]*color[0]; prods[ci][0][1] += color[0]*color[1]; prods[ci][0][2] += color[0]*color[2];
-    prods[ci][1][0] += color[1]*color[0]; prods[ci][1][1] += color[1]*color[1]; prods[ci][1][2] += color[1]*color[2];
-    prods[ci][2][0] += color[2]*color[0]; prods[ci][2][1] += color[2]*color[1]; prods[ci][2][2] += color[2]*color[2];
+	Vec3d nClr = color + noiseGenerator.generateNoise();
+    sums[ci][0] += nClr[0]; sums[ci][1] += nClr[1]; sums[ci][2] += nClr[2];
+    prods[ci][0][0] += nClr[0]*nClr[0]; prods[ci][0][1] += nClr[0]*nClr[1]; prods[ci][0][2] += nClr[0]*nClr[2];
+    prods[ci][1][0] += nClr[1]*nClr[0]; prods[ci][1][1] += nClr[1]*nClr[1]; prods[ci][1][2] += nClr[1]*nClr[2];
+    prods[ci][2][0] += nClr[2]*nClr[0]; prods[ci][2][1] += nClr[2]*nClr[1]; prods[ci][2][2] += nClr[2]*nClr[2];
     sampleCounts[ci]++;
     totalSampleCount++;
 }
@@ -181,12 +212,12 @@ void GMM::endLearning()
             coefs[ci] = 0;
         else
         {
-            coefs[ci] = (float)n/totalSampleCount;
+            coefs[ci] = (double)n/totalSampleCount;
 
-            float* m = mean + 3*ci;
+            double* m = mean + 3*ci;
             m[0] = sums[ci][0]/n; m[1] = sums[ci][1]/n; m[2] = sums[ci][2]/n;
 
-            float* c = cov + 9*ci;
+            double* c = cov + 9*ci;
             c[0] = prods[ci][0][0]/n - m[0]*m[0]; c[1] = prods[ci][0][1]/n - m[0]*m[1]; c[2] = prods[ci][0][2]/n - m[0]*m[2];
             c[3] = prods[ci][1][0]/n - m[1]*m[0]; c[4] = prods[ci][1][1]/n - m[1]*m[1]; c[5] = prods[ci][1][2]/n - m[1]*m[2];
             c[6] = prods[ci][2][0]/n - m[2]*m[0]; c[7] = prods[ci][2][1]/n - m[2]*m[1]; c[8] = prods[ci][2][2]/n - m[2]*m[2];
@@ -200,22 +231,20 @@ void GMM::calcInverseCovAndDeterm( int ci )
 {
     if( coefs[ci] > 0 )
     {
-        float *c = cov + 9*ci;
-        float dtrm =
+        double *c = cov + 9*ci;
+        double dtrm =
               covDeterms[ci] = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
 
-        if( dtrm > std::numeric_limits<float>::epsilon() )
-        {
-            inverseCovs[ci][0][0] =  (c[4]*c[8] - c[5]*c[7]) / dtrm;
-            inverseCovs[ci][1][0] = -(c[3]*c[8] - c[5]*c[6]) / dtrm;
-            inverseCovs[ci][2][0] =  (c[3]*c[7] - c[4]*c[6]) / dtrm;
-            inverseCovs[ci][0][1] = -(c[1]*c[8] - c[2]*c[7]) / dtrm;
-            inverseCovs[ci][1][1] =  (c[0]*c[8] - c[2]*c[6]) / dtrm;
-            inverseCovs[ci][2][1] = -(c[0]*c[7] - c[1]*c[6]) / dtrm;
-            inverseCovs[ci][0][2] =  (c[1]*c[5] - c[2]*c[4]) / dtrm;
-            inverseCovs[ci][1][2] = -(c[0]*c[5] - c[2]*c[3]) / dtrm;
-            inverseCovs[ci][2][2] =  (c[0]*c[4] - c[1]*c[3]) / dtrm;
-        }
+		CV_Assert( dtrm > std::numeric_limits<double>::epsilon() );
+        inverseCovs[ci][0][0] =  (c[4]*c[8] - c[5]*c[7]) / dtrm;
+        inverseCovs[ci][1][0] = -(c[3]*c[8] - c[5]*c[6]) / dtrm;
+        inverseCovs[ci][2][0] =  (c[3]*c[7] - c[4]*c[6]) / dtrm;
+        inverseCovs[ci][0][1] = -(c[1]*c[8] - c[2]*c[7]) / dtrm;
+        inverseCovs[ci][1][1] =  (c[0]*c[8] - c[2]*c[6]) / dtrm;
+        inverseCovs[ci][2][1] = -(c[0]*c[7] - c[1]*c[6]) / dtrm;
+        inverseCovs[ci][0][2] =  (c[1]*c[5] - c[2]*c[4]) / dtrm;
+        inverseCovs[ci][1][2] = -(c[0]*c[5] - c[2]*c[3]) / dtrm;
+        inverseCovs[ci][2][2] =  (c[0]*c[4] - c[1]*c[3]) / dtrm;
     }
 }
 
@@ -223,32 +252,32 @@ void GMM::calcInverseCovAndDeterm( int ci )
   Calculate beta - parameter of GrabCut algorithm.
   beta = 1/(2*avg(sqr(||color[i] - color[j]||)))
 */
-float calcBeta( const Mat& img )
+double calcBeta( const Mat& img )
 {
-    float beta = 0;
+    double beta = 0;
     for( int y = 0; y < img.rows; y++ )
     {
         for( int x = 0; x < img.cols; x++ )
         {
-            Vec3f color = img.at<Vec3b>(y,x);
+            Vec3d color = img.at<Vec3b>(y,x);
             if( x>0 ) // left
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y,x-1);
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y,x-1);
                 beta += diff.dot(diff);
             }
             if( y>0 && x>0 ) // upleft
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y-1,x-1);
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x-1);
                 beta += diff.dot(diff);
             }
             if( y>0 ) // up
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y-1,x);
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x);
                 beta += diff.dot(diff);
             }
             if( y>0 && x<img.cols-1) // upright
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y-1,x+1);
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x+1);
                 beta += diff.dot(diff);
             }
         }
@@ -261,46 +290,46 @@ float calcBeta( const Mat& img )
   Calculate weights of noterminal vertices of graph.
   beta and gamma - parameters of GrabCut algorithm.
  */
-void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Mat& uprightW, float beta, float gamma )
+void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Mat& uprightW, double beta, double gamma )
 {
-    const float gammaDivSqrt2 = gamma / std::sqrt(2.0f);
-    leftW.create( img.rows, img.cols, CV_32FC1 );
-    upleftW.create( img.rows, img.cols, CV_32FC1 );
-    upW.create( img.rows, img.cols, CV_32FC1 );
-    uprightW.create( img.rows, img.cols, CV_32FC1 );
+    const double gammaDivSqrt2 = gamma / std::sqrt(2.0f);
+    leftW.create( img.rows, img.cols, CV_64FC1 );
+    upleftW.create( img.rows, img.cols, CV_64FC1 );
+    upW.create( img.rows, img.cols, CV_64FC1 );
+    uprightW.create( img.rows, img.cols, CV_64FC1 );
     for( int y = 0; y < img.rows; y++ )
     {
         for( int x = 0; x < img.cols; x++ )
         {
-            Vec3f color = img.at<Vec3b>(y,x);
+            Vec3d color = img.at<Vec3b>(y,x);
             if( x-1>=0 ) // left
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y,x-1);
-                leftW.at<float>(y,x) = gamma * exp(-beta*diff.dot(diff));
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y,x-1);
+                leftW.at<double>(y,x) = gamma * exp(-beta*diff.dot(diff));
             }
             else
-                leftW.at<float>(y,x) = 0;
+                leftW.at<double>(y,x) = 0;
             if( x-1>=0 && y-1>=0 ) // upleft
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y-1,x-1);
-                upleftW.at<float>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x-1);
+                upleftW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
             }
             else
-                upleftW.at<float>(y,x) = 0;
+                upleftW.at<double>(y,x) = 0;
             if( y-1>=0 ) // up
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y-1,x);
-                upW.at<float>(y,x) = gamma * exp(-beta*diff.dot(diff));
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x);
+                upW.at<double>(y,x) = gamma * exp(-beta*diff.dot(diff));
             }
             else
-                upW.at<float>(y,x) = 0;
+                upW.at<double>(y,x) = 0;
             if( x+1<img.cols-1 && y-1>=0 ) // upright
             {
-                Vec3f diff = color - (Vec3f)img.at<Vec3b>(y-1,x+1);
-                uprightW.at<float>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
+                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x+1);
+                uprightW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
             }
             else
-                uprightW.at<float>(y,x) = 0;
+                uprightW.at<double>(y,x) = 0;
         }
     }
 }
@@ -394,8 +423,8 @@ void assignGMMsComponents( const Mat& img, const Mat& mask, const GMM& bgdGMM, c
     {
         for( p.x = 0; p.x < img.cols; p.x++ )
         {
-            Vec3f color = img.at<Vec3b>(p);
-            compIdxs.at<int>(p) = mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD ?
+            Vec3d color = img.at<Vec3b>(p);
+			compIdxs.at<int>(p) = mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD ?
                 bgdGMM.whichComponent(color) : fgdGMM.whichComponent(color);
         }
     }
@@ -432,9 +461,9 @@ void learnGMMs( const Mat& img, const Mat& mask, const Mat& compIdxs, GMM& bgdGM
 /*
   Construct GCGraph
 */
-void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const GMM& fgdGMM, float lambda,
+void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const GMM& fgdGMM, double lambda,
                        const Mat& leftW, const Mat& upleftW, const Mat& upW, const Mat& uprightW,
-                       GCGraph<float>& graph )
+                       GCGraph<double>& graph )
 {
     int vtxCount = img.cols*img.rows,
         edgeCount = 2*(4*img.cols*img.rows - 3*(img.cols + img.rows) + 2);
@@ -449,7 +478,7 @@ void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const
             Vec3b color = img.at<Vec3b>(p);
 
             // set t-weights
-            float fromSource, toSink;
+            double fromSource, toSink;
             if( mask.at<uchar>(p) == GC_PR_BGD || mask.at<uchar>(p) == GC_PR_FGD )
             {
                 fromSource = -log( bgdGMM(color) );
@@ -470,22 +499,22 @@ void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const
             // set n-weights
             if( p.x>0 )
             {
-                float w = leftW.at<float>(p);
+                double w = leftW.at<double>(p);
                 graph.addEdges( vtxIdx, vtxIdx-1, w, w );
             }
             if( p.x>0 && p.y>0 )
             {
-                float w = upleftW.at<float>(p);
+                double w = upleftW.at<double>(p);
                 graph.addEdges( vtxIdx, vtxIdx-img.cols-1, w, w );
             }
             if( p.y>0 )
             {
-                float w = upW.at<float>(p);
+                double w = upW.at<double>(p);
                 graph.addEdges( vtxIdx, vtxIdx-img.cols, w, w );
             }
             if( p.x<img.cols-1 && p.y>0 )
             {
-                float w = uprightW.at<float>(p);
+                double w = uprightW.at<double>(p);
                 graph.addEdges( vtxIdx, vtxIdx-img.cols+1, w, w );
             }
         }
@@ -495,7 +524,7 @@ void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const
 /*
   Estimate segmentation using MaxFlow algorithm
 */
-void estimateSegmentation( GCGraph<float>& graph, Mat& mask )
+void estimateSegmentation( GCGraph<double>& graph, Mat& mask )
 {
     graph.maxFlow();
     Point p;
@@ -541,16 +570,16 @@ void cv::grabCut( const Mat& img, Mat& mask, Rect rect,
     if( mode == GC_EVAL )
         checkMask( img, mask );
 
-    const float gamma = 50;
-    const float lambda = 9*gamma;
-    const float beta = calcBeta( img );
+    const double gamma = 50;
+    const double lambda = 9*gamma;
+    const double beta = calcBeta( img );
 
     Mat leftW, upleftW, upW, uprightW;
     calcNWeights( img, leftW, upleftW, upW, uprightW, beta, gamma );
 
     for( int i = 0; i < iterCount; i++ )
     {
-        GCGraph<float> graph;
+        GCGraph<double> graph;
         assignGMMsComponents( img, mask, bgdGMM, fgdGMM, compIdxs );
         learnGMMs( img, mask, compIdxs, bgdGMM, fgdGMM );
         constructGCGraph(img, mask, bgdGMM, fgdGMM, lambda, leftW, upleftW, upW, uprightW, graph );
