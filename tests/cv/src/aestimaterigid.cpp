@@ -96,7 +96,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
         Mat aff(2, 3, CV_64F);
         rng.fill(aff, CV_RAND_UNI, Scalar(-2), Scalar(2));          
 
-        int n = (unsigned)rng % 100 + 3;
+        int n = (unsigned)rng % 100 + 10;
 
         Mat fpts(1, n, CV_32FC2);
         Mat tpts(1, n, CV_32FC2);
@@ -125,7 +125,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
                 if( fabs(dB) < 0.01*nB )
                     continue;
             }
-            ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
+            ts->set_failed_test_info(CvTS::FAIL_BAD_ACCURACY);
             ts->printf( CvTS::LOG, "Threshold = %f, norm of difference = %f", thres, d );
             return false;
         }
@@ -150,7 +150,7 @@ bool CV_RigidTransform_Test::testImage()
     const double thres = 0.03;
     if (norm(aff_est, aff, NORM_INF) > thres)
     {                
-        ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
+        ts->set_failed_test_info(CvTS::FAIL_BAD_ACCURACY);
         ts->printf( CvTS::LOG, "Threshold = %f, norm of difference = %f", thres, 
             norm(aff_est, aff, NORM_INF) );
         return false;
