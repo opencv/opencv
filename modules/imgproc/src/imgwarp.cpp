@@ -2175,9 +2175,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
             else
             {
                 int x[4], y[4];
-                if( borderType == BORDER_TRANSPARENT &&
-                    ((unsigned)(sx+1) >= (unsigned)ssize.width ||
-                    (unsigned)(sy+1) >= (unsigned)ssize.height) )
+                if( borderType == BORDER_TRANSPARENT )
                     continue;
 
                 if( borderType == BORDER_CONSTANT &&
@@ -2277,9 +2275,7 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             else
             {
                 int x[8], y[8];
-                if( borderType == BORDER_TRANSPARENT &&
-                    ((unsigned)(sx+3) >= (unsigned)ssize.width ||
-                    (unsigned)(sy+3) >= (unsigned)ssize.height) )
+                if( borderType == BORDER_TRANSPARENT )
                     continue;
 
                 if( borderType == BORDER_CONSTANT &&

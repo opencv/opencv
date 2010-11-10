@@ -513,6 +513,7 @@ IplConvKernelFP;
 
 /* extra border mode */
 #define IPL_BORDER_REFLECT_101    4
+#define IPL_BORDER_TRANSPARENT    5
 
 #define IPL_IMAGE_MAGIC_VAL  ((int)sizeof(IplImage))
 #define CV_TYPE_NAME_IMAGE "opencv-image"
