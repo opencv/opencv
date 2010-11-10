@@ -1763,7 +1763,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
 
         d = ptr[1];
 
-        if( c =='<' )
+        if( c =='<' || c == '\0' )
         {
             CvStringHashNode *key = 0, *key2 = 0;
             CvAttrList* list = 0;
@@ -1773,7 +1773,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
             const char* type_name = 0;
             int elem_type = CV_NODE_NONE;
 
-            if( d == '/' )
+            if( d == '/' || c == '\0' )
                 break;
 
             ptr = icvXMLParseTag( fs, ptr, &key, &list, &tag_type );
@@ -1989,6 +1989,9 @@ icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
     char c;
     int have_space;
 
+    if( *ptr == '\0' )
+        CV_PARSE_ERROR( "Preliminary end of the stream" );
+    
     if( *ptr != '<' )
         CV_PARSE_ERROR( "Tag should start with \'<\'" );
 
