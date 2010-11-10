@@ -754,17 +754,19 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
                       const Mat& mask, SparseMat& hist, int dims, const int* histSize,
                       const float** ranges, bool uniform, bool accumulate, bool keepInt )
 {
-    SparseMatIterator it;
     size_t i, N;
     
     if( !accumulate )
         hist.create(dims, histSize, CV_32F);
     else
+    {
+        SparseMatIterator it = hist.begin();
         for( i = 0, N = hist.nzcount(); i < N; i++, ++it )
         {
-            int* value = (int*)it.ptr;
-            *value = cvRound(*(const float*)value);
+            Cv32suf* val = (Cv32suf*)it.ptr;
+            val->i = cvRound(val->f);
         }
+    }
     
     vector<uchar*> ptrs;
     vector<int> deltas;
@@ -783,11 +785,14 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         calcSparseHist_<float>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, uniform );
     
     if( !keepInt )
+    {
+        SparseMatIterator it = hist.begin();
         for( i = 0, N = hist.nzcount(); i < N; i++, ++it )
         {
-            int* value = (int*)it.ptr;
-            *(float*)value = (float)*value;
+            Cv32suf* val = (Cv32suf*)it.ptr;
+            val->f = (float)val->i;
         }
+    }
 }
     
     
