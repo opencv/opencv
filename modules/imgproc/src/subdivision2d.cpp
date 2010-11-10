@@ -331,12 +331,13 @@ exit:
 CV_INLINE int
 icvIsPtInCircle3( CvPoint2D32f pt, CvPoint2D32f a, CvPoint2D32f b, CvPoint2D32f c )
 {
-    double val = (a.x * a.x + a.y * a.y) * cvTriangleArea( b, c, pt );
-    val -= (b.x * b.x + b.y * b.y) * cvTriangleArea( a, c, pt );
-    val += (c.x * c.x + c.y * c.y) * cvTriangleArea( a, b, pt );
-    val -= (pt.x * pt.x + pt.y * pt.y) * cvTriangleArea( a, b, c );
+    const double eps = FLT_EPSILON*0.125;
+    double val = ((double)a.x * a.x + (double)a.y * a.y) * cvTriangleArea( b, c, pt );
+    val -= ((double)b.x * b.x + (double)b.y * b.y) * cvTriangleArea( a, c, pt );
+    val += ((double)c.x * c.x + (double)c.y * c.y) * cvTriangleArea( a, b, pt );
+    val -= ((double)pt.x * pt.x + (double)pt.y * pt.y) * cvTriangleArea( a, b, c );
 
-    return val > FLT_EPSILON ? 1 : val < -FLT_EPSILON ? -1 : 0;
+    return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
 
@@ -618,9 +619,8 @@ cvCalcSubdivVoronoi2D( CvSubdiv2D * subdiv )
 static int
 icvIsRightOf2( const CvPoint2D32f& pt, const CvPoint2D32f& org, const CvPoint2D32f& diff )
 {
-    Cv32suf cw_area;
-    cw_area.f = (org.x - pt.x)*diff.y - (org.y - pt.y)*diff.x;
-    return (cw_area.i > 0)*2 - (cw_area.i*2 != 0);
+    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
+    return (cw_area > 0) - (cw_area < 0);
 }
 
 
