@@ -51,35 +51,6 @@ This is implementation of image segmentation algorithm GrabCut described in
 Carsten Rother, Vladimir Kolmogorov, Andrew Blake.
  */
 
-class Noise3DGenerator
-{
-public:
-    Noise3DGenerator( float var=0.1f ) : rng(theRNG())
-    {
-        var = std::min( std::max( 0.01f, var ), 1.f ) ;
-
-        double meanData[] = { 0., 0., 0. };
-        double covData[] = { var, 0.,  0.,
-                             0.,  var, 0.,
-                             0.,  0.,  var };
-        Mat( 1, 3, CV_64FC1, meanData ).copyTo( mean );
-        Mat( 3, 3, CV_64FC1, covData ).copyTo( cov );
-    }
-
-    Vec3d generateNoise()
-    {
-        Mat noise( 1, 3, CV_64FC1 );
-        rng.fill( noise, RNG::NORMAL, Scalar::all(0.0), Scalar(1.0) );
-        noise = noise * cov + mean;
-        return Vec3d( noise.ptr<double>() );
-    }
-
-private:
-    RNG& rng;
-    Mat mean;
-    Mat cov;
-};
-
 /*
  GMM - Gaussian Mixture Model
 */
@@ -111,8 +82,6 @@ private:
     double prods[componentsCount][3][3];
     int sampleCounts[componentsCount];
     int totalSampleCount;
-
-	Noise3DGenerator noiseGenerator;
 };
 
 GMM::GMM( Mat& _model )
@@ -194,17 +163,17 @@ void GMM::initLearning()
 
 void GMM::addSample( int ci, const Vec3d color )
 {
-	Vec3d nClr = color + noiseGenerator.generateNoise();
-    sums[ci][0] += nClr[0]; sums[ci][1] += nClr[1]; sums[ci][2] += nClr[2];
-    prods[ci][0][0] += nClr[0]*nClr[0]; prods[ci][0][1] += nClr[0]*nClr[1]; prods[ci][0][2] += nClr[0]*nClr[2];
-    prods[ci][1][0] += nClr[1]*nClr[0]; prods[ci][1][1] += nClr[1]*nClr[1]; prods[ci][1][2] += nClr[1]*nClr[2];
-    prods[ci][2][0] += nClr[2]*nClr[0]; prods[ci][2][1] += nClr[2]*nClr[1]; prods[ci][2][2] += nClr[2]*nClr[2];
+    sums[ci][0] += color[0]; sums[ci][1] += color[1]; sums[ci][2] += color[2];
+    prods[ci][0][0] += color[0]*color[0]; prods[ci][0][1] += color[0]*color[1]; prods[ci][0][2] += color[0]*color[2];
+    prods[ci][1][0] += color[1]*color[0]; prods[ci][1][1] += color[1]*color[1]; prods[ci][1][2] += color[1]*color[2];
+    prods[ci][2][0] += color[2]*color[0]; prods[ci][2][1] += color[2]*color[1]; prods[ci][2][2] += color[2]*color[2];
     sampleCounts[ci]++;
     totalSampleCount++;
 }
 
 void GMM::endLearning()
 {
+    const double variance = 0.01;
     for( int ci = 0; ci < componentsCount; ci++ )
     {
         int n = sampleCounts[ci];
@@ -221,6 +190,15 @@ void GMM::endLearning()
             c[0] = prods[ci][0][0]/n - m[0]*m[0]; c[1] = prods[ci][0][1]/n - m[0]*m[1]; c[2] = prods[ci][0][2]/n - m[0]*m[2];
             c[3] = prods[ci][1][0]/n - m[1]*m[0]; c[4] = prods[ci][1][1]/n - m[1]*m[1]; c[5] = prods[ci][1][2]/n - m[1]*m[2];
             c[6] = prods[ci][2][0]/n - m[2]*m[0]; c[7] = prods[ci][2][1]/n - m[2]*m[1]; c[8] = prods[ci][2][2]/n - m[2]*m[2];
+
+            double dtrm = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
+            if( dtrm < std::numeric_limits<double>::epsilon() )
+            {
+                // Adds the white noise to avoid singular covariance matrix.
+                c[0] += variance;
+                c[4] += variance;
+                c[8] += variance;
+            }
 
             calcInverseCovAndDeterm(ci);
         }
