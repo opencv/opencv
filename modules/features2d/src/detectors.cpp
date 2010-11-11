@@ -202,19 +202,18 @@ void MserFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints,
 {
     vector<vector<Point> > msers;
 
-    Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    mser(image, msers, mask);
 
-    mser(grayImage, msers, mask);
-
-    keypoints.resize( msers.size() );
+    keypoints.clear();
     vector<vector<Point> >::const_iterator contour_it = msers.begin();
-    vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
-    for( ; contour_it != msers.end(); ++contour_it, ++keypoint_it )
+    for( ; contour_it != msers.end(); ++contour_it )
     {
         // TODO check transformation from MSER region to KeyPoint
         RotatedRect rect = fitEllipse(Mat(*contour_it));
-        *keypoint_it = KeyPoint( rect.center, sqrt(rect.size.height*rect.size.width), rect.angle);
+        float diam = sqrt(rect.size.height*rect.size.width);
+
+        if( diam > std::numeric_limits<float>::epsilon() )
+            keypoints.push_back( KeyPoint( rect.center, diam, rect.angle) );
     }
 }
 
