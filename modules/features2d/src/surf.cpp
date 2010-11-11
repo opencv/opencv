@@ -890,7 +890,9 @@ void SURF::operator()(const Mat& img, const Mat& mask,
     
     cvExtractSURF(&_img, pmask, &kp.seq, &d, storage,
         *(const CvSURFParams*)this, useProvidedKeypoints);
-    if( !useProvidedKeypoints )
+
+    // input keypoints can be filtered in cvExtractSURF()
+    if( !useProvidedKeypoints || (useProvidedKeypoints && keypoints.size() != kp.size()) )
     {
         Seq<CvSURFPoint>::iterator it = kp.begin();
         size_t i, n = kp.size();
