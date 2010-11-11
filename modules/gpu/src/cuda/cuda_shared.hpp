@@ -45,7 +45,7 @@
 
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
-#include "cuda_runtime_api.h"
+#include "cuda_runtime.h"
 
 namespace cv
 {
