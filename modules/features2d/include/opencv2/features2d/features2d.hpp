@@ -1414,7 +1414,7 @@ protected:
  * Adapts a detector to detect points over multiple levels of a Gaussian
  * pyramid. Useful for detectors that are not inherently scaled.
  */
-class PyramidAdaptedFeatureDetector : public FeatureDetector
+CV_EXPORTS class PyramidAdaptedFeatureDetector : public FeatureDetector
 {
 public:
     PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int levels=2 );
