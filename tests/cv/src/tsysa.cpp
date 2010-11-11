@@ -51,7 +51,6 @@ const char* blacklist[] =
     "subdiv",                         //ticket 454
     "warp-resize",                    //ticket 429
     "latentsvmdetector",              //ticket 661
-    "segmentation-grabcut",           //ticket 666
     0
 };
 
