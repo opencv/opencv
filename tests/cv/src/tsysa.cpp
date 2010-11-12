@@ -50,7 +50,6 @@ const char* blacklist[] =
     "optflow-estimate-rigid",         //ticket 433
     "subdiv",                         //ticket 454
     "warp-resize",                    //ticket 429
-    "latentsvmdetector",              //ticket 661
     "warp-affine",                    //ticket 572
     "warp-perspective",               //ticket 575
     "_3d-fundam",                     //ticket 434

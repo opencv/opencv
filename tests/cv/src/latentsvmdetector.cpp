@@ -47,7 +47,7 @@ using namespace cv;
 
 const int num_detections = 3;
 const float true_scores[3] = {-0.383931f, -0.825876f, -0.959934f};
-const float score_thr = 0.001f;
+const float score_thr = 0.05f;
 const CvRect true_bounding_boxes[3] = {cvRect(0, 45, 362, 452), cvRect(304, 0, 64, 80), cvRect(236, 0, 108, 59)};
 
 class CV_LatentSVMDetectorTest : public CvTest
