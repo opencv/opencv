@@ -52,7 +52,8 @@ class CV_GrabcutTest : public CvTest
 public:
     CV_GrabcutTest();
     ~CV_GrabcutTest();    
-protected:    
+protected:
+    bool verify(const Mat& mask, const Mat& exp);
     void run(int);    
 };
 
@@ -62,18 +63,15 @@ CV_GrabcutTest::CV_GrabcutTest(): CvTest( "segmentation-grabcut", "cv::grabCut" 
 }
 CV_GrabcutTest::~CV_GrabcutTest() {}
 
-bool verify(const Mat& mask, const Mat& exp)
-{    
-    if (0 == norm(mask, exp, NORM_INF))
-        return true;
+bool CV_GrabcutTest::verify(const Mat& mask, const Mat& exp)
+{
+    const float maxDiffRatio = 0.005f;
+    int expArea = countNonZero( exp );
+    int nonIntersectArea = countNonZero( mask != exp );
 
-    Mat mask_dilated, exp_dilated;
-
-    const int inter_num = 2;
-    dilate(mask, mask_dilated, Mat(), Point(-1, -1), inter_num);
-    dilate(exp, exp_dilated, Mat(), Point(-1, -1), inter_num);
-
-    return countNonZero(mask-exp_dilated) + countNonZero(mask_dilated-exp) == 0;
+    float curRatio = (float)nonIntersectArea / (float)expArea;
+    ts->printf( CvTS::LOG, "nonIntersectArea/expArea = %f\n", curRatio );
+    return curRatio < maxDiffRatio;
 }
 
 void CV_GrabcutTest::run( int /* start_from */)

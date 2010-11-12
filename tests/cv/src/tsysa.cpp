@@ -53,7 +53,6 @@ const char* blacklist[] =
     "latentsvmdetector",              //ticket 661
     "warp-affine",                    //ticket 572
     "warp-perspective",               //ticket 575
-    "segmentation-grabcut",           //ticket 666
     "_3d-fundam",                     //ticket 434
     "posit",                          //ticket 430
     0
