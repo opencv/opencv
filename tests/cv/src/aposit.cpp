@@ -153,7 +153,7 @@ void CV_POSITTest::run( int start_from )
         cvMatMul( tmp_matrix, true_rotationZ, true_rotation);
 
         /* fill translation vector */
-        true_translation->data.fl[2] = (float)(cvRandReal(rng)*(2*flFocalLength-40) + 40);
+        true_translation->data.fl[2] = (float)(cvRandReal(rng)*(2*flFocalLength-40) + 60);
         true_translation->data.fl[0] = (float)((cvRandReal(rng)*2-1)*true_translation->data.fl[2]);
         true_translation->data.fl[1] = (float)((cvRandReal(rng)*2-1)*true_translation->data.fl[2]);
 
