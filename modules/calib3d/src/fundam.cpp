@@ -615,7 +615,7 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
     if( !tempMask.empty() )
         cvSet( tempMask, cvScalarAll(1.) );
 
-    CvFMEstimator estimator( MIN(count, (method & 3) == CV_FM_7POINT ? 7 : 8) );
+    CvFMEstimator estimator(7);
     if( count == 7 )
         result = estimator.run7Point(m1, m2, &_F9x3);
     else if( count == 8 || method == CV_FM_8POINT )
