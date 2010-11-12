@@ -2136,6 +2136,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
         saturate_cast<T>(_borderValue[3]));
     int dx, dy;
     CastOp castOp;
+    int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
 
     unsigned width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
 
@@ -2175,10 +2176,12 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
             else
             {
                 int x[4], y[4];
-                if( borderType == BORDER_TRANSPARENT )
+                if( borderType == BORDER_TRANSPARENT &&
+                    ((unsigned)(sx+1) >= (unsigned)ssize.width ||
+                    (unsigned)(sy+1) >= (unsigned)ssize.height) )
                     continue;
 
-                if( borderType == BORDER_CONSTANT &&
+                if( borderType1 == BORDER_CONSTANT &&
                     (sx >= ssize.width || sx+4 <= 0 ||
                     sy >= ssize.height || sy+4 <= 0))
                 {
@@ -2189,8 +2192,8 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
 
                 for( i = 0; i < 4; i++ )
                 {
-                    x[i] = borderInterpolate(sx + i, ssize.width, borderType)*cn;
-                    y[i] = borderInterpolate(sy + i, ssize.height, borderType);
+                    x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
+                    y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
                 }
 
                 for( k = 0; k < cn; k++, S0++, w -= 16 )
@@ -2238,7 +2241,8 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
         saturate_cast<T>(_borderValue[3]));
     int dx, dy;
     CastOp castOp;
-
+    int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
+    
     unsigned width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
 
     if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() )
@@ -2275,10 +2279,12 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             else
             {
                 int x[8], y[8];
-                if( borderType == BORDER_TRANSPARENT )
+                if( borderType == BORDER_TRANSPARENT &&
+                    ((unsigned)(sx+3) >= (unsigned)ssize.width ||
+                    (unsigned)(sy+3) >= (unsigned)ssize.height) )
                     continue;
 
-                if( borderType == BORDER_CONSTANT &&
+                if( borderType1 == BORDER_CONSTANT &&
                     (sx >= ssize.width || sx+8 <= 0 ||
                     sy >= ssize.height || sy+8 <= 0))
                 {
@@ -2289,8 +2295,8 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
 
                 for( i = 0; i < 8; i++ )
                 {
-                    x[i] = borderInterpolate(sx + i, ssize.width, borderType)*cn;
-                    y[i] = borderInterpolate(sy + i, ssize.height, borderType);
+                    x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
+                    y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
                 }
 
                 for( k = 0; k < cn; k++, S0++, w -= 64 )
