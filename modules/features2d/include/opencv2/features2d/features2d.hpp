@@ -1414,7 +1414,7 @@ protected:
  * Adapts a detector to detect points over multiple levels of a Gaussian
  * pyramid. Useful for detectors that are not inherently scaled.
  */
-CV_EXPORTS class PyramidAdaptedFeatureDetector : public FeatureDetector
+class CV_EXPORTS PyramidAdaptedFeatureDetector : public FeatureDetector
 {
 public:
     PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int levels=2 );
@@ -1580,7 +1580,7 @@ void CalonderDescriptorExtractor<T>::write( FileStorage& ) const
  * (set in constructor) computes descriptors on each of the three channel and concatenate
  * them into a single color descriptor.
  */
-class OpponentColorDescriptorExtractor : public DescriptorExtractor
+class CV_EXPORTS OpponentColorDescriptorExtractor : public DescriptorExtractor
 {
 public:
     OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor );
