@@ -4,6 +4,8 @@
 
 using namespace cv; // all the new API is put into "cv" namespace. Export its content
 
+#if 0
+
 // enable/disable use of mixed API in the code below.
 #define DEMO_MIXED_API_USE 1
 
@@ -108,3 +110,30 @@ int main( int argc, char** argv )
     // all the memory will automatically be released by Vector<>, Mat and Ptr<> destructors.
 }
 
+#else
+
+int main(int argc, char *argv[])
+{
+	Mat im(160, 160, CV_32F);
+    randu(im, Scalar(0.0), Scalar(1.0));
+    Mat dd = Mat::zeros(17,1,CV_32F);
+    Mat lp = Mat::zeros(17,1,CV_32F);
+    dd.at<float>(0) = 0.5;
+    dd.at<float>(16) = -0.5;
+    lp.at<float>(0) = 0.5;
+    lp.at<float>(16) = 0.5;
+    int p = 16;
+    Mat H = dd*lp.t();
+    Mat imcrop(im, Rect(17, 17, im.cols-2*p, im.rows-2*p));
+    Mat out1, out2;
+    filter2D(imcrop, out1, CV_32F, H, Point(-1,-1));
+    sepFilter2D(imcrop, out2, CV_32F, lp, dd, Point(-1,-1));
+    Mat temp;
+    out1.convertTo(temp, CV_16U, 65535.0, 32768.0);
+    imshow("filtered1.png", temp);
+    out2.convertTo(temp, CV_16U, 65535.0, 32768.0);
+    imshow("filtered2.png", temp);
+    waitKey();
+}
+
+#endif

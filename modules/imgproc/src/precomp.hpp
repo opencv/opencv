@@ -92,6 +92,7 @@ static inline Point normalizeAnchor( Point anchor, Size ksize )
 
 void preprocess2DKernel( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs );
 void crossCorr( const Mat& src, const Mat& templ, Mat& dst,
+                Size corrsize, int ctype,
                 Point anchor=Point(0,0), double delta=0,
                 int borderType=BORDER_REFLECT_101 );
 
@@ -123,11 +124,6 @@ void icvSepConvSmall3_32f( float* src, int src_step, float* dst, int dst_step,
 
 #undef   CV_CALC_MAX
 #define  CV_CALC_MAX(a, b) if((a) < (b)) (a) = (b)
-
-void
-icvCrossCorr( const CvArr* _img, const CvArr* _templ,
-              CvArr* _corr, CvPoint anchor=cvPoint(0,0),
-              double delta=0, int borderType=IPL_BORDER_REPLICATE);
 
 CvStatus CV_STDCALL
 icvCopyReplicateBorder_8u( const uchar* src, int srcstep, CvSize srcroi,

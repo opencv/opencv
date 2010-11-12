@@ -2994,15 +2994,18 @@ void filter2D( const Mat& src, Mat& dst, int ddepth,
     dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     anchor = normalizeAnchor(anchor, kernel.size());
 
-    if( kernel.cols*kernel.rows >= dft_filter_size /*&&
-        kernel.cols <= src.cols && kernel.rows <= src.rows*/ )
+    if( kernel.cols*kernel.rows >= dft_filter_size )
     {
         Mat temp;
         if( src.data != dst.data )
-            temp = src;
+            temp = dst;
         else
-            src.copyTo(temp);
-        crossCorr( temp, kernel, dst, anchor, delta, borderType );
+            temp.create(dst.size(), dst.type());
+        crossCorr( src, kernel, temp, src.size(),
+                   CV_MAKETYPE(ddepth, src.channels()),
+                   anchor, delta, borderType );
+        if( temp.data != dst.data )
+            temp.copyTo(dst);
         return;
     }
 

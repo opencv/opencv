@@ -442,6 +442,7 @@ cvCopyMakeBorder( const CvArr* srcarr, CvArr* dstarr, CvPoint offset,
     if( dststep == 0 )
         dststep = CV_STUB_STEP;
 
+    bordertype &= 15;
     if( bordertype == IPL_BORDER_REPLICATE )
     {
         icvCopyReplicateBorder_8u( src->data.ptr, srcstep, srcsize,
