@@ -219,7 +219,7 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
         srcRow.resize(esz*(maxWidth + ksize.width - 1));
         if( columnBorderType == BORDER_CONSTANT )
         {
-            constBorderRow.resize(getElemSize(bufType)*(maxWidth+VEC_ALIGN));
+            constBorderRow.resize(getElemSize(bufType)*(maxWidth + ksize.width - 1 + VEC_ALIGN));
             uchar *dst = alignPtr(&constBorderRow[0], VEC_ALIGN), *tdst;
             int n = (int)constBorderValue.size(), N;
             if( isSeparable() )
