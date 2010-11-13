@@ -4334,7 +4334,7 @@ icvWriteGraph( CvFileStorage* fs, const char* name,
             {
                 int fmt_pairs[CV_FS_MAX_FMT_PAIRS], fmt_pair_count;
                 fmt_pair_count = icvDecodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
-                if( fmt_pair_count > 2 || CV_ELEM_SIZE(fmt_pairs[2*2+1]) >= (int)sizeof(double))
+                if( fmt_pair_count > 2 && CV_ELEM_SIZE(fmt_pairs[2*2+1]) >= (int)sizeof(double))
                     edge_user_align = sizeof(double);
             }
 
