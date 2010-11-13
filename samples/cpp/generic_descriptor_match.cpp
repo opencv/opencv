@@ -14,8 +14,8 @@ int main(int argc, char** argv)
 {
     if (argc != 5)
     {
-        printf("Format: \n./match_sample [image1] [image2] [algorithm] [XML params]\n");
-        printf("For example: ./match_sample scene_l.bmp scene_r.bmp fern fern_params.xml\n");
+        printf("Format: \n./generic_descriptor_match [image1] [image2] [algorithm] [XML params]\n");
+        printf("For example: ./generic_descriptor_match scene_l.bmp scene_r.bmp FERN fern_params.xml\n");
         return 0;
     }
 
