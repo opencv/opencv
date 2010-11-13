@@ -270,19 +270,21 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
         }
         else
         {
+            int xofs1 = std::min(roi.x, anchor.x) - roi.x;
+            
             int btab_esz = borderElemSize, wholeWidth = wholeSize.width;
             int* btab = (int*)&borderTab[0];
             
             for( i = 0; i < dx1; i++ )
             {
-                int p0 = borderInterpolate(i-dx1, wholeWidth, rowBorderType)*btab_esz;
+                int p0 = (borderInterpolate(i-dx1, wholeWidth, rowBorderType) + xofs1)*btab_esz;
                 for( j = 0; j < btab_esz; j++ )
                     btab[i*btab_esz + j] = p0 + j;
             }
 
             for( i = 0; i < dx2; i++ )
             {
-                int p0 = borderInterpolate(wholeWidth + i, wholeWidth, rowBorderType)*btab_esz;
+                int p0 = (borderInterpolate(wholeWidth + i, wholeWidth, rowBorderType) + xofs1)*btab_esz;
                 for( j = 0; j < btab_esz; j++ )
                     btab[(i + dx1)*btab_esz + j] = p0 + j;
             }
