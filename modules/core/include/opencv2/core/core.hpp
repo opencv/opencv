@@ -4055,5 +4055,6 @@ public:
 
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/mat.hpp"
+#include "opencv2/core/cvout.hpp"
 
 #endif /*__OPENCV_CORE_HPP__*/

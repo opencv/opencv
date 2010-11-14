@@ -485,6 +485,14 @@ Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherT
     {
         dm = new FlannBasedMatcher();
     }
+    else if (!descriptorMatcherType.compare("BruteForce-Hamming"))
+     {
+       dm = new BruteForceMatcher<Hamming> ();
+     }
+    else if (!descriptorMatcherType.compare("BruteForce-HammingLUT"))
+     {
+       dm = new BruteForceMatcher<HammingLUT> ();
+     }
     else
     {
         //CV_Error( CV_StsBadArg, "unsupported descriptor matcher type");

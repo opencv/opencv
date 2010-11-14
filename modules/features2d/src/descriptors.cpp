@@ -277,26 +277,30 @@ void OpponentColorDescriptorExtractor::write( FileStorage& fs ) const
 *                   Factory function for descriptor extractor creating                   *
 \****************************************************************************************/
 
-Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType )
+Ptr<DescriptorExtractor> createDescriptorExtractor(const string& descriptorExtractorType)
 {
-    DescriptorExtractor* de = 0;
-    if( !descriptorExtractorType.compare( "SIFT" ) )
-    {
-        de = new SiftDescriptorExtractor();
-    }
-    else if( !descriptorExtractorType.compare( "SURF" ) )
-    {
-        de = new SurfDescriptorExtractor();
-    }
-    else if( !descriptorExtractorType.compare( "OpponentSIFT" ) )
-    {
-        de = new OpponentColorDescriptorExtractor( new SiftDescriptorExtractor );
-    }
-    else if( !descriptorExtractorType.compare( "OpponentSURF" ) )
-    {
-        de = new OpponentColorDescriptorExtractor( new SurfDescriptorExtractor );
-    }
-    return de;
+  DescriptorExtractor* de = 0;
+  if (!descriptorExtractorType.compare("SIFT"))
+  {
+    de = new SiftDescriptorExtractor();
+  }
+  else if (!descriptorExtractorType.compare("SURF"))
+  {
+    de = new SurfDescriptorExtractor();
+  }
+  else if (!descriptorExtractorType.compare("OpponentSIFT"))
+  {
+    de = new OpponentColorDescriptorExtractor(new SiftDescriptorExtractor);
+  }
+  else if (!descriptorExtractorType.compare("OpponentSURF"))
+  {
+    de = new OpponentColorDescriptorExtractor(new SurfDescriptorExtractor);
+  }
+  else if (!descriptorExtractorType.compare("BRIEF"))
+  {
+    de = new BriefDescriptorExtractor(32);
+  }
+  return de;
 }
 
 }
