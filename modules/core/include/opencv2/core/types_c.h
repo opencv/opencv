@@ -245,7 +245,7 @@ enum {
  CV_StsNotImplemented=         -213, /* the requested function/feature is not implemented */
  CV_StsBadMemBlock=            -214, /* an allocated block has been corrupted */
  CV_StsAssert=                 -215, /* assertion failed */    
- CV_GpuNotFound=               -216,  
+ CV_GpuNotSupported=           -216,  
  CV_GpuApiCallError=           -217, 
  CV_GpuNppCallError=           -218  
 };

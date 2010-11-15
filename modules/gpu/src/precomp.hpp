@@ -55,6 +55,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <exception>
 
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -68,7 +69,7 @@
 
 #else /* defined(HAVE_CUDA) */
 
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotFound, "The library is compilled with no GPU support"); }
+    static inline void throw_nogpu() { CV_Error(CV_GpuNotFound, "The library is compilled without GPU support"); }
 
 #endif /* defined(HAVE_CUDA) */
 

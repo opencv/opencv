@@ -69,7 +69,7 @@ namespace cv
         CV_EXPORTS void getGpuMemInfo(size_t& free, size_t& total);
 
         //////////////////////////////// Error handling ////////////////////////
-        
+
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
         CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);        
 
@@ -83,19 +83,18 @@ namespace cv
         public:
             //! default constructor
             GpuMat();
-            //! constructs GpuMatrix of the specified size and type
-            // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-            GpuMat(int _rows, int _cols, int _type);
-            GpuMat(Size _size, int _type);
+            //! constructs GpuMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
+            GpuMat(int rows, int cols, int type);
+            GpuMat(Size size, int type);
             //! constucts GpuMatrix and fills it with the specified value _s.
-            GpuMat(int _rows, int _cols, int _type, const Scalar& _s);
-            GpuMat(Size _size, int _type, const Scalar& _s);
+            GpuMat(int rows, int cols, int type, const Scalar& s);
+            GpuMat(Size size, int type, const Scalar& s);
             //! copy constructor
             GpuMat(const GpuMat& m);
 
             //! constructor for GpuMatrix headers pointing to user-allocated data
-            GpuMat(int _rows, int _cols, int _type, void* _data, size_t _step = Mat::AUTO_STEP);
-            GpuMat(Size _size, int _type, void* _data, size_t _step = Mat::AUTO_STEP);
+            GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
+            GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
 
             //! creates a matrix header for a part of the bigger matrix
             GpuMat(const GpuMat& m, const Range& rowRange, const Range& colRange);
@@ -117,7 +116,7 @@ namespace cv
             template <class T> operator DevMem2D_<T>() const;
             template <class T> operator PtrStep_<T>() const;
 
-            //! pefroms blocking upload data to GpuMat. .
+            //! pefroms blocking upload data to GpuMat.
             void upload(const cv::Mat& m);
 
             //! upload async
@@ -156,15 +155,15 @@ namespace cv
             //! sets every GpuMatrix element to s
             GpuMat& operator = (const Scalar& s);
             //! sets some of the GpuMatrix elements to s, according to the mask
-            GpuMat& setTo(const Scalar& s, const GpuMat& mask=GpuMat());
+            GpuMat& setTo(const Scalar& s, const GpuMat& mask = GpuMat());
             //! creates alternative GpuMatrix header for the same data, with different
             // number of channels and/or different number of rows. see cvReshape.
-            GpuMat reshape(int _cn, int _rows=0) const;
+            GpuMat reshape(int cn, int rows = 0) const;
 
             //! allocates new GpuMatrix data unless the GpuMatrix already has specified size and type.
             // previous data is unreferenced if needed.
-            void create(int _rows, int _cols, int _type);
-            void create(Size _size, int _type);
+            void create(int rows, int cols, int type);
+            void create(Size size, int type);
             //! decreases reference counter;
             // deallocate the data when reference counter reaches 0.
             void release();
@@ -205,12 +204,12 @@ namespace cv
             bool empty() const;
 
             //! returns pointer to y-th row
-            uchar* ptr(int y=0);
-            const uchar* ptr(int y=0) const;
+            uchar* ptr(int y = 0);
+            const uchar* ptr(int y = 0) const;
 
             //! template version of the above method
-            template<typename _Tp> _Tp* ptr(int y=0);
-            template<typename _Tp> const _Tp* ptr(int y=0) const;
+            template<typename _Tp> _Tp* ptr(int y = 0);
+            template<typename _Tp> const _Tp* ptr(int y = 0) const;
 
             //! matrix transposition
             GpuMat t() const;
@@ -238,6 +237,11 @@ namespace cv
             uchar* dataend;
         };
 
+//#define TemplatedGpuMat // experimental now, deprecated to use
+#ifdef TemplatedGpuMat
+    #include "GpuMat_BetaDeprecated.hpp"
+#endif
+
         //////////////////////////////// CudaMem ////////////////////////////////
         // CudaMem is limited cv::Mat with page locked memory allocation.
         // Page locked memory is only needed for async and faster coping to GPU.
@@ -252,12 +256,12 @@ namespace cv
             CudaMem();
             CudaMem(const CudaMem& m);
 
-            CudaMem(int _rows, int _cols, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
-            CudaMem(Size _size, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
+            CudaMem(int rows, int cols, int type, int _alloc_type = ALLOC_PAGE_LOCKED);
+            CudaMem(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
 
 
             //! creates from cv::Mat with coping data
-            explicit CudaMem(const Mat& m, int _alloc_type = ALLOC_PAGE_LOCKED);
+            explicit CudaMem(const Mat& m, int alloc_type = ALLOC_PAGE_LOCKED);
 
             ~CudaMem();
 
@@ -267,8 +271,8 @@ namespace cv
             CudaMem clone() const;
 
             //! allocates new matrix data unless the matrix already has specified size and type.
-            void create(int _rows, int _cols, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
-            void create(Size _size, int _type, int _alloc_type = ALLOC_PAGE_LOCKED);
+            void create(int rows, int cols, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+            void create(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
 
             //! decrements reference counter and released memory if needed.
             void release();
@@ -362,30 +366,30 @@ namespace cv
         CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! subtracts one matrix from another (c = a - b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-		CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! subtracts scalar from a matrix (c = a - s)
         //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! computes element-wise product of the two arrays (c = a * b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-		CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! multiplies matrix to a scalar (c = a * s)
         //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c);
         //! computes element-wise quotient of the two arrays (c = a / b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-		CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! computes element-wise quotient of matrix and scalar (c = a / s)
         //! supports CV_32FC1 and CV_32FC2 type
         CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c);
 
         //! transposes the matrix
         //! supports only CV_8UC1 type
-		CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
+        CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
 
         //! computes element-wise absolute difference of two arrays (c = abs(a - b))
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-		CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
         //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
         //! supports only CV_32FC1 type
         CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c);
@@ -402,7 +406,7 @@ namespace cv
         //! supports NORM_INF, NORM_L1, NORM_L2
         //! supports only CV_8UC1 type
         CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
-        
+
         //! computes norm of the difference between two arrays
         //! supports NORM_INF, NORM_L1, NORM_L2
         //! supports only CV_8UC1 type
@@ -454,7 +458,7 @@ namespace cv
         //! computes exponent of each matrix element (b = e**a)
         //! supports only CV_32FC1 type
         CV_EXPORTS void exp(const GpuMat& a, GpuMat& b);
-        
+
         //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
         //! supports only CV_32FC1 type
         CV_EXPORTS void log(const GpuMat& a, GpuMat& b);
@@ -472,7 +476,7 @@ namespace cv
         CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
         //! Acync version
         CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream);
-        
+
         //! computes squared magnitude of each (x(i), y(i)) vector
         //! supports only floating-point source
         CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
@@ -496,7 +500,7 @@ namespace cv
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false);
         //! Acync version
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream);
-        
+
         ////////////////////////////// Image processing //////////////////////////////
 
         //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
@@ -544,7 +548,7 @@ namespace cv
         //! Supports INTER_NEAREST, INTER_LINEAR
         //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR);
-        
+
         //! warps the image using affine transformation
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
@@ -552,16 +556,16 @@ namespace cv
         //! warps the image using perspective transformation
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR);
-        
+
         //! rotate 8bit single or four channel image
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
-        
+
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
         //! supports CV_8UC1, CV_8UC4, CV_32SC1 types
         CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
-        
+
         //! computes the integral image and integral for the squared image
         //! sum will have CV_32S type, sqsum - CV32F type
         //! supports only CV_8UC1 source type
@@ -580,11 +584,11 @@ namespace cv
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
-         The Base Class for 1D or Row-wise Filters
-         
-         This is the base class for linear or non-linear filters that process 1D data.
-         In particular, such filters are used for the "horizontal" filtering parts in separable filters.
-         */
+        The Base Class for 1D or Row-wise Filters
+
+        This is the base class for linear or non-linear filters that process 1D data.
+        In particular, such filters are used for the "horizontal" filtering parts in separable filters.
+        */
         class CV_EXPORTS BaseRowFilter_GPU
         {
         public:
@@ -595,11 +599,11 @@ namespace cv
         };
 
         /*!
-         The Base Class for Column-wise Filters
-         
-         This is the base class for linear or non-linear filters that process columns of 2D arrays.
-         Such filters are used for the "vertical" filtering parts in separable filters.
-         */ 
+        The Base Class for Column-wise Filters
+
+        This is the base class for linear or non-linear filters that process columns of 2D arrays.
+        Such filters are used for the "vertical" filtering parts in separable filters.
+        */ 
         class CV_EXPORTS BaseColumnFilter_GPU
         {
         public:
@@ -610,10 +614,10 @@ namespace cv
         };
 
         /*!
-         The Base Class for Non-Separable 2D Filters.
-         
-         This is the base class for linear or non-linear 2D filters.
-         */ 
+        The Base Class for Non-Separable 2D Filters.
+
+        This is the base class for linear or non-linear 2D filters.
+        */ 
         class CV_EXPORTS BaseFilter_GPU
         {
         public:
@@ -625,10 +629,10 @@ namespace cv
         };
 
         /*!
-         The Base Class for Filter Engine.
-         
-         The class can be used to apply an arbitrary filtering operation to an image.
-         It contains all the necessary intermediate buffers.
+        The Base Class for Filter Engine.
+
+        The class can be used to apply an arbitrary filtering operation to an image.
+        It contains all the necessary intermediate buffers.
         */
         class CV_EXPORTS FilterEngine_GPU
         {
@@ -711,7 +715,7 @@ namespace cv
 
         //! a synonym for normalized box filter
         static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1)) { boxFilter(src, dst, -1, ksize, anchor); }
-        
+
         //! erodes the image (applies the local minimum operator)
         CV_EXPORTS void erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
 
@@ -733,7 +737,7 @@ namespace cv
 
         //! applies the vertical or horizontal Scharr operator to the image
         CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1);
-        
+
         //! smooths the image using Gaussian filter.
         CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0);
 
@@ -825,9 +829,9 @@ namespace cv
 
             //! the default constructor
             explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
-                                             int iters  = DEFAULT_ITERS,
-                                             int levels = DEFAULT_LEVELS,
-                                             int msg_type = CV_32F);
+                int iters  = DEFAULT_ITERS,
+                int levels = DEFAULT_LEVELS,
+                int msg_type = CV_32F);
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, truncation of data cost, data weight,
@@ -836,9 +840,9 @@ namespace cv
             //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
             //! please see paper for more details
             StereoBeliefPropagation(int ndisp, int iters, int levels,
-                                    float max_data_term, float data_weight,
-                                    float max_disc_term, float disc_single_jump,
-                                    int msg_type = CV_32F);
+                float max_data_term, float data_weight,
+                float max_disc_term, float disc_single_jump,
+                int msg_type = CV_32F);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
@@ -886,18 +890,18 @@ namespace cv
 
             //! the default constructor
             explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
-                                           int iters    = DEFAULT_ITERS,
-                                           int levels   = DEFAULT_LEVELS,
-                                           int nr_plane = DEFAULT_NR_PLANE,
-                                           int msg_type = CV_32F);
+                int iters    = DEFAULT_ITERS,
+                int levels   = DEFAULT_LEVELS,
+                int nr_plane = DEFAULT_NR_PLANE,
+                int msg_type = CV_32F);
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, number of active disparity on the first level, truncation of data cost, data weight,
             //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
             StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
-                                  float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
-                                  int min_disp_th = 0,
-                                  int msg_type = CV_32F);
+                float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
+                int min_disp_th = 0,
+                int msg_type = CV_32F);
 
             //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().

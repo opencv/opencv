@@ -69,8 +69,8 @@ static inline bool check_and_treat_gpu_exception(const cv::Exception& e, CvTS* t
 {
     switch (e.code)
     {
-    case CV_GpuNotFound: 
-        ts->printf(CvTS::LOG, "\nGpu not found"); 
+    case CV_GpuNotSupported: 
+        ts->printf(CvTS::LOG, "\nGpu not supported by the library"); 
         break;
 
     case CV_GpuApiCallError: 

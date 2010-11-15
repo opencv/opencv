@@ -54,53 +54,54 @@ using namespace cv::gpu;
 
 namespace 
 {
+    #define error_entry(entry)  { entry, #entry }
+
     struct NppError
     {
         int error;
         string str;
     } 
+    
     npp_errors [] = 
     {
-        { NPP_NOT_SUPPORTED_MODE_ERROR, "NPP_NOT_SUPPORTED_MODE_ERROR" },
-        { NPP_ROUND_MODE_NOT_SUPPORTED_ERROR, "NPP_ROUND_MODE_NOT_SUPPORTED_ERROR" },
-        { NPP_RESIZE_NO_OPERATION_ERROR, "NPP_RESIZE_NO_OPERATION_ERROR" },
-        { NPP_BAD_ARG_ERROR, "NPP_BAD_ARG_ERROR" },
-        { NPP_LUT_NUMBER_OF_LEVELS_ERROR, "NPP_LUT_NUMBER_OF_LEVELS_ERROR" },
-        { NPP_TEXTURE_BIND_ERROR, "NPP_TEXTURE_BIND_ERROR" },
-        { NPP_COEFF_ERROR, "NPP_COEFF_ERROR" },
-        { NPP_RECT_ERROR, "NPP_RECT_ERROR" },
-        { NPP_QUAD_ERROR, "NPP_QUAD_ERROR" },
-        { NPP_WRONG_INTERSECTION_ROI_ERROR, "NPP_WRONG_INTERSECTION_ROI_ERROR" },
-        { NPP_NOT_EVEN_STEP_ERROR, "NPP_NOT_EVEN_STEP_ERROR" },
-        { NPP_INTERPOLATION_ERROR, "NPP_INTERPOLATION_ERROR" },
-        { NPP_RESIZE_FACTOR_ERROR, "NPP_RESIZE_FACTOR_ERROR" },
-        { NPP_HAAR_CLASSIFIER_PIXEL_MATCH_ERROR, "NPP_HAAR_CLASSIFIER_PIXEL_MATCH_ERROR" },
-        { NPP_MEMFREE_ERR, "NPP_MEMFREE_ERR" },
-        { NPP_MEMSET_ERR, "NPP_MEMSET_ERR" },
-        { NPP_MEMCPY_ERROR, "NPP_MEMCPY_ERROR" },
-        { NPP_MEM_ALLOC_ERR, "NPP_MEM_ALLOC_ERR" },
-        { NPP_HISTO_NUMBER_OF_LEVELS_ERROR, "NPP_HISTO_NUMBER_OF_LEVELS_ERROR" },
-        { NPP_MIRROR_FLIP_ERR, "NPP_MIRROR_FLIP_ERR" },
-        { NPP_INVALID_INPUT, "NPP_INVALID_INPUT" },
-        { NPP_ALIGNMENT_ERROR, "NPP_ALIGNMENT_ERROR" },
-        { NPP_STEP_ERROR, "NPP_STEP_ERROR" },
-        { NPP_SIZE_ERROR, "NPP_SIZE_ERROR" },
-        { NPP_POINTER_ERROR, "NPP_POINTER_ERROR" },
-        { NPP_NULL_POINTER_ERROR, "NPP_NULL_POINTER_ERROR" },
-        { NPP_CUDA_KERNEL_EXECUTION_ERROR, "NPP_CUDA_KERNEL_EXECUTION_ERROR" },
-        { NPP_NOT_IMPLEMENTED_ERROR, "NPP_NOT_IMPLEMENTED_ERROR" },
-        { NPP_ERROR, "NPP_ERROR" }, 
-        { NPP_NO_ERROR, "NPP_NO_ERROR" },
-        { NPP_SUCCESS, "NPP_SUCCESS" },
-        { NPP_WARNING, "NPP_WARNING" },
-        { NPP_WRONG_INTERSECTION_QUAD_WARNING, "NPP_WRONG_INTERSECTION_QUAD_WARNING" },
-        { NPP_MISALIGNED_DST_ROI_WARNING, "NPP_MISALIGNED_DST_ROI_WARNING" },
-        { NPP_AFFINE_QUAD_INCORRECT_WARNING, "NPP_AFFINE_QUAD_INCORRECT_WARNING" },
-        //disabled in NPP for cuda 3.2-rc
-        //{ NPP_AFFINE_QUAD_CHANGED_WARNING, "NPP_AFFINE_QUAD_CHANGED_WARNING" },
-        //{ NPP_ADJUSTED_ROI_SIZE_WARNING, "NPP_ADJUSTED_ROI_SIZE_WARNING" },
-        { NPP_DOUBLE_SIZE_WARNING, "NPP_DOUBLE_SIZE_WARNING" },
-        { NPP_ODD_ROI_WARNING, "NPP_ODD_ROI_WARNING" }
+        error_entry( NPP_NOT_SUPPORTED_MODE_ERROR ),
+        error_entry( NPP_ROUND_MODE_NOT_SUPPORTED_ERROR ),
+        error_entry( NPP_RESIZE_NO_OPERATION_ERROR ),
+        error_entry( NPP_NOT_SUFFICIENT_COMPUTE_CAPABILITY ),
+        error_entry( NPP_BAD_ARG_ERROR ),
+        error_entry( NPP_LUT_NUMBER_OF_LEVELS_ERROR ),
+        error_entry( NPP_TEXTURE_BIND_ERROR ),
+        error_entry( NPP_COEFF_ERROR ),
+        error_entry( NPP_RECT_ERROR ),
+        error_entry( NPP_QUAD_ERROR ),
+        error_entry( NPP_WRONG_INTERSECTION_ROI_ERROR ),
+        error_entry( NPP_NOT_EVEN_STEP_ERROR ),
+        error_entry( NPP_INTERPOLATION_ERROR ),
+        error_entry( NPP_RESIZE_FACTOR_ERROR ),
+        error_entry( NPP_HAAR_CLASSIFIER_PIXEL_MATCH_ERROR ),
+        error_entry( NPP_MEMFREE_ERR ),
+        error_entry( NPP_MEMSET_ERR ),
+        error_entry( NPP_MEMCPY_ERROR ),
+        error_entry( NPP_MEM_ALLOC_ERR ),
+        error_entry( NPP_HISTO_NUMBER_OF_LEVELS_ERROR ),
+        error_entry( NPP_MIRROR_FLIP_ERR ),
+        error_entry( NPP_INVALID_INPUT ),
+        error_entry( NPP_ALIGNMENT_ERROR ),
+        error_entry( NPP_STEP_ERROR ),
+        error_entry( NPP_SIZE_ERROR ),
+        error_entry( NPP_POINTER_ERROR ),
+        error_entry( NPP_NULL_POINTER_ERROR ),
+        error_entry( NPP_CUDA_KERNEL_EXECUTION_ERROR ),
+        error_entry( NPP_NOT_IMPLEMENTED_ERROR ),
+        error_entry( NPP_ERROR ),
+        error_entry( NPP_NO_ERROR ),
+        error_entry( NPP_SUCCESS ),
+        error_entry( NPP_WARNING ),
+        error_entry( NPP_WRONG_INTERSECTION_QUAD_WARNING ),
+        error_entry( NPP_MISALIGNED_DST_ROI_WARNING ),
+        error_entry( NPP_AFFINE_QUAD_INCORRECT_WARNING ),
+        error_entry( NPP_DOUBLE_SIZE_WARNING ),
+        error_entry( NPP_ODD_ROI_WARNING )
     };
 
     int error_num = sizeof(npp_errors)/sizeof(npp_errors[0]);
@@ -136,8 +137,18 @@ namespace cv
 
         void error(const char *error_string, const char *file, const int line, const char *func)
         {          
-            //if (uncaught_exception())
-            cv::error( cv::Exception(CV_GpuApiCallError, error_string, func, file, line) );
+            int code = CV_GpuApiCallError;
+
+            if (std::uncaught_exception())
+            {
+                const char* errorStr = cvErrorStr(code);            
+                const char* function = func ? func : "unknown function";    
+
+                std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
+                std::cerr.flush();            
+            }
+            else    
+                cv::error( cv::Exception(code, error_string, func, file, line) );
         }
     }
 }

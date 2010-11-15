@@ -527,6 +527,9 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsNotImplemented : return "The function/feature is not implemented";
     case CV_StsBadMemBlock :  return "Memory block has been corrupted";
     case CV_StsAssert :  return "Assertion failed";
+    case CV_GpuNotSupported : return "No GPU support";
+    case CV_GpuApiCallError : return "GPU API error";
+    case CV_GpuNppCallError : return "NPP API error";
     };
 
     sprintf(buf, "Unknown %s code %d", status >= 0 ? "status":"error", status);
