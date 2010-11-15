@@ -2077,10 +2077,11 @@ public:
     
     Vector(const Vector& d) { *this = d; }
     
-    Vector(const Vector& d, const Range& r)
+    Vector(const Vector& d, const Range& r_)
     {
-        if( r == Range::all() )
-            r = Range(0, d.size());
+        Range r = r_ == Range::all() ? Range(0, d.size()) : r_;
+        /*if( r == Range::all() )
+            r = Range(0, d.size());*/
         if( r.size() > 0 && r.start >= 0 && r.end <= d.size() )
         {
             if( d.hdr.refcount )
