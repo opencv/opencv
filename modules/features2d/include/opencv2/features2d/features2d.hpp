@@ -1433,6 +1433,7 @@ CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const v
                                      float maxDeltaX, float maxDeltaY );
 
 CV_EXPORTS Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
+
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
 \****************************************************************************************/
@@ -1483,6 +1484,9 @@ protected:
                                        Size imageSize, int borderPixels );
 };
 
+/*
+ * SiftDescriptorExtractor
+ */
 class CV_EXPORTS SiftDescriptorExtractor : public DescriptorExtractor
 {
 public:
@@ -1504,6 +1508,9 @@ protected:
     SIFT sift;
 };
 
+/*
+ * SurfDescriptorExtractor
+ */
 class CV_EXPORTS SurfDescriptorExtractor : public DescriptorExtractor
 {
 public:
@@ -1521,6 +1528,9 @@ protected:
     SURF surf;
 };
 
+/*
+ * CalonderDescriptorExtractor
+ */
 template<typename T>
 class CV_EXPORTS CalonderDescriptorExtractor : public DescriptorExtractor
 {
@@ -1574,6 +1584,8 @@ void CalonderDescriptorExtractor<T>::write( FileStorage& ) const
 {}
 
 /*
+ * OpponentColorDescriptorExtractor
+ *
  * Adapts a descriptor extractor to compute descripors in Opponent Color Space
  * (refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
  * Input RGB image is transformed in Opponent Color Space. Then unadapted descriptor extractor
@@ -1596,6 +1608,105 @@ public:
 protected:
     Ptr<DescriptorExtractor> dextractor;
 };
+
+/*
+ * BRIEF Descriptor
+ */
+class CV_EXPORTS BriefDescriptorExtractor : public DescriptorExtractor
+{
+public:
+  BriefDescriptorExtractor(int bytes = 32);
+
+  virtual void compute(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const;
+
+  virtual int descriptorSize() const
+  {
+    return bytes_;
+  }
+  virtual int descriptorType() const
+  {
+    return CV_8UC1;
+  }
+
+  /// @todo read and write for brief
+  //virtual void read(const FileNode& fn);
+  //virtual void write(FileStorage& fs) const;
+
+protected:
+  static const int PATCH_SIZE = 48;
+  static const int KERNEL_SIZE = 9;
+
+  int bytes_;
+  typedef void(*PixelTestFn)(const Mat&, const std::vector<KeyPoint>&, Mat&);
+  PixelTestFn test_fn_;
+
+  static int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x);
+  static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors);
+  static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors);
+  static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors);
+
+};
+
+inline int BriefDescriptorExtractor::smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
+{
+  static const int HALF_KERNEL = KERNEL_SIZE / 2;
+
+  int img_y = (int)(pt.pt.y + 0.5) + y;
+  int img_x = (int)(pt.pt.x + 0.5) + x;
+  return sum.at<int> (img_y + HALF_KERNEL + 1, img_x + HALF_KERNEL + 1) - sum.at<int> (img_y + HALF_KERNEL + 1,
+                                                                                               img_x - HALF_KERNEL)
+      - sum.at<int> (img_y - HALF_KERNEL, img_x + HALF_KERNEL + 1) + sum.at<int> (img_y - HALF_KERNEL, img_x
+      - HALF_KERNEL);
+}
+
+struct CV_EXPORTS HammingLUT
+{
+  typedef unsigned char ValueType;
+  typedef int ResultType;
+
+  ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
+  {
+    ResultType result = 0;
+    for (int i = 0; i < size; i++)
+    {
+      result += byteBitsLookUp(a[i] ^ b[i]);
+    }
+    return result;
+  }
+  /** \brief given a byte, count the bits using a compile time generated look up table
+   *  \param b the byte to count bits.  The look up table has an entry for all
+   *  values of b, where that entry is the number of bits.
+   *  \return the number of bits in byte b
+   */
+  static unsigned char byteBitsLookUp(unsigned char b);
+};
+
+#if __GNUC__
+/// Hamming distance functor
+/// @todo Variable-length version, maybe default size=0 and specialize
+/// @todo Need to choose C/SSE4 at runtime, but amortize this at matcher level for efficiency...
+//template<int size>
+struct Hamming
+{
+  typedef unsigned char ValueType;
+  typedef int ResultType;
+
+  ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
+  {
+    /// @todo Non-GCC-specific version
+    ResultType result = 0;
+    for (int i = 0; i < size; i += sizeof(unsigned long))
+    {
+      unsigned long a2 = *reinterpret_cast<const unsigned long*> (a + i);
+      unsigned long b2 = *reinterpret_cast<const unsigned long*> (b + i);
+      result += __builtin_popcountl(a2 ^ b2);
+    }
+    return result;
+  }
+};
+#else
+typedef HammingLUT Hamming;
+#endif
 
 CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );
 
@@ -2477,106 +2588,6 @@ protected:
     Ptr<DescriptorExtractor> dextractor;
     Ptr<DescriptorMatcher> dmatcher;
 };
-
-/****************************************************************************************\
-*                                     BRIEF Descriptor                                  *
-\****************************************************************************************/
-
-class CV_EXPORTS BriefDescriptorExtractor : public DescriptorExtractor
-{
-public:
-  BriefDescriptorExtractor(int bytes = 32);
-
-  virtual void compute(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const;
-
-  virtual int descriptorSize() const
-  {
-    return bytes_;
-  }
-  virtual int descriptorType() const
-  {
-    return CV_8UC1;
-  }
-
-  /// @todo read and write for brief
-  //virtual void read(const FileNode& fn);
-  //virtual void write(FileStorage& fs) const;
-
-protected:
-  static const int PATCH_SIZE = 48;
-  static const int KERNEL_SIZE = 9;
-
-  int bytes_;
-  typedef void(*PixelTestFn)(const Mat&, const std::vector<KeyPoint>&, Mat&);
-  PixelTestFn test_fn_;
-
-  static int32_t smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x);
-  static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors);
-  static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors);
-  static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors);
-
-};
-
-inline int32_t BriefDescriptorExtractor::smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
-{
-  static const int HALF_KERNEL = KERNEL_SIZE / 2;
-
-  int img_y = (int)(pt.pt.y + 0.5) + y;
-  int img_x = (int)(pt.pt.x + 0.5) + x;
-  return sum.at<int32_t> (img_y + HALF_KERNEL + 1, img_x + HALF_KERNEL + 1) - sum.at<int32_t> (img_y + HALF_KERNEL + 1,
-                                                                                               img_x - HALF_KERNEL)
-      - sum.at<int32_t> (img_y - HALF_KERNEL, img_x + HALF_KERNEL + 1) + sum.at<int32_t> (img_y - HALF_KERNEL, img_x
-      - HALF_KERNEL);
-}
-
-struct CV_EXPORTS HammingLUT
-{
-  typedef unsigned char ValueType;
-  typedef int ResultType;
-
-  ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
-  {
-    ResultType result = 0;
-    for (int i = 0; i < size; i++)
-    {
-      result += byteBitsLookUp(a[i] ^ b[i]);
-    }
-    return result;
-  }
-  /** \brief given a byte, count the bits using a compile time generated look up table
-   *  \param b the byte to count bits.  The look up table has an entry for all
-   *  values of b, where that entry is the number of bits.
-   *  \return the number of bits in byte b
-   */
-  static unsigned char byteBitsLookUp(unsigned char b);
-};
-
-#if __GNUC__
-/// Hamming distance functor
-/// @todo Variable-length version, maybe default size=0 and specialize
-/// @todo Need to choose C/SSE4 at runtime, but amortize this at matcher level for efficiency...
-//template<int size>
-struct Hamming
-{
-  typedef unsigned char ValueType;
-  typedef int ResultType;
-
-  ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
-  {
-    /// @todo Non-GCC-specific version
-    ResultType result = 0;
-    for (int i = 0; i < size; i += sizeof(unsigned long))
-    {
-      unsigned long a2 = *reinterpret_cast<const unsigned long*> (a + i);
-      unsigned long b2 = *reinterpret_cast<const unsigned long*> (b + i);
-      result += __builtin_popcountl(a2 ^ b2);
-    }
-    return result;
-  }
-};
-#else
-typedef HammingLUT Hamming;
-#endif
 
 } /* namespace cv */
 
