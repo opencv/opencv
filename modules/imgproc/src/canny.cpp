@@ -159,7 +159,7 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
         const short* _dy = (short*)(dy->data.ptr + dy->step*i);
         uchar* _map;
         int x, y;
-        int magstep1, magstep2;
+        ptrdiff_t magstep1, magstep2;
         int prev_flag = 0;
 
         if( i < size.height )
@@ -204,8 +204,8 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
         _dx = (short*)(dx->data.ptr + dx->step*(i-1));
         _dy = (short*)(dy->data.ptr + dy->step*(i-1));
         
-        magstep1 = (int)(mag_buf[2] - mag_buf[1]);
-        magstep2 = (int)(mag_buf[0] - mag_buf[1]);
+        magstep1 = mag_buf[2] - mag_buf[1];
+        magstep2 = mag_buf[0] - mag_buf[1];
 
         if( (stack_top - stack_bottom) + size.width > maxsize )
         {
