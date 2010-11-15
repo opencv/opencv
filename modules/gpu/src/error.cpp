@@ -135,7 +135,8 @@ namespace cv
         }
 
         void error(const char *error_string, const char *file, const int line, const char *func)
-        {                       
+        {          
+            //if (uncaught_exception())
             cv::error( cv::Exception(CV_GpuApiCallError, error_string, func, file, line) );
         }
     }

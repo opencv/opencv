@@ -572,7 +572,7 @@ void cv::gpu::GpuMat::release()
 //////////////////////////////// CudaMem //////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
-bool cv::gpu::CudaMem::can_device_map_to_host()
+bool cv::gpu::CudaMem::canMapHostMemory()
 {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
@@ -581,7 +581,7 @@ bool cv::gpu::CudaMem::can_device_map_to_host()
 
 void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
 {
-    if (_alloc_type == ALLOC_ZEROCOPY && !can_device_map_to_host())
+    if (_alloc_type == ALLOC_ZEROCOPY && !canMapHostMemory())
             cv::gpu::error("ZeroCopy is not supported by current device", __FILE__, __LINE__);
 
     _type &= TYPE_MASK;
