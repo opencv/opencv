@@ -899,7 +899,8 @@ void SURF::operator()(const Mat& img, const Mat& mask,
         {
             const CvSURFPoint& kpt = *it;
             keypoints[i] = KeyPoint(kpt.pt, (float)kpt.size, kpt.dir,
-                                    kpt.hessian, getPointOctave(kpt, *this));
+                                    kpt.hessian, getPointOctave(kpt, *this),
+                                    kpt.laplacian);
         }
     }
     descriptors.resize(d ? d->total*d->elem_size/sizeof(float) : 0);
