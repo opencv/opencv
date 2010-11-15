@@ -70,10 +70,13 @@ void BriefDescriptorExtractor::compute(const Mat& image, std::vector<KeyPoint>& 
 {
   // Construct integral image for fast smoothing (box filter)
   Mat sum;
-  if(image.type() == CV_32S)
-    sum = image;
-  else
-    integral(image, sum, CV_32S);
+  
+  ///TODO allow the user to pass in a precomputed integral image
+  //if(image.type() == CV_32S)
+  //  sum = image;
+  //else
+  
+  integral(image, sum, CV_32S);
 
   //Remove keypoints very close to the border
   removeBorderKeypoints(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2);
