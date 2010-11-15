@@ -68,7 +68,7 @@ namespace cv
         void GpuMat::release() { throw_nogpu(); }
 
         void CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
-        bool CudaMem::can_device_map_to_host() { throw_nogpu(); return false; }
+        bool CudaMem::canMapHostMemory() { throw_nogpu(); return false; }
         void CudaMem::release() { throw_nogpu(); }
         GpuMat CudaMem::createGpuMatHeader () const { throw_nogpu(); return GpuMat(); }
     }

@@ -142,6 +142,7 @@ __global__ void compute_hists_kernel_many_blocks(const int img_block_width, cons
     const float* grad_ptr = grad.ptr(offset_y) + offset_x * 2;
     const unsigned char* qangle_ptr = qangle.ptr(offset_y) + offset_x * 2;
 
+    // 12 means that 12 pixels affect on block's cell (in one row)
     if (cell_thread_x < 12)
     {
         float* hist = hists + 12 * (cell_y * blockDim.z * CELLS_PER_BLOCK_Y + 

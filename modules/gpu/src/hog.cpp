@@ -295,11 +295,6 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& f
 }
 
 
-cv::gpu::GpuMat cv::gpu::HOGDescriptor::getLastBlockHists() const {
-    return block_hists;
-}
-
-
 int cv::gpu::HOGDescriptor::numPartsWithin(int size, int part_size, int stride) 
 {
     return (size - part_size + stride) / stride;

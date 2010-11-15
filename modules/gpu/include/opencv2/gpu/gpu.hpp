@@ -282,7 +282,7 @@ namespace cv
             operator GpuMat() const;
 
             //returns if host memory can be mapperd to gpu address space;
-            static bool can_device_map_to_host();
+            static bool canMapHostMemory();
 
             // Please see cv::Mat for descriptions
             bool isContinuous() const;
@@ -1000,8 +1000,6 @@ namespace cv
             void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, 
                                   double hit_threshold=0, Size win_stride=Size(), Size padding=Size(),
                                   double scale0=1.05, int group_threshold=2);
-
-            GpuMat getLastBlockHists() const;
 
             Size win_size;
             Size block_size;
