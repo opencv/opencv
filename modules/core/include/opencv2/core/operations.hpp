@@ -3495,6 +3495,107 @@ public:
         return new _ClsName(*(const _ClsName*)ptr);
     }
 };
+
+    
+class CV_EXPORTS Formatter
+{
+public:
+    virtual ~Formatter() {}
+    virtual void write(std::ostream& out, const Mat& m, const int* params=0, int nparams=0) const = 0;
+    virtual void write(std::ostream& out, const void* data, int nelems, int type,
+                       const int* params=0, int nparams=0) const = 0;
+    static const Formatter* get(const char* fmt="");
+    static const Formatter* setDefault(const Formatter* fmt);
+};
+
+
+struct CV_EXPORTS Formatted
+{
+    Formatted(const Mat& m, const Formatter* fmt,
+              const vector<int>& params);
+    Formatted(const Mat& m, const Formatter* fmt,
+              const int* params=0);
+    Mat mtx;
+    const Formatter* fmt;
+    vector<int> params;
+};
+
+    
+/** Writes a point to an output stream in Matlab notation
+ */
+template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point_<_Tp>& p)
+{
+    out << "[" << p.x << ", " << p.y << "]";
+    return out;
+}
+
+/** Writes a point to an output stream in Matlab notation
+ */
+template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point3_<_Tp>& p)
+{
+    out << "[" << p.x << ", " << p.y << ", " << p.z << "]";
+    return out;
+}        
+
+static inline Formatted format(const Mat& mtx, const char* fmt,
+                               const vector<int>& params=vector<int>())
+{
+    return Formatted(mtx, Formatter::get(fmt), params);
+}
+
+template<typename _Tp> static inline Formatted format(const vector<Point_<_Tp> >& vec,
+                                                      const char* fmt, const vector<int>& params=vector<int>())
+{
+    return Formatted(Mat(vec), Formatter::get(fmt), params);
+}
+
+template<typename _Tp> static inline Formatted format(const vector<Point3_<_Tp> >& vec,
+                                                      const char* fmt, const vector<int>& params=vector<int>())
+{
+    return Formatted(Mat(vec), Formatter::get(fmt), params);
+}
+
+/** \brief prints Mat to the output stream in Matlab notation
+ * use like
+ @verbatim
+ Mat my_mat = Mat::eye(3,3,CV_32F);
+ std::cout << my_mat;
+ @endverbatim
+ */    
+static inline std::ostream& operator << (std::ostream& out, const Mat& mtx)
+{
+    Formatter::get()->write(out, mtx);
+    return out;
+}
+
+/** \brief prints Mat to the output stream allows in the specified notation (see format)
+ * use like
+ @verbatim
+ Mat my_mat = Mat::eye(3,3,CV_32F);
+ std::cout << my_mat;
+ @endverbatim
+ */    
+static inline std::ostream& operator << (std::ostream& out, const Formatted& fmtd)
+{
+    fmtd.fmt->write(out, fmtd.mtx);
+    return out;
+}
+
+
+template<typename _Tp> static inline std::ostream& operator << (std::ostream& out,
+                                                                const vector<Point_<_Tp> >& vec)
+{
+    Formatter::get()->write(out, Mat(vec));
+    return out;
+}
+
+
+template<typename _Tp> static inline std::ostream& operator << (std::ostream& out,
+                                                                const vector<Point3_<_Tp> >& vec)
+{
+    Formatter::get()->write(out, Mat(vec));
+    return out;
+}
     
 }
 

@@ -1,34 +1,41 @@
 #include "opencv2/core/core.hpp"
+#include <iostream>
 
 using namespace std;
 using namespace cv;
 
-int main()
+int main(int,char**)
 {
-  Mat i = Mat::eye(4, 4, CV_32F);
-  cout << "i = " << i << ";" << endl;
+    Mat i = Mat::eye(4, 4, CV_64F);
+    i.at<double>(1,1) = CV_PI;
+    cout << "i = " << i << ";" << endl;
 
-  Mat r = Mat(10, 10, CV_8UC1);
-  randu(r, Scalar(0), Scalar(255));
+    Mat r = Mat(10, 3, CV_8UC3);
+    randu(r, Scalar::all(0), Scalar::all(255));
 
-  cout << "r = " << r << ";" << endl;
+    cout << "r (default) = " << r << ";" << endl << endl;
+    cout << "r (python) = " << format(r,"python") << ";" << endl << endl;
+    cout << "r (numpy) = " << format(r,"numpy") << ";" << endl << endl;
+    cout << "r (csv) = " << format(r,"csv") << ";" << endl << endl; 
+    cout << "r (c) = " << format(r,"C") << ";" << endl << endl;
 
-  Point2f p(5, 1);
-  cout << "p = " << p << ";" << endl;
+    Point2f p(5, 1);
+    cout << "p = " << p << ";" << endl;
 
-  Point3f p3f(2, 6, 7);
-  cout << "p3f = " << p3f << ";" << endl;
+    Point3f p3f(2, 6, 7);
+    cout << "p3f = " << p3f << ";" << endl;
 
-  vector<Point2f> points(20);
-  for (size_t i = 0; i < points.size(); ++i)
-  {
-    points[i] = Point2f(i * 5, i % 7);
-  }
-  cout << "points = " << points << ";" << endl;
+    vector<float> v;
+    v.push_back(1);
+    v.push_back(2);
+    v.push_back(3);
+    
+    cout << "shortvec = " << Mat(v) << endl;
+        
+    vector<Point2f> points(20);
+    for (size_t i = 0; i < points.size(); ++i)
+        points[i] = Point2f(i * 5, i % 7);
 
-  cout << "#csv" << endl;
-
-  writeCSV(cout, r);
-
-  return 1;
+    cout << "points = " << points << ";" << endl;
+    return 0;
 }
