@@ -46,6 +46,7 @@
 #include <vector>
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 
 namespace cv
@@ -973,7 +974,62 @@ namespace cv
             GpuMat table_color;
             GpuMat table_space;
         };
+
+        struct CV_EXPORTS HOGDescriptor
+        {
+        public:
+            enum { DEFAULT_WIN_SIGMA = -1 };
+            enum { DEFAULT_NLEVELS = 64 };
+
+            HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16), 
+                          Size block_stride=Size(8, 8), Size cell_size=Size(8, 8), 
+                          bool gamma_correction=true, int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA,
+                          double threshold_L2hys=0.2, int nlevels=DEFAULT_NLEVELS);
+
+            size_t getDescriptorSize() const;
+            size_t getBlockHistogramSize() const;
+            double getWinSigma() const;
+
+            static vector<float> getDefaultPeopleDetector();
+            void setSVMDetector(const vector<float>& detector);
+            bool checkDetectorSize() const;
+
+            void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
+            void detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0, 
+                        Size win_stride=Size(), Size padding=Size());
+            void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, 
+                                  double hit_threshold=0, Size win_stride=Size(), Size padding=Size(),
+                                  double scale0=1.05, int group_threshold=2);
+
+            GpuMat getLastBlockHists() const;
+
+            Size win_size;
+            Size block_size;
+            Size block_stride;
+            Size cell_size;
+            bool gamma_correction;
+            int nbins;
+            double win_sigma;
+            double threshold_L2hys;
+            int nlevels;
+
+            // Coefficients of the separating plane
+            float free_coef;
+            GpuMat detector;
+
+            // Results of the last classification step
+            GpuMat labels;        
+            Mat labels_host;
+
+            // Results of the last histogram evaluation step
+            GpuMat block_hists;
+
+        private:
+            static int numPartsWithin(int size, int part_size, int stride);
+            static Size numPartsWithin(Size size, Size part_size, Size stride);
+        };    
     }
+
 
     //! Speckle filtering - filters small connected components on diparity image.
     //! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize.
