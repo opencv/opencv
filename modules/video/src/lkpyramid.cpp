@@ -713,7 +713,7 @@ static CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
 
 #define ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( flavor, srctype, dsttype,      \
 worktype, cast_macro, cvt )    \
-CvStatus CV_STDCALL                                                         \
+static CvStatus CV_STDCALL                                                   \
 icvGetQuadrangleSubPix_##flavor##_C1R                                       \
 ( const srctype * src, int src_step, CvSize src_size,                       \
 dsttype *dst, int dst_step, CvSize win_size, const float *matrix )        \
