@@ -197,18 +197,18 @@ icvInterpolateKeypoint( float N9[3][9], int dx, int dy, int ds, CvSURFPoint *poi
     solve_ok = cvSolve( &matA, &_b, &_x );
     if( solve_ok )
     {
-        point->pt.x += x[0]*dx;
-        point->pt.y += x[1]*dy;
-	// TBD quick fix to be reviewed
-	if(x[2]*ds/point->size > 10)
-	{
-	  //printf("Replacing point size %d with %f\n", point->size, x[2]*ds);
-	  
-	}
-	else
-	{
-          point->size = cvRound( point->size + x[2]*ds ); 
-	}
+        if (x[0] > 1 || x[0] <-1 || x[1] > 1 || x[1] <-1 || x[2] > 1 || x[2] <-1 )
+            solve_ok = 0;
+        else
+        {
+            point->pt.x += x[0]*dx;
+            point->pt.y += x[1]*dy;
+            point->size = cvRound( point->size + x[2]*ds );
+            
+            // TBD quick fix to be reviewed
+            if(x[2]*ds/point->size <= 10)
+                point->size = cvRound( point->size + x[2]*ds ); 
+        }
     }
     return solve_ok;
 }
@@ -366,9 +366,7 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
                             int interp_ok = icvInterpolateKeypoint( N9, sampleStep, sampleStep, ds, &point );
 
                             /* Sometimes the interpolation step gives a negative size etc. */
-                            if( interp_ok && point.size >= 1 &&
-                                point.pt.x >= 0 && point.pt.x <= (sum->cols-1) &&
-                                point.pt.y >= 0 && point.pt.y <= (sum->rows-1) )
+                            if( interp_ok )
                             {    
                                 /*printf( "KeyPoint %f %f %d\n", point.pt.x, point.pt.y, point.size );*/
                                 cvSeqPush( points, &point );
