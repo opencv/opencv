@@ -57,7 +57,8 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
     int low, high;
     int* mag_buf[3];
     uchar* map;
-    int mapstep, maxsize;
+    ptrdiff_t mapstep;
+    int maxsize;
     int i, j;
     CvMat mag_row;
 
