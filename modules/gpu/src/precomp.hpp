@@ -69,7 +69,7 @@
 
 #else /* defined(HAVE_CUDA) */
 
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotFound, "The library is compilled without GPU support"); }
+    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compilled without GPU support"); }
 
 #endif /* defined(HAVE_CUDA) */
 
