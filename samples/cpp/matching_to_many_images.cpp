@@ -1,12 +1,11 @@
-#include <highgui.h>
+#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
+
 #include <iostream>
 #include <fstream>
 
 using namespace cv;
 using namespace std;
-
-const char dlmtr = '/';
 
 void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, vector<char>& mask );
 void readTrainFilenames( const string& filename, string& dirName, vector<string>& trainFilenames );
@@ -89,6 +88,7 @@ int main(int argc, char** argv)
     CV_Assert( queryPoints.size() == matches.size() );
     cout << ">" << endl;
 
+    cout << "< 6.) Save results..." << endl;
     Mat drawImg;
     vector<char> mask;
     for( size_t i = 0; i < trainImgCollection.size(); i++ )
@@ -99,6 +99,8 @@ int main(int argc, char** argv)
 
         imwrite( string(argv[6]) + "/res_" + trainFilenames[usedTrainImgIdxs[i]] + ".png", drawImg );
     }
+    cout << ">" << endl;
+
     return 0;
 }
 
@@ -116,6 +118,8 @@ void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, v
 
 void readTrainFilenames( const string& filename, string& dirName, vector<string>& trainFilenames )
 {
+    const char dlmtr = '/';
+
     trainFilenames.clear();
 
     ifstream file( filename.c_str() );
