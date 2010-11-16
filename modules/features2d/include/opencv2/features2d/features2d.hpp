@@ -266,7 +266,7 @@ CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);
 class CV_EXPORTS SIFT
 {
 public:
-    struct CommonParams
+    struct CV_EXPORTS CommonParams
     {
         static const int DEFAULT_NOCTAVES = 4;
         static const int DEFAULT_NOCTAVE_LAYERS = 3;
@@ -279,7 +279,7 @@ public:
         int angleMode;
     };
 
-    struct DetectorParams
+    struct CV_EXPORTS DetectorParams
     {
         static double GET_DEFAULT_THRESHOLD() { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
         static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
@@ -289,7 +289,7 @@ public:
         double threshold, edgeThreshold;
     };
 
-    struct DescriptorParams
+    struct CV_EXPORTS DescriptorParams
     {
         static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
         static const bool DEFAULT_IS_NORMALIZE = true;
@@ -2143,7 +2143,7 @@ CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descrip
 *                                GenericDescriptorMatcher                                *
 \****************************************************************************************/
 /*
- *   Abstract interface for a keypoint descriptor
+ *   Abstract interface for a keypoint descriptor and matcher
  */
 class GenericDescriptorMatcher;
 typedef GenericDescriptorMatcher GenericDescriptorMatch;
