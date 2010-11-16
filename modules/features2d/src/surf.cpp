@@ -204,10 +204,6 @@ icvInterpolateKeypoint( float N9[3][9], int dx, int dy, int ds, CvSURFPoint *poi
             point->pt.x += x[0]*dx;
             point->pt.y += x[1]*dy;
             point->size = cvRound( point->size + x[2]*ds );
-            
-            // TBD quick fix to be reviewed
-            if(x[2]*ds/point->size <= 10)
-                point->size = cvRound( point->size + x[2]*ds ); 
         }
     }
     return solve_ok;
