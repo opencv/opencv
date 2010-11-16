@@ -1,8 +1,8 @@
-#include <highgui.h>
-#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
+
 #include <iostream>
 
 using namespace cv;
@@ -200,6 +200,10 @@ int main(int argc, char** argv)
         cout << endl << "Mathes are filtered using homography matrix in case1 and case2 (if ransacReprojThreshold>=0)" << endl;
         cout << "Example:" << endl;
         cout << "./descriptor_extractor_matcher SURF SURF BruteForce CrossCheckFilter cola1.jpg cola2.jpg 3" << endl;
+        cout << endl << "Possible detectorType values: see in documentation on createFeatureDetector()." << endl <<
+                        "Possible descriptorType values: see in documentation on createDescriptorExtractor()." << endl <<
+                        "Possible matcherType values: see in documentation on createDescriptorMatcher()." << endl <<
+                        "Possible matcherFilterType values: NoneFilter, CrossCheckFilter." << endl;
 
         return -1;
     }
