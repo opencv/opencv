@@ -995,6 +995,7 @@ namespace cv
             double getWinSigma() const;
 
             static vector<float> getDefaultPeopleDetector();
+            static vector<float> getDefaultPeopleDetector_64x128();
             void setSVMDetector(const vector<float>& detector);
             bool checkDetectorSize() const;
 

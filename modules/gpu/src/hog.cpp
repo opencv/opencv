@@ -56,6 +56,7 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, vector<Rect>&, doub
 int cv::gpu::HOGDescriptor::numPartsWithin(int, int, int) { throw_nogpu(); return 0; }
 cv::Size cv::gpu::HOGDescriptor::numPartsWithin(cv::Size, cv::Size, cv::Size) { throw_nogpu(); return cv::Size(); } 
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
+std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector_64x128() { throw_nogpu(); return std::vector<float>(); }
 
 #else
 
@@ -309,6 +310,11 @@ cv::Size cv::gpu::HOGDescriptor::numPartsWithin(cv::Size size, cv::Size part_siz
 }
 
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector()
+{
+    return getDefaultPeopleDetector_64x128();
+}
+
+std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector_64x128()
 {
     static const float detector[] = {
        0.05359386f, -0.14721455f, -0.05532170f, 0.05077307f,

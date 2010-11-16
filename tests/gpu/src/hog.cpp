@@ -109,6 +109,8 @@ struct CV_GpuHogTest : public CvTest
 
         cv::gpu::HOGDescriptor hog;
         hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+        //cpu detector may be updated soon
+        //hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
 
         std::vector<cv::Point> locations;
 
