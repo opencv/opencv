@@ -446,7 +446,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
     if (threadIdx.x == 0)
     {
-        val = x > 0 ? row[x - 1] : row[x + 1];
+        val = x > 0 ? row[x - 1] : row[1];
         sh_row[0] = val.x;
         sh_row[(nthreads + 2)] = val.y;
         sh_row[2 * (nthreads + 2)] = val.z;
@@ -454,7 +454,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
     if (threadIdx.x == blockDim.x - 1)
     {
-        val = (x < width - 1) ? row[x + 1] : row[x - 1];
+        val = (x < width - 1) ? row[x + 1] : row[width - 2];
         sh_row[blockDim.x + 1] = val.x;
         sh_row[blockDim.x + 1 + (nthreads + 2)] = val.y;
         sh_row[blockDim.x + 1 + 2 * (nthreads + 2)] = val.z;
@@ -553,10 +553,10 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
         sh_row[threadIdx.x + 1] = row[x - 2];
 
     if (threadIdx.x == 0)
-        sh_row[0] = x > 0 ? row[x - 1] : row[x + 1];
+        sh_row[0] = x > 0 ? row[x - 1] : row[1];
 
     if (threadIdx.x == blockDim.x - 1)
-        sh_row[blockDim.x + 1] = (x < width - 1) ? row[x + 1] : row[x - 1];
+        sh_row[blockDim.x + 1] = (x < width - 1) ? row[x + 1] : row[width - 2];
 
     __syncthreads();
     if (x < width)

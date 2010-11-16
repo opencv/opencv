@@ -360,20 +360,22 @@ struct CV_EXPORTS_W HOGDescriptor
 {
 public:
     enum { L2Hys=0 };
+    enum { DEFAULT_NLEVELS=64 };
     
     CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
     	cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
-        histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true)
+        histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true), 
+        nlevels(DEFAULT_NLEVELS)
     {}
     
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
                   Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
                   int _histogramNormType=HOGDescriptor::L2Hys,
-                  double _L2HysThreshold=0.2, bool _gammaCorrection=false)
+                  double _L2HysThreshold=0.2, bool _gammaCorrection=false, int _nlevels=DEFAULT_NLEVELS)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
     nbins(_nbins), derivAperture(_derivAperture), winSigma(_winSigma),
     histogramNormType(_histogramNormType), L2HysThreshold(_L2HysThreshold),
-    gammaCorrection(_gammaCorrection)
+    gammaCorrection(_gammaCorrection), nlevels(_nlevels)
     {}
     
     CV_WRAP HOGDescriptor(const String& filename)
@@ -429,6 +431,7 @@ public:
     CV_PROP double L2HysThreshold;
     CV_PROP bool gammaCorrection;
     CV_PROP vector<float> svmDetector;
+    CV_PROP int nlevels;
 };
 
 	

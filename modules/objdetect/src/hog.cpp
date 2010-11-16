@@ -872,11 +872,10 @@ void HOGDescriptor::detectMultiScale(
     double scale0, int groupThreshold) const
 {
     double scale = 1.;
-    const int maxLevels = 64;
     int levels = 0;
 
     vector<double> levelScale;
-    for( levels = 0; levels < maxLevels; levels++ )
+    for( levels = 0; levels < nlevels; levels++ )
     {
         levelScale.push_back(scale);
         if( cvRound(img.cols/scale) < winSize.width ||
