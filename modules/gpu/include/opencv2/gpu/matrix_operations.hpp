@@ -207,7 +207,7 @@ inline GpuMat& GpuMat::operator = (const GpuMat& m)
 inline GpuMat& GpuMat::operator = (const Mat& m) { upload(m); return *this; }
 
 template <class T> inline GpuMat::operator DevMem2D_<T>() const { return DevMem2D_<T>(rows, cols, (T*)data, step); }
-template <class T> inline GpuMat::operator PtrStep_<T>() const { return PtrStep_<T>(*this); }
+template <class T> inline GpuMat::operator PtrStep_<T>() const { return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this)); }
 
 //CPP: void GpuMat::upload(const Mat& m);
 

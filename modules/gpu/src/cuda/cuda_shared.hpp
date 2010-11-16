@@ -64,8 +64,8 @@ namespace cv
         }
 
         template<class T> static inline void uploadConstant(const char* name, const T& value, cudaStream_t stream) 
-        { 
-            cudaSafeCall( cudaMemcpyToSymbolAsyc(name, &value, sizeof(T), 0, cudaMemcpyHostToDevice, stream) ); 
+        {
+            cudaSafeCall( cudaMemcpyToSymbolAsync(name, &value, sizeof(T), 0, cudaMemcpyHostToDevice, stream) ); 
         }        
 
         template<class T> static inline void bindTexture(const char* name, const DevMem2D_<T>& img/*, bool normalized = false,
