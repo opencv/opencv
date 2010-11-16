@@ -1273,6 +1273,10 @@ bool operator == (const Complex<_Tp>& a, const Complex<_Tp>& b)
 { return a.re == b.re && a.im == b.im; }
 
 template<typename _Tp> static inline
+bool operator != (const Complex<_Tp>& a, const Complex<_Tp>& b)
+{ return a.re != b.re || a.im != b.im; }    
+    
+template<typename _Tp> static inline
 Complex<_Tp> operator + (const Complex<_Tp>& a, const Complex<_Tp>& b)
 { return Complex<_Tp>( a.re + b.re, a.im + b.im ); }
 
@@ -1444,7 +1448,7 @@ template<typename _Tp> static inline bool operator == (const Point_<_Tp>& a, con
 { return a.x == b.x && a.y == b.y; }
 
 template<typename _Tp> static inline bool operator != (const Point_<_Tp>& a, const Point_<_Tp>& b)
-{ return !(a == b); }
+{ return a.x != b.x || a.y != b.y; }
 
 template<typename _Tp> static inline Point_<_Tp> operator + (const Point_<_Tp>& a, const Point_<_Tp>& b)
 { return Point_<_Tp>( saturate_cast<_Tp>(a.x + b.x), saturate_cast<_Tp>(a.y + b.y) ); }
@@ -1556,6 +1560,9 @@ template<typename _Tp> static inline double norm(const Point3_<_Tp>& pt)
 template<typename _Tp> static inline bool operator == (const Point3_<_Tp>& a, const Point3_<_Tp>& b)
 { return a.x == b.x && a.y == b.y && a.z == b.z; }
 
+template<typename _Tp> static inline bool operator != (const Point3_<_Tp>& a, const Point3_<_Tp>& b)
+{ return a.x != b.x || a.y != b.y || a.z != b.z; }
+    
 template<typename _Tp> static inline Point3_<_Tp> operator + (const Point3_<_Tp>& a, const Point3_<_Tp>& b)
 { return Point3_<_Tp>( saturate_cast<_Tp>(a.x + b.x),
                       saturate_cast<_Tp>(a.y + b.y),
@@ -1711,6 +1718,11 @@ template<typename _Tp> static inline bool operator == (const Rect_<_Tp>& a, cons
     return a.x == b.x && a.y == b.y && a.width == b.width && a.height == b.height;
 }
 
+template<typename _Tp> static inline bool operator != (const Rect_<_Tp>& a, const Rect_<_Tp>& b)
+{
+    return a.x != b.x || a.y != b.y || a.width != b.width || a.height != b.height;
+}    
+    
 template<typename _Tp> static inline Rect_<_Tp> operator + (const Rect_<_Tp>& a, const Point_<_Tp>& b)
 {
     return Rect_<_Tp>( a.x + b.x, a.y + b.y, a.width, a.height );
