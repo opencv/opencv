@@ -148,7 +148,6 @@ Settings Settings::Read(int argc, char** argv)
 }
 
 
-
 App::App(const Settings &s)
 {
     settings = s;
@@ -180,25 +179,26 @@ App::App(const Settings &s)
     cout << endl;
 }
 
+
 void App::RunOpencvGui()
 {
     running = true;
 
-    Size win_width(settings.win_width, settings.win_width * 2); //(64, 128) or (48, 96)
+    Size win_size(settings.win_width, settings.win_width * 2); //(64, 128) or (48, 96)
 
     vector<float> detector;
 
-    if (win_width == Size(64,128))
+    if (win_size == Size(64,128))
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_64x128();
     else
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_48x96();
 
     // GPU's HOG classifier
-    cv::gpu::HOGDescriptor gpu_hog(win_width);
+    cv::gpu::HOGDescriptor gpu_hog(win_size);
     gpu_hog.setSVMDetector(detector);
 
     // CPU's HOG classifier
-    cv::HOGDescriptor cpu_hog(win_width, Size(16,16), Size(8,8), Size(8,8), 9, 1, -1, HOGDescriptor::L2Hys, 0.2, true, HOGDescriptor::DEFAULT_NLEVELS);
+    cv::HOGDescriptor cpu_hog(win_size, Size(16,16), Size(8,8), Size(8,8), 9, 1, -1, HOGDescriptor::L2Hys, 0.2, true, HOGDescriptor::DEFAULT_NLEVELS);
     cpu_hog.setSVMDetector(detector);
 
     // Make endless cycle from video (if src is video)
