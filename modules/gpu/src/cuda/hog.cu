@@ -423,10 +423,12 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
         img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
         block_hists, coefs, free_coef, threshold, labels);
     cudaSafeCall(cudaThreadSynchronize());
-} 
+}
+
 
 //------------------------------------------------------------
 // Gradients computation
+
 
 template <int nthreads>
 __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrElemStep img, 

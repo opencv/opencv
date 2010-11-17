@@ -53,8 +53,6 @@ void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>&) { throw_nogpu(
 void cv::gpu::HOGDescriptor::computeGradient(const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::detect(const GpuMat&, vector<Point>&, double, Size, Size) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
-int cv::gpu::HOGDescriptor::numPartsWithin(int, int, int) { throw_nogpu(); return 0; }
-cv::Size cv::gpu::HOGDescriptor::numPartsWithin(cv::Size, cv::Size, cv::Size) { throw_nogpu(); return cv::Size(); } 
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector_48x96() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector_64x128() { throw_nogpu(); return std::vector<float>(); }
@@ -197,30 +195,12 @@ void cv::gpu::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& grad, Gp
 }
 
 
-void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, double hit_threshold, 
-                                    Size win_stride, Size padding)
+void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat& img)
 {
-    hits.clear();
-    if (detector.empty())
-        return;
-
-    GpuMat grad, qangle;     
-    computeGradient(img, grad, qangle);            
-
-    if (win_stride == Size())
-        win_stride = block_stride;
-    else
-        CV_Assert(win_stride.width % block_stride.width == 0 &&
-                  win_stride.height % block_stride.height == 0);
-
-    CV_Assert(padding == Size(0, 0));
+    computeGradient(img, grad, qangle);
 
     size_t block_hist_size = getBlockHistogramSize();
-    Size blocks_per_win = numPartsWithin(win_size, block_size, block_stride);
-    Size wins_per_img = numPartsWithin(img.size(), win_size, win_stride);
     Size blocks_per_img = numPartsWithin(img.size(), block_size, block_stride);
-
-    labels.create(1, wins_per_img.area(), CV_8U);
     block_hists.create(1, block_hist_size * blocks_per_img.area(), CV_32F);
 
     hog::compute_hists(nbins, block_stride.width, block_stride.height,
@@ -229,6 +209,63 @@ void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, doub
 
     hog::normalize_hists(nbins, block_stride.width, block_stride.height, img.rows, img.cols, 
                          block_hists.ptr<float>(), (float)threshold_L2hys);
+}
+
+
+////TODO: test it
+//void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
+//                                            vector<GpuMat>& descriptors)
+//{
+//    CV_Assert(win_stride.width % block_stride.width == 0 &&
+//              win_stride.height % block_stride.height == 0);
+//
+//    computeBlockHistograms(img);
+//
+//    Size blocks_per_img = numPartsWithin(img.size(), block_size, block_stride);
+//    GpuMat hists_reshaped = block_hists.reshape(0, blocks_per_img.height);
+//
+//    const int block_hist_size = getBlockHistogramSize();
+//    Size blocks_per_win = numPartsWithin(win_size, block_size, block_stride);
+//    Size wins_per_img = numPartsWithin(img.size(), win_size, win_stride);
+//
+//    descriptors.resize(wins_per_img.area());
+//    for (int i = 0; i < wins_per_img.height; ++i)
+//    {
+//        for (int j = 0; j < wins_per_img.width; ++j)
+//        {
+//            Range rows;
+//            rows.start = i * (blocks_per_win.height + 1);
+//            rows.end = rows.start + blocks_per_win.height;
+//
+//            Range cols;
+//            cols.start = j * (blocks_per_win.width + 1) * block_hist_size;
+//            cols.end = cols.start + blocks_per_win.width * block_hist_size;
+//
+//            descriptors[i * wins_per_img.width + j] = hists_reshaped(rows, cols);
+//        }
+//    }
+//}
+
+
+void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, double hit_threshold, 
+                                    Size win_stride, Size padding)
+{
+    CV_Assert(padding == Size(0, 0));
+
+    hits.clear();
+    if (detector.empty())
+        return;
+
+    computeBlockHistograms(img);
+
+    if (win_stride == Size())
+        win_stride = block_stride;
+    else
+        CV_Assert(win_stride.width % block_stride.width == 0 &&
+                  win_stride.height % block_stride.height == 0);
+
+    Size wins_per_img = numPartsWithin(img.size(), win_size, win_stride);
+    labels.create(1, wins_per_img.area(), CV_8U);
 
     hog::classify_hists(win_size.height, win_size.width, block_stride.height, block_stride.width, 
                         win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), 
