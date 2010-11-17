@@ -987,15 +987,17 @@ namespace cv
 
             HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16), 
                           Size block_stride=Size(8, 8), Size cell_size=Size(8, 8), 
-                          bool gamma_correction=true, int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA,
-                          double threshold_L2hys=0.2, int nlevels=DEFAULT_NLEVELS);
+                          int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA, 
+                          double threshold_L2hys=0.2, bool gamma_correction=true, 
+                          int nlevels=DEFAULT_NLEVELS);
 
             size_t getDescriptorSize() const;
             size_t getBlockHistogramSize() const;
             double getWinSigma() const;
 
             static vector<float> getDefaultPeopleDetector();
-            static vector<float> getDefaultPeopleDetector_64x128();
+            static vector<float> getPeopleDetector_48x96();
+            static vector<float> getPeopleDetector_64x128();
             void setSVMDetector(const vector<float>& detector);
             bool checkDetectorSize() const;
 
@@ -1010,10 +1012,10 @@ namespace cv
             Size block_size;
             Size block_stride;
             Size cell_size;
-            bool gamma_correction;
             int nbins;
             double win_sigma;
             double threshold_L2hys;
+            bool gamma_correction;
             int nlevels;
 
             // Coefficients of the separating plane
