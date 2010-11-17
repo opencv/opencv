@@ -73,9 +73,10 @@ void compute_hists(int nbins, int block_stride_x, int blovck_stride_y,
 void normalize_hists(int nbins, int block_stride_x, int block_stride_y, 
                      int height, int width, float* block_hists, float threshold);
 
-void classify_hists(int win_height, int win_width, int block_stride_x, 
-                    int block_stride_y, int height, int width, float* block_hists, 
-                    float* coefs, float free_coef, float threshold, unsigned char* labels);
+void classify_hists(int win_height, int win_width, int block_stride_y, 
+                    int block_stride_x, int win_stride_y, int win_stride_x, int height, 
+                    int width, float* block_hists, float* coefs, float free_coef, 
+                    float threshold, unsigned char* labels);
 
 void compute_gradients_8UC1(int nbins, int height, int width, const cv::gpu::DevMem2D& img, 
                             float angle_scale, cv::gpu::DevMem2Df grad, cv::gpu::DevMem2D qangle);
@@ -209,7 +210,8 @@ void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, doub
     if (win_stride == Size())
         win_stride = block_stride;
     else
-        CV_Assert(win_stride == block_stride);
+        CV_Assert(win_stride.width % block_stride.width == 0 &&
+                  win_stride.height % block_stride.height == 0);
 
     CV_Assert(padding == Size(0, 0));
 
@@ -229,8 +231,8 @@ void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, doub
                          block_hists.ptr<float>(), (float)threshold_L2hys);
 
     hog::classify_hists(win_size.height, win_size.width, block_stride.height, block_stride.width, 
-                        img.rows, img.cols, block_hists.ptr<float>(), detector.ptr<float>(), 
-                        (float)free_coef, (float)hit_threshold, labels.ptr());
+                        win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), 
+                        detector.ptr<float>(), (float)free_coef, (float)hit_threshold, labels.ptr());
 
     labels.download(labels_host);
     unsigned char* vec = labels_host.ptr();

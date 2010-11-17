@@ -31,6 +31,8 @@ public:
     int gr_threshold;
     double hit_threshold;
     int win_width;
+    int win_stride_width;
+    int win_stride_height;
 };
 
 
@@ -94,6 +96,8 @@ int main(int argc, char** argv)
                 << "  [-scale <double>] # HOG window scale factor\n"
                 << "  [-nlevels <int>] # max number of HOG window scales\n"
                 << "  [-win_width <int>] # width of the window (48 or 64)\n"
+                << "  [-win_stride_width <int>] # distance by OX axis between neighbour wins\n"
+                << "  [-win_stride_height <int>] # distance by OY axis between neighbour wins\n"
                 << "  [-gr_threshold <int>] # merging similar rects constant\n";
             return 1;
         }
@@ -118,6 +122,8 @@ Settings::Settings()
     gr_threshold = 8;
     hit_threshold = 1.4;
     win_width = 48;
+    win_stride_width = 8;
+    win_stride_height = 8;
 }
 
 
@@ -139,6 +145,8 @@ Settings Settings::Read(int argc, char** argv)
         else if (key == "-scale") settings.scale = atof(val.c_str());
         else if (key == "-nlevels") settings.nlevels = atoi(val.c_str());
         else if (key == "-win_width") settings.win_width = atoi(val.c_str());
+        else if (key == "-win_stride_width") settings.win_stride_width = atoi(val.c_str());
+        else if (key == "-win_stride_height") settings.win_stride_height = atoi(val.c_str());
         else if (key == "-gr_threshold") settings.gr_threshold = atoi(val.c_str());
         else throw exception((string("Unknown key: ") + key).c_str());
     }
@@ -152,13 +160,13 @@ App::App(const Settings &s)
 {
     settings = s;
     cout << "\nControls:\n"
-         << "ESC - exit\n"
-         << "m - change mode GPU <-> CPU\n"
-         << "g - convert image to gray or not\n"
-         << "1/q - increase/decrease HOG scale\n"
-         << "2/w - increase/decrease levels count\n"
-         << "3/e - increase/decrease HOG group threshold\n"
-         << "4/r - increase/decrease hit threshold\n"
+         << "\tESC - exit\n"
+         << "\tm - change mode GPU <-> CPU\n"
+         << "\tg - convert image to gray or not\n"
+         << "\t1/q - increase/decrease HOG scale\n"
+         << "\t2/w - increase/decrease levels count\n"
+         << "\t3/e - increase/decrease HOG group threshold\n"
+         << "\t4/r - increase/decrease hit threshold\n"
          << endl;
 
     use_gpu = true;
@@ -171,10 +179,11 @@ App::App(const Settings &s)
     if (settings.win_width != 64 && settings.win_width != 48)
         settings.win_width = 64;
 
-    cout << endl << "Scale: " << scale << endl;
+    cout << "Scale: " << scale << endl;
     cout << "Group threshold: " << gr_threshold << endl;
     cout << "Levels number: " << nlevels << endl;
     cout << "Win width: " << settings.win_width << endl;
+    cout << "Win stride: (" << settings.win_stride_width << ", " << settings.win_stride_height << ")\n";
     cout << "Hit threshold: " << hit_threshold << endl;
     cout << endl;
 }
@@ -185,10 +194,11 @@ void App::RunOpencvGui()
     running = true;
 
     Size win_size(settings.win_width, settings.win_width * 2); //(64, 128) or (48, 96)
+    Size win_stride(settings.win_stride_width, settings.win_stride_height);
 
     vector<float> detector;
 
-    if (win_size == Size(64,128))
+    if (win_size == Size(64, 128))
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_64x128();
     else
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_48x96();
@@ -198,7 +208,7 @@ void App::RunOpencvGui()
     gpu_hog.setSVMDetector(detector);
 
     // CPU's HOG classifier
-    cv::HOGDescriptor cpu_hog(win_size, Size(16,16), Size(8,8), Size(8,8), 9, 1, -1, HOGDescriptor::L2Hys, 0.2, true, HOGDescriptor::DEFAULT_NLEVELS);
+    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1, HOGDescriptor::L2Hys, 0.2, true, HOGDescriptor::DEFAULT_NLEVELS);
     cpu_hog.setSVMDetector(detector);
 
     // Make endless cycle from video (if src is video)
@@ -250,10 +260,10 @@ void App::RunOpencvGui()
             if (use_gpu)
             {
                 gpu_img = img;
-                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, Size(8, 8), Size(0, 0), scale, gr_threshold);
+                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, Size(0, 0), scale, gr_threshold);
             }
             else
-                cpu_hog.detectMultiScale(img, found, hit_threshold, Size(8, 8), Size(0, 0), scale, gr_threshold);
+                cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride, Size(0, 0), scale, gr_threshold);
             HogWorkEnd();
 
             // Draw positive classified windows

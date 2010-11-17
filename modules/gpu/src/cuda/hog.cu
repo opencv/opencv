@@ -198,8 +198,8 @@ __global__ void compute_hists_kernel_many_blocks(const int img_block_width, cons
 
 
 void compute_hists(int nbins, int block_stride_x, int block_stride_y, 
-                               int height, int width, const DevMem2Df& grad, 
-                               const DevMem2D& qangle, float sigma, float* block_hists)                             
+                   int height, int width, const DevMem2Df& grad, 
+                   const DevMem2D& qangle, float sigma, float* block_hists)                             
 {
     const int nblocks = 1;
 
@@ -300,7 +300,7 @@ __global__ void normalize_hists_kernel_many_blocks(const int block_hist_size,
 
 
 void normalize_hists(int nbins, int block_stride_x, int block_stride_y, 
-                                 int height, int width, float* block_hists, float threshold)
+                     int height, int width, float* block_hists, float threshold)
 {   
     const int nblocks = 1;
 
@@ -336,6 +336,7 @@ void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
 template <int nthreads, // Number of threads per one histogram block 
           int nblocks> // Number of histogram block processed by single GPU thread block
 __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const int img_block_width, 
+                                                  const int win_block_stride_x, const int win_block_stride_y,
                                                   const float* block_hists, const float* coefs,
                                                   float free_coef, float threshold, unsigned char* labels)
 {            
@@ -343,8 +344,8 @@ __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const
     if (blockIdx.x * blockDim.z + win_x >= img_win_width)
         return;
 
-    const float* hist = block_hists + (blockIdx.y * img_block_width + 
-                                       blockIdx.x * blockDim.z + win_x) * 
+    const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
+                                       blockIdx.x * win_block_stride_x * blockDim.z + win_x) * 
                                       cblock_hist_size;
 
     float product = 0.f;
@@ -397,15 +398,18 @@ __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const
 
 
 // We only support win_stride_x == block_stride_x, win_stride_y == block_stride_y
-void classify_hists(int win_height, int win_width, int block_stride_x, int block_stride_y, 
-                                int height, int width, float* block_hists, float* coefs, 
-                                float free_coef, float threshold, unsigned char* labels)
+void classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x, 
+                    int win_stride_y, int win_stride_x,
+                    int height, int width, float* block_hists, float* coefs, 
+                    float free_coef, float threshold, unsigned char* labels)
 {   
     const int nthreads = 256;
     const int nblocks = 1;
 
-    int img_win_width = (width - win_width + block_stride_x) / block_stride_x;
-    int img_win_height = (height - win_height + block_stride_y) / block_stride_y;
+    int win_block_stride_x = win_stride_x / block_stride_x;
+    int win_block_stride_y = win_stride_y / block_stride_y;
+    int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+    int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
 
     dim3 threads(nthreads, 1, nblocks);
     dim3 grid(div_up(img_win_width, nblocks), img_win_height);
@@ -416,7 +420,8 @@ void classify_hists(int win_height, int win_width, int block_stride_x, int block
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
                           block_stride_x;
     classify_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
-        img_win_width, img_block_width, block_hists, coefs, free_coef, threshold, labels);
+        img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
+        block_hists, coefs, free_coef, threshold, labels);
     cudaSafeCall(cudaThreadSynchronize());
 } 
 
@@ -524,7 +529,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
 
 void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2D& img, 
-                       float angle_scale, DevMem2Df grad, DevMem2D qangle)
+                            float angle_scale, DevMem2Df grad, DevMem2D qangle)
 {
     const int nthreads = 256;
 
@@ -580,7 +585,7 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
 
 
 void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& img, 
-                       float angle_scale, DevMem2Df grad, DevMem2D qangle)
+                            float angle_scale, DevMem2Df grad, DevMem2D qangle)
 {
     const int nthreads = 256;
 
