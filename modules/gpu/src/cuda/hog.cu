@@ -397,11 +397,9 @@ __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const
 }
 
 
-// We only support win_stride_x == block_stride_x, win_stride_y == block_stride_y
 void classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x, 
-                    int win_stride_y, int win_stride_x,
-                    int height, int width, float* block_hists, float* coefs, 
-                    float free_coef, float threshold, unsigned char* labels)
+                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+                    float* coefs, float free_coef, float threshold, unsigned char* labels)
 {   
     const int nthreads = 256;
     const int nblocks = 1;
@@ -425,8 +423,54 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
     cudaSafeCall(cudaThreadSynchronize());
 }
 
+//----------------------------------------------------------------------------
+// Extract descriptors
 
-//------------------------------------------------------------
+
+template <int nthreads>
+__global__ void extract_descriptors_kernel(const int img_win_width, const int img_block_width, 
+                                           const int win_block_stride_x, const int win_block_stride_y,
+                                           const float* block_hists, PtrElemStepf descriptors)
+{
+    // Get left top corner of the window in src
+    const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
+                                       blockIdx.x * win_block_stride_x) * cblock_hist_size;
+
+    // Get left top corner of the window in dst
+    float* descriptor = descriptors.ptr(blockIdx.y * gridDim.x + blockIdx.x);
+
+    // Copy elements from src to dst
+    for (int i = threadIdx.x; i < cdescr_size; i += nthreads)
+    {
+        int offset_y = i / cdescr_width;
+        int offset_x = i - offset_y * cdescr_width;
+        descriptor[i] = hist[offset_y * img_block_width * cblock_hist_size + offset_x];
+    }
+}
+
+
+void extract_descriptors(int win_height, int win_width, int block_stride_y, int block_stride_x, 
+                         int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+                         DevMem2Df descriptors)
+{
+    const int nthreads = 256;
+
+    int win_block_stride_x = win_stride_x / block_stride_x;
+    int win_block_stride_y = win_stride_y / block_stride_y;
+    int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+    int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
+    dim3 threads(nthreads, 1);
+    dim3 grid(img_win_width, img_win_height);
+
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
+                          block_stride_x;
+    extract_descriptors_kernel<nthreads><<<grid, threads>>>(
+        img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
+        block_hists, descriptors);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+//----------------------------------------------------------------------------
 // Gradients computation
 
 
@@ -481,7 +525,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
         float3 dx = make_float3(sqrtf(b.x) - sqrtf(a.x), 
                                 sqrtf(b.y) - sqrtf(a.y), 
-                                sqrtf(b.z) - sqrtf(a.z));        
+                                sqrtf(b.z) - sqrtf(a.z));    
         float3 dy = make_float3(0.f, 0.f, 0.f);
 
         if (blockIdx.y > 0 && blockIdx.y < height - 1)

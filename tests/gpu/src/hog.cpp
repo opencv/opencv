@@ -51,9 +51,43 @@ using namespace std;
     ts->set_failed_test_info(err); \
     return; }
 
-struct CV_GpuHogTest : public CvTest 
+struct CV_GpuHogDetectionTest: public CvTest 
 {
-    CV_GpuHogTest() : CvTest( "GPU-HOG", "HOGDescriptor" ) {}
+    CV_GpuHogDetectionTest(): CvTest( "GPU-HOG-detect", "HOGDescriptorDetection" ) {}
+
+    void run(int) 
+    {       
+        try 
+        {
+            cv::Mat img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/road.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+
+#ifdef DUMP
+            f.open((std::string(ts->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
+            CHECK(f.is_open(), CvTS::FAIL_GENERIC);          
+#else
+            f.open((std::string(ts->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
+            CHECK(f.is_open(), CvTS::FAIL_MISSING_TEST_DATA);          
+#endif
+            
+            // Test on color image
+            cv::Mat img;
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            test(img);
+
+            // Test on gray image
+            cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+            test(img);
+
+            f.close();
+        }
+        catch (const cv::Exception& e)
+        {
+            f.close();
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
 
 #ifdef DUMP
     void dump(const cv::Mat& block_hists, const std::vector<cv::Point>& locations) 
@@ -168,45 +202,115 @@ struct CV_GpuHogTest : public CvTest
 #endif
     }
 
-
-    void run(int) 
-    {       
-        try 
-        {
-            cv::Mat img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/road.png");
-            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
-
-#ifdef DUMP
-            f.open((std::string(ts->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-            CHECK(f.is_open(), CvTS::FAIL_GENERIC);          
-#else
-            f.open((std::string(ts->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-            CHECK(f.is_open(), CvTS::FAIL_MISSING_TEST_DATA);          
-#endif
-            
-            // Test on color image
-            cv::Mat img;
-            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-            test(img);
-
-            // Test on gray image
-            cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
-            test(img);
-
-            f.close();
-        }
-        catch (const cv::Exception& e)
-        {
-            f.close();
-            if (!check_and_treat_gpu_exception(e, ts)) throw;
-            return;
-        }
-    }
-
 #ifdef DUMP
     std::ofstream f;
 #else
     std::ifstream f;
 #endif
 
-} gpu_hog_test;
+} gpu_hog_detection_test;
+
+
+struct CV_GpuHogGetDescriptorsTest: public CvTest 
+{
+    CV_GpuHogGetDescriptorsTest(): CvTest("GPU-HOG-getDescriptors", "HOGDescriptorGetDescriptors") {}
+
+    void run(int)
+    {
+        try 
+        {
+            // Load image (e.g. train data, composed from windows)
+            cv::Mat img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/train_data.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+
+            // Convert to C4
+            cv::Mat img;
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            cv::gpu::GpuMat d_img(img);
+
+            cv::Size win_size(64, 128);
+            cv::gpu::HOGDescriptor hog(win_size);
+
+            // Convert train images into feature vectors (train table)
+            cv::gpu::GpuMat descriptors;
+            hog.getDescriptors(d_img, win_size, descriptors);
+
+            // Check size of the result train table
+            wins_per_img_x = 3;
+            wins_per_img_y = 2;
+            blocks_per_win_x = 7;
+            blocks_per_win_y = 15;
+            block_hist_size = 36;
+            cv::Size descr_size_expected = cv::Size(blocks_per_win_x * blocks_per_win_y * block_hist_size, 
+                                                    wins_per_img_x * wins_per_img_y);                                                
+            CHECK(descriptors.size() == descr_size_expected, CvTS::FAIL_INVALID_OUTPUT);
+
+            /* Now we want to extract the same feature vectors, but from single images. NOTE: results will 
+            be defferent, due to border values interpolation. Using of many small images is slower, however we 
+            wont't call getDescriptors and will use computeBlockHistograms instead of. computeBlockHistograms 
+            works good, it can be checked in the gpu_hog sample */
+
+            img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive1.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            hog.computeBlockHistograms(cv::gpu::GpuMat(img));
+            // Everything is fine with interpolation for left top subimage
+            CHECK(cv::norm(hog.block_hists, descriptors.rowRange(0, 1)) == 0.f, CvTS::FAIL_INVALID_OUTPUT);
+
+            img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive2.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            hog.computeBlockHistograms(cv::gpu::GpuMat(img));
+            compare_inner_parts(hog.block_hists, descriptors.rowRange(1, 2));
+
+            img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/negative1.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            hog.computeBlockHistograms(cv::gpu::GpuMat(img));
+            compare_inner_parts(hog.block_hists, descriptors.rowRange(2, 3));
+
+            img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/negative2.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            hog.computeBlockHistograms(cv::gpu::GpuMat(img));
+            compare_inner_parts(hog.block_hists, descriptors.rowRange(3, 4));
+
+            img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive3.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            hog.computeBlockHistograms(cv::gpu::GpuMat(img));
+            compare_inner_parts(hog.block_hists, descriptors.rowRange(4, 5));
+
+            img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/negative3.png");
+            CHECK(!img_rgb.empty(), CvTS::FAIL_MISSING_TEST_DATA);
+            cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+            hog.computeBlockHistograms(cv::gpu::GpuMat(img));
+            compare_inner_parts(hog.block_hists, descriptors.rowRange(5, 6));
+        }
+        catch (const cv::Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
+
+    // Does not compare border value, as interpolation leads to delta
+    void compare_inner_parts(cv::Mat d1, cv::Mat d2)
+    {
+        for (int i = 1; i < blocks_per_win_y - 1; ++i)
+            for (int j = 1; j < blocks_per_win_x - 1; ++j)
+                for (int k = 0; k < block_hist_size; ++k)
+                {
+                    float a = d1.at<float>(0, (i * blocks_per_win_x + j) * block_hist_size);
+                    float b = d2.at<float>(0, (i * blocks_per_win_x + j) * block_hist_size);
+                    CHECK(a == b, CvTS::FAIL_INVALID_OUTPUT)
+                }
+    }
+
+    int wins_per_img_x;
+    int wins_per_img_y;
+    int blocks_per_win_x;
+    int blocks_per_win_y;
+    int block_hist_size;
+} gpu_hog_get_descriptors_test;
+

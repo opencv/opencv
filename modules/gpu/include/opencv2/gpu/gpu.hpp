@@ -1001,14 +1001,13 @@ namespace cv
             void setSVMDetector(const vector<float>& detector);
             bool checkDetectorSize() const;
 
+            void computeBlockHistograms(const GpuMat& img);
             void detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0, 
                         Size win_stride=Size(), Size padding=Size());
             void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, 
                                   double hit_threshold=0, Size win_stride=Size(), Size padding=Size(),
                                   double scale0=1.05, int group_threshold=2);
-
-            ////TODO: test it
-            //void getDescriptors(const GpuMat& img, Size win_stride, vector<GpuMat>& descriptors)
+            void getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors);
 
             Size win_size;
             Size block_size;
@@ -1035,7 +1034,6 @@ namespace cv
             static int numPartsWithin(int size, int part_size, int stride);
             static Size numPartsWithin(Size size, Size part_size, Size stride);
 
-            void computeBlockHistograms(const GpuMat& img);            
             void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
 
             GpuMat grad, qangle;

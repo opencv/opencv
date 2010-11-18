@@ -225,7 +225,11 @@ void App::RunOpencvGui()
             vc >> frame;
         }
         else
+        {
             frame = imread(settings.src);
+            if (frame.empty())
+                throw exception(string("Can't open image file: " + settings.src).c_str());
+        }
 
         Mat img_aux, img, img_to_show;
         gpu::GpuMat gpu_img;
