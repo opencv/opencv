@@ -986,7 +986,7 @@ CV_IMPL CvSeq*
 cvHaarDetectObjects( const CvArr* _img,
                      CvHaarClassifierCascade* cascade,
                      CvMemStorage* storage, double scaleFactor,
-                     int minNeighbors, int flags, CvSize minSize )
+                     int minNeighbors, int flags, CvSize minSize, CvSize maxSize )
 {
     const double GROUP_EPS = 0.2;
     CvMat stub, *img = (CvMat*)_img;
@@ -1002,6 +1002,12 @@ cvHaarDetectObjects( const CvArr* _img,
     bool doCannyPruning = (flags & CV_HAAR_DO_CANNY_PRUNING) != 0;
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
     bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
+
+    if( maxSize.height == 0 || maxSize.width == 0 )
+    {
+        maxSize.height = img->rows;
+        maxSize.width = img->cols;
+    }
 
     if( !CV_IS_HAAR_CLASSIFIER(cascade) )
         CV_Error( !cascade ? CV_StsNullPtr : CV_StsBadArg, "Invalid classifier cascade" );
@@ -1069,6 +1075,8 @@ cvHaarDetectObjects( const CvArr* _img,
             CvMat* _tilted = 0;
 
             if( sz1.width <= 0 || sz1.height <= 0 )
+                break;
+            if( winSize.width > maxSize.width || winSize.height > maxSize.height )
                 break;
             if( winSize.width < minSize.width || winSize.height < minSize.height )
                 continue;

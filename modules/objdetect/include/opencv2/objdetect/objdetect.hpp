@@ -128,7 +128,7 @@ CVAPI(CvSeq*) cvHaarDetectObjects( const CvArr* image,
                      CvHaarClassifierCascade* cascade,
                      CvMemStorage* storage, double scale_factor CV_DEFAULT(1.1),
                      int min_neighbors CV_DEFAULT(3), int flags CV_DEFAULT(0),
-                     CvSize min_size CV_DEFAULT(cvSize(0,0)));
+                     CvSize min_size CV_DEFAULT(cvSize(0,0)), CvSize max_size CV_DEFAULT(cvSize(0,0)));
 
 /* sets images for haar classifier cascade */
 CVAPI(void) cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* cascade,
@@ -331,7 +331,8 @@ public:
                            CV_OUT vector<Rect>& objects,
                            double scaleFactor=1.1,
                            int minNeighbors=3, int flags=0,
-                           Size minSize=Size());
+                           Size minSize=Size(),
+                           Size maxSize=Size());
  
     bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
     int runAt( Ptr<FeatureEvaluator>&, Point );

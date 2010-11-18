@@ -849,7 +849,7 @@ struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } }
 
 void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects,
                                           double scaleFactor, int minNeighbors,
-                                          int flags, Size minSize )
+                                          int flags, Size minSize, Size maxSize )
 {
     const double GROUP_EPS = 0.2;
     
@@ -870,7 +870,10 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
         std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
         return;
     }
-    
+
+    if( maxSize.height == 0 || maxSize.width == 0 )
+        maxSize = image.size();
+
     objects.clear();
     
     Mat img = image, imgbuf(image.rows+1, image.cols+1, CV_8U);
@@ -892,6 +895,8 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
         Size sz1( sz.width - origWinSize.width, sz.height - origWinSize.height );
         
         if( sz1.width <= 0 || sz1.height <= 0 )
+            break;
+        if( winSize.width > maxSize.width || winSize.height > maxSize.height )
             break;
         if( winSize.width < minSize.width || winSize.height < minSize.height )
             continue;
