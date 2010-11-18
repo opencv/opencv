@@ -231,7 +231,8 @@ enum
 	CV_INTER_NN        =0,
 	CV_INTER_LINEAR    =1,
 	CV_INTER_CUBIC     =2,
-	CV_INTER_AREA      =3
+	CV_INTER_AREA      =3,
+    CV_INTER_LANCZOS4  =4,
 };
 
 /* ... and other image warping flags */
