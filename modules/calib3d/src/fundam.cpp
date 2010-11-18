@@ -1134,10 +1134,10 @@ void cv::computeCorrespondEpilines( const Mat& points, int whichImage,
 
 void cv::convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst )
 {
-    CV_Assert(src.checkVector(2) >= 0 &&
-              (src.depth() == CV_32F || src.depth() == CV_32S));
+    int srccn = src.checkVector(2) >= 0 ? 2 : src.checkVector(4) >= 0 ? 4 : -1;
+    CV_Assert( srccn > 0 && (src.depth() == CV_32F || src.depth() == CV_32S));
     
-    dst.resize(src.cols*src.rows*src.channels()/2);
+    dst.resize(src.cols*src.rows*src.channels()/srccn);
     CvMat _src = src, _dst = Mat(dst);
     cvConvertPointsHomogeneous(&_src, &_dst);
 }

@@ -298,8 +298,7 @@ Convert points to/from homogeneous coordinates.
 
 \cvdefPy{ConvertPointsHomogeneous( src, dst ) -> None}
 
-\cvdefCpp{void convertPointsHomogeneous( const Mat\& src, vector<Point3f>\& dst );
-
+\cvdefCpp{void convertPointsHomogeneous( const Mat\& src, vector<Point3f>\& dst );\newline
 void convertPointsHomogeneous( const Mat\& src, vector<Point2f>\& dst );}
 
 \begin{description}
@@ -307,8 +306,8 @@ void convertPointsHomogeneous( const Mat\& src, vector<Point2f>\& dst );}
 \cvarg{src}{The input point array, \texttt{2xN, Nx2, 3xN, Nx3, 4xN or Nx4 (where \texttt{N} is the number of points)}. Multi-channel \texttt{1xN} or \texttt{Nx1} array is also acceptable}
 \cvarg{dst}{The output point array, must contain the same number of points as the input; The dimensionality must be the same, 1 less or 1 more than the input, and also within 2 to 4}
 \else
-\cvarg{src}{The input array or vector of 2D or 3D points}
-\cvarg{dst}{The output vector of 3D or 2D points, respectively}
+\cvarg{src}{The input array or vector of 2D, 3D or 4D points}
+\cvarg{dst}{The output vector of 2D or 2D points}
 \fi
 \end{description}
 
@@ -752,7 +751,7 @@ Mat findHomography( const Mat\& srcPoints, const Mat\& dstPoints,\par
 \cvarg{CV\_LMEDS}{Least-Median robust method}
 \end{description}}
 \cvarg{ransacReprojThreshold}{The maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). That is, if
-\[\|\texttt{dstPoints}_i - \texttt{convertPointHomogeneous}(\texttt{H} \texttt{srcPoints}_i)\| > \texttt{ransacReprojThreshold}\]
+\[\|\texttt{dstPoints}_i - \texttt{convertPointsHomogeneous}(\texttt{H} \texttt{srcPoints}_i)\| > \texttt{ransacReprojThreshold}\]
 then the point $i$ is considered an outlier. If \texttt{srcPoints} and \texttt{dstPoints} are measured in pixels, it usually makes sense to set this parameter somewhere in the range 1 to 10.}
 \cvarg{status}{The optional output mask set by a robust method (\texttt{CV\_RANSAC} or \texttt{CV\_LMEDS}). \emph{Note that the input mask values are ignored.}}
 \end{description}
