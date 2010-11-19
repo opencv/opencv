@@ -81,6 +81,18 @@ void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) 
 void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, const Stream&) { throw_nogpu(); }
 void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, const Stream&) { throw_nogpu(); }
+void cv::gpu::bitwise_not(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const Stream& stream) { throw_nogpu(); }
+void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const Stream& stream) { throw_nogpu(); }
+void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const Stream& stream) { throw_nogpu(); }
+void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const Stream& stream) { throw_nogpu(); }
+cv::gpu::GpuMat cv::gpu::operator ~ (const GpuMat&) { throw_nogpu(); return GpuMat(); }
+cv::gpu::GpuMat cv::gpu::operator | (const GpuMat&, const GpuMat&) { throw_nogpu(); return GpuMat(); }
+cv::gpu::GpuMat cv::gpu::operator & (const GpuMat&, const GpuMat&) { throw_nogpu(); return GpuMat(); }
+cv::gpu::GpuMat cv::gpu::operator ^ (const GpuMat&, const GpuMat&) { throw_nogpu(); return GpuMat(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -855,5 +867,121 @@ void cv::gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& 
 {
     ::polarToCart_caller(magnitude, angle, x, y, angleInDegrees, StreamAccessor::getStream(stream));
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// Per-element bit-wise logical matrix operations
+
+namespace cv { namespace gpu { namespace mathfunc 
+{
+    void bitwise_not_caller(const DevMem2D src, int elemSize, PtrStep dst, cudaStream_t stream);
+    void bitwise_or_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream);
+    void bitwise_and_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream);
+    void bitwise_xor_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream);
+}}}
+
+namespace 
+{
+    void bitwise_not_caller(const GpuMat& src, GpuMat& dst, cudaStream_t stream)
+    {
+        dst.create(src.size(), src.type());
+        mathfunc::bitwise_not_caller(src, src.elemSize(), dst, stream);
+    }
+
+    void bitwise_or_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
+    {
+        CV_Assert(src1.size() == src2.size());
+        CV_Assert(src1.type() == src2.type());
+
+        dst.create(src1.size(), src1.type());
+        mathfunc::bitwise_or_caller(dst.cols, dst.rows, src1, src2, dst.elemSize(), dst, stream);
+    }
+
+    void bitwise_and_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
+    {
+        CV_Assert(src1.size() == src2.size());
+        CV_Assert(src1.type() == src2.type());
+
+        dst.create(src1.size(), src1.type());
+        mathfunc::bitwise_and_caller(dst.cols, dst.rows, src1, src2, dst.elemSize(), dst, stream);
+    }
+
+    void bitwise_xor_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
+    {
+        CV_Assert(src1.size() == src2.size());
+        CV_Assert(src1.type() == src2.type());
+
+        dst.create(src1.size(), src1.type());
+        mathfunc::bitwise_xor_caller(dst.cols, dst.rows, src1, src2, dst.elemSize(), dst, stream);
+    }
+}
+
+void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst)
+{
+    ::bitwise_not_caller(src, dst, 0);
+}
+
+void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const Stream& stream)
+{
+    ::bitwise_not_caller(src, dst, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+{
+    ::bitwise_or_caller(src1, src2, dst, 0);
+}
+
+void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream)
+{
+    ::bitwise_or_caller(src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+{
+    ::bitwise_and_caller(src1, src2, dst, 0);
+}
+
+void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream)
+{
+    ::bitwise_and_caller(src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+{
+    ::bitwise_xor_caller(src1, src2, dst, 0);
+}
+
+void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream)
+{
+    ::bitwise_xor_caller(src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+cv::gpu::GpuMat cv::gpu::operator ~ (const GpuMat& src)
+{
+    GpuMat dst;
+    bitwise_not(src, dst);
+    return dst;
+}
+
+cv::gpu::GpuMat cv::gpu::operator | (const GpuMat& src1, const GpuMat& src2)
+{
+    GpuMat dst;
+    bitwise_or(src1, src2, dst);
+    return dst;
+}
+
+cv::gpu::GpuMat cv::gpu::operator & (const GpuMat& src1, const GpuMat& src2)
+{
+    GpuMat dst;
+    bitwise_and(src1, src2, dst);
+    return dst;
+}
+
+cv::gpu::GpuMat cv::gpu::operator ^ (const GpuMat& src1, const GpuMat& src2)
+{
+    GpuMat dst;
+    bitwise_xor(src1, src2, dst);
+    return dst;
+}
+
 
 #endif /* !defined (HAVE_CUDA) */

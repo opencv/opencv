@@ -238,4 +238,105 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         compare_ne<float, float>(src1, src2, dst);
     }
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Per-element bit-wise logical matrix operations
+
+
+    __global__ void bitwise_not_kernel(int cols, int rows, const PtrStep src, PtrStep dst)
+    {
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            dst.ptr(y)[x] = ~src.ptr(y)[x];
+        }
+    }
+
+
+    void bitwise_not_caller(const DevMem2D src, int elemSize, PtrStep dst, cudaStream_t stream)
+    {
+        dim3 threads(16, 16, 1);
+        dim3 grid(divUp(src.cols * elemSize, threads.x), divUp(src.rows, threads.y), 1);
+
+        bitwise_not_kernel<<<grid, threads, 0, stream>>>(src.cols * elemSize, src.rows, src, dst);
+
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    __global__ void bitwise_or_kernel(int cols, int rows, const PtrStep src1, const PtrStep src2, PtrStep dst)
+    {
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            dst.ptr(y)[x] = src1.ptr(y)[x] | src2.ptr(y)[x];
+        }
+    }
+
+
+    void bitwise_or_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream)
+    {
+        dim3 threads(16, 16, 1);
+        dim3 grid(divUp(cols * elemSize, threads.x), divUp(rows, threads.y), 1);
+
+        bitwise_or_kernel<<<grid, threads, 0, stream>>>(cols * elemSize, rows, src1, src2, dst);
+
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    __global__ void bitwise_and_kernel(int cols, int rows, const PtrStep src1, const PtrStep src2, PtrStep dst)
+    {
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            dst.ptr(y)[x] = src1.ptr(y)[x] & src2.ptr(y)[x];
+        }
+    }
+
+
+    void bitwise_and_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream)
+    {
+        dim3 threads(16, 16, 1);
+        dim3 grid(divUp(cols * elemSize, threads.x), divUp(rows, threads.y), 1);
+
+        bitwise_and_kernel<<<grid, threads, 0, stream>>>(cols * elemSize, rows, src1, src2, dst);
+
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+
+    __global__ void bitwise_xor_kernel(int cols, int rows, const PtrStep src1, const PtrStep src2, PtrStep dst)
+    {
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            dst.ptr(y)[x] = src1.ptr(y)[x] ^ src2.ptr(y)[x];
+        }
+    }
+
+
+    void bitwise_xor_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream)
+    {
+        dim3 threads(16, 16, 1);
+        dim3 grid(divUp(cols * elemSize, threads.x), divUp(rows, threads.y), 1);
+
+        bitwise_xor_kernel<<<grid, threads, 0, stream>>>(cols * elemSize, rows, src1, src2, dst);
+
+        if (stream == 0)
+            cudaSafeCall(cudaThreadSynchronize());
+    }
 }}}
