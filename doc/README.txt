@@ -31,13 +31,18 @@ sh go
 
 (2) If you want to build the html files that OpenCV uses to populate the 
 online documentation, assuming you downloaded easy_install, 
-Sphinx and plasTex as above, then from the .../opencv/doc/plastex directory, 
-issue the "go" commend there:
+Sphinx and plasTex as above, then from the .../opencv/doc/latex2sphinx directory, 
+issue the "buildall" commend there:
 
-sh go
+sh buildall
 
 The resulting html files will be be created in:  
-.../opencv/doc/plastex/_build/html
+.../opencv/doc/latex2sphinx/_build/html
+
+Under this html directory, you will find index.html files for:
+  cpp   The C++ manual
+  c     The C manual
+  py    The Python manual
 
 --------------------------------------------------------------------------
 [1] To install easy install on Ubuntu, try either (as stated above):
