@@ -1,3 +1,44 @@
+/*
+ *
+This program's purpose is to collect data sets of an object and its segmentation mask.
+
+It shows how to use a calibrated camera together with a calibration pattern to
+compute the homography of the plane the calibration pattern is on. It also shows grabCut
+segmentation etc.
+
+select3dobj -w <board_width> -h <board_height> [-s <square_size>]
+            -i <camera_intrinsics_filename> -o <output_prefix> [video_filename/cameraId]
+
+ -w <board_width>     		Number of chessboard corners wide
+ -h <board_height>    		Number of chessboard corners width
+ [-s <square_size>]			Optional measure of chessboard squares in meters
+ -i <camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp
+ -o <output_prefix> 		Prefix the output segmentation images with this
+ [video_filename/cameraId]  If present, read from that video file or that ID
+
+Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an
+image of the object sitting on a planar surface with a calibration pattern of
+(board_width x board_height) on the surface, we draw a 3D box aroung the object. From
+then on, we can move a camera and as long as it sees the chessboard calibration pattern,
+it will store a mask of where the object is. We get succesive images using <output_prefix>
+of the segmentation mask containing the object. This makes creating training sets easy.
+It is best of the chessboard is odd x even in dimensions to avoid amiguous poses.
+
+The actions one can use while the program is running are:
+
+  Select object as 3D box with the mouse.
+    First draw one line on the plane to outline the projection of that object on the plane
+    Then extend that line into a box to encompass the projection of that object onto the plane
+    The use the mouse again to extend the box upwards from the plane to encase the object.
+  Then use the following commands
+    ESC   - Reset the selection
+    SPACE - Skip the frame; move to the next frame (not in video mode)
+    ENTER - Confirm the selection. Grab next object in video mode.
+    q     - Exit the program
+
+ *
+ */
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -326,7 +367,7 @@ static bool readStringList( const string& filename, vector<string>& l )
 
 int main(int argc, char** argv)
 {
-    const char* help = "Usage: select3dobj -w <board_width -h <board_height> [-s <square_size>]\n"
+    const char* help = "Usage: select3dobj -w <board_width> -h <board_height> [-s <square_size>]\n"
            "\t-i <intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n";
     const char* screen_help =
     "Actions: \n"
