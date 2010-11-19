@@ -47,13 +47,9 @@ const char* blacklist[] =
 {
     "calibrate-camera-artificial",    //ticket 472
     "inpaint",                        //ticket 570
-    //"optflow-estimate-rigid",         //ticket 433
-    //"subdiv",                         //ticket 454
     "warp-resize",                    //ticket 429
-    //"warp-affine",                    //ticket 572
-    //"warp-perspective",               //ticket 575
-    //"_3d-fundam",                     //ticket 434
-    //"posit",                          //ticket 430
+    "filter-generic",                 //ticket 690
+    "mhi-global",                     //ticket 457
     0
 };
 

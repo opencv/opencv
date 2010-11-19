@@ -60,7 +60,7 @@ public:
     ~CV_DetectorsTest();    
 protected:    
     void run(int);  
-    template <class T> bool testDedector(const Mat& img, const T& detector, vector<KeyPoint>& expected);
+    template <class T> bool testDetector(const Mat& img, const T& detector, vector<KeyPoint>& expected);
 
     void LoadExpected(const string& file, vector<KeyPoint>& out);
 };
@@ -153,7 +153,7 @@ struct WrapPoint
 
 struct sortByR { bool operator()(const KeyPoint& kp1, const KeyPoint& kp2) { return norm(kp1.pt) < norm(kp2.pt); } };
 
-template <class T> bool CV_DetectorsTest::testDedector(const Mat& img, const T& detector, vector<KeyPoint>& exp)
+template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& detector, vector<KeyPoint>& exp)
 {
     vector<KeyPoint> orig_kpts;
     detector(img, orig_kpts);
@@ -205,7 +205,13 @@ template <class T> bool CV_DetectorsTest::testDedector(const Mat& img, const T& 
     }
 
     sort(result.begin(), result.end(), sortByR());
-    sort(exp.begin(), exp.end(), sortByR());    
+    sort(exp.begin(), exp.end(), sortByR());
+
+    if (result.size() != exp.size())
+    {
+      ts->set_failed_test_info(CvTS::FAIL_INVALID_TEST_DATA);
+      return false;
+    }
 
     int foundCounter1 = 0;
     for(size_t i = 0; i < exp.size(); ++i)
@@ -292,14 +298,14 @@ void CV_DetectorsTest::run( int /*start_from*/ )
     if (exp.empty())
         return;
 
-    if (!testDedector(to_test, SurfNoMaskWrap(SURF(1536+512+512, 2)), exp))
+    if (!testDetector(to_test, SurfNoMaskWrap(SURF(1536+512+512, 2)), exp))
         return;
     
     LoadExpected(string(ts->get_data_path()) + "detectors/star.xml", exp);
     if (exp.empty())
         return;
 
-    if (!testDedector(to_test, StarDetector(45, 30, 10, 8, 5), exp))
+    if (!testDetector(to_test, StarDetector(45, 30, 10, 8, 5), exp))
         return;
 
     ts->set_failed_test_info( CvTS::OK);		   
