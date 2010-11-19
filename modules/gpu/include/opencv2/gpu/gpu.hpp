@@ -1007,11 +1007,15 @@ namespace cv
             GpuMat table_space;
         };
 
+
+        //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
+
         struct CV_EXPORTS HOGDescriptor
         {
         public:
             enum { DEFAULT_WIN_SIGMA = -1 };
             enum { DEFAULT_NLEVELS = 64 };
+            enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };
 
             HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16), 
                           Size block_stride=Size(8, 8), Size cell_size=Size(8, 8), 
@@ -1029,13 +1033,14 @@ namespace cv
             void setSVMDetector(const vector<float>& detector);
             bool checkDetectorSize() const;
 
-            void computeBlockHistograms(const GpuMat& img);
             void detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0, 
                         Size win_stride=Size(), Size padding=Size());
             void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, 
                                   double hit_threshold=0, Size win_stride=Size(), Size padding=Size(),
                                   double scale0=1.05, int group_threshold=2);
-            void getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors);
+
+            void getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, 
+                                int descr_format=DESCR_FORMAT_COL_BY_COL);
 
             Size win_size;
             Size block_size;
@@ -1044,8 +1049,16 @@ namespace cv
             int nbins;
             double win_sigma;
             double threshold_L2hys;
-            bool gamma_correction;
             int nlevels;
+
+        protected:
+            void computeBlockHistograms(const GpuMat& img);
+            void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
+
+            static int numPartsWithin(int size, int part_size, int stride);
+            static Size numPartsWithin(Size size, Size part_size, Size stride);
+
+            bool gamma_correction;
 
             // Coefficients of the separating plane
             float free_coef;
@@ -1058,13 +1071,8 @@ namespace cv
             // Results of the last histogram evaluation step
             GpuMat block_hists;
 
-        private:
-            static int numPartsWithin(int size, int part_size, int stride);
-            static Size numPartsWithin(Size size, Size part_size, Size stride);
-
-            void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
-
-            GpuMat grad, qangle;
+            // Gradients conputation results
+            GpuMat grad, qangle;            
         };    
     }
 

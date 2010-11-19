@@ -50,11 +50,9 @@ size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_nogpu(); re
 double cv::gpu::HOGDescriptor::getWinSigma() const { throw_nogpu(); return 0; }
 bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_nogpu(); return false; }
 void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeGradient(const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::detect(const GpuMat&, vector<Point>&, double, Size, Size) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_nogpu(); }
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector_48x96() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector_64x128() { throw_nogpu(); return std::vector<float>(); }
@@ -78,9 +76,12 @@ void classify_hists(int win_height, int win_width, int block_stride_y,
                     int width, float* block_hists, float* coefs, float free_coef, 
                     float threshold, unsigned char* labels);
 
-void extract_descriptors(int win_height, int win_width, int block_stride_y, int block_stride_x, 
-                         int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
-                         cv::gpu::DevMem2Df descriptors);
+void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, 
+                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+                            cv::gpu::DevMem2Df descriptors);
+void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x, 
+                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+                            cv::gpu::DevMem2Df descriptors);
 
 void compute_gradients_8UC1(int nbins, int height, int width, const cv::gpu::DevMem2D& img, 
                             float angle_scale, cv::gpu::DevMem2Df grad, cv::gpu::DevMem2D qangle);
@@ -218,7 +219,7 @@ void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat& img)
 }
 
 
-void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors)
+void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, int descr_format)
 {
     CV_Assert(win_stride.width % block_stride.width == 0 &&
               win_stride.height % block_stride.height == 0);
@@ -231,9 +232,21 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
 
     descriptors.create(wins_per_img.area(), blocks_per_win.area() * block_hist_size, CV_32F);
 
-    hog::extract_descriptors(win_size.height, win_size.width, block_stride.height, block_stride.width, 
-                             win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), 
-                             descriptors);
+    switch (descr_format)
+    {
+    case DESCR_FORMAT_ROW_BY_ROW:
+        hog::extract_descrs_by_rows(win_size.height, win_size.width, block_stride.height, block_stride.width, 
+                                    win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), 
+                                    descriptors);
+        break;
+    case DESCR_FORMAT_COL_BY_COL:
+        hog::extract_descrs_by_cols(win_size.height, win_size.width, block_stride.height, block_stride.width, 
+                                    win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), 
+                                    descriptors);
+        break;
+    default:
+        CV_Error(CV_StsBadArg, "Unknown descriptor format");
+    }
 }
 
 

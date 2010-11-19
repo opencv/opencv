@@ -428,9 +428,9 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
 
 
 template <int nthreads>
-__global__ void extract_descriptors_kernel(const int img_win_width, const int img_block_width, 
-                                           const int win_block_stride_x, const int win_block_stride_y,
-                                           const float* block_hists, PtrElemStepf descriptors)
+__global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, 
+                                              const int win_block_stride_y, const float* block_hists, 
+                                              PtrElemStepf descriptors)
 {
     // Get left top corner of the window in src
     const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
@@ -449,9 +449,9 @@ __global__ void extract_descriptors_kernel(const int img_win_width, const int im
 }
 
 
-void extract_descriptors(int win_height, int win_width, int block_stride_y, int block_stride_x, 
-                         int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
-                         DevMem2Df descriptors)
+void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, 
+                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+                            DevMem2Df descriptors)
 {
     const int nthreads = 256;
 
@@ -464,9 +464,56 @@ void extract_descriptors(int win_height, int win_width, int block_stride_y, int 
 
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
                           block_stride_x;
-    extract_descriptors_kernel<nthreads><<<grid, threads>>>(
-        img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
-        block_hists, descriptors);
+    extract_descrs_by_rows_kernel<nthreads><<<grid, threads>>>(
+        img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+template <int nthreads>
+__global__ void extract_descrs_by_cols_kernel(const int img_block_width, const int win_block_stride_x, 
+                                              const int win_block_stride_y, const float* block_hists, 
+                                              PtrElemStepf descriptors)
+{
+    // Get left top corner of the window in src
+    const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
+                                       blockIdx.x * win_block_stride_x) * cblock_hist_size;
+
+    // Get left top corner of the window in dst
+    float* descriptor = descriptors.ptr(blockIdx.y * gridDim.x + blockIdx.x);
+
+    // Copy elements from src to dst
+    for (int i = threadIdx.x; i < cdescr_size; i += nthreads)
+    {
+        int block_idx = i / cblock_hist_size;
+        int idx_in_block = i - block_idx * cblock_hist_size;
+
+        int y = block_idx / cnblocks_win_x;
+        int x = block_idx - y * cnblocks_win_x;
+
+        descriptor[(x * cnblocks_win_y + y) * cblock_hist_size + idx_in_block] 
+            = hist[(y * img_block_width  + x) * cblock_hist_size + idx_in_block];
+    }
+}
+
+
+void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x, 
+                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+                            DevMem2Df descriptors)
+{
+    const int nthreads = 256;
+
+    int win_block_stride_x = win_stride_x / block_stride_x;
+    int win_block_stride_y = win_stride_y / block_stride_y;
+    int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+    int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
+    dim3 threads(nthreads, 1);
+    dim3 grid(img_win_width, img_win_height);
+
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
+                          block_stride_x;
+    extract_descrs_by_cols_kernel<nthreads><<<grid, threads>>>(
+        img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
     cudaSafeCall(cudaThreadSynchronize());
 }
 
