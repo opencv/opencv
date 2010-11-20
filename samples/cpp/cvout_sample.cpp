@@ -1,11 +1,26 @@
+/*
+ *
+ * cvout_sample just demonstrates the serial out capabilities of cv::Mat
+ *  That is, cv::Mat M(...); cout << M;  Now works.
+ *
+ */
+
 #include "opencv2/core/core.hpp"
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
+void help()
+{
+//	printf("foo\n");
+	cout << "foo" << endl;
+}
+
+
 int main(int,char**)
 {
+	help();
     Mat i = Mat::eye(4, 4, CV_64F);
     i.at<double>(1,1) = CV_PI;
     cout << "i = " << i << ";" << endl;
