@@ -601,7 +601,7 @@ double CV_FilterTest::get_success_error_level( int /*test_case_idx*/, int /*i*/,
 {
     int depth = CV_MAT_DEPTH(test_mat[INPUT][0].type);
     return depth <= CV_8S ? 2 : depth <= CV_32S ? 32 :
-           depth == CV_32F ? 1e-5 : 1e-10;
+           depth == CV_32F ? 1e-4 : 1e-10;
 }
 
 
