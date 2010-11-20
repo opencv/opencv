@@ -14,8 +14,10 @@ using namespace std;
    calibration  -w 4 -h 5 -s 0.025 -o camera.yml -op -oe
  
  example command line for calibration from a list of stored images:
+   imagelist_creator image_list.xml *.png
    calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml
  where image_list.xml is the standard OpenCV XML/YAML
+ use imagelist_creator to create the xml or yaml list
  file consisting of the list of strings, e.g.:
  
 <?xml version="1.0"?>
@@ -273,6 +275,7 @@ int main( int argc, char** argv )
             "     [-su]                    # show undistorted images after calibration\n"
             "     [input_data]             # input data, one of the following:\n"
             "                              #  - text file with a list of the images of the board\n"
+            "                              #    the text file can be generated with imagelist_creator\n"
             "                              #  - name of video file with a video of the board\n"
             "                              # if input_data not specified, a live view from the camera is used\n"
             "\n" );
