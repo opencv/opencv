@@ -117,8 +117,7 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
                                Size& imsize, vector<double>& uniranges )
 {
     int i, j, c;
-    if(!channels)
-        CV_Assert( nimages == dims );
+    CV_Assert( channels != 0 || nimages == dims );
     
     imsize = images[0].size();
     int depth = images[0].depth(), esz1 = (int)images[0].elemSize1();

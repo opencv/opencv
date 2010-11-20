@@ -76,8 +76,6 @@ public:
     void allocate(int dims, const int* sizes, int type, int*& refcount,
                   uchar*& datastart, uchar*& data, size_t* step)
     {
-        static int ncalls = 0;
-        
         int depth = CV_MAT_DEPTH(type);
         int cn = CV_MAT_CN(type);
         const int f = (int)(sizeof(size_t)/8);
@@ -108,8 +106,6 @@ public:
     
     void deallocate(int* refcount, uchar* datastart, uchar* data)
     {
-        static int ncalls = 0;
-        
         if( !refcount )
             return;
         PyObject* o = pyObjectFromRefcount(refcount);
@@ -124,8 +120,6 @@ enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
 static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>", bool allowND=true)
 {
-    static int call_idx = 0;
-    
     if(!o || o == Py_None)
     {
         if( !m.data )

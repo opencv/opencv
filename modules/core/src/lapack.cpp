@@ -1454,8 +1454,7 @@ void SVD::backSubst( const Mat& w, const Mat& u, const Mat& vt, const Mat& rhs, 
     AutoBuffer<double> buffer(nb);
     CV_Assert( u.data && vt.data && w.data );
     
-    if( rhs.data )
-        CV_Assert( rhs.type() == type && rhs.rows == m );
+    CV_Assert( rhs.data == 0 || (rhs.type() == type && rhs.rows == m) );
     
     dst.create( n, nb, type );
     if( type == CV_32F )

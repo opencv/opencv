@@ -685,8 +685,11 @@ void extractImageCOI(const CvArr* arr, Mat& ch, int coi)
 {
     Mat mat = cvarrToMat(arr, false, true, 1);
     ch.create(mat.dims, mat.size, mat.depth());
-    if(coi < 0) 
-        CV_Assert( CV_IS_IMAGE(arr) && (coi = cvGetImageCOI((const IplImage*)arr)-1) >= 0 );
+    if(coi < 0)
+    { 
+        CV_Assert( CV_IS_IMAGE(arr) );
+        coi = cvGetImageCOI((const IplImage*)arr)-1;
+    }
     CV_Assert(0 <= coi && coi < mat.channels());
     int _pairs[] = { coi, 0 };
     mixChannels( &mat, 1, &ch, 1, _pairs, 1 );
@@ -695,8 +698,11 @@ void extractImageCOI(const CvArr* arr, Mat& ch, int coi)
 void insertImageCOI(const Mat& ch, CvArr* arr, int coi)
 {
     Mat mat = cvarrToMat(arr, false, true, 1);
-    if(coi < 0) 
-        CV_Assert( CV_IS_IMAGE(arr) && (coi = cvGetImageCOI((const IplImage*)arr)-1) >= 0 );
+    if(coi < 0)
+    { 
+        CV_Assert( CV_IS_IMAGE(arr) );
+        coi = cvGetImageCOI((const IplImage*)arr)-1;
+    }
     CV_Assert(ch.size == mat.size && ch.depth() == mat.depth() && 0 <= coi && coi < mat.channels());
     int _pairs[] = { 0, coi };
     mixChannels( &ch, 1, &mat, 1, _pairs, 1 );

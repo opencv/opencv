@@ -427,7 +427,7 @@ float CvKNearest::find_nearest( const Mat& _samples, int k, Mat* _results,
     {
         if(!(_results->data && (_results->type() == CV_32F ||
             (_results->type() == CV_32S && regression)) &&
-             (_results->cols == 1 || _results->rows == 1) ||
+             (_results->cols == 1 || _results->rows == 1) &&
              _results->cols + _results->rows - 1 == _samples.rows) )
             _results->create(_samples.rows, 1, CV_32F);
         presults = &(results = *_results);

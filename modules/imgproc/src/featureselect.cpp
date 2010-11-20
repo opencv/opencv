@@ -57,8 +57,7 @@ void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,
 {
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
 
-    if( mask.data )
-        CV_Assert( mask.type() == CV_8UC1 && mask.size() == image.size() );
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) );
 
     Mat eig, tmp;
     if( useHarrisDetector )

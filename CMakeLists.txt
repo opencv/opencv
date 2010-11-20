@@ -562,10 +562,10 @@ if (WITH_TBB)
 
         if (TBB_FOUND)
             set(HAVE_TBB 1)
-            if(NOT "${TBB_INCLUDE_DIRS}" STREQUAL "")
-                include_directories("${TBB_INCLUDE_DIRS}")
+            if(NOT ${TBB_INCLUDE_DIRS} STREQUAL "")
+                include_directories(${TBB_INCLUDE_DIRS})
             endif()
-            link_directories("${TBB_LIBRARY_DIRS}")
+            link_directories(${TBB_LIBRARY_DIRS})
             set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${TBB_LIBRARIES})
         else()
             set(TBB_DEFAULT_INCLUDE_DIRS
