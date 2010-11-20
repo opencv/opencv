@@ -205,7 +205,7 @@ void Mat::create(int d, const int* _sizes, int _type)
     flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
     setSize(*this, d, _sizes, 0, allocator == 0);
     
-    if( size.p[0] > 0 )
+    if( total() > 0 )
     {
         if( !allocator )
         {

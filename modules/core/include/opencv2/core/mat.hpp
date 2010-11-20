@@ -414,7 +414,7 @@ inline int Mat::type() const { return CV_MAT_TYPE(flags); }
 inline int Mat::depth() const { return CV_MAT_DEPTH(flags); }
 inline int Mat::channels() const { return CV_MAT_CN(flags); }
 inline size_t Mat::step1(int i) const { return step.p[i]/elemSize1(); }
-inline bool Mat::empty() const { return data == 0 || size.p[0] == 0; }
+inline bool Mat::empty() const { return data == 0 || total() == 0; }
 inline size_t Mat::total() const
 {
     if( dims <= 2 )
