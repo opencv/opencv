@@ -38,6 +38,10 @@ if(UNIX)
      endif()
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+    set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
+endif()
+
 set_target_properties(${the_target}
 	PROPERTIES OUTPUT_NAME "${the_target}"
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
