@@ -351,8 +351,7 @@ namespace
             
             case CV_XYZ2BGR: case CV_XYZ2RGB:
                 {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, 
-                        const void* coeffs, cudaStream_t stream);
+                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
                     static const func_t funcs[] = {color::XYZ2RGB_gpu_8u, 0, color::XYZ2RGB_gpu_16u, 0, 0, color::XYZ2RGB_gpu_32f};
 
                     if (dcn <= 0) dcn = 3;
@@ -392,7 +391,7 @@ namespace
                         
                     dst.create(sz, CV_MAKETYPE(depth, dcn));
                     
-                    const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
+                    //const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
 
                     funcs[depth](src, scn, dst, dcn, coeffs_i, stream);
                     break;

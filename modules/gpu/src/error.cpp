@@ -67,7 +67,10 @@ namespace
         error_entry( NPP_NOT_SUPPORTED_MODE_ERROR ),
         error_entry( NPP_ROUND_MODE_NOT_SUPPORTED_ERROR ),
         error_entry( NPP_RESIZE_NO_OPERATION_ERROR ),
+
+#if defined (_MSC_VER)
         error_entry( NPP_NOT_SUFFICIENT_COMPUTE_CAPABILITY ),
+#endif
         error_entry( NPP_BAD_ARG_ERROR ),
         error_entry( NPP_LUT_NUMBER_OF_LEVELS_ERROR ),
         error_entry( NPP_TEXTURE_BIND_ERROR ),
