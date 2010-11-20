@@ -330,9 +330,6 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     #define cdiff(ofs0) (tab[c0-dptr[ofs0]+255] + \
         tab[c1-dptr[(ofs0)+1]+255] + tab[c2-dptr[(ofs0)+2]+255] >= isr22)
 
-    memset( src_pyramid, 0, sizeof(src_pyramid) );
-    memset( dst_pyramid, 0, sizeof(dst_pyramid) );
-    
     double sr2 = sr * sr;
     int isr2 = cvRound(sr2), isr22 = MAX(isr2,16);
     int tab[768];
