@@ -551,8 +551,8 @@ void CV_MHIGlobalOrientTest::get_test_array_types_and_sizes( int test_case_idx, 
     CV_MHIBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     CvSize size = sizes[INPUT][0];
 
-    size.width = MAX( size.width, 8 );
-    size.height = MAX( size.height, 8 );
+    size.width = MAX( size.width, 16 );
+    size.height = MAX( size.height, 16 );
     sizes[INPUT][0] = sizes[INPUT][1] = sizes[INPUT][2] = size;
 
     types[INPUT][1] = CV_8UC1; // mask
@@ -607,6 +607,9 @@ void CV_MHIGlobalOrientTest::run_func()
 
 int CV_MHIGlobalOrientTest::validate_test_results( int test_case_idx )
 {
+    //printf("%d. rows=%d, cols=%d, nzmask=%d\n", test_case_idx, test_mat[INPUT][1].rows, test_mat[INPUT][1].cols,
+    //       cvCountNonZero(test_array[INPUT][1]));
+    
     double ref_angle = cvTsCalcGlobalOrientation( &test_mat[INPUT][2], &test_mat[INPUT][1],
                                                   &test_mat[INPUT][0], timestamp, duration );
     double err_level = get_success_error_level( test_case_idx, 0, 0 );
