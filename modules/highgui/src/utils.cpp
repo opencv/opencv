@@ -66,21 +66,21 @@ void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
 }
 
 
-void icvCvt_BGR2Gray_16u_C3C1R( const ushort* rgb, int rgb_step,
+void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
                                 ushort* gray, int gray_step,
-                                CvSize size, int _swap_rb )
+                                CvSize size, int ncn, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgb += 3 )
+        for( i = 0; i < size.width; i++, rgb += ncn )
         {
             int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
             gray[i] = (ushort)t;
         }
 
-        rgb += rgb_step - size.width*3;
+        rgb += rgb_step - size.width*ncn;
     }
 }
 
@@ -119,6 +119,21 @@ void icvCvt_Gray2BGR_8u_C1C3R( const uchar* gray, int gray_step,
 }
 
 
+void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
+                              ushort* bgr, int bgr_step, CvSize size )
+{
+    int i;
+    for( ; size.height--; gray += gray_step/sizeof(gray[0]) )
+    {
+        for( i = 0; i < size.width; i++, bgr += 3 )
+        {
+            bgr[0] = bgr[1] = bgr[2] = gray[i];
+        }
+        bgr += bgr_step/sizeof(bgr[0]) - size.width*3;
+    }
+}
+
+
 void icvCvt_BGRA2BGR_8u_C4C3R( const uchar* bgra, int bgra_step,
                                uchar* bgr, int bgr_step,
                                CvSize size, int _swap_rb )
@@ -135,6 +150,26 @@ void icvCvt_BGRA2BGR_8u_C4C3R( const uchar* bgra, int bgra_step,
         }
         bgr += bgr_step - size.width*3;
         bgra += bgra_step - size.width*4;
+    }
+}
+
+
+void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
+                              ushort* bgr, int bgr_step,
+                              CvSize size, int _swap_rb )
+{
+    int i;
+    int swap_rb = _swap_rb ? 2 : 0;
+    for( ; size.height--; )
+    {
+        for( i = 0; i < size.width; i++, bgr += 3, bgra += 4 )
+        {
+            uchar t0 = bgra[swap_rb], t1 = bgra[1];
+            bgr[0] = t0; bgr[1] = t1;
+            t0 = bgra[swap_rb^2]; bgr[2] = t0;
+        }
+        bgr += bgr_step/sizeof(bgr[0]) - size.width*3;
+        bgra += bgra_step/sizeof(bgra[0]) - size.width*4;
     }
 }
 

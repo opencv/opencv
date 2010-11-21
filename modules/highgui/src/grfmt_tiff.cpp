@@ -122,15 +122,19 @@ bool TiffDecoder::readHeader()
         if( TIFFRGBAImageOK( tif, errmsg ) &&
             TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &width ) &&
             TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &height ) &&
-            TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ) &&
-            (!TIFFGetField( tif, TIFFTAG_COMPRESSION, &compression ) ||
-            (compression != COMPRESSION_LZW &&
-             compression != COMPRESSION_OJPEG)))
+            TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ))
         {
+            int bpp=8, ncn = photometric > 1 ? 3 : 1;
+            TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
+            TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
+            
             m_width = width;
             m_height = height;
-            m_type = photometric > 1 ? CV_8UC3 : CV_8UC1;
-
+            if( bpp > 8 &&
+               ((photometric != 2 && photometric != 1) ||
+                (ncn != 1 && ncn != 3 && ncn != 4)))
+                bpp = 8;
+            m_type = CV_MAKETYPE(bpp > 8 ? CV_16U : CV_8U, photometric > 1 ? 3 : 1);
             result = true;
         }
     }
@@ -148,6 +152,9 @@ bool  TiffDecoder::readData( Mat& img )
     bool color = img.channels() > 1;
     uchar* data = img.data;
     int step = (int)img.step;
+    
+    if( img.depth() != CV_8U && img.depth() != CV_16U )
+        return false;
 
     if( m_tif && m_width && m_height )
     {
@@ -155,6 +162,12 @@ bool  TiffDecoder::readData( Mat& img )
         int tile_width0 = m_width, tile_height0 = 0;
         int x, y, i;
         int is_tiled = TIFFIsTiled(tif);
+        int photometric;
+        TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
+        int bpp = 8, ncn = photometric > 1 ? 3 : 1;
+        TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
+        TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
+        int dst_bpp = img.depth() == CV_8U ? 8 : 16;
 
         if( (!is_tiled &&
             TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 )) ||
@@ -168,8 +181,10 @@ bool  TiffDecoder::readData( Mat& img )
             if( tile_height0 <= 0 )
                 tile_height0 = m_height;
 
-            AutoBuffer<uchar> _buffer(tile_height0*tile_width0*4);
+            AutoBuffer<uchar> _buffer(tile_height0*tile_width0*8);
             uchar* buffer = _buffer;
+            ushort* buffer16 = (ushort*)buffer;
+            int tileidx = 0;
 
             for( y = 0; y < m_height; y += tile_height0, data += step*tile_height0 )
             {
@@ -178,33 +193,89 @@ bool  TiffDecoder::readData( Mat& img )
                 if( y + tile_height > m_height )
                     tile_height = m_height - y;
 
-                for( x = 0; x < m_width; x += tile_width0 )
+                for( x = 0; x < m_width; x += tile_width0, tileidx++ )
                 {
                     int tile_width = tile_width0, ok;
 
                     if( x + tile_width > m_width )
                         tile_width = m_width - x;
 
-                    if( !is_tiled )
-                        ok = TIFFReadRGBAStrip( tif, y, (uint32*)buffer );
-                    else
-                        ok = TIFFReadRGBATile( tif, x, y, (uint32*)buffer );
-
-                    if( !ok )
+                    if( dst_bpp == 8 )
                     {
-                        close();
-                        return false;
-                    }
-
-                    for( i = 0; i < tile_height; i++ )
-                        if( color )
-                            icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
-                                          data + x*3 + step*(tile_height - i - 1), 0,
-                                          cvSize(tile_width,1), 2 );
+                        if( !is_tiled )
+                            ok = TIFFReadRGBAStrip( tif, y, (uint32*)buffer );
                         else
-                            icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
-                                           data + x + step*(tile_height - i - 1), 0,
-                                           cvSize(tile_width,1), 2 );
+                            ok = TIFFReadRGBATile( tif, x, y, (uint32*)buffer );
+                        
+                        if( !ok )
+                        {
+                            close();
+                            return false;
+                        }
+                        
+                        for( i = 0; i < tile_height; i++ )
+                            if( color )
+                                icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
+                                                         data + x*3 + step*(tile_height - i - 1), 0,
+                                                         cvSize(tile_width,1), 2 );
+                            else
+                                icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
+                                                          data + x + step*(tile_height - i - 1), 0,
+                                                          cvSize(tile_width,1), 2 );
+                    }
+                    else
+                    {
+                        if( !is_tiled )
+                            ok = TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, -1 );
+                        else
+                            ok = TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, -1 );
+                        
+                        if( !ok )
+                        {
+                            close();
+                            return false;
+                        }
+                        
+                        for( i = 0; i < tile_height; i++ )
+                        {
+                            if( color )
+                            {
+                                if( ncn == 1 )
+                                {
+                                    icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width*ncn, 0,
+                                                              (ushort*)(data + step*i) + x*3, 0,
+                                                              cvSize(tile_width,1) );
+                                }
+                                else if( ncn == 3 )
+                                {
+                                    icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width*ncn, 0,
+                                                           (ushort*)(data + step*i) + x*3, 0,
+                                                           cvSize(tile_width,1) );
+                                }
+                                else
+                                {
+                                    icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width*ncn, 0,
+                                                           (ushort*)(data + step*i) + x*3, 0,
+                                                           cvSize(tile_width,1), 2 );
+                                }
+                            }
+                            else
+                            {
+                                if( ncn == 1 )
+                                {
+                                    memcpy((ushort*)(data + step*i)+x,
+                                           buffer16 + i*tile_width*ncn,
+                                           tile_width*sizeof(buffer16[0]));
+                                }
+                                else
+                                {
+                                    icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width*ncn, 0,
+                                                           (ushort*)(data + step*i) + x, 0,
+                                                           cvSize(tile_width,1), ncn, 2 );
+                                }
+                            }
+                        }
+                    } 
                 }
             }
 

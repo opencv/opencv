@@ -324,7 +324,7 @@ bool  PxMDecoder::readData( Mat& img )
                     else if( img.depth() == CV_8U )
                         icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, cvSize(m_width,1), 2 );
                     else
-                        icvCvt_BGR2Gray_16u_C3C1R( (ushort *)src, 0, (ushort *)data, 0, cvSize(m_width,1), 2 );
+                        icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)data, 0, cvSize(m_width,1), 3, 2 );
                 }
             }
             result = true;
