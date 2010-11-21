@@ -635,7 +635,7 @@ void CvANN_MLP::calc_output_scale( const CvVectors* vecs, int flags )
             }
             else
             {
-                t = t*scale[j*2] + scale[2*j+1];
+                t = t*inv_scale[j*2] + inv_scale[2*j+1];
                 if( t < m1 || t > M1 )
                     CV_ERROR( CV_StsOutOfRange,
                     "Some of new output training vector components run exceed the original range too much" );
