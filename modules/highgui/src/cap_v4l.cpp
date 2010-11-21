@@ -271,15 +271,17 @@ static unsigned int n_buffers = 0;
 
 #endif  /* HAVE_CAMV4L2 */
 
-int  PALETTE_BGR24 = 0,
-     PALETTE_YVU420 = 0,
-     PALETTE_YUV411P = 0,
-     PALETTE_YUYV = 0,
-     PALETTE_UYVY= 0,
-     PALETTE_SBGGR8 = 0,
-     PALETTE_SN9C10X = 0,
-     PALETTE_MJPEG = 0,
-     PALETTE_SGBRG = 0;
+enum PALETTE_TYPE {
+  PALETTE_BGR24 = 1,
+  PALETTE_YVU420,
+  PALETTE_YUV411P,
+  PALETTE_YUYV,
+  PALETTE_UYVY,
+  PALETTE_SBGGR8,
+  PALETTE_SN9C10X,
+  PALETTE_MJPEG,
+  PALETTE_SGBRG
+};
 
 typedef struct CvCaptureCAM_V4L
 {
@@ -295,7 +297,7 @@ typedef struct CvCaptureCAM_V4L
     IplImage frame;
 
 #ifdef HAVE_CAMV4L2
-
+   enum PALETTE_TYPE palette;
    /* V4L2 variables */
    buffer buffers[MAX_V4L_BUFFERS + 1];
    struct v4l2_capability cap;
@@ -529,17 +531,17 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
 {
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_BGR24) == 0)
   {
-    PALETTE_BGR24 = 1;
+    capture->palette = PALETTE_BGR24;
   }
   else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YVU420) == 0)
   {
-    PALETTE_YVU420 = 1;
+    capture->palette = PALETTE_YVU420;
   }
   else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUV411P) == 0)
   {
-    PALETTE_YUV411P = 1;
+    capture->palette = PALETTE_YUV411P;
   }
   else
 
@@ -551,7 +553,7 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_MJPEG) == 0 ||
       try_palette_v4l2(capture, V4L2_PIX_FMT_JPEG) == 0)
   {
-    PALETTE_MJPEG = 1;
+    capture->palette = PALETTE_MJPEG;
   }
   else
 #endif
@@ -559,24 +561,24 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
 
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUYV) == 0)
   {
-    PALETTE_YUYV = 1;
+    capture->palette = PALETTE_YUYV;
   }
   else if (try_palette_v4l2(capture, V4L2_PIX_FMT_UYVY) == 0)
   {
-    PALETTE_UYVY = 1;
+    capture->palette = PALETTE_UYVY;
   }
   else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_SN9C10X) == 0)
   {
-    PALETTE_SN9C10X = 1;
+    capture->palette = PALETTE_SN9C10X;
   } else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_SBGGR8) == 0)
   {
-    PALETTE_SBGGR8 = 1;
+    capture->palette = PALETTE_SBGGR8;
   } else
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_SGBRG) == 0)
   {
-    PALETTE_SGBRG = 1;
+    capture->palette = PALETTE_SGBRG;
   }
       else
   {
@@ -2121,87 +2123,88 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
   if (V4L2_SUPPORT == 1)
   {
+    switch (capture->palette)
+      {
+      case PALETTE_BGR24:
+	memcpy((char *)capture->frame.imageData,
+	       (char *)capture->buffers[capture->bufferIndex].start,
+	       capture->frame.imageSize);
+	break;
 
-    if (PALETTE_BGR24 == 1)
-      memcpy((char *)capture->frame.imageData,
-             (char *)capture->buffers[capture->bufferIndex].start,
-             capture->frame.imageSize);
+      case PALETTE_YVU420:
+	  yuv420p_to_rgb24(capture->form.fmt.pix.width,
+			   capture->form.fmt.pix.height,
+			   (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+			   (unsigned char*)capture->frame.imageData);
+	  break;
 
-    if (PALETTE_YVU420 == 1)
-      yuv420p_to_rgb24(capture->form.fmt.pix.width,
-                       capture->form.fmt.pix.height,
-                       (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                       (unsigned char*)capture->frame.imageData);
-
-    if (PALETTE_YUV411P == 1)
-      yuv411p_to_rgb24(capture->form.fmt.pix.width,
-                       capture->form.fmt.pix.height,
-                       (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                       (unsigned char*)capture->frame.imageData);
-
+      case PALETTE_YUV411P:
+	yuv411p_to_rgb24(capture->form.fmt.pix.width,
+			 capture->form.fmt.pix.height,
+			 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+			 (unsigned char*)capture->frame.imageData);
+	break;
 #ifdef HAVE_JPEG
 #ifdef __USE_GNU
     /* support for MJPEG is only available with libjpeg and gcc,
        because it's use libjepg and fmemopen()
     */
-    if (PALETTE_MJPEG == 1)
-      if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
-			  capture->form.fmt.pix.height,
-			  (unsigned char*)(capture->buffers[capture->bufferIndex]
-					   .start),
-			  capture->buffers[capture->bufferIndex].length,
-			  (unsigned char*)capture->frame.imageData))
-	return 0;
+      case PALETTE_MJPEG:
+	if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
+			    capture->form.fmt.pix.height,
+			    (unsigned char*)(capture->buffers[capture->bufferIndex]
+					     .start),
+			    capture->buffers[capture->bufferIndex].length,
+			    (unsigned char*)capture->frame.imageData))
+	  return 0;
+	break;
 #endif
 #endif
 
-    if (PALETTE_YUYV == 1)
+      case PALETTE_YUYV:
 	yuyv_to_rgb24(capture->form.fmt.pix.width,
 		      capture->form.fmt.pix.height,
 		      (unsigned char*)(capture->buffers[capture->bufferIndex].start),
 		      (unsigned char*)capture->frame.imageData);
+	break;
 
-    if (PALETTE_UYVY == 1)
+      case PALETTE_UYVY:
 	uyvy_to_rgb24(capture->form.fmt.pix.width,
 		      capture->form.fmt.pix.height,
 		      (unsigned char*)(capture->buffers[capture->bufferIndex].start),
 		      (unsigned char*)capture->frame.imageData);
+	break;
+      case PALETTE_SBGGR8:
+	bayer2rgb24(capture->form.fmt.pix.width,
+		    capture->form.fmt.pix.height,
+		    (unsigned char*)capture->buffers[capture->bufferIndex].start,
+		    (unsigned char*)capture->frame.imageData);
+	break;
 
-    if (PALETTE_SBGGR8 == 1)
-    {
-      bayer2rgb24(capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height,
-                  (unsigned char*)capture->buffers[capture->bufferIndex].start,
-                  (unsigned char*)capture->frame.imageData);
-    }
-
-    if (PALETTE_SN9C10X == 1)
-    {
-      sonix_decompress_init();
-
-      sonix_decompress(capture->form.fmt.pix.width,
-                       capture->form.fmt.pix.height,
-                       (unsigned char*)capture->buffers[capture->bufferIndex].start,
-                       (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
-
-      bayer2rgb24(capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height,
-                  (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-                  (unsigned char*)capture->frame.imageData);
-    }
-
-    if (PALETTE_SGBRG == 1)
-    {
-       sgbrg2rgb24(capture->form.fmt.pix.width,
-                  capture->form.fmt.pix.height,
-                  (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-                  (unsigned char*)capture->frame.imageData);
-    }
-
+      case PALETTE_SN9C10X:	
+	sonix_decompress_init();
+	sonix_decompress(capture->form.fmt.pix.width,
+			 capture->form.fmt.pix.height,
+			 (unsigned char*)capture->buffers[capture->bufferIndex].start,
+			 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
+	
+	bayer2rgb24(capture->form.fmt.pix.width,
+		    capture->form.fmt.pix.height,
+		    (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+		    (unsigned char*)capture->frame.imageData);
+	break;
+	
+      case PALETTE_SGBRG:	
+	sgbrg2rgb24(capture->form.fmt.pix.width,
+		    capture->form.fmt.pix.height,
+		    (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+		    (unsigned char*)capture->frame.imageData);
+	break;
+      }
   } else
 #endif /* HAVE_CAMV4L2 */
   {
-
+    
     switch(capture->imageProperties.palette) {
       case VIDEO_PALETTE_RGB24:
         memcpy((char *)capture->frame.imageData,
