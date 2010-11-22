@@ -808,7 +808,9 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     std::vector<int> sort_buf;
     cv::Ptr<CvMemStorage> storage;
 
-    int x, y, i, j, center_count, nz_count;
+    int x, y, i, j, k, center_count, nz_count;
+    float min_radius2 = (float)min_radius*min_radius;
+    float max_radius2 = (float)max_radius*max_radius;
     int rows, cols, arows, acols;
     int astep, *adata;
     float* ddata;
@@ -817,7 +819,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     CvSeqReader reader;
 
     edges = cvCreateMat( img->rows, img->cols, CV_8UC1 );
-    cvCanny( img, edges, MAX(canny_threshold/5,1), canny_threshold, 3 );
+    cvCanny( img, edges, MAX(canny_threshold/2,1), canny_threshold, 3 );
 
     dx = cvCreateMat( img->rows, img->cols, CV_16SC1 );
     dy = cvCreateMat( img->rows, img->cols, CV_16SC1 );
@@ -929,7 +931,6 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         y = ofs/(acols+2) - 1;
         x = ofs - (y+1)*(acols+2) - 1;
         float cx = (float)(x*dp), cy = (float)(y*dp);
-        int start_idx = nz_count - 1;
         float start_dist, dist_sum;
         float r_best = 0, c[3];
         int max_count = R_THRESH;
@@ -945,21 +946,30 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             continue;
 
         cvStartReadSeq( nz, &reader );
-        for( j = 0; j < nz_count; j++ )
+        for( j = k = 0; j < nz_count; j++ )
         {
             CvPoint pt;
-            float _dx, _dy;
+            float _dx, _dy, _r2;
             CV_READ_SEQ_ELEM( pt, reader );
             _dx = cx - pt.x; _dy = cy - pt.y;
-            ddata[j] = _dx*_dx + _dy*_dy;
-            sort_buf[j] = j;
+            _r2 = _dx*_dx + _dy*_dy;
+            if(min_radius2 <= _r2 && _r2 <= max_radius2 )
+            {
+                ddata[k] = _r2;
+                sort_buf[k] = k;
+                k++;
+            }
         }
 
+        int nz_count1 = k, start_idx = nz_count1 - 1;
+        if( nz_count1 == 0 )
+            continue;
+        dist_buf->cols = nz_count1;
         cvPow( dist_buf, dist_buf, 0.5 );
-        icvHoughSortDescent32s( &sort_buf[0], nz_count, (int*)ddata );
+        icvHoughSortDescent32s( &sort_buf[0], nz_count1, (int*)ddata );
 
-        dist_sum = start_dist = ddata[sort_buf[nz_count-1]];
-        for( j = nz_count - 2; j >= 0; j-- )
+        dist_sum = start_dist = ddata[sort_buf[nz_count1-1]];
+        for( j = nz_count1 - 2; j >= 0; j-- )
         {
             float d = ddata[sort_buf[j]];
 
@@ -970,7 +980,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             {
                 float r_cur = ddata[sort_buf[(j + start_idx)/2]];
                 if( (start_idx - j)*r_best >= max_count*r_cur ||
-                    (r_best < FLT_EPSILON && start_idx - j >= max_count) )
+                    (r_best < FLT_EPSILON && start_idx - j >= max_count) ) 
                 {
                     r_best = r_cur;
                     max_count = start_idx - j;
