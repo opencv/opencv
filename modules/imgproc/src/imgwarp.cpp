@@ -786,6 +786,7 @@ typedef HResizeNoVec HResizeLinearVec_8u32s;
 typedef HResizeNoVec HResizeLinearVec_16u32f;
 typedef HResizeNoVec HResizeLinearVec_16s32f;
 typedef HResizeNoVec HResizeLinearVec_32f;
+typedef HResizeNoVec HResizeLinearVec_64f;
 
 #else
 
@@ -793,17 +794,17 @@ typedef HResizeNoVec HResizeLinearVec_8u32s;
 typedef HResizeNoVec HResizeLinearVec_16u32f;
 typedef HResizeNoVec HResizeLinearVec_16s32f;
 typedef HResizeNoVec HResizeLinearVec_32f;
-
+    
 typedef VResizeNoVec VResizeLinearVec_32s8u;
 typedef VResizeNoVec VResizeLinearVec_32f16u;
 typedef VResizeNoVec VResizeLinearVec_32f16s;
 typedef VResizeNoVec VResizeLinearVec_32f;
-
+    
 typedef VResizeNoVec VResizeCubicVec_32s8u;
 typedef VResizeNoVec VResizeCubicVec_32f16u;
 typedef VResizeNoVec VResizeCubicVec_32f16s;
 typedef VResizeNoVec VResizeCubicVec_32f;
-
+    
 #endif
 
 
@@ -1168,16 +1169,16 @@ struct DecimateAlpha
     float alpha;
 };
 
-template<typename T>
+template<typename T, typename WT>
 static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, int xofs_count )
 {
     Size ssize = src.size(), dsize = dst.size();
     int cn = src.channels();
     dsize.width *= cn;
-    AutoBuffer<float> _buffer(dsize.width*2);
-    float *buf = _buffer, *sum = buf + dsize.width;
+    AutoBuffer<WT> _buffer(dsize.width*2);
+    WT *buf = _buffer, *sum = buf + dsize.width;
     int k, sy, dx, cur_dy = 0;
-    float scale_y = (float)ssize.height/dsize.height;
+    WT scale_y = (WT)ssize.height/dsize.height;
 
     CV_Assert( cn <= 4 );
     for( dx = 0; dx < dsize.width; dx++ )
@@ -1190,7 +1191,7 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             for( k = 0; k < xofs_count; k++ )
             {
                 int dxn = xofs[k].di;
-                float alpha = xofs[k].alpha;
+                WT alpha = xofs[k].alpha;
                 buf[dxn] += S[xofs[k].si]*alpha;
             }
         else if( cn == 2 )
@@ -1198,9 +1199,9 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             {
                 int sxn = xofs[k].si;
                 int dxn = xofs[k].di;
-                float alpha = xofs[k].alpha;
-                float t0 = buf[dxn] + S[sxn]*alpha;
-                float t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                WT alpha = xofs[k].alpha;
+                WT t0 = buf[dxn] + S[sxn]*alpha;
+                WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
                 buf[dxn] = t0; buf[dxn+1] = t1;
             }
         else if( cn == 3 )
@@ -1208,10 +1209,10 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             {
                 int sxn = xofs[k].si;
                 int dxn = xofs[k].di;
-                float alpha = xofs[k].alpha;
-                float t0 = buf[dxn] + S[sxn]*alpha;
-                float t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                float t2 = buf[dxn+2] + S[sxn+2]*alpha;
+                WT alpha = xofs[k].alpha;
+                WT t0 = buf[dxn] + S[sxn]*alpha;
+                WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
                 buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
             }
         else
@@ -1219,9 +1220,9 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             {
                 int sxn = xofs[k].si;
                 int dxn = xofs[k].di;
-                float alpha = xofs[k].alpha;
-                float t0 = buf[dxn] + S[sxn]*alpha;
-                float t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                WT alpha = xofs[k].alpha;
+                WT t0 = buf[dxn] + S[sxn]*alpha;
+                WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
                 buf[dxn] = t0; buf[dxn+1] = t1;
                 t0 = buf[dxn+2] + S[sxn+2]*alpha;
                 t1 = buf[dxn+3] + S[sxn+3]*alpha;
@@ -1230,8 +1231,8 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
 
         if( (cur_dy + 1)*scale_y <= sy + 1 || sy == ssize.height - 1 )
         {
-            float beta = std::max(sy + 1 - (cur_dy+1)*scale_y, 0.f);
-            float beta1 = 1 - beta;
+            WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y, (WT)0);
+            WT beta1 = 1 - beta;
             T* D = (T*)(dst.data + dst.step*cur_dy);
             if( fabs(beta) < 1e-3 )
                 for( dx = 0; dx < dsize.width; dx++ )
@@ -1252,8 +1253,8 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
         {
             for( dx = 0; dx <= dsize.width - 2; dx += 2 )
             {
-                float t0 = sum[dx] + buf[dx];
-                float t1 = sum[dx+1] + buf[dx+1];
+                WT t0 = sum[dx] + buf[dx];
+                WT t1 = sum[dx+1] + buf[dx+1];
                 sum[dx] = t0; sum[dx+1] = t1;
                 buf[dx] = buf[dx+1] = 0;
             }
@@ -1309,7 +1310,12 @@ void resize( const Mat& src, Mat& dst, Size dsize,
                 HResizeLinearVec_32f>,
             VResizeLinear<float, float, float, Cast<float, float>,
                 VResizeLinearVec_32f> >,
-        0, 0
+        resizeGeneric_<
+            HResizeLinear<double, double, float, 1,
+                HResizeNoVec>,
+            VResizeLinear<double, double, float, Cast<double, double>,
+                VResizeNoVec> >,
+        0
     };
 
     static ResizeFunc cubic_tab[] =
@@ -1333,7 +1339,11 @@ void resize( const Mat& src, Mat& dst, Size dsize,
             HResizeCubic<float, float, float>,
             VResizeCubic<float, float, float, Cast<float, float>,
             VResizeCubicVec_32f> >,
-        0, 0
+        resizeGeneric_<
+            HResizeCubic<double, double, float>,
+            VResizeCubic<double, double, float, Cast<double, double>,
+            VResizeNoVec> >,
+        0
     };
 
     static ResizeFunc lanczos4_tab[] =
@@ -1353,7 +1363,10 @@ void resize( const Mat& src, Mat& dst, Size dsize,
         resizeGeneric_<HResizeLanczos4<float, float, float>,
             VResizeLanczos4<float, float, float, Cast<float, float>,
             VResizeNoVec> >,
-        0, 0
+        resizeGeneric_<HResizeLanczos4<double, double, float>,
+            VResizeLanczos4<double, double, float, Cast<double, double>,
+            VResizeNoVec> >,
+        0
     };
 
     static ResizeAreaFastFunc areafast_tab[] =
@@ -1361,12 +1374,16 @@ void resize( const Mat& src, Mat& dst, Size dsize,
         resizeAreaFast_<uchar, int>, 0,
 		resizeAreaFast_<ushort, float>,
 		resizeAreaFast_<short, float>,
-        0, resizeAreaFast_<float, float>, 0, 0
+        0,
+        resizeAreaFast_<float, float>,
+        resizeAreaFast_<double, double>,
+        0
     };
 
     static ResizeAreaFunc area_tab[] =
     {
-        resizeArea_<uchar>, 0, resizeArea_<ushort>, resizeArea_<short>, 0, resizeArea_<float>, 0, 0
+        resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>, resizeArea_<short, float>,
+        0, resizeArea_<float, float>, resizeArea_<double, double>, 0
     };
 
     Size ssize = src.size();
