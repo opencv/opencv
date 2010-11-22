@@ -148,7 +148,7 @@ Settings Settings::Read(int argc, char** argv)
         else if (key == "-win_stride_width") settings.win_stride_width = atoi(val.c_str());
         else if (key == "-win_stride_height") settings.win_stride_height = atoi(val.c_str());
         else if (key == "-gr_threshold") settings.gr_threshold = atoi(val.c_str());
-        else throw exception((string("Unknown key: ") + key).c_str());
+        else throw runtime_error((string("Unknown key: ") + key));
     }
 
     cout << "Command args are parsed\n";
@@ -221,14 +221,14 @@ void App::RunOpencvGui()
         {
             vc.open(settings.src.c_str());
             if (!vc.isOpened())
-                throw exception(string("Can't open video file: " + settings.src).c_str());
+                throw runtime_error(string("Can't open video file: " + settings.src));
             vc >> frame;
         }
         else
         {
             frame = imread(settings.src);
             if (frame.empty())
-                throw exception(string("Can't open image file: " + settings.src).c_str());
+                throw runtime_error(string("Can't open image file: " + settings.src));
         }
 
         Mat img_aux, img, img_to_show;
