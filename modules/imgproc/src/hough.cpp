@@ -817,7 +817,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     CvSeqReader reader;
 
     edges = cvCreateMat( img->rows, img->cols, CV_8UC1 );
-    cvCanny( img, edges, MAX(canny_threshold/2,1), canny_threshold, 3 );
+    cvCanny( img, edges, MAX(canny_threshold/5,1), canny_threshold, 3 );
 
     dx = cvCreateMat( img->rows, img->cols, CV_16SC1 );
     dy = cvCreateMat( img->rows, img->cols, CV_16SC1 );
