@@ -526,9 +526,17 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     {
         fd = new FastFeatureDetector();
     }
+    else if( !detectorType.compare( "DynamicFAST" ) )
+    {
+	    fd = new FASTDynamicDetector(400,500,5);
+    }
     else if( !detectorType.compare( "STAR" ) )
     {
         fd = new StarFeatureDetector();
+    }
+    else if( !detectorType.compare( "DynamicSTAR" ) )
+    {
+	    fd = new StarDynamicDetector(400,500,5);
     }
     else if( !detectorType.compare( "SIFT" ) )
     {
@@ -539,6 +547,10 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     {
         fd = new SurfFeatureDetector();
     }
+    else if( !detectorType.compare( "DynamicSURF" ) )
+	{
+		fd = new SurfDynamicDetector(400,500,5);
+	}
     else if( !detectorType.compare( "MSER" ) )
     {
         fd = new MserFeatureDetector();

@@ -1448,6 +1448,152 @@ protected:
     int levels;
 };
 
+/****************************************************************************************\
+*                                Dynamic Feature Detectors                              *
+ \****************************************************************************************/
+/** \brief an adaptively adjusting detector that iteratively detects until the desired number
+ * of features are detected.
+ *  Beware that this is not thread safe - as the adjustment of parameters breaks the const
+ *  of the detection routine...
+ *  /TODO Make this const correct and thread safe
+ */
+template<typename Adjuster>
+class DynamicDetectorAdaptor: public FeatureDetector {
+public:
+
+	/** \param min_features the minimum desired features
+	 * \param max_features the maximum desired number of features
+	 * \param max_iters the maximum number of times to try to adjust the feature detector params
+	 * 			for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
+	 * \param a a copy of an Adjuster that will do the detection and parameter adjustment
+	 */
+	DynamicDetectorAdaptor(int min_features, int max_features,
+			int max_iters, const Adjuster& a = Adjuster()) :
+		escape_iters_(max_iters), min_features_(min_features), max_features_(
+				max_features), adjuster_(a) {
+	}
+protected:
+	virtual void detectImpl(const cv::Mat& image,
+			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
+					cv::Mat()) const {
+		//for oscillation testing
+		bool down = false;
+		bool up = false;
+
+		//flag for whether the correct threshhold has been reached
+		bool thresh_good = false;
+
+		//this is bad but adjuster should persist from detection to detection
+		Adjuster& adjuster = const_cast<Adjuster&> (adjuster_);
+
+		//break if the desired number hasn't been reached.
+		int iter_count = escape_iters_;
+
+		do {
+			keypoints.clear();
+
+			//the adjuster takes care of calling the detector with updated parameters
+			adjuster.detect(image, mask, keypoints);
+
+			if (int(keypoints.size()) < min_features_) {
+				down = true;
+				adjuster.tooFew(min_features_, keypoints.size());
+			} else if (int(keypoints.size()) > max_features_) {
+				up = true;
+				adjuster.tooMany(max_features_, keypoints.size());
+			} else
+				thresh_good = true;
+		} while (--iter_count >= 0 && !(down && up) && !thresh_good
+				&& adjuster.good());
+	}
+
+private:
+	int escape_iters_;
+	int min_features_, max_features_;
+	Adjuster adjuster_;
+};
+
+struct FastAdjuster {
+	FastAdjuster() :
+		thresh_(20) {
+	}
+	void detect(const Mat& img, const Mat& mask, std::vector<
+			KeyPoint>& keypoints) const {
+		FastFeatureDetector(thresh_, true).detect(img, keypoints, mask);
+	}
+	void tooFew(int min, int n_detected) {
+		//fast is easy to adjust
+		thresh_--;
+	}
+	void tooMany(int max, int n_detected) {
+		//fast is easy to adjust
+		thresh_++;
+	}
+
+	//return whether or not the threshhold is beyond
+	//a useful point
+	bool good() const {
+		return (thresh_ > 1) && (thresh_ < 200);
+	}
+	int thresh_;
+};
+
+struct StarAdjuster {
+	StarAdjuster() :
+		thresh_(30) {
+	}
+	void detect(const Mat& img, const Mat& mask, std::vector<
+			KeyPoint>& keypoints) const {
+		StarFeatureDetector detector_tmp(16, thresh_, 10, 8, 3);
+		detector_tmp.detect(img, keypoints, mask);
+	}
+	void tooFew(int min, int n_detected) {
+		thresh_ *= 0.9;
+		if (thresh_ < 1.1)
+			thresh_ = 1.1;
+	}
+	void tooMany(int max, int n_detected) {
+		thresh_ *= 1.1;
+	}
+
+	//return whether or not the threshhold is beyond
+	//a useful point
+	bool good() const {
+		return (thresh_ > 2) && (thresh_ < 200);
+	}
+	double thresh_;
+};
+
+struct SurfAdjuster {
+	SurfAdjuster() :
+		thresh_(400.0) {
+	}
+	void detect(const Mat& img, const Mat& mask, std::vector<
+			KeyPoint>& keypoints) const {
+		SurfFeatureDetector detector_tmp(thresh_);
+		detector_tmp.detect(img, keypoints, mask);
+	}
+	void tooFew(int min, int n_detected) {
+		thresh_ *= 0.9;
+		if (thresh_ < 1.1)
+			thresh_ = 1.1;
+	}
+	void tooMany(int max, int n_detected) {
+		thresh_ *= 1.1;
+	}
+
+	//return whether or not the threshhold is beyond
+	//a useful point
+	bool good() const {
+		return (thresh_ > 2) && (thresh_ < 1000);
+	}
+	double thresh_;
+};
+
+typedef DynamicDetectorAdaptor<FastAdjuster> FASTDynamicDetector;
+typedef DynamicDetectorAdaptor<StarAdjuster> StarDynamicDetector;
+typedef DynamicDetectorAdaptor<SurfAdjuster> SurfDynamicDetector;
+
 CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
                                      float maxDeltaX, float maxDeltaY );
 
@@ -1717,7 +1863,8 @@ struct CV_EXPORTS L1
 };
 
 /*
- * Hamming distance (city block distance) functor
+ * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
+ * bit count of A exclusive ored with B
  */
 struct CV_EXPORTS HammingLUT
 {
