@@ -538,7 +538,13 @@ bool CvCapture_FFMPEG::grabFrame()
     }
 
     // get the next frame
-    while (!valid && (av_read_frame(ic, &packet) >= 0)) {
+    while (!valid) {
+        int ret = av_read_frame(ic, &packet);
+        if (ret == AVERROR(EAGAIN))
+            continue;
+        if (ret < 0)
+            break;
+        
 		if( packet.stream_index != video_stream ) {
 		        av_free_packet (&packet);
 		        continue;
