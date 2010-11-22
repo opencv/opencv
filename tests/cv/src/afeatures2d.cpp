@@ -60,7 +60,7 @@ public:
         CvTest( testName, "cv::FeatureDetector::detect"), fdetector(_fdetector) {}
 
 protected:
-    virtual void run( int start_from )
+    virtual void run( int /*start_from*/ )
     {
         const float maxPtDif = 1.f;
         const float maxSizeDif = 1.f;
@@ -112,7 +112,7 @@ protected:
                 for( size_t c = 0; c < calcKeypoints.size(); c++ )
                 {
                     progress = update_progress( progress, v*calcKeypoints.size() + c, progressCount, 0 );
-                    float curDist = norm( calcKeypoints[c].pt - validKeypoints[v].pt );
+                    float curDist = (float)norm( calcKeypoints[c].pt - validKeypoints[v].pt );
                     if( curDist < minDist )
                     {
                         minDist = curDist;
@@ -434,7 +434,7 @@ int CV_DescriptorMatcherTest::testMatch( const Mat& query, const Mat& train )
             for( size_t i = 0; i < matches.size(); i++ )
             {
                 DMatch match = matches[i];
-                int shift = dmatcher->supportMask() ? 1 : 0;
+                int shift = dmatcher->isMaskSupported() ? 1 : 0;
                 {
                     if( i < queryDescCount/2 )
                     {
@@ -533,7 +533,7 @@ int CV_DescriptorMatcherTest::testKnnMatch( const Mat& query, const Mat& train )
         else
         {
             int badCount = 0;
-            int shift = dmatcher->supportMask() ? 1 : 0;
+            int shift = dmatcher->isMaskSupported() ? 1 : 0;
             for( size_t i = 0; i < matches.size(); i++ )
             {
                 if( (int)matches[i].size() != knn )
@@ -641,8 +641,8 @@ int CV_DescriptorMatcherTest::testRadiusMatch( const Mat& query, const Mat& trai
         res = curRes != CvTS::OK ? curRes : res;
 
         int badCount = 0;
-        int shift = dmatcher->supportMask() ? 1 : 0;
-        int needMatchCount = dmatcher->supportMask() ? n-1 : n;
+        int shift = dmatcher->isMaskSupported() ? 1 : 0;
+        int needMatchCount = dmatcher->isMaskSupported() ? n-1 : n;
         for( size_t i = 0; i < matches.size(); i++ )
         {
             if( (int)matches[i].size() != needMatchCount )
@@ -741,6 +741,6 @@ CV_CalonderDescriptorExtractorTest<float> floatCalonderTest( "descriptor-calonde
  * Matchers
  */
 CV_DescriptorMatcherTest bruteForceMatcherTest( "descriptor-matcher-brute-force",
-                                                new BruteForceMatcher<L2<float> >, 0.01 );
+                                                new BruteForceMatcher<L2<float> >, 0.01f );
 CV_DescriptorMatcherTest flannBasedMatcherTest( "descriptor-matcher-flann-based",
-                                                new FlannBasedMatcher, 0.04 );
+                                                new FlannBasedMatcher, 0.04f );

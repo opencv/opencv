@@ -61,6 +61,21 @@ struct MaskPredicate
     const Mat& mask;
 };
 
+FeatureDetector::~FeatureDetector()
+{}
+
+void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+	keypoints.clear();
+
+	if( image.empty() )
+		return;
+
+	CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) );
+
+	detectImpl( image, keypoints, mask );
+}
+
 void FeatureDetector::detect(const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, const vector<Mat>& masks ) const
 {
     pointCollection.resize( imageCollection.size() );
@@ -75,6 +90,12 @@ void FeatureDetector::removeInvalidPoints( const Mat& mask, vector<KeyPoint>& ke
 
     keypoints.erase(remove_if(keypoints.begin(), keypoints.end(), MaskPredicate(mask)), keypoints.end());
 };
+
+void FeatureDetector::read( const FileNode& )
+{}
+
+void FeatureDetector::write( FileStorage& ) const
+{}
 
 /*
  *   FastFeatureDetector
@@ -95,7 +116,7 @@ void FastFeatureDetector::write (FileStorage& fs) const
     fs << "nonmaxSuppression" << nonmaxSuppression;
 }
 
-void FastFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -106,14 +127,13 @@ void FastFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints,
 /*
  *  GoodFeaturesToTrackDetector
  */
-GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector( int _maxCorners, double _qualityLevel, \
-                                                          double _minDistance, int _blockSize,
-                                                          bool _useHarrisDetector, double _k )
-    : maxCorners(_maxCorners), qualityLevel(_qualityLevel), minDistance(_minDistance),
-      blockSize(_blockSize), useHarrisDetector(_useHarrisDetector), k(_k)
+GoodFeaturesToTrackDetector::Params::Params( int _maxCorners, double _qualityLevel, double _minDistance,
+                                             int _blockSize, bool _useHarrisDetector, double _k ) :
+    maxCorners(_maxCorners), qualityLevel(_qualityLevel), minDistance(_minDistance),
+    blockSize(_blockSize), useHarrisDetector(_useHarrisDetector), k(_k)
 {}
 
-void GoodFeaturesToTrackDetector::read (const FileNode& fn)
+void GoodFeaturesToTrackDetector::Params::read (const FileNode& fn)
 {
     maxCorners = fn["maxCorners"];
     qualityLevel = fn["qualityLevel"];
@@ -123,7 +143,7 @@ void GoodFeaturesToTrackDetector::read (const FileNode& fn)
     k = fn["k"];
 }
 
-void GoodFeaturesToTrackDetector::write (FileStorage& fs) const
+void GoodFeaturesToTrackDetector::Params::write (FileStorage& fs) const
 {
     fs << "maxCorners" << maxCorners;
     fs << "qualityLevel" << qualityLevel;
@@ -133,20 +153,40 @@ void GoodFeaturesToTrackDetector::write (FileStorage& fs) const
     fs << "k" << k;
 }
 
-void GoodFeaturesToTrackDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector( const Params& _params ) : params(_params)
+{}
+
+GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector( int maxCorners, double qualityLevel,
+                                                          double minDistance, int blockSize,
+                                                          bool useHarrisDetector, double k )
+{
+    params = Params( maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k );
+}
+
+void GoodFeaturesToTrackDetector::read (const FileNode& fn)
+{
+    params.read(fn);
+}
+
+void GoodFeaturesToTrackDetector::write (FileStorage& fs) const
+{
+    params.write(fs);
+}
+
+void GoodFeaturesToTrackDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
 
     vector<Point2f> corners;
-    goodFeaturesToTrack( grayImage, corners, maxCorners, qualityLevel, minDistance, mask,
-                         blockSize, useHarrisDetector, k );
+    goodFeaturesToTrack( grayImage, corners, params.maxCorners, params.qualityLevel, params.minDistance, mask,
+                         params.blockSize, params.useHarrisDetector, params.k );
     keypoints.resize(corners.size());
     vector<Point2f>::const_iterator corner_it = corners.begin();
     vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
     for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
     {
-        *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
+        *keypoint_it = KeyPoint( *corner_it, (float)params.blockSize );
     }
 }
 
@@ -198,13 +238,12 @@ void MserFeatureDetector::write (FileStorage& fs) const
 }
 
 
-void MserFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void MserFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     vector<vector<Point> > msers;
 
     mser(image, msers, mask);
 
-    keypoints.clear();
     vector<vector<Point> >::const_iterator contour_it = msers.begin();
     for( ; contour_it != msers.end(); ++contour_it )
     {
@@ -220,6 +259,12 @@ void MserFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints,
 /*
  *  StarFeatureDetector
  */
+
+StarFeatureDetector::StarFeatureDetector( const CvStarDetectorParams& params )
+    : star( params.maxSize, params.responseThreshold, params.lineThresholdProjected,
+            params.lineThresholdBinarized, params.suppressNonmaxSize)
+{}
+
 StarFeatureDetector::StarFeatureDetector(int maxSize, int responseThreshold,
                                          int lineThresholdProjected,
                                          int lineThresholdBinarized,
@@ -251,7 +296,7 @@ void StarFeatureDetector::write (FileStorage& fs) const
     fs << "suppressNonmaxSize" << star.suppressNonmaxSize;
 }
 
-void StarFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void StarFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -263,13 +308,20 @@ void StarFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints,
 /*
  *   SiftFeatureDetector
  */
-SiftFeatureDetector::SiftFeatureDetector(double threshold, double edgeThreshold,
-                                         int nOctaves, int nOctaveLayers, int firstOctave, int angleMode) :
+SiftFeatureDetector::SiftFeatureDetector( const SIFT::DetectorParams &detectorParams,
+                                          const SIFT::CommonParams &commonParams )
+    : sift(detectorParams.threshold, detectorParams.edgeThreshold,
+           commonParams.nOctaves, commonParams.nOctaveLayers, commonParams.firstOctave, commonParams.angleMode)
+{
+}
+
+SiftFeatureDetector::SiftFeatureDetector( double threshold, double edgeThreshold,
+                                          int nOctaves, int nOctaveLayers, int firstOctave, int angleMode ) :
     sift(threshold, edgeThreshold, nOctaves, nOctaveLayers, firstOctave, angleMode)
 {
 }
 
-void SiftFeatureDetector::read (const FileNode& fn)
+void SiftFeatureDetector::read( const FileNode& fn )
 {
     double threshold = fn["threshold"];
     double edgeThreshold = fn["edgeThreshold"];
@@ -296,7 +348,7 @@ void SiftFeatureDetector::write (FileStorage& fs) const
 }
 
 
-void SiftFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void SiftFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -329,7 +381,7 @@ void SurfFeatureDetector::write (FileStorage& fs) const
     fs << "octaveLayers" << surf.nOctaveLayers;
 }
 
-void SurfFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void SurfFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -340,14 +392,24 @@ void SurfFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints,
 /*
  *  DenseFeatureDetector
  */
-void DenseFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
-{
-    keypoints.clear();
+DenseFeatureDetector::Params::Params( float _initFeatureScale, int _featureScaleLevels, 
+									  float _featureScaleMul, int _initXyStep, 
+									  int _initImgBound, bool _varyXyStepWithScale, 
+									  bool _varyImgBoundWithScale ) :
+	initFeatureScale(_initFeatureScale), featureScaleLevels(_featureScaleLevels),
+	featureScaleMul(_featureScaleMul), initXyStep(_initXyStep), initImgBound(_initImgBound),
+	varyXyStepWithScale(_varyXyStepWithScale), varyImgBoundWithScale(_varyImgBoundWithScale)
+{}
 
-    float curScale = initFeatureScale;
-    int curStep = initXyStep;
-    int curBound = initImgBound;
-    for( int curLevel = 0; curLevel < featureScaleLevels; curLevel++ )
+DenseFeatureDetector::DenseFeatureDetector(const DenseFeatureDetector::Params &_params) : params(_params)
+{}
+
+void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+    float curScale = params.initFeatureScale;
+    int curStep = params.initXyStep;
+    int curBound = params.initImgBound;
+    for( int curLevel = 0; curLevel < params.featureScaleLevels; curLevel++ )
     {
         for( int x = curBound; x < image.cols - curBound; x += curStep )
         {
@@ -357,9 +419,9 @@ void DenseFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints
             }
         }
 
-        curScale = curScale * featureScaleMul;
-        if( varyXyStepWithScale ) curStep = static_cast<int>( curStep * featureScaleMul + 0.5f );
-        if( varyImgBoundWithScale ) curBound = static_cast<int>( curBound * featureScaleMul + 0.5f );
+        curScale = curScale * params.featureScaleMul;
+        if( params.varyXyStepWithScale ) curStep = static_cast<int>( curStep * params.featureScaleMul + 0.5f );
+        if( params.varyImgBoundWithScale ) curBound = static_cast<int>( curBound * params.featureScaleMul + 0.5f );
     }
 
     removeInvalidPoints( mask, keypoints );
@@ -391,9 +453,8 @@ void keepStrongest( int N, vector<KeyPoint>& keypoints )
     }
 }
 
-void GridAdaptedFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
-    keypoints.clear();
     keypoints.reserve(maxTotalKeypoints);
 
     int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
@@ -430,7 +491,7 @@ PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureD
     : detector(_detector), levels(_levels)
 {}
 
-void PyramidAdaptedFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat src = image;
     for( int l = 0, multiplier = 1; l <= levels; ++l, multiplier *= 2 )
@@ -463,12 +524,11 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     FeatureDetector* fd = 0;
     if( !detectorType.compare( "FAST" ) )
     {
-        fd = new FastFeatureDetector( 10/*threshold*/, true/*nonmax_suppression*/ );
+        fd = new FastFeatureDetector();
     }
     else if( !detectorType.compare( "STAR" ) )
     {
-        fd = new StarFeatureDetector( 16/*max_size*/, 5/*response_threshold*/, 10/*line_threshold_projected*/,
-                                      8/*line_threshold_binarized*/, 5/*suppress_nonmax_size*/ );
+        fd = new StarFeatureDetector();
     }
     else if( !detectorType.compare( "SIFT" ) )
     {
@@ -477,23 +537,21 @@ Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
     }
     else if( !detectorType.compare( "SURF" ) )
     {
-        fd = new SurfFeatureDetector( 400./*hessian_threshold*/, 3 /*octaves*/, 4/*octave_layers*/ );
+        fd = new SurfFeatureDetector();
     }
     else if( !detectorType.compare( "MSER" ) )
     {
-        fd = new MserFeatureDetector( 5/*delta*/, 60/*min_area*/, 14400/*_max_area*/, 0.25f/*max_variation*/,
-                0.2/*min_diversity*/, 200/*max_evolution*/, 1.01/*area_threshold*/, 0.003/*min_margin*/,
-                5/*edge_blur_size*/ );
+        fd = new MserFeatureDetector();
     }
     else if( !detectorType.compare( "GFTT" ) )
     {
-        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
-                                              3/*int _blockSize*/, false/*useHarrisDetector*/, 0.04/*k*/ );
+        fd = new GoodFeaturesToTrackDetector();
     }
     else if( !detectorType.compare( "HARRIS" ) )
     {
-        fd = new GoodFeaturesToTrackDetector( 1000/*maxCorners*/, 0.01/*qualityLevel*/, 1./*minDistance*/,
-                                              3/*int _blockSize*/, true/*useHarrisDetector*/, 0.04/*k*/ );
+        GoodFeaturesToTrackDetector::Params params;
+        params.useHarrisDetector = true;
+        fd = new GoodFeaturesToTrackDetector(params);
     }
     return fd;
 }

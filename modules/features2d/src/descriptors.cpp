@@ -67,6 +67,21 @@ struct RoiPredicate
     float minX, minY, maxX, maxY;
 };
 
+DescriptorExtractor::~DescriptorExtractor()
+{}
+
+void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+{
+	if( image.empty() || keypoints.empty() )
+		return;
+
+	// Check keypoints are in image. Do filter bad points here?
+    //for( size_t i = 0; i < keypoints.size(); i++ )
+    //  CV_Assert( Rect(0,0, image.cols, image.rows).contains(keypoints[i].pt) );
+
+	computeImpl( image, keypoints, descriptors );
+}
+
 void DescriptorExtractor::compute( const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, vector<Mat>& descCollection ) const
 {
     descCollection.resize( imageCollection.size() );
@@ -74,27 +89,42 @@ void DescriptorExtractor::compute( const vector<Mat>& imageCollection, vector<ve
         compute( imageCollection[i], pointCollection[i], descCollection[i] );
 }
 
+void DescriptorExtractor::read( const FileNode& )
+{}
+
+void DescriptorExtractor::write( FileStorage& ) const
+{}
+
 void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
-                                                 Size imageSize, int borderPixels )
+                                                 Size imageSize, int borderSize )
 {
-    keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
-                               RoiPredicate((float)borderPixels, (float)borderPixels,
-                                            (float)(imageSize.width - borderPixels),
-                                            (float)(imageSize.height - borderPixels))),
-                     keypoints.end());
+    if( borderSize > 0)
+    {
+        keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
+                                   RoiPredicate((float)borderSize, (float)borderSize,
+                                                (float)(imageSize.width - borderSize),
+                                                (float)(imageSize.height - borderSize))),
+                         keypoints.end() );
+    }
 }
 
 /****************************************************************************************\
 *                                SiftDescriptorExtractor                                 *
 \****************************************************************************************/
+SiftDescriptorExtractor::SiftDescriptorExtractor(const SIFT::DescriptorParams& descriptorParams,
+                                                 const SIFT::CommonParams& commonParams)
+    : sift( descriptorParams.magnification, descriptorParams.isNormalize, descriptorParams.recalculateAngles,
+            commonParams.nOctaves, commonParams.nOctaveLayers, commonParams.firstOctave, commonParams.angleMode )
+{}
+
 SiftDescriptorExtractor::SiftDescriptorExtractor( double magnification, bool isNormalize, bool recalculateAngles,
                                                   int nOctaves, int nOctaveLayers, int firstOctave, int angleMode )
     : sift( magnification, isNormalize, recalculateAngles, nOctaves, nOctaveLayers, firstOctave, angleMode )
 {}
 
-void SiftDescriptorExtractor::compute( const Mat& image,
-                                       vector<KeyPoint>& keypoints,
-                                       Mat& descriptors) const
+void SiftDescriptorExtractor::computeImpl( const Mat& image,
+										   vector<KeyPoint>& keypoints,
+										   Mat& descriptors) const
 {
     bool useProvidedKeypoints = true;
     Mat grayImage = image;
@@ -131,6 +161,16 @@ void SiftDescriptorExtractor::write (FileStorage &fs) const
     fs << "angleMode" << commParams.angleMode;
 }
 
+int SiftDescriptorExtractor::descriptorSize() const
+{
+    return sift.descriptorSize();
+}
+
+int SiftDescriptorExtractor::descriptorType() const
+{
+    return CV_32FC1;
+}
+
 /****************************************************************************************\
 *                                SurfDescriptorExtractor                                 *
 \****************************************************************************************/
@@ -139,9 +179,9 @@ SurfDescriptorExtractor::SurfDescriptorExtractor( int nOctaves,
     : surf( 0.0, nOctaves, nOctaveLayers, extended )
 {}
 
-void SurfDescriptorExtractor::compute( const Mat& image,
-                                       vector<KeyPoint>& keypoints,
-                                       Mat& descriptors) const
+void SurfDescriptorExtractor::computeImpl( const Mat& image,
+                                           vector<KeyPoint>& keypoints,
+                                           Mat& descriptors) const
 {
     // Compute descriptors for given keypoints
     vector<float> _descriptors;
@@ -175,11 +215,21 @@ void SurfDescriptorExtractor::write( FileStorage &fs ) const
     fs << "extended" << surf.extended;
 }
 
+int SurfDescriptorExtractor::descriptorSize() const
+{
+    return surf.descriptorSize();
+}
+
+int SurfDescriptorExtractor::descriptorType() const
+{
+    return CV_32FC1;
+}
+
 /****************************************************************************************\
 *                             OpponentColorDescriptorExtractor                           *
 \****************************************************************************************/
-OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& _dextractor ) :
-        dextractor(_dextractor)
+OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& _descriptorExtractor ) :
+        descriptorExtractor(_descriptorExtractor)
 {}
 
 void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& opponentChannels )
@@ -246,33 +296,42 @@ void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& oppo
     }
 }
 
-void OpponentColorDescriptorExtractor::compute( const Mat& bgrImage, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 {
     vector<Mat> opponentChannels;
     convertBGRImageToOpponentColorSpace( bgrImage, opponentChannels );
 
     // Compute descriptors three times, once for each Opponent channel
     // and concatenate into a single color surf descriptor
-    int descriptorSize = dextractor->descriptorSize();
+    int descriptorSize = descriptorExtractor->descriptorSize();
     descriptors.create( static_cast<int>(keypoints.size()), 3*descriptorSize, CV_32FC1 );
     for( int i = 0; i < 3/*channel count*/; i++ )
     {
         CV_Assert( opponentChannels[i].type() == CV_8UC1 );
         Mat opponentDescriptors = descriptors.colRange( i*descriptorSize, (i+1)*descriptorSize );
-        dextractor->compute( opponentChannels[i], keypoints, opponentDescriptors );
+        descriptorExtractor->compute( opponentChannels[i], keypoints, opponentDescriptors );
     }
 }
 
 void OpponentColorDescriptorExtractor::read( const FileNode& fn )
 {
-    dextractor->read( fn );
+    descriptorExtractor->read(fn);
 }
 
 void OpponentColorDescriptorExtractor::write( FileStorage& fs ) const
 {
-    dextractor->write( fs );
+    descriptorExtractor->write(fs);
 }
 
+int OpponentColorDescriptorExtractor::descriptorSize() const
+{
+    return 3*descriptorExtractor->descriptorSize();
+}
+
+int OpponentColorDescriptorExtractor::descriptorType() const
+{
+    return descriptorExtractor->descriptorType();
+}
 /****************************************************************************************\
 *                   Factory function for descriptor extractor creating                   *
 \****************************************************************************************/

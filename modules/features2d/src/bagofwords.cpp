@@ -46,6 +46,12 @@ using namespace std;
 namespace cv
 {
 
+BOWTrainer::BOWTrainer()
+{}
+
+BOWTrainer::~BOWTrainer()
+{}
+
 void BOWTrainer::add( const Mat& _descriptors )
 {
     CV_Assert( !_descriptors.empty() );
@@ -61,6 +67,16 @@ void BOWTrainer::add( const Mat& _descriptors )
     }
 
     descriptors.push_back(_descriptors);
+}
+
+const vector<Mat>& BOWTrainer::getDescriptors() const
+{
+    return descriptors;
+}
+
+int BOWTrainer::descripotorsCount() const
+{
+    return descriptors.empty() ? 0 : size;
 }
 
 void BOWTrainer::clear()
@@ -91,6 +107,9 @@ Mat BOWKMeansTrainer::cluster() const
     return cluster( mergedDescriptors );
 }
 
+BOWKMeansTrainer::~BOWKMeansTrainer()
+{}
+
 Mat BOWKMeansTrainer::cluster( const Mat& descriptors ) const
 {
     Mat labels, vocabulary;
@@ -104,11 +123,19 @@ BOWImgDescriptorExtractor::BOWImgDescriptorExtractor( const Ptr<DescriptorExtrac
     dextractor(_dextractor), dmatcher(_dmatcher)
 {}
 
+BOWImgDescriptorExtractor::~BOWImgDescriptorExtractor()
+{}
+
 void BOWImgDescriptorExtractor::setVocabulary( const Mat& _vocabulary )
 {
     dmatcher->clear();
     vocabulary = _vocabulary;
     dmatcher->add( vector<Mat>(1, vocabulary) );
+}
+
+const Mat& BOWImgDescriptorExtractor::getVocabulary() const
+{
+    return vocabulary;
 }
 
 void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
@@ -151,6 +178,16 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& key
 
     // Normalize image descriptor.
     imgDescriptor /= descriptors.rows;
+}
+
+int BOWImgDescriptorExtractor::descriptorSize() const
+{
+    return vocabulary.empty() ? 0 : vocabulary.rows;
+}
+
+int BOWImgDescriptorExtractor::descriptorType() const
+{
+    return CV_32FC1;
 }
 
 }
