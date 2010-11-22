@@ -325,7 +325,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     Size SADWindowSize;
     SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;
     int ftzero = max(params.preFilterCap, 15) | 1;
-    int uniquenessRatio = params.uniquenessRatio > 0 ? params.uniquenessRatio : 10;
+    int uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
     int disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
     int P1 = params.P1 > 0 ? params.P1 : 2, P2 = max(params.P2 > 0 ? params.P2 : 5, P1+1);
     int k, width = disp1.cols, height = disp1.rows;
@@ -929,7 +929,7 @@ void StereoSGBM::operator ()( const Mat& left, const Mat& right, Mat& disp )
     medianBlur(disp, disp, 3);
     
     if( speckleWindowSize > 0 )
-        filterSpeckles(disp, (minDisparity - 1)*DISP_SCALE, 100, DISP_SCALE, buffer);
+        filterSpeckles(disp, (minDisparity - 1)*DISP_SCALE, speckleWindowSize, DISP_SCALE*speckleRange, buffer);
 }
     
     
