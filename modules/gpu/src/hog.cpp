@@ -313,7 +313,7 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& f
     for (size_t i = 0; i < level_scale.size(); i++)
     {
         double scale = level_scale[i];
-        Size sz(img.cols/scale, img.rows/scale);
+        Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
         GpuMat smaller_img;
 
         if (sz == img.size())
@@ -328,7 +328,7 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& f
         }
 
         detect(smaller_img, locations, hit_threshold, win_stride, padding);
-        Size scaled_win_size(win_size.width * scale, win_size.height * scale);
+        Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
             all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
     }
