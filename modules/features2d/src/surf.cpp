@@ -153,6 +153,56 @@ icvResizeHaarPattern( const int src[][5], CvSurfHF* dst, int n, int oldSize, int
 }
 
 /*
+ * Calculate the determinant and trace of the Hessian for a layer of the
+ * scale-space pyramid
+ */
+CV_INLINE void 
+icvCalcLayerDetAndTrace( const CvMat* sum, int size, int sampleStep, CvMat *det, CvMat *trace )
+{
+    const int NX=3, NY=3, NXY=4;
+    const int dx_s[NX][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
+    const int dy_s[NY][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
+    const int dxy_s[NXY][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
+
+    CvSurfHF Dx[NX], Dy[NY], Dxy[NXY];
+    double dx = 0, dy = 0, dxy = 0;
+    int i, j, samples_i, samples_j, margin;
+    int *sum_ptr;
+    float *det_ptr, *trace_ptr;
+
+    if( size>sum->rows-1 || size>sum->cols-1 )
+       return;
+
+    icvResizeHaarPattern( dx_s , Dx , NX , 9, size, sum->cols );
+    icvResizeHaarPattern( dy_s , Dy , NY , 9, size, sum->cols );
+    icvResizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum->cols );
+
+    /* The integral image 'sum' is one pixel bigger than the source image */
+    samples_i = 1+(sum->rows-1-size)/sampleStep;
+    samples_j = 1+(sum->cols-1-size)/sampleStep;
+
+    /* Ignore pixels where some of the kernel is outside the image */
+    margin = (size/2)/sampleStep;
+
+    for( i=0; i<samples_i; i++ )
+    {
+        sum_ptr = sum->data.i + (i*sampleStep)*sum->cols;
+        det_ptr = det->data.fl + (i+margin)*det->cols + margin;
+        trace_ptr = trace->data.fl + (i+margin)*trace->cols + margin;
+        for( j=0; j<samples_j; j++ )
+        {
+            dx  = icvCalcHaarPattern( sum_ptr, Dx , 3 );
+            dy  = icvCalcHaarPattern( sum_ptr, Dy , 3 );
+            dxy = icvCalcHaarPattern( sum_ptr, Dxy, 4 );
+            sum_ptr += sampleStep;
+            *det_ptr++ = (float)(dx*dy - 0.81*dxy*dxy);
+            *trace_ptr++ = (float)(dx + dy);
+        }
+    }
+}
+
+
+/*
  * Maxima location interpolation as described in "Invariant Features from
  * Interest Point Groups" by Matthew Brown and David Lowe. This is performed by
  * fitting a 3D quadratic to a set of neighbouring samples.
@@ -209,6 +259,185 @@ icvInterpolateKeypoint( float N9[3][9], int dx, int dy, int ds, CvSURFPoint *poi
     return solve_ok;
 }
 
+/*
+ * Find the maxima in the determinant of the Hessian in a layer of the 
+ * scale-space pyramid
+ */ 
+CV_INLINE void
+icvFindMaximaInLayer( const CvMat *sum, const CvMat* mask_sum, const CvSURFParams* params,
+                      CvMat **dets, CvMat **traces, const int *sizes, 
+                      int layer, int sampleStep, CvSeq* points )
+{
+    /* Wavelet Data */
+    const int NM=1;
+    const int dm[NM][5] = { {0, 0, 9, 9, 1} };
+
+    CvSurfHF Dm;
+    int i, j, size, margin, layer_rows, layer_cols;
+    float *det_ptr, *trace_ptr;
+ 
+    size = sizes[layer];
+    
+    /* The integral image 'sum' is one pixel bigger than the source image */
+    layer_rows = (sum->rows-1)/sampleStep;
+    layer_cols = (sum->cols-1)/sampleStep;
+
+    /* Ignore pixels without a 3x3x3 neighbourhood in the layer above */
+    margin = (sizes[layer+1]/2)/sampleStep+1; 
+
+    if( mask_sum )
+       icvResizeHaarPattern( dm, &Dm, NM, 9, size, mask_sum->cols );
+    
+    for( i = margin; i < layer_rows-margin; i++ )
+    {
+        det_ptr = dets[layer]->data.fl + i*dets[layer]->cols;
+        trace_ptr = traces[layer]->data.fl + i*traces[layer]->cols;
+        for( j = margin; j < layer_cols-margin; j++ )
+        {
+            float val0 = det_ptr[j];
+            if( val0 > params->hessianThreshold )
+            {
+                /* Coordinates for the start of the wavelet in the sum image. There   
+                   is some integer division involved, so don't try to simplify this
+                   (cancel out sampleStep) without checking the result is the same */
+                int sum_i = sampleStep*(i-(size/2)/sampleStep);
+                int sum_j = sampleStep*(j-(size/2)/sampleStep);
+
+                /* The 3x3x3 neighbouring samples around the maxima. 
+                   The maxima is included at N9[1][4] */
+                int c = dets[layer]->cols;
+                const float *det1 = dets[layer-1]->data.fl + i*c + j;
+                const float *det2 = dets[layer]->data.fl   + i*c + j;
+                const float *det3 = dets[layer+1]->data.fl + i*c + j;
+                float N9[3][9] = { { det1[-c-1], det1[-c], det1[-c+1],          
+                                     det1[-1]  , det1[0] , det1[1],
+                                     det1[c-1] , det1[c] , det1[c+1]  },
+                                   { det2[-c-1], det2[-c], det2[-c+1],       
+                                     det2[-1]  , det2[0] , det2[1],
+                                     det2[c-1] , det2[c] , det2[c+1]  },
+                                   { det3[-c-1], det3[-c], det3[-c+1],       
+                                     det3[-1]  , det3[0] , det3[1],
+                                     det3[c-1] , det3[c] , det3[c+1]  } };
+
+                /* Check the mask - why not just check the mask at the center of the wavelet? */
+                if( mask_sum )
+                {
+                    const int* mask_ptr = mask_sum->data.i +  mask_sum->cols*sum_i + sum_j;
+                    float mval = icvCalcHaarPattern( mask_ptr, &Dm, 1 );
+                    if( mval < 0.5 )
+                        continue;
+                }
+
+                /* Non-maxima suppression. val0 is at N9[1][4]*/
+                if( val0 > N9[0][0] && val0 > N9[0][1] && val0 > N9[0][2] &&
+                    val0 > N9[0][3] && val0 > N9[0][4] && val0 > N9[0][5] &&
+                    val0 > N9[0][6] && val0 > N9[0][7] && val0 > N9[0][8] &&
+                    val0 > N9[1][0] && val0 > N9[1][1] && val0 > N9[1][2] &&
+                    val0 > N9[1][3]                    && val0 > N9[1][5] &&
+                    val0 > N9[1][6] && val0 > N9[1][7] && val0 > N9[1][8] &&
+                    val0 > N9[2][0] && val0 > N9[2][1] && val0 > N9[2][2] &&
+                    val0 > N9[2][3] && val0 > N9[2][4] && val0 > N9[2][5] &&
+                    val0 > N9[2][6] && val0 > N9[2][7] && val0 > N9[2][8] )
+                {
+                    /* Calculate the wavelet center coordinates for the maxima */
+                    double center_i = sum_i + (double)(size-1)/2;
+                    double center_j = sum_j + (double)(size-1)/2;
+
+                    CvSURFPoint point = cvSURFPoint( cvPoint2D32f(center_j,center_i), 
+                                                     CV_SIGN(trace_ptr[j]), sizes[layer], 0, val0 );
+
+                    /* Interpolate maxima location within the 3x3x3 neighbourhood  */
+                    int ds = size-sizes[layer-1];
+                    int interp_ok = icvInterpolateKeypoint( N9, sampleStep, sampleStep, ds, &point );
+
+                    /* Sometimes the interpolation step gives a negative size etc. */
+                    if( interp_ok  )
+                    {   
+                        /*printf( "KeyPoint %f %f %d\n", point.pt.x, point.pt.y, point.size );*/
+                    #ifdef HAVE_TBB
+                        static tbb::mutex m;
+                        tbb::mutex::scoped_lock lock(m);
+                    #endif                        
+                        cvSeqPush( points, &point );
+                    }    
+                }
+            }
+        }
+    }
+}
+
+
+namespace cv
+{
+/* Multi-threaded construction of the scale-space pyramid */
+struct SURFBuildInvoker
+{
+    SURFBuildInvoker( const CvMat *_sum, const int *_sizes, const int *_sampleSteps,
+                      CvMat** _dets, CvMat** _traces )
+    {
+        sum = _sum;
+        sizes = _sizes;
+        sampleSteps = _sampleSteps;
+        dets = _dets;
+        traces = _traces;
+    }
+   
+    void operator()(const BlockedRange& range) const
+    { 
+        for( int i=range.begin(); i<range.end(); i++ )
+            icvCalcLayerDetAndTrace( sum, sizes[i], sampleSteps[i], dets[i], traces[i] );
+    }
+    
+    const CvMat *sum;
+    const int *sizes;
+    const int *sampleSteps;
+    CvMat** dets;
+    CvMat** traces;
+};
+
+/* Multi-threaded search of the scale-space pyramid for keypoints */
+struct SURFFindInvoker
+{
+    SURFFindInvoker( const CvMat *_sum, const CvMat *_mask_sum, const CvSURFParams* _params,
+                     CvMat** _dets, CvMat** _traces,  const int *_sizes,
+                     const int *_sampleSteps, const int *_middleIndices, CvSeq* _points )
+
+    {
+       sum = _sum;
+       mask_sum = _mask_sum;
+       params = _params;
+       dets = _dets;
+       traces = _traces;
+       sizes = _sizes;
+       sampleSteps = _sampleSteps;
+       middleIndices = _middleIndices;
+       points = _points;
+    }
+
+    void operator()(const BlockedRange& range) const
+    {
+        for( int i=range.begin(); i<range.end(); i++ )
+        {
+            int layer = middleIndices[i];
+            icvFindMaximaInLayer( sum, mask_sum, params, dets, traces, sizes, layer, 
+                                  sampleSteps[layer], points );
+        }
+    }    
+
+    const CvMat *sum;
+    const CvMat *mask_sum;
+    const CvSURFParams* params;
+    CvMat** dets;
+    CvMat** traces;
+    const int *sizes;
+    const int *sampleSteps;
+    const int *middleIndices;
+    CvSeq* points;
+};
+
+} // namespace cv
+
+
 
 /* Wavelet size at first layer of first octave. */ 
 const int HAAR_SIZE0 = 9;    
@@ -230,152 +459,48 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
        however keypoint extraction becomes unreliable. */
     const int SAMPLE_STEP0 = 1; 
 
+    int nTotalLayers = (params->nOctaveLayers+2)*params->nOctaves;
+    int nMiddleLayers = params->nOctaveLayers*params->nOctaves;
 
-    /* Wavelet Data */
-    const int NX=3, NY=3, NXY=4, NM=1;
-    const int dx_s[NX][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
-    const int dy_s[NY][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
-    const int dxy_s[NXY][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
-    const int dm[NM][5] = { {0, 0, 9, 9, 1} };
-    CvSurfHF Dx[NX], Dy[NY], Dxy[NXY], Dm;
-
-    CvMat** dets = (CvMat**)cvStackAlloc((params->nOctaveLayers+2)*sizeof(dets[0]));
-    CvMat** traces = (CvMat**)cvStackAlloc((params->nOctaveLayers+2)*sizeof(traces[0]));
-    int *sizes = (int*)cvStackAlloc((params->nOctaveLayers+2)*sizeof(sizes[0]));
-
-    double dx = 0, dy = 0, dxy = 0;
-    int octave, layer, sampleStep, size, margin;
-    int rows, cols;
-    int i, j, sum_i, sum_j;
-    const int* s_ptr;
-    float *det_ptr, *trace_ptr;
-
-    /* Allocate enough space for hessian determinant and trace matrices at the 
-       first octave. Clearing these initially or between octaves is not
-       required, since all values that are accessed are first calculated */
-    for( layer = 0; layer <= params->nOctaveLayers+1; layer++ )
+    CvMat** dets = (CvMat**)cvStackAlloc(nTotalLayers*sizeof(dets[0]));
+    CvMat** traces = (CvMat**)cvStackAlloc(nTotalLayers*sizeof(traces[0]));
+    int *sizes = (int*)cvStackAlloc(nTotalLayers*sizeof(sizes[0]));
+    int *sampleSteps = (int*)cvStackAlloc(nTotalLayers*sizeof(sampleSteps[0]));
+    int *middleIndices = (int*)cvStackAlloc(nMiddleLayers*sizeof(middleIndices[0]));
+    int octave, layer, step, index, middleIndex;
+ 
+    /* Allocate space and calculate properties of each layer */
+    index = 0;
+    middleIndex = 0;
+    step = SAMPLE_STEP0;
+    for( octave=0; octave<params->nOctaves; octave++ )
     {
-        dets[layer]   = cvCreateMat( (sum->rows-1)/SAMPLE_STEP0, (sum->cols-1)/SAMPLE_STEP0, CV_32FC1 );
-        traces[layer] = cvCreateMat( (sum->rows-1)/SAMPLE_STEP0, (sum->cols-1)/SAMPLE_STEP0, CV_32FC1 );
+        for( layer=0; layer<params->nOctaveLayers+2; layer++ )
+        {
+            /* The integral image sum is one pixel bigger than the source image*/
+            dets[index]   = cvCreateMat( (sum->rows-1)/step, (sum->cols-1)/step, CV_32FC1 );
+            traces[index] = cvCreateMat( (sum->rows-1)/step, (sum->cols-1)/step, CV_32FC1 );
+            sizes[index] = (HAAR_SIZE0+HAAR_SIZE_INC*layer)<<octave;
+            sampleSteps[index] = step;
+
+            if( layer!=0 && layer!=params->nOctaveLayers+1 )
+               middleIndices[middleIndex++] = index;
+            index++;
+        }
+        step*=2;
     }
 
-    for( octave = 0, sampleStep=SAMPLE_STEP0; octave < params->nOctaves; octave++, sampleStep*=2 )
-    {
-        /* Hessian determinant and trace sample array size in this octave */
-        rows = (sum->rows-1)/sampleStep;
-        cols = (sum->cols-1)/sampleStep;
+    /* Calculate hessian determinant and trace samples in each layer*/
+    cv::parallel_for( cv::BlockedRange(0, nTotalLayers),
+                      cv::SURFBuildInvoker(sum,sizes,sampleSteps,dets,traces) );
 
-        /* Calculate the determinant and trace of the hessian */
-        for( layer = 0; layer <= params->nOctaveLayers+1; layer++ )
-        {
-            sizes[layer] = size = (HAAR_SIZE0+HAAR_SIZE_INC*layer)<<octave;
-            icvResizeHaarPattern( dx_s, Dx, NX, 9, size, sum->cols );
-            icvResizeHaarPattern( dy_s, Dy, NY, 9, size, sum->cols );
-            icvResizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum->cols );
-            
-            margin = (size/2)/sampleStep;
-            for( sum_i=0, i=margin; sum_i<=(sum->rows-1)-size; sum_i+=sampleStep, i++ )
-            {
-                s_ptr = sum->data.i + sum_i*sum->cols;
-                det_ptr = dets[layer]->data.fl + i*dets[layer]->cols + margin;
-                trace_ptr = traces[layer]->data.fl + i*traces[layer]->cols + margin;
-                for( sum_j=0, j=margin; sum_j<=(sum->cols-1)-size; sum_j+=sampleStep, j++ )
-                {
-                    dx  = icvCalcHaarPattern( s_ptr, Dx, 3 );
-                    dy  = icvCalcHaarPattern( s_ptr, Dy, 3 );
-                    dxy = icvCalcHaarPattern( s_ptr, Dxy, 4 );
-                    s_ptr+=sampleStep;
-                    *det_ptr++ = (float)(dx*dy - 0.81*dxy*dxy);
-                    *trace_ptr++ = (float)(dx + dy);
-                }
-            }
-        }
-
-        /* Find maxima in the determinant of the hessian */
-        for( layer = 1; layer <= params->nOctaveLayers; layer++ )
-        {
-            size = sizes[layer];
-            icvResizeHaarPattern( dm, &Dm, NM, 9, size, mask_sum ? mask_sum->cols : sum->cols );
-            
-            /* Ignore pixels without a 3x3 neighbourhood in the layer above */
-            margin = (sizes[layer+1]/2)/sampleStep+1; 
-            for( i = margin; i < rows-margin; i++ )
-            {
-                det_ptr = dets[layer]->data.fl + i*dets[layer]->cols;
-                trace_ptr = traces[layer]->data.fl + i*traces[layer]->cols;
-                for( j = margin; j < cols-margin; j++ )
-                {
-                    float val0 = det_ptr[j];
-                    if( val0 > params->hessianThreshold )
-                    {
-                        /* Coordinates for the start of the wavelet in the sum image. There   
-                           is some integer division involved, so don't try to simplify this
-                           (cancel out sampleStep) without checking the result is the same */
-                        int sum_i = sampleStep*(i-(size/2)/sampleStep);
-                        int sum_j = sampleStep*(j-(size/2)/sampleStep);
-
-                        /* The 3x3x3 neighbouring samples around the maxima. 
-                           The maxima is included at N9[1][4] */
-                        int c = dets[layer]->cols;
-                        const float *det1 = dets[layer-1]->data.fl + i*c + j;
-                        const float *det2 = dets[layer]->data.fl   + i*c + j;
-                        const float *det3 = dets[layer+1]->data.fl + i*c + j;
-                        float N9[3][9] = { { det1[-c-1], det1[-c], det1[-c+1],          
-                                             det1[-1]  , det1[0] , det1[1],
-                                             det1[c-1] , det1[c] , det1[c+1]  },
-                                           { det2[-c-1], det2[-c], det2[-c+1],       
-                                             det2[-1]  , det2[0] , det2[1],
-                                             det2[c-1] , det2[c] , det2[c+1 ] },
-                                           { det3[-c-1], det3[-c], det3[-c+1],       
-                                             det3[-1  ], det3[0] , det3[1],
-                                             det3[c-1] , det3[c] , det3[c+1 ] } };
-
-                        /* Check the mask - why not just check the mask at the center of the wavelet? */
-                        if( mask_sum )
-                        {
-                            const int* mask_ptr = mask_sum->data.i +  mask_sum->cols*sum_i + sum_j;
-                            float mval = icvCalcHaarPattern( mask_ptr, &Dm, 1 );
-                            if( mval < 0.5 )
-                                continue;
-                        }
-
-                        /* Non-maxima suppression. val0 is at N9[1][4]*/
-                        if( val0 > N9[0][0] && val0 > N9[0][1] && val0 > N9[0][2] &&
-                            val0 > N9[0][3] && val0 > N9[0][4] && val0 > N9[0][5] &&
-                            val0 > N9[0][6] && val0 > N9[0][7] && val0 > N9[0][8] &&
-                            val0 > N9[1][0] && val0 > N9[1][1] && val0 > N9[1][2] &&
-                            val0 > N9[1][3]                    && val0 > N9[1][5] &&
-                            val0 > N9[1][6] && val0 > N9[1][7] && val0 > N9[1][8] &&
-                            val0 > N9[2][0] && val0 > N9[2][1] && val0 > N9[2][2] &&
-                            val0 > N9[2][3] && val0 > N9[2][4] && val0 > N9[2][5] &&
-                            val0 > N9[2][6] && val0 > N9[2][7] && val0 > N9[2][8] )
-                        {
-                            /* Calculate the wavelet center coordinates for the maxima */
-                            double center_i = sum_i + (double)(size-1)/2;
-                            double center_j = sum_j + (double)(size-1)/2;
-
-                            CvSURFPoint point = cvSURFPoint( cvPoint2D32f(center_j,center_i), 
-                                                             CV_SIGN(trace_ptr[j]), sizes[layer], 0, val0 );
-
-							/* Interpolate maxima location within the 3x3x3 neighbourhood  */
-                            int ds = sizes[layer]-sizes[layer-1];
-                            int interp_ok = icvInterpolateKeypoint( N9, sampleStep, sampleStep, ds, &point );
-
-                            /* Sometimes the interpolation step gives a negative size etc. */
-                            if( interp_ok )
-                            {    
-                                /*printf( "KeyPoint %f %f %d\n", point.pt.x, point.pt.y, point.size );*/
-                                cvSeqPush( points, &point );
-                            }    
-                        }
-                    }
-                }
-            }
-        }
-    }
+    /* Find maxima in the determinant of the hessian */
+    cv::parallel_for( cv::BlockedRange(0, nMiddleLayers),
+                      cv::SURFFindInvoker(sum,mask_sum,params,dets,traces,sizes,
+                                          sampleSteps,middleIndices,points) );
 
     /* Clean-up */
-    for( layer = 0; layer <= params->nOctaveLayers+1; layer++ )
+    for( layer = 0; layer < nTotalLayers; layer++ )
     {
         cvReleaseMat( &dets[layer] );
         cvReleaseMat( &traces[layer] );
@@ -388,6 +513,10 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
 namespace cv
 {
 
+/* Methods to free data allocated in SURFInvoker constructor */
+template<> inline void Ptr<float>::delete_obj(){ cvFree(&obj); }
+template<> inline void Ptr<CvPoint>::delete_obj(){ cvFree(&obj); }
+
 struct SURFInvoker
 {
     enum { ORI_RADIUS = 6, ORI_WIN = 60, PATCH_SZ = 20 };
@@ -398,41 +527,69 @@ struct SURFInvoker
     
     SURFInvoker( const CvSURFParams* _params,
                  CvSeq* _keypoints, CvSeq* _descriptors,
-                 const CvMat* _img, const CvMat* _sum, 
-                 const CvPoint* _apt, const float* _aptw,
-                 int _nangle0, const float* _DW )
+                 const CvMat* _img, const CvMat* _sum )
     {
         params = _params;
         keypoints = _keypoints;
         descriptors = _descriptors;
         img = _img;
         sum = _sum;
-        apt = _apt;
-        aptw = _aptw;
-        nangle0 = _nangle0;
-        DW = _DW;
+
+        /* Simple bound for number of grid points in circle of radius ORI_RADIUS */
+        const int nOriSampleBound = (2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
+        
+        /* Allocate arrays */
+        apt = (CvPoint*)cvAlloc(nOriSampleBound*sizeof(CvPoint));
+        aptw = (float*)cvAlloc(nOriSampleBound*sizeof(float));
+        DW = (float*)cvAlloc(PATCH_SZ*PATCH_SZ*sizeof(float));
+
+        /* Coordinates and weights of samples used to calculate orientation */
+        cv::Mat G_ori = cv::getGaussianKernel( 2*ORI_RADIUS+1, ORI_SIGMA, CV_32F );
+        nOriSamples = 0;
+        for( int i = -ORI_RADIUS; i <= ORI_RADIUS; i++ )
+        {
+            for( int j = -ORI_RADIUS; j <= ORI_RADIUS; j++ )
+            {
+                if( i*i + j*j <= ORI_RADIUS*ORI_RADIUS )
+                {
+                    apt[nOriSamples] = cvPoint(i,j);
+                    aptw[nOriSamples++] = G_ori.at<float>(i+ORI_RADIUS,0) * G_ori.at<float>(j+ORI_RADIUS,0);
+                }
+            }
+        }
+        CV_Assert( nOriSamples <= nOriSampleBound );
+
+        /* Gaussian used to weight descriptor samples */
+        cv::Mat G_desc = cv::getGaussianKernel( PATCH_SZ, DESC_SIGMA, CV_32F );
+        for( int i = 0; i < PATCH_SZ; i++ )
+        {
+            for( int j = 0; j < PATCH_SZ; j++ )
+                DW[i*PATCH_SZ+j] = G_desc.at<float>(i,0) * G_desc.at<float>(j,0);
+        }
     }
     
     void operator()(const BlockedRange& range) const
     {
         /* X and Y gradient wavelet data */
         const int NX=2, NY=2;
-        int dx_s[NX][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
-        int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
+        const int dx_s[NX][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
+        const int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
         
         const int descriptor_size = params->extended ? 128 : 64;
         
-        const int max_ori_samples = (2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
-        float X[max_ori_samples], Y[max_ori_samples], angle[max_ori_samples];
+        /* Optimisation is better using nOriSampleBound than nOriSamples for 
+         array lengths.  Maybe because it is a constant known at compile time */
+        const int nOriSampleBound =(2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
+
+        float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
         uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
         float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
-        
-        CvMat matX = cvMat(1, max_ori_samples, CV_32F, X);
-        CvMat matY = cvMat(1, max_ori_samples, CV_32F, Y);
-        CvMat _angle = cvMat(1, max_ori_samples, CV_32F, angle);
+        CvMat matX = cvMat(1, nOriSampleBound, CV_32F, X);
+        CvMat matY = cvMat(1, nOriSampleBound, CV_32F, Y);
+        CvMat _angle = cvMat(1, nOriSampleBound, CV_32F, angle);
         CvMat _patch = cvMat(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
         
-		int k, k1 = range.begin(), k2 = range.end();
+        int k, k1 = range.begin(), k2 = range.end();
         int maxSize = 0;
         
         for( k = k1; k < k2; k++ )
@@ -475,7 +632,7 @@ struct SURFInvoker
             }
             icvResizeHaarPattern( dx_s, dx_t, NX, 4, grad_wav_size, sum->cols );
             icvResizeHaarPattern( dy_s, dy_t, NY, 4, grad_wav_size, sum->cols );
-            for( kk = 0, nangle = 0; kk < nangle0; kk++ )
+            for( kk = 0, nangle = 0; kk < nOriSamples; kk++ )
             {
                 const int* ptr;
                 float vx, vy;
@@ -649,22 +806,25 @@ struct SURFInvoker
         }
     }
    
+    /* Parameters */
     const CvSURFParams* params;
     const CvMat* img;
     const CvMat* sum;
     CvSeq* keypoints;
     CvSeq* descriptors;
-    const CvPoint* apt;
-    const float* aptw;
-    int nangle0;
-    const float* DW;
+    
+    /* Pre-calculated values */
+    int nOriSamples;
+    cv::Ptr<CvPoint> apt; 
+    cv::Ptr<float> aptw;    
+    cv::Ptr<float> DW;
 };
      
 const int SURFInvoker::ORI_SEARCH_INC = 5;  
 const float SURFInvoker::ORI_SIGMA = 2.5f;
 const float SURFInvoker::DESC_SIGMA = 3.3f;
-    
 }
+
 
 CV_IMPL void
 cvExtractSURF( const CvArr* _img, const CvArr* _mask,
@@ -672,10 +832,6 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
                CvMemStorage* storage, CvSURFParams params,
 			   int useProvidedKeyPts)
 {
-    const int ORI_RADIUS = cv::SURFInvoker::ORI_RADIUS;
-    const float ORI_SIGMA = cv::SURFInvoker::ORI_SIGMA;
-    const float DESC_SIGMA = cv::SURFInvoker::DESC_SIGMA;
-    
     CvMat *sum = 0, *mask1 = 0, *mask_sum = 0;
 
     if( _keypoints && !useProvidedKeyPts ) // If useProvidedKeyPts!=0 we'll use current contents of "*_keypoints"
@@ -687,15 +843,9 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
     CvMat imghdr, *img = cvGetMat(_img, &imghdr);
     CvMat maskhdr, *mask = _mask ? cvGetMat(_mask, &maskhdr) : 0;
     
-    const int max_ori_samples = (2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
     int descriptor_size = params.extended ? 128 : 64;
     const int descriptor_data_type = CV_32F;
-    const int PATCH_SZ = 20;
-    float DW[PATCH_SZ][PATCH_SZ];
-    CvMat _DW = cvMat(PATCH_SZ, PATCH_SZ, CV_32F, DW);
-    CvPoint apt[max_ori_samples];
-    float aptw[max_ori_samples];
-    int i, j, nangle0 = 0, N;
+    int i, N;
 
     CV_Assert(img != 0);
     CV_Assert(CV_MAT_TYPE(img->type) == CV_8UC1);
@@ -734,44 +884,12 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
         cvSeqPushMulti( descriptors, 0, N );
     }
 
-    /* Coordinates and weights of samples used to calculate orientation */
-    cv::Mat matG = cv::getGaussianKernel( 2*ORI_RADIUS+1, ORI_SIGMA, CV_32F );
-    const float* G = (const float*)matG.data;
-    
-    for( i = -ORI_RADIUS; i <= ORI_RADIUS; i++ )
-    {
-        for( j = -ORI_RADIUS; j <= ORI_RADIUS; j++ )
-        {
-            if( i*i + j*j <= ORI_RADIUS*ORI_RADIUS )
-            {
-                apt[nangle0] = cvPoint(j,i);
-                aptw[nangle0++] = G[i+ORI_RADIUS]*G[j+ORI_RADIUS];
-            }
-        }
-    }
-
-    /* Gaussian used to weight descriptor samples */
-    double c2 = 1./(DESC_SIGMA*DESC_SIGMA*2);
-    double gs = 0;
-    for( i = 0; i < PATCH_SZ; i++ )
-    {
-        for( j = 0; j < PATCH_SZ; j++ )
-        {
-            double x = j - (float)(PATCH_SZ-1)/2, y = i - (float)(PATCH_SZ-1)/2;
-            double val = exp(-(x*x+y*y)*c2);
-            DW[i][j] = (float)val;
-            gs += val;
-        }
-    }
-    cvScale( &_DW, &_DW, 1./gs );
-	
+     
 	if ( N > 0 )
-		cv::parallel_for(cv::BlockedRange(0, N),
-						 cv::SURFInvoker(&params, keypoints, descriptors, img, sum,
-										 apt, aptw, nangle0, &DW[0][0]));
-    //cv::SURFInvoker(&params, keypoints, descriptors, img, sum,
-    //                apt, aptw, nangle0, &DW[0][0])(cv::BlockedRange(0, N));
-    
+    cv::parallel_for(cv::BlockedRange(0, N),
+                     cv::SURFInvoker(&params, keypoints, descriptors, img, sum) );
+
+
     /* remove keypoints that were marked for deletion */
     for ( i = 0; i < N; i++ )
     {
