@@ -1227,9 +1227,11 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
         while( !feof( input ) )
         {
             *imgfilename = '\0';
-            if( !fscanf( input, "%s", imgfilename ))
+            if( !fgets( imgfilename, PATH_MAX - (imgfilename - full) - 1, input ))
                 break;
             len = (int)strlen( imgfilename );
+			if( len > 0 && imgfilename[len-1] == '\n' )
+				imgfilename[len-1] = 0, len--;
             if( len > 0 )
             {
                 if( (*imgfilename) == '#' ) continue; /* comment */
@@ -1254,9 +1256,11 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
             while( !feof( input ) )
             {
                 *imgfilename = '\0';
-                if( !fscanf( input, "%s", imgfilename ))
+				if( !fgets( imgfilename, PATH_MAX - (imgfilename - full) - 1, input ))
                     break;
                 len = (int)strlen( imgfilename );
+				if( len > 0 && imgfilename[len-1] == '\n' )
+					imgfilename[len-1] = 0, len--;
                 if( len > 0 )
                 {
                     if( (*imgfilename) == '#' ) continue; /* comment */
@@ -1351,11 +1355,11 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
 //#endif /* CV_VERBOSE */
           
             img = cvLoadImage( data->filename[data->last++], 0 );
-            if( !img )
+            data->last %= data->count;
+            if( !img )				
                 continue;
             data->round += data->last / data->count;
             data->round = data->round % (data->winsize.width * data->winsize.height);
-            data->last %= data->count;
 
             offset.x = round % data->winsize.width;
             offset.y = round / data->winsize.width;
