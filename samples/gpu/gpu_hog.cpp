@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <stdexcept>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
@@ -39,7 +40,7 @@ public:
 /** Describes aplication logic */
 class App
 {
-public:    
+public:
     /** Initializes application */
     App(const Settings& s);
 
@@ -86,7 +87,7 @@ int main(int argc, char** argv)
     {
         if (argc < 2)
         {
-            cout << "Usage:\nsample_hog\n" 
+            cout << "Usage:\nsample_hog\n"
                 << "  -src <path_to_the_source>\n"
                 << "  [-src_is_video <true/false>] # says to interp. src as img or as video\n"
                 << "  [-make_gray <true/false>] # convert image to gray one or not\n"
@@ -216,7 +217,7 @@ void App::RunOpencvGui()
     {
         VideoCapture vc;
         Mat frame;
-        
+
         if (settings.src_is_video)
         {
             vc.open(settings.src.c_str());
@@ -353,7 +354,7 @@ void App::HandleKey(char key)
 inline void App::HogWorkBegin() { hog_work_begin = getTickCount(); }
 
 
-inline void App::HogWorkEnd() 
+inline void App::HogWorkEnd()
 {
     int64 delta = getTickCount() - hog_work_begin;
     double freq = getTickFrequency();
@@ -367,7 +368,7 @@ inline double App::HogWorkFps() const { return hog_work_fps; }
 inline void App::WorkBegin() { work_begin = getTickCount(); }
 
 
-inline void App::WorkEnd() 
+inline void App::WorkEnd()
 {
     int64 delta = getTickCount() - work_begin;
     double freq = getTickFrequency();
@@ -378,8 +379,8 @@ inline void App::WorkEnd()
 inline double App::WorkFps() const { return work_fps; }
 
 
-inline const string App::GetPerformanceSummary() const 
-{ 
+inline const string App::GetPerformanceSummary() const
+{
     stringstream ss;
     ss << (use_gpu ? "GPU" : "CPU") << " HOG FPS: " << setiosflags(ios::left) << setprecision(4) <<
        setw(7) << HogWorkFps() << " Total FPS: " << setprecision(4) << setw(7) << WorkFps();
