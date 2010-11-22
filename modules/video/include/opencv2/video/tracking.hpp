@@ -280,9 +280,9 @@ public:
     //! the default constructor
     CV_WRAP KalmanFilter();
     //! the full constructor taking the dimensionality of the state, of the measurement and of the control vector
-    CV_WRAP KalmanFilter(int dynamParams, int measureParams, int controlParams=0);
+    CV_WRAP KalmanFilter(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F);
     //! re-initializes Kalman filter. The previous content is destroyed.
-    void init(int dynamParams, int measureParams, int controlParams=0);
+    void init(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F);
 
     //! computes predicted state
     CV_WRAP const Mat& predict(const Mat& control=Mat());
