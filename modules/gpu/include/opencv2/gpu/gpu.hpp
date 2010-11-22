@@ -474,53 +474,53 @@ namespace cv
         //! computes magnitude of each (x(i), y(i)) vector
         //! supports only floating-point source
         CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
-        //! Async version
+        //! async version
         CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream);
 
         //! computes squared magnitude of each (x(i), y(i)) vector
         //! supports only floating-point source
         CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude);
-        //! Async version
+        //! async version
         CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream);
 
         //! computes angle (angle(i)) of each (x(i), y(i)) vector
         //! supports only floating-point source
         CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees = false);
-        //! Async version
+        //! async version
         CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees, const Stream& stream);
 
         //! converts Cartesian coordinates to polar
         //! supports only floating-point source
         CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees = false);
-        //! Async version
+        //! async version
         CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees, const Stream& stream);
 
         //! converts polar coordinates to Cartesian
         //! supports only floating-point source
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false);
-        //! Async version
+        //! async version
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream);
 
 
-        //! Perfroms per-elements bit-wise inversion 
-        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const Stream& stream);
+        //! perfroms per-elements bit-wise inversion 
+        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! async version
+        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
-        //! Calculates per-element bit-wise disjunction of two arrays
-        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+        //! calculates per-element bit-wise disjunction of two arrays
+        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! async version
+        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
-        //! Calculates per-element bit-wise conjunction of two arrays
-        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+        //! calculates per-element bit-wise conjunction of two arrays
+        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! async version
+        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
-        //! Calculates per-element bit-wise "exclusive or" operation
-        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+        //! calculates per-element bit-wise "exclusive or" operation
+        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! async version
+        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
         //! Logical operators
         CV_EXPORTS GpuMat operator ~ (const GpuMat& src);
@@ -551,7 +551,7 @@ namespace cv
         //! Supported types of input disparity: CV_8U, CV_16S.
         //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
         CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp);
-        //! Async version
+        //! async version
         CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, const Stream& stream);
 
         //! Reprojects disparity image to 3D space. 
@@ -560,12 +560,12 @@ namespace cv
         //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
         //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
         CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
-        //! Async version
+        //! async version
         CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const Stream& stream);
 
         //! converts image from one color space to another
         CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0);
-        //! Async version
+        //! async version
         CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
 
         //! applies fixed threshold to the image. 
@@ -821,7 +821,7 @@ namespace cv
             //! Output disparity has CV_8U type.
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
-            //! Async version
+            //! async version
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream & stream);
 
             //! Some heuristics that tries to estmate
@@ -876,7 +876,7 @@ namespace cv
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
-            //! Async version
+            //! async version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
 
@@ -935,7 +935,7 @@ namespace cv
             //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity);
 
-            //! Async version
+            //! async version
             void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream);
 
             int ndisp;
@@ -991,7 +991,7 @@ namespace cv
             //! disparity must have CV_8U or CV_16S type, image must have CV_8UC1 or CV_8UC3 type.
             void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst);
 
-            //! Async version
+            //! async version
             void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst, Stream& stream);
 
         private:

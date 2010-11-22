@@ -60,7 +60,7 @@ struct CV_GpuBitwiseTest: public CvTest
         int rows, cols;
         for (int depth = CV_8U; depth <= CV_64F; ++depth)
             for (int cn = 1; cn <= 4; ++cn)
-                for (int attempt = 0; attempt < 5; ++attempt)
+                for (int attempt = 0; attempt < 3; ++attempt)
                 {
                     rows = 1 + rand() % 100;
                     cols = 1 + rand() % 100;
@@ -83,7 +83,12 @@ struct CV_GpuBitwiseTest: public CvTest
         }
 
         Mat dst_gold = ~src;
-        gpu::GpuMat dst = ~gpu::GpuMat(src);
+
+        gpu::GpuMat mask(src.size(), CV_8U);
+        mask.setTo(Scalar(1));
+
+        gpu::GpuMat dst;
+        gpu::bitwise_not(gpu::GpuMat(src), dst, mask);
 
         CHECK(dst_gold.size() == dst.size(), CvTS::FAIL_INVALID_OUTPUT);
         CHECK(dst_gold.type() == dst.type(), CvTS::FAIL_INVALID_OUTPUT);        
@@ -112,10 +117,23 @@ struct CV_GpuBitwiseTest: public CvTest
 
         CHECK(dst_gold.size() == dst.size(), CvTS::FAIL_INVALID_OUTPUT);
         CHECK(dst_gold.type() == dst.type(), CvTS::FAIL_INVALID_OUTPUT);        
-
         Mat dsth(dst);
         for (int i = 0; i < dst_gold.rows; ++i)       
             CHECK(memcmp(dst_gold.ptr(i), dsth.ptr(i), dst_gold.cols * dst_gold.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
+
+        Mat mask(src1.size(), CV_8U);
+        randu(mask, Scalar(0), Scalar(255));
+
+        Mat dst_gold2(dst_gold.size(), dst_gold.type()); dst_gold2.setTo(Scalar::all(0));
+        gpu::GpuMat dst2(dst.size(), dst.type()); dst2.setTo(Scalar::all(0));
+        bitwise_or(src1, src2, dst_gold2, mask);
+        gpu::bitwise_or(gpu::GpuMat(src1), gpu::GpuMat(src2), dst2, gpu::GpuMat(mask));
+
+        CHECK(dst_gold2.size() == dst2.size(), CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(dst_gold2.type() == dst2.type(), CvTS::FAIL_INVALID_OUTPUT);        
+        dsth = dst2;
+        for (int i = 0; i < dst_gold.rows; ++i)       
+            CHECK(memcmp(dst_gold2.ptr(i), dsth.ptr(i), dst_gold2.cols * dst_gold2.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
     }
 
     void test_bitwise_and(int rows, int cols, int type)
@@ -138,10 +156,24 @@ struct CV_GpuBitwiseTest: public CvTest
 
         CHECK(dst_gold.size() == dst.size(), CvTS::FAIL_INVALID_OUTPUT);
         CHECK(dst_gold.type() == dst.type(), CvTS::FAIL_INVALID_OUTPUT);        
-
         Mat dsth(dst);
         for (int i = 0; i < dst_gold.rows; ++i)       
             CHECK(memcmp(dst_gold.ptr(i), dsth.ptr(i), dst_gold.cols * dst_gold.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
+
+
+        Mat mask(src1.size(), CV_8U);
+        randu(mask, Scalar(0), Scalar(255));
+
+        Mat dst_gold2(dst_gold.size(), dst_gold.type()); dst_gold2.setTo(Scalar::all(0));
+        gpu::GpuMat dst2(dst.size(), dst.type()); dst2.setTo(Scalar::all(0));
+        bitwise_and(src1, src2, dst_gold2, mask);
+        gpu::bitwise_and(gpu::GpuMat(src1), gpu::GpuMat(src2), dst2, gpu::GpuMat(mask));
+
+        CHECK(dst_gold2.size() == dst2.size(), CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(dst_gold2.type() == dst2.type(), CvTS::FAIL_INVALID_OUTPUT);        
+        dsth = dst2;
+        for (int i = 0; i < dst_gold.rows; ++i)       
+            CHECK(memcmp(dst_gold2.ptr(i), dsth.ptr(i), dst_gold2.cols * dst_gold2.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
     }
 
     void test_bitwise_xor(int rows, int cols, int type)
@@ -164,10 +196,24 @@ struct CV_GpuBitwiseTest: public CvTest
 
         CHECK(dst_gold.size() == dst.size(), CvTS::FAIL_INVALID_OUTPUT);
         CHECK(dst_gold.type() == dst.type(), CvTS::FAIL_INVALID_OUTPUT);        
-
         Mat dsth(dst);
         for (int i = 0; i < dst_gold.rows; ++i)       
             CHECK(memcmp(dst_gold.ptr(i), dsth.ptr(i), dst_gold.cols * dst_gold.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
+
+
+        Mat mask(src1.size(), CV_8U);
+        randu(mask, Scalar(0), Scalar(255));
+
+        Mat dst_gold2(dst_gold.size(), dst_gold.type()); dst_gold2.setTo(Scalar::all(0));
+        gpu::GpuMat dst2(dst.size(), dst.type()); dst2.setTo(Scalar::all(0));
+        bitwise_xor(src1, src2, dst_gold2, mask);
+        gpu::bitwise_xor(gpu::GpuMat(src1), gpu::GpuMat(src2), dst2, gpu::GpuMat(mask));
+
+        CHECK(dst_gold2.size() == dst2.size(), CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(dst_gold2.type() == dst2.type(), CvTS::FAIL_INVALID_OUTPUT);        
+        dsth = dst2;
+        for (int i = 0; i < dst_gold.rows; ++i)       
+            CHECK(memcmp(dst_gold2.ptr(i), dsth.ptr(i), dst_gold2.cols * dst_gold2.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
     }
 } gpu_bitwise_test;
 

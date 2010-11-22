@@ -243,100 +243,154 @@ namespace cv { namespace gpu { namespace mathfunc
 //////////////////////////////////////////////////////////////////////////////
 // Per-element bit-wise logical matrix operations
 
+    struct Mask8U
+    {
+        explicit Mask8U(PtrStep mask): mask(mask) {}
+        __device__ bool operator()(int y, int x) { return mask.ptr(y)[x]; }
+        PtrStep mask;
+    };
+    struct MaskTrue { __device__ bool operator()(int y, int x) { return true; } };
 
-    __global__ void bitwise_not_kernel(int cols, int rows, const PtrStep src, PtrStep dst)
+    // Unary operations
+
+    enum { UN_OP_NOT };
+
+    template <typename T, int opid>
+    struct UnOp { __device__ T operator()(T lhs, T rhs); };
+
+    template <typename T>
+    struct UnOp<T, UN_OP_NOT>{ __device__ T operator()(T x) { return ~x; } };
+
+    template <typename T, int cn, typename UnOp, typename Mask>
+    __global__ void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, UnOp op, Mask mask)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < cols && y < rows)
+        if (x < cols && y < rows && mask(y, x)) 
         {
-            dst.ptr(y)[x] = ~src.ptr(y)[x];
+            T* dsty = (T*)dst.ptr(y);
+            const T* srcy = (const T*)src.ptr(y);
+
+            #pragma unroll
+            for (int i = 0; i < cn; ++i)
+                dsty[cn * x + i] = op(srcy[cn * x + i]);
         }
     }
 
-
-    void bitwise_not_caller(const DevMem2D src, int elemSize, PtrStep dst, cudaStream_t stream)
+    template <int opid, typename Mask>
+    void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, int elem_size, Mask mask, cudaStream_t stream)
     {
-        dim3 threads(16, 16, 1);
-        dim3 grid(divUp(src.cols * elemSize, threads.x), divUp(src.rows, threads.y), 1);
-
-        bitwise_not_kernel<<<grid, threads, 0, stream>>>(src.cols * elemSize, src.rows, src, dst);
-
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+        dim3 threads(16, 16);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+        switch (elem_size)
+        {
+        case 1: bitwise_un_op<unsigned char, 1><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned char, opid>(), mask); break;
+        case 2: bitwise_un_op<unsigned short, 1><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned short, opid>(), mask); break;
+        case 3: bitwise_un_op<unsigned char, 3><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned char, opid>(), mask); break;
+        case 4: bitwise_un_op<unsigned int, 1><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
+        case 6: bitwise_un_op<unsigned short, 3><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned short, opid>(), mask); break;
+        case 8: bitwise_un_op<unsigned int, 2><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;       
+        case 12: bitwise_un_op<unsigned int, 3><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
+        case 16: bitwise_un_op<unsigned int, 4><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
+        case 24: bitwise_un_op<unsigned int, 6><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
+        case 32: bitwise_un_op<unsigned int, 8><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
+        }
+        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
     }
 
+    void bitwise_not_caller(int rows, int cols,const PtrStep src, int elem_size, PtrStep dst, cudaStream_t stream)
+    {
+        bitwise_un_op<UN_OP_NOT>(rows, cols, src, dst, elem_size, MaskTrue(), stream);
+    }
 
-    __global__ void bitwise_or_kernel(int cols, int rows, const PtrStep src1, const PtrStep src2, PtrStep dst)
+    void bitwise_not_caller(int rows, int cols,const PtrStep src, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
+    {
+        bitwise_un_op<UN_OP_NOT>(rows, cols, src, dst, elem_size, Mask8U(mask), stream);
+    }
+
+    // Binary operations
+
+    enum { BIN_OP_OR, BIN_OP_AND, BIN_OP_XOR };
+
+    template <typename T, int opid>
+    struct BinOp { __device__ T operator()(T lhs, T rhs); };
+
+    template <typename T>
+    struct BinOp<T, BIN_OP_OR>{ __device__ T operator()(T lhs, T rhs) { return lhs | rhs; } };
+
+    template <typename T>
+    struct BinOp<T, BIN_OP_AND>{ __device__ T operator()(T lhs, T rhs) { return lhs & rhs; } };
+
+    template <typename T>
+    struct BinOp<T, BIN_OP_XOR>{ __device__ T operator()(T lhs, T rhs) { return lhs ^ rhs; } };
+
+    template <typename T, int cn, typename BinOp, typename Mask>
+    __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, BinOp op, Mask mask)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < cols && y < rows)
+        if (x < cols && y < rows && mask(y, x)) 
         {
-            dst.ptr(y)[x] = src1.ptr(y)[x] | src2.ptr(y)[x];
+            T* dsty = (T*)dst.ptr(y);
+            const T* src1y = (const T*)src1.ptr(y);
+            const T* src2y = (const T*)src2.ptr(y);
+
+            #pragma unroll
+            for (int i = 0; i < cn; ++i)
+                dsty[cn * x + i] = op(src1y[cn * x + i], src2y[cn * x + i]);
         }
     }
 
-
-    void bitwise_or_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream)
+    template <int opid, typename Mask>
+    void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, int elem_size, Mask mask, cudaStream_t stream)
     {
-        dim3 threads(16, 16, 1);
-        dim3 grid(divUp(cols * elemSize, threads.x), divUp(rows, threads.y), 1);
-
-        bitwise_or_kernel<<<grid, threads, 0, stream>>>(cols * elemSize, rows, src1, src2, dst);
-
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
-    }
-
-
-    __global__ void bitwise_and_kernel(int cols, int rows, const PtrStep src1, const PtrStep src2, PtrStep dst)
-    {
-        const int x = blockDim.x * blockIdx.x + threadIdx.x;
-        const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-        if (x < cols && y < rows)
+        dim3 threads(16, 16);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+        switch (elem_size)
         {
-            dst.ptr(y)[x] = src1.ptr(y)[x] & src2.ptr(y)[x];
+        case 1: bitwise_bin_op<unsigned char, 1><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned char, opid>(), mask); break;
+        case 2: bitwise_bin_op<unsigned short, 1><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned short, opid>(), mask); break;
+        case 3: bitwise_bin_op<unsigned char, 3><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned char, opid>(), mask); break;
+        case 4: bitwise_bin_op<unsigned int, 1><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
+        case 6: bitwise_bin_op<unsigned short, 3><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned short, opid>(), mask); break;
+        case 8: bitwise_bin_op<unsigned int, 2><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;       
+        case 12: bitwise_bin_op<unsigned int, 3><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
+        case 16: bitwise_bin_op<unsigned int, 4><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
+        case 24: bitwise_bin_op<unsigned int, 6><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
+        case 32: bitwise_bin_op<unsigned int, 8><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
         }
+        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
     }
 
-
-    void bitwise_and_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream)
+    void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
-        dim3 threads(16, 16, 1);
-        dim3 grid(divUp(cols * elemSize, threads.x), divUp(rows, threads.y), 1);
-
-        bitwise_and_kernel<<<grid, threads, 0, stream>>>(cols * elemSize, rows, src1, src2, dst);
-
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+        bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
     }
 
-
-
-    __global__ void bitwise_xor_kernel(int cols, int rows, const PtrStep src1, const PtrStep src2, PtrStep dst)
+    void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
-        const int x = blockDim.x * blockIdx.x + threadIdx.x;
-        const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-        if (x < cols && y < rows)
-        {
-            dst.ptr(y)[x] = src1.ptr(y)[x] ^ src2.ptr(y)[x];
-        }
+        bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
     }
 
-
-    void bitwise_xor_caller(int cols, int rows, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream)
+    void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
-        dim3 threads(16, 16, 1);
-        dim3 grid(divUp(cols * elemSize, threads.x), divUp(rows, threads.y), 1);
-
-        bitwise_xor_kernel<<<grid, threads, 0, stream>>>(cols * elemSize, rows, src1, src2, dst);
-
-        if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+        bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
     }
+
+    void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
+    {
+        bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
+    }
+
+    void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
+    {
+        bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
+    }
+
+    void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
+    {
+        bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
+    }  
 }}}
