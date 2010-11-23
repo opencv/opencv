@@ -48,11 +48,8 @@ void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Gpu
 
 #else /* !defined (HAVE_CUDA) */
 
-#define NPP_VERSION (10 * NPP_VERSION_MAJOR + NPP_VERSION_MINOR)
-
 void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf)
 {
-#if NPP_VERSION >= 32
     CV_Assert(leftTransp.type() == CV_32S && rightTransp.type() == CV_32S);
     CV_Assert(terminals.type() == CV_32S && bottom.type() == CV_32S && top.type() == CV_32S);
     CV_Assert(terminals.size() == leftTransp.size());
@@ -74,9 +71,6 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 
     nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
         terminals.step, leftTransp.step, sznpp, labels.ptr<Npp8u>(), labels.step, buf.ptr<Npp8u>()) );
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 

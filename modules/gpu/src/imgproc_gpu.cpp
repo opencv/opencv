@@ -71,8 +71,6 @@ void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); 
 
 #else /* !defined (HAVE_CUDA) */
 
-#define NPP_VERSION (10 * NPP_VERSION_MAJOR + NPP_VERSION_MINOR)
-
 namespace cv { namespace gpu {  namespace imgproc
 {
     void remap_gpu_1c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst);
@@ -579,7 +577,6 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
 void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
 {
-#if NPP_VERSION >= 32
     CV_Assert(!"disabled until fix crash");
     CV_Assert(image.type() == CV_8UC1);
 
@@ -603,9 +600,6 @@ void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, doubl
 
     nppSafeCall( nppiCanny_32f8u_C1R(srcDx.ptr<Npp32f>(), srcDx.step, srcDy.ptr<Npp32f>(), srcDy.step,
         edges.ptr<Npp8u>(), edges.step, sz, (Npp32f)threshold1, (Npp32f)threshold2, buf.ptr<Npp8u>()) );
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -789,18 +783,13 @@ namespace
 
 void cv::gpu::evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel)
 {
-#if NPP_VERSION >= 32
     Mat host_levels(1, nLevels, CV_32SC1);
     nppSafeCall( nppiEvenLevelsHost_32s(host_levels.ptr<Npp32s>(), nLevels, lowerLevel, upperLevel) );
     levels.upload(host_levels);
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 void cv::gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
 {
-#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 );
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat& hist, int levels, int lowerLevel, int upperLevel);
@@ -813,14 +802,10 @@ void cv::gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerL
     };
 
     hist_callers[src.depth()](src, hist, histSize, lowerLevel, upperLevel);
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 void cv::gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
 {
-#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4 || src.type() == CV_16SC4 );
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], int levels[4], int lowerLevel[4], int upperLevel[4]);
@@ -833,14 +818,10 @@ void cv::gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int l
     };
 
     hist_callers[src.depth()](src, hist, histSize, lowerLevel, upperLevel);
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 {
-#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 || src.type() == CV_32FC1);
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat& hist, const GpuMat& levels);
@@ -855,14 +836,10 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
     };
 
     hist_callers[src.depth()](src, hist, levels);
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
 {
-#if NPP_VERSION >= 32
     CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4 || src.type() == CV_16SC4 || src.type() == CV_32FC4);
 
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4]);
@@ -877,9 +854,6 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     };
 
     hist_callers[src.depth()](src, hist, levels);
-#else
-    CV_Assert(!"This function doesn't supported");
-#endif
 }
 
 #endif /* !defined (HAVE_CUDA) */

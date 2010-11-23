@@ -77,8 +77,6 @@ namespace cv
 
 #else /* !defined (HAVE_CUDA) */
 
-#define NPP_VERSION (10 * NPP_VERSION_MAJOR + NPP_VERSION_MINOR)
-
 namespace cv
 {
     namespace gpu
@@ -234,11 +232,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
                 {NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C4R>::cvt},
                 {NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C4R>::cvt},
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-#if NPP_VERSION >= 32
                 {NppCvt<CV_8U, CV_32F, nppiConvert_8u32f_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-#else
-                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-#endif
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {0,0,0,0}
             },
@@ -283,11 +277,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
                 {0,0,0,0}
             },
             {
-#if NPP_VERSION >= 32
                 {NppCvt<CV_32F, CV_8U, nppiConvert_32f8u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-#else
-                {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
-#endif
                 {convertToKernelCaller,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {NppCvt<CV_32F, CV_16U, nppiConvert_32f16u_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
                 {NppCvt<CV_32F, CV_16S, nppiConvert_32f16s_C1R>::cvt,convertToKernelCaller,convertToKernelCaller,convertToKernelCaller},
@@ -431,26 +421,10 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
         {
             {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set,kernelSet,kernelSet,NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
             {kernelSet,kernelSet,kernelSet,kernelSet},
-#if NPP_VERSION >= 32
             {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set,kernelSet,kernelSet,NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
-#else
-            {kernelSet,kernelSet,kernelSet,kernelSet},
-#endif
-#if NPP_VERSION >= 32
             {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set,kernelSet,kernelSet,NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
-#else
-            {kernelSet,kernelSet,kernelSet,kernelSet},
-#endif
-#if NPP_VERSION >= 32
             {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet,kernelSet,NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
-#else
-            {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet,kernelSet,kernelSet},
-#endif
-#if NPP_VERSION >= 32
             {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet,kernelSet,NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
-#else
-            {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet,kernelSet,kernelSet},
-#endif
             {kernelSet,kernelSet,kernelSet,kernelSet},
             {0,0,0,0}
         };
@@ -458,7 +432,6 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
     }
     else
     {
-#if NPP_VERSION >= 32
         typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, const GpuMat& mask);
         static const set_caller_t set_callers[8][4] =
         {
@@ -472,9 +445,6 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
             {0,0,0,0}
         };
         set_callers[depth()][channels()-1](*this, s, mask);
-#else
-        kernelSetMask(*this, s, mask);
-#endif
     }
 
     return *this;
