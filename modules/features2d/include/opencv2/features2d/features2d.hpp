@@ -1448,9 +1448,9 @@ protected:
     int levels;
 };
 
-/****************************************************************************************\
-*                                Dynamic Feature Detectors                              *
- \****************************************************************************************/
+/*
+ * Dynamic Feature Detectors
+ */
 /** \brief an adaptively adjusting detector that iteratively detects until the desired number
  * of features are detected.
  *  Beware that this is not thread safe - as the adjustment of parameters breaks the const
@@ -1473,9 +1473,9 @@ public:
 				max_features), adjuster_(a) {
 	}
 protected:
-	virtual void detectImpl(const cv::Mat& image,
-			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
-					cv::Mat()) const {
+    virtual void detectImpl(const cv::Mat& image,
+            std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
+                    cv::Mat()) const {
 		//for oscillation testing
 		bool down = false;
 		bool up = false;
@@ -1630,7 +1630,7 @@ public:
      * images       Image collection.
      * keypoints    Input keypoints collection. keypoints[i] is keypoints detected in images[i].
      *              Keypoints for which a descriptor cannot be computed are removed.
-     * descriptors  Descriptor collection. descriptors[i] is descriptors computed for keypoints[i].
+     * descriptors  Descriptor collection. descriptors[i] are descriptors computed for set keypoints[i].
      */
     void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const;
 
@@ -1788,7 +1788,8 @@ public:
     static const int PATCH_SIZE = 48;
     static const int KERNEL_SIZE = 9;
 
-    BriefDescriptorExtractor(int bytes = 32);
+    // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
+    BriefDescriptorExtractor( int bytes = 32 );
 
     virtual int descriptorSize() const;
     virtual int descriptorType() const;
@@ -1893,7 +1894,7 @@ struct CV_EXPORTS HammingLUT
 /// @todo Variable-length version, maybe default size=0 and specialize
 /// @todo Need to choose C/SSE4 at runtime, but amortize this at matcher level for efficiency...
 
-struct Hamming
+struct CV_EXPORTS Hamming
 {
     typedef unsigned char ValueType;
     typedef int ResultType;
@@ -1936,7 +1937,7 @@ struct CV_EXPORTS DMatch
     float distance;
 
     // less is better
-    bool operator<( const DMatch &m) const
+    bool operator<( const DMatch &m ) const
     {
         return distance < m.distance;
     }
@@ -2370,10 +2371,10 @@ public:
      * trainKeypoints   Keypoints from the train image
      */
     // Classify keypoints from query image under one train image.
-    virtual void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+    void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
                            const Mat& trainImage, vector<KeyPoint>& trainKeypoints ) const;
     // Classify keypoints from query image under train image collection.
-    virtual void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints );
+    void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints );
 
     /*
      * Group of methods to match keypoints from image pair.

@@ -84,6 +84,7 @@ void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints
 
 void DescriptorExtractor::compute( const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, vector<Mat>& descCollection ) const
 {
+    CV_Assert( imageCollection.size() == pointCollection.size() );
     descCollection.resize( imageCollection.size() );
     for( size_t i = 0; i < imageCollection.size(); i++ )
         compute( imageCollection[i], pointCollection[i], descCollection[i] );
