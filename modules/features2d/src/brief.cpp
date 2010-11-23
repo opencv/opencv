@@ -92,7 +92,7 @@ void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
 
 namespace cv
 {
-ResultType HammingLUT::operator()( const unsigned char* a, const unsigned char* b, int size ) const
+HammingLUT::ResultType HammingLUT::operator()( const unsigned char* a, const unsigned char* b, int size ) const
    {
        ResultType result = 0;
        for (int i = 0; i < size; i++)
@@ -101,7 +101,7 @@ ResultType HammingLUT::operator()( const unsigned char* a, const unsigned char* 
        }
        return result;
    }
-ResultType Hamming::operator()(const unsigned char* a, const unsigned char* b, int size) const
+Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned char* b, int size) const
 {
 #if __GNUC__
     ResultType result = 0;

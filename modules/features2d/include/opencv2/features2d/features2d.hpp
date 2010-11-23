@@ -1481,6 +1481,12 @@ public:
  *  Beware that this is not thread safe - as the adjustment of parameters breaks the const
  *  of the detection routine...
  *  /TODO Make this const correct and thread safe
+ *
+ *  sample usage:
+ //will create a detector that attempts to find 100 - 110 FAST Keypoints, and will at most run
+ //FAST feature detection 10 times until that number of keypoints are found
+ Ptr<FeatureDetector> detector(new DynamicDetector (100, 110, 10,new FastAdjuster(20,true)));
+
  */
 class CV_EXPORTS DynamicDetector: public FeatureDetector {
 public:
@@ -1503,8 +1509,14 @@ private:
 	Ptr<AdjusterAdapter> adjuster_;
 };
 
-class FastAdjuster: public AdjusterAdapter {
+/**\brief an adjust for the FAST detector. This will basically decrement or increment the
+ * threshhold by 1
+ */
+class CV_EXPORTS FastAdjuster: public AdjusterAdapter {
 public:
+	/**\param init_thresh the initial threshhold to start with, default = 20
+	 * \param nonmax whether to use non max or not for fast feature detection
+	 */
 	FastAdjuster(int init_thresh = 20, bool nonmax = true);
 	virtual void tooFew(int min, int n_detected);
 	virtual void tooMany(int max, int n_detected);
@@ -1518,7 +1530,11 @@ protected:
 
 };
 
-struct StarAdjuster: public AdjusterAdapter {
+
+/** An adjuster for StarFeatureDetector, this one adjusts the responseThreshold for now
+ * TODO find a faster way to converge the parameters for Star - use CvStarDetectorParams
+ */
+struct CV_EXPORTS StarAdjuster: public AdjusterAdapter {
 	StarAdjuster(double initial_thresh = 30.0);
 	virtual void tooFew(int min, int n_detected);
 	virtual void tooMany(int max, int n_detected);
@@ -1528,9 +1544,10 @@ protected:
 			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
 					cv::Mat()) const;
 	double thresh_;
+	CvStarDetectorParams params_; //todo use these instead of thresh_
 };
 
-struct SurfAdjuster: public AdjusterAdapter {
+struct CV_EXPORTS SurfAdjuster: public AdjusterAdapter {
 	SurfAdjuster();
 	virtual void tooFew(int min, int n_detected);
 	virtual void tooMany(int max, int n_detected);
@@ -1821,6 +1838,8 @@ struct CV_EXPORTS HammingLUT
     typedef unsigned char ValueType;
     typedef int ResultType;
 
+    /** this will count the bits in a ^ b
+     */
     ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const;
 
     /** \brief given a byte, count the bits using a compile time generated look up table
@@ -1838,7 +1857,13 @@ struct CV_EXPORTS HammingLUT
 struct CV_EXPORTS Hamming
 {
     typedef unsigned char ValueType;
+
+    //! important that this is signed as weird behavior happens
+    // in BruteForce if not
     typedef int ResultType;
+
+    /** this will count the bits in a ^ b, using __builtin_popcountl try compiling with sse4
+    */
     ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const;
 };
 
