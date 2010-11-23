@@ -92,7 +92,30 @@ void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
 
 namespace cv
 {
-
+ResultType HammingLUT::operator()( const unsigned char* a, const unsigned char* b, int size ) const
+   {
+       ResultType result = 0;
+       for (int i = 0; i < size; i++)
+       {
+           result += byteBitsLookUp(a[i] ^ b[i]);
+       }
+       return result;
+   }
+ResultType Hamming::operator()(const unsigned char* a, const unsigned char* b, int size) const
+{
+#if __GNUC__
+    ResultType result = 0;
+    for (int i = 0; i < size; i += sizeof(unsigned long))
+    {
+        unsigned long a2 = *reinterpret_cast<const unsigned long*> (a + i);
+        unsigned long b2 = *reinterpret_cast<const unsigned long*> (b + i);
+        result += __builtin_popcountl(a2 ^ b2);
+    }
+    return result;
+#else
+    return HammingLUT()(a,b,size);
+#endif
+}
 BriefDescriptorExtractor::BriefDescriptorExtractor(int bytes) :
     bytes_(bytes), test_fn_(NULL)
 {
