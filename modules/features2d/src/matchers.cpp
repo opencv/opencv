@@ -350,7 +350,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
 
     for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
     {
-        if( maskedOut( masks, qIdx ) )
+        if( isMaskedOut( masks, qIdx ) )
         {
             if( !compactResult ) // push empty vector
                 matches.push_back( vector<DMatch>() );
@@ -438,7 +438,7 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
 
     for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
     {
-        if( maskedOut( masks, qIdx ) )
+        if( isMaskedOut( masks, qIdx ) )
         {
             if( !compactResult ) // push empty vector
                 matches.push_back( vector<DMatch>() );
@@ -466,7 +466,7 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
                 assert( e_allDists[iIdx].rows() == trainDescCollection[iIdx].rows );
                 for( int tIdx = 0; tIdx < e_allDists[iIdx].rows(); tIdx++ )
                 {
-                    if( masks.empty() || possibleMatch(masks[iIdx], qIdx, tIdx) )
+                    if( masks.empty() || isPossibleMatch(masks[iIdx], qIdx, tIdx) )
                     {
                         float d =  sqrt((-2)*e_allDists[iIdx](tIdx) + queryNorm2);
                         if( d < maxDistance )
