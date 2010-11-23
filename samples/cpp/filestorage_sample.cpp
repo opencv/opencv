@@ -15,9 +15,13 @@ using namespace cv;
 
 void help(char** av)
 {
-  cout << "usage:\n" << av[0] << " outputfile.yml.gz\n"
-      << "Try using different extensions.(e.g. yaml yml xml xml.gz etc...)\n"
-      << "This will serialize some matrices and image names to the format specified." << endl;
+  cout << "usage:\n"
+		  <<  av[0] << " outputfile.yml.gz\n"
+		  << "\n   outputfile above can have many different extenstions, see below."
+		  << "\nThis program demonstrates the use of FileStorage for serialization, that is use << and >>  in OpenCV\n"
+		  << "For example, how to create a class and have it serialize, but also how to use it to read and write matrices.\n"
+		  << "FileStorage allows you to serialize to various formats specified by the file end type."
+          << "\nYou should try using different file extensions.(e.g. yaml yml xml xml.gz yaml.gz etc...)\n" << endl;
 }
 
 struct MyData
@@ -33,11 +37,11 @@ struct MyData
   int A;
   double X;
   string id;
-  void write(FileStorage& fs) const
+  void write(FileStorage& fs) const //Write serialization for this class
   {
     fs << "{" << "A" << A << "X" << X << "id" << id << "}";
   }
-  void read(const FileNode& node)
+  void read(const FileNode& node)  //Read serialization for this class
   {
 
     A = (int)node["A"];
@@ -46,6 +50,7 @@ struct MyData
   }
 };
 
+//These write and read functions must exist as per the inline functions in operations.hpp
 void write(FileStorage& fs, const std::string& name, const MyData& x){
   x.write(fs);
 }
@@ -137,7 +142,7 @@ int main(int ac, char** av)
     cout << "read mdata\n";
     cout << m << endl;
 
-    cout << "attempting to read mdata_b\n";
+    cout << "attempting to read mdata_b\n";   //Show default behavior for empty matrix
     fs["mdata_b"] >> m;
     cout << "read mdata_b\n";
     cout << m << endl;
