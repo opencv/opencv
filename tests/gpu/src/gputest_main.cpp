@@ -41,7 +41,7 @@
 
 #include "gputest.hpp"
 
-CvTS test_system;
+CvTS test_system("gpu");
 
 const char* blacklist[] =
 {
