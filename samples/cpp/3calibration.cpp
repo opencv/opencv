@@ -12,7 +12,7 @@ using namespace std;
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
-void test()
+void help()
 {
 
         printf( "This is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
@@ -197,7 +197,10 @@ int main( int argc, char** argv )
     vector<string> imageList;
     
     if(argc < 2)
-    	test();
+    {
+    	help();
+    	return 1;
+    }
 
     
     for( i = 1; i < argc; i++ )
