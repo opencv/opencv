@@ -312,6 +312,12 @@ void boxFilter( const Mat& src, Mat& dst, int ddepth,
     f->apply( src, dst );
 }
 
+void blur( const Mat& src, CV_OUT Mat& dst,
+           Size ksize, Point anchor, int borderType )
+{
+    boxFilter( src, dst, -1, ksize, anchor, true, borderType );
+}    
+
 /****************************************************************************************\
                                      Gaussian Blur
 \****************************************************************************************/

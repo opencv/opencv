@@ -845,6 +845,80 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
                                         Matrix Operations
 \*************************************************************************************************/
 
+void hconcat(const Mat* src, size_t nsrc, Mat& dst)
+{
+    if( nsrc == 0 || !src )
+    {
+        dst.release();
+        return;
+    }
+    
+    int totalCols = 0, cols = 0;
+    size_t i;
+    for( i = 0; i < nsrc; i++ )
+    {
+        CV_Assert( !src[i].empty() && src[i].dims <= 2 &&
+                   src[i].rows == src[0].rows &&
+                   src[i].type() == src[0].type());
+        totalCols += src[i].cols;
+    }
+    dst.create( src[0].rows, totalCols, src[0].type());
+    for( i = 0; i < nsrc; i++ )
+    {
+        Mat dpart(dst, Rect(cols, 0, src[i].cols, src[i].rows));
+        src[i].copyTo(dpart);
+        cols += src[i].cols;
+    }
+}
+    
+void hconcat(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    Mat src[] = {src1, src2};
+    hconcat(src, 2, dst);
+}
+    
+void hconcat(const vector<Mat>& src, CV_OUT Mat& dst)
+{
+    hconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
+}
+
+void vconcat(const Mat* src, size_t nsrc, Mat& dst)
+{
+    if( nsrc == 0 || !src )
+    {
+        dst.release();
+        return;
+    }
+    
+    int totalRows = 0, rows = 0;
+    size_t i;
+    for( i = 0; i < nsrc; i++ )
+    {
+        CV_Assert( !src[i].empty() && src[i].dims <= 2 &&
+                  src[i].cols == src[0].cols &&
+                  src[i].type() == src[0].type());
+        totalRows += src[i].rows;
+    }
+    dst.create( totalRows, src[0].cols, src[0].type());
+    for( i = 0; i < nsrc; i++ )
+    {
+        Mat dpart(dst, Rect(0, rows, src[i].cols, src[i].rows));
+        src[i].copyTo(dpart);
+        rows += src[i].rows;
+    }
+}
+    
+void vconcat(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    Mat src[] = {src1, src2};
+    vconcat(src, 2, dst);
+}        
+
+void vconcat(const vector<Mat>& src, CV_OUT Mat& dst)
+{
+    vconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
+}
+    
 //////////////////////////////////////// set identity ////////////////////////////////////////////
 void setIdentity( Mat& m, const Scalar& s )
 {

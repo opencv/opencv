@@ -480,6 +480,15 @@ void repeat(const Mat& src, int ny, int nx, Mat& dst)
         memcpy( dst.data + y*dst.step, dst.data + (y - ssize.height)*dst.step, dsize.width );
 }
 
+Mat repeat(const Mat& src, int ny, int nx)
+{
+    if( nx == 1 && ny == 1 )
+        return src;
+    Mat dst;
+    repeat(src, ny, nx, dst);
+    return dst;
+}
+
 }
 
 /* dst = src */

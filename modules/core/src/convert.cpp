@@ -162,6 +162,13 @@ void split(const Mat& src, Mat* mv)
         mixChannels( &src, 1, mv, cn, &pairs[0], cn );
     }
 }
+    
+void split(const Mat& m, vector<Mat>& mv)
+{
+    mv.resize(!m.empty() ? m.channels() : 0);
+    if(!m.empty())
+        split(m, &mv[0]);
+}
 
 /****************************************************************************************\
 *                                       merge                                            *
@@ -298,7 +305,10 @@ void merge(const Mat* mv, size_t _n, Mat& dst)
     }
 }
 
-
+void merge(const vector<Mat>& mv, Mat& dst)
+{
+    merge(!mv.empty() ? &mv[0] : 0, mv.size(), dst);
+}
 
 /****************************************************************************************\
 *                       Generalized split/merge: mixing channels                         *
@@ -436,6 +446,13 @@ void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const in
     func( (const void**)srcs, s0, s1, dsts, d0, d1, (int)npairs, size );
 }
 
+
+void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
+                 const int* fromTo, int npairs)
+{
+    mixChannels(!src.empty() ? &src[0] : 0, src.size(),
+                !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
+}        
 
 /****************************************************************************************\
 *                                convertScale[Abs]                                       *

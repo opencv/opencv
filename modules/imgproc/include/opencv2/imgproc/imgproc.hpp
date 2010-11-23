@@ -396,12 +396,9 @@ CV_EXPORTS_W void boxFilter( const Mat& src, CV_OUT Mat& dst, int ddepth,
                            bool normalize=true,
                            int borderType=BORDER_DEFAULT );
 //! a synonym for normalized box filter
-CV_WRAP static inline void blur( const Mat& src, CV_OUT Mat& dst,
-                         Size ksize, Point anchor=Point(-1,-1),
-                         int borderType=BORDER_DEFAULT )
-{
-    boxFilter( src, dst, -1, ksize, anchor, true, borderType );
-}
+CV_EXPORTS_W void blur( const Mat& src, CV_OUT Mat& dst,
+                        Size ksize, Point anchor=Point(-1,-1),
+                        int borderType=BORDER_DEFAULT );
 
 //! applies non-separable 2D linear filter to the image
 CV_EXPORTS_W void filter2D( const Mat& src, CV_OUT Mat& dst, int ddepth,

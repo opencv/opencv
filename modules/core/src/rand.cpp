@@ -657,6 +657,16 @@ RNG& theRNG()
 
 #endif
 
+void randu(CV_OUT Mat& dst, const Scalar& low, const Scalar& high)
+{
+    theRNG().fill(dst, RNG::UNIFORM, low, high);
+}
+
+void randn(CV_OUT Mat& dst, const Scalar& mean, const Scalar& stddev)
+{
+    theRNG().fill(dst, RNG::NORMAL, mean, stddev);
+}    
+    
 template<typename T> static void
 randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
 {

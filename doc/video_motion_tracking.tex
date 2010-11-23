@@ -554,8 +554,8 @@ The function estimates the subsequent stochastic model state by its current stat
 
 \[
 \begin{array}{l}
-x'_k=A \cdot x_{k-1}+B \cdot u_k\\
-P'_k=A \cdot P_{k-1}+A^T + Q
+x'_k=A x_{k-1} + B u_k\\
+P'_k=A P_{k-1} A^T + Q
 \end{array}
 \]
 

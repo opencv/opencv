@@ -2299,7 +2299,11 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
     return std::sqrt(result);
 }
 
-
+double Mahalonobis(const Mat& v1, const Mat& v2, const Mat& icovar)
+{
+    return Mahalanobis(v1, v2, icovar);
+}
+    
 /****************************************************************************************\
 *                                        cvMulTransposed                                 *
 \****************************************************************************************/

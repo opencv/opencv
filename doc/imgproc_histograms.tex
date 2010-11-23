@@ -56,7 +56,7 @@ That is the approximate algorithm of Camshift color object tracker, except for t
 Locates a template within an image by using a histogram comparison.
 
 \cvdefC{
-void cvCalcBackProjectPatch( \par IplImage** images,\par CvArr* dst,\par CvSize patch\_size,\par CvHistogram* hist,\par int method,\par float factor );
+void cvCalcBackProjectPatch( \par IplImage** images,\par CvArr* dst,\par CvSize patch\_size,\par CvHistogram* hist,\par int method,\par double factor );
 }
 \cvdefPy{CalcBackProjectPatch(images,dst,patch\_size,hist,method,factor)-> None}
 
@@ -573,11 +573,10 @@ using namespace cv;
 
 int main( int argc, char** argv )
 {
-    Mat src;
+    Mat src, hsv;
     if( argc != 2 || !(src=imread(argv[1], 1)).data )
         return -1;
 
-    Mat hsv;
     cvtColor(src, hsv, CV_BGR2HSV);
 
     // let's quantize the hue to 30 levels
@@ -593,26 +592,26 @@ int main( int argc, char** argv )
     MatND hist;
     // we compute the histogram from the 0-th and 1-st channels
     int channels[] = {0, 1};
-    
+
     calcHist( &hsv, 1, channels, Mat(), // do not use mask
-        hist, 2, histSize, ranges,
-        true, // the histogram is uniform
-        false );
+             hist, 2, histSize, ranges,
+             true, // the histogram is uniform
+             false );
     double maxVal=0;
     minMaxLoc(hist, 0, &maxVal, 0, 0);
-    
+
     int scale = 10;
-    Mat histImg = Mat::zeros(sbins*scale, hbins*10, CV_8UC3);        
+    Mat histImg = Mat::zeros(sbins*scale, hbins*10, CV_8UC3);
 
     for( int h = 0; h < hbins; h++ )
         for( int s = 0; s < sbins; s++ )
         {
             float binVal = hist.at<float>(h, s);
-            int intensity = cvRound(binVal*255/maxValue);
-            cvRectangle( histImg, Point(h*scale, s*scale),
-                         Point( (h+1)*scale - 1, (s+1)*scale - 1),
-                         Scalar::all(intensity),
-                         CV_FILLED );
+            int intensity = cvRound(binVal*255/maxVal);
+            rectangle( histImg, Point(h*scale, s*scale),
+                        Point( (h+1)*scale - 1, (s+1)*scale - 1),
+                        Scalar::all(intensity),
+                        CV_FILLED );
         }
 
     namedWindow( "Source", 1 );
@@ -620,7 +619,6 @@ int main( int argc, char** argv )
 
     namedWindow( "H-S Histogram", 1 );
     imshow( "H-S Histogram", histImg );
-
     waitKey();
 }
 \end{lstlisting}

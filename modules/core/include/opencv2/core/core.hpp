@@ -1632,7 +1632,7 @@ public:
     template<typename _Tp> void push_back(const Mat_<_Tp>& elem);
     void push_back(const Mat& m);
     //! removes several hyper-planes from bottom of the matrix
-    void pop_back(size_t nelems);
+    void pop_back(size_t nelems=1);
     
     //! locates matrix header within a parent matrix. See below
     void locateROI( Size& wholeSize, Point& ofs ) const;
@@ -1756,7 +1756,7 @@ public:
          - number of channels
      */
     int flags;
-    //! the matrix dimensionality
+    //! the matrix dimensionality, >= 2
     int dims;
     //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
     int rows, cols;
@@ -1955,41 +1955,35 @@ CV_EXPORTS void minMaxIdx(const Mat& src, double* minVal, double* maxVal,
 CV_EXPORTS_W void reduce(const Mat& src, CV_OUT Mat& dst, int dim, int rtype, int dtype=-1);
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, CV_OUT Mat& dst);
+//! makes multi-channel array out of several single-channel arrays
+CV_EXPORTS_W void merge(const vector<Mat>& mv, Mat& dst);
+    
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
-
-CV_WRAP static inline void merge(const vector<Mat>& mv, Mat& dst)
-{ merge(&mv[0], mv.size(), dst); }
-
-CV_WRAP static inline void split(const Mat& m, vector<Mat>& mv)
-{
-    mv.resize(m.channels());
-    if(m.channels() > 0)
-        split(m, &mv[0]);
-}        
+//! copies each plane of a multi-channel array to a dedicated array
+CV_EXPORTS_W void split(const Mat& m, vector<Mat>& mv);
     
 //! copies selected channels from the input arrays to the selected channels of the output arrays
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
-
-static inline void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
-                               const int* fromTo, int npairs)
-{
-    mixChannels(&src[0], (int)src.size(), &dst[0], (int)dst.size(), fromTo, npairs);
-}
-    
+CV_EXPORTS void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
+                            const int* fromTo, int npairs);
 
 //! reverses the order of the rows, columns or both in a matrix
 CV_EXPORTS_W void flip(const Mat& src, CV_OUT Mat& dst, int flipCode);
 
 //! replicates the input matrix the specified number of times in the horizontal and/or vertical direction
 CV_EXPORTS_W void repeat(const Mat& src, int ny, int nx, CV_OUT Mat& dst);
-static inline Mat repeat(const Mat& src, int ny, int nx)
-{
-    if( nx == 1 && ny == 1 ) return src;
-    Mat dst; repeat(src, ny, nx, dst); return dst;
-}
+CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
+        
+CV_EXPORTS void hconcat(const Mat* src, size_t nsrc, Mat& dst);
+CV_EXPORTS void hconcat(const Mat& src1, const Mat& src2, Mat& dst);
+CV_EXPORTS_W void hconcat(const vector<Mat>& src, CV_OUT Mat& dst);
 
+CV_EXPORTS void vconcat(const Mat* src, size_t nsrc, Mat& dst);
+CV_EXPORTS void vconcat(const Mat& src1, const Mat& src2, Mat& dst);
+CV_EXPORTS_W void vconcat(const vector<Mat>& src, CV_OUT Mat& dst);
+    
 //! computes bitwise conjunction of the two arrays (dst = src1 & src2)
 CV_EXPORTS_W void bitwise_and(const Mat& src1, const Mat& src2, CV_OUT Mat& dst, const Mat& mask=Mat());
 //! computes bitwise disjunction of the two arrays (dst = src1 | src2)
@@ -2228,8 +2222,7 @@ public:
 //! computes Mahalanobis distance between two vectors: sqrt((v1-v2)'*icovar*(v1-v2)), where icovar is the inverse covariation matrix
 CV_EXPORTS_W double Mahalanobis(const Mat& v1, const Mat& v2, const Mat& icovar);
 //! a synonym for Mahalanobis
-static inline double Mahalonobis(const Mat& v1, const Mat& v2, const Mat& icovar)
-{ return Mahalanobis(v1, v2, icovar); }
+CV_EXPORTS double Mahalonobis(const Mat& v1, const Mat& v2, const Mat& icovar);
 
 //! performs forward or inverse 1D or 2D Discrete Fourier Transformation
 CV_EXPORTS_W void dft(const Mat& src, CV_OUT Mat& dst, int flags=0, int nonzeroRows=0);
@@ -2266,12 +2259,10 @@ CV_EXPORTS RNG& theRNG();
 template<typename _Tp> static inline _Tp randu() { return (_Tp)theRNG(); }
 
 //! fills array with uniformly-distributed random numbers from the range [low, high)
-CV_WRAP static inline void randu(CV_OUT Mat& dst, const Scalar& low, const Scalar& high)
-{ theRNG().fill(dst, RNG::UNIFORM, low, high); }
+CV_EXPORTS_W void randu(CV_OUT Mat& dst, const Scalar& low, const Scalar& high);
     
 //! fills array with normally-distributed random numbers with the specified mean and the standard deviation
-CV_WRAP static inline void randn(CV_OUT Mat& dst, const Scalar& mean, const Scalar& stddev)
-{ theRNG().fill(dst, RNG::NORMAL, mean, stddev); }
+CV_EXPORTS_W void randn(CV_OUT Mat& dst, const Scalar& mean, const Scalar& stddev);
 
 //! shuffles the input array elements
 CV_EXPORTS void randShuffle(Mat& dst, double iterFactor=1., RNG* rng=0);
@@ -2866,7 +2857,7 @@ protected:
 /*!
  n-Dimensional Dense Matrix Iterator Class.
  
- The class cv::NAryMatNDIterator is used for iterating over one or more n-dimensional dense arrays (cv::Mat's).
+ The class cv::NAryMatIterator is used for iterating over one or more n-dimensional dense arrays (cv::Mat's).
  
  The iterator is completely different from cv::Mat_ and cv::SparseMat_ iterators.
  It iterates through the slices (or planes), not the elements, where "slice" is a continuous part of the arrays.
