@@ -308,6 +308,47 @@ protected:
 };
 \end{lstlisting}
 
+
+\cvclass{DynamicDetectorAdaptor}
+An adaptively adjusting detector that iteratively detects until the desired number
+of features are found.
+
+Adapters can easily be implemented for any detector through the creation of an Adjuster
+object.
+
+Beware that this is not thread safe - as the adjustment of parameters breaks the const
+of the detection routine...
+
+\begin{lstlisting}
+template<typename Adjuster>
+class DynamicDetectorAdaptor: public FeatureDetector {
+public:
+	DynamicDetectorAdaptor(int min_features, int max_features, int max_iters, 
+						   const Adjuster& a = Adjuster());
+    ...
+};
+
+//expected Adjuster interface
+class MyAdjuster {
+public:
+	//this should call a FeatureDetector and populate keypoints
+	//e.g. FASTFeatureDetector(thresh).detect(img,mask,keypoints)
+	void detect(const Mat& img, const Mat& mask, std::vector<KeyPoint>& keypoints) const;
+
+	//called if there are too few features detected, should adjust feature detector params
+	//accordingly
+	void tooFew(int min, int n_detected);
+	
+	//called if there are too many features detected, should adjust feature detector params
+	//accordingly
+	void tooMany(int max, int n_detected);
+
+	//return whether or not the threshhold is beyond
+	//a useful point
+	bool good() const;
+\end{lstlisting}
+
+
 \cvCppFunc{createFeatureDetector}
 Feature detector factory that creates \cvCppCross{FeatureDetector} of given type with 
 default parameters (rather using default constructor).
