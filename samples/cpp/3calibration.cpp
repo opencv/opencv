@@ -1,3 +1,7 @@
+/*
+ * 3calibration.cpp -- Calibrate 3 cameras in a horizontal line together.
+ */
+
 #include "opencv2/opencv.hpp"
 #include <stdio.h>
 #include <string.h>
@@ -7,6 +11,37 @@ using namespace cv;
 using namespace std;
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
+
+void test()
+{
+
+        printf( "This is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
+               "Usage: 3calibration\n"
+               "     -w <board_width>         # the number of inner corners per one of board dimension\n"
+               "     -h <board_height>        # the number of inner corners per another board dimension\n"
+               "     [-s <squareSize>]       # square size in some user-defined units (1 by default)\n"
+               "     [-o <out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
+               "     [-zt]                    # assume zero tangential distortion\n"
+               "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
+               "     [-p]                     # fix the principal point at the center\n"
+               "     [input_data]             # input data - text file with a list of the images of the board\n"
+               "\n" );
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners)
 {
@@ -161,21 +196,9 @@ int main( int argc, char** argv )
     vector<vector<Point2f> > imgpt[3];
     vector<string> imageList;
     
-    if( argc < 2 )
-    {
-        printf( "This is a camera calibration sample.\n"
-               "Usage: calibration\n"
-               "     -w <board_width>         # the number of inner corners per one of board dimension\n"
-               "     -h <board_height>        # the number of inner corners per another board dimension\n"
-               "     [-s <squareSize>]       # square size in some user-defined units (1 by default)\n"
-               "     [-o <out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
-               "     [-zt]                    # assume zero tangential distortion\n"
-               "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
-               "     [-p]                     # fix the principal point at the center\n"
-               "     [input_data]             # input data - text file with a list of the images of the board\n"
-               "\n" );
-        return 0;
-    }
+    if(argc < 2)
+    	test();
+
     
     for( i = 1; i < argc; i++ )
     {
