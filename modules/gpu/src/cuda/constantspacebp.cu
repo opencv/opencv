@@ -96,6 +96,7 @@ namespace cv { namespace gpu { namespace csbp
     {
         cudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
 
+        cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );

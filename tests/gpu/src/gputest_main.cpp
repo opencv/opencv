@@ -49,12 +49,8 @@ const char* blacklist[] =
 
     "GPU-NppImageSum",              // crash, probably npp bug
     "GPU-NppImageMinNax",           // npp bug - don't find min/max near right border
-    "GPU-NppImageExp",
-    "GPU-NppImageLog",
 
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
-    "GPU-NppImageIntegral",
-    "GPU-Histograms",
     0
 };
 
