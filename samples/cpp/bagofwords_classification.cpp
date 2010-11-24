@@ -23,6 +23,34 @@ const string bowImageDescriptorsDir = "/bowImageDescriptors";
 const string svmsDir = "/svms";
 const string plotsDir = "/plots";
 
+void help(char** argv)
+{
+	cout << "This program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
+	 << "It shows how to use detectors, descriptors and recognition methods \n"
+	 << "Call: \n"
+    << "Format:\n ./" << argv[0] << " [VOC path] [result directory]  \n"
+    << "       or:  \n"
+    << " ./" << argv[0] << " [VOC path] [result directory] [feature detector] [descriptor extractor] [descriptor matcher] \n"
+    << "\n"
+    << "Input parameters: \n"
+    << "[VOC path]             Path to Pascal VOC data (e.g. /home/my/VOCdevkit/VOC2010). Note: VOC2007-VOC2010 are supported. \n"
+    << "[result directory]     Path to result diractory. Following folders will be created in [result directory]: \n"
+    << "                         bowImageDescriptors - to store image descriptors, \n"
+    << "                         svms - to store trained svms, \n"
+    << "                         plots - to store files for plots creating. \n"
+    << "[feature detector]     Feature detector name (e.g. SURF, FAST...) - see createFeatureDetector() function in detectors.cpp \n"
+    << "                         Currently 12/2010, this is FAST, STAR, SIFT, SURF, MSER, GFTT, HARRIS \n"
+    << "[descriptor extractor] Descriptor extractor name (e.g. SURF, SIFT) - see createDescriptorExtractor() function in descriptors.cpp \n"
+    << "                         Currently 12/2010, this is SURF, OpponentSIFT, SIFT, OpponentSURF, BRIEF \n"
+    << "[descriptor matcher]   Descriptor matcher name (e.g. BruteForce) - see createDescriptorMatcher() function in matchers.cpp \n"
+    << "                         Currently 12/2010, this is BruteForce, BruteForce-L1, FlannBased, BruteForce-Hamming, BruteForce-HammingLUT \n"
+    << "\n";
+}
+
+
+
+
+
 void makeDir( const string& dir )
 {
 #if defined WIN32 || defined _WIN32
@@ -2473,24 +2501,14 @@ void computeGnuPlotOutput( const string& resPath, const string& objClassName, Vo
     vocData.savePrecRecallToGnuplot( resPath + plotsDir + "/" + plotFile, precision, recall, ap, objClassName, CV_VOC_PLOT_PNG );
 }
 
-/* Input parameters
- * [VOC path]             Path to Pascal VOC data (e.g. /home/my/VOCdevkit/VOC2010). Note: VOC2007-VOC2010 are supported.
- * [result directory]     Path to result diractory. Following folders will be created in [result directory]:
- *                          bowImageDescriptors - to store image descriptors,
- *                          svms - to store trained svms,
- *                          plots - to store files for plots creating.
- * [feature detector]     Feature detector name (e.g. SURF, FAST...) - see createFeatureDetector() function.
- * [descriptor extractor] Descriptor extractor name (e.g. SURF, SIFT) - see createDescriptorExtractor() function.
- * [descriptor matcher]   Descriptor matcher name (e.g. BruteForce) - see createDescriptorMatcher() function.
- */
+
+
+
 int main(int argc, char** argv)
 {
     if( argc != 3 && argc != 6 )
     {
-        cout << "Format: " << endl <<
-                "   ./" << argv[0] << " [VOC path] [result directory] " << endl <<
-                "       or" << endl <<
-                "   ./" << argv[0] << " [VOC path] [result directory] [feature detector] [descriptor extractor] [descriptor matcher]" << endl;
+    	help(argv);
         return -1;
     }
 
