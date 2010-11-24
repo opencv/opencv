@@ -1,33 +1,61 @@
 \cvclass{DynamicDetector}
 An adaptively adjusting detector that iteratively detects until the desired number
-of features are found.
+of features are found.  
 
-Adapters can easily be implemented for any detector through the creation of an Adjuster
-object.
+If the detector is persisted, it will "remember" the parameters
+used on the last detection. In this way, the detector may be used for consistent numbers
+of keypoints in a sets of images that are temporally related such as video streams or
+panorama series.
+
+The DynamicDetector uses another detector such as FAST or SURF to do the dirty work,
+with the help of an AdjusterAdapter.
+After a detection, and an unsatisfactory number of features are detected,
+the AdjusterAdapter will adjust the detection parameters so that the next detection will
+result in more or less features.  This is repeated until either the number of desired features are found
+or the parameters are maxed out.
+
+Adapters can easily be implemented for any detector via the  
+AdjusterAdapter interface.
 
 Beware that this is not thread safe - as the adjustment of parameters breaks the const
 of the detection routine...
 
+Here is a sample of how to create a DynamicDetector.
 \begin{lstlisting}
 //sample usage:
-//will create a detector that attempts to find 100 - 110 FAST Keypoints, and will at most run
-//FAST feature detection 10 times until that number of keypoints are found
-Ptr<FeatureDetector> detector(new DynamicDetector (100, 110, 10,new FastAdjuster(20,true)));
+//will create a detector that attempts to find 
+//100 - 110 FAST Keypoints, and will at most run
+//FAST feature detection 10 times until that 
+//number of keypoints are found
+Ptr<FeatureDetector> detector(new DynamicDetector (100, 110, 10,
+                              new FastAdjuster(20,true)));
+\end{lstlisting}
  
-class CV_EXPORTS DynamicDetector: public FeatureDetector {
+\begin{lstlisting}
+class DynamicDetector: public FeatureDetector {
 public:
-
-	/**min_features the minimum desired features
-	 * max_features the maximum desired number of features
-	 * max_iters the maximum number of times to try to adjust the feature detector params
-	 * 			for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
-	 * a an AdjusterAdapter that will do the detection and parameter adjustment
-	 */
 	DynamicDetector(int min_features, int max_features, int max_iters,
 			const Ptr<AdjusterAdapter>& a);
  	...
 };
- \end{lstlisting}
+\end{lstlisting}
+
+\cvCppFunc{DynamicDetector::DynamicDetector}
+DynamicDetector constructor.
+\cvdefCpp{
+DynamicDetector::DynamicDetector( \par int min\_features,  \par int max\_features, \par  int max\_iters,
+			 \par const Ptr<AdjusterAdapter>\& a);
+}
+
+\begin{description}  
+\cvarg{min\_features}{This minimum desired number features.}
+\cvarg{max\_features}{The maximum desired number of features.}
+\cvarg{max\_iters}{The maximum number of times to try to adjust the feature detector parameters. For the \cvCppCross{FastAdjuster} this number can be high, 
+		 but with Star or Surf, many iterations can get time consuming.  At each iteration the detector is rerun, so keep this in mind when choosing this value.}
+\cvarg{a}{ An \cvCppCross{AdjusterAdapter} that will do the detection and parameter
+	  adjustment}
+\end{description}
+
 \cvclass{AdjusterAdapter}
 A feature detector parameter adjuster interface, this is used by the \cvCppCross{DynamicDetector}
 and is a wrapper for  \cvCppCross{FeatureDetecto}r that allow them to be adjusted after a detection.
@@ -36,27 +64,59 @@ See  \cvCppCross{FastAdjuster}, \cvCppCross{StarAdjuster}, \cvCppCross{SurfAdjus
 \begin{lstlisting}
 class AdjusterAdapter: public FeatureDetector {
 public:
-	/** pure virtual interface
-	 */
 	virtual ~AdjusterAdapter() {
 	}
-	/** too few features were detected so, adjust the detector params accordingly
-	 * \param min the minimum number of desired features
-	 * \param n_detected the number previously detected
-	 */
 	virtual void tooFew(int min, int n_detected) = 0;
-	/** too many features were detected so, adjust the detector params accordingly
-	 * \param max the maximum number of desired features
-	 * \param n_detected the number previously detected
-	 */
 	virtual void tooMany(int max, int n_detected) = 0;
-	/** are params maxed out or still valid?
-	 * \return false if the parameters can't be adjusted any more
-	 */
 	virtual bool good() const = 0;
 };
 \end{lstlisting}
- 
+\cvCppFunc{AdjusterAdapter::tooFew}
+\cvdefCpp{
+virtual void tooFew(\par int min, int n\_detected) = 0;
+}
+Too few features were detected so, adjust the detector parameters accordingly - so that the next
+detection detects more features.
+\begin{description}
+\cvarg{min}{This minimum desired number features.}
+\cvarg{n\_detected}{The actual number detected last run.}
+\end{description}
+An example implementation of this is
+\begin{lstlisting}
+void FastAdjuster::tooFew(int min, int n_detected) {
+	thresh_--;
+}
+\end{lstlisting}
+
+\cvCppFunc{AdjusterAdapter::tooMany}
+Too many features were detected so, adjust the detector parameters accordingly - so that the next
+detection detects less features.
+\cvdefCpp{
+virtual void tooMany(int max, int n\_detected) = 0;
+}
+\begin{description}
+\cvarg{max}{This maximum desired number features.}
+\cvarg{n\_detected}{The actual number detected last run.}
+\end{description}
+An example implementation of this is
+\begin{lstlisting}
+void FastAdjuster::tooMany(int min, int n_detected) {
+	thresh_++;
+}
+\end{lstlisting}
+
+\cvCppFunc{AdjusterAdapter::good}
+Are params maxed out or still valid? Returns false if the parameters can't be adjusted any more.
+\cvdefCpp{
+virtual bool good() const = 0;
+}
+An example implementation of this is
+\begin{lstlisting}
+bool FastAdjuster::good() const {
+	return (thresh_ > 1) && (thresh_ < 200);
+}
+\end{lstlisting}
+	  
 \cvclass{FastAdjuster}
 An \cvCppCross{AdjusterAdapter} for the \cvCppCross{FastFeatureDetector}. This will basically decrement or increment the
 threshhold by 1
@@ -64,9 +124,6 @@ threshhold by 1
 \begin{lstlisting}
 class FastAdjuster FastAdjuster: public AdjusterAdapter {
 public:
-	/**\param init_thresh the initial threshhold to start with, default = 20
-	 * \param nonmax whether to use non max or not for fast feature detection
-	 */
 	FastAdjuster(int init_thresh = 20, bool nonmax = true);
 	...
 };
@@ -84,7 +141,7 @@ class StarAdjuster: public AdjusterAdapter {
 
 
 \cvclass{SurfAdjuster}
-An \cvCppCross{AdjusterAdapter} for the \cvCppCross{SurfFeatureDetector}.  This adjusts the responseThreshhold of 
+An \cvCppCross{AdjusterAdapter} for the \cvCppCross{SurfFeatureDetector}.  This adjusts the hessianThreshold of 
 SurfFeatureDetector.
 \begin{lstlisting}
 class SurfAdjuster: public SurfAdjuster {
