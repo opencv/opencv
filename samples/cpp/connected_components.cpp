@@ -1,10 +1,23 @@
 #include "cv.h"
 #include "highgui.h"
+#include <iostream>
 
 using namespace cv;
-
 Mat img;
 int threshval = 100;
+
+void help()
+{
+	cout <<
+		   "Program to demonstrate connected components and use of the trackbar\n"
+		<< "\n"
+		<< "Usage: ./connected_components <image>\n"
+		<< "\n"
+		<< "The image is converted to grayscale and displayed, another image has a trackbar\n"
+		<< "that controls thresholding and thereby the extracted contours which are drawn in color\n"
+		<< endl;
+}
+
 
 void on_trackbar(int, void*)
 {
@@ -34,9 +47,13 @@ void on_trackbar(int, void*)
 
 int main( int argc, char** argv )
 {
-    // the first command line parameter must be file name of binary 
-    // (black-n-white) image
-    if( !(img=imread(argc == 2 ? argv[1] : "stuff.jpg", 0)).data)
+    // the first command line parameter
+	if(argc != 2)
+	{
+		help();
+		return -1;
+	}
+    if( !(img=imread(argc == 2 ? argv[1] : "stuff.jpg", 0)).data) //The ending 0 in imread converts the image to grayscale.
         return -1;
 
     namedWindow( "Image", 1 );
