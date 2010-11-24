@@ -400,6 +400,16 @@ namespace cv { namespace gpu { namespace mathfunc
 // Min max
 
     enum { MIN, MAX };  
+
+    template <typename T> struct MinMaxTypeTraits {};
+    template <> struct MinMaxTypeTraits<unsigned char> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<signed char> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<unsigned short> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<signed short> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
+    template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
+
     template <typename T, int op> struct Cmp {};
     
     template <typename T>
@@ -407,9 +417,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         static __device__ void call(unsigned int tid, unsigned int offset, volatile T* optval)
         {
-            T val = optval[tid + offset];
-            if (val < optval[tid]) optval[tid] = val;
-            //optval[tid] = min(optval[tid], optval[tid + offset]); 
+            optval[tid] = min(optval[tid], optval[tid + offset]); 
         }
     };
 
@@ -418,17 +426,16 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         static __device__ void call(unsigned int tid, unsigned int offset, volatile T* optval)
         {
-            T val = optval[tid + offset];
-            if (val > optval[tid]) optval[tid] = val;
-            //optval[tid] = max(optval[tid], optval[tid + offset]);
+            optval[tid] = max(optval[tid], optval[tid + offset]);
         }
     };
 
 
-    template <int nthreads, typename Cmp, typename T>
+    template <int nthreads, int op, typename T>
     __global__ void opt_kernel(int cols, int rows, const PtrStep src, PtrStep optval)
     {
-        __shared__ T soptval[nthreads];
+        typedef typename MinMaxTypeTraits<T>::best_type best_type;
+        __shared__ best_type soptval[nthreads];
 
         unsigned int x0 = blockIdx.x * blockDim.x;
         unsigned int y0 = blockIdx.y * blockDim.y;
@@ -441,21 +448,21 @@ namespace cv { namespace gpu { namespace mathfunc
 
         __syncthreads();
 
-        if (nthreads >= 512) if (tid < 256) { Cmp::call(tid, 256, soptval); __syncthreads(); }
-        if (nthreads >= 256) if (tid < 128) { Cmp::call(tid, 128, soptval); __syncthreads(); }
-        if (nthreads >= 128) if (tid < 64) { Cmp::call(tid, 64, soptval); __syncthreads(); }
+        if (nthreads >= 512) if (tid < 256) { Cmp<best_type, op>::call(tid, 256, soptval); __syncthreads(); }
+        if (nthreads >= 256) if (tid < 128) { Cmp<best_type, op>::call(tid, 128, soptval); __syncthreads(); }
+        if (nthreads >= 128) if (tid < 64) { Cmp<best_type, op>::call(tid, 64, soptval); __syncthreads(); }
 
         if (tid < 32)
         {
-            if (nthreads >= 64) Cmp::call(tid, 32, soptval);
-            if (nthreads >= 32) Cmp::call(tid, 16, soptval);
-            if (nthreads >= 16) Cmp::call(tid, 8, soptval);
-            if (nthreads >= 8) Cmp::call(tid, 4, soptval);
-            if (nthreads >= 4) Cmp::call(tid, 2, soptval);
-            if (nthreads >= 2) Cmp::call(tid, 1, soptval);
+            if (nthreads >= 64) Cmp<best_type, op>::call(tid, 32, soptval);
+            if (nthreads >= 32) Cmp<best_type, op>::call(tid, 16, soptval);
+            if (nthreads >= 16) Cmp<best_type, op>::call(tid, 8, soptval);
+            if (nthreads >= 8) Cmp<best_type, op>::call(tid, 4, soptval);
+            if (nthreads >= 4) Cmp<best_type, op>::call(tid, 2, soptval);
+            if (nthreads >= 2) Cmp<best_type, op>::call(tid, 1, soptval);
         }
 
-        if (tid == 0) ((T*)optval.ptr(blockIdx.y))[blockIdx.x] = soptval[0];
+        if (tid == 0) ((T*)optval.ptr(blockIdx.y))[blockIdx.x] = (T)soptval[0];
     }
 
    
@@ -483,16 +490,16 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 cursize(src.cols, src.rows);
         dim3 grid(divUp(cursize.x, threads.x), divUp(cursize.y, threads.y));
 
-        opt_kernel<256, Cmp<T, MIN>, T><<<grid, threads>>>(cursize.x, cursize.y, src, minval_buf[curbuf]);
-        opt_kernel<256, Cmp<T, MAX>, T><<<grid, threads>>>(cursize.x, cursize.y, src, maxval_buf[curbuf]);
+        opt_kernel<256, MIN, T><<<grid, threads>>>(cursize.x, cursize.y, src, minval_buf[curbuf]);
+        opt_kernel<256, MAX, T><<<grid, threads>>>(cursize.x, cursize.y, src, maxval_buf[curbuf]);
         cursize = grid;
 
         while (cursize.x > 1 || cursize.y > 1)
         {
             grid.x = divUp(cursize.x, threads.x); 
             grid.y = divUp(cursize.y, threads.y);  
-            opt_kernel<256, Cmp<T, MIN>, T><<<grid, threads>>>(cursize.x, cursize.y, minval_buf[curbuf], minval_buf[1 - curbuf]);
-            opt_kernel<256, Cmp<T, MAX>, T><<<grid, threads>>>(cursize.x, cursize.y, maxval_buf[curbuf], maxval_buf[1 - curbuf]);
+            opt_kernel<256, MIN, T><<<grid, threads>>>(cursize.x, cursize.y, minval_buf[curbuf], minval_buf[1 - curbuf]);
+            opt_kernel<256, MAX, T><<<grid, threads>>>(cursize.x, cursize.y, maxval_buf[curbuf], maxval_buf[1 - curbuf]);
             curbuf = 1 - curbuf;
             cursize = grid;
         }
