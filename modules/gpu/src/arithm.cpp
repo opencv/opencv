@@ -496,34 +496,34 @@ namespace cv { namespace gpu { namespace mathfunc {
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
 {
-    CV_Assert(src.channels() == 1);
+    GpuMat src_ = src.reshape(1);
 
     double maxVal_;
     if (!maxVal) 
         maxVal = &maxVal_;
   
-    switch (src.type())
+    switch (src_.type())
     {
     case CV_8U:
-        mathfunc::min_max_caller<unsigned char>(src, minVal, maxVal);
+        mathfunc::min_max_caller<unsigned char>(src_, minVal, maxVal);
         break;
     case CV_8S:
-        mathfunc::min_max_caller<signed char>(src, minVal, maxVal);
+        mathfunc::min_max_caller<signed char>(src_, minVal, maxVal);
         break;
     case CV_16U:
-        mathfunc::min_max_caller<unsigned short>(src, minVal, maxVal);
+        mathfunc::min_max_caller<unsigned short>(src_, minVal, maxVal);
         break;
     case CV_16S:
-        mathfunc::min_max_caller<signed short>(src, minVal, maxVal);
+        mathfunc::min_max_caller<signed short>(src_, minVal, maxVal);
         break;
     case CV_32S:
-        mathfunc::min_max_caller<int>(src, minVal, maxVal);
+        mathfunc::min_max_caller<int>(src_, minVal, maxVal);
         break;
     case CV_32F:
-        mathfunc::min_max_caller<float>(src, minVal, maxVal);
+        mathfunc::min_max_caller<float>(src_, minVal, maxVal);
         break;
     case CV_64F:
-        mathfunc::min_max_caller<double>(src, minVal, maxVal);
+        mathfunc::min_max_caller<double>(src_, minVal, maxVal);
         break;
     default:
         CV_Error(CV_StsBadArg, "Unsupported type");

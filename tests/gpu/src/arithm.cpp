@@ -678,22 +678,23 @@ struct CV_GpuMinMaxTest: public CvTest
 
     void run(int)
     {
-        for (int type = CV_8U; type <= CV_64F; ++type)
-        {
-            int rows = 1, cols = 3;
-            test(rows, cols, type);
-            for (int i = 0; i < 4; ++i)
+        for (int cn = 1; cn <= 4; ++cn)
+            for (int depth = CV_8U; depth <= CV_64F; ++depth)
             {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
-                test(rows, cols, type);
+                int rows = 1, cols = 3;
+                test(rows, cols, cn, depth);
+                for (int i = 0; i < 4; ++i)
+                {
+                    int rows = 1 + rand() % 1000;
+                    int cols = 1 + rand() % 1000;
+                    test(rows, cols, cn, depth);
+                }
             }
-        }
     }
 
-    void test(int rows, int cols, int type)
+    void test(int rows, int cols, int cn, int depth)
     {
-        cv::Mat src(rows, cols, type);
+        cv::Mat src(rows, cols, CV_MAKE_TYPE(depth, cn));
         cv::RNG rng;
         for (int i = 0; i < src.rows; ++i)
         { 
@@ -702,20 +703,21 @@ struct CV_GpuMinMaxTest: public CvTest
         }
 
         double minVal, maxVal;
-        if (type != CV_8S)
+        Mat src_ = src.reshape(1);
+        if (depth != CV_8S)
         {
             cv::Point minLoc, maxLoc;
-            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+            cv::minMaxLoc(src_, &minVal, &maxVal, &minLoc, &maxLoc);
         }
         else 
         {
             // OpenCV's minMaxLoc doesn't support CV_8S type 
             minVal = std::numeric_limits<double>::max();
             maxVal = std::numeric_limits<double>::min();
-            for (int i = 0; i < src.rows; ++i)
-                for (int j = 0; j < src.cols; ++j)
+            for (int i = 0; i < src_.rows; ++i)
+                for (int j = 0; j < src_.cols; ++j)
                 {
-                    char val = src.at<char>(i, j);
+                    char val = src_.at<char>(i, j);
                     if (val < minVal) minVal = val;
                     if (val > maxVal) maxVal = val;
                 }
