@@ -217,7 +217,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T1, typename T2>
     struct NotEqual
     {
-        __device__ uchar operator()(const T1& src1, const T2& src2, int, int)
+        __device__ uchar operator()(const T1& src1, const T2& src2)
         {
             return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
         }

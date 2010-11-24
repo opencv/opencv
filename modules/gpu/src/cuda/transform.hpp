@@ -47,31 +47,49 @@
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D, typename UnOp>
-    static __global__ void transform(const DevMem2D_<T> src, PtrStep_<D> dst, UnOp op)
+    //! Mask accessor
+    template<class T> struct MaskReader_
+    {
+        PtrStep_<T> mask;
+        explicit MaskReader_(PtrStep_<T> mask): mask(mask) {}                
+
+        __device__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
+    };
+
+    //! Stub mask accessor
+    struct NoMask 
+    {
+        __device__ bool operator()(int y, int x) const { return true; } 
+    };
+
+    //! Transform kernels
+
+    template <typename T, typename D, typename Mask, typename UnOp>
+    static __global__ void transform(const DevMem2D_<T> src, PtrStep_<D> dst, const Mask mask, UnOp op)
     {
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < src.cols && y < src.rows)
+        if (x < src.cols && y < src.rows && mask(y, x))
         {
             T src_data = src.ptr(y)[x];
-            dst.ptr(y)[x] = op(src_data, x, y);
+            dst.ptr(y)[x] = op(src_data);
         }
     }
-    template <typename T1, typename T2, typename D, typename BinOp>
-    static __global__ void transform(const DevMem2D_<T1> src1, const PtrStep_<T2> src2, PtrStep_<D> dst, BinOp op)
+
+    template <typename T1, typename T2, typename D, typename Mask, typename BinOp>
+    static __global__ void transform(const DevMem2D_<T1> src1, const PtrStep_<T2> src2, PtrStep_<D> dst, const Mask mask, BinOp op)
     {
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < src1.cols && y < src1.rows)
+        if (x < src1.cols && y < src1.rows && mask(y, x))
         {
             T1 src1_data = src1.ptr(y)[x];
             T2 src2_data = src2.ptr(y)[x];
-            dst.ptr(y)[x] = op(src1_data, src2_data, x, y);
+            dst.ptr(y)[x] = op(src1_data, src2_data);
         }
-    }
+    }  
 }}}
 
 namespace cv 
@@ -87,7 +105,7 @@ namespace cv
             grid.x = divUp(src.cols, threads.x);
             grid.y = divUp(src.rows, threads.y);        
 
-            device::transform<T, D, UnOp><<<grid, threads, 0, stream>>>(src, dst, op);
+            device::transform<T, D, UnOp><<<grid, threads, 0, stream>>>(src, dst, device::NoMask(), op);
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
@@ -101,7 +119,7 @@ namespace cv
             grid.x = divUp(src1.cols, threads.x);
             grid.y = divUp(src1.rows, threads.y);        
 
-            device::transform<T1, T2, D, BinOp><<<grid, threads, 0, stream>>>(src1, src2, dst, op);
+            device::transform<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, device::NoMask(), op);
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );            

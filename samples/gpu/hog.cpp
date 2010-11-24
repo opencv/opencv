@@ -283,7 +283,7 @@ void App::RunOpencvGui()
             // Show results
             putText(img_to_show, GetPerformanceSummary(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(0, 0, 255), 2);
             imshow("opencv_gpu_hog", img_to_show);
-            HandleKey((char)waitKey(1));
+            HandleKey((char)waitKey(3));
 
             if (settings.src_is_video)
             {

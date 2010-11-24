@@ -24,11 +24,11 @@ if (BUILD_EXAMPLES)
     #      Define executable targets
     # ---------------------------------------------
     MACRO(MY_DEFINE_EXAMPLE name srcs)
-        set(the_target "example_${name}")
+        set(the_target "example_gpu_${name}")
     	add_executable(${the_target} ${srcs})
 		set_target_properties(${the_target} PROPERTIES
 		    OUTPUT_NAME "${name}"
-		    PROJECT_LABEL "(EXAMPLE) ${name}")
+		    PROJECT_LABEL "(EXAMPLE_GPU) ${name}")
     	add_dependencies(${the_target} opencv_core opencv_flann opencv_imgproc opencv_highgui
     	    opencv_ml opencv_video opencv_objdetect opencv_features2d
     	    opencv_calib3d opencv_legacy opencv_contrib opencv_gpu)
