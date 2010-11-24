@@ -219,6 +219,7 @@ protected:
     double fps;
     int nDMABufs;
     bool started;
+    int userMode;
 
     enum { VIDERE = 0x5505 };
 
@@ -257,6 +258,7 @@ CvCaptureCAM_DC1394_v2_CPP::CvCaptureCAM_DC1394_v2_CPP()
     frameC = 0;
     nimages = 1;
     rectify = false;
+    userMode = -1;
 }
 
 
@@ -277,7 +279,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
                                           DC1394_ISO_SPEED_3200);
     }
 
-    if (frameWidth > 0 || frameHeight > 0)
+    if (userMode == -1 && (frameWidth > 0 || frameHeight > 0))
     {
         dc1394video_mode_t bestMode = (dc1394video_mode_t) - 1;
         dc1394video_modes_t videoModes;
@@ -320,6 +322,17 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
         }
         if ((int)bestMode >= 0)
             code = dc1394_video_set_mode(dcCam, bestMode);
+    }
+    
+    if (userMode > 0)
+    {
+        dc1394video_modes_t videoModes;
+        dc1394_video_get_supported_modes(dcCam, &videoModes);
+        if (userMode < videoModes.num)
+        {
+            dc1394video_mode_t mode = videoModes.modes[userMode];
+            code = dc1394_video_set_mode(dcCam, mode);
+        }
     }
 
     if (fps > 0)
@@ -600,6 +613,9 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
         if( cameraId != VIDERE )
             return false;
         rectify = fabs(value) > FLT_EPSILON;
+        break;
+    case CV_CAP_PROP_MODE:
+        userMode = cvRound(value);
         break;
     default:
         return false;
