@@ -230,7 +230,7 @@ bool  PngDecoder::readData( Mat& img )
             else if( color )
                 png_set_gray_to_rgb( png_ptr ); // Gray->RGB
             else
-                png_set_rgb_to_gray( png_ptr, 1, -1, -1 ); // RGB->Gray
+                png_set_rgb_to_gray( png_ptr, 1, 0.299, 0.587 ); // RGB->Gray
 
             png_read_update_info( png_ptr, info_ptr );
 
