@@ -32,9 +32,10 @@ source_group("Src\\Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
 file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
 source_group("Include" FILES ${lib_hdrs})
 
-if (HAVE_CUDA)
-	set(NPP_FIND_REQUIRED 1)
-	include(FindNPP.cmake) 
+if (HAVE_CUDA)		
+	get_filename_component(_path_to_findnpp "${CMAKE_CURRENT_LIST_FILE}" PATH)
+	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_path_to_findnpp})	
+	find_package(NPP REQUIRED)
 
 	include_directories(${CUDA_INCLUDE_DIRS} ${CUDA_NPP_INCLUDES})	
 	
