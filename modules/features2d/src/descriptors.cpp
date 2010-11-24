@@ -358,7 +358,7 @@ Ptr<DescriptorExtractor> createDescriptorExtractor(const string& descriptorExtra
   }
   else if (!descriptorExtractorType.compare("BRIEF"))
   {
-    de = new BriefDescriptorExtractor(32);
+    de = new BriefDescriptorExtractor();
   }
   return de;
 }

@@ -2109,8 +2109,7 @@ inline void BruteForceMatcher<Distance>::commonKnnMatchImpl( BruteForceMatcher<D
      size_t imgCount = matcher.trainDescCollection.size();
      vector<Mat> allDists( imgCount ); // distances between one query descriptor and all train descriptors
      for( size_t i = 0; i < imgCount; i++ )
-		 if( matcher.trainDescCollection[i].rows )
-			allDists[i] = Mat( 1, matcher.trainDescCollection[i].rows, DataType<DistanceType>::type );
+        allDists[i] = Mat( 1, matcher.trainDescCollection[i].rows, DataType<DistanceType>::type );
 
      for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
      {

@@ -81,7 +81,7 @@ void CV_FeatureDetectorTest::emptyDataTest()
     }
     catch(...)
     {
-        ts->printf( CvTS::LOG, "emptyDataTest: Detect() on empty image must not generate exeption\n" );
+        ts->printf( CvTS::LOG, "emptyDataTest: Detect() on empty image must not generate exception\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         return;
     }
@@ -267,25 +267,86 @@ static Mat readMatFromBin( const string& filename )
     return Mat();
 }
 
+template<class Distance>
 class CV_DescriptorExtractorTest : public CvTest
 {
 public:
-    CV_DescriptorExtractorTest( const char* testName, float _maxNormDif, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime  ) :
-            CvTest( testName, "cv::DescriptorExtractor::compute" ), maxNormDif(_maxNormDif), prevTime(_prevTime), dextractor(_dextractor) {}
+    typedef typename Distance::ValueType ValueType;
+    typedef typename Distance::ResultType DistanceType;
+
+    CV_DescriptorExtractorTest( const char* testName, DistanceType _maxDistDif, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
+                                Distance d = Distance() ):
+            CvTest( testName, "cv::DescriptorExtractor::compute" ),
+            maxDistDif(_maxDistDif), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
 
-    void run(int)
+    void compareDescriptors( const Mat& validDescriptors, const Mat& calcDescriptors )
     {
-        createDescriptorExtractor();
-
-        if( dextractor.empty() )
+        if( validDescriptors.size != calcDescriptors.size || validDescriptors.type() != calcDescriptors.type() )
         {
-            ts->printf(CvTS::LOG, "Descriptor extractor is empty\n");
+            ts->printf(CvTS::LOG, "Valid and computed descriptors matrices must have the same size and type\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
             return;
         }
 
+        CV_Assert( DataType<ValueType>::type == validDescriptors.type() );
+
+        int dimension = validDescriptors.cols;
+        DistanceType maxDist = std::numeric_limits<DistanceType>::min();
+        for( int y = 0; y < validDescriptors.rows; y++ )
+        {
+            DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
+            if( dist > maxDistDif)
+            {
+                stringstream ss;
+                ss << "Discance between valid and computed " << y << "-descriptors > " << maxDistDif << endl;
+                ts->printf(CvTS::LOG,  ss.str().c_str() );
+                ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
+                return;
+            }
+            if( dist > maxDist )
+                maxDist = dist;
+        }
+        stringstream ss;
+        ss << "regressionTest: Max discance between valid and computed descriptors " << maxDist << endl;
+        ts->printf(CvTS::LOG,  ss.str().c_str() );
+    }
+
+    void emptyDataTest()
+    {
+        assert( !dextractor.empty() );
+        Mat image;
+        vector<KeyPoint> keypoints;
+        Mat descriptors;
+
+        try
+        {
+            dextractor->compute( image, keypoints, descriptors );
+        }
+        catch(...)
+        {
+            ts->printf( CvTS::LOG, "emptyDataTest: compute() on empty image and empty keypoints must not generate exception\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+        }
+
+        image.create( 50, 50, CV_8UC3 );
+        try
+        {
+            dextractor->compute( image, keypoints, descriptors );
+        }
+        catch(...)
+        {
+            ts->printf( CvTS::LOG, "emptyDataTest: compute() on nonempty image and empty keypoints must not generate exception\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+        }
+    }
+
+    void regressionTest()
+    {
+        assert( !dextractor.empty() );
+
+        // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
         Mat img = imread( imgFilename, 0 );
         if( img.empty() )
@@ -298,7 +359,43 @@ protected:
         vector<KeyPoint> keypoints;
         FileStorage fs( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::READ );
         if( fs.isOpened() )
+        {
             read( fs.getFirstTopLevelNode(), keypoints );
+
+            Mat calcDescriptors;
+            double t = (double)getTickCount();
+            dextractor->compute( img, keypoints, calcDescriptors );
+            t = getTickCount() - t;
+            ts->printf(CvTS::LOG, "\nregressionTest: Average time of computiting one descriptor = %g ms (previous time = %g ms)\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
+
+            if( calcDescriptors.rows != (int)keypoints.size() )
+            {
+                ts->printf( CvTS::LOG, "Count of computed descriptors and keypoints count must be equal\n" );
+                ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+                return;
+            }
+
+            if( calcDescriptors.cols != dextractor->descriptorSize() || calcDescriptors.type() != dextractor->descriptorType() )
+            {
+                ts->printf( CvTS::LOG, "Incorrect descriptor size or descriptor type\n" );
+                ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+                return;
+            }
+
+            // TODO read and write descriptor extractor parameters and check them
+            Mat validDescriptors = readDescriptors();
+            if( !validDescriptors.empty() )
+                compareDescriptors( validDescriptors, calcDescriptors );
+            else
+            {
+                if( !writeDescriptors( calcDescriptors ) )
+                {
+                    ts->printf( CvTS::LOG, "Descriptors can not be written\n" );
+                    ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+                    return;
+                }
+            }
+        }
         else
         {
             ts->printf( CvTS::LOG, "Compute and write keypoints\n" );
@@ -316,31 +413,22 @@ protected:
                 return;
             }
         }
+    }
 
-        Mat calcDescriptors;
-        double t = (double)getTickCount();
-        dextractor->compute( img, keypoints, calcDescriptors );
-        t = getTickCount() - t;
-        ts->printf(CvTS::LOG, "\nAverage time of computiting one descriptor = %g ms (previous time = %g ms)\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
+    void run(int)
+    {
+        createDescriptorExtractor();
+        if( dextractor.empty() )
+        {
+            ts->printf(CvTS::LOG, "Descriptor extractor is empty\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+            return;
+        }
 
-        // TODO read and write descriptor extractor parameters and check them
-        Mat validDescriptors = readDescriptors();
-        if( !validDescriptors.empty() )
-        {
-            double normValue = norm( calcDescriptors, validDescriptors, NORM_INF );
-            ts->printf( CvTS::LOG, "nofm (inf) BTW valid and calculated float descriptors = %f\n", normValue );
-            if( normValue > maxNormDif )
-                ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-        }
-        else
-        {
-            if( !writeDescriptors( calcDescriptors ) )
-            {
-                ts->printf( CvTS::LOG, "Descriptors can not be written\n" );
-                ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
-                return;
-            }
-        }
+        emptyDataTest();
+        regressionTest();
+
+        ts->set_failed_test_info( CvTS::OK );
     }
 
     virtual Mat readDescriptors()
@@ -355,23 +443,27 @@ protected:
         return true;
     }
 
-    const float maxNormDif;
+    const DistanceType maxDistDif;
     const float prevTime;
 
     Ptr<DescriptorExtractor> dextractor;
+    Distance distance;
 };
 
-template<typename T>
-class CV_CalonderDescriptorExtractorTest : public CV_DescriptorExtractorTest
+template<typename T, typename Distance>
+class CV_CalonderDescriptorExtractorTest : public CV_DescriptorExtractorTest<Distance>
 {
 public:
     CV_CalonderDescriptorExtractorTest( const char* testName, float _normDif, float _prevTime ) :
-            CV_DescriptorExtractorTest( testName, _normDif, Ptr<DescriptorExtractor>(), _prevTime )
+            CV_DescriptorExtractorTest<Distance>( testName, _normDif, Ptr<DescriptorExtractor>(), _prevTime )
     {}
 
+protected:
     virtual void createDescriptorExtractor()
     {
-        dextractor = new CalonderDescriptorExtractor<T>( string(ts->get_data_path()) + FEATURES2D_DIR + "/calonder_classifier.rtc");
+        CV_DescriptorExtractorTest<Distance>::dextractor =
+                new CalonderDescriptorExtractor<T>( string(CV_DescriptorExtractorTest<Distance>::ts->get_data_path()) +
+                                                    FEATURES2D_DIR + "/calonder_classifier.rtc");
     }
 };
 
@@ -782,21 +874,25 @@ CV_FeatureDetectorTest surfTest( "detector-surf", createFeatureDetector("SURF") 
 
 /*
  * Descriptors
+ * "descriptor-sift, descriptor-surf, descriptor-calonder-uchar, descriptor-calonder-float, descriptor-brief"
  */
-CV_DescriptorExtractorTest siftDescriptorTest( "descriptor-sift", 0.03f,
+CV_DescriptorExtractorTest<L2<float> > siftDescriptorTest( "descriptor-sift", 0.03f,
                                                 createDescriptorExtractor("SIFT"), 8.06652f  );
-CV_DescriptorExtractorTest surfDescriptorTest( "descriptor-surf",  0.035f,
+CV_DescriptorExtractorTest<L2<float> > surfDescriptorTest( "descriptor-surf",  0.035f,
                                                 createDescriptorExtractor("SURF"), 0.147372f );
+CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  1,
+                                                createDescriptorExtractor("BRIEF"), 0.00527548 );
+
 //CV_DescriptorExtractorTest oppSiftDescriptorTest( "descriptor-opponent-sift", 0.008f,
 //                                                createDescriptorExtractor("OpponentSIFT"), 8.06652f  );
 //CV_DescriptorExtractorTest oppurfDescriptorTest( "descriptor-opponent-surf",  0.02f,
 //                                                createDescriptorExtractor("OpponentSURF"), 0.147372f );
 
 #if CV_SSE2
-CV_CalonderDescriptorExtractorTest<uchar> ucharCalonderTest( "descriptor-calonder-uchar",
+CV_CalonderDescriptorExtractorTest<uchar, L2<uchar> > ucharCalonderTest( "descriptor-calonder-uchar",
                                                              std::numeric_limits<float>::epsilon() + 1,
                                                              0.0132175f );
-CV_CalonderDescriptorExtractorTest<float> floatCalonderTest( "descriptor-calonder-float",
+CV_CalonderDescriptorExtractorTest<float, L2<float> > floatCalonderTest( "descriptor-calonder-float",
                                                              std::numeric_limits<float>::epsilon(),
                                                              0.0221308f );
 #endif // CV_SSE2
