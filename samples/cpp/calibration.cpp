@@ -9,30 +9,67 @@
 using namespace cv;
 using namespace std;
 
-/* 
- example command line for calibration from a live feed.
-   calibration  -w 4 -h 5 -s 0.025 -o camera.yml -op -oe
- 
- example command line for calibration from a list of stored images:
-   imagelist_creator image_list.xml *.png
-   calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml
- where image_list.xml is the standard OpenCV XML/YAML
- use imagelist_creator to create the xml or yaml list
- file consisting of the list of strings, e.g.:
- 
-<?xml version="1.0"?>
-<opencv_storage>
-<images>
-"view000.png"
-"view001.png"
-<!-- view002.png -->
-"view003.png"
-"view010.png"
-"one_extra_view.jpg"
-</images>
-</opencv_storage>
+const char * usage =
+" example command line for calibration from a live feed.\n"
+"   calibration  -w 4 -h 5 -s 0.025 -o camera.yml -op -oe\n"
+" \n"
+" example command line for calibration from a list of stored images:\n"
+"   imagelist_creator image_list.xml *.png\n"
+"   calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml\n"
+" where image_list.xml is the standard OpenCV XML/YAML\n"
+" use imagelist_creator to create the xml or yaml list\n"
+" file consisting of the list of strings, e.g.:\n"
+" \n"
+"<?xml version=\"1.0\"?>\n"
+"<opencv_storage>\n"
+"<images>\n"
+"view000.png\n"
+"view001.png\n"
+"<!-- view002.png -->\n"
+"view003.png\n"
+"view010.png\n"
+"one_extra_view.jpg\n"
+"</images>\n"
+"</opencv_storage>\n";
 
- */
+
+
+
+const char* liveCaptureHelp =
+    "When the live video from camera is used as input, the following hot-keys may be used:\n"
+        "  <ESC>, 'q' - quit the program\n"
+        "  'g' - start capturing images\n"
+        "  'u' - switch undistortion on/off\n";
+
+void help()
+{
+    printf( "This is a camera calibration sample.\n"
+        "Usage: calibration\n"
+        "     -w <board_width>         # the number of inner corners per one of board dimension\n"
+        "     -h <board_height>        # the number of inner corners per another board dimension\n"
+        "     [-n <number_of_frames>]  # the number of frames to use for calibration\n"
+        "                              # (if not specified, it will be set to the number\n"
+        "                              #  of board views actually available)\n"
+        "     [-d <delay>]             # a minimum delay in ms between subsequent attempts to capture a next view\n"
+        "                              # (used only for video capturing)\n"
+        "     [-s <squareSize>]       # square size in some user-defined units (1 by default)\n"
+        "     [-o <out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
+        "     [-op]                    # write detected feature points\n"
+        "     [-oe]                    # write extrinsic parameters\n"
+        "     [-zt]                    # assume zero tangential distortion\n"
+        "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
+        "     [-p]                     # fix the principal point at the center\n"
+        "     [-v]                     # flip the captured images around the horizontal axis\n"
+        "     [-su]                    # show undistorted images after calibration\n"
+        "     [input_data]             # input data, one of the following:\n"
+        "                              #  - text file with a list of the images of the board\n"
+        "                              #    the text file can be generated with imagelist_creator\n"
+        "                              #  - name of video file with a video of the board\n"
+        "                              # if input_data not specified, a live view from the camera is used\n"
+        "\n" );
+    printf("\n%s",usage);
+    printf( "\n%s", liveCaptureHelp );
+}
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
@@ -247,40 +284,11 @@ int main( int argc, char** argv )
     vector<vector<Point2f> > imagePoints;
     vector<string> imageList;
 
-    const char* liveCaptureHelp = 
-        "When the live video from camera is used as input, the following hot-keys may be used:\n"
-            "  <ESC>, 'q' - quit the program\n"
-            "  'g' - start capturing images\n"
-            "  'u' - switch undistortion on/off\n";
 
     if( argc < 2 )
     {
-        printf( "This is a camera calibration sample.\n"
-            "Usage: calibration\n"
-            "     -w <board_width>         # the number of inner corners per one of board dimension\n"
-            "     -h <board_height>        # the number of inner corners per another board dimension\n"
-            "     [-n <number_of_frames>]  # the number of frames to use for calibration\n"
-            "                              # (if not specified, it will be set to the number\n"
-            "                              #  of board views actually available)\n"
-            "     [-d <delay>]             # a minimum delay in ms between subsequent attempts to capture a next view\n"
-            "                              # (used only for video capturing)\n"
-            "     [-s <squareSize>]       # square size in some user-defined units (1 by default)\n"
-            "     [-o <out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
-            "     [-op]                    # write detected feature points\n"
-            "     [-oe]                    # write extrinsic parameters\n"
-            "     [-zt]                    # assume zero tangential distortion\n"
-            "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
-            "     [-p]                     # fix the principal point at the center\n"
-            "     [-v]                     # flip the captured images around the horizontal axis\n"
-            "     [-su]                    # show undistorted images after calibration\n"
-            "     [input_data]             # input data, one of the following:\n"
-            "                              #  - text file with a list of the images of the board\n"
-            "                              #    the text file can be generated with imagelist_creator\n"
-            "                              #  - name of video file with a video of the board\n"
-            "                              # if input_data not specified, a live view from the camera is used\n"
-            "\n" );
-        printf( "%s", liveCaptureHelp );
-        return 0;
+    	help();
+    	return 0;
     }
 
     for( i = 1; i < argc; i++ )
