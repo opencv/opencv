@@ -60,111 +60,174 @@ public:
         CvTest( testName, "cv::FeatureDetector::detect"), fdetector(_fdetector) {}
 
 protected:
-    virtual void run( int /*start_from*/ )
-    {
-        const float maxPtDif = 1.f;
-        const float maxSizeDif = 1.f;
-        const float maxAngleDif = 2.f;
-        const float maxResponseDif = 0.1f;
+    bool isSimilarKeypoints( const KeyPoint& p1, const KeyPoint& p2 );
+    void compareKeypointSets( const vector<KeyPoint>& validKeypoints, const vector<KeyPoint>& calcKeypoints );
 
-        string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
-        string resFilename = string(ts->get_data_path()) + DETECTOR_DIR + "/" + string(name) + ".xml.gz";
+    void emptyDataTest();
+    void regressionTest(); // TODO test of detect() with mask
 
-        if( fdetector.empty() )
-        {
-            ts->printf( CvTS::LOG, "Feature detector is empty" );
-            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
-            return;
-        }
-
-        Mat image = imread( imgFilename, 0 );
-        if( image.empty() )
-        {
-            ts->printf( CvTS::LOG, "image %s can not be read \n", imgFilename.c_str() );
-            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
-            return;
-        }
-
-        FileStorage fs( resFilename, FileStorage::READ );
-
-        vector<KeyPoint> calcKeypoints;
-        fdetector->detect( image, calcKeypoints );
-
-        if( fs.isOpened() ) // compare computed and valid keypoints
-        {
-            // TODO compare saved feature detector params with current ones
-            vector<KeyPoint> validKeypoints;
-            read( fs["keypoints"], validKeypoints );
-            if( validKeypoints.empty() )
-            {
-                ts->printf( CvTS::LOG, "Keypoints can nod be read\n" );
-                ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
-                return;
-            }
-
-            int progress = 0, progressCount = validKeypoints.size() * calcKeypoints.size();
-            int badPointCount = 0, commonPointCount = max(validKeypoints.size(), calcKeypoints.size());
-            for( size_t v = 0; v < validKeypoints.size(); v++ )
-            {
-                int nearestIdx = -1;
-                float minDist = std::numeric_limits<float>::max();
-
-                for( size_t c = 0; c < calcKeypoints.size(); c++ )
-                {
-                    progress = update_progress( progress, v*calcKeypoints.size() + c, progressCount, 0 );
-                    float curDist = (float)norm( calcKeypoints[c].pt - validKeypoints[v].pt );
-                    if( curDist < minDist )
-                    {
-                        minDist = curDist;
-                        nearestIdx = c;
-                    }
-                }
-
-                if( minDist > maxPtDif ||
-                    fabs(calcKeypoints[nearestIdx].size - validKeypoints[v].size) > maxSizeDif ||
-                    abs(calcKeypoints[nearestIdx].angle - validKeypoints[v].angle) > maxAngleDif ||
-                    abs(calcKeypoints[nearestIdx].response - validKeypoints[v].response) > maxResponseDif ||
-                    calcKeypoints[nearestIdx].octave != validKeypoints[v].octave
-
-                    // TODO !!!!!!!
-                    /*||
-                    calcKeypoints[nearestIdx].class_id != validKeypoints[v].class_id*/ )
-                {
-                    badPointCount++;
-                }
-            }
-            ts->printf( CvTS::LOG, "badPointCount = %d; validPointCount = %d; calcPointCount = %d\n",
-                        badPointCount, validKeypoints.size(), calcKeypoints.size() );
-            if( badPointCount > 0.9 * commonPointCount )
-            {
-                ts->printf( CvTS::LOG, "Bad accuracy!\n" );
-                ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-                return;
-            }
-        }
-        else // write
-        {
-            fs.open( resFilename, FileStorage::WRITE );
-            if( !fs.isOpened() )
-            {
-                ts->printf( CvTS::LOG, "file %s can not be opened to write\n", resFilename.c_str() );
-                ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
-                return;
-            }
-            else
-            {
-                fs << "detector_params" << "{";
-                fdetector->write( fs );
-                fs << "}";
-
-                write( fs, "keypoints", calcKeypoints );
-            }
-        }
-        ts->set_failed_test_info( CvTS::OK );
-    }
+    virtual void run( int );
 
     Ptr<FeatureDetector> fdetector;
 };
+
+void CV_FeatureDetectorTest::emptyDataTest()
+{
+    Mat image;
+    vector<KeyPoint> keypoints;
+    try
+    {
+        fdetector->detect( image, keypoints );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "emptyDataTest: Detect() on empty image must not generate exeption\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        return;
+    }
+
+    if( !keypoints.empty() )
+    {
+        ts->printf( CvTS::LOG, "emptyDataTest: Detect() on empty image must return empty keypoints vector\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        return;
+    }
+}
+
+bool CV_FeatureDetectorTest::isSimilarKeypoints( const KeyPoint& p1, const KeyPoint& p2 )
+{
+    const float maxPtDif = 1.f;
+    const float maxSizeDif = 1.f;
+    const float maxAngleDif = 2.f;
+    const float maxResponseDif = 0.1f;
+
+    float dist = (float)norm( p1.pt - p2.pt );
+    return (dist < maxPtDif &&
+            fabs(p1.size - p2.size) < maxSizeDif &&
+            abs(p1.angle - p2.angle) < maxAngleDif &&
+            abs(p1.response - p2.response) < maxResponseDif &&
+            p1.octave == p2.octave &&
+            p1.class_id == p2.class_id );
+}
+
+void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validKeypoints, const vector<KeyPoint>& calcKeypoints )
+{
+    const float maxCountRatioDif = 0.01f;
+
+    // Compare counts of validation and calculated keypoints.
+    float countRatio = (float)validKeypoints.size() / (float)calcKeypoints.size();
+    if( countRatio < 1 - maxCountRatioDif || countRatio > 1.f + maxCountRatioDif )
+    {
+        ts->printf( CvTS::LOG, "Bad keypoints count ratio (validCount = %d, calcCount = %d)!\n",
+                    validKeypoints.size(), calcKeypoints.size() );
+        ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
+        return;
+    }
+
+    int progress = 0, progressCount = validKeypoints.size() * calcKeypoints.size();
+    int badPointCount = 0, commonPointCount = max(validKeypoints.size(), calcKeypoints.size());
+    for( size_t v = 0; v < validKeypoints.size(); v++ )
+    {
+        int nearestIdx = -1;
+        float minDist = std::numeric_limits<float>::max();
+
+        for( size_t c = 0; c < calcKeypoints.size(); c++ )
+        {
+            progress = update_progress( progress, v*calcKeypoints.size() + c, progressCount, 0 );
+            float curDist = (float)norm( calcKeypoints[c].pt - validKeypoints[v].pt );
+            if( curDist < minDist )
+            {
+                minDist = curDist;
+                nearestIdx = c;
+            }
+        }
+
+        assert( minDist >= 0 );
+        if( !isSimilarKeypoints( validKeypoints[v], calcKeypoints[nearestIdx] ) )
+            badPointCount++;
+    }
+    ts->printf( CvTS::LOG, "regressionTest: badPointCount = %d; validPointCount = %d; calcPointCount = %d\n",
+                badPointCount, validKeypoints.size(), calcKeypoints.size() );
+    if( badPointCount > 0.9 * commonPointCount )
+    {
+        ts->printf( CvTS::LOG, " - Bad accuracy!\n" );
+        ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
+        return;
+    }
+    ts->printf( CvTS::LOG, " - OK\n" );
+}
+
+void CV_FeatureDetectorTest::regressionTest()
+{
+    assert( !fdetector.empty() );
+    string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
+    string resFilename = string(ts->get_data_path()) + DETECTOR_DIR + "/" + string(name) + ".xml.gz";
+
+    // Read the test image.
+    Mat image = imread( imgFilename, 0 );
+    if( image.empty() )
+    {
+        ts->printf( CvTS::LOG, "image %s can not be read \n", imgFilename.c_str() );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+        return;
+    }
+
+    FileStorage fs( resFilename, FileStorage::READ );
+
+    // Compute keypoints.
+    vector<KeyPoint> calcKeypoints;
+    fdetector->detect( image, calcKeypoints );
+
+    if( fs.isOpened() ) // Compare computed and valid keypoints.
+    {
+        // TODO compare saved feature detector params with current ones
+
+        // Read validation keypoints set.
+        vector<KeyPoint> validKeypoints;
+        read( fs["keypoints"], validKeypoints );
+        if( validKeypoints.empty() )
+        {
+            ts->printf( CvTS::LOG, "Keypoints can nod be read\n" );
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+            return;
+        }
+
+        compareKeypointSets( validKeypoints, calcKeypoints );
+    }
+    else // Write detector parameters and computed keypoints as validation data.
+    {
+        fs.open( resFilename, FileStorage::WRITE );
+        if( !fs.isOpened() )
+        {
+            ts->printf( CvTS::LOG, "file %s can not be opened to write\n", resFilename.c_str() );
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+            return;
+        }
+        else
+        {
+            fs << "detector_params" << "{";
+            fdetector->write( fs );
+            fs << "}";
+
+            write( fs, "keypoints", calcKeypoints );
+        }
+    }
+}
+
+void CV_FeatureDetectorTest::run( int /*start_from*/ )
+{
+    if( fdetector.empty() )
+    {
+        ts->printf( CvTS::LOG, "Feature detector is empty" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+        return;
+    }
+
+    emptyDataTest();
+    regressionTest();
+
+    ts->set_failed_test_info( CvTS::OK );
+}
 
 /****************************************************************************************\
 *                     Regression tests for descriptor extractors.                        *
@@ -707,6 +770,7 @@ void CV_DescriptorMatcherTest::run( int )
 
 /*
  * Detectors
+ * "detector-fast, detector-gftt, detector-harris, detector-mser, detector-sift, detector-star, detector-surf"
  */
 CV_FeatureDetectorTest fastTest( "detector-fast", createFeatureDetector("FAST") );
 CV_FeatureDetectorTest gfttTest( "detector-gftt", createFeatureDetector("GFTT") );
