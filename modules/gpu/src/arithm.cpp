@@ -489,55 +489,45 @@ Scalar cv::gpu::sum(const GpuMat& src)
 ////////////////////////////////////////////////////////////////////////
 // minMax
 
-namespace
-{
-    void minMax_c1(const GpuMat& src, double* minVal, double* maxVal)
-    {
-        NppiSize sz;
-        sz.width  = src.cols;
-        sz.height = src.rows;
-
-        Npp8u min_res, max_res;
-
-        nppSafeCall( nppiMinMax_8u_C1R(src.ptr<Npp8u>(), src.step, sz, &min_res, &max_res) );
-
-        if (minVal)
-            *minVal = min_res;
-
-        if (maxVal)
-            *maxVal = max_res;
-    }
-
-    void minMax_c4(const GpuMat& src, double* minVal, double* maxVal)
-    {
-        NppiSize sz;
-        sz.width  = src.cols;
-        sz.height = src.rows;
-
-        Npp8u* cuMem;
-
-        cuMem = nppsMalloc_8u(8);
-
-        nppSafeCall( nppiMinMax_8u_C4R(src.ptr<Npp8u>(), src.step, sz, cuMem, cuMem + 4) );
-
-        if (minVal)
-            cudaMemcpy(minVal, cuMem, 4 * sizeof(Npp8u), cudaMemcpyDeviceToHost);
-        if (maxVal)
-            cudaMemcpy(maxVal, cuMem + 4, 4 * sizeof(Npp8u), cudaMemcpyDeviceToHost);
-
-        nppsFree(cuMem);
-    }
-}
+namespace cv { namespace gpu { namespace mathfunc {
+    template <typename T> 
+    void min_max_caller(const DevMem2D src, double* minval, double* maxval);
+}}}
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
 {
-    typedef void (*minMax_t)(const GpuMat& src, double* minVal, double* maxVal);
-    static const minMax_t minMax_callers[] = {0, minMax_c1, 0, 0, minMax_c4};
+    CV_Assert(src.channels() == 1);
 
-    CV_Assert(!"disabled until fix npp bug");
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
-
-    minMax_callers[src.channels()](src, minVal, maxVal);
+    double maxVal_;
+    if (!maxVal) 
+        maxVal = &maxVal_;
+  
+    switch (src.type())
+    {
+    case CV_8U:
+        mathfunc::min_max_caller<unsigned char>(src, minVal, maxVal);
+        break;
+    case CV_8S:
+        mathfunc::min_max_caller<signed char>(src, minVal, maxVal);
+        break;
+    case CV_16U:
+        mathfunc::min_max_caller<unsigned short>(src, minVal, maxVal);
+        break;
+    case CV_16S:
+        mathfunc::min_max_caller<signed short>(src, minVal, maxVal);
+        break;
+    case CV_32S:
+        mathfunc::min_max_caller<int>(src, minVal, maxVal);
+        break;
+    case CV_32F:
+        mathfunc::min_max_caller<float>(src, minVal, maxVal);
+        break;
+    case CV_64F:
+        mathfunc::min_max_caller<double>(src, minVal, maxVal);
+        break;
+    default:
+        CV_Error(CV_StsBadArg, "Unsupported type");
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////

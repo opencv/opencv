@@ -393,4 +393,132 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
     }  
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Min max
+
+    enum { MIN, MAX };  
+    template <typename T, int op> struct Cmp {};
+    
+    template <typename T>
+    struct Cmp<T, MIN> 
+    {
+        static __device__ void call(unsigned int tid, unsigned int offset, volatile T* optval)
+        {
+            T val = optval[tid + offset];
+            if (val < optval[tid]) optval[tid] = val;
+            //optval[tid] = min(optval[tid], optval[tid + offset]); 
+        }
+    };
+
+    template <typename T>
+    struct Cmp<T, MAX> 
+    {
+        static __device__ void call(unsigned int tid, unsigned int offset, volatile T* optval)
+        {
+            T val = optval[tid + offset];
+            if (val > optval[tid]) optval[tid] = val;
+            //optval[tid] = max(optval[tid], optval[tid + offset]);
+        }
+    };
+
+
+    template <int nthreads, typename Cmp, typename T>
+    __global__ void opt_kernel(int cols, int rows, const PtrStep src, PtrStep optval)
+    {
+        __shared__ T soptval[nthreads];
+
+        unsigned int x0 = blockIdx.x * blockDim.x;
+        unsigned int y0 = blockIdx.y * blockDim.y;
+        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        if (x0 + threadIdx.x < cols && y0 + threadIdx.y < rows)
+            soptval[tid] = ((const T*)src.ptr(y0 + threadIdx.y))[x0 + threadIdx.x];
+        else
+            soptval[tid] = ((const T*)src.ptr(y0))[x0];
+
+        __syncthreads();
+
+        if (nthreads >= 512) if (tid < 256) { Cmp::call(tid, 256, soptval); __syncthreads(); }
+        if (nthreads >= 256) if (tid < 128) { Cmp::call(tid, 128, soptval); __syncthreads(); }
+        if (nthreads >= 128) if (tid < 64) { Cmp::call(tid, 64, soptval); __syncthreads(); }
+
+        if (tid < 32)
+        {
+            if (nthreads >= 64) Cmp::call(tid, 32, soptval);
+            if (nthreads >= 32) Cmp::call(tid, 16, soptval);
+            if (nthreads >= 16) Cmp::call(tid, 8, soptval);
+            if (nthreads >= 8) Cmp::call(tid, 4, soptval);
+            if (nthreads >= 4) Cmp::call(tid, 2, soptval);
+            if (nthreads >= 2) Cmp::call(tid, 1, soptval);
+        }
+
+        if (tid == 0) ((T*)optval.ptr(blockIdx.y))[blockIdx.x] = soptval[0];
+    }
+
+   
+    template <typename T>
+    void min_max_caller(const DevMem2D src, double* minval, double* maxval)
+    {
+        dim3 threads(32, 8);
+
+        // Allocate memory for aux. buffers
+        DevMem2D minval_buf[2]; DevMem2D maxval_buf[2];
+        minval_buf[0].cols = divUp(src.cols, threads.x); 
+        minval_buf[0].rows = divUp(src.rows, threads.y);
+        minval_buf[1].cols = divUp(minval_buf[0].cols, threads.x); 
+        minval_buf[1].rows = divUp(minval_buf[0].rows, threads.y);
+        maxval_buf[0].cols = divUp(src.cols, threads.x); 
+        maxval_buf[0].rows = divUp(src.rows, threads.y);
+        maxval_buf[1].cols = divUp(maxval_buf[0].cols, threads.x); 
+        maxval_buf[1].rows = divUp(maxval_buf[0].rows, threads.y);
+        cudaSafeCall(cudaMallocPitch(&minval_buf[0].data, &minval_buf[0].step, minval_buf[0].cols * sizeof(T), minval_buf[0].rows));
+        cudaSafeCall(cudaMallocPitch(&minval_buf[1].data, &minval_buf[1].step, minval_buf[1].cols * sizeof(T), minval_buf[1].rows));
+        cudaSafeCall(cudaMallocPitch(&maxval_buf[0].data, &maxval_buf[0].step, maxval_buf[0].cols * sizeof(T), maxval_buf[0].rows));
+        cudaSafeCall(cudaMallocPitch(&maxval_buf[1].data, &maxval_buf[1].step, maxval_buf[1].cols * sizeof(T), maxval_buf[1].rows));
+
+        int curbuf = 0;
+        dim3 cursize(src.cols, src.rows);
+        dim3 grid(divUp(cursize.x, threads.x), divUp(cursize.y, threads.y));
+
+        opt_kernel<256, Cmp<T, MIN>, T><<<grid, threads>>>(cursize.x, cursize.y, src, minval_buf[curbuf]);
+        opt_kernel<256, Cmp<T, MAX>, T><<<grid, threads>>>(cursize.x, cursize.y, src, maxval_buf[curbuf]);
+        cursize = grid;
+
+        while (cursize.x > 1 || cursize.y > 1)
+        {
+            grid.x = divUp(cursize.x, threads.x); 
+            grid.y = divUp(cursize.y, threads.y);  
+            opt_kernel<256, Cmp<T, MIN>, T><<<grid, threads>>>(cursize.x, cursize.y, minval_buf[curbuf], minval_buf[1 - curbuf]);
+            opt_kernel<256, Cmp<T, MAX>, T><<<grid, threads>>>(cursize.x, cursize.y, maxval_buf[curbuf], maxval_buf[1 - curbuf]);
+            curbuf = 1 - curbuf;
+            cursize = grid;
+        }
+
+        cudaSafeCall(cudaThreadSynchronize());
+
+        // Copy results from device to host
+        T minval_, maxval_;
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf[curbuf].ptr(0), sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf[curbuf].ptr(0), sizeof(T), cudaMemcpyDeviceToHost));
+        *minval = minval_;
+        *maxval = maxval_;
+
+        // Release aux. buffers
+        cudaSafeCall(cudaFree(minval_buf[0].data));
+        cudaSafeCall(cudaFree(minval_buf[1].data));
+        cudaSafeCall(cudaFree(maxval_buf[0].data));
+        cudaSafeCall(cudaFree(maxval_buf[1].data));
+    }
+
+    template void min_max_caller<unsigned char>(const DevMem2D, double*, double*);
+    template void min_max_caller<signed char>(const DevMem2D, double*, double*);
+    template void min_max_caller<unsigned short>(const DevMem2D, double*, double*);
+    template void min_max_caller<signed short>(const DevMem2D, double*, double*);
+    template void min_max_caller<int>(const DevMem2D, double*, double*);
+    template void min_max_caller<float>(const DevMem2D, double*, double*);
+    template void min_max_caller<double>(const DevMem2D, double*, double*);
+
 }}}

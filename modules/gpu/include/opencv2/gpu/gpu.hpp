@@ -422,8 +422,6 @@ namespace cv
         CV_EXPORTS Scalar sum(const GpuMat& m);
 
         //! finds global minimum and maximum array elements and returns their values
-        //! supports CV_8UC1 and CV_8UC4 type
-        //! disabled until fix npp bug
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal = 0);
 
         //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))

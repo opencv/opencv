@@ -48,7 +48,6 @@ const char* blacklist[] =
     "GPU-MatOperatorAsyncCall",     // crash
 
     "GPU-NppImageSum",              // crash, probably npp bug
-    "GPU-NppImageMinNax",           // npp bug - don't find min/max near right border
 
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
     0

@@ -48,6 +48,11 @@ using namespace cv;
 using namespace std;
 using namespace gpu;
 
+#define CHECK(pred, err) if (!(pred)) { \
+    ts->printf(CvTS::LOG, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
+    ts->set_failed_test_info(err); \
+    return; }
+
 class CV_GpuArithmTest : public CvTest
 {
 public:
@@ -477,31 +482,6 @@ struct CV_GpuNppImageSumTest : public CV_GpuArithmTest
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// minNax
-struct CV_GpuNppImageMinNaxTest : public CV_GpuArithmTest
-{
-    CV_GpuNppImageMinNaxTest() : CV_GpuArithmTest( "GPU-NppImageMinNax", "minNax" ) {}
-
-    int test( const Mat& mat1, const Mat& )
-    {
-        if (mat1.type() != CV_8UC1)
-        {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
-            return CvTS::OK;
-        }
-
-        double cpumin, cpumax;
-        cv::minMaxLoc(mat1, &cpumin, &cpumax);
-
-        GpuMat gpu1(mat1);
-        double gpumin, gpumax;
-        cv::gpu::minMax(gpu1, &gpumin, &gpumax);
-
-        return (CheckNorm(cpumin, gpumin) == CvTS::OK && CheckNorm(cpumax, gpumax) == CvTS::OK) ? CvTS::OK : CvTS::FAIL_GENERIC;
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // LUT
 struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
 {
@@ -689,6 +669,67 @@ struct CV_GpuNppImagePolarToCartTest : public CV_GpuArithmTest
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// Min max
+
+struct CV_GpuMinMaxTest: public CvTest
+{
+    CV_GpuMinMaxTest(): CvTest("GPU-MinMaxTest", "minMax") {}
+
+    void run(int)
+    {
+        for (int type = CV_8U; type <= CV_64F; ++type)
+        {
+            int rows = 1, cols = 3;
+            test(rows, cols, type);
+            for (int i = 0; i < 4; ++i)
+            {
+                int rows = 1 + rand() % 1000;
+                int cols = 1 + rand() % 1000;
+                test(rows, cols, type);
+            }
+        }
+    }
+
+    void test(int rows, int cols, int type)
+    {
+        cv::Mat src(rows, cols, type);
+        cv::RNG rng;
+        for (int i = 0; i < src.rows; ++i)
+        { 
+            Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
+            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+        }
+
+        double minVal, maxVal;
+        if (type != CV_8S)
+        {
+            cv::Point minLoc, maxLoc;
+            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        }
+        else 
+        {
+            // OpenCV's minMaxLoc doesn't support CV_8S type 
+            minVal = std::numeric_limits<double>::max();
+            maxVal = std::numeric_limits<double>::min();
+            for (int i = 0; i < src.rows; ++i)
+                for (int j = 0; j < src.cols; ++j)
+                {
+                    char val = src.at<char>(i, j);
+                    if (val < minVal) minVal = val;
+                    if (val > maxVal) maxVal = val;
+                }
+        }
+
+        double minVal_, maxVal_;
+        cv::Point minLoc_, maxLoc_;        
+        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_);
+       
+        CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);
+    }  
+};
+
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
@@ -709,7 +750,6 @@ CV_GpuNppImageMeanStdDevTest CV_GpuNppImageMeanStdDev_test;
 CV_GpuNppImageNormTest CV_GpuNppImageNorm_test;
 CV_GpuNppImageFlipTest CV_GpuNppImageFlip_test;
 CV_GpuNppImageSumTest CV_GpuNppImageSum_test;
-CV_GpuNppImageMinNaxTest CV_GpuNppImageMinNax_test;
 CV_GpuNppImageLUTTest CV_GpuNppImageLUT_test;
 CV_GpuNppImageExpTest CV_GpuNppImageExp_test;
 CV_GpuNppImageLogTest CV_GpuNppImageLog_test;
@@ -717,3 +757,4 @@ CV_GpuNppImageMagnitudeTest CV_GpuNppImageMagnitude_test;
 CV_GpuNppImagePhaseTest CV_GpuNppImagePhase_test;
 CV_GpuNppImageCartToPolarTest CV_GpuNppImageCartToPolar_test;
 CV_GpuNppImagePolarToCartTest CV_GpuNppImagePolarToCart_test;
+CV_GpuMinMaxTest CV_GpuMinMaxTest_test;
