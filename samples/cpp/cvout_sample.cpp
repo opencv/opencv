@@ -13,8 +13,15 @@ using namespace cv;
 
 void help()
 {
-//	printf("foo\n");
-	cout << "foo" << endl;
+	cout
+	<< "\n------------------------------------------------------------------\n"
+	<< "This program shows the serial out capabilities of cv::Mat\n"
+	<< "That is, cv::Mat M(...); cout << M;  Now works.\n"
+	<< "Output can be formated to OpenCV, python, numpy, csv and C styles"
+	<< "Usage:\n"
+	<< "./cvout_sample\n"
+	<< "------------------------------------------------------------------\n\n"
+	<< endl;
 }
 
 
