@@ -2,6 +2,7 @@
  */
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include <string>
 #include <iostream>
 
@@ -27,6 +28,13 @@ int main(int ac, char** av)
   }
 
   string outputname = av[1];
+
+  Mat m = imread(outputname); //check if the output is an image - prevent overwrites!
+  if(!m.empty()){
+    std::cerr << "fail! Please specify an output file, don't want to overwrite you images!" << endl;
+    help(av);
+    return 1;
+  }
 
   FileStorage fs(outputname, FileStorage::WRITE);
   fs << "images" << "[";
