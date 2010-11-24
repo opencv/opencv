@@ -15,6 +15,16 @@ using std::cerr;
 using std::endl;
 using std::vector;
 
+void help(char **av)
+{
+	   cerr << "usage: " << av[0] << " im1.jpg im2.jpg"
+			   << "\n"
+			   << "This program shows how to use brief to match points in features2d\n"
+			   << "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
+			   << endl;
+}
+
+//Copy (x,y) location of descriptor matches found from KeyPoint data structures into Point2f vectors
 void matches2points(const vector<DMatch>& matches, const vector<KeyPoint>& kpts_train,
                     const vector<KeyPoint>& kpts_query, vector<Point2f>& pts_train, vector<Point2f>& pts_query)
 {
@@ -36,15 +46,17 @@ float match(const vector<KeyPoint>& kpts_train, const vector<KeyPoint>& kpts_que
 {
 
   float t = (double)getTickCount();
-  matcher.match(query, train, matches);
+  matcher.match(query, train, matches); //Using features2d
   return ((double)getTickCount() - t) / getTickFrequency();
 }
+
+
 
 int main(int ac, char ** av)
 {
   if (ac != 3)
   {
-    cerr << "usage: " << av[0] << " im1.jpg im2.jpg" << endl;
+	help(av);
     return 1;
   }
   string im1_name, im2_name;
@@ -63,7 +75,7 @@ int main(int ac, char ** av)
   double t = (double)getTickCount();
 
   FastFeatureDetector detector(50);
-  BriefDescriptorExtractor extractor(32);
+  BriefDescriptorExtractor extractor(32); //this is really 32 x 8 matches since they are binary matches packed into bytes
 
   vector<KeyPoint> kpts_1, kpts_2;
   detector.detect(im1, kpts_1);
@@ -87,6 +99,7 @@ int main(int ac, char ** av)
 
   cout << "done computing descriptors... took " << t << " seconds" << endl;
 
+  //Do matching with 2 methods using features2d
   cout << "matching with BruteForceMatcher<HammingLUT>" << endl;
   BruteForceMatcher<HammingLUT> matcher;
   vector<DMatch> matches_lut;
@@ -100,7 +113,7 @@ int main(int ac, char ** av)
   cout << "done BruteForceMatcher<Hamming> matching. took " << pop_time << " seconds" << endl;
 
   vector<Point2f> mpts_1, mpts_2;
-  matches2points(matches_popcount, kpts_1, kpts_2, mpts_1, mpts_2);
+  matches2points(matches_popcount, kpts_1, kpts_2, mpts_1, mpts_2); //Extract a list of the (x,y) location of the matches
   vector<uchar> outlier_mask;
   Mat H = findHomography(Mat(mpts_2), Mat(mpts_1), outlier_mask, RANSAC, 1);
 
