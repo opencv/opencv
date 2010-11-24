@@ -733,6 +733,71 @@ struct CV_GpuMinMaxTest: public CvTest
 };
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Min max loc
+
+struct CV_GpuMinMaxLocTest: public CvTest
+{
+    CV_GpuMinMaxLocTest(): CvTest("GPU-MinMaxLocTest", "minMaxLoc") {}
+
+    void run(int)
+    {
+        for (int depth = CV_8U; depth <= CV_64F; ++depth)
+        {
+            int rows = 1, cols = 3;
+            test(rows, cols, depth);
+            for (int i = 0; i < 4; ++i)
+            {
+                int rows = 1 + rand() % 1000;
+                int cols = 1 + rand() % 1000;
+                test(rows, cols, depth);
+            }
+        }
+    }
+
+    void test(int rows, int cols, int depth)
+    {
+        cv::Mat src(rows, cols, depth);
+        cv::RNG rng;
+        for (int i = 0; i < src.rows; ++i)
+        { 
+            Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
+            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+        }
+
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+
+        if (depth != CV_8S)       
+            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        else 
+        {
+            // OpenCV's minMaxLoc doesn't support CV_8S type 
+            minVal = std::numeric_limits<double>::max();
+            maxVal = std::numeric_limits<double>::min();
+            for (int i = 0; i < src.rows; ++i)
+                for (int j = 0; j < src.cols; ++j)
+                {
+                    char val = src.at<char>(i, j);
+                    if (val < minVal) { minVal = val; minLoc = cv::Point(j, i); }
+                    if (val > maxVal) { maxVal = val; maxLoc = cv::Point(j, i); }
+                }
+        }
+
+        double minVal_, maxVal_;
+        cv::Point minLoc_, maxLoc_;        
+        cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_);
+       
+        CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(0 == memcmp(src.ptr(minLoc.y) + minLoc.x * src.elemSize(), src.ptr(minLoc_.y) + minLoc_.x * src.elemSize(), src.elemSize()),  
+              CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(0 == memcmp(src.ptr(maxLoc.y) + maxLoc.x * src.elemSize(), src.ptr(maxLoc_.y) + maxLoc_.x * src.elemSize(), src.elemSize()),  
+              CvTS::FAIL_INVALID_OUTPUT);
+    }  
+};
+
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -760,3 +825,4 @@ CV_GpuNppImagePhaseTest CV_GpuNppImagePhase_test;
 CV_GpuNppImageCartToPolarTest CV_GpuNppImageCartToPolar_test;
 CV_GpuNppImagePolarToCartTest CV_GpuNppImagePolarToCart_test;
 CV_GpuMinMaxTest CV_GpuMinMaxTest_test;
+CV_GpuMinMaxLocTest CV_GpuMinMaxLocTest_test;
