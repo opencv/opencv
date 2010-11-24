@@ -484,11 +484,10 @@ cvTsCalcGlobalOrientation( const CvMat* orient, const CvMat* mask, const CvMat* 
         
         for( x = 0; x < orient->cols; x++ )
         {
-            if( mask_data[x] )
+            if( mask_data[x] && mhi_data[x] > low_time )
             {
                 double diff = orient_data[x] - base_orientation;
-                double delta_weight = mhi_data[x] >= low_time ?
-                    (((mhi_data[x] - low_time)/duration)*254 + 1)/255 : 0;
+                double delta_weight = (((mhi_data[x] - low_time)/duration)*254 + 1)/255;
 
                 if( diff < -180 ) diff += 360;
                 if( diff > 180 ) diff -= 360;
@@ -506,7 +505,7 @@ cvTsCalcGlobalOrientation( const CvMat* orient, const CvMat* mask, const CvMat* 
         global_orientation = base_orientation;
     else
     {
-        global_orientation = base_orientation + cvRound(delta_orientation/weight);
+        global_orientation = base_orientation + delta_orientation/weight;
         if( global_orientation < 0 ) global_orientation += 360;
         if( global_orientation > 360 ) global_orientation -= 360;
     }
@@ -594,7 +593,7 @@ void CV_MHIGlobalOrientTest::get_minmax_bounds( int i, int j, int type, CvScalar
 
 double CV_MHIGlobalOrientTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    return 30;
+    return 15;
 }
 
 

@@ -242,8 +242,8 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
     float _ranges[] = { 0, 360 };
     float* ranges = _ranges;
     int base_orient;
-    double shift_orient = 0, shift_weight = 0, fbase_orient;
-    double a, b;
+    float shift_orient = 0, shift_weight = 0;
+    float a, b, fbase_orient;
     float delbound;
     CvMat mhi_row, mask_row, orient_row;
     int x, y, mhi_rows, mhi_cols;
@@ -271,15 +271,14 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
 
     // find the maximum index (the dominant orientation)
     cvGetMinMaxHistValue( hist, 0, 0, 0, &base_orient );
-    base_orient = cvRound(base_orient*360./hist_size);
+    fbase_orient = base_orient*360.f/hist_size;
 
     // override timestamp with the maximum value in MHI
     cvMinMaxLoc( mhi, 0, &curr_mhi_timestamp, 0, 0, mask );
 
     // find the shift relative to the dominant orientation as weighted sum of relative angles
-    a = 254. / 255. / mhi_duration;
-    b = 1. - curr_mhi_timestamp * a;
-    fbase_orient = base_orient;
+    a = (float)(254. / 255. / mhi_duration);
+    b = (float)(1. - curr_mhi_timestamp * a);
     delbound = (float)(curr_mhi_timestamp - mhi_duration);
     mhi_rows = mhi->rows;
     mhi_cols = mhi->cols;
@@ -319,13 +318,13 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
                    -> (rel_angle = orient - base_orient) in -360..360.
                    rel_angle is translated to -180..180
                  */
-                double weight = mhi_row.data.fl[x] * a + b;
-                int rel_angle = cvRound( orient_row.data.fl[x] - fbase_orient );
+                float weight = mhi_row.data.fl[x] * a + b;
+                float rel_angle = orient_row.data.fl[x] - fbase_orient;
 
                 rel_angle += (rel_angle < -180 ? 360 : 0);
                 rel_angle += (rel_angle > 180 ? -360 : 0);
 
-                if( abs(rel_angle) < 45 )
+                if( fabs(rel_angle) < 45 )
                 {
                     shift_orient += weight * rel_angle;
                     shift_weight += weight;
@@ -337,11 +336,11 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
     if( shift_weight == 0 )
         shift_weight = 0.01;
 
-    base_orient = base_orient + cvRound( shift_orient / shift_weight );
-    base_orient -= (base_orient < 360 ? 0 : 360);
-    base_orient += (base_orient >= 0 ? 0 : 360);
+    fbase_orient += shift_orient / shift_weight;
+    fbase_orient -= (fbase_orient < 360 ? 0 : 360);
+    fbase_orient += (fbase_orient >= 0 ? 0 : 360);
 
-    return base_orient;
+    return fbase_orient;
 }
 
 

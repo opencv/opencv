@@ -1732,7 +1732,8 @@ void undistortPoints( const Mat\& src, Mat\& dst,\par
                       const Mat\& R=Mat(), const Mat\& P=Mat());}
 
 \begin{description}
-\cvarg{src}{The observed point coordinates, same format as \texttt{imagePoints} in \cvCross{ProjectPoints2}{projectPoints}}
+
+\cvarg{src}{The observed point coordinates, 1xN or Nx1 2-channel (CV\_32FC2 or CV\_64FC2).} 
 \cvarg{dst}{The output ideal point coordinates, after undistortion and reverse perspective transformation\cvCPy{, same format as \texttt{src}}.}
 \cvarg{cameraMatrix}{The camera matrix $\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}$}
 \cvarg{distCoeffs}{The vector of distortion coefficients, $(k_1^{(j)}, k_2^{(j)}, p_1^{(j)}, p_2^{(j)}[, k_3^{(j)}])$}

@@ -52,6 +52,7 @@ protected:
     int prepare_test_case( int test_case_idx );
     void run_func();
     void prepare_to_validation( int );
+    int validate_test_results( int /*test_case_idx*/ );
 
     int aperture_size, use_true_gradient;
     double threshold1, threshold2;
@@ -271,7 +272,50 @@ void CV_CannyTest::prepare_to_validation( int )
 {
     icvTsCanny( &test_mat[INPUT][0], &test_mat[REF_OUTPUT][0],
                 threshold1, threshold2, aperture_size, use_true_gradient );
+    
+    /*cv::Mat output(&test_mat[OUTPUT][0]);
+    cv::Mat ref_output(&test_mat[REF_OUTPUT][0]);
+    
+    cv::absdiff(output, ref_output, output);
+    cv::namedWindow("ref test", 0);
+    cv::imshow("ref test", ref_output);
+    cv::namedWindow("test", 0);
+    cv::imshow("test", output);
+    cv::waitKey();*/
 }
+
+
+int CV_CannyTest::validate_test_results( int test_case_idx )
+{
+    int code = CvTS::OK, nz0;
+    prepare_to_validation(test_case_idx);
+    
+    double err = cvNorm(&test_mat[OUTPUT][0], &test_mat[REF_OUTPUT][0], CV_L1);
+    if( err == 0 )
+        goto _exit_;
+    
+    if( err != cvRound(err) || cvRound(err)%255 != 0 )
+    {
+        ts->printf( CvTS::LOG, "Some of the pixels, produced by Canny, are not 0's or 255's; the difference is %g\n", err );
+        code = CvTS::FAIL_INVALID_OUTPUT;
+        goto _exit_;
+    }
+    
+    nz0 = cvCountNonZero(&test_mat[REF_OUTPUT][0]);
+    err = (err/255/MAX(nz0,100))*100;
+    if( err > 1 )
+    {
+        ts->printf( CvTS::LOG, "Too high percentage of non-matching edge pixels = %g%%\n", err);
+        code = CvTS::FAIL_BAD_ACCURACY;
+        goto _exit_;
+    }
+    
+_exit_:
+    if( code < 0 )
+        ts->set_failed_test_info( code );
+    return code;
+}
+
 
 CV_CannyTest canny_test;
 

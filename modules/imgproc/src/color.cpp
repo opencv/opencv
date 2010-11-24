@@ -94,6 +94,42 @@
 
 namespace cv
 {
+
+// computes cubic spline coefficients for a function: (xi=i, yi=f[i]), i=0..n
+template<typename _Tp> static void splineBuild(const _Tp* f, int n, _Tp* tab)
+{
+    _Tp cn = 0;
+    int i;
+    tab[0] = tab[1] = (_Tp)0;
+    
+    for(i = 1; i < n-1; i++)
+    {
+        _Tp t = 3*(f[i+1] - 2*f[i] + f[i-1]);
+        _Tp l = 1/(4 - tab[(i-1)*4]);
+        tab[i*4] = l; tab[i*4+1] = (t - tab[(i-1)*4+1])*l;
+    }
+    
+    for(i = n-1; i >= 0; i--)
+    {
+        _Tp c = tab[i*4+1] - tab[i*4]*cn;
+        _Tp b = f[i+1] - f[i] - (cn + c*2)*(_Tp)0.3333333333333333;
+        _Tp d = (cn - c)*(_Tp)0.3333333333333333;
+        tab[i*4] = f[i]; tab[i*4+1] = b;
+        tab[i*4+2] = c; tab[i*4+3] = d;
+        cn = c;
+    }
+}
+
+// interpolates value of a function at x, 0 <= x <= n using a cubic spline.
+template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab, int n)
+{
+    int ix = cvFloor(x);
+    ix = std::min(std::max(ix, 0), n-1);
+    x -= ix;
+    tab += ix*4;
+    return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
+}    
+
     
 template<typename _Tp> struct ColorChannel
 {
