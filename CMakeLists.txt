@@ -647,11 +647,11 @@ endif()
 ############################### CUDA ################################
 
 if (WITH_CUDA)
-	find_package(CUDA)
-	if (CUDA_FOUND)
-		message(STATUS "CUDA detected.")
+	find_package(CUDA 3.2)
+	if (CUDA_FOUND)		
 		set(HAVE_CUDA 1)
-
+		message(STATUS "CUDA detected: " ${CUDA_VERSION})
+		
 		set(CUDA_COMPUTE_CAPABILITIES " 1.0 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute capability")
 		set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
 

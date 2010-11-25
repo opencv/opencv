@@ -67,11 +67,17 @@
     #include "opencv2/gpu/stream_accessor.hpp"
     #include "npp.h"    
 
+#define CUDART_MINIMUM_REQUIRED_VERSION 3020
 #define NPP_MINIMUM_REQUIRED_VERSION 3216
+
+#if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
+    #error "Insufficient Cuda Runtime library version, please update it."
+#endif
 
 #if (NPP_VERSION_MAJOR*1000+NPP_VERSION_MINOR*100+NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
     #error "Insufficient NPP version, please update it."
 #endif
+
 
 #else /* defined(HAVE_CUDA) */
 

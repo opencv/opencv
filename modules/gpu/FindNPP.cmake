@@ -95,26 +95,29 @@ if(EXISTS ${CUDA_NPP_INCLUDES}/nppversion.h)
 	string( REGEX MATCH "[0-9]+" npp_major ${npp_major} ) 
 	string( REGEX MATCH "[0-9]+" npp_minor ${npp_minor} ) 
 	string( REGEX MATCH "[0-9]+" npp_build ${npp_build} ) 	
-	set( NPP_VERSION "${npp_major}.${npp_minor}.${npp_build}")
-	MESSAGE(STATUS "Npp version: " ${NPP_VERSION})
+	set( NPP_VERSION "${npp_major}.${npp_minor}.${npp_build}")	
 endif()
 
 if(NOT EXISTS ${CUDA_NPP_LIBRARIES} OR NOT EXISTS ${CUDA_NPP_INCLUDES}/npp.h)
-	set(CUDA_NPP_FOUND FALSE)
-	unset(CUDA_NPP_INCLUDES CACHE)
-	unset(CUDA_NPP_LIBRARIES CACHE)
-	
+	set(CUDA_NPP_FOUND FALSE)	
 	message(FATAL_ERROR "NPP headers/libraries are not found. Please specify CUDA_NPP_LIBRARY_ROOT_DIR in CMake or set $NPP_ROOT_DIR.")	
 endif()
-	
+
+include( FindPackageHandleStandardArgs ) 
+find_package_handle_standard_args( NPP 
+	REQUIRED_VARS 
+		CUDA_NPP_INCLUDES 
+		CUDA_NPP_LIBRARIES 
+	VERSION_VAR 
+		NPP_VERSION)
+
 if(APPLE)
-	# We need to add the path to cudart to the linker using rpath, since the
-	# library name for the cuda libraries is prepended with @rpath.
+	# We need to add the path to cudart to the linker using rpath, since the library name for the cuda libraries is prepended with @rpath.
 	get_filename_component(_cuda_path_to_npp "${CUDA_NPP_LIBRARIES}" PATH)
 	if(_cuda_path_to_npp)
 		list(APPEND CUDA_NPP_LIBRARIES -Wl,-rpath "-Wl,${_cuda_path_to_npp}")
 	endif()
-endif()	
+endif()
 
 set(CUDA_NPP_FOUND TRUE)
 set(CUDA_NPP_LIBRARY_ROOT_DIR_INTERNAL "${CUDA_NPP_LIBRARY_ROOT_DIR}" CACHE INTERNAL "This is the value of the last time CUDA_NPP_LIBRARY_ROOT_DIR was set successfully." FORCE)
