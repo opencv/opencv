@@ -1803,17 +1803,22 @@ double CvDTree::calc_node_dir( CvDTreeNode* node )
 namespace cv
 {
 
+template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj()
+{
+    fastFree(obj);
+}
+    
 DTreeBestSplitFinder::DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node)
 {
     tree = _tree;
     node = _node;
     splitSize = tree->get_data()->split_heap->elem_size;
 
-    bestSplit = (CvDTreeSplit*)(new char[splitSize]);
+    bestSplit = (CvDTreeSplit*)fastMalloc(splitSize);
     memset((CvDTreeSplit*)bestSplit, 0, splitSize);
     bestSplit->quality = -1;
     bestSplit->condensed_idx = INT_MIN;
-    split = (CvDTreeSplit*)(new char[splitSize]);
+    split = (CvDTreeSplit*)fastMalloc(splitSize);
     memset((CvDTreeSplit*)split, 0, splitSize);
     //haveSplit = false;
 }
@@ -1824,9 +1829,9 @@ DTreeBestSplitFinder::DTreeBestSplitFinder( const DTreeBestSplitFinder& finder, 
     node = finder.node;
     splitSize = tree->get_data()->split_heap->elem_size;
 
-    bestSplit = (CvDTreeSplit*)(new char[splitSize]);
+    bestSplit = (CvDTreeSplit*)fastMalloc(splitSize);
     memcpy((CvDTreeSplit*)(bestSplit), (const CvDTreeSplit*)finder.bestSplit, splitSize);
-    split = (CvDTreeSplit*)(new char[splitSize]);
+    split = (CvDTreeSplit*)fastMalloc(splitSize);
     memset((CvDTreeSplit*)split, 0, splitSize);
 }
 

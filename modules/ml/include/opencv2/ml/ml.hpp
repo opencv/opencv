@@ -748,7 +748,6 @@ struct CvDTreeSplit
     };
 };
 
-
 struct CvDTreeNode
 {
     int class_idx;
@@ -2211,6 +2210,8 @@ typedef CvANN_MLP_TrainParams ANN_MLP_TrainParams;
 typedef CvANN_MLP NeuralNet_MLP;
 typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
+
+template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
     
 }
 

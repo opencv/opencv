@@ -513,15 +513,15 @@ class FuncInfo(object):
                     sys.exit(-1)
 
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", defval0))
-                all_cargs.append(amapping)
+                parse_name = a.name
                 if a.py_inputarg:
                     if amapping[1] == "O":
                         code_decl += "    PyObject* pyobj_%s = NULL;\n" % (a.name,)
-                        parse_arglist.append("pyobj_" + a.name)
+                        parse_name = "pyobj_" + a.name
                         code_cvt_list.append("pyopencv_to(pyobj_%s, %s)" % (a.name, a.name))
-                    else:
-                        parse_arglist.append(a.name)
-
+                
+                all_cargs.append([amapping, parse_name])
+                
                 defval = a.defval
                 if not defval:
                     defval = amapping[2]
@@ -556,7 +556,7 @@ class FuncInfo(object):
 
             if v.args:
                 # form the format spec for PyArg_ParseTupleAndKeywords
-                fmtspec = "".join([all_cargs[argno][1] for aname, argno in v.py_arglist])
+                fmtspec = "".join([all_cargs[argno][0][1] for aname, argno in v.py_arglist])
                 if v.py_noptargs > 0:
                     fmtspec = fmtspec[:-v.py_noptargs] + "|" + fmtspec[-v.py_noptargs:]
                 fmtspec += ":" + fullname
@@ -568,7 +568,7 @@ class FuncInfo(object):
                 code_parse = gen_template_parse_args.substitute(
                     kw_list = ", ".join(['"' + aname + '"' for aname, argno in v.py_arglist]),
                     fmtspec = fmtspec,
-                    parse_arglist = ", ".join(["&" + aname for aname in parse_arglist]),
+                    parse_arglist = ", ".join(["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]),
                     code_cvt = " &&\n        ".join(code_cvt_list))
             else:
                 code_parse = "if(PyObject_Size(args) == 0 && PyObject_Size(kw) == 0)"
@@ -586,7 +586,7 @@ class FuncInfo(object):
                 fmtspec = "N"*len(v.py_outlist)
                 backcvt_arg_list = []
                 for aname, argno in v.py_outlist:
-                    amapping = all_cargs[argno]
+                    amapping = all_cargs[argno][0]
                     backcvt_arg_list.append("%s(%s)" % (amapping[2], aname))
                 code_ret = "return Py_BuildValue(\"(%s)\", %s)" % \
                     (fmtspec, ", ".join(["pyopencv_from(" + aname + ")" for aname, argno in v.py_outlist]))                    

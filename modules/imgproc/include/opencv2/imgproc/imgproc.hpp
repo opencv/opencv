@@ -383,7 +383,7 @@ CV_EXPORTS_W void copyMakeBorder( const Mat& src, CV_OUT Mat& dst,
 //! smooths the image using median filter.
 CV_EXPORTS_W void medianBlur( const Mat& src, CV_OUT Mat& dst, int ksize );
 //! smooths the image using Gaussian filter.
-CV_EXPORTS_W void GaussianBlur( const Mat& src, CV_OUT Mat& dst, Size ksize,
+CV_EXPORTS_AS(gaussianBlur) void GaussianBlur( const Mat& src, CV_OUT Mat& dst, Size ksize,
                               double sigma1, double sigma2=0,
                               int borderType=BORDER_DEFAULT );
 //! smooths the image using bilateral filter
@@ -412,23 +412,23 @@ CV_EXPORTS_W void sepFilter2D( const Mat& src, CV_OUT Mat& dst, int ddepth,
                              double delta=0, int borderType=BORDER_DEFAULT );
     
 //! applies generalized Sobel operator to the image
-CV_EXPORTS_W void Sobel( const Mat& src, CV_OUT Mat& dst, int ddepth,
+CV_EXPORTS_AS(sobel) void Sobel( const Mat& src, CV_OUT Mat& dst, int ddepth,
                        int dx, int dy, int ksize=3,
                        double scale=1, double delta=0,
                        int borderType=BORDER_DEFAULT );
 
 //! applies the vertical or horizontal Scharr operator to the image
-CV_EXPORTS_W void Scharr( const Mat& src, CV_OUT Mat& dst, int ddepth,
+CV_EXPORTS_AS(scharr) void Scharr( const Mat& src, CV_OUT Mat& dst, int ddepth,
                         int dx, int dy, double scale=1, double delta=0,
                         int borderType=BORDER_DEFAULT );
 
 //! applies Laplacian operator to the image
-CV_EXPORTS_W void Laplacian( const Mat& src, CV_OUT Mat& dst, int ddepth,
+CV_EXPORTS_AS(laplacian) void Laplacian( const Mat& src, CV_OUT Mat& dst, int ddepth,
                            int ksize=1, double scale=1, double delta=0,
                            int borderType=BORDER_DEFAULT );
 
 //! applies Canny edge detector and produces the edge map.
-CV_EXPORTS_W void Canny( const Mat& image, CV_OUT Mat& edges,
+CV_EXPORTS_AS(canny) void Canny( const Mat& image, CV_OUT Mat& edges,
                        double threshold1, double threshold2,
                        int apertureSize=3, bool L2gradient=false );
 
@@ -463,17 +463,17 @@ CV_EXPORTS_W void goodFeaturesToTrack( const Mat& image, CV_OUT vector<Point2f>&
                                      bool useHarrisDetector=false, double k=0.04 );
 
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
-CV_EXPORTS_W void HoughLines( const Mat& image, CV_OUT vector<Vec2f>& lines,
+CV_EXPORTS_AS(houghLines) void HoughLines( const Mat& image, CV_OUT vector<Vec2f>& lines,
                             double rho, double theta, int threshold,
                             double srn=0, double stn=0 );
 
 //! finds line segments in the black-n-white image using probabalistic Hough transform
-CV_EXPORTS_W void HoughLinesP( Mat& image, CV_OUT vector<Vec4i>& lines,
+CV_EXPORTS_AS(houghLinesP) void HoughLinesP( Mat& image, CV_OUT vector<Vec4i>& lines,
                              double rho, double theta, int threshold,
                              double minLineLength=0, double maxLineGap=0 );
 
 //! finds circles in the grayscale image using 2+1 gradient Hough transform 
-CV_EXPORTS_W void HoughCircles( const Mat& image, CV_OUT vector<Vec3f>& circles,
+CV_EXPORTS_AS(houghCircles) void HoughCircles( const Mat& image, CV_OUT vector<Vec3f>& circles,
                               int method, double dp, double minDist,
                               double param1=100, double param2=100,
                               int minRadius=0, int maxRadius=0 );
