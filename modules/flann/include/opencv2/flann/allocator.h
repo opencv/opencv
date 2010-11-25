@@ -176,7 +176,7 @@ public:
     template <typename T>
 	T* allocate(size_t count = 1)
 	{
-		T* mem = (T*) this->allocateBytes(sizeof(T)*count);
+		T* mem = (T*) this->allocateBytes((int)(sizeof(T)*count));
 		return mem;
 	}
 

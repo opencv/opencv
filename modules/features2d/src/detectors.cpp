@@ -100,7 +100,7 @@ void FeatureDetector::write( FileStorage& ) const
 Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
 {
     FeatureDetector* fd = 0;
-    int pos = 0;
+    size_t pos = 0;
 
     if( !detectorType.compare( "FAST" ) )
     {

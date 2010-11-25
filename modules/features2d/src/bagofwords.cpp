@@ -100,7 +100,7 @@ Mat BOWKMeansTrainer::cluster() const
     Mat mergedDescriptors( descCount, descriptors[0].cols, descriptors[0].type() );
     for( size_t i = 0, start = 0; i < descriptors.size(); i++ )
     {
-        Mat submut = mergedDescriptors.rowRange(start, start + descriptors[i].rows);
+        Mat submut = mergedDescriptors.rowRange((int)start, (int)(start + descriptors[i].rows));
         descriptors[i].copyTo(submut);
         start += descriptors[i].rows;
     }

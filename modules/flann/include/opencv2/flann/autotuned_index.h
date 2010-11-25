@@ -240,12 +240,12 @@ private:
         t.start();
         kmeans.buildIndex();
         t.stop();
-        float buildTime = t.value;
+        float buildTime = (float)t.value;
 
         // measure search time
         float searchTime = test_index_precision(kmeans, sampledDataset, testDataset, gt_matches, index_params.target_precision, checks, nn);;
 
-        float datasetMemory = sampledDataset.rows*sampledDataset.cols*sizeof(float);
+        float datasetMemory = (float)(sampledDataset.rows*sampledDataset.cols*sizeof(float));
         cost.memoryCost = (kmeans.usedMemory()+datasetMemory)/datasetMemory;
         cost.searchTimeCost = searchTime;
         cost.buildTimeCost = buildTime;
@@ -266,12 +266,12 @@ private:
         t.start();
         kdtree.buildIndex();
         t.stop();
-        float buildTime = t.value;
+        float buildTime = (float)t.value;
 
         //measure search time
         float searchTime = test_index_precision(kdtree, sampledDataset, testDataset, gt_matches, index_params.target_precision, checks, nn);
 
-        float datasetMemory = sampledDataset.rows*sampledDataset.cols*sizeof(float);
+        float datasetMemory = (float)(sampledDataset.rows*sampledDataset.cols*sizeof(float));
         cost.memoryCost = (kdtree.usedMemory()+datasetMemory)/datasetMemory;
         cost.searchTimeCost = searchTime;
         cost.buildTimeCost = buildTime;
@@ -459,7 +459,7 @@ private:
         for (size_t i=0;i<kdtreeParamSpaceSize;++i) {
             kdtreeCosts[i].first.totalCost = (kdtreeCosts[i].first.timeCost/optTimeCost + index_params.memory_weight * kdtreeCosts[i].first.memoryCost);
 
-            int k = i;
+            int k = (int)i;
             while (k>0 && kdtreeCosts[k].first.totalCost < kdtreeCosts[k-1].first.totalCost) {
                 swap(kdtreeCosts[k],kdtreeCosts[k-1]);
                 k--;
@@ -502,12 +502,12 @@ private:
 
         // We compute the ground truth using linear search
         logger().info("Computing ground truth... \n");
-        gt_matches = Matrix<int>(new int[testDataset.rows],testDataset.rows, 1);
+        gt_matches = Matrix<int>(new int[testDataset.rows],(long)testDataset.rows, 1);
         StartStopTimer t;
         t.start();
         compute_ground_truth(sampledDataset, testDataset, gt_matches, 0);
         t.stop();
-        float bestCost = t.value;
+        float bestCost = (float)t.value;
         IndexParams* bestParams = new LinearIndexParams();
 
         // Start parameter autotune process
@@ -550,19 +550,19 @@ private:
 
         float speedup = 0;
 
-        int samples = min(dataset.rows/10, SAMPLE_COUNT);
+        int samples = (int)min(dataset.rows/10, SAMPLE_COUNT);
         if (samples>0) {
             Matrix<ELEM_TYPE> testDataset = random_sample(dataset,samples);
 
             logger().info("Computing ground truth\n");
 
             // we need to compute the ground truth first
-            Matrix<int> gt_matches(new int[testDataset.rows],testDataset.rows,1);
+            Matrix<int> gt_matches(new int[testDataset.rows],(long)testDataset.rows,1);
             StartStopTimer t;
             t.start();
             compute_ground_truth(dataset, testDataset, gt_matches,1);
             t.stop();
-            float linear = t.value;
+            float linear = (float)t.value;
 
             int checks;
             logger().info("Estimating number of checks\n");
@@ -575,7 +575,7 @@ private:
                 float bestSearchTime = -1;
                 float best_cb_index = -1;
                 int best_checks = -1;
-                for (cb_index = 0;cb_index<1.1; cb_index+=0.2) {
+                for (cb_index = 0;cb_index<1.1f; cb_index+=0.2f) {
                     kmeans->set_cb_index(cb_index);
                     searchTime = test_index_precision(*kmeans, dataset, testDataset, gt_matches, index_params.target_precision, checks, nn, 1);
                     if (searchTime<bestSearchTime || bestSearchTime == -1) {

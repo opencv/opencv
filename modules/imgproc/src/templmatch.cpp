@@ -312,8 +312,8 @@ void matchTemplate( const Mat& _img, const Mat& _templ, Mat& result, int method 
     double* p2 = (double*)(sum.data + templ.rows*sum.step);
     double* p3 = p2 + templ.cols*cn;
 
-    int sumstep = sum.data ? sum.step / sizeof(double) : 0;
-    int sqstep = sqsum.data ? sqsum.step / sizeof(double) : 0;
+    int sumstep = sum.data ? (int)(sum.step / sizeof(double)) : 0;
+    int sqstep = sqsum.data ? (int)(sqsum.step / sizeof(double)) : 0;
 
     int i, j, k;
     

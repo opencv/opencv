@@ -204,7 +204,7 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -278,7 +278,7 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
     }
 }
 
-void parserV  (FILE * xmlf, int p, CvLSVMFilterObject * model){
+void parserV  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
     int st = 0;
     int tag;
     int tagVal;
@@ -293,7 +293,7 @@ void parserV  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -341,7 +341,7 @@ void parserV  (FILE * xmlf, int p, CvLSVMFilterObject * model){
         }        
     }
 }
-void parserD  (FILE * xmlf, int p, CvLSVMFilterObject * model){
+void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
     int st = 0;
     int tag;
     int tagVal;
@@ -356,7 +356,7 @@ void parserD  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -430,7 +430,7 @@ void parserD  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     }
 }
 
-void parserPFilter  (FILE * xmlf, int p, int N_path, CvLSVMFilterObject * model){
+void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * model){
     int st = 0;
     int sizeX, sizeY;
     int tag;
@@ -455,7 +455,7 @@ void parserPFilter  (FILE * xmlf, int p, int N_path, CvLSVMFilterObject * model)
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -540,7 +540,7 @@ void parserPFilterS (FILE * xmlf, int p, CvLSVMFilterObject *** model, int *last
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -588,7 +588,7 @@ void parserComp (FILE * xmlf, int p, int *N_comp, CvLSVMFilterObject *** model, 
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -643,7 +643,7 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -745,7 +745,7 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = fgetc( xmlf );
+        ch = (char)fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;

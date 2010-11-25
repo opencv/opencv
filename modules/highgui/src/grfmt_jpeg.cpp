@@ -108,7 +108,7 @@ skip_input_data(j_decompress_ptr cinfo, long num_bytes)
     {
         // We need to skip more data than we have in the buffer.
         // This will force the JPEG library to suspend decoding.
-        source->skip = num_bytes - source->pub.bytes_in_buffer;
+        source->skip = (int)(num_bytes - source->pub.bytes_in_buffer);
         source->pub.next_input_byte += source->pub.bytes_in_buffer;
         source->pub.bytes_in_buffer = 0;
     }

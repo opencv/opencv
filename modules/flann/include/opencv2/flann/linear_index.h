@@ -90,21 +90,21 @@ public:
 		/* nothing to do here for linear search */
 	}
 
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE*)
     {
 		/* nothing to do here for linear search */
     }
 
 
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE*)
     {
 		/* nothing to do here for linear search */
     }
 
-	void findNeighbors(ResultSet<ELEM_TYPE>& resultSet, const ELEM_TYPE* vec, const SearchParams& searchParams)
+	void findNeighbors(ResultSet<ELEM_TYPE>& resultSet, const ELEM_TYPE*, const SearchParams&)
 	{
 		for (size_t i=0;i<dataset.rows;++i) {
-			resultSet.addPoint(dataset[i],i);
+			resultSet.addPoint(dataset[i],(int)i);
 		}
 	}
 

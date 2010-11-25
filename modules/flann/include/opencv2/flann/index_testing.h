@@ -55,8 +55,8 @@ float computeDistanceRaport(const Matrix<ELEM_TYPE>& inputData, ELEM_TYPE* targe
 	ELEM_TYPE* target_end = target + veclen;
     float ret = 0;
     for (int i=0;i<n;++i) {
-        float den = flann_dist(target,target_end, inputData[groundTruth[i]]);
-        float num = flann_dist(target,target_end, inputData[neighbors[i]]);
+        float den = (float)flann_dist(target,target_end, inputData[groundTruth[i]]);
+        float num = (float)flann_dist(target,target_end, inputData[neighbors[i]]);
 
         if (den==0 && num==0) {
             ret += 1;
@@ -81,8 +81,8 @@ float search_with_ground_truth(NNIndex<ELEM_TYPE>& index, const Matrix<ELEM_TYPE
     KNNResultSet<ELEM_TYPE> resultSet(nn+skipMatches);
     SearchParams searchParams(checks);
 
-    int correct;
-    float distR;
+    int correct = 0;
+    float distR = 0;
     StartStopTimer t;
     int repeats = 0;
     while (t.value<0.2) {
@@ -92,17 +92,17 @@ float search_with_ground_truth(NNIndex<ELEM_TYPE>& index, const Matrix<ELEM_TYPE
         distR = 0;
         for (size_t i = 0; i < testData.rows; i++) {
             ELEM_TYPE* target = testData[i];
-            resultSet.init(target, testData.cols);
+            resultSet.init(target, (int)testData.cols);
             index.findNeighbors(resultSet,target, searchParams);
             int* neighbors = resultSet.getNeighbors();
             neighbors = neighbors+skipMatches;
 
             correct += countCorrectMatches(neighbors,matches[i], nn);
-            distR += computeDistanceRaport(inputData, target,neighbors,matches[i], testData.cols, nn);
+            distR += computeDistanceRaport(inputData, target,neighbors,matches[i], (int)testData.cols, nn);
         }
         t.stop();
     }
-    time = t.value/repeats;
+    time = (float)(t.value/repeats);
 
 
     float precicion = (float)correct/(nn*testData.rows);
@@ -134,7 +134,7 @@ template <typename ELEM_TYPE>
 float test_index_precision(NNIndex<ELEM_TYPE>& index, const Matrix<ELEM_TYPE>& inputData, const Matrix<ELEM_TYPE>& testData, const Matrix<int>& matches,
              float precision, int& checks, int nn = 1, int skipMatches = 0)
 {
-	const float SEARCH_EPS = 0.001;
+	const float SEARCH_EPS = 0.001f;
 
     logger().info("  Nodes  Precision(%)   Time(s)   Time/vec(ms)  Mean dist\n");
     logger().info("---------------------------------------------------------\n");

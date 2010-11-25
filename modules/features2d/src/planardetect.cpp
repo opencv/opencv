@@ -831,10 +831,10 @@ void FernClassifier::prepare(int _nclasses, int _patchSize, int _signatureSize,
 
 static int calcNumPoints( const vector<vector<Point2f> >& points )
 {
-    int count = 0;
+    size_t count = 0;
     for( size_t i = 0; i < points.size(); i++ )
         count += points[i].size();
-    return count;
+    return (int)count;
 }
 
 void FernClassifier::train(const vector<vector<Point2f> >& points,

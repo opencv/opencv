@@ -116,7 +116,7 @@ bool TiffDecoder::readHeader()
 
     if( tif )
     {
-        int width = 0, height = 0, photometric = 0, compression = 0;
+        int width = 0, height = 0, photometric = 0;
         m_tif = tif;
 
         if( TIFFRGBAImageOK( tif, errmsg ) &&
@@ -226,9 +226,9 @@ bool  TiffDecoder::readData( Mat& img )
                     else
                     {
                         if( !is_tiled )
-                            ok = TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, -1 );
+                            ok = (int)TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
                         else
-                            ok = TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, -1 );
+                            ok = (int)TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
                         
                         if( !ok )
                         {

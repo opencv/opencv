@@ -191,8 +191,8 @@ void saveCameraParams( const string& filename,
     
     if( !rvecs.empty() && !tvecs.empty() )
     {
-        Mat bigmat(rvecs.size(), 6, CV_32F);
-        for( size_t i = 0; i < rvecs.size(); i++ )
+        Mat bigmat((int)rvecs.size(), 6, CV_32F);
+        for( int i = 0; i < (int)rvecs.size(); i++ )
         {
             Mat r = bigmat(Range(i, i+1), Range(0,3));
             Mat t = bigmat(Range(i, i+1), Range(3,6));
@@ -205,8 +205,8 @@ void saveCameraParams( const string& filename,
     
     if( !imagePoints.empty() )
     {
-        Mat imagePtMat(imagePoints.size(), imagePoints[0].size(), CV_32FC2);
-        for( size_t i = 0; i < imagePoints.size(); i++ )
+        Mat imagePtMat((int)imagePoints.size(), imagePoints[0].size(), CV_32FC2);
+        for( int i = 0; i < (int)imagePoints.size(); i++ )
         {
             Mat r = imagePtMat.row(i).reshape(2, imagePtMat.cols);
             Mat imgpti(imagePoints[i]);

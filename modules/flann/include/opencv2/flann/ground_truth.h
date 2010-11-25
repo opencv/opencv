@@ -47,20 +47,20 @@ void find_nearest(const Matrix<T>& dataset, T* query, int* matches, int nn, int 
     long* match = new long[n];
     T* dists = new T[n];
 
-    dists[0] = flann_dist(query, query_end, dataset[0]);
+    dists[0] = (float)flann_dist(query, query_end, dataset[0]);
     match[0] = 0;
     int dcnt = 1;
 
     for (size_t i=1;i<dataset.rows;++i) {
-        T tmp = flann_dist(query, query_end, dataset[i]);
+        T tmp = (T)flann_dist(query, query_end, dataset[i]);
 
         if (dcnt<n) {
-            match[dcnt] = i;
+            match[dcnt] = (long)i;
             dists[dcnt++] = tmp;
         }
         else if (tmp < dists[dcnt-1]) {
             dists[dcnt-1] = tmp;
-            match[dcnt-1] = i;
+            match[dcnt-1] = (long)i;
         }
 
         int j = dcnt-1;
@@ -85,7 +85,7 @@ template <typename T>
 void compute_ground_truth(const Matrix<T>& dataset, const Matrix<T>& testset, Matrix<int>& matches, int skip=0)
 {
     for (size_t i=0;i<testset.rows;++i) {
-        find_nearest(dataset, testset[i], matches[i], matches.cols, skip);
+        find_nearest(dataset, testset[i], matches[i], (int)matches.cols, skip);
     }
 }
 

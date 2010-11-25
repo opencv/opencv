@@ -467,7 +467,7 @@ int VocData::getDetectorGroundTruth(const string& obj_class, const ObdDatasetTyp
     vector<ObdScoreIndexSorter> sorted_ids;
     {
         /* first count how many objects to allow preallocation */
-        int obj_count = 0;
+        size_t obj_count = 0;
         CV_Assert(images.size() == bounding_boxes.size());
         CV_Assert(scores.size() == bounding_boxes.size());
         for (size_t im_idx = 0; im_idx < scores.size(); ++im_idx)
@@ -484,8 +484,8 @@ int VocData::getDetectorGroundTruth(const string& obj_class, const ObdDatasetTyp
             for (size_t ob_idx = 0; ob_idx < scores[im_idx].size(); ++ob_idx)
             {
                 sorted_ids[flat_pos].score = scores[im_idx][ob_idx];
-                sorted_ids[flat_pos].image_idx = im_idx;
-                sorted_ids[flat_pos].obj_idx = ob_idx;
+                sorted_ids[flat_pos].image_idx = (int)im_idx;
+                sorted_ids[flat_pos].obj_idx = (int)ob_idx;
                 ++flat_pos;
             }
         }
@@ -579,7 +579,7 @@ int VocData::getDetectorGroundTruth(const string& obj_class, const ObdDatasetTyp
                     if (ov > maxov)
                     {
                         maxov = ov;
-                        max_gt_obj_idx = gt_obj_idx;
+                        max_gt_obj_idx = (int)gt_obj_idx;
                         //store whether the maximum detection is marked as difficult or not
                         max_is_difficult = (img_object_data[im_idx][gt_obj_idx].difficult);
                     }
@@ -854,7 +854,7 @@ void VocData::calcPrecRecall_impl(const vector<char>& ground_truth, const vector
     {
         recall_norm = recall_normalization;
     } else {
-        recall_norm = std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<bool>(),true));
+        recall_norm = (int)std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<bool>(),true));
     }
 
     ap = 0;

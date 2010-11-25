@@ -51,7 +51,7 @@ struct MyData
 };
 
 //These write and read functions must exist as per the inline functions in operations.hpp
-void write(FileStorage& fs, const std::string& name, const MyData& x){
+void write(FileStorage& fs, const std::string&, const MyData& x){
   x.write(fs);
 }
 void read(const FileNode& node, MyData& x, const MyData& default_value = MyData()){

@@ -56,10 +56,11 @@ Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPo
     if( keypoints1.empty() || keypoints2.empty() )
         return Mat();
 
-    Mat mask( keypoints1.size(), keypoints2.size(), CV_8UC1 );
-    for( size_t i = 0; i < keypoints1.size(); i++ )
+    int n1 = (int)keypoints1.size(), n2 = (int)keypoints2.size();
+    Mat mask( n1, n2, CV_8UC1 );
+    for( int i = 0; i < n1; i++ )
     {
-        for( size_t j = 0; j < keypoints2.size(); j++ )
+        for( int j = 0; j < n2; j++ )
         {
             Point2f diff = keypoints2[j].pt - keypoints1[i].pt;
             mask.at<uchar>(i, j) = std::abs(diff.x) < maxDeltaX && std::abs(diff.y) < maxDeltaY;
@@ -166,11 +167,11 @@ void DescriptorMatcher::DescriptorCollection::getLocalIdx( int globalDescIdx, in
     {
         if( globalDescIdx < startIdxs[i] )
         {
-            imgIdx = i - 1;
+            imgIdx = (int)(i - 1);
             break;
         }
     }
-    imgIdx = imgIdx == -1 ? startIdxs.size() -1 : imgIdx;
+    imgIdx = imgIdx == -1 ? (int)(startIdxs.size() - 1) : imgIdx;
     localDescIdx = globalDescIdx - startIdxs[imgIdx];
 }
 
@@ -648,7 +649,7 @@ void GenericDescriptorMatcher::KeyPointCollection::add( const vector<Mat>& _imag
     images.insert( images.end(), _images.begin(), _images.end() );
     keypoints.insert( keypoints.end(), _points.begin(), _points.end() );
     for( size_t i = 0; i < _points.size(); i++ )
-        pointCount += _points[i].size();
+        pointCount += (int)_points[i].size();
 
     size_t prevSize = startIndices.size(), addSize = _images.size();
     startIndices.resize( prevSize + addSize );
@@ -656,11 +657,11 @@ void GenericDescriptorMatcher::KeyPointCollection::add( const vector<Mat>& _imag
     if( prevSize == 0 )
         startIndices[prevSize] = 0; //first
     else
-        startIndices[prevSize] = startIndices[prevSize-1] + keypoints[prevSize-1].size();
+        startIndices[prevSize] = (int)(startIndices[prevSize-1] + keypoints[prevSize-1].size());
 
     for( size_t i = prevSize + 1; i < prevSize + addSize; i++ )
     {
-        startIndices[i] = startIndices[i - 1] + keypoints[i - 1].size();
+        startIndices[i] = (int)(startIndices[i - 1] + keypoints[i - 1].size());
     }
 }
 
@@ -712,11 +713,11 @@ void GenericDescriptorMatcher::KeyPointCollection::getLocalIdx( int globalPointI
     {
         if( globalPointIdx < startIndices[i] )
         {
-            imgIdx = i - 1;
+            imgIdx = (int)(i - 1);
             break;
         }
     }
-    imgIdx = imgIdx == -1 ? startIndices.size() -1 : imgIdx;
+    imgIdx = imgIdx == -1 ? (int)(startIndices.size() - 1) : imgIdx;
     localPointIdx = globalPointIdx - startIndices[imgIdx];
 }
 
@@ -923,14 +924,14 @@ void OneWayDescriptorMatcher::train()
         base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
                                            params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale );
 
-        base->Allocate( trainPointCollection.keypointCount() );
-        prevTrainCount = trainPointCollection.keypointCount();
+        base->Allocate( (int)trainPointCollection.keypointCount() );
+        prevTrainCount = (int)trainPointCollection.keypointCount();
 
         const vector<vector<KeyPoint> >& points = trainPointCollection.getKeypoints();
         int count = 0;
         for( size_t i = 0; i < points.size(); i++ )
         {
-            IplImage _image = trainPointCollection.getImage(i);
+            IplImage _image = trainPointCollection.getImage((int)i);
             for( size_t j = 0; j < points[i].size(); j++ )
                 base->InitializeDescriptor( count++, &_image, points[i][j], "" );
         }
@@ -961,7 +962,7 @@ void OneWayDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoi
         int descIdx = -1, poseIdx = -1;
         float distance;
         base->FindDescriptor( &_qimage, queryKeypoints[i].pt, descIdx, poseIdx, distance );
-        matches[i].push_back( DMatch(i, descIdx, distance) );
+        matches[i].push_back( DMatch((int)i, descIdx, distance) );
     }
 }
 
@@ -979,7 +980,7 @@ void OneWayDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<Key
         float distance;
         base->FindDescriptor( &_qimage, queryKeypoints[i].pt, descIdx, poseIdx, distance );
         if( distance < maxDistance )
-            matches[i].push_back( DMatch(i, descIdx, distance) );
+            matches[i].push_back( DMatch((int)i, descIdx, distance) );
     }
 }
 
@@ -1060,7 +1061,7 @@ void FernDescriptorMatcher::train()
 
         vector<vector<Point2f> > points( trainPointCollection.imageCount() );
         for( size_t imgIdx = 0; imgIdx < trainPointCollection.imageCount(); imgIdx++ )
-            KeyPoint::convert( trainPointCollection.getKeypoints(imgIdx), points[imgIdx] );
+            KeyPoint::convert( trainPointCollection.getKeypoints((int)imgIdx), points[imgIdx] );
 
         classifier = new FernClassifier( points, trainPointCollection.getImages(), vector<vector<int> >(), 0, // each points is a class
                                          params.patchSize, params.signatureSize, params.nstructs, params.structSize,
@@ -1112,8 +1113,8 @@ void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint
                 if( -signature[ci] < bestMatch.distance )
                 {
                     int imgIdx = -1, trainIdx = -1;
-                    trainPointCollection.getLocalIdx( ci , imgIdx, trainIdx );
-                    bestMatch = DMatch( queryIdx, trainIdx, imgIdx, -signature[ci] );
+                    trainPointCollection.getLocalIdx( (int)ci , imgIdx, trainIdx );
+                    bestMatch = DMatch( (int)queryIdx, trainIdx, imgIdx, -signature[ci] );
                 }
             }
 
@@ -1143,7 +1144,7 @@ void FernDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPo
             {
                 int imgIdx = -1, trainIdx = -1;
                 trainPointCollection.getLocalIdx( ci , imgIdx, trainIdx );
-                matches[i].push_back( DMatch( i, trainIdx, imgIdx, -signature[ci] ) );
+                matches[i].push_back( DMatch( (int)i, trainIdx, imgIdx, -signature[ci] ) );
             }
         }
     }

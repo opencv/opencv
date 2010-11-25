@@ -307,7 +307,7 @@ int RandomizedTree::getIndex(uchar* patch_data) const
     int child_offset = nodes_[index](patch_data);
     index = 2*index + 1 + child_offset;
   }
-  return index - nodes_.size();
+  return (int)(index - nodes_.size());
 }
 
 void RandomizedTree::train(std::vector<BaseKeypoint> const& base_set,
@@ -323,7 +323,7 @@ void RandomizedTree::train(std::vector<BaseKeypoint> const& base_set,
                            int depth, int views, size_t reduced_num_dim,
                            int num_quant_bits)
 {
-  init(base_set.size(), depth, rng);
+  init((int)base_set.size(), depth, rng);
 
   Mat patch;
 
@@ -466,24 +466,24 @@ void RandomizedTree::compressLeaves(size_t reduced_num_dim)
    }
 
    // DO NOT FREE RETURNED POINTER
-   float *cs_phi = CSMatrixGenerator::getCSMatrix(reduced_num_dim, classes_, CSMatrixGenerator::PDT_BERNOULLI);
+   float *cs_phi = CSMatrixGenerator::getCSMatrix((int)reduced_num_dim, classes_, CSMatrixGenerator::PDT_BERNOULLI);
 
    float *cs_posteriors = new float[num_leaves_ * reduced_num_dim];         // temp, num_leaves_ x reduced_num_dim
    for (int i=0; i<num_leaves_; ++i) {
       float *post = getPosteriorByIndex(i);
       float *prod = &cs_posteriors[i*reduced_num_dim];
-      Mat A( reduced_num_dim, classes_, CV_32FC1, cs_phi );
+      Mat A( (int)reduced_num_dim, classes_, CV_32FC1, cs_phi );
       Mat X( classes_, 1, CV_32FC1, post );
-      Mat Y( reduced_num_dim, 1, CV_32FC1, prod );
+      Mat Y( (int)reduced_num_dim, 1, CV_32FC1, prod );
       Y = A*X;
    }
 
    // copy new posteriors
    freePosteriors(3);
-   allocPosteriorsAligned(num_leaves_, reduced_num_dim);
+   allocPosteriorsAligned(num_leaves_, (int)reduced_num_dim);
    for (int i=0; i<num_leaves_; ++i)
       memcpy(posteriors_[i], &cs_posteriors[i*reduced_num_dim], reduced_num_dim*sizeof(float));
-   classes_ = reduced_num_dim;
+   classes_ = (int)reduced_num_dim;
 
    delete [] cs_posteriors;
 }
@@ -682,8 +682,8 @@ void RTreeClassifier::train(std::vector<BaseKeypoint> const& base_set,
   }
 
   num_quant_bits_ = num_quant_bits;
-  classes_ = reduced_num_dim; // base_set.size();
-  original_num_classes_ = base_set.size();
+  classes_ = (int)reduced_num_dim; // base_set.size();
+  original_num_classes_ = (int)base_set.size();
   trees_.resize(num_trees);
 
   printf("[OK] Training trees: base size=%i, reduced size=%i\n", (int)base_set.size(), (int)reduced_num_dim);
@@ -899,7 +899,7 @@ void RTreeClassifier::write(const char* file_name) const
 
 void RTreeClassifier::write(std::ostream &os) const
 {
-  int num_trees = trees_.size();
+  int num_trees = (int)trees_.size();
   os.write((char*)(&num_trees), sizeof(num_trees));
   os.write((char*)(&classes_), sizeof(classes_));
   os.write((char*)(&original_num_classes_), sizeof(original_num_classes_));
@@ -953,9 +953,9 @@ void RTreeClassifier::setFloatPosteriorsFromTextfile_176(std::string url)
 
 float RTreeClassifier::countZeroElements()
 {
-   int flt_zeros = 0;
-   int ui8_zeros = 0;
-   int num_elem = trees_[0].classes();
+   size_t flt_zeros = 0;
+   size_t ui8_zeros = 0;
+   size_t num_elem = trees_[0].classes();
    for (int i=0; i<(int)trees_.size(); ++i)
       for (int k=0; k<(int)trees_[i].num_leaves_; ++k) {
          float *p = trees_[i].getPosteriorByIndex(k);

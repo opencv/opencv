@@ -74,12 +74,12 @@ void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint
         if (int(keypoints.size()) < min_features_)
         {
 			down = true;
-			adjuster.tooFew(min_features_, keypoints.size());
+			adjuster.tooFew(min_features_, (int)keypoints.size());
         }
         else if (int(keypoints.size()) > max_features_)
         {
 			up = true;
-			adjuster.tooMany(max_features_, keypoints.size());
+			adjuster.tooMany(max_features_, (int)keypoints.size());
         }
         else
 			thresh_good = true;
@@ -96,13 +96,13 @@ void FastAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, con
 	FastFeatureDetector(thresh_, nonmax_).detect(image, keypoints, mask);
 }
 
-void FastAdjuster::tooFew(int min, int n_detected)
+void FastAdjuster::tooFew(int, int)
 {
 	//fast is easy to adjust
 	thresh_--;
 }
 
-void FastAdjuster::tooMany(int max, int n_detected)
+void FastAdjuster::tooMany(int, int)
 {
 	//fast is easy to adjust
 	thresh_++;
@@ -121,18 +121,18 @@ StarAdjuster::StarAdjuster(double initial_thresh) :
 
 void StarAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
-	StarFeatureDetector detector_tmp(16, thresh_, 10, 8, 3);
+	StarFeatureDetector detector_tmp(16, cvRound(thresh_), 10, 8, 3);
 	detector_tmp.detect(image, keypoints, mask);
 }
 
-void StarAdjuster::tooFew(int min, int n_detected)
+void StarAdjuster::tooFew(int, int)
 {
 	thresh_ *= 0.9;
 	if (thresh_ < 1.1)
 		thresh_ = 1.1;
 }
 
-void StarAdjuster::tooMany(int max, int n_detected)
+void StarAdjuster::tooMany(int, int)
 {
 	thresh_ *= 1.1;
 }
@@ -152,14 +152,14 @@ void SurfAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, con
 	detector_tmp.detect(image, keypoints, mask);
 }
 
-void SurfAdjuster::tooFew(int min, int n_detected)
+void SurfAdjuster::tooFew(int, int)
 {
 	thresh_ *= 0.9;
 	if (thresh_ < 1.1)
 		thresh_ = 1.1;
 }
 
-void SurfAdjuster::tooMany(int max, int n_detected)
+void SurfAdjuster::tooMany(int, int)
 {
 	thresh_ *= 1.1;
 }

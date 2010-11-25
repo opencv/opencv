@@ -25,7 +25,7 @@
 // RESULT
 // Error status
 */
-int convertPoints(int countLevel, int lambda, 
+int convertPoints(int /*countLevel*/, int lambda, 
                   int initialImageLevel,
                   CvPoint *points, int *levels, 
                   CvPoint **partsDisplacement, int kPoints, int n, 

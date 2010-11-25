@@ -1404,7 +1404,7 @@ Sift::detectKeypoints(VL::float_t threshold, VL::float_t edgeThreshold)
 
         VL::float_t Dx=0,Dy=0,Ds=0,Dxx=0,Dyy=0,Dss=0,Dxy=0,Dxs=0,Dys=0 ;
         VL::float_t  b [3] ;
-        pixel_t* pt ;
+        pixel_t* pt = 0;
         int dx = 0 ;
         int dy = 0 ;
 
@@ -1697,7 +1697,7 @@ Sift::computeKeypointOrientations(VL::float_t angles [4], Keypoint keypoint)
   prepareGrad(o) ;
 
   // clear the SIFT histogram
-  std::fill(hist, hist + nbins, 0) ;
+  std::fill(hist, hist + nbins, 0.f) ;
 
   // fill the SIFT histogram
   pixel_t* pt = temp + xi * xo + yi * yo + (si - smin -1) * so ;
@@ -1896,7 +1896,7 @@ Sift::computeKeypointDescriptor
   // make sure gradient buffer is up-to-date
   prepareGrad(o) ;
 
-  std::fill( descr_pt, descr_pt + NBO*NBP*NBP, 0 ) ;
+  std::fill( descr_pt, descr_pt + NBO*NBP*NBP, 0.f ) ;
 
   /* Center the scale space and the descriptor on the current keypoint.
    * Note that dpt is pointing to the bin of center (SBP/2,SBP/2,0).

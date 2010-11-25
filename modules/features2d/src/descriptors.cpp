@@ -113,7 +113,7 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExt
 {
     DescriptorExtractor* de = 0;
 
-    int pos = 0;
+    size_t pos = 0;
     if (!descriptorExtractorType.compare("SIFT"))
     {
         de = new SiftDescriptorExtractor();

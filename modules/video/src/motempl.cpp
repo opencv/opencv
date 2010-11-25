@@ -334,7 +334,7 @@ cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const voi
 
     // add the dominant orientation and the relative shift
     if( shift_weight == 0 )
-        shift_weight = 0.01;
+        shift_weight = 0.01f;
 
     fbase_orient += shift_orient / shift_weight;
     fbase_orient -= (fbase_orient < 360 ? 0 : 360);

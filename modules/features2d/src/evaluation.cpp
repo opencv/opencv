@@ -333,7 +333,7 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
                 {
                     float ov =  (float)ac.bna / (float)ac.bua;
                     if( ov >= minOverlap )
-                        overlaps.push_back(SIdx(ov, i1, i2));
+                        overlaps.push_back(SIdx(ov, (int)i1, (int)i2));
                 }
             }
         }
@@ -385,10 +385,10 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
     {
         overlapThreshold = 1.f - 0.5f;
 
-        thresholdedOverlapMask->create( keypoints1.size(), keypoints2t.size(), CV_8UC1 );
+        thresholdedOverlapMask->create( (int)keypoints1.size(), (int)keypoints2t.size(), CV_8UC1 );
         thresholdedOverlapMask->setTo( Scalar::all(0) );
     }
-    int minCount = min( keypoints1.size(), keypoints2t.size() );
+    size_t minCount = min( keypoints1.size(), keypoints2t.size() );
 
     // calculate overlap errors
     vector<SIdx> overlaps;
@@ -402,7 +402,7 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
     if( ifEvaluateDetectors )
     {
         // regions one-to-one matching
-        correspondencesCount = overlaps.size();
+        correspondencesCount = (int)overlaps.size();
         repeatability = minCount ? (float)correspondencesCount / minCount : -1;
     }
     else
@@ -502,7 +502,7 @@ float cv::getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precis
             float curDiff = std::fabs(l_precision - recallPrecisionCurve[i].x);
             if( curDiff <= minDiff )
             {
-                bestIdx = i;
+                bestIdx = (int)i;
                 minDiff = curDiff;
             }
         }

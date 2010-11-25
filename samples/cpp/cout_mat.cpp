@@ -56,7 +56,7 @@ int main(int,char**)
         
     vector<Point2f> points(20);
     for (size_t i = 0; i < points.size(); ++i)
-        points[i] = Point2f(i * 5, i % 7);
+        points[i] = Point2f((float)(i * 5), (float)(i % 7));
 
     cout << "points = " << points << ";" << endl;
     return 0;

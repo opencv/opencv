@@ -201,7 +201,7 @@ public:
 		// Create a permutable array of indices to the input vectors.
 		vind = new int[size_];
 		for (size_t i = 0; i < size_; i++) {
-			vind[i] = i;
+			vind[i] = (int)i;
 		}
 
         mean = new DIST_TYPE[veclen_];
@@ -230,11 +230,11 @@ public:
 		/* Construct the randomized trees. */
 		for (int i = 0; i < numTrees; i++) {
 			/* Randomize the order of vectors to allow for unbiased sampling. */
-			for (int j = size_; j > 0; --j) {
+			for (int j = (int)size_; j > 0; --j) {
 				int rnd = rand_int(j);
 				swap(vind[j-1], vind[rnd]);
 			}
-			trees[i] = divideTree(0, size_ - 1);
+			trees[i] = divideTree(0, (int)size_ - 1);
 		}
 	}
 
@@ -287,7 +287,7 @@ public:
 	 */
 	int usedMemory() const
 	{
-		return  pool.usedMemory+pool.wastedMemory+dataset.rows*sizeof(int);   // pool memory and vind array memory
+		return  (int)(pool.usedMemory+pool.wastedMemory+dataset.rows*sizeof(int));   // pool memory and vind array memory
 	}
 
 
@@ -424,10 +424,10 @@ private:
 			if (num < RAND_DIM  ||  v[i] > v[topind[num-1]]) {
 				/* Put this element at end of topind. */
 				if (num < RAND_DIM) {
-					topind[num++] = i;            /* Add to list. */
+					topind[num++] = (int)i;            /* Add to list. */
 				}
 				else {
-					topind[num-1] = i;         /* Replace last element. */
+					topind[num-1] = (int)i;         /* Replace last element. */
 				}
 				/* Bubble end value down to right location by repeated swapping. */
 				int j = num - 1;
@@ -505,7 +505,7 @@ private:
 		BranchSt branch;
 
 		int checkCount = 0;
-		Heap<BranchSt>* heap = new Heap<BranchSt>(size_);
+		Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
 		vector<bool> checked(size_,false);
 
 		/* Search once through each tree down to root. */
@@ -568,7 +568,7 @@ private:
 			adding exceeds their value.
 		*/
 
-		DIST_TYPE new_distsq = flann_dist(&val, &val+1, &node->divval, mindistsq);
+		DIST_TYPE new_distsq = (DIST_TYPE)flann_dist(&val, &val+1, &node->divval, mindistsq);
 //		if (2 * checkCount < maxCheck  ||  !result.full()) {
 		if (new_distsq < result.worstDist() ||  !result.full()) {
 			heap->insert( BranchSt::make_branch(otherChild, new_distsq) );
@@ -611,7 +611,7 @@ private:
 
 		/* Call recursively to search next level down. */
 		searchLevelExact(result, vec, bestChild, mindistsq);
-		DIST_TYPE new_distsq = flann_dist(&val, &val+1, &node->divval, mindistsq);
+		DIST_TYPE new_distsq = (DIST_TYPE)flann_dist(&val, &val+1, &node->divval, mindistsq);
 		searchLevelExact(result, vec, otherChild, new_distsq);
 	}
 

@@ -164,7 +164,7 @@ void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
     {
         for( i = 0; i < size.width; i++, bgr += 3, bgra += 4 )
         {
-            uchar t0 = bgra[swap_rb], t1 = bgra[1];
+            ushort t0 = bgra[swap_rb], t1 = bgra[1];
             bgr[0] = t0; bgr[1] = t1;
             t0 = bgra[swap_rb^2]; bgr[2] = t0;
         }

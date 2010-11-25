@@ -679,7 +679,7 @@ void CvGBTrees::leaves_get( CvDTreeNode** leaves, int& count, CvDTreeNode* node 
 CvDTreeNode** CvGBTrees::GetLeaves( const CvDTree* dtree, int& len )
 {
     len = 0;
-    CvDTreeNode** leaves = new pCvDTreeNode[1 << params.max_depth];
+    CvDTreeNode** leaves = new pCvDTreeNode[(size_t)1 << params.max_depth];
     leaves_get(leaves, len, const_cast<pCvDTreeNode>(dtree->get_root()));
     return leaves;
 }
@@ -718,7 +718,7 @@ void CvGBTrees::do_subsample()
 //===========================================================================
 
 float CvGBTrees::predict( const CvMat* _sample, const CvMat* _missing,
-        CvMat* weak_responses, CvSlice slice, int k) const 
+        CvMat* /*weak_responses*/, CvSlice slice, int k) const 
 {
     float result = 0.0f;
 

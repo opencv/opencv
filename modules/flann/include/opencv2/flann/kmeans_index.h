@@ -238,7 +238,7 @@ class KMeansIndex : public NNIndex<ELEM_TYPE>
                 centers[index] = indices[rnd];
 
                 for (int j=0;j<index;++j) {
-                    float sq = flann_dist(dataset[centers[index]],dataset[centers[index]]+dataset.cols,dataset[centers[j]]);
+                    float sq = (float)flann_dist(dataset[centers[index]],dataset[centers[index]]+dataset.cols,dataset[centers[j]]);
                     if (sq<1e-16) {
                         duplicate = true;
                     }
@@ -275,9 +275,9 @@ class KMeansIndex : public NNIndex<ELEM_TYPE>
             int best_index = -1;
             float best_val = 0;
             for (int j=0;j<n;++j) {
-                float dist = flann_dist(dataset[centers[0]],dataset[centers[0]]+dataset.cols,dataset[indices[j]]);
+                float dist = (float)flann_dist(dataset[centers[0]],dataset[centers[0]]+dataset.cols,dataset[indices[j]]);
                 for (int i=1;i<index;++i) {
-                        float tmp_dist = flann_dist(dataset[centers[i]],dataset[centers[i]]+dataset.cols,dataset[indices[j]]);
+                        float tmp_dist = (float)flann_dist(dataset[centers[i]],dataset[centers[i]]+dataset.cols,dataset[indices[j]]);
                     if (tmp_dist<dist) {
                         dist = tmp_dist;
                     }
@@ -337,7 +337,7 @@ class KMeansIndex : public NNIndex<ELEM_TYPE>
 
             // Repeat several trials
             double bestNewPot = -1;
-            int bestNewIndex;
+            int bestNewIndex = -1;
             for (int localTrial = 0; localTrial < numLocalTries; localTrial++) {
 
                 // Choose our center - have to be slightly careful to return a valid answer even accounting
@@ -418,7 +418,7 @@ public:
 		else {
 			throw FLANNException("Unknown algorithm for choosing initial centers.");
 		}
-        cb_index = 0.4;
+        cb_index = 0.4f;
 
 	}
 
@@ -481,12 +481,12 @@ public:
 
 		indices = new int[size_];
 		for (size_t i=0;i<size_;++i) {
-			indices[i] = i;
+			indices[i] = (int)i;
 		}
 
 		root = pool.allocate<KMeansNodeSt>();
-		computeNodeStatistics(root, indices, size_);
-		computeClustering(root, indices, size_, branching,0);
+		computeNodeStatistics(root, indices, (int)size_);
+		computeClustering(root, indices, (int)size_, branching,0);
 	}
 
 
@@ -496,7 +496,7 @@ public:
     	save_value(stream, max_iter);
     	save_value(stream, memoryCounter);
     	save_value(stream, cb_index);
-    	save_value(stream, *indices, size_);
+    	save_value(stream, *indices, (int)size_);
 
    		save_tree(stream, root);
     }
@@ -512,7 +512,7 @@ public:
     		delete[] indices;
     	}
 		indices = new int[size_];
-    	load_value(stream, *indices, size_);
+    	load_value(stream, *indices, (int)size_);
 
     	if (root!=NULL) {
     		free_centers(root);
@@ -540,7 +540,7 @@ public:
         }
         else {
              // Priority queue storing intermediate branches in the best-bin-first search
-            Heap<BranchSt>* heap = new Heap<BranchSt>(size_);
+            Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
 
             int checks = 0;
 
@@ -604,9 +604,9 @@ private:
     void save_tree(FILE* stream, KMeansNode node)
     {
     	save_value(stream, *node);
-    	save_value(stream, *(node->pivot), veclen_);
+    	save_value(stream, *(node->pivot), (int)veclen_);
     	if (node->childs==NULL) {
-    		int indices_offset = node->indices - indices;
+    		int indices_offset = (int)(node->indices - indices);
     		save_value(stream, indices_offset);
     	}
     	else {
@@ -622,7 +622,7 @@ private:
     	node = pool.allocate<KMeansNodeSt>();
     	load_value(stream, *node);
     	node->pivot = new DIST_TYPE[veclen_];
-    	load_value(stream, *(node->pivot), veclen_);
+    	load_value(stream, *(node->pivot), (int)veclen_);
     	if (node->childs==NULL) {
     		int indices_offset;
     		load_value(stream, indices_offset);
@@ -659,10 +659,10 @@ private:
 	 */
 	void computeNodeStatistics(KMeansNode node, int* indices, int indices_length) {
 
-		DIST_TYPE radius = 0;
-		DIST_TYPE variance = 0;
+		double radius = 0;
+		double variance = 0;
 		DIST_TYPE* mean = new DIST_TYPE[veclen_];
-		memoryCounter += veclen_*sizeof(DIST_TYPE);
+		memoryCounter += (int)(veclen_*sizeof(DIST_TYPE));
 
         memset(mean,0,veclen_*sizeof(float));
 
@@ -679,7 +679,7 @@ private:
 		variance /= size_;
 		variance -= flann_dist(mean,mean+veclen_,zero());
 
-		DIST_TYPE tmp = 0;
+		double tmp = 0;
 		for (int i=0;i<indices_length;++i) {
 			tmp = flann_dist(mean, mean + veclen_, dataset[indices[i]]);
 			if (tmp>radius) {
@@ -687,8 +687,8 @@ private:
 			}
 		}
 
-		node->variance = variance;
-		node->radius = radius;
+		node->variance = (DIST_TYPE)variance;
+		node->radius = (DIST_TYPE)radius;
 		node->pivot = mean;
 	}
 
@@ -728,7 +728,7 @@ private:
 		}
 
 
-        Matrix<double> dcenters(new double[branching*veclen_],branching,veclen_);
+        Matrix<double> dcenters(new double[branching*veclen_],branching,(long)veclen_);
         for (int i=0; i<centers_length; ++i) {
         	ELEM_TYPE* vec = dataset[centers_idx[i]];
             for (size_t k=0; k<veclen_; ++k) {
@@ -748,17 +748,17 @@ private:
 		int* belongs_to = new int[indices_length];
 		for (int i=0;i<indices_length;++i) {
 
-			float sq_dist = flann_dist(dataset[indices[i]], dataset[indices[i]] + veclen_ ,dcenters[0]);
+			double sq_dist = flann_dist(dataset[indices[i]], dataset[indices[i]] + veclen_ ,dcenters[0]);
 			belongs_to[i] = 0;
 			for (int j=1;j<branching;++j) {
-				float new_sq_dist = flann_dist(dataset[indices[i]], dataset[indices[i]]+veclen_, dcenters[j]);
+				double new_sq_dist = flann_dist(dataset[indices[i]], dataset[indices[i]]+veclen_, dcenters[j]);
 				if (sq_dist>new_sq_dist) {
 					belongs_to[i] = j;
 					sq_dist = new_sq_dist;
 				}
 			}
             if (sq_dist>radiuses[belongs_to[i]]) {
-                radiuses[belongs_to[i]] = sq_dist;
+                radiuses[belongs_to[i]] = (float)sq_dist;
             }
 			count[belongs_to[i]]++;
 		}
@@ -790,10 +790,10 @@ private:
 
 			// reassign points to clusters
 			for (int i=0;i<indices_length;++i) {
-				float sq_dist = flann_dist(dataset[indices[i]], dataset[indices[i]]+veclen_ ,dcenters[0]);
+				float sq_dist = (float)flann_dist(dataset[indices[i]], dataset[indices[i]]+veclen_ ,dcenters[0]);
 				int new_centroid = 0;
 				for (int j=1;j<branching;++j) {
-					float new_sq_dist = flann_dist(dataset[indices[i]], dataset[indices[i]]+veclen_,dcenters[j]);
+					float new_sq_dist = (float)flann_dist(dataset[indices[i]], dataset[indices[i]]+veclen_,dcenters[j]);
 					if (sq_dist>new_sq_dist) {
 						new_centroid = j;
 						sq_dist = new_sq_dist;
@@ -838,9 +838,9 @@ private:
 
         for (int i=0; i<branching; ++i) {
  			centers[i] = new DIST_TYPE[veclen_];
- 			memoryCounter += veclen_*sizeof(DIST_TYPE);
+ 			memoryCounter += (int)(veclen_*sizeof(DIST_TYPE));
             for (size_t k=0; k<veclen_; ++k) {
-                centers[i][k] = dcenters[i][k];
+                centers[i][k] = (DIST_TYPE)dcenters[i][k];
             }
  		}
 
@@ -852,11 +852,11 @@ private:
 		for (int c=0;c<branching;++c) {
 			int s = count[c];
 
-			float variance = 0;
-			float mean_radius =0;
+			double variance = 0;
+		    double mean_radius =0;
 			for (int i=0;i<indices_length;++i) {
 				if (belongs_to[i]==c) {
-					float d = flann_dist(dataset[indices[i]],dataset[indices[i]]+veclen_,zero());
+					double d = flann_dist(dataset[indices[i]],dataset[indices[i]]+veclen_,zero());
 					variance += d;
 					mean_radius += sqrt(d);
 					swap(indices[i],indices[end]);
@@ -871,8 +871,8 @@ private:
 			node->childs[c] = pool.allocate<KMeansNodeSt>();
 			node->childs[c]->radius = radiuses[c];
 			node->childs[c]->pivot = centers[c];
-			node->childs[c]->variance = variance;
-			node->childs[c]->mean_radius = mean_radius;
+			node->childs[c]->variance = (float)variance;
+			node->childs[c]->mean_radius = (float)mean_radius;
 			node->childs[c]->indices = NULL;
 			computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
 			start=end;
@@ -905,7 +905,7 @@ private:
 	{
 		// Ignore those clusters that are too far away
 		{
-			DIST_TYPE bsq = flann_dist(vec, vec+veclen_, node->pivot);
+			DIST_TYPE bsq = (DIST_TYPE)flann_dist(vec, vec+veclen_, node->pivot);
 			DIST_TYPE rsq = node->radius;
 			DIST_TYPE wsq = result.worstDist();
 
@@ -947,9 +947,9 @@ private:
 	{
 
 		int best_index = 0;
-		domain_distances[best_index] = flann_dist(q,q+veclen_,node->childs[best_index]->pivot);
+		domain_distances[best_index] = (float)flann_dist(q,q+veclen_,node->childs[best_index]->pivot);
 		for (int i=1;i<branching;++i) {
-			domain_distances[i] = flann_dist(q,q+veclen_,node->childs[i]->pivot);
+			domain_distances[i] = (float)flann_dist(q,q+veclen_,node->childs[i]->pivot);
 			if (domain_distances[i]<domain_distances[best_index]) {
 				best_index = i;
 			}
@@ -979,7 +979,7 @@ private:
 	{
 		// Ignore those clusters that are too far away
 		{
-			float bsq = flann_dist(vec, vec+veclen_, node->pivot);
+			float bsq = (float)flann_dist(vec, vec+veclen_, node->pivot);
 			float rsq = node->radius;
 			float wsq = result.worstDist();
 
@@ -1021,7 +1021,7 @@ private:
 	{
 		float* domain_distances = new float[branching];
 		for (int i=0;i<branching;++i) {
-			float dist = flann_dist(q, q+veclen_, node->childs[i]->pivot);
+			float dist = (float)flann_dist(q, q+veclen_, node->childs[i]->pivot);
 
 			int j=0;
 			while (domain_distances[j]<dist && j<i) j++;

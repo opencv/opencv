@@ -2158,7 +2158,7 @@ inline void BruteForceMatcher<Distance>::commonKnnMatchImpl( BruteForceMatcher<D
 						 Point minLoc;
 						 minMaxLoc( allDists[iIdx], &minVal, 0, &minLoc, 0 );
 						 if( minVal < bestMatch.distance )
-							 bestMatch = DMatch( qIdx, minLoc.x, iIdx, (float)minVal );
+							 bestMatch = DMatch( qIdx, minLoc.x, (int)iIdx, (float)minVal );
 					 }
                  }
                  if( bestMatch.trainIdx == -1 )
@@ -2214,7 +2214,7 @@ inline void BruteForceMatcher<Distance>::commonRadiusMatchImpl( BruteForceMatche
                                                                  matcher.trainDescCollection[iIdx].step*tIdx);
                         DistanceType d = matcher.distance(d1, d2, dimension);
                         if( d < maxDistance )
-                            curMatches->push_back( DMatch( qIdx, tIdx, iIdx, (float)d ) );
+                            curMatches->push_back( DMatch( qIdx, tIdx, (int)iIdx, (float)d ) );
                     }
                 }
             }

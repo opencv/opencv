@@ -340,7 +340,7 @@ struct ZeroIterator {
 		return 0;
 	}
 
-	T operator[](int index) {
+	T operator[](int) {
 		return 0;
 	}
 
