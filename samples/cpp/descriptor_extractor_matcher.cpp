@@ -8,6 +8,30 @@
 using namespace cv;
 using namespace std;
 
+void help(char** argv)
+{
+    cout << "Program demonstrating keypoint finding and matching between 2 images using features2d framework.\n"
+     << "   In one case, the 2nd image is synthesized by homography from the first, in the second case, there are 2 images\n"
+     << "\n"
+     << "case1: second image is obtained from the first (given) image using random generated homography matrix\n"
+     << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image] [evaluate(0 or 1)]\n"
+     << "Example of case1:\n"
+     << "./descriptor_extractor_matcher SURF SURF FlannBased NoneFilter cola.jpg 0\n"
+     << "\n"
+     << "case2: both images are given. If ransacReprojThreshold>=0 then homography matrix are calculated\n"
+     << "Example of case2:\n"
+     << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image1] [image2] [ransacReprojThreshold]\n"
+     << "\n"
+     << "Matches are filtered using homography matrix in case1 and case2 (if ransacReprojThreshold>=0)\n"
+     << "Example:\n"
+     << "./descriptor_extractor_matcher SURF SURF BruteForce CrossCheckFilter cola1.jpg cola2.jpg 3\n"
+     << "\n"
+     << "Possible detectorType values: see in documentation on createFeatureDetector().\n"
+     << "Possible descriptorType values: see in documentation on createDescriptorExtractor().\n"
+     << "Possible matcherType values: see in documentation on createDescriptorMatcher().\n"
+     << "Possible matcherFilterType values: NoneFilter, CrossCheckFilter." << endl;
+}
+
 #define DRAW_RICH_KEYPOINTS_MODE     0
 #define DRAW_OUTLIERS_MODE           0
 
@@ -185,26 +209,12 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     imshow( winName, drawImg );
 }
 
+
 int main(int argc, char** argv)
 {
     if( argc != 7 && argc != 8 )
     {
-        cout << "Format:" << endl;
-        cout << "case1: second image is obtained from the first (given) image using random generated homography matrix" << endl;
-        cout << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image] [evaluate(0 or 1)]" << endl;
-        cout << "Example:" << endl;
-        cout << "./descriptor_extractor_matcher SURF SURF FlannBased NoneFilter cola.jpg 0" << endl;
-        cout << endl;
-        cout << "case2: both images are given. If ransacReprojThreshold>=0 then homography matrix are calculated" << endl;
-        cout << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image1] [image2] [ransacReprojThreshold]" << endl;
-        cout << endl << "Mathes are filtered using homography matrix in case1 and case2 (if ransacReprojThreshold>=0)" << endl;
-        cout << "Example:" << endl;
-        cout << "./descriptor_extractor_matcher SURF SURF BruteForce CrossCheckFilter cola1.jpg cola2.jpg 3" << endl;
-        cout << endl << "Possible detectorType values: see in documentation on createFeatureDetector()." << endl <<
-                        "Possible descriptorType values: see in documentation on createDescriptorExtractor()." << endl <<
-                        "Possible matcherType values: see in documentation on createDescriptorMatcher()." << endl <<
-                        "Possible matcherFilterType values: NoneFilter, CrossCheckFilter." << endl;
-
+    	help(argv);
         return -1;
     }
     bool isWarpPerspective = argc == 7;
