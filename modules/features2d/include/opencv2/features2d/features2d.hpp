@@ -1804,7 +1804,7 @@ struct CV_EXPORTS L2
             ResultType diff = a[i] - b[i];
             result += diff*diff;
         }
-        return sqrt(result);
+        return (ResultType)sqrt((double)result);
     }
 };
 
