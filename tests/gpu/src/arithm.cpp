@@ -678,8 +678,14 @@ struct CV_GpuMinMaxTest: public CvTest
 
     void run(int)
     {
+        int depth_end;
+        int major, minor;
+        cv::gpu::getComputeCapability(getDevice(), major, minor);
+        minor = 0;
+        if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
+
         for (int cn = 1; cn <= 4; ++cn)
-            for (int depth = CV_8U; depth <= CV_64F; ++depth)
+            for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
                 int rows = 1, cols = 3;
                 test(rows, cols, cn, depth);
@@ -703,10 +709,11 @@ struct CV_GpuMinMaxTest: public CvTest
         }
 
         double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+
         Mat src_ = src.reshape(1);
         if (depth != CV_8S)
         {
-            cv::Point minLoc, maxLoc;
             cv::minMaxLoc(src_, &minVal, &maxVal, &minLoc, &maxLoc);
         }
         else 
@@ -727,8 +734,16 @@ struct CV_GpuMinMaxTest: public CvTest
         cv::Point minLoc_, maxLoc_;        
         cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_);
        
-        CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
-        CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);
+        if (abs(minVal - minVal_) > 1e-3f)
+        {
+            ts->printf(CvTS::CONSOLE, "\nfail: minVal=%f minVal_=%f rows=%d cols=%d depth=%d cn=%d\n", minVal, minVal_, rows, cols, depth, cn);
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+        }
+        if (abs(maxVal - maxVal_) > 1e-3f)
+        {
+            ts->printf(CvTS::CONSOLE, "\nfail: maxVal=%f maxVal_=%f rows=%d cols=%d depth=%d cn=%d\n", maxVal, maxVal_, rows, cols, depth, cn);
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+        }
     }  
 };
 
@@ -742,7 +757,11 @@ struct CV_GpuMinMaxLocTest: public CvTest
 
     void run(int)
     {
-        for (int depth = CV_8U; depth <= CV_64F; ++depth)
+        int depth_end;
+        int major, minor;
+        cv::gpu::getComputeCapability(getDevice(), major, minor);
+        if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
+        for (int depth = CV_8U; depth <= depth_end; ++depth)
         {
             int rows = 1, cols = 3;
             test(rows, cols, depth);
