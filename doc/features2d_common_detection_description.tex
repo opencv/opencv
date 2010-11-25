@@ -75,6 +75,8 @@ public:
 
     virtual void read(const FileNode&);
     virtual void write(FileStorage&) const;
+    
+    static Ptr<FeatureDetector> create( const string& detectorType );
 
 protected:
 ...
@@ -131,6 +133,31 @@ void FeatureDetector::write( FileStorage\& fs ) const;
 \begin{description}
 \cvarg{fs}{File storage in which detector will be written.}
 \end{description}
+
+\cvCppFunc{FeatureDetector::create}
+Feature detector factory that creates \cvCppCross{FeatureDetector} of given type with 
+default parameters (rather using default constructor).
+
+\begin{lstlisting}
+Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType );
+\end{lstlisting}
+
+\begin{description}
+\cvarg{detectorType}{Feature detector type.}
+\end{description}
+
+Now the following detector types are supported:\\
+\texttt{"FAST"} -- \cvCppCross{FastFeatureDetector},\\
+\texttt{"STAR"} -- \cvCppCross{StarFeatureDetector},\\
+\texttt{"SIFT"} -- \cvCppCross{SiftFeatureDetector}, \\
+\texttt{"SURF"} -- \cvCppCross{SurfFeatureDetector}, \\
+\texttt{"MSER"} -- \cvCppCross{MserFeatureDetector}, \\
+\texttt{"GFTT"} -- \cvCppCross{GfttFeatureDetector}, \\
+\texttt{"HARRIS"} -- \cvCppCross{HarrisFeatureDetector}. \\
+Also combined format is supported: feature detector adapter name (\texttt{"Grid"} -- 
+\cvCppCross{GridAdaptedFeatureDetector}, \texttt{"Pyramid"} -- 
+\cvCppCross{PyramidAdaptedFeatureDetector}) + feature detector name (see above), 
+e.g. \texttt{"GridFAST"}, \texttt{"PyramidSTAR"}, etc.
 
 \cvclass{FastFeatureDetector}
 Wrapping class for feature detection using \cvCppCross{FAST} method.
@@ -302,21 +329,6 @@ protected:
 %dynamic detectors doc
 \input{features2d_dynamic_detectors}
 
-\cvCppFunc{createFeatureDetector}
-Feature detector factory that creates \cvCppCross{FeatureDetector} of given type with 
-default parameters (rather using default constructor).
-
-\begin{lstlisting}
-Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
-\end{lstlisting}
-
-\begin{description}
-\cvarg{detectorType}{Feature detector type.}
-\end{description}
-
-Now the following detector types are supported ''FAST'', ''STAR'', ''SIFT'', 
-''SURF'', ''MSER'', ''GFTT'', ''HARRIS''.
-
 \section{Common Interfaces of Descriptor Extractors}
 Extractors of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily 
 between different algorithms solving the same problem. This section is devoted to computing descriptors 
@@ -342,6 +354,8 @@ public:
 
     virtual int descriptorSize() const = 0;
     virtual int descriptorType() const = 0;
+    
+    static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
 
 protected:
     ...
@@ -406,6 +420,27 @@ void DescriptorExtractor::write( FileStorage\& fs ) const;
 \begin{description}
 \cvarg{fs}{File storage in which detector will be written.}
 \end{description}
+
+\cvCppFunc{DescriptorExtractor::create}
+Descriptor extractor factory that creates \cvCppCross{DescriptorExtractor} of given type with 
+default parameters (rather using default constructor).
+
+\begin{lstlisting}
+Ptr<DescriptorExtractor> 
+DescriptorExtractor::create( const string& descriptorExtractorType );
+\end{lstlisting}
+
+\begin{description}
+\cvarg{descriptorExtractorType}{Descriptor extractor type.}
+\end{description}
+
+Now the following descriptor extractor types are supported:\\
+\texttt{"SIFT"} -- \cvCppCross{SiftFeatureDetector},\\
+\texttt{"SURF"} -- \cvCppCross{SurfFeatureDetector},\\
+\texttt{"BRIEF"} -- \cvCppCross{BriefFeatureDetector}.\\
+Also combined format is supported: descriptor extractor adapter name (\texttt{"Opponent"} -- 
+\cvCppCross{OpponentColorDescriptorExtractor}) + descriptor extractor name (see above), 
+e.g. \texttt{"OpponentSIFT"}, etc.
 
 \cvclass{SiftDescriptorExtractor}
 Wrapping class for descriptors computing using \cvCppCross{SIFT} class.
@@ -516,22 +551,6 @@ protected:
 };
 \end{lstlisting}
     
-\cvCppFunc{createDescriptorExtractor}
-Descriptor extractor factory that creates \cvCppCross{DescriptorExtractor} of given type with 
-default parameters (rather using default constructor).
-
-\begin{lstlisting}
-Ptr<DescriptorExtractor> 
-createDescriptorExtractor( const string& descriptorExtractorType );
-\end{lstlisting}
-
-\begin{description}
-\cvarg{descriptorExtractorType}{Descriptor extractor type.}
-\end{description}
-
-Now the following descriptor extractor types are supported ''SIFT'', ''SURF'', 
-''OpponentSIFT'', ''OpponentSURF'', ''BRIEF''.
-
 \section{Common Interfaces of Descriptor Matchers}
 Matchers of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily 
 between different algorithms solving the same problem. This section is devoted to matching descriptors 
@@ -612,6 +631,8 @@ public:
     virtual void write( FileStorage& ) const;
 
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
+    
+    static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
 
 protected:
     vector<Mat> trainDescCollection; 
@@ -769,6 +790,21 @@ DescriptorMatcher::clone( bool emptyTrainData ) const;
      but with empty train data..}
 \end{description}
 
+\cvCppFunc{DescriptorMatcher::create}
+Descriptor matcher factory that creates \cvCppCross{DescriptorMatcher} of 
+given type with default parameters (rather using default constructor).
+
+\begin{lstlisting}
+Ptr<DescriptorMatcher>
+DescriptorMatcher::create( const string& descriptorMatcherType );
+\end{lstlisting}
+
+\begin{description}
+\cvarg{descriptorMatcherType}{Descriptor matcher type.}
+\end{description}
+Now the following matcher types are supported: \texttt{"BruteForce"} (it uses \texttt{L2}), \texttt{"BruteForce-L1"}, 
+\texttt{"BruteForce-Hamming"}, \texttt{"BruteForce-HammingLUT"}, \texttt{"FlannBased"}.
+
 \cvclass{BruteForceMatcher}
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest
 descriptor in the second set by trying each one. This descriptor matcher supports masking 
@@ -880,20 +916,6 @@ protected:
     ...
 };
 \end{lstlisting}
-
-\cvCppFunc{createDescriptorMatcher}
-Descriptor matcher factory that creates \cvCppCross{DescriptorMatcher} of 
-given type with default parameters (rather using default constructor).
-
-\begin{lstlisting}
-Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
-\end{lstlisting}
-
-\begin{description}
-\cvarg{descriptorMatcherType}{Descriptor matcher type.}
-\end{description}
-Now the following matcher types are supported: ''BruteForce'' (it uses L2), ''BruteForce-L1'', 
-''BruteForce-Hamming'', ''BruteForce-HammingLUT''.
 
 \section{Common Interfaces of Generic Descriptor Matchers}
 Matchers of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily 
