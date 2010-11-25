@@ -223,9 +223,9 @@ int main(int argc, char** argv)
         ransacReprojThreshold = atof(argv[7]);
 
     cout << "< Creating detector, descriptor extractor and descriptor matcher ..." << endl;
-    Ptr<FeatureDetector> detector = createFeatureDetector( argv[1] );
-    Ptr<DescriptorExtractor> descriptorExtractor = createDescriptorExtractor( argv[2] );
-    Ptr<DescriptorMatcher> descriptorMatcher = createDescriptorMatcher( argv[3] );
+    Ptr<FeatureDetector> detector = FeatureDetector::create( argv[1] );
+    Ptr<DescriptorExtractor> descriptorExtractor = DescriptorExtractor::create( argv[2] );
+    Ptr<DescriptorMatcher> descriptorMatcher = DescriptorMatcher::create( argv[3] );
     int mactherFilterType = getMatcherFilterType( argv[4] );
     bool eval = !isWarpPerspective ? false : (atoi(argv[6]) == 0 ? false : true);
     cout << ">" << endl;

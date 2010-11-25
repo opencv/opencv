@@ -97,6 +97,60 @@ void FeatureDetector::read( const FileNode& )
 void FeatureDetector::write( FileStorage& ) const
 {}
 
+Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+{
+    FeatureDetector* fd = 0;
+    int pos = 0;
+
+    if( !detectorType.compare( "FAST" ) )
+    {
+        fd = new FastFeatureDetector();
+    }
+    else if( !detectorType.compare( "STAR" ) )
+    {
+        fd = new StarFeatureDetector();
+    }
+    else if( !detectorType.compare( "SIFT" ) )
+    {
+        fd = new SiftFeatureDetector();
+    }
+    else if( !detectorType.compare( "SURF" ) )
+    {
+        fd = new SurfFeatureDetector();
+    }
+    else if( !detectorType.compare( "MSER" ) )
+    {
+        fd = new MserFeatureDetector();
+    }
+    else if( !detectorType.compare( "GFTT" ) )
+    {
+        fd = new GoodFeaturesToTrackDetector();
+    }
+    else if( !detectorType.compare( "HARRIS" ) )
+    {
+        GoodFeaturesToTrackDetector::Params params;
+        params.useHarrisDetector = true;
+        fd = new GoodFeaturesToTrackDetector(params);
+    }
+    else if( (pos=detectorType.find("Grid")) == 0 )
+    {
+        pos += string("Grid").size();
+        fd = new GridAdaptedFeatureDetector( FeatureDetector::create(detectorType.substr(pos)) );
+    }
+    else if( (pos=detectorType.find("Pyramid")) == 0 )
+    {
+        pos += string("Pyramid").size();
+        fd = new PyramidAdaptedFeatureDetector( FeatureDetector::create(detectorType.substr(pos)) );
+    }
+    else if( (pos=detectorType.find("Dynamic")) == 0 )
+    {
+        pos += string("Dynamic").size();
+        fd = new DynamicAdaptedFeatureDetector( AdjusterAdapter::create(detectorType.substr(pos)) );
+    }
+
+    return fd;
+}
+
 /*
  *   FastFeatureDetector
  */
@@ -517,55 +571,6 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
             src = dst;
         }
     }
-}
-
-Ptr<FeatureDetector> createFeatureDetector( const string& detectorType )
-{
-    FeatureDetector* fd = 0;
-    if( !detectorType.compare( "FAST" ) )
-    {
-        fd = new FastFeatureDetector();
-    }
-    else if( !detectorType.compare( "DynamicFAST" ) )
-    {
-	    fd = new DynamicDetector(400,500,5,new FastAdjuster());
-    }
-    else if( !detectorType.compare( "STAR" ) )
-    {
-        fd = new StarFeatureDetector();
-    }
-    else if( !detectorType.compare( "DynamicSTAR" ) )
-    {
-	    fd =  new DynamicDetector(400,500,5,new StarAdjuster());
-    }
-    else if( !detectorType.compare( "SIFT" ) )
-    {
-        fd = new SiftFeatureDetector(SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-                                     SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD());
-    }
-    else if( !detectorType.compare( "SURF" ) )
-    {
-        fd = new SurfFeatureDetector();
-    }
-    else if( !detectorType.compare( "DynamicSURF" ) )
-	{
-		fd =new DynamicDetector(400,500,5,new SurfAdjuster());
-	}
-    else if( !detectorType.compare( "MSER" ) )
-    {
-        fd = new MserFeatureDetector();
-    }
-    else if( !detectorType.compare( "GFTT" ) )
-    {
-        fd = new GoodFeaturesToTrackDetector();
-    }
-    else if( !detectorType.compare( "HARRIS" ) )
-    {
-        GoodFeaturesToTrackDetector::Params params;
-        params.useHarrisDetector = true;
-        fd = new GoodFeaturesToTrackDetector(params);
-    }
-    return fd;
 }
 
 }

@@ -1250,10 +1250,13 @@ public:
      */
     void detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
 
-    // Read detector object from a file node
+    // Read detector object from a file node.
     virtual void read( const FileNode& );
-    // Read detector object from a file node
+    // Read detector object from a file node.
     virtual void write( FileStorage& ) const;
+
+    // Create feature detector by detector name.
+    static Ptr<FeatureDetector> create( const string& detectorType );
 
 protected:
 	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
@@ -1416,7 +1419,7 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxTotalKeypoints,
+    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxTotalKeypoints=1000,
                                 int gridRows=4, int gridCols=4 );
     
     // TODO implement read/write
@@ -1448,19 +1451,15 @@ protected:
     int levels;
 };
 
-/*
- * Dynamic Feature Detectors
- */
-
-/** \brief A feature detector parameter adjuster, this is used by the DynamicDetector
+/** \brief A feature detector parameter adjuster, this is used by the DynamicAdaptedFeatureDetector
  *  and is a wrapper for FeatureDetector that allow them to be adjusted after a detection
  */
-class CV_EXPORTS AdjusterAdapter: public FeatureDetector {
-public:
+class CV_EXPORTS AdjusterAdapter: public FeatureDetector
+{
+public:   
 	/** pure virtual interface
 	 */
-	virtual ~AdjusterAdapter() {
-	}
+    virtual ~AdjusterAdapter() {}
 	/** too few features were detected so, adjust the detector params accordingly
 	 * \param min the minimum number of desired features
 	 * \param n_detected the number previously detected
@@ -1475,6 +1474,8 @@ public:
 	 * \return false if the parameters can't be adjusted any more
 	 */
 	virtual bool good() const = 0;
+
+    static Ptr<AdjusterAdapter> create( const string& detectorType );
 };
 /** \brief an adaptively adjusting detector that iteratively detects until the desired number
  * of features are detected.
@@ -1485,24 +1486,24 @@ public:
  *  sample usage:
  //will create a detector that attempts to find 100 - 110 FAST Keypoints, and will at most run
  //FAST feature detection 10 times until that number of keypoints are found
- Ptr<FeatureDetector> detector(new DynamicDetector (100, 110, 10,new FastAdjuster(20,true)));
+ Ptr<FeatureDetector> detector(new DynamicAdaptedFeatureDetector(new FastAdjuster(20,true),100, 110, 10));
 
  */
-class CV_EXPORTS DynamicDetector: public FeatureDetector {
+class CV_EXPORTS DynamicAdaptedFeatureDetector: public FeatureDetector
+{
 public:
 
-	/** \param min_features the minimum desired features
+    /** \param adjaster an AdjusterAdapter that will do the detection and parameter adjustment
 	 * \param max_features the maximum desired number of features
 	 * \param max_iters the maximum number of times to try to adjust the feature detector params
 	 * 			for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
-	 * \param a an AdjusterAdapter that will do the detection and parameter adjustment
+     * \param min_features the minimum desired features
 	 */
-	DynamicDetector(int min_features, int max_features, int max_iters,
-			const Ptr<AdjusterAdapter>& a);
+    DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjaster, int min_features=400, int max_features=500, int max_iters=5 );
+
 protected:
-	virtual void detectImpl(const cv::Mat& image,
-			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
-					cv::Mat()) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
 private:
 	int escape_iters_;
 	int min_features_, max_features_;
@@ -1512,7 +1513,8 @@ private:
 /**\brief an adjust for the FAST detector. This will basically decrement or increment the
  * threshhold by 1
  */
-class CV_EXPORTS FastAdjuster: public AdjusterAdapter {
+class CV_EXPORTS FastAdjuster: public AdjusterAdapter
+{
 public:
 	/**\param init_thresh the initial threshhold to start with, default = 20
 	 * \param nonmax whether to use non max or not for fast feature detection
@@ -1521,49 +1523,49 @@ public:
 	virtual void tooFew(int min, int n_detected);
 	virtual void tooMany(int max, int n_detected);
 	virtual bool good() const;
+
 protected:
-	virtual void detectImpl(const cv::Mat& image,
-			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
-					cv::Mat()) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
 	int thresh_;
 	bool nonmax_;
-
 };
 
 
 /** An adjuster for StarFeatureDetector, this one adjusts the responseThreshold for now
  * TODO find a faster way to converge the parameters for Star - use CvStarDetectorParams
  */
-struct CV_EXPORTS StarAdjuster: public AdjusterAdapter {
+class CV_EXPORTS StarAdjuster: public AdjusterAdapter
+{
+public:
 	StarAdjuster(double initial_thresh = 30.0);
 	virtual void tooFew(int min, int n_detected);
 	virtual void tooMany(int max, int n_detected);
 	virtual bool good() const;
+
 protected:
-	virtual void detectImpl(const cv::Mat& image,
-			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
-					cv::Mat()) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
 	double thresh_;
 	CvStarDetectorParams params_; //todo use these instead of thresh_
 };
 
-struct CV_EXPORTS SurfAdjuster: public AdjusterAdapter {
-	SurfAdjuster();
+class CV_EXPORTS SurfAdjuster: public AdjusterAdapter
+{
+public:
+    SurfAdjuster();
 	virtual void tooFew(int min, int n_detected);
 	virtual void tooMany(int max, int n_detected);
 	virtual bool good() const;
+
 protected:
-	virtual void detectImpl(const cv::Mat& image,
-			std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask =
-					cv::Mat()) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
 	double thresh_;
 };
 
-
 CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
                                      float maxDeltaX, float maxDeltaY );
-
-CV_EXPORTS Ptr<FeatureDetector> createFeatureDetector( const string& detectorType );
 
 /****************************************************************************************\
 *                                 DescriptorExtractor                                    *
@@ -1605,6 +1607,8 @@ public:
 
     virtual int descriptorSize() const = 0;
     virtual int descriptorType() const = 0;
+
+    static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
 
 protected:
 	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
@@ -1770,8 +1774,6 @@ protected:
     int bytes_;
     PixelTestFn test_fn_;
 };
-
-CV_EXPORTS Ptr<DescriptorExtractor> createDescriptorExtractor( const string& descriptorExtractorType );
 
 /****************************************************************************************\
 *                                          Distance                                      *
@@ -1981,6 +1983,7 @@ public:
     // but with empty train data.
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
+    static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
 protected:
     /*
      * Class to work with descriptors from several images as with one merged matrix.
@@ -2265,9 +2268,6 @@ protected:
     int addedDescCount;
 };
 
-
-CV_EXPORTS Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType );
-
 /****************************************************************************************\
 *                                GenericDescriptorMatcher                                *
 \****************************************************************************************/
@@ -2371,6 +2371,9 @@ public:
     // both parameters and train data. If emptyTrainData is true the method create object copy with current parameters
     // but with empty train data.
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
+
+    static Ptr<GenericDescriptorMatcher> create( const string& genericDescritptorMatcherType,
+                                                 const string &paramsFilename=string() );
 
 protected:
     // In fact the matching is implemented only by the following two methods. These methods suppose
@@ -2556,9 +2559,6 @@ protected:
     Params params;
     int prevTrainCount;
 };
-
-CV_EXPORTS Ptr<GenericDescriptorMatcher> createGenericDescriptorMatcher( const string& genericDescritptorMatcherType,
-                                                                         const string &paramsFilename = string () );
 
 /****************************************************************************************\
 *                                VectorDescriptorMatcher                                 *

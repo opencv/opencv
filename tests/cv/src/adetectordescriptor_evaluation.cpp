@@ -686,8 +686,8 @@ inline void readKeypoints( FileStorage& fs, vector<KeyPoint>& keypoints, int img
 
 void DetectorQualityTest::readAlgorithm ()
 {
-    defaultDetector = createFeatureDetector( algName );
-    specificDetector = createFeatureDetector( algName );
+    defaultDetector = FeatureDetector::create( algName );
+    specificDetector = FeatureDetector::create( algName );
     if( defaultDetector == 0 )
     {
         ts->printf(CvTS::LOG, "Algorithm can not be read\n");
@@ -960,13 +960,13 @@ void DescriptorQualityTest::writePlotData( int di ) const
 
 void DescriptorQualityTest::readAlgorithm( )
 {
-    defaultDescMatcher = createGenericDescriptorMatcher( algName );
-    specificDescMatcher = createGenericDescriptorMatcher( algName );
+    defaultDescMatcher = GenericDescriptorMatcher::create( algName );
+    specificDescMatcher = GenericDescriptorMatcher::create( algName );
 
     if( defaultDescMatcher == 0 )
     {
-        Ptr<DescriptorExtractor> extractor = createDescriptorExtractor( algName );
-        Ptr<DescriptorMatcher> matcher = createDescriptorMatcher( matcherName );
+        Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create( algName );
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create( matcherName );
         defaultDescMatcher = new VectorDescriptorMatch( extractor, matcher );
         specificDescMatcher = new VectorDescriptorMatch( extractor, matcher );
 

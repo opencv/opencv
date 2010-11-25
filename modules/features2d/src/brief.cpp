@@ -92,15 +92,17 @@ void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
 
 namespace cv
 {
+
 HammingLUT::ResultType HammingLUT::operator()( const unsigned char* a, const unsigned char* b, int size ) const
-   {
-       ResultType result = 0;
-       for (int i = 0; i < size; i++)
-       {
-           result += byteBitsLookUp(a[i] ^ b[i]);
-       }
-       return result;
-   }
+{
+    ResultType result = 0;
+    for (int i = 0; i < size; i++)
+    {
+        result += byteBitsLookUp(a[i] ^ b[i]);
+    }
+    return result;
+}
+
 Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned char* b, int size) const
 {
 #if __GNUC__
@@ -116,6 +118,7 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
     return HammingLUT()(a,b,size);
 #endif
 }
+
 BriefDescriptorExtractor::BriefDescriptorExtractor(int bytes) :
     bytes_(bytes), test_fn_(NULL)
 {
@@ -150,12 +153,15 @@ void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoin
     // Construct integral image for fast smoothing (box filter)
     Mat sum;
 
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+
     ///TODO allow the user to pass in a precomputed integral image
     //if(image.type() == CV_32S)
     //  sum = image;
     //else
 
-    integral(image, sum, CV_32S);
+    integral( grayImage, sum, CV_32S);
 
     //Remove keypoints very close to the border
     removeBorderKeypoints(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2);

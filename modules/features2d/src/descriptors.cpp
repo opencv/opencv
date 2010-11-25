@@ -109,6 +109,31 @@ void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
     }
 }
 
+Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)
+{
+    DescriptorExtractor* de = 0;
+
+    int pos = 0;
+    if (!descriptorExtractorType.compare("SIFT"))
+    {
+        de = new SiftDescriptorExtractor();
+    }
+    else if (!descriptorExtractorType.compare("SURF"))
+    {
+        de = new SurfDescriptorExtractor();
+    }
+    else if (!descriptorExtractorType.compare("BRIEF"))
+    {
+        de = new BriefDescriptorExtractor();
+    }
+    else if ( (pos=descriptorExtractorType.find("Opponent")) == 0)
+    {
+        pos += string("Opponent").size();
+        de = new OpponentColorDescriptorExtractor( DescriptorExtractor::create(descriptorExtractorType.substr(pos)) );
+    }
+    return de;
+}
+
 /****************************************************************************************\
 *                                SiftDescriptorExtractor                                 *
 \****************************************************************************************/
@@ -231,7 +256,9 @@ int SurfDescriptorExtractor::descriptorType() const
 \****************************************************************************************/
 OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& _descriptorExtractor ) :
         descriptorExtractor(_descriptorExtractor)
-{}
+{
+    CV_Assert( !descriptorExtractor.empty() );
+}
 
 void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& opponentChannels )
 {
@@ -305,7 +332,7 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
     // Compute descriptors three times, once for each Opponent channel
     // and concatenate into a single color surf descriptor
     int descriptorSize = descriptorExtractor->descriptorSize();
-    descriptors.create( static_cast<int>(keypoints.size()), 3*descriptorSize, CV_32FC1 );
+    descriptors.create( static_cast<int>(keypoints.size()), 3*descriptorSize, descriptorExtractor->descriptorType() );
     for( int i = 0; i < 3/*channel count*/; i++ )
     {
         CV_Assert( opponentChannels[i].type() == CV_8UC1 );
@@ -332,35 +359,6 @@ int OpponentColorDescriptorExtractor::descriptorSize() const
 int OpponentColorDescriptorExtractor::descriptorType() const
 {
     return descriptorExtractor->descriptorType();
-}
-/****************************************************************************************\
-*                   Factory function for descriptor extractor creating                   *
-\****************************************************************************************/
-
-Ptr<DescriptorExtractor> createDescriptorExtractor(const string& descriptorExtractorType)
-{
-  DescriptorExtractor* de = 0;
-  if (!descriptorExtractorType.compare("SIFT"))
-  {
-    de = new SiftDescriptorExtractor();
-  }
-  else if (!descriptorExtractorType.compare("SURF"))
-  {
-    de = new SurfDescriptorExtractor();
-  }
-  else if (!descriptorExtractorType.compare("OpponentSIFT"))
-  {
-    de = new OpponentColorDescriptorExtractor(new SiftDescriptorExtractor);
-  }
-  else if (!descriptorExtractorType.compare("OpponentSURF"))
-  {
-    de = new OpponentColorDescriptorExtractor(new SurfDescriptorExtractor);
-  }
-  else if (!descriptorExtractorType.compare("BRIEF"))
-  {
-    de = new BriefDescriptorExtractor();
-  }
-  return de;
 }
 
 }

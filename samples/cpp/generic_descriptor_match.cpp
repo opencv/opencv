@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     std::string alg_name = std::string(argv[3]);
     std::string params_filename = std::string(argv[4]);
 
-    Ptr<GenericDescriptorMatcher> descriptorMatcher = createGenericDescriptorMatcher(alg_name, params_filename);
+    Ptr<GenericDescriptorMatcher> descriptorMatcher = GenericDescriptorMatcher::create(alg_name, params_filename);
     if( descriptorMatcher == 0 )
     {
         printf ("Cannot create descriptor\n");

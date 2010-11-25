@@ -2552,8 +2552,8 @@ int main(int argc, char** argv)
     }
 
     // Create detector, descriptor, matcher.
-    Ptr<FeatureDetector> featureDetector = createFeatureDetector( ddmParams.detectorType );
-    Ptr<DescriptorExtractor> descExtractor = createDescriptorExtractor( ddmParams.descriptorType );
+    Ptr<FeatureDetector> featureDetector = FeatureDetector::create( ddmParams.detectorType );
+    Ptr<DescriptorExtractor> descExtractor = DescriptorExtractor::create( ddmParams.descriptorType );
     Ptr<BOWImgDescriptorExtractor> bowExtractor;
     if( featureDetector.empty() || descExtractor.empty() )
     {
@@ -2561,7 +2561,7 @@ int main(int argc, char** argv)
         return -1;
     }
     {
-        Ptr<DescriptorMatcher> descMatcher = createDescriptorMatcher( ddmParams.matcherType );
+        Ptr<DescriptorMatcher> descMatcher = DescriptorMatcher::create( ddmParams.matcherType );
         if( featureDetector.empty() || descExtractor.empty() || descMatcher.empty() )
         {
             cout << "descMatcher was not created" << endl;

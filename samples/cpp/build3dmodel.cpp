@@ -651,8 +651,8 @@ int main(int argc, char** argv)
     Size calibratedImageSize;
     readCameraMatrix(intrinsicsFilename, cameraMatrix, distCoeffs, calibratedImageSize);
     
-    Ptr<FeatureDetector> detector = createFeatureDetector(detectorName);
-    Ptr<DescriptorExtractor> descriptorExtractor = createDescriptorExtractor(descriptorExtractorName);
+    Ptr<FeatureDetector> detector = FeatureDetector::create(detectorName);
+    Ptr<DescriptorExtractor> descriptorExtractor = DescriptorExtractor::create(descriptorExtractorName);
     
     string modelIndexFilename = format("%s_segm/frame_index.yml", modelName);
     if(!readModelViews( modelIndexFilename, modelBox, imageList, roiList, poseList))

@@ -62,9 +62,9 @@ bool createDetectorDescriptorMatcher( const string& detectorType, const string& 
                                       Ptr<DescriptorMatcher>& descriptorMatcher )
 {
     cout << "< Creating feature detector, descriptor extractor and descriptor matcher ..." << endl;
-    featureDetector = createFeatureDetector( detectorType );
-    descriptorExtractor = createDescriptorExtractor( descriptorType );
-    descriptorMatcher = createDescriptorMatcher( matcherType );
+    featureDetector = FeatureDetector::create( detectorType );
+    descriptorExtractor = DescriptorExtractor::create( descriptorType );
+    descriptorMatcher = DescriptorMatcher::create( matcherType );
     cout << ">" << endl;
 
     bool isCreated = !( featureDetector.empty() || descriptorExtractor.empty() || descriptorMatcher.empty() );

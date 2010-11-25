@@ -322,7 +322,39 @@ bool DescriptorMatcher::isMaskedOut( const vector<Mat>& masks, int queryIdx )
     return !masks.empty() && outCount == masks.size() ;
 }
 
+/*
+ * Factory function for DescriptorMatcher creating
+ */
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
+{
+    DescriptorMatcher* dm = 0;
+    if( !descriptorMatcherType.compare( "FlannBased" ) )
+    {
+        dm = new FlannBasedMatcher();
+    }
+    else if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
+    {
+        dm = new BruteForceMatcher<L2<float> >();
+    }
+    else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
+    {
+        dm = new BruteForceMatcher<L1<float> >();
+    }
+    else if( !descriptorMatcherType.compare("BruteForce-Hamming") )
+    {
+        dm = new BruteForceMatcher<Hamming>();
+    }
+    else if( !descriptorMatcherType.compare( "BruteForce-HammingLUT") )
+    {
+        dm = new BruteForceMatcher<HammingLUT>();
+    }
 
+    return dm;
+}
+
+/*
+ * BruteForce L2 specialization
+ */
 template<>
 void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                                               const vector<Mat>& masks, bool compactResult )
@@ -585,36 +617,6 @@ void FlannBasedMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vec
     convertToDMatches( mergedDescriptors, indices, dists, matches );
 }
 
-/*
- * Factory function for DescriptorMatcher creating
- */
-Ptr<DescriptorMatcher> createDescriptorMatcher( const string& descriptorMatcherType )
-{
-    DescriptorMatcher* dm = 0;
-    if( !descriptorMatcherType.compare( "FlannBased" ) )
-    {
-        dm = new FlannBasedMatcher();
-    }
-    else if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
-    {
-        dm = new BruteForceMatcher<L2<float> >();
-    }
-    else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
-    {
-        dm = new BruteForceMatcher<L1<float> >();
-    }
-    else if( !descriptorMatcherType.compare("BruteForce-Hamming") )
-    {
-        dm = new BruteForceMatcher<Hamming>();
-    }
-    else if( !descriptorMatcherType.compare( "BruteForce-HammingLUT") )
-    {
-        dm = new BruteForceMatcher<HammingLUT>();
-    }
-
-    return dm;
-}
-
 /****************************************************************************************\
 *                                GenericDescriptorMatcher                                *
 \****************************************************************************************/
@@ -846,6 +848,34 @@ void GenericDescriptorMatcher::read( const FileNode& )
 
 void GenericDescriptorMatcher::write( FileStorage& ) const
 {}
+
+/*
+ * Factory function for GenericDescriptorMatch creating
+ */
+Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const string& genericDescritptorMatcherType,
+                                                                const string &paramsFilename )
+{
+    Ptr<GenericDescriptorMatcher> descriptorMatcher;
+    if( ! genericDescritptorMatcherType.compare("ONEWAY") )
+    {
+        descriptorMatcher = new OneWayDescriptorMatcher();
+    }
+    else if( ! genericDescritptorMatcherType.compare("FERN") )
+    {
+        descriptorMatcher = new FernDescriptorMatcher();
+    }
+
+    if( !paramsFilename.empty() && !descriptorMatcher.empty() )
+    {
+        FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
+        if( fs.isOpened() )
+        {
+            descriptorMatcher->read( fs.root() );
+            fs.release();
+        }
+    }
+    return descriptorMatcher;
+}
 
 /****************************************************************************************\
 *                                OneWayDescriptorMatcher                                  *
@@ -1236,34 +1266,6 @@ Ptr<GenericDescriptorMatcher> VectorDescriptorMatcher::clone( bool emptyTrainDat
 {
     // TODO clone extractor
     return new VectorDescriptorMatcher( extractor, matcher->clone(emptyTrainData) );
-}
-
-/*
- * Factory function for GenericDescriptorMatch creating
- */
-Ptr<GenericDescriptorMatcher> createGenericDescriptorMatcher( const string& genericDescritptorMatcherType,
-                                                              const string &paramsFilename )
-{
-    Ptr<GenericDescriptorMatcher> descriptorMatcher;
-    if( ! genericDescritptorMatcherType.compare("ONEWAY") )
-    {
-        descriptorMatcher = new OneWayDescriptorMatcher();
-    }
-    else if( ! genericDescritptorMatcherType.compare("FERN") )
-    {
-        descriptorMatcher = new FernDescriptorMatcher();
-    }
-
-    if( !paramsFilename.empty() && !descriptorMatcher.empty() )
-    {
-        FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
-        if( fs.isOpened() )
-        {
-            descriptorMatcher->read( fs.root() );
-            fs.release();
-        }
-    }
-    return descriptorMatcher;
 }
 
 }
