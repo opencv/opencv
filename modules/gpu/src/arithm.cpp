@@ -66,7 +66,7 @@ double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 
 void cv::gpu::flip(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*) { throw_nogpu(); }
-void cv::gou::minMax(const GpuMat&, double*, double*, GpuMat&) { throw_nogpu(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*) { throw_nogpu(); }
 void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&) { throw_nogpu(); }

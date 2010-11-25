@@ -52,6 +52,7 @@ bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_nogpu(); return f
 void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>&) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::detect(const GpuMat&, vector<Point>&, double, Size, Size) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_nogpu(); }
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector_48x96() { throw_nogpu(); return std::vector<float>(); }
