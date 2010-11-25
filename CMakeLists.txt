@@ -1166,19 +1166,19 @@ if(BUILD_PACKAGE)
             )
 
         if(CMAKE_INSTALL_DEBUG_LIBRARIES)
-            foreach(m cxcore cv cvaux ml highgui opencv_ffmpeg)
-                install(FILES ${CMAKE_BINARY_DIR}/bin/Debug/${m}${OPENCV_DLLVERSION}d.dll
+            foreach(m calib3d core contrib features2d ffmpeg flann gpu highgui imgproc legacy ml objdetect video)
+                install(FILES ${CMAKE_BINARY_DIR}/bin/Debug/opencv_${m}${OPENCV_DLLVERSION}d.dll
             DESTINATION bin COMPONENT main)
-                install(FILES ${CMAKE_BINARY_DIR}/lib/Debug/${m}${OPENCV_DLLVERSION}d.lib
+                install(FILES ${CMAKE_BINARY_DIR}/lib/Debug/opencv_${m}${OPENCV_DLLVERSION}d.lib
             DESTINATION lib COMPONENT main)
             endforeach()
         endif()
 
         install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
-        install(DIRECTORY 3rdparty apps interfaces src tests utils DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
+        install(DIRECTORY 3rdparty android modules tests utils DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
         install(DIRECTORY doc/ DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.tex")
         install(DIRECTORY doc/pics DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
-        install(DIRECTORY doc/plastex DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
+        install(DIRECTORY doc/latex2sphinx DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
 
     endif()
 endif()

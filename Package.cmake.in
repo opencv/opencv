@@ -7,11 +7,11 @@
 if(MSVC)
     set(CMAKE_INSTALL_DEBUG_LIBRARIES 1)
 endif()
-if(ENABLE_OPENMP)
-    set(CMAKE_INSTALL_OPENMP_LIBRARIES 1)
-endif()
+#if(ENABLE_OPENMP)
+#    set(CMAKE_INSTALL_OPENMP_LIBRARIES 1)
+#endif()
 #include(OpenCVInstallRequiredSystemLibraries.cmake)
-#include(InstallRequiredSystemLibraries)
+include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_NAME "OpenCV")
 set(CPACK_PACKAGE_VENDOR "OpenCV project opencvlibrary.sourceforge.net")
@@ -82,6 +82,7 @@ if(WIN32)
         "doc\\\\opencv.pdf" "The Reference Manual"
         "CMakeLists.txt" "The Build Script (open with CMake)"
         "samples\\\\c" "C Samples"
+        "samples\\\\cpp" "C++ Samples"
         "samples\\\\python" "Python Samples")
     
     # Add "<install_path>/bin" to the system PATH
