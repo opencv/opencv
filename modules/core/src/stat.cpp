@@ -771,7 +771,7 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
     }
 }
 
-void minMaxIndx(const Mat& a, double* minVal,
+void minMaxIdx(const Mat& a, double* minVal,
                 double* maxVal, int* minIdx, int* maxIdx,
                 const Mat& mask)
 {
