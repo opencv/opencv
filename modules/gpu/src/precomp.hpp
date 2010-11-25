@@ -67,6 +67,12 @@
     #include "opencv2/gpu/stream_accessor.hpp"
     #include "npp.h"    
 
+#define NPP_MINIMUM_REQUIRED_VERSION 3216
+
+#if (NPP_VERSION_MAJOR*1000+NPP_VERSION_MINOR*100+NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+    #error "Insufficient NPP version, please update it."
+#endif
+
 #else /* defined(HAVE_CUDA) */
 
     static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compilled without GPU support"); }

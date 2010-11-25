@@ -27,7 +27,7 @@ if (BUILD_EXAMPLES)
         set(the_target "example_gpu_${name}")
     	add_executable(${the_target} ${srcs})
 		set_target_properties(${the_target} PROPERTIES
-		    OUTPUT_NAME "${name}"
+		    OUTPUT_NAME "${name}_gpu"
 		    PROJECT_LABEL "(EXAMPLE_GPU) ${name}")
     	add_dependencies(${the_target} opencv_core opencv_flann opencv_imgproc opencv_highgui
     	    opencv_ml opencv_video opencv_objdetect opencv_features2d
