@@ -66,6 +66,7 @@ double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 
 void cv::gpu::flip(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*) { throw_nogpu(); }
+void cv::gou::minMax(const GpuMat&, double*, double*, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*) { throw_nogpu(); }
 void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&) { throw_nogpu(); }
@@ -492,20 +493,24 @@ Scalar cv::gpu::sum(const GpuMat& src)
 
 namespace cv { namespace gpu { namespace mathfunc { namespace minmax {
 
-    void get_buf_size_required(int elem_size, int& b1cols, int& b1rows, 
-                               int& b2cols, int& b2rows);
+    void get_buf_size_required(int elem_size, int& cols, int& rows);
     
     template <typename T> 
-    void min_max_caller(const DevMem2D src, double* minval, double* maxval, 
-                        unsigned char* minval_buf, unsigned char* maxval_buf);
+    void min_max_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf);
 
     template <typename T> 
-    void min_max_caller_2steps(const DevMem2D src, double* minval, double* maxval, 
-                               unsigned char* minval_buf, unsigned char* maxval_buf);
+    void min_max_caller_2steps(const DevMem2D src, double* minval, double* maxval, PtrStep buf);
 
 }}}}
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
+{
+    GpuMat buf;
+    minMax(src, minVal, maxVal, buf);
+}
+
+
+void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& buf)
 {
     using namespace mathfunc::minmax;
 
@@ -513,26 +518,25 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
     if (!maxVal) maxVal = &maxVal_;
 
     GpuMat src_ = src.reshape(1);
-
-    // Allocate GPU buffers
-    Size b1size, b2size;
-    get_buf_size_required(src.elemSize(), b1size.width, b1size.height, b2size.width, b2size.height);
-    GpuMat b1(b1size, CV_8U), b2(b2size, CV_8U);
+    
+    Size bufSize;
+    get_buf_size_required(src.elemSize(), bufSize.width, bufSize.height);
+    buf.create(bufSize, CV_8U);
 
     int major, minor;
     getComputeCapability(getDevice(), major, minor);
-  
+ 
     if (major >= 1 && minor >= 1)
     {
         switch (src_.type())
         {
-        case CV_8U: min_max_caller<unsigned char>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_8S: min_max_caller<signed char>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_16U: min_max_caller<unsigned short>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_16S: min_max_caller<signed short>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_32S: min_max_caller<int>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_32F: min_max_caller<float>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_64F: min_max_caller<double>(src_, minVal, maxVal, b1.data, b2.data); break;
+        case CV_8U: min_max_caller<unsigned char>(src_, minVal, maxVal, buf); break;
+        case CV_8S: min_max_caller<signed char>(src_, minVal, maxVal, buf); break;
+        case CV_16U: min_max_caller<unsigned short>(src_, minVal, maxVal, buf); break;
+        case CV_16S: min_max_caller<signed short>(src_, minVal, maxVal, buf); break;
+        case CV_32S: min_max_caller<int>(src_, minVal, maxVal, buf); break;
+        case CV_32F: min_max_caller<float>(src_, minVal, maxVal, buf); break;
+        case CV_64F: min_max_caller<double>(src_, minVal, maxVal, buf); break;
         default: CV_Error(CV_StsBadArg, "Unsupported type");
         }
     }
@@ -540,12 +544,12 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
     {
         switch (src_.type())
         {
-        case CV_8U: min_max_caller_2steps<unsigned char>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_8S: min_max_caller_2steps<signed char>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_16U: min_max_caller_2steps<unsigned short>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_16S: min_max_caller_2steps<signed short>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_32S: min_max_caller_2steps<int>(src_, minVal, maxVal, b1.data, b2.data); break;
-        case CV_32F: min_max_caller_2steps<float>(src_, minVal, maxVal, b1.data, b2.data); break;
+        case CV_8U: min_max_caller_2steps<unsigned char>(src_, minVal, maxVal, buf); break;
+        case CV_8S: min_max_caller_2steps<signed char>(src_, minVal, maxVal, buf); break;
+        case CV_16U: min_max_caller_2steps<unsigned short>(src_, minVal, maxVal, buf); break;
+        case CV_16S: min_max_caller_2steps<signed short>(src_, minVal, maxVal, buf); break;
+        case CV_32S: min_max_caller_2steps<int>(src_, minVal, maxVal, buf); break;
+        case CV_32F: min_max_caller_2steps<float>(src_, minVal, maxVal, buf); break;
         default: CV_Error(CV_StsBadArg, "Unsupported type");
         }
     }

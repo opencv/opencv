@@ -676,6 +676,8 @@ struct CV_GpuMinMaxTest: public CvTest
 {
     CV_GpuMinMaxTest(): CvTest("GPU-MinMaxTest", "minMax") {}
 
+    cv::gpu::GpuMat buf;
+
     void run(int)
     {
         int depth_end;
@@ -732,7 +734,7 @@ struct CV_GpuMinMaxTest: public CvTest
 
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;        
-        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_);
+        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, buf);
        
         if (abs(minVal - minVal_) > 1e-3f)
         {

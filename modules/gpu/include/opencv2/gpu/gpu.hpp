@@ -424,6 +424,9 @@ namespace cv
         //! finds global minimum and maximum array elements and returns their values
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0);
 
+        //! finds global minimum and maximum array elements and returns their values
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& buf);
+
         //! finds global minimum and maximum array elements and returns their values with locations
         CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0);
 

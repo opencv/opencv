@@ -401,7 +401,7 @@ namespace cv { namespace gpu { namespace mathfunc
 //////////////////////////////////////////////////////////////////////////////
 // Min max
 
-    // To avoid shared banck confilict we convert reach value into value of 
+    // To avoid shared bank conflicts we convert each value into value of 
     // appropriate type (32 bits minimum)
     template <typename T> struct MinMaxTypeTraits {};
     template <> struct MinMaxTypeTraits<unsigned char> { typedef int best_type; };
@@ -423,6 +423,10 @@ namespace cv { namespace gpu { namespace mathfunc
 
     static const unsigned int czero = 0;
 
+    // Global counter of blocks finished its work
+    __device__ unsigned int blocks_finished;
+
+
     // Estimates good thread configuration
     //  - threads variable satisfies to threads.x * threads.y == 256
     void estimate_thread_cfg(dim3& threads, dim3& grid)
@@ -431,14 +435,16 @@ namespace cv { namespace gpu { namespace mathfunc
         grid = dim3(6, 5);
     }
 
+
     // Returns required buffer sizes
-    void get_buf_size_required(int elem_size, int& b1cols, int& b1rows, int& b2cols, int& b2rows)
+    void get_buf_size_required(int elem_size, int& cols, int& rows)
     {
         dim3 threads, grid;
         estimate_thread_cfg(threads, grid);
-        b1cols = grid.x * grid.y * elem_size; b1rows = 1;
-        b2cols = grid.x * grid.y * elem_size; b2rows = 1;
+        cols = grid.x * grid.y * elem_size; 
+        rows = 2;
     }
+
 
     // Estimates device constants which are used in the kernels using specified thread configuration
     void estimate_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
@@ -449,6 +455,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall(cudaMemcpyToSymbol(ctheight, &theight, sizeof(ctheight))); 
     }  
 
+
     // Does min and max in shared memory
     template <typename T>
     __device__ void merge(unsigned int tid, unsigned int offset, volatile T* minval, volatile T* maxval)
@@ -457,8 +464,6 @@ namespace cv { namespace gpu { namespace mathfunc
         maxval[tid] = max(maxval[tid], maxval[tid + offset]);
     }
 
-    // Global counter of blocks finished its work
-    __device__ unsigned int blocks_finished;
 
     template <int nthreads, typename T>
     __global__ void min_max_kernel(int cols, int rows, const PtrStep src, T* minval, T* maxval)
@@ -535,6 +540,37 @@ namespace cv { namespace gpu { namespace mathfunc
 #endif
     }
 
+   
+    template <typename T>
+    void min_max_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* minval_buf = (T*)buf.ptr(0);
+        T* maxval_buf = (T*)buf.ptr(1);
+
+        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
+        min_max_kernel<256, T><<<grid, threads>>>(src.cols, src.rows, src, minval_buf, maxval_buf);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T minval_, maxval_;
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        *minval = minval_;
+        *maxval = maxval_;
+    }  
+
+    template void min_max_caller<unsigned char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<signed char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<unsigned short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<signed short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<int>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<float>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<double>(const DevMem2D, double*, double*, PtrStep);
+
+
     // This kernel will be used only when compute capability is 1.0
     template <typename T>
     __global__ void min_max_kernel_2ndstep(T* minval, T* maxval, int size)
@@ -550,18 +586,21 @@ namespace cv { namespace gpu { namespace mathfunc
         minval[0] = mymin;
         maxval[0] = mymax;
     }
-   
+
+
     template <typename T>
-    void min_max_caller(const DevMem2D src, double* minval, double* maxval, 
-                        unsigned char* minval_buf, unsigned char* maxval_buf)
+    void min_max_caller_2steps(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
         estimate_thread_cfg(threads, grid);
         estimate_kernel_consts(src.cols, src.rows, threads, grid);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
-        min_max_kernel<256, T><<<grid, threads>>>(src.cols, src.rows, src, (T*)minval_buf, (T*)maxval_buf);
+        T* minval_buf = (T*)buf.ptr(0);
+        T* maxval_buf = (T*)buf.ptr(1);
 
+        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
+        min_max_kernel<256, T><<<grid, threads>>>(src.cols, src.rows, src, minval_buf, maxval_buf);
+        min_max_kernel_2ndstep<T><<<1, 1>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -571,42 +610,15 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }
 
-    template <typename T>
-    void min_max_caller_2steps(const DevMem2D src, double* minval, double* maxval, 
-                               unsigned char* minval_buf, unsigned char* maxval_buf)
-    {
-        dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
-
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
-        min_max_kernel<256, T><<<grid, threads>>>(src.cols, src.rows, src, (T*)minval_buf, (T*)maxval_buf);
-        min_max_kernel_2ndstep<T><<<1, 1>>>((T*)minval_buf, (T*)maxval_buf, grid.x * grid.y);
-        cudaSafeCall(cudaThreadSynchronize());
-
-        T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        *minval = minval_;
-        *maxval = maxval_;
-    }
-
-    template void min_max_caller<unsigned char>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller<signed char>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller<unsigned short>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller<signed short>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller<int>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller<float>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller<double>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-
-    template void min_max_caller_2steps<unsigned char>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller_2steps<signed char>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller_2steps<unsigned short>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller_2steps<signed short>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller_2steps<int>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
-    template void min_max_caller_2steps<float>(const DevMem2D, double*, double*, unsigned char*, unsigned char*);
+    template void min_max_caller_2steps<unsigned char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller_2steps<signed char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller_2steps<unsigned short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller_2steps<signed short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller_2steps<int>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller_2steps<float>(const DevMem2D, double*, double*, PtrStep);
 
     } // namespace minmax
+
 
     namespace minmaxloc {
 
