@@ -1782,10 +1782,10 @@ struct CV_EXPORTS Accumulator
     typedef T Type;
 };
 
-template<> struct Accumulator<unsigned char>  { typedef unsigned int Type; };
-template<> struct Accumulator<unsigned short> { typedef unsigned int Type; };
-template<> struct Accumulator<char>   { typedef int Type; };
-template<> struct Accumulator<short>  { typedef int Type; };
+template<> struct Accumulator<unsigned char>  { typedef float Type; };
+template<> struct Accumulator<unsigned short> { typedef float Type; };
+template<> struct Accumulator<char>   { typedef float Type; };
+template<> struct Accumulator<short>  { typedef float Type; };
 
 /*
  * Squared Euclidean distance functor
@@ -1823,7 +1823,7 @@ struct CV_EXPORTS L1
         for( int i = 0; i < size; i++ )
         {
             ResultType diff = a[i] - b[i];
-            result += fabs( diff );
+            result += (ResultType)fabs( diff );
         }
         return result;
     }
