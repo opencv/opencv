@@ -62,7 +62,7 @@ public:
     /**
      * Convenience function for deallocating the storage data.
      */
-    void free()
+    void release()
     {
         if (data!=NULL) delete[] data;
     }

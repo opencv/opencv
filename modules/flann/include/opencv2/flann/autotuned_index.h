@@ -527,9 +527,9 @@ private:
             bestCost = kdtreeCost.first.totalCost;
         }
 
-        gt_matches.free();
-        sampledDataset.free();
-        testDataset.free();
+        gt_matches.release();
+        sampledDataset.release();
+        testDataset.release();
 
         return bestParams;
     }
@@ -601,7 +601,7 @@ private:
 
             speedup = linear/searchTime;
 
-            gt_matches.free();
+            gt_matches.release();
         }
 
         return speedup;

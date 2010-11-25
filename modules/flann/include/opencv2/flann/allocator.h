@@ -119,7 +119,7 @@ public:
 	 * Returns a pointer to a piece of new memory of the given size in bytes
 	 * allocated from the pool.
 	 */
-	void* malloc(int size)
+	void* allocateBytes(int size)
 	{
 		int blocksize;
 
@@ -176,7 +176,7 @@ public:
     template <typename T>
 	T* allocate(size_t count = 1)
 	{
-		T* mem = (T*) this->malloc(sizeof(T)*count);
+		T* mem = (T*) this->allocateBytes(sizeof(T)*count);
 		return mem;
 	}
 
