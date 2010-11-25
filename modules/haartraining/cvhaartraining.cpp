@@ -1227,7 +1227,7 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
         while( !feof( input ) )
         {
             *imgfilename = '\0';
-            if( !fgets( imgfilename, PATH_MAX - (imgfilename - full) - 1, input ))
+            if( !fgets( imgfilename, PATH_MAX - (int)(imgfilename - full) - 1, input ))
                 break;
             len = (int)strlen( imgfilename );
 			if( len > 0 && imgfilename[len-1] == '\n' )
@@ -1256,7 +1256,7 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
             while( !feof( input ) )
             {
                 *imgfilename = '\0';
-				if( !fgets( imgfilename, PATH_MAX - (imgfilename - full) - 1, input ))
+				if( !fgets( imgfilename, PATH_MAX - (int)(imgfilename - full) - 1, input ))
                     break;
                 len = (int)strlen( imgfilename );
 				if( len > 0 && imgfilename[len-1] == '\n' )
