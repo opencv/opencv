@@ -45,7 +45,7 @@ float match(const vector<KeyPoint>& kpts_train, const vector<KeyPoint>& kpts_que
             const Mat& train, const Mat& query, vector<DMatch>& matches)
 {
 
-  float t = (double)getTickCount();
+  double t = (double)getTickCount();
   matcher.match(query, train, matches); //Using features2d
   return ((double)getTickCount() - t) / getTickFrequency();
 }

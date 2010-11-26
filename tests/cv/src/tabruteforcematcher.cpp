@@ -68,7 +68,7 @@ void BruteForceMatcherTest::run( int )
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
     for( int i=0;i<descriptorsNumber;i++ )
     {
-        float epsilon = 1e-2;
+        float epsilon = 0.01f;
         bool isEquiv = fabs( specMatches[i].distance - genericMatches[i].distance ) < epsilon &&
                        specMatches[i].queryIdx == genericMatches[i].queryIdx &&
                        specMatches[i].trainIdx == genericMatches[i].trainIdx;

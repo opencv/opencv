@@ -58,7 +58,8 @@ static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt 
     if( z )
     {
         double w = 1./z;
-        return Point2f( (H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w, (H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w );
+        return Point2f( (float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w), 
+						(float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w) );
     }
     return Point2f( numeric_limits<float>::max(), numeric_limits<float>::max() );
 }
@@ -103,13 +104,13 @@ static void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<dou
             Mat_<double> dstM; invert(Aff*invM*Aff.t(), dstM);
             Mat_<double> eval; eigen( dstM, eval );
             assert( eval(0,0) && eval(1,0) );
-            float dstSize = pow(1./(eval(0,0)*eval(1,0)), 0.25);
+            float dstSize = (float)pow(1./(eval(0,0)*eval(1,0)), 0.25);
 
             // TODO: check angle projection
-            float srcAngleRad = srcIt->angle*CV_PI/180;
+            float srcAngleRad = (float)(srcIt->angle*CV_PI/180);
             Point2f vec1(cos(srcAngleRad), sin(srcAngleRad)), vec2;
-            vec2.x = Aff(0,0)*vec1.x + Aff(0,1)*vec1.y;
-            vec2.y = Aff(1,0)*vec1.x + Aff(0,1)*vec1.y;
+            vec2.x = (float)(Aff(0,0)*vec1.x + Aff(0,1)*vec1.y);
+            vec2.y = (float)(Aff(1,0)*vec1.x + Aff(0,1)*vec1.y);
             float dstAngleGrad = fastAtan2(vec2.y, vec2.x);
 
             *dstIt = KeyPoint( dstPt, dstSize, dstAngleGrad, srcIt->response, srcIt->octave, srcIt->class_id );
@@ -184,8 +185,8 @@ protected:
     virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const = 0;
     void setDefaultAllDatasetsRunParams();
     virtual void setDefaultDatasetRunParams( int datasetIdx ) = 0;
-    virtual void readDefaultRunParams( FileNode &fn ) {};
-    virtual void writeDefaultRunParams( FileStorage &fs ) const {};
+    virtual void readDefaultRunParams( FileNode& /*fn*/ ) {}
+    virtual void writeDefaultRunParams( FileStorage& /*fs*/ ) const {}
 
     virtual void readResults();
     virtual void readResults( FileNode& fn, int datasetIdx, int caseIdx ) = 0;
@@ -196,13 +197,13 @@ protected:
 
     virtual void readAlgorithm( ) {};
     virtual void processRunParamsFile () {};
-    virtual void runDatasetTest( const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress ) {};
+    virtual void runDatasetTest( const vector<Mat>& /*imgs*/, const vector<Mat>& /*Hs*/, int /*di*/, int& /*progress*/ ) {}
     void run( int );
 
     virtual void processResults( int datasetIdx );
     virtual int processResults( int datasetIdx, int caseIdx ) = 0;
     virtual void processResults();
-    virtual void writePlotData( int datasetIdx ) const {};
+    virtual void writePlotData( int /*datasetIdx*/ ) const {}
     virtual void writeAveragePlotData() const {};
 
     string algName;
@@ -915,7 +916,7 @@ void DescriptorQualityTest::writeDefaultRunParams (FileStorage &fs) const
 
 void DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
-    commRunParams[datasetIdx].isActiveParams = (int)fn[IS_ACTIVE_PARAMS];
+    commRunParams[datasetIdx].isActiveParams = (int)fn[IS_ACTIVE_PARAMS] != 0;
     if (commRunParams[datasetIdx].isActiveParams)
     {
         commRunParams[datasetIdx].keypontsFilename = (string)fn[KEYPOINTS_FILENAME];

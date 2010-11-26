@@ -861,7 +861,7 @@ void VocData::calcPrecRecall_impl(const vector<char>& ground_truth, const vector
     recall[0] = 0;
     for (size_t idx = 0; idx < ground_truth.size(); ++idx)
     {
-        if (ground_truth[ranking[idx]] == true) ++retrieved_hits;
+        if (ground_truth[ranking[idx]] != 0) ++retrieved_hits;
 
         precision[idx+1] = static_cast<float>(retrieved_hits)/static_cast<float>(idx+1);
         recall[idx+1] = static_cast<float>(retrieved_hits)/static_cast<float>(recall_norm);
@@ -897,12 +897,12 @@ void VocData::calcPrecRecall_impl(const vector<char>& ground_truth, const vector
         for (size_t idx = 0; idx < (recall.size()-1); ++idx)
         {
             ap += (recall[idx+1] - recall[idx])*precision_monot[idx+1] +   //no need to take min of prec - is monotonically decreasing
-                    0.5*(recall[idx+1] - recall[idx])*std::abs(precision_monot[idx+1] - precision_monot[idx]);
+                    0.5f*(recall[idx+1] - recall[idx])*std::abs(precision_monot[idx+1] - precision_monot[idx]);
         }
     } else {
         // FOR BEFORE VOC2010 AP IS CALCULATED BY SAMPLING PRECISION AT RECALL 0.0,0.1,..,1.0
 
-        for (float recall_pos = 0.0; recall_pos <= 1.0; recall_pos += 0.1)
+        for (float recall_pos = 0.f; recall_pos <= 1.f; recall_pos += 0.1f)
         {
             //find iterator of the precision corresponding to the first recall >= recall_pos
             vector<float>::iterator recall_it = recall.begin();
@@ -1037,7 +1037,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
                 /* convert iterator to index */
                 int class_idx = std::distance(output_headers.begin(),class_idx_it);
                 //add to confusion matrix row in proportion
-                output_values[class_idx] += 1.0/static_cast<float>(img_objects.size());
+                output_values[class_idx] += 1.f/static_cast<float>(img_objects.size());
             }
         }
         //check break conditions if breaking on certain level of recall
@@ -1154,16 +1154,16 @@ void VocData::calcDetectorConfMatRow(const string& obj_class, const ObdDatasetTy
 
         //find the ground truth object which has the highest overlap score with the detected object
         float maxov = -1.0;
-        size_t max_gt_obj_idx = -1;
+        int max_gt_obj_idx = -1;
         //-- for each detected object iterate through objects present in ground truth --
         for (size_t gt_obj_idx = 0; gt_obj_idx < img_objects.size(); ++gt_obj_idx)
         {
             //check difficulty flag
-            if (ignore_difficult || (img_object_data[gt_obj_idx].difficult = false))
+            if (ignore_difficult || (img_object_data[gt_obj_idx].difficult == false))
             {
                 //if the class matches, then check if the detected object and ground truth object overlap by a sufficient margin
-                int ov = testBoundingBoxesForOverlap(bounding_boxes_flat[ranking[image_idx]], img_objects[gt_obj_idx].boundingBox);
-                if (ov != -1.0)
+                float ov = testBoundingBoxesForOverlap(bounding_boxes_flat[ranking[image_idx]], img_objects[gt_obj_idx].boundingBox);
+                if (ov != -1.f)
                 {
                     //if all conditions are met store the overlap score and index (as objects are assigned to the highest scoring match)
                     if (ov > maxov)
@@ -1773,7 +1773,7 @@ bool VocData::getClassifierGroundTruthImage(const string& obj_class, const strin
     if (it != m_classifier_gt_all_ids.end())
     {
         //image found, so return corresponding ground truth
-        return m_classifier_gt_all_present[std::distance(m_classifier_gt_all_ids.begin(),it)];
+        return m_classifier_gt_all_present[std::distance(m_classifier_gt_all_ids.begin(),it)] != 0;
     } else {
         string err_msg = "could not find classifier ground truth for image '" + id + "' and class '" + obj_class + "'";
         CV_Error(CV_StsError,err_msg.c_str());
@@ -2015,9 +2015,7 @@ struct VocabTrainParams
 struct SVMTrainParamsExt
 {
     SVMTrainParamsExt() : descPercent(0.5f), targetRatio(0.4f), balanceClasses(true) {}
-    SVMTrainParamsExt( float _descPercent, float _targetRatio, bool _balanceClasses,
-                       int _svmType, int _kernelType, double _degree, double _gamma, double _coef0,
-                       double _C, double _nu, double _p, Mat& _class_weights, TermCriteria _termCrit ) :
+    SVMTrainParamsExt( float _descPercent, float _targetRatio, bool _balanceClasses ) :
             descPercent(_descPercent), targetRatio(_targetRatio), balanceClasses(_balanceClasses) {}
     void read( const FileNode& fn )
     {

@@ -296,6 +296,7 @@ public:
             maxDistDif(_maxDistDif), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
+	CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) {}
 
     void compareDescriptors( const Mat& validDescriptors, const Mat& calcDescriptors )
     {
@@ -508,14 +509,14 @@ class CV_DescriptorMatcherTest : public CvTest
 public:
     CV_DescriptorMatcherTest( const char* testName, const Ptr<DescriptorMatcher>& _dmatcher, float _badPart ) :
         CvTest( testName, "cv::DescritorMatcher::[,knn,radius]match()"), badPart(_badPart), dmatcher(_dmatcher)
-        { CV_Assert( queryDescCount % 2 == 0 ); // because we split train data in same cases in two
-          CV_Assert( countFactor == 4); }
+        {}
 protected:
     static const int dim = 500;
-    static const int queryDescCount = 300;
-    static const int countFactor = 4;
+    static const int queryDescCount = 300; // must be even number because we split train data in same cases in two
+    static const int countFactor = 4; // do not change it
     const float badPart;
 
+	CV_DescriptorMatcherTest& operator=(const CV_DescriptorMatcherTest&) {}
     virtual void run( int );
     void generateData( Mat& query, Mat& train );
 
@@ -788,7 +789,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
             }
             if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1)\.n",
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1).\n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
             }
@@ -900,8 +901,8 @@ CV_DescriptorExtractorTest<L2<float> > siftDescriptorTest( "descriptor-sift", 0.
                                                 DescriptorExtractor::create("SIFT"), 8.06652f  );
 CV_DescriptorExtractorTest<L2<float> > surfDescriptorTest( "descriptor-surf",  0.035f,
                                                 DescriptorExtractor::create("SURF"), 0.147372f );
-CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  std::numeric_limits<float>::epsilon() + 1,
-                                                DescriptorExtractor::create("BRIEF"), 0.00527548 );
+CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  1,
+                                                DescriptorExtractor::create("BRIEF"), 0.00527548f );
 
 CV_DescriptorExtractorTest<L2<float> > oppSiftDescriptorTest( "descriptor-opponent-sift", 0.008f,
                                                 DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );

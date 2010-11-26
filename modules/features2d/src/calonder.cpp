@@ -961,7 +961,7 @@ float RTreeClassifier::countZeroElements()
          float *p = trees_[i].getPosteriorByIndex(k);
          uchar *p2 = trees_[i].getPosteriorByIndex2(k);
          assert(p); assert(p2);
-         for (int j=0; j<num_elem; ++j, ++p, ++p2) {
+         for (int j=0; j<(int)num_elem; ++j, ++p, ++p2) {
             if (*p == 0.f) flt_zeros++;
             if (*p2 == 0) ui8_zeros++;
          }
