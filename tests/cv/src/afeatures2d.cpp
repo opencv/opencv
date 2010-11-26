@@ -82,14 +82,14 @@ void CV_FeatureDetectorTest::emptyDataTest()
     }
     catch(...)
     {
-        ts->printf( CvTS::LOG, "detect() on empty image must not generate exception (1)\n" );
+        ts->printf( CvTS::LOG, "detect() on empty image must not generate exception (1).\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         return;
     }
 
     if( !keypoints.empty() )
     {
-        ts->printf( CvTS::LOG, "detect() on empty image must return empty keypoints vector (1)\n" );
+        ts->printf( CvTS::LOG, "detect() on empty image must return empty keypoints vector (1).\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         return;
     }
@@ -103,7 +103,7 @@ void CV_FeatureDetectorTest::emptyDataTest()
     }
     catch(...)
     {
-        ts->printf( CvTS::LOG, "detect() on empty image vector must not generate exception (2)\n" );
+        ts->printf( CvTS::LOG, "detect() on empty image vector must not generate exception (2).\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         return;
     }
@@ -182,7 +182,7 @@ void CV_FeatureDetectorTest::regressionTest()
     Mat image = imread( imgFilename );
     if( image.empty() )
     {
-        ts->printf( CvTS::LOG, "image %s can not be read \n", imgFilename.c_str() );
+        ts->printf( CvTS::LOG, "Image %s can not be read.\n", imgFilename.c_str() );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         return;
     }
@@ -202,7 +202,7 @@ void CV_FeatureDetectorTest::regressionTest()
         read( fs["keypoints"], validKeypoints );
         if( validKeypoints.empty() )
         {
-            ts->printf( CvTS::LOG, "Keypoints can nod be read\n" );
+            ts->printf( CvTS::LOG, "Keypoints can not be read.\n" );
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -214,7 +214,7 @@ void CV_FeatureDetectorTest::regressionTest()
         fs.open( resFilename, FileStorage::WRITE );
         if( !fs.isOpened() )
         {
-            ts->printf( CvTS::LOG, "file %s can not be opened to write\n", resFilename.c_str() );
+            ts->printf( CvTS::LOG, "File %s can not be opened to write.\n", resFilename.c_str() );
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -233,7 +233,7 @@ void CV_FeatureDetectorTest::run( int /*start_from*/ )
 {
     if( fdetector.empty() )
     {
-        ts->printf( CvTS::LOG, "Feature detector is empty" );
+        ts->printf( CvTS::LOG, "Feature detector is empty.\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         return;
     }
@@ -301,7 +301,7 @@ protected:
     {
         if( validDescriptors.size != calcDescriptors.size || validDescriptors.type() != calcDescriptors.type() )
         {
-            ts->printf(CvTS::LOG, "Valid and computed descriptors matrices must have the same size and type\n");
+            ts->printf(CvTS::LOG, "Valid and computed descriptors matrices must have the same size and type.\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -316,7 +316,7 @@ protected:
             if( dist > maxDistDif)
             {
                 stringstream ss;
-                ss << "Discance between valid and computed " << y << "-descriptors " << dist << ">" << maxDistDif << endl;
+                ss << "Distance between valid and computed " << y << "-descriptors " << dist << ">" << maxDistDif  << "."<< endl;
                 ts->printf(CvTS::LOG,  ss.str().c_str() );
                 ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
                 return;
@@ -325,7 +325,7 @@ protected:
                 maxDist = dist;
         }
         stringstream ss;
-        ss << "Max distance between valid and computed descriptors " << maxDist << endl;
+        ss << "Max distance between valid and computed descriptors " << maxDist << "." << endl;
         ts->printf(CvTS::LOG,  ss.str().c_str() );
     }
 
@@ -344,7 +344,7 @@ protected:
         }
         catch(...)
         {
-            ts->printf( CvTS::LOG, "compute() on empty image and empty keypoints must not generate exception (1)\n");
+            ts->printf( CvTS::LOG, "compute() on empty image and empty keypoints must not generate exception (1).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         }
 
@@ -355,7 +355,7 @@ protected:
         }
         catch(...)
         {
-            ts->printf( CvTS::LOG, "compute() on nonempty image and empty keypoints must not generate exception (1)\n");
+            ts->printf( CvTS::LOG, "compute() on nonempty image and empty keypoints must not generate exception (1).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         }
 
@@ -369,7 +369,7 @@ protected:
         }
         catch(...)
         {
-            ts->printf( CvTS::LOG, "compute() on empty images and empty keypoints collection must not generate exception (2)\n");
+            ts->printf( CvTS::LOG, "compute() on empty images and empty keypoints collection must not generate exception (2).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
         }
     }
@@ -384,7 +384,7 @@ protected:
         Mat img = imread( imgFilename );
         if( img.empty() )
         {
-            ts->printf( CvTS::LOG, "image %s can not be read\n", imgFilename.c_str() );
+            ts->printf( CvTS::LOG, "Image %s can not be read.\n", imgFilename.c_str() );
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -399,18 +399,18 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(CvTS::LOG, "\nAverage time of computiting one descriptor = %g ms (previous time = %g ms)\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
+            ts->printf(CvTS::LOG, "\nAverage time of computiting one descriptor = %g ms (previous time = %g ms).\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
-                ts->printf( CvTS::LOG, "Count of computed descriptors and keypoints count must be equal\n" );
+                ts->printf( CvTS::LOG, "Count of computed descriptors and keypoints count must be equal.\n" );
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
                 return;
             }
 
             if( calcDescriptors.cols != dextractor->descriptorSize() || calcDescriptors.type() != dextractor->descriptorType() )
             {
-                ts->printf( CvTS::LOG, "Incorrect descriptor size or descriptor type\n" );
+                ts->printf( CvTS::LOG, "Incorrect descriptor size or descriptor type.\n" );
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
                 return;
             }
@@ -423,7 +423,7 @@ protected:
             {
                 if( !writeDescriptors( calcDescriptors ) )
                 {
-                    ts->printf( CvTS::LOG, "Descriptors can not be written\n" );
+                    ts->printf( CvTS::LOG, "Descriptors can not be written.\n" );
                     ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
                     return;
                 }
@@ -431,7 +431,7 @@ protected:
         }
         else
         {
-            ts->printf( CvTS::LOG, "Compute and write keypoints\n" );
+            ts->printf( CvTS::LOG, "Compute and write keypoints.\n" );
             fs.open( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::WRITE );
             if( fs.isOpened() )
             {
@@ -441,7 +441,7 @@ protected:
             }
             else
             {
-                ts->printf(CvTS::LOG, "File for writting keypoints can not be opened\n");
+                ts->printf(CvTS::LOG, "File for writting keypoints can not be opened.\n");
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
                 return;
             }
@@ -453,7 +453,7 @@ protected:
         createDescriptorExtractor();
         if( dextractor.empty() )
         {
-            ts->printf(CvTS::LOG, "Descriptor extractor is empty\n");
+            ts->printf(CvTS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -576,7 +576,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
 
         if( (int)matches.size() != queryDescCount )
         {
-            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (1)\n");
+            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (1).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
         else
@@ -590,7 +590,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
             }
             if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (1)\n",
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (1).\n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
             }
@@ -616,7 +616,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
 
         if( (int)matches.size() != queryDescCount )
         {
-            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (2)\n");
+            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (2).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
         else
@@ -641,7 +641,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
             }
             if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (2)\n",
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (2).\n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
             }
@@ -662,7 +662,7 @@ void CV_DescriptorMatcherTest::knnMatchTest( const Mat& query, const Mat& train 
 
         if( (int)matches.size() != queryDescCount )
         {
-            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (1)\n");
+            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (1).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
         else
@@ -686,7 +686,7 @@ void CV_DescriptorMatcherTest::knnMatchTest( const Mat& query, const Mat& train 
             }
             if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (1)\n",
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (1).\n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
             }
@@ -713,7 +713,7 @@ void CV_DescriptorMatcherTest::knnMatchTest( const Mat& query, const Mat& train 
 
         if( (int)matches.size() != queryDescCount )
         {
-            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (2)\n");
+            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (2).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
         else
@@ -750,7 +750,7 @@ void CV_DescriptorMatcherTest::knnMatchTest( const Mat& query, const Mat& train 
             }
             if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (2)\n",
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (2).\n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
             }
@@ -769,7 +769,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
 
         if( (int)matches.size() != queryDescCount )
         {
-            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1)\n");
+            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
         else
@@ -788,7 +788,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
             }
             if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1)\n",
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1)\.n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
             }
@@ -817,7 +817,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
         int curRes = CvTS::OK;
         if( (int)matches.size() != queryDescCount )
         {
-            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1)\n");
+            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1).\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
 
@@ -855,7 +855,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
         if( (float)badCount > (float)queryDescCount*badPart )
         {
             curRes = CvTS::FAIL_INVALID_OUTPUT;
-            ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (2)\n",
+            ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (2).\n",
                         (float)badCount/(float)queryDescCount );
             ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
         }
@@ -900,7 +900,7 @@ CV_DescriptorExtractorTest<L2<float> > siftDescriptorTest( "descriptor-sift", 0.
                                                 DescriptorExtractor::create("SIFT"), 8.06652f  );
 CV_DescriptorExtractorTest<L2<float> > surfDescriptorTest( "descriptor-surf",  0.035f,
                                                 DescriptorExtractor::create("SURF"), 0.147372f );
-CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  1,
+CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  std::numeric_limits<float>::epsilon() + 1,
                                                 DescriptorExtractor::create("BRIEF"), 0.00527548 );
 
 CV_DescriptorExtractorTest<L2<float> > oppSiftDescriptorTest( "descriptor-opponent-sift", 0.008f,
