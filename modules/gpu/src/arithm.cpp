@@ -68,6 +68,7 @@ Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*) { throw_nogpu(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*) { throw_nogpu(); }
+void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::log(const GpuMat&, GpuMat&) { throw_nogpu(); }
@@ -514,8 +515,8 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
 {
     using namespace mathfunc::minmax;
 
-    double maxVal_;
-    if (!maxVal) maxVal = &maxVal_;
+    double minVal_; if (!minVal) minVal = &minVal_;
+    double maxVal_; if (!maxVal) maxVal = &maxVal_;
 
     GpuMat src_ = src.reshape(1);
     
@@ -561,53 +562,75 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
 
 namespace cv { namespace gpu { namespace mathfunc { namespace minmaxloc {
 
+    void get_buf_size_required(int elem_size, int& b1cols, int& b1rows, 
+                               int& b2cols, int& b2rows);
+
     template <typename T> 
     void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, 
-                            int* minlocx, int* minlocy, int* maxlocx, int* maxlocy);
+                            int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
+
+    template <typename T> 
+    void min_max_loc_caller_2steps(const DevMem2D src, double* minval, double* maxval, 
+                                   int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
 
 }}}}
 
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc)
+{    
+    GpuMat valbuf, locbuf;
+    minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, valbuf, locbuf);
+}
+
+void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, 
+                        GpuMat& valbuf, GpuMat& locbuf)
 {
     using namespace mathfunc::minmaxloc;
-
     CV_Assert(src.channels() == 1);
 
-    double maxVal_;
-    if (!maxVal) maxVal = &maxVal_;
+    double minVal_; if (!minVal) minVal = &minVal_;
+    double maxVal_; if (!maxVal) maxVal = &maxVal_;
+    int minLoc_[2];
+    int maxLoc_[2];
 
-    cv::Point minLoc_;
-    if (!minLoc) minLoc = &minLoc_;
+    Size valbuf_size, locbuf_size;
+    get_buf_size_required(src.elemSize(), valbuf_size.width, valbuf_size.height, 
+                          locbuf_size.width, locbuf_size.height);
+    valbuf.create(valbuf_size, CV_8U);
+    locbuf.create(locbuf_size, CV_8U);
 
-    cv::Point maxLoc_;
-    if (!maxLoc) maxLoc = &maxLoc_;
-  
-    switch (src.type())
-    {
-    case CV_8U:
-        min_max_loc_caller<unsigned char>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    case CV_8S:
-        min_max_loc_caller<signed char>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    case CV_16U:
-        min_max_loc_caller<unsigned short>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    case CV_16S:
-        min_max_loc_caller<signed short>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    case CV_32S:
-        min_max_loc_caller<int>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    case CV_32F:
-        min_max_loc_caller<float>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    case CV_64F:
-        min_max_loc_caller<double>(src, minVal, maxVal, &minLoc->x, &minLoc->y, &maxLoc->x, &maxLoc->y);
-        break;
-    default:
-        CV_Error(CV_StsBadArg, "Unsupported type");
+    int major, minor;
+    getComputeCapability(getDevice(), major, minor);
+ 
+    if (major >= 1 && minor >= 1)
+    {  
+        switch (src.type())
+        {
+        case CV_8U: min_max_loc_caller<unsigned char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_8S: min_max_loc_caller<signed char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16U: min_max_loc_caller<unsigned short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16S: min_max_loc_caller<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_32S: min_max_loc_caller<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_32F: min_max_loc_caller<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_64F: min_max_loc_caller<double>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        default: CV_Error(CV_StsBadArg, "Unsupported type");
+        }
     }
+    else
+    {
+        switch (src.type())
+        {
+        case CV_8U: min_max_loc_caller_2steps<unsigned char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_8S: min_max_loc_caller_2steps<signed char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16U: min_max_loc_caller_2steps<unsigned short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16S: min_max_loc_caller_2steps<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_32S: min_max_loc_caller_2steps<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_32F: min_max_loc_caller_2steps<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        default: CV_Error(CV_StsBadArg, "Unsupported type");
+        }
+    }
+
+    if (minLoc) { minLoc->x = minLoc_[0]; minLoc->y = minLoc_[1]; }
+    if (maxLoc) { maxLoc->x = maxLoc_[0]; maxLoc->y = maxLoc_[1]; }
 }
 
 ////////////////////////////////////////////////////////////////////////

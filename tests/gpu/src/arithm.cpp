@@ -683,7 +683,7 @@ struct CV_GpuMinMaxTest: public CvTest
         int depth_end;
         int major, minor;
         cv::gpu::getComputeCapability(getDevice(), major, minor);
-        minor = 0;
+
         if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
 
         for (int cn = 1; cn <= 4; ++cn)
@@ -757,11 +757,14 @@ struct CV_GpuMinMaxLocTest: public CvTest
 {
     CV_GpuMinMaxLocTest(): CvTest("GPU-MinMaxLocTest", "minMaxLoc") {}
 
+    GpuMat valbuf, locbuf;
+
     void run(int)
     {
         int depth_end;
         int major, minor;
         cv::gpu::getComputeCapability(getDevice(), major, minor);
+
         if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
         for (int depth = CV_8U; depth <= depth_end; ++depth)
         {
@@ -807,7 +810,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
 
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;        
-        cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_);
+        cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_, valbuf, locbuf);
        
         CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
         CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);

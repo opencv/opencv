@@ -430,6 +430,11 @@ namespace cv
         //! finds global minimum and maximum array elements and returns their values with locations
         CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0);
 
+        //! finds global minimum and maximum array elements and returns their values with locations
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, 
+                                  GpuMat& valbuf, GpuMat& locbuf);
+
+
         //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
         //! destination array will have the depth type as lut and the same channels number as source
         //! supports CV_8UC1, CV_8UC3 types

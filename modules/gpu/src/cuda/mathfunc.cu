@@ -412,8 +412,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
     template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
 
-    // Available optimization operations
-    enum { OP_MIN, OP_MAX };
 
     namespace minmax 
     {
@@ -466,7 +464,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int nthreads, typename T>
-    __global__ void min_max_kernel(int cols, int rows, const PtrStep src, T* minval, T* maxval)
+    __global__ void min_max_kernel(const DevMem2D src, T* minval, T* maxval)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
@@ -479,10 +477,10 @@ namespace cv { namespace gpu { namespace mathfunc
         T val;
         T mymin = numeric_limits_gpu<T>::max();
         T mymax = numeric_limits_gpu<T>::min();
-        for (unsigned int y = 0; y < ctheight && y0 + y * blockDim.y < rows; ++y)
+        for (unsigned int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
         {
             const T* ptr = (const T*)src.ptr(y0 + y * blockDim.y);
-            for (unsigned int x = 0; x < ctwidth && x0 + x * blockDim.x < cols; ++x)
+            for (unsigned int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
             {
                 val = ptr[x0 + x * blockDim.x];
                 mymin = min(mymin, val);
@@ -509,8 +507,6 @@ namespace cv { namespace gpu { namespace mathfunc
             if (nthreads >= 2) merge(tid, 1, sminval, smaxval);
         }
 
-        __syncthreads();
-
         if (tid == 0) 
         {
             minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
@@ -525,9 +521,9 @@ namespace cv { namespace gpu { namespace mathfunc
             __threadfence();
             if (atomicInc(&blocks_finished, gridDim.x * gridDim.y) == gridDim.x * gridDim.y - 1)
             {
-                mymin = numeric_limits_gpu<T>::max();
-                mymax = numeric_limits_gpu<T>::min();
-                for (unsigned int i = 0; i < gridDim.x * gridDim.y; ++i)
+                mymin = minval[0];
+                mymax = maxval[0];
+                for (unsigned int i = 1; i < gridDim.x * gridDim.y; ++i)
                 {                    
                     mymin = min(mymin, minval[i]);
                     mymax = max(mymax, maxval[i]);
@@ -552,7 +548,7 @@ namespace cv { namespace gpu { namespace mathfunc
         T* maxval_buf = (T*)buf.ptr(1);
 
         cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
-        min_max_kernel<256, T><<<grid, threads>>>(src.cols, src.rows, src, minval_buf, maxval_buf);
+        min_max_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -576,9 +572,9 @@ namespace cv { namespace gpu { namespace mathfunc
     __global__ void min_max_kernel_2ndstep(T* minval, T* maxval, int size)
     {
         T val;
-        T mymin = numeric_limits_gpu<T>::max();
-        T mymax = numeric_limits_gpu<T>::min();
-        for (unsigned int i = 0; i < size; ++i)
+        T mymin = minval[0];
+        T mymax = maxval[0];
+        for (unsigned int i = 1; i < size; ++i)
         {     
             val = minval[i]; if (val < mymin) mymin = val;
             val = maxval[i]; if (val > mymax) mymax = val;
@@ -599,7 +595,7 @@ namespace cv { namespace gpu { namespace mathfunc
         T* maxval_buf = (T*)buf.ptr(1);
 
         cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
-        min_max_kernel<256, T><<<grid, threads>>>(src.cols, src.rows, src, minval_buf, maxval_buf);
+        min_max_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf);
         min_max_kernel_2ndstep<T><<<1, 1>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
@@ -622,220 +618,253 @@ namespace cv { namespace gpu { namespace mathfunc
 
     namespace minmaxloc {
 
-    template <typename T, int op> struct OptLoc {};
-    
-    template <typename T>
-    struct OptLoc<T, OP_MIN> 
+    __constant__ int ctwidth;
+    __constant__ int ctheight;
+
+    static const unsigned int czero = 0;
+
+    // Global counter of blocks finished its work
+    __device__ unsigned int blocks_finished;
+
+
+    // Estimates good thread configuration
+    //  - threads variable satisfies to threads.x * threads.y == 256
+    void estimate_thread_cfg(dim3& threads, dim3& grid)
     {
-        static __device__ void call(unsigned int tid, unsigned int offset, volatile T* optval, volatile unsigned int* optloc)
-        {
-            T val = optval[tid + offset];
-            if (val < optval[tid])
-            {
-                optval[tid] = val;
-                optloc[tid] = optloc[tid + offset];
-            }
-        }
-    };
+        threads = dim3(64, 4);
+        grid = dim3(6, 5);
+    }
+
+
+    // Returns required buffer sizes
+    void get_buf_size_required(int elem_size, int& b1cols, int& b1rows, 
+                               int& b2cols, int& b2rows)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        b1cols = grid.x * grid.y * elem_size; // For values
+        b1rows = 2;
+        b2cols = grid.x * grid.y * sizeof(int); // For locations
+        b2rows = 2;
+    }
+
+
+    // Estimates device constants which are used in the kernels using specified thread configuration
+    void estimate_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    {        
+        int twidth = divUp(divUp(cols, grid.x), threads.x);
+        int theight = divUp(divUp(rows, grid.y), threads.y);
+        cudaSafeCall(cudaMemcpyToSymbol(ctwidth, &twidth, sizeof(ctwidth))); 
+        cudaSafeCall(cudaMemcpyToSymbol(ctheight, &theight, sizeof(ctheight))); 
+    }  
+
 
     template <typename T>
-    struct OptLoc<T, OP_MAX> 
+    __device__ void merge(unsigned int tid, unsigned int offset, volatile T* minval, volatile T* maxval, 
+                          volatile unsigned int* minloc, volatile unsigned int* maxloc)
     {
-        static __device__ void call(unsigned int tid, unsigned int offset, volatile T* optval, volatile unsigned int* optloc)
+        T val = minval[tid + offset];
+        if (val < minval[tid])
         {
-            T val = optval[tid + offset];
-            if (val > optval[tid])
-            {
-                optval[tid] = val;
-                optloc[tid] = optloc[tid + offset];
-            }
+            minval[tid] = val;
+            minloc[tid] = minloc[tid + offset];
         }
-    };
+        val = maxval[tid + offset];
+        if (val > maxval[tid])
+        {
+            maxval[tid] = val;
+            maxloc[tid] = maxloc[tid + offset];
+        }
+    }
 
-    template <int nthreads, int op, typename T>
-    __global__ void opt_loc_init_kernel(int cols, int rows, const PtrStep src, PtrStep optval, PtrStep optloc)
+
+    template <int nthreads, typename T>
+    __global__ void min_max_loc_kernel(const DevMem2D src, T* minval, T* maxval, 
+                                       unsigned int* minloc, unsigned int* maxloc)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
-        __shared__ best_type soptval[nthreads];
-        __shared__ unsigned int soptloc[nthreads];
+        __shared__ best_type sminval[nthreads];
+        __shared__ best_type smaxval[nthreads];
+        __shared__ unsigned int sminloc[nthreads];
+        __shared__ unsigned int smaxloc[nthreads];
 
-        unsigned int x0 = blockIdx.x * blockDim.x;
-        unsigned int y0 = blockIdx.y * blockDim.y;
+        unsigned int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        unsigned int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
         unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        if (x0 + threadIdx.x < cols && y0 + threadIdx.y < rows)
+        T val = ((const T*)src.ptr(0))[0];
+        T mymin = val, mymax = val; 
+        unsigned int myminloc = 0, mymaxloc = 0;
+        for (unsigned int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
         {
-            soptval[tid] = ((const T*)src.ptr(y0 + threadIdx.y))[x0 + threadIdx.x];
-            soptloc[tid] = (y0 + threadIdx.y) * cols + x0 + threadIdx.x;
+            const T* ptr = (const T*)src.ptr(y0 + y * blockDim.y);
+            for (unsigned int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+            {
+                val = ptr[x0 + x * blockDim.x];
+                if (val < mymin) 
+                { 
+                    mymin = val; 
+                    myminloc = (y0 + y * blockDim.y) * src.cols + x0 + x * blockDim.x; 
+                }
+                else if (val > mymax)
+                {
+                    mymax = val; 
+                    mymaxloc = (y0 + y * blockDim.y) * src.cols + x0 + x * blockDim.x; 
+                }
+            }
         }
-        else
-        {
-            soptval[tid] = ((const T*)src.ptr(y0))[x0];
-            soptloc[tid] = y0 * cols + x0;
-        }
+
+        sminval[tid] = mymin; 
+        smaxval[tid] = mymax;
+        sminloc[tid] = myminloc;
+        smaxloc[tid] = mymaxloc;
 
         __syncthreads();
 
-        if (nthreads >= 512) if (tid < 256) { OptLoc<best_type, op>::call(tid, 256, soptval, soptloc); __syncthreads(); }
-        if (nthreads >= 256) if (tid < 128) { OptLoc<best_type, op>::call(tid, 128, soptval, soptloc); __syncthreads(); }
-        if (nthreads >= 128) if (tid < 64) { OptLoc<best_type, op>::call(tid, 64, soptval, soptloc); __syncthreads(); }
+        if (nthreads >= 512) if (tid < 256) { merge(tid, 256, sminval, smaxval, sminloc, smaxloc); __syncthreads(); }
+        if (nthreads >= 256) if (tid < 128) { merge(tid, 128, sminval, smaxval, sminloc, smaxloc); __syncthreads(); }
+        if (nthreads >= 128) if (tid < 64) { merge(tid, 64, sminval, smaxval, sminloc, smaxloc); __syncthreads(); }
 
         if (tid < 32)
         {
-            if (nthreads >= 64) OptLoc<best_type, op>::call(tid, 32, soptval, soptloc);
-            if (nthreads >= 32) OptLoc<best_type, op>::call(tid, 16, soptval, soptloc);
-            if (nthreads >= 16) OptLoc<best_type, op>::call(tid, 8, soptval, soptloc);
-            if (nthreads >= 8) OptLoc<best_type, op>::call(tid, 4, soptval, soptloc);
-            if (nthreads >= 4) OptLoc<best_type, op>::call(tid, 2, soptval, soptloc);
-            if (nthreads >= 2) OptLoc<best_type, op>::call(tid, 1, soptval, soptloc);
+            if (nthreads >= 64) merge(tid, 32, sminval, smaxval, sminloc, smaxloc);
+            if (nthreads >= 32) merge(tid, 16, sminval, smaxval, sminloc, smaxloc);
+            if (nthreads >= 16) merge(tid, 8, sminval, smaxval, sminloc, smaxloc);
+            if (nthreads >= 8) merge(tid, 4, sminval, smaxval, sminloc, smaxloc);
+            if (nthreads >= 4) merge(tid, 2, sminval, smaxval, sminloc, smaxloc);
+            if (nthreads >= 2) merge(tid, 1, sminval, smaxval, sminloc, smaxloc);
         }
 
         if (tid == 0) 
         {
-            ((T*)optval.ptr(blockIdx.y))[blockIdx.x] = (T)soptval[0];
-            ((unsigned int*)optloc.ptr(blockIdx.y))[blockIdx.x] = soptloc[0];
+            minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
+            maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
+            minloc[blockIdx.y * gridDim.x + blockIdx.x] = sminloc[0];
+            maxloc[blockIdx.y * gridDim.x + blockIdx.x] = smaxloc[0];
         }
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+        
+        // Process partial results in the first thread of the last block      
+        if ((gridDim.x > 1 || gridDim.y > 1) && tid == 0)
+        {
+            __threadfence();
+            if (atomicInc(&blocks_finished, gridDim.x * gridDim.y) == gridDim.x * gridDim.y - 1)
+            {
+                mymin = minval[0];
+                mymax = maxval[0];
+                unsigned int imin = 0, imax = 0;
+                for (unsigned int i = 1; i < gridDim.x * gridDim.y; ++i)
+                {                    
+                    val = minval[i]; if (val < mymin) { mymin = val; imin = i; }
+                    val = maxval[i]; if (val > mymax) { mymax = val; imax = i; }
+                }
+                minval[0] = mymin;
+                maxval[0] = mymax;
+                minloc[0] = minloc[imin];
+                maxloc[0] = maxloc[imax];
+            }
+        }
+#endif
     }
 
-    template <int nthreads, int op, typename T>
-    __global__ void opt_loc_kernel(int cols, int rows, const PtrStep src, const PtrStep loc, PtrStep optval, PtrStep optloc)
-    {
-        typedef typename MinMaxTypeTraits<T>::best_type best_type;
-        __shared__ best_type soptval[nthreads];
-        __shared__ unsigned int soptloc[nthreads];
-
-        unsigned int x0 = blockIdx.x * blockDim.x;
-        unsigned int y0 = blockIdx.y * blockDim.y;
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
-
-        if (x0 + threadIdx.x < cols && y0 + threadIdx.y < rows)
-        {
-            soptval[tid] = ((const T*)src.ptr(y0 + threadIdx.y))[x0 + threadIdx.x];
-            soptloc[tid] = ((const unsigned int*)loc.ptr(y0 + threadIdx.y))[x0 + threadIdx.x];
-        }
-        else
-        {
-            soptval[tid] = ((const T*)src.ptr(y0))[x0];
-            soptloc[tid] = ((const unsigned int*)loc.ptr(y0))[x0];
-        }
-
-        __syncthreads();
-
-        if (nthreads >= 512) if (tid < 256) { OptLoc<best_type, op>::call(tid, 256, soptval, soptloc); __syncthreads(); }
-        if (nthreads >= 256) if (tid < 128) { OptLoc<best_type, op>::call(tid, 128, soptval, soptloc); __syncthreads(); }
-        if (nthreads >= 128) if (tid < 64) { OptLoc<best_type, op>::call(tid, 64, soptval, soptloc); __syncthreads(); }
-
-        if (tid < 32)
-        {
-            if (nthreads >= 64) OptLoc<best_type, op>::call(tid, 32, soptval, soptloc);
-            if (nthreads >= 32) OptLoc<best_type, op>::call(tid, 16, soptval, soptloc);
-            if (nthreads >= 16) OptLoc<best_type, op>::call(tid, 8, soptval, soptloc);
-            if (nthreads >= 8) OptLoc<best_type, op>::call(tid, 4, soptval, soptloc);
-            if (nthreads >= 4) OptLoc<best_type, op>::call(tid, 2, soptval, soptloc);
-            if (nthreads >= 2) OptLoc<best_type, op>::call(tid, 1, soptval, soptloc);
-        }
-
-        if (tid == 0) 
-        {
-            ((T*)optval.ptr(blockIdx.y))[blockIdx.x] = (T)soptval[0];
-            ((unsigned int*)optloc.ptr(blockIdx.y))[blockIdx.x] = soptloc[0];
-        }
-    }
 
     template <typename T>
-    void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, int* minlocx, int* minlocy, 
-                                                                                int* maxlocx, int* maxlocy)
+    void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, 
+                            int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
-        dim3 threads(32, 8);
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
 
-        // Allocate memory for aux. buffers
+        T* minval_buf = (T*)valbuf.ptr(0);
+        T* maxval_buf = (T*)valbuf.ptr(1);
+        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
+        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
 
-        DevMem2D minval_buf[2]; 
-        minval_buf[0].cols = divUp(src.cols, threads.x); 
-        minval_buf[0].rows = divUp(src.rows, threads.y);
-        minval_buf[1].cols = divUp(minval_buf[0].cols, threads.x); 
-        minval_buf[1].rows = divUp(minval_buf[0].rows, threads.y);
-        cudaSafeCall(cudaMallocPitch(&minval_buf[0].data, &minval_buf[0].step, minval_buf[0].cols * sizeof(T), minval_buf[0].rows));
-        cudaSafeCall(cudaMallocPitch(&minval_buf[1].data, &minval_buf[1].step, minval_buf[1].cols * sizeof(T), minval_buf[1].rows));
-
-        DevMem2D maxval_buf[2];        
-        maxval_buf[0].cols = divUp(src.cols, threads.x); 
-        maxval_buf[0].rows = divUp(src.rows, threads.y);
-        maxval_buf[1].cols = divUp(maxval_buf[0].cols, threads.x); 
-        maxval_buf[1].rows = divUp(maxval_buf[0].rows, threads.y);
-        cudaSafeCall(cudaMallocPitch(&maxval_buf[0].data, &maxval_buf[0].step, maxval_buf[0].cols * sizeof(T), maxval_buf[0].rows));
-        cudaSafeCall(cudaMallocPitch(&maxval_buf[1].data, &maxval_buf[1].step, maxval_buf[1].cols * sizeof(T), maxval_buf[1].rows));
-
-        DevMem2D minloc_buf[2]; 
-        minloc_buf[0].cols = divUp(src.cols, threads.x); 
-        minloc_buf[0].rows = divUp(src.rows, threads.y);
-        minloc_buf[1].cols = divUp(minloc_buf[0].cols, threads.x); 
-        minloc_buf[1].rows = divUp(minloc_buf[0].rows, threads.y);
-        cudaSafeCall(cudaMallocPitch(&minloc_buf[0].data, &minloc_buf[0].step, minloc_buf[0].cols * sizeof(int), minloc_buf[0].rows));
-        cudaSafeCall(cudaMallocPitch(&minloc_buf[1].data, &minloc_buf[1].step, minloc_buf[1].cols * sizeof(int), minloc_buf[1].rows));
-
-        DevMem2D maxloc_buf[2]; 
-        maxloc_buf[0].cols = divUp(src.cols, threads.x); 
-        maxloc_buf[0].rows = divUp(src.rows, threads.y);
-        maxloc_buf[1].cols = divUp(maxloc_buf[0].cols, threads.x); 
-        maxloc_buf[1].rows = divUp(maxloc_buf[0].rows, threads.y);
-        cudaSafeCall(cudaMallocPitch(&maxloc_buf[0].data, &maxloc_buf[0].step, maxloc_buf[0].cols * sizeof(int), maxloc_buf[0].rows));
-        cudaSafeCall(cudaMallocPitch(&maxloc_buf[1].data, &maxloc_buf[1].step, maxloc_buf[1].cols * sizeof(int), maxloc_buf[1].rows));
-
-        int curbuf = 0;
-        dim3 cursize(src.cols, src.rows);
-        dim3 grid(divUp(cursize.x, threads.x), divUp(cursize.y, threads.y));
-
-        opt_loc_init_kernel<256, OP_MIN, T><<<grid, threads>>>(cursize.x, cursize.y, src, minval_buf[curbuf], minloc_buf[curbuf]);
-        opt_loc_init_kernel<256, OP_MAX, T><<<grid, threads>>>(cursize.x, cursize.y, src, maxval_buf[curbuf], maxloc_buf[curbuf]);
-        cursize = grid;
-      
-        while (cursize.x > 1 || cursize.y > 1)
-        {
-            grid.x = divUp(cursize.x, threads.x); 
-            grid.y = divUp(cursize.y, threads.y);  
-            opt_loc_kernel<256, OP_MIN, T><<<grid, threads>>>(cursize.x, cursize.y, minval_buf[curbuf], minloc_buf[curbuf], 
-                                                              minval_buf[1 - curbuf], minloc_buf[1 - curbuf]);
-            opt_loc_kernel<256, OP_MAX, T><<<grid, threads>>>(cursize.x, cursize.y, maxval_buf[curbuf], maxloc_buf[curbuf], 
-                                                              maxval_buf[1 - curbuf], maxloc_buf[1 - curbuf]);
-            curbuf = 1 - curbuf;
-            cursize = grid;
-        }
-
+        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
+        min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
-        // Copy results from device to host
-
         T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf[curbuf].ptr(0), sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf[curbuf].ptr(0), sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
         *minval = minval_;
         *maxval = maxval_;
 
-        unsigned int minloc, maxloc;
-        cudaSafeCall(cudaMemcpy(&minloc, minloc_buf[curbuf].ptr(0), sizeof(int), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxloc, maxloc_buf[curbuf].ptr(0), sizeof(int), cudaMemcpyDeviceToHost));
-        *minlocy = minloc / src.cols; *minlocx = minloc - *minlocy * src.cols;
-        *maxlocy = maxloc / src.cols; *maxlocx = maxloc - *maxlocy * src.cols;
-
-        // Release aux. buffers
-        cudaSafeCall(cudaFree(minval_buf[0].data));
-        cudaSafeCall(cudaFree(minval_buf[1].data));
-        cudaSafeCall(cudaFree(maxval_buf[0].data));
-        cudaSafeCall(cudaFree(maxval_buf[1].data));
-        cudaSafeCall(cudaFree(minloc_buf[0].data));
-        cudaSafeCall(cudaFree(minloc_buf[1].data));
-        cudaSafeCall(cudaFree(maxloc_buf[0].data));
-        cudaSafeCall(cudaFree(maxloc_buf[1].data));
+        unsigned int minloc_, maxloc_;
+        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
+        maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_caller<unsigned char>(const DevMem2D, double*, double*, int*, int*, int*, int*);
-    template void min_max_loc_caller<signed char>(const DevMem2D, double*, double*, int*, int*, int*, int*);
-    template void min_max_loc_caller<unsigned short>(const DevMem2D, double*, double*, int*, int*, int*, int*);
-    template void min_max_loc_caller<signed short>(const DevMem2D, double*, double*, int*, int*, int*, int*);
-    template void min_max_loc_caller<int>(const DevMem2D, double*, double*, int*, int*, int*, int*);
-    template void min_max_loc_caller<float>(const DevMem2D, double*, double*, int*, int*, int*, int*);
-    template void min_max_loc_caller<double>(const DevMem2D, double*, double*, int*, int*, int*, int*);
+    template void min_max_loc_caller<unsigned char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<signed char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<unsigned short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<signed short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<double>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+
+
+    // This kernel will be used only when compute capability is 1.0
+    template <typename T>
+    __global__ void min_max_loc_kernel_2ndstep(T* minval, T* maxval, unsigned int* minloc, unsigned int* maxloc, int size)
+    {
+        T val;
+        T mymin = minval[0];
+        T mymax = maxval[0];
+        unsigned int imin  = 0, imax = 0;
+        for (unsigned int i = 1; i < size; ++i)
+        {     
+            val = minval[i]; if (val < mymin) { mymin = val; imin = i; }
+            val = maxval[i]; if (val > mymax) { mymax = val; imax = i; }
+        }
+        minval[0] = mymin;
+        maxval[0] = mymax;
+        minloc[0] = minloc[imin];
+        maxloc[0] = maxloc[imax];
+    }
+
+
+    template <typename T>
+    void min_max_loc_caller_2steps(const DevMem2D src, double* minval, double* maxval, 
+                                   int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* minval_buf = (T*)valbuf.ptr(0);
+        T* maxval_buf = (T*)valbuf.ptr(1);
+        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
+        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+
+        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
+        min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        min_max_loc_kernel_2ndstep<T><<<1, 1>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T minval_, maxval_;
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        *minval = minval_;
+        *maxval = maxval_;
+
+        unsigned int minloc_, maxloc_;
+        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
+        maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
+    }
+
+    template void min_max_loc_caller_2steps<unsigned char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller_2steps<signed char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller_2steps<unsigned short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller_2steps<signed short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller_2steps<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller_2steps<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
 
     } // namespace minmaxloc
 
