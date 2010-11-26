@@ -48,17 +48,16 @@ namespace cv
 /*
  *  FeatureDetector
  */
-struct MaskPredicate
+class MaskPredicate
 {
-    MaskPredicate( const Mat& _mask ) : mask(_mask)
-    {}
-    MaskPredicate& operator=(const MaskPredicate&) { return *this; }
+public:
+    MaskPredicate( const Mat& _mask ) : mask(_mask) {}
     bool operator() (const KeyPoint& key_pt) const
     {
       return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) == 0;
     }
-
-    const Mat& mask;
+private:
+	const Mat mask;
 };
 
 FeatureDetector::~FeatureDetector()
