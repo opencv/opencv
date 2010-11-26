@@ -108,7 +108,6 @@ find_package_handle_standard_args( NPP
 	REQUIRED_VARS 
 		CUDA_NPP_INCLUDES 
 		CUDA_NPP_LIBRARIES 
-	VERSION_VAR 
 		NPP_VERSION)
 
 if(APPLE)
