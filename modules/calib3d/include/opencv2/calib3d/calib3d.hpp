@@ -745,6 +745,4 @@ CV_EXPORTS_W void reprojectImageTo3D( const Mat& disparity,
 
 #endif
 
-#include "opencv2/calib3d/compat_c.h"
-
 #endif

@@ -46,6 +46,7 @@
 /* Turn off the functionality until cvaux/src/Makefile.am gets updated: */
 //#if _MSC_VER >= 1200
 
+#include "opencv2/core/core_c.h"
 #include <stdio.h>
 
 #if _MSC_VER >= 1200 || defined __BORLANDC__
@@ -88,343 +89,63 @@ private: /* Internal data: */
 protected:
     int         m_Wnd;
 public: /* Constructor and destructor: */
-    CvVSModule()
-    {
-        m_pNickName = NULL;
-        m_pParamList = NULL;
-        m_pModuleTypeName = NULL;
-        m_pModuleName = NULL;
-        m_Wnd = 0;
-        AddParam("DebugWnd",&m_Wnd);
-    }
-    virtual ~CvVSModule()
-    {
-        CvDefParam* p = m_pParamList;
-        for(;p;)
-        {
-            CvDefParam* pf = p;
-            p=p->next;
-            FreeParam(&pf);
-        }
-        m_pParamList=NULL;
-        if(m_pModuleTypeName)free(m_pModuleTypeName);
-        if(m_pModuleName)free(m_pModuleName);
-    }
+    CvVSModule();
+    virtual ~CvVSModule();
 private: /* Internal functions: */
-    void    FreeParam(CvDefParam** pp)
-    {
-        CvDefParam* p = pp[0];
-        if(p->Str)free(p->Str);
-        if(p->pName)free(p->pName);
-        if(p->pComment)free(p->pComment);
-        cvFree(pp);
-    }
-    CvDefParam* NewParam(const char* name)
-    {
-        CvDefParam* pNew = (CvDefParam*)cvAlloc(sizeof(CvDefParam));
-        memset(pNew,0,sizeof(CvDefParam));
-        pNew->pName = strdup(name);
-        if(m_pParamList==NULL)
-        {
-            m_pParamList = pNew;
-        }
-        else
-        {
-            CvDefParam* p = m_pParamList;
-            for(;p->next;p=p->next) ;
-            p->next = pNew;
-        }
-        return pNew;
-    };
-
-    CvDefParam* GetParamPtr(int index)
-    {
-        CvDefParam* p = m_pParamList;
-        for(;index>0 && p;index--,p=p->next) ;
-        return p;
-    }
-    CvDefParam* GetParamPtr(const char* name)
-    {
-        CvDefParam* p = m_pParamList;
-        for(;p;p=p->next)
-        {
-            if(cv_stricmp(p->pName,name)==0) break;
-        }
-        return p;
-    }
+    void    FreeParam(CvDefParam** pp);
+    CvDefParam* NewParam(const char* name);
+    CvDefParam* GetParamPtr(int index);
+    CvDefParam* GetParamPtr(const char* name);
 protected: /* INTERNAL INTERFACE */
-    int  IsParam(const char* name)
-    {
-        return GetParamPtr(name)?1:0;
-    };
-    void AddParam(const char* name, double* pAddr)
-    {
-        NewParam(name)->pDouble = pAddr;
-    };
-    void AddParam(const char* name, float* pAddr)
-    {
-        NewParam(name)->pFloat=pAddr;
-    };
-    void AddParam(const char* name, int* pAddr)
-    {
-        NewParam(name)->pInt=pAddr;
-    };
-    void AddParam(const char* name, const char** pAddr)
-    {
-        CvDefParam* pP = NewParam(name);
-        const char* p = pAddr?pAddr[0]:NULL;
-        pP->pStr = pAddr?(char**)pAddr:&(pP->Str);
-        if(p)
-        {
-            pP->Str = strdup(p);
-            pP->pStr[0] = pP->Str;
-        }
-    };
-    void AddParam(const char* name)
-    {
-        CvDefParam* p = NewParam(name);
-        p->pDouble = &p->Double;
-    };
-    void CommentParam(const char* name, const char* pComment)
-    {
-        CvDefParam* p = GetParamPtr(name);
-        if(p)p->pComment = pComment ? strdup(pComment) : 0;
-    };
-    void SetTypeName(const char* name){m_pModuleTypeName = strdup(name);}
-    void SetModuleName(const char* name){m_pModuleName = strdup(name);}
-    void DelParam(const char* name)
-    {
-        CvDefParam* p = m_pParamList;
-        CvDefParam* pPrev = NULL;
-        for(;p;p=p->next)
-        {
-            if(cv_stricmp(p->pName,name)==0) break;
-            pPrev = p;
-        }
-        if(p)
-        {
-            if(pPrev)
-            {
-                pPrev->next = p->next;
-            }
-            else
-            {
-                m_pParamList = p->next;
-            }
-            FreeParam(&p);
-        }
-    }/* DelParam */
+    int  IsParam(const char* name);
+    void AddParam(const char* name, double* pAddr);
+    void AddParam(const char* name, float* pAddr);
+    void AddParam(const char* name, int* pAddr);
+    void AddParam(const char* name, const char** pAddr);
+    void AddParam(const char* name);
+    void CommentParam(const char* name, const char* pComment);
+    void SetTypeName(const char* name);
+    void SetModuleName(const char* name);
+    void DelParam(const char* name);
 
 public: /* EXTERNAL INTERFACE */
-    const char* GetParamName(int index)
-    {
-        CvDefParam* p = GetParamPtr(index);
-        return p?p->pName:NULL;
-    }
-    const char* GetParamComment(const char* name)
-    {
-        CvDefParam* p = GetParamPtr(name);
-        if(p && p->pComment) return p->pComment;
-        return NULL;
-    }
-    double GetParam(const char* name)
-    {
-        CvDefParam* p = GetParamPtr(name);
-        if(p)
-        {
-            if(p->pDouble) return p->pDouble[0];
-            if(p->pFloat) return p->pFloat[0];
-            if(p->pInt) return p->pInt[0];
-        }
-        return 0;
-    };
-
-    const char* GetParamStr(const char* name)
-    {
-        CvDefParam* p = GetParamPtr(name);
-        return p?p->Str:NULL;
-    }
-    void   SetParam(const char* name, double val)
-    {
-        CvDefParam* p = m_pParamList;
-        for(;p;p=p->next)
-        {
-            if(cv_stricmp(p->pName,name) != 0) continue;
-            if(p->pDouble)p->pDouble[0] = val;
-            if(p->pFloat)p->pFloat[0] = (float)val;
-            if(p->pInt)p->pInt[0] = cvRound(val);
-        }
-    }
-    void   SetParamStr(const char* name, const char* str)
-    {
-        CvDefParam* p = m_pParamList;
-        for(; p; p=p->next)
-        {
-            if(cv_stricmp(p->pName,name) != 0) continue;
-            if(p->pStr)
-            {
-                if(p->Str)free(p->Str);
-                p->Str = NULL;
-                if(str)p->Str = strdup(str);
-                p->pStr[0] = p->Str;
-            }
-        }
-        /* Convert to double and set: */
-        if(str) SetParam(name,atof(str));
-    }
-    void TransferParamsFromChild(CvVSModule* pM, const char* prefix = NULL)
-    {
-        char    tmp[1024];
-        const char*   FN = NULL;
-        int i;
-        for(i=0;;++i)
-        {
-            const char* N = pM->GetParamName(i);
-            if(N == NULL) break;
-            FN = N;
-            if(prefix)
-            {
-                strcpy(tmp,prefix);
-                strcat(tmp,"_");
-                FN = strcat(tmp,N);
-            }
-
-            if(!IsParam(FN))
-            {
-                if(pM->GetParamStr(N))
-                {
-                    AddParam(FN,(const char**)NULL);
-                }
-                else
-                {
-                    AddParam(FN);
-                }
-            }
-            if(pM->GetParamStr(N))
-            {
-                const char* val = pM->GetParamStr(N);
-                SetParamStr(FN,val);
-            }
-            else
-            {
-                double val = pM->GetParam(N);
-                SetParam(FN,val);
-            }
-            CommentParam(FN, pM->GetParamComment(N));
-        }/* transfer next param */
-    }/* Transfer params */
-
-    void TransferParamsToChild(CvVSModule* pM, char* prefix = NULL)
-    {
-        char    tmp[1024];
-        int i;
-        for(i=0;;++i)
-        {
-            const char* N = pM->GetParamName(i);
-            if(N == NULL) break;
-            if(prefix)
-            {
-                strcpy(tmp,prefix);
-                strcat(tmp,"_");
-                strcat(tmp,N);
-            }
-            else
-            {
-                strcpy(tmp,N);
-            }
-
-            if(IsParam(tmp))
-            {
-                if(GetParamStr(tmp))
-                    pM->SetParamStr(N,GetParamStr(tmp));
-                else
-                    pM->SetParam(N,GetParam(tmp));
-            }
-        }/* Transfer next parameter */
-        pM->ParamUpdate();
-    }/* Transfer params */
-
-    virtual void ParamUpdate(){};
-    const char*   GetTypeName()
-    {
-        return m_pModuleTypeName;
-    }
-    int     IsModuleTypeName(const char* name)
-    {
-        return m_pModuleTypeName?(cv_stricmp(m_pModuleTypeName,name)==0):0;
-    }
-    char*   GetModuleName()
-    {
-        return m_pModuleName;
-    }
-    int     IsModuleName(const char* name)
-    {
-        return m_pModuleName?(cv_stricmp(m_pModuleName,name)==0):0;
-    }
-    void SetNickName(const char* pStr)
-    {
-        if(m_pNickName)
-            free(m_pNickName);
-
-        m_pNickName = NULL;
-
-        if(pStr)
-            m_pNickName = strdup(pStr);
-    }
-    const char* GetNickName()
-    {
-        return m_pNickName ? m_pNickName : "unknown";
-    }
-    virtual void SaveState(CvFileStorage*){};
-    virtual void LoadState(CvFileStorage*, CvFileNode*){};
+    const char* GetParamName(int index);
+    const char* GetParamComment(const char* name);
+    double GetParam(const char* name);
+    const char* GetParamStr(const char* name);
+    void   SetParam(const char* name, double val);
+    void   SetParamStr(const char* name, const char* str);
+    void TransferParamsFromChild(CvVSModule* pM, const char* prefix = NULL);
+    void TransferParamsToChild(CvVSModule* pM, char* prefix = NULL);
+    virtual void ParamUpdate();
+    const char*   GetTypeName();
+    int     IsModuleTypeName(const char* name);
+    char*   GetModuleName();
+    int     IsModuleName(const char* name);
+    void SetNickName(const char* pStr);
+    const char* GetNickName();
+    virtual void SaveState(CvFileStorage*);
+    virtual void LoadState(CvFileStorage*, CvFileNode*);
 
     virtual void Release() = 0;
 };/* CvVMModule */
-void inline cvWriteStruct(CvFileStorage* fs, const char* name, void* addr, const char* desc, int num=1)
-{
-    cvStartWriteStruct(fs,name,CV_NODE_SEQ|CV_NODE_FLOW);
-    cvWriteRawData(fs,addr,num,desc);
-    cvEndWriteStruct(fs);
-}
-void inline cvReadStructByName(CvFileStorage* fs, CvFileNode* node, const char* name, void* addr, const char* desc)
-{
-    CvFileNode* pSeqNode = cvGetFileNodeByName(fs, node, name);
-    if(pSeqNode==NULL)
-    {
-        printf("WARNING!!! Can't read structure %s\n",name);
-    }
-    else
-    {
-        if(CV_NODE_IS_SEQ(pSeqNode->tag))
-        {
-            cvReadRawData( fs, pSeqNode, addr, desc );
-        }
-        else
-        {
-            printf("WARNING!!! Structure %s is not sequence and can not be read\n",name);
-        }
-    }
-}
 
+CV_EXPORTS void cvWriteStruct(CvFileStorage* fs, const char* name, void* addr, const char* desc, int num=1);
+CV_EXPORTS void cvReadStructByName(CvFileStorage* fs, CvFileNode* node, const char* name, void* addr, const char* desc);
 
 /* FOREGROUND DETECTOR INTERFACE */
-class CV_EXPORTS CvFGDetector: public CvVSModule
+class CV_EXPORTS CvFGDetector : public CvVSModule
 {
 public:
-	CvFGDetector(){SetTypeName("FGDetector");};
+    CvFGDetector();
     virtual IplImage* GetMask() = 0;
     /* Process current image: */
     virtual void    Process(IplImage* pImg) = 0;
     /* Release foreground detector: */
     virtual void    Release() = 0;
 };
-inline void cvReleaseFGDetector(CvFGDetector** ppT )
-{
-    ppT[0]->Release();
-    ppT[0] = 0;
-}
-/* FOREGROUND DETECTOR INTERFACE */
 
+CV_EXPORTS void cvReleaseFGDetector(CvFGDetector** ppT );
 CV_EXPORTS CvFGDetector* cvCreateFGDetectorBase(int type, void *param);
 
 
@@ -552,71 +273,15 @@ struct CvBlobTrack
 class CV_EXPORTS CvBlobTrackSeq
 {
 public:
-    CvBlobTrackSeq(int TrackSize = sizeof(CvBlobTrack))
-    {
-        m_pMem = cvCreateMemStorage();
-        m_pSeq = cvCreateSeq(0,sizeof(CvSeq),TrackSize,m_pMem);
-    }
-    virtual ~CvBlobTrackSeq()
-    {
-        Clear();
-        cvReleaseMemStorage(&m_pMem);
-    };
-    virtual CvBlobTrack* GetBlobTrack(int TrackIndex)
-    {
-        return (CvBlobTrack*)cvGetSeqElem(m_pSeq,TrackIndex);
-    };
-    virtual CvBlobTrack* GetBlobTrackByID(int TrackID)
-    {
-        int i;
-        for(i=0; i<m_pSeq->total; ++i)
-        {
-            CvBlobTrack* pP = GetBlobTrack(i);
-            if(pP && pP->TrackID == TrackID)
-                return pP;
-        }
-        return NULL;
-    };
-    virtual void DelBlobTrack(int TrackIndex)
-    {
-        CvBlobTrack* pP = GetBlobTrack(TrackIndex);
-        if(pP && pP->pBlobSeq) delete pP->pBlobSeq;
-        cvSeqRemove(m_pSeq,TrackIndex);
-    };
-    virtual void DelBlobTrackByID(int TrackID)
-    {
-        int i;
-        for(i=0; i<m_pSeq->total; ++i)
-        {
-            CvBlobTrack* pP = GetBlobTrack(i);
-            if(TrackID == pP->TrackID)
-            {
-                DelBlobTrack(i);
-                return;
-            }
-        }
-    };
-    virtual void Clear()
-    {
-        int i;
-        for(i=GetBlobTrackNum();i>0;i--)
-        {
-            DelBlobTrack(i-1);
-        }
-        cvClearSeq(m_pSeq);
-    };
-    virtual void AddBlobTrack(int TrackID, int StartFrame = 0)
-    {
-        CvBlobTrack N;
-        N.TrackID = TrackID;
-        N.StartFrame = StartFrame;
-        N.pBlobSeq = new CvBlobSeq;
-        cvSeqPush(m_pSeq,&N);
-    };
-    virtual int GetBlobTrackNum()
-    {
-        return m_pSeq->total;
-    };
+    CvBlobTrackSeq(int TrackSize = sizeof(CvBlobTrack));
+    virtual ~CvBlobTrackSeq();
+    virtual CvBlobTrack* GetBlobTrack(int TrackIndex);
+    virtual CvBlobTrack* GetBlobTrackByID(int TrackID);
+    virtual void DelBlobTrack(int TrackIndex);
+    virtual void DelBlobTrackByID(int TrackID);
+    virtual void Clear();
+    virtual void AddBlobTrack(int TrackID, int StartFrame = 0);
+    virtual int GetBlobTrackNum();
 protected:
     CvMemStorage*   m_pMem;
     CvSeq*          m_pSeq;
@@ -638,18 +303,13 @@ public:
     /* release blob detector */
     virtual void Release()=0;
 };
+
 /* Release any blob detector: */
-inline void cvReleaseBlobDetector(CvBlobDetector** ppBD)
-{
-    ppBD[0]->Release();
-    ppBD[0] = NULL;
-}
-/* END BLOB DETECTOR INTERFACE */
+CV_EXPORTS void cvReleaseBlobDetector(CvBlobDetector** ppBD);
 
 /* Declarations of constructors of implemented modules: */
 CV_EXPORTS CvBlobDetector* cvCreateBlobDetectorSimple();
 CV_EXPORTS CvBlobDetector* cvCreateBlobDetectorCC();
-
 
 struct CV_EXPORTS CvDetectedBlob : public CvBlob
 {
@@ -667,28 +327,27 @@ CV_INLINE CvDetectedBlob cvDetectedBlob( float x, float y, float w, float h, int
 class CV_EXPORTS CvObjectDetector
 {
 public:
-    CvObjectDetector( const char* /*detector_file_name*/ = 0 ) {};
-
-    ~CvObjectDetector() {};
+    CvObjectDetector( const char* /*detector_file_name*/ = 0 );
+    ~CvObjectDetector();
 
     /*
      * Release the current detector and load new detector from file
      * (if detector_file_name is not 0)
      * Return true on success:
      */
-    bool Load( const char* /*detector_file_name*/ = 0 ) { return false; }
+    bool Load( const char* /*detector_file_name*/ = 0 );
 
     /* Return min detector window size: */
-    CvSize GetMinWindowSize() const { return cvSize(0,0); }
+    CvSize GetMinWindowSize() const;
 
     /* Return max border: */
-    int GetMaxBorderSize() const { return 0; }
+    int GetMaxBorderSize() const;
 
     /*
      * Detect the object on the image and push the detected
      * blobs into <detected_blob_seq> which must be the sequence of <CvDetectedBlob>s
      */
-    void Detect( const CvArr* /*img*/, /* out */ CvBlobSeq* /*detected_blob_seq*/ = 0 ) {};
+    void Detect( const CvArr* /*img*/, /* out */ CvBlobSeq* /*detected_blob_seq*/ = 0 );
 
 protected:
     class CvObjectDetectorImpl* impl;
@@ -774,7 +433,7 @@ CV_EXPORTS CvBlobTrackGen* cvCreateModuleBlobTrackGenYML();
 class CV_EXPORTS CvBlobTracker: public CvVSModule
 {
 public:
-    CvBlobTracker(){SetTypeName("BlobTracker");};
+    CvBlobTracker();
 
     /* Add new blob to track it and assign to this blob personal ID */
     /* pBlob - pointer to structure with blob parameters (ID is ignored)*/
@@ -800,100 +459,52 @@ public:
 
 
     /* Process one blob (for multi hypothesis tracing): */
-    virtual void ProcessBlob(int BlobIndex, CvBlob* pBlob, IplImage* /*pImg*/, IplImage* /*pImgFG*/ = NULL)
-    {
-        CvBlob* pB;
-        int ID = 0;
-        assert(pBlob);
-        //pBlob->ID;
-        pB = GetBlob(BlobIndex);
-        if(pB)
-            pBlob[0] = pB[0];
-        pBlob->ID = ID;
-    };
+    virtual void ProcessBlob(int BlobIndex, CvBlob* pBlob, IplImage* /*pImg*/, IplImage* /*pImgFG*/ = NULL);
 
     /* Get confidence/wieght/probability (0-1) for blob: */
-    virtual double  GetConfidence(int /*BlobIndex*/, CvBlob* /*pBlob*/, IplImage* /*pImg*/, IplImage* /*pImgFG*/ = NULL)
-    {
-        return 1;
-    };
+    virtual double  GetConfidence(int /*BlobIndex*/, CvBlob* /*pBlob*/, IplImage* /*pImg*/, IplImage* /*pImgFG*/ = NULL);
 
-    virtual double GetConfidenceList(CvBlobSeq* pBlobList, IplImage* pImg, IplImage* pImgFG = NULL)
-    {
-        int     b,bN = pBlobList->GetBlobNum();
-        double  W = 1;
-        for(b=0;b<bN;++b)
-        {
-            CvBlob* pB = pBlobList->GetBlob(b);
-            int     BI = GetBlobIndexByID(pB->ID);
-            W *= GetConfidence(BI,pB,pImg,pImgFG);
-        }
-        return W;
-    };
+    virtual double GetConfidenceList(CvBlobSeq* pBlobList, IplImage* pImg, IplImage* pImgFG = NULL);
 
-    virtual void UpdateBlob(int /*BlobIndex*/, CvBlob* /*pBlob*/, IplImage* /*pImg*/, IplImage* /*pImgFG*/ = NULL){};
+    virtual void UpdateBlob(int /*BlobIndex*/, CvBlob* /*pBlob*/, IplImage* /*pImg*/, IplImage* /*pImgFG*/ = NULL);
 
     /* Update all blob models: */
-    virtual void Update(IplImage* pImg, IplImage* pImgFG = NULL)
-    {
-        int i;
-        for(i=GetBlobNum();i>0;i--)
-        {
-            CvBlob* pB=GetBlob(i-1);
-            UpdateBlob(i-1, pB, pImg, pImgFG);
-        }
-
-    };
+    virtual void Update(IplImage* pImg, IplImage* pImgFG = NULL);
 
     /* Return pointer to blob by its unique ID: */
-    virtual int     GetBlobIndexByID(int BlobID)
-    {
-        int i;
-        for(i=GetBlobNum();i>0;i--)
-        {
-            CvBlob* pB=GetBlob(i-1);
-            if(CV_BLOB_ID(pB) == BlobID) return i-1;
-        }
-        return -1;
-    };
+    virtual int     GetBlobIndexByID(int BlobID);
 
     /* Return pointer to blob by its unique ID: */
-    virtual CvBlob* GetBlobByID(int BlobID){return GetBlob(GetBlobIndexByID(BlobID));};
+    virtual CvBlob* GetBlobByID(int BlobID);
 
     /* Delete blob by its ID: */
-    virtual void    DelBlobByID(int BlobID){DelBlob(GetBlobIndexByID(BlobID));};
+    virtual void    DelBlobByID(int BlobID);
 
     /* Set new parameters for specified (by index) blob: */
-    virtual void    SetBlob(int /*BlobIndex*/, CvBlob* /*pBlob*/){};
+    virtual void    SetBlob(int /*BlobIndex*/, CvBlob* /*pBlob*/);
 
     /* Set new parameters for specified (by ID) blob: */
-    virtual void    SetBlobByID(int BlobID, CvBlob* pBlob)
-    {
-        SetBlob(GetBlobIndexByID(BlobID),pBlob);
-    };
+    virtual void    SetBlobByID(int BlobID, CvBlob* pBlob);
 
     /*  ===============  MULTI HYPOTHESIS INTERFACE ==================  */
 
     /* Return number of position hyposetis of currently tracked blob: */
-    virtual int     GetBlobHypNum(int /*BlobIdx*/){return 1;};
+    virtual int     GetBlobHypNum(int /*BlobIdx*/);
 
     /* Return pointer to specified blob hypothesis by index blob: */
-    virtual CvBlob* GetBlobHyp(int BlobIndex, int /*hypothesis*/){return GetBlob(BlobIndex);};
+    virtual CvBlob* GetBlobHyp(int BlobIndex, int /*hypothesis*/);
 
     /* Set new parameters for specified (by index) blob hyp
      * (can be called several times for each hyp ):
      */
-    virtual void    SetBlobHyp(int /*BlobIndex*/, CvBlob* /*pBlob*/){};
+    virtual void    SetBlobHyp(int /*BlobIndex*/, CvBlob* /*pBlob*/);
 };
-inline void cvReleaseBlobTracker(CvBlobTracker**ppT )
-{
-    ppT[0]->Release();
-    ppT[0] = 0;
-}
+
+CV_EXPORTS void cvReleaseBlobTracker(CvBlobTracker**ppT );
 /* BLOB TRACKER INTERFACE */
 
 /*BLOB TRACKER ONE INTERFACE */
-class CV_EXPORTS CvBlobTrackerOne:public CvVSModule
+class CV_EXPORTS CvBlobTrackerOne : public CvVSModule
 {
 public:
     virtual void Init(CvBlob* pBlobInit, IplImage* pImg, IplImage* pImgFG = NULL) = 0;

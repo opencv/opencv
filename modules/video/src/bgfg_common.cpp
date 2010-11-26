@@ -40,6 +40,20 @@
 
 #include "precomp.hpp"
 
+void cvReleaseBGStatModel( CvBGStatModel** bg_model )
+{
+    if( bg_model && *bg_model && (*bg_model)->release )
+        (*bg_model)->release( bg_model );
+}
+
+int cvUpdateBGStatModel( IplImage* current_frame,
+                        CvBGStatModel*  bg_model,
+                        double learningRate )
+{
+    return bg_model && bg_model->update ? bg_model->update( current_frame, bg_model, learningRate ) : 0;
+}
+
+
 //  Function cvRefineForegroundMaskBySegm preforms FG post-processing based on segmentation
 //    (all pixels of the segment will be classified as FG if majority of pixels of the region are FG).
 // parameters:

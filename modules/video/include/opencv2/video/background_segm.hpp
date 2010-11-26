@@ -340,7 +340,6 @@ CVAPI(CvSeq*) cvSegmentFGMask( CvArr *fgmask, int poly1Hull0 CV_DEFAULT(1),
                                CvMemStorage* storage CV_DEFAULT(0),
                                CvPoint offset CV_DEFAULT(cvPoint(0,0)));
 
-
 #ifdef __cplusplus
 }
 

@@ -42,33 +42,19 @@
 // Function cvCreateBGStatModel creates and returns initialized BG model.
 // Parameters:
 //      first_frame   - frame from video sequence
-//      model_type – type of BG model (CV_BG_MODEL_MOG, CV_BG_MODEL_FGD,…)
+//      model_type Ã± type of BG model (CV_BG_MODEL_MOG, CV_BG_MODEL_FGD,Ã–)
 //      parameters  - (optional) if NULL the default parameters of the algorithm will be used
-CvBGStatModel* cvCreateBGStatModel( IplImage* first_frame, int model_type, void* params )
+static CvBGStatModel* cvCreateBGStatModel( IplImage* first_frame, int model_type, void* params )
 {
     CvBGStatModel* bg_model = NULL;
-
+    
     if( model_type == CV_BG_MODEL_FGD || model_type == CV_BG_MODEL_FGD_SIMPLE )
         bg_model = cvCreateFGDStatModel( first_frame, (CvFGDStatModelParams*)params );
     else if( model_type == CV_BG_MODEL_MOG )
         bg_model = cvCreateGaussianBGModel( first_frame, (CvGaussBGStatModelParams*)params );
-
+    
     return bg_model;
 }
-
-void cvReleaseBGStatModel( CvBGStatModel** bg_model )
-{
-    if( bg_model && *bg_model && (*bg_model)->release )
-        (*bg_model)->release( bg_model );
-}
-
-int cvUpdateBGStatModel( IplImage* current_frame,
-                         CvBGStatModel*  bg_model,
-                         double learningRate )
-{
-    return bg_model && bg_model->update ? bg_model->update( current_frame, bg_model, learningRate ) : 0;
-}
-
 
 /* FOREGROUND DETECTOR INTERFACE */
 class CvFGDetectorBase : public CvFGDetector

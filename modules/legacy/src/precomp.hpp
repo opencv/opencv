@@ -50,8 +50,14 @@
 #endif
 
 #include "opencv2/legacy/legacy.hpp"
-#include "opencv2/video/tracking.hpp"
+
 #include "opencv2/core/internal.hpp"
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/video/background_segm.hpp"
+
+#include "opencv2/legacy/blobtrack.hpp"
+#include "opencv2/legacy/compat.hpp"
+
 #include "_matrix.h"
 
 typedef unsigned short ushort;

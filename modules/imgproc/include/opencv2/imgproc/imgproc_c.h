@@ -780,6 +780,4 @@ CVAPI(void) cvLSHQuery(struct CvLSH* lsh, const CvMat* query_points,
 }
 #endif
 
-#include "opencv2/imgproc/compat_c.h"
-
 #endif
