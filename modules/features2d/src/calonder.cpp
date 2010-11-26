@@ -969,8 +969,8 @@ float RTreeClassifier::countZeroElements()
    num_elem = trees_.size()*trees_[0].num_leaves_*num_elem;
    float flt_perc = 100.f*flt_zeros/num_elem;
    float ui8_perc = 100.f*ui8_zeros/num_elem;
-   printf("[OK] RTC: overall %i/%i (%.3f%%) zeros in float leaves\n", flt_zeros, num_elem, flt_perc);
-   printf("          overall %i/%i (%.3f%%) zeros in uint8 leaves\n", ui8_zeros, num_elem, ui8_perc);
+   printf("[OK] RTC: overall %i/%i (%.3f%%) zeros in float leaves\n", (int)flt_zeros, (int)num_elem, flt_perc);
+   printf("          overall %i/%i (%.3f%%) zeros in uint8 leaves\n", (int)ui8_zeros, (int)num_elem, ui8_perc);
 
    return flt_perc;
 }

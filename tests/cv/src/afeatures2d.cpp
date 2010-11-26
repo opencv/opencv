@@ -133,7 +133,7 @@ void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validK
     float countRatio = (float)validKeypoints.size() / (float)calcKeypoints.size();
     if( countRatio < 1 - maxCountRatioDif || countRatio > 1.f + maxCountRatioDif )
     {
-        ts->printf( CvTS::LOG, "Bad keypoints count ratio (validCount = %d, calcCount = %d)!\n",
+        ts->printf( CvTS::LOG, "Bad keypoints count ratio (validCount = %d, calcCount = %d).\n",
                     validKeypoints.size(), calcKeypoints.size() );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         return;
@@ -296,7 +296,6 @@ public:
             maxDistDif(_maxDistDif), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
-	CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) {}
 
     void compareDescriptors( const Mat& validDescriptors, const Mat& calcDescriptors )
     {
@@ -482,6 +481,9 @@ protected:
 
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
+
+private:
+    CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) { return *this; }
 };
 
 template<typename T, typename Distance>
@@ -512,11 +514,10 @@ public:
         {}
 protected:
     static const int dim = 500;
-    static const int queryDescCount = 300; // must be even number because we split train data in same cases in two
+    static const int queryDescCount = 300; // must be even number because we split train data in some cases in two
     static const int countFactor = 4; // do not change it
     const float badPart;
 
-	CV_DescriptorMatcherTest& operator=(const CV_DescriptorMatcherTest&) {}
     virtual void run( int );
     void generateData( Mat& query, Mat& train );
 
@@ -526,6 +527,8 @@ protected:
     void radiusMatchTest( const Mat& query, const Mat& train );
 
     Ptr<DescriptorMatcher> dmatcher;
+private:
+    CV_DescriptorMatcherTest& operator=(const CV_DescriptorMatcherTest&) { return *this; }
 };
 
 void CV_DescriptorMatcherTest::emptyDataTest()
