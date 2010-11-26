@@ -44,11 +44,11 @@
 using namespace cv;
 using namespace std;
 
-struct CV_GpuMatAsyncCallStereoBMTest : public CvTest
+struct CV_AsyncStereoBMTest : public CvTest
 {
     public:
-        CV_GpuMatAsyncCallStereoBMTest() : CvTest( "GPU-MatAsyncCallStereoBM", "asyncStereoBM" ) {}
-        ~CV_GpuMatAsyncCallStereoBMTest() {}
+        CV_AsyncStereoBMTest() : CvTest( "GPU-AsyncStereoBM", "asyncStereoBM" ) {}
+        ~CV_AsyncStereoBMTest() {}
 
     void run( int /* start_from */)
     {
@@ -100,4 +100,4 @@ struct CV_GpuMatAsyncCallStereoBMTest : public CvTest
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
-CV_GpuMatAsyncCallStereoBMTest CV_GpuMatAsyncCallStereoBMTest_test;
+CV_AsyncStereoBMTest CV_AsyncStereoBMTest_test;

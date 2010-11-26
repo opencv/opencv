@@ -43,6 +43,7 @@
 #include <iostream>
 #include <string>
 
+#include "opencv2/highgui/highgui.hpp"
 
 struct CV_GpuStereoBMTest : public CvTest
 {
@@ -69,6 +70,15 @@ struct CV_GpuStereoBMTest : public CvTest
 
 	        disp.convertTo(disp, img_reference.type());
 	        double norm = cv::norm(disp, img_reference, cv::NORM_INF);
+
+            //cv::imwrite(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", disp);
+
+            /*cv::imshow("disp", disp);
+            cv::imshow("img_reference", img_reference);
+
+            cv::Mat diff = (cv::Mat)disp - (cv::Mat)img_reference;
+            cv::imshow("diff", diff);
+            cv::waitKey();*/
 
 	        if (norm >= 100) 
             {

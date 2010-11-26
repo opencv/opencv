@@ -83,7 +83,7 @@ protected:
         if (res <= 1)
             return CvTS::OK;
         
-        ts->printf(CvTS::LOG, "\nNorm: %f\n", res);
+        ts->printf(CvTS::LOG, "Norm: %f\n", res);
         return CvTS::FAIL_GENERIC;
     }
 };
@@ -244,7 +244,7 @@ struct CV_GpuNppImageGaussianBlurTest : public CV_GpuNppFilterTest
             {
                 cv::Size ksize(ksizes[i], ksizes[j]);
 
-                ts->printf(CvTS::LOG, "\nksize = (%dx%d)\n", ksizes[i], ksizes[j]);
+                ts->printf(CvTS::LOG, "ksize = (%dx%d)\t", ksizes[i], ksizes[j]);
 
                 Mat cpudst;
                 cv::GaussianBlur(img, cpudst, ksize, sigma1);

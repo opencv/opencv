@@ -45,7 +45,7 @@ CvTS test_system("gpu");
 
 const char* blacklist[] =
 {
-    "GPU-MatOperatorAsyncCall",     // crash
+    "GPU-AsyncGpuMatOperator",     // crash
 
     "GPU-NppImageSum",              // crash, probably npp bug
 

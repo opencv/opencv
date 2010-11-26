@@ -112,7 +112,7 @@ int CV_GpuImageProcTest::CheckNorm(const Mat& m1, const Mat& m2)
     }
     else
     {
-        ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
+        ts->printf(CvTS::LOG, "Norm: %f\n", ret);
         return CvTS::FAIL_GENERIC;
     }
 }
@@ -134,37 +134,37 @@ void CV_GpuImageProcTest::run( int )
         //run tests
         ts->printf(CvTS::LOG, "\n========Start test 8UC1========\n");
         if (test8UC1(img) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
+            ts->printf(CvTS::LOG, "SUCCESS\n");
         else
         {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
+            ts->printf(CvTS::LOG, "FAIL\n");
             testResult = CvTS::FAIL_GENERIC;
         }
 
         ts->printf(CvTS::LOG, "\n========Start test 8UC4========\n");
         if (test8UC4(img) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
+            ts->printf(CvTS::LOG, "SUCCESS\n");
         else
         {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
+            ts->printf(CvTS::LOG, "FAIL\n");
             testResult = CvTS::FAIL_GENERIC;
         }
 
         ts->printf(CvTS::LOG, "\n========Start test 32SC1========\n");
         if (test32SC1(img) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
+            ts->printf(CvTS::LOG, "SUCCESS\n");
         else
         {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
+            ts->printf(CvTS::LOG, "FAIL\n");
             testResult = CvTS::FAIL_GENERIC;
         }
 
         ts->printf(CvTS::LOG, "\n========Start test 32FC1========\n");
         if (test32FC1(img) == CvTS::OK)
-            ts->printf(CvTS::LOG, "\nSUCCESS\n");
+            ts->printf(CvTS::LOG, "SUCCESS\n");
         else
         {
-            ts->printf(CvTS::LOG, "\nFAIL\n");
+            ts->printf(CvTS::LOG, "FAIL\n");
             testResult = CvTS::FAIL_GENERIC;
         }
     }
@@ -216,7 +216,7 @@ struct CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
     {
         if (img.type() != CV_8UC1 && img.type() != CV_8UC4)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "Unsupported type\n");
             return CvTS::OK;
         }
 
@@ -228,7 +228,7 @@ struct CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
 
         for (int i = 0; i < interpolations_num; ++i)
         {
-            ts->printf(CvTS::LOG, "\nInterpolation type: %s\n", interpolations_str[i]);
+            ts->printf(CvTS::LOG, "Interpolation: %s\n", interpolations_str[i]);
 
             Mat cpu_res;
             cv::resize(img, cpu_res, Size(), 0.5, 0.5, interpolations[i]);

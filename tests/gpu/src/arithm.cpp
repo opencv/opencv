@@ -117,13 +117,13 @@ void CV_GpuArithmTest::run( int )
     try
     {
         const int types[] = {CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1};
-        const char* type_names[] = {"CV_8UC1", "CV_8UC3", "CV_8UC4", "CV_32FC1"};
+        const char* type_names[] = {"CV_8UC1 ", "CV_8UC3 ", "CV_8UC4 ", "CV_32FC1"};
         const int type_count = sizeof(types)/sizeof(types[0]);
 
         //run tests
         for (int t = 0; t < type_count; ++t)
         {
-            ts->printf(CvTS::LOG, "========Start test %s========\n", type_names[t]);
+            ts->printf(CvTS::LOG, "Start testing %s", type_names[t]);
 
             if (CvTS::OK == test(types[t]))
                 ts->printf(CvTS::LOG, "SUCCESS\n");
@@ -155,7 +155,7 @@ struct CV_GpuNppImageAddTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -181,7 +181,7 @@ struct CV_GpuNppImageSubtractTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -207,7 +207,7 @@ struct CV_GpuNppImageMultiplyTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -233,7 +233,7 @@ struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -259,7 +259,7 @@ struct CV_GpuNppImageTransposeTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -284,7 +284,7 @@ struct CV_GpuNppImageAbsdiffTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -310,7 +310,7 @@ struct CV_GpuNppImageCompareTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -350,7 +350,7 @@ struct CV_GpuNppImageMeanStdDevTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -391,7 +391,7 @@ struct CV_GpuNppImageNormTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -429,7 +429,7 @@ struct CV_GpuNppImageFlipTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -468,7 +468,7 @@ struct CV_GpuNppImageSumTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -491,7 +491,7 @@ struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC3)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -519,7 +519,7 @@ struct CV_GpuNppImageExpTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -544,7 +544,7 @@ struct CV_GpuNppImageLogTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -569,7 +569,7 @@ struct CV_GpuNppImageMagnitudeTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -595,7 +595,7 @@ struct CV_GpuNppImagePhaseTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -621,7 +621,7 @@ struct CV_GpuNppImageCartToPolarTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 
@@ -650,7 +650,7 @@ struct CV_GpuNppImagePolarToCartTest : public CV_GpuArithmTest
     {
         if (mat1.type() != CV_32FC1)
         {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+            ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
         }
 

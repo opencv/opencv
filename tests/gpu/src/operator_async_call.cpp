@@ -52,16 +52,16 @@ using namespace cv;
 using namespace std;
 using namespace gpu;
 
-class CV_GpuMatAsyncCallTest : public CvTest
+class CV_AsyncGpuMatTest : public CvTest
 {
     public:
-        CV_GpuMatAsyncCallTest() : CvTest( "GPU-MatOperatorAsyncCall", "async" )
+        CV_AsyncGpuMatTest() : CvTest( "GPU-AsyncGpuMatOperator", "async" )
         {
              rows = 234;
             cols = 123;
 
         }
-        ~CV_GpuMatAsyncCallTest() {}
+        ~CV_AsyncGpuMatTest() {}
 
     protected:
         void run(int);
@@ -75,9 +75,9 @@ class CV_GpuMatAsyncCallTest : public CvTest
 };
 
 template<typename T>
-void CV_GpuMatAsyncCallTest::print_mat(const T & mat, const std::string & name) const { cv::imshow(name, mat); }
+void CV_AsyncGpuMatTest::print_mat(const T & mat, const std::string & name) const { cv::imshow(name, mat); }
 
-bool CV_GpuMatAsyncCallTest::compare_matrix(cv::Mat & cpumat)
+bool CV_AsyncGpuMatTest::compare_matrix(cv::Mat & cpumat)
 {
     Mat cmat(cpumat.size(), cpumat.type(), Scalar::all(0));
     GpuMat gmat0(cmat);
@@ -125,7 +125,7 @@ bool CV_GpuMatAsyncCallTest::compare_matrix(cv::Mat & cpumat)
     }
 }
 
-void CV_GpuMatAsyncCallTest::run( int /* start_from */)
+void CV_AsyncGpuMatTest::run( int /* start_from */)
 {
     bool is_test_good = true;
 
@@ -155,4 +155,4 @@ void CV_GpuMatAsyncCallTest::run( int /* start_from */)
 /////////////////////////////////////////////////////////////////////////////
 
 
-CV_GpuMatAsyncCallTest CV_GpuMatAsyncCall_test;
+CV_AsyncGpuMatTest CV_AsyncGpuMatTest_test;
