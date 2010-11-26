@@ -1,14 +1,8 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#include "cv.h"
-#include "highgui.h"
+#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include <iostream>
-#include <cstdio>
-
-#ifdef _EiC
-#define WIN32
-#endif
 
 using namespace std;
 using namespace cv;

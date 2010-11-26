@@ -1,7 +1,6 @@
-#undef _GLIBCXX_DEBUG
-
-#include "cv.h"
-#include "highgui.h"
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
 

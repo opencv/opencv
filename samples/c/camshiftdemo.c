@@ -1,15 +1,8 @@
-#ifdef _CH_
-#pragma package <opencv>
-#endif
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#ifndef _EiC
-#include "cv.h"
-#include "highgui.h"
 #include <stdio.h>
 #include <ctype.h>
-#endif
 
 IplImage *image = 0, *hsv = 0, *hue = 0, *mask = 0, *backproject = 0, *histimg = 0;
 CvHistogram *hist = 0;

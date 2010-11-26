@@ -1,8 +1,5 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#include <cxcore.h>
-#include <cv.h>
-#include <highgui.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 // Rearrange the quadrants of Fourier image so that the origin is at
 // the image center

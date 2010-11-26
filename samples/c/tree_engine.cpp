@@ -1,4 +1,4 @@
-#include "ml.h"
+#include "opencv2/ml/ml.hpp"
 #include <stdio.h>
 /*
 The sample demonstrates how to use different decision trees.

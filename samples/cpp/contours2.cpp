@@ -1,9 +1,10 @@
-#include "cv.h"
-#include "highgui.h"
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <math.h>
 #include <iostream>
 
 using namespace cv;
+using namespace std;
 
 void help()
 {

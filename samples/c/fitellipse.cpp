@@ -14,16 +14,8 @@
 *
 *
 ********************************************************************************/
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#ifndef _EiC
-#include "cv.h"
-#include "highgui.h"
-#endif
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/highgui/highgui.hpp"
 
 int slider_pos = 70;
 

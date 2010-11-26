@@ -1,11 +1,5 @@
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#include "cv.h"
-#include "highgui.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 
 IplImage* inpaint_mask = 0;
 IplImage* img0 = 0, *img = 0, *inpainted = 0;

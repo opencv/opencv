@@ -1,9 +1,5 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#include <cv.h>
-#include <highgui.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 IplImage* src = 0;
 IplImage* dst = 0;

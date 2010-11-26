@@ -1,14 +1,5 @@
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#ifndef _EiC
-#include "cv.h"
-#include "highgui.h"
-#include <stdio.h>
-#endif
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core/core.hpp"
 
 int main( int argc, char** argv )
 {

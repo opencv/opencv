@@ -1,5 +1,8 @@
-#include "cvaux.h"
-#include "highgui.h"
+#include <opencv2/video/background_segm.hpp>
+#include <opencv2/legacy/blobtrack.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc_c.h>
+
 #include <stdio.h>
 
 /* Select appropriate case insensitive string comparison function: */

@@ -1,5 +1,6 @@
-#include "cvaux.h"
-#include "highgui.h"
+#include <opencv2/video/background_segm.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <stdio.h>
 
 //this is a sample for foreground detection functions

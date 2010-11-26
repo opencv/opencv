@@ -1,5 +1,5 @@
-#include "ml.h"
-#include <stdio.h>
+#include "opencv2/core/core_c.h"
+#include "opencv2/ml/ml.hpp"
 
 /*
 The sample demonstrates how to train Random Trees classifier

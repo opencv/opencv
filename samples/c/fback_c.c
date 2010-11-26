@@ -1,7 +1,5 @@
-#undef _GLIBCXX_DEBUG
-
-#include "cv.h"
-#include "highgui.h"
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
                     double scale, CvScalar color)

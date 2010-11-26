@@ -1,12 +1,5 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#include "cv.h"
-#include "highgui.h"
-#include <stdio.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 char wndname[] = "Distance transform";
 char tbarname[] = "Threshold";

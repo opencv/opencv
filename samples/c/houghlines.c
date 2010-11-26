@@ -1,10 +1,5 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-/* This is a standalone program. Pass an image name as a first parameter of the program.
-   Switch between standard and probabilistic Hough transform by changing "#if 1" to "#if 0" and back */
-#include <cv.h>
-#include <highgui.h>
-#include <math.h>
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 int main(int argc, char** argv)
 {

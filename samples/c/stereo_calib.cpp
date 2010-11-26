@@ -25,11 +25,10 @@
      http://pr.willowgarage.com/wiki/OpenCV
    ************************************************** */
 
-#undef _GLIBCXX_DEBUG
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 
-#include "cv.h"
-#include "cxmisc.h"
-#include "highgui.h"
 #include <vector>
 #include <string>
 #include <algorithm>

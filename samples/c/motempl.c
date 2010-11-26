@@ -1,18 +1,7 @@
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#ifndef _EiC
-// motion templates sample code
-#include "cv.h"
-#include "highgui.h"
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include <time.h>
-#include <math.h>
-#include <ctype.h>
-#include <stdio.h>
-#endif
 
 // various tracking parameters (in seconds)
 const double MHI_DURATION = 1;
