@@ -371,7 +371,7 @@ struct EqKeypoints
 
 static void build3dmodel( const Ptr<FeatureDetector>& detector,
                           const Ptr<DescriptorExtractor>& descriptorExtractor,
-                          const vector<Point3f>& modelBox,
+                          const vector<Point3f>& /*modelBox*/,
                           const vector<string>& imageList,
                           const vector<Rect>& roiList,
                           const vector<Vec6f>& poseList,

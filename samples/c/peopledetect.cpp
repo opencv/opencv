@@ -67,7 +67,6 @@ int main(int argc, char** argv)
 	    // run the detector with default parameters. to get a higher hit-rate
 	    // (and more false alarms, respectively), decrease the hitThreshold and
 	    // groupThreshold (set groupThreshold to 0 to turn off the grouping completely).
-        int can = img.channels();
 	    hog.detectMultiScale(img, found, 0, Size(8,8), Size(32,32), 1.05, 2);
 	    t = (double)getTickCount() - t;
 	    printf("tdetection time = %gms\n", t*1000./cv::getTickFrequency());

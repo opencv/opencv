@@ -1803,7 +1803,7 @@ struct CV_EXPORTS L2
         ResultType result = ResultType();
         for( int i = 0; i < size; i++ )
         {
-            ResultType diff = a[i] - b[i];
+            ResultType diff = (ResultType)(a[i] - b[i]);
             result += diff*diff;
         }
         return (ResultType)sqrt((double)result);

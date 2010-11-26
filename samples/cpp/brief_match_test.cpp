@@ -44,7 +44,7 @@ void matches2points(const vector<DMatch>& matches, const vector<KeyPoint>& kpts_
 
 }
 
-float match(const vector<KeyPoint>& kpts_train, const vector<KeyPoint>& kpts_query, DescriptorMatcher& matcher,
+double match(const vector<KeyPoint>& kpts_train, const vector<KeyPoint>& kpts_query, DescriptorMatcher& matcher,
             const Mat& train, const Mat& query, vector<DMatch>& matches)
 {
 
@@ -112,7 +112,7 @@ int main(int ac, char ** av)
   cout << "matching with BruteForceMatcher<Hamming>" << endl;
   BruteForceMatcher<Hamming> matcher_popcount;
   vector<DMatch> matches_popcount;
-  float pop_time = match(kpts_1, kpts_2, matcher_popcount, desc_1, desc_2, matches_popcount);
+  double pop_time = match(kpts_1, kpts_2, matcher_popcount, desc_1, desc_2, matches_popcount);
   cout << "done BruteForceMatcher<Hamming> matching. took " << pop_time << " seconds" << endl;
 
   vector<Point2f> mpts_1, mpts_2;

@@ -35,7 +35,7 @@ int process(VideoCapture& capture) {
 		if (frame.empty())
 			continue;
 		imshow(window_name, frame);
-		char key = waitKey(5); //delay N millis, usually long enough to display and capture input
+		char key = (char)waitKey(5); //delay N millis, usually long enough to display and capture input
 		switch (key) {
 		case 'q':
 		case 'Q':

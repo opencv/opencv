@@ -3,7 +3,7 @@
 // It loads several images subsequentally and tries to find squares in
 // each image
 //
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
 #include <math.h>

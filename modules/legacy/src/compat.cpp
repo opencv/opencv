@@ -573,7 +573,7 @@ void cvCalibrateCamera_64d( int image_count, int* _point_counts,
 /* Find 3d position of object given intrinsic camera parameters,
    3d model of the object and projection of the object into view plane */
 void cvFindExtrinsicCameraParams( int point_count,
-    CvSize image_size, CvPoint2D32f* _image_points,
+    CvSize, CvPoint2D32f* _image_points,
     CvPoint3D32f* _object_points, float* focal_length,
     CvPoint2D32f principal_point, float* _distortion_coeffs,
     float* _rotation_vector, float* _translation_vector )
@@ -598,7 +598,7 @@ void cvFindExtrinsicCameraParams( int point_count,
 
 /* Variant of the previous function that takes double-precision parameters */
 void cvFindExtrinsicCameraParams_64d( int point_count,
-    CvSize image_size, CvPoint2D64f* _image_points,
+    CvSize, CvPoint2D64f* _image_points,
     CvPoint3D64f* _object_points, double* focal_length,
     CvPoint2D64f principal_point, double* _distortion_coeffs,
     double* _rotation_vector, double* _translation_vector )

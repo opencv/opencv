@@ -1,5 +1,7 @@
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/highgui/highgui.hpp>
+
+#include <stdio.h>
 
 /* the script demostrates iterative construction of
    delaunay triangulation and voronoi tesselation */

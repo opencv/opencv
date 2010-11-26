@@ -33,7 +33,7 @@ void on_trackbar(int, void*)
     imshow("contours", cnt_img);
 }
 
-int main( int argc, char** argv)
+int main( int argc, char**)
 {
     Mat img = Mat::zeros(w, w, CV_8UC1);
     if(argc > 1)
