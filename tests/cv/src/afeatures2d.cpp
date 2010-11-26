@@ -290,10 +290,10 @@ public:
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
 
-    CV_DescriptorExtractorTest( const char* testName, DistanceType _maxDistDif, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
+    CV_DescriptorExtractorTest( const char* testName, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
                                 Distance d = Distance() ):
             CvTest( testName, "cv::DescriptorExtractor::compute" ),
-            maxDistDif(_maxDistDif), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
+            maxDist(_maxDist), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
 
@@ -309,23 +309,23 @@ protected:
         CV_Assert( DataType<ValueType>::type == validDescriptors.type() );
 
         int dimension = validDescriptors.cols;
-        DistanceType maxDist = std::numeric_limits<DistanceType>::min();
+        DistanceType curMaxDist = std::numeric_limits<DistanceType>::min();
         for( int y = 0; y < validDescriptors.rows; y++ )
         {
             DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
-            if( dist > maxDistDif)
-            {
-                stringstream ss;
-                ss << "Distance between valid and computed " << y << "-descriptors " << dist << ">" << maxDistDif  << "."<< endl;
-                ts->printf(CvTS::LOG,  ss.str().c_str() );
-                ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
-                return;
-            }
-            if( dist > maxDist )
-                maxDist = dist;
+            if( dist > curMaxDist )
+                curMaxDist = dist;
         }
+
         stringstream ss;
-        ss << "Max distance between valid and computed descriptors " << maxDist << "." << endl;
+        ss << "Max distance between valid and computed descriptors " << curMaxDist;
+        if( curMaxDist < maxDist )
+            ss << "." << endl;
+        else
+        {
+            ss << ">" << maxDist  << " - bad accuracy!"<< endl;
+            ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
+        }
         ts->printf(CvTS::LOG,  ss.str().c_str() );
     }
 
@@ -476,7 +476,7 @@ protected:
         return true;
     }
 
-    const DistanceType maxDistDif;
+    const DistanceType maxDist;
     const float prevTime;
 
     Ptr<DescriptorExtractor> dextractor;
@@ -907,9 +907,9 @@ CV_DescriptorExtractorTest<L2<float> > surfDescriptorTest( "descriptor-surf",  0
 CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  1,
                                                 DescriptorExtractor::create("BRIEF"), 0.00527548f );
 
-CV_DescriptorExtractorTest<L2<float> > oppSiftDescriptorTest( "descriptor-opponent-sift", 0.008f,
+CV_DescriptorExtractorTest<L2<float> > oppSiftDescriptorTest( "descriptor-opponent-sift", 0.03f,
                                                 DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
-CV_DescriptorExtractorTest<L2<float> > oppurfDescriptorTest( "descriptor-opponent-surf",  0.02f,
+CV_DescriptorExtractorTest<L2<float> > oppurfDescriptorTest( "descriptor-opponent-surf",  0.04f,
                                                 DescriptorExtractor::create("OpponentSURF"), 0.147372f );
 
 #if CV_SSE2
