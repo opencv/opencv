@@ -414,7 +414,10 @@ public:
     // detects keypoints using fast multi-scale Hessian detector
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints) const;
-    // detects keypoints and computes the SURF descriptors for them
+    // detects keypoints and computes the SURF descriptors for them;
+    // output vector "descriptors" stores elements of descriptors and has size 
+    // equal descriptorSize()*keypoints.size() as each descriptor is 
+    // descriptorSize() elements of this vector.
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints,
                     vector<float>& descriptors,
