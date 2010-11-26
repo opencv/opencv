@@ -1,6 +1,8 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
+#include <stdio.h>
+
 IplImage* inpaint_mask = 0;
 IplImage* img0 = 0, *img = 0, *inpainted = 0;
 CvPoint prev_pt = {-1,-1};
