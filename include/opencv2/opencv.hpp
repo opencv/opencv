@@ -58,7 +58,6 @@
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/legacy/legacy.hpp"
 #include "opencv2/contrib/contrib.hpp"
 
 #endif

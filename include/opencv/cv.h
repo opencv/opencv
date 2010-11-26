@@ -69,6 +69,7 @@
 #include "opencv2/flann/flann.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/legacy/compat.hpp"
 
 #if !defined(CV_IMPL)
 #define CV_IMPL extern "C"
