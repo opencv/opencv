@@ -69,6 +69,8 @@ void cv::gpu::minMax(const GpuMat&, double*, double*) { throw_nogpu(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, GpuMat&, GpuMat&) { throw_nogpu(); }
+int cv::gpu::countNonZero(const GpuMat&) { throw_nogpu(); return 0; }
+int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_nogpu(); return 0; }
 void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::log(const GpuMat&, GpuMat&) { throw_nogpu(); }
@@ -527,7 +529,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
     int major, minor;
     getComputeCapability(getDevice(), major, minor);
  
-    if (major >= 1 && minor >= 1)
+    if (major > 1 || (major == 1 && minor >= 1))
     {
         switch (src_.type())
         {
@@ -538,7 +540,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
         case CV_32S: min_max_caller<int>(src_, minVal, maxVal, buf); break;
         case CV_32F: min_max_caller<float>(src_, minVal, maxVal, buf); break;
         case CV_64F: min_max_caller<double>(src_, minVal, maxVal, buf); break;
-        default: CV_Error(CV_StsBadArg, "Unsupported type");
+        default: CV_Error(CV_StsBadArg, "minMax: unsupported type");
         }
     }
     else
@@ -551,7 +553,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
         case CV_16S: min_max_caller_2steps<signed short>(src_, minVal, maxVal, buf); break;
         case CV_32S: min_max_caller_2steps<int>(src_, minVal, maxVal, buf); break;
         case CV_32F: min_max_caller_2steps<float>(src_, minVal, maxVal, buf); break;
-        default: CV_Error(CV_StsBadArg, "Unsupported type");
+        default: CV_Error(CV_StsBadArg, "minMax: unsupported type");
         }
     }
 }
@@ -601,7 +603,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     int major, minor;
     getComputeCapability(getDevice(), major, minor);
  
-    if (major >= 1 && minor >= 1)
+    if (major > 1 || (major == 1 && minor >= 1))
     {  
         switch (src.type())
         {
@@ -612,7 +614,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
         case CV_32S: min_max_loc_caller<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32F: min_max_loc_caller<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_64F: min_max_loc_caller<double>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        default: CV_Error(CV_StsBadArg, "Unsupported type");
+        default: CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
         }
     }
     else
@@ -625,12 +627,57 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
         case CV_16S: min_max_loc_caller_2steps<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32S: min_max_loc_caller_2steps<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32F: min_max_loc_caller_2steps<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        default: CV_Error(CV_StsBadArg, "Unsupported type");
+        default: CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
         }
     }
 
     if (minLoc) { minLoc->x = minLoc_[0]; minLoc->y = minLoc_[1]; }
     if (maxLoc) { maxLoc->x = maxLoc_[0]; maxLoc->y = maxLoc_[1]; }
+}
+
+////////////////////////////////////////////////////////////////////////
+// Count non zero
+
+namespace cv { namespace gpu { namespace mathfunc { namespace countnonzero {
+
+    void get_buf_size_required(int& cols, int& rows);
+
+    template <typename T> 
+    int count_non_zero_caller(const DevMem2D src, PtrStep buf);
+
+    template <typename T> 
+    int count_non_zero_caller_2steps(const DevMem2D src, PtrStep buf);
+
+}}}}
+
+int cv::gpu::countNonZero(const GpuMat& src)
+{
+    GpuMat buf;
+    return countNonZero(src, buf);
+}
+
+int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
+{
+    using namespace mathfunc::countnonzero;
+    CV_Assert(src.channels() == 1);
+
+    Size buf_size;
+    get_buf_size_required(buf_size.width, buf_size.height);
+    buf.create(buf_size, CV_8U);
+
+    switch (src.type())
+    {
+    case CV_8U: return count_non_zero_caller<unsigned char>(src, buf);
+    case CV_8S: return count_non_zero_caller<signed char>(src, buf);
+    case CV_16U: return count_non_zero_caller<unsigned short>(src, buf);
+    case CV_16S: return count_non_zero_caller<signed short>(src, buf);
+    case CV_32S: return count_non_zero_caller<int>(src, buf);
+    case CV_32F: return count_non_zero_caller<float>(src, buf);
+    case CV_64F: return count_non_zero_caller<double>(src, buf);
+    }
+
+    CV_Error(CV_StsBadArg, "countNonZero: unsupported type");
+    return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////

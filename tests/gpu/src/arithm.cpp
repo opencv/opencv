@@ -689,9 +689,7 @@ struct CV_GpuMinMaxTest: public CvTest
         for (int cn = 1; cn <= 4; ++cn)
             for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
-                int rows = 1, cols = 3;
-                test(rows, cols, cn, depth);
-                for (int i = 0; i < 4; ++i)
+                for (int i = 0; i < 1; ++i)
                 {
                     int rows = 1 + rand() % 1000;
                     int cols = 1 + rand() % 1000;
@@ -821,6 +819,59 @@ struct CV_GpuMinMaxLocTest: public CvTest
     }  
 };
 
+////////////////////////////////////////////////////////////////////////////
+// Count non zero
+struct CV_GpuCountNonZeroTest: CvTest 
+{
+    CV_GpuCountNonZeroTest(): CvTest("GPU-CountNonZeroTest", "countNonZero") {}
+
+    void run(int) 
+    {
+        srand(0);
+        int depth_end;
+        int major, minor;
+        cv::gpu::getComputeCapability(getDevice(), major, minor);
+
+        if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
+        for (int depth = CV_8U; depth <= depth_end; ++depth)
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                int rows = 1 + rand() % 1000;
+                int cols = 1 + rand() % 1000;
+                test(rows, cols, depth);
+            }
+        }
+    }
+
+    void test(int rows, int cols, int depth)
+    {
+        cv::Mat src(rows, cols, depth);
+        cv::RNG rng;
+        if (depth == 5)
+            rng.fill(src, RNG::UNIFORM, Scalar(-1000.f), Scalar(1000.f));
+        else if (depth == 6)
+            rng.fill(src, RNG::UNIFORM, Scalar(-1000.), Scalar(1000.));
+        else
+            for (int i = 0; i < src.rows; ++i)
+            { 
+                Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
+                rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+            }
+
+        int n_gold = cv::countNonZero(src);
+        int n = cv::gpu::countNonZero(cv::gpu::GpuMat(src));
+
+        if (n != n_gold)
+        {
+            ts->printf(CvTS::CONSOLE, "%d %d %d %d %d\n", n, n_gold, depth, cols, rows);
+            n_gold = cv::countNonZero(src);
+        }
+
+        CHECK(n == n_gold, CvTS::FAIL_INVALID_OUTPUT);
+    }
+};
+
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
@@ -850,3 +901,4 @@ CV_GpuNppImageCartToPolarTest CV_GpuNppImageCartToPolar_test;
 CV_GpuNppImagePolarToCartTest CV_GpuNppImagePolarToCart_test;
 CV_GpuMinMaxTest CV_GpuMinMaxTest_test;
 CV_GpuMinMaxLocTest CV_GpuMinMaxLocTest_test;
+CV_GpuCountNonZeroTest CV_CountNonZero_test;

@@ -615,6 +615,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
     } // namespace minmax
 
+///////////////////////////////////////////////////////////////////////////////
+// minMaxLoc
 
     namespace minmaxloc {
 
@@ -867,5 +869,127 @@ namespace cv { namespace gpu { namespace mathfunc
     template void min_max_loc_caller_2steps<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
 
     } // namespace minmaxloc
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// countNonZero
+
+    namespace countnonzero 
+    {
+
+    __constant__ int ctwidth;
+    __constant__ int ctheight;
+
+    static const unsigned int czero = 0;
+
+    __device__ unsigned int blocks_finished;
+
+    void estimate_thread_cfg(dim3& threads, dim3& grid)
+    {
+        threads = dim3(64, 4);
+        grid = dim3(6, 5);
+    }
+
+
+    void get_buf_size_required(int& cols, int& rows)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        cols = grid.x * grid.y * sizeof(int);
+        rows = 1;
+    }
+
+
+    void estimate_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    {        
+        int twidth = divUp(divUp(cols, grid.x), threads.x);
+        int theight = divUp(divUp(rows, grid.y), threads.y);
+        cudaSafeCall(cudaMemcpyToSymbol(ctwidth, &twidth, sizeof(twidth))); 
+        cudaSafeCall(cudaMemcpyToSymbol(ctheight, &theight, sizeof(theight))); 
+    }
+
+
+    template <int nthreads, typename T>
+    __global__ void count_non_zero_kernel(const DevMem2D src, volatile unsigned int* count)
+    {
+        __shared__ unsigned int scount[nthreads];
+
+        unsigned int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        unsigned int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+		unsigned int cnt = 0;
+        for (unsigned int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
+        {
+            const T* ptr = (const T*)src.ptr(y0 + y * blockDim.y);
+            for (unsigned int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+				cnt += ptr[x0 + x * blockDim.x] != 0;
+		}
+
+		scount[tid] = cnt;
+		__syncthreads();
+
+		for (unsigned int step = nthreads / 2; step > 0; step >>= 1)
+		{
+			if (tid < step) scount[tid] += scount[tid + step];
+			__syncthreads();
+		}
+
+		__shared__ bool is_last;
+
+		if (tid == 0)
+		{
+			count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
+			__threadfence();
+
+			unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+			is_last = ticket == gridDim.x * gridDim.y - 1;
+		}
+
+		__syncthreads();
+
+		if (is_last)
+		{
+			scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
+
+			for (unsigned int step = nthreads / 2; step > 0; step >>= 1)
+			{
+				if (tid < step) scount[tid] += scount[tid + step];
+				__syncthreads();
+			}
+
+			if (tid == 0) count[0] = scount[0];
+		}
+
+    }
+
+   
+    template <typename T>
+    int count_non_zero_caller(const DevMem2D src, PtrStep buf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+
+        unsigned int* count_buf = (unsigned int*)buf.ptr(0);
+
+        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
+        count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        unsigned int count;
+        cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        
+        return count;
+    }  
+
+    template int count_non_zero_caller<unsigned char>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<signed char>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<unsigned short>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<signed short>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<int>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<float>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<double>(const DevMem2D, PtrStep);
+
+    } // namespace countnonzero
 
 }}}

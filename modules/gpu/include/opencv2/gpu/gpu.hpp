@@ -434,6 +434,11 @@ namespace cv
         CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, 
                                   GpuMat& valbuf, GpuMat& locbuf);
 
+        //! counts non-zero array elements
+        CV_EXPORTS int countNonZero(const GpuMat& src);
+
+        //! counts non-zero array elements
+        CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
         //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
         //! destination array will have the depth type as lut and the same channels number as source
