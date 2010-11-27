@@ -1,4 +1,4 @@
 #location of android-opencv port of OpenCV to android
 OPENCV_CONFIG=../../build/android-opencv.mk
 ANDROID_NDK_ROOT=$(HOME)/android-ndk-r4-crystax
-ARM_TARGETS=armeabi armeabi-v7a
+ARM_TARGETS="armeabi armeabi-v7a"
