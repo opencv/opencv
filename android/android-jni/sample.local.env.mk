@@ -6,4 +6,5 @@ OPENCV_CONFIG=../build/android-opencv.mk
 #you can download the ndk from http://www.crystax.net/android/ndk-r4.php
 ANDROID_NDK_ROOT=$(HOME)/android-ndk-r4-crystax
 
+#define only armeabi-v7a to make the final apk smaller or armeabi
 ARM_TARGETS=armeabi armeabi-v7a

@@ -24,7 +24,7 @@ public class CameraConfig extends Activity {
 		// Restore preferences
 		SharedPreferences settings = ctx.getSharedPreferences(CAMERA_SETTINGS,
 				0);
-		int mode = settings.getInt(CAMERA_MODE, CAMERA_MODE_BW);
+		int mode = settings.getInt(CAMERA_MODE, CAMERA_MODE_COLOR);
 		return mode;
 	}
 
@@ -52,7 +52,7 @@ public class CameraConfig extends Activity {
 		SharedPreferences settings = ctx.getSharedPreferences(CAMERA_SETTINGS,
 				0);
 		size[0] = settings.getInt(IMAGE_WIDTH, 600);
-		size[1] = settings.getInt(IMAGE_HEIGHT, 600);
+		size[1] = settings.getInt(IMAGE_HEIGHT, 400);
 
 	}
 

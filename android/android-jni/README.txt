@@ -34,4 +34,8 @@ code. See Calibration or CVCamera in the opencv/android/apps directory
 With cdt installed in eclipse, you may also "convert to C++ project" once you have
 opened this as an android project. Select makefile project->toolchain other to do this.
 
+Eclipse tip of the day:
+You may get build warnings when linking to the project, complainging about duplicate something
+or other in you .svn directories.  Right click project->settings->java build path->source->excude paths->add
+.svn/ and **/.svn/ should do it ;)
     
