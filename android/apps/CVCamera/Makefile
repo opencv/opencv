@@ -11,7 +11,9 @@ $(info ERROR local environement not setup! try:)
 $(info gedit $(LOCAL_ENV_MK))
 $(error Please setup the $(LOCAL_ENV_MK) - the default was just created')
 endif
-
+ifndef ARM_TARGETS
+ARM_TARGETS=armeabi armeabi-v7a
+endif
 ANDROID_NDK_BASE = $(ANDROID_NDK_ROOT)
 
 $(info OPENCV_CONFIG = $(OPENCV_CONFIG))
@@ -46,7 +48,8 @@ SWIG_C_OUT = $(SWIG_C_DIR)/cvcamera_swig.cpp
 BUILD_DEFS=OPENCV_CONFIG=$(OPENCV_CONFIG) \
 	PROJECT_PATH=$(PROJECT_PATH) \
 	V=$(V) \
-	$(NDK_FLAGS)
+	$(NDK_FLAGS) \
+	ARM_TARGETS=$(ARM_TARGETS)
 
 # The real native library stripped of symbols
 LIB		= libs/armeabi-v7a/$(LIBNAME) libs/armeabi/$(LIBNAME)

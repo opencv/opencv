@@ -10,6 +10,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.Environment;
@@ -20,16 +21,16 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.ViewGroup.LayoutParams;
-import android.widget.AnalogClock;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.opencv.camera.CameraConfig;
 import com.opencv.camera.NativePreviewer;
 import com.opencv.camera.NativeProcessor;
 import com.opencv.camera.NativeProcessor.PoolCallback;
@@ -77,12 +78,11 @@ public class CVCamera extends Activity {
 					Toast.LENGTH_LONG).show();
 			break;
 		case DIALOG_TUTORIAL_CHESS:
-			Toast
-					.makeText(
-							this,
-							"Calibration Mode, Point at a chessboard pattern and press the camera button, space,"
-									+ "or the DPAD to capture.",
-							Toast.LENGTH_LONG).show();
+			Toast.makeText(
+					this,
+					"Calibration Mode, Point at a chessboard pattern and press the camera button, space,"
+							+ "or the DPAD to capture.", Toast.LENGTH_LONG)
+					.show();
 			break;
 
 		default:
@@ -110,8 +110,9 @@ public class CVCamera extends Activity {
 
 	private Dialog makeCalibFileAlert() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage(calib_text).setTitle(
-				"camera.yml at " + calib_file_loc).setCancelable(false)
+		builder.setMessage(calib_text)
+				.setTitle("camera.yml at " + calib_file_loc)
+				.setCancelable(false)
 				.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int id) {
 
@@ -187,6 +188,7 @@ public class CVCamera extends Activity {
 		menu.add("STAR");
 		menu.add("SURF");
 		menu.add("Chess");
+		menu.add("Settings");
 		return true;
 	}
 
@@ -224,7 +226,14 @@ public class CVCamera extends Activity {
 
 		}
 
+		else if (item.getTitle().equals("Settings")) {
+
+			Intent intent = new Intent(this,CameraConfig.class);
+			startActivity(intent);
+		}
+
 		mPreview.addCallbackStack(defaultcallbackstack);
+		
 		return true;
 	}
 
@@ -234,7 +243,6 @@ public class CVCamera extends Activity {
 		super.onOptionsMenuClosed(menu);
 	}
 
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -263,53 +271,54 @@ public class CVCamera extends Activity {
 
 		glview = new GL2CameraViewer(getApplication(), false, 0, 0);
 		glview.setZOrderMediaOverlay(true);
-		glview.setLayoutParams(new LayoutParams(LayoutParams.FILL_PARENT,
-				LayoutParams.FILL_PARENT));
-		
+
+		LinearLayout gllay = new LinearLayout(getApplication());
+
+		gllay.setGravity(Gravity.CENTER);
+		gllay.addView(glview, params);
+		frame.addView(gllay);
+
 		ImageButton capture_button = new ImageButton(getApplicationContext());
-		capture_button.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_menu_camera));
-		capture_button.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
-				LayoutParams.WRAP_CONTENT));
+		capture_button.setImageDrawable(getResources().getDrawable(
+				android.R.drawable.ic_menu_camera));
+		capture_button.setLayoutParams(new LayoutParams(
+				LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 		capture_button.setOnClickListener(new View.OnClickListener() {
-			
-			
+
 			@Override
 			public void onClick(View v) {
 				captureChess = true;
-				
+
 			}
 		});
-		
+
 		LinearLayout buttons = new LinearLayout(getApplicationContext());
 		buttons.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
 				LayoutParams.WRAP_CONTENT));
-	
+
 		buttons.addView(capture_button);
-		
+
 		Button focus_button = new Button(getApplicationContext());
-		focus_button.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
-				LayoutParams.WRAP_CONTENT));
+		focus_button.setLayoutParams(new LayoutParams(
+				LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 		focus_button.setText("Focus");
 		focus_button.setOnClickListener(new View.OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
 				mPreview.postautofocus(100);
 			}
 		});
 		buttons.addView(focus_button);
-		
-		frame.addView(glview);
 
 		frame.addView(buttons);
 		setContentView(frame);
 		toasts(DIALOG_OPENING_TUTORIAL);
-
 	}
 
 	@Override
 	public boolean onTrackballEvent(MotionEvent event) {
-		if(event.getAction() == MotionEvent.ACTION_UP){
+		if (event.getAction() == MotionEvent.ACTION_UP) {
 			captureChess = true;
 			return true;
 		}
@@ -320,8 +329,7 @@ public class CVCamera extends Activity {
 	protected void onPause() {
 		super.onPause();
 
-		
-		//clears the callback stack
+		// clears the callback stack
 		mPreview.onPause();
 
 		glview.onPause();
@@ -332,9 +340,9 @@ public class CVCamera extends Activity {
 	protected void onResume() {
 		super.onResume();
 		glview.onResume();
-		
-		//add an initiall callback stack to the preview on resume...
-		//this one will just draw the frames to opengl
+		mPreview.setParamsFromPrefs(getApplicationContext());
+		// add an initiall callback stack to the preview on resume...
+		// this one will just draw the frames to opengl
 		LinkedList<NativeProcessor.PoolCallback> cbstack = new LinkedList<PoolCallback>();
 		cbstack.add(glview.getDrawCallback());
 		mPreview.addCallbackStack(cbstack);
@@ -362,7 +370,6 @@ public class CVCamera extends Activity {
 		public void process(int idx, image_pool pool, long timestamp,
 				NativeProcessor nativeProcessor) {
 			processor.detectAndDrawFeatures(idx, pool, cvcamera.DETECT_STAR);
-			
 
 		}
 
@@ -396,8 +403,8 @@ public class CVCamera extends Activity {
 			}
 			if (processor.getNumberDetectedChessboards() == 10) {
 
-				File opencvdir = new File(Environment
-						.getExternalStorageDirectory(), "opencv");
+				File opencvdir = new File(
+						Environment.getExternalStorageDirectory(), "opencv");
 				if (!opencvdir.exists()) {
 					opencvdir.mkdir();
 				}
@@ -486,9 +493,9 @@ public class CVCamera extends Activity {
 			}
 			if (processor.getNumberDetectedChessboards() < 10) {
 
-				processor.drawText(idx, pool, "found "
-						+ processor.getNumberDetectedChessboards()
-						+ "/10 chessboards");
+				processor.drawText(idx, pool,
+						"found " + processor.getNumberDetectedChessboards()
+								+ "/10 chessboards");
 			}
 
 		}

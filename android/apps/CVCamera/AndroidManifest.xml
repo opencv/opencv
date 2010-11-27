@@ -12,6 +12,12 @@
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+		
+		<activity android:name="com.opencv.camera.CameraConfig" android:label="@string/app_name"
+			android:screenOrientation="landscape" 
+			android:configChanges="orientation|keyboardHidden|keyboard">
+		</activity>
+		
 
 	</application>
 
