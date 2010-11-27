@@ -531,6 +531,10 @@ CV_EXPORTS_W void drawChessboardCorners( Mat& image, Size patternSize,
                                          const Mat& corners,
                                          bool patternWasFound );
 
+CV_EXPORTS void drawChessboardCorners( Mat& image, Size patternSize,
+                                       const vector<Point2f>& corners,
+                                       bool patternWasFound );    
+    
 enum
 {
     CALIB_USE_INTRINSIC_GUESS = 1,

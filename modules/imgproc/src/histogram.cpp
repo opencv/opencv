@@ -174,7 +174,7 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
         uniranges.resize( dims*2 );
         for( i = 0; i < dims; i++ )
         {
-            uniranges[i*2] = 1;
+            uniranges[i*2] = histSize[i]/256.;
             uniranges[i*2+1] = 0;
         }
     }

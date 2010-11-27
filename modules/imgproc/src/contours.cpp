@@ -1704,8 +1704,9 @@ double cv::matchShapes( const Mat& contour1,
 
 void cv::convexHull( const Mat& points, vector<int>& hull, bool clockwise )
 {
-    CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
-    hull.resize(points.cols*points.rows*points.channels()/2);
+    int nelems = points.checkVector(2);
+    CV_Assert(nelems >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
+    hull.resize(nelems);
     CvMat _points = Mat(points), _hull=Mat(hull);
     cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 0);
     hull.resize(_hull.cols + _hull.rows - 1);
@@ -1715,8 +1716,9 @@ void cv::convexHull( const Mat& points, vector<int>& hull, bool clockwise )
 void cv::convexHull( const Mat& points,
                      vector<Point>& hull, bool clockwise )
 {
-    CV_Assert(points.checkVector(2, CV_32S) >= 0);
-    hull.resize(points.cols*points.rows*points.channels()/2);
+    int nelems = points.checkVector(2, CV_32S);
+    CV_Assert(nelems >= 0);
+    hull.resize(nelems);
     CvMat _points = Mat(points), _hull=Mat(hull);
     cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 1);
     hull.resize(_hull.cols + _hull.rows - 1);
@@ -1726,8 +1728,9 @@ void cv::convexHull( const Mat& points,
 void cv::convexHull( const Mat& points,
                      vector<Point2f>& hull, bool clockwise )
 {
-    CV_Assert(points.checkVector(2, CV_32F) >= 0);
-    hull.resize(points.cols*points.rows*points.channels()/2);
+    int nelems = points.checkVector(2, CV_32S);
+    CV_Assert(nelems >= 0);
+    hull.resize(nelems);
     CvMat _points = Mat(points), _hull=Mat(hull);
     cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 1);
     hull.resize(_hull.cols + _hull.rows - 1);

@@ -1916,10 +1916,21 @@ void drawChessboardCorners( Mat& image, Size patternSize,
     if( corners.cols == 0 || corners.rows == 0 )
         return;
     CvMat _image = image;
-    CV_Assert((corners.cols == 1 || corners.rows == 1) &&
-              corners.type() == CV_32FC2 && corners.isContinuous());
+    int nelems = corners.checkVector(2, CV_32F, true);
+    CV_Assert(nelems >= 0);
     cvDrawChessboardCorners( &_image, patternSize, (CvPoint2D32f*)corners.data,
-                             corners.cols + corners.rows - 1, patternWasFound );
+                             nelems, patternWasFound );
+}
+    
+void drawChessboardCorners( Mat& image, Size patternSize,
+                            const vector<Point2f>& corners,
+                            bool patternWasFound )
+{
+    if( corners.empty() )
+        return;
+    CvMat _image = image;
+    cvDrawChessboardCorners( &_image, patternSize, (CvPoint2D32f*)&corners[0],
+                            (int)corners.size(), patternWasFound );
 }
 
 }

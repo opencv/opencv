@@ -181,7 +181,7 @@ void addFilter(CvLSVMFilterObject *** model, int *last, int *max){
 
 void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
     int st = 0;
-    int sizeX, sizeY;
+    int sizeX=0, sizeY=0;
     int tag;
     int tagVal;
     char ch;
@@ -432,7 +432,7 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
 
 void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * model){
     int st = 0;
-    int sizeX, sizeY;
+    int sizeX=0, sizeY=0;
     int tag;
     int tagVal;
     char ch;

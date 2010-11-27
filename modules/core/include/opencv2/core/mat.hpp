@@ -408,7 +408,7 @@ inline Mat::operator CvMat() const
 
 inline bool Mat::isContinuous() const { return (flags & CONTINUOUS_FLAG) != 0; }
 inline bool Mat::isSubmatrix() const { return (flags & SUBMATRIX_FLAG) != 0; }
-inline size_t Mat::elemSize() const { return step.p[dims-1]; }
+inline size_t Mat::elemSize() const { return dims > 0 ? step.p[dims-1] : 0; }
 inline size_t Mat::elemSize1() const { return CV_ELEM_SIZE1(flags); }
 inline int Mat::type() const { return CV_MAT_TYPE(flags); }
 inline int Mat::depth() const { return CV_MAT_DEPTH(flags); }
