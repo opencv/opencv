@@ -27,6 +27,7 @@ import android.widget.Toast;
 
 import com.opencv.calibration.Calibrator.CalibrationCallback;
 import com.opencv.calibration.services.CalibrationService;
+import com.opencv.camera.CameraConfig;
 import com.opencv.camera.NativePreviewer;
 import com.opencv.camera.NativeProcessor;
 import com.opencv.misc.SDCardChecker;
@@ -112,6 +113,11 @@ public class Calibration extends Activity implements CalibrationCallback {
 		case R.id.calibrate:
 			calibrate();
 			break;
+		case R.id.settings:
+			Intent configurer = new Intent(getApplicationContext(),
+					CameraConfig.class);
+			startActivity(configurer);
+			
 		}
 
 		return true;
@@ -152,7 +158,7 @@ public class Calibration extends Activity implements CalibrationCallback {
 				Calibrator tcalib = calibrator;
 				calibrator = new Calibrator(Calibration.this);
 				setCallbackStack();
-				calibservice.startCalibrating(tcalib, calibfile);
+				calibservice.startCalibrating(Calibration.class, R.drawable.icon,tcalib, calibfile);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -200,6 +206,8 @@ public class Calibration extends Activity implements CalibrationCallback {
 		disableScreenTurnOff();
 		setContentView(R.layout.camera);
 		mPreview = (NativePreviewer) findViewById(R.id.nativepreviewer);
+		mPreview.setPreviewSize(1000, 500);
+		mPreview.setGrayscale(true);
 		LinearLayout glview_layout = (LinearLayout) findViewById(R.id.glview_layout);
 		glview = new GL2CameraViewer(getApplication(), false, 0, 0);
 		glview_layout.addView(glview);
@@ -250,6 +258,12 @@ public class Calibration extends Activity implements CalibrationCallback {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		int size[] ={0,0};
+		CameraConfig.readImageSize(getApplicationContext(), size);
+		int mode = CameraConfig.readCameraMode(getApplicationContext());
+		mPreview.setPreviewSize(size[0], size[1]);
+		mPreview.setGrayscale(mode == CameraConfig.CAMERA_MODE_BW ? true : false);
+		
 		glview.onResume();
 		mPreview.onResume();
 		setCallbackStack();

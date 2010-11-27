@@ -16,14 +16,22 @@
 			</intent-filter>
 
 		</activity>
-
-		<activity android:name=".ChessBoardChooser" android:label="@string/app_name"
+		<!--
+			These activities are defined in the android-jni library, and just reused here
+		-->
+		<activity android:name="com.opencv.calibration.ChessBoardChooser" android:label="@string/app_name"
 			android:screenOrientation="landscape" 
 			android:configChanges="orientation|keyboardHidden|keyboard">
-
 		</activity>
+		
+		<activity android:name="com.opencv.camera.CameraConfig" android:label="@string/app_name"
+			android:screenOrientation="landscape" 
+			android:configChanges="orientation|keyboardHidden|keyboard">
+		</activity>
+		
+		<activity android:name="com.opencv.calibration.CalibrationViewer"  android:label="@string/app_name"/>
 
-		<service android:name=".services.CalibrationService"></service>
+		<service android:name="com.opencv.calibration.services.CalibrationService"></service>
 
 	</application>
 

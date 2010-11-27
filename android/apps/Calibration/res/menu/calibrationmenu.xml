@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu
-  xmlns:android="http://schemas.android.com/apk/res/android">
-<item android:id="@+id/patternsize" android:titleCondensed="Size" 
-android:title="@string/patternsize" 
-android:icon="@drawable/patternicon"
-></item>
-<item android:id="@+id/calibrate" 
-android:titleCondensed="Calib" 
-android:title="Calibrate"
-></item>
-<item android:id="@+id/help" 
-android:titleCondensed="Help" 
-android:title="Help" 
-android:icon="@android:drawable/ic_menu_help"
-></item>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+	<item android:id="@+id/calibrate" android:titleCondensed="Calib"
+		android:title="Calibrate"></item>
+	<item android:id="@+id/patternsize" android:titleCondensed="Size"
+		android:title="@string/patternsize" android:icon="@drawable/patternicon"></item>
+
+
+<item android:id="@+id/settings" android:title="Settings" android:icon="@android:drawable/ic_menu_preferences"></item>
+<item android:id="@+id/help" android:title="Help" android:icon="@android:drawable/ic_menu_help"></item>
 </menu>
