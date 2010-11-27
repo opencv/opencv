@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string-array name="image_sizes">
+<item>320x240</item>
+<item>400x300</item>
+<item>600x400</item>
+<item>800x600</item>
+<item>1000x800</item>
+</string-array>
+<string-array name="camera_mode">
+<item>color</item>
+<item>BW</item>
+</string-array>
+<string name="image_size_prompt">
+Image Size:\n(may not be exact)
+</string>
+<string name="camera_mode_prompt">
+Camera Mode:
+</string>
+</resources>

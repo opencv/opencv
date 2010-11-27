@@ -12,6 +12,10 @@ $(info gedit $(LOCAL_ENV_MK))
 $(error Please setup the $(LOCAL_ENV_MK) - the default was just created')
 endif
 
+ifndef ARM_TARGETS
+ARM_TARGETS=armeabi armeabi-v7a
+endif
+
 ANDROID_NDK_BASE = $(ANDROID_NDK_ROOT)
 
 $(info OPENCV_CONFIG = $(OPENCV_CONFIG))
@@ -44,7 +48,7 @@ all:	$(LIB) nogdb
 #calls the ndk-build script, passing it OPENCV_ROOT and OPENCV_LIBS_DIR
 $(LIB): $(SWIG_C_OUT) $(SOURCES) $(HEADERS) $(ANDROID_MKS)
 	$(ANDROID_NDK_BASE)/ndk-build OPENCV_CONFIG=$(OPENCV_CONFIG) \
-	PROJECT_PATH=$(PROJECT_PATH) V=$(V) $(NDK_FLAGS)
+	PROJECT_PATH=$(PROJECT_PATH) ARM_TARGETS=$(ARM_TARGETS) V=$(V) $(NDK_FLAGS)
 
 
 #this creates the swig wrappers
@@ -70,5 +74,5 @@ clean-swig:
 #does clean-swig and then uses the ndk-build clean
 clean: clean-swig
 	$(ANDROID_NDK_BASE)/ndk-build OPENCV_CONFIG=$(OPENCV_CONFIG) \
-	PROJECT_PATH=$(PROJECT_PATH) clean V=$(V) $(NDK_FLAGS)
+	PROJECT_PATH=$(PROJECT_PATH) clean  ARM_TARGETS=$(ARM_TARGETS) V=$(V) $(NDK_FLAGS)
 	

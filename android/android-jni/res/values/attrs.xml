@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+<declare-styleable name="CameraParams">
+
+<attr name="preview_width" format="integer"/>
+<attr name="preview_height" format="integer"/>
+
+</declare-styleable>
+
+</resources>

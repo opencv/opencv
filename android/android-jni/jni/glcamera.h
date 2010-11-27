@@ -6,35 +6,34 @@
 #include <GLES2/gl2ext.h>
 
 #include "image_pool.h"
-class glcamera {
-	Mat nimg;
-	bool newimage;
-	GLuint textureID;
 
-	GLuint gProgram;
-	GLuint gvPositionHandle;
-
-	GLuint gvTexCoordHandle;
-	GLuint gvSamplerHandle;
-
+class glcamera
+{
 public:
 
-	glcamera();
-	~glcamera();
-	void init(int width, int height);
-	void step();
+  glcamera();
+  ~glcamera();
+  void init(int width, int height);
+  void step();
 
-	void drawMatToGL(int idx, image_pool* pool);
-	void setTextureImage(Ptr<Mat> img);
+  void drawMatToGL(int idx, image_pool* pool);
+  void setTextureImage(const cv::Mat& img);
 
 private:
-	GLuint createSimpleTexture2D(GLuint _textureid, GLubyte* pixels, int width,
-			int height, int channels);
-	GLuint loadShader(GLenum shaderType, const char* pSource);
-	GLuint
-			createProgram(const char* pVertexSource,
-					const char* pFragmentSource);
-	bool setupGraphics(int w, int h);
-	void renderFrame();
+  GLuint createSimpleTexture2D(GLuint _textureid, GLubyte* pixels, int width, int height, int channels);
+  GLuint loadShader(GLenum shaderType, const char* pSource);
+  GLuint
+  createProgram(const char* pVertexSource, const char* pFragmentSource);
+  bool setupGraphics(int w, int h);
+  void renderFrame();
+  cv::Mat nimg;
+  bool newimage;
+  GLuint textureID;
+
+  GLuint gProgram;
+  GLuint gvPositionHandle;
+
+  GLuint gvTexCoordHandle;
+  GLuint gvSamplerHandle;
 };
 #endif

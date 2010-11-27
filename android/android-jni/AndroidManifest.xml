@@ -11,6 +11,10 @@
              regular Android project.
         -->
         <activity android:name="com.opencv.OpenCV" />
+        <activity android:name="com.opencv.calibration.ChessBoardChooser"/>
+		<activity android:name="com.opencv.calibration.CameraConfig"/>
+		<activity android:name="com.opencv.calibration.CalibrationViewer"/>
+        <service android:name="com.opencv.calibration.services.CalibrationService"/>
     </application>
     <!-- set the opengl version 
     <uses-feature android:glEsVersion="0x00020000" />-->

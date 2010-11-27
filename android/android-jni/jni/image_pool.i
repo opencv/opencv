@@ -46,10 +46,8 @@ public:
 	~image_pool();
 	
 	
-	Ptr<Mat> getImage(int i);
-
-	
-	void addImage(int i, Ptr< Mat> mat);
+	Mat getImage(int i);
+	void addImage(int i, Mat mat);
 
 	
 
