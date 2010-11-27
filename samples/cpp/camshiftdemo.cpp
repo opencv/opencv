@@ -1,7 +1,7 @@
 #include <opencv2/video/tracking.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include <stdio.h>
+#include <iostream>
 #include <ctype.h>
 
 IplImage *image = 0, *hsv = 0, *hue = 0, *mask = 0, *backproject = 0, *histimg = 0;
@@ -21,25 +21,19 @@ float hranges_arr[] = {0,180};
 float* hranges = hranges_arr;
 int vmin = 10, vmax = 256, smin = 30;
 
-void on_mouse( int event, int x, int y, int flags, void* param )
+void onMouse( int event, int x, int y, int flags, void* param )
 {
-    if( !image )
-        return;
-
-    if( image->origin )
-        y = image->height - y;
-
-    if( select_object )
+    if( selectObject )
     {
-        selection.x = MIN(x,origin.x);
-        selection.y = MIN(y,origin.y);
-        selection.width = selection.x + CV_IABS(x - origin.x);
-        selection.height = selection.y + CV_IABS(y - origin.y);
+        selection.x = MIN(x, origin.x);
+        selection.y = MIN(y, origin.y);
+        selection.width = selection.x + std::abs(x - origin.x);
+        selection.height = selection.y + std::abs(y - origin.y);
 
-        selection.x = MAX( selection.x, 0 );
-        selection.y = MAX( selection.y, 0 );
-        selection.width = MIN( selection.width, image->width );
-        selection.height = MIN( selection.height, image->height );
+        selection.x = MAX(selection.x, 0);
+        selection.y = MAX(selection.y, 0);
+        selection.width = MIN(selection.width, image.cols);
+        selection.height = MIN(selection.height, image.rows);
         selection.width -= selection.x;
         selection.height -= selection.y;
     }
@@ -47,23 +41,23 @@ void on_mouse( int event, int x, int y, int flags, void* param )
     switch( event )
     {
     case CV_EVENT_LBUTTONDOWN:
-        origin = cvPoint(x,y);
-        selection = cvRect(x,y,0,0);
-        select_object = 1;
+        origin = Point(x,y);
+        selection = Rect(x,y,0,0);
+        selectObject = true;
         break;
     case CV_EVENT_LBUTTONUP:
-        select_object = 0;
+        selectObject = false;
         if( selection.width > 0 && selection.height > 0 )
-            track_object = -1;
+            trackObject = -1;
         break;
     }
 }
 
 
-CvScalar hsv2rgb( float hue )
+Scalar hsv2rgb( float hue )
 {
     int rgb[3], p, sector;
-    static const int sector_data[][3]=
+    static const int sectorData[][3]=
         {{0,2,1}, {1,2,0}, {1,0,2}, {2,0,1}, {2,1,0}, {0,1,2}};
     hue *= 0.033333333333333333333333333333333f;
     sector = cvFloor(hue);
@@ -218,7 +212,3 @@ int main( int argc, char** argv )
 
     return 0;
 }
-
-#ifdef _EiC
-main(1,"camshiftdemo.c");
-#endif

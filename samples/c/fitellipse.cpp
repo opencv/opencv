@@ -14,113 +14,70 @@
 *
 *
 ********************************************************************************/
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-int slider_pos = 70;
+#include <iostream>
 
-// Load the source image. HighGUI use.
-IplImage *image02 = 0, *image03 = 0, *image04 = 0;
+using namespace cv;
+using namespace std;
 
-void process_image(int h);
+int sliderPos = 70;
+
+Mat image;
+
+void processImage(int, void*);
 
 int main( int argc, char** argv )
 {
     const char* filename = argc == 2 ? argv[1] : (char*)"stuff.jpg";
+    image = imread(filename, 0);
+    if( image.empty() )
+    {
+        cout << "Usage: fitellipse <image_name>\n";
+        return 0;
+    }
 
-    // load image and force it to be grayscale
-    if( (image03 = cvLoadImage(filename, 0)) == 0 )
-        return -1;
-
-    // Create the destination images
-    image02 = cvCloneImage( image03 );
-    image04 = cvCloneImage( image03 );
-
-    // Create windows.
-    cvNamedWindow("Source", 1);
-    cvNamedWindow("Result", 1);
-
-    // Show the image.
-    cvShowImage("Source", image03);
-
+    imshow("source", image);
+    namedWindow("result", 1);
+    
     // Create toolbars. HighGUI use.
-    cvCreateTrackbar( "Threshold", "Result", &slider_pos, 255, process_image );
-
-    process_image(0);
+    createTrackbar( "threshold", "result", &sliderPos, 255, processImage );
+    processImage(0, 0);
 
     // Wait for a key stroke; the same function arranges events processing
-    cvWaitKey(0);
-    cvReleaseImage(&image02);
-    cvReleaseImage(&image03);
-
-    cvDestroyWindow("Source");
-    cvDestroyWindow("Result");
-
+    waitKey();
     return 0;
 }
 
 // Define trackbar callback functon. This function find contours,
 // draw it and approximate it by ellipses.
-void process_image(int h)
+void processImage(int h, void*)
 {
-    CvMemStorage* storage;
-    CvSeq* contour;
+    vector<vector<Point> > contours;
+    Mat bimage = image >= sliderPos;
+    
+    findContours(bimage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 
-    // Create dynamic structure and sequence.
-    storage = cvCreateMemStorage(0);
-    contour = cvCreateSeq(CV_SEQ_ELTYPE_POINT, sizeof(CvSeq), sizeof(CvPoint) , storage);
+    Mat cimage = Mat::zeros(bimage.size(), CV_8UC3);
 
-    // Threshold the source image. This needful for cvFindContours().
-    cvThreshold( image03, image02, slider_pos, 255, CV_THRESH_BINARY );
-
-    // Find all contours.
-    cvFindContours( image02, storage, &contour, sizeof(CvContour),
-                    CV_RETR_LIST, CV_CHAIN_APPROX_NONE, cvPoint(0,0));
-
-    // Clear images. IPL use.
-    cvZero(image02);
-    cvZero(image04);
-
-    // This cycle draw all contours and approximate it by ellipses.
-    for(;contour;contour = contour->h_next)
+    for(size_t i = 0; i < contours.size(); i++)
     {
-        int count = contour->total; // This is number point in contour
-        CvPoint center;
-        CvSize size;
-        CvBox2D box;
-
-        // Number point must be more than or equal to 6 (for cvFitEllipse_32f).
+        size_t count = contours[i].size();
         if( count < 6 )
             continue;
+        
+        Mat pointsf;
+        Mat(contours[i]).convertTo(pointsf, CV_32F);
+        RotatedRect box = fitEllipse(pointsf);
+        
+        box.angle = -box.angle;
+        if( MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height)*30 )
+            continue;
+        drawContours(cimage, contours, (int)i, Scalar::all(255), 1, 8);
 
-        CvMat* points_f = cvCreateMat( 1, count, CV_32FC2 );
-        CvMat points_i = cvMat( 1, count, CV_32SC2, points_f->data.ptr );
-        cvCvtSeqToArray( contour, points_f->data.ptr, CV_WHOLE_SEQ );
-        cvConvert( &points_i, points_f );
-
-        // Fits ellipse to current contour.
-        box = cvFitEllipse2( points_f );
-
-        // Draw current contour.
-        cvDrawContours(image04,contour,CV_RGB(255,255,255),CV_RGB(255,255,255),0,1,8,cvPoint(0,0));
-
-        // Convert ellipse data from float to integer representation.
-        center = cvPointFrom32f(box.center);
-        size.width = cvRound(box.size.width*0.5);
-        size.height = cvRound(box.size.height*0.5);
-
-        // Draw ellipse.
-        cvEllipse(image04, center, size,
-                  -box.angle, 0, 360,
-                  CV_RGB(0,0,255), 1, CV_AA, 0);
-
-        cvReleaseMat(&points_f);
+        ellipse(cimage, box, Scalar(0,0,255), 1, CV_AA);
     }
 
-    // Show image. HighGUI use.
-    cvShowImage( "Result", image04 );
+    imshow("result", cimage);
 }
-
-#ifdef _EiC
-main(1,"fitellipse.c");
-#endif
