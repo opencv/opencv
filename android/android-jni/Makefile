@@ -13,7 +13,7 @@ $(error Please setup the $(LOCAL_ENV_MK) - the default was just created')
 endif
 
 ifndef ARM_TARGETS
-ARM_TARGETS=armeabi armeabi-v7a
+ARM_TARGETS="armeabi armeabi-v7a"
 endif
 
 ANDROID_NDK_BASE = $(ANDROID_NDK_ROOT)
