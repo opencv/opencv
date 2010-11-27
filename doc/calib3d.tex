@@ -549,8 +549,8 @@ void cvDrawChessboardCorners( \par CvArr* image,\par CvSize patternSize,\par CvP
                             bool patternWasFound );}
 \begin{description}
 \cvarg{image}{The destination image; it must be an 8-bit color image}
-\cvarg{patternSize}{The number of inner corners per chessboard row and column. (patternSize = cvSize(points\_per\_row,points\_per\_colum) = cvSize(columns,rows) )}
-\cvarg{corners}{The array of corners detected}
+\cvarg{patternSize}{The number of inner corners per chessboard row and column. (patternSize = cv::Size(points\_per\_row,points\_per\_column) = cv::Size(rows,columns) )}
+\cvarg{corners}{The array of corners detected, this should be the output from findChessboardCorners wrapped in a cv::Mat().}
 \cvC{\cvarg{count}{The number of corners}}
 \cvarg{patternWasFound}{Indicates whether the complete board was found \cvCPy{$(\ne 0)$} or not \cvCPy{$(=0)$}. One may just pass the return value \cvCPyCross{FindChessboardCorners}{findChessboardCorners} here}
 \end{description}
@@ -581,6 +581,8 @@ Finds the positions of the internal corners of the chessboard.
  \cvarg{CV\_CALIB\_CB\_ADAPTIVE\_THRESH}{use adaptive thresholding to convert the image to black and white, rather than a fixed threshold level (computed from the average image brightness).}
  \cvarg{CV\_CALIB\_CB\_NORMALIZE\_IMAGE}{normalize the image gamma with \cvCross{EqualizeHist}{equalizeHist} before applying fixed or adaptive thresholding.}
  \cvarg{CV\_CALIB\_CB\_FILTER\_QUADS}{use additional criteria (like contour area, perimeter, square-like shape) to filter out false quads that are extracted at the contour retrieval stage.}
+ \cvarg{CALIB\_CB\_FAST\_CHECK}{Runs a fast check on the image that looks for chessboard corners, and shortcuts the call if none are found. This can drastically speed up the call in the degenerate condition when
+ no chessboard is observed.}
 \end{description}}
 \end{description}
 
@@ -595,6 +597,25 @@ squares and 7 x 7 internal corners, that is, points, where the black
 squares touch each other. The coordinates detected are approximate,
 and to determine their position more accurately, the user may use
 the function \cvCross{FindCornerSubPix}{cornerSubPix}.
+
+Sample usage of detecting and drawing chessboard corners:
+\begin{lstlisting}
+Size patternsize(8,6); //interior number of corners
+Mat gray = ....; //source image
+vector<Point2f> corners; //this will be filled by the detected corners
+
+//CALIB_CB_FAST_CHECK saves a lot of time on images 
+//that don't contain any chessboard corners
+bool patternfound = findChessboardCorners(gray, patternsize, corners, 
+	CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE 
+	+ CALIB_CB_FAST_CHECK);
+
+if(patternfound)
+  cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1), 
+    TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+    
+drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
+\end{lstlisting}
 
 \textbf{Note:} the function requires some white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environment (otherwise if there is no border and the background is dark, the outer black squares could not be segmented properly and so the square grouping and ordering algorithm will fail).
 
