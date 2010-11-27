@@ -19,5 +19,19 @@ that should work...  If it doesn't make sure to edit the generated local.env.mk
 to reflect your machine's setup
 
 see the sample for how to use this in your own projects
-    
+
+If you only support armeabi-v7a or armeabi your final apks will be much smaller.
+
+To build the class files, either start a new Android project from existing sources
+in eclipse
+or from the commmand line:
+sh project_create.sh
+ant debug
+
+This should be linked to in your android projects, if you would like to reuse the
+code. See Calibration or CVCamera in the opencv/android/apps directory
+
+With cdt installed in eclipse, you may also "convert to C++ project" once you have
+opened this as an android project. Select makefile project->toolchain other to do this.
+
     
