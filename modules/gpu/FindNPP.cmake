@@ -36,7 +36,7 @@
 ###############################################################################
 
 cmake_policy(PUSH)
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.0)
 cmake_policy(POP)
 
 if(NOT "${CUDA_NPP_LIBRARY_ROOT_DIR}" STREQUAL "${CUDA_NPP_LIBRARY_ROOT_DIR_INTERNAL}")
@@ -107,8 +107,8 @@ find_package_handle_standard_args( NPP
     REQUIRED_VARS 
         CUDA_NPP_INCLUDES 
         CUDA_NPP_LIBRARIES 
-    # Don't remove!!! Please update your CMake.
-    VERSION_VAR			
+    #Need cmake 2.8.3 to uncomment this. 
+    #VERSION_VAR			
         NPP_VERSION)
 
 if(APPLE)
