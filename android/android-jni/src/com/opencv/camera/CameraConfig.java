@@ -24,7 +24,7 @@ public class CameraConfig extends Activity {
 		// Restore preferences
 		SharedPreferences settings = ctx.getSharedPreferences(CAMERA_SETTINGS,
 				0);
-		int mode = settings.getInt(CAMERA_MODE, CAMERA_MODE_COLOR);
+		int mode = settings.getInt(CAMERA_MODE, CAMERA_MODE_BW);
 		return mode;
 	}
 

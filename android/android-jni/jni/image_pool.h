@@ -53,6 +53,8 @@ public:
    */
   void addYUVMat(int i, cv::Mat mat);
 
+  void convertYUVtoColor(int i, cv::Mat& out);
+
   //	int addYUV(uchar* buffer, int size, int width, int height, bool grey,int idx);
   //
   //	void getBitmap(int * outintarray, int size, int idx);

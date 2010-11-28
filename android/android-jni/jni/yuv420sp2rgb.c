@@ -25,7 +25,7 @@
 #endif
 
 const int bytes_per_pixel = 2;
-void color_convert_common(unsigned char *pY, unsigned char *pUV, int width, int height, unsigned char *buffer, int grey)
+void color_convert_common(const unsigned char *pY, const unsigned char *pUV, int width, int height, unsigned char *buffer, int grey)
 {
 
   int i, j;

@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 void color_convert_common(
-    unsigned char *pY, unsigned char *pUV,
+    const unsigned char *pY, const unsigned char *pUV,
     int width, int height, unsigned char *buffer,
     int grey);
 

@@ -44,6 +44,11 @@
 #include <algorithm>
 #include <vector>
 
+#if ANDROID  && HAVE_NEON
+#include <cpu-features.h>
+#include <arm_neon.h>
+#endif
+
 using namespace cv;
 
 inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
@@ -106,16 +111,39 @@ HammingLUT::ResultType HammingLUT::operator()( const unsigned char* a, const uns
 Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned char* b, int size) const
 {
 #if __GNUC__
-    ResultType result = 0;
-    for (int i = 0; i < size; i += sizeof(unsigned long))
+  ResultType result = 0;
+#if ANDROID && HAVE_NEON
+  static uint64_t features = android_getCpuFeatures();
+  if ((features & ANDROID_CPU_ARM_FEATURE_NEON))
+  {
+    for (int i = 0; i < size; i += 16)
     {
-        unsigned long a2 = *reinterpret_cast<const unsigned long*> (a + i);
-        unsigned long b2 = *reinterpret_cast<const unsigned long*> (b + i);
-        result += __builtin_popcountl(a2 ^ b2);
+      uint8x16_t A_vec = vld1q_u8 (a + i);
+      uint8x16_t B_vec = vld1q_u8 (b + i);
+      //uint8x16_t veorq_u8 (uint8x16_t, uint8x16_t)
+      uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
+
+      uint8x16_t bitsSet += vcntq_u8 (AxorB);
+      //uint16x8_t vpadalq_u8 (uint16x8_t, uint8x16_t)
+      uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+      uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+
+      uint64x2_t bitSet2 = vpaddlq_u32 (bitSet4);
+      result += vgetq_lane_u64 (bitSet2,0);
+      result += vgetq_lane_u64 (bitSet2,1);
     }
-    return result;
+  }
+  else
+#endif
+  for (int i = 0; i < size; i += sizeof(unsigned long))
+  {
+    unsigned long a2 = *reinterpret_cast<const unsigned long*> (a + i);
+    unsigned long b2 = *reinterpret_cast<const unsigned long*> (b + i);
+    result += __builtin_popcountl(a2 ^ b2);
+  }
+  return result;
 #else
-    return HammingLUT()(a,b,size);
+  return HammingLUT()(a,b,size);
 #endif
 }
 

@@ -3,7 +3,11 @@ LOCAL_PATH := ${CMAKE_CURRENT_SOURCE_DIR}
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := ${android_module_name}
- 
+
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+LOCAL_ARM_NEON := true
+endif
+
 LOCAL_SRC_FILES :=  ${android_srcs}
 
 LOCAL_CFLAGS := ${android_defs}

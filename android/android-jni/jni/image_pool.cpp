@@ -18,17 +18,17 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved)
   return JNI_VERSION_1_4;
 }
 
-JNIEXPORT void JNICALL Java_com_opencv_jni_opencvJNI_addYUVtoPool(JNIEnv * env,
-    jclass thiz, jlong ppool, jobject _jpool, jbyteArray jbuffer,
-    jint jidx, jint jwidth, jint jheight, jboolean jgrey)
+JNIEXPORT void JNICALL Java_com_opencv_jni_opencvJNI_addYUVtoPool(JNIEnv * env, jclass thiz, jlong ppool,
+                                                                  jobject _jpool, jbyteArray jbuffer, jint jidx,
+                                                                  jint jwidth, jint jheight, jboolean jgrey)
 {
-  int buff_height = jheight + (jheight/2);
-  Size buff_size(jwidth,buff_height);
-  image_pool *pool = (image_pool *) ppool;
+  int buff_height = jheight + (jheight / 2);
+  Size buff_size(jwidth, buff_height);
+  image_pool *pool = (image_pool *)ppool;
 
   Mat mat = pool->getYUV(jidx);
 
-  if (mat.empty() || mat.size() != buff_size )
+  if (mat.empty() || mat.size() != buff_size)
   {
     mat.create(buff_size, CV_8UC1);
   }
@@ -36,7 +36,7 @@ JNIEXPORT void JNICALL Java_com_opencv_jni_opencvJNI_addYUVtoPool(JNIEnv * env,
   jsize sz = env->GetArrayLength(jbuffer);
   uchar* buff = mat.ptr<uchar> (0);
 
-  env->GetByteArrayRegion(jbuffer, 0, sz, (jbyte*) buff);
+  env->GetByteArrayRegion(jbuffer, 0, sz, (jbyte*)buff);
 
   pool->addYUVMat(jidx, mat);
 
@@ -51,8 +51,7 @@ JNIEXPORT void JNICALL Java_com_opencv_jni_opencvJNI_addYUVtoPool(JNIEnv * env,
     }
     //doesn't work unfortunately..
     //TODO cvtColor(mat,color, CV_YCrCb2RGB);
-    color_convert_common(buff, buff + jwidth * jheight, jwidth, jheight,
-        color.ptr<uchar> (0), false);
+    color_convert_common(buff, buff + jwidth * jheight, jwidth, jheight, color.ptr<uchar> (0), false);
   }
 
   if (jgrey)
@@ -84,7 +83,7 @@ Mat image_pool::getGrey(int i)
   Mat tm = yuvImagesMap[i];
   if (tm.empty())
     return tm;
-  return tm(Range(0, tm.rows * (2.0f/3)), Range::all());
+  return tm(Range(0, tm.rows * (2.0f / 3)), Range::all());
 }
 Mat image_pool::getYUV(int i)
 {
@@ -99,3 +98,19 @@ void image_pool::addImage(int i, Mat mat)
   imagesmap[i] = mat;
 }
 
+void image_pool::convertYUVtoColor(int i, cv::Mat& out)
+{
+
+  Mat yuv = getYUV(i);
+
+  if (yuv.empty())
+    return;
+  int width = yuv.cols;
+  int height = yuv.rows * (2.0f / 3);
+  out.create(height, width, CV_8UC3);
+  const unsigned char* buff = yuv.ptr<unsigned char> (0);
+  unsigned char* out_buff = out.ptr<unsigned char> (0);
+  //doesn't work unfortunately..
+  //TODO cvtColor(mat,color, CV_YCrCb2RGB);
+  color_convert_common(buff, buff + width * height, width, height, out_buff, false);
+}
