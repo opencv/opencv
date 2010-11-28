@@ -1,24 +1,21 @@
 #include <opencv2/video/tracking.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 #include <ctype.h>
 
-IplImage *image = 0, *hsv = 0, *hue = 0, *mask = 0, *backproject = 0, *histimg = 0;
-CvHistogram *hist = 0;
+using namespace cv;
+using namespace std;
 
-int backproject_mode = 0;
-int select_object = 0;
-int track_object = 0;
-int show_hist = 1;
-CvPoint origin;
-CvRect selection;
-CvRect track_window;
-CvBox2D track_box;
-CvConnectedComp track_comp;
-int hdims = 16;
-float hranges_arr[] = {0,180};
-float* hranges = hranges_arr;
+Mat image;
+
+bool backprojMode = false;
+bool selectObject = false;
+int trackObject = 0;
+bool showHist = true;
+Point origin;
+Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
 
 void onMouse( int event, int x, int y, int flags, void* param )
@@ -27,15 +24,10 @@ void onMouse( int event, int x, int y, int flags, void* param )
     {
         selection.x = MIN(x, origin.x);
         selection.y = MIN(y, origin.y);
-        selection.width = selection.x + std::abs(x - origin.x);
-        selection.height = selection.y + std::abs(y - origin.y);
+        selection.width = std::abs(x - origin.x);
+        selection.height = std::abs(y - origin.y);
 
-        selection.x = MAX(selection.x, 0);
-        selection.y = MAX(selection.y, 0);
-        selection.width = MIN(selection.width, image.cols);
-        selection.height = MIN(selection.height, image.rows);
-        selection.width -= selection.x;
-        selection.height -= selection.y;
+        selection &= Rect(0, 0, image.cols, image.rows);
     }
 
     switch( event )
@@ -53,162 +45,131 @@ void onMouse( int event, int x, int y, int flags, void* param )
     }
 }
 
-
-Scalar hsv2rgb( float hue )
-{
-    int rgb[3], p, sector;
-    static const int sectorData[][3]=
-        {{0,2,1}, {1,2,0}, {1,0,2}, {2,0,1}, {2,1,0}, {0,1,2}};
-    hue *= 0.033333333333333333333333333333333f;
-    sector = cvFloor(hue);
-    p = cvRound(255*(hue - sector));
-    p ^= sector & 1 ? 255 : 0;
-
-    rgb[sector_data[sector][0]] = 255;
-    rgb[sector_data[sector][1]] = 0;
-    rgb[sector_data[sector][2]] = p;
-
-    return cvScalar(rgb[2], rgb[1], rgb[0],0);
-}
-
 int main( int argc, char** argv )
 {
-    CvCapture* capture = 0;
+    VideoCapture cap;
+    Rect trackWindow;
+    RotatedRect trackBox;
+    CvConnectedComp trackComp;
+    int hsize = 16;
+    float hranges[] = {0,180};
+    const float* phranges = hranges;
 
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
-        capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
+        cap.open(argc == 2 ? argv[1][0] - '0' : 0);
     else if( argc == 2 )
-        capture = cvCaptureFromAVI( argv[1] );
+        cap.open(argv[1]);
 
-    if( !capture )
+    if( !cap.isOpened() )
     {
-        fprintf(stderr,"Could not initialize capturing...\n");
-        return -1;
+        cout << "Could not initialize capturing...\n";
+        return 0;
     }
 
-    printf( "Hot keys: \n"
+    cout << "Hot keys: \n"
         "\tESC - quit the program\n"
         "\tc - stop the tracking\n"
         "\tb - switch to/from backprojection view\n"
         "\th - show/hide object histogram\n"
-        "To initialize tracking, select the object with mouse\n" );
+        "To initialize tracking, select the object with mouse\n";
 
-    cvNamedWindow( "Histogram", 1 );
-    cvNamedWindow( "CamShiftDemo", 1 );
-    cvSetMouseCallback( "CamShiftDemo", on_mouse, 0 );
-    cvCreateTrackbar( "Vmin", "CamShiftDemo", &vmin, 256, 0 );
-    cvCreateTrackbar( "Vmax", "CamShiftDemo", &vmax, 256, 0 );
-    cvCreateTrackbar( "Smin", "CamShiftDemo", &smin, 256, 0 );
+    namedWindow( "Histogram", 1 );
+    namedWindow( "CamShift Demo", 1 );
+    setMouseCallback( "CamShift Demo", onMouse, 0 );
+    createTrackbar( "Vmin", "CamShift Demo", &vmin, 256, 0 );
+    createTrackbar( "Vmax", "CamShift Demo", &vmax, 256, 0 );
+    createTrackbar( "Smin", "CamShift Demo", &smin, 256, 0 );
 
+    Mat hsv, hue, mask, hist, histimg = Mat::zeros(200, 320, CV_8UC3), backproj;
+    
     for(;;)
     {
-        IplImage* frame = 0;
-        int i, bin_w, c;
-
-        frame = cvQueryFrame( capture );
-        if( !frame )
+        Mat frame;
+        cap >> frame;
+        if( frame.empty() )
             break;
 
-        if( !image )
-        {
-            /* allocate all the buffers */
-            image = cvCreateImage( cvGetSize(frame), 8, 3 );
-            image->origin = frame->origin;
-            hsv = cvCreateImage( cvGetSize(frame), 8, 3 );
-            hue = cvCreateImage( cvGetSize(frame), 8, 1 );
-            mask = cvCreateImage( cvGetSize(frame), 8, 1 );
-            backproject = cvCreateImage( cvGetSize(frame), 8, 1 );
-            hist = cvCreateHist( 1, &hdims, CV_HIST_ARRAY, &hranges, 1 );
-            histimg = cvCreateImage( cvSize(320,200), 8, 3 );
-            cvZero( histimg );
-        }
+        frame.copyTo(image);
+        cvtColor(image, hsv, CV_BGR2HSV);
 
-        cvCopy( frame, image, 0 );
-        cvCvtColor( image, hsv, CV_BGR2HSV );
-
-        if( track_object )
+        if( trackObject )
         {
             int _vmin = vmin, _vmax = vmax;
 
-            cvInRangeS( hsv, cvScalar(0,smin,MIN(_vmin,_vmax),0),
-                        cvScalar(180,256,MAX(_vmin,_vmax),0), mask );
-            cvSplit( hsv, hue, 0, 0, 0 );
+            inRange(hsv, Scalar(0, smin, MIN(_vmin,_vmax)),
+                    Scalar(180, 256, MAX(_vmin, _vmax)), mask);
+            int ch[] = {0, 0};
+            hue.create(hsv.size(), hsv.depth());
+            mixChannels(&hsv, 1, &hue, 1, ch, 1);
 
-            if( track_object < 0 )
+            if( trackObject < 0 )
             {
-                float max_val = 0.f;
-                cvSetImageROI( hue, selection );
-                cvSetImageROI( mask, selection );
-                cvCalcHist( &hue, hist, 0, mask );
-                cvGetMinMaxHistValue( hist, 0, &max_val, 0, 0 );
-                cvConvertScale( hist->bins, hist->bins, max_val ? 255. / max_val : 0., 0 );
-                cvResetImageROI( hue );
-                cvResetImageROI( mask );
-                track_window = selection;
-                track_object = 1;
+                Mat roi(hue, selection), maskroi(mask, selection);
+                calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
+                normalize(hist, hist, 0, 255, CV_MINMAX);
+                
+                trackWindow = selection;
+                trackObject = 1;
 
-                cvZero( histimg );
-                bin_w = histimg->width / hdims;
-                for( i = 0; i < hdims; i++ )
+                histimg = Scalar::all(0);
+                int binW = histimg.cols / hsize;
+                Mat buf(1, hsize, CV_8UC3);
+                for( int i = 0; i < hsize; i++ )
+                    buf.at<Vec3b>(i) = Vec3b(saturate_cast<uchar>(i*180./hsize), 255, 255);
+                cvtColor(buf, buf, CV_HSV2BGR);
+                    
+                for( int i = 0; i < hsize; i++ )
                 {
-                    int val = cvRound( cvGetReal1D(hist->bins,i)*histimg->height/255 );
-                    CvScalar color = hsv2rgb(i*180.f/hdims);
-                    cvRectangle( histimg, cvPoint(i*bin_w,histimg->height),
-                                 cvPoint((i+1)*bin_w,histimg->height - val),
-                                 color, -1, 8, 0 );
+                    int val = saturate_cast<int>(hist.at<float>(i)*histimg.rows/255);
+                    rectangle( histimg, Point(i*binW,histimg.rows),
+                               Point((i+1)*binW,histimg.rows - val),
+                               Scalar(buf.at<Vec3b>(i)), -1, 8 );
                 }
             }
 
-            cvCalcBackProject( &hue, backproject, hist );
-            cvAnd( backproject, mask, backproject, 0 );
-            cvCamShift( backproject, track_window,
-                        cvTermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1 ),
-                        &track_comp, &track_box );
-            track_window = track_comp.rect;
+            calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
+            backproj &= mask;
+            RotatedRect trackBox = CamShift(backproj, trackWindow,
+                                TermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1 ));
+            trackBox.angle = 90-trackBox.angle;
 
-            if( backproject_mode )
-                cvCvtColor( backproject, image, CV_GRAY2BGR );
-            if( !image->origin )
-                track_box.angle = -track_box.angle;
-            cvEllipseBox( image, track_box, CV_RGB(255,0,0), 3, CV_AA, 0 );
+            if( backprojMode )
+                cvtColor( backproj, image, CV_GRAY2BGR );
+            ellipse( image, trackBox, Scalar(0,0,255), 3, CV_AA );
         }
 
-        if( select_object && selection.width > 0 && selection.height > 0 )
+        if( selectObject && selection.width > 0 && selection.height > 0 )
         {
-            cvSetImageROI( image, selection );
-            cvXorS( image, cvScalarAll(255), image, 0 );
-            cvResetImageROI( image );
+            Mat roi(image, selection);
+            bitwise_not(roi, roi);
         }
 
-        cvShowImage( "CamShiftDemo", image );
-        cvShowImage( "Histogram", histimg );
+        imshow( "CamShift Demo", image );
+        imshow( "Histogram", histimg );
 
-        c = cvWaitKey(10);
-        if( (char) c == 27 )
+        char c = (char)waitKey(10);
+        if( c == 27 )
             break;
-        switch( (char) c )
+        switch(c)
         {
         case 'b':
-            backproject_mode ^= 1;
+            backprojMode = !backprojMode;
             break;
         case 'c':
-            track_object = 0;
-            cvZero( histimg );
+            trackObject = 0;
+            histimg = Scalar::all(0);
             break;
         case 'h':
-            show_hist ^= 1;
-            if( !show_hist )
-                cvDestroyWindow( "Histogram" );
+            showHist = !showHist;
+            if( !showHist )
+                destroyWindow( "Histogram" );
             else
-                cvNamedWindow( "Histogram", 1 );
+                namedWindow( "Histogram", 1 );
             break;
         default:
             ;
         }
     }
-
-    cvReleaseCapture( &capture );
-    cvDestroyWindow("CamShiftDemo");
 
     return 0;
 }

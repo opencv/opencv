@@ -17,7 +17,6 @@ enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
 void help()
 {
-
         printf( "This is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
                "Usage: 3calibration\n"
                "     -w <board_width>         # the number of inner corners per one of board dimension\n"
@@ -32,20 +31,6 @@ void help()
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners)
 {
     corners.resize(0);
@@ -55,7 +40,6 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
             corners.push_back(Point3f(float(j*squareSize),
                                       float(i*squareSize), 0));
 }
-
 
 static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
                             vector<vector<Point2f> > imagePoints2,
