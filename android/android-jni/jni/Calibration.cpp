@@ -160,34 +160,9 @@ bool Calibration::detectAndDrawChessboard(int idx, image_pool* pool)
   if (grey.empty())
     return false;
   vector<Point2f> corners;
-  IplImage iplgrey = grey;
-  patternfound = cvCheckChessboard(&iplgrey, patternsize);
-  if (!patternfound)
-    return false;
 
-  float factor = grey.cols / 320.0f;
-  if (factor < 1)
-    factor = 1;
-  cv::Size r_size = cv::Size(grey.cols / factor, grey.rows / factor);
-  Mat grey_sub;
-  while (patternfound && (r_size.width < grey.size().width))
-  {
-    cv::resize(grey, grey_sub, r_size);
-    patternfound = findChessboardCorners(grey_sub, patternsize, corners);
-    if (patternfound)
-    {
-      r_size.width *= 2;
-      r_size.height *= 2;
-    }
-    else
-    {
-      return false;
-    }
-  }
-
-  // hopefully if we're going to fail we fail on a smaller size image in the while-loop
-  patternfound = findChessboardCorners(grey, patternsize, corners);
-
+  patternfound = findChessboardCorners(grey, patternsize, corners,CALIB_CB_FILTER_QUADS + CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE
+                                                + CALIB_CB_FAST_CHECK);
   Mat img = pool->getImage(idx);
 
   if (corners.size() < 1)

@@ -51,8 +51,8 @@ public class CameraConfig extends Activity {
 		// Restore preferences
 		SharedPreferences settings = ctx.getSharedPreferences(CAMERA_SETTINGS,
 				0);
-		size[0] = settings.getInt(IMAGE_WIDTH, 600);
-		size[1] = settings.getInt(IMAGE_HEIGHT, 400);
+		size[0] = settings.getInt(IMAGE_WIDTH, 640);
+		size[1] = settings.getInt(IMAGE_HEIGHT, 480);
 
 	}
 

@@ -17,7 +17,7 @@ public class ChessBoardChooser extends Activity {
 	public static final String CHESS_SIZE = "chess_size";
 	public static final int DEFAULT_WIDTH = 6;
 	public static final int DEFAULT_HEIGHT = 8;
-	public static final int LOWEST = 3;
+	public static final int LOWEST = 2;
 
 	class DimChooser implements OnItemSelectedListener {
 		private String dim;

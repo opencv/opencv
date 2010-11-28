@@ -3,7 +3,7 @@
 <string-array name="image_sizes">
 <item>320x240</item>
 <item>400x300</item>
-<item>600x400</item>
+<item>640x480</item>
 <item>800x600</item>
 <item>1000x800</item>
 </string-array>

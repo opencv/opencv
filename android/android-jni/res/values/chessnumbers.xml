@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 <string-array name="chesssizes">
+<item>2</item>
 <item>3</item>
 <item>4</item>
 <item>5</item>
