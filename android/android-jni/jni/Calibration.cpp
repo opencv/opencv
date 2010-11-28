@@ -155,25 +155,49 @@ void saveCameraParams(const string& filename, Size imageSize, Size boardSize, fl
 bool Calibration::detectAndDrawChessboard(int idx, image_pool* pool)
 {
 
+  bool patternfound = false;
   Mat grey = pool->getGrey(idx);
   if (grey.empty())
     return false;
   vector<Point2f> corners;
-
   IplImage iplgrey = grey;
-  if (!cvCheckChessboard(&iplgrey, patternsize))
+  patternfound = cvCheckChessboard(&iplgrey, patternsize);
+  if (!patternfound)
     return false;
-  bool patternfound = findChessboardCorners(grey, patternsize, corners);
+
+  float factor = grey.cols / 320.0f;
+  if (factor < 1)
+    factor = 1;
+  cv::Size r_size = cv::Size(grey.cols / factor, grey.rows / factor);
+  Mat grey_sub;
+  while (patternfound && (r_size.width < grey.size().width))
+  {
+    cv::resize(grey, grey_sub, r_size);
+    patternfound = findChessboardCorners(grey_sub, patternsize, corners);
+    if (patternfound)
+    {
+      r_size.width *= 2;
+      r_size.height *= 2;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  // hopefully if we're going to fail we fail on a smaller size image in the while-loop
+  patternfound = findChessboardCorners(grey, patternsize, corners);
 
   Mat img = pool->getImage(idx);
 
   if (corners.size() < 1)
     return false;
 
-  cornerSubPix(grey, corners, Size(11, 11), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
-
   if (patternfound)
+  {
+    cornerSubPix(grey, corners, Size(11, 11), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
     imagepoints.push_back(corners);
+  }
 
   drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
 
