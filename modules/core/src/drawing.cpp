@@ -892,7 +892,7 @@ EllipseEx( Mat& img, Point center, Size axes,
            int angle, int arc_start, int arc_end,
            const void* color, int thickness, int line_type )
 {
-    CV_Assert( axes.width >= 0 && axes.height >= 0 );
+    axes.width = std::abs(axes.width), axes.height = std::abs(axes.height);
     int delta = (std::max(axes.width,axes.height)+(XY_ONE>>1))>>XY_SHIFT;
     delta = delta < 3 ? 90 : delta < 10 ? 30 : delta < 15 ? 18 : 5;
 
