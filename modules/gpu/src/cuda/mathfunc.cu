@@ -463,6 +463,25 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
+    template <int size, typename T>
+    __device__ void find_min_max_in_smem(volatile T* minval, volatile T* maxval, const unsigned int tid)
+    {
+        if (size >= 512) { if (tid < 256) { merge(tid, 256, minval, maxval); } __syncthreads(); }
+        if (size >= 256) { if (tid < 128) { merge(tid, 128, minval, maxval); }  __syncthreads(); }
+        if (size >= 128) { if (tid < 64) { merge(tid, 64, minval, maxval); } __syncthreads(); }
+
+        if (tid < 32)
+        {
+            if (size >= 64) merge(tid, 32, minval, maxval);
+            if (size >= 32) merge(tid, 16, minval, maxval);
+            if (size >= 16) merge(tid, 8, minval, maxval);
+            if (size >= 8) merge(tid, 4, minval, maxval);
+            if (size >= 4) merge(tid, 2, minval, maxval);
+            if (size >= 2) merge(tid, 1, minval, maxval);
+        }
+    }
+
+
     template <int nthreads, typename T>
     __global__ void min_max_kernel(const DevMem2D src, T* minval, T* maxval)
     {
@@ -490,22 +509,9 @@ namespace cv { namespace gpu { namespace mathfunc
 
         sminval[tid] = mymin;
         smaxval[tid] = mymax;
-
         __syncthreads();
 
-        if (nthreads >= 512) if (tid < 256) { merge(tid, 256, sminval, smaxval); __syncthreads(); }
-        if (nthreads >= 256) if (tid < 128) { merge(tid, 128, sminval, smaxval); __syncthreads(); }
-        if (nthreads >= 128) if (tid < 64) { merge(tid, 64, sminval, smaxval); __syncthreads(); }
-
-        if (tid < 32)
-        {
-            if (nthreads >= 64) merge(tid, 32, sminval, smaxval);
-            if (nthreads >= 32) merge(tid, 16, sminval, smaxval);
-            if (nthreads >= 16) merge(tid, 8, sminval, smaxval);
-            if (nthreads >= 8) merge(tid, 4, sminval, smaxval);
-            if (nthreads >= 4) merge(tid, 2, sminval, smaxval);
-            if (nthreads >= 2) merge(tid, 1, sminval, smaxval);
-        }
+        find_min_max_in_smem<nthreads, best_type>(sminval, smaxval, tid);
 
         if (tid == 0) 
         {
@@ -514,25 +520,42 @@ namespace cv { namespace gpu { namespace mathfunc
         }
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
-        
-        // Process partial results in the first thread of the last block      
-        if ((gridDim.x > 1 || gridDim.y > 1) && tid == 0)
-        {
-            __threadfence();
-            if (atomicInc(&blocks_finished, gridDim.x * gridDim.y) == gridDim.x * gridDim.y - 1)
-            {
-                mymin = minval[0];
-                mymax = maxval[0];
-                for (unsigned int i = 1; i < gridDim.x * gridDim.y; ++i)
-                {                    
-                    mymin = min(mymin, minval[i]);
-                    mymax = max(mymax, maxval[i]);
-                }
-                minval[0] = mymin;
-                maxval[0] = mymax;
-            }
-        }
+		__shared__ bool is_last;
 
+		if (tid == 0)
+		{
+			minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
+            maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
+			__threadfence();
+
+			unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+			is_last = ticket == gridDim.x * gridDim.y - 1;
+		}
+
+		__syncthreads();
+
+		if (is_last)
+		{
+            unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+
+            sminval[tid] = minval[idx];
+            smaxval[tid] = maxval[idx];
+            __syncthreads();
+
+			find_min_max_in_smem<nthreads, best_type>(sminval, smaxval, tid);
+
+            if (tid == 0) 
+            {
+                minval[0] = (T)sminval[0];
+                maxval[0] = (T)smaxval[0];
+            }
+		}
+#else
+        if (tid == 0) 
+        {
+            minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
+            maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
+        }
 #endif
     }
 
@@ -568,19 +591,27 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     // This kernel will be used only when compute capability is 1.0
-    template <typename T>
+    template <int nthreads, typename T>
     __global__ void min_max_kernel_2ndstep(T* minval, T* maxval, int size)
     {
-        T val;
-        T mymin = minval[0];
-        T mymax = maxval[0];
-        for (unsigned int i = 1; i < size; ++i)
-        {     
-            val = minval[i]; if (val < mymin) mymin = val;
-            val = maxval[i]; if (val > mymax) mymax = val;
+        typedef typename MinMaxTypeTraits<T>::best_type best_type;
+        __shared__ best_type sminval[nthreads];
+        __shared__ best_type smaxval[nthreads];
+        
+        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+
+        sminval[tid] = minval[idx];
+        smaxval[tid] = maxval[idx];
+        __syncthreads();
+
+		find_min_max_in_smem<nthreads, best_type>(sminval, smaxval, tid);
+
+        if (tid == 0) 
+        {
+            minval[0] = (T)sminval[0];
+            maxval[0] = (T)smaxval[0];
         }
-        minval[0] = mymin;
-        maxval[0] = mymax;
     }
 
 
@@ -596,7 +627,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         min_max_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf);
-        min_max_kernel_2ndstep<T><<<1, 1>>>(minval_buf, maxval_buf, grid.x * grid.y);
+        min_max_kernel_2ndstep<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -680,6 +711,26 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
+    template <int size, typename T>
+    __device__ void find_min_max_loc_in_smem(volatile T* minval, volatile T* maxval, volatile unsigned int* minloc, 
+                                             volatile unsigned int* maxloc, const unsigned int tid)
+    {
+        if (size >= 512) { if (tid < 256) { merge(tid, 256, minval, maxval, minloc, maxloc); } __syncthreads(); }
+        if (size >= 256) { if (tid < 128) { merge(tid, 128, minval, maxval, minloc, maxloc); }  __syncthreads(); }
+        if (size >= 128) { if (tid < 64) { merge(tid, 64, minval, maxval, minloc, maxloc); } __syncthreads(); }
+
+        if (tid < 32)
+        {
+            if (size >= 64) merge(tid, 32, minval, maxval, minloc, maxloc);
+            if (size >= 32) merge(tid, 16, minval, maxval, minloc, maxloc);
+            if (size >= 16) merge(tid, 8, minval, maxval, minloc, maxloc);
+            if (size >= 8) merge(tid, 4, minval, maxval, minloc, maxloc);
+            if (size >= 4) merge(tid, 2, minval, maxval, minloc, maxloc);
+            if (size >= 2) merge(tid, 1, minval, maxval, minloc, maxloc);
+        }
+    }
+
+
     template <int nthreads, typename T>
     __global__ void min_max_loc_kernel(const DevMem2D src, T* minval, T* maxval, 
                                        unsigned int* minloc, unsigned int* maxloc)
@@ -720,52 +771,54 @@ namespace cv { namespace gpu { namespace mathfunc
         smaxval[tid] = mymax;
         sminloc[tid] = myminloc;
         smaxloc[tid] = mymaxloc;
-
         __syncthreads();
 
-        if (nthreads >= 512) if (tid < 256) { merge(tid, 256, sminval, smaxval, sminloc, smaxloc); __syncthreads(); }
-        if (nthreads >= 256) if (tid < 128) { merge(tid, 128, sminval, smaxval, sminloc, smaxloc); __syncthreads(); }
-        if (nthreads >= 128) if (tid < 64) { merge(tid, 64, sminval, smaxval, sminloc, smaxloc); __syncthreads(); }
+        find_min_max_loc_in_smem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
-        if (tid < 32)
-        {
-            if (nthreads >= 64) merge(tid, 32, sminval, smaxval, sminloc, smaxloc);
-            if (nthreads >= 32) merge(tid, 16, sminval, smaxval, sminloc, smaxloc);
-            if (nthreads >= 16) merge(tid, 8, sminval, smaxval, sminloc, smaxloc);
-            if (nthreads >= 8) merge(tid, 4, sminval, smaxval, sminloc, smaxloc);
-            if (nthreads >= 4) merge(tid, 2, sminval, smaxval, sminloc, smaxloc);
-            if (nthreads >= 2) merge(tid, 1, sminval, smaxval, sminloc, smaxloc);
-        }
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+		__shared__ bool is_last;
 
+		if (tid == 0)
+		{
+			minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
+            maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
+            minloc[blockIdx.y * gridDim.x + blockIdx.x] = sminloc[0];
+            maxloc[blockIdx.y * gridDim.x + blockIdx.x] = smaxloc[0];
+			__threadfence();
+
+			unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+			is_last = ticket == gridDim.x * gridDim.y - 1;
+		}
+
+		__syncthreads();
+
+		if (is_last)
+		{
+            unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+
+            sminval[tid] = minval[idx];
+            smaxval[tid] = maxval[idx];
+            sminloc[tid] = minloc[idx];
+            smaxloc[tid] = maxloc[idx];
+            __syncthreads();
+
+			find_min_max_loc_in_smem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+
+            if (tid == 0) 
+            {
+                minval[0] = (T)sminval[0];
+                maxval[0] = (T)smaxval[0];
+                minloc[0] = sminloc[0];
+                maxloc[0] = smaxloc[0];
+            }
+		}
+#else
         if (tid == 0) 
         {
             minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
             maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
             minloc[blockIdx.y * gridDim.x + blockIdx.x] = sminloc[0];
             maxloc[blockIdx.y * gridDim.x + blockIdx.x] = smaxloc[0];
-        }
-
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
-        
-        // Process partial results in the first thread of the last block      
-        if ((gridDim.x > 1 || gridDim.y > 1) && tid == 0)
-        {
-            __threadfence();
-            if (atomicInc(&blocks_finished, gridDim.x * gridDim.y) == gridDim.x * gridDim.y - 1)
-            {
-                mymin = minval[0];
-                mymax = maxval[0];
-                unsigned int imin = 0, imax = 0;
-                for (unsigned int i = 1; i < gridDim.x * gridDim.y; ++i)
-                {                    
-                    val = minval[i]; if (val < mymin) { mymin = val; imin = i; }
-                    val = maxval[i]; if (val > mymax) { mymax = val; imax = i; }
-                }
-                minval[0] = mymin;
-                maxval[0] = mymax;
-                minloc[0] = minloc[imin];
-                maxloc[0] = maxloc[imax];
-            }
         }
 #endif
     }
@@ -811,22 +864,33 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     // This kernel will be used only when compute capability is 1.0
-    template <typename T>
+    template <int nthreads, typename T>
     __global__ void min_max_loc_kernel_2ndstep(T* minval, T* maxval, unsigned int* minloc, unsigned int* maxloc, int size)
     {
-        T val;
-        T mymin = minval[0];
-        T mymax = maxval[0];
-        unsigned int imin  = 0, imax = 0;
-        for (unsigned int i = 1; i < size; ++i)
-        {     
-            val = minval[i]; if (val < mymin) { mymin = val; imin = i; }
-            val = maxval[i]; if (val > mymax) { mymax = val; imax = i; }
+        typedef typename MinMaxTypeTraits<T>::best_type best_type;
+        __shared__ best_type sminval[nthreads];
+        __shared__ best_type smaxval[nthreads];
+        __shared__ unsigned int sminloc[nthreads];
+        __shared__ unsigned int smaxloc[nthreads];
+
+        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+
+        sminval[tid] = minval[idx];
+        smaxval[tid] = maxval[idx];
+        sminloc[tid] = minloc[idx];
+        smaxloc[tid] = maxloc[idx];
+        __syncthreads();
+
+		find_min_max_loc_in_smem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+
+        if (tid == 0) 
+        {
+            minval[0] = (T)sminval[0];
+            maxval[0] = (T)smaxval[0];
+            minloc[0] = sminloc[0];
+            maxloc[0] = smaxloc[0];
         }
-        minval[0] = mymin;
-        maxval[0] = mymax;
-        minloc[0] = minloc[imin];
-        maxloc[0] = maxloc[imax];
     }
 
 
@@ -845,7 +909,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
-        min_max_loc_kernel_2ndstep<T><<<1, 1>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        min_max_loc_kernel_2ndstep<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -909,13 +973,13 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int size, typename T>
-    __device__ void sum_shared_mem(volatile T* data, const unsigned int tid)
+    __device__ void sum_is_smem(volatile T* data, const unsigned int tid)
     {
         T sum = data[tid];
 
-        if (size >= 512) if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads();
-        if (size >= 256) if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads();
-        if (size >= 128) if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads();
+        if (size >= 512) { if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads(); }
+        if (size >= 256) { if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads(); }
+        if (size >= 128) { if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads(); }
 
         if (tid < 32)
         {
@@ -949,7 +1013,7 @@ namespace cv { namespace gpu { namespace mathfunc
 		scount[tid] = cnt;
 		__syncthreads();
 
-        sum_shared_mem<nthreads, unsigned int>(scount, tid);
+        sum_is_smem<nthreads, unsigned int>(scount, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
@@ -967,8 +1031,11 @@ namespace cv { namespace gpu { namespace mathfunc
 
 		if (is_last)
 		{
-			scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
-			sum_shared_mem<nthreads, unsigned int>(scount, tid);
+            scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
+            __syncthreads();
+
+			sum_is_smem<nthreads, unsigned int>(scount, tid);
+
 			if (tid == 0) count[0] = scount[0];
 		}
 #else
@@ -1012,7 +1079,7 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         scount[tid] = tid < size ? count[tid] : 0;
-		sum_shared_mem<nthreads, unsigned int>(scount, tid);
+		sum_is_smem<nthreads, unsigned int>(scount, tid);
 
 		if (tid == 0) count[0] = scount[0];
     }
