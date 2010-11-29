@@ -526,10 +526,8 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
     get_buf_size_required(src.elemSize(), bufSize.width, bufSize.height);
     buf.create(bufSize, CV_8U);
 
-    int major, minor;
-    getComputeCapability(getDevice(), major, minor);
- 
-    if (major > 1 || (major == 1 && minor >= 1))
+    int device = getDevice();
+    if (hasAtomicsSupport(device))
     {
         switch (src_.type())
         {
@@ -539,7 +537,12 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& 
         case CV_16S: min_max_caller<signed short>(src_, minVal, maxVal, buf); break;
         case CV_32S: min_max_caller<int>(src_, minVal, maxVal, buf); break;
         case CV_32F: min_max_caller<float>(src_, minVal, maxVal, buf); break;
-        case CV_64F: min_max_caller<double>(src_, minVal, maxVal, buf); break;
+        case CV_64F: 
+            if (hasNativeDoubleSupport(device))
+            {
+                min_max_caller<double>(src_, minVal, maxVal, buf); 
+                break;
+            }
         default: CV_Error(CV_StsBadArg, "minMax: unsupported type");
         }
     }
@@ -600,10 +603,8 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     valbuf.create(valbuf_size, CV_8U);
     locbuf.create(locbuf_size, CV_8U);
 
-    int major, minor;
-    getComputeCapability(getDevice(), major, minor);
- 
-    if (major > 1 || (major == 1 && minor >= 1))
+    int device = getDevice();
+    if (hasAtomicsSupport(device))
     {  
         switch (src.type())
         {
@@ -613,7 +614,12 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
         case CV_16S: min_max_loc_caller<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32S: min_max_loc_caller<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32F: min_max_loc_caller<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_64F: min_max_loc_caller<double>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_64F: 
+            if (hasNativeDoubleSupport(device))
+            {
+                min_max_loc_caller<double>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); 
+                break;
+            }
         default: CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
         }
     }
