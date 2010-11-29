@@ -1252,7 +1252,7 @@ void convexHull( const Mat\& points, vector<Point2f>\& hull,\par
                  bool clockwise=false );}
 \begin{description}
 \cvarg{points}{The input 2D point set, represented by \texttt{CV\_32SC2} or \texttt{CV\_32FC2} matrix, or by \texttt{vector<Point>} or \texttt{vector<Point2f>} converted to the matrix using \texttt{Mat(const vector<T>\&)} constructor.}
-\cvarg{hull}{The output convex hull. It is either a vector of points that form the hull, or a vector of 0-based point indices of the hull points in the original array (since the set of convex hull points is a subset of the original point set).}
+\cvarg{hull}{The output convex hull. It is either a vector of points that form the hull (must have the same type as the input points), or a vector of 0-based point indices of the hull points in the original array (since the set of convex hull points is a subset of the original point set).}
 \cvarg{clockwise}{If true, the output convex hull will be oriented clockwise, otherwise it will be oriented counter-clockwise. Here, the usual screen coordinate system is assumed - the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.}
 \end{description}
 
