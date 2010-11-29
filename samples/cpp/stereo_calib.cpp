@@ -57,7 +57,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         return;
     }
     
-    bool displayCorners = true;
+    bool displayCorners = false;//true;
     const int maxScale = 2;
     const float squareSize = 1.f;  // Set this to your actual square size
     // ARRAY AND VECTOR STORAGE:
@@ -172,7 +172,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
                     CV_CALIB_FIX_ASPECT_RATIO +
                     CV_CALIB_ZERO_TANGENT_DIST +
                     CV_CALIB_SAME_FOCAL_LENGTH +
-                    CV_CALIB_FIX_K3);
+                    CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);
     cout << "done\n";
     
 // CALIBRATION QUALITY CHECK
@@ -217,13 +217,13 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         cout << "Error: can not save the intrinsic parameters\n";
     
     Mat R1, R2, P1, P2, Q;
-    Rect roi1, roi2;
+    Rect validRoi[2];
     
     stereoRectify(cameraMatrix[0], distCoeffs[0],
                   cameraMatrix[1], distCoeffs[1],
                   imageSize, R, T, R1, R2, P1, P2, Q,
-                  1, imageSize, &roi1, &roi2);
-    
+                  1, imageSize, &validRoi[0], &validRoi[1]);
+        
     fs.open("extrinsics.yml", CV_STORAGE_WRITE);
     if( fs.isOpened() )
     {
@@ -237,17 +237,17 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     // or up-down camera arrangements
     bool isVerticalStereo = fabs(P2.at<double>(1, 3)) > fabs(P2.at<double>(0, 3));
     
-//COMPUTE AND DISPLAY RECTIFICATION
+// COMPUTE AND DISPLAY RECTIFICATION
     if( !showRectified )
         return;
     
     Mat rmap[2][2];
 // IF BY CALIBRATED (BOUGUET'S METHOD)
-    if( !useCalibrated )
+    if( useCalibrated )
     {
         // we already computed everything
     }
-//OR ELSE HARTLEY'S METHOD
+// OR ELSE HARTLEY'S METHOD
     else
  // use intrinsic parameters of each camera, but
  // compute the rectification transformation directly
@@ -265,17 +265,60 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         
         R1 = cameraMatrix[0].inv()*H1*cameraMatrix[0];
         R2 = cameraMatrix[1].inv()*H2*cameraMatrix[1];
+        P1 = cameraMatrix[0];
+        P2 = cameraMatrix[1];
     }
 
     //Precompute maps for cv::remap()
     initUndistortRectifyMap(cameraMatrix[0], distCoeffs[0], R1, P1, imageSize, CV_16SC2, rmap[0][0], rmap[0][1]);
     initUndistortRectifyMap(cameraMatrix[1], distCoeffs[1], R2, P2, imageSize, CV_16SC2, rmap[1][0], rmap[1][1]);
     
-    /*for( i = 0; i < nimages; i++ )
+    Mat canvas;
+    double sf;
+    int w, h;
+    if( !isVerticalStereo )
     {
-        Mat img = 
+        sf = 1;//600./MAX(imageSize.width, imageSize.height);
+        w = cvRound(imageSize.width*sf);
+        h = cvRound(imageSize.height*sf);
+        canvas.create(h, w*2, CV_8UC3);
+    }
+    else
+    {
+        sf = 1;//300./MAX(imageSize.width, imageSize.height);
+        w = cvRound(imageSize.width*sf);
+        h = cvRound(imageSize.height*sf);
+        canvas.create(h*2, w, CV_8UC3);
+    }
+    
+    for( i = 0; i < nimages; i++ )
+    {
+        for( k = 0; k < 2; k++ )
+        {
+            Mat img = imread(goodImageList[i*2+k], 0), rimg, cimg;
+            remap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
+            cvtColor(rimg, cimg, CV_GRAY2BGR);
+            Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
+            resize(cimg, canvasPart, canvasPart.size(), 0, 0, CV_INTER_AREA);
+            if( useCalibrated )
+            {
+                Rect vroi(cvRound(validRoi[k].x*sf), cvRound(validRoi[k].y*sf),
+                          cvRound(validRoi[k].width*sf), cvRound(validRoi[k].height*sf)); 
+                rectangle(canvasPart, vroi, Scalar(0,0,255), 3, 8);
+            }
+        }
         
-    }*/
+        if( !isVerticalStereo )
+            for( j = 0; j < canvas.rows; j += 16 )
+                line(canvas, Point(0, j), Point(canvas.cols, j), Scalar(0, 255, 0), 1, 8);
+        else
+            for( j = 0; j < canvas.cols; j += 16 )
+                line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
+        imshow("rectified", canvas);
+        char c = (char)waitKey();
+        if( c == 27 || c == 'q' || c == 'Q' )
+            break;
+    }
 }
 
                    
@@ -297,7 +340,7 @@ static bool readStringList( const string& filename, vector<string>& l )
                    
 int print_help()
 {
-    cout << "Usage:\n ./stereo_calib -w board_width -h board_height <image list XML/YML file>\n";
+    cout << "Usage:\n ./stereo_calib -w board_width -h board_height [-nr /*dot not view results*/] <image list XML/YML file>\n";
     return 0;
 }
 
@@ -306,13 +349,28 @@ int main(int argc, char** argv)
 {
     Size boardSize;
     string imagelistfn;
+    bool showRectified = true;
     
     for( int i = 1; i < argc; i++ )
     {
         if( string(argv[i]) == "-w" )
-            sscanf(argv[++i], "%d", &boardSize.width);
+        {
+            if( sscanf(argv[++i], "%d", &boardSize.width) != 1 || boardSize.width <= 0 )
+            {
+                cout << "invalid board width" << endl;
+                return print_help();
+            }
+        }
         else if( string(argv[i]) == "-h" )
-            sscanf(argv[++i], "%d", &boardSize.height);
+        {
+            if( sscanf(argv[++i], "%d", &boardSize.height) != 1 || boardSize.height <= 0 )
+            {
+                cout << "invalid board height" << endl;
+                return print_help();
+            }
+        }
+        else if( string(argv[i]) == "-nr" )
+            showRectified = false;
         else if( string(argv[i]) == "--help" )
             return print_help();
         else if( argv[i][0] == '-' )
@@ -332,11 +390,13 @@ int main(int argc, char** argv)
     
     vector<string> imagelist;
     bool ok = readStringList(imagelistfn, imagelist);
-    
-    if( !ok || imagelist.empty() || boardSize.width <= 0 || boardSize.height <= 0 )
+    if(!ok || imagelist.empty())
+    {
+        cout << "can not open " << imagelistfn << " or the string list is empty" << endl;
         return print_help();
+    }
     
-    StereoCalib(imagelist, boardSize);
+    StereoCalib(imagelist, boardSize, true, showRectified);
     return 0;
 }
 
