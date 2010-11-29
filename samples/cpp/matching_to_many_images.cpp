@@ -7,22 +7,33 @@
 using namespace cv;
 using namespace std;
 
-/*
- * This is a sample on matching descriptors detected on one image to descriptors detected in image set.
- * So we have one query image and several train images. For each keypoint descriptor of query image
- * the one nearest train descriptor is found the entire collection of train images. To visualize the result
- * of matching we save images, each of which combines query and train image with matches between them (if they exist).
- * Match is drawn as line between corresponding points. Count of all matches is equel to count of
- * query keypoints, so we have the same count of lines in all set of result images (but not for each result
- * (train) image).
- */
-
 const string defaultDetectorType = "SURF";
 const string defaultDescriptorType = "SURF";
 const string defaultMatcherType = "FlannBased";
 const string defaultQueryImageName = "../../opencv/samples/cpp/matching_to_many_images/query.png";
 const string defaultFileWithTrainImages = "../../opencv/samples/cpp/matching_to_many_images/train/trainImages.txt";
 const string defaultDirToSaveResImages = "../../opencv/samples/cpp/matching_to_many_images/results";
+
+void printPrompt( const string& applName )
+{
+	cout << "/*\n"
+	<< " * This is a sample on matching descriptors detected on one image to descriptors detected in image set.\n"
+	<< " * So we have one query image and several train images. For each keypoint descriptor of query image\n"
+	<< " * the one nearest train descriptor is found the entire collection of train images. To visualize the result\n"
+	<< " * of matching we save images, each of which combines query and train image with matches between them (if they exist).\n"
+	<< " * Match is drawn as line between corresponding points. Count of all matches is equel to count of\n"
+	<< " * query keypoints, so we have the same count of lines in all set of result images (but not for each result\n"
+	<< " * (train) image).\n"
+	<< " */\n" << endl;
+
+    cout << endl << "Format:" << endl;
+    cout << "./" << applName << " [detectorType] [descriptorType] [matcherType] [queryImage] [fileWithTrainImages] [dirToSaveResImages]" << endl;
+    cout << endl;
+
+    cout << "\nExample:" << endl
+         << "./" << applName << " " << defaultDetectorType << " " << defaultDescriptorType << " " << defaultMatcherType << " "
+         << defaultQueryImageName << " " << defaultFileWithTrainImages << " " << defaultDirToSaveResImages << endl;
+}
 
 void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, vector<char>& mask )
 {
@@ -164,15 +175,6 @@ void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& queryKeypo
         }
     }
     cout << ">" << endl;
-}
-
-void printPrompt( const string& applName )
-{
-    cout << endl << "Format:" << endl;
-    cout << applName << " [detectorType] [descriptorType] [matcherType] [queryImage] [fileWithTrainImages] [dirToSaveResImages]" << endl;
-    cout << endl << "Example:" << endl
-         << defaultDetectorType << " " << defaultDescriptorType << " " << defaultMatcherType << " "
-         << defaultQueryImageName << " " << defaultFileWithTrainImages << " " << defaultDirToSaveResImages << endl;
 }
 
 int main(int argc, char** argv)
