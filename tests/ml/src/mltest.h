@@ -104,6 +104,8 @@ protected:
     CvERTrees* ertrees;
 
     map<int, int> cls_map;
+
+    int64 initSeed;
 };
 
 class CV_AMLTest : public CV_MLBaseTest
