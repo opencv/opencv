@@ -540,7 +540,8 @@ public:
         CvParamGrid pGrid      = get_default_grid(CvSVM::P),
         CvParamGrid nuGrid     = get_default_grid(CvSVM::NU),
         CvParamGrid coeffGrid  = get_default_grid(CvSVM::COEF),
-        CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE) );
+        CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE),
+        bool balanced=false );
 
     virtual float predict( const CvMat* sample, bool returnDFVal=false ) const;
 
@@ -561,7 +562,8 @@ public:
                             CvParamGrid pGrid      = CvSVM::get_default_grid(CvSVM::P),
                             CvParamGrid nuGrid     = CvSVM::get_default_grid(CvSVM::NU),
                             CvParamGrid coeffGrid  = CvSVM::get_default_grid(CvSVM::COEF),
-                            CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE) );
+                            CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE),
+                            bool balanced=false);
     CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;    
 #endif
     
