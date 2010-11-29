@@ -13,6 +13,17 @@
 using namespace cv;
 using namespace std;
 
+void myhelp()
+{
+
+printf("Sigh: This program is not complete/will be replaced. \n"
+"So:   Use this just to see hints of how to use things like Rodrigues\n"
+"      conversions, finding the fundamental matrix, using descriptor\n"
+"      finding and matching in features2d and using camera parameters\n"
+		);
+}
+
+
 static bool readCameraMatrix(const string& filename,
                              Mat& cameraMatrix, Mat& distCoeffs,
                              Size& calibratedImageSize )
@@ -606,11 +617,12 @@ int main(int argc, char** argv)
     triangulatePoint_test();
     
     const char* help = "Usage: build3dmodel -i <intrinsics_filename>\n"
-        "\t[-d <detector>] [-de <descriptor_extractor>] -m <model_name>\n";
+        "\t[-d <detector>] [-de <descriptor_extractor>] -m <model_name>\n\n";
     
     if(argc < 3)
     {
         puts(help);
+        myhelp();
         return 0;
     }
     const char* intrinsicsFilename = 0;
