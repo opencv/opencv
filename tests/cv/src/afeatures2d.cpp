@@ -84,7 +84,6 @@ void CV_FeatureDetectorTest::emptyDataTest()
     {
         ts->printf( CvTS::LOG, "detect() on empty image must not generate exception (1).\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
-        return;
     }
 
     if( !keypoints.empty() )
@@ -105,7 +104,6 @@ void CV_FeatureDetectorTest::emptyDataTest()
     {
         ts->printf( CvTS::LOG, "detect() on empty image vector must not generate exception (2).\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
-        return;
     }
 }
 
@@ -534,6 +532,80 @@ private:
 void CV_DescriptorMatcherTest::emptyDataTest()
 {
     assert( !dmatcher.empty() );
+    Mat queryDescriptors, trainDescriptors, mask;
+    vector<Mat> trainDescriptorCollection, masks;
+    vector<DMatch> matches;
+    vector<vector<DMatch> > vmatches;
+
+    try
+    {
+        dmatcher->match( queryDescriptors, trainDescriptors, matches, mask );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "match() on empty descriptors must not generate exception (1).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher->knnMatch( queryDescriptors, trainDescriptors, vmatches, 2, mask );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "knnMatch() on empty descriptors must not generate exception (1).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher->radiusMatch( queryDescriptors, trainDescriptors, vmatches, 10.f, mask );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "radiusMatch() on empty descriptors must not generate exception (1).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher->add( trainDescriptorCollection );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "add() on empty descriptors must not generate exception.\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher->match( queryDescriptors, matches, masks );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "match() on empty descriptors must not generate exception (2).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher->knnMatch( queryDescriptors, vmatches, 2, masks );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "knnMatch() on empty descriptors must not generate exception (2).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher->radiusMatch( queryDescriptors, vmatches, 10.f, masks );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "radiusMatch() on empty descriptors must not generate exception (2).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
 
 }
 
