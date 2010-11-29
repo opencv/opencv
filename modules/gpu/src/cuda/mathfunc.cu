@@ -248,10 +248,10 @@ namespace cv { namespace gpu { namespace mathfunc
     struct Mask8U
     {
         explicit Mask8U(PtrStep mask): mask(mask) {}
-        __device__ bool operator()(int y, int x) { return mask.ptr(y)[x]; }
+        __device__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
         PtrStep mask;
     };
-    struct MaskTrue { __device__ bool operator()(int y, int x) { return true; } };
+    struct MaskTrue { __device__ bool operator()(int y, int x) const { return true; } };
 
     // Unary operations
 
@@ -788,8 +788,8 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    template <int nthreads, typename T>
-    __global__ void min_max_loc_kernel(const DevMem2D src, T* minval, T* maxval, 
+    template <int nthreads, typename T, typename Mask>
+    __global__ void min_max_loc_kernel(const DevMem2D src, Mask mask, T* minval, T* maxval, 
                                        unsigned int* minloc, unsigned int* maxloc)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
@@ -814,16 +814,11 @@ namespace cv { namespace gpu { namespace mathfunc
             const T* ptr = (const T*)src.ptr(y);
             for (unsigned int x = x0; x < x_end; x += blockDim.x)
             {
-                T val = ptr[x];
-                if (val <= mymin) 
-                { 
-                    mymin = val; 
-                    myminloc = y * src.cols + x; 
-                }
-                if (val >= mymax)
+                if (mask(y, x))
                 {
-                    mymax = val; 
-                    mymaxloc = y * src.cols + x; 
+                    T val = ptr[x];
+                    if (val <= mymin) { mymin = val; myminloc = y * src.cols + x; }
+                    if (val >= mymax) { mymax = val; mymaxloc = y * src.cols + x; }
                 }
             }
         }
@@ -887,6 +882,44 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
+    void min_max_loc_mask_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
+                                 int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* minval_buf = (T*)valbuf.ptr(0);
+        T* maxval_buf = (T*)valbuf.ptr(1);
+        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
+        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+
+        min_max_loc_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T minval_, maxval_;
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        *minval = minval_;
+        *maxval = maxval_;
+
+        unsigned int minloc_, maxloc_;
+        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
+        maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
+    }
+
+    template void min_max_loc_mask_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<double>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+
+
+    template <typename T>
     void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, 
                             int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
@@ -899,7 +932,7 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
         unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
 
-        min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        min_max_loc_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -957,8 +990,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    void min_max_loc_multipass_caller(const DevMem2D src, double* minval, double* maxval, 
-                                   int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+    void min_max_loc_mask_multipass_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
+                                           int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
         estimate_thread_cfg(threads, grid);
@@ -969,7 +1002,45 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
         unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
 
-        min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        min_max_loc_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        min_max_loc_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T minval_, maxval_;
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        *minval = minval_;
+        *maxval = maxval_;
+
+        unsigned int minloc_, maxloc_;
+        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
+        maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
+    }
+
+    template void min_max_loc_mask_multipass_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+
+
+    template <typename T>
+    void min_max_loc_multipass_caller(const DevMem2D src, double* minval, double* maxval, 
+                                      int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* minval_buf = (T*)valbuf.ptr(0);
+        T* maxval_buf = (T*)valbuf.ptr(1);
+        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
+        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+
+        min_max_loc_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         min_max_loc_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 

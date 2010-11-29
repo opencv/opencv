@@ -684,7 +684,7 @@ struct CV_GpuMinMaxTest: public CvTest
         if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
         for (int depth = CV_8U; depth <= depth_end; ++depth)
         {
-            for (int i = 0; i < 1; ++i)
+            for (int i = 0; i < 3; ++i)
             {
                 int rows = 1 + rand() % 1000;
                 int cols = 1 + rand() % 1000;
@@ -829,11 +829,14 @@ struct CV_GpuMinMaxLocTest: public CvTest
             rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
         }
 
+        cv::Mat mask(src.size(), CV_8U);
+        rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
+
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
 
         if (depth != CV_8S)       
-            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, mask);
         else 
         {
             // OpenCV's minMaxLoc doesn't support CV_8S type 
@@ -843,14 +846,17 @@ struct CV_GpuMinMaxLocTest: public CvTest
                 for (int j = 0; j < src.cols; ++j)
                 {
                     char val = src.at<char>(i, j);
-                    if (val < minVal) { minVal = val; minLoc = cv::Point(j, i); }
-                    if (val > maxVal) { maxVal = val; maxLoc = cv::Point(j, i); }
+                    if (mask.at<unsigned char>(i, j))
+                    {
+                        if (val < minVal) { minVal = val; minLoc = cv::Point(j, i); }
+                        if (val > maxVal) { maxVal = val; maxLoc = cv::Point(j, i); }
+                    }
                 }
         }
 
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;        
-        cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_, valbuf, locbuf);
+        cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::gpu::GpuMat(mask), valbuf, locbuf);
        
         CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
         CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);
