@@ -60,6 +60,8 @@ void help()
         "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
         "     [-p]                     # fix the principal point at the center\n"
         "     [-v]                     # flip the captured images around the horizontal axis\n"
+        "     [-V]                     # use a video file, and not an image list, uses\n"
+        "                              # [input_data] string for the video file name\n"
         "     [-su]                    # show undistorted images after calibration\n"
         "     [input_data]             # input data, one of the following:\n"
         "                              #  - text file with a list of the images of the board\n"
@@ -126,10 +128,11 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
     vector<vector<Point3f> > objectPoints(1);
     calcChessboardCorners(boardSize, squareSize, objectPoints[0]);
 
-	objectPoints.resize(imagePoints.size(),objectPoints[0]);
+    objectPoints.resize(imagePoints.size(),objectPoints[0]);
     
     calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
-                    distCoeffs, rvecs, tvecs, flags|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);///*|CV_CALIB_FIX_K3*/|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
+                    distCoeffs, rvecs, tvecs, flags|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
+                    ///*|CV_CALIB_FIX_K3*/|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
     
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
     
@@ -277,6 +280,7 @@ int main( int argc, char** argv )
     VideoCapture capture;
     bool flipVertical = false;
     bool showUndistorted = false;
+    bool videofile = false;
     int delay = 1000;
     clock_t prevTimestamp = 0;
     int mode = DETECTION;
@@ -284,11 +288,10 @@ int main( int argc, char** argv )
     vector<vector<Point2f> > imagePoints;
     vector<string> imageList;
 
-
     if( argc < 2 )
     {
-    	help();
-    	return 0;
+        help();
+        return 0;
     }
 
     for( i = 1; i < argc; i++ )
@@ -327,11 +330,11 @@ int main( int argc, char** argv )
         }
         else if( strcmp( s, "-op" ) == 0 )
         {
-            writePoints = 1;
+            writePoints = true;
         }
         else if( strcmp( s, "-oe" ) == 0 )
         {
-            writeExtrinsics = 1;
+            writeExtrinsics = true;
         }
         else if( strcmp( s, "-zt" ) == 0 )
         {
@@ -343,7 +346,11 @@ int main( int argc, char** argv )
         }
         else if( strcmp( s, "-v" ) == 0 )
         {
-            flipVertical = 1;
+            flipVertical = true;
+        }
+        else if( strcmp( s, "-V" ) == 0 )
+        {
+            videofile = true;
         }
         else if( strcmp( s, "-o" ) == 0 )
         {
@@ -355,18 +362,18 @@ int main( int argc, char** argv )
         }
         else if( s[0] != '-' )
         {
-			if( isdigit(s[0]) )
-				sscanf(s, "%d", &cameraId);
-			else
-				inputFilename = s;
-		}
+            if( isdigit(s[0]) )
+                sscanf(s, "%d", &cameraId);
+            else
+                inputFilename = s;
+        }
         else
             return fprintf( stderr, "Unknown option %s", s ), -1;
     }
 
     if( inputFilename )
     {
-        if( readStringList(inputFilename, imageList) )
+        if( !videofile && readStringList(inputFilename, imageList) )
             mode = CAPTURING;
         else    
             capture.open(inputFilename);
@@ -415,27 +422,25 @@ int main( int argc, char** argv )
             flip( view, view, 0 );
 
         vector<Point2f> pointbuf;
-       
-         
         cvtColor(view, viewGray, CV_BGR2GRAY); 
-      
-		    
-            bool found = findChessboardCorners( view, boardSize, pointbuf, CV_CALIB_CB_ADAPTIVE_THRESH & CV_CALIB_CB_FAST_CHECK & CV_CALIB_CB_NORMALIZE_IMAGE);
 
-           // improve the found corners' coordinate accuracy
-            if(found) cornerSubPix( viewGray, pointbuf, Size(11,11),
-                Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+        bool found = findChessboardCorners( view, boardSize, pointbuf,
+            CV_CALIB_CB_ADAPTIVE_THRESH & CV_CALIB_CB_FAST_CHECK & CV_CALIB_CB_NORMALIZE_IMAGE);
 
-            if( mode == CAPTURING && found &&
-               (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
-            {
-                imagePoints.push_back(pointbuf);
-                prevTimestamp = clock();
-                blink = capture.isOpened();
-            }
-               if(found) drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
+       // improve the found corners' coordinate accuracy
+        if(found) cornerSubPix( viewGray, pointbuf, Size(11,11),
+            Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+
+        if( mode == CAPTURING && found &&
+           (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
+        {
+            imagePoints.push_back(pointbuf);
+            prevTimestamp = clock();
+            blink = capture.isOpened();
+        }
         
-     
+        if(found)
+            drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
 
         string msg = mode == CAPTURING ? "100/100" :
             mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
@@ -445,11 +450,11 @@ int main( int argc, char** argv )
 
         if( mode == CAPTURING )
         {
-			if(undistortImage)
-            	msg = format( "%d/%d Undist", (int)imagePoints.size(), nframes );
+            if(undistortImage)
+                msg = format( "%d/%d Undist", (int)imagePoints.size(), nframes );
             else
-            	msg = format( "%d/%d", (int)imagePoints.size(), nframes );
-		}
+                msg = format( "%d/%d", (int)imagePoints.size(), nframes );
+        }
 
         putText( view, msg, textOrigin, 1, 1,
                  mode != CALIBRATED ? Scalar(0,0,255) : Scalar(0,255,0));
