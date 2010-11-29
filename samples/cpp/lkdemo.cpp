@@ -106,7 +106,7 @@ int main( int argc, char** argv )
             points[1].resize(k);
         }
 
-        if( addRemovePt && points[1].size() < MAX_COUNT )
+        if( addRemovePt && points[1].size() < (size_t)MAX_COUNT )
         {
             vector<Point2f> tmp;
             tmp.push_back(pt);

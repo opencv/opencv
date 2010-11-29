@@ -50,7 +50,6 @@ int main( int argc, char** argv )
     VideoCapture cap;
     Rect trackWindow;
     RotatedRect trackBox;
-    CvConnectedComp trackComp;
     int hsize = 16;
     float hranges[] = {0,180};
     const float* phranges = hranges;

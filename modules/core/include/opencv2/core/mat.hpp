@@ -757,7 +757,7 @@ SVD::backSubst( const Matx<_Tp, nm, 1>& w, const Matx<_Tp, m, nm>& u,
                 Matx<_Tp, n, nb>& dst )
 {
     assert( nm == MIN(m, n));
-    Mat _u(u, false), _w(w, false), _vt(vt, false), _rhs(_rhs, false), _dst(dst, false);
+    Mat _u(u, false), _w(w, false), _vt(vt, false), _rhs(rhs, false), _dst(dst, false);
     SVD::backSubst(_w, _u, _vt, _rhs, _dst);
     CV_Assert(_dst.data == (uchar*)&dst.val[0]);
 }
