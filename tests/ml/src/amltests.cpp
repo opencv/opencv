@@ -118,6 +118,6 @@ int CV_AMLTest::validate_test_results( int testCaseIdx )
 CV_AMLTest amldtree( CV_DTREE, "adtree" );
 CV_AMLTest amlboost( CV_BOOST, "aboost" );
 CV_AMLTest amlrtrees( CV_RTREES, "artrees" );
-//CV_AMLTest amlertrees( CV_ERTREES, "aertrees" );
+CV_AMLTest amlertrees( CV_ERTREES, "aertrees" );
 
 /* End of file. */

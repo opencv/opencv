@@ -666,6 +666,8 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
     CvMat* isubsample_idx = 0;
     CvMat* subsample_co = 0;
 
+    bool isMakeRootCopy = true;
+
     CV_FUNCNAME( "CvDTreeTrainData::subsample_data" );
 
     __BEGIN__;
@@ -674,9 +676,26 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         CV_ERROR( CV_StsError, "No training data has been set" );
 
     if( _subsample_idx )
+    {
         CV_CALL( isubsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count ));
 
-    if( !isubsample_idx )
+        if( isubsample_idx->cols + isubsample_idx->rows - 1 == sample_count )
+        {
+            const int* sidx = isubsample_idx->data.i;
+            for( int i = 0; i < sample_count; i++ )
+            {
+                if( sidx[i] != i )
+                {
+                    isMakeRootCopy = false;
+                    break;
+                }
+            }
+        }
+        else
+            isMakeRootCopy = false;
+    }
+
+    if( isMakeRootCopy )
     {
         // make a copy of the root node
         CvDTreeNode temp;
@@ -1588,7 +1607,7 @@ bool CvDTree::do_train( const CvMat* _subsample_idx )
     CV_CALL( try_split_node(root));
 
     if( data->params.cv_folds > 0 )
-        CV_CALL( prune_cv());
+        CV_CALL( prune_cv() );
 
     if( !data->shared )
         data->free_train_data();

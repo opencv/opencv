@@ -48,6 +48,7 @@ const char* blacklist[] =
     "adtree",          //ticket 662
     "artrees",         //ticket 460
     "aboost",          //ticket 474
+    "aertrees",
     0
 };
 
