@@ -432,11 +432,11 @@ int str_to_boost_type( string& str )
 CV_MLBaseTest::CV_MLBaseTest( const char* _modelName, const char* _testName, const char* _testFuncs ) :
 CvTest( _testName, _testFuncs )
 {
-    int64 seeds[] = { 0x00009fff4f9c8d52,
-                      0x0000a17166072c7c,
-                      0x0201b32115cd1f9a,
-                      0x0513cb37abcd1234,
-                      0x0001a2b3c4d5f678
+    int64 seeds[] = { CV_BIG_INT(0x00009fff4f9c8d52),
+                      CV_BIG_INT(0x0000a17166072c7c),
+                      CV_BIG_INT(0x0201b32115cd1f9a),
+                      CV_BIG_INT(0x0513cb37abcd1234),
+                      CV_BIG_INT(0x0001a2b3c4d5f678)
                     };
 
     int seedCount = sizeof(seeds)/sizeof(seeds[0]);
