@@ -805,21 +805,25 @@ namespace cv { namespace gpu { namespace mathfunc
         T val = ((const T*)src.ptr(0))[0];
         T mymin = val, mymax = val; 
         unsigned int myminloc = 0, mymaxloc = 0;
-        for (unsigned int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
+
+        unsigned int y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
+        unsigned int x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
+
+        for (unsigned int y = y0; y < y_end; y += blockDim.y)
         {
-            const T* ptr = (const T*)src.ptr(y0 + y * blockDim.y);
-            for (unsigned int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+            const T* ptr = (const T*)src.ptr(y);
+            for (unsigned int x = x0; x < x_end; x += blockDim.x)
             {
-                val = ptr[x0 + x * blockDim.x];
+                val = ptr[x];
                 if (val < mymin) 
                 { 
                     mymin = val; 
-                    myminloc = (y0 + y * blockDim.y) * src.cols + x0 + x * blockDim.x; 
+                    myminloc = y * src.cols + x; 
                 }
                 else if (val > mymax)
                 {
                     mymax = val; 
-                    mymaxloc = (y0 + y * blockDim.y) * src.cols + x0 + x * blockDim.x; 
+                    mymaxloc = y * src.cols + x; 
                 }
             }
         }
