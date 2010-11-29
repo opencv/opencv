@@ -95,7 +95,7 @@ CvANN_MLP::CvANN_MLP()
     layer_sizes = wbuf = 0;
     min_val = max_val = min_val1 = max_val1 = 0.;
     weights = 0;
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
     default_model_name = "my_nn";
     clear();
 }
@@ -108,7 +108,7 @@ CvANN_MLP::CvANN_MLP( const CvMat* _layer_sizes,
     layer_sizes = wbuf = 0;
     min_val = max_val = min_val1 = max_val1 = 0.;
     weights = 0;
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
     default_model_name = "my_nn";
     create( _layer_sizes, _activ_func, _f_param1, _f_param2 );
 }
@@ -190,7 +190,7 @@ void CvANN_MLP::init_weights()
             double s = 0;
             for( k = 0; k <= n1; k++ )
             {
-                val = cvRandReal(&rng)*2-1.;
+                val = rng->uniform(0., 1.)*2-1.;
                 w[k*n2 + j] = val;
                 s += fabs(val);
             }
@@ -928,8 +928,8 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
             for( i = 0; i < count; i++ )
             {
                 int tt;
-                j = (unsigned)cvRandInt(&rng) % count;
-                k = (unsigned)cvRandInt(&rng) % count;
+                j = (*rng)(count);
+                k = (*rng)(count);
                 CV_SWAP( _idx->data.i[j], _idx->data.i[k], tt );
             }
         }
@@ -1507,7 +1507,7 @@ CvANN_MLP::CvANN_MLP( const Mat& _layer_sizes, int _activ_func,
     layer_sizes = wbuf = 0;
     min_val = max_val = min_val1 = max_val1 = 0.;
     weights = 0;
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
     default_model_name = "my_nn";
     create( _layer_sizes, _activ_func, _f_param1, _f_param2 );
 }

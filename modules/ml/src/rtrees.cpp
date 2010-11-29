@@ -200,7 +200,7 @@ CvRTrees::CvRTrees()
     data             = NULL;
     active_var_mask  = NULL;
     var_importance   = NULL;
-    rng = cvRNG(0xffffffff);
+    rng = &cv::theRNG();
     default_model_name = "my_random_trees";
 }
 
@@ -235,7 +235,7 @@ CvMat* CvRTrees::get_active_var_mask()
 
 CvRNG* CvRTrees::get_rng()
 {
-    return &rng;
+    return &rng->state;
 }
 
 bool CvRTrees::train( const CvMat* _train_data, int _tflag,
@@ -375,7 +375,7 @@ bool CvRTrees::grow_forest( const CvTermCriteria term_crit )
         cvZero( sample_idx_mask_for_tree );
         for(i = 0; i < nsamples; i++ ) //form sample for creation one tree
         {
-            int idx = cvRandInt( &rng ) % nsamples;
+            int idx = (*rng)(nsamples);
             sample_idx_for_tree->data.i[i] = idx;
             sample_idx_mask_for_tree->data.ptr[idx] = 0xFF;
         }
@@ -458,8 +458,8 @@ bool CvRTrees::grow_forest( const CvTermCriteria term_crit )
 
                         if( sample_idx_mask_for_tree->data.ptr[i] ) //the sample is not OOB
                             continue;
-                        i1 = cvRandInt( &rng ) % nsamples;
-                        i2 = cvRandInt( &rng ) % nsamples;
+                        i1 = (*rng)(nsamples);
+                        i2 = (*rng)(nsamples);
                         CV_SWAP( mth_var_ptr[i1*dims], mth_var_ptr[i2*dims], temp );
 
                         // turn values of (m-1)-th variable, that were permuted
@@ -762,7 +762,7 @@ void CvRTrees::read( CvFileStorage* fs, CvFileNode* fnode )
         CV_Error( CV_StsParseError, "Some <nclasses>, <nsamples>, <var_count>, "
         "<nactive_vars>, <oob_error>, <ntrees> of tags are missing" );
 
-    rng = CvRNG( -1 );
+    rng = &cv::theRNG();
 
     trees = (CvForestTree**)cvAlloc( sizeof(trees[0])*ntrees );
     memset( trees, 0, sizeof(trees[0])*ntrees );

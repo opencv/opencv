@@ -84,7 +84,7 @@ CvMLData :: CvMLData()
     //flt_separator = '.';
 
     class_map = new std::map<std::string, int>();
-    rng = cvRNG( -cvGetTickCount() );
+    rng = &cv::theRNG();
 }
 
 CvMLData :: ~CvMLData()
@@ -608,8 +608,8 @@ void CvMLData :: mix_train_and_test_idx()
         int n = values->rows;
         for (int i = 0; i < n; i++)
         {
-            int a = cvRandInt( &rng ) % n;
-            int b = cvRandInt( &rng ) % n;
+            int a = (*rng)(n);
+            int b = (*rng)(n);
             int t;
             CV_SWAP( sample_idx[a], sample_idx[b], t );
         }

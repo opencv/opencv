@@ -913,7 +913,7 @@ struct CV_EXPORTS CvDTreeTrainData
     CvSet* cv_heap;
     CvSet* nv_heap;
 
-    CvRNG rng;
+    cv::RNG* rng;
 };
 
 class CvDTree;
@@ -1147,7 +1147,7 @@ protected:
     CvMat* var_importance;
     int nsamples;
 
-    CvRNG rng;
+    cv::RNG* rng;
     CvMat* active_var_mask;
 };
 
@@ -1908,7 +1908,7 @@ protected:
     CvMat* missing;
     CvMat* class_labels;
 
-    CvRNG rng;
+    cv::RNG* rng;
 
     int class_count;
     float delta;
@@ -2034,7 +2034,7 @@ protected:
     int activ_func;
     int max_count, max_buf_sz;
     CvANN_MLP_TrainParams params;
-    CvRNG rng;
+    cv::RNG* rng;
 };
 
 /****************************************************************************************\
@@ -2177,7 +2177,7 @@ protected:
     CvMat* test_sample_idx;
     int* sample_idx; // data of train_sample_idx and test_sample_idx
 
-    CvRNG rng;
+    cv::RNG* rng;
 };
 
 

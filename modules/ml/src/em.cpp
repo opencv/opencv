@@ -581,7 +581,7 @@ void CvEM::kmeans( const CvVectors& train_data, int nclusters, CvMat* labels,
 
     __BEGIN__;
 
-    CvRNG rng = cvRNG(-1);
+    cv::RNG* rng = &cv::theRNG();
     int i, j, k, nsamples, dims;
     int iter = 0;
     double max_dist = DBL_MAX;
@@ -605,7 +605,7 @@ void CvEM::kmeans( const CvVectors& train_data, int nclusters, CvMat* labels,
     {
         for( i = 0; i < nsamples; i++ )
             labels->data.i[i] = i*nclusters/nsamples;
-        cvRandShuffle( labels, &rng );
+        cvRandShuffle( labels, &rng->state );
     }
 
     for( ;; )
@@ -702,7 +702,7 @@ void CvEM::kmeans( const CvVectors& train_data, int nclusters, CvMat* labels,
                 const float* s;
                 for( j = 0; j < 10; j++ )
                 {
-                    i = cvRandInt( &rng ) % nsamples;
+                    i = (*rng)(nsamples);
                     if( counters->data.i[labels->data.i[i]] > 1 )
                         break;
                 }
@@ -738,7 +738,7 @@ void CvEM::kmeans( const CvVectors& train_data, int nclusters, CvMat* labels,
         if( counters->data.i[k] == 0 )
             for(;;)
             {
-                i = cvRandInt(&rng) % nsamples;
+                i = (*rng)(nsamples);
                 j = labels->data.i[i];
                 if( counters->data.i[j] > 1 )
                 {

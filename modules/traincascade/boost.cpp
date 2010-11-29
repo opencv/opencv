@@ -218,7 +218,7 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
     have_priors = false;
     is_classifier = true;
 
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
 
     set_params( _params );
 

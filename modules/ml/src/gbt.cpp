@@ -268,7 +268,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
     }    
 
     // subsample params and data
-    rng = CvRNG(time(0));
+    rng = &cv::theRNG();
 
     int samples_count = get_len(sample_idx);
 
@@ -698,8 +698,8 @@ void CvGBTrees::do_subsample()
     if (subsample_test)
         for (int i = 0; i < n; i++)
         {
-            int a = cvRandInt( &rng ) % n;
-            int b = cvRandInt( &rng ) % n;
+            int a = (*rng)(n);
+            int b = (*rng)(n);
             int t;
             CV_SWAP( idx[a], idx[b], t );
         }

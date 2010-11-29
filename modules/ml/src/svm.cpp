@@ -1612,7 +1612,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     int block_size = 1 << 16;
     double* alpha;
     int i, k;
-    CvRNG rng = cvRNG(-1);
+    RNG* rng = &theRNG();
 
     // all steps are logarithmic and must be > 1
     double degree_step = 10, g_step = 10, coef_step = 10, C_step = 10, nu_step = 10, p_step = 10;
@@ -1745,8 +1745,8 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     // randomly permute samples and responses
     for( i = 0; i < sample_count; i++ )
     {
-        int i1 = cvRandInt( &rng ) % sample_count;
-        int i2 = cvRandInt( &rng ) % sample_count;
+        int i1 = (*rng)(sample_count);
+        int i2 = (*rng)(sample_count);
         const float* temp;
         float t;
         int y;

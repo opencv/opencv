@@ -196,7 +196,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     clear();
 
     var_all = 0;
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
 
     CV_CALL( set_params( _params ));
 
@@ -566,7 +566,6 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     {
         unsigned short* udst = 0;
         int* idst = 0;
-        CvRNG* r = &rng;
 
         if (is_buf_16u)
         {
@@ -579,8 +578,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
             for( i = 0; i < sample_count; i++ )
             {
-                int a = cvRandInt(r) % sample_count;
-                int b = cvRandInt(r) % sample_count;
+                int a = (*rng)(sample_count);
+                int b = (*rng)(sample_count);
                 unsigned short unsh = (unsigned short)vi;
                 CV_SWAP( udst[a], udst[b], unsh );
             }
@@ -596,8 +595,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
             for( i = 0; i < sample_count; i++ )
             {
-                int a = cvRandInt(r) % sample_count;
-                int b = cvRandInt(r) % sample_count;
+                int a = (*rng)(sample_count);
+                int b = (*rng)(sample_count);
                 CV_SWAP( idst[a], idst[b], vi );
             }
         }
@@ -1134,7 +1133,7 @@ void CvDTreeTrainData::clear()
     
     data_root = 0;
 
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
 }
 
 
@@ -2040,14 +2039,14 @@ void CvDTree::cluster_categories( const int* vectors, int n, int m,
     double* buf = (double*)cvStackAlloc( (n + k)*sizeof(buf[0]) );
     double *v_weights = buf, *c_weights = buf + n;
     bool modified = true;
-    CvRNG* r = &data->rng;
+    RNG* r = data->rng;
 
     // assign labels randomly
     for( i = 0; i < n; i++ )
     {
         int sum = 0;
         const int* v = vectors + i*m;
-        labels[i] = i < k ? i : (cvRandInt(r) % k);
+        labels[i] = i < k ? i : (*r)(k);
 
         // compute weight of each vector
         for( j = 0; j < m; j++ )
@@ -2057,8 +2056,8 @@ void CvDTree::cluster_categories( const int* vectors, int n, int m,
 
     for( i = 0; i < n; i++ )
     {
-        int i1 = cvRandInt(r) % n;
-        int i2 = cvRandInt(r) % n;
+        int i1 = (*r)(n);
+        int i2 = (*r)(n);
         CV_SWAP( labels[i1], labels[i2], j );
     }
 

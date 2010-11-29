@@ -91,7 +91,7 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     clear();
 
     var_all = 0;
-    rng = cvRNG(-1);
+    rng = &cv::theRNG();
 
     CV_CALL( set_params( _params ));
 
@@ -444,7 +444,6 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     {
         unsigned short* udst = 0;
         int* idst = 0;
-        CvRNG* r = &rng;
 
         if (is_buf_16u)
         {
@@ -457,8 +456,8 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
             for( i = 0; i < sample_count; i++ )
             {
-                int a = cvRandInt(r) % sample_count;
-                int b = cvRandInt(r) % sample_count;
+                int a = (*rng)(sample_count);
+                int b = (*rng)(sample_count);
                 unsigned short unsh = (unsigned short)vi;
                 CV_SWAP( udst[a], udst[b], unsh );
             }
@@ -474,8 +473,8 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
             for( i = 0; i < sample_count; i++ )
             {
-                int a = cvRandInt(r) % sample_count;
-                int b = cvRandInt(r) % sample_count;
+                int a = (*rng)(sample_count);
+                int b = (*rng)(sample_count);
                 CV_SWAP( idst[a], idst[b], vi );
             }
         }
@@ -894,8 +893,8 @@ CvDTreeSplit* CvForestERTree::find_split_ord_class( CvDTreeNode* node, int vi, f
     if (fdiff > epsilon)
     {
         is_find_split = true;
-        CvRNG* rng = &data->rng;
-        split_val = pmin + cvRandReal(rng) * fdiff ;
+        cv::RNG* rng = data->rng;
+        split_val = pmin + rng->uniform(0.f, 1.f) * fdiff ;
         if (split_val - pmin <= FLT_EPSILON)
             split_val = pmin + split_delta;
         if (pmax - split_val <= FLT_EPSILON)
@@ -1047,7 +1046,7 @@ CvDTreeSplit* CvForestERTree::find_split_cat_class( CvDTreeNode* node, int vi, f
             for (int i = 0; i < valid_ccount; i++)
             {
                 uchar temp;
-                int i1 = cvRandInt( rng ) % valid_ccount;
+                int i1 =  cvRandInt( rng ) % valid_ccount;
                 int i2 = cvRandInt( rng ) % valid_ccount;
                 CV_SWAP( var_class_mask->data.ptr[i1], var_class_mask->data.ptr[i2], temp );
             }
@@ -1189,8 +1188,8 @@ CvDTreeSplit* CvForestERTree::find_split_ord_reg( CvDTreeNode* node, int vi, flo
     if (fdiff > epsilon)
     {
         is_find_split = true;
-        CvRNG* rng = &data->rng;
-        split_val = pmin + cvRandReal(rng) * fdiff ;
+        cv::RNG* rng = data->rng;
+        split_val = pmin + rng->uniform(0.f, 1.f) * fdiff ;
         if (split_val - pmin <= FLT_EPSILON)
             split_val = pmin + split_delta;
         if (pmax - split_val <= FLT_EPSILON)
@@ -1745,8 +1744,8 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
                         int i1, i2;
                         float temp;
 
-                        i1 = cvRandInt( &rng ) % nsamples;
-                        i2 = cvRandInt( &rng ) % nsamples;
+                        i1 = (*rng)(nsamples);
+                        i2 = (*rng)(nsamples);
                         CV_SWAP( mth_var_ptr[i1*dims], mth_var_ptr[i2*dims], temp );
 
                         // turn values of (m-1)-th variable, that were permuted
