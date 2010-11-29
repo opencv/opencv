@@ -4,7 +4,7 @@
 
 #include <android/log.h>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include <jni.h>
 using namespace cv;
 
 #define  LOG_TAG    "libandroid-opencv"
