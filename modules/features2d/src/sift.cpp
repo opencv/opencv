@@ -2061,10 +2061,11 @@ inline void ocvKeypointToVl( const VL::Sift& vlSift, const KeyPoint& ocvKeypoint
     vlKeypoint = vlSift.getKeypoint( ocvKeypoint.pt.x, ocvKeypoint.pt.y, sigma);
 }
 
-float computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, int angleMode )
+bool computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, float& angleVal, int angleMode )
 {
-    float angleVal = -1;
+    angleVal = 0.f;
     VL::float_t angles[4];
+
     int angleCount = sift.computeKeypointOrientations(angles, keypoint);
     if( angleCount > 0 )
     {
@@ -2082,8 +2083,10 @@ float computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& key
         {
           assert(0);
         }
+        return true;
     }
-    return angleVal;
+
+    return false;
 }
 
 // detectors
@@ -2098,6 +2101,7 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
 
     const double sigman = .5 ;
     const double sigma0 = 1.6 * powf(2.0f, 1.0f / commParams.nOctaveLayers) ;
+    const double a_180divPI = 180./CV_PI;
 
     VL::Sift vlsift((float*)fimg.data, fimg.cols, fimg.rows,
                     sigman, sigma0, commParams.nOctaves, commParams.nOctaveLayers,
@@ -2109,13 +2113,18 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
 
     for( VL::Sift::KeypointsConstIter iter = vlsift.keypointsBegin(); iter != vlsift.keypointsEnd(); ++iter )
     {
-        float angleVal = computeKeypointOrientations( vlsift, *iter, commParams.angleMode );
-        if( angleVal >= 0 )
+        float angleVal = 0.f;
+        if( computeKeypointOrientations( vlsift, *iter, angleVal, commParams.angleMode ) )
         {
-            keypoints.push_back( vlKeypointToOcv(vlsift, *iter, angleVal*180.0/CV_PI) );
+            keypoints.push_back( vlKeypointToOcv(vlsift, *iter, angleVal*a_180divPI) );
         }
     }
 }
+
+struct InvalidKeypoint
+{
+    bool operator()(const KeyPoint& kp) const { return kp.octave == std::numeric_limits<int>::max(); }
+};
 
 // descriptors
 void SIFT::operator()(const Mat& img, const Mat& mask,
@@ -2131,6 +2140,8 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
 
     const double sigman = .5 ;
     const double sigma0 = 1.6 * powf(2.0f, 1.0f / commParams.nOctaveLayers) ;
+    const double a_180divPI = 180./CV_PI;
+    const double a_PIdiv180 = CV_PI/180.;
 
     if( !useProvidedKeypoints )
         (*this)(img, mask, keypoints);
@@ -2142,20 +2153,40 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     vlsift.setMagnification(descriptorParams.magnification);
 
     descriptors.create( keypoints.size(), DescriptorParams::DESCRIPTOR_SIZE, DataType<VL::float_t>::type );
-    vector<KeyPoint>::const_iterator iter = keypoints.begin();
-    for( int pi = 0 ; iter != keypoints.end(); ++iter, pi++ )
+    vector<KeyPoint>::iterator kp_iter = keypoints.begin();
+
+    for( int pi = 0 ; kp_iter != keypoints.end(); ++kp_iter, pi++ )
     {
         VL::Sift::Keypoint vlkpt;
-        ocvKeypointToVl( vlsift, *iter, vlkpt, descriptorParams.magnification );
-        float angleVal = iter->angle*CV_PI/180.0;
+        ocvKeypointToVl( vlsift, *kp_iter, vlkpt, descriptorParams.magnification );
+
         if( descriptorParams.recalculateAngles )
         {
-            float recalcAngleVal = computeKeypointOrientations( vlsift, vlkpt, commParams.angleMode );
-            if( recalcAngleVal >= 0 )
-                angleVal = recalcAngleVal;
+            float recalcAngleVal = 0.f;
+            if( computeKeypointOrientations( vlsift, vlkpt, recalcAngleVal, commParams.angleMode ) )
+            {
+                kp_iter->angle = recalcAngleVal*a_180divPI; // save recalculated angle value
+                assert( kp_iter->angle >= 0 );
+                vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, recalcAngleVal);
+            }
+            else
+            {
+                // mark point to remove
+                kp_iter->octave = std::numeric_limits<int>::max();
+            }
         }
-        vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, angleVal);
+        else
+        {
+            if( kp_iter->angle < 0 )
+                CV_Error( CV_StsBadArg, "Angle must be applicable (i.e. supported by feature detector that was used to detect keypoints)." );
+
+            float angleVal = kp_iter->angle*a_PIdiv180;
+            vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, angleVal);
+        }
     }
+
+    if( descriptorParams.recalculateAngles )
+        keypoints.erase( remove_if(keypoints.begin(), keypoints.end(), InvalidKeypoint()), keypoints.end());
 }
 
 #endif
