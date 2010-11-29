@@ -223,6 +223,7 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_FIX_K4  2048
 #define CV_CALIB_FIX_K5  4096
 #define CV_CALIB_FIX_K6  8192
+#define CV_CALIB_RATIONAL_MODEL 16384
 
 /* Finds intrinsic and extrinsic camera parameters
    from a few views of known calibration pattern */
@@ -542,17 +543,18 @@ enum
     CALIB_FIX_PRINCIPAL_POINT = 4,
     CALIB_ZERO_TANGENT_DIST = 8,
     CALIB_FIX_FOCAL_LENGTH = 16,
-    CALIB_FIX_K1 = 32,
-    CALIB_FIX_K2 = 64,
-    CALIB_FIX_K3 = 128,
-    CALIB_FIX_K4 = 2048,
-    CALIB_FIX_K5 = 4096,
-    CALIB_FIX_K6 = 8192,
+    CALIB_FIX_K1 = CV_CALIB_FIX_K1,
+    CALIB_FIX_K2 = CV_CALIB_FIX_K2,
+    CALIB_FIX_K3 = CV_CALIB_FIX_K3,
+    CALIB_FIX_K4 = CV_CALIB_FIX_K4,
+    CALIB_FIX_K5 = CV_CALIB_FIX_K5,
+    CALIB_FIX_K6 = CV_CALIB_FIX_K6,
+    CALIB_RATIONAL_MODEL = CV_CALIB_RATIONAL_MODEL,
     // only for stereo
-    CALIB_FIX_INTRINSIC = 256,
-    CALIB_SAME_FOCAL_LENGTH = 512,
+    CALIB_FIX_INTRINSIC = CV_CALIB_FIX_INTRINSIC,
+    CALIB_SAME_FOCAL_LENGTH = CV_CALIB_SAME_FOCAL_LENGTH,
     // for stereo rectification
-    CALIB_ZERO_DISPARITY = 1024
+    CALIB_ZERO_DISPARITY = CV_CALIB_ZERO_DISPARITY
 };
 
 //! finds intrinsic and extrinsic camera parameters from several fews of a known calibration pattern.

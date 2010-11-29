@@ -1596,6 +1596,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         param[6] = param[7] = 0;
         mask[6] = mask[7] = 0;
     }
+    if( !(flags & CV_CALIB_RATIONAL_MODEL) )
+        flags |= CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5 + CV_CALIB_FIX_K6;
     if( flags & CV_CALIB_FIX_K1 )
         mask[4] = 0;
     if( flags & CV_CALIB_FIX_K2 )
@@ -1928,6 +1930,8 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
     if( recomputeIntrinsics )
     {
         uchar* imask = solver.mask->data.ptr + nparams - NINTRINSIC*2;
+        if( !(flags & CV_CALIB_RATIONAL_MODEL) )
+            flags |= CV_CALIB_FIX_K4 | CV_CALIB_FIX_K5 | CV_CALIB_FIX_K6;
         if( flags & CV_CALIB_FIX_ASPECT_RATIO )
             imask[0] = imask[NINTRINSIC] = 0;
         if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
@@ -3293,6 +3297,8 @@ double cv::calibrateCamera( const vector<vector<Point3f> >& objectPoints,
     int rtype = CV_64F;
     cameraMatrix = prepareCameraMatrix(cameraMatrix, rtype);
     distCoeffs = prepareDistCoeffs(distCoeffs, rtype);
+    if( !(flags & CALIB_RATIONAL_MODEL) )
+        distCoeffs = distCoeffs.rows == 1 ? distCoeffs.colRange(0, 5) : distCoeffs.rowRange(0, 5);
 
     size_t i, nimages = objectPoints.size();
     CV_Assert( nimages > 0 );
@@ -3341,6 +3347,13 @@ double cv::stereoCalibrate( const vector<vector<Point3f> >& objectPoints,
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype);
     distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype);
     distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype);
+    
+    if( !(flags & CALIB_RATIONAL_MODEL) )
+    {
+        distCoeffs1 = distCoeffs1.rows == 1 ? distCoeffs1.colRange(0, 5) : distCoeffs1.rowRange(0, 5);
+        distCoeffs2 = distCoeffs2.rows == 1 ? distCoeffs2.colRange(0, 5) : distCoeffs2.rowRange(0, 5);
+    }
+    
     R.create(3, 3, rtype);
     T.create(3, 1, rtype);
     E.create(3, 3, rtype);

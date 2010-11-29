@@ -160,8 +160,6 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     Mat cameraMatrix[2], distCoeffs[2];
     cameraMatrix[0] = Mat::eye(3, 3, CV_64F);
     cameraMatrix[1] = Mat::eye(3, 3, CV_64F);
-    distCoeffs[0] = Mat::zeros(8, 1, CV_64F);
-    distCoeffs[1] = Mat::zeros(8, 1, CV_64F);
     Mat R, T, E, F;
     
     stereoCalibrate(objectPoints, imagePoints[0], imagePoints[1],
@@ -171,8 +169,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
                     TermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5),
                     CV_CALIB_FIX_ASPECT_RATIO +
                     CV_CALIB_ZERO_TANGENT_DIST +
-                    CV_CALIB_SAME_FOCAL_LENGTH +
-                    CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);
+                    CV_CALIB_SAME_FOCAL_LENGTH);
     cout << "done\n";
     
 // CALIBRATION QUALITY CHECK

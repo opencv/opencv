@@ -60,17 +60,17 @@ is extended as:
 \vecthree{x}{y}{z} = R \vecthree{X}{Y}{Z} + t\\
 x' = x/z\\
 y' = y/z\\
-x'' = x' (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) \\
-y'' = y' (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' \\
+x'' = x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) \\
+y'' = y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' \\
 \text{where} \quad r^2 = x'^2 + y'^2 \\
 u = f_x*x'' + c_x\\
 v = f_y*y'' + c_y
 \end{array}
 \]
 
-$k_1$, $k_2$, $k_3$ are radial distortion coefficients, $p_1$, $p_2$ are tangential distortion coefficients.
+$k_1$, $k_2$, $k_3$, $k_4$, $k_5$, $k_6$ are radial distortion coefficients, $p_1$, $p_2$ are tangential distortion coefficients.
 Higher-order coefficients are not considered in OpenCV. In the functions below the coefficients are passed or returned as
-\[ (k_1, k_2, p_1, p_2[, k_3]) \]vector. That is, if the vector contains 4 elements, it means that $k_3=0$.
+\[ (k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]]) \] vector. That is, if the vector contains 4 elements, it means that $k_3=0$.
 The distortion coefficients do not depend on the scene viewed, thus they also belong to the intrinsic camera parameters.
 \emph{And they remain the same regardless of the captured image resolution.}
 That is, if, for example, a camera has been calibrated on images of $320
@@ -139,7 +139,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
 \cvarg{imageSize}{Size of the image, used only to initialize the intrinsic camera matrix}
 \cvarg{cameraMatrix}{The output 3x3 floating-point camera matrix $A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}$.\newline
 If \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS} and/or \texttt{CV\_CALIB\_FIX\_ASPECT\_RATIO} are specified, some or all of \texttt{fx, fy, cx, cy} must be initialized before calling the function}
-\cvarg{distCoeffs}{The output \cvCPy{4x1, 1x4,} 5x1 or 1x5 vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3])$}.
+\cvarg{distCoeffs}{The output vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements}
 \cvarg{rvecs}{The output \cvCPy{3x\emph{M} or \emph{M}x3 1-channel, or 1x\emph{M} or \emph{M}x1 3-channel array}\cvCpp{vector} of rotation vectors (see \cvCross{Rodrigues2}{Rodrigues}), estimated for each pattern view. That is, each k-th rotation vector together with the corresponding k-th translation vector (see the next output parameter description) brings the calibration pattern from the model coordinate space (in which object points are specified) to the world coordinate space, i.e. real position of the calibration pattern in the k-th pattern view (k=0..\emph{M}-1)}
 \cvarg{tvecs}{The output \cvCPy{3x\emph{M} or \emph{M}x3 1-channel, or 1x\emph{M} or \emph{M}x1 3-channel array}\cvCpp{vector} of translation vectors, estimated for each pattern view.}
 \cvarg{flags}{Different flags, may be 0 or combination of the following values:
@@ -148,6 +148,8 @@ If \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS} and/or \texttt{CV\_CALIB\_FIX\_ASPE
 \cvarg{CV\_CALIB\_FIX\_PRINCIPAL\_POINT}{The principal point is not changed during the global optimization, it stays at the center or at the other location specified when \newline \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS} is set too.}
 \cvarg{CV\_CALIB\_FIX\_ASPECT\_RATIO}{The functions considers only \texttt{fy} as a free parameter, the ratio \texttt{fx/fy} stays the same as in the input \texttt{cameraMatrix}. \newline When \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS} is not set, the actual input values of \texttt{fx} and \texttt{fy} are ignored, only their ratio is computed and used further.}
 \cvarg{CV\_CALIB\_ZERO\_TANGENT\_DIST}{Tangential distortion coefficients $(p_1, p_2)$ will be set to zeros and stay zero.}}
+\cvarg{CV\_CALIB\_FIX\_K1,...,CV\_CALIB\_FIX\_K6}{Do not change the corresponding radial distortion coefficient during the optimization. If \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS} is set, the coefficient from the supplied \texttt{distCoeffs} matrix is used, otherwise it is set to 0.}
+\cvarg{CV\_CALIB\_RATIONAL\_MODEL}{Enable coefficients k4, k5 and k6. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the rational model and return 8 coefficients. If the flag is not set, the function will compute \cvCpp{and return} only 5 distortion coefficients.}
 \end{description}
 \end{description}
 
@@ -638,13 +640,18 @@ Finds the object pose from the 3D-2D point correspondences
 \cvarg{objectPoints}{The array of object points in the object coordinate space, 3xN or Nx3 1-channel, or 1xN or Nx1 3-channel, where N is the number of points. \cvCpp{Can also pass \texttt{vector<Point3f>} here.}}
 \cvarg{imagePoints}{The array of corresponding image points, 2xN or Nx2 1-channel or 1xN or Nx1 2-channel, where N is the number of points. \cvCpp{Can also pass \texttt{vector<Point2f>} here.}}
 \cvarg{cameraMatrix}{The input camera matrix $A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1} $}
-\cvarg{distCoeffs}{The input 4x1, 1x4, 5x1 or 1x5 vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3])$. If it is NULL, all of the distortion coefficients are set to 0}
+\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{rvec}{The output rotation vector (see \cvCross{Rodrigues2}{Rodrigues}) that (together with \texttt{tvec}) brings points from the model coordinate system to the camera coordinate system}
 \cvarg{tvec}{The output translation vector}
 \cvarg{useExtrinsicGuess}{If true (1), the function will use the provided \texttt{rvec} and \texttt{tvec} as the initial approximations of the rotation and translation vectors, respectively, and will further optimize them.}
 \end{description}
 
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, i.e. the sum of squared distances between the observed projections \texttt{imagePoints} and the projected (using \cvCross{ProjectPoints2}{projectPoints}) \texttt{objectPoints}.
+
+
+\ifCPy
+The function's counterpart in the C++ API is \hyperref[cppfunc.solvePnP]{cv::solvePnP}
+\fi
 
 \ifCPy
 \cvCPyFunc{FindFundamentalMat}
@@ -756,7 +763,6 @@ Mat findHomography( const Mat\& srcPoints, const Mat\& dstPoints,\par
                     double ransacReprojThreshold=3 );\newline
 Mat findHomography( const Mat\& srcPoints, const Mat\& dstPoints,\par
                     int method=0, double ransacReprojThreshold=3 );}
-
 \begin{description}
 
 \cvCPy{\cvarg{srcPoints}{Coordinates of the points in the original plane, 2xN, Nx2, 3xN or Nx3 1-channel array (the latter two are for representation in homogeneous coordinates), where N is the number of points. 1xN or Nx1 2- or 3-channel array can also be passed.}
@@ -990,7 +996,7 @@ Returns the new camera matrix based on the free scaling parameter
     
 \begin{description}
 \cvarg{cameraMatrix}{The input camera matrix}
-\cvarg{distCoeffs}{The input 4x1, 1x4, 5x1 or 1x5 vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3])$}.
+\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{imageSize}{The original image size}
 \cvarg{alpha}{The free scaling parameter between 0 (when all the pixels in the undistorted image will be valid) and 1 (when all the source image pixels will be retained in the undistorted image); see \cvCross{StereoRectify}{stereoRectify}}
 \cvarg{newCameraMatrix}{The output new camera matrix.}
@@ -1044,7 +1050,7 @@ Computes an undistortion map.
 
 \begin{description}
 \cvarg{cameraMatrix}{The input camera matrix $A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1} $}
-\cvarg{distCoeffs}{The input 4x1, 1x4, 5x1 or 1x5 vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3])$}.
+\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{map1}{The first output map \cvCPy{of type \texttt{CV\_32FC1} or \texttt{CV\_16SC2} - the second variant is more efficient}}
 \cvarg{map2}{The second output map \cvCPy{of type \texttt{CV\_32FC1} or \texttt{CV\_16UC1} - the second variant is more efficient}}
 \end{description}
@@ -1073,7 +1079,7 @@ Computes the undistortion and rectification transformation map.
                            Mat\& map1, Mat\& map2 );}
 \begin{description}
 \cvarg{cameraMatrix}{The input camera matrix $A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}$}
-\cvarg{distCoeffs}{The input 4x1, 1x4, 5x1 or 1x5 vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3])$}.
+\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{R}{The optional rectification transformation in object space (3x3 matrix). \texttt{R1} or \texttt{R2}, computed by \cvCross{StereoRectify}{stereoRectify} can be passed here. If the matrix is \cvCPy{NULL}\cvCpp{empty}, the identity transformation is assumed}
 \cvarg{newCameraMatrix}{The new camera matrix $A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}$}
 \cvCpp{\cvarg{size}{The undistorted image size}
@@ -1182,7 +1188,7 @@ void projectPoints( const Mat\& objectPoints,\par
 \cvarg{rvec}{The rotation vector, see \cvCross{Rodrigues2}{Rodrigues}}
 \cvarg{tvec}{The translation vector}
 \cvarg{cameraMatrix}{The camera matrix $A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1} $}
-\cvarg{distCoeffs}{The input 4x1, 1x4, 5x1 or 1x5 vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3])$. If it is \cvC{NULL}\cvCpp{empty}\cvPy{None}, all of the distortion coefficients are considered 0's}
+\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{imagePoints}{The output array of image points, 2xN or Nx2 1-channel or 1xN or Nx1 2-channel \cvCpp{(or \texttt{vector<Point2f>})}}
 \cvarg{dpdrot}{Optional 2Nx3 matrix of derivatives of image points with respect to components of the rotation vector}
 \cvarg{dpdt}{Optional 2Nx3 matrix of derivatives of image points with respect to components of the translation vector}
@@ -1521,9 +1527,9 @@ Calibrates stereo camera.
     \cvarg{imagePoints2}{The vector of vectors of the object point projections on the calibration pattern views from the 2nd camera, one vector per a view. The projections must be in the same order as the corresponding object points.}
 \fi
     \cvarg{cameraMatrix1}{The input/output first camera matrix: $ \vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}$, $j = 0,\, 1$. If any of \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS}, \newline \texttt{CV\_CALIB\_FIX\_ASPECT\_RATIO}, \texttt{CV\_CALIB\_FIX\_INTRINSIC} or \texttt{CV\_CALIB\_FIX\_FOCAL\_LENGTH} are specified, some or all of the matrices' components must be initialized; see the flags description}
-    \cvarg{distCoeffs1}{The input/output lens distortion coefficients for the first camera, 4x1, 5x1, 1x4 or 1x5 floating-point vectors $(k_1^{(j)}, k_2^{(j)}, p_1^{(j)}, p_2^{(j)}[, k_3^{(j)}])$, $j = 0,\, 1$. If any of \texttt{CV\_CALIB\_FIX\_K1}, \texttt{CV\_CALIB\_FIX\_K2} or \texttt{CV\_CALIB\_FIX\_K3} is specified, then the corresponding elements of the distortion coefficients must be initialized.}    
+    \cvarg{distCoeffs}{The input/output vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. \cvCpp{On output vector length depends on the flags.}}
     \cvarg{cameraMatrix2}{The input/output second camera matrix, as cameraMatrix1.}
-    \cvarg{distCoeffs2}{The input/output lens distortion coefficients for the second camera, as distCoeffs1.}
+    \cvarg{distCoeffs2}{The input/output lens distortion coefficients for the second camera, as \texttt{distCoeffs1}.}
 \cvarg{imageSize}{Size of the image, used only to initialize intrinsic camera matrix.} 
 \cvarg{R}{The output rotation matrix between the 1st and the 2nd cameras' coordinate systems.}
 \cvarg{T}{The output translation vector between the cameras' coordinate systems.}
@@ -1538,7 +1544,8 @@ Calibrates stereo camera.
 \cvarg{CV\_CALIB\_FIX\_FOCAL\_LENGTH}{$f^{(j)}_x$ and $f^{(j)}_y$ are fixed.}
 \cvarg{CV\_CALIB\_FIX\_ASPECT\_RATIO}{$f^{(j)}_y$ is optimized, but the ratio $f^{(j)}_x/f^{(j)}_y$ is fixed.}
 \cvarg{CV\_CALIB\_SAME\_FOCAL\_LENGTH}{Enforces $f^{(0)}_x=f^{(1)}_x$ and $f^{(0)}_y=f^{(1)}_y$} \cvarg{CV\_CALIB\_ZERO\_TANGENT\_DIST}{Tangential distortion coefficients for each camera are set to zeros and fixed there.}
-\cvarg{CV\_CALIB\_FIX\_K1, CV\_CALIB\_FIX\_K2, CV\_CALIB\_FIX\_K3}{Fixes the corresponding radial distortion coefficient (the coefficient must be passed to the function)}
+\cvarg{CV\_CALIB\_FIX\_K1,...,CV\_CALIB\_FIX\_K6}{Do not change the corresponding radial distortion coefficient during the optimization. If \texttt{CV\_CALIB\_USE\_INTRINSIC\_GUESS} is set, the coefficient from the supplied \texttt{distCoeffs} matrix is used, otherwise it is set to 0.}
+\cvarg{CV\_CALIB\_RATIONAL\_MODEL}{Enable coefficients k4, k5 and k6. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the rational model and return 8 coefficients. If the flag is not set, the function will compute \cvCpp{and return} only 5 distortion coefficients.}
 \end{description}}
 \end{description}
 
@@ -1602,7 +1609,7 @@ void stereoRectify( const Mat\& cameraMatrix1, const Mat\& distCoeffs1,\par
                     int flags=CALIB\_ZERO\_DISPARITY );}
 \begin{description}
 \cvarg{cameraMatrix1, cameraMatrix2}{The camera matrices $\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}$.}
-\cvarg{distCoeffs1, distCoeffs2}{The input distortion coefficients for each camera, ${k_1}^{(j)}, {k_2}^{(j)}, {p_1}^{(j)}, {p_2}^{(j)} [, {k_3}^{(j)}]$}
+\cvarg{distCoeffs1, distCoeffs2}\cvarg{distCoeffs}{The input vectors of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements each. If the vectors are NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{imageSize}{Size of the image used for stereo calibration.}
 \cvarg{R}{The rotation matrix between the 1st and the 2nd cameras' coordinate systems.}
 \cvarg{T}{The translation vector between the cameras' coordinate systems.}
@@ -1715,7 +1722,7 @@ Transforms an image to compensate for lens distortion.
 \cvarg{src}{The input (distorted) image}
 \cvarg{dst}{The output (corrected) image; will have the same size and the same type as \texttt{src}}
 \cvarg{cameraMatrix}{The input camera matrix $A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1} $}
-\cvarg{distCoeffs}{The vector of distortion coefficients, $(k_1^{(j)}, k_2^{(j)}, p_1^{(j)}, p_2^{(j)}[, k_3^{(j)}])$}
+\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvCpp{\cvarg{newCameraMatrix}{Camera matrix of the distorted image. By default it is the same as \texttt{cameraMatrix}, but you may additionally scale and shift the result by using some different matrix}}
 \end{description}
 
@@ -1757,7 +1764,7 @@ void undistortPoints( const Mat\& src, Mat\& dst,\par
 \cvarg{src}{The observed point coordinates, 1xN or Nx1 2-channel (CV\_32FC2 or CV\_64FC2).} 
 \cvarg{dst}{The output ideal point coordinates, after undistortion and reverse perspective transformation\cvCPy{, same format as \texttt{src}}.}
 \cvarg{cameraMatrix}{The camera matrix $\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}$}
-\cvarg{distCoeffs}{The vector of distortion coefficients, $(k_1^{(j)}, k_2^{(j)}, p_1^{(j)}, p_2^{(j)}[, k_3^{(j)}])$}
+\cvarg{distCoeffs}\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
 \cvarg{R}{The rectification transformation in object space (3x3 matrix). \texttt{R1} or \texttt{R2}, computed by \cvCppCross{StereoRectify} can be passed here. If the matrix is empty, the identity transformation is used}
 \cvarg{P}{The new camera matrix (3x3) or the new projection matrix (3x4). \texttt{P1} or \texttt{P2}, computed by \cvCppCross{StereoRectify} can be passed here. If the matrix is empty, the identity new camera matrix is used}
 \end{description}
