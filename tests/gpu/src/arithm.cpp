@@ -680,17 +680,28 @@ struct CV_GpuMinMaxTest: public CvTest
 
     void run(int)
     {
-        int depth_end;
-        if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
-        for (int depth = CV_8U; depth <= depth_end; ++depth)
+        try
         {
-            for (int i = 0; i < 3; ++i)
+            int depth_end;
+            if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) 
+                depth_end = CV_64F; 
+            else 
+                depth_end = CV_32F;
+            for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
-                test(rows, cols, 1, depth);
-                test_masked(rows, cols, 1, depth);
+                for (int i = 0; i < 3; ++i)
+                {
+                    int rows = 1 + rand() % 1000;
+                    int cols = 1 + rand() % 1000;
+                    test(rows, cols, 1, depth);
+                    test_masked(rows, cols, 1, depth);
+                }
             }
+        }
+        catch (const Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
         }
     }
 
@@ -804,18 +815,29 @@ struct CV_GpuMinMaxLocTest: public CvTest
 
     void run(int)
     {
-        int depth_end;
-        if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
-        for (int depth = CV_8U; depth <= depth_end; ++depth)
+        try 
         {
-            int rows = 1, cols = 3;
-            test(rows, cols, depth);
-            for (int i = 0; i < 4; ++i)
+            int depth_end;
+            if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) 
+                depth_end = CV_64F; 
+            else 
+                depth_end = CV_32F;
+            for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
+                int rows = 1, cols = 3;
                 test(rows, cols, depth);
+                for (int i = 0; i < 4; ++i)
+                {
+                    int rows = 1 + rand() % 1000;
+                    int cols = 1 + rand() % 1000;
+                    test(rows, cols, depth);
+                }
             }
+        }
+        catch (const Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
         }
     }
 
@@ -875,17 +897,27 @@ struct CV_GpuCountNonZeroTest: CvTest
 
     void run(int) 
     {
-        srand(0);
-        int depth_end;
-        if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
-        for (int depth = CV_8U; depth <= CV_32F; ++depth)
+        try
         {
-            for (int i = 0; i < 4; ++i)
+            int depth_end;
+            if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) 
+                depth_end = CV_64F; 
+            else 
+                depth_end = CV_32F;
+            for (int depth = CV_8U; depth <= CV_32F; ++depth)
             {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
-                test(rows, cols, depth);
+                for (int i = 0; i < 4; ++i)
+                {
+                    int rows = 1 + rand() % 1000;
+                    int cols = 1 + rand() % 1000;
+                    test(rows, cols, depth);
+                }
             }
+        }
+        catch (const Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
         }
     }
 
