@@ -35,16 +35,20 @@ get_filename_component(THIS_OPENCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH
 # ======================================================
 # Include directories to add to the user project:
 # ======================================================
-INCLUDE_DIRECTORIES(@CMAKE_INCLUDE_DIRS_CONFIGCMAKE@)
+
 # Provide the include directories to the caller
 SET(OpenCV_INCLUDE_DIRS @CMAKE_INCLUDE_DIRS_CONFIGCMAKE@)
+
+INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
 # Link directories to add to the user project:
 # ======================================================
-LINK_DIRECTORIES("@CMAKE_LIB_DIRS_CONFIGCMAKE@")
+
 # Provide the libs directory anyway, it may be needed in some cases.
-SET(OpenCV_LIB_DIR "@CMAKE_LIB_DIRS_CONFIGCMAKE@")
+SET(OpenCV_LIB_DIR @CMAKE_LIB_DIRS_CONFIGCMAKE@)
+
+LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 
 # ====================================================================
 # Link libraries: e.g.   opencv_core220.so, opencv_imgproc220d.lib, etc...
@@ -78,7 +82,7 @@ endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 #  many more dependencies:
 IF (NOT @OPENCV_BUILD_SHARED_LIB@)
 	# Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
-	LINK_DIRECTORIES("@CMAKE_BINARY_DIR@/3rdparty/lib")
+	#LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib")
 
 	SET(OpenCV_LIBS
 		@OPENCV_LINKER_LIBS@
