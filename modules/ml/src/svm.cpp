@@ -1567,7 +1567,7 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     block_size = MAX( block_size, sample_count*2*(int)sizeof(double) + 1024 );
     block_size = MAX( block_size, sample_size*2 + 1024 );
 
-    CV_CALL( storage = cvCreateMemStorage(block_size));
+    CV_CALL( storage = cvCreateMemStorage(block_size + sizeof(CvMemBlock) + sizeof(CvSeqBlock)));
     CV_CALL( temp_storage = cvCreateChildMemStorage(storage));
     CV_CALL( alpha = (double*)cvMemStorageAlloc(temp_storage, sample_count*sizeof(double)));
 
