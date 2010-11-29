@@ -58,6 +58,7 @@ namespace cv
                 __device__ static type infinity() { return type(); }
                 __device__ static type quiet_NaN() { return type(); }
                 __device__ static type signaling_NaN() { return T(); }
+                static const bool is_signed;
             };
 
             template<> struct numeric_limits_gpu<bool>
@@ -71,6 +72,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = false;
             };
 
             template<> struct numeric_limits_gpu<char>
@@ -84,6 +86,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = (char)-1 == -1;
             };
 
             template<> struct numeric_limits_gpu<unsigned char>
@@ -97,6 +100,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = false;
             };
 
             template<> struct numeric_limits_gpu<short>
@@ -110,6 +114,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = true;
             };
 
             template<> struct numeric_limits_gpu<unsigned short>
@@ -123,6 +128,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = false;
             };
 
             template<> struct numeric_limits_gpu<int>
@@ -136,6 +142,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = true;
             };
 
 
@@ -150,6 +157,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = false;
             };
 
             template<> struct numeric_limits_gpu<long>
@@ -163,6 +171,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = true;
             };
 
             template<> struct numeric_limits_gpu<unsigned long>
@@ -176,6 +185,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = false;
             };
                         
             template<> struct numeric_limits_gpu<float>
@@ -189,6 +199,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = true;
             };
 
             template<> struct numeric_limits_gpu<double>
@@ -202,6 +213,7 @@ namespace cv
                 __device__ static type infinity();
                 __device__ static type quiet_NaN();
                 __device__ static type signaling_NaN();
+                static const bool is_signed = true;
             };            
         }
     }

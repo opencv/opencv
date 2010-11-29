@@ -524,20 +524,20 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 
     typedef void (*Caller)(const DevMem2D, double*, double*, PtrStep);
     static const Caller callers[2][7] = 
-    { { min_max_multipass_caller<unsigned char>, min_max_multipass_caller<signed char>, 
-        min_max_multipass_caller<unsigned short>, min_max_multipass_caller<signed short>, 
+    { { min_max_multipass_caller<unsigned char>, min_max_multipass_caller<char>, 
+        min_max_multipass_caller<unsigned short>, min_max_multipass_caller<short>, 
         min_max_multipass_caller<int>, min_max_multipass_caller<float>, 0 },
-      { min_max_caller<unsigned char>, min_max_caller<signed char>, 
-        min_max_caller<unsigned short>, min_max_caller<signed short>, 
+      { min_max_caller<unsigned char>, min_max_caller<char>, 
+        min_max_caller<unsigned short>, min_max_caller<short>, 
         min_max_caller<int>, min_max_caller<float>, min_max_caller<double> } };
 
     typedef void (*MaskedCaller)(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     static const MaskedCaller masked_callers[2][7] = 
-    { { min_max_mask_multipass_caller<unsigned char>, min_max_mask_multipass_caller<signed char>, 
-        min_max_mask_multipass_caller<unsigned short>, min_max_mask_multipass_caller<signed short>, 
+    { { min_max_mask_multipass_caller<unsigned char>, min_max_mask_multipass_caller<char>, 
+        min_max_mask_multipass_caller<unsigned short>, min_max_mask_multipass_caller<short>, 
         min_max_mask_multipass_caller<int>, min_max_mask_multipass_caller<float>, 0 },
-      { min_max_mask_caller<unsigned char>, min_max_mask_caller<signed char>, 
-        min_max_mask_caller<unsigned short>, min_max_mask_caller<signed short>, 
+      { min_max_mask_caller<unsigned char>, min_max_mask_caller<char>, 
+        min_max_mask_caller<unsigned short>, min_max_mask_caller<short>, 
         min_max_mask_caller<int>, min_max_mask_caller<float>, 
         min_max_mask_caller<double> } };
 
@@ -615,9 +615,9 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
         switch (src.type())
         {
         case CV_8U: min_max_loc_caller<unsigned char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_8S: min_max_loc_caller<signed char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_8S: min_max_loc_caller<char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_16U: min_max_loc_caller<unsigned short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_16S: min_max_loc_caller<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16S: min_max_loc_caller<short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32S: min_max_loc_caller<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32F: min_max_loc_caller<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_64F: 
@@ -634,9 +634,9 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
         switch (src.type())
         {
         case CV_8U: min_max_loc_multipass_caller<unsigned char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_8S: min_max_loc_multipass_caller<signed char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_8S: min_max_loc_multipass_caller<char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_16U: min_max_loc_multipass_caller<unsigned short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_16S: min_max_loc_multipass_caller<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16S: min_max_loc_multipass_caller<short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32S: min_max_loc_multipass_caller<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         case CV_32F: min_max_loc_multipass_caller<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         default: CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
@@ -683,9 +683,9 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
         switch (src.type())
         {
         case CV_8U: return count_non_zero_caller<unsigned char>(src, buf);
-        case CV_8S: return count_non_zero_caller<signed char>(src, buf);
+        case CV_8S: return count_non_zero_caller<char>(src, buf);
         case CV_16U: return count_non_zero_caller<unsigned short>(src, buf);
-        case CV_16S: return count_non_zero_caller<signed short>(src, buf);
+        case CV_16S: return count_non_zero_caller<short>(src, buf);
         case CV_32S: return count_non_zero_caller<int>(src, buf);
         case CV_32F: return count_non_zero_caller<float>(src, buf);
         case CV_64F: 
@@ -698,9 +698,9 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
         switch (src.type())
         {
         case CV_8U: return count_non_zero_multipass_caller<unsigned char>(src, buf);
-        case CV_8S: return count_non_zero_multipass_caller<signed char>(src, buf);
+        case CV_8S: return count_non_zero_multipass_caller<char>(src, buf);
         case CV_16U: return count_non_zero_multipass_caller<unsigned short>(src, buf);
-        case CV_16S: return count_non_zero_multipass_caller<signed short>(src, buf);
+        case CV_16S: return count_non_zero_multipass_caller<short>(src, buf);
         case CV_32S: return count_non_zero_multipass_caller<int>(src, buf);
         case CV_32F: return count_non_zero_multipass_caller<float>(src, buf);
         }

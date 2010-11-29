@@ -405,9 +405,9 @@ namespace cv { namespace gpu { namespace mathfunc
     // appropriate type (32 bits minimum)
     template <typename T> struct MinMaxTypeTraits {};
     template <> struct MinMaxTypeTraits<unsigned char> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<signed char> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<char> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<unsigned short> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<signed short> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<short> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
     template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
@@ -492,7 +492,7 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         T mymin = numeric_limits_gpu<T>::max();
-        T mymax = numeric_limits_gpu<T>::min();
+        T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : numeric_limits_gpu<T>::min();
         unsigned int y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
         unsigned int x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
         for (unsigned int y = y0; y < y_end; y += blockDim.y)
@@ -584,9 +584,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }  
 
     template void min_max_mask_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<signed char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_caller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<signed short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_caller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<double>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
@@ -613,9 +613,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }  
 
     template void min_max_caller<unsigned char>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<signed char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<char>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<unsigned short>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<signed short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<short>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<int>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<float>(const DevMem2D, double*,double*, PtrStep);
     template void min_max_caller<double>(const DevMem2D, double*, double*, PtrStep);
@@ -668,9 +668,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template void min_max_mask_multipass_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<signed char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_multipass_caller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<signed short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_multipass_caller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
 
@@ -697,9 +697,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template void min_max_multipass_caller<unsigned char>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<signed char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_multipass_caller<char>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<unsigned short>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<signed short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_multipass_caller<short>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<int>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<float>(const DevMem2D, double*, double*, PtrStep);
 
@@ -802,10 +802,10 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
         unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        T val = ((const T*)src.ptr(0))[0];
-        T mymin = val, mymax = val; 
-        unsigned int myminloc = 0, mymaxloc = 0;
-
+        T mymin = numeric_limits_gpu<T>::max();
+        T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : numeric_limits_gpu<T>::min(); 
+        unsigned int myminloc = 0;
+        unsigned int mymaxloc = 0;
         unsigned int y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
         unsigned int x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
 
@@ -814,13 +814,13 @@ namespace cv { namespace gpu { namespace mathfunc
             const T* ptr = (const T*)src.ptr(y);
             for (unsigned int x = x0; x < x_end; x += blockDim.x)
             {
-                val = ptr[x];
-                if (val < mymin) 
+                T val = ptr[x];
+                if (val <= mymin) 
                 { 
                     mymin = val; 
                     myminloc = y * src.cols + x; 
                 }
-                else if (val > mymax)
+                if (val >= mymax)
                 {
                     mymax = val; 
                     mymaxloc = y * src.cols + x; 
@@ -916,9 +916,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template void min_max_loc_caller<unsigned char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<signed char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<unsigned short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<signed short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<double>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
@@ -987,9 +987,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template void min_max_loc_multipass_caller<unsigned char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<signed char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_multipass_caller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<unsigned short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<signed short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_multipass_caller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
 
@@ -1126,9 +1126,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }  
 
     template int count_non_zero_caller<unsigned char>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<signed char>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<char>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<unsigned short>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<signed short>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<short>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<int>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<float>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<double>(const DevMem2D, PtrStep);
@@ -1171,9 +1171,9 @@ namespace cv { namespace gpu { namespace mathfunc
     }  
 
     template int count_non_zero_multipass_caller<unsigned char>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<signed char>(const DevMem2D, PtrStep);
+    template int count_non_zero_multipass_caller<char>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<unsigned short>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<signed short>(const DevMem2D, PtrStep);
+    template int count_non_zero_multipass_caller<short>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<int>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<float>(const DevMem2D, PtrStep);
 

@@ -701,7 +701,7 @@ struct CV_GpuMinMaxTest: public CvTest
         for (int i = 0; i < src.rows; ++i)
         { 
             Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
         }
 
         double minVal, maxVal;
@@ -714,7 +714,7 @@ struct CV_GpuMinMaxTest: public CvTest
         else 
         {
             minVal = std::numeric_limits<double>::max();
-            maxVal = std::numeric_limits<double>::min();
+            maxVal = -std::numeric_limits<double>::max();
             for (int i = 0; i < src.rows; ++i)
                 for (int j = 0; j < src.cols; ++j)
                 {
@@ -747,7 +747,7 @@ struct CV_GpuMinMaxTest: public CvTest
         for (int i = 0; i < src.rows; ++i)
         { 
             Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
         }
 
         cv::Mat mask(src.size(), CV_8U);
@@ -765,7 +765,7 @@ struct CV_GpuMinMaxTest: public CvTest
         {
             // OpenCV's minMaxLoc doesn't support CV_8S type 
             minVal = std::numeric_limits<double>::max();
-            maxVal = std::numeric_limits<double>::min();
+            maxVal = -std::numeric_limits<double>::max();
             for (int i = 0; i < src_.rows; ++i)
                 for (int j = 0; j < src_.cols; ++j)
                 {
@@ -826,7 +826,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
         for (int i = 0; i < src.rows; ++i)
         { 
             Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
         }
 
         double minVal, maxVal;
@@ -838,7 +838,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
         {
             // OpenCV's minMaxLoc doesn't support CV_8S type 
             minVal = std::numeric_limits<double>::max();
-            maxVal = std::numeric_limits<double>::min();
+            maxVal = -std::numeric_limits<double>::max();
             for (int i = 0; i < src.rows; ++i)
                 for (int j = 0; j < src.cols; ++j)
                 {
@@ -895,7 +895,7 @@ struct CV_GpuCountNonZeroTest: CvTest
             for (int i = 0; i < src.rows; ++i)
             { 
                 Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-                rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+                rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
             }
 
         int n_gold = cv::countNonZero(src);
