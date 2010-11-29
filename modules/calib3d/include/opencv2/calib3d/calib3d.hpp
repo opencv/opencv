@@ -77,10 +77,15 @@ CVAPI(void) cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst );
 /* Calculates fundamental matrix given a set of corresponding points */
 #define CV_FM_7POINT 1
 #define CV_FM_8POINT 2
-#define CV_FM_LMEDS_ONLY  8
-#define CV_FM_RANSAC_ONLY 4
-#define CV_FM_LMEDS 8
-#define CV_FM_RANSAC 4
+
+#define CV_LMEDS 4
+#define CV_RANSAC 8
+    
+#define CV_FM_LMEDS_ONLY  CV_LMEDS
+#define CV_FM_RANSAC_ONLY CV_RANSAC
+#define CV_FM_LMEDS CV_LMEDS
+#define CV_FM_RANSAC CV_RANSAC
+    
 CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
                                  CvMat* fundamental_matrix,
                                  int method CV_DEFAULT(CV_FM_RANSAC),
@@ -119,9 +124,6 @@ CVAPI(void) cvGetOptimalNewCameraMatrix( const CvMat* camera_matrix,
 /* Converts rotation vector to rotation matrix or vice versa */
 CVAPI(int) cvRodrigues2( const CvMat* src, CvMat* dst,
                          CvMat* jacobian CV_DEFAULT(0) );
-
-#define CV_LMEDS 4
-#define CV_RANSAC 8
 
 /* Finds perspective transformation between the object plane and image (view) plane */
 CVAPI(int) cvFindHomography( const CvMat* src_points,
@@ -438,8 +440,8 @@ CV_EXPORTS_AS(RodriguesJ) void Rodrigues(const Mat& src, CV_OUT Mat& dst, CV_OUT
 //! type of the robust estimation algorithm
 enum
 {
-    LMEDS=4, //!< least-median algorithm
-    RANSAC=8 //!< RANSAC algorithm
+    LMEDS=CV_LMEDS, //!< least-median algorithm
+    RANSAC=CV_RANSAC //!< RANSAC algorithm
 };
 
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
@@ -543,11 +545,11 @@ CV_EXPORTS void drawChessboardCorners( Mat& image, Size patternSize,
     
 enum
 {
-    CALIB_USE_INTRINSIC_GUESS = 1,
-    CALIB_FIX_ASPECT_RATIO = 2,
-    CALIB_FIX_PRINCIPAL_POINT = 4,
-    CALIB_ZERO_TANGENT_DIST = 8,
-    CALIB_FIX_FOCAL_LENGTH = 16,
+    CALIB_USE_INTRINSIC_GUESS = CV_CALIB_USE_INTRINSIC_GUESS,
+    CALIB_FIX_ASPECT_RATIO = CV_CALIB_FIX_ASPECT_RATIO,
+    CALIB_FIX_PRINCIPAL_POINT = CV_CALIB_FIX_PRINCIPAL_POINT,
+    CALIB_ZERO_TANGENT_DIST = CV_CALIB_ZERO_TANGENT_DIST,
+    CALIB_FIX_FOCAL_LENGTH = CV_CALIB_FIX_FOCAL_LENGTH,
     CALIB_FIX_K1 = CV_CALIB_FIX_K1,
     CALIB_FIX_K2 = CV_CALIB_FIX_K2,
     CALIB_FIX_K3 = CV_CALIB_FIX_K3,
@@ -645,10 +647,10 @@ CV_EXPORTS void convertPointsHomogeneous( const Mat& src, CV_OUT vector<Point2f>
 //! the algorithm for finding fundamental matrix
 enum
 { 
-    FM_7POINT = 1, //!< 7-point algorithm
-    FM_8POINT = 2, //!< 8-point algorithm
-    FM_LMEDS = 4,  //!< least-median algorithm
-    FM_RANSAC = 8  //!< RANSAC algorithm
+    FM_7POINT = CV_FM_7POINT, //!< 7-point algorithm
+    FM_8POINT = CV_FM_8POINT, //!< 8-point algorithm
+    FM_LMEDS = CV_FM_LMEDS,  //!< least-median algorithm
+    FM_RANSAC = CV_FM_RANSAC  //!< RANSAC algorithm
 };
 
 //! finds fundamental matrix from a set of corresponding 2D points

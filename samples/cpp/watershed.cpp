@@ -92,9 +92,9 @@ int main( int argc, char** argv )
             vector<Vec3b> colorTab;
             for( i = 0; i < compCount; i++ )
             {
-                int b = theRNG().uniform(180, 230);
-                int g = theRNG().uniform(180, 230);
-                int r = theRNG().uniform(180, 230);
+                int b = theRNG().uniform(0, 255);
+                int g = theRNG().uniform(0, 255);
+                int r = theRNG().uniform(0, 255);
                 
                 colorTab.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
             }
