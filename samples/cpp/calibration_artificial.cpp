@@ -9,7 +9,14 @@
 
 using namespace cv;
 using namespace std;
-
+void help()
+{
+	cout << "\nThis code generates an artificial camera and artificial chessboard views,\n"
+         <<  "and then calibrates. It is basically test code for calibration that shows\n"
+		 <<	"how to package calibration points and then calibrate the camera.\n"
+		 <<	"Call:\n"
+		 <<	"./calibration_artificial\n" << endl;
+}
 namespace cv
 {
 
@@ -53,8 +60,11 @@ template<class T> ostream& operator<<(ostream& out, const Mat_<T>& mat)
     return out;
 }
 
+
+
 int main()
 {          
+	help();
     cout << "Initializing background...";    
     Mat background(imgSize, CV_8UC3);  
     randu(background, Scalar::all(32), Scalar::all(255));    
