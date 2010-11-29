@@ -47,6 +47,7 @@
 #endif
 
 #include "cxts.h"
+#include "opencv2/core/internal.hpp"
 #include <assert.h>
 #include <float.h>
 #include <limits.h>

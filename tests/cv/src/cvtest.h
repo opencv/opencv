@@ -46,11 +46,19 @@
 #pragma warning( disable: 4710 4711 4514 4996 )
 #endif
 
-#include "cv.h"
-#include "cxmisc.h"
-#include "cvaux.h"
 #include "cxts.h"
-#include "highgui.h"
+#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/legacy/compat.hpp"
+#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core/core_c.h"
+#include "opencv2/core/internal.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
 
 #undef min
 #undef max

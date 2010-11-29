@@ -41,6 +41,8 @@
 
 #include "cvtest.h"
 
+#if 0
+
 #if defined WIN32 || defined _WIN32
 #include "direct.h"
 #else
@@ -427,7 +429,7 @@ protected:
 
     std::vector<Camera*> m_cameras;
     RigidBody* m_body;
-    std::vector<CvPoint2D64d*> m_image_points;
+    std::vector<CvPoint2D64f*> m_image_points;
     std::vector<int*> m_point_visibility;
     float noise;
 
@@ -1157,15 +1159,15 @@ void CV_BundleAdjustmentTest::run( int start_from )
     int             numImages;
     CvSize          etalonSize;
     
-    CvPoint2D64d*   imagePoints;
-    CvPoint3D64d*   objectPoints;
-    CvPoint2D64d*   reprojectPoints;
+    CvPoint2D64f*   imagePoints;
+    CvPoint3D64f*   objectPoints;
+    CvPoint2D64f*   reprojectPoints;
 
-    CvVect64d       transVects;
-    CvMatr64d       rotMatrs;
+    double*         transVects;
+    double*         rotMatrs;
 
-    CvVect64d       goodTransVects;
-    CvMatr64d       goodRotMatrs;
+    double*         goodTransVects;
+    double*         goodRotMatrs;
 
     double          cameraMatrix[3*3];
     double          distortion[4];
@@ -1278,14 +1280,14 @@ void CV_BundleAdjustmentTest::run( int start_from )
         }
 
         /* Need to allocate memory */
-        imagePoints     = (CvPoint2D64d*)cvAlloc( numPoints *
-                                                    numImages * sizeof(CvPoint2D64d));
+        imagePoints     = (CvPoint2D64f*)cvAlloc( numPoints *
+                                                    numImages * sizeof(CvPoint2D64f));
         
-        objectPoints    = (CvPoint3D64d*)cvAlloc( numPoints *
-                                                    numImages * sizeof(CvPoint3D64d));
+        objectPoints    = (CvPoint3D64f*)cvAlloc( numPoints *
+                                                    numImages * sizeof(CvPoint3D64f));
 
-        reprojectPoints = (CvPoint2D64d*)cvAlloc( numPoints *
-                                                    numImages * sizeof(CvPoint2D64d));
+        reprojectPoints = (CvPoint2D64f*)cvAlloc( numPoints *
+                                                    numImages * sizeof(CvPoint2D64f));
 
         /* Alloc memory for numbers */
         numbers = (int*)cvAlloc( numImages * sizeof(int));
@@ -1297,11 +1299,11 @@ void CV_BundleAdjustmentTest::run( int start_from )
         }
 
         /* Allocate memory for translate vectors and rotmatrixs*/
-        transVects     = (CvVect64d)cvAlloc(3 * 1 * numImages * sizeof(double));
-        rotMatrs       = (CvMatr64d)cvAlloc(3 * 3 * numImages * sizeof(double));
+        transVects     = (double*)cvAlloc(3 * 1 * numImages * sizeof(double));
+        rotMatrs       = (double*)cvAlloc(3 * 3 * numImages * sizeof(double));
 
-        goodTransVects = (CvVect64d)cvAlloc(3 * 1 * numImages * sizeof(double));
-        goodRotMatrs   = (CvMatr64d)cvAlloc(3 * 3 * numImages * sizeof(double));
+        goodTransVects = (double*)cvAlloc(3 * 1 * numImages * sizeof(double));
+        goodRotMatrs   = (double*)cvAlloc(3 * 3 * numImages * sizeof(double));
 
         /* Read object points */
         i = 0;/* shift for current point */
@@ -1379,7 +1381,7 @@ void CV_BundleAdjustmentTest::run( int start_from )
         cameraMatrix[8] = 1.;
 
         /* Now we can calibrate camera */
-        cvCalibrateCamera_64d(  numImages,
+        cvCalibrateCamera_64f(  numImages,
                                 numbers,
                                 imageSize,
                                 imagePoints,
@@ -1528,3 +1530,6 @@ _exit_:
 }
 
 //CV_BundleAdjustmentTest bundleadjustment_test;
+
+#endif
+

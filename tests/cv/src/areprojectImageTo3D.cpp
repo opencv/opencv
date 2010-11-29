@@ -117,7 +117,7 @@ protected:
     {                     
         typedef Vec<OutT, 3> out3d_t;
 
-        bool handleMissingValues = (int)theRNG() % 2 == 0;                   
+        bool handleMissingValues = (unsigned)theRNG() % 2 == 0;                   
 
         Mat_<InT> disp(Size(320, 240));
         randu(disp, Scalar(min), Scalar(max));

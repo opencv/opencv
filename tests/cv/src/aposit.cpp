@@ -161,8 +161,8 @@ void CV_POSITTest::run( int start_from )
         for ( i = 0; i < 8; i++ )
         {
             float vec[3];
-            CvMat Vec = cvMat( 3, 1, CV_MAT32F, vec );
-            CvMat Obj_point = cvMat( 3, 1, CV_MAT32F, &obj_points[i].x );
+            CvMat Vec = cvMat( 3, 1, CV_32F, vec );
+            CvMat Obj_point = cvMat( 3, 1, CV_32F, &obj_points[i].x );
 
             cvMatMul( true_rotation, &Obj_point, &Vec );
 

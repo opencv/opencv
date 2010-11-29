@@ -42,8 +42,8 @@
 #ifndef __CXTS_H__
 #define __CXTS_H__
 
-#include "cxcore.h"
-#include "cxmisc.h"
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/core_c.h"
 #include <assert.h>
 #include <limits.h>
 #include <setjmp.h>

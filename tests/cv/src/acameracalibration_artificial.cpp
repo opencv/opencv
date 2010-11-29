@@ -327,7 +327,7 @@ protected:
         Mat camMat_est = Mat::eye(3, 3, CV_64F), distCoeffs_est = Mat::zeros(1, 5, CV_64F);
         vector<Mat> rvecs_est, tvecs_est;
 
-        int flags = 0; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;
+        int flags = /*CV_CALIB_FIX_K3|*/CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;
         double rep_error = calibrateCamera(objectPoints, imagePoints, imgSize, camMat_est, distCoeffs_est, rvecs_est, tvecs_est, flags);
         rep_error /= brdsNum * cornersSize.area();
 
