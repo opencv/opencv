@@ -55,6 +55,8 @@ CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; }
 CV_EXPORTS void cv::gpu::getComputeCapability(int /*device*/, int& /*major*/, int& /*minor*/) { throw_nogpu(); } 
 CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { throw_nogpu(); return 0; } 
 CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& /*free*/, size_t& /*total*/)  { throw_nogpu(); } 
+CV_EXPORTS bool cv::gpu::hasNativeDoubleSupport(int /*device*/) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int /*device*/) { throw_nogpu(); return false; }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -104,6 +106,20 @@ CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
 CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& free, size_t& total)
 {
     cudaSafeCall( cudaMemGetInfo( &free, &total ) );
+}
+
+CV_EXPORTS bool cv::gpu::hasNativeDoubleSupport(int device)
+{
+    int major, minor;
+    getComputeCapability(device, major, minor);
+    return major > 1 || (major == 1 && minor >= 3);
+}
+
+CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int device) 
+{
+    int major, minor;
+    getComputeCapability(device, major, minor);
+    return major > 1 || (major == 1 && minor >= 1);
 }
 
 #endif

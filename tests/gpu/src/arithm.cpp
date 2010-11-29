@@ -681,11 +681,7 @@ struct CV_GpuMinMaxTest: public CvTest
     void run(int)
     {
         int depth_end;
-        int major, minor;
-        cv::gpu::getComputeCapability(getDevice(), major, minor);
-
-        if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
-
+        if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
         for (int cn = 1; cn <= 4; ++cn)
             for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
@@ -760,10 +756,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
     void run(int)
     {
         int depth_end;
-        int major, minor;
-        cv::gpu::getComputeCapability(getDevice(), major, minor);
-
-        if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
+        if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
         for (int depth = CV_8U; depth <= depth_end; ++depth)
         {
             int rows = 1, cols = 3;
@@ -829,11 +822,8 @@ struct CV_GpuCountNonZeroTest: CvTest
     {
         srand(0);
         int depth_end;
-        int major, minor;
-        cv::gpu::getComputeCapability(getDevice(), major, minor);
-
-        if (minor >= 1) depth_end = CV_64F; else depth_end = CV_32F;
-        for (int depth = CV_8U; depth <= depth_end; ++depth)
+        if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
+        for (int depth = CV_8U; depth <= CV_32F; ++depth)
         {
             for (int i = 0; i < 4; ++i)
             {

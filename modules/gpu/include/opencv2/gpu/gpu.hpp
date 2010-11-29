@@ -68,6 +68,9 @@ namespace cv
 
         CV_EXPORTS void getGpuMemInfo(size_t& free, size_t& total);
 
+        CV_EXPORTS bool hasNativeDoubleSupport(int device);
+        CV_EXPORTS bool hasAtomicsSupport(int device);
+
         //////////////////////////////// Error handling ////////////////////////
 
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);

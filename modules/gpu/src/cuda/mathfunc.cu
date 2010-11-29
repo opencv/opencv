@@ -908,6 +908,27 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
+    template <int size, typename T>
+    __device__ void sum_shared_mem(volatile T* data, const unsigned int tid)
+    {
+        T sum = data[tid];
+
+        if (size >= 512) if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads();
+        if (size >= 256) if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads();
+        if (size >= 128) if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads();
+
+        if (tid < 32)
+        {
+            if (size >= 64) data[tid] = sum = sum + data[tid + 32];
+            if (size >= 32) data[tid] = sum = sum + data[tid + 16];
+            if (size >= 16) data[tid] = sum = sum + data[tid + 8];
+            if (size >= 8) data[tid] = sum = sum + data[tid + 4];
+            if (size >= 4) data[tid] = sum = sum + data[tid + 2];
+            if (size >= 2) data[tid] = sum = sum + data[tid + 1];
+        }
+    }
+
+
     template <int nthreads, typename T>
     __global__ void count_non_zero_kernel(const DevMem2D src, volatile unsigned int* count)
     {
@@ -928,12 +949,9 @@ namespace cv { namespace gpu { namespace mathfunc
 		scount[tid] = cnt;
 		__syncthreads();
 
-		for (unsigned int step = nthreads / 2; step > 0; step >>= 1)
-		{
-			if (tid < step) scount[tid] += scount[tid + step];
-			__syncthreads();
-		}
+        sum_shared_mem<nthreads, unsigned int>(scount, tid);
 
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
 
 		if (tid == 0)
@@ -950,16 +968,12 @@ namespace cv { namespace gpu { namespace mathfunc
 		if (is_last)
 		{
 			scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
-
-			for (unsigned int step = nthreads / 2; step > 0; step >>= 1)
-			{
-				if (tid < step) scount[tid] += scount[tid + step];
-				__syncthreads();
-			}
-
+			sum_shared_mem<nthreads, unsigned int>(scount, tid);
 			if (tid == 0) count[0] = scount[0];
 		}
-
+#else
+        if (tid == 0) count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
+#endif
     }
 
    
@@ -989,6 +1003,47 @@ namespace cv { namespace gpu { namespace mathfunc
     template int count_non_zero_caller<int>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<float>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<double>(const DevMem2D, PtrStep);
+
+
+    template <int nthreads, typename T>
+    __global__ void count_non_zero_kernel_2ndstep(unsigned int* count, int size)
+    {
+        __shared__ unsigned int scount[nthreads];
+        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        scount[tid] = tid < size ? count[tid] : 0;
+		sum_shared_mem<nthreads, unsigned int>(scount, tid);
+
+		if (tid == 0) count[0] = scount[0];
+    }
+
+
+    template <typename T>
+    int count_non_zero_caller_2steps(const DevMem2D src, PtrStep buf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(threads, grid);
+        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+
+        unsigned int* count_buf = (unsigned int*)buf.ptr(0);
+
+        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
+        count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
+        count_non_zero_kernel_2ndstep<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        unsigned int count;
+        cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        
+        return count;
+    }  
+
+    template int count_non_zero_caller_2steps<unsigned char>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller_2steps<signed char>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller_2steps<unsigned short>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller_2steps<signed short>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller_2steps<int>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller_2steps<float>(const DevMem2D, PtrStep);
 
     } // namespace countnonzero
 

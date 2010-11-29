@@ -665,15 +665,33 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     get_buf_size_required(buf_size.width, buf_size.height);
     buf.create(buf_size, CV_8U);
 
-    switch (src.type())
+    int device = getDevice();
+    if (hasAtomicsSupport(device))
+    {  
+        switch (src.type())
+        {
+        case CV_8U: return count_non_zero_caller<unsigned char>(src, buf);
+        case CV_8S: return count_non_zero_caller<signed char>(src, buf);
+        case CV_16U: return count_non_zero_caller<unsigned short>(src, buf);
+        case CV_16S: return count_non_zero_caller<signed short>(src, buf);
+        case CV_32S: return count_non_zero_caller<int>(src, buf);
+        case CV_32F: return count_non_zero_caller<float>(src, buf);
+        case CV_64F: 
+            if (hasNativeDoubleSupport(device)) 
+                return count_non_zero_caller<double>(src, buf);
+        }
+    }
+    else
     {
-    case CV_8U: return count_non_zero_caller<unsigned char>(src, buf);
-    case CV_8S: return count_non_zero_caller<signed char>(src, buf);
-    case CV_16U: return count_non_zero_caller<unsigned short>(src, buf);
-    case CV_16S: return count_non_zero_caller<signed short>(src, buf);
-    case CV_32S: return count_non_zero_caller<int>(src, buf);
-    case CV_32F: return count_non_zero_caller<float>(src, buf);
-    case CV_64F: return count_non_zero_caller<double>(src, buf);
+        switch (src.type())
+        {
+        case CV_8U: return count_non_zero_caller_2steps<unsigned char>(src, buf);
+        case CV_8S: return count_non_zero_caller_2steps<signed char>(src, buf);
+        case CV_16U: return count_non_zero_caller_2steps<unsigned short>(src, buf);
+        case CV_16S: return count_non_zero_caller_2steps<signed short>(src, buf);
+        case CV_32S: return count_non_zero_caller_2steps<int>(src, buf);
+        case CV_32F: return count_non_zero_caller_2steps<float>(src, buf);
+        }
     }
 
     CV_Error(CV_StsBadArg, "countNonZero: unsupported type");
