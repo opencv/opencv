@@ -130,7 +130,6 @@ int main( int argc, char** argv )
             backproj &= mask;
             RotatedRect trackBox = CamShift(backproj, trackWindow,
                                 TermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1 ));
-            trackBox.angle = 90-trackBox.angle;
 
             if( backprojMode )
                 cvtColor( backproj, image, CV_GRAY2BGR );

@@ -134,7 +134,7 @@ void CV_TrackBaseTest::generate_object()
     double width = box0.size.width*0.5;
     double height = box0.size.height*0.5;
     double angle = box0.angle*CV_PI/180.;
-    double a = cos(angle), b = sin(angle);
+    double a = sin(angle), b = -cos(angle);
     double inv_ww = 1./(width*width), inv_hh = 1./(height*height);
 
     img = cvCreateMat( img_size.height, img_size.width, img_type );

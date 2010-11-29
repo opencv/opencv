@@ -275,7 +275,13 @@ cvCamShift( const void* imgProb, CvRect windowIn,
     {
         box->size.height = (float)length;
         box->size.width = (float)width;
-        box->angle = (float)(theta*180./CV_PI);
+        box->angle = (float)((CV_PI*0.5+theta)*180./CV_PI);
+        while(box->angle < 0)
+            box->angle += 360;
+        while(box->angle >= 360)
+            box->angle -= 360;
+        if(box->angle >= 180)
+            box->angle -= 180;
         box->center = cvPoint2D32f( comp.rect.x + comp.rect.width*0.5f,
                                     comp.rect.y + comp.rect.height*0.5f);
     }

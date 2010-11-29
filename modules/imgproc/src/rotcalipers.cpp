@@ -415,9 +415,9 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
         icvRotatingCalipers( points, n, CV_CALIPERS_MINAREARECT, (float*)out );
         box.center.x = out[0].x + (out[1].x + out[2].x)*0.5f;
         box.center.y = out[0].y + (out[1].y + out[2].y)*0.5f;
-        box.size.height = (float)sqrt((double)out[1].x*out[1].x + (double)out[1].y*out[1].y);
-        box.size.width = (float)sqrt((double)out[2].x*out[2].x + (double)out[2].y*out[2].y);
-        box.angle = (float)atan2( -(double)out[1].y, (double)out[1].x );
+        box.size.width = (float)sqrt((double)out[1].x*out[1].x + (double)out[1].y*out[1].y);
+        box.size.height = (float)sqrt((double)out[2].x*out[2].x + (double)out[2].y*out[2].y);
+        box.angle = (float)atan2( (double)out[1].y, (double)out[1].x );
     }
     else if( n == 2 )
     {
@@ -425,9 +425,9 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
         box.center.y = (points[0].y + points[1].y)*0.5f;
         double dx = points[1].x - points[0].x;
         double dy = points[1].y - points[0].y;
-        box.size.height = (float)sqrt(dx*dx + dy*dy);
-        box.size.width = 0;
-        box.angle = (float)atan2( -dy, dx );
+        box.size.width = (float)sqrt(dx*dx + dy*dy);
+        box.size.height = 0;
+        box.angle = (float)atan2( dy, dx );
     }
     else
     {

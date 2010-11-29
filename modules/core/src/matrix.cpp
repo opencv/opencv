@@ -3043,6 +3043,37 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
     
     src.convertTo( dst, -1, scale );
 }
+
+////////////////////// RotatedRect //////////////////////
+    
+void RotatedRect::points(Point2f pt[]) const
+{
+    double _angle = angle*CV_PI/180.;
+    float b = (float)cos(_angle)*0.5f;
+    float a = (float)sin(_angle)*0.5f;
+    
+    pt[0].x = center.x - a*size.height - b*size.width;
+    pt[0].y = center.y + b*size.height - a*size.width;
+    pt[1].x = center.x + a*size.height - b*size.width;
+    pt[1].y = center.y - b*size.height - a*size.width;
+    pt[2].x = 2*center.x - pt[0].x;
+    pt[2].y = 2*center.y - pt[0].y;
+    pt[3].x = 2*center.x - pt[1].x;
+    pt[3].y = 2*center.y - pt[1].y;
+}
+
+inline Rect RotatedRect::boundingRect() const
+{
+    Point2f pt[4];
+    points(pt);
+    Rect r(cvFloor(min(min(min(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
+           cvFloor(min(min(min(pt[0].y, pt[1].y), pt[2].y), pt[3].y)),
+           cvCeil(max(max(max(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
+           cvCeil(max(max(max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
+    r.width -= r.x - 1;
+    r.height -= r.y - 1;
+    return r;
+}        
     
 }
  
