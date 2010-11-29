@@ -1223,21 +1223,30 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
 
             cvFindHomography( _Mxy, _mn, &matH );
 
-            cvGetCol( &matH, &_h1, 0 );
-            _h2 = _h1; _h2.data.db++;
-            _h3 = _h2; _h3.data.db++;
-            h1_norm = sqrt(h[0]*h[0] + h[3]*h[3] + h[6]*h[6]);
-            h2_norm = sqrt(h[1]*h[1] + h[4]*h[4] + h[7]*h[7]);
+            if( cvCheckArr(&matH, CV_CHECK_QUIET) )
+            {
+                cvGetCol( &matH, &_h1, 0 );
+                _h2 = _h1; _h2.data.db++;
+                _h3 = _h2; _h3.data.db++;
+                h1_norm = sqrt(h[0]*h[0] + h[3]*h[3] + h[6]*h[6]);
+                h2_norm = sqrt(h[1]*h[1] + h[4]*h[4] + h[7]*h[7]);
 
-            cvScale( &_h1, &_h1, 1./h1_norm );
-            cvScale( &_h2, &_h2, 1./h2_norm );
-            cvScale( &_h3, &_t, 2./(h1_norm + h2_norm));
-            cvCrossProduct( &_h1, &_h2, &_h3 );
+                cvScale( &_h1, &_h1, 1./MAX(h1_norm, DBL_EPSILON) );
+                cvScale( &_h2, &_h2, 1./MAX(h2_norm, DBL_EPSILON) );
+                cvScale( &_h3, &_t, 2./MAX(h1_norm + h2_norm, DBL_EPSILON));
+                cvCrossProduct( &_h1, &_h2, &_h3 );
 
-            cvRodrigues2( &matH, &_r );
-            cvRodrigues2( &_r, &matH );
-            cvMatMulAdd( &matH, &T_transform, &_t, &_t );
-            cvMatMul( &matH, R_transform, &matR );
+                cvRodrigues2( &matH, &_r );
+                cvRodrigues2( &_r, &matH );
+                cvMatMulAdd( &matH, &T_transform, &_t, &_t );
+                cvMatMul( &matH, R_transform, &matR );
+            }
+            else
+            {
+                cvSetIdentity( &matR );
+                cvZero( &_t );
+            }
+
             cvRodrigues2( &matR, &_r );
         }
         else
