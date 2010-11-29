@@ -844,11 +844,6 @@ CV_EXPORTS_W double pointPolygonTest( const Mat& contour,
 //! estimates the best-fit affine transformation that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( const Mat& A, const Mat& B,
                                        bool fullAffine );
-
-//! computes the best-fit affine transformation that maps one 3D point set to another (RANSAC algorithm is used)
-CV_EXPORTS int estimateAffine3D(const Mat& from, const Mat& to, CV_OUT Mat& dst,
-                                CV_OUT vector<uchar>& outliers,
-                                double param1 = 3.0, double param2 = 0.99);
     
 }
 

@@ -453,6 +453,11 @@ CV_EXPORTS_W Mat findHomography( const Mat& srcPoints,
                                const Mat& dstPoints,
                                int method=0, double ransacReprojThreshold=3 );
 
+//! computes the best-fit affine transformation that maps one 3D point set to another (RANSAC algorithm is used)
+CV_EXPORTS int estimateAffine3D(const Mat& from, const Mat& to, CV_OUT Mat& dst,
+                                CV_OUT vector<uchar>& outliers,
+                                double param1 = 3.0, double param2 = 0.99);    
+    
 //! Computes RQ decomposition of 3x3 matrix
 CV_EXPORTS void RQDecomp3x3( const Mat& M, Mat& R, Mat& Q );
     
