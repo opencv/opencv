@@ -419,10 +419,8 @@ namespace cv { namespace gpu { namespace mathfunc
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
-    static const unsigned int czero = 0;
-
     // Global counter of blocks finished its work
-    __device__ unsigned int blocks_finished;
+    __device__ unsigned int blocks_finished = 0;
 
 
     // Estimates good thread configuration
@@ -548,6 +546,7 @@ namespace cv { namespace gpu { namespace mathfunc
             {
                 minval[0] = (T)sminval[0];
                 maxval[0] = (T)smaxval[0];
+                blocks_finished = 0;
             }
 		}
 #else
@@ -570,7 +569,6 @@ namespace cv { namespace gpu { namespace mathfunc
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         min_max_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
@@ -611,6 +609,7 @@ namespace cv { namespace gpu { namespace mathfunc
         {
             minval[0] = (T)sminval[0];
             maxval[0] = (T)smaxval[0];
+            blocks_finished = 0;
         }
     }
 
@@ -625,7 +624,6 @@ namespace cv { namespace gpu { namespace mathfunc
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         min_max_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf);
         min_max_kernel_2ndstep<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
@@ -654,10 +652,8 @@ namespace cv { namespace gpu { namespace mathfunc
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
-    static const unsigned int czero = 0;
-
     // Global counter of blocks finished its work
-    __device__ unsigned int blocks_finished;
+    __device__ unsigned int blocks_finished = 0;
 
 
     // Estimates good thread configuration
@@ -810,6 +806,7 @@ namespace cv { namespace gpu { namespace mathfunc
                 maxval[0] = (T)smaxval[0];
                 minloc[0] = sminloc[0];
                 maxloc[0] = smaxloc[0];
+                blocks_finished = 0;
             }
 		}
 #else
@@ -837,7 +834,6 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
         unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
@@ -890,6 +886,7 @@ namespace cv { namespace gpu { namespace mathfunc
             maxval[0] = (T)smaxval[0];
             minloc[0] = sminloc[0];
             maxloc[0] = smaxloc[0];
+            blocks_finished = 0;
         }
     }
 
@@ -907,7 +904,6 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
         unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         min_max_loc_kernel<256, T><<<grid, threads>>>(src, minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         min_max_loc_kernel_2ndstep<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
@@ -943,9 +939,7 @@ namespace cv { namespace gpu { namespace mathfunc
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
-    static const unsigned int czero = 0;
-
-    __device__ unsigned int blocks_finished;
+    __device__ unsigned int blocks_finished = 0;
 
     void estimate_thread_cfg(dim3& threads, dim3& grid)
     {
@@ -1036,7 +1030,11 @@ namespace cv { namespace gpu { namespace mathfunc
 
 			sum_is_smem<nthreads, unsigned int>(scount, tid);
 
-			if (tid == 0) count[0] = scount[0];
+			if (tid == 0) 
+            {
+                count[0] = scount[0];
+                blocks_finished = 0;
+            }
 		}
 #else
         if (tid == 0) count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
@@ -1053,7 +1051,6 @@ namespace cv { namespace gpu { namespace mathfunc
 
         unsigned int* count_buf = (unsigned int*)buf.ptr(0);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
@@ -1081,7 +1078,11 @@ namespace cv { namespace gpu { namespace mathfunc
         scount[tid] = tid < size ? count[tid] : 0;
 		sum_is_smem<nthreads, unsigned int>(scount, tid);
 
-		if (tid == 0) count[0] = scount[0];
+		if (tid == 0) 
+        {
+            count[0] = scount[0];
+            blocks_finished = 0;
+        }
     }
 
 
@@ -1094,7 +1095,6 @@ namespace cv { namespace gpu { namespace mathfunc
 
         unsigned int* count_buf = (unsigned int*)buf.ptr(0);
 
-        cudaSafeCall(cudaMemcpyToSymbol(blocks_finished, &czero, sizeof(blocks_finished)));
         count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
         count_non_zero_kernel_2ndstep<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
