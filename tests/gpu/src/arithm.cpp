@@ -682,16 +682,16 @@ struct CV_GpuMinMaxTest: public CvTest
     {
         int depth_end;
         if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) depth_end = CV_64F; else depth_end = CV_32F;
-        for (int cn = 1; cn <= 4; ++cn)
-            for (int depth = CV_8U; depth <= depth_end; ++depth)
+        for (int depth = CV_8U; depth <= depth_end; ++depth)
+        {
+            for (int i = 0; i < 1; ++i)
             {
-                for (int i = 0; i < 1; ++i)
-                {
-                    int rows = 1 + rand() % 1000;
-                    int cols = 1 + rand() % 1000;
-                    test(rows, cols, cn, depth);
-                }
+                int rows = 1 + rand() % 1000;
+                int cols = 1 + rand() % 1000;
+                test(rows, cols, 1, depth);
+                test_masked(rows, cols, 1, depth);
             }
+        }
     }
 
     void test(int rows, int cols, int cn, int depth)
@@ -707,10 +707,59 @@ struct CV_GpuMinMaxTest: public CvTest
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
 
+        if (depth != CV_8S)
+        {
+            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        }
+        else 
+        {
+            minVal = std::numeric_limits<double>::max();
+            maxVal = std::numeric_limits<double>::min();
+            for (int i = 0; i < src.rows; ++i)
+                for (int j = 0; j < src.cols; ++j)
+                {
+                    signed char val = src.at<signed char>(i, j);
+                    if (val < minVal) minVal = val;
+                    if (val > maxVal) maxVal = val;
+                }
+        }
+
+        double minVal_, maxVal_;
+        cv::Point minLoc_, maxLoc_;        
+        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, cv::gpu::GpuMat(), buf);
+       
+        if (abs(minVal - minVal_) > 1e-3f)
+        {
+            ts->printf(CvTS::CONSOLE, "\nfail: minVal=%f minVal_=%f rows=%d cols=%d depth=%d cn=%d\n", minVal, minVal_, rows, cols, depth, cn);
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+        }
+        if (abs(maxVal - maxVal_) > 1e-3f)
+        {
+            ts->printf(CvTS::CONSOLE, "\nfail: maxVal=%f maxVal_=%f rows=%d cols=%d depth=%d cn=%d\n", maxVal, maxVal_, rows, cols, depth, cn);
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+        }
+    }  
+
+    void test_masked(int rows, int cols, int cn, int depth)
+    {
+        cv::Mat src(rows, cols, CV_MAKE_TYPE(depth, cn));
+        cv::RNG rng;
+        for (int i = 0; i < src.rows; ++i)
+        { 
+            Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
+            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(255));
+        }
+
+        cv::Mat mask(src.size(), CV_8U);
+        rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
+
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+
         Mat src_ = src.reshape(1);
         if (depth != CV_8S)
         {
-            cv::minMaxLoc(src_, &minVal, &maxVal, &minLoc, &maxLoc);
+            cv::minMaxLoc(src_, &minVal, &maxVal, &minLoc, &maxLoc, mask);
         }
         else 
         {
@@ -721,14 +770,14 @@ struct CV_GpuMinMaxTest: public CvTest
                 for (int j = 0; j < src_.cols; ++j)
                 {
                     char val = src_.at<char>(i, j);
-                    if (val < minVal) minVal = val;
-                    if (val > maxVal) maxVal = val;
+                    if (mask.at<unsigned char>(i, j)) { if (val < minVal) minVal = val; }
+                    if (mask.at<unsigned char>(i, j)) { if (val > maxVal) maxVal = val; }
                 }
         }
 
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;        
-        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, buf);
+        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, cv::gpu::GpuMat(mask), buf);
        
         if (abs(minVal - minVal_) > 1e-3f)
         {

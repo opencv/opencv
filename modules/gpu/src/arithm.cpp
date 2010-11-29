@@ -65,8 +65,8 @@ double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
 void cv::gpu::flip(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*) { throw_nogpu(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*, GpuMat&) { throw_nogpu(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_nogpu(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, GpuMat&, GpuMat&) { throw_nogpu(); }
 int cv::gpu::countNonZero(const GpuMat&) { throw_nogpu(); return 0; }
@@ -502,62 +502,68 @@ namespace cv { namespace gpu { namespace mathfunc { namespace minmax {
     void min_max_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf);
 
     template <typename T> 
-    void min_max_caller_2steps(const DevMem2D src, double* minval, double* maxval, PtrStep buf);
+    void min_max_mask_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf);
+
+    template <typename T> 
+    void min_max_multipass_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf);
+
+    template <typename T> 
+    void min_max_mask_multipass_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf);
 
 }}}}
 
-void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal)
+void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask)
 {
     GpuMat buf;
-    minMax(src, minVal, maxVal, buf);
+    minMax(src, minVal, maxVal, mask, buf);
 }
 
-
-void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& buf)
+void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf)
 {
     using namespace mathfunc::minmax;
 
+    typedef void (*Caller)(const DevMem2D, double*, double*, PtrStep);
+    static const Caller callers[2][7] = 
+    { { min_max_multipass_caller<unsigned char>, min_max_multipass_caller<signed char>, 
+        min_max_multipass_caller<unsigned short>, min_max_multipass_caller<signed short>, 
+        min_max_multipass_caller<int>, min_max_multipass_caller<float>, 0 },
+      { min_max_caller<unsigned char>, min_max_caller<signed char>, 
+        min_max_caller<unsigned short>, min_max_caller<signed short>, 
+        min_max_caller<int>, min_max_caller<float>, min_max_caller<double> } };
+
+    typedef void (*MaskedCaller)(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    static const MaskedCaller masked_callers[2][7] = 
+    { { min_max_mask_multipass_caller<unsigned char>, min_max_mask_multipass_caller<signed char>, 
+        min_max_mask_multipass_caller<unsigned short>, min_max_mask_multipass_caller<signed short>, 
+        min_max_mask_multipass_caller<int>, min_max_mask_multipass_caller<float>, 0 },
+      { min_max_mask_caller<unsigned char>, min_max_mask_caller<signed char>, 
+        min_max_mask_caller<unsigned short>, min_max_mask_caller<signed short>, 
+        min_max_mask_caller<int>, min_max_mask_caller<float>, 
+        min_max_mask_caller<double> } };
+
+
+    CV_Assert(src.channels() == 1);
+    CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
+    CV_Assert(src.type() != CV_64F || hasNativeDoubleSupport(getDevice()));
+
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
-
-    GpuMat src_ = src.reshape(1);
     
     Size bufSize;
     get_buf_size_required(src.elemSize(), bufSize.width, bufSize.height);
     buf.create(bufSize, CV_8U);
 
-    int device = getDevice();
-    if (hasAtomicsSupport(device))
+    if (mask.empty())
     {
-        switch (src_.type())
-        {
-        case CV_8U: min_max_caller<unsigned char>(src_, minVal, maxVal, buf); break;
-        case CV_8S: min_max_caller<signed char>(src_, minVal, maxVal, buf); break;
-        case CV_16U: min_max_caller<unsigned short>(src_, minVal, maxVal, buf); break;
-        case CV_16S: min_max_caller<signed short>(src_, minVal, maxVal, buf); break;
-        case CV_32S: min_max_caller<int>(src_, minVal, maxVal, buf); break;
-        case CV_32F: min_max_caller<float>(src_, minVal, maxVal, buf); break;
-        case CV_64F: 
-            if (hasNativeDoubleSupport(device))
-            {
-                min_max_caller<double>(src_, minVal, maxVal, buf); 
-                break;
-            }
-        default: CV_Error(CV_StsBadArg, "minMax: unsupported type");
-        }
+        Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
+        if (!caller) CV_Error(CV_StsBadArg, "minMax: unsupported type");
+        caller(src, minVal, maxVal, buf);
     }
     else
     {
-        switch (src_.type())
-        {
-        case CV_8U: min_max_caller_2steps<unsigned char>(src_, minVal, maxVal, buf); break;
-        case CV_8S: min_max_caller_2steps<signed char>(src_, minVal, maxVal, buf); break;
-        case CV_16U: min_max_caller_2steps<unsigned short>(src_, minVal, maxVal, buf); break;
-        case CV_16S: min_max_caller_2steps<signed short>(src_, minVal, maxVal, buf); break;
-        case CV_32S: min_max_caller_2steps<int>(src_, minVal, maxVal, buf); break;
-        case CV_32F: min_max_caller_2steps<float>(src_, minVal, maxVal, buf); break;
-        default: CV_Error(CV_StsBadArg, "minMax: unsupported type");
-        }
+        MaskedCaller caller = masked_callers[hasAtomicsSupport(getDevice())][src.type()];
+        if (!caller) CV_Error(CV_StsBadArg, "minMax: unsupported type");
+        caller(src, mask, minVal, maxVal, buf);
     }
 }
 
@@ -575,7 +581,7 @@ namespace cv { namespace gpu { namespace mathfunc { namespace minmaxloc {
                             int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
 
     template <typename T> 
-    void min_max_loc_caller_2steps(const DevMem2D src, double* minval, double* maxval, 
+    void min_max_loc_multipass_caller(const DevMem2D src, double* minval, double* maxval, 
                                    int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
 
 }}}}
@@ -627,12 +633,12 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     {
         switch (src.type())
         {
-        case CV_8U: min_max_loc_caller_2steps<unsigned char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_8S: min_max_loc_caller_2steps<signed char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_16U: min_max_loc_caller_2steps<unsigned short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_16S: min_max_loc_caller_2steps<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_32S: min_max_loc_caller_2steps<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
-        case CV_32F: min_max_loc_caller_2steps<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_8U: min_max_loc_multipass_caller<unsigned char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_8S: min_max_loc_multipass_caller<signed char>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16U: min_max_loc_multipass_caller<unsigned short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_16S: min_max_loc_multipass_caller<signed short>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_32S: min_max_loc_multipass_caller<int>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
+        case CV_32F: min_max_loc_multipass_caller<float>(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf); break;
         default: CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
         }
     }
@@ -652,7 +658,7 @@ namespace cv { namespace gpu { namespace mathfunc { namespace countnonzero {
     int count_non_zero_caller(const DevMem2D src, PtrStep buf);
 
     template <typename T> 
-    int count_non_zero_caller_2steps(const DevMem2D src, PtrStep buf);
+    int count_non_zero_multipass_caller(const DevMem2D src, PtrStep buf);
 
 }}}}
 
@@ -691,12 +697,12 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     {
         switch (src.type())
         {
-        case CV_8U: return count_non_zero_caller_2steps<unsigned char>(src, buf);
-        case CV_8S: return count_non_zero_caller_2steps<signed char>(src, buf);
-        case CV_16U: return count_non_zero_caller_2steps<unsigned short>(src, buf);
-        case CV_16S: return count_non_zero_caller_2steps<signed short>(src, buf);
-        case CV_32S: return count_non_zero_caller_2steps<int>(src, buf);
-        case CV_32F: return count_non_zero_caller_2steps<float>(src, buf);
+        case CV_8U: return count_non_zero_multipass_caller<unsigned char>(src, buf);
+        case CV_8S: return count_non_zero_multipass_caller<signed char>(src, buf);
+        case CV_16U: return count_non_zero_multipass_caller<unsigned short>(src, buf);
+        case CV_16S: return count_non_zero_multipass_caller<signed short>(src, buf);
+        case CV_32S: return count_non_zero_multipass_caller<int>(src, buf);
+        case CV_32F: return count_non_zero_multipass_caller<float>(src, buf);
         }
     }
 

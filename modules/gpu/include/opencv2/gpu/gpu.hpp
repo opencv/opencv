@@ -425,10 +425,10 @@ namespace cv
         CV_EXPORTS Scalar sum(const GpuMat& m);
 
         //! finds global minimum and maximum array elements and returns their values
-        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0);
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
 
         //! finds global minimum and maximum array elements and returns their values
-        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, GpuMat& buf);
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
         CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0);
