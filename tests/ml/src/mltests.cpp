@@ -432,6 +432,20 @@ int str_to_boost_type( string& str )
 CV_MLBaseTest::CV_MLBaseTest( const char* _modelName, const char* _testName, const char* _testFuncs ) :
 CvTest( _testName, _testFuncs )
 {
+    int64 seeds[] = { 0x00009fff4f9c8d52,
+                      0x0000a17166072c7c,
+                      0x0201b32115cd1f9a,
+                      0x0513cb37abcd1234,
+                      0x0001a2b3c4d5f678
+                    };
+
+    int seedCount = sizeof(seeds)/sizeof(seeds[0]);
+    RNG& rng = theRNG();
+
+    initSeed = rng.state;
+
+    rng.state = seeds[rng(seedCount)];
+
     modelName = _modelName;
     nbayes = 0;
     knearest = 0;
@@ -495,6 +509,7 @@ CV_MLBaseTest::~CV_MLBaseTest()
         delete rtrees;
     if( ertrees )
         delete ertrees;
+    theRNG().state = initSeed;
 }
 
 int CV_MLBaseTest::read_params( CvFileStorage* _fs )
