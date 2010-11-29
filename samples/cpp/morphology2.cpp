@@ -7,6 +7,20 @@
 
 using namespace cv;
 
+void help()
+{
+
+printf("Show off image morphology: erosion, dialation, open and close\n"
+	"Call:\n   morphology2 [image]\n"
+	"This program also shows use of rect, elipse and cross kernels\n\n");
+printf( "Hot keys: \n"
+    "\tESC - quit the program\n"
+    "\tr - use rectangle structuring element\n"
+    "\te - use elliptic structuring element\n"
+    "\tc - use cross-shaped structuring element\n"
+    "\tSPACE - loop through all the options\n" );
+}
+
 Mat src, dst;
 
 int element_shape = MORPH_RECT;
@@ -49,12 +63,7 @@ int main( int argc, char** argv )
     if( (src = imread(filename,1)).data == 0 )
         return -1;
 
-    printf( "Hot keys: \n"
-        "\tESC - quit the program\n"
-        "\tr - use rectangle structuring element\n"
-        "\te - use elliptic structuring element\n"
-        "\tc - use cross-shaped structuring element\n"
-        "\tSPACE - loop through all the options\n" );
+    help();
 
     //create windows for output images
     namedWindow("Open/Close",1);
