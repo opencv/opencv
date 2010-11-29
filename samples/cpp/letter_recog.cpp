@@ -1,6 +1,7 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/ml/ml.hpp"
 
+#include <cstdio>
 /*
 The sample demonstrates how to train Random Trees classifier
 (or Boosting classifier, or MLP - see main()) using the provided dataset.
