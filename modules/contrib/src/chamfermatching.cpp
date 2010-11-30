@@ -711,10 +711,10 @@ float ChamferMatcher::Matching::getAngle(coordinate_t a, coordinate_t b, int& dx
 {
 	dx = b.first-a.first;
 	dy = -(b.second-a.second);  // in image coordinated Y axis points downward
-	float angle = atan2(dy,dx);
+        float angle = atan2((float)dy,(float)dx);
 	
 	if (angle<0) {
-		angle+=M_PI;
+                angle+=CV_PI;
 	}
 	
 	return angle;
@@ -728,7 +728,7 @@ void ChamferMatcher::Matching::findContourOrientations(const template_coords_t& 
 	int coords_size = coords.size();
 
 	vector<float> angles(2*M);
-	orientations.insert(orientations.begin(), coords_size, float(-3*M_PI)); // mark as invalid in the beginning
+        orientations.insert(orientations.begin(), coords_size, float(-3*CV_PI)); // mark as invalid in the beginning
 
 	if (coords_size<2*M+1) {  // if contour not long enough to estimate orientations, abort
 		return;
@@ -879,7 +879,7 @@ void ChamferMatcher::Template::show() const
 		//CV_PIXEL(unsigned char, templ_color,x,y)[1] = 255;
 
 		if (i%3==0) {
-			if (orientations[i] < -M_PI) {
+                        if (orientations[i] < -CV_PI) {
 				continue;
 			}
 			Point p1;
@@ -1012,7 +1012,7 @@ void ChamferMatcher::Matching::computeEdgeOrientations(Mat& edge_img, Mat& orien
 {
 	Mat contour_img(edge_img.size(), CV_8UC1);
 
-	orientation_img.setTo(3*(-M_PI));
+        orientation_img.setTo(3*(-CV_PI));
 	template_coords_t coords;
 	template_orientations_t orientations;
 
@@ -1024,7 +1024,7 @@ void ChamferMatcher::Matching::computeEdgeOrientations(Mat& edge_img, Mat& orien
 		for (size_t i = 0; i<coords.size();++i) {
 			int x = coords[i].first;
 			int y = coords[i].second;
-			//			if (orientations[i]>-M_PI)
+                        //			if (orientations[i]>-CV_PI)
 			//	{
 			//CV_PIXEL(unsigned char, contour_img, x, y)[0] = 255;
 			contour_img.at<uchar>(y,x)=255;
@@ -1094,7 +1094,7 @@ ChamferMatcher::Match* ChamferMatcher::Matching::localChamferDistance(Point offs
 		for (size_t i=0;i<addr.size();++i) {
 		
 			if(addr[i] < (orientation_img.cols*orientation_img.rows) - (offset.y*orientation_img.cols + offset.x)){
-				if (tpl->orientations[i]>=-M_PI && (*(optr+addr[i]))>=-M_PI) {
+                                if (tpl->orientations[i]>=-CV_PI && (*(optr+addr[i]))>=-CV_PI) {
 					sum_orientation += orientation_diff(tpl->orientations[i], (*(optr+addr[i])));
 					cnt_orientation++;
 				}
@@ -1102,7 +1102,7 @@ ChamferMatcher::Match* ChamferMatcher::Matching::localChamferDistance(Point offs
 		}
 
 		if (cnt_orientation>0) {
-			cost = beta*cost+alpha*(sum_orientation/(2*M_PI))/cnt_orientation;
+                        cost = beta*cost+alpha*(sum_orientation/(2*CV_PI))/cnt_orientation;
 		}
 
 	}
