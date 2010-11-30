@@ -981,7 +981,7 @@ CV_DescriptorExtractorTest<Hamming> briefDescriptorTest( "descriptor-brief",  1,
 
 CV_DescriptorExtractorTest<L2<float> > oppSiftDescriptorTest( "descriptor-opponent-sift", 0.03f,
                                                 DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
-CV_DescriptorExtractorTest<L2<float> > oppurfDescriptorTest( "descriptor-opponent-surf",  0.04f,
+CV_DescriptorExtractorTest<L2<float> > oppurfDescriptorTest( "descriptor-opponent-surf",  0.18f,
                                                 DescriptorExtractor::create("OpponentSURF"), 0.147372f );
 
 #if CV_SSE2
