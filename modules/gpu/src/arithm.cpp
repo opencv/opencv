@@ -496,7 +496,7 @@ Scalar cv::gpu::sum(const GpuMat& src)
 
 namespace cv { namespace gpu { namespace mathfunc { namespace minmax {
 
-    void get_buf_size_required(int elem_size, int& cols, int& rows);
+    void get_buf_size_required(int cols, int rows, int elem_size, int& bufcols, int& bufrows);
     
     template <typename T> 
     void min_max_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf);
@@ -551,7 +551,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
     
     Size bufSize;
-    get_buf_size_required(src.elemSize(), bufSize.width, bufSize.height);
+    get_buf_size_required(src.cols, src.rows, src.elemSize(), bufSize.width, bufSize.height);
     buf.create(bufSize, CV_8U);
 
     if (mask.empty())
@@ -574,8 +574,8 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 
 namespace cv { namespace gpu { namespace mathfunc { namespace minmaxloc {
 
-    void get_buf_size_required(int elem_size, int& b1cols, int& b1rows, 
-                               int& b2cols, int& b2rows);
+    void get_buf_size_required(int cols, int rows, int elem_size, int& b1cols, 
+                               int& b1rows, int& b2cols, int& b2rows);
 
     template <typename T> 
     void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, 
@@ -636,8 +636,8 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     int maxLoc_[2];
 
     Size valbuf_size, locbuf_size;
-    get_buf_size_required(src.elemSize(), valbuf_size.width, valbuf_size.height, 
-                          locbuf_size.width, locbuf_size.height);
+    get_buf_size_required(src.cols, src.rows, src.elemSize(), valbuf_size.width, 
+                          valbuf_size.height, locbuf_size.width, locbuf_size.height);
     valbuf.create(valbuf_size, CV_8U);
     locbuf.create(locbuf_size, CV_8U);
 
@@ -663,7 +663,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
 
 namespace cv { namespace gpu { namespace mathfunc { namespace countnonzero {
 
-    void get_buf_size_required(int& cols, int& rows);
+    void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows);
 
     template <typename T> 
     int count_non_zero_caller(const DevMem2D src, PtrStep buf);
@@ -697,7 +697,7 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     CV_Assert(src.type() != CV_64F || hasNativeDoubleSupport(getDevice()));
 
     Size buf_size;
-    get_buf_size_required(buf_size.width, buf_size.height);
+    get_buf_size_required(src.cols, src.rows, buf_size.width, buf_size.height);
     buf.create(buf_size, CV_8U);
 
     Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];

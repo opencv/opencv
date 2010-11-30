@@ -425,25 +425,25 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Estimates good thread configuration
     //  - threads variable satisfies to threads.x * threads.y == 256
-    void estimate_thread_cfg(dim3& threads, dim3& grid)
+    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
     {
-        threads = dim3(64, 4);
-        grid = dim3(6, 5);
+        threads = dim3(32, 8);
+        grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
     }
 
 
     // Returns required buffer sizes
-    void get_buf_size_required(int elem_size, int& cols, int& rows)
+    void get_buf_size_required(int cols, int rows, int elem_size, int& bufcols, int& bufrows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        cols = grid.x * grid.y * elem_size; 
-        rows = 2;
+        estimate_thread_cfg(cols, rows, threads, grid);
+        bufcols = grid.x * grid.y * elem_size; 
+        bufrows = 2;
     }
 
 
     // Estimates device constants which are used in the kernels using specified thread configuration
-    void estimate_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -567,8 +567,8 @@ namespace cv { namespace gpu { namespace mathfunc
     void min_max_mask_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
@@ -596,8 +596,8 @@ namespace cv { namespace gpu { namespace mathfunc
     void min_max_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
@@ -650,8 +650,8 @@ namespace cv { namespace gpu { namespace mathfunc
     void min_max_mask_multipass_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
@@ -679,8 +679,8 @@ namespace cv { namespace gpu { namespace mathfunc
     void min_max_multipass_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
@@ -719,19 +719,19 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Estimates good thread configuration
     //  - threads variable satisfies to threads.x * threads.y == 256
-    void estimate_thread_cfg(dim3& threads, dim3& grid)
+    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
     {
-        threads = dim3(64, 4);
-        grid = dim3(6, 5);
+        threads = dim3(32, 8);
+        grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
     }
 
 
     // Returns required buffer sizes
-    void get_buf_size_required(int elem_size, int& b1cols, int& b1rows, 
-                               int& b2cols, int& b2rows)
+    void get_buf_size_required(int cols, int rows, int elem_size, int& b1cols, 
+                               int& b1rows, int& b2cols, int& b2rows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
+        estimate_thread_cfg(cols, rows, threads, grid);
         b1cols = grid.x * grid.y * elem_size; // For values
         b1rows = 2;
         b2cols = grid.x * grid.y * sizeof(int); // For locations
@@ -740,7 +740,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     // Estimates device constants which are used in the kernels using specified thread configuration
-    void estimate_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -886,8 +886,8 @@ namespace cv { namespace gpu { namespace mathfunc
                                  int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
@@ -924,8 +924,8 @@ namespace cv { namespace gpu { namespace mathfunc
                             int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
@@ -994,8 +994,8 @@ namespace cv { namespace gpu { namespace mathfunc
                                            int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
@@ -1032,8 +1032,8 @@ namespace cv { namespace gpu { namespace mathfunc
                                       int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
@@ -1077,23 +1077,23 @@ namespace cv { namespace gpu { namespace mathfunc
 
     __device__ unsigned int blocks_finished = 0;
 
-    void estimate_thread_cfg(dim3& threads, dim3& grid)
+    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
     {
-        threads = dim3(64, 4);
-        grid = dim3(6, 5);
+        threads = dim3(32, 8);
+        grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
     }
 
 
-    void get_buf_size_required(int& cols, int& rows)
+    void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        cols = grid.x * grid.y * sizeof(int);
-        rows = 1;
+        estimate_thread_cfg(cols, rows, threads, grid);
+        bufcols = grid.x * grid.y * sizeof(int);
+        bufrows = 1;
     }
 
 
-    void estimate_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -1182,8 +1182,8 @@ namespace cv { namespace gpu { namespace mathfunc
     int count_non_zero_caller(const DevMem2D src, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         unsigned int* count_buf = (unsigned int*)buf.ptr(0);
 
@@ -1226,8 +1226,8 @@ namespace cv { namespace gpu { namespace mathfunc
     int count_non_zero_multipass_caller(const DevMem2D src, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(threads, grid);
-        estimate_kernel_consts(src.cols, src.rows, threads, grid);
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
 
         unsigned int* count_buf = (unsigned int*)buf.ptr(0);
 
