@@ -1,12 +1,24 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <fstream>
+#include <iostream>
 
 using namespace cv;
+using namespace std;
+
+void help()
+{
+	cout << "\nThis sample demonstrates the use of the convexHull() function\n"
+		 << "Call:\n"
+		 << "./convexhull\n" << endl;
+}
 
 int main( int argc, char** argv )
 {
     Mat img(500, 500, CV_8UC3);
     RNG& rng = theRNG();
+
+    help();
 
     for(;;)
     {
