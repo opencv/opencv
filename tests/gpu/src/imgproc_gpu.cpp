@@ -659,6 +659,62 @@ struct CV_GpuCornerHarrisTest: CvTest
     }
 };
 
+////////////////////////////////////////////////////////////////////////
+// Corner Min Eigen Val
+
+struct CV_GpuCornerMinEigenValTest: CvTest 
+{
+    CV_GpuCornerMinEigenValTest(): CvTest("GPU-CornerMinEigenValTest", "cornerMinEigenVal") {}
+
+    void run(int)
+    {
+        try
+        {
+            int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
+            if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
+            for (int i = 0; i < 3; ++i)
+            {
+                rows = 1 + rand() % 300; cols = 1 + rand() % 300;
+                if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
+            }
+        }
+        catch (const Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
+
+    bool compareToCpuTest(int rows, int cols, int depth, int blockSize, int apertureSize)
+    {
+        RNG rng;
+        cv::Mat src(rows, cols, depth);
+        if (depth == CV_32F) 
+            rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
+
+        double k = 0.1;
+        int borderType = BORDER_DEFAULT;
+
+        cv::Mat dst_gold;
+        cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType); 
+
+        cv::gpu::GpuMat dst;
+        cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dst, blockSize, apertureSize);
+
+        cv::Mat dsth = dst;
+        for (int i = apertureSize + 2; i < dst.rows - apertureSize - 2; ++i)
+        {
+            for (int j = apertureSize + 2; j < dst.cols - apertureSize - 2; ++j)
+            {
+                float a = dst_gold.at<float>(i, j);
+                float b = dsth.at<float>(i, j);
+                if (fabs(a - b) > 1e-3f) return false;
+            }
+        }
+        return true;
+    }
+};
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -677,4 +733,5 @@ CV_GpuNppImageCannyTest CV_GpuNppImageCanny_test;
 CV_GpuCvtColorTest CV_GpuCvtColor_test;
 CV_GpuHistogramsTest CV_GpuHistograms_test;
 CV_GpuCornerHarrisTest CV_GpuCornerHarris_test;
+CV_GpuCornerMinEigenValTest CV_GpuCornerMinEigenVal_test;
 

@@ -466,7 +466,8 @@ namespace cv { namespace gpu { namespace imgproc
 
 /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
 
-    __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k, const PtrStep Dx, const PtrStep Dy, PtrStep dst)
+    __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
+                                        const PtrStep Dx, const PtrStep Dy, PtrStep dst)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -509,6 +510,57 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
         cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size / 2, k, Dx, Dy, dst);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
+/////////////////////////////////////////// Corner Min Eigen Val /////////////////////////////////////////////////
+
+    __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size,
+                                             const PtrStep Dx, const PtrStep Dy, PtrStep dst)
+    {
+        const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            float a = 0.f;
+            float b = 0.f;
+            float c = 0.f;
+
+            const unsigned int j_begin = max(x - block_size, 0);
+            const unsigned int i_begin = max(y - block_size, 0);
+            const unsigned int j_end = min(x + block_size + 1, cols);
+            const unsigned int i_end = min(y + block_size + 1, rows);
+
+            for (unsigned int i = i_begin; i < i_end; ++i)
+            {
+                const float* dx_row = (const float*)Dx.ptr(i);
+                const float* dy_row = (const float*)Dy.ptr(i);
+                for (unsigned int j = j_begin; j < j_end; ++j)
+                {
+                    float dx = dx_row[j];
+                    float dy = dy_row[j];
+                    a += dx * dx;
+                    b += dx * dy;
+                    c += dy * dy;
+                }
+            }
+
+            a *= 0.5f;
+            c *= 0.5f;
+            ((float*)dst.ptr(y))[x] = (a + c) - sqrtf((a - c) * (a - c) + b * b);
+        }
+    }
+
+    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst)
+    {
+        const int rows = Dx.rows;
+        const int cols = Dx.cols;
+
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        cornerMinEigenVal_kernel<<<grid, threads>>>(cols, rows, block_size / 2, Dx, Dy, dst);
         cudaSafeCall(cudaThreadSynchronize());
     }
 }}}

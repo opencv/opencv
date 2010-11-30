@@ -629,7 +629,13 @@ namespace cv
 
         //! computes Harris cornerness criteria at each image pixel 
         // (does BORDER_CONSTANT interpolation with 0 as the fill value)
-        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int apertureSize, double k);
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k);
+
+
+        //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
+        // (does BORDER_CONSTANT interpolation with 0 as the fill value)
+        CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize=3);
+
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 
