@@ -8,7 +8,8 @@
 	
 	<string name="patternlink">http://opencv.willowgarage.com/pattern</string>
 	<string name="camera_settings_label">Camera Settings</string>
-	<string name="settings_text">Change the camera settings</string>
+	<string name="settings_text">Change the camera settings. Be aware that BW is much faster for previewing, than color. Also, if you change the image size, you should
+	rerun calibration.  Default values: BW and 640x480 are a good start.</string>
 	
 	<string name="calibration_service_started">Calibration calculations have started...</string>
 	<string name="calibration_service_stopped">Calibration calculations has stopped.</string>
