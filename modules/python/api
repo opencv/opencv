@@ -766,11 +766,14 @@ CheckArr int
   int flags 0
   double min_val 0
   double max_val 0
-KMeans2
+KMeans2 double
   CvArr samples
   int nclusters
   CvArr labels
-  CvTermCriteria termcrit 
+  CvTermCriteria termcrit
+  int attempts 1
+  int flags 0
+  CvArr centers NULL
 
 # Gradients, Edges, Corners and Features
 Sobel
@@ -1648,7 +1651,7 @@ HOGDetectMultiScale CvSeq*
   int nbins 9
   int gammaCorrection 1
 
-grabCut
+GrabCut
   CvArr image
   CvArr mask
   CvRect rect
@@ -1700,11 +1703,11 @@ CreateHist CvHistogram /doconly
   ranges ranges None
   int uniform 1
 CreateImageHeader IplImage* /doconly
-  int size
+  CvSize size
   int depth
   int channels
 CreateImage IplImage* /doconly
-  int size
+  CvSize size
   int depth
   int channels
 CreateMatHeader CvMat /doconly

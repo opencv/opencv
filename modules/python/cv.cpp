@@ -3800,7 +3800,7 @@ static CvSeq* cvHOGDetectMultiScale( const CvArr* image, CvMemStorage* storage,
     return seq;
 }
 
-static void cvgrabCut(CvArr *image,
+static void cvGrabCut(CvArr *image,
                       CvArr *mask,
                       CvRect rect,
                       CvArr *bgdModel,
@@ -3844,6 +3844,22 @@ static int zero = 0;
       return (PyObject*)failmsg("SnakeImage weights invalid"); \
     cvSnakeImage(image, points, length, a, b, g, coeff_usage, win, criteria, calc_gradient); \
   } while (0)
+
+static double cppKMeans(const CvArr* _samples, int cluster_count, CvArr* _labels,
+           CvTermCriteria termcrit, int attempts, int flags, CvArr* _centers)
+{
+    cv::Mat data = cv::cvarrToMat(_samples), labels = cv::cvarrToMat(_labels), centers;
+    if( _centers )
+        centers = cv::cvarrToMat(_centers);
+    CV_Assert( labels.isContinuous() && labels.type() == CV_32S &&
+        (labels.cols == 1 || labels.rows == 1) &&
+        labels.cols + labels.rows - 1 == data.rows );
+    return cv::kmeans(data, cluster_count, labels, termcrit, attempts,
+                                    flags, _centers ? &centers : 0 );
+}
+
+#define cvKMeans2(samples, nclusters, labels, termcrit, attempts, flags, centers) \
+    cppKMeans(samples, nclusters, labels, termcrit, attempts, flags, centers)
 
 #include "generated0.i"
 
