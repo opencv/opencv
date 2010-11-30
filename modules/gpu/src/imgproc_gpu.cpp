@@ -68,6 +68,8 @@ void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double) { throw_nogpu(); }
+
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -855,5 +857,36 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
 
     hist_callers[src.depth()](src, hist, levels);
 }
+
+namespace cv { namespace gpu { namespace imgproc {
+
+    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst);
+
+}}}
+
+void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int apertureSize, double k)
+{
+    CV_Assert(src.type() == CV_32F);
+
+    double scale = (double)(1 << ((apertureSize > 0 ? apertureSize : 3) - 1)) * blockSize;
+    if (apertureSize < 0) scale *= 2.;
+    scale = 1./scale;
+
+    GpuMat Dx, Dy;
+    if (apertureSize > 0)
+    {
+        Sobel(src, Dx, CV_32F, 1, 0, apertureSize, scale);
+        Sobel(src, Dy, CV_32F, 0, 1, apertureSize, scale);
+    }
+    else
+    {
+        Scharr(src, Dx, CV_32F, 1, 0, scale);
+        Scharr(src, Dy, CV_32F, 0, 1, scale);
+    }
+
+    dst.create(src.size(), CV_32F);
+    imgproc::cornerHarris_caller(blockSize, (float)k, Dx, Dy, dst);
+}
+
 
 #endif /* !defined (HAVE_CUDA) */

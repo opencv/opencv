@@ -627,6 +627,10 @@ namespace cv
         //! disabled until fix crash
         CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize = 3);
 
+        //! computes Harris cornerness criteria at each image pixel 
+        // (does BORDER_CONSTANT interpolation with 0 as the fill value)
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int apertureSize, double k);
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
