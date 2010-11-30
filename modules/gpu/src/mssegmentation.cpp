@@ -286,7 +286,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
             g.addEdge(pix(y, x, ncols), pix(y, x + 1, ncols), SegmLinkVal(dr[0], dsp[0]));
             g.addEdge(pix(y, x, ncols), pix(y + 1, x, ncols), SegmLinkVal(dr[1], dsp[1]));
             g.addEdge(pix(y, x, ncols), pix(y + 1, x + 1, ncols), SegmLinkVal(dr[2], dsp[2]));
-            g.addEdge(pix(y, x + 1, ncols), pix(y, x + 1, ncols), SegmLinkVal(dr[3], dsp[3]));
+            g.addEdge(pix(y, x + 1, ncols), pix(y + 1, x, ncols), SegmLinkVal(dr[3], dsp[3]));
         }
     }
     for (int y = 0; y < nrows - 1; ++y)

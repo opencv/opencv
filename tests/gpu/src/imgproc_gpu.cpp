@@ -692,7 +692,6 @@ struct CV_GpuCornerMinEigenValTest: CvTest
         if (depth == CV_32F) 
             rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 
-        double k = 0.1;
         int borderType = BORDER_DEFAULT;
 
         cv::Mat dst_gold;
