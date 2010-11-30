@@ -8,6 +8,23 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+	cout << "\nThis is a demo that shows mean shift based tracking\n"
+		 <<   "You select a color objects such as your face and it tracks it.\n"
+		 <<   "This reads from video camera (0 by default, or the camera number the user enters\n"
+		 << "Call:\n"
+		 << "\n./camshiftdemo [camera number]"
+		 << "\n" << endl;
+
+	cout << "\n\nHot keys: \n"
+        "\tESC - quit the program\n"
+        "\tc - stop the tracking\n"
+        "\tb - switch to/from backprojection view\n"
+        "\th - show/hide object histogram\n"
+        "To initialize tracking, select the object with mouse\n" << endl;
+}
+
 Mat image;
 
 bool backprojMode = false;
@@ -45,6 +62,8 @@ void onMouse( int event, int x, int y, int flags, void* param )
     }
 }
 
+
+
 int main( int argc, char** argv )
 {
     VideoCapture cap;
@@ -61,16 +80,12 @@ int main( int argc, char** argv )
 
     if( !cap.isOpened() )
     {
-        cout << "Could not initialize capturing...\n";
+    	help();
+        cout << "***Could not initialize capturing...***\n";
         return 0;
     }
 
-    cout << "Hot keys: \n"
-        "\tESC - quit the program\n"
-        "\tc - stop the tracking\n"
-        "\tb - switch to/from backprojection view\n"
-        "\th - show/hide object histogram\n"
-        "To initialize tracking, select the object with mouse\n";
+    help();
 
     namedWindow( "Histogram", 1 );
     namedWindow( "CamShift Demo", 1 );
