@@ -1728,7 +1728,7 @@ void cv::convexHull( const Mat& points,
 void cv::convexHull( const Mat& points,
                      vector<Point2f>& hull, bool clockwise )
 {
-    int nelems = points.checkVector(2, CV_32S);
+    int nelems = points.checkVector(2, CV_32F);
     CV_Assert(nelems >= 0);
     hull.resize(nelems);
     CvMat _points = Mat(points), _hull=Mat(hull);

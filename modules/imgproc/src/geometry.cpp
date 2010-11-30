@@ -86,21 +86,9 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
 CV_IMPL void
 cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 {
-    double angle = box.angle*CV_PI/180.;
-    float a = (float)cos(angle)*0.5f;
-    float b = (float)sin(angle)*0.5f;
-
     if( !pt )
         CV_Error( CV_StsNullPtr, "NULL vertex array pointer" );
-
-    pt[0].x = box.center.x - a*box.size.height - b*box.size.width;
-    pt[0].y = box.center.y + b*box.size.height - a*box.size.width;
-    pt[1].x = box.center.x + a*box.size.height - b*box.size.width;
-    pt[1].y = box.center.y - b*box.size.height - a*box.size.width;
-    pt[2].x = 2*box.center.x - pt[0].x;
-    pt[2].y = 2*box.center.y - pt[0].y;
-    pt[3].x = 2*box.center.x - pt[1].x;
-    pt[3].y = 2*box.center.y - pt[1].y;
+    cv::RotatedRect(box).points((cv::Point2f*)pt);
 }
 
 
