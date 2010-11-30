@@ -14,7 +14,14 @@
               <h2>Help and Feedback</h2>
               You did not find what you were looking for?
               <ul>
-                  <li>Try the <a href="faq.html">FAQ</a>.</li>
+                  {% if theme_lang == 'c' %}
+                  {% endif %}
+                  {% if theme_lang == 'cpp' %}
+                    <li>Try the <a href="http://opencv.willowgarage.com/wiki/Welcome?action=AttachFile&do=get&target=opencv_cheatsheet.pdf">Cheatsheet</a>.</li>
+                  {% endif %}
+                  {% if theme_lang == 'py' %}
+                    <li>Try the <a href="cookbook.html">Cookbook</a>.</li>
+                  {% endif %}
                   <li>Ask a question in the <a href="http://tech.groups.yahoo.com/group/OpenCV/">user group/mailing list</a>.</li>
                   <li>If you think something is missing or wrong in the documentation,
                   please file a <a href="https://code.ros.org/trac/opencv/wiki">bug report</a>.</li>

@@ -618,4 +618,46 @@ For a 3D array of size $j \times k \times l$, it returns a
 
 Alternatively, use \cross{fromarray} with the \texttt{allowND} option to always return a \cross{cvMatND}.
 
+\subsection{OpenCV to pygame}
+
+To convert an OpenCV image to a \href{http://www.pygame.org/}{pygame} surface:
+
+\begin{lstlisting}
+>>> import pygame.image, cv
+>>> src = cv.LoadImage("lena.jpg")
+>>> src_rgb = cv.CreateMat(src.height, src.width, cv.CV_8UC3)
+>>> cv.CvtColor(src, src_rgb, cv.CV_BGR2RGB)
+>>> pg_img = pygame.image.frombuffer(src_rgb.tostring(), cv.GetSize(src_rgb), "RGB")
+>>> print pg_img
+<Surface(512x512x24 SW)>
+\end{lstlisting}
+
+\subsection{OpenCV and OpenEXR}
+
+Using \href{http://www.excamera.com/sphinx/articles-openexr.html}{OpenEXR's Python bindings} you can make a simple
+image viewer:
+
+\begin{lstlisting}
+import OpenEXR, Imath, cv
+filename = "GoldenGate.exr"
+exrimage = OpenEXR.InputFile(filename)
+
+dw = exrimage.header()['dataWindow']
+(width, height) = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)
+
+def fromstr(s):
+    mat = cv.CreateMat(height, width, cv.CV_32FC1)
+    cv.SetData(mat, s)
+    return mat
+
+pt = Imath.PixelType(Imath.PixelType.FLOAT)
+(r, g, b) = [fromstr(s) for s in exrimage.channels("RGB", pt)]
+
+bgr = cv.CreateMat(height, width, cv.CV_32FC3)
+cv.Merge(b, g, r, None, bgr)
+
+cv.ShowImage(filename, bgr)
+cv.WaitKey()
+\end{lstlisting}
+
 \fi
