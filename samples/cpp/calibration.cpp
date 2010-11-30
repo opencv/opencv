@@ -91,14 +91,14 @@ static double computeReprojectionErrors(
     {
         projectPoints(Mat(objectPoints[i]), rvecs[i], tvecs[i],
                       cameraMatrix, distCoeffs, imagePoints2);
-        err = norm(Mat(imagePoints[i]), Mat(imagePoints2), CV_L1 );
+        err = norm(Mat(imagePoints[i]), Mat(imagePoints2), CV_L2);
         int n = (int)objectPoints[i].size();
-        perViewErrors[i] = (float)(err/n);
-        totalErr += err;
+        perViewErrors[i] = (float)std::sqrt(err*err/n);
+        totalErr += err*err;
         totalPoints += n;
     }
     
-    return totalErr/totalPoints;
+    return std::sqrt(totalErr/totalPoints);
 }
 
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners)
@@ -130,9 +130,10 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
     
-    calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
+    double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
                     distCoeffs, rvecs, tvecs, flags|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
                     ///*|CV_CALIB_FIX_K3*/|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
+    printf("RMS error reported by calibrateCamera: %g\n", rms);
     
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
     

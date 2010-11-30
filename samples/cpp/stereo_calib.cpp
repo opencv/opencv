@@ -162,7 +162,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     cameraMatrix[1] = Mat::eye(3, 3, CV_64F);
     Mat R, T, E, F;
     
-    stereoCalibrate(objectPoints, imagePoints[0], imagePoints[1],
+    double rms = stereoCalibrate(objectPoints, imagePoints[0], imagePoints[1],
                     cameraMatrix[0], distCoeffs[0],
                     cameraMatrix[1], distCoeffs[1],
                     imageSize, R, T, E, F,
@@ -170,7 +170,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
                     CV_CALIB_FIX_ASPECT_RATIO +
                     CV_CALIB_ZERO_TANGENT_DIST +
                     CV_CALIB_SAME_FOCAL_LENGTH);
-    cout << "done\n";
+    cout << "done with RMS error=" << rms << endl;
     
 // CALIBRATION QUALITY CHECK
 // because the output fundamental matrix implicitly

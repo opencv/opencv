@@ -1742,7 +1742,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
          }
     }
     
-    return reprojErr;
+    return std::sqrt(reprojErr/total);
 }
 
 
@@ -2254,7 +2254,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         }
     }
     
-    return reprojErr;
+    return std::sqrt(reprojErr/(pointsTotal*2));
 }
 
 
