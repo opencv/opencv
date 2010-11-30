@@ -886,9 +886,11 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
 
      
 	if ( N > 0 )
-    cv::parallel_for(cv::BlockedRange(0, N),
-                     cv::SURFInvoker(&params, keypoints, descriptors, img, sum) );
-
+    {
+        //cv::parallel_for(cv::BlockedRange(0, N),
+        //             cv::SURFInvoker(&params, keypoints, descriptors, img, sum) );
+        cv::SURFInvoker(&params, keypoints, descriptors, img, sum)(cv::BlockedRange(0, N));
+    }
 
     /* remove keypoints that were marked for deletion */
     for ( i = 0; i < N; i++ )
