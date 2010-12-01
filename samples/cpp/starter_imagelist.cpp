@@ -71,7 +71,8 @@ int main(int ac, char** av)
 
   if (!readStringList(arg,imagelist))
   {   
-    cerr << "Failed to read image list" << endl;
+    cerr << "Failed to read image list\n" << endl;
+    help(av);
     return 1;
   }
 
