@@ -5,11 +5,19 @@
 
 using namespace cv;
 
+void help()
+{
+	printf("\nThis program demonstrates using features2d detector, descriptor extractor and simple matcher\n"
+			"Using the SURF desriptor:\n"
+			"\n"
+			"Usage: matcher_simple <image1> <image2>\n");
+}
+
 int main(int argc, char** argv)
 {
 	if(argc != 3)
 	{
-		printf("Usage: matcher_simple <image1> <image2>\n");
+		help();
 		return -1;
 	}
 
