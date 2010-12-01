@@ -61,7 +61,8 @@ int main(int ac, char** av) {
 	if (!capture.isOpened()) //if this fails, try to open as a video camera, through the use of an integer param
 		capture.open(atoi(arg.c_str()));
 	if (!capture.isOpened()) {
-		cerr << "Failed to open a video device or video file!" << endl;
+		cerr << "Failed to open a video device or video file!\n" << endl;
+		help(av);
 		return 1;
 	}
 	return process(capture);
