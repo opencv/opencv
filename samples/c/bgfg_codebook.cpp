@@ -37,6 +37,7 @@ bool ch[NCHANNELS]={true,true,true}; // This sets what channels should be adjust
 void help(void)
 {
     printf("\nLearn background and find foreground using simple average and average difference learning method:\n"
+    		"Originally from the book: Learning OpenCV by O'Reilly press\n"
         "\nUSAGE:\nbgfg_codebook [--nframes=300] [movie filename, else from camera]\n"
         "***Keep the focus on the video windows, NOT the consol***\n\n"
         "INTERACTIVE PARAMETERS:\n"
