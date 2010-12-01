@@ -4,6 +4,12 @@
 #include <ctype.h>
 #include <stdio.h>
 
+void help()
+{
+    printf( "Usage:\n" ""
+    "./convert_cascade --size=\"<width>x<height>\" input_cascade_path output_cascade_filename\n" );
+}
+
 int main( int argc, char** argv )
 {
     const char* size_opt = "--size=";
@@ -13,7 +19,7 @@ int main( int argc, char** argv )
 
     if( argc != 4 || strncmp( argv[1], size_opt, strlen(size_opt) ) != 0 )
     {
-        printf( "Usage: convert_cascade --size=\"<width>x<height>\" input_cascade_path output_cascade_filename\n" );
+    	help();
         return -1;
     }
 
