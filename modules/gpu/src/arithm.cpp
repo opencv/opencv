@@ -262,17 +262,39 @@ void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst)
 ////////////////////////////////////////////////////////////////////////
 // transpose
 
+namespace cv { namespace gpu { namespace mathfunc
+{
+    template <typename T>
+    void transpose_gpu(const DevMem2D& src, const DevMem2D& dst);
+}}}
+
 void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
 {
-    CV_Assert(src.type() == CV_8UC1);
+    using namespace cv::gpu::mathfunc;
+    typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst);
+    static const func_t funcs[] = 
+    {
+        transpose_gpu<uchar4>, transpose_gpu<char4>, transpose_gpu<ushort2>, transpose_gpu<short2>,
+        transpose_gpu<int>, transpose_gpu<float>
+    };
+
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_8SC4 
+        || src.type() == CV_16UC2 || src.type() == CV_16SC2 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
 
     dst.create( src.cols, src.rows, src.type() );
 
-    NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
+    if (src.type() == CV_8UC1)
+    {
+        NppiSize sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
 
-    nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );
+        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );
+    }
+    else
+    {
+        funcs[src.depth()](src, dst);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////

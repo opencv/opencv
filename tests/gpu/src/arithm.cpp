@@ -257,7 +257,7 @@ struct CV_GpuNppImageTransposeTest : public CV_GpuArithmTest
 
     int test( const Mat& mat1, const Mat& )
     {
-        if (mat1.type() != CV_8UC1)
+        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\tUnsupported type\t");
             return CvTS::OK;
