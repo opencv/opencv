@@ -1,41 +1,6 @@
 /*
  *
-This program's purpose is to collect data sets of an object and its segmentation mask.
-
-It shows how to use a calibrated camera together with a calibration pattern to
-compute the homography of the plane the calibration pattern is on. It also shows grabCut
-segmentation etc.
-
-select3dobj -w <board_width> -h <board_height> [-s <square_size>]
-            -i <camera_intrinsics_filename> -o <output_prefix> [video_filename/cameraId]
-
- -w <board_width>     		Number of chessboard corners wide
- -h <board_height>    		Number of chessboard corners width
- [-s <square_size>]			Optional measure of chessboard squares in meters
- -i <camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp
- -o <output_prefix> 		Prefix the output segmentation images with this
- [video_filename/cameraId]  If present, read from that video file or that ID
-
-Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an
-image of the object sitting on a planar surface with a calibration pattern of
-(board_width x board_height) on the surface, we draw a 3D box aroung the object. From
-then on, we can move a camera and as long as it sees the chessboard calibration pattern,
-it will store a mask of where the object is. We get succesive images using <output_prefix>
-of the segmentation mask containing the object. This makes creating training sets easy.
-It is best of the chessboard is odd x even in dimensions to avoid amiguous poses.
-
-The actions one can use while the program is running are:
-
-  Select object as 3D box with the mouse.
-    First draw one line on the plane to outline the projection of that object on the plane
-    Then extend that line into a box to encompass the projection of that object onto the plane
-    The use the mouse again to extend the box upwards from the plane to encase the object.
-  Then use the following commands
-    ESC   - Reset the selection
-    SPACE - Skip the frame; move to the next frame (not in video mode)
-    ENTER - Confirm the selection. Grab next object in video mode.
-    q     - Exit the program
-
+ * select3obj.cpp
  *
  */
 
@@ -49,6 +14,50 @@ The actions one can use while the program is running are:
 #include <stdlib.h>
 
 using namespace cv;
+
+const char* helphelp =
+"\nThis program's purpose is to collect data sets of an object and its segmentation mask.\n"
+"\n"
+"It shows how to use a calibrated camera together with a calibration pattern to\n"
+"compute the homography of the plane the calibration pattern is on. It also shows grabCut\n"
+"segmentation etc.\n"
+"\n"
+"select3dobj -w <board_width> -h <board_height> [-s <square_size>]\n"
+"           -i <camera_intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n"
+"\n"
+" -w <board_width>     		Number of chessboard corners wide\n"
+" -h <board_height>    		Number of chessboard corners width\n"
+" [-s <square_size>]			Optional measure of chessboard squares in meters\n"
+" -i <camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp\n"
+" -o <output_prefix> 		Prefix the output segmentation images with this\n"
+" [video_filename/cameraId]  If present, read from that video file or that ID\n"
+"\n"
+"Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an\n"
+"image of the object sitting on a planar surface with a calibration pattern of\n"
+"(board_width x board_height) on the surface, we draw a 3D box aroung the object. From\n"
+"then on, we can move a camera and as long as it sees the chessboard calibration pattern,\n"
+"it will store a mask of where the object is. We get succesive images using <output_prefix>\n"
+"of the segmentation mask containing the object. This makes creating training sets easy.\n"
+"It is best of the chessboard is odd x even in dimensions to avoid amiguous poses.\n"
+"\n"
+"The actions one can use while the program is running are:\n"
+"\n"
+"  Select object as 3D box with the mouse.\n"
+"   First draw one line on the plane to outline the projection of that object on the plane\n"
+"    Then extend that line into a box to encompass the projection of that object onto the plane\n"
+"    The use the mouse again to extend the box upwards from the plane to encase the object.\n"
+"  Then use the following commands\n"
+"    ESC   - Reset the selection\n"
+"    SPACE - Skip the frame; move to the next frame (not in video mode)\n"
+"    ENTER - Confirm the selection. Grab next object in video mode.\n"
+"    q     - Exit the program\n"
+"\n\n";
+
+void help()
+{
+	puts(helphelp);
+}
+
 
 struct MouseEvent
 {
@@ -379,6 +388,7 @@ int main(int argc, char** argv)
     
     if(argc < 5)
     {
+    	puts(helphelp);
         puts(help);
         return 0;
     }
