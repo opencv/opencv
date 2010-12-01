@@ -10,13 +10,16 @@ using namespace cv;
 
 void help()
 {
-    cout << "\n This program demonstrates the haar cascade recognizer\n"
+    cout << "\nThis program demonstrates the haar cascade recognizer\n"
     		"this classifier can recognize many ~rigid objects, it's most known use is for faces.\n"
     	"Usage:\n"
-    	"./facedetect [--cascade=<cascade_path>]\n"
-        "   [--nested-cascade[=nested_cascade_path]]\n"
-        "   [--scale=<image scale greater or equal to 1>\n"
-        "   [filename|camera_index]\n" << endl;;
+    	"./facedetect [--cascade=<cascade_path> this is the primary trained classifier such as frontal face]\n"
+        "   [--nested-cascade[=nested_cascade_path this an optional secondary classifier such as eyes]]\n"
+        "   [--scale=<image scale greater or equal to 1, try 1.3 for example>\n"
+        "   [filename|camera_index]\n\n"
+    		"see facedetect.cmd for one call:\n"
+    		"./facedetect --cascade=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --nested-cascade=\"../../data/haarcascades/haarcascade_eye.xml\" --scale=1.3 \n"
+    	"Hit any key to quit.\n" << endl;
 }
 
 void detectAndDraw( Mat& img,
