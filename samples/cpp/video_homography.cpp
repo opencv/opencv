@@ -16,6 +16,17 @@
 using namespace std;
 using namespace cv;
 
+void help(char **av)
+{
+	cout << "\n This program demonstrated the use of features2d with the Fast corner detector and brief descriptors\n"
+	<< "to track planar objects by computing their homography from the key (training) image to the query (test) image\n\n" << endl;
+    cout << "usage: " << av[0] << " <video device number>\n" << endl;
+    cout << "The following keys do stuff:" << endl;
+    cout << "  t : grabs a reference frame to match against" << endl;
+    cout << "  l : makes the reference frame new every frame" << endl;
+    cout << "  q or escape: quit" << endl;
+}
+
 namespace
 {
 void drawMatchesRelative(const vector<KeyPoint>& train, const vector<KeyPoint>& query,
@@ -37,6 +48,7 @@ void drawMatchesRelative(const vector<KeyPoint>& train, const vector<KeyPoint>& 
   }
 }
 
+//Takes a descriptor and turns it into an xy point
 void keypoints2points(const vector<KeyPoint>& in, vector<Point2f>& out)
 {
   out.clear();
@@ -47,6 +59,7 @@ void keypoints2points(const vector<KeyPoint>& in, vector<Point2f>& out)
   }
 }
 
+//Takes an xy point and appends that to a keypoint structure
 void points2keypoints(const vector<Point2f>& in, vector<KeyPoint>& out)
 {
   out.clear();
@@ -57,6 +70,7 @@ void points2keypoints(const vector<Point2f>& in, vector<KeyPoint>& out)
   }
 }
 
+//Uses computed homography H to warp original input points to new planar position
 void warpKeypoints(const Mat& H, const vector<KeyPoint>& in, vector<KeyPoint>& out)
 {
   vector<Point2f> pts;
@@ -67,6 +81,7 @@ void warpKeypoints(const Mat& H, const vector<KeyPoint>& in, vector<KeyPoint>& o
   points2keypoints(pts_w, out);
 }
 
+//Converts matching indices to xy points
 void matches2points(const vector<KeyPoint>& train, const vector<KeyPoint>& query,
                     const std::vector<cv::DMatch>& matches, std::vector<cv::Point2f>& pts_train,
                     std::vector<Point2f>& pts_query)
@@ -96,13 +111,14 @@ void resetH(Mat&H)
   H = Mat::eye(3, 3, CV_32FC1);
 }
 }
+
 int main(int ac, char ** av)
 {
 
   if (ac != 2)
   {
-    cout << "usage: " << av[0] << " <video device number>" << endl;
-    return 1;
+	  help(av);
+	  return 1;
   }
 
   BriefDescriptorExtractor brief(32);
@@ -111,7 +127,8 @@ int main(int ac, char ** av)
   capture.open(atoi(av[1]));
   if (!capture.isOpened())
   {
-    cout << "capture device " << atoi(av[1]) << " failed to open!" << endl;
+	  help(av);
+	  cout << "capture device " << atoi(av[1]) << " failed to open!" << endl;
     return 1;
   }
 
@@ -147,9 +164,9 @@ int main(int ac, char ** av)
 
     cvtColor(frame, gray, CV_RGB2GRAY);
 
-    detector.detect(gray, query_kpts);
+    detector.detect(gray, query_kpts); //Find interest points
 
-    brief.compute(gray, query_kpts, query_desc);
+    brief.compute(gray, query_kpts, query_desc); //Compute brief descriptors at each keypoint location
 
     if (!train_kpts.empty())
     {
