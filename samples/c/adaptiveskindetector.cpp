@@ -42,6 +42,20 @@
 #include <opencv2/contrib/contrib.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+void help(char **argv)
+{
+	std::cout << "\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector which can be found in contrib.cpp\n"
+			<< "Usage: " << std::endl <<
+		argv[0] << " fileMask firstFrame lastFrame" << std::endl << std::endl <<
+		"Example: " << std::endl <<
+		argv[0] << " C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  0  1000" << std::endl <<
+		"	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
+		"If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
+		"Please note: Background should not contain large surfaces with skin tone." <<
+		"\n\n ESC will stop\n" <<
+		std::endl;
+}
+
 class ASDFrameHolder
 {
 private:
@@ -332,15 +346,7 @@ int main(int argc, char** argv )
 
 	if (argc < 4)
 	{
-		std::cout << "Usage: " << std::endl <<
-			argv[0] << " fileMask firstFrame lastFrame" << std::endl << std::endl <<
-			"Example: " << std::endl <<
-			argv[0] << " C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  0  1000" << std::endl <<
-			"	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
-			"If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
-			"Please note: Background should not contain large surfaces with skin tone." <<
-			std::endl;
-
+		help(argv);
 		sequencer = new ASDFrameSequencerWebCam();
 		(dynamic_cast<ASDFrameSequencerWebCam*>(sequencer))->open(-1);
 
@@ -373,7 +379,7 @@ int main(int argc, char** argv )
 			filterMask = cvCreateImage( cvSize(img->width, img->height), IPL_DEPTH_8U, 1);
 		}
 		clock = std::clock();
-		filter.process(img, filterMask);	// process the frame
+		filter.process(img, filterMask);	// DETECT SKIN
 		clockTotal += (std::clock() - clock);
 
 		displayBuffer(img, filterMask, 0, 255, 0);
