@@ -5,6 +5,32 @@
 
 #include <stdio.h>
 
+void help()
+{
+	printf("\nExample of using background_segm.hpp and legacy blobtrack.hpp (somewhat out of date\n"
+			"This somewhat over complex program segments blobs and tracks them with a Kalman filter\n"
+			"Usage:\n"
+	);
+    printf("blobtrack [fg=<fg_name>] [bd=<bd_name>]\n"
+        "          [bt=<bt_name>] [btpp=<btpp_name>]\n"
+        "          [bta=<bta_name>\n"
+        "          [bta_data=<bta_data_name>\n"
+        "          [bt_corr=<bt_corr_way>]\n"
+        "          [btgen=<btgen_name>]\n"
+        "          [track=<track_file_name>]\n"
+        "          [scale=<scale val>] [noise=<noise_name>] [IVar=<IVar_name>]\n"
+        "          [FGTrainFrames=<FGTrainFrames>]\n"
+        "          [btavi=<avi output>] [fgavi=<avi output on FG>]\n"
+        "          <avi_file>\n");
+
+    printf("WHERE:\n  <bt_corr_way> is way of blob position corrrection for \"Blob Tracking\" module\n"
+        "     <bt_corr_way>=none,PostProcRes\n"
+        "  <FGTrainFrames> is number of frames for FG training\n"
+        "  <track_file_name> is file name for save tracked trajectories\n"
+        "  <bta_data> is file name for data base of trajectory analysis module\n"
+        "  <avi_file> is file name of avi to process by BlobTrackerAuto\n");
+}
+
 /* Select appropriate case insensitive string comparison function: */
 #if defined WIN32 || defined _MSC_VER
   #define MY_STRNICMP strnicmp
@@ -403,24 +429,7 @@ int main(int argc, char* argv[])
     if(argc < 2)
     {   /* Print help: */
         int i;
-        printf("blobtrack [fg=<fg_name>] [bd=<bd_name>]\n"
-            "          [bt=<bt_name>] [btpp=<btpp_name>]\n"
-            "          [bta=<bta_name>\n"
-            "          [bta_data=<bta_data_name>\n"
-            "          [bt_corr=<bt_corr_way>]\n"
-            "          [btgen=<btgen_name>]\n"
-            "          [track=<track_file_name>]\n"
-            "          [scale=<scale val>] [noise=<noise_name>] [IVar=<IVar_name>]\n"
-            "          [FGTrainFrames=<FGTrainFrames>]\n"
-            "          [btavi=<avi output>] [fgavi=<avi output on FG>]\n"
-            "          <avi_file>\n");
-
-        printf("  <bt_corr_way> is way of blob position corrrection for \"Blob Tracking\" module\n"
-            "     <bt_corr_way>=none,PostProcRes\n"
-            "  <FGTrainFrames> is number of frames for FG training\n"
-            "  <track_file_name> is file name for save tracked trajectories\n"
-            "  <bta_data> is file name for data base of trajectory analysis module\n"
-            "  <avi_file> is file name of avi to process by BlobTrackerAuto\n");
+        help();
 
         puts("\nModules:");
 #define PR(_name,_m,_mt)\
