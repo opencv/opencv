@@ -614,12 +614,11 @@ struct CV_GpuCornerHarrisTest: CvTest
     {
         try
         {
-            int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
-            if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
-            for (int i = 0; i < 3; ++i)
+            for (int i = 0; i < 5; ++i)
             {
-                rows = 1 + rand() % 300; cols = 1 + rand() % 300;
+                int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
+                if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
             }
         }
         catch (const Exception& e)
@@ -645,14 +644,21 @@ struct CV_GpuCornerHarrisTest: CvTest
         cv::gpu::GpuMat dst;
         cv::gpu::cornerHarris(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, k);
 
+        int asize = apertureSize > 0 ? apertureSize : 3;
+
         cv::Mat dsth = dst;
-        for (int i = apertureSize + 2; i < dst.rows - apertureSize - 2; ++i)
+        for (int i = max(blockSize, asize) + 2; i < dst.rows - max(blockSize, asize) - 2; ++i)
         {
-            for (int j = apertureSize + 2; j < dst.cols - apertureSize - 2; ++j)
+            for (int j = max(blockSize, asize) + 2; j < dst.cols - max(blockSize, asize) - 2; ++j)
             {
                 float a = dst_gold.at<float>(i, j);
                 float b = dsth.at<float>(i, j);
-                if (fabs(a - b) > 1e-3f) return false;
+                if (fabs(a - b) > 1e-3f) 
+                {
+                    ts->printf(CvTS::CONSOLE, "%d %d %f %f %d\n", i, j, a, b, apertureSize);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return false;
+                };
             }
         }
         return true;
@@ -670,11 +676,10 @@ struct CV_GpuCornerMinEigenValTest: CvTest
     {
         try
         {
-            int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
-            if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
             for (int i = 0; i < 3; ++i)
             {
-                rows = 1 + rand() % 300; cols = 1 + rand() % 300;
+                int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
+                if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
             }
         }
@@ -700,14 +705,21 @@ struct CV_GpuCornerMinEigenValTest: CvTest
         cv::gpu::GpuMat dst;
         cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dst, blockSize, apertureSize);
 
+        int asize = apertureSize > 0 ? apertureSize : 3;
+
         cv::Mat dsth = dst;
-        for (int i = apertureSize + 2; i < dst.rows - apertureSize - 2; ++i)
+        for (int i = max(blockSize, asize) + 2; i < dst.rows - max(blockSize, asize) - 2; ++i)
         {
-            for (int j = apertureSize + 2; j < dst.cols - apertureSize - 2; ++j)
+            for (int j = max(blockSize, asize) + 2; j < dst.cols - max(blockSize, asize) - 2; ++j)
             {
                 float a = dst_gold.at<float>(i, j);
                 float b = dsth.at<float>(i, j);
-                if (fabs(a - b) > 1e-3f) return false;
+                if (fabs(a - b) > 1e-3f) 
+                {
+                    ts->printf(CvTS::CONSOLE, "%d %d %f %f %d %d\n", i, j, a, b, apertureSize, blockSize);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return false;
+                };
             }
         }
         return true;

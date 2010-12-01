@@ -478,10 +478,13 @@ namespace cv { namespace gpu { namespace imgproc
             float b = 0.f;
             float c = 0.f;
 
-            const unsigned int j_begin = max(x - block_size, 0);
-            const unsigned int i_begin = max(y - block_size, 0);
-            const unsigned int j_end = min(x + block_size + 1, cols);
-            const unsigned int i_end = min(y + block_size + 1, rows);
+            int offset1 = -(block_size / 2);
+            int offset2 = offset1 + block_size;
+
+            unsigned int j_begin = max(x + offset1, 0);
+            unsigned int i_begin = max(y + offset1, 0);
+            unsigned int j_end = min(x + offset2, cols);
+            unsigned int i_end = min(y + offset2, rows);
 
             for (unsigned int i = i_begin; i < i_end; ++i)
             {
@@ -509,7 +512,7 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size / 2, k, Dx, Dy, dst);
+        cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size, k, Dx, Dy, dst);
         cudaSafeCall(cudaThreadSynchronize());
     }
 
@@ -527,10 +530,13 @@ namespace cv { namespace gpu { namespace imgproc
             float b = 0.f;
             float c = 0.f;
 
-            const unsigned int j_begin = max(x - block_size, 0);
-            const unsigned int i_begin = max(y - block_size, 0);
-            const unsigned int j_end = min(x + block_size + 1, cols);
-            const unsigned int i_end = min(y + block_size + 1, rows);
+            int offset1 = -(block_size / 2);
+            int offset2 = offset1 + block_size;
+
+            unsigned int j_begin = max(x + offset1, 0);
+            unsigned int i_begin = max(y + offset1, 0);
+            unsigned int j_end = min(x + offset2, cols);
+            unsigned int i_end = min(y + offset2, rows);
 
             for (unsigned int i = i_begin; i < i_end; ++i)
             {
@@ -560,7 +566,7 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        cornerMinEigenVal_kernel<<<grid, threads>>>(cols, rows, block_size / 2, Dx, Dy, dst);
+        cornerMinEigenVal_kernel<<<grid, threads>>>(cols, rows, block_size, Dx, Dy, dst);
         cudaSafeCall(cudaThreadSynchronize());
     }
 }}}
