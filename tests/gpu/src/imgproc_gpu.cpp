@@ -616,7 +616,7 @@ struct CV_GpuCornerHarrisTest: CvTest
         {
             for (int i = 0; i < 5; ++i)
             {
-                int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
+                int rows = 10 + rand() % 300, cols = 10 + rand() % 300;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
             }
@@ -678,7 +678,7 @@ struct CV_GpuCornerMinEigenValTest: CvTest
         {
             for (int i = 0; i < 3; ++i)
             {
-                int rows = 1 + rand() % 300, cols = 1 + rand() % 300;
+                int rows = 10 + rand() % 300, cols = 10 + rand() % 300;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
             }
