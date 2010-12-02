@@ -110,7 +110,7 @@ void CvCascadeBoostParams::printAttrs() const
     cout << "minHitRate: " << minHitRate << endl;
     cout << "maxFalseAlarmRate: " <<  maxFalseAlarm << endl;
     cout << "weightTrimRate: " << weight_trim_rate << endl;
-    cout << "maxTreeDepth: " << max_depth << endl;
+    cout << "maxDepth: " << max_depth << endl;
     cout << "maxWeakCount: " << weak_count << endl;
 }
 
@@ -139,7 +139,7 @@ bool CvCascadeBoostParams::scanAttr( const String prmName, const String val)
     {
         weight_trim_rate = (float) atof( val.c_str() );
     }
-    else if( !prmName.compare( "-maxTreeDepth" ) )
+    else if( !prmName.compare( "-maxDepth" ) )
     {
         max_depth = atoi( val.c_str() );
     }
