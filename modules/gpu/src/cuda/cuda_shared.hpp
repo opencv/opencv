@@ -99,7 +99,7 @@ namespace cv
         // border interpolation modes)
         enum 
         {
-            BORDER_REFLECT101 = 0,
+            BORDER_REFLECT101 = 0
         };
 
     }
