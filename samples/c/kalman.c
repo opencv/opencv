@@ -1,23 +1,30 @@
-/*
-   Tracking of rotating point.
-   Rotation speed is constant.
-   Both state and measurements vectors are 1D (a point angle),
-   Measurement is the real point angle + gaussian noise.
-   The real and the estimated points are connected with yellow line segment,
-   the real and the measured points are connected with red line segment.
-   (if Kalman filter works correctly,
-    the yellow segment should be shorter than the red one).
-   Pressing any key (except ESC) will reset the tracking with a different speed.
-   Pressing ESC will stop the program.
-*/
-
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/highgui/highgui.hpp"
+
+#include <stdio.h>
+void help()
+{
+	printf( "\nExamle of c calls to OpenCV's Kalman filter.\n"
+"   Tracking of rotating point.\n"
+"   Rotation speed is constant.\n"
+"   Both state and measurements vectors are 1D (a point angle),\n"
+"   Measurement is the real point angle + gaussian noise.\n"
+"   The real and the estimated points are connected with yellow line segment,\n"
+"   the real and the measured points are connected with red line segment.\n"
+"   (if Kalman filter works correctly,\n"
+"    the yellow segment should be shorter than the red one).\n"
+			"\n"
+"   Pressing any key (except ESC) will reset the tracking with a different speed.\n"
+"   Pressing ESC will stop the program.\n"
+			);
+}
+
+
 
 int main(int argc, char** argv)
 {
     const float A[] = { 1, 1, 0, 1 };
-
+    help();
     IplImage* img = cvCreateImage( cvSize(500,500), 8, 3 );
     CvKalman* kalman = cvCreateKalman( 2, 1, 0 );
     CvMat* state = cvCreateMat( 2, 1, CV_32FC1 ); /* (phi, delta_phi) */
