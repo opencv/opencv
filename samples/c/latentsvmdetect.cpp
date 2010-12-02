@@ -4,6 +4,16 @@
 
 using namespace cv;
 
+void help()
+{
+	printf( "This program demonstrated the use of the latentSVM detector.\n"
+			"It reads in a trained object model and then uses that to detect the object in an image\n"
+			"Call:\n"
+			"./latentsvmdetect [<image_filename> <model_filename]\n"
+			"  The defaults for image_filename and model_filename are cat.jpg and cat.xml respectively\n"
+			"  Press any key to quit.\n");
+}
+
 const char* model_filename = "cat.xml";
 const char* image_filename = "cat.jpg";
 
@@ -31,9 +41,9 @@ void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detector)
     cvReleaseMemStorage( &storage );
 }
 
-
 int main(int argc, char* argv[])
 {
+	help();
 	if (argc > 2)
 	{
 		image_filename = argv[1];
