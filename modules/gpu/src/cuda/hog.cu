@@ -322,7 +322,8 @@ void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
         normalize_hists_kernel_many_blocks<256, nblocks><<<grid, threads>>>(block_hist_size, img_block_width, block_hists, threshold);
     else if (nthreads == 512)
         normalize_hists_kernel_many_blocks<512, nblocks><<<grid, threads>>>(block_hist_size, img_block_width, block_hists, threshold);
-    // We don't support bigger sizes of the block histograms
+    else
+        cv::gpu::error("normalize_hists: histogram's size is too big, try to decrease number of bins", __FILE__, __LINE__);
 
     cudaSafeCall(cudaThreadSynchronize());
 }

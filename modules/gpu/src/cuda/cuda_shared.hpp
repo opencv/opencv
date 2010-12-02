@@ -94,6 +94,14 @@ namespace cv
             cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
             cudaSafeCall( cudaUnbindTexture(tex) );
         }        
+
+        // Available GPU border interpolation modes (named as CPU 
+        // border interpolation modes)
+        enum 
+        {
+            BORDER_REFLECT101 = 0,
+        };
+
     }
 }
 

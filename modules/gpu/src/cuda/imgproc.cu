@@ -41,6 +41,7 @@
 //M*/
 
 #include "cuda_shared.hpp"
+#include "border_interpolate.hpp"
 
 using namespace cv::gpu;
 
@@ -464,10 +465,40 @@ namespace cv { namespace gpu { namespace imgproc
         reprojectImageTo3D_caller(disp, xyzw, q, stream);
     }
 
+//////////////////////////////////////// Extract Cov Data ////////////////////////////////////////////////
+
+    __global__ void extractCovData_kernel(const int cols, const int rows, const PtrStepf Dx, 
+                                          const PtrStepf Dy, PtrStepf dst)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {            
+            float dx = Dx.ptr(y)[x];
+            float dy = Dy.ptr(y)[x];
+
+            dst.ptr(y)[x] = dx * dx;
+            dst.ptr(y + rows)[x] = dx * dy;
+            dst.ptr(y + (rows << 1))[x] = dy * dy;
+        }
+    }
+
+    void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst)
+    {
+        dim3 threads(32, 8);
+        dim3 grid(divUp(Dx.cols, threads.x), divUp(Dx.rows, threads.y));
+
+        extractCovData_kernel<<<grid, threads>>>(Dx.cols, Dx.rows, Dx, Dy, dst);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
 /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
 
+    template <typename B>
     __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
-                                        const PtrStep Dx, const PtrStep Dy, PtrStep dst)
+                                        const PtrStep Dx, const PtrStep Dy, PtrStep dst, B border_row, 
+                                        B border_col)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -478,22 +509,21 @@ namespace cv { namespace gpu { namespace imgproc
             float b = 0.f;
             float c = 0.f;
 
-            int offset1 = -(block_size / 2);
-            int offset2 = offset1 + block_size;
+            const int ibegin = y - (block_size / 2);
+            const int jbegin = x - (block_size / 2);
+            const int iend = ibegin + block_size;
+            const int jend = jbegin + block_size;
 
-            unsigned int j_begin = max(x + offset1, 0);
-            unsigned int i_begin = max(y + offset1, 0);
-            unsigned int j_end = min(x + offset2, cols);
-            unsigned int i_end = min(y + offset2, rows);
-
-            for (unsigned int i = i_begin; i < i_end; ++i)
+            for (int i = ibegin; i < iend; ++i)
             {
-                const float* dx_row = (const float*)Dx.ptr(i);
-                const float* dy_row = (const float*)Dy.ptr(i);
-                for (unsigned int j = j_begin; j < j_end; ++j)
+                int y = border_col.idx(i);
+                const float* dx_row = (const float*)Dx.ptr(y);
+                const float* dy_row = (const float*)Dy.ptr(y);
+                for (int j = jbegin; j < jend; ++j)
                 {
-                    float dx = dx_row[j];
-                    float dy = dy_row[j];
+                    int x = border_row.idx(j);
+                    float dx = dx_row[x];
+                    float dy = dy_row[x];
                     a += dx * dx;
                     b += dx * dy;
                     c += dy * dy;
@@ -504,7 +534,8 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst)
+    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst, 
+                             int border_type)
     {
         const int rows = Dx.rows;
         const int cols = Dx.cols;
@@ -512,14 +543,22 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size, k, Dx, Dy, dst);
+        switch (border_type) 
+        {
+        case BORDER_REFLECT101:
+            cornerHarris_kernel<<<grid, threads>>>(
+                    cols, rows, block_size, k, Dx, Dy, dst, 
+                    BrdReflect101(cols), BrdReflect101(rows));
+            break;
+        }
         cudaSafeCall(cudaThreadSynchronize());
     }
 
 /////////////////////////////////////////// Corner Min Eigen Val /////////////////////////////////////////////////
 
-    __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size,
-                                             const PtrStep Dx, const PtrStep Dy, PtrStep dst)
+    template <typename B>
+    __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, const PtrStep Dx, 
+                                             const PtrStep Dy, PtrStep dst, B border_row, B border_col)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -530,22 +569,21 @@ namespace cv { namespace gpu { namespace imgproc
             float b = 0.f;
             float c = 0.f;
 
-            int offset1 = -(block_size / 2);
-            int offset2 = offset1 + block_size;
+            const int ibegin = y - (block_size / 2);
+            const int jbegin = x - (block_size / 2);
+            const int iend = ibegin + block_size;
+            const int jend = jbegin + block_size;
 
-            unsigned int j_begin = max(x + offset1, 0);
-            unsigned int i_begin = max(y + offset1, 0);
-            unsigned int j_end = min(x + offset2, cols);
-            unsigned int i_end = min(y + offset2, rows);
-
-            for (unsigned int i = i_begin; i < i_end; ++i)
+            for (int i = ibegin; i < iend; ++i)
             {
-                const float* dx_row = (const float*)Dx.ptr(i);
-                const float* dy_row = (const float*)Dy.ptr(i);
-                for (unsigned int j = j_begin; j < j_end; ++j)
+                int y = border_col.idx(i);
+                const float* dx_row = (const float*)Dx.ptr(y);
+                const float* dy_row = (const float*)Dy.ptr(y);
+                for (int j = jbegin; j < jend; ++j)
                 {
-                    float dx = dx_row[j];
-                    float dy = dy_row[j];
+                    int x = border_row.idx(j);
+                    float dx = dx_row[x];
+                    float dy = dy_row[x];
                     a += dx * dx;
                     b += dx * dy;
                     c += dy * dy;
@@ -558,7 +596,8 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst)
+    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst,
+                                  int border_type)
     {
         const int rows = Dx.rows;
         const int cols = Dx.cols;
@@ -566,7 +605,14 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        cornerMinEigenVal_kernel<<<grid, threads>>>(cols, rows, block_size, Dx, Dy, dst);
+        switch (border_type)
+        {
+        case BORDER_REFLECT101:
+            cornerMinEigenVal_kernel<<<grid, threads>>>(
+                    cols, rows, block_size, Dx, Dy, dst, 
+                    BrdReflect101(cols), BrdReflect101(rows));
+            break;
+        }
         cudaSafeCall(cudaThreadSynchronize());
     }
 }}}

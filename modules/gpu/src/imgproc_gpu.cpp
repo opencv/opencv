@@ -68,8 +68,8 @@ void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -861,49 +861,119 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
 
 namespace cv { namespace gpu { namespace imgproc {
 
-    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst);
-    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst);
+    void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst);
+    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst, int border_type);
+    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst, int border_type);
+
+}}}
+
+namespace cv { namespace gpu { namespace linear_filters {
+
+    template <typename T>
+    void rowFilterCaller(const DevMem2D_<T> src, PtrStepf dst, int anchor, const float* kernel, 
+                         int ksize, int brd_interp);
+
+    template <typename T>
+    void colFilterCaller(const DevMem2D_<T> src, PtrStepf dst, int anchor, const float* kernel, 
+                         int ksize, int brd_interp);
 
 }}}
 
 namespace 
 {
-    void computeGradients(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize)
-    {
-        CV_Assert(src.type() == CV_32F);
-
+    template <typename T>
+    void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int gpuBorderType)
+    {   
         double scale = (double)(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
-        if (ksize < 0) scale *= 2.;
+        if (ksize < 0) 
+            scale *= 2.;
+        if (src.depth() == CV_8U)
+            scale *= 255.;
         scale = 1./scale;
 
-        if (ksize > 0)
+        GpuMat tmp_buf(src.size(), CV_32F);
+        Dx.create(src.size(), CV_32F);
+        Dy.create(src.size(), CV_32F);
+        Mat kx, ky;
+
+        getDerivKernels(kx, ky, 1, 0, ksize, false, CV_32F);
+        kx = kx.reshape(1, 1) * scale;
+        ky = ky.reshape(1, 1);
+
+        linear_filters::rowFilterCaller<T>(
+                src, tmp_buf, kx.cols >> 1, kx.ptr<float>(0), kx.cols,
+                gpuBorderType);
+
+        linear_filters::colFilterCaller<float>(
+                tmp_buf, Dx, ky.cols >> 1, ky.ptr<float>(0), ky.cols, 
+                gpuBorderType);
+
+        getDerivKernels(kx, ky, 0, 1, ksize, false, CV_32F);
+        kx = kx.reshape(1, 1);
+        ky = ky.reshape(1, 1) * scale;
+
+        linear_filters::rowFilterCaller<T>(
+                src, tmp_buf, kx.cols >> 1, kx.ptr<float>(0), kx.cols, 
+                gpuBorderType);
+
+        linear_filters::colFilterCaller<float>(
+                tmp_buf, Dy, ky.cols >> 1, ky.ptr<float>(0), ky.cols, 
+                gpuBorderType);
+    }
+
+    void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int gpuBorderType)
+    {
+        switch (src.type())
         {
-            Sobel(src, Dx, CV_32F, 1, 0, ksize, scale);
-            Sobel(src, Dy, CV_32F, 0, 1, ksize, scale);
-        }
-        else
-        {
-            Scharr(src, Dx, CV_32F, 1, 0, scale);
-            Scharr(src, Dy, CV_32F, 0, 1, scale);
+        case CV_8U:
+            extractCovData<unsigned char>(src, Dx, Dy, blockSize, ksize, gpuBorderType);
+            break;
+        case CV_32F:
+            extractCovData<float>(src, Dx, Dy, blockSize, ksize, gpuBorderType);
+            break;
+        default:
+            CV_Error(CV_StsBadArg, "extractCovData: unsupported type of the source matrix");
         }
     }
+
+} // Anonymous namespace
+
+void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType)
+{
+    int gpuBorderType;
+    switch (borderType)
+    {
+    case cv::BORDER_REFLECT101:
+        gpuBorderType = cv::gpu::BORDER_REFLECT101;
+        break;
+    default:
+        CV_Error(CV_StsBadArg, "cornerHarris: unsupported border type");
+    }
+
+    GpuMat Dx, Dy;
+    extractCovData(src, Dx, Dy, blockSize, ksize, gpuBorderType);
+    dst.create(src.size(), CV_32F);
+    imgproc::cornerHarris_caller(blockSize, (float)k, Dx, Dy, dst, gpuBorderType);
 }
 
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k)
-{
-    GpuMat Dx, Dy;
-    computeGradients(src, Dx, Dy, blockSize, ksize);
-    dst.create(src.size(), CV_32F);
-    imgproc::cornerHarris_caller(blockSize, (float)k, Dx, Dy, dst);
-}
+void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
+{  
+    int gpuBorderType;
+    switch (borderType)
+    {
+    case cv::BORDER_REFLECT101:
+        gpuBorderType = cv::gpu::BORDER_REFLECT101;
+        break;
+    default:
+        CV_Error(CV_StsBadArg, "cornerMinEigenVal: unsupported border type");
+    }
 
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize)
-{
     GpuMat Dx, Dy;
-    computeGradients(src, Dx, Dy, blockSize, ksize);
+    extractCovData(src, Dx, Dy, blockSize, ksize, gpuBorderType);    
     dst.create(src.size(), CV_32F);
-    imgproc::cornerMinEigenVal_caller(blockSize, Dx, Dy, dst);
+    imgproc::cornerMinEigenVal_caller(blockSize, Dx, Dy, dst, gpuBorderType);
 }
 
 
 #endif /* !defined (HAVE_CUDA) */
+

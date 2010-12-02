@@ -616,9 +616,11 @@ struct CV_GpuCornerHarrisTest: CvTest
         {
             for (int i = 0; i < 5; ++i)
             {
-                int rows = 10 + rand() % 300, cols = 10 + rand() % 300;
+                int rows = 25 + rand() % 300, cols = 25 + rand() % 300;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
+                if (!compareToCpuTest(rows, cols, CV_8U, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
+                if (!compareToCpuTest(rows, cols, CV_8U, 1 + rand() % 5, -1)) return;
             }
         }
         catch (const Exception& e)
@@ -634,22 +636,22 @@ struct CV_GpuCornerHarrisTest: CvTest
         cv::Mat src(rows, cols, depth);
         if (depth == CV_32F) 
             rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
+        else if (depth == CV_8U)
+            rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(256));
 
         double k = 0.1;
-        int borderType = BORDER_DEFAULT;
+        int borderType = BORDER_REFLECT101;
 
         cv::Mat dst_gold;
         cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType); 
 
         cv::gpu::GpuMat dst;
-        cv::gpu::cornerHarris(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, k);
-
-        int asize = apertureSize > 0 ? apertureSize : 3;
+        cv::gpu::cornerHarris(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, k, borderType);
 
         cv::Mat dsth = dst;
-        for (int i = max(blockSize, asize) + 2; i < dst.rows - max(blockSize, asize) - 2; ++i)
+        for (int i = 0; i < dst.rows; ++i)
         {
-            for (int j = max(blockSize, asize) + 2; j < dst.cols - max(blockSize, asize) - 2; ++j)
+            for (int j = 0; j < dst.cols; ++j)
             {
                 float a = dst_gold.at<float>(i, j);
                 float b = dsth.at<float>(i, j);
@@ -678,9 +680,11 @@ struct CV_GpuCornerMinEigenValTest: CvTest
         {
             for (int i = 0; i < 3; ++i)
             {
-                int rows = 10 + rand() % 300, cols = 10 + rand() % 300;
+                int rows = 25 + rand() % 300, cols = 25 + rand() % 300;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, -1)) return;
                 if (!compareToCpuTest(rows, cols, CV_32F, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
+                if (!compareToCpuTest(rows, cols, CV_8U, 1 + rand() % 5, -1)) return;
+                if (!compareToCpuTest(rows, cols, CV_8U, 1 + rand() % 5, 1 + 2 * (rand() % 4))) return;
             }
         }
         catch (const Exception& e)
@@ -696,25 +700,25 @@ struct CV_GpuCornerMinEigenValTest: CvTest
         cv::Mat src(rows, cols, depth);
         if (depth == CV_32F) 
             rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
+        else if (depth == CV_8U)
+            rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(256));
 
-        int borderType = BORDER_DEFAULT;
+        int borderType = BORDER_REFLECT101;
 
         cv::Mat dst_gold;
         cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType); 
 
         cv::gpu::GpuMat dst;
-        cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dst, blockSize, apertureSize);
-
-        int asize = apertureSize > 0 ? apertureSize : 3;
+        cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, borderType);      
 
         cv::Mat dsth = dst;
-        for (int i = max(blockSize, asize) + 2; i < dst.rows - max(blockSize, asize) - 2; ++i)
+        for (int i = 0; i < dst.rows; ++i)
         {
-            for (int j = max(blockSize, asize) + 2; j < dst.cols - max(blockSize, asize) - 2; ++j)
+            for (int j = 0; j < dst.cols; ++j)
             {
                 float a = dst_gold.at<float>(i, j);
                 float b = dsth.at<float>(i, j);
-                if (fabs(a - b) > 1e-3f) 
+                if (fabs(a - b) > 1e-2f) 
                 {
                     ts->printf(CvTS::CONSOLE, "%d %d %f %f %d %d\n", i, j, a, b, apertureSize, blockSize);
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
