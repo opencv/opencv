@@ -14,7 +14,17 @@
 #include <vector>
 
 using namespace std;
+void help()
+{
+	printf(
+			"This program demonstrated the use of the SURF Detector and Descriptor using\n"
+			"either FLANN (fast approx nearst neighbor classification) or brute force matching\n"
+			"on planar objects.\n"
+			"Call:\n"
+			"./find_obj [<object_filename default box.png> <scene_filename default box_in_scene.png>]\n\n"
+			);
 
+}
 
 // define whether to use approximate nearest-neighbor search
 #define USE_FLANN
@@ -205,7 +215,7 @@ int main(int argc, char** argv)
     const char* scene_filename = argc == 3 ? argv[2] : "box_in_scene.png";
 
     CvMemStorage* storage = cvCreateMemStorage(0);
-
+    help();
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
