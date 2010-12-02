@@ -1,6 +1,15 @@
 #include <opencv2/video/tracking.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <stdio.h>
+void help()
+{
+	printf(
+			"This program demonstrate dense \"Farneback\n optical flow\n"
+			"It read from camera 0, and shows how to use and display dense Franeback optical flow\n"
+			"Call:\n"
+			"./fback_c\n\n");
 
+}
 void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
                     double scale, CvScalar color)
 {
@@ -19,6 +28,8 @@ int main(int argc, char** argv)
 {
     CvCapture* capture = cvCreateCameraCapture(0);
     CvMat* prevgray = 0, *gray = 0, *flow = 0, *cflow = 0;
+
+    help();
 
     if( !capture )
         return -1;
