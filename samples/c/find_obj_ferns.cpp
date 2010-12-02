@@ -8,13 +8,20 @@
 #include <vector>
 
 using namespace cv;
-
+void help()
+{
+    printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"
+    		"descriptor classifier"
+    		"Usage:\n"
+    		"./find_obj_ferns [<object_filename default: box.png> <scene_filename default:box_in_scene.png>]\n"
+    		"\n");
+}
 int main(int argc, char** argv)
 {
     const char* object_filename = argc > 1 ? argv[1] : "box.png";
     const char* scene_filename = argc > 2 ? argv[2] : "box_in_scene.png";
     int i;
-    
+    help();
     cvNamedWindow("Object", 1);
     cvNamedWindow("Image", 1);
     cvNamedWindow("Object Correspondence", 1);
@@ -31,7 +38,7 @@ int main(int argc, char** argv)
     if( !object.data || !image.data )
     {
         fprintf( stderr, "Can not load %s and/or %s\n"
-                "Usage: find_obj [<object_filename> <scene_filename>]\n",
+                "Usage: find_obj_ferns [<object_filename> <scene_filename>]\n",
                 object_filename, scene_filename );
         exit(-1);
     }
