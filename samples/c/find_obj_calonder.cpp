@@ -9,6 +9,15 @@
 using namespace std;
 using namespace cv;
 
+void help()
+{
+    cout << "This program shows the use of the Calonder point descriptor classifier"
+    		"SURF is used to detect interest points, Calonder is used to describe/match these points\n"
+    		"Format:" << endl <<
+            "   classifier_file(to write) test_image file_with_train_images_filenames(txt)" <<
+            "   or" << endl <<
+            "   classifier_file(to read) test_image" << endl;
+}
 /*
  * Generates random perspective transform of image
  */
@@ -133,15 +142,11 @@ void testCalonderClassifier( const string& classifierFilename, const string& img
     waitKey();
 }
 
-
 int main( int argc, char **argv )
 {
     if( argc != 4 && argc != 3 )
     {
-        cout << "Format:" << endl <<
-                "   classifier_file(to write) test_image file_with_train_images_filenames(txt)" <<
-                "   or" << endl <<
-                "   classifier_file(to read) test_image" << endl;
+    	help();
         return -1;
     }
 
