@@ -139,7 +139,7 @@ bool CvCascadeBoostParams::scanAttr( const String prmName, const String val)
     {
         weight_trim_rate = (float) atof( val.c_str() );
     }
-    else if( !prmName.compare( "-maxDepth" ) )
+    else if( !prmName.compare( "-maxTreeDepth" ) )
     {
         max_depth = atoi( val.c_str() );
     }
@@ -240,9 +240,11 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
     if (sample_count < 65536) 
         is_buf_16u = true; 
 
-	numPrecalcVal = min( (_precalcValBufSize*1048576) / int(sizeof(float)*sample_count), var_count );
-    numPrecalcIdx = min( (_precalcIdxBufSize*1048576) /
-                int((is_buf_16u ? sizeof(unsigned short) : sizeof (int))*sample_count), var_count );
+    numPrecalcVal = min( cvRound((double)_precalcValBufSize*1048576. / (sizeof(float)*sample_count)), var_count );
+    numPrecalcIdx = min( cvRound((double)_precalcIdxBufSize*1048576. /
+                ((is_buf_16u ? sizeof(unsigned short) : sizeof (int))*sample_count)), var_count );
+
+    assert( numPrecalcIdx >= 0 && numPrecalcVal >= 0 );
 
     valCache.create( numPrecalcVal, sample_count, CV_32FC1 );
     var_type = cvCreateMat( 1, var_count + 2, CV_32SC1 );
@@ -394,7 +396,7 @@ void CvCascadeBoostTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* o
 		}
 		else
 		{
-			for( int i = 0; i < nodeSampleCount; i++ )
+            for( int i = 0; i < nodeSampleCount; i++ )
 	        {
                 int idx = (*sortedIndices)[i];
 	            idx = sampleIndices[idx];
@@ -404,13 +406,26 @@ void CvCascadeBoostTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* o
     }
 	else // vi >= numPrecalcIdx
 	{
-		// use sample_indices as temporary buffer for values
+        vector<float> sampleValuesBuf;
+        float* sampleValues = 0;
+
+        if( sizeof(float) == sizeof(int) )
+        {
+            // use sampleIndices as temporary buffer for values
+            sampleValues = (float*)sampleIndices;
+        }
+        else
+        {
+            sampleValuesBuf.resize(nodeSampleCount);
+            sampleValues = &sampleValuesBuf[0];
+        }
+
 		if ( vi < numPrecalcVal )
 		{
 			for( int i = 0; i < nodeSampleCount; i++ )
 	        {
                 sortedIndicesBuf[i] = i;
-	            ((float*)sampleIndices)[i] = valCache.at<float>( vi, sampleIndices[i] );
+                sampleValues[i] = valCache.at<float>( vi, sampleIndices[i] );
 	        }
 		}
 		else
@@ -418,12 +433,12 @@ void CvCascadeBoostTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* o
             for( int i = 0; i < nodeSampleCount; i++ )
 	        {
                 sortedIndicesBuf[i] = i;
-				((float*)sampleIndices)[i] = (*featureEvaluator)( vi, sampleIndices[i]);
+                sampleValues[i] = (*featureEvaluator)( vi, sampleIndices[i]);
 			}
 		}
-        icvSortIntAux( sortedIndicesBuf, sample_count, (float *)sampleIndices );
+        icvSortIntAux( sortedIndicesBuf, nodeSampleCount, &sampleValues[0] );
 		for( int i = 0; i < nodeSampleCount; i++ )
-            ordValuesBuf[i] = ((float*)sampleIndices)[sortedIndicesBuf[i]];
+            ordValuesBuf[i] = (&sampleValues[0])[sortedIndicesBuf[i]];
         *sortedIndices = sortedIndicesBuf;
 	}
 	
@@ -553,7 +568,6 @@ struct FeatureValOnlyPrecalc
 void CvCascadeBoostTrainData::precalculate()
 {
     int minNum = MIN( numPrecalcVal, numPrecalcIdx);
-    CV_DbgAssert( !valCache.empty() );
 
     double proctime = -TIME( 0 );
     parallel_for( BlockedRange(numPrecalcVal, numPrecalcIdx),
