@@ -53,12 +53,12 @@ namespace cv { namespace gpu {
 
         __device__ int idx_high(int i) const 
         {
-            return last - abs(i - last);
+            return last - abs(last - i);
         }
 
         __device__ int idx(int i) const
         {
-            return i <= last ? idx_low(i) : idx_high(i);
+            return abs(idx_high(i));
         }
 
         bool is_range_safe(int mini, int maxi) const 
@@ -91,6 +91,70 @@ namespace cv { namespace gpu {
     struct BrdColReflect101: BrdReflect101
     {
         BrdColReflect101(int len, int step) : BrdReflect101(len), step(step) {}
+
+        __device__ float at_low(int i, const T* data) const 
+        {
+            return data[idx_low(i) * step];
+        }
+
+        __device__ float at_high(int i, const T* data) const 
+        {
+            return data[idx_high(i) * step];
+        }
+
+        int step;
+    };
+
+
+    struct BrdReplicate
+    {
+        BrdReplicate(int len) : last(len - 1) {}
+
+        __device__ int idx_low(int i) const
+        {
+            return max(i, 0);
+        }
+
+        __device__ int idx_high(int i) const 
+        {
+            return min(i, last);
+        }
+
+        __device__ int idx(int i) const
+        {
+            return min(max(i, last), 0);
+        }
+
+        bool is_range_safe(int mini, int maxi) const 
+        {
+            return true;
+        }
+
+        int last;
+    };
+
+
+    template <typename T>
+    struct BrdRowReplicate: BrdReplicate
+    {
+        BrdRowReplicate(int len) : BrdReplicate(len) {}
+
+        __device__ float at_low(int i, const T* data) const 
+        {
+            return data[idx_low(i)];
+        }
+
+        __device__ float at_high(int i, const T* data) const 
+        {
+            return data[idx_high(i)];
+        }
+    };
+
+
+    template <typename T>
+    struct BrdColReplicate: BrdReplicate
+    {
+        BrdColReplicate(int len, int step) : BrdReplicate(len), step(step) {}
 
         __device__ float at_low(int i, const T* data) const 
         {
