@@ -13,9 +13,9 @@ void help()
 			"\nThis program demonstrates chamfer matching -- computing a distance between an \n"
 			"edge template and a query edge image.\n"
 			"Call:\n"
-			"./chamfermatching [<image edge map> <template edge map>]\n"
+			"./chamfer [<image edge map> <template edge map>]\n"
 			"By default\n"
-			"the inputs are ./chamfermatching logo_in_clutter.png logo.png\n"<< endl;
+			"the inputs are ./chamfer logo_in_clutter.png logo.png\n"<< endl;
 }
 int main( int argc, char** argv )
 {
