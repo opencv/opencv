@@ -5,6 +5,24 @@
 
 using namespace cv;
 
+void help()
+{
+	printf("\nDemonstrate the use of the distance transform function between edge images.\n"
+			"Usage:\n"
+			"./distrans [image_name -- default image is stuff.jpg]\n"
+			);
+    printf( "\nHot keys: \n"
+        "\tESC - quit the program\n"
+        "\tC - use C/Inf metric\n"
+        "\tL1 - use L1 metric\n"
+        "\tL2 - use L2 metric\n"
+        "\t3 - use 3x3 mask\n"
+        "\t5 - use 5x5 mask\n"
+        "\t0 - use precise distance transform\n"
+        "\tv - switch Voronoi diagram mode on/off\n"
+        "\tSPACE - loop through all the modes\n" );
+}
+
 int maskSize0 = CV_DIST_MASK_5;
 bool buildVoronoi = false;
 int edgeThresh = 100;
@@ -89,21 +107,11 @@ int main( int argc, char** argv )
     gray = imread(filename, 0);
     if(gray.empty())
     {
-        printf("Usage: distrans <image_name>\n");
-        return 0;
+    	help();
+    	return -1;
     }
 
-    printf( "Hot keys: \n"
-        "\tESC - quit the program\n"
-        "\tC - use C/Inf metric\n"
-        "\tL1 - use L1 metric\n"
-        "\tL2 - use L2 metric\n"
-        "\t3 - use 3x3 mask\n"
-        "\t5 - use 5x5 mask\n"
-        "\t0 - use precise distance transform\n"
-        "\tv - switch Voronoi diagram mode on/off\n"
-        "\tSPACE - loop through all the modes\n" );
-
+    help();
     namedWindow("Distance Map", 1);
     createTrackbar("Brightness Threshold", "Distance Map", &edgeThresh, 255, onTrackbar, 0);
 
