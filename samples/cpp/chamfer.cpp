@@ -7,11 +7,21 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+	cout <<
+			"\nThis program demonstrates chamfer matching -- computing a distance between an \n"
+			"edge template and a query edge image.\n"
+			"Call:\n"
+			"./chamfermatching [<image edge map> <template edge map>]\n"
+			"By default\n"
+			"the inputs are ./chamfermatching logo_in_clutter.png logo.png\n"<< endl;
+}
 int main( int argc, char** argv )
 {
     if( argc != 1 && argc != 3 )
     {
-        cout << "Usage: chamfer <image edge map> <template edge map>\n";
+        help();
         return 0;
     }
     Mat img = imread(argc == 3 ? argv[1] : "logo_in_clutter.png", 0);
