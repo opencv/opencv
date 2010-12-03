@@ -696,8 +696,8 @@ void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& im
 //-------------------------------------------------------------------
 // Resize
 
-texture<uchar4, 2> resize8UC4_tex;
-texture<unsigned char, 2> resize8UC1_tex;
+texture<uchar4, 2, cudaReadModeNormalizedFloat> resize8UC4_tex;
+texture<unsigned char, 2, cudaReadModeNormalizedFloat> resize8UC1_tex;
 
 
 extern "C" __global__ void resize_8UC4_kernel(float sx, float sy, DevMem2D dst)
@@ -706,7 +706,10 @@ extern "C" __global__ void resize_8UC4_kernel(float sx, float sy, DevMem2D dst)
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < dst.cols && y < dst.rows)
-        ((uchar4*)dst.ptr(y))[x] = tex2D(resize8UC4_tex, x * sx, y * sy);
+    {
+        float4 val = tex2D(resize8UC4_tex, x * sx, y * sy);
+        ((uchar4*)dst.ptr(y))[x] = make_uchar4(val.x * 255, val.y * 255, val.z * 255, val.w * 255);
+    }
 }
 
 
@@ -714,6 +717,7 @@ void resize_8UC4(const DevMem2D& src, DevMem2D dst)
 {
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
     cudaBindTexture2D(0, resize8UC4_tex, src.data, desc, src.cols, src.rows, src.step);
+    resize8UC4_tex.filterMode = cudaFilterModeLinear;
 
     dim3 threads(32, 8);
     dim3 grid(div_up(dst.cols, threads.x), div_up(dst.rows, threads.y));
@@ -732,7 +736,7 @@ extern "C" __global__ void resize_8UC1_kernel(float sx, float sy, DevMem2D dst)
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < dst.cols && y < dst.rows)
-        ((unsigned char*)dst.ptr(y))[x] = tex2D(resize8UC1_tex, x * sx, y * sy);
+        ((unsigned char*)dst.ptr(y))[x] = tex2D(resize8UC1_tex, x * sx, y * sy) * 255;
 }
 
 
@@ -740,6 +744,7 @@ void resize_8UC1(const DevMem2D& src, DevMem2D dst)
 {
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
     cudaBindTexture2D(0, resize8UC1_tex, src.data, desc, src.cols, src.rows, src.step);
+    resize8UC1_tex.filterMode = cudaFilterModeLinear;
 
     dim3 threads(32, 8);
     dim3 grid(div_up(dst.cols, threads.x), div_up(dst.rows, threads.y));
