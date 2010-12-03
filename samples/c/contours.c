@@ -1,4 +1,4 @@
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <stdio.h>
 void help()
@@ -76,6 +76,12 @@ int main( int argc, char** argv )
 
     cvFindContours( img, storage, &contours, sizeof(CvContour),
                     CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+    
+    {
+    const char* attrs[] = {"recursive", "1", 0};
+    cvSave("contours.xml", contours, 0, 0, cvAttrList(attrs, 0));
+    contours = (CvSeq*)cvLoad("contours.xml", storage, 0, 0);
+    }
 
     // comment this out if you do not want approximation
     contours = cvApproxPoly( contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, 3, 1 );

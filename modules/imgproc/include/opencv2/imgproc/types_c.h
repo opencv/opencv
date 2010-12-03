@@ -64,8 +64,8 @@ CvConnectedComp;
 /* Image smooth methods */
 enum
 {
-	CV_BLUR_NO_SCALE =0,
-	CV_BLUR  =1,
+    CV_BLUR_NO_SCALE =0,
+    CV_BLUR  =1,
     CV_GAUSSIAN  =2,
     CV_MEDIAN =3,
     CV_BILATERAL =4
@@ -80,121 +80,121 @@ enum
 /* Inpainting algorithms */
 enum
 {
-	CV_INPAINT_NS      =0,
+    CV_INPAINT_NS      =0,
     CV_INPAINT_TELEA   =1
 };
 
 /* Special filters */
 enum
 {
-	CV_SCHARR =-1,
-	CV_MAX_SOBEL_KSIZE =7
+    CV_SCHARR =-1,
+    CV_MAX_SOBEL_KSIZE =7
 };
 
 /* Constants for color conversion */
 enum
 {
-	CV_BGR2BGRA    =0,
-	CV_RGB2RGBA    =CV_BGR2BGRA,
+    CV_BGR2BGRA    =0,
+    CV_RGB2RGBA    =CV_BGR2BGRA,
 
-	CV_BGRA2BGR    =1,
-	CV_RGBA2RGB    =CV_BGRA2BGR,
+    CV_BGRA2BGR    =1,
+    CV_RGBA2RGB    =CV_BGRA2BGR,
 
-	CV_BGR2RGBA    =2,
-	CV_RGB2BGRA    =CV_BGR2RGBA,
+    CV_BGR2RGBA    =2,
+    CV_RGB2BGRA    =CV_BGR2RGBA,
 
-	CV_RGBA2BGR    =3,
-	CV_BGRA2RGB    =CV_RGBA2BGR,
+    CV_RGBA2BGR    =3,
+    CV_BGRA2RGB    =CV_RGBA2BGR,
 
-	CV_BGR2RGB     =4,
-	CV_RGB2BGR     =CV_BGR2RGB,
+    CV_BGR2RGB     =4,
+    CV_RGB2BGR     =CV_BGR2RGB,
 
-	CV_BGRA2RGBA   =5,
-	CV_RGBA2BGRA   =CV_BGRA2RGBA,
+    CV_BGRA2RGBA   =5,
+    CV_RGBA2BGRA   =CV_BGRA2RGBA,
 
-	CV_BGR2GRAY    =6,
-	CV_RGB2GRAY    =7,
-	CV_GRAY2BGR    =8,
-	CV_GRAY2RGB    =CV_GRAY2BGR,
-	CV_GRAY2BGRA   =9,
-	CV_GRAY2RGBA   =CV_GRAY2BGRA,
-	CV_BGRA2GRAY   =10,
-	CV_RGBA2GRAY   =11,
+    CV_BGR2GRAY    =6,
+    CV_RGB2GRAY    =7,
+    CV_GRAY2BGR    =8,
+    CV_GRAY2RGB    =CV_GRAY2BGR,
+    CV_GRAY2BGRA   =9,
+    CV_GRAY2RGBA   =CV_GRAY2BGRA,
+    CV_BGRA2GRAY   =10,
+    CV_RGBA2GRAY   =11,
 
-	CV_BGR2BGR565  =12,
-	CV_RGB2BGR565  =13,
-	CV_BGR5652BGR  =14,
-	CV_BGR5652RGB  =15,
-	CV_BGRA2BGR565 =16,
-	CV_RGBA2BGR565 =17,
-	CV_BGR5652BGRA =18,
-	CV_BGR5652RGBA =19,
+    CV_BGR2BGR565  =12,
+    CV_RGB2BGR565  =13,
+    CV_BGR5652BGR  =14,
+    CV_BGR5652RGB  =15,
+    CV_BGRA2BGR565 =16,
+    CV_RGBA2BGR565 =17,
+    CV_BGR5652BGRA =18,
+    CV_BGR5652RGBA =19,
 
-	CV_GRAY2BGR565 =20,
-	CV_BGR5652GRAY =21,
+    CV_GRAY2BGR565 =20,
+    CV_BGR5652GRAY =21,
 
-	CV_BGR2BGR555  =22,
-	CV_RGB2BGR555  =23,
-	CV_BGR5552BGR  =24,
-	CV_BGR5552RGB  =25,
-	CV_BGRA2BGR555 =26,
-	CV_RGBA2BGR555 =27,
-	CV_BGR5552BGRA =28,
-	CV_BGR5552RGBA =29,
+    CV_BGR2BGR555  =22,
+    CV_RGB2BGR555  =23,
+    CV_BGR5552BGR  =24,
+    CV_BGR5552RGB  =25,
+    CV_BGRA2BGR555 =26,
+    CV_RGBA2BGR555 =27,
+    CV_BGR5552BGRA =28,
+    CV_BGR5552RGBA =29,
 
-	CV_GRAY2BGR555 =30,
-	CV_BGR5552GRAY =31,
+    CV_GRAY2BGR555 =30,
+    CV_BGR5552GRAY =31,
 
-	CV_BGR2XYZ     =32,
-	CV_RGB2XYZ     =33,
-	CV_XYZ2BGR     =34,
-	CV_XYZ2RGB     =35,
+    CV_BGR2XYZ     =32,
+    CV_RGB2XYZ     =33,
+    CV_XYZ2BGR     =34,
+    CV_XYZ2RGB     =35,
 
-	CV_BGR2YCrCb   =36,
-	CV_RGB2YCrCb   =37,
-	CV_YCrCb2BGR   =38,
-	CV_YCrCb2RGB   =39,
+    CV_BGR2YCrCb   =36,
+    CV_RGB2YCrCb   =37,
+    CV_YCrCb2BGR   =38,
+    CV_YCrCb2RGB   =39,
 
-	CV_BGR2HSV     =40,
-	CV_RGB2HSV     =41,
+    CV_BGR2HSV     =40,
+    CV_RGB2HSV     =41,
 
-	CV_BGR2Lab     =44,
-	CV_RGB2Lab     =45,
+    CV_BGR2Lab     =44,
+    CV_RGB2Lab     =45,
 
-	CV_BayerBG2BGR =46,
-	CV_BayerGB2BGR =47,
-	CV_BayerRG2BGR =48,
-	CV_BayerGR2BGR =49,
+    CV_BayerBG2BGR =46,
+    CV_BayerGB2BGR =47,
+    CV_BayerRG2BGR =48,
+    CV_BayerGR2BGR =49,
 
-	CV_BayerBG2RGB =CV_BayerRG2BGR,
-	CV_BayerGB2RGB =CV_BayerGR2BGR,
-	CV_BayerRG2RGB =CV_BayerBG2BGR,
-	CV_BayerGR2RGB =CV_BayerGB2BGR,
+    CV_BayerBG2RGB =CV_BayerRG2BGR,
+    CV_BayerGB2RGB =CV_BayerGR2BGR,
+    CV_BayerRG2RGB =CV_BayerBG2BGR,
+    CV_BayerGR2RGB =CV_BayerGB2BGR,
 
-	CV_BGR2Luv     =50,
-	CV_RGB2Luv     =51,
-	CV_BGR2HLS     =52,
-	CV_RGB2HLS     =53,
+    CV_BGR2Luv     =50,
+    CV_RGB2Luv     =51,
+    CV_BGR2HLS     =52,
+    CV_RGB2HLS     =53,
 
-	CV_HSV2BGR     =54,
-	CV_HSV2RGB     =55,
+    CV_HSV2BGR     =54,
+    CV_HSV2RGB     =55,
 
-	CV_Lab2BGR     =56,
-	CV_Lab2RGB     =57,
-	CV_Luv2BGR     =58,
-	CV_Luv2RGB     =59,
-	CV_HLS2BGR     =60,
-	CV_HLS2RGB     =61,
+    CV_Lab2BGR     =56,
+    CV_Lab2RGB     =57,
+    CV_Luv2BGR     =58,
+    CV_Luv2RGB     =59,
+    CV_HLS2BGR     =60,
+    CV_HLS2RGB     =61,
 
     CV_BayerBG2BGR_VNG =62,
-	CV_BayerGB2BGR_VNG =63,
-	CV_BayerRG2BGR_VNG =64,
-	CV_BayerGR2BGR_VNG =65,
+    CV_BayerGB2BGR_VNG =63,
+    CV_BayerRG2BGR_VNG =64,
+    CV_BayerGR2BGR_VNG =65,
     
-	CV_BayerBG2RGB_VNG =CV_BayerRG2BGR_VNG,
-	CV_BayerGB2RGB_VNG =CV_BayerGR2BGR_VNG,
-	CV_BayerRG2RGB_VNG =CV_BayerBG2BGR_VNG,
-	CV_BayerGR2RGB_VNG =CV_BayerGB2BGR_VNG,
+    CV_BayerBG2RGB_VNG =CV_BayerRG2BGR_VNG,
+    CV_BayerGB2RGB_VNG =CV_BayerGR2BGR_VNG,
+    CV_BayerRG2RGB_VNG =CV_BayerBG2BGR_VNG,
+    CV_BayerGR2RGB_VNG =CV_BayerGB2BGR_VNG,
     
     CV_BGR2HSV_FULL = 66,
     CV_RGB2HSV_FULL = 67,
@@ -221,46 +221,46 @@ enum
     CV_YUV2BGR      = 84,
     CV_YUV2RGB      = 85,
     
-	CV_COLORCVT_MAX  =100
+    CV_COLORCVT_MAX  =100
 };
 
 
 /* Sub-pixel interpolation methods */
 enum
 {
-	CV_INTER_NN        =0,
-	CV_INTER_LINEAR    =1,
-	CV_INTER_CUBIC     =2,
-	CV_INTER_AREA      =3,
+    CV_INTER_NN        =0,
+    CV_INTER_LINEAR    =1,
+    CV_INTER_CUBIC     =2,
+    CV_INTER_AREA      =3,
     CV_INTER_LANCZOS4  =4
 };
 
 /* ... and other image warping flags */
 enum
 {
-	CV_WARP_FILL_OUTLIERS =8,
-	CV_WARP_INVERSE_MAP  =16
+    CV_WARP_FILL_OUTLIERS =8,
+    CV_WARP_INVERSE_MAP  =16
 };
 
 /* Shapes of a structuring element for morphological operations */
 enum
 {
-	CV_SHAPE_RECT      =0,
-	CV_SHAPE_CROSS     =1,
-	CV_SHAPE_ELLIPSE   =2,
-	CV_SHAPE_CUSTOM    =100
+    CV_SHAPE_RECT      =0,
+    CV_SHAPE_CROSS     =1,
+    CV_SHAPE_ELLIPSE   =2,
+    CV_SHAPE_CUSTOM    =100
 };
 
 /* Morphological operations */
 enum
 {
-	CV_MOP_ERODE        =0,
-	CV_MOP_DILATE       =1,
-	CV_MOP_OPEN         =2,
-	CV_MOP_CLOSE        =3,
-	CV_MOP_GRADIENT     =4,
-	CV_MOP_TOPHAT       =5,
-	CV_MOP_BLACKHAT     =6
+    CV_MOP_ERODE        =0,
+    CV_MOP_DILATE       =1,
+    CV_MOP_OPEN         =2,
+    CV_MOP_CLOSE        =3,
+    CV_MOP_GRADIENT     =4,
+    CV_MOP_TOPHAT       =5,
+    CV_MOP_BLACKHAT     =6
 };
 
 /* Spatial and central moments */
@@ -282,12 +282,12 @@ CvHuMoments;
 /* Template matching methods */
 enum
 {
-	CV_TM_SQDIFF        =0,
-	CV_TM_SQDIFF_NORMED =1,
-	CV_TM_CCORR         =2,
-	CV_TM_CCORR_NORMED  =3,
-	CV_TM_CCOEFF        =4,
-	CV_TM_CCOEFF_NORMED =5
+    CV_TM_SQDIFF        =0,
+    CV_TM_SQDIFF_NORMED =1,
+    CV_TM_CCORR         =2,
+    CV_TM_CCORR_NORMED  =3,
+    CV_TM_CCOEFF        =4,
+    CV_TM_CCOEFF_NORMED =5
 };
 
 typedef float (CV_CDECL * CvDistanceFunction)( const float* a, const float* b, void* user_param );
@@ -295,7 +295,7 @@ typedef float (CV_CDECL * CvDistanceFunction)( const float* a, const float* b, v
 /* Contour retrieval modes */
 enum
 {
-	CV_RETR_EXTERNAL=0,
+    CV_RETR_EXTERNAL=0,
     CV_RETR_LIST=1,
     CV_RETR_CCOMP=2,
     CV_RETR_TREE=3
@@ -304,12 +304,12 @@ enum
 /* Contour approximation methods */
 enum
 {
-	CV_CHAIN_CODE=0,
-	CV_CHAIN_APPROX_NONE=1,
-	CV_CHAIN_APPROX_SIMPLE=2,
-	CV_CHAIN_APPROX_TC89_L1=3,
-	CV_CHAIN_APPROX_TC89_KCOS=4,
-	CV_LINK_RUNS=5
+    CV_CHAIN_CODE=0,
+    CV_CHAIN_APPROX_NONE=1,
+    CV_CHAIN_APPROX_SIMPLE=2,
+    CV_CHAIN_APPROX_TC89_L1=3,
+    CV_CHAIN_APPROX_TC89_KCOS=4,
+    CV_LINK_RUNS=5
 };
 
 /*
@@ -351,7 +351,7 @@ typedef size_t CvSubdiv2DEdge;
     int            flags;      \
     CvSubdiv2DEdge first;      \
     CvPoint2D32f   pt;         \
-	int id;
+    int id;
 
 #define CV_SUBDIV2D_VIRTUAL_POINT_FLAG (1 << 30)
 
@@ -412,22 +412,22 @@ CvNextEdgeType;
 /* Contour approximation algorithms */
 enum
 {
-	CV_POLY_APPROX_DP = 0
+    CV_POLY_APPROX_DP = 0
 };
 
 /* Shape matching methods */
 enum
 {
-	CV_CONTOURS_MATCH_I1  =1,
-	CV_CONTOURS_MATCH_I2  =2,
-	CV_CONTOURS_MATCH_I3  =3
+    CV_CONTOURS_MATCH_I1  =1,
+    CV_CONTOURS_MATCH_I2  =2,
+    CV_CONTOURS_MATCH_I3  =3
 };
 
 /* Shape orientation */
 enum
 {
-	CV_CLOCKWISE         =1,
-	CV_COUNTER_CLOCKWISE =2
+    CV_CLOCKWISE         =1,
+    CV_COUNTER_CLOCKWISE =2
 };
 
 
@@ -444,75 +444,75 @@ typedef struct CvConvexityDefect
 /* Histogram comparison methods */
 enum
 {
-	CV_COMP_CORREL        =0,
-	CV_COMP_CHISQR        =1,
-	CV_COMP_INTERSECT     =2,
-	CV_COMP_BHATTACHARYYA =3
+    CV_COMP_CORREL        =0,
+    CV_COMP_CHISQR        =1,
+    CV_COMP_INTERSECT     =2,
+    CV_COMP_BHATTACHARYYA =3
 };
 
 /* Mask size for distance transform */
 enum
 {
-	CV_DIST_MASK_3   =3,
-	CV_DIST_MASK_5   =5,
-	CV_DIST_MASK_PRECISE =0
+    CV_DIST_MASK_3   =3,
+    CV_DIST_MASK_5   =5,
+    CV_DIST_MASK_PRECISE =0
 };
 
 /* Distance types for Distance Transform and M-estimators */
 enum
 {
-	CV_DIST_USER    =-1,  /* User defined distance */
-	CV_DIST_L1      =1,   /* distance = |x1-x2| + |y1-y2| */
-	CV_DIST_L2      =2,   /* the simple euclidean distance */
-	CV_DIST_C       =3,   /* distance = max(|x1-x2|,|y1-y2|) */
-	CV_DIST_L12     =4,   /* L1-L2 metric: distance = 2(sqrt(1+x*x/2) - 1)) */
-	CV_DIST_FAIR    =5,   /* distance = c^2(|x|/c-log(1+|x|/c)), c = 1.3998 */
-	CV_DIST_WELSCH  =6,   /* distance = c^2/2(1-exp(-(x/c)^2)), c = 2.9846 */
-	CV_DIST_HUBER   =7    /* distance = |x|<c ? x^2/2 : c(|x|-c/2), c=1.345 */
+    CV_DIST_USER    =-1,  /* User defined distance */
+    CV_DIST_L1      =1,   /* distance = |x1-x2| + |y1-y2| */
+    CV_DIST_L2      =2,   /* the simple euclidean distance */
+    CV_DIST_C       =3,   /* distance = max(|x1-x2|,|y1-y2|) */
+    CV_DIST_L12     =4,   /* L1-L2 metric: distance = 2(sqrt(1+x*x/2) - 1)) */
+    CV_DIST_FAIR    =5,   /* distance = c^2(|x|/c-log(1+|x|/c)), c = 1.3998 */
+    CV_DIST_WELSCH  =6,   /* distance = c^2/2(1-exp(-(x/c)^2)), c = 2.9846 */
+    CV_DIST_HUBER   =7    /* distance = |x|<c ? x^2/2 : c(|x|-c/2), c=1.345 */
 };
 
 
 /* Threshold types */
 enum
 {
-	CV_THRESH_BINARY      =0,  /* value = value > threshold ? max_value : 0       */
-	CV_THRESH_BINARY_INV  =1,  /* value = value > threshold ? 0 : max_value       */
-	CV_THRESH_TRUNC       =2,  /* value = value > threshold ? threshold : value   */
-	CV_THRESH_TOZERO      =3,  /* value = value > threshold ? value : 0           */
-	CV_THRESH_TOZERO_INV  =4,  /* value = value > threshold ? 0 : value           */
-	CV_THRESH_MASK        =7,
-	CV_THRESH_OTSU        =8  /* use Otsu algorithm to choose the optimal threshold value;
+    CV_THRESH_BINARY      =0,  /* value = value > threshold ? max_value : 0       */
+    CV_THRESH_BINARY_INV  =1,  /* value = value > threshold ? 0 : max_value       */
+    CV_THRESH_TRUNC       =2,  /* value = value > threshold ? threshold : value   */
+    CV_THRESH_TOZERO      =3,  /* value = value > threshold ? value : 0           */
+    CV_THRESH_TOZERO_INV  =4,  /* value = value > threshold ? 0 : value           */
+    CV_THRESH_MASK        =7,
+    CV_THRESH_OTSU        =8  /* use Otsu algorithm to choose the optimal threshold value;
                                  combine the flag with one of the above CV_THRESH_* values */
 };
 
 /* Adaptive threshold methods */
 enum
 {
-	CV_ADAPTIVE_THRESH_MEAN_C  =0,
-	CV_ADAPTIVE_THRESH_GAUSSIAN_C  =1
+    CV_ADAPTIVE_THRESH_MEAN_C  =0,
+    CV_ADAPTIVE_THRESH_GAUSSIAN_C  =1
 };
 
 /* FloodFill flags */
 enum
 {
-	CV_FLOODFILL_FIXED_RANGE =(1 << 16),
-	CV_FLOODFILL_MASK_ONLY   =(1 << 17)
+    CV_FLOODFILL_FIXED_RANGE =(1 << 16),
+    CV_FLOODFILL_MASK_ONLY   =(1 << 17)
 };
 
 
 /* Canny edge detector flags */
 enum
 {
-	CV_CANNY_L2_GRADIENT  =(1 << 31)
+    CV_CANNY_L2_GRADIENT  =(1 << 31)
 };
 
 /* Variants of a Hough transform */
 enum
 {
-	CV_HOUGH_STANDARD =0,
-	CV_HOUGH_PROBABILISTIC =1,
-	CV_HOUGH_MULTI_SCALE =2,
-	CV_HOUGH_GRADIENT =3
+    CV_HOUGH_STANDARD =0,
+    CV_HOUGH_PROBABILISTIC =1,
+    CV_HOUGH_MULTI_SCALE =2,
+    CV_HOUGH_GRADIENT =3
 };
 
 
