@@ -1,5 +1,15 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include <stdio.h>
+
+void help()
+{
+	printf("\nThis program demonstrated color pyramid segmentation cvcvPyrSegmentation() which is controlled\n"
+			"by two trhesholds which can be manipulated by a trackbar. It can take an image file name or defaults to 'fruits.jpg'\n"
+			"Call:\n"
+			"./pyaramid_segmentation [image_path_filename -- Defaults to fruits.jpg]\n\n"
+			);
+}
 
 IplImage*  image[2] = { 0, 0 }, *image0 = 0, *image1 = 0;
 CvSize size;
@@ -43,6 +53,7 @@ void ON_SEGMENT(int a)
     }*/
     cvShowImage("Segmentation", image1);
 }
+
 
 int main( int argc, char** argv )
 {
