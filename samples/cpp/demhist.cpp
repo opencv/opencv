@@ -54,7 +54,12 @@ void updateBrightnessContrast( int arg, void* )
                    Scalar::all(0), -1, 8, 0 );
     imshow("histogram", histImage);
 }
-
+void help()
+{
+	cout << "\nThis program demonstrates the use of calcHist -- histogram creation.\n"
+			"Call:\n"
+			"demhist [image_name -- Defaults to baboon.jpg]\n" << endl;
+}
 
 int main( int argc, char** argv )
 {
@@ -63,10 +68,10 @@ int main( int argc, char** argv )
 
     if( image.empty() )
     {
-        cout << "Image was not loaded.\n";
+        help();
         return -1;
     }
-
+    help();
     namedWindow("image", 0);
     namedWindow("histogram", 0);
 
