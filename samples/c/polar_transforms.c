@@ -4,6 +4,13 @@
 #include <ctype.h>
 #include <stdio.h>
 
+void help()
+{
+	printf("\nThis program illustrates Linear-Polar and Log-Polar image transforms\n"
+			"Call:\n"
+			"./polar_transforms [[camera number -- Default 0],[AVI path_filename]]\n\n"
+			);
+}
 int main( int argc, char** argv )
 {
     CvCapture* capture = 0;
@@ -15,7 +22,7 @@ int main( int argc, char** argv )
         capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
     else if( argc == 2 )
         capture = cvCaptureFromAVI( argv[1] );
-
+    help();
     if( !capture )
     {
         fprintf(stderr,"Could not initialize capturing...\n");
