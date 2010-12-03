@@ -2,19 +2,25 @@
 #include "opencv2/ml/ml.hpp"
 #include <stdio.h>
 
-/*
-The sample demonstrates how to build a decision tree for classifying mushrooms.
-It uses the sample base agaricus-lepiota.data from UCI Repository, here is the link:
+void help()
+{
+	printf("\nThis program demonstrated the use of OpenCV's decision tree function for learning and predicting data\n"
+			"Call:\n"
+			"./mushroom <path to agaricus-lepiota.data>\n");
+	printf("\n"
+	"The sample demonstrates how to build a decision tree for classifying mushrooms.\n"
+	"It uses the sample base agaricus-lepiota.data from UCI Repository, here is the link:\n"
+	"\n"
+	"Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).\n"
+	"UCI Repository of machine learning databases\n"
+	"[http://www.ics.uci.edu/~mlearn/MLRepository.html].\n"
+	"Irvine, CA: University of California, Department of Information and Computer Science.\n"
+	"\n"
+	"// loads the mushroom database, which is a text file, containing\n"
+	"// one training sample per row, all the input variables and the output variable are categorical,\n"
+	"// the values are encoded by characters.\n\n");
+}
 
-Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).
-UCI Repository of machine learning databases
-[http://www.ics.uci.edu/~mlearn/MLRepository.html].
-Irvine, CA: University of California, Department of Information and Computer Science.
-*/
-
-// loads the mushroom database, which is a text file, containing
-// one training sample per row, all the input variables and the output variable are categorical,
-// the values are encoded by characters.
 int mushroom_read_database( const char* filename, CvMat** data, CvMat** missing, CvMat** responses )
 {
     const int M = 1024;
@@ -294,9 +300,8 @@ int main( int argc, char** argv )
 
     if( !mushroom_read_database( base_path, &data, &missing, &responses ) )
     {
-        printf( "Unable to load the training database\n"
-                "Pass it as a parameter: dtree <path to agaricus-lepiota.data>\n" );
-        return 0;
+        printf( "\nUnable to load the training database\n\n");
+        help();
         return -1;
     }
 
