@@ -54,7 +54,15 @@ struct CV_GpuMeanShiftTest : public CvTest
         int colorRad = 30;
 
         cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
-        cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
+        cv::Mat img_template;
+        
+        int major, minor;
+        cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
+        
+        if (major == 1)
+            img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result_CC1X.png");
+        else
+            img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
 
         if (img.empty() || img_template.empty())
         {
@@ -69,6 +77,7 @@ struct CV_GpuMeanShiftTest : public CvTest
         {
             cv::gpu::GpuMat res;
             cv::gpu::meanShiftFiltering( cv::gpu::GpuMat(rgba), res, spatialRad, colorRad );
+
             if (res.type() != CV_8UC4)
             {
                 ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
@@ -197,7 +206,7 @@ struct CV_GpuMeanShiftProcTest : public CvTest
             cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
 
             if (major == 1)
-                fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_1x.yaml", cv::FileStorage::READ);
+                fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_CC1X.yaml", cv::FileStorage::READ);
             else
                 fs.open(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
             fs["spmap"] >> spmap_template;
