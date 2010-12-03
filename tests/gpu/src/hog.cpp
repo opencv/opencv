@@ -176,29 +176,6 @@ struct CV_GpuHogDetectionTest: public CvTest, public cv::gpu::HOGDescriptor
 #else
         compare(block_hists, locations);
 #endif
-
-        // Test detectMultiScale
-        std::vector<cv::Rect> rects;
-        size_t nrects;
-        detectMultiScale(d_img, rects, 0, cv::Size(8, 8), cv::Size(), 1.05, 2);
-
-#ifdef DUMP
-        nrects = rects.size();
-        f.write((char*)&nrects, sizeof(nrects));
-        for (size_t i = 0; i < rects.size(); ++i)
-            f.write((char*)&rects[i], sizeof(rects[i]));
-        dump(block_hists, std::vector<cv::Point>());
-#else
-        f.read((char*)&nrects, sizeof(nrects));
-        CHECK(nrects == rects.size(), CvTS::FAIL_INVALID_OUTPUT)
-        for (size_t i = 0; i < rects.size(); ++i) 
-        {
-            cv::Rect rect;
-            f.read((char*)&rect, sizeof(rect));
-            CHECK(rect == rects[i], CvTS::FAIL_INVALID_OUTPUT);
-        }
-        compare(block_hists, std::vector<cv::Point>());
-#endif
     }
 
 #ifdef DUMP
