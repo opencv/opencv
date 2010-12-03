@@ -52,6 +52,21 @@ void ErodeDilate(int pos)
     cvShowImage("Erode/Dilate",dst);
 }
 
+void help()
+{
+    printf( "This program demonstrated the use of the morphology operator, especially open, close, erode, dilate operations\n"
+    		"Morphology operators are built on max (close) and min (open) operators as measured by pixels covered by small structuring elements.\n"
+    		"These operators are very efficient.\n"
+    		"This program also allows you to play with elliptical, rectangluar and cross structure elements\n"
+    		"Call:\n"
+    		"./morphologyc [image_name -- Default baboon.jpg]\n"
+    		"\nHot keys: \n"
+        "\tESC - quit the program\n"
+        "\tr - use rectangle structuring element\n"
+        "\te - use elliptic structuring element\n"
+        "\tc - use cross-shaped structuring element\n"
+        "\tSPACE - loop through all the options\n" );
+}
 
 int main( int argc, char** argv )
 {
@@ -59,12 +74,7 @@ int main( int argc, char** argv )
     if( (src = cvLoadImage(filename,1)) == 0 )
         return -1;
 
-    printf( "Hot keys: \n"
-        "\tESC - quit the program\n"
-        "\tr - use rectangle structuring element\n"
-        "\te - use elliptic structuring element\n"
-        "\tc - use cross-shaped structuring element\n"
-        "\tSPACE - loop through all the options\n" );
+    help();
 
     dst = cvCloneImage(src);
 
