@@ -166,6 +166,11 @@ int CV_GBTreesTest::TestSaveLoad()
     tmpnam(model_file_name1);
     tmpnam(model_file_name2);
 
+    if(model_file_name1[0] == '\\')
+        model_file_name1[0] = '_';
+    if(model_file_name2[0] == '\\')
+        model_file_name2[0] = '_';
+
     gtb->save(model_file_name1);
     gtb->calc_error(data, CV_TEST_ERROR, &test_resps1);
     gtb->load(model_file_name1);
