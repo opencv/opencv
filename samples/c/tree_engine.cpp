@@ -1,8 +1,20 @@
 #include "opencv2/ml/ml.hpp"
 #include <stdio.h>
-/*
-The sample demonstrates how to use different decision trees.
-*/
+
+void help()
+{
+	printf(
+		"\nThis sample demonstrates how to use different decision trees and forests including boosting and random trees:\n"
+		"CvDTree dtree;\n"
+		"CvBoost boost;\n"
+		"CvRTrees rtrees;\n"
+		"CvERTrees ertrees;\n"
+		"CvGBTrees gbtrees;\n"
+		"Date is hard coded to come from filename = \"../../../OpenCV/samples/c/waveform.data\";\n"
+		"Or can come from filename = \"../../../OpenCV/samples/c/waveform.data\";\n"
+		"Call:\n"
+		"./tree_engine\n\n");
+}
 void print_result(float train_err, float test_err, const CvMat* var_imp)
 {
     printf( "train error    %f\n", train_err );
