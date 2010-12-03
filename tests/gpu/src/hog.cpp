@@ -47,7 +47,7 @@ using namespace std;
 //#define DUMP
 
 #define CHECK(pred, err) if (!(pred)) { \
-    ts->printf(CvTS::LOG, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
+    ts->printf(CvTS::CONSOLE, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
     ts->set_failed_test_info(err); \
     return; }
 
@@ -141,6 +141,7 @@ struct CV_GpuHogDetectionTest: public CvTest, public cv::gpu::HOGDescriptor
     {
         cv::gpu::GpuMat d_img(img);
 
+        gamma_correction = false;
         setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
         //cpu detector may be updated soon
         //hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
@@ -157,9 +158,9 @@ struct CV_GpuHogDetectionTest: public CvTest, public cv::gpu::HOGDescriptor
 #endif
 
         // Test detect on smaller image
-        cv::gpu::GpuMat d_img2;
-        cv::gpu::resize(d_img, d_img2, cv::Size(d_img.cols / 2, d_img.rows / 2)); 
-        detect(d_img2, locations, 0);
+        cv::Mat img2;
+        cv::resize(img, img2, cv::Size(img.cols / 2, img.rows / 2)); 
+        detect(cv::gpu::GpuMat(img2), locations, 0);
 
 #ifdef DUMP
         dump(block_hists, locations);
@@ -168,8 +169,8 @@ struct CV_GpuHogDetectionTest: public CvTest, public cv::gpu::HOGDescriptor
 #endif
 
         // Test detect on greater image
-        cv::gpu::resize(d_img, d_img2, cv::Size(d_img.cols * 2, d_img.rows * 2)); 
-        detect(d_img2, locations, 0);
+        cv::resize(img, img2, cv::Size(img.cols * 2, img.rows * 2)); 
+        detect(cv::gpu::GpuMat(img2), locations, 0);
         
 #ifdef DUMP
         dump(block_hists, locations);

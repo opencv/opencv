@@ -522,7 +522,7 @@ void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, i
 // Gradients computation
 
 
-template <int nthreads>
+template <int nthreads, int correct_gamma>
 __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrElemStep img, 
                                               float angle_scale, PtrElemStepf grad, PtrElemStep qangle)
 {
@@ -533,11 +533,10 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
     __shared__ float sh_row[(nthreads + 2) * 3];
 
     uchar4 val;
-    if (x < width)
-        val = row[x];
-    else if (x == width)
-        val = row[x - 2];
-    // Othrewise we do not read variable 'val' at all
+    if (x < width) 
+        val = row[x]; 
+    else 
+        val = row[width - 2];
 
     sh_row[threadIdx.x + 1] = val.x;
     sh_row[threadIdx.x + 1 + (nthreads + 2)] = val.y;
@@ -545,7 +544,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
     if (threadIdx.x == 0)
     {
-        val = x > 0 ? row[x - 1] : row[1];
+        val = row[max(x - 1, 1)];
         sh_row[0] = val.x;
         sh_row[(nthreads + 2)] = val.y;
         sh_row[2 * (nthreads + 2)] = val.z;
@@ -553,7 +552,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
     if (threadIdx.x == blockDim.x - 1)
     {
-        val = (x < width - 1) ? row[x + 1] : row[width - 2];
+        val = row[min(x + 1, width - 2)];
         sh_row[blockDim.x + 1] = val.x;
         sh_row[blockDim.x + 1 + (nthreads + 2)] = val.y;
         sh_row[blockDim.x + 1 + 2 * (nthreads + 2)] = val.z;
@@ -571,9 +570,12 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
         a.y = sh_row[threadIdx.x + (nthreads + 2)];
         a.z = sh_row[threadIdx.x + 2 * (nthreads + 2)];
 
-        float3 dx = make_float3(sqrtf(b.x) - sqrtf(a.x), 
-                                sqrtf(b.y) - sqrtf(a.y), 
-                                sqrtf(b.z) - sqrtf(a.z));    
+        float3 dx;
+        if (correct_gamma)
+            dx = make_float3(sqrtf(b.x) - sqrtf(a.x), sqrtf(b.y) - sqrtf(a.y), sqrtf(b.z) - sqrtf(a.z));    
+        else
+            dx = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);    
+
         float3 dy = make_float3(0.f, 0.f, 0.f);
 
         if (blockIdx.y > 0 && blockIdx.y < height - 1)
@@ -584,9 +586,10 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
             val = ((const uchar4*)img.ptr(blockIdx.y + 1))[x];
             b = make_float3(val.x, val.y, val.z);
 
-            dy = make_float3(sqrtf(b.x) - sqrtf(a.x), 
-                             sqrtf(b.y) - sqrtf(a.y), 
-                             sqrtf(b.z) - sqrtf(a.z));
+            if (correct_gamma)
+                dy = make_float3(sqrtf(b.x) - sqrtf(a.x), sqrtf(b.y) - sqrtf(a.y), sqrtf(b.z) - sqrtf(a.z));
+            else
+                dy = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);
         }
 
         float best_dx = dx.x;
@@ -623,20 +626,25 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
 
 void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2D& img, 
-                            float angle_scale, DevMem2Df grad, DevMem2D qangle)
+                            float angle_scale, DevMem2Df grad, DevMem2D qangle, bool correct_gamma)
 {
     const int nthreads = 256;
 
     dim3 bdim(nthreads, 1);
     dim3 gdim(div_up(width, bdim.x), div_up(height, bdim.y));
 
-    compute_gradients_8UC4_kernel<nthreads><<<gdim, bdim>>>(height, width, img, angle_scale, 
-                                                            grad, qangle);
+    if (correct_gamma)
+        compute_gradients_8UC4_kernel<nthreads, 1><<<gdim, bdim>>>(
+                height, width, img, angle_scale, grad, qangle);
+    else
+        compute_gradients_8UC4_kernel<nthreads, 0><<<gdim, bdim>>>(
+                height, width, img, angle_scale, grad, qangle);
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
 
-template <int nthreads>
+template <int nthreads, int correct_gamma>
 __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrElemStep img, 
                                               float angle_scale, PtrElemStepf grad, PtrElemStep qangle)
 {
@@ -647,24 +655,36 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
     __shared__ float sh_row[nthreads + 2];
 
     if (x < width) 
-        sh_row[threadIdx.x + 1] = row[x];
-    else if (x == width)
-        sh_row[threadIdx.x + 1] = row[x - 2];
+        sh_row[threadIdx.x + 1] = row[x]; 
+    else 
+        sh_row[threadIdx.x + 1] = row[width - 2];
 
     if (threadIdx.x == 0)
-        sh_row[0] = x > 0 ? row[x - 1] : row[1];
+        sh_row[0] = row[max(x - 1, 1)];
 
     if (threadIdx.x == blockDim.x - 1)
-        sh_row[blockDim.x + 1] = (x < width - 1) ? row[x + 1] : row[width - 2];
+        sh_row[blockDim.x + 1] = row[min(x + 1, width - 2)];
 
     __syncthreads();
     if (x < width)
     {
-        float dx = sqrtf(sh_row[threadIdx.x + 2]) - sqrtf(sh_row[threadIdx.x]);
+        float dx;
+
+        if (correct_gamma)
+            dx = sqrtf(sh_row[threadIdx.x + 2]) - sqrtf(sh_row[threadIdx.x]);
+        else
+            dx = sh_row[threadIdx.x + 2] - sh_row[threadIdx.x];
+
         float dy = 0.f;
         if (blockIdx.y > 0 && blockIdx.y < height - 1)
-            dy = sqrtf(((const unsigned char*)img.ptr(blockIdx.y + 1))[x]) - 
-                 sqrtf(((const unsigned char*)img.ptr(blockIdx.y - 1))[x]);
+        {
+            float a = ((const unsigned char*)img.ptr(blockIdx.y + 1))[x];
+            float b = ((const unsigned char*)img.ptr(blockIdx.y - 1))[x];
+            if (correct_gamma)
+                dy = sqrtf(a) - sqrtf(b);
+            else
+                dy = a - b;
+        }
         float mag = sqrtf(dx * dx + dy * dy);
 
         float ang = (atan2f(dy, dx) + CV_PI_F) * angle_scale - 0.5f;
@@ -679,15 +699,20 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
 
 
 void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& img, 
-                            float angle_scale, DevMem2Df grad, DevMem2D qangle)
+                            float angle_scale, DevMem2Df grad, DevMem2D qangle, bool correct_gamma)
 {
     const int nthreads = 256;
 
     dim3 bdim(nthreads, 1);
     dim3 gdim(div_up(width, bdim.x), div_up(height, bdim.y));
 
-    compute_gradients_8UC1_kernel<nthreads><<<gdim, bdim>>>(height, width, img, angle_scale, 
-                                                            grad, qangle);
+    if (correct_gamma)
+        compute_gradients_8UC1_kernel<nthreads, 1><<<gdim, bdim>>>(
+                height, width, img, angle_scale, grad, qangle);
+    else
+        compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(
+                height, width, img, angle_scale, grad, qangle);
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 

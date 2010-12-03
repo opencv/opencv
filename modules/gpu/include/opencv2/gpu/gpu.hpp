@@ -1076,6 +1076,7 @@ namespace cv
             double win_sigma;
             double threshold_L2hys;
             int nlevels;
+            bool gamma_correction;
 
         protected:
             void computeBlockHistograms(const GpuMat& img);
@@ -1083,8 +1084,6 @@ namespace cv
 
             static int numPartsWithin(int size, int part_size, int stride);
             static Size numPartsWithin(Size size, Size part_size, Size stride);
-
-            bool gamma_correction;
 
             // Coefficients of the separating plane
             float free_coef;

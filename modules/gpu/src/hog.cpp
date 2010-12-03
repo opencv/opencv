@@ -85,9 +85,9 @@ void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, i
                             cv::gpu::DevMem2Df descriptors);
 
 void compute_gradients_8UC1(int nbins, int height, int width, const cv::gpu::DevMem2D& img, 
-                            float angle_scale, cv::gpu::DevMem2Df grad, cv::gpu::DevMem2D qangle);
+                            float angle_scale, cv::gpu::DevMem2Df grad, cv::gpu::DevMem2D qangle, bool correct_gamma);
 void compute_gradients_8UC4(int nbins, int height, int width, const cv::gpu::DevMem2D& img, 
-                            float angle_scale, cv::gpu::DevMem2Df grad, cv::gpu::DevMem2D qangle);
+                            float angle_scale, cv::gpu::DevMem2Df grad, cv::gpu::DevMem2D qangle, bool correct_gamma);
 
 void resize_8UC1(const cv::gpu::DevMem2D& src, cv::gpu::DevMem2D dst);
 void resize_8UC4(const cv::gpu::DevMem2D& src, cv::gpu::DevMem2D dst);
@@ -117,8 +117,6 @@ cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size, Size block_size, Size block
     CV_Assert(block_stride == cell_size);
 
     CV_Assert(cell_size == Size(8, 8));
-
-    CV_Assert(gamma_correction == true);
 
     Size cells_per_block = Size(block_size.width / cell_size.width, 
                                 block_size.height / cell_size.height);
@@ -194,10 +192,10 @@ void cv::gpu::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& grad, Gp
     float angleScale = (float)(nbins / CV_PI);
     switch (img.type()) {
         case CV_8UC1:
-            hog::compute_gradients_8UC1(nbins, img.rows, img.cols, img, angleScale, grad, qangle);
+            hog::compute_gradients_8UC1(nbins, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction);
             break;
         case CV_8UC4:
-            hog::compute_gradients_8UC4(nbins, img.rows, img.cols, img, angleScale, grad, qangle);
+            hog::compute_gradients_8UC4(nbins, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction);
             break;
     }
 }

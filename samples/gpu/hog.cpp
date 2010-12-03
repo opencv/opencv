@@ -34,6 +34,7 @@ public:
     int win_width;
     int win_stride_width;
     int win_stride_height;
+    bool gamma_corr;
 };
 
 
@@ -72,6 +73,7 @@ private:
     int gr_threshold;
     int nlevels;
     double hit_threshold;
+    bool gamma_corr;
 
     int64 hog_work_begin;
     double hog_work_fps;
@@ -99,7 +101,8 @@ int main(int argc, char** argv)
                 << "  [-win_width <int>] # width of the window (48 or 64)\n"
                 << "  [-win_stride_width <int>] # distance by OX axis between neighbour wins\n"
                 << "  [-win_stride_height <int>] # distance by OY axis between neighbour wins\n"
-                << "  [-gr_threshold <int>] # merging similar rects constant\n";
+                << "  [-gr_threshold <int>] # merging similar rects constant\n"
+                << "  [-gamma_corr <int>] # do gamma correction or not\n";
             return 1;
         }
         App app(Settings::Read(argc, argv));
@@ -125,6 +128,7 @@ Settings::Settings()
     win_width = 48;
     win_stride_width = 8;
     win_stride_height = 8;
+    gamma_corr = true;
 }
 
 
@@ -149,6 +153,7 @@ Settings Settings::Read(int argc, char** argv)
         else if (key == "-win_stride_width") settings.win_stride_width = atoi(val.c_str());
         else if (key == "-win_stride_height") settings.win_stride_height = atoi(val.c_str());
         else if (key == "-gr_threshold") settings.gr_threshold = atoi(val.c_str());
+        else if (key == "-gamma_corr") settings.gamma_corr = atoi(val.c_str()) != 0;
         else throw runtime_error((string("Unknown key: ") + key));
     }
 
@@ -176,6 +181,7 @@ App::App(const Settings &s)
     gr_threshold = settings.gr_threshold;
     nlevels = settings.nlevels;
     hit_threshold = settings.hit_threshold;
+    gamma_corr = settings.gamma_corr;
 
     if (settings.win_width != 64 && settings.win_width != 48)
         settings.win_width = 64;
@@ -186,6 +192,7 @@ App::App(const Settings &s)
     cout << "Win width: " << settings.win_width << endl;
     cout << "Win stride: (" << settings.win_stride_width << ", " << settings.win_stride_height << ")\n";
     cout << "Hit threshold: " << hit_threshold << endl;
+    cout << "Gamma correction: " << gamma_corr << endl;
     cout << endl;
 }
 
@@ -205,11 +212,14 @@ void App::RunOpencvGui()
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_48x96();
 
     // GPU's HOG classifier
-    cv::gpu::HOGDescriptor gpu_hog(win_size);
+    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 
+                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr, 
+                                   cv::gpu::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
 
     // CPU's HOG classifier
-    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1, HOGDescriptor::L2Hys, 0.2, true, HOGDescriptor::DEFAULT_NLEVELS);
+    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1, 
+                              HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     cpu_hog.setSVMDetector(detector);
 
     // Make endless cycle from video (if src is video)
@@ -346,6 +356,11 @@ void App::HandleKey(char key)
     case 'R':
         hit_threshold = max(0.0, hit_threshold - 0.25);
         cout << "Hit threshold: " << hit_threshold << endl;
+        break;
+    case 'c':
+    case 'C':
+        gamma_corr = !gamma_corr;
+        cout << "Gamma correction: " << gamma_corr << endl;
         break;
     }
 }
