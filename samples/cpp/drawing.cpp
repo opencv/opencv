@@ -1,8 +1,15 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-
+#include <iostream>
 using namespace cv;
 
+void help()
+{
+	std::cout
+	<< "\nThis program demonstrates OpenCV drawing and text output functions\n"
+	"Call:\n"
+	"./drawing\n" << std::endl;
+}
 static Scalar randomColor(RNG& rng)
 {
     int icolor = (unsigned)rng;
