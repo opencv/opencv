@@ -191,7 +191,15 @@ struct CV_GpuMeanShiftProcTest : public CvTest
             d_spmap.download(spmap);
 
             cv::Mat spmap_template;
-            cv::FileStorage fs(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
+            cv::FileStorage fs;
+
+            int major, minor;
+            cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
+
+            if (major == 1)
+                fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_1x.yaml", cv::FileStorage::READ);
+            else
+                fs.open(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
             fs["spmap"] >> spmap_template;
 
             for (int y = 0; y < spmap.rows; ++y) {
