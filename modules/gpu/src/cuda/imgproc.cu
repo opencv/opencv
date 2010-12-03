@@ -495,10 +495,12 @@ namespace cv { namespace gpu { namespace imgproc
 
 /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
 
+    texture<float, 2> harrisDxTex;
+    texture<float, 2> harrisDyTex;
+
     template <typename B>
     __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
-                                        const PtrStep Dx, const PtrStep Dy, PtrStep dst, B border_row, 
-                                        B border_col)
+                                        PtrStep dst, B border_row, B border_col)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -517,13 +519,11 @@ namespace cv { namespace gpu { namespace imgproc
             for (int i = ibegin; i < iend; ++i)
             {
                 int y = border_col.idx(i);
-                const float* dx_row = (const float*)Dx.ptr(y);
-                const float* dy_row = (const float*)Dy.ptr(y);
                 for (int j = jbegin; j < jend; ++j)
                 {
                     int x = border_row.idx(j);
-                    float dx = dx_row[x];
-                    float dy = dy_row[x];
+                    float dx = tex2D(harrisDxTex, x, y);
+                    float dy = tex2D(harrisDyTex, x, y);
                     a += dx * dx;
                     b += dx * dy;
                     c += dy * dy;
@@ -543,22 +543,33 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
+        cudaBindTexture2D(0, harrisDxTex, Dx.data, desc, Dx.cols, Dx.rows, Dx.step);
+        cudaBindTexture2D(0, harrisDyTex, Dy.data, desc, Dy.cols, Dy.rows, Dy.step);
+        harrisDxTex.filterMode = cudaFilterModePoint;
+        harrisDyTex.filterMode = cudaFilterModePoint;
+
         switch (border_type) 
         {
         case BORDER_REFLECT101:
             cornerHarris_kernel<<<grid, threads>>>(
-                    cols, rows, block_size, k, Dx, Dy, dst, 
-                    BrdReflect101(cols), BrdReflect101(rows));
+                    cols, rows, block_size, k, dst, BrdReflect101(cols), BrdReflect101(rows));
             break;
         }
+
         cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall(cudaUnbindTexture(harrisDxTex));
+        cudaSafeCall(cudaUnbindTexture(harrisDyTex));
     }
 
 /////////////////////////////////////////// Corner Min Eigen Val /////////////////////////////////////////////////
 
+    texture<float, 2> minEigenValDxTex;
+    texture<float, 2> minEigenValDyTex;
+
     template <typename B>
-    __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, const PtrStep Dx, 
-                                             const PtrStep Dy, PtrStep dst, B border_row, B border_col)
+    __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
+                                             PtrStep dst, B border_row, B border_col)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -577,13 +588,11 @@ namespace cv { namespace gpu { namespace imgproc
             for (int i = ibegin; i < iend; ++i)
             {
                 int y = border_col.idx(i);
-                const float* dx_row = (const float*)Dx.ptr(y);
-                const float* dy_row = (const float*)Dy.ptr(y);
                 for (int j = jbegin; j < jend; ++j)
                 {
                     int x = border_row.idx(j);
-                    float dx = dx_row[x];
-                    float dy = dy_row[x];
+                    float dx = tex2D(minEigenValDxTex, x, y);
+                    float dy = tex2D(minEigenValDyTex, x, y);
                     a += dx * dx;
                     b += dx * dy;
                     c += dy * dy;
@@ -605,14 +614,24 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
+        cudaBindTexture2D(0, minEigenValDxTex, Dx.data, desc, Dx.cols, Dx.rows, Dx.step);
+        cudaBindTexture2D(0, minEigenValDyTex, Dy.data, desc, Dy.cols, Dy.rows, Dy.step);
+        minEigenValDxTex.filterMode = cudaFilterModePoint;
+        minEigenValDyTex.filterMode = cudaFilterModePoint;
+
         switch (border_type)
         {
         case BORDER_REFLECT101:
             cornerMinEigenVal_kernel<<<grid, threads>>>(
-                    cols, rows, block_size, Dx, Dy, dst, 
+                    cols, rows, block_size, dst, 
                     BrdReflect101(cols), BrdReflect101(rows));
             break;
         }
+
         cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
+        cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
     }
 }}}
+
