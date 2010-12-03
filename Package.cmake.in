@@ -46,6 +46,8 @@ set(CPACK_SOURCE_IGNORE_FILES
     "/autom4te.cache/"
     "/build/"
     "/lib/"
+    "/interfaces/"
+    "/utils/"
     "~$"    
     "\\\\.aux$"
     "\\\\.bbl$"
@@ -67,11 +69,11 @@ if(WIN32)
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_SOURCE_GENERATOR "ZIP")
     set(CPACK_NSIS_PACKAGE_NAME "OpenCV ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-    set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\utils\\\\opencv.ico")
-    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\utils\\\\opencv.ico")
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\doc\\\\opencv.ico")
+    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\doc\\\\opencv.ico")
     #set(CPACK_PACKAGE_ICON "utils/opencv.ico") 
         
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "${CMAKE_SOURCE_DIR}\\\\utils\\\\opencv.ico")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "${CMAKE_SOURCE_DIR}\\\\doc\\\\opencv.ico")
     set(CPACK_NSIS_HELP_LINK "http:\\\\\\\\opencvlibrary.sourceforge.net")
     set(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\opencvlibrary.sourceforge.net")
     set(CPACK_NSIS_CONTACT "info@opencvlibrary.sourceforge.net")
