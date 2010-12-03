@@ -6,6 +6,15 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
+
+void help()
+{
+	printf("\nThis program demonstrates the Maximal Extremal Region interest point detector.\n"
+			"It finds the most stable (in size) dark and white regions as a threshold is increased.\n"
+			"\nCall:\n"
+			"./mser_sample <path_and_image_filename, Default is 'puzzle.png'>\n\n");
+}
+
 static CvScalar colors[] = 
 {
     {{0,0,255}},
@@ -34,10 +43,12 @@ static uchar bcolors[][3] =
     {255,255,255}
 };
 
+
 int main( int argc, char** argv )
 {
 	char path[1024];
 	IplImage* img;
+	help();
 	if (argc!=2)
 	{
 		strcpy(path,"puzzle.png");
