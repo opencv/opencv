@@ -3,9 +3,17 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
-
 using namespace cv;
 using namespace std;
+void help()
+{
+	cout << "\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
+			"The dft of an image is taken and it's power spectrum is displayed.\n"
+			"Call:\n"
+			"./dft [image_name -- default lena.jpg]\n" << endl;
+}
+
+
 
 int main(int argc, char ** argv)
 {
@@ -14,10 +22,10 @@ int main(int argc, char ** argv)
     Mat img = imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
     if( img.empty() )
     {
-        cout << "Usage: dft <image_name>" << endl;
+        help();
         return -1;
     }
-
+    help();
     int M = getOptimalDFTSize( img.rows );
     int N = getOptimalDFTSize( img.cols );
     Mat padded;
