@@ -56,7 +56,7 @@ void updateBrightnessContrast( int arg, void* )
 }
 void help()
 {
-	cout << "\nThis program demonstrates the use of calcHist -- histogram creation.\n"
+	cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
 			"Call:\n"
 			"demhist [image_name -- Defaults to baboon.jpg]\n" << endl;
 }
