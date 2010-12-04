@@ -5,6 +5,7 @@
 #include <iostream>
 using namespace cv;
 using namespace std;
+
 void help()
 {
 	cout << "\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
