@@ -22,7 +22,7 @@ void help(char **av)
 {
 	   cerr << "usage: " << av[0] << " im1.jpg im2.jpg"
 			   << "\n"
-			   << "This program shows how to use brief to match points in features2d\n"
+			   << "This program shows how to use BRIEF descriptor to match points in features2d\n"
 			   << "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
 			   << endl;
 }
