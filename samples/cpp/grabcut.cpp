@@ -6,6 +6,27 @@
 using namespace std;
 using namespace cv;
 
+void help()
+{
+    cout << "\nThis program demonstrates GrabCut segmentation -- select an object in a region\n"
+    		"and then grabcut will attempt to segment it out.\n"
+    		"Call:\n"
+    		"./grabcut <image_name>\n"
+    	"\nSelect a rectangular area around the object you want to segment\n" <<
+        "\nHot keys: \n"
+        "\tESC - quit the program\n"
+        "\tr - restore the original image\n"
+        "\tn - next iteration\n"
+        "\n"
+        "\tleft mouse button - set rectangle\n"
+        "\n"
+        "\tCTRL+left mouse button - set GC_BGD pixels\n"
+        "\tSHIFT+left mouse button - set CG_FGD pixels\n"
+        "\n"
+        "\tCTRL+right mouse button - set GC_PR_BGD pixels\n"
+        "\tSHIFT+right mouse button - set CG_PR_FGD pixels\n" << endl;
+}
+
 const Scalar RED = Scalar(0,0,255);
 const Scalar PINK = Scalar(230,130,255);
 const Scalar BLUE = Scalar(255,0,0);
@@ -254,28 +275,25 @@ void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    if( argc==1 )
+    if( argc!=2 )
+    {
+    	help();
         return 1;
+    }
     string filename = argv[1];
     if( filename.empty() )
+    {
+    	cout << "\nDurn, couldn't read in " << argv[1] << endl;
         return 1;
+    }
     Mat image = imread( filename, 1 );
     if( image.empty() )
-        return 1;
+    {
+        cout << "\n Durn, couldn't read image filename " << filename << endl;
+    	return 1;
+    }
 
-    cout << "First, select the rectangular area\n" <<
-        "Hot keys: \n"
-        "\tESC - quit the program\n"
-        "\tr - restore the original image\n"
-        "\tn - next iteration\n"
-        "\n"
-        "\tleft mouse button - set rectangle\n"
-        "\n"
-        "\tCTRL+left mouse button - set GC_BGD pixels\n"
-        "\tSHIFT+left mouse button - set CG_FGD pixels\n"
-        "\n"
-        "\tCTRL+right mouse button - set GC_PR_BGD pixels\n"
-        "\tSHIFT+right mouse button - set CG_PR_FGD pixels\n";
+    help();
 
     const string winName = "image";
     cvNamedWindow( winName.c_str(), CV_WINDOW_AUTOSIZE );
