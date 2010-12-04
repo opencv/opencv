@@ -5,10 +5,20 @@
 #ifndef _EiC
 #include "cv.h"
 #include "highgui.h"
+#include <stdio.h>
 #include <stdlib.h>
 #endif
 
 #define ARRAY  1
+
+void help()
+{
+	printf("\nThis program demonstrates finding the minimum enclosing box or circle of a set\n"
+		"of points using functions: minAreaRect() minEnclosingCircle().\n"
+		"Random points are generated and then enclosed.\n"
+		"Call:\n"
+		"./minarea\n");
+}
 
 int main( int argc, char** argv )
 {
@@ -16,7 +26,7 @@ int main( int argc, char** argv )
 #if !ARRAY        
     CvMemStorage* storage = cvCreateMemStorage(0);
 #endif
-
+    help();
     cvNamedWindow( "rect & circle", 1 );
         
     for(;;)
