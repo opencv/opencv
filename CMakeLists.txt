@@ -965,8 +965,6 @@ IF(NOT BUILD_SHARED_LIBS)
     if(CMAKE_COMPILER_IS_GNUCXX)
         set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
     endif()
-
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_flann zlib opencv_lapack)
 endif()
 
 
@@ -1067,18 +1065,6 @@ set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
 
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/lib")
 
-# This will expand to, for example, <program files>/OpenCV 1.1.0/include
-set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/include\" 
-                                    \"\${THIS_OPENCV_CONFIG_PATH}/include/opencv\" 
-                                    \"\${THIS_OPENCV_CONFIG_PATH}/3rdparty/include\"")
-
-set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}\"")
-
-# This will expand to, for example, <program files>/OpenCV 1.1.0/lib
-# support for 3rdparty libraries.
-set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/lib\" 
-                                \"\${THIS_OPENCV_CONFIG_PATH}/3rdparty/lib\"")
-
 exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/unix-install/\"" OUTPUT_VARIABLE RET_VAL)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
@@ -1093,6 +1079,17 @@ endif()
 if(WIN32)
     # Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
     # support for 3rdparty libraries.
+    # This will expand to, for example, <program files>/OpenCV 1.1.0/include
+    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/include\" 
+                                        \"\${THIS_OPENCV_CONFIG_PATH}/include/opencv\" 
+                                        \"\${THIS_OPENCV_CONFIG_PATH}/3rdparty/include\"")
+
+    set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}\"")
+
+    # This will expand to, for example, <program files>/OpenCV 1.1.0/lib
+    # support for 3rdparty libraries.
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/lib\" 
+                                    \"\${THIS_OPENCV_CONFIG_PATH}/3rdparty/lib\"")
 
     #exec_program(${CMAKE_COMMAND} ARGS "-E make_directory \"${CMAKE_BINARY_DIR}/win-install/\"")
     exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)

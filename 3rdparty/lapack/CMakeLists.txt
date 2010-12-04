@@ -60,4 +60,15 @@ set_target_properties(${the_target}
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/3rdparty/lib
 	)
+    
+if(NOT BUILD_SHARED_LIBS)
+    set_target_properties(${the_target}
+	PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+    
+    install(TARGETS ${the_target}
+	    RUNTIME DESTINATION bin COMPONENT main
+	    LIBRARY DESTINATION lib COMPONENT main
+	    ARCHIVE DESTINATION lib COMPONENT main)
+endif()
+    
 endif() #android

@@ -82,7 +82,12 @@ endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 #  many more dependencies:
 IF (NOT @OPENCV_BUILD_SHARED_LIB@)
 	# Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
-	#LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib")
+    if(UNIX)
+        LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../3rdparty/lib)
+    else()
+        LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
+    endif()
+    
 
 	SET(OpenCV_LIBS
 		@OPENCV_LINKER_LIBS@
@@ -92,7 +97,9 @@ IF (NOT @OPENCV_BUILD_SHARED_LIB@)
 		@TIFF_LIBRARIES@
 		@JASPER_LIBRARIES@
 		@HIGHGUI_LIBRARIES@
-		${OpenCV_LIBS}) # The standard libs BEFORE (OpenCV_LIBS) since these can have "debug","optimized".
+		${OpenCV_LIBS}
+        opencv_zlib
+        opencv_lapack) # The standard libs BEFORE (OpenCV_LIBS) since these can have "debug","optimized".
 ENDIF(NOT @OPENCV_BUILD_SHARED_LIB@)
 
 
