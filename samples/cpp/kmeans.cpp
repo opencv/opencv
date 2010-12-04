@@ -1,7 +1,18 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/core/core.hpp"
+#include <iostream>
 
 using namespace cv;
+using namespace std;
+
+void help()
+{
+	cout << "\nThis program demonstrates kmeans clustering.\n"
+			"It generates an image with random points, then assigns a random number of cluster\n"
+			"centers and uses kmeans to move those cluster centers to their representitive location\n"
+			"Call\n"
+			"./kmeans\n" << endl;
+}
 
 int main( int argc, char** argv )
 {
