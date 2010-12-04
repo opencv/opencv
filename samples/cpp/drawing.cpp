@@ -6,7 +6,7 @@ using namespace cv;
 void help()
 {
 	std::cout
-	<< "\nThis program demonstrates OpenCV drawing and text output functions\n"
+	<< "\nThis program demonstrates OpenCV drawing and text output functions.\n"
 	"Call:\n"
 	"./drawing\n" << std::endl;
 }
