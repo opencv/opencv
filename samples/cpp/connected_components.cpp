@@ -11,7 +11,7 @@ int threshval = 100;
 void help()
 {
 	cout <<
-		   "Program to demonstrate connected components and use of the trackbar\n"
+		   "\n This program demonstrates connected components and use of the trackbar\n"
 		<< "\n"
 		<< "Usage: ./connected_components <image>\n"
 		<< "\n"
