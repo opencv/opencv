@@ -10,7 +10,7 @@ void help()
 	printf("\nThis program demonstrates using features2d detector, descriptor extractor and simple matcher\n"
 			"Using the SURF desriptor:\n"
 			"\n"
-			"Usage: matcher_simple <image1> <image2>\n");
+			"Usage:\n matcher_simple <image1> <image2>\n");
 }
 
 int main(int argc, char** argv)
