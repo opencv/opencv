@@ -16,7 +16,7 @@ using namespace std;
 void myhelp()
 {
 
-printf("Sigh: This program is not complete/will be replaced. \n"
+printf("\nSigh: This program is not complete/will be replaced. \n"
 "So:   Use this just to see hints of how to use things like Rodrigues\n"
 "      conversions, finding the fundamental matrix, using descriptor\n"
 "      finding and matching in features2d and using camera parameters\n"
