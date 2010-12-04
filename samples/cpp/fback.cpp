@@ -2,8 +2,20 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-using namespace cv;
+#include <iostream>
 
+using namespace cv;
+using namespace std;
+
+void help()
+{
+	cout <<
+			"\nThis program demonstrates dense, Farnback, optical flow\n"
+			"Mainly the function: calcOpticalFlowFarneback()\n"
+			"Call:\n"
+			"./fback\n"
+			"This reads from video camera 0\n" << endl;
+}
 void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
                     double, const Scalar& color)
 {
@@ -20,7 +32,7 @@ void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
 int main(int, char**)
 {
     VideoCapture cap(0);
-    
+    help();
     if( !cap.isOpened() )
         return -1;
     
@@ -34,7 +46,7 @@ int main(int, char**)
         
         if( prevgray.data )
         {
-            calcOpticalFlowFarneback(prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
+            (prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
             cvtColor(prevgray, cflow, CV_GRAY2BGR);
             drawOptFlowMap(flow, cflow, 16, 1.5, CV_RGB(0, 255, 0));
             imshow("flow", cflow);
