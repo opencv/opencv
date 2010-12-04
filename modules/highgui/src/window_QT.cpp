@@ -46,12 +46,12 @@
 //Static and global first
 static GuiReceiver *guiMainThread = NULL;
 static int parameterSystemC = 1;
-static char* parameterSystemV[] = {""};
+static char* parameterSystemV[] = {(char*)""};
 static bool multiThreads = false;
 static int last_key = -1;
 QWaitCondition key_pressed;
 QMutex mutexKey;
-static const unsigned int threshold_zoom_img_region = 15;
+static const unsigned int threshold_zoom_img_region = 30;
 //the minimum zoom value to start displaying the values in the grid
 //that is also the number of pixel per grid
 
@@ -979,7 +979,7 @@ void GuiReceiver::destroyAllWindow()
 
 		foreach (QObject *obj, QApplication::topLevelWidgets())
 		{
-			if (obj->metaObject ()->className () == "CvWindow")
+			if (obj->metaObject ()->className () == QString("CvWindow"))
 			{
 				delete obj;
 			}
@@ -1320,9 +1320,6 @@ void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata
 }
 
 
-
-
-
 //buttons here
 CvPushButton::CvPushButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4)
 {
@@ -1458,10 +1455,6 @@ CvWinProperties::~CvWinProperties()
 		delete myLayout;
 	}
 }
-
-
-
-
 
 
 //Here CvWindow class
@@ -2391,13 +2384,11 @@ void ViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 	on_mouse_param = param;
 }
 
-void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double angle_arg, double zmin_arg, double zmax_arg)
+#if defined( HAVE_QT_OPENGL )
+void ViewPort::setOpenGLCallback(CvOpenGLCallback func, void* userdata, double angle_arg, double zmin_arg, double zmax_arg)
 {
 	//avoid unreferenced formal parameter warning with vs 2008
 	//http://msdn.microsoft.com/en-en/library/26kb9fy0%28VS.80%29.aspx
-	func;userdata;angle_arg;zmin_arg;zmax_arg;
-
-#if defined( HAVE_QT_OPENGL )
 	on_openGL_draw3D = func;
 	on_openGL_param = userdata;
 
@@ -2417,8 +2408,12 @@ void ViewPort::setOpenGLCallback(CvOpenGLCallback func,void* userdata, double an
 		zmax = zmax_arg;
 	else
 		zmax = DEFAULT_ZMAX;
-#endif
 }
+#else
+void ViewPort::setOpenGLCallback(CvOpenGLCallback, void*, double, double, double)
+{
+}
+#endif
 
 void ViewPort::controlImagePosition()
 {
@@ -2531,7 +2526,6 @@ void ViewPort::mousePressEvent(QMouseEvent *event)
 
 void ViewPort::mouseReleaseEvent(QMouseEvent *event)
 {
-
 	int cv_event = -1, flags = 0;
 	QPoint pt = event->pos();
 
@@ -2559,13 +2553,12 @@ void ViewPort::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ViewPort::mouseMoveEvent(QMouseEvent *event)
 {
-	int cv_event = -1, flags = 0;
+	int cv_event = CV_EVENT_MOUSEMOVE, flags = 0;
 	QPoint pt = event->pos();
 
 	//icvmouseHandler: pass parameters for cv_event, flags
 	icvmouseHandler(event, mouse_move, cv_event, flags);
 	icvmouseProcessing(QPointF(pt), cv_event, flags);
-
 
 	if (param_matrixWorld.m11()>1 && event->buttons() == Qt::LeftButton)
 	{
@@ -2582,30 +2575,52 @@ void ViewPort::mouseMoveEvent(QMouseEvent *event)
 	QWidget::mouseMoveEvent(event);
 }
 
+
+/*void ViewPort::dragMoveEvent(QDragMoveEvent *event)
+{
+	QPoint pt = event->pos();
+
+	//icvmouseHandler: pass parameters for cv_event, flags
+	icvmouseProcessing(QPointF(pt), CV_EVENT_MOUSEMOVE, CV_EVENT_FLAG_LBUTTON);
+
+	if (param_matrixWorld.m11()>1)
+	{
+		QPointF dxy = (pt - positionGrabbing)/param_matrixWorld.m11();
+		positionGrabbing = event->pos();
+		moveView(dxy);
+	}
+
+	//I update the statusbar here because if the user does a cvWaitkey(0) (like with inpaint.cpp)
+	//the status bar will only be repaint when a click occurs.
+	if (centralWidget->myStatusBar)
+		viewport()->update();
+
+	QWidget::dragMoveEvent(event);
+}*/
+
+
 //up, down, dclick, move
 void ViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags)
 {
+	Qt::KeyboardModifiers modifiers = event->modifiers();
+    Qt::MouseButtons buttons = event->buttons();
+    
+    flags = 0;
+    if(modifiers & Qt::ShiftModifier)
+		flags |= CV_EVENT_FLAG_SHIFTKEY;
+	if(modifiers & Qt::ControlModifier)
+		flags |= CV_EVENT_FLAG_CTRLKEY;
+	if(modifiers & Qt::AltModifier)
+		flags |= CV_EVENT_FLAG_ALTKEY;
 
-	switch(event->modifiers())
-	{
-	case Qt::ShiftModifier:
-		flags = CV_EVENT_FLAG_SHIFTKEY;
-		break;
-	case Qt::ControlModifier:
-		flags = CV_EVENT_FLAG_CTRLKEY;
-		break;
-	case Qt::AltModifier:
-		flags = CV_EVENT_FLAG_ALTKEY;
-		break;
-	case Qt::NoModifier	:
-		break;
-	case Qt::MetaModifier:
-		break;
-	case Qt::KeypadModifier:
-		break;
-	default:;
-	}
+    if(buttons & Qt::LeftButton)
+		flags |= CV_EVENT_FLAG_LBUTTON;
+	if(buttons & Qt::RightButton)
+		flags |= CV_EVENT_FLAG_RBUTTON;
+    if(buttons & Qt::MidButton)
+		flags |= CV_EVENT_FLAG_MBUTTON;
 
+    cv_event = CV_EVENT_MOUSEMOVE;
 	switch(event->button())
 	{
 	case Qt::LeftButton:
@@ -2634,8 +2649,8 @@ void ViewPort::icvmouseProcessing(QPointF pt, int cv_event, int flags)
 	mouseCoordinate.ry()=floor(pfy/ratioY);
 
 	if (on_mouse)
-		on_mouse( cv_event, mouseCoordinate.x(),mouseCoordinate.y(), flags, on_mouse_param );
-
+		on_mouse( cv_event, mouseCoordinate.x(),
+            mouseCoordinate.y(), flags, on_mouse_param );
 }
 
 QSize ViewPort::sizeHint() const
@@ -2759,7 +2774,7 @@ void ViewPort::drawStatusBar()
 
 		if (nbChannelOriginImage==CV_8UC3 )
 		{
-			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
+			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
 				.arg(mouseCoordinate.x())
 				.arg(mouseCoordinate.y())+
 				tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
@@ -2771,10 +2786,10 @@ void ViewPort::drawStatusBar()
 		if (nbChannelOriginImage==CV_8UC1)
 		{
 			//all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
-			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>Coordinate: %1x%2 ~ </font>")
+			centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
 				.arg(mouseCoordinate.x())
 				.arg(mouseCoordinate.y())+
-				tr("<font color='grey'>grey:%3 </font>").arg(qRed(rgbValue))
+				tr("<font color='grey'>L:%3 </font>").arg(qRed(rgbValue))
 				);
 		}
 	}
@@ -2806,7 +2821,7 @@ void ViewPort::drawImgRegion(QPainter *painter)
 	int original_font_size = f.pointSize();
 	//change font size
 	//f.setPointSize(4+(param_matrixWorld.m11()-threshold_zoom_img_region)/5);
-	f.setPixelSize(6+(param_matrixWorld.m11()-threshold_zoom_img_region)/5);
+	f.setPixelSize(10+(param_matrixWorld.m11()-threshold_zoom_img_region)/5);
 	painter->setFont(f);
 	QString val;
 	QRgb rgbValue;

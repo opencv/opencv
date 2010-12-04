@@ -434,6 +434,7 @@ private:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
+    //void dragMoveEvent(QDragMoveEvent *event);
     void drawInstructions(QPainter *painter);
     void drawViewOverview(QPainter *painter);
     void drawImgRegion(QPainter *painter);
