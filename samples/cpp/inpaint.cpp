@@ -6,6 +6,21 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+    cout << "\nCool inpainging demo. Inpainting repairs damage to images by floodfilling the damage \n"
+    		<< "with surrounding image areas.\n"
+    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+   	"Usage:\n"
+    	"./inpaint [image_name -- Default fruits.jpg]\n" << endl;
+
+    cout << "Hot keys: \n"
+        "\tESC - quit the program\n"
+        "\tr - restore the original image\n"
+        "\ti or SPACE - run inpainting algorithm\n"
+        "\t\t(before running it, paint something on the image)\n" << endl;
+}
+
 Mat img, inpaintMask;
 Point prevPt(-1,-1);
 
@@ -34,15 +49,11 @@ int main( int argc, char** argv )
     Mat img0 = imread(filename, -1);
     if(img0.empty())
     {
-        cout << "Usage: inpaint <image_name>\n";
+        cout << "Couldn't open the image " << filename << ". Usage: inpaint <image_name>\n" << endl;
         return 0;
     }
 
-    cout << "Hot keys: \n"
-            "\tESC - quit the program\n"
-            "\tr - restore the original image\n"
-            "\ti or SPACE - run inpainting algorithm\n"
-            "\t\t(before running it, paint something on the image)\n";
+    help();
     
     namedWindow( "image", 1 );
 
