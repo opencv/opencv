@@ -16,11 +16,18 @@
 ********************************************************************************/
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-
 #include <iostream>
-
 using namespace cv;
 using namespace std;
+
+void help()
+{
+	cout <<
+			"\nThis program is demonstration for ellipse fitting. The program finds\n"
+			"contours and approximate it by ellipses.\n"
+			"Call:\n"
+			"./fitellipse [image_name -- Default stuff.jpg]\n" << endl;
+}
 
 int sliderPos = 70;
 
@@ -34,7 +41,7 @@ int main( int argc, char** argv )
     image = imread(filename, 0);
     if( image.empty() )
     {
-        cout << "Usage: fitellipse <image_name>\n";
+        cout << "Couldn't open image " << filename << "\nUsage: fitellipse <image_name>\n";
         return 0;
     }
 
