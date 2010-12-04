@@ -9,11 +9,22 @@ using namespace cv; // all the new API is put into "cv" namespace. Export its co
 using namespace std;
 using namespace cv::flann;
 
+void help()
+{
+	cout <<
+	"\nThis program shows how to use cv::Mat and IplImages converting back and forth.\n"
+	"It shows reading of images, converting to planes and merging back, color conversion\n"
+	"and also iterating through pixels.\n"
+	"Call:\n"
+	"./image [image-name Default: lena.jpg]\n" << endl;
+}
+
 // enable/disable use of mixed API in the code below.
 #define DEMO_MIXED_API_USE 1
 
 int main( int argc, char** argv )
 {
+	help();
     const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
 #if DEMO_MIXED_API_USE
     Ptr<IplImage> iplimg = cvLoadImage(imagename); // Ptr<T> is safe ref-conting pointer class
