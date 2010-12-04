@@ -25,8 +25,9 @@ const string plotsDir = "/plots";
 
 void help(char** argv)
 {
-	cout << "This program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
+	cout << "\nThis program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
 	 << "It shows how to use detectors, descriptors and recognition methods \n"
+		"Using OpenCV version %s\n" << CV_VERSION << "\n"
 	 << "Call: \n"
     << "Format:\n ./" << argv[0] << " [VOC path] [result directory]  \n"
     << "       or:  \n"
