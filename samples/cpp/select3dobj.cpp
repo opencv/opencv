@@ -1,6 +1,10 @@
 /*
  *
- * select3obj.cpp
+ * select3obj.cpp With a calibration chessboard on a table, mark an object in a 3D box and
+ *                track that object in all subseqent frames as long as the camera can see
+ *                the chessboard. Also segments the object using the box projection. This
+ *                program is useful for collecting large datasets of many views of an object
+ *                on a table.
  *
  */
 
