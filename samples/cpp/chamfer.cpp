@@ -10,7 +10,7 @@ using namespace std;
 void help()
 {
 	cout <<
-			"\nThis program demonstrates chamfer matching -- computing a distance between an \n"
+			"\nThis program demonstrates Chamfer matching -- computing a distance between an \n"
 			"edge template and a query edge image.\n"
 			"Call:\n"
 			"./chamfer [<image edge map> <template edge map>]\n"
