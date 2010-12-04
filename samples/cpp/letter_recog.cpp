@@ -3,22 +3,33 @@
 
 #include <cstdio>
 /*
-The sample demonstrates how to train Random Trees classifier
-(or Boosting classifier, or MLP - see main()) using the provided dataset.
 
-We use the sample database letter-recognition.data
-from UCI Repository, here is the link:
-
-Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).
-UCI Repository of machine learning databases
-[http://www.ics.uci.edu/~mlearn/MLRepository.html].
-Irvine, CA: University of California, Department of Information and Computer Science.
-
-The dataset consists of 20000 feature vectors along with the
-responses - capital latin letters A..Z.
-The first 16000 (10000 for boosting)) samples are used for training
-and the remaining 4000 (10000 for boosting) - to test the classifier.
 */
+
+void help()
+{
+	printf("\nThe sample demonstrates how to train Random Trees classifier\n"
+	"(or Boosting classifier, or MLP - see main()) using the provided dataset.\n"
+	"\n"
+	"We use the sample database letter-recognition.data\n"
+	"from UCI Repository, here is the link:\n"
+	"\n"
+	"Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).\n"
+	"UCI Repository of machine learning databases\n"
+	"[http://www.ics.uci.edu/~mlearn/MLRepository.html].\n"
+	"Irvine, CA: University of California, Department of Information and Computer Science.\n"
+	"\n"
+	"The dataset consists of 20000 feature vectors along with the\n"
+	"responses - capital latin letters A..Z.\n"
+	"The first 16000 (10000 for boosting)) samples are used for training\n"
+	"and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
+	"======================================================\n");
+    printf("\nThis is letter recognition sample.\n"
+            "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
+            "  [-save <output XML file for the classifier>] \\\n"
+            "  [-load <XML file with the pre-trained classifier>] \\\n"
+            "  [-boost|-mlp] # to use boost/mlp classifier instead of default Random Trees\n" );
+}
 
 // This function reads data and responses from the file <filename>
 static int
@@ -521,11 +532,7 @@ int main( int argc, char *argv[] )
         build_mlp_classifier( data_filename, filename_to_save, filename_to_load ) :
         -1) < 0)
     {
-        printf("This is letter recognition sample.\n"
-                "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
-                "  [-save <output XML file for the classifier>] \\\n"
-                "  [-load <XML file with the pre-trained classifier>] \\\n"
-                "  [-boost|-mlp] # to use boost/mlp classifier instead of default Random Trees\n" );
+    	help();
     }
     return 0;
 }
