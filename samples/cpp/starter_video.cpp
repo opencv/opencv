@@ -17,7 +17,8 @@ using namespace std;
 //hide the local functions in an anon namespace
 namespace {
 void help(char** av) {
-	cout << "usage:" << av[0] << " <video device number>\n"
+	cout << "\nThis program justs gets you started reading images from video\n"
+			"Usage:\n./" << av[0] << " <video device number>\n"
 			<< "\tThis is a starter sample, to get you up and going in a copy pasta fashion\n"
 			<< "\tThe program captures frames from a camera connected to your computer.\n"
 			<< "\tTo find the video device number, try ls /dev/video* \n"
