@@ -2,7 +2,7 @@
 
 /* *************** License:**************************
    Oct. 3, 2008
-   Right to use this code in any way you want without warrenty, support or any guarentee of it working.
+   Right to use this code in any way you want without warranty, support or any guarantee of it working.
 
    BOOK: It would be nice if you cited it:
    Learning OpenCV: Computer Vision with the OpenCV Library
@@ -41,13 +41,22 @@
 using namespace cv;
 using namespace std;
 
-//
-// Given a list of chessboard images, the number of corners (nx, ny)
-// on the chessboards, and a flag: useCalibrated for calibrated (0) or
-// uncalibrated (1: use cvStereoCalibrate(), 2: compute fundamental
-// matrix separately) stereo. Calibrate the cameras and display the
-// rectified results along with the computed disparity images.
-//
+int print_help()
+{
+	cout <<
+			" Given a list of chessboard images, the number of corners (nx, ny)\n"
+			" on the chessboards, and a flag: useCalibrated for \n"
+			"   calibrated (0) or\n"
+			"   uncalibrated \n"
+			"     (1: use cvStereoCalibrate(), 2: compute fundamental\n"
+			"         matrix separately) stereo. \n"
+			" Calibrate the cameras and display the\n"
+			" rectified results along with the computed disparity images.	\n" << endl;
+    cout << "Usage:\n ./stereo_calib -w board_width -h board_height [-nr /*dot not view results*/] <image list XML/YML file>\n" << endl;
+    return 0;
+}
+
+
 static void
 StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=true, bool showRectified=true)
 {
@@ -335,14 +344,6 @@ static bool readStringList( const string& filename, vector<string>& l )
         l.push_back((string)*it);
     return true;
 }
-
-                   
-int print_help()
-{
-    cout << "Usage:\n ./stereo_calib -w board_width -h board_height [-nr /*dot not view results*/] <image list XML/YML file>\n";
-    return 0;
-}
-
                    
 int main(int argc, char** argv)
 {
