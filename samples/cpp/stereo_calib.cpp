@@ -286,14 +286,14 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     int w, h;
     if( !isVerticalStereo )
     {
-        sf = 1;//600./MAX(imageSize.width, imageSize.height);
+        sf = 600./MAX(imageSize.width, imageSize.height);
         w = cvRound(imageSize.width*sf);
         h = cvRound(imageSize.height*sf);
         canvas.create(h, w*2, CV_8UC3);
     }
     else
     {
-        sf = 1;//300./MAX(imageSize.width, imageSize.height);
+        sf = 300./MAX(imageSize.width, imageSize.height);
         w = cvRound(imageSize.width*sf);
         h = cvRound(imageSize.height*sf);
         canvas.create(h*2, w, CV_8UC3);
@@ -386,6 +386,11 @@ int main(int argc, char** argv)
     {
         imagelistfn = "stereo_calib.xml";
         boardSize = Size(9, 6);
+    }
+    else if( boardSize.width <= 0 || boardSize.height <= 0 )
+    {
+        cout << "if you specified XML file with chessboards, you should also specify the board width and height (-w and -h options)" << endl; 
+        return 0;
     }
     
     vector<string> imagelist;
