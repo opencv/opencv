@@ -6,6 +6,24 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+    cout << "\nThis program demonstrated the floodFill() function\n"
+    		"Call:\n"
+    		"./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
+
+	cout << "Hot keys: \n"
+			"\tESC - quit the program\n"
+			"\tc - switch color/grayscale mode\n"
+			"\tm - switch mask mode\n"
+			"\tr - restore the original image\n"
+			"\ts - use null-range floodfill\n"
+			"\tf - use gradient floodfill with fixed(absolute) range\n"
+			"\tg - use gradient floodfill with floating(relative) range\n"
+			"\t4 - use 4-connectivity mode\n"
+			"\t8 - use 8-connectivity mode\n" << endl;
+}
+
 Mat image0, image, gray, mask;
 int ffillMode = 1;
 int loDiff = 20, upDiff = 20;
@@ -58,21 +76,10 @@ int main( int argc, char** argv )
     
     if( image0.empty() )
     {
-        cout << "Usage: ffilldemo <image_name>\n";
+        cout << "Image empty. Usage: ffilldemo <image_name>\n";
         return 0;
     }
-
-    cout << "Hot keys: \n"
-            "\tESC - quit the program\n"
-            "\tc - switch color/grayscale mode\n"
-            "\tm - switch mask mode\n"
-            "\tr - restore the original image\n"
-            "\ts - use null-range floodfill\n"
-            "\tf - use gradient floodfill with fixed(absolute) range\n"
-            "\tg - use gradient floodfill with floating(relative) range\n"
-            "\t4 - use 4-connectivity mode\n"
-            "\t8 - use 8-connectivity mode\n";
-
+    help();
     image0.copyTo(image);
     cvtColor(image0, gray, CV_BGR2GRAY);
     mask.create(image0.rows+2, image0.cols+2, CV_8UC1);
