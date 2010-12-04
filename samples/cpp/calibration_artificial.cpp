@@ -11,7 +11,7 @@ using namespace cv;
 using namespace std;
 void help()
 {
-	cout << "\nThis code generates an artificial camera and artificial chessboard views,\n"
+	cout << "\nThis code generates an artificial camera and artificial chessboard images,\n"
          <<  "and then calibrates. It is basically test code for calibration that shows\n"
 		 <<	"how to package calibration points and then calibrate the camera.\n"
 		 <<	"Call:\n"
