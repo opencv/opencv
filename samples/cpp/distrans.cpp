@@ -7,7 +7,7 @@ using namespace cv;
 
 void help()
 {
-	printf("\nDemonstrate the use of the distance transform function between edge images.\n"
+	printf("\nProgram to demonstrate the use of the distance transform function between edge images.\n"
 			"Usage:\n"
 			"./distrans [image_name -- default image is stuff.jpg]\n"
 			);
