@@ -7,12 +7,22 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+	cout <<
+			"\nThis program demonstrates Laplace point/edge detection using OpenCV function Laplacian()\n"
+			"It captures from the camera of your choice: 0, 1, ... default 0\n"
+			"Call:\n"
+			"./laplace [camera #, default 0]\n" << endl;
+}
+
 int sigma = 3;
 int smoothType = CV_GAUSSIAN;
 
 int main( int argc, char** argv )
 {
     VideoCapture cap;
+    help();
 
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         cap.open(argc == 2 ? argv[1][0] - '0' : 0);
