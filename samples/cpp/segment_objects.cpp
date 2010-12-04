@@ -10,8 +10,8 @@ void help()
 {
 	printf("\n"
 			"This program demonstrated a simple method of connected components clean up of background subtraction\n"
-			"When the program starts, it begins learning the background. You can toggle background learning on and off\n"
-			"by hitting the space bar.\n"
+			"When the program starts, it begins learning the background.\n"
+			"You can toggle background learning on and off by hitting the space bar.\n"
 			"Call\n"
 			"./segment_objects [video file, else it reads camera 0]\n\n");
 }
