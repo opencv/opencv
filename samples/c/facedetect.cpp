@@ -19,7 +19,9 @@ void help()
         "   [filename|camera_index]\n\n"
     		"see facedetect.cmd for one call:\n"
     		"./facedetect --cascade=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --nested-cascade=\"../../data/haarcascades/haarcascade_eye.xml\" --scale=1.3 \n"
-    	"Hit any key to quit.\n" << endl;
+    	"Hit any key to quit.\n"
+    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+    		<< endl;
 }
 
 void detectAndDraw( Mat& img,
