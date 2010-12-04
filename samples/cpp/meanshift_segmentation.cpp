@@ -9,7 +9,7 @@ using namespace std;
 
 void help(char** argv)
 {
-	cout << "\nDemonstrate mean shift based color segmentation in spatial pyramid.\n"
+	cout << "\nDemonstrate mean-shift based color segmentation in spatial pyramid.\n"
     << "Call:\n   " << argv[0] << " image\n"
     << "This program allows you to set the spatial and color radius\n"
     << "of the mean shift window as well as the number of pyramid reduction levels explored\n"
