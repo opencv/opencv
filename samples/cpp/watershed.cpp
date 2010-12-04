@@ -86,6 +86,8 @@ int main( int argc, char** argv )
             
             findContours(markerMask, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
             
+            if( contours.empty() )
+                continue;
             Mat markers(markerMask.size(), CV_32S);
             markers = Scalar::all(0);
             int idx = 0;

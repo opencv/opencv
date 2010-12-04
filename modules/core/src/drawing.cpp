@@ -2033,7 +2033,7 @@ cvDrawContours( void* _img, CvSeq* contour,
     scalarToRawData( externalColor, ext_buf, img.type(), 0 );
     scalarToRawData( holeColor, hole_buf, img.type(), 0 );
 
-    maxLevel = MAX(maxLevel, INT_MIN-2);
+    maxLevel = MAX(maxLevel, INT_MIN+2);
     maxLevel = MIN(maxLevel, INT_MAX-1);
     
     if( maxLevel < 0 )
