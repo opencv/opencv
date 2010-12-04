@@ -6,6 +6,15 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+	cout <<
+			"\nDemonstrate Canny edge detection\n"
+			"Call:\n"
+			"/.edge [image_name -- Default is fruits.jpg]\n" << endl;
+
+}
+
 int edgeThresh = 1;
 Mat image, gray, edge, cedge;
 
@@ -29,10 +38,10 @@ int main( int argc, char** argv )
     image = imread(filename, 1);
     if(image.empty())
     {
-        cout << "Usage: edge <image_name>" << endl;
+    	help();
         return -1;
     }
-
+    help();
     cedge.create(image.size(), image.type());
     cvtColor(image, gray, CV_BGR2GRAY);
 
