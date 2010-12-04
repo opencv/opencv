@@ -10,7 +10,7 @@ using namespace cv;
 using namespace std;
 
 const char * usage =
-" example command line for calibration from a live feed.\n"
+" \nexample command line for calibration from a live feed.\n"
 "   calibration  -w 4 -h 5 -s 0.025 -o camera.yml -op -oe\n"
 " \n"
 " example command line for calibration from a list of stored images:\n"
