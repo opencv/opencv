@@ -97,7 +97,7 @@ CV_EXPORTS IndexHeader load_header(FILE* stream);
 template<typename T>
 void save_value(FILE* stream, const T& value, int count = 1)
 {
-	fwrite(&value, sizeof(value),count, stream);
+	fwrite(&value, 1, sizeof(value)*count, stream);
 }
 
 
