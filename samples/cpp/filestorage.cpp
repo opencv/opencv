@@ -15,7 +15,8 @@ using namespace cv;
 
 void help(char** av)
 {
-  cout << "usage:\n"
+  cout << "\nfilestorage_sample demonstrate the usage of the opencv serialization functionality.\n"
+		  << "usage:\n"
 		  <<  av[0] << " outputfile.yml.gz\n"
 		  << "\n   outputfile above can have many different extenstions, see below."
 		  << "\nThis program demonstrates the use of FileStorage for serialization, that is use << and >>  in OpenCV\n"
