@@ -52,8 +52,9 @@ void help(char **argv)
 		"	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
 		"If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
 		"Please note: Background should not contain large surfaces with skin tone." <<
-		"\n\n ESC will stop\n" <<
-		std::endl;
+		"\n\n ESC will stop\n"
+		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+		<< std::endl;
 }
 
 class ASDFrameHolder
