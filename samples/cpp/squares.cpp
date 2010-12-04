@@ -1,5 +1,5 @@
 // The "Square Detector" program.
-// It loads several images subsequentally and tries to find squares in
+// It loads several images sequentially and tries to find squares in
 // each image
 
 #include "opencv2/core/core.hpp"
@@ -12,6 +12,20 @@
 
 using namespace cv;
 using namespace std;
+
+void help()
+{
+	cout <<
+	"\nA program using pyramid scaling, Canny, contours, contour simpification and\n"
+	"memory storage (it's got it all folks) to find\n"
+	"squares in a list of images pic1-6.png\n"
+	"Returns sequence of squares detected on the image.\n"
+	"the sequence is stored in the specified memory storage\n"
+	"Call:\n"
+	"./squares\n"
+    "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+}
+
 
 int thresh = 50, N = 11;
 const char* wndname = "Square Detection Demo";
@@ -129,7 +143,7 @@ int main(int argc, char** argv)
 {
     static const char* names[] = { "pic1.png", "pic2.png", "pic3.png",
         "pic4.png", "pic5.png", "pic6.png", 0 };
-
+    help();
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares;
     
