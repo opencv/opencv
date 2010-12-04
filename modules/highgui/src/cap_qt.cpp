@@ -41,7 +41,6 @@
 
 
 #include "precomp.hpp"
-#include "cv.h"
 
 // Original implementation by   Mark Asbach
 //                              Institute of Communications Engineering
@@ -1289,6 +1288,7 @@ static CvVideoWriter_QT* icvCreateVideoWriter_QT(
     Track                             video_track  = nil;
     Media                             video        = nil;
     OSErr                             err          = noErr;
+    CodecType codecType = kRawCodecType;
 
     __BEGIN__
 
@@ -1347,15 +1347,8 @@ static CvVideoWriter_QT* icvCreateVideoWriter_QT(
         CV_ERROR( CV_StsInternal, "Cannot create video media" );
     }
 
-    CodecType codecType;
-    switch ( fourcc ) {
-        case CV_FOURCC( 'D', 'I', 'B', ' ' ):
-            codecType = kRawCodecType;
-            break;
-        default:
-            codecType = kRawCodecType;
-            break;
-    }
+    /*if( fourcc == CV_FOURCC( 'D', 'I', 'B', ' ' ))
+        codecType = kRawCodecType;*/
 
     // start a compression session
     err = ICMCompressionSessionOptionsCreate( kCFAllocatorDefault,
