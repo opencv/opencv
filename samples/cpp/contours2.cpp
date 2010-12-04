@@ -9,7 +9,7 @@ using namespace std;
 void help()
 {
 	cout
-	<< "This program illustrates the use of findContours and drawContours\n"
+	<< "\nThis program illustrates the use of findContours and drawContours\n"
 	<< "The original image is put up along with the image of drawn contours\n"
 	<< "Usage:\n"
 	<< "./contours2\n"
