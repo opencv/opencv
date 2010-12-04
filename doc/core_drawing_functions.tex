@@ -725,18 +725,18 @@ public:
     // from the left-most point to the right most,
     // not to depend on the ordering of pt1 and pt2 parameters
     LineIterator(const Mat& img, Point pt1, Point pt2,
-                 int connectivity=8, bool leftToRight=false);newline
+                 int connectivity=8, bool leftToRight=false);
     // returns pointer to the current line pixel
-    uchar* operator *();newline
+    uchar* operator *();
     // move the iterator to the next pixel
-    LineIterator& operator ++();newline
-    LineIterator operator ++(int);newline
+    LineIterator& operator ++();
+    LineIterator operator ++(int);
 
     // internal state of the iterator
-    uchar* ptr;newline
-    int err, count;newline
-    int minusDelta, plusDelta;newline
-    int minusStep, plusStep;newline
+    uchar* ptr;
+    int err, count;
+    int minusDelta, plusDelta;
+    int minusStep, plusStep;
 };
 \end{lstlisting}
 

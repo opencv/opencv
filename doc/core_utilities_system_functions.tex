@@ -646,18 +646,18 @@ public:
     // various constructors and the copy operation
     Exception() { code = 0; line = 0; }
     Exception(int _code, const string& _err,
-              const string& _func, const string& _file, int _line);newline
-    Exception(const Exception& exc);newline
-    Exception& operator = (const Exception& exc);newline
+              const string& _func, const string& _file, int _line);
+    Exception(const Exception& exc);
+    Exception& operator = (const Exception& exc);
 
     // the error code
-    int code;newline
+    int code;
     // the error text message
-    string err;newline
+    string err;
     // function name where the error happened
-    string func;newline
+    string func;
     // the source file name where the error happened
-    string file;newline
+    string file;
     // the source file line where the error happened
     int line;
 };

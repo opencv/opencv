@@ -139,14 +139,13 @@ static char *fgets_chomp(char *str, int n, FILE *stream)
 }
 
 
-int CvMLData :: read_csv(const char* filename)
+int CvMLData::read_csv(const char* filename)
 {
-    const int M = 50000;
+    const int M = 1000000;
     const char str_delimiter[3] = { ' ', delimiter, '\0' };
     FILE* file = 0;
     CvMemStorage* storage;
     CvSeq* seq;
-    char *buf;
     char *ptr;
     float* el_ptr;
     CvSeqReader reader;
@@ -161,7 +160,8 @@ int CvMLData :: read_csv(const char* filename)
         return -1;
 
     // read the first line and determine the number of variables
-    buf = new char[M];
+    std::vector<char> _buf(M);
+    char* buf = &_buf[0];
     if( !fgets_chomp( buf, M, file ))
     {
         fclose(file);
@@ -242,7 +242,6 @@ int CvMLData :: read_csv(const char* filename)
 
     cvReleaseMemStorage( &storage );
     delete []el_ptr;
-    delete []buf;
     return 0;
 }
 

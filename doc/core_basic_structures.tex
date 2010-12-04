@@ -1725,7 +1725,7 @@ Mat\& Mat::setTo(const Scalar\& s, const Mat\& mask=Mat());
 
 This is the advanced variant of \texttt{Mat::operator=(const Scalar\& s)} operator.
 
-\cvCppFunc{reshape}
+\cvCppFunc{Mat::reshape}
 Changes the 2D matrix's shape and/or the number of channels without copying the data.
 
 \cvdefCpp{
@@ -1758,7 +1758,7 @@ Mat pointMat = Mat(vec). // convert vector to Mat, O(1) operation
 \end{lstlisting} 
 
 
-\cvCppFunc{Mat::t()}
+\cvCppFunc{Mat::t}
 Transposes the matrix
 
 \cvdefCpp{

@@ -905,14 +905,14 @@ Kalman filter class
 class KalmanFilter
 {
 public:
-    KalmanFilter();newline
-    KalmanFilter(int dynamParams, int measureParams, int controlParams=0);newline
-    void init(int dynamParams, int measureParams, int controlParams=0);newline
+    KalmanFilter();
+    KalmanFilter(int dynamParams, int measureParams, int controlParams=0);
+    void init(int dynamParams, int measureParams, int controlParams=0);
     // predicts statePre from statePost
-    const Mat& predict(const Mat& control=Mat());newline
+    const Mat& predict(const Mat& control=Mat());
     // corrects statePre based on the input measurement vector
     // and stores the result to statePost. 
-    const Mat& correct(const Mat& measurement);newline
+    const Mat& correct(const Mat& measurement);
 
     Mat statePre;           // predicted state (x'(k)):
                             //    x(k)=A*x(k-1)+B*u(k)
