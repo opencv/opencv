@@ -10,7 +10,7 @@ using namespace std;
 
 void help(char** argv)
 {
-    cout << "Program demonstrating keypoint finding and matching between 2 images using features2d framework.\n"
+    cout << "\nThis program demonstrats keypoint finding and matching between 2 images using features2d framework.\n"
      << "   In one case, the 2nd image is synthesized by homography from the first, in the second case, there are 2 images\n"
      << "\n"
      << "case1: second image is obtained from the first (given) image using random generated homography matrix\n"
