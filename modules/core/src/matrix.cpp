@@ -3062,7 +3062,7 @@ void RotatedRect::points(Point2f pt[]) const
     pt[3].y = 2*center.y - pt[1].y;
 }
 
-inline Rect RotatedRect::boundingRect() const
+Rect RotatedRect::boundingRect() const
 {
     Point2f pt[4];
     points(pt);
