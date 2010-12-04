@@ -1,13 +1,6 @@
 //Yannick Verdie 2010
 
-//--- Please read me: ---
-
-//1). This demo is mainly based on work from Javier Barandiaran Martirena
-//See this page http://opencv.willowgarage.com/wiki/Posit.
-//2). This is a demo to illustrate how to use **OpenGL Callback**.
-//3). You need Qt binding to compile this sample with OpenGL support enabled.
-//4). The features' detection is very basic and could highly be improved (basic thresholding tuned for the specific video) but 2).
-
+//--- Please read help() below: ---
 
 #include <iostream>
 #include <vector>
@@ -16,13 +9,25 @@
 #include <gl/GL.h>
 #include <opencv/cxcore.h>
 #include <opencv/cv.h>
-
+using namespace std;
+using namespace cv;
+void help()
+{
+	cout << "\nThis demo demonstrates the use of the Qt enhanced version of the highgui GUI interface\n"
+			"  and dang if it doesn't throw in the use of of the POSIT 3D tracking algorithm too\n"
+			"It works off of the video: cube4.avi\n"
+			"Using OpenCV version %s\n" << CV_VERSION << "\n\n"
+" 1). This demo is mainly based on work from Javier Barandiaran Martirena\n"
+"     See this page http://opencv.willowgarage.com/wiki/Posit.\n"
+" 2). This is a demo to illustrate how to use **OpenGL Callback**.\n"
+" 3). You need Qt binding to compile this sample with OpenGL support enabled.\n"
+" 4). The features' detection is very basic and could highly be improved \n"
+"     (basic thresholding tuned for the specific video) but 2).\n"
+" 5) THANKS TO Google Summer of Code 2010 for supporting this work!\n" << endl;
+}
 
 #define FOCAL_LENGTH 600
 #define CUBE_SIZE 10
-
-using namespace std;
-using namespace cv;
 
 void renderCube(float size)
 {
