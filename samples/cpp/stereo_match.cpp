@@ -15,6 +15,14 @@
 
 using namespace cv;
 
+void print_help()
+{
+	printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
+    printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh] [--blocksize=<block_size>]\n"
+           "[--max-disparity=<max_disparity>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
+           "[--no-display] [-o <disparity_image>] [-p <point_cloud_file>]\n");
+}
+
 void saveXYZ(const char* filename, const Mat& mat)
 {
     const double max_z = 1.0e4;
@@ -31,12 +39,6 @@ void saveXYZ(const char* filename, const Mat& mat)
     fclose(fp);
 }
 
-void print_help()
-{
-    printf("Usage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh] [--blocksize=<block_size>]\n"
-           "[--max-disparity=<max_disparity>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
-           "[--no-display] [-o <disparity_image>] [-p <point_cloud_file>]\n");
-}
 
 int main(int argc, char** argv)
 {
