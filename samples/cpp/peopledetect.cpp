@@ -9,6 +9,15 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+	printf(
+			"\nDemonstrate the use of the HoG descriptor using\n"
+			"  HOGDescriptor::hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());\n"
+			"Usage:\n"
+			"./peopledetect (<image_filename> | <image_list>.txt)\n\n");
+}
+
 int main(int argc, char** argv)
 {
     Mat img;
