@@ -8,7 +8,7 @@ using namespace std;
 
 void help()
 {
-	cout << "\nThis sample demonstrates the use of the convexHull() function\n"
+	cout << "\nThis sample program demonstrates the use of the convexHull() function\n"
 		 << "Call:\n"
 		 << "./convexhull\n" << endl;
 }
