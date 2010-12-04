@@ -6,6 +6,13 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+	cout << "\nThis program demonstrates line finding with the Hough transform.\n"
+			"Call:\n"
+			"./houghlines [image_len -- Default is pic1.png\n" << endl;
+}
+
 int main(int argc, char** argv)
 {
     const char* filename = argc >= 2 ? argv[1] : "pic1.png";
@@ -16,7 +23,7 @@ int main(int argc, char** argv)
         cout << "can not open " << filename << endl;
         cout << "Usage: houghlines <image_name>" << endl;
     }
-
+    help();
     Mat dst, cdst;
     Canny(src, dst, 50, 200, 3);
     cvtColor(dst, cdst, CV_GRAY2BGR);
