@@ -10,7 +10,7 @@ using namespace cv;
 void help()
 {
 
-printf("Show off image morphology: erosion, dialation, open and close\n"
+printf("\nShow off image morphology: erosion, dialation, open and close\n"
 	"Call:\n   morphology2 [image]\n"
 	"This program also shows use of rect, elipse and cross kernels\n\n");
 printf( "Hot keys: \n"
