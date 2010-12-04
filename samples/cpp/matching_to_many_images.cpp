@@ -26,7 +26,7 @@ void printPrompt( const string& applName )
 	<< " * (train) image).\n"
 	<< " */\n" << endl;
 
-    cout << endl << "Format:" << endl;
+    cout << endl << "Format:\n" << endl;
     cout << "./" << applName << " [detectorType] [descriptorType] [matcherType] [queryImage] [fileWithTrainImages] [dirToSaveResImages]" << endl;
     cout << endl;
 
