@@ -4,7 +4,7 @@
 #include <stdio.h>
 void help()
 {
- printf("\nDo background segmentation, especially demonstrating the use of cvUpdateBGStatModel.\n"
+ printf("\nDo background segmentation, especially demonstrating the use of cvUpdateBGStatModel().\n"
 "Learns the background at the start and then segments.\n"
 "Learning is togged by the space key. Will read from file or camera\n"
 "Call:\n"
