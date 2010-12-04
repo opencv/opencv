@@ -16,7 +16,9 @@ void help()
     		"Format:" << endl <<
             "   classifier_file(to write) test_image file_with_train_images_filenames(txt)" <<
             "   or" << endl <<
-            "   classifier_file(to read) test_image" << endl;
+            "   classifier_file(to read) test_image"
+    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+            << endl;
 }
 /*
  * Generates random perspective transform of image
