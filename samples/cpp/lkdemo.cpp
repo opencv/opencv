@@ -8,6 +8,21 @@
 using namespace cv;
 using namespace std;
 
+void help()
+{
+    // print a welcome message, and the OpenCV version
+    cout << "\nThis is a demo of Lukas-Kanade optical flow lkdemo(),\n"
+    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+    		<< endl;
+
+    cout << "\nHot keys: \n"
+            "\tESC - quit the program\n"
+            "\tr - auto-initialize tracking\n"
+            "\tc - delete all the points\n"
+            "\tn - switch the \"night\" mode on/off\n"
+            "To add/remove a feature point click it\n" << endl;
+}
+
 Point2f pt;
 bool addRemovePt = false;
 
@@ -41,15 +56,7 @@ int main( int argc, char** argv )
         return 0;
     }
 
-    // print a welcome message, and the OpenCV version
-    cout << "Welcome to lkdemo, using OpenCV version %s\n" << CV_VERSION;
-
-    cout << "\nHot keys: \n"
-            "\tESC - quit the program\n"
-            "\tr - auto-initialize tracking\n"
-            "\tc - delete all the points\n"
-            "\tn - switch the \"night\" mode on/off\n"
-            "To add/remove a feature point click it\n";
+    help();
 
     namedWindow( "LK Demo", 1 );
     setMouseCallback( "LK Demo", onMouse, 0 );
