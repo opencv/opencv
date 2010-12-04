@@ -74,13 +74,13 @@ if(WIN32)
     #set(CPACK_PACKAGE_ICON "utils/opencv.ico") 
         
     set(CPACK_NSIS_INSTALLED_ICON_NAME "${CMAKE_SOURCE_DIR}\\\\doc\\\\opencv.ico")
-    set(CPACK_NSIS_HELP_LINK "http:\\\\\\\\opencvlibrary.sourceforge.net")
-    set(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\opencvlibrary.sourceforge.net")
-    set(CPACK_NSIS_CONTACT "info@opencvlibrary.sourceforge.net")
-    set(CPACK_NSIS_DISPLAY_NAME "OpenCV SDK")
+    set(CPACK_NSIS_HELP_LINK "http:\\\\\\\\opencv.willowgarage.com")
+    set(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\opencv.willowgarage.com")
+    set(CPACK_NSIS_CONTACT "")
+    set(CPACK_NSIS_DISPLAY_NAME "Open Source Computer Vision Library")
 
     set(CPACK_NSIS_MENU_LINKS
-        "doc\\\\index.htm" "Start Page"
+        "http://opencv.willowgarage.com" "Start Page"
         "doc\\\\opencv.pdf" "The Reference Manual"
         "CMakeLists.txt" "The Build Script (open with CMake)"
         "samples\\\\c" "C Samples"

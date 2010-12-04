@@ -68,7 +68,7 @@ endif()
 # ----------------------------------------------------------------------------
 #  Current version number:
 # ----------------------------------------------------------------------------
-set(OPENCV_VERSION "2.1.1")
+set(OPENCV_VERSION "2.2.0")
 
 string(REGEX MATCHALL "[0-9]" OPENCV_VERSION_PARTS "${OPENCV_VERSION}")
 
@@ -1098,10 +1098,9 @@ if(WIN32)
 
     #exec_program(${CMAKE_COMMAND} ARGS "-E make_directory \"${CMAKE_BINARY_DIR}/win-install/\"")
     exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
-
-    #Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory
-    install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/")
+    #configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
+    # Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory 
+    install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/") 
 
     # if videoInput support is enabled (which is by default on WIN32) copy the static library required to the installation path
     # DESTINATION could also be "${CMAKE_INSTALL_PREFIX}/lib") to simplify dev environment setup of client applications
