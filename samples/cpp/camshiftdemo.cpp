@@ -35,7 +35,7 @@ Point origin;
 Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
 
-void onMouse( int event, int x, int y, int flags, void* param )
+void onMouse( int event, int x, int y, int, void* )
 {
     if( selectObject )
     {

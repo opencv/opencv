@@ -32,7 +32,7 @@ int isColor = true;
 bool useMask = false;
 int newMaskVal = 255;
 
-void onMouse( int event, int x, int y, int, void* param )
+void onMouse( int event, int x, int y, int, void* )
 {
     if( event != CV_EVENT_LBUTTONDOWN )
         return;

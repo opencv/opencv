@@ -5,6 +5,9 @@
 
 add_subdirectory(c)
 add_subdirectory(cpp)
+add_subdirectory(gpu)
+
+if(0)
 add_subdirectory(swig_python)
 add_subdirectory(octave)
-add_subdirectory(gpu)
+endif()

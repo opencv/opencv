@@ -82,24 +82,25 @@ endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 #  many more dependencies:
 IF (NOT @OPENCV_BUILD_SHARED_LIB@)
 	# Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
-    if(UNIX)
-        LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../3rdparty/lib)
-    else()
+    LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../3rdparty/lib)
+    if(WIN32)
         LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
-    endif()
-    
+    endif()    
 
-	SET(OpenCV_LIBS
-		@OPENCV_LINKER_LIBS@
-		@IPP_LIBS@
-		@JPEG_LIBRARIES@
-		@PNG_LIBRARIES@
-		@TIFF_LIBRARIES@
-		@JASPER_LIBRARIES@
-		@HIGHGUI_LIBRARIES@
-		${OpenCV_LIBS}
-        opencv_zlib
-        opencv_lapack) # The standard libs BEFORE (OpenCV_LIBS) since these can have "debug","optimized".
+	set(OpenCV_LIBS @OPENCV_LINKER_LIBS@ @IPP_LIBS@ @HIGHGUI_LIBRARIES@ ${OpenCV_LIBS})
+
+    set(OPENCV_EXTRA_COMPONENTS @JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ zlib opencv_lapack)
+
+    if (CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+        foreach(__EXTRA_LIB ${OPENCV_EXTRA_COMPONENTS})
+	        set(OpenCV_LIBS ${OpenCV_LIBS}
+                debug ${__EXTRA_LIB}@OPENCV_DEBUG_POSTFIX@
+                optimized ${__EXTRA_LIB})
+        endforeach(__EXTRA_LIB)
+    else(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+        set(OpenCV_LIBS ${OpenCV_LIBS} ${OPENCV_EXTRA_COMPONENTS})
+    endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+
 ENDIF(NOT @OPENCV_BUILD_SHARED_LIB@)
 
 

@@ -474,6 +474,24 @@ if(UNIX)
     endif()
 endif()
 
+if(WITH_PNG AND NOT PNG_FOUND)
+    set(PNG_LIBRARIES libpng)
+endif()
+
+if(WITH_JPEG AND NOT JPEG_FOUND)
+    set(JPEG_LIBRARIES libjpeg)
+endif()
+
+if(WITH_TIFF AND NOT TIFF_FOUND)
+    set(TIFF_LIBRARIES libtiff)
+endif()
+
+if(WITH_JASPER AND NOT JASPER_FOUND)
+    set(JASPER_LIBRARIES libjasper)
+endif()
+
+message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
+
 if(WITH_OPENEXR)
     include(OpenCVFindOpenEXR.cmake)
 endif()
@@ -777,6 +795,31 @@ if(IPP_FOUND AND USE_IPP)
                  ${A}ippcvmerged${B} ${A}ippcvemerged${B}
                  ${A}ippcore${IPP_ARCH}${L}${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
+
+################## Extra HighGUI libs on Windows ###################
+
+if(WIN32)
+	set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
+	
+	if (MSVC)
+		set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
+	endif()
+
+	if(MINGW)
+		if(MINGW64)
+            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} msvfw32 avifil32 avicap32 winmm)
+			if(HAVE_VIDEOINPUT)
+				set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} videoInput64 strmiids)
+			endif()
+		else()
+            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
+			if(HAVE_VIDEOINPUT)
+                set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} videoInput strmiids)
+			endif()
+		endif()  
+    endif()
+endif()
+
 
 
 ################## LATEX ##################
@@ -1192,7 +1235,7 @@ if(BUILD_PACKAGE)
         endif()
 
         install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
-        install(DIRECTORY 3rdparty android modules tests utils DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
+        install(DIRECTORY 3rdparty android modules tests DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
         install(DIRECTORY doc/ DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.tex")
         install(DIRECTORY doc/pics DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
         install(DIRECTORY doc/latex2sphinx DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)

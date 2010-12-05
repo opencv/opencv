@@ -1,11 +1,11 @@
 if(ANDROID)
-define_3rdparty_module(opencv_zlib)
+define_3rdparty_module(zlib)
 else()
 # ----------------------------------------------------------------------------
 #  CMake file for zlib. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
-PROJECT(opencv_zlib)
+PROJECT(zlib)
 
 # List of C++ files:
 
@@ -18,7 +18,7 @@ file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 set(lib_ext_hdrs "../include/zlib.h" "../include/zconf.h")
 
-set(the_target "opencv_zlib")
+set(the_target "zlib")
 
 add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
 

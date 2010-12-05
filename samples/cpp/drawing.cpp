@@ -16,7 +16,7 @@ static Scalar randomColor(RNG& rng)
     return Scalar(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
 }
 
-int main( int argc, char** argv )
+int main( int, char** )
 {
     char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
@@ -24,7 +24,7 @@ int main( int argc, char** argv )
     int lineType = CV_AA; // change it to 8 to see non-antialiased graphics
     int i, width = 1000, height = 700;
     int x1 = -width/2, x2 = width*3/2, y1 = -height/2, y2 = height*3/2;
-    RNG rng(-1);
+    RNG rng(0xFFFFFFFF);
 
     Mat image = Mat::zeros(height, width, CV_8UC3);
     imshow(wndname, image);

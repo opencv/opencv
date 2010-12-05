@@ -12,6 +12,3 @@ add_subdirectory(cxts)
         add_subdirectory(gpu)
 #	 endif()
 #endif()
-
-
-
