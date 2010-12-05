@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 
+
 namespace cv
 {
 
@@ -769,7 +770,13 @@ static const double expTab[] = {
     1.9571441241754002690183222516269 * EXPPOLY_32F_A0,
     1.9784560263879509682582499181312 * EXPPOLY_32F_A0,
 };
-    
+
+
+// the code below uses _mm_cast* intrinsics, which are not avialable on VS2005
+#if defined _MSC_VER && _MSC_VER < 1500
+#undef CV_SSE2
+#define CV_SSE2 0
+#endif    
     
 static const double exp_prescale = 1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE);
 static const double exp_postscale = 1./(1 << EXPTAB_SCALE);
