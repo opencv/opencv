@@ -490,7 +490,7 @@ if(WITH_JASPER AND NOT JASPER_FOUND)
     set(JASPER_LIBRARIES libjasper)
 endif()
 
-message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
+#message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
 
 if(WITH_OPENEXR)
     include(OpenCVFindOpenEXR.cmake)

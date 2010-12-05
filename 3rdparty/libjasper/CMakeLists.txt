@@ -57,4 +57,10 @@ set_target_properties(${the_target}
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/lib"
 	)
+    
+if(NOT BUILD_SHARED_LIBS)
+    install(TARGETS ${the_target}
+	    ARCHIVE DESTINATION share/opencv/3rdparty/lib COMPONENT main)
+endif()
+    
 endif(ANDROID)#!android

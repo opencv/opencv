@@ -62,13 +62,8 @@ set_target_properties(${the_target}
 	)
     
 if(NOT BUILD_SHARED_LIBS)
-    set_target_properties(${the_target}
-	PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
-    
     install(TARGETS ${the_target}
-	    RUNTIME DESTINATION bin COMPONENT main
-	    LIBRARY DESTINATION lib COMPONENT main
-	    ARCHIVE DESTINATION lib COMPONENT main)
+	    ARCHIVE DESTINATION share/opencv/3rdparty/lib COMPONENT main)
 endif()
     
 endif() #android
