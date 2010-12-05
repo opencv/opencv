@@ -45,7 +45,6 @@ set(CPACK_SOURCE_IGNORE_FILES
     "/\\\\.svn/"
     "/autom4te.cache/"
     "/build/"
-    "/lib/"
     "/interfaces/"
     "/swig_python/"
     "/octave/"
@@ -65,6 +64,12 @@ set(CPACK_SOURCE_IGNORE_FILES
     "\\\\.vcproj$"
     "/1$"
     "${CPACK_SOURCE_IGNORE_FILES}")
+
+if(NOT WIN32)
+    set(CPACK_SOURCE_IGNORE_FILES
+    "/lib/"
+    "${CPACK_SOURCE_IGNORE_FILES}")
+endif()
 
 set(CPACK_SOURCE_PACKAGE_FILE_NAME
     "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
