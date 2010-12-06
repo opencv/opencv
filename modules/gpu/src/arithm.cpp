@@ -98,6 +98,14 @@ cv::gpu::GpuMat cv::gpu::operator ~ (const GpuMat&) { throw_nogpu(); return GpuM
 cv::gpu::GpuMat cv::gpu::operator | (const GpuMat&, const GpuMat&) { throw_nogpu(); return GpuMat(); }
 cv::gpu::GpuMat cv::gpu::operator & (const GpuMat&, const GpuMat&) { throw_nogpu(); return GpuMat(); }
 cv::gpu::GpuMat cv::gpu::operator ^ (const GpuMat&, const GpuMat&) { throw_nogpu(); return GpuMat(); }
+void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::min(const GpuMat&, double, GpuMat&) { throw_nogpu(); }
+void cv::gpu::min(const GpuMat&, double, GpuMat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::max(const GpuMat&, double, GpuMat&) { throw_nogpu(); }
+void cv::gpu::max(const GpuMat&, double, GpuMat&, const Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -1117,6 +1125,145 @@ cv::gpu::GpuMat cv::gpu::operator ^ (const GpuMat& src1, const GpuMat& src2)
     GpuMat dst;
     bitwise_xor(src1, src2, dst);
     return dst;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// min/max
+
+namespace cv { namespace gpu { namespace mathfunc
+{
+    template <typename T>
+    void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+
+    template <typename T>
+    void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+
+    template <typename T>
+    void min_gpu(const DevMem2D_<T>& src1, double src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+
+    template <typename T>
+    void max_gpu(const DevMem2D_<T>& src1, double src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+}}}
+
+namespace
+{
+    template <typename T>
+    void min_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
+    {
+        CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+        dst.create(src1.size(), src1.type());
+        mathfunc::min_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
+    }
+
+    template <typename T>
+    void min_caller(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream)
+    {
+        dst.create(src1.size(), src1.type());
+        mathfunc::min_gpu<T>(src1.reshape(1), src2, dst.reshape(1), stream);
+    }
+    
+    template <typename T>
+    void max_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
+    {
+        CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+        dst.create(src1.size(), src1.type());
+        mathfunc::max_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
+    }
+
+    template <typename T>
+    void max_caller(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream)
+    {
+        dst.create(src1.size(), src1.type());
+        mathfunc::max_gpu<T>(src1.reshape(1), src2, dst.reshape(1), stream);
+    }
+}
+
+void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) 
+{ 
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        min_caller<uchar>, min_caller<char>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
+        min_caller<float>, min_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, 0);
+}
+
+void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream) 
+{ 
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        min_caller<uchar>, min_caller<char>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
+        min_caller<float>, min_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst) 
+{
+    typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        min_caller<uchar>, min_caller<char>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
+        min_caller<float>, min_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, 0);
+}
+
+void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream) 
+{
+    typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        min_caller<uchar>, min_caller<char>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
+        min_caller<float>, min_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) 
+{ 
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        max_caller<uchar>, max_caller<char>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
+        max_caller<float>, max_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, 0);
+}
+
+void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream) 
+{ 
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        max_caller<uchar>, max_caller<char>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
+        max_caller<float>, max_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst) 
+{
+    typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        max_caller<uchar>, max_caller<char>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
+        max_caller<float>, max_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, 0);
+}
+
+void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream) 
+{
+    typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
+    static const func_t funcs[] = 
+    {
+        max_caller<uchar>, max_caller<char>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
+        max_caller<float>, max_caller<double>
+    };
+    funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
 }
 
 

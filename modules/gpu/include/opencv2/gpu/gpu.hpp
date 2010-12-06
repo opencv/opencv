@@ -546,6 +546,26 @@ namespace cv
         CV_EXPORTS GpuMat operator & (const GpuMat& src1, const GpuMat& src2);
         CV_EXPORTS GpuMat operator ^ (const GpuMat& src1, const GpuMat& src2);
 
+        //! computes per-element minimum of two arrays (dst = min(src1, src2))
+        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+
+        //! computes per-element minimum of array and scalar (dst = min(src1, src2))
+        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
+
+        //! computes per-element maximum of two arrays (dst = max(src1, src2))
+        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+
+        //! computes per-element maximum of array and scalar (dst = max(src1, src2))
+        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
+
 
         ////////////////////////////// Image processing //////////////////////////////
 

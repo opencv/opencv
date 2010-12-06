@@ -949,6 +949,30 @@ struct CV_GpuCountNonZeroTest: CvTest
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// min/max
+
+struct CV_GpuImageMinMaxTest : public CV_GpuArithmTest
+{
+    CV_GpuImageMinMaxTest() : CV_GpuArithmTest( "GPU-ImageMinMax", "min/max" ) {}
+
+    int test( const Mat& mat1, const Mat& mat2 )
+    {
+        cv::Mat cpuMinRes, cpuMaxRes;
+        cv::min(mat1, mat2, cpuMinRes);
+        cv::max(mat1, mat2, cpuMaxRes);
+
+        GpuMat gpu1(mat1);
+        GpuMat gpu2(mat2);
+        GpuMat gpuMinRes, gpuMaxRes;
+        cv::gpu::min(gpu1, gpu2, gpuMinRes);
+        cv::gpu::max(gpu1, gpu2, gpuMaxRes);
+
+        return CheckNorm(cpuMinRes, gpuMinRes) == CvTS::OK && CheckNorm(cpuMaxRes, gpuMaxRes) == CvTS::OK ?
+            CvTS::OK : CvTS::FAIL_GENERIC;
+    }
+};
+
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
@@ -979,3 +1003,4 @@ CV_GpuNppImagePolarToCartTest CV_GpuNppImagePolarToCart_test;
 CV_GpuMinMaxTest CV_GpuMinMaxTest_test;
 CV_GpuMinMaxLocTest CV_GpuMinMaxLocTest_test;
 CV_GpuCountNonZeroTest CV_CountNonZero_test;
+CV_GpuImageMinMaxTest CV_GpuImageMinMax_test;

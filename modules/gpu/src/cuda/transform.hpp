@@ -64,7 +64,7 @@ namespace cv { namespace gpu { namespace device
 
     //! Transform kernels
 
-    template <typename T, typename D, typename Mask, typename UnOp>
+    template <typename T, typename D, typename UnOp, typename Mask>
     static __global__ void transform(const DevMem2D_<T> src, PtrStep_<D> dst, const Mask mask, UnOp op)
     {
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -77,7 +77,7 @@ namespace cv { namespace gpu { namespace device
         }
     }
 
-    template <typename T1, typename T2, typename D, typename Mask, typename BinOp>
+    template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
     static __global__ void transform(const DevMem2D_<T1> src1, const PtrStep_<T2> src2, PtrStep_<D> dst, const Mask mask, BinOp op)
     {
 		const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -105,7 +105,7 @@ namespace cv
             grid.x = divUp(src.cols, threads.x);
             grid.y = divUp(src.rows, threads.y);        
 
-            device::transform<T, D, UnOp><<<grid, threads, 0, stream>>>(src, dst, device::NoMask(), op);
+            device::transform<T, D><<<grid, threads, 0, stream>>>(src, dst, device::NoMask(), op);
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
