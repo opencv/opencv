@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -39,6 +39,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
+#ifndef __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
+#define __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
+
+#include "../internal_common.hpp"
 
 namespace cv { namespace gpu {
 
@@ -170,3 +175,5 @@ namespace cv { namespace gpu {
     };
 
 }}
+
+#endif

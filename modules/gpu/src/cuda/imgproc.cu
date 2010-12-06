@@ -42,7 +42,6 @@
 
 #include "cuda_shared.hpp"
 #include "border_interpolate.hpp"
-#include <stdio.h>
 
 using namespace cv::gpu;
 

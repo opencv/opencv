@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "border_interpolate.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -940,18 +941,11 @@ namespace
 
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType)
 {
+    CV_Assert(borderType == cv::BORDER_REFLECT101 ||
+              borderType == cv::BORDER_REPLICATE);
+
     int gpuBorderType;
-    switch (borderType)
-    {
-    case cv::BORDER_REFLECT101:
-        gpuBorderType = cv::gpu::BORDER_REFLECT101; 
-        break;
-    case cv::BORDER_REPLICATE:
-        gpuBorderType = cv::gpu::BORDER_REPLICATE; 
-        break;
-    default:
-        CV_Error(CV_StsBadArg, "cornerHarris: unsupported border extrapolation mode");
-    }
+    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
     GpuMat Dx, Dy;
     extractCovData(src, Dx, Dy, blockSize, ksize, gpuBorderType);
@@ -961,18 +955,11 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ks
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
 {  
+    CV_Assert(borderType == cv::BORDER_REFLECT101 ||
+              borderType == cv::BORDER_REPLICATE);
+
     int gpuBorderType;
-    switch (borderType)
-    {
-    case cv::BORDER_REFLECT101:
-        gpuBorderType = cv::gpu::BORDER_REFLECT101;
-        break;
-    case cv::BORDER_REPLICATE:
-        gpuBorderType = cv::gpu::BORDER_REPLICATE; 
-        break;
-    default:
-        CV_Error(CV_StsBadArg, "cornerMinEigenVal: unsupported border extrapolation mode");
-    }
+    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
     GpuMat Dx, Dy;
     extractCovData(src, Dx, Dy, blockSize, ksize, gpuBorderType);    
