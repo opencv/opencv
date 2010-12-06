@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_INTERNAL_COMMON_HPP__
-#define __OPENCV_GPU_INTERNAL_COMMON_HPP__
+#ifndef __OPENCV_GPU_INTERNAL_SHARED_HPP__
+#define __OPENCV_GPU_INTERNAL_SHARED_HPP__
 
 namespace cv { namespace gpu {
 

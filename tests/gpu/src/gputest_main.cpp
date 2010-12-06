@@ -56,7 +56,10 @@ const char* blacklist[] =
 int main( int argc, char** argv )
 
 {
-    return test_system.run( argc, argv, blacklist );
+    argc = 3;
+    const char* manargs[] = { "gputest", "-tn", "GPU-MatchTemplateTest"};
+    
+    return test_system.run( argc, (char**)manargs, blacklist );
 }
 
 /* End of file. */

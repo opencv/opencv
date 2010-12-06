@@ -656,6 +656,10 @@ namespace cv
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
 
 
+        //! computes the proximity map for the raster template and the image where the template is searched for
+        CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
+
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!

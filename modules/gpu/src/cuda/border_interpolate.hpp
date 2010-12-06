@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
 #define __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
 
-#include "../internal_common.hpp"
+#include "../internal_shared.hpp"
 
 namespace cv { namespace gpu {
 

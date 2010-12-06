@@ -40,24 +40,30 @@
 //
 //M*/
 
-#include "internal_shared.hpp"
-#include "border_interpolate.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "precomp.hpp"
 
+#if !defined (HAVE_CUDA)
 
-bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
+void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_nogpu(); }
+
+#else
+
+namespace cv { namespace gpu { namespace imgproc {
+    
+    void matchTemplateCaller_8U_SqDiff(const DevMem2D, const DevMem2D, DevMem2Df);
+
+}}}
+
+void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
 {
-    if (cpuBorderType == cv::BORDER_REFLECT101)
-    {
-        gpuBorderType = cv::gpu::BORDER_REFLECT101;
-        return true;
-    }
+    CV_Assert(image.type() == CV_8U);
+    CV_Assert(method == CV_TM_SQDIFF);
 
-    if (cpuBorderType == cv::BORDER_REPLICATE)
-    {
-        gpuBorderType = cv::gpu::BORDER_REPLICATE;
-        return true;
-    }
+    CV_Assert(image.type() == templ.type());
+    CV_Assert(image.cols >= templ.cols && image.rows >= templ.rows);
 
-    return false;
+    result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    imgproc::matchTemplateCaller_8U_SqDiff(image, templ, result);
 }
+
+#endif
