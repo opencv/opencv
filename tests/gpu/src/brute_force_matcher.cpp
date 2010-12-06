@@ -67,7 +67,7 @@ protected:
             const int desc_len = rng.uniform(40, 300);
 
             Mat queryCPU(rng.uniform(100, 300), desc_len, CV_32F);            
-            rng.fill(queryCPU, cv::RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar::all(1.0));
+            rng.fill(queryCPU, cv::RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar::all(10.0));
             GpuMat queryGPU(queryCPU);
 
             const int nTrains = rng.uniform(1, 5);
@@ -81,7 +81,7 @@ protected:
             for (int i = 0; i < nTrains; ++i)
             {
                 Mat train(rng.uniform(100, 300), desc_len, CV_32F);
-                rng.fill(train, cv::RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar::all(1.0));
+                rng.fill(train, cv::RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar::all(10.0));
 
                 trainsCPU[i] = train;
                 trainsGPU[i].upload(train);
@@ -89,7 +89,7 @@ protected:
                 bool with_mask = rng.uniform(0, 10) < 5;
                 if (with_mask)
                 {
-                    Mat mask(queryCPU.rows, train.rows, CV_8U, Scalar::all(1));
+                    Mat mask(queryCPU.rows, train.rows, CV_8U);
                     rng.fill(mask, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(200));
 
                     masksCPU[i] = mask;
@@ -111,8 +111,8 @@ protected:
 
             const int knn = rng.uniform(3, 10);
 
-            matcherCPU.knnMatch(queryCPU, knnMatchesCPU, knn, masksCPU);
-            matcherGPU.knnMatch(queryGPU, knnMatchesGPU, knn, masksGPU);
+            matcherCPU.knnMatch(queryCPU, knnMatchesCPU, knn, masksCPU, true);
+            matcherGPU.knnMatch(queryGPU, knnMatchesGPU, knn, masksGPU, true);
 
             if (!compareMatches(knnMatchesCPU, knnMatchesGPU))
             {
@@ -120,10 +120,10 @@ protected:
                 return;
             }
 
-            const float maxDistance = rng.uniform(0.01f, 0.3f);
+            const float maxDistance = rng.uniform(25.0f, 65.0f);
             
-            matcherCPU.radiusMatch(queryCPU, radiusMatchesCPU, maxDistance, masksCPU);
-            matcherGPU.radiusMatch(queryGPU, radiusMatchesGPU, maxDistance, masksGPU);
+            matcherCPU.radiusMatch(queryCPU, radiusMatchesCPU, maxDistance, masksCPU, true);
+            matcherGPU.radiusMatch(queryGPU, radiusMatchesGPU, maxDistance, masksGPU, true);
 
             if (!compareMatches(radiusMatchesCPU, radiusMatchesGPU))
             {

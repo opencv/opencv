@@ -1104,6 +1104,8 @@ namespace cv { namespace gpu { namespace bfmatcher
     __global__ void radiusMatch(PtrStep_<T> queryDescs_, DevMem2D_<T> trainDescs_, 
         float maxDistance, Mask mask, DevMem2Di trainIdx_, unsigned int* nMatches, PtrStepf distance)
     {
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+
         __shared__ float sdiff[BLOCK_DIM_X * BLOCK_DIM_Y];
 
         float* sdiff_row = sdiff + BLOCK_DIM_X * threadIdx.y;
@@ -1135,6 +1137,8 @@ namespace cv { namespace gpu { namespace bfmatcher
                 }
             }
         }
+
+        #endif
     }
         
     ///////////////////////////////////////////////////////////////////////////////
