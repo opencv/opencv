@@ -773,7 +773,8 @@ static const double expTab[] = {
 
 
 // the code below uses _mm_cast* intrinsics, which are not avialable on VS2005
-#if defined _MSC_VER && _MSC_VER < 1500
+#if (defined _MSC_VER && _MSC_VER < 1500) || \
+    (!defined __APPLE__ && defined __GNUC__ && __GNUC__*100 + __GNUC_MINOR__ < 402)
 #undef CV_SSE2
 #define CV_SSE2 0
 #endif    
