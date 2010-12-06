@@ -640,15 +640,37 @@ struct CV_GpuCornerHarrisTest: CvTest
             rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(256));
 
         double k = 0.1;
-        int borderType = BORDER_REFLECT101;
 
         cv::Mat dst_gold;
-        cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType); 
-
         cv::gpu::GpuMat dst;
+        cv::Mat dsth;
+        int borderType;
+
+        borderType = BORDER_REFLECT101;
+        cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType); 
         cv::gpu::cornerHarris(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, k, borderType);
 
-        cv::Mat dsth = dst;
+        dsth = dst;
+        for (int i = 0; i < dst.rows; ++i)
+        {
+            for (int j = 0; j < dst.cols; ++j)
+            {
+                float a = dst_gold.at<float>(i, j);
+                float b = dsth.at<float>(i, j);
+                if (fabs(a - b) > 1e-3f) 
+                {
+                    ts->printf(CvTS::CONSOLE, "%d %d %f %f %d\n", i, j, a, b, apertureSize);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return false;
+                };
+            }
+        }
+
+        borderType = BORDER_REPLICATE;
+        cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType); 
+        cv::gpu::cornerHarris(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, k, borderType);
+
+        dsth = dst;
         for (int i = 0; i < dst.rows; ++i)
         {
             for (int j = 0; j < dst.cols; ++j)
@@ -703,15 +725,17 @@ struct CV_GpuCornerMinEigenValTest: CvTest
         else if (depth == CV_8U)
             rng.fill(src, RNG::UNIFORM, cv::Scalar(0), cv::Scalar(256));
 
-        int borderType = BORDER_REFLECT101;
-
         cv::Mat dst_gold;
-        cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType); 
-
         cv::gpu::GpuMat dst;
+        cv::Mat dsth;
+
+        int borderType;
+
+        borderType = BORDER_REFLECT101;
+        cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType); 
         cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, borderType);      
 
-        cv::Mat dsth = dst;
+        dsth = dst;
         for (int i = 0; i < dst.rows; ++i)
         {
             for (int j = 0; j < dst.cols; ++j)
@@ -726,6 +750,27 @@ struct CV_GpuCornerMinEigenValTest: CvTest
                 };
             }
         }
+
+        borderType = BORDER_REPLICATE;
+        cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType); 
+        cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dst, blockSize, apertureSize, borderType);      
+
+        dsth = dst;
+        for (int i = 0; i < dst.rows; ++i)
+        {
+            for (int j = 0; j < dst.cols; ++j)
+            {
+                float a = dst_gold.at<float>(i, j);
+                float b = dsth.at<float>(i, j);
+                if (fabs(a - b) > 1e-2f) 
+                {
+                    ts->printf(CvTS::CONSOLE, "%d %d %f %f %d %d\n", i, j, a, b, apertureSize, blockSize);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return false;
+                };
+            }
+        }
+
         return true;
     }
 };

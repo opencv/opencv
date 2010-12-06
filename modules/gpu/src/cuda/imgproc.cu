@@ -42,6 +42,7 @@
 
 #include "cuda_shared.hpp"
 #include "border_interpolate.hpp"
+#include <stdio.h>
 
 using namespace cv::gpu;
 
@@ -498,6 +499,39 @@ namespace cv { namespace gpu { namespace imgproc
     texture<float, 2> harrisDxTex;
     texture<float, 2> harrisDyTex;
 
+    __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
+                                        PtrStep dst)
+    {
+        const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            float a = 0.f;
+            float b = 0.f;
+            float c = 0.f;
+
+            const int ibegin = y - (block_size / 2);
+            const int jbegin = x - (block_size / 2);
+            const int iend = ibegin + block_size;
+            const int jend = jbegin + block_size;
+
+            for (int i = ibegin; i < iend; ++i)
+            {
+                for (int j = jbegin; j < jend; ++j)
+                {
+                    float dx = tex2D(harrisDxTex, j, i);
+                    float dy = tex2D(harrisDyTex, j, i);
+                    a += dx * dx;
+                    b += dx * dy;
+                    c += dy * dy;
+                }
+            }
+
+            ((float*)dst.ptr(y))[x] = a * c - b * b - k * (a + c) * (a + c);
+        }
+    }
+
     template <typename B>
     __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
                                         PtrStep dst, B border_row, B border_col)
@@ -555,6 +589,13 @@ namespace cv { namespace gpu { namespace imgproc
             cornerHarris_kernel<<<grid, threads>>>(
                     cols, rows, block_size, k, dst, BrdReflect101(cols), BrdReflect101(rows));
             break;
+        case BORDER_REPLICATE:
+            harrisDxTex.addressMode[0] = cudaAddressModeClamp;
+            harrisDxTex.addressMode[1] = cudaAddressModeClamp;
+            harrisDyTex.addressMode[0] = cudaAddressModeClamp;
+            harrisDyTex.addressMode[1] = cudaAddressModeClamp;
+            cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size, k, dst);
+            break;
         }
 
         cudaSafeCall(cudaThreadSynchronize());
@@ -566,6 +607,42 @@ namespace cv { namespace gpu { namespace imgproc
 
     texture<float, 2> minEigenValDxTex;
     texture<float, 2> minEigenValDyTex;
+
+    __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
+                                             PtrStep dst)
+    {
+        const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            float a = 0.f;
+            float b = 0.f;
+            float c = 0.f;
+
+            const int ibegin = y - (block_size / 2);
+            const int jbegin = x - (block_size / 2);
+            const int iend = ibegin + block_size;
+            const int jend = jbegin + block_size;
+
+            for (int i = ibegin; i < iend; ++i)
+            {
+                for (int j = jbegin; j < jend; ++j)
+                {
+                    float dx = tex2D(minEigenValDxTex, j, i);
+                    float dy = tex2D(minEigenValDyTex, j, i);
+                    a += dx * dx;
+                    b += dx * dy;
+                    c += dy * dy;
+                }
+            }
+
+            a *= 0.5f;
+            c *= 0.5f;
+            ((float*)dst.ptr(y))[x] = (a + c) - sqrtf((a - c) * (a - c) + b * b);
+        }
+    }
+
 
     template <typename B>
     __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
@@ -624,8 +701,14 @@ namespace cv { namespace gpu { namespace imgproc
         {
         case BORDER_REFLECT101:
             cornerMinEigenVal_kernel<<<grid, threads>>>(
-                    cols, rows, block_size, dst, 
-                    BrdReflect101(cols), BrdReflect101(rows));
+                    cols, rows, block_size, dst, BrdReflect101(cols), BrdReflect101(rows));
+            break;
+        case BORDER_REPLICATE:
+            minEigenValDxTex.addressMode[0] = cudaAddressModeClamp;
+            minEigenValDxTex.addressMode[1] = cudaAddressModeClamp;
+            minEigenValDyTex.addressMode[0] = cudaAddressModeClamp;
+            minEigenValDyTex.addressMode[1] = cudaAddressModeClamp;
+            cornerMinEigenVal_kernel<<<grid, threads>>>(cols, rows, block_size, dst);
             break;
         }
 

@@ -150,7 +150,8 @@ void rowFilterCaller(const DevMem2D_<T> src, PtrStepf dst, int anchor,
 
     static const Caller callers[] = 
     { 
-        rowFilterCaller<T, BrdRowReflect101<T> >
+        rowFilterCaller<T, BrdRowReflect101<T> >,
+        rowFilterCaller<T, BrdRowReplicate<T> >
     };
 
     callers[brd_interp](src, dst, anchor, kernel, ksize);
@@ -251,7 +252,8 @@ void colFilterCaller(const DevMem2D_<T> src, PtrStepf dst, int anchor,
 
     static const Caller callers[] = 
     { 
-        colFilterCaller<T, BrdColReflect101<T> >
+        colFilterCaller<T, BrdColReflect101<T> >,
+        colFilterCaller<T, BrdColReplicate<T> >
     };
 
     callers[brd_interp](src, dst, anchor, kernel, ksize);

@@ -944,10 +944,13 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ks
     switch (borderType)
     {
     case cv::BORDER_REFLECT101:
-        gpuBorderType = cv::gpu::BORDER_REFLECT101;
+        gpuBorderType = cv::gpu::BORDER_REFLECT101; 
+        break;
+    case cv::BORDER_REPLICATE:
+        gpuBorderType = cv::gpu::BORDER_REPLICATE; 
         break;
     default:
-        CV_Error(CV_StsBadArg, "cornerHarris: unsupported border type");
+        CV_Error(CV_StsBadArg, "cornerHarris: unsupported border extrapolation mode");
     }
 
     GpuMat Dx, Dy;
@@ -964,8 +967,11 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, i
     case cv::BORDER_REFLECT101:
         gpuBorderType = cv::gpu::BORDER_REFLECT101;
         break;
+    case cv::BORDER_REPLICATE:
+        gpuBorderType = cv::gpu::BORDER_REPLICATE; 
+        break;
     default:
-        CV_Error(CV_StsBadArg, "cornerMinEigenVal: unsupported border type");
+        CV_Error(CV_StsBadArg, "cornerMinEigenVal: unsupported border extrapolation mode");
     }
 
     GpuMat Dx, Dy;
