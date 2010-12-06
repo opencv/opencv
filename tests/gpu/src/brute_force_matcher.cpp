@@ -40,6 +40,7 @@
 //M*/
 
 #include "gputest.hpp"
+#include <algorithm>
 
 using namespace cv;
 using namespace cv::gpu;
@@ -149,18 +150,18 @@ private:
             copy(knnMatches[i].begin(), knnMatches[i].end(), back_inserter(matches));
     }
 
+    struct DMatchEqual : public binary_function<DMatch, DMatch, bool>
+    {
+        bool operator()(const DMatch& m1, const DMatch& m2) const
+        {
+            return m1.imgIdx == m2.imgIdx && m1.queryIdx == m2.queryIdx && m1.trainIdx == m2.trainIdx;
+        }
+    };
+    
     static bool compareMatches(const vector<DMatch>& matches1, const vector<DMatch>& matches2)
     {
         if (matches1.size() != matches2.size())
             return false;
-
-        struct DMatchEqual : public binary_function<DMatch, DMatch, bool>
-        {
-            bool operator()(const DMatch& m1, const DMatch& m2)
-            {
-                return m1.imgIdx == m2.imgIdx && m1.queryIdx == m2.queryIdx && m1.trainIdx == m2.trainIdx;
-            }
-        };
 
         return equal(matches1.begin(), matches1.end(), matches2.begin(), DMatchEqual());
     }

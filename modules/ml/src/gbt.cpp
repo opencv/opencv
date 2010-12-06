@@ -11,10 +11,6 @@ using namespace std;
 #define CV_CMP_FLOAT(a,b) ((a) < (b))
 static CV_IMPLEMENT_QSORT_EX( icvSortFloat, float, CV_CMP_FLOAT, float)
 
-#if ANDROID
-#define expl(x) exp(x)
-#endif
-
 //===========================================================================
 string ToString(int i)
 {
@@ -461,17 +457,17 @@ void CvGBTrees::find_gradient(const int k)
         {
             for (int i=0; i<get_len(subsample_train); ++i)
             {
-                long double exp_fk = 0;
-                long double exp_sfi = 0;
+                double exp_fk = 0;
+                double exp_sfi = 0;
                 int s_step = (sample_idx->cols > sample_idx->rows) ? 1
                              : sample_idx->step/CV_ELEM_SIZE(sample_idx->type);
                 int idx = *(sample_data + subsample_data[i]*s_step);
             
                 for (int j=0; j<class_count; ++j)
                 {
-                    long double res;
+                    double res;
                     res = current_data[idx + j*sum_response->cols];
-                    res = expl(res);
+                    res = exp(res);
                     if (j == k) exp_fk = res;
                     exp_sfi += res;
                 }
@@ -625,7 +621,7 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
 float CvGBTrees::find_optimal_value( const CvMat* _Idx )
 {
 
-    long double gamma = (long double)0.0;
+    double gamma = (double)0.0;
 
     int* idx = _Idx->data.i;
     float* resp_data = orig_response->data.fl;
@@ -639,7 +635,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
         {
             for (int i=0; i<n; ++i)
                 gamma += resp_data[idx[i]] - cur_data[idx[i]];
-            gamma /= (long double)n;
+            gamma /= (double)n;
         }; break;
 
     case ABSOLUTE_LOSS:
@@ -671,7 +667,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
                 float dif = residuals[i] - r_median;
                 gamma += (delta < fabs(dif)) ? Sign(dif)*delta : dif;
             }
-            gamma /= (long double)n;
+            gamma /= (double)n;
             gamma += r_median;
             delete[] residuals;
 
@@ -680,9 +676,9 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
     case DEVIANCE_LOSS:
         {
             float* grad_data = data->responses->data.fl;
-            long double tmp1 = 0;
-            long double tmp2 = 0;
-            long double tmp  = 0;
+            double tmp1 = 0;
+            double tmp2 = 0;
+            double tmp  = 0;
             for (int i=0; i<n; ++i)
             {
                 tmp = grad_data[idx[i]];
@@ -694,7 +690,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
                 tmp2 = 1;
             }
 
-            gamma = ((long double)(class_count-1)) / (long double)class_count * (tmp1/tmp2);
+            gamma = ((double)(class_count-1)) / (double)class_count * (tmp1/tmp2);
         }; break;
 
     default: break;
