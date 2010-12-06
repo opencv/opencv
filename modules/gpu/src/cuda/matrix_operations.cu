@@ -40,8 +40,10 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
-#include "saturate_cast.hpp"
+#include "internal_shared.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
+
+using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace matrix_operations {
 

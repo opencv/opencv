@@ -40,7 +40,7 @@
 //
 //M*/
 
-//#include "cuda_shared.hpp"
+//#include "internal_shared.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
 static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }

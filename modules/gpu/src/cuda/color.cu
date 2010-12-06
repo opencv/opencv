@@ -40,18 +40,19 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
-#include "saturate_cast.hpp"
-#include "vecmath.hpp"
+#include "internal_shared.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/vecmath.hpp"
 
 using namespace cv::gpu;
+using namespace cv::gpu::device;
 
 #ifndef CV_DESCALE
 #define CV_DESCALE(x, n) (((x) + (1 << ((n)-1))) >> (n))
 #endif
 
 #ifndef FLT_EPSILON
-#define FLT_EPSILON     1.192092896e-07F
+    #define FLT_EPSILON     1.192092896e-07F
 #endif
 
 namespace cv { namespace gpu { namespace color

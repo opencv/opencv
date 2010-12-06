@@ -63,40 +63,29 @@ namespace cv { namespace gpu { namespace csbp
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
         const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp);
 
-    void init_data_cost(int rows, int cols, short* disp_selected_pyr, short* data_cost_selected,
-        size_t msg_step, int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
+    template<class T>
+    void init_data_cost(int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
+                int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
 
-    void init_data_cost(int rows, int cols, float* disp_selected_pyr, float* data_cost_selected,
-        size_t msg_step, int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
+    template<class T>
+    void compute_data_cost(const T* disp_selected_pyr, T* data_cost, size_t msg_step1, size_t msg_step2,
+                           int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
 
-    void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step1, size_t msg_step2,
-        int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
-    void compute_data_cost(const float* disp_selected_pyr, float* data_cost, size_t msg_step1, size_t msg_step2,
-        int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
+    template<class T>
+    void init_message(T* u_new, T* d_new, T* l_new, T* r_new,
+                      const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
+                      T* selected_disp_pyr_new, const T* selected_disp_pyr_cur,
+                      T* data_cost_selected, const T* data_cost, size_t msg_step1, size_t msg_step2,
+                      int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
 
-    void init_message(short* u_new, short* d_new, short* l_new, short* r_new,
-        const short* u_cur, const short* d_cur, const short* l_cur, const short* r_cur,
-        short* selected_disp_pyr_new, const short* selected_disp_pyr_cur,
-        short* data_cost_selected, const short* data_cost, size_t msg_step1, size_t msg_step2,
-        int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
+    template<class T>
+    void calc_all_iterations(T* u, T* d, T* l, T* r, const T* data_cost_selected,
+        const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream);
 
-    void init_message(float* u_new, float* d_new, float* l_new, float* r_new,
-        const float* u_cur, const float* d_cur, const float* l_cur, const float* r_cur,
-        float* selected_disp_pyr_new, const float* selected_disp_pyr_cur,
-        float* data_cost_selected, const float* data_cost, size_t msg_step1, size_t msg_step2,
-        int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
+    template<class T> 
+    void compute_disp(const T* u, const T* d, const T* l, const T* r, const T* data_cost_selected, const T* disp_selected, size_t msg_step,
+        const DevMem2D_<short>& disp, int nr_plane, cudaStream_t stream);
 
-    void calc_all_iterations(short* u, short* d, short* l, short* r, short* data_cost_selected,
-        const short* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream);
-
-    void calc_all_iterations(float*u, float* d, float* l, float* r, float* data_cost_selected,
-        const float* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream);
-
-    void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step,
-        DevMem2D_<short> disp, int nr_plane, cudaStream_t stream);
-
-    void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
-        DevMem2D_<short> disp, int nr_plane, cudaStream_t stream);
 }}}
 
 namespace

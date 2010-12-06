@@ -40,10 +40,12 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
-#include "border_interpolate.hpp"
+#include "internal_shared.hpp"
+#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "internal_shared.hpp"
 
 using namespace cv::gpu;
+using namespace cv::gpu::device;
 
 /////////////////////////////////// Remap ///////////////////////////////////////////////
 namespace cv { namespace gpu { namespace imgproc
@@ -584,11 +586,11 @@ namespace cv { namespace gpu { namespace imgproc
 
         switch (border_type) 
         {
-        case BORDER_REFLECT101:
+        case BORDER_REFLECT101_GPU:
             cornerHarris_kernel<<<grid, threads>>>(
                     cols, rows, block_size, k, dst, BrdReflect101(cols), BrdReflect101(rows));
             break;
-        case BORDER_REPLICATE:
+        case BORDER_REPLICATE_GPU:
             harrisDxTex.addressMode[0] = cudaAddressModeClamp;
             harrisDxTex.addressMode[1] = cudaAddressModeClamp;
             harrisDyTex.addressMode[0] = cudaAddressModeClamp;
@@ -698,11 +700,11 @@ namespace cv { namespace gpu { namespace imgproc
 
         switch (border_type)
         {
-        case BORDER_REFLECT101:
+        case BORDER_REFLECT101_GPU:
             cornerMinEigenVal_kernel<<<grid, threads>>>(
                     cols, rows, block_size, dst, BrdReflect101(cols), BrdReflect101(rows));
             break;
-        case BORDER_REPLICATE:
+        case BORDER_REPLICATE_GPU:
             minEigenValDxTex.addressMode[0] = cudaAddressModeClamp;
             minEigenValDxTex.addressMode[1] = cudaAddressModeClamp;
             minEigenValDyTex.addressMode[0] = cudaAddressModeClamp;

@@ -41,12 +41,14 @@
 //M*/
 
 #include "opencv2/gpu/devmem2d.hpp"
-#include "saturate_cast.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/vecmath.hpp"
+
 #include "safe_call.hpp"
-#include "cuda_shared.hpp"
-#include "vecmath.hpp"
+#include "internal_shared.hpp"
 
 using namespace cv::gpu;
+using namespace cv::gpu::device;
 
 #ifndef FLT_MAX
 #define FLT_MAX 3.402823466e+30F

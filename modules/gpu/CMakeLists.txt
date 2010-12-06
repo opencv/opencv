@@ -1,6 +1,8 @@
 
 set(name "gpu")
-set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann")
+
+#"opencv_features2d" "opencv_flann" "opencv_objdetect" - only headers needed 
+set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann") 
 
 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
 
@@ -10,8 +12,8 @@ project(${the_target})
 
 add_definitions(-DCVAPI_EXPORTS)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"                    
+					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"                    
 					"${CMAKE_CURRENT_SOURCE_DIR}/src"
 					"${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -32,6 +34,10 @@ source_group("Src\\Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
 file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
 source_group("Include" FILES ${lib_hdrs})
 
+#file(GLOB lib_device_hdrs "include/opencv2/${name}/device/*.h*")
+file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
+source_group("Device" FILES ${lib_device_hdrs})
+
 if (HAVE_CUDA)		
 	get_filename_component(_path_to_findnpp "${CMAKE_CURRENT_LIST_FILE}" PATH)
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_path_to_findnpp})	
@@ -46,7 +52,7 @@ if (HAVE_CUDA)
 	endif()
 
 	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
-	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;/EHsc-;")
+	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
 
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
@@ -71,7 +77,7 @@ if (HAVE_CUDA)
 endif()
 
 
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${cuda_objs})
+add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${cuda_objs})
 
 
 if(PCHSupport_FOUND)
@@ -114,9 +120,9 @@ if(MSVC)
 			LINK_FLAGS "/NODEFAULTLIB:secchk"
 			)
 	endif()
-	set_target_properties(${the_target} PROPERTIES
-		LINK_FLAGS "/NODEFAULTLIB:libc"
-		)
+        set_target_properties(${the_target} PROPERTIES
+            LINK_FLAGS "/NODEFAULTLIB:libc"
+            )
 endif()
 
 # Dependencies of this target:
@@ -130,5 +136,9 @@ install(TARGETS ${the_target}
 install(FILES ${lib_hdrs}
 	DESTINATION include/opencv2/${name}
 	COMPONENT main)
+
+#install(FILES ${lib_device_hdrs}
+#	DESTINATION include/opencv2/${name}/device
+#	COMPONENT main)
 
 

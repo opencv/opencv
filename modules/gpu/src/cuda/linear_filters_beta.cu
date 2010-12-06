@@ -41,16 +41,16 @@
 //M*/
 
 #include "opencv2/gpu/devmem2d.hpp"
+#include "opencv2/gpu/device/border_interpolate.hpp"
 #include "safe_call.hpp"
-#include "cuda_shared.hpp"
-#include "border_interpolate.hpp"
+#include "internal_shared.hpp"
 
 #define BLOCK_DIM_X 16
 #define BLOCK_DIM_Y 16
 #define MAX_KERNEL_SIZE 16
 
 using namespace cv::gpu;
-
+using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace linear_filters {
 

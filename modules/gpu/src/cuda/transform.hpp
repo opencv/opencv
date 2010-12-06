@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_TRANSFORM_HPP__
 #define __OPENCV_GPU_TRANSFORM_HPP__
 
-#include "cuda_shared.hpp"
+#include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

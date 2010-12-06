@@ -41,14 +41,17 @@
 //M*/
 
 #include "opencv2/gpu/devmem2d.hpp"
-#include "saturate_cast.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/limits_gpu.hpp"
 #include "safe_call.hpp"
 
 using namespace cv::gpu;
+using namespace cv::gpu::device;
 
-#ifndef FLT_MAX
-#define FLT_MAX 3.402823466e+38F
-#endif
+#undef FLT_MAX
+//#ifndef FLT_MAX
+//#define FLT_MAX 3.402823466e+38F
+//#endif
 
 namespace cv { namespace gpu { namespace bp {
 
@@ -349,7 +352,7 @@ namespace cv { namespace gpu { namespace bp {
     template <typename T>
     __device__ void message(const T* msg1, const T* msg2, const T* msg3, const T* data, T* dst, size_t msg_disp_step, size_t data_disp_step)
     {
-        float minimum = FLT_MAX;
+        float minimum = numeric_limits_gpu<float>::max();
 
         for(int i = 0; i < cndisp; ++i)
         {
@@ -470,7 +473,7 @@ namespace cv { namespace gpu { namespace bp {
             size_t disp_step = rows * step;
 
             int best = 0;
-            float best_val = FLT_MAX;
+            float best_val = numeric_limits_gpu<float>::max();
             for (int d = 0; d < cndisp; ++d) 
             {
                 float val  = us[d * disp_step];

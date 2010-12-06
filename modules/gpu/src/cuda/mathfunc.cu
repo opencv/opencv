@@ -40,10 +40,10 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
+#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
 #include "transform.hpp"
-#include "limits_gpu.hpp"
-#include "saturate_cast.hpp"
+#include "internal_shared.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

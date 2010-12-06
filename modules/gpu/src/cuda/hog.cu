@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
+#include "internal_shared.hpp"
 
 #ifndef CV_PI_F
   #ifndef CV_PI

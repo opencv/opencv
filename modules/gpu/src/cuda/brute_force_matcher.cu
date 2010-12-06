@@ -40,8 +40,8 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
-#include "limits_gpu.hpp"
+#include "internal_shared.hpp"
+#include "opencv2/gpu/device/limits_gpu.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -51,9 +51,6 @@ namespace cv { namespace gpu { namespace bfmatcher
 ///////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// General funcs //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
-    
-    template <bool expr> struct StaticAssert;
-    template <> struct StaticAssert<true> {static __host__ __device__ void check(){}};
 
     ///////////////////////////////////////////////////////////////////////////////
     // Mask strategy

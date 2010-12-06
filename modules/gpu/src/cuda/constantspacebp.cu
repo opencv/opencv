@@ -41,31 +41,16 @@
 //M*/
 
 #include "opencv2/gpu/devmem2d.hpp"
-#include "saturate_cast.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/limits_gpu.hpp"
 #include "safe_call.hpp"
 
 using namespace cv::gpu;
+using namespace cv::gpu::device;
 
-#ifndef FLT_MAX
-#define FLT_MAX 3.402823466e+30F
-#endif
-
-#ifndef SHRT_MAX
-#define SHRT_MAX 32767
-#endif
 
 namespace cv { namespace gpu { namespace csbp
-{
-
-    template <typename T> struct TypeLimits;
-    template <> struct TypeLimits<short>
-    {
-        static __device__ short max() {return SHRT_MAX;}
-    };
-    template <> struct TypeLimits<float>
-    {
-        static __device__ float max() {return FLT_MAX;}
-    };
+{  
 
 ///////////////////////////////////////////////////////////////
 /////////////////////// load constants ////////////////////////
@@ -150,7 +135,7 @@ namespace cv { namespace gpu { namespace csbp
 
             for(int i = 0; i < nr_plane; i++)
             {
-                T minimum = TypeLimits<T>::max();
+                T minimum = numeric_limits_gpu<T>::max();
                 int id = 0;
                 for(int d = 0; d < cndisp; d++)
                 {
@@ -164,7 +149,7 @@ namespace cv { namespace gpu { namespace csbp
 
                 data_cost_selected[i  * cdisp_step1] = minimum;
                 selected_disparity[i  * cdisp_step1] = id;
-                data_cost         [id * cdisp_step1] = TypeLimits<T>::max();
+                data_cost         [id * cdisp_step1] = numeric_limits_gpu<T>::max();
             }
         }
     }
@@ -195,7 +180,7 @@ namespace cv { namespace gpu { namespace csbp
                     data_cost_selected[nr_local_minimum * cdisp_step1] = cur;
                     selected_disparity[nr_local_minimum * cdisp_step1] = d;
 
-                    data_cost[d * cdisp_step1] = TypeLimits<T>::max();
+                    data_cost[d * cdisp_step1] = numeric_limits_gpu<T>::max();
 
                     nr_local_minimum++;
                 }
@@ -206,7 +191,7 @@ namespace cv { namespace gpu { namespace csbp
 
             for (int i = nr_local_minimum; i < nr_plane; i++)
             {
-                T minimum = TypeLimits<T>::max();
+                T minimum = numeric_limits_gpu<T>::max();
                 int id = 0;
 
                 for (int d = 0; d < cndisp; d++)
@@ -221,7 +206,7 @@ namespace cv { namespace gpu { namespace csbp
                 data_cost_selected[i * cdisp_step1] = minimum;
                 selected_disparity[i * cdisp_step1] = id;
 
-                data_cost[id * cdisp_step1] = TypeLimits<T>::max();
+                data_cost[id * cdisp_step1] = numeric_limits_gpu<T>::max();
             }
         }
     }
@@ -365,7 +350,7 @@ namespace cv { namespace gpu { namespace csbp
     }
 
     template<class T>
-    void init_data_cost_tmpl(int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
+    void init_data_cost(int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,
                 int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream)
     {
 
@@ -400,17 +385,11 @@ namespace cv { namespace gpu { namespace csbp
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-      void init_data_cost(int rows, int cols, short* disp_selected_pyr, short* data_cost_selected,
-                        size_t msg_step, int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream)
-      {
-          init_data_cost_tmpl(rows, cols, disp_selected_pyr, data_cost_selected, msg_step, h, w, level, nr_plane, ndisp, channels, use_local_init_data_cost, stream);
-      }
+    template void init_data_cost(int rows, int cols, short* disp_selected_pyr, short* data_cost_selected, size_t msg_step,
+                int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
 
-      void init_data_cost(int rows, int cols, float* disp_selected_pyr, float* data_cost_selected,
-                        size_t msg_step, int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream)
-      {
-          init_data_cost_tmpl(rows, cols, disp_selected_pyr, data_cost_selected, msg_step, h, w, level, nr_plane, ndisp, channels, use_local_init_data_cost, stream);
-      }
+    template void init_data_cost(int rows, int cols, float* disp_selected_pyr, float* data_cost_selected, size_t msg_step,
+                int h, int w, int level, int nr_plane, int ndisp, int channels, bool use_local_init_data_cost, cudaStream_t stream);
 
 ///////////////////////////////////////////////////////////////
 ////////////////////// compute data cost //////////////////////
@@ -562,7 +541,7 @@ namespace cv { namespace gpu { namespace csbp
     }
 
     template<class T>
-    void compute_data_cost_tmpl(const T* disp_selected_pyr, T* data_cost, size_t msg_step1, size_t msg_step2,
+    void compute_data_cost(const T* disp_selected_pyr, T* data_cost, size_t msg_step1, size_t msg_step2,
                            int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream)
     {
         typedef void (*ComputeDataCostCaller)(const T* disp_selected_pyr, T* data_cost, int rows, int cols,
@@ -588,16 +567,12 @@ namespace cv { namespace gpu { namespace csbp
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-     void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step1, size_t msg_step2,
-                           int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream)
-     {
-         compute_data_cost_tmpl(disp_selected_pyr, data_cost, msg_step1, msg_step2, rows, cols, h, w, h2, level, nr_plane, channels, stream);
-     }
-     void compute_data_cost(const float* disp_selected_pyr, float* data_cost, size_t msg_step1, size_t msg_step2,
-                           int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream)
-     {
-         compute_data_cost_tmpl(disp_selected_pyr, data_cost, msg_step1, msg_step2, rows, cols, h, w, h2, level, nr_plane, channels, stream);
-     }
+    template void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step1, size_t msg_step2,
+                           int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
+
+    template void compute_data_cost(const float* disp_selected_pyr, float* data_cost, size_t msg_step1, size_t msg_step2,
+                           int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
+     
 
 ///////////////////////////////////////////////////////////////
 //////////////////////// init message /////////////////////////
@@ -613,7 +588,7 @@ namespace cv { namespace gpu { namespace csbp
     {
         for(int i = 0; i < nr_plane; i++)
         {
-            T minimum = TypeLimits<T>::max();
+            T minimum = numeric_limits_gpu<T>::max();
             int id = 0;
             for(int j = 0; j < nr_plane2; j++)
             {
@@ -633,7 +608,7 @@ namespace cv { namespace gpu { namespace csbp
             l_new[i * cdisp_step1] = l_cur[id * cdisp_step2];
             r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];
 
-            data_cost_new[id * cdisp_step1] = TypeLimits<T>::max();
+            data_cost_new[id * cdisp_step1] = numeric_limits_gpu<T>::max();
         }
     }
 
@@ -688,7 +663,7 @@ namespace cv { namespace gpu { namespace csbp
 
 
     template<class T>
-    void init_message_tmpl(T* u_new, T* d_new, T* l_new, T* r_new,
+    void init_message(T* u_new, T* d_new, T* l_new, T* r_new,
                       const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
                       T* selected_disp_pyr_new, const T* selected_disp_pyr_cur,
                       T* data_cost_selected, const T* data_cost, size_t msg_step1, size_t msg_step2,
@@ -718,27 +693,18 @@ namespace cv { namespace gpu { namespace csbp
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void init_message(short* u_new, short* d_new, short* l_new, short* r_new,
+
+    template void init_message(short* u_new, short* d_new, short* l_new, short* r_new,
                       const short* u_cur, const short* d_cur, const short* l_cur, const short* r_cur,
                       short* selected_disp_pyr_new, const short* selected_disp_pyr_cur,
                       short* data_cost_selected, const short* data_cost, size_t msg_step1, size_t msg_step2,
-                      int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream)
-    {
-        init_message_tmpl(u_new, d_new, l_new, r_new, u_cur, d_cur, l_cur, r_cur,
-                      selected_disp_pyr_new, selected_disp_pyr_cur, data_cost_selected, data_cost, msg_step1, msg_step2,
-                      h, w, nr_plane, h2, w2, nr_plane2, stream);
-    }
+                      int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
 
-    void init_message(float* u_new, float* d_new, float* l_new, float* r_new,
+    template void init_message(float* u_new, float* d_new, float* l_new, float* r_new,
                       const float* u_cur, const float* d_cur, const float* l_cur, const float* r_cur,
                       float* selected_disp_pyr_new, const float* selected_disp_pyr_cur,
                       float* data_cost_selected, const float* data_cost, size_t msg_step1, size_t msg_step2,
-                      int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream)
-    {
-        init_message_tmpl(u_new, d_new, l_new, r_new, u_cur, d_cur, l_cur, r_cur,
-                      selected_disp_pyr_new, selected_disp_pyr_cur, data_cost_selected, data_cost, msg_step1, msg_step2,
-                      h, w, nr_plane, h2, w2, nr_plane2, stream);
-    }
+                      int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);        
 
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
@@ -748,7 +714,7 @@ namespace cv { namespace gpu { namespace csbp
     __device__ void message_per_pixel(const T* data, T* msg_dst, const T* msg1, const T* msg2, const T* msg3,
                                       const T* dst_disp, const T* src_disp, int nr_plane, T* temp)
     {
-        T minimum = TypeLimits<T>::max();
+        T minimum = numeric_limits_gpu<T>::max();
 
         for(int d = 0; d < nr_plane; d++)
         {
@@ -807,7 +773,7 @@ namespace cv { namespace gpu { namespace csbp
 
 
     template<class T>
-    void calc_all_iterations_tmpl(T* u, T* d, T* l, T* r, const T* data_cost_selected,
+    void calc_all_iterations(T* u, T* d, T* l, T* r, const T* data_cost_selected,
         const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream)
     {
         size_t disp_step = msg_step * h;
@@ -828,18 +794,12 @@ namespace cv { namespace gpu { namespace csbp
                 cudaSafeCall( cudaThreadSynchronize() );
         }
     };
+    
+    template void calc_all_iterations(short* u, short* d, short* l, short* r, const short* data_cost_selected, const short* selected_disp_pyr_cur, size_t msg_step,
+        int h, int w, int nr_plane, int iters, cudaStream_t stream);
 
-    void calc_all_iterations(short* u, short* d, short* l, short* r, short* data_cost_selected,
-                             const short* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream)
-    {
-          calc_all_iterations_tmpl(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, msg_step, h, w, nr_plane, iters, stream);
-    }
-
-    void calc_all_iterations(float*u, float* d, float* l, float* r, float* data_cost_selected,
-                             const float* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream)
-    {
-        calc_all_iterations_tmpl(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, msg_step, h, w, nr_plane, iters, stream);
-    }
+    template void calc_all_iterations(float* u, float* d, float* l, float* r, const float* data_cost_selected, const float* selected_disp_pyr_cur, size_t msg_step, 
+        int h, int w, int nr_plane, int iters, cudaStream_t stream);
 
 
 ///////////////////////////////////////////////////////////////
@@ -866,7 +826,7 @@ namespace cv { namespace gpu { namespace csbp
             const T* r = r_ + (y+0) * cmsg_step1 + (x-1);
 
             int best = 0;
-            T best_val = TypeLimits<T>::max();
+            T best_val = numeric_limits_gpu<T>::max();
             for (int i = 0; i < nr_plane; ++i)
             {
                 int idx = i * cdisp_step1;
@@ -882,9 +842,8 @@ namespace cv { namespace gpu { namespace csbp
         }
     }
 
-
     template<class T>
-    void compute_disp_tmpl(const T* u, const T* d, const T* l, const T* r, const T* data_cost_selected, const T* disp_selected, size_t msg_step,
+    void compute_disp(const T* u, const T* d, const T* l, const T* r, const T* data_cost_selected, const T* disp_selected, size_t msg_step,
         const DevMem2D_<short>& disp, int nr_plane, cudaStream_t stream)
     {
         size_t disp_step = disp.rows * msg_step;
@@ -903,16 +862,9 @@ namespace cv { namespace gpu { namespace csbp
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step,
-        DevMem2D_<short> disp, int nr_plane, cudaStream_t stream)
-    {
-        compute_disp_tmpl(u, d, l, r, data_cost_selected, disp_selected, msg_step, disp, nr_plane, stream);
-    }
+    template void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step, 
+        const DevMem2D_<short>& disp, int nr_plane, cudaStream_t stream);
 
-    void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
-        DevMem2D_<short> disp, int nr_plane, cudaStream_t stream)
-    {
-        compute_disp_tmpl(u, d, l, r, data_cost_selected, disp_selected, msg_step, disp, nr_plane, stream);
-    }
-
+    template void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
+        const DevMem2D_<short>& disp, int nr_plane, cudaStream_t stream);
 }}}

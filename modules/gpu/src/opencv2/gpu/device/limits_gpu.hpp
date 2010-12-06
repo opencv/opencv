@@ -193,7 +193,7 @@ namespace cv
                 typedef float type;
                 __device__ static type min() { return 1.175494351e-38f/*FLT_MIN*/; };            
                 __device__ static type max() { return 3.402823466e+38f/*FLT_MAX*/; };
-                __device__ static type epsilon();
+                __device__ static type epsilon() { return 1.192092896e-07f/*FLT_EPSILON*/; };
                 __device__ static type round_error();
                 __device__ static type denorm_min();
                 __device__ static type infinity();

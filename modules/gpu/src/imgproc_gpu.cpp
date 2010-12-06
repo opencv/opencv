@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "border_interpolate.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -860,6 +859,9 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     hist_callers[src.depth()](src, hist, levels);
 }
 
+////////////////////////////////////////////////////////////////////////
+// cornerHarris & minEgenVal
+
 namespace cv { namespace gpu { namespace imgproc {
 
     void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst);
@@ -938,6 +940,24 @@ namespace
     }
 
 } // Anonymous namespace
+
+
+bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
+{
+    if (cpuBorderType == cv::BORDER_REFLECT101)
+    {
+        gpuBorderType = cv::gpu::BORDER_REFLECT101_GPU;
+        return true;
+    }
+
+    if (cpuBorderType == cv::BORDER_REPLICATE)
+    {
+        gpuBorderType = cv::gpu::BORDER_REPLICATE_GPU;
+        return true;
+    }
+
+    return false;
+}
 
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType)
 {

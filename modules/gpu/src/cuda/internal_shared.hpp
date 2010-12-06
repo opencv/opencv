@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SHARED_HPP__
-#define __OPENCV_CUDA_SHARED_HPP__
+#ifndef __OPENCV_internal_shared_HPP__
+#define __OPENCV_internal_shared_HPP__
 
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
@@ -54,7 +54,18 @@ namespace cv
         typedef unsigned char uchar;
         typedef signed char schar;
         typedef unsigned short ushort;
-        typedef unsigned int uint;        
+        typedef unsigned int uint;       
+
+        enum 
+        {
+            BORDER_REFLECT101_GPU = 0,
+            BORDER_REPLICATE_GPU
+        };
+        
+        // Converts CPU border extrapolation mode into GPU internal analogue.
+        // Returns true if the GPU analogue exists, false otherwise.
+        bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
+
 
         static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
 
@@ -99,4 +110,4 @@ namespace cv
 }
 
 
-#endif /* __OPENCV_CUDA_SHARED_HPP__ */
+#endif /* __OPENCV_internal_shared_HPP__ */

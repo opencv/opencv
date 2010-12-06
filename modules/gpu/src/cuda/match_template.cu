@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "cuda_shared.hpp"
+#include "internal_shared.hpp"
 
 using namespace cv::gpu;
 

@@ -55,6 +55,8 @@ namespace cv
 #else
     #define __CV_GPU_HOST_DEVICE__
 #endif
+        template <bool expr> struct StaticAssert;
+        template <> struct StaticAssert<true> {static __CV_GPU_HOST_DEVICE__ void check(){}};        
         
         template <typename T> struct DevMem2D_
         {            
@@ -96,19 +98,18 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step); }
         };
 
-        template <bool> struct StaticCheck;
-        template <> struct StaticCheck<true>{};            
+        
        
         template<typename T> struct PtrElemStep_ : public PtrStep_<T>
         {                   
             PtrElemStep_(const DevMem2D_<T>& mem) : PtrStep_<T>(mem) 
             {
+                StaticAssert<256 % sizeof(T) == 0>::check();
+
                 PtrStep_<T>::step /= PtrStep_<T>::elem_size;             
             }
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return PtrStep_<T>::data + y * PtrStep_<T>::step; }
-            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return PtrStep_<T>::data + y * PtrStep_<T>::step; }
-        private:            
-            StaticCheck<256 % sizeof(T) == 0>  ElemStepTypeCheck;
+            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return PtrStep_<T>::data + y * PtrStep_<T>::step; }                    
         };
 
         typedef DevMem2D_<unsigned char> DevMem2D;
