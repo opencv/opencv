@@ -64,11 +64,18 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream
 namespace cv { namespace gpu { namespace bp
 {
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
-    void comp_data(int msg_type, const DevMem2D& l, const DevMem2D& r, int channels, DevMem2D mdata, const cudaStream_t& stream);
-    void data_step_down(int dst_cols, int dst_rows, int src_rows, int msg_type, const DevMem2D& src, DevMem2D dst, const cudaStream_t& stream);
-    void level_up_messages(int dst_idx, int dst_cols, int dst_rows, int src_rows, int msg_type, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, const cudaStream_t& stream);
-    void calc_all_iterations(int cols, int rows, int iters, int msg_type, DevMem2D& u, DevMem2D& d, DevMem2D& l, DevMem2D& r, const DevMem2D& data, const cudaStream_t& stream);
-    void output(int msg_type, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, DevMem2D disp, const cudaStream_t& stream);
+    template<typename T, typename D>
+    void comp_data_gpu(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
+    template<typename T>
+    void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+    template <typename T>
+    void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, cudaStream_t stream);
+    template <typename T>
+    void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2D& u, const DevMem2D& d, 
+        const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, cudaStream_t stream);
+    template <typename T>
+    void output_gpu(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, 
+        const DevMem2D_<short>& disp, cudaStream_t stream);
 }}}
 
 namespace
@@ -121,17 +128,24 @@ namespace
             : rthis(rthis_), u(u_), d(d_), l(l_), r(r_), u2(u2_), d2(d2_), l2(l2_), r2(r2_), datas(datas_), out(out_),
               zero(Scalar::all(0)), scale(rthis_.msg_type == CV_32F ? 1.0f : 10.0f)
         {
-            CV_DbgAssert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels);
+            CV_Assert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels);
             CV_Assert(rthis.msg_type == CV_32F || rthis.msg_type == CV_16S);
 
             if (rthis.msg_type == CV_16S)
                 CV_Assert((1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
         }
 
-        void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, const cudaStream_t& stream)
+        void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, cudaStream_t stream)
         {
-            CV_DbgAssert(left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
-            CV_Assert(left.type() == CV_8UC1 || left.type() == CV_8UC3);
+            typedef void (*comp_data_t)(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
+            static const comp_data_t comp_data_callers[2][5] = 
+            {
+                {0, bp::comp_data_gpu<unsigned char, short>, 0, bp::comp_data_gpu<uchar3, short>, bp::comp_data_gpu<uchar4, short>},
+                {0, bp::comp_data_gpu<unsigned char, float>, 0, bp::comp_data_gpu<uchar3, float>, bp::comp_data_gpu<uchar4, float>}
+            };
+
+            CV_Assert(left.size() == right.size() && left.type() == right.type());
+            CV_Assert(left.type() == CV_8UC1 || left.type() == CV_8UC3 || left.type() == CV_8UC4);
 
             rows = left.rows;
             cols = left.cols;
@@ -146,12 +160,12 @@ namespace
 
             datas[0].create(rows * rthis.ndisp, cols, rthis.msg_type);
 
-            bp::comp_data(rthis.msg_type, left, right, left.channels(), datas[0], stream);
+            comp_data_callers[rthis.msg_type == CV_32F][left.channels()](left, right, datas[0], stream);
 
             calcBP(disp, stream);
         }
 
-        void operator()(const GpuMat& data, GpuMat& disp, const cudaStream_t& stream)
+        void operator()(const GpuMat& data, GpuMat& disp, cudaStream_t stream)
         {
             CV_Assert((data.type() == rthis.msg_type) && (data.rows % rthis.ndisp == 0));
 
@@ -217,8 +231,36 @@ namespace
             rows_all[0] = rows;
         }
 
-        void calcBP(GpuMat& disp, const cudaStream_t& stream)
+        void calcBP(GpuMat& disp, cudaStream_t stream)
         {
+            using namespace cv::gpu::bp;
+
+            typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+            static const data_step_down_t data_step_down_callers[2] = 
+            {
+                data_step_down_gpu<short>, data_step_down_gpu<float>
+            };
+            
+            typedef void (*level_up_messages_t)(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, cudaStream_t stream);
+            static const level_up_messages_t level_up_messages_callers[2] = 
+            {
+                level_up_messages_gpu<short>, level_up_messages_gpu<float>
+            };
+
+            typedef void (*calc_all_iterations_t)(int cols, int rows, int iters, const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, cudaStream_t stream);
+            static const calc_all_iterations_t calc_all_iterations_callers[2] = 
+            {
+                calc_all_iterations_gpu<short>, calc_all_iterations_gpu<float>
+            };
+
+            typedef void (*output_t)(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, const DevMem2D_<short>& disp, cudaStream_t stream);
+            static const output_t output_callers[2] = 
+            {
+                output_gpu<short>, output_gpu<float>
+            };
+
+            const int funcIdx = rthis.msg_type == CV_32F;
+
             for (int i = 1; i < rthis.levels; ++i)
             {
                 cols_all[i] = (cols_all[i-1] + 1) / 2;
@@ -226,7 +268,7 @@ namespace
 
                 datas[i].create(rows_all[i] * rthis.ndisp, cols_all[i], rthis.msg_type);
 
-                bp::data_step_down(cols_all[i], rows_all[i], rows_all[i-1], rthis.msg_type, datas[i-1], datas[i], stream);
+                data_step_down_callers[funcIdx](cols_all[i], rows_all[i], rows_all[i-1], datas[i-1], datas[i], stream);
             }
 
             DevMem2D mus[] = {u, u2};
@@ -240,9 +282,9 @@ namespace
             {
                 // for lower level we have already computed messages by setting to zero
                 if (i != rthis.levels - 1)
-                    bp::level_up_messages(mem_idx, cols_all[i], rows_all[i], rows_all[i+1], rthis.msg_type, mus, mds, mls, mrs, stream);
+                    level_up_messages_callers[funcIdx](mem_idx, cols_all[i], rows_all[i], rows_all[i+1], mus, mds, mls, mrs, stream);
 
-                bp::calc_all_iterations(cols_all[i], rows_all[i], rthis.iters, rthis.msg_type, mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], stream);
+                calc_all_iterations_callers[funcIdx](cols_all[i], rows_all[i], rthis.iters, mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], stream);
 
                 mem_idx = (mem_idx + 1) & 1;
             }
@@ -253,7 +295,7 @@ namespace
             out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
             out = zero;
 
-            bp::output(rthis.msg_type, u, d, l, r, datas.front(), out, stream);
+            output_callers[funcIdx](u, d, l, r, datas.front(), out, stream);
 
             if (disp.type() != CV_16S)
                 out.convertTo(disp, disp.type());

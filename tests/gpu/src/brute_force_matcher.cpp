@@ -106,6 +106,7 @@ protected:
 
             if (!compareMatches(matchesCPU, matchesGPU))
             {
+                ts->printf(CvTS::LOG, "Match FAIL");
                 ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
                 return;
             }
@@ -117,6 +118,7 @@ protected:
 
             if (!compareMatches(knnMatchesCPU, knnMatchesGPU))
             {
+                ts->printf(CvTS::LOG, "KNN Match FAIL");
                 ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
                 return;
             }
@@ -128,6 +130,7 @@ protected:
 
             if (!compareMatches(radiusMatchesCPU, radiusMatchesGPU))
             {
+                ts->printf(CvTS::LOG, "Radius Match FAIL");
                 ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
                 return;
             }
