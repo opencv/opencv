@@ -1261,13 +1261,15 @@ namespace cv
         class CV_EXPORTS BruteForceMatcher_GPU< L1<T> > : public BruteForceMatcher_GPU_base
         {
         public:
-            explicit BruteForceMatcher_GPU(L1<T> d = L1<T>()) : BruteForceMatcher_GPU_base(L1Dist) {}
+            explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L1Dist) {}
+            explicit BruteForceMatcher_GPU(L1<T> /*d*/) : BruteForceMatcher_GPU_base(L1Dist) {}
         };
         template <typename T>
         class CV_EXPORTS BruteForceMatcher_GPU< L2<T> > : public BruteForceMatcher_GPU_base
         {
         public:
-            explicit BruteForceMatcher_GPU(L2<T> d = L2<T>()) : BruteForceMatcher_GPU_base(L2Dist) {}
+            explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L2Dist) {}
+            explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
         };
     }
 
