@@ -48,8 +48,8 @@ const char* blacklist[] =
     "calibrate-camera-artificial",    //ticket 472
     "inpaint",                        //ticket 570
     "warp-resize",                    //ticket 429
-    //"mhi-global",                     //ticket 457
-    //"canny",                          //ticket 702
+    "descriptor-opponent-sift",       //ticket 737
+    "_3d-rodrigues",                  //ticket 435
     0
 };
 
