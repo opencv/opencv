@@ -288,8 +288,6 @@ void App::RunOpencvGui()
                 rectangle(img_to_show, r.tl(), r.br(), CV_RGB(0, 255, 0), 3);
             }
 
-            WorkEnd();
-
             // Show results
             putText(img_to_show, GetPerformanceSummary(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(0, 0, 255), 2);
             imshow("opencv_gpu_hog", img_to_show);
@@ -299,6 +297,8 @@ void App::RunOpencvGui()
             {
                 vc >> frame;
             }
+
+            WorkEnd();
         }
     }
 }
