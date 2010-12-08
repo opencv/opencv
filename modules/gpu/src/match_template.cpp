@@ -61,6 +61,7 @@ namespace cv { namespace gpu { namespace imgproc
     void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, 
                                     const cufftComplex* b, cufftComplex* c);
     void matchTemplate_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+    void matchTemplate_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
 }}}
 
 
@@ -90,6 +91,14 @@ namespace
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         imgproc::matchTemplate_8U_SQDIFF(image, templ, result);
+    }
+
+    
+    template <>
+    void matchTemplate<CV_32F, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+        imgproc::matchTemplate_32F_SQDIFF(image, templ, result);
     }
 
 
@@ -243,7 +252,8 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
     typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&);
 
     static const Caller callers8U[] = { ::matchTemplate<CV_8U, CV_TM_SQDIFF>, 0, 0, 0, 0, 0 };
-    static const Caller callers32F[] = { 0, 0, ::matchTemplate<CV_32F, CV_TM_CCORR>, 0, 0, 0 };
+    static const Caller callers32F[] = { ::matchTemplate<CV_32F, CV_TM_SQDIFF>, 0, 
+                                         ::matchTemplate<CV_32F, CV_TM_CCORR>, 0, 0, 0 };
 
     const Caller* callers;
     switch (image.type())

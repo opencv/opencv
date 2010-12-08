@@ -90,6 +90,16 @@ struct CV_GpuMatchTemplateTest: CvTest
                 gen(image, n, m, CV_32F);
                 gen(templ, h, w, CV_32F);
                 F(t = clock();)
+                matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF);
+                F(cout << "cpu:" << clock() - t << endl;)
+                F(t = clock();)
+                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
+                F(cout << "gpu_block: " << clock() - t << endl;)
+                if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+
+                gen(image, n, m, CV_32F);
+                gen(templ, h, w, CV_32F);
+                F(t = clock();)
                 matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
                 F(cout << "cpu:" << clock() - t << endl;)
                 F(t = clock();)
@@ -136,48 +146,48 @@ struct CV_GpuMatchTemplateTest: CvTest
         return true;
     }
 
-    void match_template_naive_SQDIFF(const Mat& a, const Mat& b, Mat& c)
-    {
-        c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
-        for (int i = 0; i < c.rows; ++i)
-        {
-            for (int j = 0; j < c.cols; ++j)
-            {
-                float delta;
-                float sum = 0.f;
-                for (int y = 0; y < b.rows; ++y)
-                {
-                    const unsigned char* arow = a.ptr(i + y);
-                    const unsigned char* brow = b.ptr(y);
-                    for (int x = 0; x < b.cols; ++x)
-                    {
-                        delta = (float)(arow[j + x] - brow[x]);
-                        sum += delta * delta;
-                    }
-                }
-                c.at<float>(i, j) = sum;
-            }
-        }
-    }
+    //void match_template_naive_SQDIFF(const Mat& a, const Mat& b, Mat& c)
+    //{
+    //    c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
+    //    for (int i = 0; i < c.rows; ++i)
+    //    {
+    //        for (int j = 0; j < c.cols; ++j)
+    //        {
+    //            float delta;
+    //            float sum = 0.f;
+    //            for (int y = 0; y < b.rows; ++y)
+    //            {
+    //                const unsigned char* arow = a.ptr(i + y);
+    //                const unsigned char* brow = b.ptr(y);
+    //                for (int x = 0; x < b.cols; ++x)
+    //                {
+    //                    delta = (float)(arow[j + x] - brow[x]);
+    //                    sum += delta * delta;
+    //                }
+    //            }
+    //            c.at<float>(i, j) = sum;
+    //        }
+    //    }
+    //}
 
-    void match_template_naive_CCORR(const Mat& a, const Mat& b, Mat& c)
-    {
-        c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
-        for (int i = 0; i < c.rows; ++i)
-        {
-            for (int j = 0; j < c.cols; ++j)
-            {
-                float sum = 0.f;
-                for (int y = 0; y < b.rows; ++y)
-                {
-                    const float* arow = a.ptr<float>(i + y);
-                    const float* brow = b.ptr<float>(y);
-                    for (int x = 0; x < b.cols; ++x)
-                        sum += arow[j + x] * brow[x];
-                }
-                c.at<float>(i, j) = sum;
-            }
-        }
-    }
+    //void match_template_naive_CCORR(const Mat& a, const Mat& b, Mat& c)
+    //{
+    //    c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
+    //    for (int i = 0; i < c.rows; ++i)
+    //    {
+    //        for (int j = 0; j < c.cols; ++j)
+    //        {
+    //            float sum = 0.f;
+    //            for (int y = 0; y < b.rows; ++y)
+    //            {
+    //                const float* arow = a.ptr<float>(i + y);
+    //                const float* brow = b.ptr<float>(y);
+    //                for (int x = 0; x < b.cols; ++x)
+    //                    sum += arow[j + x] * brow[x];
+    //            }
+    //            c.at<float>(i, j) = sum;
+    //        }
+    //    }
+    //}
 } match_template_test;
 

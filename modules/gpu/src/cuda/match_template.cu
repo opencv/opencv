@@ -50,6 +50,7 @@ using namespace cv::gpu;
 
 namespace cv { namespace gpu { namespace imgproc {
 
+
 texture<unsigned char, 2> imageTex_8U;
 texture<unsigned char, 2> templTex_8U;
 
@@ -95,6 +96,54 @@ void matchTemplate_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2
     cudaSafeCall(cudaThreadSynchronize());
     cudaSafeCall(cudaUnbindTexture(imageTex_8U));
     cudaSafeCall(cudaUnbindTexture(templTex_8U));
+}
+
+
+texture<float, 2> imageTex_32F;
+texture<float, 2> templTex_32F;
+
+
+__global__ void matchTemplateKernel_32F_SQDIFF(int w, int h, DevMem2Df result)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float sum = 0.f;
+        float delta;
+
+        for (int i = 0; i < h; ++i)
+        {
+            for (int j = 0; j < w; ++j)
+            {
+                delta = tex2D(imageTex_32F, x + j, y + i) - 
+                        tex2D(templTex_32F, j, i);
+                sum += delta * delta;
+            }
+        }
+
+        result.ptr(y)[x] = sum;
+    }
+}
+
+
+void matchTemplate_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
+              divUp(image.rows - templ.rows + 1, threads.y));
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
+    cudaBindTexture2D(0, imageTex_32F, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_32F, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_8U.filterMode = cudaFilterModePoint;
+    templTex_8U.filterMode = cudaFilterModePoint;
+
+    matchTemplateKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
+    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall(cudaUnbindTexture(imageTex_32F));
+    cudaSafeCall(cudaUnbindTexture(templTex_32F));
 }
 
 
