@@ -138,12 +138,12 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
         l_diff = u_diff = cvScalarAll(0.);
     else
     {
-        CvMat m = cvMat( 1, 8, CV_64F, buf );
-        cvRandArr( rng, &m, CV_RAND_NORMAL, cvScalarAll(0), cvScalarAll(4) );
+        CvMat m = cvMat( 1, 8, CV_16S, buf );
+        cvRandArr( rng, &m, CV_RAND_NORMAL, cvScalarAll(0), cvScalarAll(32) );
         for( i = 0; i < 4; i++ )
         {
-            l_diff.val[i] = fabs(m.data.db[i]);
-            u_diff.val[i] = fabs(m.data.db[i+4]);
+            l_diff.val[i] = fabs(m.data.s[i]/16.);
+            u_diff.val[i] = fabs(m.data.s[i+4]/16.);
         }
     }
 
