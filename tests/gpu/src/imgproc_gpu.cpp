@@ -775,6 +775,56 @@ struct CV_GpuCornerMinEigenValTest: CvTest
     }
 };
 
+struct CV_GpuColumnSumTest: CvTest 
+{
+    CV_GpuColumnSumTest(): CvTest("GPU-ColumnSumTest", "columnSum") {}
+
+    void run(int)
+    {
+        try
+        {
+            int n = 375;
+            int m = 1072;
+            Mat src(n, m, CV_32F);
+            RNG rng;
+            rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(1));
+            Mat dst_gold, dst2_gold;
+
+            integral(src, dst_gold, dst2_gold);
+
+            GpuMat dsrc(src);
+            GpuMat buf;
+            GpuMat dst;
+            columnSum(dsrc, buf);
+            transpose(buf, dst);
+            columnSum(dst, buf);
+            transpose(buf, dst);
+            
+            Mat dst_ = dst;
+            for (int i = 0; i < dst_.rows; ++i)
+            {
+                const double* dst_gold_data = (const double*)dst_gold.ptr(i + 1);
+                for (int j = 0; j < dst_.cols; ++j)
+                {
+                    float a = (float)dst_gold_data[j + 1];
+                    float b = dst_.at<float>(i, j);
+                    if (fabs(a - b) > 0.5f)
+                    {
+                        ts->printf(CvTS::CONSOLE, "%d %d %f %f\n", i, j, a, b);
+                        ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
+                }
+            }
+        }
+        catch (const Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
+};
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -794,4 +844,5 @@ CV_GpuCvtColorTest CV_GpuCvtColor_test;
 CV_GpuHistogramsTest CV_GpuHistograms_test;
 CV_GpuCornerHarrisTest CV_GpuCornerHarris_test;
 CV_GpuCornerMinEigenValTest CV_GpuCornerMinEigenVal_test;
+CV_GpuColumnSumTest CV_GpuColumnSum_test;
 

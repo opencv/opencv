@@ -723,16 +723,18 @@ namespace cv { namespace gpu { namespace imgproc
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
 
-        const float* src_data = (const float*)src.data + x;
-        float* dst_data = (float*)dst.data + x;
-
         if (x < cols)
         {
+            const unsigned char* src_data = src.data + x * sizeof(float);
+            unsigned char* dst_data = dst.data + x * sizeof(float);
+
             float sum = 0.f;
             for (int y = 0; y < rows; ++y)
             {
-                sum += src_data[y];
-                dst_data[y] = sum;
+                sum += *(const float*)src_data;
+                *(float*)dst_data = sum;
+                src_data += src.step;
+                dst_data += dst.step;
             }
         }
     }
