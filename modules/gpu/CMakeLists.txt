@@ -112,6 +112,7 @@ target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS})
 
 if (HAVE_CUDA)
 	target_link_libraries(${the_target} ${CUDA_LIBRARIES} ${CUDA_NPP_LIBRARIES})
+    CUDA_ADD_CUFFT_TO_TARGET(${the_target})
 endif()
 
 if(MSVC)

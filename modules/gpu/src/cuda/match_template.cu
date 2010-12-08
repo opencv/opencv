@@ -40,7 +40,11 @@
 //
 //M*/
 
+#include <cufft.h>
 #include "internal_shared.hpp"
+
+#include <iostream>
+using namespace std;
 
 using namespace cv::gpu;
 
@@ -50,7 +54,7 @@ texture<unsigned char, 2> imageTex_8U;
 texture<unsigned char, 2> templTex_8U;
 
 
-__global__ void matchTemplateKernel_8U_SqDiff(int w, int h, DevMem2Df result)
+__global__ void matchTemplateKernel_8U_SQDIFF(int w, int h, DevMem2Df result)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -75,7 +79,7 @@ __global__ void matchTemplateKernel_8U_SqDiff(int w, int h, DevMem2Df result)
 }
 
 
-void matchTemplateCaller_8U_SqDiff(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
+void matchTemplate_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
@@ -87,10 +91,31 @@ void matchTemplateCaller_8U_SqDiff(const DevMem2D image, const DevMem2D templ, D
     imageTex_8U.filterMode = cudaFilterModePoint;
     templTex_8U.filterMode = cudaFilterModePoint;
 
-    matchTemplateKernel_8U_SqDiff<<<grid, threads>>>(templ.cols, templ.rows, result);
+    matchTemplateKernel_8U_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
     cudaSafeCall(cudaThreadSynchronize());
     cudaSafeCall(cudaUnbindTexture(imageTex_8U));
     cudaSafeCall(cudaUnbindTexture(templTex_8U));
+}
+
+
+__global__ void multiplyAndNormalizeSpectsKernel(int n, float scale, const cufftComplex* a, 
+                                                 const cufftComplex* b, cufftComplex* c)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;    
+    if (x < n) 
+    {
+        cufftComplex v = cuCmulf(a[x], cuConjf(b[x]));
+        c[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+    }
+}
+
+
+void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, const cufftComplex* b, 
+                                cufftComplex* c)
+{
+    dim3 threads(256);
+    dim3 grid(divUp(n, threads.x));
+    multiplyAndNormalizeSpectsKernel<<<grid, threads>>>(n, scale, a, b, c);
 }
 
 

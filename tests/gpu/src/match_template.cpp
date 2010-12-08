@@ -41,6 +41,17 @@
 //M*/
 
 #include "gputest.hpp"
+#include <string>
+#include <iostream>
+
+//#define SHOW_TIME
+
+#ifdef SHOW_TIME
+#include <ctime>
+#define F(x)
+#else
+#define F(x)
+#endif
 
 using namespace cv;
 using namespace std;
@@ -57,28 +68,43 @@ struct CV_GpuMatchTemplateTest: CvTest
             Mat dst_gold;
             gpu::GpuMat dst;
             int n, m, h, w;
+            F(clock_t t;)
 
-            for (int i = 0; i < 4; ++i)
+            for (int i = 0; i < 3; ++i)
             {
-                n = 1 + rand() % 100;
-                m = 1 + rand() % 100;
-                do h = 1 + rand() % 20; while (h > n);
-                do w = 1 + rand() % 20; while (w > m);
+                n = 1 + rand() % 2000;
+                m = 1 + rand() % 1000;
+                do h = 1 + rand() % 30; while (h > n);
+                do w = 1 + rand() % 30; while (w > m);
+
                 gen(image, n, m, CV_8U);
                 gen(templ, h, w, CV_8U);
-
-                match_template_naive(image, templ, dst_gold);
+                F(t = clock();)
+                matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF);
+                F(cout << "cpu:" << clock() - t << endl;)
+                F(t = clock();)
                 gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
-                if (!check8U(dst_gold, Mat(dst))) return;
+                F(cout << "gpu_block: " << clock() - t << endl;)
+                if (!check(dst_gold, Mat(dst), 5 * h * w * 1e-5f)) return;
+
+                gen(image, n, m, CV_32F);
+                gen(templ, h, w, CV_32F);
+                F(t = clock();)
+                matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
+                F(cout << "cpu:" << clock() - t << endl;)
+                F(t = clock();)
+                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
+                F(cout << "gpu_block: " << clock() - t << endl;)
+                if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
             }
         }
         catch (const Exception& e)
         {
+            ts->printf(CvTS::CONSOLE, e.what());
             if (!check_and_treat_gpu_exception(e, ts)) throw;
             return;
         }
     }
-
 
     void gen(Mat& a, int rows, int cols, int type)
     {
@@ -86,11 +112,31 @@ struct CV_GpuMatchTemplateTest: CvTest
         a.create(rows, cols, type);
         if (type == CV_8U)
             rng.fill(a, RNG::UNIFORM, Scalar(0), Scalar(10));
+        else if (type == CV_32F)
+            rng.fill(a, RNG::UNIFORM, Scalar(0.f), Scalar(1.f));
     }
 
-    // Naive version for unsigned char
-    // Time complexity is O(a.size().area() * b.size().area()).
-    void match_template_naive(const Mat& a, const Mat& b, Mat& c)
+    bool check(const Mat& a, const Mat& b, float max_err)
+    {
+        if (a.size() != b.size())
+        {
+            ts->printf(CvTS::CONSOLE, "bad size");
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+            return false;
+        }
+
+        float err = (float)norm(a, b, NORM_INF);
+        if (err > max_err)
+        {
+            ts->printf(CvTS::CONSOLE, "bad accuracy: %f\n", err);
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+            return false;
+        }
+
+        return true;
+    }
+
+    void match_template_naive_SQDIFF(const Mat& a, const Mat& b, Mat& c)
     {
         c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
         for (int i = 0; i < c.rows; ++i)
@@ -114,32 +160,24 @@ struct CV_GpuMatchTemplateTest: CvTest
         }
     }
 
-
-    bool check8U(const Mat& a, const Mat& b)
+    void match_template_naive_CCORR(const Mat& a, const Mat& b, Mat& c)
     {
-        if (a.size() != b.size())
+        c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
+        for (int i = 0; i < c.rows; ++i)
         {
-            ts->printf(CvTS::CONSOLE, "bad size");
-            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
-            return false;
-        }
-
-        for (int i = 0; i < a.rows; ++i)
-        {
-            for (int j = 0; j < a.cols; ++j)
+            for (int j = 0; j < c.cols; ++j)
             {
-                float v1 = a.at<float>(i, j);
-                float v2 = b.at<float>(i, j);
-                if (fabs(v1 - v2) > 1e-3f)
+                float sum = 0.f;
+                for (int y = 0; y < b.rows; ++y)
                 {
-                    ts->printf(CvTS::CONSOLE, "(gold)%f != %f, pos: (%d, %d) size: (%d, %d)\n", 
-                               v1, v2, j, i, a.cols, a.rows);
-                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
-                    return false;
+                    const float* arow = a.ptr<float>(i + y);
+                    const float* brow = b.ptr<float>(y);
+                    for (int x = 0; x < b.cols; ++x)
+                        sum += arow[j + x] * brow[x];
                 }
+                c.at<float>(i, j) = sum;
             }
         }
-
-        return true;
     }
 } match_template_test;
+
