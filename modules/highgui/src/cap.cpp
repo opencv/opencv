@@ -52,10 +52,10 @@
 namespace cv
 {
 
-template<> inline void Ptr<CvCapture>::delete_obj()
+template<> void Ptr<CvCapture>::delete_obj()
 { cvReleaseCapture(&obj); }
 
-template<> inline void Ptr<CvVideoWriter>::delete_obj()
+template<> void Ptr<CvVideoWriter>::delete_obj()
 { cvReleaseVideoWriter(&obj); }
 
 }
