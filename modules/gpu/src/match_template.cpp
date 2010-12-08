@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <cufft.h>
 #include <iostream>
 #include <utility>
 
@@ -56,12 +55,14 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 
 #else
 
+#include <cufft.h>
+
 namespace cv { namespace gpu { namespace imgproc 
 {  
     void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, 
                                     const cufftComplex* b, cufftComplex* c);
-    void matchTemplate_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
-    void matchTemplate_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+    void matchTemplateNaive_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+    void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
 }}}
 
 
@@ -90,7 +91,7 @@ namespace
     void matchTemplate<CV_8U, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplate_8U_SQDIFF(image, templ, result);
+        imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
     }
 
     
@@ -98,7 +99,7 @@ namespace
     void matchTemplate<CV_32F, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplate_32F_SQDIFF(image, templ, result);
+        imgproc::matchTemplateNaive_32F_SQDIFF(image, templ, result);
     }
 
 

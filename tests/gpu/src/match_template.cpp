@@ -97,15 +97,15 @@ struct CV_GpuMatchTemplateTest: CvTest
                 F(cout << "gpu_block: " << clock() - t << endl;)
                 if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
 
-                gen(image, n, m, CV_32F);
-                gen(templ, h, w, CV_32F);
-                F(t = clock();)
-                matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
-                F(cout << "cpu:" << clock() - t << endl;)
-                F(t = clock();)
-                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
-                F(cout << "gpu_block: " << clock() - t << endl;)
-                if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                //gen(image, n, m, CV_32F);
+                //gen(templ, h, w, CV_32F);
+                //F(t = clock();)
+                //matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
+                //F(cout << "cpu:" << clock() - t << endl;)
+                //F(t = clock();)
+                //gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
+                //F(cout << "gpu_block: " << clock() - t << endl;)
+                //if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
             }
         }
         catch (const Exception& e)

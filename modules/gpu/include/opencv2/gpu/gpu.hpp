@@ -638,6 +638,9 @@ namespace cv
         //! supports only CV_8UC1 source type
         CV_EXPORTS void integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum);
 
+        //! computes vertical sum, supports only CV_32FC1 images
+        CV_EXPORTS void columnSum(const GpuMat& src, GpuMat& sum);
+
         //! computes the standard deviation of integral images
         //! supports only CV_32SC1 source type and CV_32FC1 sqr type
         //! output will have CV_32FC1 type

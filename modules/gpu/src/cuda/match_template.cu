@@ -55,7 +55,7 @@ texture<unsigned char, 2> imageTex_8U;
 texture<unsigned char, 2> templTex_8U;
 
 
-__global__ void matchTemplateKernel_8U_SQDIFF(int w, int h, DevMem2Df result)
+__global__ void matchTemplateNaiveKernel_8U_SQDIFF(int w, int h, DevMem2Df result)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -80,7 +80,7 @@ __global__ void matchTemplateKernel_8U_SQDIFF(int w, int h, DevMem2Df result)
 }
 
 
-void matchTemplate_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
+void matchTemplateNaive_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
@@ -92,7 +92,7 @@ void matchTemplate_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2
     imageTex_8U.filterMode = cudaFilterModePoint;
     templTex_8U.filterMode = cudaFilterModePoint;
 
-    matchTemplateKernel_8U_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
+    matchTemplateNaiveKernel_8U_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
     cudaSafeCall(cudaThreadSynchronize());
     cudaSafeCall(cudaUnbindTexture(imageTex_8U));
     cudaSafeCall(cudaUnbindTexture(templTex_8U));
@@ -103,7 +103,7 @@ texture<float, 2> imageTex_32F;
 texture<float, 2> templTex_32F;
 
 
-__global__ void matchTemplateKernel_32F_SQDIFF(int w, int h, DevMem2Df result)
+__global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h, DevMem2Df result)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -128,7 +128,7 @@ __global__ void matchTemplateKernel_32F_SQDIFF(int w, int h, DevMem2Df result)
 }
 
 
-void matchTemplate_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
+void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
@@ -140,7 +140,7 @@ void matchTemplate_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem
     imageTex_8U.filterMode = cudaFilterModePoint;
     templTex_8U.filterMode = cudaFilterModePoint;
 
-    matchTemplateKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
+    matchTemplateNaiveKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
     cudaSafeCall(cudaThreadSynchronize());
     cudaSafeCall(cudaUnbindTexture(imageTex_32F));
     cudaSafeCall(cudaUnbindTexture(templTex_32F));
@@ -165,6 +165,7 @@ void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, const
     dim3 threads(256);
     dim3 grid(divUp(n, threads.x));
     multiplyAndNormalizeSpectsKernel<<<grid, threads>>>(n, scale, a, b, c);
+    cudaSafeCall(cudaThreadSynchronize());
 }
 
 

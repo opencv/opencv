@@ -61,6 +61,7 @@ void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_nogpu(); }
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int) { throw_nogpu(); }
 void cv::gpu::integral(GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
 void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_nogpu(); }
@@ -553,6 +554,22 @@ void cv::gpu::integral(GpuMat& src, GpuMat& sum, GpuMat& sqsum)
 
     nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(src.ptr<Npp8u>(), src.step, sum.ptr<Npp32s>(),
         sum.step, sqsum.ptr<Npp32f>(), sqsum.step, sz, 0, 0.0f, h) );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// columnSum
+
+namespace cv { namespace gpu { namespace imgproc
+{
+    void columnSum_32F(const DevMem2D src, const DevMem2D dst);
+}}}
+
+void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
+{
+    CV_Assert(src.type() == CV_32F);
+
+    dst.create(src.size(), CV_32F);
+    imgproc::columnSum_32F(src, dst);
 }
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect)

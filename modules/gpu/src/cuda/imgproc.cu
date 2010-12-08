@@ -42,7 +42,6 @@
 
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
-#include "internal_shared.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -717,5 +716,36 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
         cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
     }
+
+////////////////////////////// Column Sum //////////////////////////////////////
+
+    __global__ void columnSumKernel_32F(int cols, int rows, const PtrStep src, const PtrStep dst)
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+        const float* src_data = (const float*)src.data + x;
+        float* dst_data = (float*)dst.data + x;
+
+        if (x < cols)
+        {
+            float sum = 0.f;
+            for (int y = 0; y < rows; ++y)
+            {
+                sum += src_data[y];
+                dst_data[y] = sum;
+            }
+        }
+    }
+
+
+    void columnSum_32F(const DevMem2D src, const DevMem2D dst)
+    {
+        dim3 threads(256);
+        dim3 grid(divUp(src.cols, threads.x));
+
+        columnSumKernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
 }}}
 
