@@ -1254,10 +1254,9 @@ namespace cv { namespace gpu { namespace mathfunc
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // transpose
 
-    template <typename T>
-    __global__ void transpose(const DevMem2D_<T> src, PtrStep_<T> dst)
+    __global__ void transpose(const DevMem2Di src, PtrStepi dst)
     {
-    	__shared__ T s_mem[16 * 17];
+    	__shared__ int s_mem[16 * 17];
 
     	int x = blockIdx.x * blockDim.x + threadIdx.x;
     	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -1280,22 +1279,14 @@ namespace cv { namespace gpu { namespace mathfunc
 	    }
     }
 
-    template <typename T>
-    void transpose_gpu(const DevMem2D& src, const DevMem2D& dst)
+    void transpose_gpu(const DevMem2Di& src, const DevMem2Di& dst)
     {
 	    dim3 threads(16, 16, 1);
 	    dim3 grid(divUp(src.cols, 16), divUp(src.rows, 16), 1);
 
-	    transpose<T><<<grid, threads>>>((DevMem2D_<T>)src, (DevMem2D_<T>)dst);
+	    transpose<<<grid, threads>>>(src, dst);
         cudaSafeCall( cudaThreadSynchronize() );
     }
-
-    template void transpose_gpu<uchar4 >(const DevMem2D& src, const DevMem2D& dst);
-    template void transpose_gpu<char4  >(const DevMem2D& src, const DevMem2D& dst);
-    template void transpose_gpu<ushort2>(const DevMem2D& src, const DevMem2D& dst);
-    template void transpose_gpu<short2 >(const DevMem2D& src, const DevMem2D& dst);
-    template void transpose_gpu<int    >(const DevMem2D& src, const DevMem2D& dst);
-    template void transpose_gpu<float  >(const DevMem2D& src, const DevMem2D& dst);
     
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // min/max

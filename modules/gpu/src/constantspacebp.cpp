@@ -141,7 +141,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     CV_DbgAssert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels && 0 < rthis.nr_plane
         && left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
 
-    CV_Assert(rthis.levels <= 8 && (left.type() == CV_8UC1 || left.type() == CV_8UC3));
+    CV_Assert(rthis.levels <= 8 && (left.type() == CV_8UC1 || left.type() == CV_8UC3 || left.type() == CV_8UC4));
 
     const Scalar zero = Scalar::all(0);
 

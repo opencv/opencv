@@ -99,8 +99,15 @@ namespace cv { namespace gpu { namespace csbp
 /////////////////////// init data cost ////////////////////////
 ///////////////////////////////////////////////////////////////
 
-    template <int channels>
-    struct DataCostPerPixel
+    template <int channels> struct DataCostPerPixel;
+    template <> struct DataCostPerPixel<1>
+    {
+        static __device__ float compute(const uchar* left, const uchar* right)
+        {
+            return fmin(cdata_weight * abs((int)*left - *right), cdata_weight * cmax_data_term);
+        }
+    };
+    template <> struct DataCostPerPixel<3>
     {
         static __device__ float compute(const uchar* left, const uchar* right)
         {
@@ -111,13 +118,18 @@ namespace cv { namespace gpu { namespace csbp
             return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
         }
     };
-
-    template <>
-    struct DataCostPerPixel<1>
+    template <> struct DataCostPerPixel<4>
     {
         static __device__ float compute(const uchar* left, const uchar* right)
         {
-            return fmin(cdata_weight * abs((int)*left - *right), cdata_weight * cmax_data_term);
+            uchar4 l = *((const uchar4*)left);
+            uchar4 r = *((const uchar4*)right);
+
+            float tb = 0.114f * abs((int)l.x - r.x);
+            float tg = 0.587f * abs((int)l.y - r.y);
+            float tr = 0.299f * abs((int)l.z - r.z);
+
+            return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
         }
     };
 
@@ -327,6 +339,7 @@ namespace cv { namespace gpu { namespace csbp
         {
         case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
         case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
+        case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(h, w, level); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
@@ -345,6 +358,7 @@ namespace cv { namespace gpu { namespace csbp
         {
         case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
         case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
+        case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
@@ -517,6 +531,7 @@ namespace cv { namespace gpu { namespace csbp
         {
         case 1: compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
         case 3: compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
+        case 4: compute_data_cost<T, 4><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }
@@ -536,6 +551,7 @@ namespace cv { namespace gpu { namespace csbp
         {
         case 1: compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
         case 3: compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
+        case 4: compute_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
         default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
         }
     }

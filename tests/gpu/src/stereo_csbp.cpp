@@ -62,6 +62,9 @@ struct CV_GpuStereoCSBPTest : public CvTest
 
         try
         {
+            {cv::Mat temp; cv::cvtColor(img_l, temp, CV_BGR2BGRA); cv::swap(temp, img_l);}
+            {cv::Mat temp; cv::cvtColor(img_r, temp, CV_BGR2BGRA); cv::swap(temp, img_r);}
+
             cv::gpu::GpuMat disp;
             cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
 
