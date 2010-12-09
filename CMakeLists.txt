@@ -1224,6 +1224,11 @@ if(BUILD_PACKAGE)
             DESTINATION "."
             COMPONENT main
             )
+        install(FILES
+            "include/CMakeLists.txt"
+            DESTINATION "include/"
+            COMPONENT src
+            )
 
         if(CMAKE_INSTALL_DEBUG_LIBRARIES)
             foreach(m calib3d core contrib features2d ffmpeg flann gpu highgui imgproc legacy ml objdetect video)
