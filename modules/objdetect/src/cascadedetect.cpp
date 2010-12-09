@@ -717,26 +717,30 @@ inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator>
 template<class FEval>
 inline int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_feval )
 {
-    int si, nstages = (int)cascade.stages.size();
     int nodeOfs = 0, leafOfs = 0;
     FEval& feval = (FEval&)*_feval;
     float* cascadeLeaves = &cascade.leaves[0];
     CascadeClassifier::DTreeNode* cascadeNodes = &cascade.nodes[0];
     CascadeClassifier::Stage* cascadeStages = &cascade.stages[0];
-    for( si = 0; si < nstages; si++ )
+
+    int nstages = (int)cascade.stages.size();
+    for( int stageIdx = 0; stageIdx < nstages; stageIdx++ )
     {
-        CascadeClassifier::Stage& stage = cascadeStages[si];
-        int wi, ntrees = stage.ntrees;
-        double sum = 0;
-        for( wi = 0; wi < ntrees; wi++, nodeOfs++, leafOfs+= 2 )
+        CascadeClassifier::Stage& stage = cascadeStages[stageIdx];
+        double sum = 0.0;
+
+        int ntrees = stage.ntrees;
+        for( int i = 0; i < ntrees; i++, nodeOfs++, leafOfs+= 2 )
         {
             CascadeClassifier::DTreeNode& node = cascadeNodes[nodeOfs];
-            double val = feval(node.featureIdx);
-            sum += cascadeLeaves[ val < node.threshold ? leafOfs : leafOfs+1 ];
+            double value = feval(node.featureIdx);
+            sum += cascadeLeaves[ value < node.threshold ? leafOfs : leafOfs + 1 ];
         }
+
         if( sum < stage.threshold )
-            return -si;            
+            return -stageIdx;
     }
+
     return 1;
 }
 
@@ -773,7 +777,7 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     return 1;
 }
 
-int CascadeClassifier::runAt( Ptr<FeatureEvaluator> &_feval, Point pt )
+int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& featureEvaluator, Point pt )
 {
     CV_Assert( oldCascade.empty() );
     /*if( !oldCascade.empty() )
@@ -781,17 +785,17 @@ int CascadeClassifier::runAt( Ptr<FeatureEvaluator> &_feval, Point pt )
         
     assert(featureType == FeatureEvaluator::HAAR ||
            featureType == FeatureEvaluator::LBP);
-    return !_feval->setWindow(pt) ? -1 :
-                is_stump_based ? ( featureType == FeatureEvaluator::HAAR ?
-                    predictOrderedStump<HaarEvaluator>( *this, _feval ) :
-                    predictCategoricalStump<LBPEvaluator>( *this, _feval ) ) :
-                                 ( featureType == FeatureEvaluator::HAAR ?
-                    predictOrdered<HaarEvaluator>( *this, _feval ) :
-                    predictCategorical<LBPEvaluator>( *this, _feval ) );
-}
 
+    return !featureEvaluator->setWindow(pt) ? -1 :
+                isStumpBased ? ( featureType == FeatureEvaluator::HAAR ?
+                    predictOrderedStump<HaarEvaluator>( *this, featureEvaluator ) :
+                    predictCategoricalStump<LBPEvaluator>( *this, featureEvaluator ) ) :
+                                 ( featureType == FeatureEvaluator::HAAR ?
+                    predictOrdered<HaarEvaluator>( *this, featureEvaluator ) :
+                    predictCategorical<LBPEvaluator>( *this, featureEvaluator ) );
+}
     
-bool CascadeClassifier::setImage( Ptr<FeatureEvaluator> &_feval, const Mat& image )
+bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& featureEvaluator, const Mat& image )
 {
     /*if( !oldCascade.empty() )
     {
@@ -803,45 +807,48 @@ bool CascadeClassifier::setImage( Ptr<FeatureEvaluator> &_feval, const Mat& imag
         cvSetImagesForHaarClassifierCascade( oldCascade, &_sum, &_sqsum, &_tilted, 1. );
         return true;
     }*/
-    return empty() ? false : _feval->setImage(image, origWinSize );
+    return empty() ? false : featureEvaluator->setImage(image, origWinSize);
 }
     
- 
+
 struct CascadeClassifierInvoker
 {
     CascadeClassifierInvoker( CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor, ConcurrentRectVector& _vec )
     {
-        cc = &_cc;
-        sz1 = _sz1;
+        classifier = &_cc;
+        processingAreaSize = _sz1;
         stripSize = _stripSize;
         yStep = _yStep;
-        factor = _factor;
-        vec = &_vec;
+        scalingFactor = _factor;
+        rectangles = &_vec;
     }
     
     void operator()(const BlockedRange& range) const
     {
-        Ptr<FeatureEvaluator> feval = cc->feval->clone();
-        int y1 = range.begin()*stripSize, y2 = min(range.end()*stripSize, sz1.height);
-        Size winSize(cvRound(cc->origWinSize.width*factor), cvRound(cc->origWinSize.height*factor));
-            
+        Ptr<FeatureEvaluator> evaluator = classifier->feval->clone();
+        Size winSize(cvRound(classifier->origWinSize.width * scalingFactor), cvRound(classifier->origWinSize.height * scalingFactor));
+
+        int y1 = range.begin() * stripSize;
+        int y2 = min(range.end() * stripSize, processingAreaSize.height);
         for( int y = y1; y < y2; y += yStep )
-            for( int x = 0; x < sz1.width; x += yStep )
+        {
+            for( int x = 0; x < processingAreaSize.width; x += yStep )
             {
-                int r = cc->runAt(feval, Point(x, y));
-                if( r > 0 )
-                    vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                        winSize.width, winSize.height));
-                if( r == 0 )
+                int result = classifier->runAt(evaluator, Point(x, y));
+                if( result > 0 )
+                    rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor),
+                                          winSize.width, winSize.height));
+                if( result == 0 )
                     x += yStep;
             }
+        }
     }
     
-    CascadeClassifier* cc;
-    Size sz1;
+    CascadeClassifier* classifier;
+    ConcurrentRectVector* rectangles;
+    Size processingAreaSize;
     int stripSize, yStep;
-    double factor;
-    ConcurrentRectVector* vec;
+    double scalingFactor;
 };
     
     
@@ -849,7 +856,7 @@ struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } }
 
 void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects,
                                           double scaleFactor, int minNeighbors,
-                                          int flags, Size minSize, Size maxSize )
+                                          int flags, Size minObjectSize, Size maxObjectSize )
 {
     const double GROUP_EPS = 0.2;
     
@@ -863,7 +870,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
         MemStorage storage(cvCreateMemStorage(0));
         CvMat _image = image;
         CvSeq* _objects = cvHaarDetectObjects( &_image, oldCascade, storage, scaleFactor,
-                                              minNeighbors, flags, minSize );
+                                              minNeighbors, flags, minObjectSize );
         vector<CvAvgComp> vecAvgComp;
         Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
         objects.resize(vecAvgComp.size());
@@ -871,57 +878,60 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
         return;
     }
 
-    if( maxSize.height == 0 || maxSize.width == 0 )
-        maxSize = image.size();
-
     objects.clear();
+
+    if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
+        maxObjectSize = image.size();
     
-    Mat img = image, imgbuf(image.rows+1, image.cols+1, CV_8U);
-    
-    if( img.channels() > 1 )
+    Mat grayImage = image;
+    if( grayImage.channels() > 1 )
     {
         Mat temp;
-        cvtColor(img, temp, CV_BGR2GRAY);
-        img = temp;
+        cvtColor(grayImage, temp, CV_BGR2GRAY);
+        grayImage = temp;
     }
     
-    ConcurrentRectVector allCandidates;
+    Mat imageBuffer(image.rows + 1, image.cols + 1, CV_8U);
+    ConcurrentRectVector candidates;
 
     for( double factor = 1; ; factor *= scaleFactor )
     {
         int stripCount, stripSize;
-        Size winSize( cvRound(origWinSize.width*factor), cvRound(origWinSize.height*factor) );
-        Size sz( cvRound( img.cols/factor ), cvRound( img.rows/factor ) );
-        Size sz1( sz.width - origWinSize.width, sz.height - origWinSize.height );
+
+        Size windowSize( cvRound(origWinSize.width*factor), cvRound(origWinSize.height*factor) );
+        Size scaledImageSize( cvRound( grayImage.cols/factor ), cvRound( grayImage.rows/factor ) );
+        Size processingAreaSize( scaledImageSize.width - origWinSize.width, scaledImageSize.height - origWinSize.height );
         
-        if( sz1.width <= 0 || sz1.height <= 0 )
+        if( processingAreaSize.width <= 0 || processingAreaSize.height <= 0 )
             break;
-        if( winSize.width > maxSize.width || winSize.height > maxSize.height )
+        if( windowSize.width > maxObjectSize.width || windowSize.height > maxObjectSize.height )
             break;
-        if( winSize.width < minSize.width || winSize.height < minSize.height )
+        if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
             continue;
         
         int yStep = factor > 2. ? 1 : 2;
+
     #ifdef HAVE_TBB
         const int PTS_PER_THREAD = 1000;
-        stripCount = ((sz1.width/yStep)*(sz1.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
+        stripCount = ((processingAreaSize.width/yStep)*(processingAreaSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
         stripCount = std::min(std::max(stripCount, 1), 100);
-        stripSize = (((sz1.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
+        stripSize = (((processingAreaSize.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
     #else
         stripCount = 1;
-        stripSize = sz1.height;
+        stripSize = processingAreaSize.height;
     #endif
 
-        Mat img1( sz, CV_8U, imgbuf.data );
-        resize( img, img1, sz, 0, 0, CV_INTER_LINEAR );
-        if( !feval->setImage( img1, origWinSize ) )
+        Mat scaledImage( scaledImageSize, CV_8U, imageBuffer.data );
+        resize( grayImage, scaledImage, scaledImageSize, 0, 0, CV_INTER_LINEAR );
+        if( !feval->setImage( scaledImage, origWinSize ) )
             break;
  
-        parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker(*this, sz1, stripSize, yStep, factor, allCandidates));
+        parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker(*this, processingAreaSize, stripSize, yStep, factor, candidates));
     }
     
-    objects.resize(allCandidates.size());
-    std::copy(allCandidates.begin(), allCandidates.end(), objects.begin());
+    objects.resize(candidates.size());
+    std::copy(candidates.begin(), candidates.end(), objects.begin());
+
     groupRectangles( objects, minNeighbors, GROUP_EPS );
 }    
 
@@ -947,7 +957,7 @@ bool CascadeClassifier::read(const FileNode& root)
     origWinSize.height = (int)root[CC_HEIGHT];
     CV_Assert( origWinSize.height > 0 && origWinSize.width > 0 );
     
-    is_stump_based = (int)(root[CC_STAGE_PARAMS][CC_MAX_DEPTH]) == 1 ? true : false;
+    isStumpBased = (int)(root[CC_STAGE_PARAMS][CC_MAX_DEPTH]) == 1 ? true : false;
 
     // load feature params
     FileNode fn = root[CC_FEATURE_PARAMS];

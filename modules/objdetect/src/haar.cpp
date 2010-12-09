@@ -112,7 +112,7 @@ CvHidHaarStageClassifier;
 struct CvHidHaarClassifierCascade
 {
     int  count;
-    int  is_stump_based;
+    int  isStumpBased;
     int  has_tilted_features;
     int  is_tree;
     double inv_window_area;
@@ -272,7 +272,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     haar_classifier_ptr = (CvHidHaarClassifier*)(out->stage_classifier + cascade->count);
     haar_node_ptr = (CvHidHaarTreeNode*)(haar_classifier_ptr + total_classifiers);
 
-    out->is_stump_based = 1;
+    out->isStumpBased = 1;
     out->has_tilted_features = has_tilted_features;
     out->is_tree = 0;
 
@@ -329,12 +329,12 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
             haar_node_ptr =
                 (CvHidHaarTreeNode*)cvAlignPtr(alpha_ptr+node_count+1, sizeof(void*));
 
-            out->is_stump_based &= node_count == 1;
+            out->isStumpBased &= node_count == 1;
         }
     }
 
 #ifdef HAVE_IPP
-    int can_use_ipp = !out->has_tilted_features && !out->is_tree && out->is_stump_based;
+    int can_use_ipp = !out->has_tilted_features && !out->is_tree && out->isStumpBased;
 
     if( can_use_ipp )
     {
@@ -719,7 +719,7 @@ cvRunHaarClassifierCascade( const CvHaarClassifierCascade* _cascade,
             }
         }
     }
-    else if( cascade->is_stump_based )
+    else if( cascade->isStumpBased )
     {
         for( i = start_stage; i < cascade->count; i++ )
         {

@@ -64,7 +64,7 @@ extern "C" {
 
 typedef struct CvHaarFeature
 {
-    int  tilted;
+    int tilted;
     struct
     {
         CvRect r;
@@ -328,16 +328,16 @@ public:
     CV_WRAP bool load(const string& filename);
     bool read(const FileNode& node);
     CV_WRAP void detectMultiScale( const Mat& image,
-                           CV_OUT vector<Rect>& objects,
-                           double scaleFactor=1.1,
-                           int minNeighbors=3, int flags=0,
-                           Size minSize=Size(),
-                           Size maxSize=Size());
+                                   CV_OUT vector<Rect>& objects,
+                                   double scaleFactor=1.1,
+                                   int minNeighbors=3, int flags=0,
+                                   Size minSize=Size(),
+                                   Size maxSize=Size());
  
     bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
     int runAt( Ptr<FeatureEvaluator>&, Point );
 
-    bool is_stump_based;
+    bool isStumpBased;
 
     int stageType;
     int featureType;
