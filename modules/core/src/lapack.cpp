@@ -217,10 +217,10 @@ bool Cholesky(double* A, int m, double* b, int n)
 *                                 Determinant of the matrix                              *
 \****************************************************************************************/
 
-#define det2(m)   (m(0,0)*m(1,1) - m(0,1)*m(1,0))
-#define det3(m)   (m(0,0)*(m(1,1)*m(2,2) - m(1,2)*m(2,1)) -  \
-                   m(0,1)*(m(1,0)*m(2,2) - m(1,2)*m(2,0)) +  \
-                   m(0,2)*(m(1,0)*m(2,1) - m(1,1)*m(2,0)))
+#define det2(m)   ((double)m(0,0)*m(1,1) - (double)m(0,1)*m(1,0))
+#define det3(m)   (m(0,0)*((double)m(1,1)*m(2,2) - (double)m(1,2)*m(2,1)) -  \
+                   m(0,1)*((double)m(1,0)*m(2,2) - (double)m(1,2)*m(2,0)) +  \
+                   m(0,2)*((double)m(1,0)*m(2,1) - (double)m(1,1)*m(2,0)))
 
 double determinant( const Mat& mat )
 {
@@ -405,17 +405,17 @@ double invert( const Mat& src, Mat& dst, int method )
                     result = d;
                     d = 1./d;
 
-                    t[0] = (float)((Sf(1,1) * Sf(2,2) - Sf(1,2) * Sf(2,1)) * d);
-                    t[1] = (float)((Sf(0,2) * Sf(2,1) - Sf(0,1) * Sf(2,2)) * d);
-                    t[2] = (float)((Sf(0,1) * Sf(1,2) - Sf(0,2) * Sf(1,1)) * d);
-                                  
-                    t[3] = (float)((Sf(1,2) * Sf(2,0) - Sf(1,0) * Sf(2,2)) * d);
-                    t[4] = (float)((Sf(0,0) * Sf(2,2) - Sf(0,2) * Sf(2,0)) * d);
-                    t[5] = (float)((Sf(0,2) * Sf(1,0) - Sf(0,0) * Sf(1,2)) * d);
-                                  
-                    t[6] = (float)((Sf(1,0) * Sf(2,1) - Sf(1,1) * Sf(2,0)) * d);
-                    t[7] = (float)((Sf(0,1) * Sf(2,0) - Sf(0,0) * Sf(2,1)) * d);
-                    t[8] = (float)((Sf(0,0) * Sf(1,1) - Sf(0,1) * Sf(1,0)) * d);
+                    t[0] = (float)(((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
+                    t[1] = (float)(((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
+                    t[2] = (float)(((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
+                           
+                    t[3] = (float)(((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
+                    t[4] = (float)(((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
+                    t[5] = (float)(((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
+                           
+                    t[6] = (float)(((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
+                    t[7] = (float)(((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
+                    t[8] = (float)(((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
 
                     Df(0,0) = t[0]; Df(0,1) = t[1]; Df(0,2) = t[2];
                     Df(1,0) = t[3]; Df(1,1) = t[4]; Df(1,2) = t[5];
@@ -607,10 +607,10 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
                 double d = det2(Sf);
                 if( d != 0. )
                 {
-                    float t;
+                    double t;
                     d = 1./d;
-                    t = (float)((bf(0)*Sf(1,1) - bf(1)*Sf(0,1))*d);
-                    Df(1,0) = (float)((bf(1)*Sf(0,0) - bf(0)*Sf(1,0))*d);
+                    t = (float)(((double)bf(0)*Sf(1,1) - (double)bf(1)*Sf(0,1))*d);
+                    Df(1,0) = (float)(((double)bf(1)*Sf(0,0) - (double)bf(0)*Sf(1,0))*d);
                     Df(0,0) = t;
                 }
                 else
@@ -642,19 +642,19 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
                     d = 1./d;
 
                     t[0] = (float)(d*
-                           (bf(0)*(Sf(1,1)*Sf(2,2) - Sf(1,2)*Sf(2,1)) -
-                            Sf(0,1)*(bf(1)*Sf(2,2) - Sf(1,2)*bf(2)) +
-                            Sf(0,2)*(bf(1)*Sf(2,1) - Sf(1,1)*bf(2))));
+                           (bf(0)*((double)Sf(1,1)*Sf(2,2) - (double)Sf(1,2)*Sf(2,1)) -
+                            Sf(0,1)*((double)bf(1)*Sf(2,2) - (double)Sf(1,2)*bf(2)) +
+                            Sf(0,2)*((double)bf(1)*Sf(2,1) - (double)Sf(1,1)*bf(2))));
 
                     t[1] = (float)(d*
-                           (Sf(0,0)*(bf(1)*Sf(2,2) - Sf(1,2)*bf(2)) -
-                            bf(0)*(Sf(1,0)*Sf(2,2) - Sf(1,2)*Sf(2,0)) +
-                            Sf(0,2)*(Sf(1,0)*bf(2) - bf(1)*Sf(2,0))));
+                           (Sf(0,0)*(double)(bf(1)*Sf(2,2) - (double)Sf(1,2)*bf(2)) -
+                            bf(0)*((double)Sf(1,0)*Sf(2,2) - (double)Sf(1,2)*Sf(2,0)) +
+                            Sf(0,2)*((double)Sf(1,0)*bf(2) - (double)bf(1)*Sf(2,0))));
 
                     t[2] = (float)(d*
-                           (Sf(0,0)*(Sf(1,1)*bf(2) - bf(1)*Sf(2,1)) -
-                            Sf(0,1)*(Sf(1,0)*bf(2) - bf(1)*Sf(2,0)) +
-                            bf(0)*(Sf(1,0)*Sf(2,1) - Sf(1,1)*Sf(2,0))));
+                           (Sf(0,0)*((double)Sf(1,1)*bf(2) - (double)bf(1)*Sf(2,1)) -
+                            Sf(0,1)*((double)Sf(1,0)*bf(2) - (double)bf(1)*Sf(2,0)) +
+                            bf(0)*((double)Sf(1,0)*Sf(2,1) - (double)Sf(1,1)*Sf(2,0))));
 
                     Df(0,0) = t[0];
                     Df(1,0) = t[1];
