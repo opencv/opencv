@@ -41,6 +41,7 @@
 
 #include "gputest.hpp"
 #include <algorithm>
+#include <iterator>
 
 using namespace cv;
 using namespace cv::gpu;
