@@ -17,7 +17,7 @@ void help()
                "   --cascade1=<cascade_path> this is the primary trained classifier such as frontal face\n"
                "   [--cascade2=[this an optional secondary classifier such as profile face or eyes]]\n"
                "   input video or image\n\n"
-            "Example: ./multicascadeclassifier --cascade1=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\ --cascade2=\"../../data/haarcascades/haarcascade_eye.xml\"\n\n"
+            "Example: ./multicascadeclassifier --cascade1=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --cascade2=\"../../data/haarcascades/haarcascade_eye.xml\"\n\n"
             "Using OpenCV version " << CV_VERSION << endl << endl;
 }
 
