@@ -375,6 +375,8 @@ CV_INLINE int cvIsInf( double value )
 
 typedef uint64 CvRNG;
 
+#define CV_RNG_COEFF 4164903690U
+
 CV_INLINE CvRNG cvRNG( int64 seed CV_DEFAULT(-1))
 {
     CvRNG rng = seed ? (uint64)seed : (uint64)(int64)-1;
@@ -385,7 +387,7 @@ CV_INLINE CvRNG cvRNG( int64 seed CV_DEFAULT(-1))
 CV_INLINE unsigned cvRandInt( CvRNG* rng )
 {
     uint64 temp = *rng;
-    temp = (uint64)(unsigned)temp*4164903690U + (temp >> 32);
+    temp = (uint64)(unsigned)temp*CV_RNG_COEFF + (temp >> 32);
     *rng = temp;
     return (unsigned)temp;
 }

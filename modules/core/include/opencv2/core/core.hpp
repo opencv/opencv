@@ -1816,7 +1816,7 @@ public:
 class CV_EXPORTS RNG
 {
 public:
-    enum { A=4164903690U, UNIFORM=0, NORMAL=1 };
+    enum { UNIFORM=0, NORMAL=1 };
 
     RNG();
     RNG(uint64 _state);

@@ -60,7 +60,7 @@ namespace cv
    carry = temp / (2^32)
 */
 
-#define  RNG_NEXT(x)    ((uint64)(unsigned)(x)*RNG::A + ((x) >> 32))
+#define  RNG_NEXT(x)    ((uint64)(unsigned)(x)*CV_RNG_COEFF + ((x) >> 32))
 
 /***************************************************************************************\
 *                           Pseudo-Random Number Generators (PRNGs)                     *

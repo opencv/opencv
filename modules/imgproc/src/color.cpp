@@ -1738,6 +1738,131 @@ struct Luv2RGB_b
         
 //////////////////////////// Bayer Pattern -> RGB conversion /////////////////////////////
 
+static void Bayer2Gray_8u( const Mat& srcmat, Mat& dstmat, int code )
+{
+    const int R2Y = 4899;
+    const int G2Y = 9617;
+    const int B2Y = 1868;
+    const int SHIFT = 14;
+    
+    const uchar* bayer0 = srcmat.data;
+    int bayer_step = (int)srcmat.step;
+    uchar* dst0 = dstmat.data;
+    int dst_step = (int)dstmat.step;
+    Size size = srcmat.size();
+    int bcoeff = B2Y, rcoeff = R2Y;
+    int start_with_green = code == CV_BayerGB2Gray || code == CV_BayerGR2Gray;
+    bool brow = false;
+#if CV_SSE2    
+    bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#endif
+    
+    if( code != CV_BayerBG2Gray && code != CV_BayerGB2Gray )
+    {
+        brow = true;
+        std::swap(bcoeff, rcoeff);
+    }
+    
+    memset( dst0, 0, size.width*sizeof(dst0[0]) );
+    memset( dst0 + (size.height - 1)*dst_step, 0, size.width*sizeof(dst0[0]) );
+    dst0 += dst_step + 1;
+    size.height -= 2;
+    size.width -= 2;
+    
+    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    {
+        int t0, t1, t2;
+        const uchar* bayer = bayer0;
+        uchar* dst = dst0;
+        const uchar* bayer_end = bayer + size.width;
+        
+        dst[-1] = dst[size.width+1] = 0;
+        
+        if( size.width <= 0 )
+            continue;
+        
+        if( start_with_green )
+        {
+            t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
+            t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
+            t2 = bayer[bayer_step+1]*(2*G2Y);
+            
+            dst[0] = (uchar)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+            bayer++;
+            dst++;
+        }
+        
+#if CV_SSE2
+        if( haveSSE2 )
+        {
+            __m128i _b2y = _mm_set1_epi16((short)(rcoeff*2));
+            __m128i _g2y = _mm_set1_epi16((short)(G2Y*2));
+            __m128i _r2y = _mm_set1_epi16((short)(bcoeff*2));
+            
+            for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
+                __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
+                
+                __m128i b1 = _mm_add_epi16(_mm_srli_epi16(_mm_slli_epi16(r0, 8), 8),
+                                           _mm_srli_epi16(_mm_slli_epi16(r2, 8), 8));
+                __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
+                b1 = _mm_slli_epi16(_mm_srli_si128(b1, 2), 1);
+                
+                __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_srli_epi16(r2, 8));
+                __m128i g1 = _mm_srli_epi16(_mm_slli_epi16(r1, 8), 8);
+                g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
+                g1 = _mm_slli_epi16(_mm_srli_si128(g1, 2), 2);
+                
+                r0 = _mm_srli_epi16(r1, 8);
+                r1 = _mm_slli_epi16(_mm_add_epi16(r0, _mm_srli_si128(r0, 2)), 1);
+                r0 = _mm_slli_epi16(r0, 2);
+                
+                g0 = _mm_add_epi16(_mm_mulhi_epi16(b0, _b2y), _mm_mulhi_epi16(g0, _g2y));
+                g1 = _mm_add_epi16(_mm_mulhi_epi16(b1, _b2y), _mm_mulhi_epi16(g1, _g2y));
+                g0 = _mm_add_epi16(g0, _mm_mulhi_epi16(r0, _r2y));
+                g1 = _mm_add_epi16(g1, _mm_mulhi_epi16(r1, _r2y));
+                g0 = _mm_srli_epi16(g0, 1);
+                g1 = _mm_srli_epi16(g1, 1);
+                g0 = _mm_packus_epi16(g0, g0);
+                g1 = _mm_packus_epi16(g1, g1);
+                g0 = _mm_unpacklo_epi8(g0, g1);
+                _mm_storeu_si128((__m128i*)dst, g0);
+            }
+        }
+#endif
+        
+        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
+            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
+            t2 = bayer[bayer_step+1]*(4*bcoeff);
+            dst[0] = (uchar)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+            
+            t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
+            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
+            t2 = bayer[bayer_step+2]*(2*G2Y);
+            dst[1] = (uchar)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+        }
+        
+        if( bayer < bayer_end )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
+            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
+            t2 = bayer[bayer_step+1]*(4*bcoeff);
+            dst[0] = (uchar)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+            bayer++;
+            dst++;
+        }
+        
+        brow = !brow;
+        std::swap(bcoeff, rcoeff);
+        start_with_green = !start_with_green;
+    }
+}
+
+
 static void Bayer2RGB_8u( const Mat& srcmat, Mat& dstmat, int code )
 {
     const uchar* bayer0 = srcmat.data;
@@ -1745,96 +1870,165 @@ static void Bayer2RGB_8u( const Mat& srcmat, Mat& dstmat, int code )
     uchar* dst0 = dstmat.data;
     int dst_step = (int)dstmat.step;
     Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
     int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
-
+    bool brow = false;
+#if CV_SSE2    
+    bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#endif    
+    
+    if( code != CV_BayerBG2Gray && code != CV_BayerGB2Gray )
+        brow = true;
+    
     memset( dst0, 0, size.width*3*sizeof(dst0[0]) );
     memset( dst0 + (size.height - 1)*dst_step, 0, size.width*3*sizeof(dst0[0]) );
-    dst0 += dst_step + 3 + 1;
+    dst0 += dst_step + 4;
     size.height -= 2;
     size.width -= 2;
-
+    
     for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
     {
-        int t0, t1;
+        int t0, t1, t2;
         const uchar* bayer = bayer0;
         uchar* dst = dst0;
         const uchar* bayer_end = bayer + size.width;
-
-        dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-            dst[size.width*3] = dst[size.width*3+1] = 0;
-
+        int blue = brow ? -1 : 1;
+        
+        dst[-4] = dst[-3] = dst[-2] =
+        dst[size.width*3+3] = dst[size.width*3+4] = dst[size.width*3+5] = 0;
+        
         if( size.width <= 0 )
             continue;
-
+        
         if( start_with_green )
         {
-            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
+            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1)>>1;
+            t1 = (bayer[bayer_step] + bayer[bayer_step+2]+1)>>1;
+            t2 = bayer[bayer_step+1];
+            
             dst[-blue] = (uchar)t0;
-            dst[0] = bayer[bayer_step+1];
+            dst[0] = (uchar)t2;
             dst[blue] = (uchar)t1;
             bayer++;
             dst += 3;
         }
-
-        if( blue > 0 )
+        
+#if CV_SSE2
+        if( haveSSE2 )
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            /*
+             B G B G | B G B G | B G B G | B G B G
+             G R G R | G R G R | G R G R | G R G R
+             B G B G | B G B G | B G B G | B G B G
+             */
+            __m128i delta1 = _mm_set1_epi16(1), delta2 = _mm_set1_epi16(2);
+            __m128i mask = _mm_set1_epi16(brow ? -1 : 0), z = _mm_setzero_si128();
+            __m128i masklo = _mm_set1_epi16(0x00ff);
+            
+            for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
             {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[-1] = (uchar)t0;
-                dst[0] = (uchar)t1;
-                dst[1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[2] = (uchar)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[4] = (uchar)t1;
+                __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
+                __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
+                
+                __m128i b1 = _mm_add_epi16(_mm_and_si128(r0, masklo), _mm_and_si128(r2, masklo));
+                __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
+                b1 = _mm_srli_si128(b1, 2);
+                b1 = _mm_srli_epi16(_mm_add_epi16(b1, delta1), 1);
+                b0 = _mm_srli_epi16(_mm_add_epi16(b0, delta2), 2);
+                b0 = _mm_packus_epi16(b0, b1);
+                
+                __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_srli_epi16(r2, 8));
+                __m128i g1 = _mm_and_si128(r1, masklo);
+                g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
+                g1 = _mm_srli_si128(g1, 2);
+                g0 = _mm_srli_epi16(_mm_add_epi16(g0, delta2), 2);
+                g0 = _mm_packus_epi16(g0, g1);
+                
+                r0 = _mm_srli_epi16(r1, 8);
+                r1 = _mm_add_epi16(r0, _mm_srli_si128(r0, 2));
+                r1 = _mm_srli_epi16(_mm_add_epi16(r1, delta1), 1);
+                r0 = _mm_packus_epi16(r0, r1);
+                
+                b1 = _mm_and_si128(_mm_xor_si128(b0, r0), mask);
+                b0 = _mm_xor_si128(b0, b1);
+                r0 = _mm_xor_si128(r0, b1);
+                
+                // b1 g1 b1 g1 ...
+                b1 = _mm_unpackhi_epi8(b0, g0);
+                // b0 g0 b2 g2 b4 g4 ....
+                b0 = _mm_unpacklo_epi8(b0, g0);
+                
+                // r1 0 r3 0 ...
+                r1 = _mm_unpackhi_epi8(r0, z);
+                // r0 0 r2 0 r4 0 ...
+                r0 = _mm_unpacklo_epi8(r0, z);
+                
+                // 0 b0 g0 r0 0 b2 g2 r2 0 ...
+                g0 = _mm_slli_si128(_mm_unpacklo_epi16(b0, r0), 1);
+                // 0 b8 g8 r8 0 b10 g10 r10 0 ...
+                g1 = _mm_slli_si128(_mm_unpackhi_epi16(b0, r0), 1);
+                
+                // b1 g1 r1 0 b3 g3 r3 ....
+                r0 = _mm_unpacklo_epi16(b1, r1);
+                // b9 g9 r9 0 ...
+                r1 = _mm_unpackhi_epi16(b1, r1);
+                
+                b0 = _mm_srli_si128(_mm_unpacklo_epi32(g0, r0), 1);
+                b1 = _mm_srli_si128(_mm_unpackhi_epi32(g0, r0), 1);
+                
+                _mm_storel_epi64((__m128i*)(dst-1+0), b0);
+                _mm_storel_epi64((__m128i*)(dst-1+6*1), _mm_srli_si128(b0, 8));
+                _mm_storel_epi64((__m128i*)(dst-1+6*2), b1);
+                _mm_storel_epi64((__m128i*)(dst-1+6*3), _mm_srli_si128(b1, 8));
+                
+                g0 = _mm_srli_si128(_mm_unpacklo_epi32(g1, r1), 1);
+                g1 = _mm_srli_si128(_mm_unpackhi_epi32(g1, r1), 1);
+                
+                _mm_storel_epi64((__m128i*)(dst-1+6*4), g0);
+                _mm_storel_epi64((__m128i*)(dst-1+6*5), _mm_srli_si128(g0, 8));
+                
+                _mm_storel_epi64((__m128i*)(dst-1+6*6), g1);
             }
         }
-        else
+#endif
+        
+        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-            {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[1] = (uchar)t0;
-                dst[0] = (uchar)t1;
-                dst[-1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[4] = (uchar)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[2] = (uchar)t1;
-            }
-        }
-
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                  bayer[bayer_step*2+2] + 2) >> 2;
-            t1 = (bayer[1] + bayer[bayer_step] +
-                  bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2]+2)>>2;
+            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1]+2)>>2;
+            t2 = bayer[bayer_step+1];
+            
             dst[-blue] = (uchar)t0;
             dst[0] = (uchar)t1;
-            dst[blue] = bayer[bayer_step+1];
+            dst[blue] = (uchar)t2;
+            
+            t0 = (bayer[2] + bayer[bayer_step*2+2]+1)>>1;
+            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3]+1)>>1;
+            t2 = bayer[bayer_step+2];
+            
+            dst[3-blue] = (uchar)t0;
+            dst[3] = (uchar)t2;
+            dst[3+blue] = (uchar)t1;
+        }
+        
+        if( bayer < bayer_end )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2] + 2)>>2;
+            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1]+2)>>2;
+            t2 = bayer[bayer_step+1];
+            
+            dst[-blue] = (uchar)t0;
+            dst[0] = (uchar)t1;
+            dst[blue] = (uchar)t2;
             bayer++;
             dst += 3;
         }
-
-        blue = -blue;
+        
+        brow = !brow;
         start_with_green = !start_with_green;
     }
 }
-
+    
     
 /////////////////// Demosaicing using Variable Number of Gradients ///////////////////////
     
@@ -2132,8 +2326,9 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 break;
             
             __m128i emask = _mm_set1_epi32(0x0000ffff),
-            omask = _mm_set1_epi32(0xffff0000),
-            z = _mm_setzero_si128();
+                omask = _mm_set1_epi32(0xffff0000),
+                all_ones = _mm_set1_epi16(1),
+                z = _mm_setzero_si128();
             __m128 _0_5 = _mm_set1_ps(0.5f);
             
             #define _mm_merge_epi16(a, b) \
@@ -2307,7 +2502,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 
                 // gradNW
                 mask = _mm_cmpgt_epi16(T, gradNW);
-                ng = _mm_sub_epi16(ng, mask);
+                ng = _mm_max_epi16(_mm_sub_epi16(ng, mask), all_ones);
                 
                 __m128 ngf0, ngf1;
                 ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
@@ -2657,12 +2852,19 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             }
             }
             break;
+        
+        case CV_BayerBG2Gray: case CV_BayerGB2Gray: case CV_BayerRG2Gray: case CV_BayerGR2Gray:
+            if(dcn <= 0) dcn = 1;
+            CV_Assert( scn == 1 && dcn == 1 && depth == CV_8U );
+            dst.create(sz, depth);
+            Bayer2Gray_8u(src, dst, code);
+            break;    
             
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
             if(dcn <= 0) dcn = 3;
             CV_Assert( scn == 1 && dcn == 3 && depth == CV_8U );
-            dst.create(sz, CV_8UC3);
+            dst.create(sz, CV_MAKETYPE(depth, dcn));
             
             if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
                 code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
