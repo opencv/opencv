@@ -260,7 +260,10 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
     if( method == CV_LMEDS )
         result = estimator.runLMeDS( M, m, &matH, tempMask, confidence, maxIters );
     else if( method == CV_RANSAC )
+    {
         result = estimator.runRANSAC( M, m, &matH, tempMask, ransacReprojThreshold, confidence, maxIters);
+        estimator.runKernel( M, m, &matH );
+    }
     else
         result = estimator.runKernel( M, m, &matH ) > 0;
 
