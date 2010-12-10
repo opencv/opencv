@@ -1510,33 +1510,6 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    template <typename T>
-    T sum_caller(const DevMem2D_<T> src, PtrStep buf)
-    {
-        dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
-
-        T* buf_ = (T*)buf.ptr(0);
-
-        sum_kernel<T, threads_x * threads_y><<<grid, threads>>>(src, buf_);
-        cudaSafeCall(cudaThreadSynchronize());
-
-        T sum;
-        cudaSafeCall(cudaMemcpy(&sum, buf_, sizeof(T), cudaMemcpyDeviceToHost));
-
-        return sum;
-    }  
-
-    template unsigned char sum_caller<unsigned char>(const DevMem2D_<unsigned char>, PtrStep);
-    template char sum_caller<char>(const DevMem2D_<char>, PtrStep);
-    template unsigned short sum_caller<unsigned short>(const DevMem2D_<unsigned short>, PtrStep);
-    template short sum_caller<short>(const DevMem2D_<short>, PtrStep);
-    template int sum_caller<int>(const DevMem2D_<int>, PtrStep);
-    template float sum_caller<float>(const DevMem2D_<float>, PtrStep);
-    template double sum_caller<double>(const DevMem2D_<double>, PtrStep);
-
-
     template <typename T, int nthreads>
     __global__ void sum_pass2_kernel(T* result, int size)
     {
@@ -1550,10 +1523,14 @@ namespace cv { namespace gpu { namespace mathfunc
             result[0] = smem[0];
     }
 
+    } // namespace sum
+
 
     template <typename T>
     T sum_multipass_caller(const DevMem2D_<T> src, PtrStep buf)
     {
+        using namespace sum;
+
         dim3 threads, grid;
         estimate_thread_cfg(src.cols, src.rows, threads, grid);
         set_kernel_consts(src.cols, src.rows, threads, grid);
@@ -1578,5 +1555,32 @@ namespace cv { namespace gpu { namespace mathfunc
     template int sum_multipass_caller<int>(const DevMem2D_<int>, PtrStep);
     template float sum_multipass_caller<float>(const DevMem2D_<float>, PtrStep);
 
-    } // namespace sum
+
+    template <typename T>
+    T sum_caller(const DevMem2D_<T> src, PtrStep buf)
+    {
+        using namespace sum;
+
+        dim3 threads, grid;
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* buf_ = (T*)buf.ptr(0);
+
+        sum_kernel<T, threads_x * threads_y><<<grid, threads>>>(src, buf_);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T sum;
+        cudaSafeCall(cudaMemcpy(&sum, buf_, sizeof(T), cudaMemcpyDeviceToHost));
+
+        return sum;
+    }  
+
+    template unsigned char sum_caller<unsigned char>(const DevMem2D_<unsigned char>, PtrStep);
+    template char sum_caller<char>(const DevMem2D_<char>, PtrStep);
+    template unsigned short sum_caller<unsigned short>(const DevMem2D_<unsigned short>, PtrStep);
+    template short sum_caller<short>(const DevMem2D_<short>, PtrStep);
+    template int sum_caller<int>(const DevMem2D_<int>, PtrStep);
+    template float sum_caller<float>(const DevMem2D_<float>, PtrStep);
+    template double sum_caller<double>(const DevMem2D_<double>, PtrStep);
 }}}
