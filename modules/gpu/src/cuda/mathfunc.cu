@@ -450,6 +450,8 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
+        grid.x = min(grid.x, threads.x);
+        grid.y = min(grid.y, threads.y);
     }
 
 
@@ -662,7 +664,6 @@ namespace cv { namespace gpu { namespace mathfunc
         {
             minval[0] = (T)sminval[0];
             maxval[0] = (T)smaxval[0];
-            blocks_finished = 0;
         }
     }
 
@@ -744,6 +745,8 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
+        grid.x = min(grid.x, threads.x);
+        grid.y = min(grid.y, threads.y);
     }
 
 
@@ -1005,7 +1008,6 @@ namespace cv { namespace gpu { namespace mathfunc
             maxval[0] = (T)smaxval[0];
             minloc[0] = sminloc[0];
             maxloc[0] = smaxloc[0];
-            blocks_finished = 0;
         }
     }
 
@@ -1102,6 +1104,8 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
+        grid.x = min(grid.x, threads.x);
+        grid.y = min(grid.y, threads.y);
     }
 
 
@@ -1212,13 +1216,12 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         scount[tid] = tid < size ? count[tid] : 0;
-		sum_in_smem<nthreads, unsigned int>(scount, tid);
+        __syncthreads();
 
-		if (tid == 0) 
-        {
+        sum_in_smem<nthreads, unsigned int>(scount, tid);
+
+        if (tid == 0) 
             count[0] = scount[0];
-            blocks_finished = 0;
-        }
     }
 
 
@@ -1409,4 +1412,171 @@ namespace cv { namespace gpu { namespace mathfunc
     template void max_gpu<int   >(const DevMem2D_<int>& src1, double src2, const DevMem2D_<int>& dst, cudaStream_t stream);
     template void max_gpu<float >(const DevMem2D_<float>& src1, double src2, const DevMem2D_<float>& dst, cudaStream_t stream);
     template void max_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+
+//////////////////////////////////////////////////////////////////////////////
+// Sum
+
+    namespace sum 
+    {
+
+    __constant__ int ctwidth;
+    __constant__ int ctheight;
+    __device__ unsigned int blocks_finished = 0;
+
+    const int threads_x = 32;
+    const int threads_y = 8;
+
+    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
+    {
+        threads = dim3(threads_x, threads_y);
+        grid = dim3(divUp(cols, threads.x * threads.y), 
+                    divUp(rows, threads.y * threads.x));
+        grid.x = min(grid.x, threads.x);
+        grid.y = min(grid.y, threads.y);
+    }
+
+
+    template <typename T>
+    void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(cols, rows, threads, grid);
+        bufcols = grid.x * grid.y * sizeof(T);
+        bufrows = 1;
+    }
+
+
+    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    {        
+        int twidth = divUp(divUp(cols, grid.x), threads.x);
+        int theight = divUp(divUp(rows, grid.y), threads.y);
+        cudaSafeCall(cudaMemcpyToSymbol(ctwidth, &twidth, sizeof(twidth))); 
+        cudaSafeCall(cudaMemcpyToSymbol(ctheight, &theight, sizeof(theight))); 
+    }
+
+    template <typename T, int nthreads>
+    __global__ void sum_kernel(const DevMem2D_<T> src, T* result)
+    {
+        __shared__ T smem[nthreads];
+
+        const int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        const int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
+
+        T sum = 0;
+        for (int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
+        {
+            const T* ptr = src.ptr(y0 + y * blockDim.y);
+            for (int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+                sum += ptr[x0 + x * blockDim.x];
+        }
+
+        smem[tid] = sum;
+        __syncthreads();
+
+        sum_in_smem<nthreads, T>(smem, tid);
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+        __shared__ bool is_last;
+
+        if (tid == 0)
+        {
+            result[bid] = smem[0];
+            __threadfence();
+
+            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            is_last = (ticket == gridDim.x * gridDim.y - 1);
+        }
+
+        __syncthreads();
+
+        if (is_last)
+        {
+            smem[tid] = tid < gridDim.x * gridDim.y ? result[tid] : 0;
+            __syncthreads();
+
+            sum_in_smem<nthreads, T>(smem, tid);
+
+            if (tid == 0) 
+            {
+                result[0] = smem[0];
+                blocks_finished = 0;
+            }
+        }
+#else
+        if (tid == 0) result[bid] = smem[0];
+#endif
+    }
+
+
+    template <typename T>
+    T sum_caller(const DevMem2D_<T> src, PtrStep buf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* buf_ = (T*)buf.ptr(0);
+
+        sum_kernel<T, threads_x * threads_y><<<grid, threads>>>(src, buf_);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T sum;
+        cudaSafeCall(cudaMemcpy(&sum, buf_, sizeof(T), cudaMemcpyDeviceToHost));
+
+        return sum;
+    }  
+
+    template unsigned char sum_caller<unsigned char>(const DevMem2D_<unsigned char>, PtrStep);
+    template char sum_caller<char>(const DevMem2D_<char>, PtrStep);
+    template unsigned short sum_caller<unsigned short>(const DevMem2D_<unsigned short>, PtrStep);
+    template short sum_caller<short>(const DevMem2D_<short>, PtrStep);
+    template int sum_caller<int>(const DevMem2D_<int>, PtrStep);
+    template float sum_caller<float>(const DevMem2D_<float>, PtrStep);
+    template double sum_caller<double>(const DevMem2D_<double>, PtrStep);
+
+
+    template <typename T, int nthreads>
+    __global__ void sum_pass2_kernel(T* result, int size)
+    {
+        __shared__ T smem[nthreads];
+        int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        smem[tid] = tid < size ? result[tid] : 0;
+        sum_in_smem<nthreads, T>(smem, tid);
+
+        if (tid == 0) 
+            result[0] = smem[0];
+    }
+
+
+    template <typename T>
+    T sum_multipass_caller(const DevMem2D_<T> src, PtrStep buf)
+    {
+        dim3 threads, grid;
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
+
+        T* buf_ = (T*)buf.ptr(0);
+
+        sum_kernel<T, threads_x * threads_y><<<grid, threads>>>(src, buf_);
+        sum_pass2_kernel<T, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                buf_, grid.x * grid.y);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T sum;
+        cudaSafeCall(cudaMemcpy(&sum, buf_, sizeof(T), cudaMemcpyDeviceToHost));
+        
+        return sum;
+    }  
+
+    template unsigned char sum_multipass_caller<unsigned char>(const DevMem2D_<unsigned char>, PtrStep);
+    template char sum_multipass_caller<char>(const DevMem2D_<char>, PtrStep);
+    template unsigned short sum_multipass_caller<unsigned short>(const DevMem2D_<unsigned short>, PtrStep);
+    template short sum_multipass_caller<short>(const DevMem2D_<short>, PtrStep);
+    template int sum_multipass_caller<int>(const DevMem2D_<int>, PtrStep);
+    template float sum_multipass_caller<float>(const DevMem2D_<float>, PtrStep);
+
+    } // namespace sum
 }}}

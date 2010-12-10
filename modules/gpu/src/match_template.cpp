@@ -244,17 +244,6 @@ namespace
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
-
-        //GpuMat image_sum;
-        //GpuMat image_sumsq;
-        //integral(image, image_sum, image_sumsq);
-
-        //float templ_sumsq = 0.f;
-
-        //matchTemplate_8U_CCORR(image, templ, result);
-
-        //imgproc::matchTemplatePrepared_8U_SQDIFF(
-        //        templ.cols, templ.rows, image_sumsq, templ_sumsq, result);
     }
 
     
