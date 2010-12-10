@@ -77,6 +77,8 @@ struct CV_GpuMatchTemplateTest: CvTest
                 do h = 1 + rand() % 30; while (h > n);
                 do w = 1 + rand() % 30; while (w > m);
 
+                //cout << "w: " << w << " h: " << h << endl;
+
                 gen(image, n, m, CV_8U);
                 gen(templ, h, w, CV_8U);
                 F(t = clock();)
@@ -107,15 +109,15 @@ struct CV_GpuMatchTemplateTest: CvTest
                 F(cout << "gpu_block: " << clock() - t << endl;)
                 if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
 
-                //gen(image, n, m, CV_32F);
-                //gen(templ, h, w, CV_32F);
-                //F(t = clock();)
-                //matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
-                //F(cout << "cpu:" << clock() - t << endl;)
-                //F(t = clock();)
-                //gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
-                //F(cout << "gpu_block: " << clock() - t << endl;)
-                //if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                gen(image, n, m, CV_32F);
+                gen(templ, h, w, CV_32F);
+                F(t = clock();)
+                matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
+                F(cout << "cpu:" << clock() - t << endl;)
+                F(t = clock();)
+                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
+                F(cout << "gpu_block: " << clock() - t << endl;)
+                if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
             }
         }
         catch (const Exception& e)
@@ -152,6 +154,21 @@ struct CV_GpuMatchTemplateTest: CvTest
             ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
             return false;
         }
+
+        //// Debug check
+        //for (int i = 0; i < a.rows; ++i)
+        //{
+        //    for (int j = 0; j < a.cols; ++j)
+        //    {
+        //        float v1 = a.at<float>(i, j);
+        //        float v2 = b.at<float>(i, j);
+        //        if (fabs(v1 - v2) > max_err)
+        //        {
+        //            ts->printf(CvTS::CONSOLE, "%d %d %f %f\n", i, j, v1, v2);
+        //            cin.get();
+        //        }
+        //    }
+        //}
 
         return true;
     }

@@ -57,6 +57,26 @@ using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace mathfunc
 {
+    template <int size, typename T>
+    __device__ void sum_in_smem(volatile T* data, const unsigned int tid)
+    {
+        T sum = data[tid];
+
+        if (size >= 512) { if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads(); }
+        if (size >= 256) { if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads(); }
+        if (size >= 128) { if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads(); }
+
+        if (tid < 32)
+        {
+            if (size >= 64) data[tid] = sum = sum + data[tid + 32];
+            if (size >= 32) data[tid] = sum = sum + data[tid + 16];
+            if (size >= 16) data[tid] = sum = sum + data[tid + 8];
+            if (size >= 8) data[tid] = sum = sum + data[tid + 4];
+            if (size >= 4) data[tid] = sum = sum + data[tid + 2];
+            if (size >= 2) data[tid] = sum = sum + data[tid + 1];
+        }
+    }
+
     struct Nothing
     {
         static __device__ void calc(int, int, float, float, float*, size_t, float)
@@ -1103,27 +1123,6 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    template <int size, typename T>
-    __device__ void sum_is_smem(volatile T* data, const unsigned int tid)
-    {
-        T sum = data[tid];
-
-        if (size >= 512) { if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads(); }
-        if (size >= 256) { if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads(); }
-        if (size >= 128) { if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads(); }
-
-        if (tid < 32)
-        {
-            if (size >= 64) data[tid] = sum = sum + data[tid + 32];
-            if (size >= 32) data[tid] = sum = sum + data[tid + 16];
-            if (size >= 16) data[tid] = sum = sum + data[tid + 8];
-            if (size >= 8) data[tid] = sum = sum + data[tid + 4];
-            if (size >= 4) data[tid] = sum = sum + data[tid + 2];
-            if (size >= 2) data[tid] = sum = sum + data[tid + 1];
-        }
-    }
-
-
     template <int nthreads, typename T>
     __global__ void count_non_zero_kernel(const DevMem2D src, volatile unsigned int* count)
     {
@@ -1144,7 +1143,7 @@ namespace cv { namespace gpu { namespace mathfunc
 		scount[tid] = cnt;
 		__syncthreads();
 
-        sum_is_smem<nthreads, unsigned int>(scount, tid);
+        sum_in_smem<nthreads, unsigned int>(scount, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
@@ -1165,7 +1164,7 @@ namespace cv { namespace gpu { namespace mathfunc
             scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
             __syncthreads();
 
-			sum_is_smem<nthreads, unsigned int>(scount, tid);
+			sum_in_smem<nthreads, unsigned int>(scount, tid);
 
 			if (tid == 0) 
             {
@@ -1213,7 +1212,7 @@ namespace cv { namespace gpu { namespace mathfunc
         unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         scount[tid] = tid < size ? count[tid] : 0;
-		sum_is_smem<nthreads, unsigned int>(scount, tid);
+		sum_in_smem<nthreads, unsigned int>(scount, tid);
 
 		if (tid == 0) 
         {

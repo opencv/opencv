@@ -59,18 +59,27 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 
 namespace cv { namespace gpu { namespace imgproc 
 {  
-    void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, 
+    void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
                                     const cufftComplex* b, cufftComplex* c);
-    void matchTemplateNaive_8U_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
-    void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+
+    void matchTemplateNaive_8U_SQDIFF(
+            const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+
+    void matchTemplateNaive_32F_SQDIFF(
+            const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+
+    void matchTemplatePrepared_8U_SQDIFF(
+            int w, int h, const DevMem2Df image_sumsq, float templ_sumsq,
+            DevMem2Df result);
 }}}
 
 
 namespace 
 {
-
-    template <int type, int method>
-    void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+    void matchTemplate_32F_SQDIFF(const GpuMat&, const GpuMat&, GpuMat&);
+    void matchTemplate_32F_CCORR(const GpuMat&, const GpuMat&, GpuMat&);
+    void matchTemplate_8U_SQDIFF(const GpuMat&, const GpuMat&, GpuMat&);
+    void matchTemplate_8U_CCORR(const GpuMat&, const GpuMat&, GpuMat&);
 
 
 #ifdef BLOCK_VERSION
@@ -86,8 +95,7 @@ namespace
     }
 #endif
     
-    template <>
-    void matchTemplate<CV_32F, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_32F_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         imgproc::matchTemplateNaive_32F_SQDIFF(image, templ, result);
@@ -95,8 +103,7 @@ namespace
 
 
 #ifdef BLOCK_VERSION
-    template <>
-    void matchTemplate<CV_32F, CV_TM_CCORR>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_32F_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
 
@@ -174,8 +181,7 @@ namespace
         cudaFree(result_data);
     }
 #else
-    template <>
-    void matchTemplate<CV_32F, CV_TM_CCORR>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_32F_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         Size opt_size;
         opt_size.width = getOptimalDFTSize(image.cols);
@@ -234,23 +240,31 @@ namespace
 #endif
 
 
-    template <>
-    void matchTemplate<CV_8U, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_8U_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
+
+        //GpuMat image_sum;
+        //GpuMat image_sumsq;
+        //integral(image, image_sum, image_sumsq);
+
+        //float templ_sumsq = 0.f;
+
+        //matchTemplate_8U_CCORR(image, templ, result);
+
+        //imgproc::matchTemplatePrepared_8U_SQDIFF(
+        //        templ.cols, templ.rows, image_sumsq, templ_sumsq, result);
     }
 
-	
-    template <>
-    void matchTemplate<CV_8U, CV_TM_CCORR>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
-	{
-		GpuMat imagef, templf;
-		image.convertTo(imagef, CV_32F);
-		templ.convertTo(templf, CV_32F);
-		matchTemplate<CV_32F, CV_TM_SQDIFF>(imagef, templf, result);
-	}
-
+    
+    void matchTemplate_8U_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        GpuMat imagef, templf;
+        image.convertTo(imagef, CV_32F);
+        templ.convertTo(templf, CV_32F);
+        matchTemplate_32F_CCORR(imagef, templf, result);
+    }
 }
 
 
@@ -261,10 +275,10 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
 
     typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&);
 
-	static const Caller callers8U[] = { ::matchTemplate<CV_8U, CV_TM_SQDIFF>, 0, 
-										::matchTemplate<CV_8U, CV_TM_CCORR>, 0, 0, 0 };
-    static const Caller callers32F[] = { ::matchTemplate<CV_32F, CV_TM_SQDIFF>, 0, 
-                                         ::matchTemplate<CV_32F, CV_TM_CCORR>, 0, 0, 0 };
+    static const Caller callers8U[] = { ::matchTemplate_8U_SQDIFF, 0, 
+                                        ::matchTemplate_8U_CCORR, 0, 0, 0 };
+    static const Caller callers32F[] = { ::matchTemplate_32F_SQDIFF, 0, 
+                                         ::matchTemplate_32F_CCORR, 0, 0, 0 };
 
     const Caller* callers;
     switch (image.type())
