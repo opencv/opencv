@@ -85,15 +85,6 @@ namespace
         bh = std::min(bh, h);
     }
 #endif
-
-
-    template <>
-    void matchTemplate<CV_8U, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
-    {
-        result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
-    }
-
     
     template <>
     void matchTemplate<CV_32F, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
@@ -242,6 +233,24 @@ namespace
     }
 #endif
 
+
+    template <>
+    void matchTemplate<CV_8U, CV_TM_SQDIFF>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+        imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
+    }
+
+	
+    template <>
+    void matchTemplate<CV_8U, CV_TM_CCORR>(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+	{
+		GpuMat imagef, templf;
+		image.convertTo(imagef, CV_32F);
+		templ.convertTo(templf, CV_32F);
+		matchTemplate<CV_32F, CV_TM_SQDIFF>(imagef, templf, result);
+	}
+
 }
 
 
@@ -252,7 +261,8 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
 
     typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&);
 
-    static const Caller callers8U[] = { ::matchTemplate<CV_8U, CV_TM_SQDIFF>, 0, 0, 0, 0, 0 };
+	static const Caller callers8U[] = { ::matchTemplate<CV_8U, CV_TM_SQDIFF>, 0, 
+										::matchTemplate<CV_8U, CV_TM_CCORR>, 0, 0, 0 };
     static const Caller callers32F[] = { ::matchTemplate<CV_32F, CV_TM_SQDIFF>, 0, 
                                          ::matchTemplate<CV_32F, CV_TM_CCORR>, 0, 0, 0 };
 
