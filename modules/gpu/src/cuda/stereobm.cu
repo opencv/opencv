@@ -252,7 +252,7 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
         for(uint *ptr = minSSDImage; ptr != minSSDImage_end; ptr += minssd_step )
             *ptr = 0xFFFFFFFF;
     }*/
-    int end_row = min(ROWSperTHREAD, cheight - Y);
+    int end_row = min(ROWSperTHREAD, cheight - Y - RADIUS);
     int y_tex;
     int x_tex = X - RADIUS;
 
