@@ -805,7 +805,7 @@ template<typename _Tp> inline Mat_<_Tp>::Mat_(const Mat_& m, const Rect& roi)
 
 template<typename _Tp> template<int n> inline
     Mat_<_Tp>::Mat_(const Vec<typename DataType<_Tp>::channel_type, n>& vec, bool copyData)
-    : Mat(n/DataType<_Tp>::channels, 1, DataType<_Tp>::type, &vec)
+    : Mat(n/DataType<_Tp>::channels, 1, DataType<_Tp>::type, (void*)&vec)
 {
     CV_Assert(n%DataType<_Tp>::channels == 0);
     if( copyData )
@@ -814,7 +814,7 @@ template<typename _Tp> template<int n> inline
 
 template<typename _Tp> template<int m, int n> inline
     Mat_<_Tp>::Mat_(const Matx<typename DataType<_Tp>::channel_type,m,n>& M, bool copyData)
-    : Mat(m, n/DataType<_Tp>::channels, DataType<_Tp>::type, &M)
+    : Mat(m, n/DataType<_Tp>::channels, DataType<_Tp>::type, (void*)&M)
 {
     CV_Assert(n % DataType<_Tp>::channels == 0);
     if( copyData )
@@ -822,7 +822,7 @@ template<typename _Tp> template<int m, int n> inline
 }
     
 template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point_<typename DataType<_Tp>::channel_type>& pt, bool copyData)
-    : Mat(2/DataType<_Tp>::channels, 1, DataType<_Tp>::type, &pt)
+    : Mat(2/DataType<_Tp>::channels, 1, DataType<_Tp>::type, (void*)&pt)
 {
     CV_Assert(2 % DataType<_Tp>::channels == 0);
     if( copyData )
@@ -830,7 +830,7 @@ template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point_<typename DataType<_Tp
 }
 
 template<typename _Tp> inline Mat_<_Tp>::Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData)
-    : Mat(3/DataType<_Tp>::channels, 1, DataType<_Tp>::type, &pt)
+    : Mat(3/DataType<_Tp>::channels, 1, DataType<_Tp>::type, (void*)&pt)
 {
     CV_Assert(3 % DataType<_Tp>::channels == 0);
     if( copyData )
