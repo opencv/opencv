@@ -221,10 +221,10 @@ enum
     CV_YUV2BGR      = 84,
     CV_YUV2RGB      = 85,
     
-    CV_BayerBG2Gray = 86,
-    CV_BayerGB2Gray = 87,
-    CV_BayerRG2Gray = 88,
-    CV_BayerGR2Gray = 89,
+    CV_BayerBG2GRAY = 86,
+    CV_BayerGB2GRAY = 87,
+    CV_BayerRG2GRAY = 88,
+    CV_BayerGR2GRAY = 89,
     
     CV_COLORCVT_MAX  =100
 };

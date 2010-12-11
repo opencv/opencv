@@ -1734,9 +1734,6 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
     int bi = 0;
     int step = src->step;
 
-    memset( dst->data.ptr, 0, dst->cols*3 );
-    memset( dst->data.ptr + (dst->rows-1)*dst->step, 0, dst->cols*3 );
-
     if( fwd_code == CV_BayerRG2BGR || fwd_code == CV_BayerGR2BGR )
         bi ^= 2;
 
@@ -1745,8 +1742,12 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
         const uchar* ptr = src->data.ptr + i*step + 1;
         uchar* dst_row = dst->data.ptr + i*dst->step + 3;
         int save_code = code;
-        dst_row[-3] = dst_row[-2] = dst_row[-1] = 0;
-        dst_row[cols*3] = dst_row[cols*3+1] = dst_row[cols*3+2] = 0;
+        if( cols <= 0 )
+        {
+            dst_row[-3] = dst_row[-2] = dst_row[-1] = 0;
+            dst_row[cols*3] = dst_row[cols*3+1] = dst_row[cols*3+2] = 0;
+            continue;
+        }
 
         for( j = 0; j < cols; j++ )
         {
@@ -1768,8 +1769,34 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
             dst_row[j*3 + 1] = (uchar)g;
             dst_row[j*3 + (bi^2)] = (uchar)r;
         }
+        
+        dst_row[-3] = dst_row[0];
+        dst_row[-2] = dst_row[1];
+        dst_row[-1] = dst_row[2];
+        dst_row[cols*3] = dst_row[cols*3-3];
+        dst_row[cols*3+1] = dst_row[cols*3-2];
+        dst_row[cols*3+2] = dst_row[cols*3-1];
+        
         code = save_code ^ 1;
         bi ^= 2;
+    }
+    
+    if( src->rows <= 2 )
+    {
+        memset( dst->data.ptr, 0, (cols+2)*3 );
+        memset( dst->data.ptr + (dst->rows-1)*dst->step, 0, (cols+2)*3 );
+    }
+    else
+    {
+        uchar* top_row = dst->data.ptr;
+        uchar* bottom_row = dst->data.ptr + dst->step*(dst->rows-1);
+        int dstep = dst->step;
+        
+        for( j = 0; j < (cols+2)*3; j++ )
+        {
+            top_row[j] = top_row[j + dstep];
+            bottom_row[j] = bottom_row[j - dstep];
+        }
     }
 }
 
