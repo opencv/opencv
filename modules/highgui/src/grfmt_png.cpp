@@ -223,8 +223,12 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_palette_to_rgb( png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
+#if PNG_LIBPNG_VER_MAJOR*100 + PNG_LIBPNG_VER_MINOR >= 104
                 png_set_expand_gray_1_2_4_to_8( png_ptr );
-
+#else
+                png_set_gray_1_2_4_to_8( png_ptr );
+#endif
+            
             if( CV_MAT_CN(m_type) > 1 && color )
                 png_set_bgr( png_ptr ); // convert RGB to BGR
             else if( color )
