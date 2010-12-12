@@ -348,8 +348,10 @@ CV_EXPORTS Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksi
                                               bool normalize=true,
                                               int borderType=BORDER_DEFAULT);
 //! type of morphological operation
-enum { MORPH_ERODE=0, MORPH_DILATE=1, MORPH_OPEN=2, MORPH_CLOSE=3,
-       MORPH_GRADIENT=4, MORPH_TOPHAT=5, MORPH_BLACKHAT=6 };
+enum { MORPH_ERODE=CV_MOP_ERODE, MORPH_DILATE=CV_MOP_DILATE,
+       MORPH_OPEN=CV_MOP_OPEN, MORPH_CLOSE=CV_MOP_CLOSE,
+       MORPH_GRADIENT=CV_MOP_GRADIENT, MORPH_TOPHAT=CV_MOP_TOPHAT,
+       MORPH_BLACKHAT=CV_MOP_BLACKHAT };
 
 //! returns horizontal 1D morphological filter
 CV_EXPORTS Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int anchor=-1);
@@ -500,13 +502,13 @@ CV_EXPORTS_W void morphologyEx( const Mat& src, CV_OUT Mat& dst,
 //! interpolation algorithm
 enum
 {
-    INTER_NEAREST=0, //!< nearest neighbor interpolation
-    INTER_LINEAR=1, //!< bilinear interpolation
-    INTER_CUBIC=2, //!< bicubic interpolation
-    INTER_AREA=3, //!< area-based (or super) interpolation
-    INTER_LANCZOS4=4, //!< Lanczos interpolation over 8x8 neighborhood
+    INTER_NEAREST=CV_INTER_NN, //!< nearest neighbor interpolation
+    INTER_LINEAR=CV_INTER_LINEAR, //!< bilinear interpolation
+    INTER_CUBIC=CV_INTER_CUBIC, //!< bicubic interpolation
+    INTER_AREA=CV_INTER_AREA, //!< area-based (or super) interpolation
+    INTER_LANCZOS4=CV_INTER_LANCZOS4, //!< Lanczos interpolation over 8x8 neighborhood
     INTER_MAX=7,
-    WARP_INVERSE_MAP=16
+    WARP_INVERSE_MAP=CV_WARP_INVERSE_MAP
 };
 
 //! resizes the image
@@ -574,8 +576,10 @@ CV_EXPORTS_W void accumulateWeighted( const Mat& src, CV_IN_OUT Mat& dst,
                                       double alpha, const Mat& mask=Mat() );
     
 //! type of the threshold operation
-enum { THRESH_BINARY=0, THRESH_BINARY_INV=1, THRESH_TRUNC=2, THRESH_TOZERO=3,
-       THRESH_TOZERO_INV=4, THRESH_MASK=7, THRESH_OTSU=8 };
+enum { THRESH_BINARY=CV_THRESH_BINARY, THRESH_BINARY_INV=CV_THRESH_BINARY_INV,
+       THRESH_TRUNC=CV_THRESH_TRUNC, THRESH_TOZERO=CV_THRESH_TOZERO,
+       THRESH_TOZERO_INV=CV_THRESH_TOZERO_INV, THRESH_MASK=CV_THRESH_MASK,
+       THRESH_OTSU=CV_THRESH_OTSU };
 
 //! applies fixed threshold to the image
 CV_EXPORTS_W double threshold( const Mat& src, CV_OUT Mat& dst, double thresh, double maxval, int type );
@@ -672,17 +676,21 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( const Mat& src, CV_OUT Mat& dst,
                     TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) );
 
 //! class of the pixel in GrabCut algorithm
-enum { GC_BGD    = 0,  //!< background
-       GC_FGD    = 1,  //!< foreground
-       GC_PR_BGD = 2,  //!< most probably background
-       GC_PR_FGD = 3   //!< most probably foreground 
-     };
+enum
+{
+    GC_BGD    = 0,  //!< background
+    GC_FGD    = 1,  //!< foreground
+    GC_PR_BGD = 2,  //!< most probably background
+    GC_PR_FGD = 3   //!< most probably foreground 
+};
 
 //! GrabCut algorithm flags
-enum { GC_INIT_WITH_RECT  = 0,
-       GC_INIT_WITH_MASK  = 1,
-       GC_EVAL            = 2
-     };
+enum
+{
+    GC_INIT_WITH_RECT  = 0,
+    GC_INIT_WITH_MASK  = 1,
+    GC_EVAL            = 2
+};
 
 //! segments the image using GrabCut algorithm
 CV_EXPORTS_W void grabCut( const Mat& img, Mat& mask, Rect rect, 
@@ -692,8 +700,8 @@ CV_EXPORTS_W void grabCut( const Mat& img, Mat& mask, Rect rect,
 //! the inpainting algorithm
 enum
 {
-    INPAINT_NS=0, // Navier-Stokes algorithm
-    INPAINT_TELEA=1 // A. Telea algorithm
+    INPAINT_NS=CV_INPAINT_NS, // Navier-Stokes algorithm
+    INPAINT_TELEA=CV_INPAINT_TELEA // A. Telea algorithm
 };
 
 //! restores the damaged image areas using one of the available intpainting algorithms
@@ -764,19 +772,19 @@ CV_EXPORTS_W void matchTemplate( const Mat& image, const Mat& templ, CV_OUT Mat&
 //! mode of the contour retrieval algorithm
 enum
 {
-    RETR_EXTERNAL=0, //!< retrieve only the most external (top-level) contours
-    RETR_LIST=1, //!< retrieve all the contours without any hierarchical information
-    RETR_CCOMP=2, //!< retrieve the connected components (that can possibly be nested)
-    RETR_TREE=3 //!< retrieve all the contours and the whole hierarchy
+    RETR_EXTERNAL=CV_RETR_EXTERNAL, //!< retrieve only the most external (top-level) contours
+    RETR_LIST=CV_RETR_LIST, //!< retrieve all the contours without any hierarchical information
+    RETR_CCOMP=CV_RETR_CCOMP, //!< retrieve the connected components (that can possibly be nested)
+    RETR_TREE=CV_RETR_TREE //!< retrieve all the contours and the whole hierarchy
 };
 
 //! the contour approximation algorithm
 enum
 {
-    CHAIN_APPROX_NONE=0,
-    CHAIN_APPROX_SIMPLE=1,
-    CHAIN_APPROX_TC89_L1=2,
-    CHAIN_APPROX_TC89_KCOS=3
+    CHAIN_APPROX_NONE=CV_CHAIN_APPROX_NONE,
+ 	CHAIN_APPROX_SIMPLE=CV_CHAIN_APPROX_SIMPLE,
+ 	CHAIN_APPROX_TC89_L1=CV_CHAIN_APPROX_TC89_L1,
+ 	CHAIN_APPROX_TC89_KCOS=CV_CHAIN_APPROX_TC89_KCOS
 };
 
 //! retrieves contours and the hierarchical information from black-n-white image.
