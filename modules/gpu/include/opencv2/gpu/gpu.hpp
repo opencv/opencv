@@ -421,9 +421,12 @@ namespace cv
         CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode);
 
         //! computes sum of array elements
-        //! supports CV_8UC1, CV_8UC4 types
-        //! disabled until fix crash
-        CV_EXPORTS Scalar sum(const GpuMat& m);
+        //! supports only single channel images
+        CV_EXPORTS Scalar sum(const GpuMat& src);
+
+        //! computes sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());

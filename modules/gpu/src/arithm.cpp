@@ -65,6 +65,7 @@ double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
 void cv::gpu::flip(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
+Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_nogpu(); }
@@ -480,36 +481,50 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 ////////////////////////////////////////////////////////////////////////
 // sum
 
-Scalar cv::gpu::sum(const GpuMat& src)
+namespace cv { namespace gpu { namespace mathfunc
 {
-    CV_Assert(!"disabled until fix crash");
+    template <typename T>
+    void sum_caller(const DevMem2D src, PtrStep buf, double* sum);
 
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
+    template <typename T>
+    void sum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum);
 
-    NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
-
-    Scalar res;
-
-    int bufsz;
-
-    if (src.type() == CV_8UC1)
+    namespace sum
     {
-        nppiReductionGetBufferHostSize_8u_C1R(sz, &bufsz);
-        GpuMat buf(1, bufsz, CV_32S);
-
-        nppSafeCall( nppiSum_8u_C1R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
+        void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows);
     }
-    else
-    {
-        nppiReductionGetBufferHostSize_8u_C4R(sz, &bufsz);
-        GpuMat buf(1, bufsz, CV_32S);
+}}}
 
-        nppSafeCall( nppiSum_8u_C4R(src.ptr<Npp8u>(), src.step, sz, buf.ptr<Npp32s>(), res.val) );
-    }
+Scalar cv::gpu::sum(const GpuMat& src) 
+{
+    GpuMat buf;
+    return sum(src, buf);
+}
 
-    return res;
+Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf) 
+{
+    using namespace mathfunc;
+    CV_Assert(src.channels() == 1);
+
+    typedef void (*Caller)(const DevMem2D, PtrStep, double*);
+    static const Caller callers[2][7] = 
+        { { sum_multipass_caller<unsigned char>, sum_multipass_caller<char>, 
+            sum_multipass_caller<unsigned short>, sum_multipass_caller<short>, 
+            sum_multipass_caller<int>, sum_multipass_caller<float>, 0 },
+          { sum_caller<unsigned char>, sum_caller<char>, 
+            sum_caller<unsigned short>, sum_caller<short>, 
+            sum_caller<int>, sum_caller<float>, sum_caller<double> } };
+
+    Size bufSize;
+    sum::get_buf_size_required(src.cols, src.rows, bufSize.width, bufSize.height); 
+    buf.create(bufSize, CV_8U);
+
+    Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
+    if (!caller) CV_Error(CV_StsBadArg, "sum: unsupported type");
+
+    double result;
+    caller(src, buf, &result);
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////

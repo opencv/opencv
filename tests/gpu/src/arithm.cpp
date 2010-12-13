@@ -459,29 +459,6 @@ struct CV_GpuNppImageFlipTest : public CV_GpuArithmTest
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// sum
-struct CV_GpuNppImageSumTest : public CV_GpuArithmTest
-{
-    CV_GpuNppImageSumTest() : CV_GpuArithmTest( "GPU-NppImageSum", "sum" ) {}
-
-    int test( const Mat& mat1, const Mat& )
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4)
-        {
-            ts->printf(CvTS::LOG, "\tUnsupported type\t");
-            return CvTS::OK;
-        }
-
-        Scalar cpures = cv::sum(mat1);
-
-        GpuMat gpu1(mat1);
-        Scalar gpures = cv::gpu::sum(gpu1);
-
-        return CheckNorm(cpures, gpures);
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // LUT
 struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
 {
@@ -949,27 +926,49 @@ struct CV_GpuCountNonZeroTest: CvTest
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// min/max
 
-struct CV_GpuImageMinMaxTest : public CV_GpuArithmTest
+//////////////////////////////////////////////////////////////////////////////
+// sum
+
+struct CV_GpuSumTest: CvTest 
 {
-    CV_GpuImageMinMaxTest() : CV_GpuArithmTest( "GPU-ImageMinMax", "min/max" ) {}
+    CV_GpuSumTest(): CvTest("GPU-SumTest", "sum") {}
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    void run(int) 
     {
-        cv::Mat cpuMinRes, cpuMaxRes;
-        cv::min(mat1, mat2, cpuMinRes);
-        cv::max(mat1, mat2, cpuMaxRes);
+        try
+        {
+            Mat src;
+            Scalar a, b;
+            double max_err = 1e-6;
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuMinRes, gpuMaxRes;
-        cv::gpu::min(gpu1, gpu2, gpuMinRes);
-        cv::gpu::max(gpu1, gpu2, gpuMaxRes);
+            int typemax = hasNativeDoubleSupport(getDevice()) ? CV_64F : CV_32F;
+            for (int type = CV_8U; type <= typemax; ++type) 
+            {
+                gen(1 + rand() % 1000, 1 + rand() % 1000, type, src);
+                a = sum(src);
+                b = sum(GpuMat(src));
+                if (abs(a[0] - b[0]) > src.size().area() * max_err)
+                {
+                    ts->printf(CvTS::CONSOLE, "cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+            }
+        }
+        catch (const Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
 
-        return CheckNorm(cpuMinRes, gpuMinRes) == CvTS::OK && CheckNorm(cpuMaxRes, gpuMaxRes) == CvTS::OK ?
-            CvTS::OK : CvTS::FAIL_GENERIC;
+    void gen(int cols, int rows, int type, Mat& m)
+    {
+        m.create(rows, cols, type);
+        RNG rng;
+        rng.fill(m, RNG::UNIFORM, Scalar::all(0), Scalar::all(20));
+
     }
 };
 
@@ -992,7 +991,6 @@ CV_GpuNppImageCompareTest CV_GpuNppImageCompare_test;
 CV_GpuNppImageMeanStdDevTest CV_GpuNppImageMeanStdDev_test;
 CV_GpuNppImageNormTest CV_GpuNppImageNorm_test;
 CV_GpuNppImageFlipTest CV_GpuNppImageFlip_test;
-CV_GpuNppImageSumTest CV_GpuNppImageSum_test;
 CV_GpuNppImageLUTTest CV_GpuNppImageLUT_test;
 CV_GpuNppImageExpTest CV_GpuNppImageExp_test;
 CV_GpuNppImageLogTest CV_GpuNppImageLog_test;
@@ -1003,4 +1001,4 @@ CV_GpuNppImagePolarToCartTest CV_GpuNppImagePolarToCart_test;
 CV_GpuMinMaxTest CV_GpuMinMaxTest_test;
 CV_GpuMinMaxLocTest CV_GpuMinMaxLocTest_test;
 CV_GpuCountNonZeroTest CV_CountNonZero_test;
-CV_GpuImageMinMaxTest CV_GpuImageMinMax_test;
+CV_GpuSumTest CV_GpuSum_test;
