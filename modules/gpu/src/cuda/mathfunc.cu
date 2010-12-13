@@ -1554,7 +1554,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall(cudaThreadSynchronize());
 
         R result = 0;
-        cudaSafeCall(cudaMemcpy(&result, buf_, result, cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&result, buf_, sizeof(result), cudaMemcpyDeviceToHost));
         sum[0] = result;
     }  
 
