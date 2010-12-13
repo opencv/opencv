@@ -940,7 +940,7 @@ struct CV_GpuSumTest: CvTest
         {
             Mat src;
             Scalar a, b;
-            double max_err = 1e-6;
+            double max_err = 1e-5;
 
             int typemax = hasNativeDoubleSupport(getDevice()) ? CV_64F : CV_32F;
             for (int type = CV_8U; type <= typemax; ++type) 
@@ -953,6 +953,19 @@ struct CV_GpuSumTest: CvTest
                     ts->printf(CvTS::CONSOLE, "cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                     return;
+                }
+                if (type != CV_8S)
+                {
+                    b = sqrSum(GpuMat(src));
+                    Mat sqrsrc;
+                    multiply(src, src, sqrsrc);
+                    a = sum(sqrsrc);
+                    if (abs(a[0] - b[0]) > src.size().area() * max_err)
+                    {
+                        ts->printf(CvTS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
+                        ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
                 }
             }
         }
@@ -967,7 +980,7 @@ struct CV_GpuSumTest: CvTest
     {
         m.create(rows, cols, type);
         RNG rng;
-        rng.fill(m, RNG::UNIFORM, Scalar::all(0), Scalar::all(20));
+        rng.fill(m, RNG::UNIFORM, Scalar::all(0), Scalar::all(16));
 
     }
 };

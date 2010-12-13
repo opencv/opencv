@@ -428,6 +428,14 @@ namespace cv
         //! supports only single channel images
         CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
 
+        //! computes squared sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sqrSum(const GpuMat& src);
+
+        //! computes squared sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
+
         //! finds global minimum and maximum array elements and returns their values
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
 

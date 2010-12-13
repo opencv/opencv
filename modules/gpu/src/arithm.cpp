@@ -66,6 +66,8 @@ double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 
 void cv::gpu::flip(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_nogpu(); }
@@ -489,6 +491,12 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum);
 
+    template <typename T>
+    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum);
+
+    template <typename T>
+    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum);
+
     namespace sum
     {
         void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows);
@@ -521,6 +529,38 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
 
     Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
     if (!caller) CV_Error(CV_StsBadArg, "sum: unsupported type");
+
+    double result;
+    caller(src, buf, &result);
+    return result;
+}
+
+Scalar cv::gpu::sqrSum(const GpuMat& src) 
+{
+    GpuMat buf;
+    return sqrSum(src, buf);
+}
+
+Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf) 
+{
+    using namespace mathfunc;
+    CV_Assert(src.channels() == 1);
+
+    typedef void (*Caller)(const DevMem2D, PtrStep, double*);
+    static const Caller callers[2][7] = 
+        { { sqsum_multipass_caller<unsigned char>, sqsum_multipass_caller<char>, 
+            sqsum_multipass_caller<unsigned short>, sqsum_multipass_caller<short>, 
+            sqsum_multipass_caller<int>, sqsum_multipass_caller<float>, 0 },
+          { sqsum_caller<unsigned char>, sqsum_caller<char>, 
+            sqsum_caller<unsigned short>, sqsum_caller<short>, 
+            sqsum_caller<int>, sqsum_caller<float>, sqsum_caller<double> } };
+
+    Size bufSize;
+    sum::get_buf_size_required(src.cols, src.rows, bufSize.width, bufSize.height); 
+    buf.create(bufSize, CV_8U);
+
+    Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
+    if (!caller) CV_Error(CV_StsBadArg, "sqrSum: unsupported type");
 
     double result;
     caller(src, buf, &result);

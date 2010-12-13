@@ -1428,6 +1428,12 @@ namespace cv { namespace gpu { namespace mathfunc
     template <> struct SumType<float> { typedef float R; };
     template <> struct SumType<double> { typedef double R; };
 
+    template <typename R> 
+    struct IdentityOp { static __device__ R call(R x) { return x; } };
+
+    template <typename R> 
+    struct SqrOp { static __device__ R call(R x) { return x * x; } };
+
     __constant__ int ctwidth;
     __constant__ int ctheight;
     __device__ unsigned int blocks_finished = 0;
@@ -1462,7 +1468,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall(cudaMemcpyToSymbol(ctheight, &theight, sizeof(theight))); 
     }
 
-    template <typename T, typename R, int nthreads>
+    template <typename T, typename R, typename Op, int nthreads>
     __global__ void sum_kernel(const DevMem2D_<T> src, R* result)
     {
         __shared__ R smem[nthreads];
@@ -1477,7 +1483,7 @@ namespace cv { namespace gpu { namespace mathfunc
         {
             const T* ptr = src.ptr(y0 + y * blockDim.y);
             for (int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
-                sum += ptr[x0 + x * blockDim.x];
+                sum += Op::call(ptr[x0 + x * blockDim.x]);
         }
 
         smem[tid] = sum;
@@ -1548,9 +1554,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         R* buf_ = (R*)buf.ptr(0);
 
-        sum_kernel<T, R, threads_x * threads_y><<<grid, threads>>>((const DevMem2D_<T>)src, buf_);
-        sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                buf_, grid.x * grid.y);
+        sum_kernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>((const DevMem2D_<T>)src, buf_);
+        sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(buf_, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         R result = 0;
@@ -1567,6 +1572,35 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
+    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum)
+    {
+        using namespace sum;
+        typedef typename SumType<T>::R R;
+
+        dim3 threads, grid;
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
+
+        R* buf_ = (R*)buf.ptr(0);
+
+        sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>((const DevMem2D_<T>)src, buf_);
+        sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(buf_, grid.x * grid.y);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        R result = 0;
+        cudaSafeCall(cudaMemcpy(&result, buf_, sizeof(result), cudaMemcpyDeviceToHost));
+        sum[0] = result;
+    }  
+
+    template void sqsum_multipass_caller<unsigned char>(const DevMem2D, PtrStep, double*);
+    template void sqsum_multipass_caller<char>(const DevMem2D, PtrStep, double*);
+    template void sqsum_multipass_caller<unsigned short>(const DevMem2D, PtrStep, double*);
+    template void sqsum_multipass_caller<short>(const DevMem2D, PtrStep, double*);
+    template void sqsum_multipass_caller<int>(const DevMem2D, PtrStep, double*);
+    template void sqsum_multipass_caller<float>(const DevMem2D, PtrStep, double*);
+
+
+    template <typename T>
     void sum_caller(const DevMem2D src, PtrStep buf, double* sum)
     {
         using namespace sum;
@@ -1578,7 +1612,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         R* buf_ = (R*)buf.ptr(0);
 
-        sum_kernel<T, R, threads_x * threads_y><<<grid, threads>>>((const DevMem2D_<T>)src, buf_);
+        sum_kernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>((const DevMem2D_<T>)src, buf_);
         cudaSafeCall(cudaThreadSynchronize());
 
         R result = 0;
@@ -1593,5 +1627,34 @@ namespace cv { namespace gpu { namespace mathfunc
     template void sum_caller<int>(const DevMem2D, PtrStep, double*);
     template void sum_caller<float>(const DevMem2D, PtrStep, double*);
     template void sum_caller<double>(const DevMem2D, PtrStep, double*);
+
+
+    template <typename T>
+    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum)
+    {
+        using namespace sum;
+        typedef typename SumType<T>::R R;
+
+        dim3 threads, grid;
+        estimate_thread_cfg(src.cols, src.rows, threads, grid);
+        set_kernel_consts(src.cols, src.rows, threads, grid);
+
+        R* buf_ = (R*)buf.ptr(0);
+
+        sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>((const DevMem2D_<T>)src, buf_);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        R result = 0;
+        cudaSafeCall(cudaMemcpy(&result, buf_, sizeof(result), cudaMemcpyDeviceToHost));
+        sum[0] = result;
+    }  
+
+    template void sqsum_caller<unsigned char>(const DevMem2D, PtrStep, double*);
+    template void sqsum_caller<char>(const DevMem2D, PtrStep, double*);
+    template void sqsum_caller<unsigned short>(const DevMem2D, PtrStep, double*);
+    template void sqsum_caller<short>(const DevMem2D, PtrStep, double*);
+    template void sqsum_caller<int>(const DevMem2D, PtrStep, double*);
+    template void sqsum_caller<float>(const DevMem2D, PtrStep, double*);
+    template void sqsum_caller<double>(const DevMem2D, PtrStep, double*);
 }}}
 
