@@ -48,7 +48,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace cv { namespace gpu { namespace bp 
+namespace cv { namespace gpu { namespace bp
 {
 ///////////////////////////////////////////////////////////////
 /////////////////////// load constants ////////////////////////
@@ -66,62 +66,90 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
         cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
-        cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );         
+        cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
     }
 
 ///////////////////////////////////////////////////////////////
 ////////////////////////// comp data //////////////////////////
 ///////////////////////////////////////////////////////////////
 
-    __device__ float pixDiff(uchar l, uchar r)
+    template <int cn> struct PixDiff;
+    template <> struct PixDiff<1>
     {
-        return abs((int)l - r);
-    }
-    __device__ float pixDiff(const uchar3& l, const uchar3& r)
+        __device__ PixDiff(const uchar* ls)
+        {
+            l = *ls;
+        }
+        __device__ float operator()(const uchar* rs) const
+        {
+            return abs((int)l - *rs);
+        }
+        uchar l;
+    };
+    template <> struct PixDiff<3>
     {
-        const float tr = 0.299f;
-        const float tg = 0.587f;
-        const float tb = 0.114f;
+        __device__ PixDiff(const uchar* ls)
+        {
+            l = *((uchar3*)ls);
+        }
+        __device__ float operator()(const uchar* rs) const
+        {
+            const float tr = 0.299f;
+            const float tg = 0.587f;
+            const float tb = 0.114f;
 
-        float val  = tb * abs((int)l.x - r.x);
-              val += tg * abs((int)l.y - r.y);
-              val += tr * abs((int)l.z - r.z);
-        
-        return val;
-    }
-    __device__ float pixDiff(const uchar4& l, const uchar4& r)
+            float val  = tb * abs((int)l.x - rs[0]);
+                  val += tg * abs((int)l.y - rs[1]);
+                  val += tr * abs((int)l.z - rs[2]);
+
+            return val;
+        }
+        uchar3 l;
+    };
+    template <> struct PixDiff<4>
     {
-        const float tr = 0.299f;
-        const float tg = 0.587f;
-        const float tb = 0.114f;
+        __device__ PixDiff(const uchar* ls)
+        {
+            l = *((uchar4*)ls);
+        }
+        __device__ float operator()(const uchar* rs) const
+        {
+            const float tr = 0.299f;
+            const float tg = 0.587f;
+            const float tb = 0.114f;
 
-        float val  = tb * abs((int)l.x - r.x);
-              val += tg * abs((int)l.y - r.y);
-              val += tr * abs((int)l.z - r.z);
-        
-        return val;
-    }
+            uchar4 r = *((uchar4*)rs);
 
-    template <typename T, typename D>
-    __global__ void comp_data(const DevMem2D_<T> left, const PtrStep_<T> right, PtrElemStep_<D> data) 
+            float val  = tb * abs((int)l.x - r.x);
+                  val += tg * abs((int)l.y - r.y);
+                  val += tr * abs((int)l.z - r.z);
+
+            return val;
+        }
+        uchar4 l;
+    };
+
+    template <int cn, typename D>
+    __global__ void comp_data(const DevMem2D left, const PtrStep right, PtrElemStep_<D> data)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
         if (y > 0 && y < left.rows - 1 && x > 0 && x < left.cols - 1)
         {
-            const T l = left.ptr(y)[x];
-            const T* rs = right.ptr(y) + x; 
+            const uchar* ls = left.ptr(y) + x * cn;
+            const PixDiff<cn> pixDiff(ls);
+            const uchar* rs = right.ptr(y) + x * cn;
 
             D* ds = data.ptr(y) + x;
             const size_t disp_step = data.step * left.rows;
 
-            for (int disp = 0; disp < cndisp; disp++) 
+            for (int disp = 0; disp < cndisp; disp++)
             {
                 if (x - disp >= 1)
                 {
-                    float val = pixDiff(l, rs[-disp]);
-                    
+                    float val = pixDiff(rs - disp * cn);
+
                     ds[disp * disp_step] = saturate_cast<D>(fmin(cdata_weight * val, cdata_weight * cmax_data_term));
                 }
                 else
@@ -133,28 +161,88 @@ namespace cv { namespace gpu { namespace bp
     }
 
     template<typename T, typename D>
-    void comp_data_gpu(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
+    void comp_data_gpu(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
+
+    template <> void comp_data_gpu<uchar, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
 
         grid.x = divUp(left.cols, threads.x);
         grid.y = divUp(left.rows, threads.y);
-        
-        comp_data<T, D><<<grid, threads, 0, stream>>>((DevMem2D_<T>)left, (DevMem2D_<T>)right, (DevMem2D_<D>)data);
-        
+
+        comp_data<1, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+    template <> void comp_data_gpu<uchar, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(left.cols, threads.x);
+        grid.y = divUp(left.rows, threads.y);
+
+        comp_data<1, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
 
-    template void comp_data_gpu<uchar, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
-    template void comp_data_gpu<uchar, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
-    
-    template void comp_data_gpu<uchar3, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
-    template void comp_data_gpu<uchar3, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
-    
-    template void comp_data_gpu<uchar4, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
-    template void comp_data_gpu<uchar4, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
+    template <> void comp_data_gpu<uchar3, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(left.cols, threads.x);
+        grid.y = divUp(left.rows, threads.y);
+
+        comp_data<3, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+    template <> void comp_data_gpu<uchar3, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(left.cols, threads.x);
+        grid.y = divUp(left.rows, threads.y);
+
+        comp_data<3, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+
+    template <> void comp_data_gpu<uchar4, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(left.cols, threads.x);
+        grid.y = divUp(left.rows, threads.y);
+
+        comp_data<4, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
+    template <> void comp_data_gpu<uchar4, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
+    {
+        dim3 threads(32, 8, 1);
+        dim3 grid(1, 1, 1);
+
+        grid.x = divUp(left.cols, threads.x);
+        grid.y = divUp(left.rows, threads.y);
+
+        comp_data<4, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+
+        if (stream == 0)
+            cudaSafeCall( cudaThreadSynchronize() );
+    }
 
 ///////////////////////////////////////////////////////////////
 //////////////////////// data step down ///////////////////////
@@ -190,7 +278,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(dst_rows, threads.y);
 
         data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)src, (DevMem2D_<T>)dst);
-        
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -206,7 +294,7 @@ namespace cv { namespace gpu { namespace bp
     __global__ void level_up_message(int dst_cols, int dst_rows, int src_rows, const PtrElemStep_<T> src, PtrElemStep_<T> dst)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;        
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
         if (x < dst_cols && y < dst_rows)
         {
@@ -216,7 +304,7 @@ namespace cv { namespace gpu { namespace bp
             T*       dstr = dst.ptr(y  ) + x;
             const T* srcr = src.ptr(y/2) + x/2;
 
-            for (int d = 0; d < cndisp; ++d)            
+            for (int d = 0; d < cndisp; ++d)
                 dstr[d * dst_disp_step] = srcr[d * src_disp_step];
         }
     }
@@ -236,7 +324,7 @@ namespace cv { namespace gpu { namespace bp
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mds[src_idx], (DevMem2D_<T>)mds[dst_idx]);
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mls[src_idx], (DevMem2D_<T>)mls[dst_idx]);
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mrs[src_idx], (DevMem2D_<T>)mrs[dst_idx]);
-        
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -253,7 +341,7 @@ namespace cv { namespace gpu { namespace bp
     {
         float prev = dst[0];
         float cur;
-        for (int disp = 1; disp < cndisp; ++disp) 
+        for (int disp = 1; disp < cndisp; ++disp)
         {
             prev += cdisc_single_jump;
             cur = dst[step * disp];
@@ -266,7 +354,7 @@ namespace cv { namespace gpu { namespace bp
         }
 
         prev = dst[(cndisp - 1) * step];
-        for (int disp = cndisp - 2; disp >= 0; disp--)     
+        for (int disp = cndisp - 2; disp >= 0; disp--)
         {
             prev += cdisc_single_jump;
             cur = dst[step * disp];
@@ -275,7 +363,7 @@ namespace cv { namespace gpu { namespace bp
                 cur = prev;
                 dst[step * disp] = saturate_cast<T>(prev);
             }
-            prev = cur;      
+            prev = cur;
         }
     }
 
@@ -311,7 +399,7 @@ namespace cv { namespace gpu { namespace bp
                 dst[msg_disp_step * i] = saturate_cast<T>(minimum);
             }
             sum += dst_reg;
-        }    
+        }
         sum /= cndisp;
 
         for(int i = 0; i < cndisp; ++i)
@@ -338,12 +426,12 @@ namespace cv { namespace gpu { namespace bp
             message(us + u.step, ls      + 1, rs - 1, dt, us, msg_disp_step, data_disp_step);
             message(ds - u.step, ls      + 1, rs - 1, dt, ds, msg_disp_step, data_disp_step);
             message(us + u.step, ds - u.step, rs - 1, dt, rs, msg_disp_step, data_disp_step);
-            message(us + u.step, ds - u.step, ls + 1, dt, ls, msg_disp_step, data_disp_step);                
+            message(us + u.step, ds - u.step, ls + 1, dt, ls, msg_disp_step, data_disp_step);
         }
     }
 
     template <typename T>
-    void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2D& u, const DevMem2D& d, 
+    void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2D& u, const DevMem2D& d,
         const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
@@ -355,7 +443,7 @@ namespace cv { namespace gpu { namespace bp
         for(int t = 0; t < iters; ++t)
         {
             one_iteration<T><<<grid, threads, 0, stream>>>(t, (DevMem2D_<T>)u, (T*)d.data, (T*)l.data, (T*)r.data, (DevMem2D_<T>)data, cols, rows);
-            
+
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
         }
@@ -369,9 +457,9 @@ namespace cv { namespace gpu { namespace bp
 ///////////////////////////////////////////////////////////////
 
     template <typename T>
-    __global__ void output(const PtrElemStep_<T> u, const T* d, const T* l, const T* r, const T* data, 
-        DevMem2D_<short> disp) 
-    {   
+    __global__ void output(const PtrElemStep_<T> u, const T* d, const T* l, const T* r, const T* data,
+        DevMem2D_<short> disp)
+    {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -387,7 +475,7 @@ namespace cv { namespace gpu { namespace bp
 
             int best = 0;
             float best_val = numeric_limits_gpu<float>::max();
-            for (int d = 0; d < cndisp; ++d) 
+            for (int d = 0; d < cndisp; ++d)
             {
                 float val  = us[d * disp_step];
                       val += ds[d * disp_step];
@@ -395,7 +483,7 @@ namespace cv { namespace gpu { namespace bp
                       val += rs[d * disp_step];
                       val += dt[d * disp_step];
 
-                if (val < best_val) 
+                if (val < best_val)
                 {
                     best_val = val;
                     best = d;
@@ -407,7 +495,7 @@ namespace cv { namespace gpu { namespace bp
     }
 
     template <typename T>
-    void output_gpu(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, 
+    void output_gpu(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data,
         const DevMem2D_<short>& disp, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);

@@ -47,7 +47,7 @@ struct CV_GpuStereoBPTest : public CvTest
 {
     CV_GpuStereoBPTest() : CvTest( "GPU-StereoBP", "StereoBP" ){}
     ~CV_GpuStereoBPTest() {}
-  
+
     void run(int )
     {
         cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
@@ -74,20 +74,20 @@ struct CV_GpuStereoBPTest : public CvTest
 
             disp.convertTo(disp, img_template.type());
 
-            double norm = cv::norm(disp, img_template, cv::NORM_INF);
-	        if (norm >= 0.5) 
-            {
-                ts->printf(CvTS::LOG, "\nStereoBP norm = %f\n", norm);
-                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
-                return;
-            }
-        }
-        catch(const cv::Exception& e)
-        {
-            if (!check_and_treat_gpu_exception(e, ts))
-                throw;
-            return;
-        }
+	    double norm = cv::norm(disp, img_template, cv::NORM_INF);
+		if (norm >= 0.5)
+	    {
+		ts->printf(CvTS::LOG, "\nStereoBP norm = %f\n", norm);
+		ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+		return;
+	    }
+	}
+	catch(const cv::Exception& e)
+	{
+	    if (!check_and_treat_gpu_exception(e, ts))
+		throw;
+	    return;
+	}
 
         ts->set_failed_test_info(CvTS::OK);
     }
