@@ -75,18 +75,18 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat&, std::vector
 namespace cv { namespace gpu { namespace bfmatcher
 {
     template <typename T>
-    void matchSingleL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, 
+    void matchSingleL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance);
     template <typename T>
-    void matchSingleL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, 
+    void matchSingleL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance);
     template <typename T>
-    void matchCollectionL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection, 
-        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, 
+    void matchCollectionL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection,
+        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx,
         const DevMem2Df& distance);
     template <typename T>
-    void matchCollectionL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection, 
-        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, 
+    void matchCollectionL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection,
+        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx,
         const DevMem2Df& distance);
 
     template <typename T>
@@ -116,12 +116,12 @@ void cv::gpu::BruteForceMatcher_GPU_base::add(const vector<GpuMat>& descCollecti
     trainDescCollection.insert(trainDescCollection.end(), descCollection.begin(), descCollection.end());
 }
 
-const vector<GpuMat>& cv::gpu::BruteForceMatcher_GPU_base::getTrainDescriptors() const 
+const vector<GpuMat>& cv::gpu::BruteForceMatcher_GPU_base::getTrainDescriptors() const
 {
     return trainDescCollection;
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::clear() 
+void cv::gpu::BruteForceMatcher_GPU_base::clear()
 {
     trainDescCollection.clear();
 }
@@ -139,29 +139,29 @@ bool cv::gpu::BruteForceMatcher_GPU_base::isMaskSupported() const
 ////////////////////////////////////////////////////////////////////
 // Match
 
-void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
     GpuMat& trainIdx, GpuMat& distance, const GpuMat& mask)
 {
     using namespace cv::gpu::bfmatcher;
 
-    typedef void (*match_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainDescs, 
+    typedef void (*match_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainDescs,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance);
 
-    static const match_caller_t match_callers[2][8] = 
+    static const match_caller_t match_callers[2][8] =
     {
         {
-            matchSingleL1_gpu<unsigned char>, matchSingleL1_gpu<char>, matchSingleL1_gpu<unsigned short>, 
+            matchSingleL1_gpu<unsigned char>, matchSingleL1_gpu<char>, matchSingleL1_gpu<unsigned short>,
             matchSingleL1_gpu<short>, matchSingleL1_gpu<int>, matchSingleL1_gpu<float>, 0, 0
         },
         {
-            matchSingleL2_gpu<unsigned char>, matchSingleL2_gpu<char>, matchSingleL2_gpu<unsigned short>, 
+            matchSingleL2_gpu<unsigned char>, matchSingleL2_gpu<char>, matchSingleL2_gpu<unsigned short>,
             matchSingleL2_gpu<short>, matchSingleL2_gpu<int>, matchSingleL2_gpu<float>, 0, 0
         }
     };
-    
+
     CV_Assert(queryDescs.channels() == 1);
     CV_Assert(trainDescs.cols == queryDescs.cols && trainDescs.type() == queryDescs.type());
-    
+
     const int nQuery = queryDescs.rows;
 
     trainIdx.create(1, nQuery, CV_32S);
@@ -170,12 +170,12 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, 
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
 
-    // For single train there is no need to save imgIdx, so we just save imgIdx to trainIdx. 
+    // For single train there is no need to save imgIdx, so we just save imgIdx to trainIdx.
     // trainIdx store after imgIdx, so we doesn't lose it value.
     func(queryDescs, trainDescs, mask, trainIdx, trainIdx, distance);
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, const GpuMat& distance, 
+void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, const GpuMat& distance,
     vector<DMatch>& matches)
 {
     const int nQuery = trainIdx.cols;
@@ -202,7 +202,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, 
     }
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::match(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::match(const GpuMat& queryDescs, const GpuMat& trainDescs,
     vector<DMatch>& matches, const GpuMat& mask)
 {
     GpuMat trainIdx, distance;
@@ -210,11 +210,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::match(const GpuMat& queryDescs, const 
     matchDownload(trainIdx, distance, matches);
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, 
+void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection,
     const vector<GpuMat>& masks)
 {
     if (masks.empty())
-    {        
+    {
         Mat trainCollectionCPU(1, trainDescCollection.size(), CV_8UC(sizeof(DevMem2D)));
 
         for (size_t i = 0; i < trainDescCollection.size(); ++i)
@@ -229,7 +229,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
     else
     {
         CV_Assert(masks.size() == trainDescCollection.size());
-        
+
         Mat trainCollectionCPU(1, trainDescCollection.size(), CV_8UC(sizeof(DevMem2D)));
         Mat maskCollectionCPU(1, trainDescCollection.size(), CV_8UC(sizeof(PtrStep)));
 
@@ -242,7 +242,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
 
             trainCollectionCPU.ptr<DevMem2D>(0)[i] = trainDescs;
 
-            maskCollectionCPU.ptr<PtrStep>(0)[i] = static_cast<PtrStep>(mask);
+            maskCollectionCPU.ptr<PtrStep>(0)[i] = mask;
         }
 
         trainCollection.upload(trainCollectionCPU);
@@ -250,31 +250,31 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
     }
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection, 
+void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection,
     GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& maskCollection)
 {
     using namespace cv::gpu::bfmatcher;
 
-    typedef void (*match_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainCollection, 
-        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, 
+    typedef void (*match_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainCollection,
+        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx,
         const DevMem2Df& distance);
 
-    static const match_caller_t match_callers[2][8] = 
+    static const match_caller_t match_callers[2][8] =
     {
         {
-            matchCollectionL1_gpu<unsigned char>, matchCollectionL1_gpu<char>, 
-            matchCollectionL1_gpu<unsigned short>, matchCollectionL1_gpu<short>, 
+            matchCollectionL1_gpu<unsigned char>, matchCollectionL1_gpu<char>,
+            matchCollectionL1_gpu<unsigned short>, matchCollectionL1_gpu<short>,
             matchCollectionL1_gpu<int>, matchCollectionL1_gpu<float>, 0, 0
         },
         {
-            matchCollectionL2_gpu<unsigned char>, matchCollectionL2_gpu<char>, 
-            matchCollectionL2_gpu<unsigned short>, matchCollectionL2_gpu<short>, 
+            matchCollectionL2_gpu<unsigned char>, matchCollectionL2_gpu<char>,
+            matchCollectionL2_gpu<unsigned short>, matchCollectionL2_gpu<short>,
             matchCollectionL2_gpu<int>, matchCollectionL2_gpu<float>, 0, 0
         }
     };
-    
+
     CV_Assert(queryDescs.channels() == 1);
-    
+
     const int nQuery = queryDescs.rows;
 
     trainIdx.create(1, nQuery, CV_32S);
@@ -287,7 +287,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDes
     func(queryDescs, trainCollection, maskCollection, trainIdx, imgIdx, distance);
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, 
+void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx,
     const GpuMat& distance, vector<DMatch>& matches)
 {
     const int nQuery = trainIdx.cols;
@@ -318,9 +318,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, 
     }
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::match(const GpuMat& queryDescs, vector<DMatch>& matches, 
+void cv::gpu::BruteForceMatcher_GPU_base::match(const GpuMat& queryDescs, vector<DMatch>& matches,
     const vector<GpuMat>& masks)
-{    
+{
     GpuMat trainCollection;
     GpuMat maskCollection;
 
@@ -335,7 +335,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::match(const GpuMat& queryDescs, vector
 ////////////////////////////////////////////////////////////////////
 // KnnMatch
 
-void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
     GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask)
 {
     using namespace cv::gpu::bfmatcher;
@@ -343,20 +343,20 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     typedef void (*match_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist);
 
-    static const match_caller_t match_callers[2][8] = 
+    static const match_caller_t match_callers[2][8] =
     {
         {
-            knnMatchL1_gpu<unsigned char>, knnMatchL1_gpu<char>, knnMatchL1_gpu<unsigned short>, 
+            knnMatchL1_gpu<unsigned char>, knnMatchL1_gpu<char>, knnMatchL1_gpu<unsigned short>,
             knnMatchL1_gpu<short>, knnMatchL1_gpu<int>, knnMatchL1_gpu<float>, 0, 0
         },
         {
-            knnMatchL2_gpu<unsigned char>, knnMatchL2_gpu<char>, knnMatchL2_gpu<unsigned short>, 
+            knnMatchL2_gpu<unsigned char>, knnMatchL2_gpu<char>, knnMatchL2_gpu<unsigned short>,
             knnMatchL2_gpu<short>, knnMatchL2_gpu<int>, knnMatchL2_gpu<float>, 0, 0
         }
     };
-    
+
     CV_Assert(queryDescs.channels() == 1);
-    
+
     const int nQuery = queryDescs.rows;
     const int nTrain = trainDescs.rows;
 
@@ -411,7 +411,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchDownload(const GpuMat& trainId
     }
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
     vector< vector<DMatch> >& matches, int k, const GpuMat& mask, bool compactResult)
 {
     GpuMat trainIdx, distance, allDist;
@@ -431,7 +431,7 @@ namespace
     };
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs,
     vector< vector<DMatch> >& matches, int knn, const vector<GpuMat>& masks, bool compactResult)
 {
     vector< vector<DMatch> > curMatches;
@@ -443,7 +443,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs,
 
     for (size_t imgIdx = 0; imgIdx < trainDescCollection.size(); ++imgIdx)
     {
-        knnMatch(queryDescs, trainDescCollection[imgIdx], curMatches, knn, 
+        knnMatch(queryDescs, trainDescCollection[imgIdx], curMatches, knn,
             masks.empty() ? GpuMat() : masks[imgIdx]);
 
         for (int queryIdx = 0; queryIdx < queryDescs.rows; ++queryIdx)
@@ -464,7 +464,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs,
 
     if (compactResult)
     {
-        vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(), 
+        vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(),
             mem_fun_ref(&vector<DMatch>::empty));
         matches.erase(new_end, matches.end());
     }
@@ -473,7 +473,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs,
 ////////////////////////////////////////////////////////////////////
 // RadiusMatch
 
-void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
     GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance, const GpuMat& mask)
 {
     using namespace cv::gpu::bfmatcher;
@@ -481,14 +481,14 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     typedef void (*radiusMatch_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainDescs, float maxDistance,
         const DevMem2D& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, const DevMem2Df& distance);
 
-    static const radiusMatch_caller_t radiusMatch_callers[2][8] = 
+    static const radiusMatch_caller_t radiusMatch_callers[2][8] =
     {
         {
-            radiusMatchL1_gpu<unsigned char>, radiusMatchL1_gpu<char>, radiusMatchL1_gpu<unsigned short>, 
+            radiusMatchL1_gpu<unsigned char>, radiusMatchL1_gpu<char>, radiusMatchL1_gpu<unsigned short>,
             radiusMatchL1_gpu<short>, radiusMatchL1_gpu<int>, radiusMatchL1_gpu<float>, 0, 0
         },
         {
-            radiusMatchL2_gpu<unsigned char>, radiusMatchL2_gpu<char>, radiusMatchL2_gpu<unsigned short>, 
+            radiusMatchL2_gpu<unsigned char>, radiusMatchL2_gpu<char>, radiusMatchL2_gpu<unsigned short>,
             radiusMatchL2_gpu<short>, radiusMatchL2_gpu<int>, radiusMatchL2_gpu<float>, 0, 0
         }
     };
@@ -496,14 +496,14 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     int major, minor;
     getComputeCapability(getDevice(), major, minor);
     CV_Assert(100 * major + 10 * minor >= 110); // works onle on device with CC >= 1.1
-    
+
     const int nQuery = queryDescs.rows;
     const int nTrain = trainDescs.rows;
-    
+
     CV_Assert(queryDescs.channels() == 1);
     CV_Assert(trainDescs.type() == queryDescs.type() && trainDescs.cols == queryDescs.cols);
-    CV_Assert(trainIdx.empty() || trainIdx.rows == nQuery);    
-    
+    CV_Assert(trainIdx.empty() || trainIdx.rows == nQuery);
+
     nMatches.create(1, nQuery, CV_32SC1);
     nMatches.setTo(Scalar::all(0));
     if (trainIdx.empty())
@@ -518,7 +518,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     func(queryDescs, trainDescs, maxDistance, mask, trainIdx, nMatches.ptr<unsigned int>(), distance);
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches, 
+void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches,
     const GpuMat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult)
 {
     const int nQuery = trainIdx.rows;
@@ -554,7 +554,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trai
             int trainIdx = *trainIdx_ptr;
 
             float distance = *distance_ptr;
-            
+
             DMatch m(queryIdx, trainIdx, 0, distance);
 
             curMatches.push_back(m);
@@ -563,7 +563,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trai
     }
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
     vector< vector<DMatch> >& matches, float maxDistance, const GpuMat& mask, bool compactResult)
 {
     GpuMat trainIdx, nMatches, distance;
@@ -571,7 +571,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     radiusMatchDownload(trainIdx, nMatches, distance, matches, compactResult);
 }
 
-void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, vector< vector<DMatch> >& matches, 
+void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, vector< vector<DMatch> >& matches,
                 float maxDistance, const vector<GpuMat>& masks, bool compactResult)
 
 {
@@ -581,7 +581,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
 
     for (size_t imgIdx = 0; imgIdx < trainDescCollection.size(); ++imgIdx)
     {
-        radiusMatch(queryDescs, trainDescCollection[imgIdx], curMatches, maxDistance, 
+        radiusMatch(queryDescs, trainDescCollection[imgIdx], curMatches, maxDistance,
             masks.empty() ? GpuMat() : masks[imgIdx]);
 
         for (int queryIdx = 0; queryIdx < queryDescs.rows; ++queryIdx)
@@ -600,7 +600,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
 
     if (compactResult)
     {
-        vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(), 
+        vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(),
             mem_fun_ref(&vector<DMatch>::empty));
         matches.erase(new_end, matches.end());
     }
