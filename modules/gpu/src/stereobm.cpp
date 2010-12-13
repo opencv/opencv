@@ -62,7 +62,7 @@ namespace cv { namespace gpu
     {
         //extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf);
         extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, cudaStream_t & stream);
-        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D output, int prefilterCap /*= 31*/, cudaStream_t & stream);
+        extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
         extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, cudaStream_t & stream);
     }
 }}

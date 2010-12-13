@@ -390,7 +390,6 @@ extern "C" __global__ void prefilter_kernel(DevMem2D output, int prefilterCap)
     }
 }
 
-
 extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap, cudaStream_t & stream)
 {
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();

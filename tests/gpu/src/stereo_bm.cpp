@@ -45,13 +45,65 @@
 
 #include "opencv2/highgui/highgui.hpp"
 
+using namespace cv;
+using namespace cv::gpu;
+
 struct CV_GpuStereoBMTest : public CvTest
 {
 	CV_GpuStereoBMTest() : CvTest( "GPU-StereoBM", "StereoBM" ){}
     ~CV_GpuStereoBMTest() {}
 
+
+    void run_stress()
+    {
+        //cv::setBreakOnError(true);
+        int winsz[] = { 13, 15, 17, 19 };
+        int disps[] = { 128, 160, 192, 256};
+
+        Size res[] = { Size(1027, 768), Size(1280, 1024), Size(1600, 1152), Size(1920, 1080) };        
+        RNG rng;
+
+        for(int i = 0; i < 10; ++i)
+        {
+            int winSize = cvRound(rng.uniform(2, 11)) * 2 + 1;
+
+            for(int j = 0; j < 10; ++j)
+            {
+                int ndisp = cvRound(rng.uniform(5, 32)) * 8;
+
+                for(int s = 0; s < 10; ++s)
+                {
+                    int w =  cvRound(rng.uniform(1024, 2048));
+                    int h =  cvRound(rng.uniform(768, 1152));
+
+                    for(int p = 0; p < 2; ++p)
+                    {
+                        //int winSize = winsz[i];
+                        //int disp = disps[j];
+                        Size imgSize(w, h);//res[s];
+                        int preset = p;
+
+                        printf("Preset = %d, nidsp = %d, winsz = %d, width = %d, height = %d\n", p, ndisp, winSize, imgSize.width, imgSize.height);
+
+                        GpuMat l(imgSize, CV_8U);
+                        GpuMat r(imgSize, CV_8U);
+
+                        GpuMat disparity;
+                        StereoBM_GPU bm(preset, ndisp, winSize);
+                        bm(l, r, disparity);
+
+            
+                    }
+                }
+            }
+        }
+    }
+
     void run(int )
     {
+        /*run_stress();
+        return;*/
+
 	    cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-L.png", 0);
 	    cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-R.png", 0);
 	    cv::Mat img_reference = cv::imread(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", 0);
