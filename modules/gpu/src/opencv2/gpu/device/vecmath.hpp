@@ -123,278 +123,295 @@ namespace cv
             { 
                 typedef uchar elem_t; 
                 enum {cn=1};
-                static __device__ uchar all(uchar v) {return v;}
+                static __device__ __host__ uchar all(uchar v) {return v;}
+                static __device__ __host__ uchar make(uchar x) {return x;}
             };
             template<> struct VecTraits<uchar1> 
             { 
                 typedef uchar elem_t; 
                 enum {cn=1};
-                static __device__ uchar1 all(uchar v) {return make_uchar1(v);}
+                static __device__ __host__ uchar1 all(uchar v) {return make_uchar1(v);}
+                static __device__ __host__ uchar1 make(uchar x) {return make_uchar1(x);}
             };
             template<> struct VecTraits<uchar2> 
             { 
                 typedef uchar elem_t; 
                 enum {cn=2}; 
-                static __device__ uchar2 all(uchar v) {return make_uchar2(v, v);}
+                static __device__ __host__ uchar2 all(uchar v) {return make_uchar2(v, v);}
+                static __device__ __host__ uchar2 make(uchar x, uchar y) {return make_uchar2(x, y);}
             };
             template<> struct VecTraits<uchar3> 
             { 
                 typedef uchar elem_t; 
                 enum {cn=3}; 
-                static __device__ uchar3 all(uchar v) {return make_uchar3(v, v, v);}
+                static __device__ __host__ uchar3 all(uchar v) {return make_uchar3(v, v, v);}
+                static __device__ __host__ uchar3 make(uchar x, uchar y, uchar z) {return make_uchar3(x, y, z);}
             };
             template<> struct VecTraits<uchar4> 
             { 
                 typedef uchar elem_t; 
                 enum {cn=4}; 
-                static __device__ uchar4 all(uchar v) {return make_uchar4(v, v, v, v);}
+                static __device__ __host__ uchar4 all(uchar v) {return make_uchar4(v, v, v, v);}
+                static __device__ __host__ uchar4 make(uchar x, uchar y, uchar z, uchar w) {return make_uchar4(x, y, z, w);}
             };
 
             template<> struct VecTraits<char> 
             { 
                 typedef char elem_t; 
                 enum {cn=1}; 
-                static __device__ char all(char v) {return v;}
+                static __device__ __host__ char all(char v) {return v;}
+                static __device__ __host__ char make(char x) {return x;}
             };
             template<> struct VecTraits<char1> 
             { 
                 typedef char elem_t; 
                 enum {cn=1}; 
-                static __device__ char1 all(char v) {return make_char1(v);}
+                static __device__ __host__ char1 all(char v) {return make_char1(v);}
+                static __device__ __host__ char1 make(char x) {return make_char1(x);}
             };
             template<> struct VecTraits<char2> 
             { 
                 typedef char elem_t; 
                 enum {cn=2}; 
-                static  __device__ char2 all(char v) {return make_char2(v, v);}
+                static  __device__ __host__ char2 all(char v) {return make_char2(v, v);}
+                static  __device__ __host__ char2 make(char x, char y) {return make_char2(x, y);}
             };
             template<> struct VecTraits<char3> 
             { 
                 typedef char elem_t; 
                 enum {cn=3}; 
-                static __device__ char3 all(char v) {return make_char3(v, v, v);}
+                static __device__ __host__ char3 all(char v) {return make_char3(v, v, v);}
+                static __device__ __host__ char3 make(char x, char y, char z) {return make_char3(x, y, z);}
             };
             template<> struct VecTraits<char4> 
             { 
                 typedef char elem_t; 
                 enum {cn=4}; 
-                static __device__ char4 all(char v) {return make_char4(v, v, v, v);}
+                static __device__ __host__ char4 all(char v) {return make_char4(v, v, v, v);}
+                static __device__ __host__ char4 make(char x, char y, char z, char w) {return make_char4(x, y, z, w);}
             };
 
             template<> struct VecTraits<ushort> 
             { 
                 typedef ushort elem_t; 
                 enum {cn=1}; 
-                static __device__ ushort all(ushort v) {return v;}
+                static __device__ __host__ ushort all(ushort v) {return v;}
+                static __device__ __host__ ushort make(ushort x) {return x;}
             };
             template<> struct VecTraits<ushort1> 
             { 
                 typedef ushort elem_t; 
                 enum {cn=1}; 
-                static __device__ ushort1 all(ushort v) {return make_ushort1(v);}
+                static __device__ __host__ ushort1 all(ushort v) {return make_ushort1(v);}
+                static __device__ __host__ ushort1 make(ushort x) {return make_ushort1(x);}
             };
             template<> struct VecTraits<ushort2> 
             { 
                 typedef ushort elem_t; 
                 enum {cn=2}; 
-                static __device__ ushort2 all(ushort v) {return make_ushort2(v, v);}
+                static __device__ __host__ ushort2 all(ushort v) {return make_ushort2(v, v);}
+                static __device__ __host__ ushort2 make(ushort x, ushort y) {return make_ushort2(x, y);}
             };
             template<> struct VecTraits<ushort3> 
             { 
                 typedef ushort elem_t; 
                 enum {cn=3}; 
-                static __device__ ushort3 all(ushort v) {return make_ushort3(v, v, v);}
+                static __device__ __host__ ushort3 all(ushort v) {return make_ushort3(v, v, v);}
+                static __device__ __host__ ushort3 make(ushort x, ushort y, ushort z) {return make_ushort3(x, y, z);}
             };
             template<> struct VecTraits<ushort4> 
             { 
                 typedef ushort elem_t; 
                 enum {cn=4}; 
-                static __device__ ushort4 all(ushort v) {return make_ushort4(v, v, v, v);}
+                static __device__ __host__ ushort4 all(ushort v) {return make_ushort4(v, v, v, v);}
+                static __device__ __host__ ushort4 make(ushort x, ushort y, ushort z, ushort w) {return make_ushort4(x, y, z, w);}
             };
 
             template<> struct VecTraits<short> 
             { 
                 typedef short elem_t; 
                 enum {cn=1}; 
-                static __device__ short all(short v) {return v;}
+                static __device__ __host__ short all(short v) {return v;}
+                static __device__ __host__ short make(short x) {return x;}
             };
             template<> struct VecTraits<short1> 
             { 
                 typedef short elem_t; 
                 enum {cn=1}; 
-                static __device__ short1 all(short v) {return make_short1(v);}
+                static __device__ __host__ short1 all(short v) {return make_short1(v);}
+                static __device__ __host__ short1 make(short x) {return make_short1(x);}
             };
             template<> struct VecTraits<short2> 
             { 
                 typedef short elem_t; 
                 enum {cn=2}; 
-                static __device__ short2 all(short v) {return make_short2(v, v);}
+                static __device__ __host__ short2 all(short v) {return make_short2(v, v);}
+                static __device__ __host__ short2 make(short x, short y) {return make_short2(x, y);}
             };
             template<> struct VecTraits<short3> 
             { 
                 typedef short elem_t; 
                 enum {cn=3}; 
-                static __device__ short3 all(short v) {return make_short3(v, v, v);}
+                static __device__ __host__ short3 all(short v) {return make_short3(v, v, v);}
+                static __device__ __host__ short3 make(short x, short y, short z) {return make_short3(x, y, z);}
             };
             template<> struct VecTraits<short4> 
             { 
                 typedef short elem_t; 
                 enum {cn=4}; 
-                static __device__ short4 all(short v) {return make_short4(v, v, v, v);}
+                static __device__ __host__ short4 all(short v) {return make_short4(v, v, v, v);}
+                static __device__ __host__ short4 make(short x, short y, short z, short w) {return make_short4(x, y, z, w);}
             };
 
             template<> struct VecTraits<uint> 
             { 
                 typedef uint elem_t; 
                 enum {cn=1}; 
-                static __device__ uint all(uint v) {return v;}
+                static __device__ __host__ uint all(uint v) {return v;}
+                static __device__ __host__ uint make(uint x) {return x;}
             };
             template<> struct VecTraits<uint1> 
             { 
                 typedef uint elem_t; 
                 enum {cn=1}; 
-                static __device__ uint1 all(uint v) {return make_uint1(v);}
+                static __device__ __host__ uint1 all(uint v) {return make_uint1(v);}
+                static __device__ __host__ uint1 make(uint x) {return make_uint1(x);}
             };
             template<> struct VecTraits<uint2> 
             { 
                 typedef uint elem_t; 
                 enum {cn=2}; 
-                static __device__ uint2 all(uint v) {return make_uint2(v, v);}
+                static __device__ __host__ uint2 all(uint v) {return make_uint2(v, v);}
+                static __device__ __host__ uint2 make(uint x, uint y) {return make_uint2(x, y);}
             };
             template<> struct VecTraits<uint3> 
             { 
                 typedef uint elem_t; 
                 enum {cn=3}; 
-                static __device__ uint3 all(uint v) {return make_uint3(v, v, v);}
+                static __device__ __host__ uint3 all(uint v) {return make_uint3(v, v, v);}
+                static __device__ __host__ uint3 make(uint x, uint y, uint z) {return make_uint3(x, y, z);}
             };
             template<> struct VecTraits<uint4> 
             { 
                 typedef uint elem_t; 
                 enum {cn=4}; 
-                static __device__ uint4 all(uint v) {return make_uint4(v, v, v, v);}
+                static __device__ __host__ uint4 all(uint v) {return make_uint4(v, v, v, v);}
+                static __device__ __host__ uint4 make(uint x, uint y, uint z, uint w) {return make_uint4(x, y, z, w);}
             };
 
             template<> struct VecTraits<int> 
             { 
                 typedef int elem_t; 
                 enum {cn=1}; 
-                static __device__ int all(int v) {return v;}
+                static __device__ __host__ int all(int v) {return v;}
+                static __device__ __host__ int make(int x) {return x;}
             };
             template<> struct VecTraits<int1> 
             { 
                 typedef int elem_t; 
                 enum {cn=1}; 
-                static __device__ int1 all(int v) {return make_int1(v);}
+                static __device__ __host__ int1 all(int v) {return make_int1(v);}
+                static __device__ __host__ int1 make(int x) {return make_int1(x);}
             };
             template<> struct VecTraits<int2> 
             { 
                 typedef int elem_t; 
                 enum {cn=2}; 
-                static __device__ int2 all(int v) {return make_int2(v, v);}
+                static __device__ __host__ int2 all(int v) {return make_int2(v, v);}
+                static __device__ __host__ int2 make(int x, int y) {return make_int2(x, y);}
             };
             template<> struct VecTraits<int3> 
             { 
                 typedef int elem_t; 
                 enum {cn=3}; 
-                static __device__ int3 all(int v) {return make_int3(v, v, v);}
+                static __device__ __host__ int3 all(int v) {return make_int3(v, v, v);}
+                static __device__ __host__ int3 make(int x, int y, int z) {return make_int3(x, y, z);}
             };
             template<> struct VecTraits<int4> 
             { 
                 typedef int elem_t; 
                 enum {cn=4}; 
-                static __device__ int4 all(int v) {return make_int4(v, v, v, v);}
+                static __device__ __host__ int4 all(int v) {return make_int4(v, v, v, v);}
+                static __device__ __host__ int4 make(int x, int y, int z, int w) {return make_int4(x, y, z, w);}
             };
 
             template<> struct VecTraits<float> 
             { 
                 typedef float elem_t; 
                 enum {cn=1}; 
-                static __device__ float all(float v) {return v;}
+                static __device__ __host__ float all(float v) {return v;}
+                static __device__ __host__ float make(float x) {return x;}
             };
             template<> struct VecTraits<float1> 
             { 
                 typedef float elem_t; 
                 enum {cn=1}; 
-                static __device__ float1 all(float v) {return make_float1(v);}
+                static __device__ __host__ float1 all(float v) {return make_float1(v);}
+                static __device__ __host__ float1 make(float x) {return make_float1(x);}
             };
             template<> struct VecTraits<float2> 
             { 
                 typedef float elem_t; 
                 enum {cn=2}; 
-                static __device__ float2 all(float v) {return make_float2(v, v);}
+                static __device__ __host__ float2 all(float v) {return make_float2(v, v);}
+                static __device__ __host__ float2 make(float x, float y) {return make_float2(x, y);}
             };
             template<> struct VecTraits<float3> 
             { 
                 typedef float elem_t; 
                 enum {cn=3}; 
-                static __device__ float3 all(float v) {return make_float3(v, v, v);}
+                static __device__ __host__ float3 all(float v) {return make_float3(v, v, v);}
+                static __device__ __host__ float3 make(float x, float y, float z) {return make_float3(x, y, z);}
             };
             template<> struct VecTraits<float4> 
             { 
                 typedef float elem_t;
                 enum {cn=4}; 
-                static __device__ float4 all(float v) {return make_float4(v, v, v, v);}
+                static __device__ __host__ float4 all(float v) {return make_float4(v, v, v, v);}
+                static __device__ __host__ float4 make(float x, float y, float z, float w) {return make_float4(x, y, z, w);}
             };
 
             template <int cn, typename VecD> struct SatCast;
             template <typename VecD> struct SatCast<1, VecD>
             {
                 template <typename VecS>
-                __device__ VecD operator()(const VecS& v)
+                static __device__ VecD cast(const VecS& v)
                 {
-                    VecD res; 
-                    res.x = saturate_cast< VecTraits<VecD>::elem_t >(v.x);
-                    return res;
+                    typedef typename VecTraits<VecD>::elem_t D;
+                    return VecTraits<VecD>::make(saturate_cast<D>(v.x));
                 }
             };
             template <typename VecD> struct SatCast<2, VecD>
             {
                 template <typename VecS>
-                __device__ VecD operator()(const VecS& v)
+                static __device__ VecD cast(const VecS& v)
                 {
-                    VecD res; 
-                    res.x = saturate_cast< VecTraits<VecD>::elem_t >(v.x);
-                    res.y = saturate_cast< VecTraits<VecD>::elem_t >(v.y);
-                    return res;
+                    typedef typename VecTraits<VecD>::elem_t D;
+                    return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y));
                 }
             };
             template <typename VecD> struct SatCast<3, VecD>
             {
                 template <typename VecS>
-                __device__ VecD operator()(const VecS& v)
+                static __device__ VecD cast(const VecS& v)
                 {
-                    VecD res; 
-                    res.x = saturate_cast< VecTraits<VecD>::elem_t >(v.x);
-                    res.y = saturate_cast< VecTraits<VecD>::elem_t >(v.y);
-                    res.y = saturate_cast< VecTraits<VecD>::elem_t >(v.z);
-                    return res;
+                    typedef typename VecTraits<VecD>::elem_t D;
+                    return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z));
                 }
             };
             template <typename VecD> struct SatCast<4, VecD>
             {
                 template <typename VecS>
-                __device__ VecD operator()(const VecS& v)
+                static __device__ VecD cast(const VecS& v)
                 {
-                    VecD res; 
-                    res.x = saturate_cast< VecTraits<VecD>::elem_t >(v.x);
-                    res.y = saturate_cast< VecTraits<VecD>::elem_t >(v.y);
-                    res.y = saturate_cast< VecTraits<VecD>::elem_t >(v.z);
-                    res.w = saturate_cast< VecTraits<VecD>::elem_t >(v.w);
-                    return res;
+                    typedef typename VecTraits<VecD>::elem_t D;
+                    return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z), saturate_cast<D>(v.w));
                 }
             };
 
             template <typename VecD, typename VecS> static __device__ VecD saturate_cast_caller(const VecS& v)
             {
-                SatCast<
-                    
-                    VecTraits<VecD>::cn, 
-                    
-                    VecD
-                > 
-                
-                cast;
-                return cast(v);
+                return SatCast<VecTraits<VecD>::cn, VecD>::cast(v);
             }
 
             template<typename _Tp> static __device__ _Tp saturate_cast(const uchar1& v) {return saturate_cast_caller<_Tp>(v);}

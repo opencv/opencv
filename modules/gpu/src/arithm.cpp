@@ -277,12 +277,12 @@ namespace cv { namespace gpu { namespace mathfunc
 
 void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_8SC4 
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8SC1 || src.type() == CV_8UC4 || src.type() == CV_8SC4 
         || src.type() == CV_16UC2 || src.type() == CV_16SC2 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
 
     dst.create( src.cols, src.rows, src.type() );
 
-    if (src.type() == CV_8UC1)
+    if (src.type() == CV_8UC1 || src.type() == CV_8SC1)
     {
         NppiSize sz;
         sz.width  = src.cols;

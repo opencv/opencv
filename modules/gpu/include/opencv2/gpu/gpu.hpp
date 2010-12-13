@@ -388,7 +388,7 @@ namespace cv
         CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c);
 
         //! transposes the matrix
-        //! supports only CV_8UC1 type
+        //! supports CV_8UC1, CV_8SC1, CV_8UC4, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32FC1 type
         CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
 
         //! computes element-wise absolute difference of two arrays (c = abs(a - b))
@@ -725,11 +725,11 @@ namespace cv
         };
 
         //! returns the non-separable filter engine with the specified filter
-        CV_EXPORTS Ptr<FilterEngine_GPU> createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D, int srcType, int dstType);
 
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter, 
-            const Ptr<BaseColumnFilter_GPU>& columnFilter);
+            const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType);
 
         //! returns horizontal 1D box filter
         //! supports only CV_8UC1 source type and CV_32FC1 sum type
@@ -767,23 +767,40 @@ namespace cv
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, 
             const Point& anchor = Point(-1,-1));
 
-        //! returns the primitive row filter with the specified kernel
+        //! returns the primitive row filter with the specified kernel.
+        //! supports only CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC2, CV_32SC1, CV_32FC1 source type.
+        //! there are two version of algorithm: NPP and OpenCV.
+        //! NPP calls when srcType == CV_8UC1 or srcType == CV_8UC4 and bufType == srcType,
+        //! otherwise calls OpenCV version.
+        //! NPP supports only BORDER_CONSTANT border type.
+        //! OpenCV version supports only CV_32F as buffer depth and 
+        //! BORDER_REFLECT101, BORDER_REPLICATE and BORDER_CONSTANT border types.
         CV_EXPORTS Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, 
-            int anchor = -1);
+            int anchor = -1, int borderType = BORDER_CONSTANT);
 
-        //! returns the primitive column filter with the specified kernel
+        //! returns the primitive column filter with the specified kernel.
+        //! supports only CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC2, CV_32SC1, CV_32FC1 dst type.
+        //! there are two version of algorithm: NPP and OpenCV.
+        //! NPP calls when dstType == CV_8UC1 or dstType == CV_8UC4 and bufType == dstType,
+        //! otherwise calls OpenCV version.
+        //! NPP supports only BORDER_CONSTANT border type.
+        //! OpenCV version supports only CV_32F as buffer depth and 
+        //! BORDER_REFLECT101, BORDER_REPLICATE and BORDER_CONSTANT border types.
         CV_EXPORTS Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, 
-            int anchor = -1);
+            int anchor = -1, int borderType = BORDER_CONSTANT);
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, 
-            const Mat& columnKernel, const Point& anchor = Point(-1,-1));
+            const Mat& columnKernel, const Point& anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT,
+            int columnBorderType = -1);
 
         //! returns filter engine for the generalized Sobel operator
-        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, 
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! returns the Gaussian filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, 
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! returns maximum filter
         CV_EXPORTS Ptr<BaseFilter_GPU> getMaxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1));
@@ -812,16 +829,19 @@ namespace cv
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, 
-            Point anchor = Point(-1,-1));
+            Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! applies generalized Sobel operator to the image
-        CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1);
+        CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1, 
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! applies the vertical or horizontal Scharr operator to the image
-        CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1);
+        CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1, 
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! smooths the image using Gaussian filter.
-        CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0);
+        CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0, 
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! applies Laplacian operator to the image
         //! supports only ksize = 1 and ksize = 3

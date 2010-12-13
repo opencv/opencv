@@ -972,6 +972,12 @@ bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
         gpuBorderType = cv::gpu::BORDER_REPLICATE_GPU;
         return true;
     }
+    
+    if (cpuBorderType == cv::BORDER_CONSTANT)
+    {
+        gpuBorderType = cv::gpu::BORDER_CONSTANT_GPU;
+        return true;
+    }
 
     return false;
 }
