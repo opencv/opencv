@@ -75,7 +75,7 @@ namespace cv
         //////////////////////////////// Error handling ////////////////////////
 
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
-        CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);        
+        CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);
 
         //////////////////////////////// GpuMat ////////////////////////////////
         class Stream;
@@ -443,11 +443,11 @@ namespace cv
         CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
-        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, 
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
                                   const GpuMat& mask=GpuMat());
 
         //! finds global minimum and maximum array elements and returns their values with locations
-        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, 
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
                                   const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
 
         //! counts non-zero array elements
@@ -532,7 +532,7 @@ namespace cv
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream);
 
 
-        //! perfroms per-elements bit-wise inversion 
+        //! perfroms per-elements bit-wise inversion
         CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat());
         //! async version
         CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream);
@@ -586,11 +586,11 @@ namespace cv
         CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
 
         //! Does mean shift filtering on GPU.
-        CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, 
+        CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         //! Does mean shift procedure on GPU.
-        CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, 
+        CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
         //! Does mean shift segmentation with elimiation of small regions.
@@ -604,9 +604,9 @@ namespace cv
         //! async version
         CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, const Stream& stream);
 
-        //! Reprojects disparity image to 3D space. 
+        //! Reprojects disparity image to 3D space.
         //! Supports CV_8U and CV_16S types of input disparity.
-        //! The output is a 4-channel floating-point (CV_32FC4) matrix. 
+        //! The output is a 4-channel floating-point (CV_32FC4) matrix.
         //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
         //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
         CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q);
@@ -618,7 +618,7 @@ namespace cv
         //! async version
         CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
 
-        //! applies fixed threshold to the image. 
+        //! applies fixed threshold to the image.
         //! Now supports only THRESH_TRUNC threshold type and one channels float source.
         CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh);
 
@@ -662,7 +662,7 @@ namespace cv
         //! disabled until fix crash
         CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize = 3);
 
-        //! computes Harris cornerness criteria at each image pixel 
+        //! computes Harris cornerness criteria at each image pixel
         CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
 
 
@@ -696,7 +696,7 @@ namespace cv
 
         This is the base class for linear or non-linear filters that process columns of 2D arrays.
         Such filters are used for the "vertical" filtering parts in separable filters.
-        */ 
+        */
         class CV_EXPORTS BaseColumnFilter_GPU
         {
         public:
@@ -710,7 +710,7 @@ namespace cv
         The Base Class for Non-Separable 2D Filters.
 
         This is the base class for linear or non-linear 2D filters.
-        */ 
+        */
         class CV_EXPORTS BaseFilter_GPU
         {
         public:
@@ -739,7 +739,7 @@ namespace cv
         CV_EXPORTS Ptr<FilterEngine_GPU> createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D, int srcType, int dstType);
 
         //! returns the separable filter engine with the specified filters
-        CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter,
             const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType);
 
         //! returns horizontal 1D box filter
@@ -755,27 +755,27 @@ namespace cv
         CV_EXPORTS Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1));
 
         //! returns box filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createBoxFilter_GPU(int srcType, int dstType, const Size& ksize, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createBoxFilter_GPU(int srcType, int dstType, const Size& ksize,
             const Point& anchor = Point(-1,-1));
 
         //! returns 2D morphological filter
         //! only MORPH_ERODE and MORPH_DILATE are supported
         //! supports CV_8UC1 and CV_8UC4 types
         //! kernel must have CV_8UC1 type, one rows and cols == ksize.width * ksize.height
-        CV_EXPORTS Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, 
+        CV_EXPORTS Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize,
             Point anchor=Point(-1,-1));
 
         //! returns morphological filter engine. Only MORPH_ERODE and MORPH_DILATE are supported.
-        CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel,
             const Point& anchor = Point(-1,-1), int iterations = 1);
 
         //! returns 2D filter with the specified kernel
         //! supports CV_8UC1 and CV_8UC4 types
-        CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize, 
+        CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize,
             Point anchor = Point(-1, -1));
 
         //! returns the non-separable linear filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel,
             const Point& anchor = Point(-1,-1));
 
         //! returns the primitive row filter with the specified kernel.
@@ -784,9 +784,9 @@ namespace cv
         //! NPP calls when srcType == CV_8UC1 or srcType == CV_8UC4 and bufType == srcType,
         //! otherwise calls OpenCV version.
         //! NPP supports only BORDER_CONSTANT border type.
-        //! OpenCV version supports only CV_32F as buffer depth and 
+        //! OpenCV version supports only CV_32F as buffer depth and
         //! BORDER_REFLECT101, BORDER_REPLICATE and BORDER_CONSTANT border types.
-        CV_EXPORTS Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, 
+        CV_EXPORTS Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel,
             int anchor = -1, int borderType = BORDER_CONSTANT);
 
         //! returns the primitive column filter with the specified kernel.
@@ -795,22 +795,22 @@ namespace cv
         //! NPP calls when dstType == CV_8UC1 or dstType == CV_8UC4 and bufType == dstType,
         //! otherwise calls OpenCV version.
         //! NPP supports only BORDER_CONSTANT border type.
-        //! OpenCV version supports only CV_32F as buffer depth and 
+        //! OpenCV version supports only CV_32F as buffer depth and
         //! BORDER_REFLECT101, BORDER_REPLICATE and BORDER_CONSTANT border types.
-        CV_EXPORTS Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, 
+        CV_EXPORTS Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel,
             int anchor = -1, int borderType = BORDER_CONSTANT);
 
         //! returns the separable linear filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel,
             const Mat& columnKernel, const Point& anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT,
             int columnBorderType = -1);
 
         //! returns filter engine for the generalized Sobel operator
-        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! returns the Gaussian filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, 
+        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! returns maximum filter
@@ -839,19 +839,19 @@ namespace cv
         CV_EXPORTS void filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1));
 
         //! applies separable 2D linear filter to the image
-        CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, 
+        CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY,
             Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! applies generalized Sobel operator to the image
-        CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1, 
+        CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! applies the vertical or horizontal Scharr operator to the image
-        CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1, 
+        CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! smooths the image using Gaussian filter.
-        CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0, 
+        CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! applies Laplacian operator to the image
@@ -892,7 +892,7 @@ namespace cv
 
         class CV_EXPORTS StereoBM_GPU
         {
-        public:                                    
+        public:
             enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
 
             enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
@@ -948,7 +948,7 @@ namespace cv
 
             //! the full constructor taking the number of disparities, number of BP iterations on each level,
             //! number of levels, truncation of data cost, data weight,
-            //! truncation of discontinuity cost and discontinuity single jump            
+            //! truncation of discontinuity cost and discontinuity single jump
             //! DataTerm = data_weight * min(fabs(I2-I1), max_data_term)
             //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
             //! please see paper for more details
@@ -1102,10 +1102,10 @@ namespace cv
             enum { DEFAULT_NLEVELS = 64 };
             enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };
 
-            HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16), 
-                          Size block_stride=Size(8, 8), Size cell_size=Size(8, 8), 
-                          int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA, 
-                          double threshold_L2hys=0.2, bool gamma_correction=true, 
+            HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16),
+                          Size block_stride=Size(8, 8), Size cell_size=Size(8, 8),
+                          int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA,
+                          double threshold_L2hys=0.2, bool gamma_correction=true,
                           int nlevels=DEFAULT_NLEVELS);
 
             size_t getDescriptorSize() const;
@@ -1118,13 +1118,13 @@ namespace cv
             void setSVMDetector(const vector<float>& detector);
             bool checkDetectorSize() const;
 
-            void detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0, 
+            void detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0,
                         Size win_stride=Size(), Size padding=Size());
-            void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, 
+            void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations,
                                   double hit_threshold=0, Size win_stride=Size(), Size padding=Size(),
                                   double scale0=1.05, int group_threshold=2);
 
-            void getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, 
+            void getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors,
                                 int descr_format=DESCR_FORMAT_COL_BY_COL);
 
             Size win_size;
@@ -1134,8 +1134,8 @@ namespace cv
             int nbins;
             double win_sigma;
             double threshold_L2hys;
-            int nlevels;
             bool gamma_correction;
+            int nlevels;
 
         protected:
             void computeBlockHistograms(const GpuMat& img);
@@ -1149,14 +1149,14 @@ namespace cv
             GpuMat detector;
 
             // Results of the last classification step
-            GpuMat labels;        
+            GpuMat labels;
             Mat labels_host;
 
             // Results of the last histogram evaluation step
             GpuMat block_hists;
 
             // Gradients conputation results
-            GpuMat grad, qangle;            
+            GpuMat grad, qangle;
         };
 
 
@@ -1187,7 +1187,7 @@ namespace cv
             // Find one best match for each query descriptor.
             // trainIdx.at<int>(0, queryIdx) will contain best train index for queryIdx
             // distance.at<float>(0, queryIdx) will contain distance
-            void matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+            void matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
                 GpuMat& trainIdx, GpuMat& distance,
                 const GpuMat& mask = GpuMat());
 
@@ -1195,7 +1195,7 @@ namespace cv
             static void matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>& matches);
 
             // Find one best match for each query descriptor.
-            void match(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector<DMatch>& matches, 
+            void match(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector<DMatch>& matches,
                 const GpuMat& mask = GpuMat());
 
             // Make gpu collection of trains and masks in suitable format for matchCollection function
@@ -1206,16 +1206,16 @@ namespace cv
             // trainIdx.at<int>(0, queryIdx) will contain best train index for queryIdx
             // imgIdx.at<int>(0, queryIdx) will contain best image index for queryIdx
             // distance.at<float>(0, queryIdx) will contain distance
-            void matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection, 
-                GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, 
+            void matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection,
+                GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
                 const GpuMat& maskCollection);
 
             // Download trainIdx, imgIdx and distance to CPU vector with DMatch
-            static void matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, const GpuMat& distance, 
+            static void matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, const GpuMat& distance,
                 std::vector<DMatch>& matches);
 
             // Find one best match from train collection for each query descriptor.
-            void match(const GpuMat& queryDescs, std::vector<DMatch>& matches, 
+            void match(const GpuMat& queryDescs, std::vector<DMatch>& matches,
                 const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
             // Find k best matches for each query descriptor (in increasing order of distances).
@@ -1223,9 +1223,9 @@ namespace cv
             // distance.at<float>(queryIdx, i) will contain distance.
             // allDist is a buffer to store all distance between query descriptors and train descriptors
             // it have size (nQuery,nTrain) and CV_32F type
-            // allDist.at<float>(queryIdx, trainIdx) will contain FLT_MAX, if trainIdx is one from k best, 
+            // allDist.at<float>(queryIdx, trainIdx) will contain FLT_MAX, if trainIdx is one from k best,
             // otherwise it will contain distance between queryIdx and trainIdx descriptors
-            void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+            void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
                 GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat());
 
             // Download trainIdx and distance to CPU vector with DMatch
@@ -1239,15 +1239,15 @@ namespace cv
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
-            void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
-                std::vector< std::vector<DMatch> >& matches, int k, const GpuMat& mask = GpuMat(), 
-                bool compactResult = false);            
+            void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+                std::vector< std::vector<DMatch> >& matches, int k, const GpuMat& mask = GpuMat(),
+                bool compactResult = false);
 
             // Find k best matches  for each query descriptor (in increasing order of distances).
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
-            void knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, int knn, 
+            void knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, int knn,
                 const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false );
 
             // Find best matches for each query descriptor which have distance less than maxDistance.
@@ -1259,8 +1259,8 @@ namespace cv
             // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x nTrain,
             // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
             // Matches doesn't sorted.
-            void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
-                GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance, 
+            void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+                GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance,
                 const GpuMat& mask = GpuMat());
 
             // Download trainIdx, nMatches and distance to CPU vector with DMatch.
@@ -1271,17 +1271,17 @@ namespace cv
             static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches, const GpuMat& distance,
                 std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
-            // Find best matches for each query descriptor which have distance less than maxDistance 
+            // Find best matches for each query descriptor which have distance less than maxDistance
             // in increasing order of distances).
-            void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, 
-                std::vector< std::vector<DMatch> >& matches, float maxDistance, 
+            void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+                std::vector< std::vector<DMatch> >& matches, float maxDistance,
                 const GpuMat& mask = GpuMat(), bool compactResult = false);
 
             // Find best matches from train collection for each query descriptor which have distance less than
             // maxDistance (in increasing order of distances).
-            void radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, float maxDistance, 
-                const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);        
-        
+            void radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, float maxDistance,
+                const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
+
         private:
             DistType distType;
 

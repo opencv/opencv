@@ -57,8 +57,8 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 
 #include <cufft.h>
 
-namespace cv { namespace gpu { namespace imgproc 
-{  
+namespace cv { namespace gpu { namespace imgproc
+{
     void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
                                     const cufftComplex* b, cufftComplex* c);
 
@@ -74,7 +74,7 @@ namespace cv { namespace gpu { namespace imgproc
 }}}
 
 
-namespace 
+namespace
 {
     void matchTemplate_32F_SQDIFF(const GpuMat&, const GpuMat&, GpuMat&);
     void matchTemplate_32F_CCORR(const GpuMat&, const GpuMat&, GpuMat&);
@@ -94,7 +94,7 @@ namespace
         bh = std::min(bh, h);
     }
 #endif
-    
+
     void matchTemplate_32F_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
@@ -108,7 +108,7 @@ namespace
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
 
         Size block_size;
-        estimateBlockSize(result.cols, result.rows, templ.cols, templ.rows, 
+        estimateBlockSize(result.cols, result.rows, templ.cols, templ.rows,
                           block_size.width, block_size.height);
 
         Size dft_size;
@@ -139,7 +139,7 @@ namespace
 
         GpuMat templ_roi(templ.size(), CV_32S, templ.data, templ.step);
         GpuMat templ_block(dft_size, CV_32S, templ_data, dft_size.width * sizeof(cufftReal));
-        copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
+        copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
                        templ_block.cols - templ_roi.cols, 0);
         CV_Assert(cufftExecR2C(planR2C, templ_data, templ_spect) == CUFFT_SUCCESS);
 
@@ -148,16 +148,16 @@ namespace
         for (int y = 0; y < result.rows; y += block_size.height)
         {
             for (int x = 0; x < result.cols; x += block_size.width)
-            {                
+            {
                 Size image_roi_size;
                 image_roi_size.width = min(x + dft_size.width, image.cols) - x;
                 image_roi_size.height = min(y + dft_size.height, image.rows) - y;
                 GpuMat image_roi(image_roi_size, CV_32S, (void*)(image.ptr<float>(y) + x), image.step);
-                copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
+                copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0,
                                image_block.cols - image_roi.cols, 0);
 
                 CV_Assert(cufftExecR2C(planR2C, image_data, image_spect) == CUFFT_SUCCESS);
-                imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(), 
+                imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(),
                                                     image_spect, templ_spect, result_spect);
                 CV_Assert(cufftExecC2R(planC2R, result_spect, result_data) == CUFFT_SUCCESS);
 
@@ -204,12 +204,12 @@ namespace
 
         GpuMat image_(image.size(), CV_32S, image.data, image.step);
         GpuMat image_cont(opt_size, CV_32S, image_data, opt_size.width * sizeof(cufftReal));
-        copyMakeBorder(image_, image_cont, 0, image_cont.rows - image.rows, 0, 
+        copyMakeBorder(image_, image_cont, 0, image_cont.rows - image.rows, 0,
                        image_cont.cols - image.cols, 0);
 
         GpuMat templ_(templ.size(), CV_32S, templ.data, templ.step);
         GpuMat templ_cont(opt_size, CV_32S, templ_data, opt_size.width * sizeof(cufftReal));
-        copyMakeBorder(templ_, templ_cont, 0, templ_cont.rows - templ.rows, 0, 
+        copyMakeBorder(templ_, templ_cont, 0, templ_cont.rows - templ.rows, 0,
                        templ_cont.cols - templ.cols, 0);
 
         cufftHandle planR2C, planC2R;
@@ -218,7 +218,7 @@ namespace
 
         CV_Assert(cufftExecR2C(planR2C, image_data, image_spect) == CUFFT_SUCCESS);
         CV_Assert(cufftExecR2C(planR2C, templ_data, templ_spect) == CUFFT_SUCCESS);
-        imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / opt_size.area(), 
+        imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / opt_size.area(),
                                             image_spect, templ_spect, result_spect);
 
         CV_Assert(cufftExecC2R(planC2R, result_spect, result_data) == CUFFT_SUCCESS);
@@ -226,7 +226,7 @@ namespace
         cufftDestroy(planR2C);
         cufftDestroy(planC2R);
 
-        GpuMat result_cont(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F, 
+        GpuMat result_cont(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F,
                            result_data, opt_size.width * sizeof(cufftReal));
         result_cont.copyTo(result);
 
@@ -246,7 +246,7 @@ namespace
         imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
     }
 
-    
+
     void matchTemplate_8U_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         GpuMat imagef, templf;
@@ -264,12 +264,12 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
 
     typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&);
 
-    static const Caller callers8U[] = { ::matchTemplate_8U_SQDIFF, 0, 
+    static const Caller callers8U[] = { ::matchTemplate_8U_SQDIFF, 0,
                                         ::matchTemplate_8U_CCORR, 0, 0, 0 };
-    static const Caller callers32F[] = { ::matchTemplate_32F_SQDIFF, 0, 
+    static const Caller callers32F[] = { ::matchTemplate_32F_SQDIFF, 0,
                                          ::matchTemplate_32F_CCORR, 0, 0, 0 };
 
-    const Caller* callers;
+    const Caller* callers = 0;
     switch (image.type())
     {
     case CV_8U: callers = callers8U; break;
