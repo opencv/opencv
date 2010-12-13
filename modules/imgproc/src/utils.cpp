@@ -113,7 +113,7 @@ static void copyMakeBorder_8u( const uchar* src, int srcstep, Size srcroi,
     left *= cn;
     right *= cn;
     
-    uchar* dstInner = dst + (dststep*top + left)*elemSize;
+    uchar* dstInner = dst + dststep*top + left*elemSize;
 
     for( i = 0; i < srcroi.height; i++, dstInner += dststep, src += srcstep )
     {
@@ -183,7 +183,7 @@ static void copyMakeConstBorder_8u( const uchar* src, int srcstep, Size srcroi,
         if( dstInner != src )
             memcpy( dstInner, src, srcroi.width );
         memcpy( dstInner - left, constBuf, left );
-        memcpy( dstInner + srcroi.width, constBuf + left, right );
+        memcpy( dstInner + srcroi.width, constBuf, right );
     }
     
     dst += dststep*top;
