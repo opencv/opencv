@@ -51,7 +51,6 @@ const char* blacklist[] =
 };
 
 int main( int argc, char** argv )
-
 {
     return test_system.run( argc, argv, blacklist );
 }

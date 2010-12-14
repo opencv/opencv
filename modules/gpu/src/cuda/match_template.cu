@@ -47,50 +47,6 @@ using namespace cv::gpu;
 
 namespace cv { namespace gpu { namespace imgproc {
 
-texture<unsigned char, 2> imageTex_8U_CCORR;
-texture<unsigned char, 2> templTex_8U_CCORR;
-
-
-__global__ void matchTemplateNaiveKernel_8U_CCORR(int w, int h, 
-                                                  DevMem2Df result)
-{
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-    if (x < result.cols && y < result.rows)
-    {
-        float sum = 0.f;
-
-        for (int i = 0; i < h; ++i)
-            for (int j = 0; j < w; ++j)
-                sum += (float)tex2D(imageTex_8U_CCORR, x + j, y + i) * 
-                       (float)tex2D(templTex_8U_CCORR, j, i);
-
-        result.ptr(y)[x] = sum;
-    }
-}
-
-
-void matchTemplateNaive_8U_CCORR(const DevMem2D image, const DevMem2D templ,
-                                 DevMem2Df result)
-{
-    dim3 threads(32, 8);
-    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-              divUp(image.rows - templ.rows + 1, threads.y));
-
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-    cudaBindTexture2D(0, imageTex_8U_CCORR, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_8U_CCORR, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_8U_CCORR.filterMode = cudaFilterModePoint;
-    templTex_8U_CCORR.filterMode = cudaFilterModePoint;
-
-    matchTemplateNaiveKernel_8U_CCORR<<<grid, threads>>>(templ.cols, templ.rows, result);
-    cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_8U_CCORR));
-    cudaSafeCall(cudaUnbindTexture(templTex_8U_CCORR));
-}
-
-
 texture<float, 2> imageTex_32F_CCORR;
 texture<float, 2> templTex_32F_CCORR;
 
@@ -132,6 +88,56 @@ void matchTemplateNaive_32F_CCORR(const DevMem2D image, const DevMem2D templ,
     cudaSafeCall(cudaThreadSynchronize());
     cudaSafeCall(cudaUnbindTexture(imageTex_32F_CCORR));
     cudaSafeCall(cudaUnbindTexture(templTex_32F_CCORR));
+}
+
+
+texture<float, 2> imageTex_32F_SQDIFF;
+texture<float, 2> templTex_32F_SQDIFF;
+
+
+__global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h, 
+                                                    DevMem2Df result)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float sum = 0.f;
+        float delta;
+
+        for (int i = 0; i < h; ++i)
+        {
+            for (int j = 0; j < w; ++j)
+            {
+                delta = tex2D(imageTex_32F_SQDIFF, x + j, y + i) - 
+                        tex2D(templTex_32F_SQDIFF, j, i);
+                sum += delta * delta;
+            }
+        }
+
+        result.ptr(y)[x] = sum;
+    }
+}
+
+
+void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ,
+                                   DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
+              divUp(image.rows - templ.rows + 1, threads.y));
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
+    cudaBindTexture2D(0, imageTex_32F_SQDIFF, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_32F_SQDIFF, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_32F_SQDIFF.filterMode = cudaFilterModePoint;
+    templTex_32F_SQDIFF.filterMode = cudaFilterModePoint;
+
+    matchTemplateNaiveKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
+    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall(cudaUnbindTexture(imageTex_32F_SQDIFF));
+    cudaSafeCall(cudaUnbindTexture(templTex_32F_SQDIFF));
 }
 
 
@@ -185,12 +191,12 @@ void matchTemplateNaive_8U_SQDIFF(const DevMem2D image, const DevMem2D templ,
 }
 
 
-texture<float, 2> imageTex_32F_SQDIFF;
-texture<float, 2> templTex_32F_SQDIFF;
+texture<unsigned char, 2> imageTex_8U_CCORR;
+texture<unsigned char, 2> templTex_8U_CCORR;
 
 
-__global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h, 
-                                                    DevMem2Df result)
+__global__ void matchTemplateNaiveKernel_8U_CCORR(int w, int h, 
+                                                  DevMem2Df result)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -198,40 +204,34 @@ __global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h,
     if (x < result.cols && y < result.rows)
     {
         float sum = 0.f;
-        float delta;
 
         for (int i = 0; i < h; ++i)
-        {
             for (int j = 0; j < w; ++j)
-            {
-                delta = tex2D(imageTex_32F_SQDIFF, x + j, y + i) - 
-                        tex2D(templTex_32F_SQDIFF, j, i);
-                sum += delta * delta;
-            }
-        }
+                sum += (float)tex2D(imageTex_8U_CCORR, x + j, y + i) * 
+                       (float)tex2D(templTex_8U_CCORR, j, i);
 
         result.ptr(y)[x] = sum;
     }
 }
 
 
-void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ,
-                                   DevMem2Df result)
+void matchTemplateNaive_8U_CCORR(const DevMem2D image, const DevMem2D templ,
+                                 DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
               divUp(image.rows - templ.rows + 1, threads.y));
 
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-    cudaBindTexture2D(0, imageTex_32F_SQDIFF, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_32F_SQDIFF, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
-    templTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
+    cudaBindTexture2D(0, imageTex_8U_CCORR, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_8U_CCORR, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_8U_CCORR.filterMode = cudaFilterModePoint;
+    templTex_8U_CCORR.filterMode = cudaFilterModePoint;
 
-    matchTemplateNaiveKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
+    matchTemplateNaiveKernel_8U_CCORR<<<grid, threads>>>(templ.cols, templ.rows, result);
     cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_32F_SQDIFF));
-    cudaSafeCall(cudaUnbindTexture(templTex_32F_SQDIFF));
+    cudaSafeCall(cudaUnbindTexture(imageTex_8U_CCORR));
+    cudaSafeCall(cudaUnbindTexture(templTex_8U_CCORR));
 }
 
 
@@ -301,8 +301,8 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        result.ptr(y)[x] = (image_sqsum_ - 2.f * ccorr + templ_sqsum) * 
-                           rsqrtf(image_sqsum_ * templ_sqsum);
+        result.ptr(y)[x] = min(1.f, (image_sqsum_ - 2.f * ccorr + templ_sqsum) * 
+                           rsqrtf(image_sqsum_ * templ_sqsum));
     }
 }
 
@@ -368,8 +368,8 @@ __global__ void matchTemplatePreparedKernel_8U_CCOEFF_NORMED(
         float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
-        result.ptr(y)[x] = (ccorr - image_sum_ * templ_sum_scale) * 
-                           rsqrtf(templ_sqsum_scale * (image_sqsum_ - weight * image_sum_ * image_sum_));
+        result.ptr(y)[x] = min(1.f, (ccorr - image_sum_ * templ_sum_scale) * 
+                           rsqrtf(templ_sqsum_scale * (image_sqsum_ - weight * image_sum_ * image_sum_)));
     }
 }
 
@@ -405,7 +405,7 @@ __global__ void normalizeKernel_8U(
         float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
-        result.ptr(y)[x] *= rsqrtf(image_sqsum_ * templ_sqsum);
+        result.ptr(y)[x] = min(1.f, result.ptr(y)[x] * rsqrtf(image_sqsum_ * templ_sqsum));
     }
 }
 
