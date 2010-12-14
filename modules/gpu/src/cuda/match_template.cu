@@ -175,8 +175,8 @@ void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
 
 
 __global__ void matchTemplatePreparedKernel_8U_SQDIFF(
-        int w, int h, const PtrStep_<unsigned long long> image_sqsum, float templ_sqsum,
-        DevMem2Df result)
+        int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
+        unsigned int templ_sqsum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -193,8 +193,8 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF(
 
 
 void matchTemplatePrepared_8U_SQDIFF(
-        int w, int h, const DevMem2D_<unsigned long long> image_sqsum, float templ_sqsum,
-        DevMem2Df result)
+        int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
+        unsigned int templ_sqsum, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
@@ -205,8 +205,8 @@ void matchTemplatePrepared_8U_SQDIFF(
 
 
 __global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
-        int w, int h, const PtrStep_<unsigned long long> image_sqsum, float templ_sqsum,
-        DevMem2Df result)
+        int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
+        unsigned int templ_sqsum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -224,8 +224,8 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
 
 
 void matchTemplatePrepared_8U_SQDIFF_NORMED(
-        int w, int h, const DevMem2D_<unsigned long long> image_sqsum, float templ_sqsum,
-        DevMem2Df result)
+        int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
+        unsigned int templ_sqsum, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
@@ -235,8 +235,39 @@ void matchTemplatePrepared_8U_SQDIFF_NORMED(
 }
 
 
-__global__ void normalizeKernel_8U(int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
-                                   float templ_sqsum, DevMem2Df result)
+__global__ void matchTemplatePreparedKernel_8U_CCOEFF(
+        int w, int h, float scale, const PtrStep_<unsigned int> image_sum,
+        DevMem2Df result)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float ccorr = result.ptr(y)[x];
+        float image_sum_ = (float)(
+                (image_sum.ptr(y + h)[x + w] - image_sum.ptr(y)[x + w]) -
+                (image_sum.ptr(y + h)[x] - image_sum.ptr(y)[x]));
+        result.ptr(y)[x] = ccorr - image_sum_ * scale;
+    }
+}
+
+
+void matchTemplatePrepared_8U_CCOEFF(
+        int w, int h, const DevMem2D_<unsigned int> image_sum,
+        unsigned int templ_sum, DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+    matchTemplatePreparedKernel_8U_CCOEFF<<<grid, threads>>>(
+            w, h, (float)templ_sum / (w * h), image_sum, result);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+__global__ void normalizeKernel_8U(
+        int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
+        unsigned int templ_sqsum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -252,7 +283,7 @@ __global__ void normalizeKernel_8U(int w, int h, const PtrStep_<unsigned long lo
 
 
 void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-                  float templ_sqsum, DevMem2Df result)
+                  unsigned int templ_sqsum, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
