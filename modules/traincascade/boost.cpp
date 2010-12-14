@@ -474,9 +474,9 @@ float CvCascadeBoostTrainData::getVarValue( int vi, int si )
 
 struct FeatureIdxOnlyPrecalc
 {
-    FeatureIdxOnlyPrecalc( const CvFeatureEvaluator* _feval, CvMat* _buf, int _sample_count, bool _is_buf_16u )
+    FeatureIdxOnlyPrecalc( const CvFeatureEvaluator* _featureEvaluator, CvMat* _buf, int _sample_count, bool _is_buf_16u )
     {
-        feval = _feval;
+        featureEvaluator = _featureEvaluator;
         sample_count = _sample_count;
         udst = (unsigned short*)_buf->data.s;
         idst = _buf->data.i;
@@ -490,7 +490,7 @@ struct FeatureIdxOnlyPrecalc
         {
             for( int si = 0; si < sample_count; si++ )
             {
-                valCachePtr[si] = (*feval)( fi, si );
+                valCachePtr[si] = (*featureEvaluator)( fi, si );
                 if ( is_buf_16u )
                     *(udst + fi*sample_count + si) = (unsigned short)si;
                 else
@@ -502,7 +502,7 @@ struct FeatureIdxOnlyPrecalc
                 icvSortIntAux( idst + fi*sample_count, sample_count, valCachePtr );
         }
     }
-    const CvFeatureEvaluator* feval;
+    const CvFeatureEvaluator* featureEvaluator;
     int sample_count;
     int* idst;
     unsigned short* udst;
@@ -511,9 +511,9 @@ struct FeatureIdxOnlyPrecalc
 
 struct FeatureValAndIdxPrecalc
 {
-    FeatureValAndIdxPrecalc( const CvFeatureEvaluator* _feval, CvMat* _buf, Mat* _valCache, int _sample_count, bool _is_buf_16u )
+    FeatureValAndIdxPrecalc( const CvFeatureEvaluator* _featureEvaluator, CvMat* _buf, Mat* _valCache, int _sample_count, bool _is_buf_16u )
     {
-        feval = _feval;
+        featureEvaluator = _featureEvaluator;
         valCache = _valCache;
         sample_count = _sample_count;
         udst = (unsigned short*)_buf->data.s;
@@ -526,7 +526,7 @@ struct FeatureValAndIdxPrecalc
         {
             for( int si = 0; si < sample_count; si++ )
             {
-                valCache->at<float>(fi,si) = (*feval)( fi, si );
+                valCache->at<float>(fi,si) = (*featureEvaluator)( fi, si );
                 if ( is_buf_16u )
                     *(udst + fi*sample_count + si) = (unsigned short)si;
                 else
@@ -538,7 +538,7 @@ struct FeatureValAndIdxPrecalc
                 icvSortIntAux( idst + fi*sample_count, sample_count, valCache->ptr<float>(fi) );
         }
     }
-    const CvFeatureEvaluator* feval;
+    const CvFeatureEvaluator* featureEvaluator;
     Mat* valCache;
     int sample_count;
     int* idst;
@@ -548,9 +548,9 @@ struct FeatureValAndIdxPrecalc
 
 struct FeatureValOnlyPrecalc
 {
-    FeatureValOnlyPrecalc( const CvFeatureEvaluator* _feval, Mat* _valCache, int _sample_count )
+    FeatureValOnlyPrecalc( const CvFeatureEvaluator* _featureEvaluator, Mat* _valCache, int _sample_count )
     {
-        feval = _feval;
+        featureEvaluator = _featureEvaluator;
         valCache = _valCache;
         sample_count = _sample_count;
     }
@@ -558,9 +558,9 @@ struct FeatureValOnlyPrecalc
     {
         for ( int fi = range.begin(); fi < range.end(); fi++)
             for( int si = 0; si < sample_count; si++ )
-                valCache->at<float>(fi,si) = (*feval)( fi, si );
+                valCache->at<float>(fi,si) = (*featureEvaluator)( fi, si );
     }
-    const CvFeatureEvaluator* feval;
+    const CvFeatureEvaluator* featureEvaluator;
     Mat* valCache;
     int sample_count;
 };

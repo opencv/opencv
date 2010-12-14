@@ -278,6 +278,7 @@ class CV_EXPORTS FeatureEvaluator
 public:    
     enum { HAAR = 0, LBP = 1 };
     virtual ~FeatureEvaluator();
+
     virtual bool read(const FileNode& node);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
@@ -296,64 +297,95 @@ template<> CV_EXPORTS void Ptr<CvHaarClassifierCascade>::delete_obj();
 class CV_EXPORTS_W CascadeClassifier
 {
 public:
-    struct CV_EXPORTS DTreeNode
-    {
-        int featureIdx;
-        float threshold; // for ordered features only
-        int left;
-        int right;
-    };
-    
-    struct CV_EXPORTS DTree
-    {
-        int nodeCount;
-    };
-    
-    struct CV_EXPORTS Stage
-    {
-        int first;
-        int ntrees;
-        float threshold;
-    };
-    
-    enum { BOOST = 0 };
-    enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
-           FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
-
     CV_WRAP CascadeClassifier();
-    CV_WRAP CascadeClassifier(const string& filename);
-    ~CascadeClassifier();
+    CV_WRAP CascadeClassifier( const string& filename );
+    virtual ~CascadeClassifier();
     
-    CV_WRAP bool empty() const;
-    CV_WRAP bool load(const string& filename);
-    bool read(const FileNode& node);
+    CV_WRAP virtual bool empty() const;
+    CV_WRAP bool load( const string& filename );
+    bool read( const FileNode& node );
     CV_WRAP void detectMultiScale( const Mat& image,
                                    CV_OUT vector<Rect>& objects,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
-                                   Size maxSize=Size());
- 
+                                   Size maxSize=Size() );
+
+
+    bool isOldFormatCascade() const;
+    virtual Size getOriginalWindowSize() const;
+    int getFeatureType() const;
+    bool setImage(const Mat&);
+
+protected:
+    virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
+                                    int stripSize, int yStep, double factor, vector<Rect>& candidates );
+
+private:
+    enum { BOOST = 0 };
+    enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
+           FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
+
+    friend class CascadeClassifierInvoker;
+
+    template<class FEval>
+    friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+
+    template<class FEval>
+    friend int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+
+    template<class FEval>
+    friend int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+
+    template<class FEval>
+    friend int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+
     bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
     int runAt( Ptr<FeatureEvaluator>&, Point );
 
-    bool isStumpBased;
+    class Data
+    {
+    public:
+        struct CV_EXPORTS DTreeNode
+        {
+            int featureIdx;
+            float threshold; // for ordered features only
+            int left;
+            int right;
+        };
 
-    int stageType;
-    int featureType;
-    int ncategories;
-    Size origWinSize;
-    
-    vector<Stage> stages;
-    vector<DTree> classifiers;
-    vector<DTreeNode> nodes;
-    vector<float> leaves;
-    vector<int> subsets;
+        struct CV_EXPORTS DTree
+        {
+            int nodeCount;
+        };
 
-    Ptr<FeatureEvaluator> feval;
+        struct CV_EXPORTS Stage
+        {
+            int first;
+            int ntrees;
+            float threshold;
+        };
+
+        bool read(const FileNode &node);
+
+        bool isStumpBased;
+
+        int stageType;
+        int featureType;
+        int ncategories;
+        Size origWinSize;
+
+        vector<Stage> stages;
+        vector<DTree> classifiers;
+        vector<DTreeNode> nodes;
+        vector<float> leaves;
+        vector<int> subsets;
+    };
+
+    Data data;
+    Ptr<FeatureEvaluator> featureEvaluator;
     Ptr<CvHaarClassifierCascade> oldCascade;
 };
-
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
