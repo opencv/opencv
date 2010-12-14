@@ -43,20 +43,104 @@
 #include <cufft.h>
 #include "internal_shared.hpp"
 
-#include <iostream>
-using namespace std;
-
 using namespace cv::gpu;
 
 namespace cv { namespace gpu { namespace imgproc {
 
+texture<unsigned char, 2> imageTex_8U_CCORR;
+texture<unsigned char, 2> templTex_8U_CCORR;
 
-texture<unsigned char, 2> imageTex_8U;
-texture<unsigned char, 2> templTex_8U;
+
+__global__ void matchTemplateNaiveKernel_8U_CCORR(int w, int h, 
+                                                  DevMem2Df result)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float sum = 0.f;
+
+        for (int i = 0; i < h; ++i)
+            for (int j = 0; j < w; ++j)
+                sum += (float)tex2D(imageTex_8U_CCORR, x + j, y + i) * 
+                       (float)tex2D(templTex_8U_CCORR, j, i);
+
+        result.ptr(y)[x] = sum;
+    }
+}
+
+
+void matchTemplateNaive_8U_CCORR(const DevMem2D image, const DevMem2D templ,
+                                 DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
+              divUp(image.rows - templ.rows + 1, threads.y));
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
+    cudaBindTexture2D(0, imageTex_8U_CCORR, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_8U_CCORR, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_8U_CCORR.filterMode = cudaFilterModePoint;
+    templTex_8U_CCORR.filterMode = cudaFilterModePoint;
+
+    matchTemplateNaiveKernel_8U_CCORR<<<grid, threads>>>(templ.cols, templ.rows, result);
+    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall(cudaUnbindTexture(imageTex_8U_CCORR));
+    cudaSafeCall(cudaUnbindTexture(templTex_8U_CCORR));
+}
+
+
+texture<float, 2> imageTex_32F_CCORR;
+texture<float, 2> templTex_32F_CCORR;
+
+
+__global__ void matchTemplateNaiveKernel_32F_CCORR(int w, int h, 
+                                                   DevMem2Df result)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float sum = 0.f;
+
+        for (int i = 0; i < h; ++i)
+            for (int j = 0; j < w; ++j)
+                sum += tex2D(imageTex_32F_CCORR, x + j, y + i) * 
+                       tex2D(templTex_32F_CCORR, j, i);
+
+        result.ptr(y)[x] = sum;
+    }
+}
+
+
+void matchTemplateNaive_32F_CCORR(const DevMem2D image, const DevMem2D templ,
+                                  DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
+              divUp(image.rows - templ.rows + 1, threads.y));
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
+    cudaBindTexture2D(0, imageTex_32F_CCORR, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_32F_CCORR, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_32F_CCORR.filterMode = cudaFilterModePoint;
+    templTex_32F_CCORR.filterMode = cudaFilterModePoint;
+
+    matchTemplateNaiveKernel_32F_CCORR<<<grid, threads>>>(templ.cols, templ.rows, result);
+    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall(cudaUnbindTexture(imageTex_32F_CCORR));
+    cudaSafeCall(cudaUnbindTexture(templTex_32F_CCORR));
+}
+
+
+texture<unsigned char, 2> imageTex_8U_SQDIFF;
+texture<unsigned char, 2> templTex_8U_SQDIFF;
 
 
 __global__ void matchTemplateNaiveKernel_8U_SQDIFF(int w, int h, 
-                                                DevMem2Df result)
+                                                   DevMem2Df result)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -70,8 +154,8 @@ __global__ void matchTemplateNaiveKernel_8U_SQDIFF(int w, int h,
         {
             for (int j = 0; j < w; ++j)
             {
-                delta = (float)tex2D(imageTex_8U, x + j, y + i) - 
-                        (float)tex2D(templTex_8U, j, i);
+                delta = (float)tex2D(imageTex_8U_SQDIFF, x + j, y + i) - 
+                        (float)tex2D(templTex_8U_SQDIFF, j, i);
                 sum += delta * delta;
             }
         }
@@ -82,27 +166,27 @@ __global__ void matchTemplateNaiveKernel_8U_SQDIFF(int w, int h,
 
 
 void matchTemplateNaive_8U_SQDIFF(const DevMem2D image, const DevMem2D templ,
-                                DevMem2Df result)
+                                  DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-            divUp(image.rows - templ.rows + 1, threads.y));
+              divUp(image.rows - templ.rows + 1, threads.y));
 
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-    cudaBindTexture2D(0, imageTex_8U, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_8U, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_8U.filterMode = cudaFilterModePoint;
-    templTex_8U.filterMode = cudaFilterModePoint;
+    cudaBindTexture2D(0, imageTex_8U_SQDIFF, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_8U_SQDIFF, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
+    templTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
 
     matchTemplateNaiveKernel_8U_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
     cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_8U));
-    cudaSafeCall(cudaUnbindTexture(templTex_8U));
+    cudaSafeCall(cudaUnbindTexture(imageTex_8U_SQDIFF));
+    cudaSafeCall(cudaUnbindTexture(templTex_8U_SQDIFF));
 }
 
 
-texture<float, 2> imageTex_32F;
-texture<float, 2> templTex_32F;
+texture<float, 2> imageTex_32F_SQDIFF;
+texture<float, 2> templTex_32F_SQDIFF;
 
 
 __global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h, 
@@ -120,8 +204,8 @@ __global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h,
         {
             for (int j = 0; j < w; ++j)
             {
-                delta = tex2D(imageTex_32F, x + j, y + i) - 
-                        tex2D(templTex_32F, j, i);
+                delta = tex2D(imageTex_32F_SQDIFF, x + j, y + i) - 
+                        tex2D(templTex_32F_SQDIFF, j, i);
                 sum += delta * delta;
             }
         }
@@ -132,22 +216,22 @@ __global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h,
 
 
 void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ,
-                                DevMem2Df result)
+                                   DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-            divUp(image.rows - templ.rows + 1, threads.y));
+              divUp(image.rows - templ.rows + 1, threads.y));
 
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-    cudaBindTexture2D(0, imageTex_32F, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_32F, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_8U.filterMode = cudaFilterModePoint;
-    templTex_8U.filterMode = cudaFilterModePoint;
+    cudaBindTexture2D(0, imageTex_32F_SQDIFF, image.data, desc, image.cols, image.rows, image.step);
+    cudaBindTexture2D(0, templTex_32F_SQDIFF, templ.data, desc, templ.cols, templ.rows, templ.step);
+    imageTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
+    templTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
 
     matchTemplateNaiveKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
     cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_32F));
-    cudaSafeCall(cudaUnbindTexture(templTex_32F));
+    cudaSafeCall(cudaUnbindTexture(imageTex_32F_SQDIFF));
+    cudaSafeCall(cudaUnbindTexture(templTex_32F_SQDIFF));
 }
 
 
@@ -183,11 +267,11 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF(
 
     if (x < result.cols && y < result.rows)
     {
-        float image_sq = (float)(
+        float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        result.ptr(y)[x] = image_sq - 2.f * ccorr + templ_sqsum;
+        result.ptr(y)[x] = image_sqsum_ - 2.f * ccorr + templ_sqsum;
     }
 }
 
@@ -213,12 +297,12 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
 
     if (x < result.cols && y < result.rows)
     {
-        float image_sq = (float)(
+        float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        result.ptr(y)[x] = (image_sq - 2.f * ccorr + templ_sqsum) * 
-                           rsqrtf(image_sq * templ_sqsum);
+        result.ptr(y)[x] = (image_sqsum_ - 2.f * ccorr + templ_sqsum) * 
+                           rsqrtf(image_sqsum_ * templ_sqsum);
     }
 }
 
@@ -318,10 +402,10 @@ __global__ void normalizeKernel_8U(
 
     if (x < result.cols && y < result.rows)
     {
-        float image_sq = (float)(
+        float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
-        result.ptr(y)[x] *= rsqrtf(image_sq * templ_sqsum);
+        result.ptr(y)[x] *= rsqrtf(image_sqsum_ * templ_sqsum);
     }
 }
 
