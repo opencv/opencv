@@ -330,7 +330,6 @@
 #define CV_IMWRITE_PXM_BINARY 32
 #define IPL_ORIGIN_TL 0
 #define IPL_ORIGIN_BL 1
-#define CV_PI
 #define CV_GAUSSIAN_5x5
 #define CV_CN_MAX
 #define CV_WINDOW_AUTOSIZE  1

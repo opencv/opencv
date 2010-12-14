@@ -3962,6 +3962,9 @@ void initcv()
   convert.to = &cvmat_Type;
   PyDict_SetItemString(d, "cvmat", convert.o);
 
+  // AFAIK the only floating-point constant
+  PyDict_SetItemString(d, "CV_PI", PyFloat_FromDouble(CV_PI));
+
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 #define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
 #define PUBLISH2(I, value) PyDict_SetItemString(d, #I, PyLong_FromLong(value))
