@@ -236,8 +236,8 @@ void matchTemplatePrepared_8U_SQDIFF_NORMED(
 
 
 __global__ void matchTemplatePreparedKernel_8U_CCOEFF(
-        int w, int h, float scale, const PtrStep_<unsigned int> image_sum,
-        DevMem2Df result)
+        int w, int h, float templ_sum_scale, 
+        const PtrStep_<unsigned int> image_sum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -248,7 +248,7 @@ __global__ void matchTemplatePreparedKernel_8U_CCOEFF(
         float image_sum_ = (float)(
                 (image_sum.ptr(y + h)[x + w] - image_sum.ptr(y)[x + w]) -
                 (image_sum.ptr(y + h)[x] - image_sum.ptr(y)[x]));
-        result.ptr(y)[x] = ccorr - image_sum_ * scale;
+        result.ptr(y)[x] = ccorr - image_sum_ * templ_sum_scale;
     }
 }
 
@@ -261,6 +261,50 @@ void matchTemplatePrepared_8U_CCOEFF(
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
     matchTemplatePreparedKernel_8U_CCOEFF<<<grid, threads>>>(
             w, h, (float)templ_sum / (w * h), image_sum, result);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+__global__ void matchTemplatePreparedKernel_8U_CCOEFF_NORMED(
+        int w, int h, float weight, 
+        float templ_sum_scale, float templ_sqsum_scale,
+        const PtrStep_<unsigned int> image_sum, 
+        const PtrStep_<unsigned long long> image_sqsum,
+        DevMem2Df result)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float ccorr = result.ptr(y)[x];
+        float image_sum_ = (float)(
+                (image_sum.ptr(y + h)[x + w] - image_sum.ptr(y)[x + w]) -
+                (image_sum.ptr(y + h)[x] - image_sum.ptr(y)[x]));
+        float image_sqsum_ = (float)(
+                (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
+                (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
+        result.ptr(y)[x] = (ccorr - image_sum_ * templ_sum_scale) * 
+                           rsqrtf(templ_sqsum_scale * (image_sqsum_ - weight * image_sum_ * image_sum_));
+    }
+}
+
+
+void matchTemplatePrepared_8U_CCOEFF_NORMED(
+            int w, int h, const DevMem2D_<unsigned int> image_sum, 
+            const DevMem2D_<unsigned long long> image_sqsum,
+            unsigned int templ_sum, unsigned int templ_sqsum,
+            DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+
+    float weight = 1.f / (w * h);
+    float templ_sum_scale = templ_sum * weight;
+    float templ_sqsum_scale = templ_sqsum - templ_sum * templ_sum * weight;
+    matchTemplatePreparedKernel_8U_CCOEFF_NORMED<<<grid, threads>>>(
+            w, h, weight, templ_sum_scale, templ_sqsum_scale, 
+            image_sum, image_sqsum, result);
     cudaSafeCall(cudaThreadSynchronize());
 }
 
