@@ -42,7 +42,7 @@
 
 #include <cufft.h>
 #include "internal_shared.hpp"
-#include "../opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/vecmath.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -386,10 +386,10 @@ __global__ void matchTemplatePreparedKernel_CCOFF_8U(
 
     if (x < result.cols && y < result.rows)
     {
-        float ccorr = result.ptr(y)[x];
         float image_sum_ = (float)(
                 (image_sum.ptr(y + h)[x + w] - image_sum.ptr(y)[x + w]) -
                 (image_sum.ptr(y + h)[x] - image_sum.ptr(y)[x]));
+        float ccorr = result.ptr(y)[x];
         result.ptr(y)[x] = ccorr - image_sum_ * templ_sum_scale;
     }
 }
@@ -403,6 +403,46 @@ void matchTemplatePrepared_CCOFF_8U(
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
     matchTemplatePreparedKernel_CCOFF_8U<<<grid, threads>>>(
             w, h, (float)templ_sum / (w * h), image_sum, result);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+__global__ void matchTemplatePreparedKernel_CCOFF_8UC2(
+        int w, int h, float templ_sum_scale_r, float templ_sum_scale_g,
+        const PtrStep_<unsigned int> image_sum_r,
+        const PtrStep_<unsigned int> image_sum_g,
+        DevMem2Df result)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float image_sum_r_ = (float)(
+                (image_sum_r.ptr(y + h)[x + w] - image_sum_r.ptr(y)[x + w]) -
+                (image_sum_r.ptr(y + h)[x] - image_sum_r.ptr(y)[x]));
+        float image_sum_g_ = (float)(
+                (image_sum_g.ptr(y + h)[x + w] - image_sum_g.ptr(y)[x + w]) -
+                (image_sum_g.ptr(y + h)[x] - image_sum_g.ptr(y)[x]));
+        float ccorr = result.ptr(y)[x];
+        result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r 
+                                 - image_sum_g_ * templ_sum_scale_g;
+    }
+}
+
+
+void matchTemplatePrepared_CCOFF_8UC2(
+        int w, int h, 
+        const DevMem2D_<unsigned int> image_sum_r, 
+        const DevMem2D_<unsigned int> image_sum_g,
+        unsigned int templ_sum_r, unsigned int templ_sum_g, 
+        DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+    matchTemplatePreparedKernel_CCOFF_8UC2<<<grid, threads>>>(
+            w, h, (float)templ_sum_r / (w * h), (float)templ_sum_g / (w * h),
+            image_sum_r, image_sum_g, result);
     cudaSafeCall(cudaThreadSynchronize());
 }
 

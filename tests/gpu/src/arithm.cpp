@@ -945,7 +945,7 @@ struct CV_GpuSumTest: CvTest
             int typemax = hasNativeDoubleSupport(getDevice()) ? CV_64F : CV_32F;
             for (int type = CV_8U; type <= typemax; ++type) 
             {
-                gen(1 + rand() % 1000, 1 + rand() % 1000, type, src);
+                gen(1 + rand() % 500, 1 + rand() % 500, type, src);
                 a = sum(src);
                 b = sum(GpuMat(src));
                 if (abs(a[0] - b[0]) > src.size().area() * max_err)
