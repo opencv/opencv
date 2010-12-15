@@ -42,196 +42,218 @@
 
 #include <cufft.h>
 #include "internal_shared.hpp"
+#include "../opencv2/gpu/device/vecmath.hpp"
 
 using namespace cv::gpu;
+using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace imgproc {
 
-texture<float, 2> imageTex_32F_CCORR;
-texture<float, 2> templTex_32F_CCORR;
+
+__device__ float sum(float v) { return v; }
+__device__ float sum(float2 v) { return v.x + v.y; }
+__device__ float sum(float3 v) { return v.x + v.y + v.z; }
+__device__ float sum(float4 v) { return v.x + v.y + v.z + v.w; }
+
+__device__ float first(float v) { return v; }
+__device__ float first(float2 v) { return v.x; }
+__device__ float first(float3 v) { return v.x; }
+__device__ float first(float4 v) { return v.x; }
+
+__device__ float mul(float a, float b) { return a * b; }
+__device__ float2 mul(float2 a, float2 b) { return make_float2(a.x * b.x, a.y * b.y); }
+__device__ float3 mul(float3 a, float3 b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); }
+__device__ float4 mul(float4 a, float4 b) { return make_float4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
+
+__device__ float mul(uchar a, uchar b) { return a * b; }
+__device__ float2 mul(uchar2 a, uchar2 b) { return make_float2(a.x * b.x, a.y * b.y); }
+__device__ float3 mul(uchar3 a, uchar3 b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); }
+__device__ float4 mul(uchar4 a, uchar4 b) { return make_float4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
+
+__device__ float sub(float a, float b) { return a - b; }
+__device__ float2 sub(float2 a, float2 b) { return make_float2(a.x - b.x, a.y - b.y); }
+__device__ float3 sub(float3 a, float3 b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); }
+__device__ float4 sub(float4 a, float4 b) { return make_float4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
+
+__device__ float sub(uchar a, uchar b) { return a - b; }
+__device__ float2 sub(uchar2 a, uchar2 b) { return make_float2(a.x - b.x, a.y - b.y); }
+__device__ float3 sub(uchar3 a, uchar3 b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); }
+__device__ float4 sub(uchar4 a, uchar4 b) { return make_float4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
 
 
-__global__ void matchTemplateNaiveKernel_32F_CCORR(int w, int h, 
-                                                   DevMem2Df result)
+template <typename T, int cn>
+__global__ void matchTemplateNaiveKernel_CCORR(
+        int w, int h, const PtrStep image, const PtrStep templ, 
+        DevMem2Df result)
 {
+    typedef typename TypeVec<T, cn>::vec_t Type;
+    typedef typename TypeVec<float, cn>::vec_t Typef;
+
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
     if (x < result.cols && y < result.rows)
     {
-        float sum = 0.f;
-
-        for (int i = 0; i < h; ++i)
-            for (int j = 0; j < w; ++j)
-                sum += tex2D(imageTex_32F_CCORR, x + j, y + i) * 
-                       tex2D(templTex_32F_CCORR, j, i);
-
-        result.ptr(y)[x] = sum;
-    }
-}
-
-
-void matchTemplateNaive_32F_CCORR(const DevMem2D image, const DevMem2D templ,
-                                  DevMem2Df result)
-{
-    dim3 threads(32, 8);
-    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-              divUp(image.rows - templ.rows + 1, threads.y));
-
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-    cudaBindTexture2D(0, imageTex_32F_CCORR, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_32F_CCORR, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_32F_CCORR.filterMode = cudaFilterModePoint;
-    templTex_32F_CCORR.filterMode = cudaFilterModePoint;
-
-    matchTemplateNaiveKernel_32F_CCORR<<<grid, threads>>>(templ.cols, templ.rows, result);
-    cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_32F_CCORR));
-    cudaSafeCall(cudaUnbindTexture(templTex_32F_CCORR));
-}
-
-
-texture<float, 2> imageTex_32F_SQDIFF;
-texture<float, 2> templTex_32F_SQDIFF;
-
-
-__global__ void matchTemplateNaiveKernel_32F_SQDIFF(int w, int h, 
-                                                    DevMem2Df result)
-{
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-    if (x < result.cols && y < result.rows)
-    {
-        float sum = 0.f;
-        float delta;
+        Typef res = VecTraits<Typef>::all(0);
 
         for (int i = 0; i < h; ++i)
         {
+            const Type* image_ptr = (const Type*)image.ptr(y + i);
+            const Type* templ_ptr = (const Type*)templ.ptr(i);
             for (int j = 0; j < w; ++j)
-            {
-                delta = tex2D(imageTex_32F_SQDIFF, x + j, y + i) - 
-                        tex2D(templTex_32F_SQDIFF, j, i);
-                sum += delta * delta;
-            }
+                res = res + mul(image_ptr[x + j], templ_ptr[j]);
         }
 
-        result.ptr(y)[x] = sum;
+        result.ptr(y)[x] = sum(res);
     }
 }
 
 
-void matchTemplateNaive_32F_SQDIFF(const DevMem2D image, const DevMem2D templ,
-                                   DevMem2Df result)
+void matchTemplateNaive_CCORR_32F(const DevMem2D image, const DevMem2D templ,
+                                  DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
-    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-              divUp(image.rows - templ.rows + 1, threads.y));
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-    cudaBindTexture2D(0, imageTex_32F_SQDIFF, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_32F_SQDIFF, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_32F_SQDIFF.filterMode = cudaFilterModePoint;
-    templTex_32F_SQDIFF.filterMode = cudaFilterModePoint;
-
-    matchTemplateNaiveKernel_32F_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
+    switch (cn)
+    {
+    case 1:
+        matchTemplateNaiveKernel_CCORR<float, 1><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 2:
+        matchTemplateNaiveKernel_CCORR<float, 2><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 3:
+        matchTemplateNaiveKernel_CCORR<float, 3><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 4:
+        matchTemplateNaiveKernel_CCORR<float, 4><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    }
     cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_32F_SQDIFF));
-    cudaSafeCall(cudaUnbindTexture(templTex_32F_SQDIFF));
 }
 
 
-texture<unsigned char, 2> imageTex_8U_SQDIFF;
-texture<unsigned char, 2> templTex_8U_SQDIFF;
-
-
-__global__ void matchTemplateNaiveKernel_8U_SQDIFF(int w, int h, 
-                                                   DevMem2Df result)
+void matchTemplateNaive_CCORR_8U(const DevMem2D image, const DevMem2D templ,
+                                 DevMem2Df result, int cn)
 {
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+
+    switch (cn)
+    {
+    case 1:
+        matchTemplateNaiveKernel_CCORR<uchar, 1><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 2:
+        matchTemplateNaiveKernel_CCORR<uchar, 2><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 3:
+        matchTemplateNaiveKernel_CCORR<uchar, 3><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 4:
+        matchTemplateNaiveKernel_CCORR<uchar, 4><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    }
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+template <typename T, int cn>
+__global__ void matchTemplateNaiveKernel_SQDIFF(
+        int w, int h, const PtrStep image, const PtrStep templ, 
+        DevMem2Df result)
+{
+    typedef typename TypeVec<T, cn>::vec_t Type;
+    typedef typename TypeVec<float, cn>::vec_t Typef;
+
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
 
     if (x < result.cols && y < result.rows)
     {
-        float sum = 0.f;
-        float delta;
+        Typef res = VecTraits<Typef>::all(0);
+        Typef delta;
 
         for (int i = 0; i < h; ++i)
         {
+            const Type* image_ptr = (const Type*)image.ptr(y + i);
+            const Type* templ_ptr = (const Type*)templ.ptr(i);
             for (int j = 0; j < w; ++j)
             {
-                delta = (float)tex2D(imageTex_8U_SQDIFF, x + j, y + i) - 
-                        (float)tex2D(templTex_8U_SQDIFF, j, i);
-                sum += delta * delta;
+                delta = sub(image_ptr[x + j], templ_ptr[j]);
+                res = res + delta * delta;
             }
         }
 
-        result.ptr(y)[x] = sum;
+        result.ptr(y)[x] = sum(res);
     }
 }
 
 
-void matchTemplateNaive_8U_SQDIFF(const DevMem2D image, const DevMem2D templ,
-                                  DevMem2Df result)
+void matchTemplateNaive_SQDIFF_32F(const DevMem2D image, const DevMem2D templ,
+                                   DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
-    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-              divUp(image.rows - templ.rows + 1, threads.y));
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-    cudaBindTexture2D(0, imageTex_8U_SQDIFF, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_8U_SQDIFF, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
-    templTex_8U_SQDIFF.filterMode = cudaFilterModePoint;
-
-    matchTemplateNaiveKernel_8U_SQDIFF<<<grid, threads>>>(templ.cols, templ.rows, result);
-    cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_8U_SQDIFF));
-    cudaSafeCall(cudaUnbindTexture(templTex_8U_SQDIFF));
-}
-
-
-texture<unsigned char, 2> imageTex_8U_CCORR;
-texture<unsigned char, 2> templTex_8U_CCORR;
-
-
-__global__ void matchTemplateNaiveKernel_8U_CCORR(int w, int h, 
-                                                  DevMem2Df result)
-{
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-    if (x < result.cols && y < result.rows)
+    switch (cn)
     {
-        float sum = 0.f;
-
-        for (int i = 0; i < h; ++i)
-            for (int j = 0; j < w; ++j)
-                sum += (float)tex2D(imageTex_8U_CCORR, x + j, y + i) * 
-                       (float)tex2D(templTex_8U_CCORR, j, i);
-
-        result.ptr(y)[x] = sum;
+    case 1:
+        matchTemplateNaiveKernel_SQDIFF<float, 1><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 2:
+        matchTemplateNaiveKernel_SQDIFF<float, 2><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 3:
+        matchTemplateNaiveKernel_SQDIFF<float, 3><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 4:
+        matchTemplateNaiveKernel_SQDIFF<float, 4><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
     }
+    cudaSafeCall(cudaThreadSynchronize());
 }
 
 
-void matchTemplateNaive_8U_CCORR(const DevMem2D image, const DevMem2D templ,
-                                 DevMem2Df result)
+void matchTemplateNaive_SQDIFF_8U(const DevMem2D image, const DevMem2D templ,
+                                  DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
-    dim3 grid(divUp(image.cols - templ.cols + 1, threads.x), 
-              divUp(image.rows - templ.rows + 1, threads.y));
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-    cudaBindTexture2D(0, imageTex_8U_CCORR, image.data, desc, image.cols, image.rows, image.step);
-    cudaBindTexture2D(0, templTex_8U_CCORR, templ.data, desc, templ.cols, templ.rows, templ.step);
-    imageTex_8U_CCORR.filterMode = cudaFilterModePoint;
-    templTex_8U_CCORR.filterMode = cudaFilterModePoint;
-
-    matchTemplateNaiveKernel_8U_CCORR<<<grid, threads>>>(templ.cols, templ.rows, result);
+    switch (cn)
+    {
+    case 1:
+        matchTemplateNaiveKernel_SQDIFF<uchar, 1><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 2:
+        matchTemplateNaiveKernel_SQDIFF<uchar, 2><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 3:
+        matchTemplateNaiveKernel_SQDIFF<uchar, 3><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    case 4:
+        matchTemplateNaiveKernel_SQDIFF<uchar, 4><<<grid, threads>>>(
+                templ.cols, templ.rows, image, templ, result);
+        break;
+    }
     cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(imageTex_8U_CCORR));
-    cudaSafeCall(cudaUnbindTexture(templTex_8U_CCORR));
 }
 
 
@@ -258,7 +280,8 @@ void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
 }
 
 
-__global__ void matchTemplatePreparedKernel_8U_SQDIFF(
+template <int cn>
+__global__ void matchTemplatePreparedKernel_SQDIFF_8U(
         int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
         unsigned int templ_sqsum, DevMem2Df result)
 {
@@ -268,27 +291,45 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF(
     if (x < result.cols && y < result.rows)
     {
         float image_sqsum_ = (float)(
-                (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
-                (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
+                (image_sqsum.ptr(y + h)[(x + w) * cn] - image_sqsum.ptr(y)[(x + w) * cn]) -
+                (image_sqsum.ptr(y + h)[x * cn] - image_sqsum.ptr(y)[x * cn]));
         float ccorr = result.ptr(y)[x];
         result.ptr(y)[x] = image_sqsum_ - 2.f * ccorr + templ_sqsum;
     }
 }
 
 
-void matchTemplatePrepared_8U_SQDIFF(
+void matchTemplatePrepared_SQDIFF_8U(
         int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-        unsigned int templ_sqsum, DevMem2Df result)
+        unsigned int templ_sqsum, DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
-    matchTemplatePreparedKernel_8U_SQDIFF<<<grid, threads>>>(
-            w, h, image_sqsum, templ_sqsum, result);
+    switch (cn)
+    {
+    case 1:
+        matchTemplatePreparedKernel_SQDIFF_8U<1><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 2:
+        matchTemplatePreparedKernel_SQDIFF_8U<2><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 3:
+        matchTemplatePreparedKernel_SQDIFF_8U<3><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 4:
+        matchTemplatePreparedKernel_SQDIFF_8U<4><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    }
     cudaSafeCall(cudaThreadSynchronize());
 }
 
 
-__global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
+template <int cn>
+__global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(
         int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
         unsigned int templ_sqsum, DevMem2Df result)
 {
@@ -298,8 +339,8 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
     if (x < result.cols && y < result.rows)
     {
         float image_sqsum_ = (float)(
-                (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
-                (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
+                (image_sqsum.ptr(y + h)[(x + w) * cn] - image_sqsum.ptr(y)[(x + w) * cn]) -
+                (image_sqsum.ptr(y + h)[x * cn] - image_sqsum.ptr(y)[x * cn]));
         float ccorr = result.ptr(y)[x];
         result.ptr(y)[x] = min(1.f, (image_sqsum_ - 2.f * ccorr + templ_sqsum) * 
                            rsqrtf(image_sqsum_ * templ_sqsum));
@@ -307,19 +348,36 @@ __global__ void matchTemplatePreparedKernel_8U_SQDIFF_NORMED(
 }
 
 
-void matchTemplatePrepared_8U_SQDIFF_NORMED(
+void matchTemplatePrepared_SQDIFF_NORMED_8U(
         int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-        unsigned int templ_sqsum, DevMem2Df result)
+        unsigned int templ_sqsum, DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
-    matchTemplatePreparedKernel_8U_SQDIFF_NORMED<<<grid, threads>>>(
-            w, h, image_sqsum, templ_sqsum, result);
+    switch (cn)
+    {
+    case 1:
+        matchTemplatePreparedKernel_SQDIFF_NORMED_8U<1><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 2:
+        matchTemplatePreparedKernel_SQDIFF_NORMED_8U<2><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 3:
+        matchTemplatePreparedKernel_SQDIFF_NORMED_8U<3><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 4:
+        matchTemplatePreparedKernel_SQDIFF_NORMED_8U<4><<<grid, threads>>>(
+                w, h, image_sqsum, templ_sqsum, result);
+        break;
+    }
     cudaSafeCall(cudaThreadSynchronize());
 }
 
 
-__global__ void matchTemplatePreparedKernel_8U_CCOEFF(
+__global__ void matchTemplatePreparedKernel_CCOFF_8U(
         int w, int h, float templ_sum_scale, 
         const PtrStep_<unsigned int> image_sum, DevMem2Df result)
 {
@@ -337,19 +395,19 @@ __global__ void matchTemplatePreparedKernel_8U_CCOEFF(
 }
 
 
-void matchTemplatePrepared_8U_CCOEFF(
+void matchTemplatePrepared_CCOFF_8U(
         int w, int h, const DevMem2D_<unsigned int> image_sum,
         unsigned int templ_sum, DevMem2Df result)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
-    matchTemplatePreparedKernel_8U_CCOEFF<<<grid, threads>>>(
+    matchTemplatePreparedKernel_CCOFF_8U<<<grid, threads>>>(
             w, h, (float)templ_sum / (w * h), image_sum, result);
     cudaSafeCall(cudaThreadSynchronize());
 }
 
 
-__global__ void matchTemplatePreparedKernel_8U_CCOEFF_NORMED(
+__global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8U(
         int w, int h, float weight, 
         float templ_sum_scale, float templ_sqsum_scale,
         const PtrStep_<unsigned int> image_sum, 
@@ -374,7 +432,7 @@ __global__ void matchTemplatePreparedKernel_8U_CCOEFF_NORMED(
 }
 
 
-void matchTemplatePrepared_8U_CCOEFF_NORMED(
+void matchTemplatePrepared_CCOFF_NORMED_8U(
             int w, int h, const DevMem2D_<unsigned int> image_sum, 
             const DevMem2D_<unsigned long long> image_sqsum,
             unsigned int templ_sum, unsigned int templ_sqsum,
@@ -386,13 +444,14 @@ void matchTemplatePrepared_8U_CCOEFF_NORMED(
     float weight = 1.f / (w * h);
     float templ_sum_scale = templ_sum * weight;
     float templ_sqsum_scale = templ_sqsum - templ_sum * templ_sum * weight;
-    matchTemplatePreparedKernel_8U_CCOEFF_NORMED<<<grid, threads>>>(
+    matchTemplatePreparedKernel_CCOFF_NORMED_8U<<<grid, threads>>>(
             w, h, weight, templ_sum_scale, templ_sqsum_scale, 
             image_sum, image_sqsum, result);
     cudaSafeCall(cudaThreadSynchronize());
 }
 
 
+template <int cn>
 __global__ void normalizeKernel_8U(
         int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
         unsigned int templ_sqsum, DevMem2Df result)
@@ -403,21 +462,76 @@ __global__ void normalizeKernel_8U(
     if (x < result.cols && y < result.rows)
     {
         float image_sqsum_ = (float)(
-                (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
-                (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
+                (image_sqsum.ptr(y + h)[(x + w) * cn] - image_sqsum.ptr(y)[(x + w) * cn]) -
+                (image_sqsum.ptr(y + h)[x * cn] - image_sqsum.ptr(y)[x * cn]));
         result.ptr(y)[x] = min(1.f, result.ptr(y)[x] * rsqrtf(image_sqsum_ * templ_sqsum));
     }
 }
 
 
 void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-                  unsigned int templ_sqsum, DevMem2Df result)
+                  unsigned int templ_sqsum, DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
-    normalizeKernel_8U<<<grid, threads>>>(w, h, image_sqsum, templ_sqsum, result);
+    switch (cn)
+    {
+    case 1:
+        normalizeKernel_8U<1><<<grid, threads>>>(w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 2:
+        normalizeKernel_8U<2><<<grid, threads>>>(w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 3:
+        normalizeKernel_8U<3><<<grid, threads>>>(w, h, image_sqsum, templ_sqsum, result);
+        break;
+    case 4:
+        normalizeKernel_8U<4><<<grid, threads>>>(w, h, image_sqsum, templ_sqsum, result);
+        break;
+    }
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+template <int cn>
+__global__ void extractFirstChannel_32F(const PtrStep image, DevMem2Df result)
+{
+    typedef typename TypeVec<float, cn>::vec_t Typef;
+
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        Typef val = ((const Typef*)image.ptr(y))[x];
+        result.ptr(y)[x] = first(val);
+    }
+}
+
+
+void extractFirstChannel_32F(const DevMem2D image, DevMem2Df result, int cn)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+
+    switch (cn)
+    {
+    case 1:
+        extractFirstChannel_32F<1><<<grid, threads>>>(image, result);
+        break;
+    case 2:
+        extractFirstChannel_32F<2><<<grid, threads>>>(image, result);
+        break;
+    case 3:
+        extractFirstChannel_32F<3><<<grid, threads>>>(image, result);
+        break;
+    case 4:
+        extractFirstChannel_32F<4><<<grid, threads>>>(image, result);
+        break;
+    }
     cudaSafeCall(cudaThreadSynchronize());
 }
 
 
 }}}
+
