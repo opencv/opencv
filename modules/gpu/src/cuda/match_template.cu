@@ -49,7 +49,6 @@ using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace imgproc {
 
-
 __device__ float sum(float v) { return v; }
 __device__ float sum(float2 v) { return v.x + v.y; }
 __device__ float sum(float3 v) { return v.x + v.y + v.z; }
@@ -443,6 +442,124 @@ void matchTemplatePrepared_CCOFF_8UC2(
     matchTemplatePreparedKernel_CCOFF_8UC2<<<grid, threads>>>(
             w, h, (float)templ_sum_r / (w * h), (float)templ_sum_g / (w * h),
             image_sum_r, image_sum_g, result);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+__global__ void matchTemplatePreparedKernel_CCOFF_8UC3(
+        int w, int h, 
+        float templ_sum_scale_r, 
+        float templ_sum_scale_g,
+        float templ_sum_scale_b,
+        const PtrStep_<unsigned int> image_sum_r,
+        const PtrStep_<unsigned int> image_sum_g,
+        const PtrStep_<unsigned int> image_sum_b,
+        DevMem2Df result)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float image_sum_r_ = (float)(
+                (image_sum_r.ptr(y + h)[x + w] - image_sum_r.ptr(y)[x + w]) -
+                (image_sum_r.ptr(y + h)[x] - image_sum_r.ptr(y)[x]));
+        float image_sum_g_ = (float)(
+                (image_sum_g.ptr(y + h)[x + w] - image_sum_g.ptr(y)[x + w]) -
+                (image_sum_g.ptr(y + h)[x] - image_sum_g.ptr(y)[x]));
+        float image_sum_b_ = (float)(
+                (image_sum_b.ptr(y + h)[x + w] - image_sum_b.ptr(y)[x + w]) -
+                (image_sum_b.ptr(y + h)[x] - image_sum_b.ptr(y)[x]));
+        float ccorr = result.ptr(y)[x];
+        result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r 
+                                 - image_sum_g_ * templ_sum_scale_g
+                                 - image_sum_b_ * templ_sum_scale_b;
+    }
+}
+
+
+void matchTemplatePrepared_CCOFF_8UC3(
+        int w, int h, 
+        const DevMem2D_<unsigned int> image_sum_r, 
+        const DevMem2D_<unsigned int> image_sum_g,
+        const DevMem2D_<unsigned int> image_sum_b,
+        unsigned int templ_sum_r, 
+        unsigned int templ_sum_g, 
+        unsigned int templ_sum_b, 
+        DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+    matchTemplatePreparedKernel_CCOFF_8UC3<<<grid, threads>>>(
+            w, h, 
+            (float)templ_sum_r / (w * h), 
+            (float)templ_sum_g / (w * h), 
+            (float)templ_sum_b / (w * h),
+            image_sum_r, image_sum_g, image_sum_b, result);
+    cudaSafeCall(cudaThreadSynchronize());
+}
+
+
+__global__ void matchTemplatePreparedKernel_CCOFF_8UC4(
+        int w, int h, 
+        float templ_sum_scale_r, 
+        float templ_sum_scale_g,
+        float templ_sum_scale_b,
+        float templ_sum_scale_a,
+        const PtrStep_<unsigned int> image_sum_r,
+        const PtrStep_<unsigned int> image_sum_g,
+        const PtrStep_<unsigned int> image_sum_b,
+        const PtrStep_<unsigned int> image_sum_a,
+        DevMem2Df result)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < result.cols && y < result.rows)
+    {
+        float image_sum_r_ = (float)(
+                (image_sum_r.ptr(y + h)[x + w] - image_sum_r.ptr(y)[x + w]) -
+                (image_sum_r.ptr(y + h)[x] - image_sum_r.ptr(y)[x]));
+        float image_sum_g_ = (float)(
+                (image_sum_g.ptr(y + h)[x + w] - image_sum_g.ptr(y)[x + w]) -
+                (image_sum_g.ptr(y + h)[x] - image_sum_g.ptr(y)[x]));
+        float image_sum_b_ = (float)(
+                (image_sum_b.ptr(y + h)[x + w] - image_sum_b.ptr(y)[x + w]) -
+                (image_sum_b.ptr(y + h)[x] - image_sum_b.ptr(y)[x]));
+        float image_sum_a_ = (float)(
+                (image_sum_a.ptr(y + h)[x + w] - image_sum_a.ptr(y)[x + w]) -
+                (image_sum_a.ptr(y + h)[x] - image_sum_a.ptr(y)[x]));
+        float ccorr = result.ptr(y)[x];
+        result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r 
+                                 - image_sum_g_ * templ_sum_scale_g
+                                 - image_sum_b_ * templ_sum_scale_b
+                                 - image_sum_a_ * templ_sum_scale_a;
+    }
+}
+
+
+void matchTemplatePrepared_CCOFF_8UC4(
+        int w, int h, 
+        const DevMem2D_<unsigned int> image_sum_r, 
+        const DevMem2D_<unsigned int> image_sum_g,
+        const DevMem2D_<unsigned int> image_sum_b,
+        const DevMem2D_<unsigned int> image_sum_a,
+        unsigned int templ_sum_r, 
+        unsigned int templ_sum_g, 
+        unsigned int templ_sum_b, 
+        unsigned int templ_sum_a, 
+        DevMem2Df result)
+{
+    dim3 threads(32, 8);
+    dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
+    matchTemplatePreparedKernel_CCOFF_8UC4<<<grid, threads>>>(
+            w, h, 
+            (float)templ_sum_r / (w * h), 
+            (float)templ_sum_g / (w * h), 
+            (float)templ_sum_b / (w * h),
+            (float)templ_sum_a / (w * h),
+            image_sum_r, image_sum_g, image_sum_b, image_sum_a,
+            result);
     cudaSafeCall(cudaThreadSynchronize());
 }
 
