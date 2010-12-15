@@ -1645,6 +1645,246 @@ namespace cv { namespace gpu { namespace mathfunc
         }
     }
 
+
+    template <typename T, typename R, typename Op, int nthreads>
+    __global__ void sum_kernel_C3(const DevMem2D src, typename TypeVec<R, 3>::vec_t* result)
+    {
+        typedef typename TypeVec<T, 3>::vec_t SrcType;
+        typedef typename TypeVec<R, 3>::vec_t DstType;
+
+        __shared__ R smem[nthreads * 3];
+
+        const int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        const int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
+
+        SrcType val;
+        DstType sum = VecTraits<DstType>::all(0);
+        for (int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
+        {
+            const SrcType* ptr = (const SrcType*)src.ptr(y0 + y * blockDim.y);
+            for (int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+            {
+                val = ptr[x0 + x * blockDim.x];
+                sum = sum + VecTraits<DstType>::make(Op::call(val.x), Op::call(val.y), Op::call(val.z));
+            }
+        }
+
+        smem[tid] = sum.x;
+        smem[tid + nthreads] = sum.y;
+        smem[tid + 2 * nthreads] = sum.z;
+        __syncthreads();
+
+        sum_in_smem<nthreads, R>(smem, tid);
+        sum_in_smem<nthreads, R>(smem + nthreads, tid);
+        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+        __shared__ bool is_last;
+
+        if (tid == 0)
+        {
+            DstType res;
+            res.x = smem[0];
+            res.y = smem[nthreads];
+            res.z = smem[2 * nthreads];
+            result[bid] = res;
+            __threadfence();
+
+            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            is_last = (ticket == gridDim.x * gridDim.y - 1);
+        }
+
+        __syncthreads();
+
+        if (is_last)
+        {
+            DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+            smem[tid] = res.x;
+            smem[tid + nthreads] = res.y;
+            smem[tid + 2 * nthreads] = res.z;
+            __syncthreads();
+
+            sum_in_smem<nthreads, R>(smem, tid);
+            sum_in_smem<nthreads, R>(smem + nthreads, tid);
+            sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+
+            if (tid == 0) 
+            {
+                res.x = smem[0];
+                res.y = smem[nthreads];
+                res.z = smem[2 * nthreads];
+                result[0] = res;
+                blocks_finished = 0;
+            }
+        }
+#else
+        if (tid == 0) 
+        {
+            DstType res;
+            res.x = smem[0];
+            res.y = smem[nthreads];
+            res.z = smem[2 * nthreads];
+            result[bid] = res;
+        }
+#endif
+    }
+
+
+    template <typename T, typename R, int nthreads>
+    __global__ void sum_pass2_kernel_C3(typename TypeVec<R, 3>::vec_t* result, int size)
+    {
+        typedef typename TypeVec<R, 3>::vec_t DstType;
+
+        __shared__ R smem[nthreads * 3];
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+        smem[tid] = res.x;
+        smem[tid + nthreads] = res.y;
+        smem[tid + 2 * nthreads] = res.z;
+        __syncthreads();
+
+        sum_in_smem<nthreads, R>(smem, tid);
+        sum_in_smem<nthreads, R>(smem + nthreads, tid);
+        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+
+        if (tid == 0) 
+        {
+            res.x = smem[0];
+            res.y = smem[nthreads];
+            res.z = smem[2 * nthreads];
+            result[0] = res;
+        }
+    }
+
+    template <typename T, typename R, typename Op, int nthreads>
+    __global__ void sum_kernel_C4(const DevMem2D src, typename TypeVec<R, 4>::vec_t* result)
+    {
+        typedef typename TypeVec<T, 4>::vec_t SrcType;
+        typedef typename TypeVec<R, 4>::vec_t DstType;
+
+        __shared__ R smem[nthreads * 4];
+
+        const int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        const int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
+
+        SrcType val;
+        DstType sum = VecTraits<DstType>::all(0);
+        for (int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
+        {
+            const SrcType* ptr = (const SrcType*)src.ptr(y0 + y * blockDim.y);
+            for (int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+            {
+                val = ptr[x0 + x * blockDim.x];
+                sum = sum + VecTraits<DstType>::make(Op::call(val.x), Op::call(val.y), 
+                                                     Op::call(val.z), Op::call(val.w));
+            }
+        }
+
+        smem[tid] = sum.x;
+        smem[tid + nthreads] = sum.y;
+        smem[tid + 2 * nthreads] = sum.z;
+        smem[tid + 3 * nthreads] = sum.w;
+        __syncthreads();
+
+        sum_in_smem<nthreads, R>(smem, tid);
+        sum_in_smem<nthreads, R>(smem + nthreads, tid);
+        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+        sum_in_smem<nthreads, R>(smem + 3 * nthreads, tid);
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+        __shared__ bool is_last;
+
+        if (tid == 0)
+        {
+            DstType res;
+            res.x = smem[0];
+            res.y = smem[nthreads];
+            res.z = smem[2 * nthreads];
+            res.w = smem[3 * nthreads];
+            result[bid] = res;
+            __threadfence();
+
+            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            is_last = (ticket == gridDim.x * gridDim.y - 1);
+        }
+
+        __syncthreads();
+
+        if (is_last)
+        {
+            DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+            smem[tid] = res.x;
+            smem[tid + nthreads] = res.y;
+            smem[tid + 2 * nthreads] = res.z;
+            smem[tid + 3 * nthreads] = res.w;
+            __syncthreads();
+
+            sum_in_smem<nthreads, R>(smem, tid);
+            sum_in_smem<nthreads, R>(smem + nthreads, tid);
+            sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+            sum_in_smem<nthreads, R>(smem + 3 * nthreads, tid);
+
+            if (tid == 0) 
+            {
+                res.x = smem[0];
+                res.y = smem[nthreads];
+                res.z = smem[2 * nthreads];
+                res.w = smem[3 * nthreads];
+                result[0] = res;
+                blocks_finished = 0;
+            }
+        }
+#else
+        if (tid == 0) 
+        {
+            DstType res;
+            res.x = smem[0];
+            res.y = smem[nthreads];
+            res.z = smem[2 * nthreads];
+            res.w = smem[3 * nthreads];
+            result[bid] = res;
+        }
+#endif
+    }
+
+
+    template <typename T, typename R, int nthreads>
+    __global__ void sum_pass2_kernel_C4(typename TypeVec<R, 4>::vec_t* result, int size)
+    {
+        typedef typename TypeVec<R, 4>::vec_t DstType;
+
+        __shared__ R smem[nthreads * 4];
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+        smem[tid] = res.x;
+        smem[tid + nthreads] = res.y;
+        smem[tid + 2 * nthreads] = res.z;
+        smem[tid + 3 * nthreads] = res.z;
+        __syncthreads();
+
+        sum_in_smem<nthreads, R>(smem, tid);
+        sum_in_smem<nthreads, R>(smem + nthreads, tid);
+        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+        sum_in_smem<nthreads, R>(smem + 3 * nthreads, tid);
+
+        if (tid == 0) 
+        {
+            res.x = smem[0];
+            res.y = smem[nthreads];
+            res.z = smem[2 * nthreads];
+            res.w = smem[3 * nthreads];
+            result[0] = res;
+        }
+    }
+
     } // namespace sum
 
 
@@ -1670,6 +1910,16 @@ namespace cv { namespace gpu { namespace mathfunc
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
             sum_pass2_kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+        case 3:
+            sum_kernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            sum_pass2_kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+        case 4:
+            sum_kernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            sum_pass2_kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
         }
         cudaSafeCall(cudaThreadSynchronize());
 
@@ -1709,6 +1959,14 @@ namespace cv { namespace gpu { namespace mathfunc
         case 2:
             sum_kernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            break;
+        case 3:
+            sum_kernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            break;
+        case 4:
+            sum_kernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             break;
         }
         cudaSafeCall(cudaThreadSynchronize());

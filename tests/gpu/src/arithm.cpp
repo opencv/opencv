@@ -950,7 +950,25 @@ struct CV_GpuSumTest: CvTest
                 b = sum(GpuMat(src));
                 if (abs(a[0] - b[0]) + abs(a[1] - b[1]) > src.size().area() * max_err)
                 {
-                    ts->printf(CvTS::CONSOLE, "cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
+                    ts->printf(CvTS::CONSOLE, "2 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[1], b[1]);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+                gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 3), src);
+                a = sum(src);
+                b = sum(GpuMat(src));
+                if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2])> src.size().area() * max_err)
+                {
+                    ts->printf(CvTS::CONSOLE, "3 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[2], b[2]);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+                gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 4), src);
+                a = sum(src);
+                b = sum(GpuMat(src));
+                if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3])> src.size().area() * max_err)
+                {
+                    ts->printf(CvTS::CONSOLE, "4 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[3], b[3]);
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                     return;
                 }
