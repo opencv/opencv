@@ -866,6 +866,91 @@ namespace cv
                 return make_float4(a.x * s, a.y * s, a.z * s, a.w * s);
             }
 
+
+            static __device__  uint1 operator+(const uint1& a, const uint1& b)
+            {
+                return make_uint1(a.x + b.x);
+            }
+            static __device__  uint1 operator-(const uint1& a, const uint1& b)
+            {
+                return make_uint1(a.x - b.x);
+            }
+            static __device__  uint1 operator*(const uint1& a, const uint1& b)
+            {
+                return make_uint1(a.x * b.x);
+            }
+            static __device__  uint1 operator/(const uint1& a, const uint1& b)
+            {
+                return make_uint1(a.x / b.x);
+            }
+            static __device__ float1 operator*(const uint1& a, float s)
+            {
+                return make_float1(a.x * s);
+            }
+
+            static __device__  uint2 operator+(const uint2& a, const uint2& b)
+            {
+                return make_uint2(a.x + b.x, a.y + b.y);
+            }
+            static __device__  uint2 operator-(const uint2& a, const uint2& b)
+            {
+                return make_uint2(a.x - b.x, a.y - b.y);
+            }
+            static __device__  uint2 operator*(const uint2& a, const uint2& b)
+            {
+                return make_uint2(a.x * b.x, a.y * b.y);
+            }
+            static __device__  uint2 operator/(const uint2& a, const uint2& b)
+            {
+                return make_uint2(a.x / b.x, a.y / b.y);
+            }
+            static __device__ float2 operator*(const uint2& a, float s)
+            {
+                return make_float2(a.x * s, a.y * s);
+            }
+
+            static __device__  uint3 operator+(const uint3& a, const uint3& b)
+            {
+                return make_uint3(a.x + b.x, a.y + b.y, a.z + b.z);
+            }
+            static __device__  uint3 operator-(const uint3& a, const uint3& b)
+            {
+                return make_uint3(a.x - b.x, a.y - b.y, a.z - b.z);
+            }
+            static __device__  uint3 operator*(const uint3& a, const uint3& b)
+            {
+                return make_uint3(a.x * b.x, a.y * b.y, a.z * b.z);
+            }
+            static __device__  uint3 operator/(const uint3& a, const uint3& b)
+            {
+                return make_uint3(a.x / b.x, a.y / b.y, a.z / b.z);
+            }
+            static __device__ float3 operator*(const uint3& a, float s)
+            {
+                return make_float3(a.x * s, a.y * s, a.z * s);
+            }
+
+            static __device__  uint4 operator+(const uint4& a, const uint4& b)
+            {
+                return make_uint4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+            }
+            static __device__  uint4 operator-(const uint4& a, const uint4& b)
+            {
+                return make_uint4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+            }
+            static __device__  uint4 operator*(const uint4& a, const uint4& b)
+            {
+                return make_uint4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
+            }
+            static __device__  uint4 operator/(const uint4& a, const uint4& b)
+            {
+                return make_uint4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w);
+            }
+            static __device__ float4 operator*(const uint4& a, float s)
+            {
+                return make_float4(a.x * s, a.y * s, a.z * s, a.w * s);
+            }
+
             static __device__  float1 operator+(const float1& a, const float1& b)
             {
                 return make_float1(a.x + b.x);

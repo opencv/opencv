@@ -486,10 +486,10 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 namespace cv { namespace gpu { namespace mathfunc
 {
     template <typename T>
-    void sum_caller(const DevMem2D src, PtrStep buf, double* sum);
+    void sum_caller(const DevMem2D src, PtrStep buf, double* sum, int cn);
 
     template <typename T>
-    void sum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum);
+    void sum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum, int cn);
 
     template <typename T>
     void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum);
@@ -499,7 +499,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     namespace sum
     {
-        void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows);
+        void get_buf_size_required(int cols, int rows, int cn, int& bufcols, int& bufrows);
     }
 }}}
 
@@ -512,27 +512,26 @@ Scalar cv::gpu::sum(const GpuMat& src)
 Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf) 
 {
     using namespace mathfunc;
-    CV_Assert(src.channels() == 1);
 
-    typedef void (*Caller)(const DevMem2D, PtrStep, double*);
+    typedef void (*Caller)(const DevMem2D, PtrStep, double*, int);
     static const Caller callers[2][7] = 
         { { sum_multipass_caller<unsigned char>, sum_multipass_caller<char>, 
             sum_multipass_caller<unsigned short>, sum_multipass_caller<short>, 
             sum_multipass_caller<int>, sum_multipass_caller<float>, 0 },
           { sum_caller<unsigned char>, sum_caller<char>, 
             sum_caller<unsigned short>, sum_caller<short>, 
-            sum_caller<int>, sum_caller<float>, sum_caller<double> } };
+            sum_caller<int>, sum_caller<float>, 0 } };
 
     Size bufSize;
-    sum::get_buf_size_required(src.cols, src.rows, bufSize.width, bufSize.height); 
+    sum::get_buf_size_required(src.cols, src.rows, src.channels(), bufSize.width, bufSize.height); 
     buf.create(bufSize, CV_8U);
 
-    Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
+    Caller caller = callers[hasAtomicsSupport(getDevice())][src.depth()];
     if (!caller) CV_Error(CV_StsBadArg, "sum: unsupported type");
 
-    double result;
-    caller(src, buf, &result);
-    return result;
+    double result[4];
+    caller(src, buf, result, src.channels());
+    return Scalar(result[0], result[1], result[2], result[3]);
 }
 
 Scalar cv::gpu::sqrSum(const GpuMat& src) 
@@ -553,10 +552,10 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
             sqsum_multipass_caller<int>, sqsum_multipass_caller<float>, 0 },
           { sqsum_caller<unsigned char>, sqsum_caller<char>, 
             sqsum_caller<unsigned short>, sqsum_caller<short>, 
-            sqsum_caller<int>, sqsum_caller<float>, sqsum_caller<double> } };
+            sqsum_caller<int>, sqsum_caller<float>, 0 } };
 
     Size bufSize;
-    sum::get_buf_size_required(src.cols, src.rows, bufSize.width, bufSize.height); 
+    sum::get_buf_size_required(src.cols, src.rows, 1, bufSize.width, bufSize.height); 
     buf.create(bufSize, CV_8U);
 
     Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];

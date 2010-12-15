@@ -942,9 +942,18 @@ struct CV_GpuSumTest: CvTest
             Scalar a, b;
             double max_err = 1e-5;
 
-            int typemax = hasNativeDoubleSupport(getDevice()) ? CV_64F : CV_32F;
+            int typemax = CV_32F;
             for (int type = CV_8U; type <= typemax; ++type) 
             {
+                gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 2), src);
+                a = sum(src);
+                b = sum(GpuMat(src));
+                if (abs(a[0] - b[0]) + abs(a[1] - b[1]) > src.size().area() * max_err)
+                {
+                    ts->printf(CvTS::CONSOLE, "cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
                 gen(1 + rand() % 500, 1 + rand() % 500, type, src);
                 a = sum(src);
                 b = sum(GpuMat(src));
