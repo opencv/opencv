@@ -872,7 +872,7 @@ Size CascadeClassifier::getOriginalWindowSize() const
 
 bool CascadeClassifier::setImage(const Mat& image)
 {
-    featureEvaluator->setImage(image, data.origWinSize);
+    return featureEvaluator->setImage(image, data.origWinSize);
 }
 
 void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects,

@@ -49,6 +49,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include <ctime>
 
 using namespace std;
 
@@ -75,6 +76,8 @@ int main( int argc, char* argv[] )
     double scale = 4.0;
     int width  = 24;
     int height = 24;
+
+    srand(time(0));
 
     if( argc == 1 )
     {

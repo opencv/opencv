@@ -311,11 +311,10 @@ public:
                                    Size minSize=Size(),
                                    Size maxSize=Size() );
 
-
     bool isOldFormatCascade() const;
     virtual Size getOriginalWindowSize() const;
     int getFeatureType() const;
-    bool setImage(const Mat&);
+    bool setImage( const Mat& );
 
 protected:
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
