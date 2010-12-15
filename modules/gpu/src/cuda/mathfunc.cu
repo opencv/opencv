@@ -1989,7 +1989,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum)
+    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
         using namespace sum;
         typedef typename SumType<T>::R R;
@@ -1998,27 +1998,54 @@ namespace cv { namespace gpu { namespace mathfunc
         estimate_thread_cfg(src.cols, src.rows, threads, grid);
         set_kernel_consts(src.cols, src.rows, threads, grid);
 
-        sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
-        sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+        switch (cn)
+        {
+        case 1:
+            sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        case 2:
+            sum_kernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            sum_pass2_kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        case 3:
+            sum_kernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            sum_pass2_kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        case 4:
+            sum_kernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            sum_pass2_kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        }
         cudaSafeCall(cudaThreadSynchronize());
 
-        R result = 0;
-        cudaSafeCall(cudaMemcpy(&result, buf.ptr(0), sizeof(R), cudaMemcpyDeviceToHost));
-        sum[0] = result;
+        R result[4] = {0, 0, 0, 0};
+        cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
+
+        sum[0] = result[0];
+        sum[1] = result[1];
+        sum[2] = result[2];
+        sum[3] = result[3];
     }  
 
-    template void sqsum_multipass_caller<unsigned char>(const DevMem2D, PtrStep, double*);
-    template void sqsum_multipass_caller<char>(const DevMem2D, PtrStep, double*);
-    template void sqsum_multipass_caller<unsigned short>(const DevMem2D, PtrStep, double*);
-    template void sqsum_multipass_caller<short>(const DevMem2D, PtrStep, double*);
-    template void sqsum_multipass_caller<int>(const DevMem2D, PtrStep, double*);
-    template void sqsum_multipass_caller<float>(const DevMem2D, PtrStep, double*);
+    template void sqsum_multipass_caller<unsigned char>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<char>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<unsigned short>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<short>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<int>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<float>(const DevMem2D, PtrStep, double*, int);
 
 
     template <typename T>
-    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum)
+    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
         using namespace sum;
         typedef typename SumType<T>::R R;
@@ -2027,20 +2054,42 @@ namespace cv { namespace gpu { namespace mathfunc
         estimate_thread_cfg(src.cols, src.rows, threads, grid);
         set_kernel_consts(src.cols, src.rows, threads, grid);
 
-        sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+        switch (cn)
+        {
+        case 1:
+            sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            break;
+        case 2:
+            sum_kernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            break;
+        case 3:
+            sum_kernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            break;
+        case 4:
+            sum_kernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            break;
+        }
         cudaSafeCall(cudaThreadSynchronize());
 
-        R result = 0;
-        cudaSafeCall(cudaMemcpy(&result, buf.ptr(0), sizeof(R), cudaMemcpyDeviceToHost));
-        sum[0] = result;
-    }  
+        R result[4] = {0, 0, 0, 0};
+        cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
 
-    template void sqsum_caller<unsigned char>(const DevMem2D, PtrStep, double*);
-    template void sqsum_caller<char>(const DevMem2D, PtrStep, double*);
-    template void sqsum_caller<unsigned short>(const DevMem2D, PtrStep, double*);
-    template void sqsum_caller<short>(const DevMem2D, PtrStep, double*);
-    template void sqsum_caller<int>(const DevMem2D, PtrStep, double*);
-    template void sqsum_caller<float>(const DevMem2D, PtrStep, double*);
+        sum[0] = result[0];
+        sum[1] = result[1];
+        sum[2] = result[2];
+        sum[3] = result[3];
+    }
+
+    template void sqsum_caller<unsigned char>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<char>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<unsigned short>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<short>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<int>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<float>(const DevMem2D, PtrStep, double*, int);
 }}}
+
 

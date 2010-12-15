@@ -492,10 +492,10 @@ namespace cv { namespace gpu { namespace mathfunc
     void sum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum, int cn);
 
     template <typename T>
-    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum);
+    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum, int cn);
 
     template <typename T>
-    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum);
+    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum, int cn);
 
     namespace sum
     {
@@ -543,9 +543,8 @@ Scalar cv::gpu::sqrSum(const GpuMat& src)
 Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf) 
 {
     using namespace mathfunc;
-    CV_Assert(src.channels() == 1);
 
-    typedef void (*Caller)(const DevMem2D, PtrStep, double*);
+    typedef void (*Caller)(const DevMem2D, PtrStep, double*, int);
     static const Caller callers[2][7] = 
         { { sqsum_multipass_caller<unsigned char>, sqsum_multipass_caller<char>, 
             sqsum_multipass_caller<unsigned short>, sqsum_multipass_caller<short>, 
@@ -555,15 +554,15 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
             sqsum_caller<int>, sqsum_caller<float>, 0 } };
 
     Size bufSize;
-    sum::get_buf_size_required(src.cols, src.rows, 1, bufSize.width, bufSize.height); 
+    sum::get_buf_size_required(src.cols, src.rows, src.channels(), bufSize.width, bufSize.height); 
     buf.create(bufSize, CV_8U);
 
-    Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
+    Caller caller = callers[hasAtomicsSupport(getDevice())][src.depth()];
     if (!caller) CV_Error(CV_StsBadArg, "sqrSum: unsupported type");
 
-    double result;
-    caller(src, buf, &result);
-    return result;
+    double result[4];
+    caller(src, buf, result, src.channels());
+    return Scalar(result[0], result[1], result[2], result[3]);
 }
 
 ////////////////////////////////////////////////////////////////////////

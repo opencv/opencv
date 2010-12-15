@@ -983,11 +983,42 @@ struct CV_GpuSumTest: CvTest
                 }
                 if (type != CV_8S)
                 {
+                    gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 1), src);
                     b = sqrSum(GpuMat(src));
                     Mat sqrsrc;
                     multiply(src, src, sqrsrc);
                     a = sum(sqrsrc);
                     if (abs(a[0] - b[0]) > src.size().area() * max_err)
+                    {
+                        ts->printf(CvTS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
+                        ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
+                    gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 2), src);
+                    b = sqrSum(GpuMat(src));
+                    multiply(src, src, sqrsrc);
+                    a = sum(sqrsrc);
+                    if (abs(a[0] - b[0]) + abs(a[1] - b[1])> src.size().area() * max_err * 2)
+                    {
+                        ts->printf(CvTS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
+                        ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
+                    gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 3), src);
+                    b = sqrSum(GpuMat(src));
+                    multiply(src, src, sqrsrc);
+                    a = sum(sqrsrc);
+                    if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2])> src.size().area() * max_err * 3)
+                    {
+                        ts->printf(CvTS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
+                        ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
+                    gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 4), src);
+                    b = sqrSum(GpuMat(src));
+                    multiply(src, src, sqrsrc);
+                    a = sum(sqrsrc);
+                    if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3])> src.size().area() * max_err * 4)
                     {
                         ts->printf(CvTS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
                         ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
