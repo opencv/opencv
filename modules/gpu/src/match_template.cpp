@@ -62,13 +62,13 @@ namespace cv { namespace gpu { namespace imgproc
     void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
                                     const cufftComplex* b, cufftComplex* c);
 
-    void matchTemplateNaive_8U_SQDIFF(
-            const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+    void matchTemplateNaive_SQDIFF_8U(
+            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
 
-    void matchTemplateNaive_32F_SQDIFF(
-            const DevMem2D image, const DevMem2D templ, DevMem2Df result);
+    void matchTemplateNaive_SQDIFF_32F(
+            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
 
-    void matchTemplatePrepared_8U_SQDIFF(
+    void matchTemplatePrepared_SQDIFF_8U(
             int w, int h, const DevMem2Df image_sumsq, float templ_sumsq,
             DevMem2Df result);
 }}}
@@ -98,7 +98,7 @@ namespace
     void matchTemplate_32F_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_32F_SQDIFF(image, templ, result);
+        imgproc::matchTemplateNaive_SQDIFF_32F(image, templ, result, 1);
     }
 
 
@@ -243,7 +243,7 @@ namespace
     void matchTemplate_8U_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_8U_SQDIFF(image, templ, result);
+        imgproc::matchTemplateNaive_SQDIFF_8U(image, templ, result, 1);
     }
 
 
