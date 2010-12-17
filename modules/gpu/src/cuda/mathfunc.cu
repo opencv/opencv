@@ -291,15 +291,10 @@ namespace cv { namespace gpu { namespace mathfunc
     //------------------------------------------------------------------------
     // Unary operations
 
-    enum 
-    { 
-        UN_OP_NOT 
-    };
-
+    enum { UN_OP_NOT };
 
     template <typename T, int opid>
     struct UnOp;
-
 
     template <typename T>
     struct UnOp<T, UN_OP_NOT>
@@ -380,7 +375,8 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 grid(divUp(cols * elem_size, threads.x * sizeof(uint)), 
                   divUp(rows, threads.y));
         bitwise_un_op<opid><<<grid, threads>>>(rows, cols * elem_size, src, dst);
-        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());
+        if (stream == 0) 
+            cudaSafeCall(cudaThreadSynchronize());
     }
 
 
@@ -422,7 +418,8 @@ namespace cv { namespace gpu { namespace mathfunc
             bitwise_un_op_two_loads<uint, 4, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         }
-        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());
+        if (stream == 0) 
+            cudaSafeCall(cudaThreadSynchronize());
     }
 
 
@@ -442,134 +439,201 @@ namespace cv { namespace gpu { namespace mathfunc
 
     enum { BIN_OP_OR, BIN_OP_AND, BIN_OP_XOR };
 
-
     template <typename T, int opid>
     struct BinOp;
-
 
     template <typename T>
     struct BinOp<T, BIN_OP_OR>
     { 
-        static __device__ T call(T lhs, T rhs) 
-        { 
-            return lhs | rhs; 
-        } 
+        typedef typename TypeVec<T, 2>::vec_t Vec2;
+        typedef typename TypeVec<T, 3>::vec_t Vec3;
+        typedef typename TypeVec<T, 4>::vec_t Vec4;
+        static __device__ T call(T a, T b) { return a | b; } 
+        static __device__ Vec2 call(Vec2 a, Vec2 b) { return VecTraits<Vec2>::make(a.x | b.x, a.y | b.y); } 
+        static __device__ Vec3 call(Vec3 a, Vec3 b) { return VecTraits<Vec3>::make(a.x | b.x, a.y | b.y, a.z | b.z); } 
+        static __device__ Vec4 call(Vec4 a, Vec4 b) { return VecTraits<Vec4>::make(a.x | b.x, a.y | b.y, a.z | b.z, a.w | b.w); } 
     };
 
 
     template <typename T>
     struct BinOp<T, BIN_OP_AND>
     { 
-        static __device__ T call(T lhs, T rhs) 
-        { 
-            return lhs & rhs; 
-        } 
+        typedef typename TypeVec<T, 2>::vec_t Vec2;
+        typedef typename TypeVec<T, 3>::vec_t Vec3;
+        typedef typename TypeVec<T, 4>::vec_t Vec4;
+        static __device__ T call(T a, T b) { return a & b; } 
+        static __device__ Vec2 call(Vec2 a, Vec2 b) { return VecTraits<Vec2>::make(a.x & b.x, a.y & b.y); } 
+        static __device__ Vec3 call(Vec3 a, Vec3 b) { return VecTraits<Vec3>::make(a.x & b.x, a.y & b.y, a.z & b.z); } 
+        static __device__ Vec4 call(Vec4 a, Vec4 b) { return VecTraits<Vec4>::make(a.x & b.x, a.y & b.y, a.z & b.z, a.w & b.w); } 
     };
 
     template <typename T>
     struct BinOp<T, BIN_OP_XOR>
     { 
-        static __device__ T call(T lhs, T rhs) 
-        { 
-            return lhs ^ rhs; 
-        } 
+        typedef typename TypeVec<T, 2>::vec_t Vec2;
+        typedef typename TypeVec<T, 3>::vec_t Vec3;
+        typedef typename TypeVec<T, 4>::vec_t Vec4;
+        static __device__ T call(T a, T b) { return a ^ b; } 
+        static __device__ Vec2 call(Vec2 a, Vec2 b) { return VecTraits<Vec2>::make(a.x ^ b.x, a.y ^ b.y); } 
+        static __device__ Vec3 call(Vec3 a, Vec3 b) { return VecTraits<Vec3>::make(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z); } 
+        static __device__ Vec4 call(Vec4 a, Vec4 b) { return VecTraits<Vec4>::make(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w); } 
     };
 
 
-    template <typename T, int cn, typename BinOp, typename Mask>
-    __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, Mask mask)
+    template <int opid>
+    __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst)
     {
-        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int x = (blockDim.x * blockIdx.x + threadIdx.x) * 4;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < cols && y < rows && mask(y, x)) 
+        if (y < rows) 
         {
-            T* dsty = (T*)dst.ptr(y);
-            const T* src1y = (const T*)src1.ptr(y);
-            const T* src2y = (const T*)src2.ptr(y);
-
-            #pragma unroll
-            for (int i = 0; i < cn; ++i)
-                dsty[cn * x + i] = BinOp::call(src1y[cn * x + i], src2y[cn * x + i]);
+            uchar* dst_ptr = dst.ptr(y) + x;
+            const uchar* src1_ptr = src1.ptr(y) + x;
+            const uchar* src2_ptr = src2.ptr(y) + x;
+            if (x + sizeof(uint) - 1 < cols)
+            {
+                *(uint*)dst_ptr = BinOp<uint, opid>::call(*(uint*)src1_ptr, *(uint*)src2_ptr);
+            }
+            else
+            {
+                const uchar* src1_end = src1.ptr(y) + cols;
+                while (src1_ptr < src1_end)
+                {
+                    *dst_ptr++ = BinOp<uchar, opid>::call(*src1_ptr++, *src2_ptr++);
+                }
+            }
         }
     }
 
 
-    template <int opid, typename Mask>
-    void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, int elem_size, Mask mask, cudaStream_t stream)
+    template <typename T, int cn, int opid>
+    __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, 
+                                   PtrStep dst, const PtrStep mask)
+    {
+        typedef typename TypeVec<T, cn>::vec_t Type;
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows && mask.ptr(y)[x]) 
+        {
+            Type* dst_row = (Type*)dst.ptr(y);
+            const Type* src1_row = (const Type*)src1.ptr(y);
+            const Type* src2_row = (const Type*)src2.ptr(y);
+            dst_row[x] = BinOp<T, opid>::call(src1_row[x], src2_row[x]);
+        }
+    }
+
+
+    template <typename T, int cn, int opid>
+    __global__ void bitwise_bin_op_two_loads(int rows, int cols, const PtrStep src1, const PtrStep src2, 
+                                             PtrStep dst, const PtrStep mask)
+    {
+        typedef typename TypeVec<T, cn>::vec_t Type;
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows && mask.ptr(y)[x]) 
+        {
+            Type* dst_row = (Type*)dst.ptr(y);
+            const Type* src1_row = (const Type*)src1.ptr(y);
+            const Type* src2_row = (const Type*)src2.ptr(y);
+            dst_row[2 * x] = BinOp<T, opid>::call(src1_row[2 * x], src2_row[2 * x]);
+            dst_row[2 * x + 1] = BinOp<T, opid>::call(src1_row[2 * x + 1], src2_row[2 * x + 1]);
+        }
+    }
+
+
+    template <int opid>
+    void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, 
+                        int elem_size, cudaStream_t stream)
+    {
+        dim3 threads(16, 16);
+        dim3 grid(divUp(cols * elem_size, threads.x * sizeof(uint)), 
+                  divUp(rows, threads.y));
+        bitwise_bin_op<opid><<<grid, threads>>>(rows, cols * elem_size, src1, src2, dst);
+        if (stream == 0) 
+            cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    template <int opid>
+    void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, 
+                        int elem_size, const PtrStep mask, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
         switch (elem_size)
         {
         case 1: 
-            bitwise_bin_op<uchar, 1, BinOp<uchar, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uchar, 1, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 2: 
-            bitwise_bin_op<ushort, 1, BinOp<ushort, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<ushort, 1, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 3: 
-            bitwise_bin_op<uchar, 3, BinOp<uchar, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uchar, 3, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 4: 
-            bitwise_bin_op<uint, 1, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 1, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 6: 
-            bitwise_bin_op<ushort, 3, BinOp<ushort, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<ushort, 3, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 8: 
-            bitwise_bin_op<uint, 2, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 2, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 12: 
-            bitwise_bin_op<uint, 3, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 3, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 16: 
-            bitwise_bin_op<uint, 4, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 4, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 24: 
-            bitwise_bin_op<uint, 6, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op_two_loads<uint, 3, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 32: 
-            bitwise_bin_op<uint, 8, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op_two_loads<uint, 4, opid><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         }
-        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
+        if (stream == 0) 
+            cudaSafeCall(cudaThreadSynchronize());
     }
 
 
     void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
-        bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
+        bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, stream);
     }
 
 
     void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
-        bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
+        bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, mask, stream);
     }
 
 
     void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
-        bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
+        bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, stream);
     }
 
 
     void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
-        bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
+        bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, mask, stream);
     }
 
 
     void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
-        bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
+        bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, stream);
     }
 
 
     void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
-        bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
+        bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, mask, stream);
     }  
 
 
@@ -2245,5 +2309,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template void sqsum_caller<int>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_caller<float>(const DevMem2D, PtrStep, double*, int);
 }}}
+
 
 
