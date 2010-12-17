@@ -280,13 +280,19 @@ namespace cv { namespace gpu { namespace mathfunc
     enum { UN_OP_NOT };
 
     template <typename T, int opid>
-    struct UnOp { __device__ T operator()(T lhs, T rhs); };
+    struct UnOp;
 
     template <typename T>
-    struct UnOp<T, UN_OP_NOT>{ __device__ T operator()(T x) { return ~x; } };
+    struct UnOp<T, UN_OP_NOT>
+    { 
+        static __device__ T call(T x) 
+        { 
+            return ~x; 
+        } 
+    };
 
     template <typename T, int cn, typename UnOp, typename Mask>
-    __global__ void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, UnOp op, Mask mask)
+    __global__ void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, Mask mask)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -298,7 +304,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
             #pragma unroll
             for (int i = 0; i < cn; ++i)
-                dsty[cn * x + i] = op(srcy[cn * x + i]);
+                dsty[cn * x + i] = UnOp::call(srcy[cn * x + i]);
         }
     }
 
@@ -309,16 +315,36 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
         switch (elem_size)
         {
-        case 1: bitwise_un_op<unsigned char, 1><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned char, opid>(), mask); break;
-        case 2: bitwise_un_op<unsigned short, 1><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned short, opid>(), mask); break;
-        case 3: bitwise_un_op<unsigned char, 3><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned char, opid>(), mask); break;
-        case 4: bitwise_un_op<unsigned int, 1><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
-        case 6: bitwise_un_op<unsigned short, 3><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned short, opid>(), mask); break;
-        case 8: bitwise_un_op<unsigned int, 2><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;       
-        case 12: bitwise_un_op<unsigned int, 3><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
-        case 16: bitwise_un_op<unsigned int, 4><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
-        case 24: bitwise_un_op<unsigned int, 6><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
-        case 32: bitwise_un_op<unsigned int, 8><<<grid, threads>>>(rows, cols, src, dst, UnOp<unsigned int, opid>(), mask); break;
+        case 1: 
+            bitwise_un_op<unsigned char, 1, UnOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 2: 
+            bitwise_un_op<unsigned short, 1, UnOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 3: 
+            bitwise_un_op<unsigned char, 3, UnOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 4: 
+            bitwise_un_op<unsigned int, 1, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 6: 
+            bitwise_un_op<unsigned short, 3, UnOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 8: 
+            bitwise_un_op<unsigned int, 2, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 12: 
+            bitwise_un_op<unsigned int, 3, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 16: 
+            bitwise_un_op<unsigned int, 4, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 24: 
+            bitwise_un_op<unsigned int, 6, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
+        case 32: 
+            bitwise_un_op<unsigned int, 8, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            break;
         }
         if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
     }
@@ -338,19 +364,37 @@ namespace cv { namespace gpu { namespace mathfunc
     enum { BIN_OP_OR, BIN_OP_AND, BIN_OP_XOR };
 
     template <typename T, int opid>
-    struct BinOp { __device__ T operator()(T lhs, T rhs); };
+    struct BinOp;
 
     template <typename T>
-    struct BinOp<T, BIN_OP_OR>{ __device__ T operator()(T lhs, T rhs) { return lhs | rhs; } };
+    struct BinOp<T, BIN_OP_OR>
+    { 
+        static __device__ T call(T lhs, T rhs) 
+        { 
+            return lhs | rhs; 
+        } 
+    };
 
     template <typename T>
-    struct BinOp<T, BIN_OP_AND>{ __device__ T operator()(T lhs, T rhs) { return lhs & rhs; } };
+    struct BinOp<T, BIN_OP_AND>
+    { 
+        static __device__ T call(T lhs, T rhs) 
+        { 
+            return lhs & rhs; 
+        } 
+    };
 
     template <typename T>
-    struct BinOp<T, BIN_OP_XOR>{ __device__ T operator()(T lhs, T rhs) { return lhs ^ rhs; } };
+    struct BinOp<T, BIN_OP_XOR>
+    { 
+        static __device__ T call(T lhs, T rhs) 
+        { 
+            return lhs ^ rhs; 
+        } 
+    };
 
     template <typename T, int cn, typename BinOp, typename Mask>
-    __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, BinOp op, Mask mask)
+    __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, Mask mask)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -363,7 +407,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
             #pragma unroll
             for (int i = 0; i < cn; ++i)
-                dsty[cn * x + i] = op(src1y[cn * x + i], src2y[cn * x + i]);
+                dsty[cn * x + i] = BinOp::call(src1y[cn * x + i], src2y[cn * x + i]);
         }
     }
 
@@ -374,16 +418,36 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
         switch (elem_size)
         {
-        case 1: bitwise_bin_op<unsigned char, 1><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned char, opid>(), mask); break;
-        case 2: bitwise_bin_op<unsigned short, 1><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned short, opid>(), mask); break;
-        case 3: bitwise_bin_op<unsigned char, 3><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned char, opid>(), mask); break;
-        case 4: bitwise_bin_op<unsigned int, 1><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
-        case 6: bitwise_bin_op<unsigned short, 3><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned short, opid>(), mask); break;
-        case 8: bitwise_bin_op<unsigned int, 2><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;       
-        case 12: bitwise_bin_op<unsigned int, 3><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
-        case 16: bitwise_bin_op<unsigned int, 4><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
-        case 24: bitwise_bin_op<unsigned int, 6><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
-        case 32: bitwise_bin_op<unsigned int, 8><<<grid, threads>>>(rows, cols, src1, src2, dst, BinOp<unsigned int, opid>(), mask); break;
+        case 1: 
+            bitwise_bin_op<unsigned char, 1, BinOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 2: 
+            bitwise_bin_op<unsigned short, 1, BinOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 3: 
+            bitwise_bin_op<unsigned char, 3, BinOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 4: 
+            bitwise_bin_op<unsigned int, 1, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 6: 
+            bitwise_bin_op<unsigned short, 3, BinOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 8: 
+            bitwise_bin_op<unsigned int, 2, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 12: 
+            bitwise_bin_op<unsigned int, 3, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 16: 
+            bitwise_bin_op<unsigned int, 4, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 24: 
+            bitwise_bin_op<unsigned int, 6, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
+        case 32: 
+            bitwise_bin_op<unsigned int, 8, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            break;
         }
         if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
     }
