@@ -1,14 +1,11 @@
-
 set(name "gpu")
 
-#"opencv_features2d" "opencv_flann" "opencv_objdetect" - only headers needed 
-set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann") 
-
-set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
-
 set(the_target "opencv_${name}")
-
 project(${the_target})
+
+
+set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann") #"opencv_features2d" "opencv_flann" "opencv_objdetect" - only headers needed 
+set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
 
 add_definitions(-DCVAPI_EXPORTS)
 
@@ -43,7 +40,7 @@ if (HAVE_CUDA)
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_path_to_findnpp})	
 	find_package(NPP 3.2.16 REQUIRED)
 	message(STATUS "NPP detected: " ${NPP_VERSION})
-
+       
 	include_directories(${CUDA_INCLUDE_DIRS} ${CUDA_NPP_INCLUDES})	
 	
 	if (UNIX OR APPLE)
@@ -79,6 +76,11 @@ endif()
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${cuda_objs})
 
+IF (HAVE_CUDA)
+    include(FindNPP_staging.cmake)    
+    include_directories(${NPPST_INC})       
+    target_link_libraries(${the_target} ${NPPST_LIB})
+endif()
 
 if(PCHSupport_FOUND)
 	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
@@ -108,7 +110,7 @@ set_target_properties(${the_target} PROPERTIES
 	)
 
 # Add the required libraries for linking:
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS})
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
 if (HAVE_CUDA)
 	target_link_libraries(${the_target} ${CUDA_LIBRARIES} ${CUDA_NPP_LIBRARIES})

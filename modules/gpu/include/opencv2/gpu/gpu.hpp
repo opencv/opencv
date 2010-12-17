@@ -1305,8 +1305,67 @@ namespace cv
             explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L2Dist) {}
             explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
         };
-    }
 
+        ////////////////////////////////// CascadeClassifier //////////////////////////////////////////
+        // The cascade classifier class for object detection.
+        class CV_EXPORTS CascadeClassifier
+        {
+        public:
+            struct CV_EXPORTS DTreeNode
+            {
+                int featureIdx;
+                float threshold; // for ordered features only
+                int left;
+                int right;
+            };
+
+            struct CV_EXPORTS DTree
+            {
+                int nodeCount;
+            };
+
+            struct CV_EXPORTS Stage
+            {
+                int first;
+                int ntrees;
+                float threshold;
+            };
+
+            enum { BOOST = 0 };
+            enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
+
+            CascadeClassifier();
+            CascadeClassifier(const string& filename);
+            ~CascadeClassifier();
+
+            bool empty() const;
+            bool load(const string& filename);
+            bool read(const FileNode& node);
+
+            void detectMultiScale( const Mat& image, vector<Rect>& objects, double scaleFactor=1.1,
+                int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size());
+
+            bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
+            int runAt( Ptr<FeatureEvaluator>&, Point );
+
+            bool isStumpBased;
+
+            int stageType;
+            int featureType;
+            int ncategories;
+            Size origWinSize;
+
+            vector<Stage> stages;
+            vector<DTree> classifiers;
+            vector<DTreeNode> nodes;
+            vector<float> leaves;
+            vector<int> subsets;
+
+            Ptr<FeatureEvaluator> feval;
+            Ptr<CvHaarClassifierCascade> oldCascade;
+        };
+
+    }
 
     //! Speckle filtering - filters small connected components on diparity image.
     //! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize.

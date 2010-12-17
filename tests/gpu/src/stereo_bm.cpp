@@ -55,12 +55,7 @@ struct CV_GpuStereoBMTest : public CvTest
 
 
     void run_stress()
-    {
-        //cv::setBreakOnError(true);
-        int winsz[] = { 13, 15, 17, 19 };
-        int disps[] = { 128, 160, 192, 256};
-
-        Size res[] = { Size(1027, 768), Size(1280, 1024), Size(1600, 1152), Size(1920, 1080) };        
+    {                
         RNG rng;
 
         for(int i = 0; i < 10; ++i)
