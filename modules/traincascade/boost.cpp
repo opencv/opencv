@@ -445,22 +445,30 @@ void CvCascadeBoostTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* o
     *ordValues = ordValuesBuf;
 }
  
-const int* CvCascadeBoostTrainData::get_cat_var_data( CvDTreeNode* n, int vi, int* catValuesBuf)
+const int* CvCascadeBoostTrainData::get_cat_var_data( CvDTreeNode* n, int vi, int* catValuesBuf )
 {
-    int nodeSampleCount = n->sample_count; 
+    int nodeSampleCount = n->sample_count;
     int* sampleIndicesBuf = catValuesBuf; //
     const int* sampleIndices = get_sample_indices(n, sampleIndicesBuf);
 
     if ( vi < numPrecalcVal )
-	{
-		for( int i = 0; i < nodeSampleCount; i++ )
+    {
+        for( int i = 0; i < nodeSampleCount; i++ )
             catValuesBuf[i] = (int) valCache.at<float>( vi, sampleIndices[i]);
-	}
-	else
-	{
-		for( int i = 0; i < nodeSampleCount; i++ )
-			catValuesBuf[i] = (int)(*featureEvaluator)( vi, sampleIndices[i] );
-	}
+    }
+    else
+    {
+        if( vi >= numPrecalcVal && vi < var_count )
+        {
+            for( int i = 0; i < nodeSampleCount; i++ )
+                catValuesBuf[i] = (int)(*featureEvaluator)( vi, sampleIndices[i] );
+        }
+        else
+        {
+            get_cv_labels( n, catValuesBuf );
+        }
+    }
+
     return catValuesBuf;
 }
 
