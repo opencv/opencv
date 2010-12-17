@@ -59,7 +59,7 @@ using namespace cv::gpu::device;
 namespace cv { namespace gpu { namespace mathfunc
 {
     template <int size, typename T>
-    __device__ void sum_in_smem(volatile T* data, const unsigned int tid)
+    __device__ void sum_in_smem(volatile T* data, const uint tid)
     {
         T sum = data[tid];
 
@@ -270,101 +270,182 @@ namespace cv { namespace gpu { namespace mathfunc
     struct Mask8U
     {
         explicit Mask8U(PtrStep mask): mask(mask) {}
-        __device__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
+
+        __device__ bool operator()(int y, int x) const 
+        { 
+            return mask.ptr(y)[x]; 
+        }
+
         PtrStep mask;
     };
-    struct MaskTrue { __device__ bool operator()(int y, int x) const { return true; } };
 
+
+    struct MaskTrue 
+    { 
+        __device__ bool operator()(int y, int x) const 
+        { 
+            return true; 
+        } 
+    };
+
+    //------------------------------------------------------------------------
     // Unary operations
 
-    enum { UN_OP_NOT };
+    enum 
+    { 
+        UN_OP_NOT 
+    };
+
 
     template <typename T, int opid>
     struct UnOp;
 
+
     template <typename T>
     struct UnOp<T, UN_OP_NOT>
     { 
-        static __device__ T call(T x) 
-        { 
-            return ~x; 
-        } 
+        typedef typename TypeVec<T, 2>::vec_t Vec2;
+        typedef typename TypeVec<T, 3>::vec_t Vec3;
+        typedef typename TypeVec<T, 4>::vec_t Vec4;
+        static __device__ T call(T v) { return ~v; }
+        static __device__ Vec2 call(Vec2 v) { return VecTraits<Vec2>::make(~v.x, ~v.y); }
+        static __device__ Vec3 call(Vec3 v) { return VecTraits<Vec3>::make(~v.x, ~v.y, ~v.z); }
+        static __device__ Vec4 call(Vec4 v) { return VecTraits<Vec4>::make(~v.x, ~v.y, ~v.z, ~v.w); }
     };
 
-    template <typename T, int cn, typename UnOp, typename Mask>
-    __global__ void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, Mask mask)
+
+    template <int opid>
+    __global__ void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst)
     {
-        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int x = (blockDim.x * blockIdx.x + threadIdx.x) * 4;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < cols && y < rows && mask(y, x)) 
+        if (y < rows) 
         {
-            T* dsty = (T*)dst.ptr(y);
-            const T* srcy = (const T*)src.ptr(y);
-
-            #pragma unroll
-            for (int i = 0; i < cn; ++i)
-                dsty[cn * x + i] = UnOp::call(srcy[cn * x + i]);
+            uchar* dst_ptr = dst.ptr(y) + x;
+            const uchar* src_ptr = src.ptr(y) + x;
+            if (x + sizeof(uint) - 1 < cols)
+            {
+                *(uint*)dst_ptr = UnOp<uint, opid>::call(*(uint*)src_ptr);
+            }
+            else
+            {
+                const uchar* src_end = src.ptr(y) + cols;
+                while (src_ptr < src_end)
+                {
+                    *dst_ptr++ = UnOp<uchar, opid>::call(*src_ptr++);
+                }
+            }
         }
     }
 
-    template <int opid, typename Mask>
-    void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, int elem_size, Mask mask, cudaStream_t stream)
+
+    template <typename T, int cn, int opid>
+    __global__ void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, const PtrStep mask)
+    {
+        typedef typename TypeVec<T, cn>::vec_t Type;
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows && mask.ptr(y)[x]) 
+        {
+            Type* dst_row = (Type*)dst.ptr(y);
+            const Type* src_row = (const Type*)src.ptr(y);
+            dst_row[x] = UnOp<T, opid>::call(src_row[x]);
+        }
+    }
+
+
+    template <typename T, int cn, int opid>
+    __global__ void bitwise_un_op_two_loads(int rows, int cols, const PtrStep src, PtrStep dst, const PtrStep mask)
+    {
+        typedef typename TypeVec<T, cn>::vec_t Type;
+        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+        if (x < cols && y < rows && mask.ptr(y)[x]) 
+        {
+            Type* dst_row = (Type*)dst.ptr(y);
+            const Type* src_row = (const Type*)src.ptr(y);
+            dst_row[2 * x] = UnOp<T, opid>::call(src_row[2 * x]);
+            dst_row[2 * x + 1] = UnOp<T, opid>::call(src_row[2 * x + 1]);
+        }
+    }
+
+
+    template <int opid>
+    void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, int elem_size, cudaStream_t stream)
+    {
+        dim3 threads(16, 16);
+        dim3 grid(divUp(cols * elem_size, threads.x * sizeof(uint)), 
+                  divUp(rows, threads.y));
+        bitwise_un_op<opid><<<grid, threads>>>(rows, cols * elem_size, src, dst);
+        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    template <int opid>
+    void bitwise_un_op(int rows, int cols, const PtrStep src, PtrStep dst, int elem_size, const PtrStep mask, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
         switch (elem_size)
         {
         case 1: 
-            bitwise_un_op<unsigned char, 1, UnOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<uchar, 1, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 2: 
-            bitwise_un_op<unsigned short, 1, UnOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<ushort, 1, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 3: 
-            bitwise_un_op<unsigned char, 3, UnOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<uchar, 3, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 4: 
-            bitwise_un_op<unsigned int, 1, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<uint, 1, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 6: 
-            bitwise_un_op<unsigned short, 3, UnOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<ushort, 3, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 8: 
-            bitwise_un_op<unsigned int, 2, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<uint, 2, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 12: 
-            bitwise_un_op<unsigned int, 3, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<uint, 3, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 16: 
-            bitwise_un_op<unsigned int, 4, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op<uint, 4, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 24: 
-            bitwise_un_op<unsigned int, 6, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op_two_loads<uint, 3, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         case 32: 
-            bitwise_un_op<unsigned int, 8, UnOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src, dst, mask); 
+            bitwise_un_op_two_loads<uint, 4, opid><<<grid, threads>>>(rows, cols, src, dst, mask); 
             break;
         }
-        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
+        if (stream == 0) cudaSafeCall(cudaThreadSynchronize());
     }
 
-    void bitwise_not_caller(int rows, int cols,const PtrStep src, int elem_size, PtrStep dst, cudaStream_t stream)
+
+    void bitwise_not_caller(int rows, int cols, const PtrStep src, int elem_size, PtrStep dst, cudaStream_t stream)
     {
-        bitwise_un_op<UN_OP_NOT>(rows, cols, src, dst, elem_size, MaskTrue(), stream);
+        bitwise_un_op<UN_OP_NOT>(rows, cols, src, dst, elem_size, stream);
     }
+
 
     void bitwise_not_caller(int rows, int cols,const PtrStep src, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
-        bitwise_un_op<UN_OP_NOT>(rows, cols, src, dst, elem_size, Mask8U(mask), stream);
+        bitwise_un_op<UN_OP_NOT>(rows, cols, src, dst, elem_size, mask, stream);
     }
 
+    //------------------------------------------------------------------------
     // Binary operations
 
     enum { BIN_OP_OR, BIN_OP_AND, BIN_OP_XOR };
 
+
     template <typename T, int opid>
     struct BinOp;
+
 
     template <typename T>
     struct BinOp<T, BIN_OP_OR>
@@ -374,6 +455,7 @@ namespace cv { namespace gpu { namespace mathfunc
             return lhs | rhs; 
         } 
     };
+
 
     template <typename T>
     struct BinOp<T, BIN_OP_AND>
@@ -393,6 +475,7 @@ namespace cv { namespace gpu { namespace mathfunc
         } 
     };
 
+
     template <typename T, int cn, typename BinOp, typename Mask>
     __global__ void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, Mask mask)
     {
@@ -411,6 +494,7 @@ namespace cv { namespace gpu { namespace mathfunc
         }
     }
 
+
     template <int opid, typename Mask>
     void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, int elem_size, Mask mask, cudaStream_t stream)
     {
@@ -419,63 +503,69 @@ namespace cv { namespace gpu { namespace mathfunc
         switch (elem_size)
         {
         case 1: 
-            bitwise_bin_op<unsigned char, 1, BinOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uchar, 1, BinOp<uchar, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 2: 
-            bitwise_bin_op<unsigned short, 1, BinOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<ushort, 1, BinOp<ushort, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 3: 
-            bitwise_bin_op<unsigned char, 3, BinOp<unsigned char, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uchar, 3, BinOp<uchar, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 4: 
-            bitwise_bin_op<unsigned int, 1, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 1, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 6: 
-            bitwise_bin_op<unsigned short, 3, BinOp<unsigned short, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<ushort, 3, BinOp<ushort, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 8: 
-            bitwise_bin_op<unsigned int, 2, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 2, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 12: 
-            bitwise_bin_op<unsigned int, 3, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 3, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 16: 
-            bitwise_bin_op<unsigned int, 4, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 4, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 24: 
-            bitwise_bin_op<unsigned int, 6, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 6, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         case 32: 
-            bitwise_bin_op<unsigned int, 8, BinOp<unsigned int, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
+            bitwise_bin_op<uint, 8, BinOp<uint, opid> ><<<grid, threads>>>(rows, cols, src1, src2, dst, mask); 
             break;
         }
         if (stream == 0) cudaSafeCall(cudaThreadSynchronize());        
     }
+
 
     void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
         bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
     }
 
+
     void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
         bitwise_bin_op<BIN_OP_OR>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
     }
+
 
     void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
         bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
     }
 
+
     void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
         bitwise_bin_op<BIN_OP_AND>(rows, cols, src1, src2, dst, elem_size, Mask8U(mask), stream);
     }
 
+
     void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, cudaStream_t stream)
     {
         bitwise_bin_op<BIN_OP_XOR>(rows, cols, src1, src2, dst, elem_size, MaskTrue(), stream);
     }
+
 
     void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elem_size, PtrStep dst, const PtrStep mask, cudaStream_t stream)
     {
@@ -490,9 +580,9 @@ namespace cv { namespace gpu { namespace mathfunc
     // To avoid shared bank conflicts we convert each value into value of 
     // appropriate type (32 bits minimum)
     template <typename T> struct MinMaxTypeTraits {};
-    template <> struct MinMaxTypeTraits<unsigned char> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<uchar> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<char> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<unsigned short> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<ushort> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<short> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
@@ -506,7 +596,7 @@ namespace cv { namespace gpu { namespace mathfunc
     __constant__ int ctheight;
 
     // Global counter of blocks finished its work
-    __device__ unsigned int blocks_finished = 0;
+    __device__ uint blocks_finished = 0;
 
 
     // Estimates good thread configuration
@@ -542,7 +632,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Does min and max in shared memory
     template <typename T>
-    __device__ void merge(unsigned int tid, unsigned int offset, volatile T* minval, volatile T* maxval)
+    __device__ void merge(uint tid, uint offset, volatile T* minval, volatile T* maxval)
     {
         minval[tid] = min(minval[tid], minval[tid + offset]);
         maxval[tid] = max(maxval[tid], maxval[tid + offset]);
@@ -550,7 +640,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int size, typename T>
-    __device__ void find_min_max_in_smem(volatile T* minval, volatile T* maxval, const unsigned int tid)
+    __device__ void find_min_max_in_smem(volatile T* minval, volatile T* maxval, const uint tid)
     {
         if (size >= 512) { if (tid < 256) { merge(tid, 256, minval, maxval); } __syncthreads(); }
         if (size >= 256) { if (tid < 128) { merge(tid, 128, minval, maxval); }  __syncthreads(); }
@@ -575,18 +665,18 @@ namespace cv { namespace gpu { namespace mathfunc
         __shared__ best_type sminval[nthreads];
         __shared__ best_type smaxval[nthreads];
 
-        unsigned int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
-        unsigned int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        uint x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        uint y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         T mymin = numeric_limits_gpu<T>::max();
         T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : numeric_limits_gpu<T>::min();
-        unsigned int y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
-        unsigned int x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
-        for (unsigned int y = y0; y < y_end; y += blockDim.y)
+        uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
+        uint x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
+        for (uint y = y0; y < y_end; y += blockDim.y)
         {
             const T* src_row = (const T*)src.ptr(y);
-            for (unsigned int x = x0; x < x_end; x += blockDim.x)
+            for (uint x = x0; x < x_end; x += blockDim.x)
             {
                 T val = src_row[x];
                 if (mask(y, x)) 
@@ -618,7 +708,7 @@ namespace cv { namespace gpu { namespace mathfunc
             maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
 			__threadfence();
 
-			unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+			uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
 			is_last = ticket == gridDim.x * gridDim.y - 1;
 		}
 
@@ -626,7 +716,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 		if (is_last)
 		{
-            unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+            uint idx = min(tid, gridDim.x * gridDim.y - 1);
 
             sminval[tid] = minval[idx];
             smaxval[tid] = maxval[idx];
@@ -671,9 +761,9 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }  
 
-    template void min_max_mask_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_caller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
@@ -700,9 +790,9 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }  
 
-    template void min_max_caller<unsigned char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<uchar>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<char>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<unsigned short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_caller<ushort>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<short>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<int>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_caller<float>(const DevMem2D, double*,double*, PtrStep);
@@ -716,8 +806,8 @@ namespace cv { namespace gpu { namespace mathfunc
         __shared__ best_type sminval[nthreads];
         __shared__ best_type smaxval[nthreads];
         
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+        uint tid = threadIdx.y * blockDim.x + threadIdx.x;
+        uint idx = min(tid, gridDim.x * gridDim.y - 1);
 
         sminval[tid] = minval[idx];
         smaxval[tid] = maxval[idx];
@@ -754,9 +844,9 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }
 
-    template void min_max_mask_multipass_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_multipass_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void min_max_mask_multipass_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
     template void min_max_mask_multipass_caller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
@@ -783,9 +873,9 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }
 
-    template void min_max_multipass_caller<unsigned char>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_multipass_caller<uchar>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<char>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<unsigned short>(const DevMem2D, double*, double*, PtrStep);
+    template void min_max_multipass_caller<ushort>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<short>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<int>(const DevMem2D, double*, double*, PtrStep);
     template void min_max_multipass_caller<float>(const DevMem2D, double*, double*, PtrStep);
@@ -801,7 +891,7 @@ namespace cv { namespace gpu { namespace mathfunc
     __constant__ int ctheight;
 
     // Global counter of blocks finished its work
-    __device__ unsigned int blocks_finished = 0;
+    __device__ uint blocks_finished = 0;
 
 
     // Estimates good thread configuration
@@ -839,8 +929,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    __device__ void merge(unsigned int tid, unsigned int offset, volatile T* minval, volatile T* maxval, 
-                          volatile unsigned int* minloc, volatile unsigned int* maxloc)
+    __device__ void merge(uint tid, uint offset, volatile T* minval, volatile T* maxval, 
+                          volatile uint* minloc, volatile uint* maxloc)
     {
         T val = minval[tid + offset];
         if (val < minval[tid])
@@ -858,8 +948,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int size, typename T>
-    __device__ void find_min_max_loc_in_smem(volatile T* minval, volatile T* maxval, volatile unsigned int* minloc, 
-                                             volatile unsigned int* maxloc, const unsigned int tid)
+    __device__ void find_min_max_loc_in_smem(volatile T* minval, volatile T* maxval, volatile uint* minloc, 
+                                             volatile uint* maxloc, const uint tid)
     {
         if (size >= 512) { if (tid < 256) { merge(tid, 256, minval, maxval, minloc, maxloc); } __syncthreads(); }
         if (size >= 256) { if (tid < 128) { merge(tid, 128, minval, maxval, minloc, maxloc); }  __syncthreads(); }
@@ -879,29 +969,29 @@ namespace cv { namespace gpu { namespace mathfunc
 
     template <int nthreads, typename T, typename Mask>
     __global__ void min_max_loc_kernel(const DevMem2D src, Mask mask, T* minval, T* maxval, 
-                                       unsigned int* minloc, unsigned int* maxloc)
+                                       uint* minloc, uint* maxloc)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
         __shared__ best_type smaxval[nthreads];
-        __shared__ unsigned int sminloc[nthreads];
-        __shared__ unsigned int smaxloc[nthreads];
+        __shared__ uint sminloc[nthreads];
+        __shared__ uint smaxloc[nthreads];
 
-        unsigned int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
-        unsigned int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        uint x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        uint y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         T mymin = numeric_limits_gpu<T>::max();
         T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : numeric_limits_gpu<T>::min(); 
-        unsigned int myminloc = 0;
-        unsigned int mymaxloc = 0;
-        unsigned int y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
-        unsigned int x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
+        uint myminloc = 0;
+        uint mymaxloc = 0;
+        uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
+        uint x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
 
-        for (unsigned int y = y0; y < y_end; y += blockDim.y)
+        for (uint y = y0; y < y_end; y += blockDim.y)
         {
             const T* ptr = (const T*)src.ptr(y);
-            for (unsigned int x = x0; x < x_end; x += blockDim.x)
+            for (uint x = x0; x < x_end; x += blockDim.x)
             {
                 if (mask(y, x))
                 {
@@ -931,7 +1021,7 @@ namespace cv { namespace gpu { namespace mathfunc
             maxloc[blockIdx.y * gridDim.x + blockIdx.x] = smaxloc[0];
 			__threadfence();
 
-			unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+			uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
 			is_last = ticket == gridDim.x * gridDim.y - 1;
 		}
 
@@ -939,7 +1029,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 		if (is_last)
 		{
-            unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+            uint idx = min(tid, gridDim.x * gridDim.y - 1);
 
             sminval[tid] = minval[idx];
             smaxval[tid] = maxval[idx];
@@ -980,8 +1070,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
-        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
-        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+        uint* minloc_buf = (uint*)locbuf.ptr(0);
+        uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
         min_max_loc_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
@@ -992,16 +1082,16 @@ namespace cv { namespace gpu { namespace mathfunc
         *minval = minval_;
         *maxval = maxval_;
 
-        unsigned int minloc_, maxloc_;
+        uint minloc_, maxloc_;
         cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_mask_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_caller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_caller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_caller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_caller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
@@ -1018,8 +1108,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
-        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
-        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+        uint* minloc_buf = (uint*)locbuf.ptr(0);
+        uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
         min_max_loc_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
@@ -1030,16 +1120,16 @@ namespace cv { namespace gpu { namespace mathfunc
         *minval = minval_;
         *maxval = maxval_;
 
-        unsigned int minloc_, maxloc_;
+        uint minloc_, maxloc_;
         cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_caller<unsigned char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<uchar>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<unsigned short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_caller<ushort>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
@@ -1048,16 +1138,16 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // This kernel will be used only when compute capability is 1.0
     template <int nthreads, typename T>
-    __global__ void min_max_loc_pass2_kernel(T* minval, T* maxval, unsigned int* minloc, unsigned int* maxloc, int size)
+    __global__ void min_max_loc_pass2_kernel(T* minval, T* maxval, uint* minloc, uint* maxloc, int size)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
         __shared__ best_type smaxval[nthreads];
-        __shared__ unsigned int sminloc[nthreads];
-        __shared__ unsigned int smaxloc[nthreads];
+        __shared__ uint sminloc[nthreads];
+        __shared__ uint smaxloc[nthreads];
 
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        unsigned int idx = min(tid, gridDim.x * gridDim.y - 1);
+        uint tid = threadIdx.y * blockDim.x + threadIdx.x;
+        uint idx = min(tid, gridDim.x * gridDim.y - 1);
 
         sminval[tid] = minval[idx];
         smaxval[tid] = maxval[idx];
@@ -1087,8 +1177,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
-        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
-        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+        uint* minloc_buf = (uint*)locbuf.ptr(0);
+        uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
         min_max_loc_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         min_max_loc_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
@@ -1100,16 +1190,16 @@ namespace cv { namespace gpu { namespace mathfunc
         *minval = minval_;
         *maxval = maxval_;
 
-        unsigned int minloc_, maxloc_;
+        uint minloc_, maxloc_;
         cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_mask_multipass_caller<unsigned char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_multipass_caller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_multipass_caller<unsigned short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_mask_multipass_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_multipass_caller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_multipass_caller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_mask_multipass_caller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
@@ -1125,8 +1215,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
-        unsigned int* minloc_buf = (unsigned int*)locbuf.ptr(0);
-        unsigned int* maxloc_buf = (unsigned int*)locbuf.ptr(1);
+        uint* minloc_buf = (uint*)locbuf.ptr(0);
+        uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
         min_max_loc_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
         min_max_loc_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
@@ -1138,16 +1228,16 @@ namespace cv { namespace gpu { namespace mathfunc
         *minval = minval_;
         *maxval = maxval_;
 
-        unsigned int minloc_, maxloc_;
+        uint minloc_, maxloc_;
         cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
         minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_multipass_caller<unsigned char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_multipass_caller<uchar>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<unsigned short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void min_max_loc_multipass_caller<ushort>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
     template void min_max_loc_multipass_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
@@ -1163,7 +1253,7 @@ namespace cv { namespace gpu { namespace mathfunc
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
-    __device__ unsigned int blocks_finished = 0;
+    __device__ uint blocks_finished = 0;
 
     void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
     {
@@ -1193,26 +1283,26 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int nthreads, typename T>
-    __global__ void count_non_zero_kernel(const DevMem2D src, volatile unsigned int* count)
+    __global__ void count_non_zero_kernel(const DevMem2D src, volatile uint* count)
     {
-        __shared__ unsigned int scount[nthreads];
+        __shared__ uint scount[nthreads];
 
-        unsigned int x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
-        unsigned int y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        uint x0 = blockIdx.x * blockDim.x * ctwidth + threadIdx.x;
+        uint y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
+        uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-		unsigned int cnt = 0;
-        for (unsigned int y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
+		uint cnt = 0;
+        for (uint y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
         {
             const T* ptr = (const T*)src.ptr(y0 + y * blockDim.y);
-            for (unsigned int x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
+            for (uint x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
 				cnt += ptr[x0 + x * blockDim.x] != 0;
 		}
 
 		scount[tid] = cnt;
 		__syncthreads();
 
-        sum_in_smem<nthreads, unsigned int>(scount, tid);
+        sum_in_smem<nthreads, uint>(scount, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
@@ -1222,7 +1312,7 @@ namespace cv { namespace gpu { namespace mathfunc
 			count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
 			__threadfence();
 
-			unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+			uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
 			is_last = ticket == gridDim.x * gridDim.y - 1;
 		}
 
@@ -1233,7 +1323,7 @@ namespace cv { namespace gpu { namespace mathfunc
             scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
             __syncthreads();
 
-			sum_in_smem<nthreads, unsigned int>(scount, tid);
+			sum_in_smem<nthreads, uint>(scount, tid);
 
 			if (tid == 0) 
             {
@@ -1254,20 +1344,20 @@ namespace cv { namespace gpu { namespace mathfunc
         estimate_thread_cfg(src.cols, src.rows, threads, grid);
         set_kernel_consts(src.cols, src.rows, threads, grid);
 
-        unsigned int* count_buf = (unsigned int*)buf.ptr(0);
+        uint* count_buf = (uint*)buf.ptr(0);
 
         count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
-        unsigned int count;
+        uint count;
         cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(int), cudaMemcpyDeviceToHost));
         
         return count;
     }  
 
-    template int count_non_zero_caller<unsigned char>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<uchar>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<char>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<unsigned short>(const DevMem2D, PtrStep);
+    template int count_non_zero_caller<ushort>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<short>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<int>(const DevMem2D, PtrStep);
     template int count_non_zero_caller<float>(const DevMem2D, PtrStep);
@@ -1275,15 +1365,15 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int nthreads, typename T>
-    __global__ void count_non_zero_pass2_kernel(unsigned int* count, int size)
+    __global__ void count_non_zero_pass2_kernel(uint* count, int size)
     {
-        __shared__ unsigned int scount[nthreads];
-        unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        __shared__ uint scount[nthreads];
+        uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         scount[tid] = tid < size ? count[tid] : 0;
         __syncthreads();
 
-        sum_in_smem<nthreads, unsigned int>(scount, tid);
+        sum_in_smem<nthreads, uint>(scount, tid);
 
         if (tid == 0) 
             count[0] = scount[0];
@@ -1297,21 +1387,21 @@ namespace cv { namespace gpu { namespace mathfunc
         estimate_thread_cfg(src.cols, src.rows, threads, grid);
         set_kernel_consts(src.cols, src.rows, threads, grid);
 
-        unsigned int* count_buf = (unsigned int*)buf.ptr(0);
+        uint* count_buf = (uint*)buf.ptr(0);
 
         count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
         count_non_zero_pass2_kernel<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
-        unsigned int count;
+        uint count;
         cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(int), cudaMemcpyDeviceToHost));
         
         return count;
     }  
 
-    template int count_non_zero_multipass_caller<unsigned char>(const DevMem2D, PtrStep);
+    template int count_non_zero_multipass_caller<uchar>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<char>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<unsigned short>(const DevMem2D, PtrStep);
+    template int count_non_zero_multipass_caller<ushort>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<short>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<int>(const DevMem2D, PtrStep);
     template int count_non_zero_multipass_caller<float>(const DevMem2D, PtrStep);
@@ -1485,9 +1575,9 @@ namespace cv { namespace gpu { namespace mathfunc
     {
 
     template <typename T> struct SumType {};
-    template <> struct SumType<unsigned char> { typedef unsigned int R; };
+    template <> struct SumType<uchar> { typedef uint R; };
     template <> struct SumType<char> { typedef int R; };
-    template <> struct SumType<unsigned short> { typedef unsigned int R; };
+    template <> struct SumType<ushort> { typedef uint R; };
     template <> struct SumType<short> { typedef int R; };
     template <> struct SumType<int> { typedef int R; };
     template <> struct SumType<float> { typedef float R; };
@@ -1501,7 +1591,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     __constant__ int ctwidth;
     __constant__ int ctheight;
-    __device__ unsigned int blocks_finished = 0;
+    __device__ uint blocks_finished = 0;
 
     const int threads_x = 32;
     const int threads_y = 8;
@@ -1564,7 +1654,7 @@ namespace cv { namespace gpu { namespace mathfunc
             result[bid] = smem[0];
             __threadfence();
 
-            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
             is_last = (ticket == gridDim.x * gridDim.y - 1);
         }
 
@@ -1648,7 +1738,7 @@ namespace cv { namespace gpu { namespace mathfunc
             result[bid] = res;
             __threadfence();
 
-            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
             is_last = (ticket == gridDim.x * gridDim.y - 1);
         }
 
@@ -1756,7 +1846,7 @@ namespace cv { namespace gpu { namespace mathfunc
             result[bid] = res;
             __threadfence();
 
-            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
             is_last = (ticket == gridDim.x * gridDim.y - 1);
         }
 
@@ -1874,7 +1964,7 @@ namespace cv { namespace gpu { namespace mathfunc
             result[bid] = res;
             __threadfence();
 
-            unsigned int ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+            uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
             is_last = (ticket == gridDim.x * gridDim.y - 1);
         }
 
@@ -1996,9 +2086,9 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }  
 
-    template void sum_multipass_caller<unsigned char>(const DevMem2D, PtrStep, double*, int);
+    template void sum_multipass_caller<uchar>(const DevMem2D, PtrStep, double*, int);
     template void sum_multipass_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sum_multipass_caller<unsigned short>(const DevMem2D, PtrStep, double*, int);
+    template void sum_multipass_caller<ushort>(const DevMem2D, PtrStep, double*, int);
     template void sum_multipass_caller<short>(const DevMem2D, PtrStep, double*, int);
     template void sum_multipass_caller<int>(const DevMem2D, PtrStep, double*, int);
     template void sum_multipass_caller<float>(const DevMem2D, PtrStep, double*, int);
@@ -2044,9 +2134,9 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }  
 
-    template void sum_caller<unsigned char>(const DevMem2D, PtrStep, double*, int);
+    template void sum_caller<uchar>(const DevMem2D, PtrStep, double*, int);
     template void sum_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sum_caller<unsigned short>(const DevMem2D, PtrStep, double*, int);
+    template void sum_caller<ushort>(const DevMem2D, PtrStep, double*, int);
     template void sum_caller<short>(const DevMem2D, PtrStep, double*, int);
     template void sum_caller<int>(const DevMem2D, PtrStep, double*, int);
     template void sum_caller<float>(const DevMem2D, PtrStep, double*, int);
@@ -2100,9 +2190,9 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }  
 
-    template void sqsum_multipass_caller<unsigned char>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<uchar>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_multipass_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_multipass_caller<unsigned short>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_multipass_caller<ushort>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_multipass_caller<short>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_multipass_caller<int>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_multipass_caller<float>(const DevMem2D, PtrStep, double*, int);
@@ -2148,9 +2238,9 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }
 
-    template void sqsum_caller<unsigned char>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<uchar>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_caller<unsigned short>(const DevMem2D, PtrStep, double*, int);
+    template void sqsum_caller<ushort>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_caller<short>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_caller<int>(const DevMem2D, PtrStep, double*, int);
     template void sqsum_caller<float>(const DevMem2D, PtrStep, double*, int);

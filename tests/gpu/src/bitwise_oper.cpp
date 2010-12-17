@@ -44,7 +44,7 @@
 #include "gputest.hpp"
 
 #define CHECK(pred, err) if (!(pred)) { \
-    ts->printf(CvTS::LOG, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
+    ts->printf(CvTS::CONSOLE, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
     ts->set_failed_test_info(err); \
     return; }
 
@@ -88,12 +88,22 @@ struct CV_GpuBitwiseTest: public CvTest
         mask.setTo(Scalar(1));
 
         gpu::GpuMat dst;
-        gpu::bitwise_not(gpu::GpuMat(src), dst, mask);
+        gpu::bitwise_not(gpu::GpuMat(src), dst);
 
         CHECK(dst_gold.size() == dst.size(), CvTS::FAIL_INVALID_OUTPUT);
         CHECK(dst_gold.type() == dst.type(), CvTS::FAIL_INVALID_OUTPUT);        
 
         Mat dsth(dst);
+        for (int i = 0; i < dst_gold.rows; ++i)       
+            CHECK(memcmp(dst_gold.ptr(i), dsth.ptr(i), dst_gold.cols * dst_gold.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT);
+
+        dst.setTo(Scalar::all(0));
+        gpu::bitwise_not(gpu::GpuMat(src), dst, mask);
+
+        CHECK(dst_gold.size() == dst.size(), CvTS::FAIL_INVALID_OUTPUT);
+        CHECK(dst_gold.type() == dst.type(), CvTS::FAIL_INVALID_OUTPUT);        
+
+        dsth = dst;
         for (int i = 0; i < dst_gold.rows; ++i)       
             CHECK(memcmp(dst_gold.ptr(i), dsth.ptr(i), dst_gold.cols * dst_gold.elemSize()) == 0, CvTS::FAIL_INVALID_OUTPUT)
     }
