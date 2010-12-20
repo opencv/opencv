@@ -41,13 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 #include <utility>
 
 using namespace cv;
 using namespace cv::gpu;
-
-#define BLOCK_VERSION
 
 #if !defined (HAVE_CUDA)
 
@@ -56,11 +53,18 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 #else
 
 #include <cufft.h>
+#include <NPP_staging.h>
 
-namespace cv { namespace gpu { namespace imgproc
-{
+namespace cv { namespace gpu { namespace imgproc 
+{  
     void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
                                     const cufftComplex* b, cufftComplex* c);
+
+    void matchTemplateNaive_CCORR_8U(
+            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
+
+    void matchTemplateNaive_CCORR_32F(
+            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
 
     void matchTemplateNaive_SQDIFF_8U(
             const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
@@ -69,46 +73,193 @@ namespace cv { namespace gpu { namespace imgproc
             const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
 
     void matchTemplatePrepared_SQDIFF_8U(
-            int w, int h, const DevMem2Df image_sumsq, float templ_sumsq,
+            int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
+            unsigned int templ_sqsum, DevMem2Df result, int cn);
+
+    void matchTemplatePrepared_SQDIFF_NORMED_8U(
+            int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
+            unsigned int templ_sqsum, DevMem2Df result, int cn);
+
+    void matchTemplatePrepared_CCOFF_8U(
+            int w, int h, const DevMem2D_<unsigned int> image_sum,
+            unsigned int templ_sum, DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_8UC2(
+            int w, int h, 
+            const DevMem2D_<unsigned int> image_sum_r, 
+            const DevMem2D_<unsigned int> image_sum_g,
+            unsigned int templ_sum_r, unsigned int templ_sum_g, 
             DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_8UC3(
+            int w, int h, 
+            const DevMem2D_<unsigned int> image_sum_r, 
+            const DevMem2D_<unsigned int> image_sum_g,
+            const DevMem2D_<unsigned int> image_sum_b,
+            unsigned int templ_sum_r, 
+            unsigned int templ_sum_g, 
+            unsigned int templ_sum_b, 
+            DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_8UC4(
+            int w, int h, 
+            const DevMem2D_<unsigned int> image_sum_r, 
+            const DevMem2D_<unsigned int> image_sum_g,
+            const DevMem2D_<unsigned int> image_sum_b,
+            const DevMem2D_<unsigned int> image_sum_a,
+            unsigned int templ_sum_r, 
+            unsigned int templ_sum_g, 
+            unsigned int templ_sum_b, 
+            unsigned int templ_sum_a, 
+            DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_NORMED_8U(
+            int w, int h, const DevMem2D_<unsigned int> image_sum, 
+            const DevMem2D_<unsigned long long> image_sqsum,
+            unsigned int templ_sum, unsigned int templ_sqsum,
+            DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_NORMED_8UC2(
+            int w, int h, 
+            const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
+            const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
+            unsigned int templ_sum_r, unsigned int templ_sqsum_r,
+            unsigned int templ_sum_g, unsigned int templ_sqsum_g,
+            DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_NORMED_8UC3(
+            int w, int h, 
+            const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
+            const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
+            const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
+            unsigned int templ_sum_r, unsigned int templ_sqsum_r,
+            unsigned int templ_sum_g, unsigned int templ_sqsum_g,
+            unsigned int templ_sum_b, unsigned int templ_sqsum_b,
+            DevMem2Df result);
+
+    void matchTemplatePrepared_CCOFF_NORMED_8UC4(
+            int w, int h, 
+            const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
+            const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
+            const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
+            const DevMem2D_<unsigned int> image_sum_a, const DevMem2D_<unsigned long long> image_sqsum_a,
+            unsigned int templ_sum_r, unsigned int templ_sqsum_r,
+            unsigned int templ_sum_g, unsigned int templ_sqsum_g,
+            unsigned int templ_sum_b, unsigned int templ_sqsum_b,
+            unsigned int templ_sum_a, unsigned int templ_sqsum_a,
+            DevMem2Df result);
+
+    void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
+                  unsigned int templ_sqsum, DevMem2Df result, int cn);
+
+    void extractFirstChannel_32F(const DevMem2D image, DevMem2Df result, int cn);
 }}}
 
 
-namespace
+namespace 
 {
-    void matchTemplate_32F_SQDIFF(const GpuMat&, const GpuMat&, GpuMat&);
-    void matchTemplate_32F_CCORR(const GpuMat&, const GpuMat&, GpuMat&);
-    void matchTemplate_8U_SQDIFF(const GpuMat&, const GpuMat&, GpuMat&);
-    void matchTemplate_8U_CCORR(const GpuMat&, const GpuMat&, GpuMat&);
+    // Computes integral image. Result matrix will have data type 32S,
+    // while actuall data type is 32U
+    void integral_8U_32U(const GpuMat& src, GpuMat& sum);
+
+    // Computes squared integral image. Result matrix will have data type 64F,
+    // while actual data type is 64U
+    void sqrIntegral_8U_64U(const GpuMat& src, GpuMat& sqsum);
+
+    // Estimates optimal blocks size for FFT method
+    void estimateBlockSize(int w, int h, int tw, int th, int& bw, int& bh);
+
+    // Performs FFT-based cross-correlation
+    void crossCorr_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+
+    // Evaluates optimal template's area threshold. If 
+    // template's area is less  than the threshold, we use naive match 
+    // template version, otherwise FFT-based (if available)
+    int getTemplateThreshold(int method, int depth);
+
+    void matchTemplate_CCORR_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+    void matchTemplate_CCORR_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+    void matchTemplate_CCORR_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+
+    void matchTemplate_SQDIFF_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+    void matchTemplate_SQDIFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+    void matchTemplate_SQDIFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+
+    void matchTemplate_CCOFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+    void matchTemplate_CCOFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
 
 
-#ifdef BLOCK_VERSION
+    void integral_8U_32U(const GpuMat& src, GpuMat& sum)
+    {
+        CV_Assert(src.type() == CV_8U);
+
+        NppStSize32u roiSize;
+        roiSize.width = src.cols;
+        roiSize.height = src.rows;
+
+        NppSt32u bufSize;
+        nppSafeCall(nppiStIntegralGetSize_8u32u(roiSize, &bufSize));
+        GpuMat buf(1, bufSize, CV_8U);
+
+        sum.create(src.rows + 1, src.cols + 1, CV_32S);
+        nppSafeCall(nppiStIntegral_8u32u_C1R(
+                const_cast<NppSt8u*>(src.ptr<NppSt8u>(0)), src.step, 
+                sum.ptr<NppSt32u>(0), sum.step, roiSize, 
+                buf.ptr<NppSt8u>(0), bufSize));
+    }
+
+
+    void sqrIntegral_8U_64U(const GpuMat& src, GpuMat& sqsum)
+    {
+        CV_Assert(src.type() == CV_8U);
+
+        NppStSize32u roiSize;
+        roiSize.width = src.cols;
+        roiSize.height = src.rows;
+
+        NppSt32u bufSize;
+        nppSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize));
+        GpuMat buf(1, bufSize, CV_8U);
+
+        sqsum.create(src.rows + 1, src.cols + 1, CV_64F);
+        nppSafeCall(nppiStSqrIntegral_8u64u_C1R(
+                const_cast<NppSt8u*>(src.ptr<NppSt8u>(0)), src.step, 
+                sqsum.ptr<NppSt64u>(0), sqsum.step, roiSize, 
+                buf.ptr<NppSt8u>(0), bufSize));
+    }
+
+
     void estimateBlockSize(int w, int h, int tw, int th, int& bw, int& bh)
     {
-        const int scale = 40;
-        const int bh_min = 1024;
-        const int bw_min = 1024;
+        int major, minor;
+        getComputeCapability(getDevice(), major, minor);
+
+        int scale = 40;
+        int bh_min = 1024;
+        int bw_min = 1024;
+
+        if (major >= 2) // Fermi generation or newer
+        {
+            bh_min = 2048;
+            bw_min = 2048;
+        }
+
         bw = std::max(tw * scale, bw_min);
         bh = std::max(th * scale, bh_min);
         bw = std::min(bw, w);
         bh = std::min(bh, h);
     }
-#endif
 
-    void matchTemplate_32F_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+
+    void crossCorr_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
-        result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_SQDIFF_32F(image, templ, result, 1);
-    }
+        CV_Assert(image.type() == CV_32F);
+        CV_Assert(templ.type() == CV_32F);
 
-
-#ifdef BLOCK_VERSION
-    void matchTemplate_32F_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
-    {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
 
         Size block_size;
-        estimateBlockSize(result.cols, result.rows, templ.cols, templ.rows,
+        estimateBlockSize(result.cols, result.rows, templ.cols, templ.rows, 
                           block_size.width, block_size.height);
 
         Size dft_size;
@@ -139,7 +290,7 @@ namespace
 
         GpuMat templ_roi(templ.size(), CV_32S, templ.data, templ.step);
         GpuMat templ_block(dft_size, CV_32S, templ_data, dft_size.width * sizeof(cufftReal));
-        copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+        copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
                        templ_block.cols - templ_roi.cols, 0);
         CV_Assert(cufftExecR2C(planR2C, templ_data, templ_spect) == CUFFT_SUCCESS);
 
@@ -148,16 +299,16 @@ namespace
         for (int y = 0; y < result.rows; y += block_size.height)
         {
             for (int x = 0; x < result.cols; x += block_size.width)
-            {
+            {                
                 Size image_roi_size;
                 image_roi_size.width = min(x + dft_size.width, image.cols) - x;
                 image_roi_size.height = min(y + dft_size.height, image.rows) - y;
                 GpuMat image_roi(image_roi_size, CV_32S, (void*)(image.ptr<float>(y) + x), image.step);
-                copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0,
+                copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
                                image_block.cols - image_roi.cols, 0);
 
                 CV_Assert(cufftExecR2C(planR2C, image_data, image_spect) == CUFFT_SUCCESS);
-                imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(),
+                imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(), 
                                                     image_spect, templ_spect, result_spect);
                 CV_Assert(cufftExecC2R(planC2R, result_spect, result_data) == CUFFT_SUCCESS);
 
@@ -180,79 +331,236 @@ namespace
         cudaFree(templ_data);
         cudaFree(result_data);
     }
-#else
-    void matchTemplate_32F_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+
+
+    int getTemplateThreshold(int method, int depth)
     {
-        Size opt_size;
-        opt_size.width = getOptimalDFTSize(image.cols);
-        opt_size.height = getOptimalDFTSize(image.rows);
-
-        cufftReal* image_data;
-        cufftReal* templ_data;
-        cufftReal* result_data;
-        cudaMalloc((void**)&image_data, sizeof(cufftReal) * opt_size.area());
-        cudaMalloc((void**)&templ_data, sizeof(cufftReal) * opt_size.area());
-        cudaMalloc((void**)&result_data, sizeof(cufftReal) * opt_size.area());
-
-        int spect_len = opt_size.height * (opt_size.width / 2 + 1);
-        cufftComplex* image_spect;
-        cufftComplex* templ_spect;
-        cufftComplex* result_spect;
-        cudaMalloc((void**)&image_spect, sizeof(cufftComplex) * spect_len);
-        cudaMalloc((void**)&templ_spect, sizeof(cufftComplex) * spect_len);
-        cudaMalloc((void**)&result_spect, sizeof(cufftComplex) * spect_len);
-
-        GpuMat image_(image.size(), CV_32S, image.data, image.step);
-        GpuMat image_cont(opt_size, CV_32S, image_data, opt_size.width * sizeof(cufftReal));
-        copyMakeBorder(image_, image_cont, 0, image_cont.rows - image.rows, 0,
-                       image_cont.cols - image.cols, 0);
-
-        GpuMat templ_(templ.size(), CV_32S, templ.data, templ.step);
-        GpuMat templ_cont(opt_size, CV_32S, templ_data, opt_size.width * sizeof(cufftReal));
-        copyMakeBorder(templ_, templ_cont, 0, templ_cont.rows - templ.rows, 0,
-                       templ_cont.cols - templ.cols, 0);
-
-        cufftHandle planR2C, planC2R;
-        CV_Assert(cufftPlan2d(&planC2R, opt_size.height, opt_size.width, CUFFT_C2R) == CUFFT_SUCCESS);
-        CV_Assert(cufftPlan2d(&planR2C, opt_size.height, opt_size.width, CUFFT_R2C) == CUFFT_SUCCESS);
-
-        CV_Assert(cufftExecR2C(planR2C, image_data, image_spect) == CUFFT_SUCCESS);
-        CV_Assert(cufftExecR2C(planR2C, templ_data, templ_spect) == CUFFT_SUCCESS);
-        imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / opt_size.area(),
-                                            image_spect, templ_spect, result_spect);
-
-        CV_Assert(cufftExecC2R(planC2R, result_spect, result_data) == CUFFT_SUCCESS);
-
-        cufftDestroy(planR2C);
-        cufftDestroy(planC2R);
-
-        GpuMat result_cont(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F,
-                           result_data, opt_size.width * sizeof(cufftReal));
-        result_cont.copyTo(result);
-
-        cudaFree(image_spect);
-        cudaFree(templ_spect);
-        cudaFree(result_spect);
-        cudaFree(image_data);
-        cudaFree(templ_data);
-        cudaFree(result_data);
+        switch (method)
+        {
+        case CV_TM_CCORR: 
+            if (depth == CV_32F) return 250;
+            if (depth == CV_8U) return 300;
+            break;
+        case CV_TM_SQDIFF:
+            if (depth == CV_8U) return 500;
+            break;
+        }
+        CV_Error(CV_StsBadArg, "getTemplateThreshold: unsupported match template mode");
+        return 0;
     }
-#endif
 
-
-    void matchTemplate_8U_SQDIFF(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    
+    void matchTemplate_CCORR_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_SQDIFF_8U(image, templ, result, 1);
+        if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_32F))
+        {
+            imgproc::matchTemplateNaive_CCORR_32F(image, templ, result, image.channels());
+            return;
+        }
+
+        GpuMat result_;
+        crossCorr_32F(image.reshape(1), templ.reshape(1), result_);
+        imgproc::extractFirstChannel_32F(result_, result, image.channels());
     }
 
 
-    void matchTemplate_8U_CCORR(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_CCORR_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_8U))
+        {
+            result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+            imgproc::matchTemplateNaive_CCORR_8U(image, templ, result, image.channels());
+            return;
+        }
+
+        GpuMat imagef, templf;
+        image.convertTo(imagef, CV_32F);
+        templ.convertTo(templf, CV_32F);
+        matchTemplate_CCORR_32F(imagef, templf, result);
+    }
+
+
+    void matchTemplate_CCORR_NORMED_8U(const GpuMat& image, const GpuMat& templ, 
+                                       GpuMat& result)
+    {
+        matchTemplate_CCORR_8U(image, templ, result);
+
+        GpuMat img_sqsum;
+        sqrIntegral_8U_64U(image.reshape(1), img_sqsum);
+
+        unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
+        imgproc::normalize_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, 
+                              result, image.channels());
+    }
+
+    
+    void matchTemplate_SQDIFF_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+        imgproc::matchTemplateNaive_SQDIFF_32F(image, templ, result, image.channels());
+    }
+
+
+    void matchTemplate_SQDIFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, CV_8U))
+        {
+            result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+            imgproc::matchTemplateNaive_SQDIFF_8U(image, templ, result, image.channels());
+            return;
+        }
+
+        GpuMat img_sqsum;
+        sqrIntegral_8U_64U(image.reshape(1), img_sqsum);
+
+        unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
+
+        matchTemplate_CCORR_8U(image, templ, result);
+        imgproc::matchTemplatePrepared_SQDIFF_8U(
+                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels());
+    }
+
+
+    void matchTemplate_SQDIFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        GpuMat img_sqsum;
+        sqrIntegral_8U_64U(image.reshape(1), img_sqsum);
+
+        unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
+
+        matchTemplate_CCORR_8U(image, templ, result);
+        imgproc::matchTemplatePrepared_SQDIFF_NORMED_8U(
+                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels());
+    }
+
+
+    void matchTemplate_CCOFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    {
+        matchTemplate_CCORR_8U(image, templ, result);
+
+        if (image.channels() == 1)
+        {
+            GpuMat image_sum;
+            integral_8U_32U(image, image_sum);
+
+            unsigned int templ_sum = (unsigned int)sum(templ)[0];
+            imgproc::matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, 
+                                                    image_sum, templ_sum, result);
+        }
+        else
+        {
+            std::vector<GpuMat> images;
+            std::vector<GpuMat> image_sums(image.channels());
+
+            split(image, images);
+            for (int i = 0; i < image.channels(); ++i)
+                integral_8U_32U(images[i], image_sums[i]);
+
+            Scalar templ_sum = sum(templ);
+
+            switch (image.channels())
+            {
+            case 2:
+                imgproc::matchTemplatePrepared_CCOFF_8UC2(
+                        templ.cols, templ.rows, image_sums[0], image_sums[1],
+                        (unsigned int)templ_sum[0], (unsigned int)templ_sum[1],
+                        result);
+                break;
+            case 3:
+                imgproc::matchTemplatePrepared_CCOFF_8UC3(
+                        templ.cols, templ.rows, image_sums[0], image_sums[1], image_sums[2],
+                        (unsigned int)templ_sum[0], (unsigned int)templ_sum[1], (unsigned int)templ_sum[2],
+                        result);
+                break;
+            case 4:
+                imgproc::matchTemplatePrepared_CCOFF_8UC4(
+                        templ.cols, templ.rows, image_sums[0], image_sums[1], image_sums[2], image_sums[3],
+                        (unsigned int)templ_sum[0], (unsigned int)templ_sum[1], (unsigned int)templ_sum[2],
+                        (unsigned int)templ_sum[3], result);
+                break;
+            default:
+                CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+            }
+        }
+    }
+
+
+    void matchTemplate_CCOFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         GpuMat imagef, templf;
         image.convertTo(imagef, CV_32F);
         templ.convertTo(templf, CV_32F);
-        matchTemplate_32F_CCORR(imagef, templf, result);
+        matchTemplate_CCORR_32F(imagef, templf, result);
+
+        if (image.channels() == 1)
+        {
+            GpuMat image_sum, image_sqsum;
+            integral_8U_32U(image, image_sum);
+            sqrIntegral_8U_64U(image, image_sqsum);
+
+            unsigned int templ_sum = (unsigned int)sum(templ)[0];
+            unsigned int templ_sqsum = (unsigned int)sqrSum(templ)[0];
+
+            imgproc::matchTemplatePrepared_CCOFF_NORMED_8U(
+                    templ.cols, templ.rows, image_sum, image_sqsum, 
+                    templ_sum, templ_sqsum, result);
+        }
+        else
+        {
+            std::vector<GpuMat> images;
+            std::vector<GpuMat> image_sums(image.channels());
+            std::vector<GpuMat> image_sqsums(image.channels());
+
+            split(image, images);
+            for (int i = 0; i < image.channels(); ++i)
+            {
+                integral_8U_32U(images[i], image_sums[i]);
+                sqrIntegral_8U_64U(images[i], image_sqsums[i]);
+            }
+
+            Scalar templ_sum = sum(templ);
+            Scalar templ_sqsum = sqrSum(templ);
+
+            switch (image.channels())
+            {
+            case 2:
+                imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC2(
+                        templ.cols, templ.rows, 
+                        image_sums[0], image_sqsums[0],
+                        image_sums[1], image_sqsums[1],
+                        (unsigned int)templ_sum[0], (unsigned int)templ_sqsum[0],
+                        (unsigned int)templ_sum[1], (unsigned int)templ_sqsum[1],
+                        result);
+                break;
+            case 3:
+                imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC3(
+                        templ.cols, templ.rows, 
+                        image_sums[0], image_sqsums[0],
+                        image_sums[1], image_sqsums[1],
+                        image_sums[2], image_sqsums[2],
+                        (unsigned int)templ_sum[0], (unsigned int)templ_sqsum[0],
+                        (unsigned int)templ_sum[1], (unsigned int)templ_sqsum[1],
+                        (unsigned int)templ_sum[2], (unsigned int)templ_sqsum[2],
+                        result);
+                break;
+            case 4:
+                imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC4(
+                        templ.cols, templ.rows, 
+                        image_sums[0], image_sqsums[0],
+                        image_sums[1], image_sqsums[1],
+                        image_sums[2], image_sqsums[2],
+                        image_sums[3], image_sqsums[3],
+                        (unsigned int)templ_sum[0], (unsigned int)templ_sqsum[0],
+                        (unsigned int)templ_sum[1], (unsigned int)templ_sqsum[1],
+                        (unsigned int)templ_sum[2], (unsigned int)templ_sqsum[2],
+                        (unsigned int)templ_sum[3], (unsigned int)templ_sqsum[3],
+                        result);                
+                break;
+            default:
+                CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+            }
+        }
     }
 }
 
@@ -264,17 +572,18 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
 
     typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&);
 
-    static const Caller callers8U[] = { ::matchTemplate_8U_SQDIFF, 0,
-                                        ::matchTemplate_8U_CCORR, 0, 0, 0 };
-    static const Caller callers32F[] = { ::matchTemplate_32F_SQDIFF, 0,
-                                         ::matchTemplate_32F_CCORR, 0, 0, 0 };
+    static const Caller callers8U[] = { ::matchTemplate_SQDIFF_8U, ::matchTemplate_SQDIFF_NORMED_8U, 
+                                        ::matchTemplate_CCORR_8U, ::matchTemplate_CCORR_NORMED_8U, 
+                                        ::matchTemplate_CCOFF_8U, ::matchTemplate_CCOFF_NORMED_8U };
+    static const Caller callers32F[] = { ::matchTemplate_SQDIFF_32F, 0, 
+                                         ::matchTemplate_CCORR_32F, 0, 0, 0 };
 
-    const Caller* callers = 0;
-    switch (image.type())
+    const Caller* callers;
+    switch (image.depth())
     {
-    case CV_8U: callers = callers8U; break;
-    case CV_32F: callers = callers32F; break;
-    default: CV_Error(CV_StsBadArg, "matchTemplate: unsupported data type");
+        case CV_8U: callers = callers8U; break;
+        case CV_32F: callers = callers32F; break;
+        default: CV_Error(CV_StsBadArg, "matchTemplate: unsupported data type");
     }
 
     Caller caller = callers[method];
@@ -283,4 +592,5 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
 }
 
 #endif
+
 

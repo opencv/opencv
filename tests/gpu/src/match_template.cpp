@@ -48,7 +48,7 @@
 
 #ifdef SHOW_TIME
 #include <ctime>
-#define F(x)
+#define F(x) x
 #else
 #define F(x)
 #endif
@@ -70,54 +70,106 @@ struct CV_GpuMatchTemplateTest: CvTest
             int n, m, h, w;
             F(clock_t t;)
 
-            for (int i = 0; i < 3; ++i)
+            for (int cn = 1; cn <= 4; ++cn)
             {
-                n = 1 + rand() % 2000;
-                m = 1 + rand() % 1000;
-                do h = 1 + rand() % 30; while (h > n);
-                do w = 1 + rand() % 30; while (w > m);
+                F(ts->printf(CvTS::CONSOLE, "cn: %d\n", cn);)
+                for (int i = 0; i <= 0; ++i)
+                {
+                    n = 1 + rand() % 1000;
+                    m = 1 + rand() % 1000;
+                    do h = 1 + rand() % 100; while (h > n);
+                    do w = 1 + rand() % 100; while (w > m);
 
-                //cout << "w: " << w << " h: " << h << endl;
+                    //cout << "w: " << w << " h: " << h << endl;
 
-                gen(image, n, m, CV_8U);
-                gen(templ, h, w, CV_8U);
-                F(t = clock();)
-                matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF);
-                F(cout << "cpu:" << clock() - t << endl;)
-                F(t = clock();)
-                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
-                F(cout << "gpu_block: " << clock() - t << endl;)
-                if (!check(dst_gold, Mat(dst), 5 * h * w * 1e-5f)) return;
+                    gen(image, n, m, CV_8U, cn);
+                    gen(templ, h, w, CV_8U, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF);
+                    F(cout << "depth: 8U cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), 5 * h * w * 1e-4f)) return;
 
-                gen(image, n, m, CV_8U);
-                gen(templ, h, w, CV_8U);
-                F(t = clock();)
-                matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
-                F(cout << "cpu:" << clock() - t << endl;)
-                F(t = clock();)
-                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
-                F(cout << "gpu_block: " << clock() - t << endl;)
-                if (!check(dst_gold, Mat(dst), 5 * h * w * 1e-5f)) return;
+                    gen(image, n, m, CV_8U, cn);
+                    gen(templ, h, w, CV_8U, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF_NORMED);
+                    F(cout << "depth: 8U cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF_NORMED);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-5f)) return;
 
-                gen(image, n, m, CV_32F);
-                gen(templ, h, w, CV_32F);
-                F(t = clock();)
-                matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF);
-                F(cout << "cpu:" << clock() - t << endl;)
-                F(t = clock();)
-                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
-                F(cout << "gpu_block: " << clock() - t << endl;)
-                if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                    gen(image, n, m, CV_8U, cn);
+                    gen(templ, h, w, CV_8U, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
+                    F(cout << "depth: 8U cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), 5 * h * w * cn * cn * 1e-5f)) return;
 
-                gen(image, n, m, CV_32F);
-                gen(templ, h, w, CV_32F);
-                F(t = clock();)
-                matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
-                F(cout << "cpu:" << clock() - t << endl;)
-                F(t = clock();)
-                gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
-                F(cout << "gpu_block: " << clock() - t << endl;)
-                if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                    gen(image, n, m, CV_8U, cn);
+                    gen(templ, h, w, CV_8U, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_CCORR_NORMED);
+                    F(cout << "depth: 8U cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR_NORMED);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-5f)) return;
+
+                    gen(image, n, m, CV_8U, cn);
+                    gen(templ, h, w, CV_8U, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_CCOEFF);
+                    F(cout << "depth: 8U cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCOEFF);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), 5 * h * w * cn * cn * 1e-5f)) return;
+
+                    gen(image, n, m, CV_8U, cn);
+                    gen(templ, h, w, CV_8U, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_CCOEFF_NORMED);
+                    F(cout << "depth: 8U cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCOEFF_NORMED);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f)) return;
+
+                    gen(image, n, m, CV_32F, cn);
+                    gen(templ, h, w, CV_32F, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_SQDIFF);
+                    F(cout << "depth: 32F cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+
+                    gen(image, n, m, CV_32F, cn);
+                    gen(templ, h, w, CV_32F, cn);
+                    F(t = clock();)
+                    matchTemplate(image, templ, dst_gold, CV_TM_CCORR);
+                    F(cout << "depth: 32F cn: " << cn << " n: " << n << " m: " << m << " w: " << w << " h: " << h << endl;)
+                    F(cout << "cpu:" << clock() - t << endl;)
+                    F(t = clock();)
+                    gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
+                    F(cout << "gpu_block: " << clock() - t << endl;)
+                    if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                }
             }
         }
         catch (const Exception& e)
@@ -128,14 +180,14 @@ struct CV_GpuMatchTemplateTest: CvTest
         }
     }
 
-    void gen(Mat& a, int rows, int cols, int type)
+    void gen(Mat& a, int rows, int cols, int depth, int cn)
     {
         RNG rng;
-        a.create(rows, cols, type);
-        if (type == CV_8U)
-            rng.fill(a, RNG::UNIFORM, Scalar(0), Scalar(10));
-        else if (type == CV_32F)
-            rng.fill(a, RNG::UNIFORM, Scalar(0.f), Scalar(1.f));
+        a.create(rows, cols, CV_MAKETYPE(depth, cn));
+        if (depth == CV_8U)
+            rng.fill(a, RNG::UNIFORM, Scalar::all(1), Scalar::all(10));
+        else if (depth == CV_32F)
+            rng.fill(a, RNG::UNIFORM, Scalar::all(0.001f), Scalar::all(1.f));
     }
 
     bool check(const Mat& a, const Mat& b, float max_err)
