@@ -10,6 +10,8 @@
 using namespace std;
 using namespace cv;
 
+//#define WRITE_VIDEO
+
 
 /** Contains all properties of application (including those which can be
 changed by user in runtime) */
@@ -142,7 +144,7 @@ Settings Settings::Read(int argc, char** argv)
         string key = argv[i];
         string val = argv[i + 1];
         if (key == "-src") settings.src = val;
-        else if (key == "-src_is_video") settings.src_is_video = (val == "true");
+        else if (key == "-src_is_video") settings.src_is_video = (val == "true");        
         else if (key == "-make_gray") settings.make_gray = (val == "true");
         else if (key == "-resize_src") settings.resize_src = (val == "true");
         else if (key == "-resize_src_scale") settings.resize_src_scale = atof(val.c_str());
@@ -222,6 +224,15 @@ void App::RunOpencvGui()
                               HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     cpu_hog.setSVMDetector(detector);
 
+#ifdef WRITE_VIDEO
+    cv::VideoWriter video_writer;
+
+    video_writer.open("output.avi", CV_FOURCC('x','v','i','d'), 24., cv::Size(640, 480), true);
+
+    if (!video_writer.isOpened())
+        throw std::runtime_error("can't create video writer");
+#endif
+
     // Make endless cycle from video (if src is video)
     while (running)
     {
@@ -299,6 +310,11 @@ void App::RunOpencvGui()
             }
 
             WorkEnd();
+
+#ifdef WRITE_VIDEO
+            cvtColor(img_to_show, img, CV_BGRA2BGR);
+            video_writer << img;
+#endif
         }
     }
 }
