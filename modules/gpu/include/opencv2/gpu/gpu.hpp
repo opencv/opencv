@@ -360,65 +360,16 @@ namespace cv
             friend struct StreamAccessor;
         };
 
+
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
         //! transposes the matrix
         //! supports CV_8UC1, CV_8SC1, CV_8UC4, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32FC1 type
         CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
 
-        //! computes mean value and standard deviation of all or selected array elements
-        //! supports only CV_8UC1 type
-        CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
-
-        //! computes norm of array
-        //! supports NORM_INF, NORM_L1, NORM_L2
-        //! supports only CV_8UC1 type
-        CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
-
-        //! computes norm of the difference between two arrays
-        //! supports NORM_INF, NORM_L1, NORM_L2
-        //! supports only CV_8UC1 type
-        CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
-
         //! reverses the order of the rows, columns or both in a matrix
         //! supports CV_8UC1, CV_8UC4 types
         CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode);
-
-        //! computes sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sum(const GpuMat& src);
-
-        //! computes sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
-
-        //! computes squared sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sqrSum(const GpuMat& src);
-
-        //! computes squared sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
-
-        //! finds global minimum and maximum array elements and returns their values
-        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
-
-        //! finds global minimum and maximum array elements and returns their values
-        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
-
-        //! finds global minimum and maximum array elements and returns their values with locations
-        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
-                                  const GpuMat& mask=GpuMat());
-
-        //! finds global minimum and maximum array elements and returns their values with locations
-        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                                  const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
-
-        //! counts non-zero array elements
-        CV_EXPORTS int countNonZero(const GpuMat& src);
-
-        //! counts non-zero array elements
-        CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
         //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
         //! destination array will have the depth type as lut and the same channels number as source
@@ -487,25 +438,6 @@ namespace cv
         //! async version
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream);
 
-        //! computes per-element minimum of two arrays (dst = min(src1, src2))
-        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
-
-        //! computes per-element minimum of array and scalar (dst = min(src1, src2))
-        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
-
-        //! computes per-element maximum of two arrays (dst = max(src1, src2))
-        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
-
-        //! computes per-element maximum of array and scalar (dst = max(src1, src2))
-        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst);
-        //! Async version
-        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
 
         //////////////////////////// Per-element operations ////////////////////////////////////
 
@@ -575,6 +507,26 @@ namespace cv
         CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
         //! async version
         CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
+
+        //! computes per-element minimum of two arrays (dst = min(src1, src2))
+        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+
+        //! computes per-element minimum of array and scalar (dst = min(src1, src2))
+        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
+
+        //! computes per-element maximum of two arrays (dst = max(src1, src2))
+        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream);
+
+        //! computes per-element maximum of array and scalar (dst = max(src1, src2))
+        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst);
+        //! Async version
+        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
 
 
         ////////////////////////////// Image processing //////////////////////////////
@@ -663,13 +615,64 @@ namespace cv
         //! computes Harris cornerness criteria at each image pixel
         CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
 
-
         //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
 
-
         //! computes the proximity map for the raster template and the image where the template is searched for
         CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
+
+
+        ////////////////////////////// Matrix reductions //////////////////////////////
+
+        //! computes mean value and standard deviation of all or selected array elements
+        //! supports only CV_8UC1 type
+        CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
+
+        //! computes norm of array
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports only CV_8UC1 type
+        CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
+
+        //! computes norm of the difference between two arrays
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports only CV_8UC1 type
+        CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
+
+        //! computes sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sum(const GpuMat& src);
+
+        //! computes sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
+
+        //! computes squared sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sqrSum(const GpuMat& src);
+
+        //! computes squared sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
+
+        //! finds global minimum and maximum array elements and returns their values
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
+
+        //! finds global minimum and maximum array elements and returns their values
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
+
+        //! finds global minimum and maximum array elements and returns their values with locations
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
+                                  const GpuMat& mask=GpuMat());
+
+        //! finds global minimum and maximum array elements and returns their values with locations
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
+                                  const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
+
+        //! counts non-zero array elements
+        CV_EXPORTS int countNonZero(const GpuMat& src);
+
+        //! counts non-zero array elements
+        CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
 
         //////////////////////////////// Filter Engine ////////////////////////////////

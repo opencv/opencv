@@ -345,4 +345,127 @@ namespace cv { namespace gpu { namespace mathfunc
     template void bitwiseMaskXorCaller<ushort>(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
     template void bitwiseMaskXorCaller<uint>(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
 
+
+    //////////////////////////////////////////////////////////////////////////
+    // min/max
+
+    struct MinOp
+    {        
+        template <typename T>
+        __device__ T operator()(T a, T b)
+        {
+            return min(a, b);
+        }
+        __device__ float operator()(float a, float b)
+        {
+            return fmin(a, b);
+        }
+        __device__ double operator()(double a, double b)
+        {
+            return fmin(a, b);
+        }
+    };
+
+    struct MaxOp
+    {        
+        template <typename T>
+        __device__ T operator()(T a, T b)
+        {
+            return max(a, b);
+        }
+        __device__ float operator()(float a, float b)
+        {
+            return fmax(a, b);
+        }
+        __device__ double operator()(double a, double b)
+        {
+            return fmax(a, b);
+        }
+    };
+    
+    struct ScalarMinOp
+    {
+        double s;
+
+        explicit ScalarMinOp(double s_) : s(s_) {}
+
+        template <typename T>
+        __device__ T operator()(T a)
+        {
+            return saturate_cast<T>(fmin((double)a, s));
+        }
+    };
+    
+    struct ScalarMaxOp
+    {
+        double s;
+
+        explicit ScalarMaxOp(double s_) : s(s_) {}
+
+        template <typename T>
+        __device__ T operator()(T a)
+        {
+            return saturate_cast<T>(fmax((double)a, s));
+        }
+    };
+    
+    template <typename T>
+    void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    {
+        MinOp op;
+        transform(src1, src2, dst, op, stream);    
+    }
+
+    template void min_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void min_gpu<char  >(const DevMem2D_<char>& src1, const DevMem2D_<char>& src2, const DevMem2D_<char>& dst, cudaStream_t stream);
+    template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, const DevMem2D_<ushort>& src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
+    template void min_gpu<short >(const DevMem2D_<short>& src1, const DevMem2D_<short>& src2, const DevMem2D_<short>& dst, cudaStream_t stream);
+    template void min_gpu<int   >(const DevMem2D_<int>& src1, const DevMem2D_<int>& src2, const DevMem2D_<int>& dst, cudaStream_t stream);
+    template void min_gpu<float >(const DevMem2D_<float>& src1, const DevMem2D_<float>& src2, const DevMem2D_<float>& dst, cudaStream_t stream);
+    template void min_gpu<double>(const DevMem2D_<double>& src1, const DevMem2D_<double>& src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+
+    template <typename T>
+    void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    {
+        MaxOp op;
+        transform(src1, src2, dst, op, stream);    
+    }
+    
+    template void max_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void max_gpu<char  >(const DevMem2D_<char>& src1, const DevMem2D_<char>& src2, const DevMem2D_<char>& dst, cudaStream_t stream);
+    template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, const DevMem2D_<ushort>& src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
+    template void max_gpu<short >(const DevMem2D_<short>& src1, const DevMem2D_<short>& src2, const DevMem2D_<short>& dst, cudaStream_t stream);
+    template void max_gpu<int   >(const DevMem2D_<int>& src1, const DevMem2D_<int>& src2, const DevMem2D_<int>& dst, cudaStream_t stream);
+    template void max_gpu<float >(const DevMem2D_<float>& src1, const DevMem2D_<float>& src2, const DevMem2D_<float>& dst, cudaStream_t stream);
+    template void max_gpu<double>(const DevMem2D_<double>& src1, const DevMem2D_<double>& src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+
+    template <typename T>
+    void min_gpu(const DevMem2D_<T>& src1, double src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    {
+        ScalarMinOp op(src2);
+        transform(src1, dst, op, stream);    
+    }
+
+    template void min_gpu<uchar >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
+    template void min_gpu<char  >(const DevMem2D_<char>& src1, double src2, const DevMem2D_<char>& dst, cudaStream_t stream);
+    template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, double src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
+    template void min_gpu<short >(const DevMem2D_<short>& src1, double src2, const DevMem2D_<short>& dst, cudaStream_t stream);
+    template void min_gpu<int   >(const DevMem2D_<int>& src1, double src2, const DevMem2D_<int>& dst, cudaStream_t stream);
+    template void min_gpu<float >(const DevMem2D_<float>& src1, double src2, const DevMem2D_<float>& dst, cudaStream_t stream);
+    template void min_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+    
+    template <typename T>
+    void max_gpu(const DevMem2D_<T>& src1, double src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    {
+        ScalarMaxOp op(src2);
+        transform(src1, dst, op, stream);    
+    }
+
+    template void max_gpu<uchar >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
+    template void max_gpu<char  >(const DevMem2D_<char>& src1, double src2, const DevMem2D_<char>& dst, cudaStream_t stream);
+    template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, double src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
+    template void max_gpu<short >(const DevMem2D_<short>& src1, double src2, const DevMem2D_<short>& dst, cudaStream_t stream);
+    template void max_gpu<int   >(const DevMem2D_<int>& src1, double src2, const DevMem2D_<int>& dst, cudaStream_t stream);
+    template void max_gpu<float >(const DevMem2D_<float>& src1, double src2, const DevMem2D_<float>& dst, cudaStream_t stream);
+    template void max_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
 }}}
