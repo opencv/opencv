@@ -362,45 +362,9 @@ namespace cv
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
-        //! adds one matrix to another (c = a + b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c);
-        //! adds scalar to a matrix (c = a + s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c);
-        //! subtracts one matrix from another (c = a - b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
-        //! subtracts scalar from a matrix (c = a - s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c);
-        //! computes element-wise product of the two arrays (c = a * b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
-        //! multiplies matrix to a scalar (c = a * s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c);
-        //! computes element-wise quotient of the two arrays (c = a / b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
-        //! computes element-wise quotient of matrix and scalar (c = a / s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c);
-
         //! transposes the matrix
         //! supports CV_8UC1, CV_8SC1, CV_8UC4, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32FC1 type
         CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
-
-        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
-        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c);
-
-        //! compares elements of two arrays (c = a <cmpop> b)
-        //! supports CV_8UC4, CV_32FC1 types
-        CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop);
 
         //! computes mean value and standard deviation of all or selected array elements
         //! supports only CV_8UC1 type
@@ -485,14 +449,6 @@ namespace cv
         //! copies each plane of a multi-channel array to a dedicated array (async version)
         CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream);
 
-        //! computes exponent of each matrix element (b = e**a)
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void exp(const GpuMat& a, GpuMat& b);
-
-        //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void log(const GpuMat& a, GpuMat& b);
-
         //! computes magnitude of complex (x(i).re, x(i).im) vector
         //! supports only CV_32FC2 type
         CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude);
@@ -531,33 +487,6 @@ namespace cv
         //! async version
         CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream);
 
-
-        //! perfroms per-elements bit-wise inversion
-        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! async version
-        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream);
-
-        //! calculates per-element bit-wise disjunction of two arrays
-        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! async version
-        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
-
-        //! calculates per-element bit-wise conjunction of two arrays
-        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! async version
-        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
-
-        //! calculates per-element bit-wise "exclusive or" operation
-        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! async version
-        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
-
-        //! Logical operators
-        CV_EXPORTS GpuMat operator ~ (const GpuMat& src);
-        CV_EXPORTS GpuMat operator | (const GpuMat& src1, const GpuMat& src2);
-        CV_EXPORTS GpuMat operator & (const GpuMat& src1, const GpuMat& src2);
-        CV_EXPORTS GpuMat operator ^ (const GpuMat& src1, const GpuMat& src2);
-
         //! computes per-element minimum of two arrays (dst = min(src1, src2))
         CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst);
         //! Async version
@@ -577,6 +506,83 @@ namespace cv
         CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst);
         //! Async version
         CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream);
+
+        //////////////////////////// Per-element operations ////////////////////////////////////
+
+        //! adds one matrix to another (c = a + b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! adds scalar to a matrix (c = a + s)
+        //! supports CV_32FC1 and CV_32FC2 type
+        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c);
+
+        //! subtracts one matrix from another (c = a - b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! subtracts scalar from a matrix (c = a - s)
+        //! supports CV_32FC1 and CV_32FC2 type
+        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c);
+
+        //! computes element-wise product of the two arrays (c = a * b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! multiplies matrix to a scalar (c = a * s)
+        //! supports CV_32FC1 and CV_32FC2 type
+        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c);
+
+        //! computes element-wise quotient of the two arrays (c = a / b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! computes element-wise quotient of matrix and scalar (c = a / s)
+        //! supports CV_32FC1 and CV_32FC2 type
+        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c);
+
+        //! computes exponent of each matrix element (b = e**a)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void exp(const GpuMat& a, GpuMat& b);
+
+        //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void log(const GpuMat& a, GpuMat& b);
+
+        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c);
+        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c);
+
+        //! compares elements of two arrays (c = a <cmpop> b)
+        //! supports CV_8UC4, CV_32FC1 types
+        CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop);
+
+        //! performs per-elements bit-wise inversion
+        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! version without mask
+        CV_EXPORTS GpuMat operator ~ (const GpuMat& src);
+        //! async version
+        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream);
+
+        //! calculates per-element bit-wise disjunction of two arrays
+        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! version without mask
+        CV_EXPORTS GpuMat operator | (const GpuMat& src1, const GpuMat& src2);
+        //! async version
+        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
+
+        //! calculates per-element bit-wise conjunction of two arrays
+        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! version without mask
+        CV_EXPORTS GpuMat operator & (const GpuMat& src1, const GpuMat& src2);
+        //! async version
+        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
+
+        //! calculates per-element bit-wise "exclusive or" operation
+        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
+        //! version without mask
+        CV_EXPORTS GpuMat operator ^ (const GpuMat& src1, const GpuMat& src2);
+        //! async version
+        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
 
         ////////////////////////////// Image processing //////////////////////////////

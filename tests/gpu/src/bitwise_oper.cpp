@@ -53,7 +53,7 @@ using namespace std;
 
 struct CV_GpuBitwiseTest: public CvTest
 {
-    CV_GpuBitwiseTest(): CvTest("GPU-BitwiseOpers", "bitwiseMatOperators") {}
+    CV_GpuBitwiseTest(): CvTest("GPU-BitwiseOpersTest", "bitwiseMatOperators") {}
 
     void run(int)
     {
