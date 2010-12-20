@@ -58,9 +58,8 @@
 #include <ctype.h>
 #include <assert.h>
 
-#if !defined WIN32 && !defined _WIN32
 #include "cvconfig.h"
-#else
+#if defined WIN32 || defined _WIN32
 void  FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin );
 #endif
 
