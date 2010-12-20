@@ -1002,18 +1002,25 @@ void cv::gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& 
 
 namespace cv { namespace gpu { namespace mathfunc
 {
-    void bitwise_not_caller(int rows, int cols, const PtrStep src, int elemSize, PtrStep dst, cudaStream_t stream);
-    void bitwise_not_caller(int rows, int cols, const PtrStep src, int elemSize, PtrStep dst, const PtrStep mask, cudaStream_t stream);
-    void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream);
-    void bitwise_or_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, const PtrStep mask, cudaStream_t stream);
-    void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream);
-    void bitwise_and_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, const PtrStep mask, cudaStream_t stream);
-    void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, cudaStream_t stream);
-    void bitwise_xor_caller(int rows, int cols, const PtrStep src1, const PtrStep src2, int elemSize, PtrStep dst, const PtrStep mask, cudaStream_t stream);
+    void bitwise_not_caller(int rows, int cols, int elem_size1, int cn, const PtrStep src, PtrStep dst, cudaStream_t stream);
 
+    template <typename T>
+    void bitwise_mask_not_caller(int rows, int cols, int cn, const PtrStep src, const PtrStep mask, PtrStep dst, cudaStream_t stream);
 
-    template <int opid, typename Mask>
-    void bitwise_bin_op(int rows, int cols, const PtrStep src1, const PtrStep src2, PtrStep dst, int elem_size, Mask mask, cudaStream_t stream);
+    void bitwise_or_caller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
+
+    template <typename T>
+    void bitwise_mask_or_caller(int rows, int cols, int cn, const PtrStep src1, const PtrStep src2, const PtrStep mask, PtrStep dst, cudaStream_t stream);
+
+    void bitwise_and_caller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
+
+    template <typename T>
+    void bitwise_mask_and_caller(int rows, int cols, int cn, const PtrStep src1, const PtrStep src2, const PtrStep mask, PtrStep dst, cudaStream_t stream);
+
+    void bitwise_xor_caller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
+
+    template <typename T>
+    void bitwise_mask_xor_caller(int rows, int cols, int cn, const PtrStep src1, const PtrStep src2, const PtrStep mask, PtrStep dst, cudaStream_t stream);
 }}}
 
 namespace
@@ -1021,60 +1028,123 @@ namespace
     void bitwise_not_caller(const GpuMat& src, GpuMat& dst, cudaStream_t stream)
     {
         dst.create(src.size(), src.type());
-        mathfunc::bitwise_not_caller(src.rows, src.cols, src, src.elemSize(), dst, stream);
+
+        cv::gpu::mathfunc::bitwise_not_caller(src.rows, src.cols, src.elemSize1(), 
+                                              dst.channels(), src, dst, stream);
     }
+
 
     void bitwise_not_caller(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
+        using namespace cv::gpu;
+
+        typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
+        static Caller callers[] = {mathfunc::bitwise_mask_not_caller<unsigned char>, mathfunc::bitwise_mask_not_caller<unsigned char>, 
+                                   mathfunc::bitwise_mask_not_caller<unsigned short>, mathfunc::bitwise_mask_not_caller<unsigned short>,
+                                   mathfunc::bitwise_mask_not_caller<unsigned int>, mathfunc::bitwise_mask_not_caller<unsigned int>,
+                                   mathfunc::bitwise_mask_not_caller<unsigned int>};
+
         CV_Assert(mask.type() == CV_8U && mask.size() == src.size());
         dst.create(src.size(), src.type());
-        mathfunc::bitwise_not_caller(src.rows, src.cols, src, src.elemSize(), dst, mask, stream);
+
+        Caller caller = callers[src.depth()];
+        CV_Assert(caller);
+
+        int cn = src.depth() != CV_64F ? src.channels() : src.channels() * (sizeof(double) / sizeof(unsigned int));
+        caller(src.rows, src.cols, cn, src, mask, dst, stream);
     }
+
 
     void bitwise_or_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
     {
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        mathfunc::bitwise_or_caller(dst.rows, dst.cols, src1, src2, dst.elemSize(), dst, stream);
+
+        cv::gpu::mathfunc::bitwise_or_caller(dst.rows, dst.cols, dst.elemSize1(), 
+                                             dst.channels(), src1, src2, dst, stream);
     }
+
 
     void bitwise_or_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
+        using namespace cv::gpu;
+
+        typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
+        static Caller callers[] = {mathfunc::bitwise_mask_or_caller<unsigned char>, mathfunc::bitwise_mask_or_caller<unsigned char>, 
+                                   mathfunc::bitwise_mask_or_caller<unsigned short>, mathfunc::bitwise_mask_or_caller<unsigned short>,
+                                   mathfunc::bitwise_mask_or_caller<unsigned int>, mathfunc::bitwise_mask_or_caller<unsigned int>,
+                                   mathfunc::bitwise_mask_or_caller<unsigned int>};
+
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
-        CV_Assert(mask.type() == CV_8U && mask.size() == src1.size());
         dst.create(src1.size(), src1.type());
-        mathfunc::bitwise_or_caller(dst.rows, dst.cols, src1, src2, dst.elemSize(), dst, mask, stream);
+
+        Caller caller = callers[src1.depth()];
+        CV_Assert(caller);
+
+        int cn = dst.depth() != CV_64F ? dst.channels() : dst.channels() * (sizeof(double) / sizeof(unsigned int));
+        caller(dst.rows, dst.cols, cn, src1, src2, mask, dst, stream);
     }
+
 
     void bitwise_and_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
     {
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        mathfunc::bitwise_and_caller(dst.rows, dst.cols, src1, src2, dst.elemSize(), dst, stream);
+
+        cv::gpu::mathfunc::bitwise_and_caller(dst.rows, dst.cols, dst.elemSize1(), 
+                                              dst.channels(), src1, src2, dst, stream);
     }
+
 
     void bitwise_and_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
+        using namespace cv::gpu;
+
+        typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
+        static Caller callers[] = {mathfunc::bitwise_mask_and_caller<unsigned char>, mathfunc::bitwise_mask_and_caller<unsigned char>, 
+                                   mathfunc::bitwise_mask_and_caller<unsigned short>, mathfunc::bitwise_mask_and_caller<unsigned short>,
+                                   mathfunc::bitwise_mask_and_caller<unsigned int>, mathfunc::bitwise_mask_and_caller<unsigned int>,
+                                   mathfunc::bitwise_mask_and_caller<unsigned int>};
+
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
-        CV_Assert(mask.type() == CV_8U && mask.size() == src1.size());
         dst.create(src1.size(), src1.type());
-        mathfunc::bitwise_and_caller(dst.rows, dst.cols, src1, src2, dst.elemSize(), dst, mask, stream);
+
+        Caller caller = callers[src1.depth()];
+        CV_Assert(caller);
+
+        int cn = dst.depth() != CV_64F ? dst.channels() : dst.channels() * (sizeof(double) / sizeof(unsigned int));
+        caller(dst.rows, dst.cols, cn, src1, src2, mask, dst, stream);
     }
+
 
     void bitwise_xor_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream)
     {
-        CV_Assert(src1.size() == src2.size());
-        CV_Assert(src1.type() == src2.type());
+        CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        mathfunc::bitwise_xor_caller(dst.rows, dst.cols, src1, src2, dst.elemSize(), dst, stream);
+
+        cv::gpu::mathfunc::bitwise_xor_caller(dst.rows, dst.cols, dst.elemSize1(), 
+                                              dst.channels(), src1, src2, dst, stream);
     }
+
 
     void bitwise_xor_caller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
+        using namespace cv::gpu;
+
+        typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
+        static Caller callers[] = {mathfunc::bitwise_mask_xor_caller<unsigned char>, mathfunc::bitwise_mask_xor_caller<unsigned char>, 
+                                   mathfunc::bitwise_mask_xor_caller<unsigned short>, mathfunc::bitwise_mask_xor_caller<unsigned short>,
+                                   mathfunc::bitwise_mask_xor_caller<unsigned int>, mathfunc::bitwise_mask_xor_caller<unsigned int>,
+                                   mathfunc::bitwise_mask_xor_caller<unsigned int>};
+
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
-        CV_Assert(mask.type() == CV_8U && mask.size() == src1.size());
         dst.create(src1.size(), src1.type());
-        mathfunc::bitwise_xor_caller(dst.rows, dst.cols, src1, src2, dst.elemSize(), dst, mask, stream);
+
+        Caller caller = callers[src1.depth()];
+        CV_Assert(caller);
+
+        int cn = dst.depth() != CV_64F ? dst.channels() : dst.channels() * (sizeof(double) / sizeof(unsigned int));
+        caller(dst.rows, dst.cols, cn, src1, src2, mask, dst, stream);
     }
 }
 
