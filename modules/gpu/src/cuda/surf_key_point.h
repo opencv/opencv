@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -39,53 +39,38 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
 
-#if _MSC_VER >= 1200
-#pragma warning( disable: 4251 4710 4711 4514 4996 )
-#endif
+#ifndef __OPENCV_SURF_KEY_POINT_H__
+#define __OPENCV_SURF_KEY_POINT_H__
 
-#ifdef HAVE_CONFIG_H
-#include <cvconfig.h>
-#endif
+namespace cv
+{
+    namespace gpu
+    {
+        namespace surf
+        {
+            struct KeyPoint_GPU
+            {
+                float x;
+                float y;
+                float size;
+                float response;
+                float angle;
+                float octave;
+            };
 
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
+            enum KeypointLayout 
+            {
+                SF_X,
+                SF_Y,
+                SF_SIZE,
+                SF_RESPONSE,
+                SF_ANGLE,
+                SF_OCTAVE,
+                SF_FEATURE_STRIDE
+            };
+        }
+    }
+}
 
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-
-#if defined(HAVE_CUDA)
-
-    #include "internal_shared.hpp"
-    #include "cuda_runtime_api.h"
-    #include "opencv2/gpu/stream_accessor.hpp"
-    #include "npp.h"    
-    #include "npp_staging.h"
-    #include "surf_key_point.h"
-
-#define CUDART_MINIMUM_REQUIRED_VERSION 3020
-#define NPP_MINIMUM_REQUIRED_VERSION 3216
-
-#if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-    #error "Insufficient Cuda Runtime library version, please update it."
-#endif
-
-#if (NPP_VERSION_MAJOR*1000+NPP_VERSION_MINOR*100+NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-    #error "Insufficient NPP version, please update it."
-#endif
-
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The called functionality is disabled for current build or platform"); }
-
-#else /* defined(HAVE_CUDA) */
-
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-
-#endif /* defined(HAVE_CUDA) */
-
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif // __OPENCV_SURF_KEY_POINT_H__

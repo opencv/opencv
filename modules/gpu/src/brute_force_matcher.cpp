@@ -493,9 +493,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
         }
     };
 
-    int major, minor;
-    getComputeCapability(getDevice(), major, minor);
-    CV_Assert(100 * major + 10 * minor >= 110); // works onle on device with CC >= 1.1
+    CV_Assert(hasAtomicsSupport(getDevice()));
 
     const int nQuery = queryDescs.rows;
     const int nTrain = trainDescs.rows;

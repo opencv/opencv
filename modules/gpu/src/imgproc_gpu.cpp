@@ -304,7 +304,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
 void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value)
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1);
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
 
     dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
 
@@ -318,26 +318,34 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
     switch (src.type())
     {
     case CV_8UC1:
-                {
+        {
             Npp8u nVal = static_cast<Npp8u>(value[0]);
             nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), src.step, srcsz,
-                dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
+            dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
             break;
-                }
+        }
     case CV_8UC4:
-                {
+        {
             Npp8u nVal[] = {static_cast<Npp8u>(value[0]), static_cast<Npp8u>(value[1]), static_cast<Npp8u>(value[2]), static_cast<Npp8u>(value[3])};
             nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), src.step, srcsz,
                 dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
             break;
-                }
+        }
     case CV_32SC1:
-            {
+        {
             Npp32s nVal = static_cast<Npp32s>(value[0]);
             nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz,
                 dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );
             break;
-            }
+        }
+    case CV_32FC1:
+        {
+            float val = static_cast<float>(value[0]);
+            Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
+            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz,
+                dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );
+            break;
+        }
     default:
         CV_Assert(!"Unsupported source type");
     }

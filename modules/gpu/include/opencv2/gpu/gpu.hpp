@@ -591,7 +591,7 @@ namespace cv
         CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR);
 
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1 types
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1 and CV_32FC1 types
         CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
 
         //! computes the integral image and integral for the squared image
@@ -1364,6 +1364,100 @@ namespace cv
 
             Ptr<FeatureEvaluator> feval;
             Ptr<CvHaarClassifierCascade> oldCascade;
+        };
+
+        ////////////////////////////////// SURF //////////////////////////////////////////
+        
+        struct CV_EXPORTS SURFParams_GPU 
+        {
+            SURFParams_GPU() :
+                threshold(0.1f), 
+                nOctaves(4),
+                nIntervals(4),
+                initialScale(2.f),
+
+                l1(3.f/1.5f),
+                l2(5.f/1.5f),
+                l3(3.f/1.5f),
+                l4(1.f/1.5f),
+                edgeScale(0.81f),
+                initialStep(1),
+
+                extended(true),
+
+                featuresRatio(0.01f)
+            {
+            }
+
+            //! The interest operator threshold
+            float threshold;
+            //! The number of octaves to process
+            int nOctaves;
+            //! The number of intervals in each octave
+            int nIntervals;
+            //! The scale associated with the first interval of the first octave
+            float initialScale;
+
+            //! mask parameter l_1
+            float l1;
+            //! mask parameter l_2 
+            float l2;
+            //! mask parameter l_3
+            float l3;
+            //! mask parameter l_4
+            float l4;
+            //! The amount to scale the edge rejection mask
+            float edgeScale;
+            //! The initial sampling step in pixels.
+            int initialStep;
+
+            //! True, if generate 128-len descriptors, false - 64-len descriptors
+            bool extended;
+
+            //! max features = featuresRatio * img.size().srea()
+            float featuresRatio;
+        };
+
+        class CV_EXPORTS SURF_GPU : public SURFParams_GPU
+        {
+        public:
+            //! returns the descriptor size in float's (64 or 128)
+            int descriptorSize() const;
+
+            //! upload host keypoints to device memory
+            static void uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMat& keypointsGPU);
+            //! download keypoints from device to host memory
+            static void downloadKeypoints(const GpuMat& keypointsGPU, vector<KeyPoint>& keypoints);
+
+            //! download descriptors from device to host memory
+            static void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
+            
+            //! finds the keypoints using fast hessian detector used in SURF
+            //! supports CV_8UC1 (0..255) and CV_32FC1 (0..1) images
+            //! keypoints will have 1 row and type CV_32FC(6)
+            //! keypoints.at<float6>(1, i) contains i'th keypoint
+            //! format: (x, y, size, response, angle, octave)
+            void operator()(const GpuMat& img, GpuMat& keypoints);
+            //! finds the keypoints and computes their descriptors. 
+            //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
+            void operator()(const GpuMat& img, GpuMat& keypoints, GpuMat& descriptors, 
+                bool useProvidedKeypoints = false, bool calcOrientation = true);
+        
+            void operator()(const GpuMat& img, std::vector<KeyPoint>& keypoints);
+            void operator()(const GpuMat& img, std::vector<KeyPoint>& keypoints, GpuMat& descriptors, 
+                bool useProvidedKeypoints = false, bool calcOrientation = true);
+            
+            void operator()(const GpuMat& img, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
+                bool useProvidedKeypoints = false, bool calcOrientation = true);
+
+            GpuMat img_float;
+            GpuMat img_float_tr;
+
+            GpuMat sum;
+
+            GpuMat hessianBuffer;
+            GpuMat maxPosBuffer;
+            GpuMat featuresBuffer;
         };
 
     }
