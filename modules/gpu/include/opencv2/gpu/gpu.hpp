@@ -558,29 +558,21 @@ namespace cv
 
         //! performs per-elements bit-wise inversion
         CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! version without mask
-        CV_EXPORTS GpuMat operator ~ (const GpuMat& src);
         //! async version
         CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
         //! calculates per-element bit-wise disjunction of two arrays
         CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! version without mask
-        CV_EXPORTS GpuMat operator | (const GpuMat& src1, const GpuMat& src2);
         //! async version
         CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
         //! calculates per-element bit-wise conjunction of two arrays
         CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! version without mask
-        CV_EXPORTS GpuMat operator & (const GpuMat& src1, const GpuMat& src2);
         //! async version
         CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 
         //! calculates per-element bit-wise "exclusive or" operation
         CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat());
-        //! version without mask
-        CV_EXPORTS GpuMat operator ^ (const GpuMat& src1, const GpuMat& src2);
         //! async version
         CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream);
 

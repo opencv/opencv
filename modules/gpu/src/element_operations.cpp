@@ -403,14 +403,6 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, co
 }
 
 
-cv::gpu::GpuMat cv::gpu::operator ~ (const GpuMat& src)
-{
-    GpuMat dst;
-    bitwise_not(src, dst);
-    return dst;
-}
-
-
 //////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
 
@@ -580,30 +572,6 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
         ::bitwiseXorCaller(src1, src2, dst, StreamAccessor::getStream(stream));
     else
         ::bitwiseXorCaller(src1, src2, dst, mask, StreamAccessor::getStream(stream));
-}
-
-
-cv::gpu::GpuMat cv::gpu::operator | (const GpuMat& src1, const GpuMat& src2)
-{
-    GpuMat dst;
-    bitwise_or(src1, src2, dst);
-    return dst;
-}
-
-
-cv::gpu::GpuMat cv::gpu::operator & (const GpuMat& src1, const GpuMat& src2)
-{
-    GpuMat dst;
-    bitwise_and(src1, src2, dst);
-    return dst;
-}
-
-
-cv::gpu::GpuMat cv::gpu::operator ^ (const GpuMat& src1, const GpuMat& src2)
-{
-    GpuMat dst;
-    bitwise_xor(src1, src2, dst);
-    return dst;
 }
 
 #endif
