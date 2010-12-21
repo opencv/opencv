@@ -621,7 +621,7 @@ drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
 
 \textbf{Note:} the function requires some white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environment (otherwise if there is no border and the background is dark, the outer black squares could not be segmented properly and so the square grouping and ordering algorithm will fail).
 
-
+\ifCpp
 \cvCppFunc{findCirclesGrid}
 Finds the centers of the cirlces' grid.
 \cvdefCpp{bool findCirclesGrid( const Mat\& image, Size patternSize,\par
@@ -657,6 +657,7 @@ drawChessboardCorners(img, patternsize, Mat(centers), patternfound);
 \end{lstlisting}
 
 \textbf{Note:} the function requires some white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environment.
+\fi
 
 \ifCPy
 \cvCPyFunc{FindExtrinsicCameraParams2}
