@@ -106,7 +106,7 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
   for (Vertices::const_iterator it1 = vertices.begin(); it1 != vertices.end(); it1++)
   {
     distanceMatrix.at<int> (it1->first, it1->first) = 0;
-    for (Neighbors::iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end(); it2++)
+    for (Neighbors::const_iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end(); it2++)
     {
       assert( it1->first != *it2 );
       distanceMatrix.at<int> (it1->first, *it2) = edgeWeight;

@@ -100,7 +100,7 @@ struct CirclesGridFinderParameters
   int minGraphConfidence;
   float vertexGain;
   float vertexPenalty;
-  float existingVertexGain;
+  int existingVertexGain;
   float edgeGain;
   float edgePenalty;
   float convexHullFactor;

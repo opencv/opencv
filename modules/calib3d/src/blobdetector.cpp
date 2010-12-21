@@ -145,7 +145,7 @@ void BlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, v
     {
       double area = moms.m00;
       double perimeter = arcLength(Mat(contours[contourIdx]), true);
-      double ratio = 4 * M_PI * area / (perimeter * perimeter);
+      double ratio = 4 * CV_PI * area / (perimeter * perimeter);
       if (ratio < params.minCircularity)
         continue;
     }
