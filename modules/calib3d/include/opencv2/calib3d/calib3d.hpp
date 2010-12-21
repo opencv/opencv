@@ -542,7 +542,12 @@ CV_EXPORTS_W void drawChessboardCorners( Mat& image, Size patternSize,
 CV_EXPORTS void drawChessboardCorners( Mat& image, Size patternSize,
                                        const vector<Point2f>& corners,
                                        bool patternWasFound );    
-    
+
+//! finds circles' grid pattern of the specified size in the image
+CV_EXPORTS_W bool findCirclesGrid( const Mat& image, Size patternSize,
+                                   CV_OUT vector<Point2f>& centers,
+                                   int flags=0 );
+
 enum
 {
     CALIB_USE_INTRINSIC_GUESS = CV_CALIB_USE_INTRINSIC_GUESS,

@@ -60,6 +60,8 @@
 \************************************************************************************/
 
 #include "precomp.hpp"
+#include "circlesgrid.hpp"
+#include "blobdetector.hpp"
 #include <stdarg.h>
 
 //#define ENABLE_TRIM_COL_ROW
@@ -1931,6 +1933,62 @@ void drawChessboardCorners( Mat& image, Size patternSize,
     CvMat _image = image;
     cvDrawChessboardCorners( &_image, patternSize, (CvPoint2D32f*)&corners[0],
                             (int)corners.size(), patternWasFound );
+}
+
+bool findCirclesGrid( const Mat& image, Size patternSize,
+                      vector<Point2f>& centers, int flags )
+{
+    Ptr<BlobDetector> detector = new BlobDetector();
+    //Ptr<FeatureDetector> detector = new MserFeatureDetector();
+    vector<KeyPoint> keypoints;
+    detector->detect(image, keypoints);
+
+    CirclesGridFinderParameters parameters;
+    parameters.vertexPenalty = -0.6;
+    parameters.vertexGain = 1;
+    parameters.existingVertexGain = 10000;
+    parameters.edgeGain = 1;
+    parameters.edgePenalty = -0.6;
+
+    const int attempts = 2;
+    const int minHomographyPoints = 4;
+    Mat H;
+    for (int i = 0; i < attempts; i++)
+    {
+      centers.clear();
+      CirclesGridFinder boxFinder(patternSize, keypoints, parameters);
+      bool isFound = false;
+      try
+      {
+        isFound = boxFinder.findHoles();
+      }
+      catch (cv::Exception &e)
+      {
+      }
+
+      boxFinder.getHoles(centers);
+
+      if (isFound)
+      {
+        if (i != 0)
+        {
+          Mat orgPointsMat;
+          transform(Mat(centers), orgPointsMat, H.inv());
+          convertPointsHomogeneous(orgPointsMat, centers);
+        }
+
+        return true;
+      }
+
+      if (i != attempts - 1)
+      {
+        if (centers.size() < minHomographyPoints)
+          break;
+        H = CirclesGridFinder::rectifyGrid(boxFinder.getDetectedGridSize(), centers, keypoints, keypoints);
+      }
+    }
+
+    return false;
 }
 
 }
