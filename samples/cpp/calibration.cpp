@@ -47,6 +47,7 @@ void help()
         "Usage: calibration\n"
         "     -w <board_width>         # the number of inner corners per one of board dimension\n"
         "     -h <board_height>        # the number of inner corners per another board dimension\n"
+        "     [-pt <pattern>]          # the type of pattern: chessboard or circles' grid\n"
         "     [-n <number_of_frames>]  # the number of frames to use for calibration\n"
         "                              # (if not specified, it will be set to the number\n"
         "                              #  of board views actually available)\n"
@@ -74,6 +75,7 @@ void help()
 }
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
+enum Pattern { CHESSBOARD, CIRCLESGRID };
 
 static double computeReprojectionErrors(
         const vector<vector<Point3f> >& objectPoints,
@@ -288,6 +290,7 @@ int main( int argc, char** argv )
     int cameraId = 0;
     vector<vector<Point2f> > imagePoints;
     vector<string> imageList;
+    Pattern pattern = CHESSBOARD;
 
     if( argc < 2 )
     {
@@ -307,6 +310,15 @@ int main( int argc, char** argv )
         {
             if( sscanf( argv[++i], "%u", &boardSize.height ) != 1 || boardSize.height <= 0 )
                 return fprintf( stderr, "Invalid board height\n" ), -1;
+        }
+        else if( strcmp( s, "-pt" ) == 0 )
+        {
+            if( !strcmp( argv[++i], "circles" ) )
+                pattern = CIRCLESGRID;
+            else if( !strcmp( argv[++i], "chessboard" ) )
+                pattern = CHESSBOARD;
+            else
+                return fprintf( stderr, "Invalid pattern type: must be chessboard or circles\n" ), -1;
         }
         else if( strcmp( s, "-s" ) == 0 )
         {
@@ -425,11 +437,22 @@ int main( int argc, char** argv )
         vector<Point2f> pointbuf;
         cvtColor(view, viewGray, CV_BGR2GRAY); 
 
-        bool found = findChessboardCorners( view, boardSize, pointbuf,
-            CV_CALIB_CB_ADAPTIVE_THRESH & CV_CALIB_CB_FAST_CHECK & CV_CALIB_CB_NORMALIZE_IMAGE);
+        bool found;
+        switch( pattern )
+        {
+            case CHESSBOARD:
+                found = findChessboardCorners( view, boardSize, pointbuf,
+                    CV_CALIB_CB_ADAPTIVE_THRESH & CV_CALIB_CB_FAST_CHECK & CV_CALIB_CB_NORMALIZE_IMAGE);
+                break;
+            case CIRCLESGRID:
+                found = findCirclesGrid( view, boardSize, pointbuf );
+                break;
+            default:
+                return fprintf( stderr, "Unknown pattern type\n" ), -1;
+        }
 
        // improve the found corners' coordinate accuracy
-        if(found) cornerSubPix( viewGray, pointbuf, Size(11,11),
+        if( pattern == CHESSBOARD && found) cornerSubPix( viewGray, pointbuf, Size(11,11),
             Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
 
         if( mode == CAPTURING && found &&
