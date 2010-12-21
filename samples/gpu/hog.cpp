@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     {
         if (argc < 2)
         {
-            cout << "Usage:\nsample_hog\n"
+            cout << "Usage:\nhog_gpu\n"
                 << "  -src <path_to_the_source>\n"
                 << "  [-src_is_video <true/false>] # says to interp. src as img or as video\n"
                 << "  [-make_gray <true/false>] # convert image to gray one or not\n"
