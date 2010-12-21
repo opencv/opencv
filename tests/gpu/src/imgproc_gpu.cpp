@@ -384,29 +384,14 @@ struct CV_GpuNppImageIntegralTest : public CV_GpuImageProcTest
             return CvTS::OK;
         }
 
-        Mat cpusum, cpusqsum;
-        cv::integral(img, cpusum, cpusqsum, CV_32S);
+        Mat cpusum;
+        cv::integral(img, cpusum, CV_32S);
 
         GpuMat gpu1(img);
-        GpuMat gpusum, gpusqsum;
-        cv::gpu::integral(gpu1, gpusum, gpusqsum);
+        GpuMat gpusum;
+        cv::gpu::integral(gpu1, gpusum);
 
-        gpusqsum.convertTo(gpusqsum, CV_64F);
-
-        int test_res = CvTS::OK;
-
-        if (CheckNorm(cpusum, gpusum) != CvTS::OK)
-        {
-            ts->printf(CvTS::LOG, "\nSum failed\n");
-            test_res = CvTS::FAIL_GENERIC;
-        }
-        if (CheckNorm(cpusqsum, gpusqsum) != CvTS::OK)
-        {
-            ts->printf(CvTS::LOG, "\nSquared sum failed\n");
-            test_res = CvTS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        return CheckNorm(cpusum, gpusum) == CvTS::OK ? CvTS::OK : CvTS::FAIL_GENERIC;
     }
 };
 

@@ -364,7 +364,7 @@ namespace cv
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
         //! transposes the matrix
-        //! supports CV_8UC1, CV_8SC1, CV_8UC4, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32FC1 type
+        //! supports matrix with element size = 1, 4 and 8 bytes (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc)
         CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst);
 
         //! reverses the order of the rows, columns or both in a matrix
@@ -593,6 +593,11 @@ namespace cv
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
         //! supports CV_8UC1, CV_8UC4, CV_32SC1 and CV_32FC1 types
         CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar());
+
+        //! computes the integral image
+        //! sum will have CV_32S type, but will contain unsigned int values
+        //! supports only CV_8UC1 source type
+        CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum);
 
         //! computes the integral image and integral for the squared image
         //! sum will have CV_32S type, sqsum - CV32F type
@@ -1433,27 +1438,28 @@ namespace cv
             static void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
             
             //! finds the keypoints using fast hessian detector used in SURF
-            //! supports CV_8UC1 (0..255) and CV_32FC1 (0..1) images
+            //! supports CV_8UC1 images
             //! keypoints will have 1 row and type CV_32FC(6)
-            //! keypoints.at<float6>(1, i) contains i'th keypoint
+            //! keypoints.at<float[6]>(1, i) contains i'th keypoint
             //! format: (x, y, size, response, angle, octave)
-            void operator()(const GpuMat& img, GpuMat& keypoints);
+            void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints);
             //! finds the keypoints and computes their descriptors. 
             //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
-            void operator()(const GpuMat& img, GpuMat& keypoints, GpuMat& descriptors, 
+            void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors, 
                 bool useProvidedKeypoints = false, bool calcOrientation = true);
         
-            void operator()(const GpuMat& img, std::vector<KeyPoint>& keypoints);
-            void operator()(const GpuMat& img, std::vector<KeyPoint>& keypoints, GpuMat& descriptors, 
+            void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
+            void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors, 
                 bool useProvidedKeypoints = false, bool calcOrientation = true);
             
-            void operator()(const GpuMat& img, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
+            void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
                 bool useProvidedKeypoints = false, bool calcOrientation = true);
 
-            GpuMat img_float;
-            GpuMat img_float_tr;
-
             GpuMat sum;
+            GpuMat sumf;
+
+            GpuMat mask1;
+            GpuMat maskSum;
 
             GpuMat hessianBuffer;
             GpuMat maxPosBuffer;

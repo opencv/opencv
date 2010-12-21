@@ -71,19 +71,13 @@ void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, 
 ////////////////////////////////////////////////////////////////////////
 // transpose
 
-namespace cv { namespace gpu { namespace mathfunc
-{
-    void transpose_gpu(const DevMem2Di& src, const DevMem2Di& dst);
-}}}
-
 void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8SC1 || src.type() == CV_8UC4 || src.type() == CV_8SC4 
-        || src.type() == CV_16UC2 || src.type() == CV_16SC2 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
+    CV_Assert(src.elemSize() == 1 || src.elemSize() == 4 || src.elemSize() == 8);
 
     dst.create( src.cols, src.rows, src.type() );
 
-    if (src.type() == CV_8UC1 || src.type() == CV_8SC1)
+    if (src.elemSize() == 1)
     {
         NppiSize sz;
         sz.width  = src.cols;
@@ -91,9 +85,23 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
 
         nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );
     }
-    else
+    else if (src.elemSize() == 4)
     {
-        mathfunc::transpose_gpu(src, dst);
+        NppStSize32u sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
+
+        nppSafeCall( nppiStTranspose_32u_C1R(const_cast<NppSt32u*>(src.ptr<NppSt32u>()), src.step, 
+            dst.ptr<NppSt32u>(), dst.step, sz) );
+    }
+    else // if (src.elemSize() == 8)
+    {
+        NppStSize32u sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
+
+        nppSafeCall( nppiStTranspose_64u_C1R(const_cast<NppSt64u*>(src.ptr<NppSt64u>()), src.step, 
+            dst.ptr<NppSt64u>(), dst.step, sz) );
     }
 }
 

@@ -214,44 +214,6 @@ namespace cv { namespace gpu { namespace mathfunc
 
         callers[mag.data == 0](mag, angle, x, y, angleInDegrees, stream);
     }
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-// transpose
-
-    __global__ void transpose(const DevMem2Di src, PtrStepi dst)
-    {
-    	__shared__ int s_mem[16 * 17];
-
-    	int x = blockIdx.x * blockDim.x + threadIdx.x;
-    	int y = blockIdx.y * blockDim.y + threadIdx.y;
-	    int smem_idx = threadIdx.y * blockDim.x + threadIdx.x + threadIdx.y;
-
-	    if (y < src.rows && x < src.cols)
-	    {
-            s_mem[smem_idx] = src.ptr(y)[x];
-	    }
-	    __syncthreads();
-
-	    smem_idx = threadIdx.x * blockDim.x + threadIdx.y + threadIdx.x;
-
-	    x = blockIdx.y * blockDim.x + threadIdx.x;
-	    y = blockIdx.x * blockDim.y + threadIdx.y;
-
-	    if (y < src.cols && x < src.rows)
-	    {
-		    dst.ptr(y)[x] = s_mem[smem_idx];
-	    }
-    }
-
-    void transpose_gpu(const DevMem2Di& src, const DevMem2Di& dst)
-    {
-	    dim3 threads(16, 16, 1);
-	    dim3 grid(divUp(src.cols, 16), divUp(src.rows, 16), 1);
-
-	    transpose<<<grid, threads>>>(src, dst);
-        cudaSafeCall( cudaThreadSynchronize() );
-    }
 }}}
 
 

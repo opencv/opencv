@@ -52,11 +52,11 @@ int cv::gpu::SURF_GPU::descriptorSize() const { throw_nogpu(); return 0;}
 void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, vector<float>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, GpuMat&, GpuMat&, bool, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, vector<KeyPoint>&, GpuMat&, bool, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, vector<KeyPoint>&, vector<float>&, bool, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, GpuMat&, bool, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, vector<float>&, bool, bool) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -65,7 +65,7 @@ namespace cv { namespace gpu { namespace surf
     void fasthessian_gpu(PtrStepf hessianBuffer, int nIntervals, int x_size, int y_size);
     
     void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
-        int nIntervals, int x_size, int y_size);
+        int nIntervals, int x_size, int y_size, bool use_mask);
     
     void fh_interp_extremum_gpu(PtrStepf hessianBuffer, const int4* maxPosBuffer, unsigned int maxCounter, 
         KeyPoint_GPU* featuresBuffer, unsigned int& featureCounter);
@@ -82,12 +82,12 @@ namespace
     class SURF_GPU_Invoker : private SURFParams_GPU
     {
     public:
-        SURF_GPU_Invoker(SURF_GPU& surf, const GpuMat& img) : 
+        SURF_GPU_Invoker(SURF_GPU& surf, const GpuMat& img, const GpuMat& mask) : 
             SURFParams_GPU(surf),
 
-            img_float(surf.img_float), img_float_tr(surf.img_float_tr),
+            sum(surf.sum), sumf(surf.sumf),
 
-            sum(surf.sum), 
+            mask1(surf.mask1), maskSum(surf.maskSum),
 
             hessianBuffer(surf.hessianBuffer), 
             maxPosBuffer(surf.maxPosBuffer), 
@@ -95,11 +95,15 @@ namespace
 
             img_cols(img.cols), img_rows(img.rows),
 
+            use_mask(!mask.empty()),
+
             mask_width(0), mask_height(0),
 
             featureCounter(0), maxCounter(0)
         {
-            CV_Assert((img.type() == CV_8UC1 || img.type() == CV_32FC1) && nOctaves > 0 && nIntervals > 2);
+            CV_Assert(img.type() == CV_8UC1);
+            CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
+            CV_Assert(nOctaves > 0 && nIntervals > 2);
             CV_Assert(hasAtomicsSupport(getDevice()));
 
             max_features = static_cast<int>(img.size().area() * featuresRatio);
@@ -139,22 +143,25 @@ namespace
             
             hessianBuffer.create(height0 * nIntervals, width0, CV_32F);
 
-            if (img.type() == CV_32FC1)
-                img_float = img;
-            else
-                img.convertTo(img_float, CV_32F, 1.0 / 255.0);
-
-            transpose(img_float, img_float_tr);
-            columnSum(img_float_tr, img_float_tr);
-            transpose(img_float_tr, sum);
-            columnSum(sum, sum);
+            integral(img, sum);
+            sum.convertTo(sumf, CV_32F, 1.0 / 255.0);
             
-            bindTexture("cv::gpu::surf::sumTex", (DevMem2Df)sum);
+            bindTexture("cv::gpu::surf::sumTex", (DevMem2Df)sumf);
+
+            if (!mask.empty())
+		    {
+                min(mask, 1.0, mask1);
+                integral(mask1, maskSum);
+            
+                bindTexture("cv::gpu::surf::maskSumTex", (DevMem2Di)maskSum);
+		    }
         }
 
         ~SURF_GPU_Invoker()
         {
             unbindTexture("cv::gpu::surf::sumTex");
+            if (use_mask)
+                unbindTexture("cv::gpu::surf::maskSumTex");
         }
 
         void detectKeypoints(GpuMat& keypoints)
@@ -185,7 +192,7 @@ namespace
                 // Reset the candidate count.
                 maxCounter = 0;
 
-                nonmaxonly_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter, nIntervals, x_size, y_size); 
+                nonmaxonly_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter, nIntervals, x_size, y_size, use_mask); 
                 
                 maxCounter = std::min(maxCounter, static_cast<unsigned int>(max_candidates));
 
@@ -214,16 +221,19 @@ namespace
         }
 
     private:
-        GpuMat& img_float;
-        GpuMat& img_float_tr;
-
         GpuMat& sum;
+        GpuMat& sumf;
+
+        GpuMat& mask1;
+        GpuMat& maskSum;
 
         GpuMat& hessianBuffer;
         GpuMat& maxPosBuffer;
         GpuMat& featuresBuffer;
 
         int img_cols, img_rows;
+
+        bool use_mask;
         
         float mask_width, mask_height;
 
@@ -298,19 +308,19 @@ void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat& descriptorsGPU, vector
     descriptorsGPU.download(descriptorsCPU);
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, GpuMat& keypoints)
+void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
 {
-    SURF_GPU_Invoker surf(*this, img);
+    SURF_GPU_Invoker surf(*this, img, mask);
 
     surf.detectKeypoints(keypoints);
 
     surf.findOrientation(keypoints);
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, GpuMat& keypoints, GpuMat& descriptors, 
+void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors, 
                                    bool useProvidedKeypoints, bool calcOrientation)
 {
-    SURF_GPU_Invoker surf(*this, img);
+    SURF_GPU_Invoker surf(*this, img, mask);
     
     if (!useProvidedKeypoints)
         surf.detectKeypoints(keypoints);
@@ -321,34 +331,34 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, GpuMat& keypoints, GpuMat&
     surf.computeDescriptors(keypoints, descriptors, descriptorSize());
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, vector<KeyPoint>& keypoints)
+void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector<KeyPoint>& keypoints)
 {
     GpuMat keypointsGPU;
 
-    (*this)(img, keypointsGPU);
+    (*this)(img, mask, keypointsGPU);
 
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, vector<KeyPoint>& keypoints, GpuMat& descriptors, 
-                                   bool useProvidedKeypoints, bool calcOrientation)
+void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector<KeyPoint>& keypoints, 
+    GpuMat& descriptors, bool useProvidedKeypoints, bool calcOrientation)
 {
     GpuMat keypointsGPU;
 
     if (useProvidedKeypoints)
         uploadKeypoints(keypoints, keypointsGPU);    
 
-    (*this)(img, keypointsGPU, descriptors, useProvidedKeypoints, calcOrientation);
+    (*this)(img, mask, keypointsGPU, descriptors, useProvidedKeypoints, calcOrientation);
 
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, vector<KeyPoint>& keypoints, vector<float>& descriptors, 
-                                   bool useProvidedKeypoints, bool calcOrientation)
+void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector<KeyPoint>& keypoints, 
+    vector<float>& descriptors, bool useProvidedKeypoints, bool calcOrientation)
 {
     GpuMat descriptorsGPU;
 
-    (*this)(img, keypoints, descriptorsGPU, useProvidedKeypoints, calcOrientation);
+    (*this)(img, mask, keypoints, descriptorsGPU, useProvidedKeypoints, calcOrientation);
 
     downloadDescriptors(descriptorsGPU, descriptors);
 }

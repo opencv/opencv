@@ -259,7 +259,36 @@ namespace cv { namespace gpu { namespace surf
 
     ////////////////////////////////////////////////////////////////////////
     // NONMAX
+    
+    texture<int, 2, cudaReadModeElementType> maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
+    struct WithOutMask
+    {
+        static __device__ bool check(float, float, float)
+        {
+            return true;
+        }
+    };
+    struct WithMask
+    {
+        static __device__ bool check(float x, float y, float fscale)
+        {
+	        float half_width = fscale / 2;
+    
+	        float result = 0.f;
+
+            result += tex2D(maskSumTex, x - half_width, y - half_width);
+            result -= tex2D(maskSumTex, x + half_width, y - half_width);
+            result -= tex2D(maskSumTex, x - half_width, y + half_width);
+            result += tex2D(maskSumTex, x + half_width, y + half_width);
+	
+	        result /= (fscale * fscale);
+
+            return (result >= 0.5f);
+        }
+    };
+
+    template <typename Mask>
     __global__ void nonmaxonly(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int* maxCounter)
     {        
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
@@ -287,7 +316,12 @@ namespace cv { namespace gpu { namespace surf
 
         float val = fh_vals[localLin];
 
-        if (inBounds2 && val >= c_threshold)
+	    // Compute the lookup location of the mask center
+        float x = hidx_x * c_step + c_border;
+        float y = hidx_y * c_step + c_border;
+        float fscale = calcScale(hidx_z);
+
+        if (inBounds2 && val >= c_threshold && Mask::check(x, y, fscale))
         {
             // Check to see if we have a max (in its 26 neighbours)
             int zoff = blockDim.x * blockDim.y;
@@ -337,7 +371,7 @@ namespace cv { namespace gpu { namespace surf
     }
 
     void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
-        int nIntervals, int x_size, int y_size)
+        int nIntervals, int x_size, int y_size, bool use_mask)
     {
         dim3 threads;
         threads.x = 16;
@@ -353,7 +387,10 @@ namespace cv { namespace gpu { namespace surf
 
         DeviceReference<unsigned int> maxCounterWrapper(maxCounter);
 
-        nonmaxonly<<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
+        if (use_mask)
+            nonmaxonly<WithMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
+        else
+            nonmaxonly<WithOutMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
