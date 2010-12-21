@@ -51,7 +51,8 @@ struct App
     string text() const
     {
         stringstream ss;
-        ss << "(" << p.method_str() << ") FPS: " << setiosflags(ios::left) << setprecision(4) << work_fps;
+        ss << "(" << p.method_str() << ") FPS: " << setiosflags(ios::left)
+            << setprecision(4) << work_fps;
         return ss.str();
     }
 private:
@@ -79,7 +80,7 @@ int main(int argc, char** argv)
         {
             cout << "Usage: stereo_match_gpu\n"
                 << "\t-l <left_view> -r <right_view> # must be rectified\n"
-                << "\t-m <stereo_match_method> # bm | bp | csbp\n";
+                << "\t-m <stereo_match_method> # BM | BP | CSBP\n";
             return 1;
         }
         App app(Params::read(argc, argv));
@@ -239,7 +240,7 @@ void App::handleKey(char key)
         break;
     case 'p': case 'P':
         printParams();
-        break;
+        break;  
     case 'g': case 'G':
         if (left.channels() == 1 && p.method != Params::BM)
         {
