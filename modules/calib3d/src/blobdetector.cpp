@@ -64,14 +64,14 @@ BlobDetectorParameters::BlobDetectorParameters()
 
   filterByInertia = true;
   //minInertiaRatio = 0.6;
-  minInertiaRatio = 0.1;
+  minInertiaRatio = 0.1f;
 
   filterByConvexity = true;
   //minConvexity = 0.8;
-  minConvexity = 0.95;
+  minConvexity = 0.95f;
 
   filterByCircularity = false;
-  minCircularity = 0.8;
+  minCircularity = 0.8f;
 }
 
 BlobDetector::BlobDetector(const BlobDetectorParameters &parameters) :
@@ -195,7 +195,7 @@ void BlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, v
 
     if (params.filterByColor)
     {
-      if (binaryImage.at<uchar> (center.location.y, center.location.x) == 255)
+      if (binaryImage.at<uchar> (cvRound(center.location.y), cvRound(center.location.x)) == 255)
         continue;
     }
 

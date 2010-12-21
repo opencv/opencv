@@ -1936,7 +1936,7 @@ void drawChessboardCorners( Mat& image, Size patternSize,
 }
 
 bool findCirclesGrid( const Mat& image, Size patternSize,
-                      vector<Point2f>& centers, int flags )
+                      vector<Point2f>& centers, int )
 {
     Ptr<BlobDetector> detector = new BlobDetector();
     //Ptr<FeatureDetector> detector = new MserFeatureDetector();
@@ -1944,11 +1944,11 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
     detector->detect(image, keypoints);
 
     CirclesGridFinderParameters parameters;
-    parameters.vertexPenalty = -0.6;
+    parameters.vertexPenalty = -0.6f;
     parameters.vertexGain = 1;
     parameters.existingVertexGain = 10000;
     parameters.edgeGain = 1;
-    parameters.edgePenalty = -0.6;
+    parameters.edgePenalty = -0.6f;
 
     const int attempts = 2;
     const int minHomographyPoints = 4;
@@ -1962,7 +1962,7 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
       {
         isFound = boxFinder.findHoles();
       }
-      catch (cv::Exception &e)
+      catch (cv::Exception)
       {
       }
 

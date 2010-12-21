@@ -97,10 +97,10 @@ struct CirclesGridFinderParameters
   int kmeansAttempts;
   int minDistanceToAddKeypoint;
   int keypointScale;
-  int minGraphConfidence;
+  float minGraphConfidence;
   float vertexGain;
   float vertexPenalty;
-  int existingVertexGain;
+  float existingVertexGain;
   float edgeGain;
   float edgePenalty;
   float convexHullFactor;

@@ -142,7 +142,7 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
   densityNeighborhoodSize = Size2f(16, 16);
   minDistanceToAddKeypoint = 20;
   kmeansAttempts = 100;
-  convexHullFactor = 1.1;
+  convexHullFactor = 1.1f;
   keypointScale = 1;
 
   minGraphConfidence = 9;
@@ -258,7 +258,6 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const vector<Point2f>&
   assert( !centers.empty() );
   const float edgeLength = 30;
   const Point2f offset(150, 150);
-  const int keypointScale = 1;
 
   vector<Point2f> dstPoints;
   for (int i = 0; i < detectedGridSize.height; i++)
@@ -296,10 +295,10 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const vector<Point2f>&
 int CirclesGridFinder::findNearestKeypoint(Point2f pt) const
 {
   int bestIdx = -1;
-  float minDist = std::numeric_limits<float>::max();
+  double minDist = std::numeric_limits<double>::max();
   for (size_t i = 0; i < keypoints.size(); i++)
   {
-    float dist = norm(pt - keypoints[i]);
+    double dist = norm(pt - keypoints[i]);
     if (dist < minDist)
     {
       minDist = dist;
@@ -621,7 +620,7 @@ void CirclesGridFinder::computeEdgeVectorsOfRNG(vector<Point2f> &vectors, Mat *d
         continue;
 
       Point2f vec = keypoints[i] - keypoints[j];
-      float dist = norm(vec);
+      double dist = norm(vec);
 
       bool isNeighbors = true;
       for (size_t k = 0; k < keypoints.size(); k++)
@@ -629,8 +628,8 @@ void CirclesGridFinder::computeEdgeVectorsOfRNG(vector<Point2f> &vectors, Mat *d
         if (k == i || k == j)
           continue;
 
-        float dist1 = norm(keypoints[i] - keypoints[k]);
-        float dist2 = norm(keypoints[j] - keypoints[k]);
+        double dist1 = norm(keypoints[i] - keypoints[k]);
+        double dist2 = norm(keypoints[j] - keypoints[k]);
         if (dist1 < dist && dist2 < dist)
         {
           isNeighbors = false;
@@ -714,7 +713,7 @@ size_t CirclesGridFinder::findLongestPath(vector<Graph> &basisGraphs, Path &best
     }
     if (longestPaths.empty() || (maxVal == longestPaths[0].length && graphIdx == bestGraphIdx))
     {
-      Path path = Path(maxLoc.x, maxLoc.y, maxVal);
+      Path path = Path(maxLoc.x, maxLoc.y, cvRound(maxVal));
       computeShortestPath(predecessorMatrix, maxLoc.x, maxLoc.y, path.vertices);
       longestPaths.push_back(path);
 
