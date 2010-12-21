@@ -44,7 +44,6 @@
 #define BLOBDETECTOR_HPP_
 
 #include "precomp.hpp"
-#include "../../features2d/include/opencv2/features2d/features2d.hpp"
 
 struct BlobDetectorParameters
 {
@@ -72,7 +71,7 @@ class BlobDetector //: public cv::FeatureDetector
 {
 public:
   BlobDetector(const BlobDetectorParameters &parameters = BlobDetectorParameters());
-  void detect(const cv::Mat& image, vector<cv::KeyPoint>& keypoints, const cv::Mat& mask = cv::Mat()) const;
+  void detect(const cv::Mat& image, std::vector<cv::Point2f>& keypoints, const cv::Mat& mask = cv::Mat()) const;
 protected:
   struct Center
   {
@@ -81,10 +80,10 @@ protected:
     double confidence;
   };
 
-  virtual void detectImpl(const cv::Mat& image, vector<cv::KeyPoint>& keypoints, const cv::Mat& mask = cv::Mat()) const;
-  virtual void findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, vector<Center> &centers) const;
+  virtual void detectImpl(const cv::Mat& image, std::vector<cv::Point2f>& keypoints, const cv::Mat& mask = cv::Mat()) const;
+  virtual void findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, std::vector<Center> &centers) const;
 
-  cv::Point2d computeGrayscaleCentroid(const cv::Mat &image, const vector<cv::Point> &contour) const;
+  cv::Point2d computeGrayscaleCentroid(const cv::Mat &image, const std::vector<cv::Point> &contour) const;
 
   BlobDetectorParameters params;
 };

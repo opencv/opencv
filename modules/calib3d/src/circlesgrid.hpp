@@ -49,17 +49,16 @@
 #include <set>
 
 #include "precomp.hpp"
-#include "../../features2d/include/opencv2/features2d/features2d.hpp"
 
 class Graph
 {
 public:
-  typedef set<int> Neighbors;
+  typedef std::set<int> Neighbors;
   struct Vertex
   {
     Neighbors neighbors;
   };
-  typedef map<int, Vertex> Vertices;
+  typedef std::map<int, Vertex> Vertices;
 
   Graph( int n);
   bool doesVertexExist( int id ) const;
@@ -80,7 +79,7 @@ struct Path
   int lastVertex;
   int length;
 
-  vector<int> vertices;
+  std::vector<int> vertices;
 
   Path(int first = -1, int last = -1, int len = -1)
   {
@@ -110,45 +109,45 @@ struct CirclesGridFinderParameters
 class CirclesGridFinder
 {
 public:
-  CirclesGridFinder(cv::Size patternSize, const vector<cv::KeyPoint> &testKeypoints,
+  CirclesGridFinder(cv::Size patternSize, const std::vector<cv::Point2f> &testKeypoints,
                     const CirclesGridFinderParameters &parameters = CirclesGridFinderParameters());
   bool findHoles();
-  static cv::Mat rectifyGrid(cv::Size detectedGridSize, const vector<cv::Point2f>& centers,
-                          const vector<cv::KeyPoint> &keypoint, vector<cv::KeyPoint> &warpedKeypoints);
+  static cv::Mat rectifyGrid(cv::Size detectedGridSize, const std::vector<cv::Point2f>& centers,
+                          const std::vector<cv::Point2f> &keypoint, std::vector<cv::Point2f> &warpedKeypoints);
 
-  void getHoles(vector<cv::Point2f> &holes) const;
+  void getHoles(std::vector<cv::Point2f> &holes) const;
   cv::Size getDetectedGridSize() const;
 
-  void drawBasis(const vector<cv::Point2f> &basis, cv::Point2f origin, cv::Mat &drawImg) const;
-  void drawBasisGraphs(const vector<Graph> &basisGraphs, cv::Mat &drawImg, bool drawEdges = true, bool drawVertices =
+  void drawBasis(const std::vector<cv::Point2f> &basis, cv::Point2f origin, cv::Mat &drawImg) const;
+  void drawBasisGraphs(const std::vector<Graph> &basisGraphs, cv::Mat &drawImg, bool drawEdges = true, bool drawVertices =
       true) const;
   void drawHoles(const cv::Mat &srcImage, cv::Mat &drawImage) const;
 private:
-  void computeEdgeVectorsOfRNG(vector<cv::Point2f> &vectors, cv::Mat *drawImage = 0) const;
-  void filterOutliersByDensity(const vector<cv::Point2f> &samples, vector<cv::Point2f> &filteredSamples);
-  void findBasis(const vector<cv::Point2f> &samples, vector<cv::Point2f> &basis, vector<Graph> &basisGraphs);
-  void findMCS(const vector<cv::Point2f> &basis, vector<Graph> &basisGraphs);
-  size_t findLongestPath(vector<Graph> &basisGraphs, Path &bestPath);
-  float computeGraphConfidence(const vector<Graph> &basisGraphs, bool addRow, const vector<int> &points, const vector<
+  void computeEdgeVectorsOfRNG(std::vector<cv::Point2f> &vectors, cv::Mat *drawImage = 0) const;
+  void filterOutliersByDensity(const std::vector<cv::Point2f> &samples, std::vector<cv::Point2f> &filteredSamples);
+  void findBasis(const std::vector<cv::Point2f> &samples, std::vector<cv::Point2f> &basis, std::vector<Graph> &basisGraphs);
+  void findMCS(const std::vector<cv::Point2f> &basis, std::vector<Graph> &basisGraphs);
+  size_t findLongestPath(std::vector<Graph> &basisGraphs, Path &bestPath);
+  float computeGraphConfidence(const std::vector<Graph> &basisGraphs, bool addRow, const std::vector<int> &points, const std::vector<
       int> &seeds);
-  void addHolesByGraph(const vector<Graph> &basisGraphs, bool addRow, cv::Point2f basisVec);
+  void addHolesByGraph(const std::vector<Graph> &basisGraphs, bool addRow, cv::Point2f basisVec);
 
   int findNearestKeypoint(cv::Point2f pt) const;
-  void addPoint(cv::Point2f pt, vector<int> &points);
-  void findCandidateLine(vector<int> &line, int seedLineIdx, bool addRow, cv::Point2f basisVec, vector<int> &seeds);
-  void findCandidateHoles(vector<int> &above, vector<int> &below, bool addRow, cv::Point2f basisVec,
-                          vector<int> &aboveSeeds, vector<int> &belowSeeds);
-  static bool areCentersNew( const vector<int> &newCenters, const vector<vector<int> > &holes );
+  void addPoint(cv::Point2f pt, std::vector<int> &points);
+  void findCandidateLine(std::vector<int> &line, int seedLineIdx, bool addRow, cv::Point2f basisVec, std::vector<int> &seeds);
+  void findCandidateHoles(std::vector<int> &above, std::vector<int> &below, bool addRow, cv::Point2f basisVec,
+                          std::vector<int> &aboveSeeds, std::vector<int> &belowSeeds);
+  static bool areCentersNew( const std::vector<int> &newCenters, const std::vector<std::vector<int> > &holes );
   bool isDetectionCorrect();
 
   static void insertWinner(float aboveConfidence, float belowConfidence, float minConfidence,
                            bool addRow,
-                           const vector<int> &above, const vector<int> &below, vector<vector<int> > &holes);
+                           const std::vector<int> &above, const std::vector<int> &below, std::vector<std::vector<int> > &holes);
   static bool areVerticesAdjacent(const Graph &graph, int vertex1, int vertex2);
 
-  vector<cv::KeyPoint> keypoints;
+  std::vector<cv::Point2f> keypoints;
 
-  vector<vector<int> > holes;
+  std::vector<std::vector<int> > holes;
   const cv::Size patternSize;
   CirclesGridFinderParameters parameters;
 };

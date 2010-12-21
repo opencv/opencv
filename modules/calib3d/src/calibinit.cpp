@@ -1940,7 +1940,7 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
 {
     Ptr<BlobDetector> detector = new BlobDetector();
     //Ptr<FeatureDetector> detector = new MserFeatureDetector();
-    vector<KeyPoint> keypoints;
+    vector<Point2f> keypoints;
     detector->detect(image, keypoints);
 
     CirclesGridFinderParameters parameters;
