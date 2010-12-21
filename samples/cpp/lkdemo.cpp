@@ -26,7 +26,7 @@ void help()
 Point2f pt;
 bool addRemovePt = false;
 
-void onMouse( int event, int x, int y, int flags, void* param )
+void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
 {
     if( event == CV_EVENT_LBUTTONDOWN )
     {

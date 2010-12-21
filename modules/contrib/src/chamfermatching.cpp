@@ -1155,7 +1155,7 @@ ChamferMatcher::Matches* ChamferMatcher::Matching::matchTemplates(Mat& dist_img,
  * @param edge_img Edge image
  * @return a match object
  */
-ChamferMatcher::Matches* ChamferMatcher::Matching::matchEdgeImage(Mat& edge_img, const ImageRange& range, float orientation_weight, int max_matches, float min_match_distance)
+ChamferMatcher::Matches* ChamferMatcher::Matching::matchEdgeImage(Mat& edge_img, const ImageRange& range, float orientation_weight, int /*max_matches*/, float /*min_match_distance*/)
 {
 	CV_Assert(edge_img.channels()==1);
 

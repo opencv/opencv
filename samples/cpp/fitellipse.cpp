@@ -59,7 +59,7 @@ int main( int argc, char** argv )
 
 // Define trackbar callback functon. This function find contours,
 // draw it and approximate it by ellipses.
-void processImage(int h, void*)
+void processImage(int /*h*/, void*)
 {
     vector<vector<Point> > contours;
     Mat bimage = image >= sliderPos;

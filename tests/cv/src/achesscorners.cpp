@@ -222,7 +222,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         Size pattern_size = expected.size();
 
         vector<Point2f> v;
-        bool result;
+        bool result = false;
         switch( pattern )
         {
             case CHESSBOARD:

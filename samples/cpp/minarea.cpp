@@ -16,7 +16,7 @@ void help()
 
 
 
-int main( int argc, char** argv )
+int main( int /*argc*/, char** /*argv*/ )
 {
     Mat img(500, 500, CV_8UC3);
     RNG& rng = theRNG();

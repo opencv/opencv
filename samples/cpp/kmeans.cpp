@@ -14,7 +14,7 @@ void help()
 			"./kmeans\n" << endl;
 }
 
-int main( int argc, char** argv )
+int main( int /*argc*/, char** /*argv*/ )
 {
     const int MAX_CLUSTERS = 5;
     Scalar colorTab[] =
