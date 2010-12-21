@@ -53,7 +53,6 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 #else
 
 #include <cufft.h>
-#include <NPP_staging.h>
 
 namespace cv { namespace gpu { namespace imgproc 
 {  
