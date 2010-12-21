@@ -157,7 +157,7 @@ void App::run()
     imshow("left", left);
     imshow("right", right);
 
-    // Create stero method descriptors
+	// Set common parameters
     bm.ndisp = p.ndisp;
     bp.ndisp = p.ndisp;
     csbp.ndisp = p.ndisp;
