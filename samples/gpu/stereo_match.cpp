@@ -17,7 +17,17 @@ struct Params
 
     string left;
     string right;
-    string method_str;
+
+    string method_str() const
+    {
+        switch (method)
+        {
+        case BM: return "BM";
+        case BP: return "BP";
+        case CSBP: return "CSBP";
+        }
+        return "";
+    }
     enum {BM, BP, CSBP} method;
     int ndisp; // Max disparity + 1
 };
@@ -28,6 +38,7 @@ struct App
     App(const Params& p);
     void run();
     void handleKey(char key);
+    void printParams() const;
 
     void workBegin() { work_begin = getTickCount(); }
     void workEnd() 
@@ -40,7 +51,7 @@ struct App
     string text() const
     {
         stringstream ss;
-        ss << "(" << p.method_str << ") FPS: " << setiosflags(ios::left) << setprecision(4) << work_fps;
+        ss << "(" << p.method_str() << ") FPS: " << setiosflags(ios::left) << setprecision(4) << work_fps;
         return ss.str();
     }
 private:
@@ -80,6 +91,7 @@ int main(int argc, char** argv)
 
 Params::Params()
 {
+    method = BM;
     ndisp = 64;
 }
 
@@ -100,7 +112,6 @@ Params Params::read(int argc, char** argv)
             else if (val == "BP") p.method = BP;
             else if (val == "CSBP") p.method = CSBP;
             else throw runtime_error("unknown stereo match method: " + val);
-            p.method_str = val;
         }
         else if (key == "-ndisp") p.ndisp = atoi(val.c_str());
         else throw runtime_error("unknown key: " + key);
@@ -116,8 +127,12 @@ App::App(const Params& p)
     cout << "stereo_match_gpu sample\n";
     cout << "\nControls:\n"
         << "\tesc - exit\n"
+        << "\tp - print current parameters\n"
         << "\tm - change stereo match method\n"
-        << "\t1/q - increase/decrease max disprity\n";
+        << "\t1/q - increase/decrease maximum disparity\n"
+        << "\t2/w - increase/decrease window size (for BM only)\n"
+        << "\t3/e - increase/decrease iteration count (for BP and CSBP only)\n"
+        << "\t4/r - increase/decrease level count (for BP and CSBP only)\n";
 }
 
 
@@ -149,11 +164,8 @@ void App::run()
     Mat disp(left.size(), CV_8U);
     gpu::GpuMat d_disp(left.size(), CV_8U);
 
-    // Show initial parameters
-    cout << "\nInitial Params:\n"
-        << "\timage_size: (" << left.cols << ", " << left.rows << ")\n"
-        << "\tmethod: " << p.method_str << endl
-        << "\tndisp: " << p.ndisp << endl << endl;
+    cout << "\nimage_size: (" << left.cols << ", " << left.rows << ")\n";
+    printParams();
 
     running = true;
     while (running)
@@ -177,6 +189,29 @@ void App::run()
 }
 
 
+void App::printParams() const
+{
+    cout << "--- Parameters ---\n";
+    cout << "method: " << p.method_str() << endl
+        << "ndisp: " << p.ndisp << endl;
+    switch (p.method)
+    {
+    case Params::BM:
+        cout << "win_size: " << bm.winSize << endl;
+        break;
+    case Params::BP:
+        cout << "iter_count: " << bp.iters << endl;
+        cout << "level_count: " << bp.levels << endl;
+        break;
+    case Params::CSBP:
+        cout << "iter_count: " << csbp.iters << endl;
+        cout << "level_count: " << csbp.levels << endl;
+        break;
+    }
+    cout << endl;
+}
+
+
 void App::handleKey(char key)
 {
     switch (key)
@@ -184,37 +219,99 @@ void App::handleKey(char key)
     case 27:
         running = false;
         break;
+    case 'p': case 'P':
+        printParams();
+        break;
     case 'm': case 'M':
         switch (p.method)
         {
         case Params::BM:
             p.method = Params::BP;
-            p.method_str = "BP";
             break;
         case Params::BP:
             p.method = Params::CSBP;
-            p.method_str = "CSBP";
             break;
         case Params::CSBP:
             p.method = Params::BM;
-            p.method_str = "BM";
             break;
         }
-        cout << "method: " << p.method_str << endl;
+        cout << "method: " << p.method_str() << endl;
         break;
     case '1':
         p.ndisp = p.ndisp == 1 ? 8 : p.ndisp + 8;
+        cout << "ndisp: " << p.ndisp << endl;
         bm.ndisp = p.ndisp;
         bp.ndisp = p.ndisp;
         csbp.ndisp = p.ndisp;
-        cout << "ndisp: " << p.ndisp << endl;
         break;
     case 'q': case 'Q':
         p.ndisp = max(p.ndisp - 8, 1);
+        cout << "ndisp: " << p.ndisp << endl;
         bm.ndisp = p.ndisp;
         bp.ndisp = p.ndisp;
         csbp.ndisp = p.ndisp;
-        cout << "ndisp: " << p.ndisp << endl;
+        break;
+    case '2':
+        if (p.method == Params::BM)
+        {
+            bm.winSize += 1;
+            cout << "win_size: " << bm.winSize << endl;
+        }
+        break;
+    case 'w': case 'W':
+        if (p.method == Params::BM)
+        {
+            bm.winSize = max(bm.winSize - 1, 2);
+            cout << "win_size: " << bm.winSize << endl;
+        }
+        break;
+    case '3':
+        if (p.method == Params::BP)
+        {
+            bp.iters += 1;
+            cout << "iter_count: " << bp.iters << endl;
+        }
+        else if (p.method == Params::CSBP)
+        {
+            csbp.iters += 1;
+            cout << "iter_count: " << csbp.iters << endl;
+        }
+        break;
+    case 'e': case 'E':
+        if (p.method == Params::BP)
+        {
+            bp.iters = max(bp.iters - 1, 1);
+            cout << "iter_count: " << bp.iters << endl;
+        }
+        else if (p.method == Params::CSBP)
+        {
+            csbp.iters = max(csbp.iters - 1, 1);
+            cout << "iter_count: " << csbp.iters << endl;
+        }
+        break;
+    case '4':
+        if (p.method == Params::BP)
+        {
+            bp.levels += 1;
+            cout << "level_count: " << bp.levels << endl;
+        }
+        else if (p.method == Params::CSBP)
+        {
+            csbp.levels += 1;
+            cout << "level_count: " << csbp.levels << endl;
+        }
+        break;
+    case 'r': case 'R':
+        if (p.method == Params::BP)
+        {
+            bp.levels = max(bp.levels - 1, 1);
+            cout << "level_count: " << bp.levels << endl;
+        }
+        else if (p.method == Params::CSBP)
+        {
+            csbp.levels = max(csbp.levels - 1, 1);
+            cout << "level_count: " << csbp.levels << endl;
+        }
         break;
     }
 }
