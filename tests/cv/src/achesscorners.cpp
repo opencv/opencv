@@ -74,20 +74,25 @@ void show_points( const Mat& gray, const Mat& u, const vector<Point2f>& v, Size 
 }
 
 
+enum Pattern { CHESSBOARD, CIRCLES_GRID };
+
 class CV_ChessboardDetectorTest : public CvTest
 {
 public:
-    CV_ChessboardDetectorTest();
+    CV_ChessboardDetectorTest( Pattern pattern, const char* testName, const char* funcName );
 protected:
     void run(int);
     void run_batch(const string& filename);
-    bool checkByGenerator();        
+    bool checkByGenerator();
+
+    Pattern pattern;
 };
 
-CV_ChessboardDetectorTest::CV_ChessboardDetectorTest():
-    CvTest( "chessboard-detector", "cvFindChessboardCorners" )
+CV_ChessboardDetectorTest::CV_ChessboardDetectorTest( Pattern _pattern, const char* testName, const char* funcName ):
+    CvTest( testName, funcName )
 {
-    support_testing_modes = CvTS::CORRECTNESS_CHECK_MODE;    
+    support_testing_modes = CvTS::CORRECTNESS_CHECK_MODE;
+    pattern = _pattern;
 }
 
 double calcError(const vector<Point2f>& v, const Mat& u)
@@ -134,10 +139,17 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
 {
     /*if (!checkByGenerator())
         return;*/
-    checkByGenerator();    
-    
-    run_batch("chessboard_list.dat");
-    run_batch("chessboard_list_subpixel.dat");
+    switch( pattern )
+    {
+        case CHESSBOARD:
+            checkByGenerator();
+            run_batch("chessboard_list.dat");
+            run_batch("chessboard_list_subpixel.dat");
+            break;
+        case CIRCLES_GRID:
+            run_batch("circles_list.dat");
+            break;
+    }
 }
 
 void CV_ChessboardDetectorTest::run_batch( const string& filename )
@@ -150,7 +162,16 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 #ifndef WRITE_POINTS    
     double max_rough_error = 0, max_precise_error = 0;
 #endif
-    string folder = string(ts.get_data_path()) + "cameracalibration/";
+    string folder;
+    switch( pattern )
+    {
+        case CHESSBOARD:
+            folder = string(ts.get_data_path()) + "cameracalibration/";
+            break;
+        case CIRCLES_GRID:
+            folder = string(ts.get_data_path()) + "cameracalibration/circles/";
+            break;
+    }
 
     FileStorage fs( folder + filename, FileStorage::READ );
     FileNode board_list = fs["boards"];
@@ -200,8 +221,17 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         size_t count_exp = static_cast<size_t>(expected.cols * expected.rows);                
         Size pattern_size = expected.size();
 
-        vector<Point2f> v;        
-        bool result = findChessboardCorners(gray, pattern_size, v, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);        
+        vector<Point2f> v;
+        bool result;
+        switch( pattern )
+        {
+            case CHESSBOARD:
+                result = findChessboardCorners(gray, pattern_size, v, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);
+                break;
+            case CIRCLES_GRID:
+                result = findCirclesGrid(gray, pattern_size, v);
+                break;
+        }
         show_points( gray, Mat(), v, pattern_size, result );
         if( !result || v.size() != count_exp )
         {
@@ -222,7 +252,8 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 #endif
         max_rough_error = MAX( max_rough_error, err );
 #endif
-        cornerSubPix( gray, v, Size(5, 5), Size(-1,-1), TermCriteria(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1));        
+        if( pattern == CHESSBOARD )
+            cornerSubPix( gray, v, Size(5, 5), Size(-1,-1), TermCriteria(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1));
         //find4QuadCornerSubpix(gray, v, Size(5, 5));
         show_points( gray, expected, v, pattern_size, result  );
 
@@ -408,6 +439,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
     return res;
 }
 
-CV_ChessboardDetectorTest chessboard_detector_test;
+CV_ChessboardDetectorTest chessboard_detector_test ( CHESSBOARD, "chessboard-detector", "cvFindChessboardCorners" );
+CV_ChessboardDetectorTest circlesgrid_detector_test ( CIRCLES_GRID, "circlesgrid-detector", "findCirclesGrid" );
 
 /* End of file. */
