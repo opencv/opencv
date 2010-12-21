@@ -58,6 +58,10 @@ private:
     Params p;
     bool running;
 
+    Mat left_src, right_src;
+    Mat left, right; 
+    gpu::GpuMat d_left, d_right;
+
     gpu::StereoBM_GPU bm;
     gpu::StereoBeliefPropagation bp;
     gpu::StereoConstantSpaceBP csbp;
@@ -128,7 +132,9 @@ App::App(const Params& p)
     cout << "\nControls:\n"
         << "\tesc - exit\n"
         << "\tp - print current parameters\n"
+        << "\tg - convert source images into gray\n"
         << "\tm - change stereo match method\n"
+        << "\ts - change Sobel prefiltering flag (for BM only)\n"
         << "\t1/q - increase/decrease maximum disparity\n"
         << "\t2/w - increase/decrease window size (for BM only)\n"
         << "\t3/e - increase/decrease iteration count (for BP and CSBP only)\n"
@@ -138,17 +144,13 @@ App::App(const Params& p)
 
 void App::run()
 {
-    Mat left, right;
-    Mat left_aux, right_aux;
-    gpu::GpuMat d_left, d_right;
-
     // Load images
-    left_aux = imread(p.left);
-    right_aux = imread(p.right);
-    if (left_aux.empty()) throw runtime_error("can't open file \"" + p.left + "\"");
-    if (right_aux.empty()) throw runtime_error("can't open file \"" + p.right + "\"");
-    cvtColor(left_aux, left, CV_BGR2GRAY);
-    cvtColor(right_aux, right, CV_BGR2GRAY);
+    left_src = imread(p.left);
+    right_src = imread(p.right);
+    if (left_src.empty()) throw runtime_error("can't open file \"" + p.left + "\"");
+    if (right_src.empty()) throw runtime_error("can't open file \"" + p.right + "\"");
+    cvtColor(left_src, left, CV_BGR2GRAY);
+    cvtColor(right_src, right, CV_BGR2GRAY);
     d_left = left;
     d_right = right;
 
@@ -164,7 +166,7 @@ void App::run()
     Mat disp(left.size(), CV_8U);
     gpu::GpuMat d_disp(left.size(), CV_8U);
 
-    cout << "\nimage_size: (" << left.cols << ", " << left.rows << ")\n";
+    cout << endl;
     printParams();
 
     running = true;
@@ -173,7 +175,20 @@ void App::run()
         workBegin();
         switch (p.method)
         {
-        case Params::BM: bm(d_left, d_right, d_disp); break;
+        case Params::BM: 
+            if (d_left.channels() > 1 || d_right.channels() > 1)
+            {
+                cout << "BM doesn't support color images\n";
+                cvtColor(left_src, left, CV_BGR2GRAY);
+                cvtColor(right_src, right, CV_BGR2GRAY);
+                cout << "image_channels: " << left.channels() << endl;
+                d_left = left;
+                d_right = right;
+                imshow("left", left);
+                imshow("right", right);
+            }
+            bm(d_left, d_right, d_disp); 
+            break;
         case Params::BP: bp(d_left, d_right, d_disp); break;
         case Params::CSBP: csbp(d_left, d_right, d_disp); break;
         }
@@ -192,12 +207,15 @@ void App::run()
 void App::printParams() const
 {
     cout << "--- Parameters ---\n";
+    cout << "image_size: (" << left.cols << ", " << left.rows << ")\n";
+    cout << "image_channels: " << left.channels() << endl;
     cout << "method: " << p.method_str() << endl
         << "ndisp: " << p.ndisp << endl;
     switch (p.method)
     {
     case Params::BM:
         cout << "win_size: " << bm.winSize << endl;
+        cout << "prefilter_sobel: " << bm.preset << endl;
         break;
     case Params::BP:
         cout << "iter_count: " << bp.iters << endl;
@@ -222,6 +240,23 @@ void App::handleKey(char key)
     case 'p': case 'P':
         printParams();
         break;
+    case 'g': case 'G':
+        if (left.channels() == 1 && p.method != Params::BM)
+        {
+            left = left_src;
+            right = right_src;
+        }
+        else 
+        {
+            cvtColor(left_src, left, CV_BGR2GRAY);
+            cvtColor(right_src, right, CV_BGR2GRAY);
+        }
+        d_left = left;
+        d_right = right;
+        cout << "image_channels: " << left.channels() << endl;
+        imshow("left", left);
+        imshow("right", right);
+        break;
     case 'm': case 'M':
         switch (p.method)
         {
@@ -236,6 +271,21 @@ void App::handleKey(char key)
             break;
         }
         cout << "method: " << p.method_str() << endl;
+        break;
+    case 's': case 'S':
+        if (p.method == Params::BM)
+        {
+            switch (bm.preset)
+            {
+            case gpu::StereoBM_GPU::BASIC_PRESET:
+                bm.preset = gpu::StereoBM_GPU::PREFILTER_XSOBEL;
+                break;
+            case gpu::StereoBM_GPU::PREFILTER_XSOBEL:
+                bm.preset = gpu::StereoBM_GPU::BASIC_PRESET;
+                break;
+            }
+            cout << "prefilter_sobel: " << bm.preset << endl;
+        }
         break;
     case '1':
         p.ndisp = p.ndisp == 1 ? 8 : p.ndisp + 8;
@@ -254,7 +304,7 @@ void App::handleKey(char key)
     case '2':
         if (p.method == Params::BM)
         {
-            bm.winSize += 1;
+            bm.winSize = min(bm.winSize + 1, 51);
             cout << "win_size: " << bm.winSize << endl;
         }
         break;
@@ -315,4 +365,5 @@ void App::handleKey(char key)
         break;
     }
 }
+
 
