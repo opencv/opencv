@@ -52,8 +52,6 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 
 #else
 
-#include <cufft.h>
-
 namespace cv { namespace gpu { namespace imgproc 
 {  
     void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
@@ -271,27 +269,27 @@ namespace
         cufftReal* image_data;
         cufftReal* templ_data;
         cufftReal* result_data;
-        cudaMalloc((void**)&image_data, sizeof(cufftReal) * dft_size.area());
-        cudaMalloc((void**)&templ_data, sizeof(cufftReal) * dft_size.area());
-        cudaMalloc((void**)&result_data, sizeof(cufftReal) * dft_size.area());
+        cudaSafeCall(cudaMalloc((void**)&image_data, sizeof(cufftReal) * dft_size.area()));
+        cudaSafeCall(cudaMalloc((void**)&templ_data, sizeof(cufftReal) * dft_size.area()));
+        cudaSafeCall(cudaMalloc((void**)&result_data, sizeof(cufftReal) * dft_size.area()));
 
         int spect_len = dft_size.height * (dft_size.width / 2 + 1);
         cufftComplex* image_spect;
         cufftComplex* templ_spect;
         cufftComplex* result_spect;
-        cudaMalloc((void**)&image_spect, sizeof(cufftComplex) * spect_len);
-        cudaMalloc((void**)&templ_spect, sizeof(cufftComplex) * spect_len);
-        cudaMalloc((void**)&result_spect, sizeof(cufftComplex) * spect_len);
+        cudaSafeCall(cudaMalloc((void**)&image_spect, sizeof(cufftComplex) * spect_len));
+        cudaSafeCall(cudaMalloc((void**)&templ_spect, sizeof(cufftComplex) * spect_len));
+        cudaSafeCall(cudaMalloc((void**)&result_spect, sizeof(cufftComplex) * spect_len));
 
         cufftHandle planR2C, planC2R;
-        CV_Assert(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R) == CUFFT_SUCCESS);
-        CV_Assert(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C) == CUFFT_SUCCESS);
+        cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
+        cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
 
         GpuMat templ_roi(templ.size(), CV_32S, templ.data, templ.step);
         GpuMat templ_block(dft_size, CV_32S, templ_data, dft_size.width * sizeof(cufftReal));
         copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
                        templ_block.cols - templ_roi.cols, 0);
-        CV_Assert(cufftExecR2C(planR2C, templ_data, templ_spect) == CUFFT_SUCCESS);
+        cufftSafeCall(cufftExecR2C(planR2C, templ_data, templ_spect));
 
         GpuMat image_block(dft_size, CV_32S, image_data, dft_size.width * sizeof(cufftReal));
 
@@ -306,10 +304,10 @@ namespace
                 copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
                                image_block.cols - image_roi.cols, 0);
 
-                CV_Assert(cufftExecR2C(planR2C, image_data, image_spect) == CUFFT_SUCCESS);
+                cufftSafeCall(cufftExecR2C(planR2C, image_data, image_spect));
                 imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(), 
                                                     image_spect, templ_spect, result_spect);
-                CV_Assert(cufftExecC2R(planC2R, result_spect, result_data) == CUFFT_SUCCESS);
+                cufftSafeCall(cufftExecC2R(planC2R, result_spect, result_data));
 
                 Size result_roi_size;
                 result_roi_size.width = min(x + block_size.width, result.cols) - x;
@@ -320,15 +318,15 @@ namespace
             }
         }
 
-        cufftDestroy(planR2C);
-        cufftDestroy(planC2R);
+        cufftSafeCall(cufftDestroy(planR2C));
+        cufftSafeCall(cufftDestroy(planC2R));
 
-        cudaFree(image_spect);
-        cudaFree(templ_spect);
-        cudaFree(result_spect);
-        cudaFree(image_data);
-        cudaFree(templ_data);
-        cudaFree(result_data);
+        cudaSafeCall(cudaFree(image_spect));
+        cudaSafeCall(cudaFree(templ_spect));
+        cudaSafeCall(cudaFree(result_spect));
+        cudaSafeCall(cudaFree(image_data));
+        cudaSafeCall(cudaFree(templ_data));
+        cudaSafeCall(cudaFree(result_data));
     }
 
 

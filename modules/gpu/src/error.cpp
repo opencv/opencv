@@ -56,6 +56,9 @@ namespace
 {
     #define error_entry(entry)  { entry, #entry }
 
+    //////////////////////////////////////////////////////////////////////////
+    // NPP errors
+
     struct NppError
     {
         int error;
@@ -116,6 +119,40 @@ namespace
         bool operator()(const NppError& e) const { return e.error == err; }
     };
 
+    //////////////////////////////////////////////////////////////////////////
+    // CUFFT errors
+
+    struct CufftError
+    {
+        int code;
+        string message;
+    };
+
+    const CufftError cufft_errors[] = 
+    {
+        error_entry(CUFFT_INVALID_PLAN),
+        error_entry(CUFFT_ALLOC_FAILED),
+        error_entry(CUFFT_INVALID_TYPE),
+        error_entry(CUFFT_INVALID_VALUE),
+        error_entry(CUFFT_INTERNAL_ERROR),
+        error_entry(CUFFT_EXEC_FAILED),
+        error_entry(CUFFT_SETUP_FAILED),
+        error_entry(CUFFT_INVALID_SIZE),
+        error_entry(CUFFT_UNALIGNED_DATA)
+    };
+
+    struct CufftErrorComparer
+    {
+        CufftErrorComparer(int code_): code(code_) {}
+        bool operator()(const CufftError& other) const 
+        { 
+            return other.code == code; 
+        }
+        int code;
+    };
+
+    const int cufft_error_num = sizeof(cufft_errors) / sizeof(cufft_errors[0]);
+
 }
 
 namespace cv
@@ -136,6 +173,26 @@ namespace cv
         void nppError( int err, const char *file, const int line, const char *func)
         {                    
             cv::error( cv::Exception(CV_GpuNppCallError, getNppErrorString(err), func, file, line) );                
+        }
+
+        const string getCufftErrorString(int err_code)
+        {
+            const CufftError* cufft_error = std::find_if(
+                    cufft_errors, cufft_errors + cufft_error_num, 
+                    CufftErrorComparer(err_code));
+
+            bool found = cufft_error != cufft_errors + cufft_error_num;
+
+            std::stringstream ss;
+            ss << (found ? cufft_error->message : "Unknown error code");
+            ss << " [Code = " << err_code << "]";
+
+            return ss.str();
+        }
+
+        void cufftError(int err, const char *file, const int line, const char *func)
+        {
+            cv::error(cv::Exception(CV_GpuCufftCallError, getCufftErrorString(err), func, file, line));
         }
 
         void error(const char *error_string, const char *file, const int line, const char *func)

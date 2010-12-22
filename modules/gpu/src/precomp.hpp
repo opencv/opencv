@@ -64,6 +64,7 @@
 
     #include "internal_shared.hpp"
     #include "cuda_runtime_api.h"
+    #include "cufft.h"
     #include "opencv2/gpu/stream_accessor.hpp"
     #include "npp.h"    
     #include "npp_staging.h"
