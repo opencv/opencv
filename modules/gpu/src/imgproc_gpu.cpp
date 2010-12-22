@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <utility>
 
 using namespace cv;
 using namespace cv::gpu;
@@ -73,6 +74,7 @@ void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); 
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); }
 void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
 void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
+void cv::gpu::crossCorr(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -1061,6 +1063,135 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, i
     dst.create(src.size(), CV_32F);
     imgproc::cornerMinEigenVal_caller(blockSize, Dx, Dy, dst, gpuBorderType);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// crossCorr
+
+namespace 
+{
+    // Estimates optimal block size
+    void crossCorrOptBlockSize(int w, int h, int tw, int th, int& bw, int& bh)
+    {
+        int major, minor;
+        getComputeCapability(getDevice(), major, minor);
+
+        int scale = 40;
+        int bh_min = 1024;
+        int bw_min = 1024;
+
+        // Check whether we use Fermi generation or newer GPU
+        if (major >= 2) 
+        {
+            bh_min = 2048;
+            bw_min = 2048;
+        }
+
+        bw = std::max(tw * scale, bw_min);
+        bh = std::max(th * scale, bh_min);
+        bw = std::min(bw, w);
+        bh = std::min(bh, h);
+    }
+}
+
+
+namespace cv { namespace gpu { namespace imgproc
+{
+    void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
+                                    const cufftComplex* b, cufftComplex* c);
+}}}
+
+
+void cv::gpu::crossCorr(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+{
+    CV_Assert(image.type() == CV_32F);
+    CV_Assert(templ.type() == CV_32F);
+
+    result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+
+    Size block_size;
+    crossCorrOptBlockSize(result.cols, result.rows, templ.cols, templ.rows, 
+                          block_size.width, block_size.height);
+
+    Size dft_size;
+    dft_size.width = getOptimalDFTSize(block_size.width + templ.cols - 1);
+    dft_size.height = getOptimalDFTSize(block_size.width + templ.rows - 1);
+
+    block_size.width = std::min(dft_size.width - templ.cols + 1, result.cols);
+    block_size.height = std::min(dft_size.height - templ.rows + 1, result.rows);
+
+    cufftReal* image_data;
+    cufftReal* templ_data;
+    cufftReal* result_data;
+    cudaSafeCall(cudaMalloc((void**)&image_data, sizeof(cufftReal) * dft_size.area()));
+    cudaSafeCall(cudaMalloc((void**)&templ_data, sizeof(cufftReal) * dft_size.area()));
+    cudaSafeCall(cudaMalloc((void**)&result_data, sizeof(cufftReal) * dft_size.area()));
+
+    int spect_len = dft_size.height * (dft_size.width / 2 + 1);
+    cufftComplex* image_spect;
+    cufftComplex* templ_spect;
+    cufftComplex* result_spect;
+    cudaSafeCall(cudaMalloc((void**)&image_spect, sizeof(cufftComplex) * spect_len));
+    cudaSafeCall(cudaMalloc((void**)&templ_spect, sizeof(cufftComplex) * spect_len));
+    cudaSafeCall(cudaMalloc((void**)&result_spect, sizeof(cufftComplex) * spect_len));
+
+    cufftHandle planR2C, planC2R;
+    cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
+    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
+
+    GpuMat templ_roi(templ.size(), CV_32S, templ.data, templ.step);
+    GpuMat templ_block(dft_size, CV_32S, templ_data, dft_size.width * sizeof(cufftReal));
+    copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
+                   templ_block.cols - templ_roi.cols, 0);
+
+    cufftSafeCall(cufftExecR2C(planR2C, templ_data, templ_spect));
+
+    GpuMat image_block(dft_size, CV_32S, image_data, dft_size.width * sizeof(cufftReal));
+
+    // Process all blocks of the result matrix
+    for (int y = 0; y < result.rows; y += block_size.height)
+    {
+        for (int x = 0; x < result.cols; x += block_size.width)
+        {                
+            // Locate ROI in the source matrix
+            Size image_roi_size;
+            image_roi_size.width = std::min(x + dft_size.width, image.cols) - x;
+            image_roi_size.height = std::min(y + dft_size.height, image.rows) - y;
+            GpuMat image_roi(image_roi_size, CV_32S, (void*)(image.ptr<float>(y) + x), image.step);
+
+            // Make source image block continous
+            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
+                           image_block.cols - image_roi.cols, 0);
+
+            cufftSafeCall(cufftExecR2C(planR2C, image_data, image_spect));
+
+            imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(), 
+                                                image_spect, templ_spect, result_spect);
+
+            cufftSafeCall(cufftExecC2R(planC2R, result_spect, result_data));
+
+            // Copy result block into appropriate part of the result matrix.
+            // We can't compute it inplace as the result of the CUFFT transforms
+            // is always continous, while the result matrix and its blocks can have gaps.
+            Size result_roi_size;
+            result_roi_size.width = std::min(x + block_size.width, result.cols) - x;
+            result_roi_size.height = std::min(y + block_size.height, result.rows) - y;
+            GpuMat result_roi(result_roi_size, CV_32F, (void*)(result.ptr<float>(y) + x), result.step);
+            GpuMat result_block(result_roi_size, CV_32F, result_data, dft_size.width * sizeof(cufftReal));
+            result_block.copyTo(result_roi);
+        }
+    }
+
+    cufftSafeCall(cufftDestroy(planR2C));
+    cufftSafeCall(cufftDestroy(planC2R));
+
+    cudaSafeCall(cudaFree(image_spect));
+    cudaSafeCall(cudaFree(templ_spect));
+    cudaSafeCall(cudaFree(result_spect));
+    cudaSafeCall(cudaFree(image_data));
+    cudaSafeCall(cudaFree(templ_data));
+    cudaSafeCall(cudaFree(result_data));
+}
+
 
 
 #endif /* !defined (HAVE_CUDA) */

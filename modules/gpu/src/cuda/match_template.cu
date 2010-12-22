@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include <cufft.h>
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/vecmath.hpp"
 
@@ -252,29 +251,6 @@ void matchTemplateNaive_SQDIFF_8U(const DevMem2D image, const DevMem2D templ,
                 templ.cols, templ.rows, image, templ, result);
         break;
     }
-    cudaSafeCall(cudaThreadSynchronize());
-}
-
-
-__global__ void multiplyAndNormalizeSpectsKernel(
-        int n, float scale, const cufftComplex* a, 
-        const cufftComplex* b, cufftComplex* c)
-{
-    int x = blockIdx.x * blockDim.x + threadIdx.x;    
-    if (x < n) 
-    {
-        cufftComplex v = cuCmulf(a[x], cuConjf(b[x]));
-        c[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
-    }
-}
-
-
-void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, 
-                                const cufftComplex* b, cufftComplex* c)
-{
-    dim3 threads(256);
-    dim3 grid(divUp(n, threads.x));
-    multiplyAndNormalizeSpectsKernel<<<grid, threads>>>(n, scale, a, b, c);
     cudaSafeCall(cudaThreadSynchronize());
 }
 

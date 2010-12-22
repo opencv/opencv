@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include <cufft.h>
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
@@ -746,6 +747,33 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(src.cols, threads.x));
 
         column_sum_kernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // multiplyAndNormalizeSpects
+
+    __global__ void multiplyAndNormalizeSpectsKernel(
+            int n, float scale, const cufftComplex* a, 
+            const cufftComplex* b, cufftComplex* c)
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;    
+        if (x < n) 
+        {
+            cufftComplex v = cuCmulf(a[x], cuConjf(b[x]));
+            c[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+        }
+    }
+
+
+    // Performs per-element multiplication and normalization of two spectrums
+    void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, 
+                                    const cufftComplex* b, cufftComplex* c)
+    {
+        dim3 threads(256);
+        dim3 grid(divUp(n, threads.x));
+
+        multiplyAndNormalizeSpectsKernel<<<grid, threads>>>(n, scale, a, b, c);
         cudaSafeCall(cudaThreadSynchronize());
     }
 
