@@ -74,7 +74,9 @@ void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); 
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*) { throw_nogpu(); }
 void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
 void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::crossCorr(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool) { throw_nogpu(); }
+void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool) { throw_nogpu(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -1065,6 +1067,66 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, i
 }
 
 //////////////////////////////////////////////////////////////////////////////
+// mulSpectrums
+
+namespace cv { namespace gpu { namespace imgproc 
+{
+    void mulSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+                      DevMem2D_<cufftComplex> c);
+
+    void mulSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+                           DevMem2D_<cufftComplex> c);
+}}}
+
+
+void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
+                           int flags, bool conjB) 
+{
+    typedef void (*Caller)(const PtrStep_<cufftComplex>, const PtrStep_<cufftComplex>, 
+                           DevMem2D_<cufftComplex>);
+    static Caller callers[] = { imgproc::mulSpectrums, 
+                                imgproc::mulSpectrums_CONJ };
+
+    CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
+    CV_Assert(a.size() == b.size());
+
+    c.create(a.size(), CV_32FC2);
+
+    Caller caller = callers[(int)conjB];
+    caller(a, b, c);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// mulAndScaleSpectrums
+
+namespace cv { namespace gpu { namespace imgproc 
+{
+    void mulAndScaleSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+                             float scale, DevMem2D_<cufftComplex> c);
+
+    void mulAndScaleSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+                                  float scale, DevMem2D_<cufftComplex> c);
+}}}
+
+
+void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c,
+                                  int flags, float scale, bool conjB) 
+{
+    typedef void (*Caller)(const PtrStep_<cufftComplex>, const PtrStep_<cufftComplex>,
+                           float scale, DevMem2D_<cufftComplex>);
+    static Caller callers[] = { imgproc::mulAndScaleSpectrums, 
+                                imgproc::mulAndScaleSpectrums_CONJ };
+
+    CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
+    CV_Assert(a.size() == b.size());
+
+    c.create(a.size(), CV_32FC2);
+
+    Caller caller = callers[(int)conjB];
+    caller(a, b, scale, c);
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // crossCorr
 
 namespace 
@@ -1094,15 +1156,12 @@ namespace
 }
 
 
-namespace cv { namespace gpu { namespace imgproc
+void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr)
 {
-    void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a,
-                                    const cufftComplex* b, cufftComplex* c);
-}}}
+    // We must be sure we use correct OpenCV analogues for CUFFT types
+    StaticAssert<sizeof(float) == sizeof(cufftReal)>::check();
+    StaticAssert<sizeof(float) * 2 == sizeof(cufftComplex)>::check();
 
-
-void cv::gpu::crossCorr(const GpuMat& image, const GpuMat& templ, GpuMat& result)
-{
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 
@@ -1119,33 +1178,28 @@ void cv::gpu::crossCorr(const GpuMat& image, const GpuMat& templ, GpuMat& result
     block_size.width = std::min(dft_size.width - templ.cols + 1, result.cols);
     block_size.height = std::min(dft_size.height - templ.rows + 1, result.rows);
 
-    cufftReal* image_data;
-    cufftReal* templ_data;
-    cufftReal* result_data;
-    cudaSafeCall(cudaMalloc((void**)&image_data, sizeof(cufftReal) * dft_size.area()));
-    cudaSafeCall(cudaMalloc((void**)&templ_data, sizeof(cufftReal) * dft_size.area()));
-    cudaSafeCall(cudaMalloc((void**)&result_data, sizeof(cufftReal) * dft_size.area()));
+    GpuMat image_data(1, dft_size.area(), CV_32F);
+    GpuMat templ_data(1, dft_size.area(), CV_32F);
+    GpuMat result_data(1, dft_size.area(), CV_32F);
 
     int spect_len = dft_size.height * (dft_size.width / 2 + 1);
-    cufftComplex* image_spect;
-    cufftComplex* templ_spect;
-    cufftComplex* result_spect;
-    cudaSafeCall(cudaMalloc((void**)&image_spect, sizeof(cufftComplex) * spect_len));
-    cudaSafeCall(cudaMalloc((void**)&templ_spect, sizeof(cufftComplex) * spect_len));
-    cudaSafeCall(cudaMalloc((void**)&result_spect, sizeof(cufftComplex) * spect_len));
+    GpuMat image_spect(1, spect_len, CV_32FC2);
+    GpuMat templ_spect(1, spect_len, CV_32FC2);
+    GpuMat result_spect(1, spect_len, CV_32FC2);
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
     cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
 
-    GpuMat templ_roi(templ.size(), CV_32S, templ.data, templ.step);
-    GpuMat templ_block(dft_size, CV_32S, templ_data, dft_size.width * sizeof(cufftReal));
+    GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
+    GpuMat templ_block(dft_size, CV_32F, templ_data.ptr(), dft_size.width * sizeof(cufftReal));
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
                    templ_block.cols - templ_roi.cols, 0);
 
-    cufftSafeCall(cufftExecR2C(planR2C, templ_data, templ_spect));
+    cufftSafeCall(cufftExecR2C(planR2C, templ_data.ptr<cufftReal>(), 
+                               templ_spect.ptr<cufftComplex>()));
 
-    GpuMat image_block(dft_size, CV_32S, image_data, dft_size.width * sizeof(cufftReal));
+    GpuMat image_block(dft_size, CV_32F, image_data.ptr(), dft_size.width * sizeof(cufftReal));
 
     // Process all blocks of the result matrix
     for (int y = 0; y < result.rows; y += block_size.height)
@@ -1156,18 +1210,20 @@ void cv::gpu::crossCorr(const GpuMat& image, const GpuMat& templ, GpuMat& result
             Size image_roi_size;
             image_roi_size.width = std::min(x + dft_size.width, image.cols) - x;
             image_roi_size.height = std::min(y + dft_size.height, image.rows) - y;
-            GpuMat image_roi(image_roi_size, CV_32S, (void*)(image.ptr<float>(y) + x), image.step);
+            GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), image.step);
 
             // Make source image block continous
             copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
                            image_block.cols - image_roi.cols, 0);
 
-            cufftSafeCall(cufftExecR2C(planR2C, image_data, image_spect));
+            cufftSafeCall(cufftExecR2C(planR2C, image_data.ptr<cufftReal>(), 
+                                       image_spect.ptr<cufftComplex>()));
 
-            imgproc::multiplyAndNormalizeSpects(spect_len, 1.f / dft_size.area(), 
-                                                image_spect, templ_spect, result_spect);
+            mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
+                                1.f / dft_size.area(), ccorr);
 
-            cufftSafeCall(cufftExecC2R(planC2R, result_spect, result_data));
+            cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(), 
+                                       result_data.ptr<cufftReal>()));
 
             // Copy result block into appropriate part of the result matrix.
             // We can't compute it inplace as the result of the CUFFT transforms
@@ -1176,23 +1232,17 @@ void cv::gpu::crossCorr(const GpuMat& image, const GpuMat& templ, GpuMat& result
             result_roi_size.width = std::min(x + block_size.width, result.cols) - x;
             result_roi_size.height = std::min(y + block_size.height, result.rows) - y;
             GpuMat result_roi(result_roi_size, CV_32F, (void*)(result.ptr<float>(y) + x), result.step);
-            GpuMat result_block(result_roi_size, CV_32F, result_data, dft_size.width * sizeof(cufftReal));
+            GpuMat result_block(result_roi_size, CV_32F, result_data.ptr(), dft_size.width * sizeof(cufftReal));
             result_block.copyTo(result_roi);
         }
     }
 
     cufftSafeCall(cufftDestroy(planR2C));
     cufftSafeCall(cufftDestroy(planC2R));
-
-    cudaSafeCall(cudaFree(image_spect));
-    cudaSafeCall(cudaFree(templ_spect));
-    cudaSafeCall(cudaFree(result_spect));
-    cudaSafeCall(cudaFree(image_data));
-    cudaSafeCall(cudaFree(templ_data));
-    cudaSafeCall(cudaFree(result_data));
 }
 
 
 
 #endif /* !defined (HAVE_CUDA) */
+
 

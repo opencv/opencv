@@ -196,7 +196,7 @@ namespace
         }
 
         GpuMat result_;
-        crossCorr(image.reshape(1), templ.reshape(1), result_);
+        convolve(image.reshape(1), templ.reshape(1), result_, true);
         imgproc::extractFirstChannel_32F(result_, result, image.channels());
     }
 

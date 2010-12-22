@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include <cufft.h>
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
@@ -751,31 +750,121 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
     //////////////////////////////////////////////////////////////////////////
-    // multiplyAndNormalizeSpects
+    // mulSpectrums
 
-    __global__ void multiplyAndNormalizeSpectsKernel(
-            int n, float scale, const cufftComplex* a, 
-            const cufftComplex* b, cufftComplex* c)
+
+    __global__ void mulSpectrumsKernel(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+                                       DevMem2D_<cufftComplex> c)
     {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;    
-        if (x < n) 
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;    
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;    
+
+        if (x < c.cols && y < c.rows) 
         {
-            cufftComplex v = cuCmulf(a[x], cuConjf(b[x]));
-            c[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+            c.ptr(y)[x] = cuCmulf(a.ptr(y)[x], b.ptr(y)[x]);
         }
     }
 
 
-    // Performs per-element multiplication and normalization of two spectrums
-    void multiplyAndNormalizeSpects(int n, float scale, const cufftComplex* a, 
-                                    const cufftComplex* b, cufftComplex* c)
+    void mulSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+                      DevMem2D_<cufftComplex> c)
     {
         dim3 threads(256);
-        dim3 grid(divUp(n, threads.x));
+        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
-        multiplyAndNormalizeSpectsKernel<<<grid, threads>>>(n, scale, a, b, c);
+        mulSpectrumsKernel<<<grid, threads>>>(a, b, c);
         cudaSafeCall(cudaThreadSynchronize());
     }
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // mulSpectrums_CONJ
+
+
+    __global__ void mulSpectrumsKernel_CONJ(
+            const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+            DevMem2D_<cufftComplex> c)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;    
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;    
+
+        if (x < c.cols && y < c.rows) 
+        {
+            c.ptr(y)[x] = cuCmulf(a.ptr(y)[x], cuConjf(b.ptr(y)[x]));
+        }
+    }
+
+
+    void mulSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+                           DevMem2D_<cufftComplex> c)
+    {
+        dim3 threads(256);
+        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
+
+        mulSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, c);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // mulAndScaleSpectrums
+
+
+    __global__ void mulAndScaleSpectrumsKernel(
+            const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+            float scale, DevMem2D_<cufftComplex> c)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < c.cols && y < c.rows) 
+        {
+            cufftComplex v = cuCmulf(a.ptr(y)[x], b.ptr(y)[x]);
+            c.ptr(y)[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+        }
+    }
+
+
+    void mulAndScaleSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+                              float scale, DevMem2D_<cufftComplex> c)
+    {
+        dim3 threads(256);
+        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
+
+        mulAndScaleSpectrumsKernel<<<grid, threads>>>(a, b, scale, c);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // mulAndScaleSpectrums_CONJ
+
+
+    __global__ void mulAndScaleSpectrumsKernel_CONJ(
+            const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+            float scale, DevMem2D_<cufftComplex> c)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < c.cols && y < c.rows) 
+        {
+            cufftComplex v = cuCmulf(a.ptr(y)[x], cuConjf(b.ptr(y)[x]));
+            c.ptr(y)[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+        }
+    }
+
+
+    void mulAndScaleSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+                                  float scale, DevMem2D_<cufftComplex> c)
+    {
+        dim3 threads(256);
+        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
+
+        mulAndScaleSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, scale, c);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
 
 }}}
 

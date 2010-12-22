@@ -628,10 +628,19 @@ namespace cv
         //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
 
-        //! computes cross-correlation of two images using FFT
+        //! performs per-element multiplication of two full (i.e. not packed) Fourier spectrums
+        //! supports only 32FC2 matrixes (interleaved format)
+        CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false);
+
+        //! performs per-element multiplication of two full (i.e. not packed) Fourier spectrums
+        //! supports only 32FC2 matrixes (interleaved format)
+        CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, 
+                                             float scale, bool conjB=false);
+
+        //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
         //! supports source images of 32FC1 type only
         //! result matrix will have 32FC1 type
-        CV_EXPORTS void crossCorr(const GpuMat& image, const GpuMat& templ, GpuMat& result);
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false);
 
         //! computes the proximity map for the raster template and the image where the template is searched for
         CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
