@@ -309,12 +309,12 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 
     dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
 
-	NppiSize srcsz;
-	srcsz.width  = src.cols;
-	srcsz.height = src.rows;
+    NppiSize srcsz;
+    srcsz.width  = src.cols;
+    srcsz.height = src.rows;
     NppiSize dstsz;
-        dstsz.width  = dst.cols;
-        dstsz.height = dst.rows;
+    dstsz.width  = dst.cols;
+    dstsz.height = dst.rows;
 
     switch (src.type())
     {
@@ -341,7 +341,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
         }
     case CV_32FC1:
         {
-            float val = static_cast<float>(value[0]);
+            Npp32f val = static_cast<Npp32f>(value[0]);
             Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
             nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz,
                 dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );

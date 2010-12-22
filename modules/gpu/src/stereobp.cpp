@@ -130,9 +130,7 @@ namespace
         {
             CV_Assert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels);
             CV_Assert(rthis.msg_type == CV_32F || rthis.msg_type == CV_16S);
-
-            if (rthis.msg_type == CV_16S)
-                CV_Assert((1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
+            CV_Assert(rthis.msg_type == CV_32F || (1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
         }
 
         void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, cudaStream_t stream)

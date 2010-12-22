@@ -577,7 +577,7 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
     static const Caller callers32F[] = { ::matchTemplate_SQDIFF_32F, 0, 
                                          ::matchTemplate_CCORR_32F, 0, 0, 0 };
 
-    const Caller* callers;
+    const Caller* callers = 0;
     switch (image.depth())
     {
         case CV_8U: callers = callers8U; break;

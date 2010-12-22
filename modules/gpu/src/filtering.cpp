@@ -810,7 +810,6 @@ Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int 
     if (columnBorderType < 0)
         columnBorderType = rowBorderType;
 
-    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(srcType);
     int bdepth = CV_32F;
     int bufType = CV_MAKETYPE(bdepth, cn);
