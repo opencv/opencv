@@ -155,14 +155,6 @@ namespace cv { namespace gpu { namespace imgproc
 
 namespace 
 {
-    // Computes integral image. Result matrix will have data type 32S,
-    // while actuall data type is 32U
-    void integral_8U_32U(const GpuMat& src, GpuMat& sum);
-
-    // Computes squared integral image. Result matrix will have data type 64F,
-    // while actual data type is 64U
-    void sqrIntegral_8U_64U(const GpuMat& src, GpuMat& sqsum);
-
     // Estimates optimal blocks size for FFT method
     void estimateBlockSize(int w, int h, int tw, int th, int& bw, int& bh);
 
@@ -183,47 +175,7 @@ namespace
     void matchTemplate_SQDIFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
 
     void matchTemplate_CCOFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
-    void matchTemplate_CCOFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result);
-
-
-    void integral_8U_32U(const GpuMat& src, GpuMat& sum)
-    {
-        CV_Assert(src.type() == CV_8U);
-
-        NppStSize32u roiSize;
-        roiSize.width = src.cols;
-        roiSize.height = src.rows;
-
-        NppSt32u bufSize;
-        nppSafeCall(nppiStIntegralGetSize_8u32u(roiSize, &bufSize));
-        GpuMat buf(1, bufSize, CV_8U);
-
-        sum.create(src.rows + 1, src.cols + 1, CV_32S);
-        nppSafeCall(nppiStIntegral_8u32u_C1R(
-                const_cast<NppSt8u*>(src.ptr<NppSt8u>(0)), src.step, 
-                sum.ptr<NppSt32u>(0), sum.step, roiSize, 
-                buf.ptr<NppSt8u>(0), bufSize));
-    }
-
-
-    void sqrIntegral_8U_64U(const GpuMat& src, GpuMat& sqsum)
-    {
-        CV_Assert(src.type() == CV_8U);
-
-        NppStSize32u roiSize;
-        roiSize.width = src.cols;
-        roiSize.height = src.rows;
-
-        NppSt32u bufSize;
-        nppSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize));
-        GpuMat buf(1, bufSize, CV_8U);
-
-        sqsum.create(src.rows + 1, src.cols + 1, CV_64F);
-        nppSafeCall(nppiStSqrIntegral_8u64u_C1R(
-                const_cast<NppSt8u*>(src.ptr<NppSt8u>(0)), src.step, 
-                sqsum.ptr<NppSt64u>(0), sqsum.step, roiSize, 
-                buf.ptr<NppSt8u>(0), bufSize));
-    }
+    void matchTemplate_CCOFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result); 
 
 
     void estimateBlockSize(int w, int h, int tw, int th, int& bw, int& bh)
@@ -384,7 +336,7 @@ namespace
         matchTemplate_CCORR_8U(image, templ, result);
 
         GpuMat img_sqsum;
-        sqrIntegral_8U_64U(image.reshape(1), img_sqsum);
+        sqrIntegral(image.reshape(1), img_sqsum);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
         imgproc::normalize_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, 
@@ -409,7 +361,7 @@ namespace
         }
 
         GpuMat img_sqsum;
-        sqrIntegral_8U_64U(image.reshape(1), img_sqsum);
+        sqrIntegral(image.reshape(1), img_sqsum);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
 
@@ -422,7 +374,7 @@ namespace
     void matchTemplate_SQDIFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
     {
         GpuMat img_sqsum;
-        sqrIntegral_8U_64U(image.reshape(1), img_sqsum);
+        sqrIntegral(image.reshape(1), img_sqsum);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
 
@@ -439,7 +391,7 @@ namespace
         if (image.channels() == 1)
         {
             GpuMat image_sum;
-            integral_8U_32U(image, image_sum);
+            integral(image, image_sum);
 
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
             imgproc::matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, 
@@ -452,7 +404,7 @@ namespace
 
             split(image, images);
             for (int i = 0; i < image.channels(); ++i)
-                integral_8U_32U(images[i], image_sums[i]);
+                integral(images[i], image_sums[i]);
 
             Scalar templ_sum = sum(templ);
 
@@ -493,8 +445,8 @@ namespace
         if (image.channels() == 1)
         {
             GpuMat image_sum, image_sqsum;
-            integral_8U_32U(image, image_sum);
-            sqrIntegral_8U_64U(image, image_sqsum);
+            integral(image, image_sum);
+            sqrIntegral(image, image_sqsum);
 
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
             unsigned int templ_sqsum = (unsigned int)sqrSum(templ)[0];
@@ -512,8 +464,8 @@ namespace
             split(image, images);
             for (int i = 0; i < image.channels(); ++i)
             {
-                integral_8U_32U(images[i], image_sums[i]);
-                sqrIntegral_8U_64U(images[i], image_sqsums[i]);
+                integral(images[i], image_sums[i]);
+                sqrIntegral(images[i], image_sqsums[i]);
             }
 
             Scalar templ_sum = sum(templ);

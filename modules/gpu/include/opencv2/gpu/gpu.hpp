@@ -604,6 +604,11 @@ namespace cv
         //! supports only CV_8UC1 source type
         CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum);
 
+        //! computes squared integral image
+        //! result matrix will have 64F type, but will contain 64U values
+        //! supports source images of 8UC1 type only
+        CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum);
+
         //! computes vertical sum, supports only CV_32FC1 images
         CV_EXPORTS void columnSum(const GpuMat& src, GpuMat& sum);
 
