@@ -45,7 +45,7 @@ class CV_FindContourTest : public CvTest
 {
 public:
     enum { NUM_IMG = 4 };
-    
+
     CV_FindContourTest();
     ~CV_FindContourTest();
     int write_default_params(CvFileStorage* fs);
@@ -65,7 +65,7 @@ protected:
     CvSize img_size;
     int count, count2;
 
-    IplImage *img[NUM_IMG];
+    IplImage* img[NUM_IMG];
     CvMemStorage* storage;
     CvSeq *contours, *contours2, *chain;
 };
@@ -75,16 +75,18 @@ CV_FindContourTest::CV_FindContourTest() :
     CvTest( "contour-find", "cvFindContours, cvDrawContours, cvApproxChains" )
 {
     int i;
-    test_case_count = 300;
-    min_blob_size = 1;
-    max_blob_size = 50;
+
+    test_case_count    = 300;
+    min_blob_size      = 1;
+    max_blob_size      = 50;
     max_log_blob_count = 10;
 
-    min_log_img_size = 3;
-    max_log_img_size = 10;
-    
+    min_log_img_size   = 3;
+    max_log_img_size   = 10;
+
     for( i = 0; i < NUM_IMG; i++ )
         img[i] = 0;
+
     storage = 0;
 }
 
@@ -97,10 +99,13 @@ CV_FindContourTest::~CV_FindContourTest()
 
 void CV_FindContourTest::clear()
 {
-    CvTest::clear();
     int i;
+
+    CvTest::clear();
+
     for( i = 0; i < NUM_IMG; i++ )
         cvReleaseImage( &img[i] );
+
     cvReleaseMemStorage( &storage );
 }
 
@@ -123,20 +128,21 @@ int CV_FindContourTest::write_default_params( CvFileStorage* fs )
 
 int CV_FindContourTest::read_params( CvFileStorage* fs )
 {
-    int code = CvTest::read_params( fs );
     int t;
+    int code = CvTest::read_params( fs );
 
     if( code < 0 )
         return code;
 
-    min_blob_size = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
-    max_blob_size = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
-    max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );    
-    min_log_img_size = cvReadInt( find_param( fs, "min_log_img_size" ), min_log_img_size );
-    max_log_img_size = cvReadInt( find_param( fs, "max_log_img_size" ), max_log_img_size );
-    
+    min_blob_size      = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
+    max_blob_size      = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
+    max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );
+    min_log_img_size   = cvReadInt( find_param( fs, "min_log_img_size" ), min_log_img_size );
+    max_log_img_size   = cvReadInt( find_param( fs, "max_log_img_size" ), max_log_img_size );
+
     min_blob_size = cvTsClipInt( min_blob_size, 1, 100 );
     max_blob_size = cvTsClipInt( max_blob_size, 1, 100 );
+
     if( min_blob_size > max_blob_size )
         CV_SWAP( min_blob_size, max_blob_size, t );
 
@@ -144,6 +150,7 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
 
     min_log_img_size = cvTsClipInt( min_log_img_size, 1, 10 );
     max_log_img_size = cvTsClipInt( max_log_img_size, 1, 10 );
+
     if( min_log_img_size > max_log_img_size )
         CV_SWAP( min_log_img_size, max_log_img_size, t );
 
@@ -158,8 +165,11 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
 {
     int i;
     CvSize size;
+
     assert( img->depth == IPL_DEPTH_8U && img->nChannels == 1 );
+
     cvZero( img );
+
     // keep the border clear
     cvSetImageROI( img, cvRect(1,1,img->width-2,img->height-2) );
     size = cvGetSize( img );
@@ -173,12 +183,13 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
                          (max_brightness - min_brightness) + min_brightness;
         center.x = cvTsRandInt(rng) % size.width;
         center.y = cvTsRandInt(rng) % size.height;
+
         axes.width = (cvTsRandInt(rng) %
                      (max_blob_size - min_blob_size) + min_blob_size + 1)/2;
         axes.height = (cvTsRandInt(rng) %
                       (max_blob_size - min_blob_size) + min_blob_size + 1)/2;
-        
-        cvEllipse( img, center, axes, angle, 0, 360, cvScalar(brightness), CV_FILLED ); 
+
+        cvEllipse( img, center, axes, angle, 0, 360, cvScalar(brightness), CV_FILLED );
     }
 
     cvResetImageROI( img );
@@ -190,8 +201,9 @@ cvTsMarkContours( IplImage* img, int val )
 {
     int i, j;
     int step = img->widthStep;
-    
+
     assert( img->depth == IPL_DEPTH_8U && img->nChannels == 1 && (val&1) != 0);
+
     for( i = 1; i < img->height - 1; i++ )
         for( j = 1; j < img->width - 1; j++ )
         {
@@ -209,12 +221,14 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
     CvRNG* rng = ts->get_rng();
     const int  min_brightness = 0, max_brightness = 2;
     int i, code = CvTest::prepare_test_case( test_case_idx );
+
     if( code < 0 )
         return code;
-    
+
     clear();
 
     blob_count = cvRound(exp(cvTsRandReal(rng)*max_log_blob_count*CV_LOG2));
+
     img_size.width = cvRound(exp((cvTsRandReal(rng)*
         (max_log_img_size - min_log_img_size) + min_log_img_size)*CV_LOG2));
     img_size.height = cvRound(exp((cvTsRandReal(rng)*
@@ -227,11 +241,13 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
 
     for( i = 0; i < NUM_IMG; i++ )
         img[i] = cvCreateImage( img_size, 8, 1 );
-    
+
     cvTsGenerateBlobImage( img[0], min_blob_size, max_blob_size,
         blob_count, min_brightness, max_brightness, rng );
+
     cvCopy( img[0], img[1] );
     cvCopy( img[0], img[2] );
+
     cvTsMarkContours( img[1], 255 );
 
     return 1;
@@ -242,14 +258,21 @@ void CV_FindContourTest::run_func()
 {
     contours = contours2 = chain = 0;
     count = cvFindContours( img[2], storage, &contours, sizeof(CvContour), retr_mode, approx_method );
+
     cvZero( img[3] );
+
     if( contours && retr_mode != CV_RETR_EXTERNAL && approx_method < CV_CHAIN_APPROX_TC89_L1 )
         cvDrawContours( img[3], contours, cvScalar(255), cvScalar(255), INT_MAX, -1 );
+
     cvCopy( img[0], img[2] );
+
     count2 = cvFindContours( img[2], storage, &chain, sizeof(CvChain), retr_mode, CV_CHAIN_CODE );
+
     if( chain )
         contours2 = cvApproxChains( chain, storage, approx_method, 0, 0, 1 );
+
     cvZero( img[2] );
+
     if( contours && retr_mode != CV_RETR_EXTERNAL && approx_method < CV_CHAIN_APPROX_TC89_L1 )
         cvDrawContours( img[2], contours2, cvScalar(255), cvScalar(255), INT_MAX );
 }
@@ -291,12 +314,12 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
         CvTreeNodeIterator iterator1;
         CvTreeNodeIterator iterator2;
         int count3;
-        
+
         for( i = 0; i < 2; i++ )
         {
             CvTreeNodeIterator iterator;
             cvInitTreeNodeIterator( &iterator, i == 0 ? contours : contours2, INT_MAX );
-        
+
             for( count3 = 0; cvNextTreeNode( &iterator ) != 0; count3++ )
                 ;
 
@@ -365,7 +388,7 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
 _exit_:
     if( code < 0 )
     {
-#if 0    
+#if 0
         cvNamedWindow( "test", 0 );
         cvShowImage( "test", img[0] );
         cvWaitKey();
