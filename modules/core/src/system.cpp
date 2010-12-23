@@ -47,7 +47,7 @@
 #if defined _MSC_VER
   #if _MSC_VER >= 1400
     #include <intrin.h>
-  #elif defined _M_IX86 
+  #elif defined _M_IX86
     static void __cpuid(int* cpuid_data, int)
     {
         __asm
@@ -91,18 +91,18 @@ namespace cv
 struct HWFeatures
 {
     enum { MAX_FEATURE = CV_HARDWARE_MAX_FEATURE };
-    
-    HWFeatures()
-    {
+
+    HWFeatures(void)
+     {
         memset( have, 0, sizeof(have) );
         x86_family = 0;
     }
-    
-    static HWFeatures initialize()
+
+    static HWFeatures initialize(void)
     {
         HWFeatures f;
-        int cpuid_data[4]={0,0,0,0};
-        
+        int cpuid_data[4] = { 0, 0, 0, 0 };
+
     #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
         __cpuid(cpuid_data, 1);
     #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
@@ -128,28 +128,28 @@ struct HWFeatures
         );
         #endif
     #endif
-        
+
         f.x86_family = (cpuid_data[0] >> 8) & 15;
         if( f.x86_family >= 6 )
         {
-            f.have[CV_CPU_MMX] = (cpuid_data[3] & (1 << 23)) != 0;
-            f.have[CV_CPU_SSE] = (cpuid_data[3] & (1<<25)) != 0;
-            f.have[CV_CPU_SSE2] = (cpuid_data[3] & (1<<26)) != 0;
-            f.have[CV_CPU_SSE3] = (cpuid_data[2] & (1<<0)) != 0;
-            f.have[CV_CPU_SSSE3] = (cpuid_data[2] & (1<<9)) != 0;
+            f.have[CV_CPU_MMX]    = (cpuid_data[3] & (1 << 23)) != 0;
+            f.have[CV_CPU_SSE]    = (cpuid_data[3] & (1<<25)) != 0;
+            f.have[CV_CPU_SSE2]   = (cpuid_data[3] & (1<<26)) != 0;
+            f.have[CV_CPU_SSE3]   = (cpuid_data[2] & (1<<0)) != 0;
+            f.have[CV_CPU_SSSE3]  = (cpuid_data[2] & (1<<9)) != 0;
             f.have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
-            f.have[CV_CPU_AVX] = (cpuid_data[2] & (1<<28)) != 0;
+            f.have[CV_CPU_AVX]    = (cpuid_data[2] & (1<<28)) != 0;
         }
-        
+
         return f;
     }
-    
+
     int x86_family;
     bool have[MAX_FEATURE+1];
 };
-    
-static HWFeatures featuresEnabled = HWFeatures::initialize(), featuresDisabled = HWFeatures();
+
+static HWFeatures  featuresEnabled = HWFeatures::initialize(), featuresDisabled = HWFeatures();
 static HWFeatures* currentFeatures = &featuresEnabled;
 
 bool checkHardwareSupport(int feature)
@@ -163,7 +163,7 @@ volatile bool useOptimizedFlag = true;
 
 struct IPPInitializer
 {
-    IPPInitializer() { ippStaticInit(); }
+    IPPInitializer(void) { ippStaticInit(); }
 };
 
 IPPInitializer ippInitializer;
@@ -177,12 +177,12 @@ void setUseOptimized( bool flag )
     currentFeatures = flag ? &featuresEnabled : &featuresDisabled;
 }
 
-bool useOptimized()
+bool useOptimized(void)
 {
     return useOptimizedFlag;
 }
-    
-int64 getTickCount()
+
+int64 getTickCount(void)
 {
 #if defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
@@ -194,7 +194,7 @@ int64 getTickCount()
     return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
 #elif defined __MACH__
     return (int64)mach_absolute_time();
-#else    
+#else
     struct timeval tv;
     struct timezone tz;
     gettimeofday( &tv, &tz );
@@ -202,7 +202,7 @@ int64 getTickCount()
 #endif
 }
 
-double getTickFrequency()
+double getTickFrequency(void)
 {
 #if defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
@@ -218,13 +218,13 @@ double getTickFrequency()
         mach_timebase_info(&sTimebaseInfo);
         freq = sTimebaseInfo.denom*1e9/sTimebaseInfo.numer;
     }
-    return freq; 
+    return freq;
 #else
     return 1e6;
 #endif
 }
 
-#if defined __GNUC__ && (defined __i386__ || defined __x86_64__ || defined __ppc__) 
+#if defined __GNUC__ && (defined __i386__ || defined __x86_64__ || defined __ppc__)
 #if defined(__i386__)
 
 int64 getCPUTickCount(void)
@@ -246,7 +246,7 @@ int64 getCPUTickCount(void)
 
 int64 getCPUTickCount(void)
 {
-    int64 result=0;
+    int64 result = 0;
     unsigned upper, lower, tmp;
     __asm__ volatile(
                      "0:                  \n"
@@ -276,16 +276,23 @@ int64 getCPUTickCount(void)
 
 #else
 
-int64 getCPUTickCount()
+#ifdef HAVE_IPP
+int64 getCPUTickCount(void)
+{
+    return ippGetCpuClocks();
+}
+#else
+int64 getCPUTickCount(void)
 {
     return getTickCount();
 }
+#endif
 
 #endif
 
 
 static int numThreads = 0;
-static int numProcs = 0;
+static int numProcs   = 0;
 
 int getNumThreads(void)
 {
@@ -330,8 +337,8 @@ int getThreadNum(void)
     return 0;
 #endif
 }
-    
-    
+
+
 string format( const char* fmt, ... )
 {
     char buf[1 << 16];
@@ -350,11 +357,11 @@ bool setBreakOnError(bool value)
     bool prevVal = breakOnError;
     breakOnError = value;
     return prevVal;
-}        
+}
 
 void error( const Exception& exc )
 {
-    if (customErrorCallback != 0) 
+    if (customErrorCallback != 0)
         customErrorCallback(exc.code, exc.func.c_str(), exc.err.c_str(),
                             exc.file.c_str(), exc.line, customErrorCallbackData);
     else
@@ -368,26 +375,30 @@ void error( const Exception& exc )
         fprintf( stderr, "%s\n", buf );
         fflush( stderr );
     }
+
     if(breakOnError)
     {
         static volatile int* p = 0;
         *p = 0;
     }
+
     throw exc;
 }
-    
+
 CvErrorCallback
 redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
 {
     if( prevUserdata )
         *prevUserdata = customErrorCallbackData;
+
     CvErrorCallback prevCallback = customErrorCallback;
-    customErrorCallback = errCallback;
+
+    customErrorCallback     = errCallback;
     customErrorCallbackData = userdata;
-    
+
     return prevCallback;
 }
-    
+
 }
 
 /*CV_IMPL int
@@ -499,34 +510,34 @@ CV_IMPL const char* cvErrorStr( int status )
 
     switch (status)
     {
-    case CV_StsOk :        return "No Error";
-    case CV_StsBackTrace : return "Backtrace";
-    case CV_StsError :     return "Unspecified error";
-    case CV_StsInternal :  return "Internal error";
-    case CV_StsNoMem :     return "Insufficient memory";
-    case CV_StsBadArg :    return "Bad argument";
-    case CV_StsNoConv :    return "Iterations do not converge";
-    case CV_StsAutoTrace : return "Autotrace call";
-    case CV_StsBadSize :   return "Incorrect size of input array";
-    case CV_StsNullPtr :   return "Null pointer";
-    case CV_StsDivByZero : return "Division by zero occured";
-    case CV_BadStep :      return "Image step is wrong";
+    case CV_StsOk :                  return "No Error";
+    case CV_StsBackTrace :           return "Backtrace";
+    case CV_StsError :               return "Unspecified error";
+    case CV_StsInternal :            return "Internal error";
+    case CV_StsNoMem :               return "Insufficient memory";
+    case CV_StsBadArg :              return "Bad argument";
+    case CV_StsNoConv :              return "Iterations do not converge";
+    case CV_StsAutoTrace :           return "Autotrace call";
+    case CV_StsBadSize :             return "Incorrect size of input array";
+    case CV_StsNullPtr :             return "Null pointer";
+    case CV_StsDivByZero :           return "Division by zero occured";
+    case CV_BadStep :                return "Image step is wrong";
     case CV_StsInplaceNotSupported : return "Inplace operation is not supported";
     case CV_StsObjectNotFound :      return "Requested object was not found";
-    case CV_BadDepth :     return "Input image depth is not supported by function";
-    case CV_StsUnmatchedFormats : return "Formats of input arguments do not match";
-    case CV_StsUnmatchedSizes :  return "Sizes of input arguments do not match";
-    case CV_StsOutOfRange : return "One of arguments\' values is out of range";
-    case CV_StsUnsupportedFormat : return "Unsupported format or combination of formats";
-    case CV_BadCOI :      return "Input COI is not supported";
-    case CV_BadNumChannels : return "Bad number of channels";
-    case CV_StsBadFlag :   return "Bad flag (parameter or structure field)";
-    case CV_StsBadPoint :  return "Bad parameter of type CvPoint";
-    case CV_StsBadMask : return "Bad type of mask argument";
-    case CV_StsParseError : return "Parsing error";
-    case CV_StsNotImplemented : return "The function/feature is not implemented";
-    case CV_StsBadMemBlock :  return "Memory block has been corrupted";
-    case CV_StsAssert :  return "Assertion failed";
+    case CV_BadDepth :               return "Input image depth is not supported by function";
+    case CV_StsUnmatchedFormats :    return "Formats of input arguments do not match";
+    case CV_StsUnmatchedSizes :      return "Sizes of input arguments do not match";
+    case CV_StsOutOfRange :          return "One of arguments\' values is out of range";
+    case CV_StsUnsupportedFormat :   return "Unsupported format or combination of formats";
+    case CV_BadCOI :                 return "Input COI is not supported";
+    case CV_BadNumChannels :         return "Bad number of channels";
+    case CV_StsBadFlag :             return "Bad flag (parameter or structure field)";
+    case CV_StsBadPoint :            return "Bad parameter of type CvPoint";
+    case CV_StsBadMask :             return "Bad type of mask argument";
+    case CV_StsParseError :          return "Parsing error";
+    case CV_StsNotImplemented :      return "The function/feature is not implemented";
+    case CV_StsBadMemBlock :         return "Memory block has been corrupted";
+    case CV_StsAssert :              return "Assertion failed";
     case CV_GpuNotSupported : return "No GPU support";
     case CV_GpuApiCallError : return "Gpu Api call";
     case CV_GpuNppCallError : return "Npp Api call";
@@ -546,7 +557,7 @@ CV_IMPL int cvSetErrMode(int)
     return 0;
 }
 
-CV_IMPL int cvGetErrStatus()
+CV_IMPL int cvGetErrStatus(void)
 {
     return 0;
 }
@@ -569,34 +580,35 @@ cvErrorFromIppStatus( int status )
 {
     switch (status)
     {
-    case CV_BADSIZE_ERR: return CV_StsBadSize;
-    case CV_BADMEMBLOCK_ERR: return CV_StsBadMemBlock;
-    case CV_NULLPTR_ERR: return CV_StsNullPtr;
-    case CV_DIV_BY_ZERO_ERR: return CV_StsDivByZero;
-    case CV_BADSTEP_ERR: return CV_BadStep ;
-    case CV_OUTOFMEM_ERR: return CV_StsNoMem;
-    case CV_BADARG_ERR: return CV_StsBadArg;
-    case CV_NOTDEFINED_ERR: return CV_StsError;
+    case CV_BADSIZE_ERR:               return CV_StsBadSize;
+    case CV_BADMEMBLOCK_ERR:           return CV_StsBadMemBlock;
+    case CV_NULLPTR_ERR:               return CV_StsNullPtr;
+    case CV_DIV_BY_ZERO_ERR:           return CV_StsDivByZero;
+    case CV_BADSTEP_ERR:               return CV_BadStep;
+    case CV_OUTOFMEM_ERR:              return CV_StsNoMem;
+    case CV_BADARG_ERR:                return CV_StsBadArg;
+    case CV_NOTDEFINED_ERR:            return CV_StsError;
     case CV_INPLACE_NOT_SUPPORTED_ERR: return CV_StsInplaceNotSupported;
-    case CV_NOTFOUND_ERR: return CV_StsObjectNotFound;
-    case CV_BADCONVERGENCE_ERR: return CV_StsNoConv;
-    case CV_BADDEPTH_ERR: return CV_BadDepth;
-    case CV_UNMATCHED_FORMATS_ERR: return CV_StsUnmatchedFormats;
-    case CV_UNSUPPORTED_COI_ERR: return CV_BadCOI;
-    case CV_UNSUPPORTED_CHANNELS_ERR: return CV_BadNumChannels;
-    case CV_BADFLAG_ERR: return CV_StsBadFlag;
-    case CV_BADRANGE_ERR: return CV_StsBadArg;
-    case CV_BADCOEF_ERR: return CV_StsBadArg;
-    case CV_BADFACTOR_ERR: return CV_StsBadArg;
-    case CV_BADPOINT_ERR: return CV_StsBadPoint;
+    case CV_NOTFOUND_ERR:              return CV_StsObjectNotFound;
+    case CV_BADCONVERGENCE_ERR:        return CV_StsNoConv;
+    case CV_BADDEPTH_ERR:              return CV_BadDepth;
+    case CV_UNMATCHED_FORMATS_ERR:     return CV_StsUnmatchedFormats;
+    case CV_UNSUPPORTED_COI_ERR:       return CV_BadCOI;
+    case CV_UNSUPPORTED_CHANNELS_ERR:  return CV_BadNumChannels;
+    case CV_BADFLAG_ERR:               return CV_StsBadFlag;
+    case CV_BADRANGE_ERR:              return CV_StsBadArg;
+    case CV_BADCOEF_ERR:               return CV_StsBadArg;
+    case CV_BADFACTOR_ERR:             return CV_StsBadArg;
+    case CV_BADPOINT_ERR:              return CV_StsBadPoint;
 
-    default: return CV_StsError;
+    default:
+      return CV_StsError;
     }
 }
 
 static CvModuleInfo cxcore_info = { 0, "cxcore", CV_VERSION, 0 };
 
-CvModuleInfo *CvModule::first = 0, *CvModule::last = 0;
+CvModuleInfo* CvModule::first = 0, *CvModule::last = 0;
 
 CvModule::CvModule( CvModuleInfo* _info )
 {
@@ -604,19 +616,23 @@ CvModule::CvModule( CvModuleInfo* _info )
     info = last;
 }
 
-CvModule::~CvModule()
+CvModule::~CvModule(void)
 {
     if( info )
     {
         CvModuleInfo* p = first;
         for( ; p != 0 && p->next != info; p = p->next )
             ;
+
         if( p )
             p->next = info->next;
+
         if( first == info )
             first = info->next;
+
         if( last == info )
             last = p;
+
         free( info );
         info = 0;
     }
@@ -645,7 +661,9 @@ cvRegisterModule( const CvModuleInfo* module )
         CvModule::first = module_copy;
     else
         CvModule::last->next = module_copy;
+
     CvModule::last = module_copy;
+
     return 0;
 }
 
@@ -654,7 +672,7 @@ CvModule cxcore_module( &cxcore_info );
 CV_IMPL void
 cvGetModuleInfo( const char* name, const char **version, const char **plugin_list )
 {
-    static char joint_verinfo[1024] = "";
+    static char joint_verinfo[1024]   = "";
     static char plugin_list_buf[1024] = "";
 
     if( version )
