@@ -377,7 +377,7 @@ typedef void (*AccWMaskFunc)(const Mat&, Mat&, double, const Mat&);
 void accumulate( const Mat& src, Mat& dst, const Mat& mask )
 {
     CV_Assert( dst.size() == src.size() && dst.channels() == src.channels() );
-    
+
     if( !mask.data )
     {
         AccFunc func = 0;
