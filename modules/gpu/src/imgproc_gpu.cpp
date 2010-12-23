@@ -76,6 +76,7 @@ void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { thro
 void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool) { throw_nogpu(); }
 void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool) { throw_nogpu(); }
+void cv::gpu::dft(const GpuMat&, GpuMat&, int, int, bool) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 
 
@@ -1124,6 +1125,164 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c,
 
     Caller caller = callers[(int)conjB];
     caller(a, b, scale, c);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// dft
+
+void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bool odd)
+{
+    CV_Assert(src.type() == CV_32F || src.type() == CV_32FC2);
+
+    // We don't support unpacked output (in the case of real input)
+    CV_Assert(!(flags & DFT_COMPLEX_OUTPUT));
+
+    bool is_1d_input = (src.rows == 1) || (src.cols == 1);
+    int is_row_dft = flags & DFT_ROWS;
+    int is_scaled_dft = flags & DFT_SCALE;
+    int is_inverse = flags & DFT_INVERSE;
+    bool is_complex_input = src.channels() == 2;
+    bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
+
+    // We don't support scaled transform
+    CV_Assert(!is_scaled_dft);
+
+    // We don't support real-to-real transform
+    CV_Assert(is_complex_input || is_complex_output);
+
+    GpuMat src_data, src_aux;
+
+    // Make sure here we work with the continuous input, 
+    // as CUFFT can't handle gaps
+    if (src.isContinuous())
+        src_aux = src;
+    else
+    {
+        src_data = GpuMat(1, src.size().area(), src.type());
+        src_aux = GpuMat(src.rows, src.cols, src.type(), src_data.ptr(), src.cols * src.elemSize());
+        src.copyTo(src_aux);
+
+        if (is_1d_input && !is_row_dft)
+        {
+            // If the source matrix is the single column
+            // reshape it into single row
+            int rows = std::min(src.rows, src.cols);
+            int cols = src.size().area() / rows;
+            src_aux = GpuMat(rows, cols, src.type(), src_data.ptr(), cols * src.elemSize());
+        }
+    }
+
+    cufftType dft_type = CUFFT_R2C;
+    if (is_complex_input) 
+        dft_type = is_complex_output ? CUFFT_C2C : CUFFT_C2R;
+
+    int dft_cols = src_aux.cols;
+    if (is_complex_input && !is_complex_output)
+        dft_cols = (src_aux.cols - 1) * 2 + (int)odd;
+    CV_Assert(dft_cols > 1);
+
+    cufftHandle plan;
+    if (is_1d_input || is_row_dft)
+        cufftPlan1d(&plan, dft_cols, dft_type, src_aux.rows);
+    else
+        cufftPlan2d(&plan, src_aux.rows, dft_cols, dft_type);
+
+    GpuMat dst_data, dst_aux;
+    int dst_cols, dst_rows;
+    bool is_dst_mem_good;
+
+    if (is_complex_input)
+    {
+        if (is_complex_output)
+        {
+            is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32FC2 
+                              && dst.size().area() >= src.size().area();
+
+            if (is_dst_mem_good)
+                dst_data = dst;
+            else
+            {
+                dst_data.create(1, src.size().area(), CV_32FC2);
+                dst_aux = GpuMat(src.rows, src.cols, dst_data.type(), dst_data.ptr(),
+                                 src.cols * dst_data.elemSize());
+            }
+
+            cufftSafeCall(cufftExecC2C(
+                    plan, src_data.ptr<cufftComplex>(),
+                    dst_data.ptr<cufftComplex>(),
+                    is_inverse ? CUFFT_INVERSE : CUFFT_FORWARD));
+
+            if (!is_dst_mem_good)
+            {
+                dst.create(dst_aux.size(), dst_aux.type());
+                dst_aux.copyTo(dst);
+            }
+        }
+        else
+        {
+            dst_rows = src.rows;
+            dst_cols = (src.cols - 1) * 2 + (int)odd;
+            if (src_aux.size() != src.size())
+            {
+                dst_rows = (src.rows - 1) * 2 + (int)odd;
+                dst_cols = src.cols;
+            }
+
+            is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32F
+                              && dst.rows >= dst_rows && dst.cols >= dst_cols;
+
+            if (is_dst_mem_good)
+                dst_data = dst;
+            else
+            {
+                dst_data.create(1, dst_rows * dst_cols, CV_32F);
+                dst_aux = GpuMat(dst_rows, dst_cols, dst_data.type(), dst_data.ptr(), 
+                                 dst_cols * dst_data.elemSize());
+            }
+
+            cufftSafeCall(cufftExecC2R(
+                    plan, src_data.ptr<cufftComplex>(), dst_data.ptr<cufftReal>()));
+
+            if (!is_dst_mem_good)
+            {
+                dst.create(dst_aux.size(), dst_aux.type());
+                dst_aux.copyTo(dst);
+            }
+        }
+    }
+    else
+    {
+        dst_rows = src.rows;
+        dst_cols = src.cols / 2 + 1;
+        if (src_aux.size() != src.size())
+        {
+            dst_rows = src.rows / 2 + 1;
+            dst_cols = src.cols;
+        }
+
+        is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32FC2 
+                          && dst.rows >= dst_rows && dst.cols >= dst_cols;
+
+        if (is_dst_mem_good)
+            dst_data = dst;
+        else
+        {
+            dst_data.create(1, dst_rows * dst_cols, CV_32FC2);
+            dst_aux = GpuMat(dst_rows, dst_cols, dst_data.type(), dst_data.ptr(), 
+                             dst_cols * dst_data.elemSize());
+        }
+
+        cufftSafeCall(cufftExecR2C(
+                plan, src_data.ptr<cufftReal>(), dst_data.ptr<cufftComplex>()));
+
+        if (!is_dst_mem_good)
+        {
+            dst.create(dst_aux.size(), dst_aux.type());
+            dst_aux.copyTo(dst);
+        }
+    }
+
+    cufftSafeCall(cufftDestroy(plan));
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -628,14 +628,27 @@ namespace cv
         //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
 
-        //! performs per-element multiplication of two full (i.e. not packed) Fourier spectrums
-        //! supports only 32FC2 matrixes (interleaved format)
+        //! performs per-element multiplication of two full (not packed) Fourier spectrums
+        //! supports 32FC2 matrixes only (interleaved format)
         CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false);
 
-        //! performs per-element multiplication of two full (i.e. not packed) Fourier spectrums
-        //! supports only 32FC2 matrixes (interleaved format)
+        //! performs per-element multiplication of two full (not packed) Fourier spectrums
+        //! supports 32FC2 matrixes only (interleaved format)
         CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, 
                                              float scale, bool conjB=false);
+
+        //! performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix
+        //!
+        //! If the source matrix is not continous, then additional copy will be done,
+        //! so to avoid copying ensure the source matrix is continous one.
+        //!
+        //! Being implemented via CUFFT real-to-complex transform result contains only non-redundant values
+        //! in CUFFT's format. Result as full complex matrix for such kind of transform cannot be retrieved.
+        //!
+        //! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format, which
+        //! doesn't allow us to retrieve parity of the destiantion matrix dimension (along which the first step 
+        //! of DFT is performed). You must specifiy odd case explicitely.
+        CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, int flags=0, int nonZeroRows=0, bool odd=false);
 
         //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
         //! supports source images of 32FC1 type only
