@@ -1155,7 +1155,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     // Make sure here we work with the continuous input, 
     // as CUFFT can't handle gaps
     if (src.isContinuous())
-        src_aux = src;
+        src_data = src_aux = src;
     else
     {
         src_data = GpuMat(1, src.size().area(), src.type());

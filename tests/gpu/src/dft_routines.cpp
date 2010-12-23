@@ -246,7 +246,7 @@ struct CV_GpuDftTest: CvTest
             testR2CThenC2R(1, rows, "single col");
             testR2CThenC2R(1, rows + 1, "single col 1");
             testR2CThenC2R(cols, 1, "single row" );;
-            testR2CThenC2R(cols + 1, 1, "single row 1" );;
+            testR2CThenC2R(cols + 1, 1, "single row 1" );
         }
         catch (const Exception& e)
         {
@@ -258,7 +258,7 @@ struct CV_GpuDftTest: CvTest
 
     void gen(int cols, int rows, int cn, Mat& mat)
     {
-        RNG rng;
+        RNG rng(1);
         mat.create(rows, cols, CV_MAKETYPE(CV_32F, cn));
         rng.fill(mat, RNG::UNIFORM, Scalar::all(0.f), Scalar::all(10.f));
     }
@@ -324,7 +324,7 @@ struct CV_GpuDftTest: CvTest
             ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
             ok = false;
         }
-        if (ok) ok = cmp(b_gold, Mat(d_b), rows * cols * 1e-5f);
+        if (ok) ok = cmp(b_gold, Mat(d_b), rows * cols * 1e-4f);
         if (!ok) 
             ts->printf(CvTS::CONSOLE, "testC2C failed: hint=%s, cols=%d, rows=%d, flags=%d\n", hint.c_str(), cols, rows, flags);
     }
