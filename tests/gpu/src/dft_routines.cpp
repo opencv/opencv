@@ -223,30 +223,41 @@ struct CV_GpuDftTest: CvTest
     {
         try
         {
-            int cols = 1 + rand() % 100, rows = 1 + rand() % 100;
+            srand(0);
+            int cols = 2 + rand() % 100, rows = 2 + rand() % 100;
 
-            testC2C(cols, rows, 0, "no flags");
-            testC2C(cols, rows + 1, 0, "no flags 0 1");
-            testC2C(cols, rows + 1, 0, "no flags 1 0");
-            testC2C(cols + 1, rows, 0, "no flags 1 1");
-            testC2C(cols, rows, DFT_INVERSE, "DFT_INVERSE");
-            testC2C(cols, rows, DFT_ROWS, "DFT_ROWS");
-            testC2C(1, rows, 0, "single col");
-            testC2C(cols, 1, 0, "single row");
-            testC2C(1, rows, DFT_INVERSE, "single col inversed");
-            testC2C(cols, 1, DFT_INVERSE, "single row inversed");
-            testC2C(cols, 1, DFT_ROWS, "single row DFT_ROWS");
-            testC2C(1, 2, 0, "size 1 2");
-            testC2C(2, 1, 0, "size 2 1");
+            for (int inplace = 0; inplace < 2; ++inplace)
+            {
+                testC2C("no flags", cols, rows, 0, inplace);
+                testC2C("no flags 0 1", cols, rows + 1, 0, inplace);
+                testC2C("no flags 1 0", cols, rows + 1, 0, inplace);
+                testC2C("no flags 1 1", cols + 1, rows, 0, inplace);
+                testC2C("DFT_INVERSE", cols, rows, DFT_INVERSE, inplace);
+                testC2C("DFT_ROWS", cols, rows, DFT_ROWS, inplace);
+                testC2C("single col", 1, rows, 0, inplace);
+                testC2C("single row", cols, 1, 0, inplace);
+                testC2C("single col inversed", 1, rows, DFT_INVERSE, inplace);
+                testC2C("single row inversed", cols, 1, DFT_INVERSE, inplace);
+                testC2C("single row DFT_ROWS", cols, 1, DFT_ROWS, inplace);
+                testC2C("size 1 2", 1, 2, 0, inplace);
+                testC2C("size 2 1", 2, 1, 0, inplace);
+            }
 
-            testR2CThenC2R(cols, rows, "sanity");
-            testR2CThenC2R(cols, rows + 1, "sanity 0 1");
-            testR2CThenC2R(cols + 1, rows, "sanity 1 0");
-            testR2CThenC2R(cols + 1, rows + 1, "sanity 1 1");
-            testR2CThenC2R(1, rows, "single col");
-            testR2CThenC2R(1, rows + 1, "single col 1");
-            testR2CThenC2R(cols, 1, "single row" );;
-            testR2CThenC2R(cols + 1, 1, "single row 1" );
+            testR2CThenC2R("sanity", cols, rows);
+            testR2CThenC2R("sanity 0 1", cols, rows + 1);
+            testR2CThenC2R("sanity 1 0", cols + 1, rows);
+            testR2CThenC2R("sanity 1 1", cols + 1, rows + 1);
+            testR2CThenC2R("single col", 1, rows);
+            testR2CThenC2R("single col 1", 1, rows + 1);
+            testR2CThenC2R("single row", cols, 1);
+            testR2CThenC2R("single row 1", cols + 1, 1);
+
+            testR2CThenC2R("sanity", cols, rows, true);
+            testR2CThenC2R("sanity 0 1", cols, rows + 1, true);
+            testR2CThenC2R("sanity 1 0", cols + 1, rows, true);
+            testR2CThenC2R("sanity 1 1", cols + 1, rows + 1, true);
+            testR2CThenC2R("single row", cols, 1, true);
+            testR2CThenC2R("single row 1", cols + 1, 1, true);
         }
         catch (const Exception& e)
         {
@@ -300,7 +311,7 @@ struct CV_GpuDftTest: CvTest
         return true;
     }
 
-    void testC2C(int cols, int rows, int flags, const std::string& hint)
+    void testC2C(const std::string& hint, int cols, int rows, int flags, bool inplace=false)
     {
         Mat a;
         gen(cols, rows, 2, a);
@@ -309,9 +320,22 @@ struct CV_GpuDftTest: CvTest
         dft(a, b_gold, flags);
 
         GpuMat d_b;
+        GpuMat d_b_data;
+        if (inplace)
+        {
+            d_b_data.create(1, a.size().area(), CV_32FC2);
+            d_b = GpuMat(a.rows, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
+        }
+
         dft(GpuMat(a), d_b, flags);
 
         bool ok = true;
+        if (ok && inplace && d_b.ptr() != d_b_data.ptr())
+        {
+            ts->printf(CvTS::CONSOLE, "unnecessary reallocation was done\n");
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+            ok = false;
+        }
         if (ok && d_b.depth() != CV_32F)
         {
             ts->printf(CvTS::CONSOLE, "bad depth: %d\n", d_b.depth());
@@ -326,10 +350,11 @@ struct CV_GpuDftTest: CvTest
         }
         if (ok) ok = cmp(b_gold, Mat(d_b), rows * cols * 1e-4f);
         if (!ok) 
-            ts->printf(CvTS::CONSOLE, "testC2C failed: hint=%s, cols=%d, rows=%d, flags=%d\n", hint.c_str(), cols, rows, flags);
+            ts->printf(CvTS::CONSOLE, "testC2C failed: hint=%s, cols=%d, rows=%d, flags=%d, inplace=%d\n", 
+                       hint.c_str(), cols, rows, flags, inplace);
     }
 
-    void testR2CThenC2R(int cols, int rows, const std::string& hint)
+    void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inplace=false)
     {
         Mat a;
         gen(cols, rows, 1, a);
@@ -339,11 +364,38 @@ struct CV_GpuDftTest: CvTest
         else odd = a.cols % 2 == 1;
         bool ok = true;
 
-        GpuMat d_b;
-        GpuMat d_c;
+        GpuMat d_b, d_c;
+        GpuMat d_b_data, d_c_data;
+        if (inplace)
+        {
+            if (a.cols == 1)
+            {
+                d_b_data.create(1, (a.rows / 2 + 1) * a.cols, CV_32FC2);
+                d_b = GpuMat(a.rows / 2 + 1, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
+            }
+            else
+            {
+                d_b_data.create(1, a.rows * (a.cols / 2 + 1), CV_32FC2);
+                d_b = GpuMat(a.rows, a.cols / 2 + 1, CV_32FC2, d_b_data.ptr(), (a.cols / 2 + 1) * d_b_data.elemSize());
+            }
+            d_c_data.create(1, a.size().area(), CV_32F);
+            d_c = GpuMat(a.rows, a.cols, CV_32F, d_c_data.ptr(), a.cols * d_c_data.elemSize());
+        }
         dft(GpuMat(a), d_b, 0);
         dft(d_b, d_c, DFT_REAL_OUTPUT, 0, odd);
 
+        if (ok && inplace && d_b.ptr() != d_b_data.ptr())
+        {
+            ts->printf(CvTS::CONSOLE, "unnecessary reallocation was done for b\n");
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+            ok = false;
+        }
+        if (ok && inplace && d_c.ptr() != d_c_data.ptr())
+        {
+            ts->printf(CvTS::CONSOLE, "unnecessary reallocation was done for c\n");
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+            ok = false;
+        }
         if (ok && d_c.depth() != CV_32F)
         {
             ts->printf(CvTS::CONSOLE, "bad depth: %d\n", d_c.depth());

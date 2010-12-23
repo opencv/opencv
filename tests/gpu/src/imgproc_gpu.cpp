@@ -771,7 +771,7 @@ struct CV_GpuColumnSumTest: CvTest
             int n = 375;
             int m = 1072;
             Mat src(n, m, CV_32F);
-            RNG rng;
+            RNG rng(1);
             rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(1));
             Mat dst_gold, dst2_gold;
 

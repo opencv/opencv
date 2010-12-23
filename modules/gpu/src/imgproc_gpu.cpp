@@ -1159,7 +1159,8 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     else
     {
         src_data = GpuMat(1, src.size().area(), src.type());
-        src_aux = GpuMat(src.rows, src.cols, src.type(), src_data.ptr(), src.cols * src.elemSize());
+        src_aux = GpuMat(src.rows, src.cols, src.type(), src_data.ptr(),
+                         src.cols * src.elemSize());
         src.copyTo(src_aux);
 
         if (is_1d_input && !is_row_dft)
@@ -1168,7 +1169,8 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
             // reshape it into single row
             int rows = std::min(src.rows, src.cols);
             int cols = src.size().area() / rows;
-            src_aux = GpuMat(rows, cols, src.type(), src_data.ptr(), cols * src.elemSize());
+            src_aux = GpuMat(rows, cols, src.type(), src_data.ptr(), 
+                             cols * src.elemSize());
         }
     }
 
@@ -1196,7 +1198,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
         if (is_complex_output)
         {
             is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32FC2 
-                              && dst.size().area() >= src.size().area();
+                              && dst.cols >= src.cols && dst.rows >= src.rows;
 
             if (is_dst_mem_good)
                 dst_data = dst;
@@ -1229,7 +1231,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
             }
 
             is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32F
-                              && dst.rows >= dst_rows && dst.cols >= dst_cols;
+                              && dst.cols >= dst_cols && dst.rows >= dst_rows;
 
             if (is_dst_mem_good)
                 dst_data = dst;
@@ -1261,7 +1263,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
         }
 
         is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32FC2 
-                          && dst.rows >= dst_rows && dst.cols >= dst_cols;
+                          && dst.cols >= dst_cols && dst.rows >= dst_rows;
 
         if (is_dst_mem_good)
             dst_data = dst;
