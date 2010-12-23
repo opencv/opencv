@@ -55,10 +55,12 @@ extern "C" {
 typedef struct CvSURFPoint
 {
     CvPoint2D32f pt;
-    int laplacian;
-    int size;
-    float dir;
-    float hessian;
+
+    int          laplacian;
+    int          size;
+    float        dir;
+    float        hessian;
+
 } CvSURFPoint;
 
 CV_INLINE CvSURFPoint cvSURFPoint( CvPoint2D32f pt, int laplacian,
@@ -66,21 +68,24 @@ CV_INLINE CvSURFPoint cvSURFPoint( CvPoint2D32f pt, int laplacian,
                                    float hessian CV_DEFAULT(0))
 {
     CvSURFPoint kp;
-    kp.pt = pt;
+
+    kp.pt        = pt;
     kp.laplacian = laplacian;
-    kp.size = size;
-    kp.dir = dir;
-    kp.hessian = hessian;
+    kp.size      = size;
+    kp.dir       = dir;
+    kp.hessian   = hessian;
+
     return kp;
 }
 
 typedef struct CvSURFParams
 {
-    int extended;
+    int    extended;
     double hessianThreshold;
 
-    int nOctaves;
-    int nOctaveLayers;
+    int    nOctaves;
+    int    nOctaveLayers;
+
 } CvSURFParams;
 
 CVAPI(CvSURFParams) cvSURFParams( double hessianThreshold, int extended CV_DEFAULT(0) );
@@ -271,7 +276,7 @@ public:
         static const int DEFAULT_NOCTAVES = 4;
         static const int DEFAULT_NOCTAVE_LAYERS = 3;
         static const int DEFAULT_FIRST_OCTAVE = -1;
-        enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
+        enum { FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
 
         CommonParams();
         CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode );
