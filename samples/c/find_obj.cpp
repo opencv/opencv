@@ -30,7 +30,7 @@ void help()
 #define USE_FLANN
 
 
-IplImage *image = 0;
+IplImage* image = 0;
 
 double
 compareSURFDescriptors( const float* d1, const float* d2, double best, int length )
@@ -39,7 +39,7 @@ compareSURFDescriptors( const float* d1, const float* d2, double best, int lengt
     assert( length % 4 == 0 );
     for( int i = 0; i < length; i += 4 )
     {
-        double t0 = d1[i] - d2[i];
+        double t0 = d1[i  ] - d2[i  ];
         double t1 = d1[i+1] - d2[i+1];
         double t2 = d1[i+2] - d2[i+2];
         double t3 = d1[i+3] - d2[i+3];
