@@ -286,12 +286,12 @@ void CvArrTest::print_time( int test_case_idx, double time_clocks, double time_c
     {
         if( !CV_NODE_IS_SEQ(size_node->tag) )
         {
-            size.width = cvReadInt(size_node,-1);
+            size.width  = cvReadInt(size_node,-1);
             size.height = 1;
         }
         else
         {
-            size.width = cvReadInt((const CvFileNode*)cvGetSeqElem(size_node->data.seq,0),-1);
+            size.width  = cvReadInt((const CvFileNode*)cvGetSeqElem(size_node->data.seq,0),-1);
             size.height = cvReadInt((const CvFileNode*)cvGetSeqElem(size_node->data.seq,1),-1);
         }
     }
