@@ -72,8 +72,8 @@
 
   #if (_MSC_VER >= 1400 && defined _M_X64) || (__GNUC__ >= 4 && defined __x86_64__)
     #if defined WIN32
-		#include <intrin.h>
-	#endif
+    #include <intrin.h>
+  #endif
     #include <emmintrin.h>
   #endif
 
@@ -1365,8 +1365,8 @@ CvSet;
      o   Two pointers to the starting and ending vertices
          (vtx[0] and vtx[1] respectively).
 
-	 A graph may be oriented or not. In the latter case, edges between
-	 vertex i to vertex j are not distinguished during search operations.
+   A graph may be oriented or not. In the latter case, edges between
+   vertex i to vertex j are not distinguished during search operations.
 
      o   Two pointers to next edges for the starting and ending vertices, where
          next[0] points to the next edge in the vtx[0] adjacency list and
