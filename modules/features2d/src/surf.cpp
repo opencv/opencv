@@ -220,15 +220,15 @@ icvCalcLayerDetAndTrace( const CvMat* sum, int size, int sampleStep, CvMat *det,
  * point contains the keypoint coordinates and scale to be modified
  *
  * Return value is 1 if interpolation was successful, 0 on failure.
- */   
-CV_INLINE int 
+ */
+CV_INLINE int
 icvInterpolateKeypoint( float N9[3][9], int dx, int dy, int ds, CvSURFPoint *point )
 {
     int solve_ok;
     float A[9], x[3], b[3];
     CvMat matA = cvMat(3, 3, CV_32F, A);
-    CvMat _x = cvMat(3, 1, CV_32F, x);                
-    CvMat _b = cvMat(3, 1, CV_32F, b);
+    CvMat _x   = cvMat(3, 1, CV_32F, x);
+    CvMat _b   = cvMat(3, 1, CV_32F, b);
 
     b[0] = -(N9[1][5]-N9[1][3])/2;  /* Negative 1st deriv with respect to x */
     b[1] = -(N9[1][7]-N9[1][1])/2;  /* Negative 1st deriv with respect to y */
@@ -442,7 +442,7 @@ struct SURFFindInvoker
 /* Wavelet size at first layer of first octave. */ 
 const int HAAR_SIZE0 = 9;    
 
-/* Wavelet size increment between layers. This should be an even number, 
+/* Wavelet size increment between layers. This should be an even number,
  such that the wavelet sizes in an octave are either all even or all odd.
  This ensures that when looking for the neighbours of a sample, the layers
  above and below are aligned correctly. */
@@ -455,9 +455,9 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
     CvSeq* points = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvSURFPoint), storage );
 
     /* Sampling step along image x and y axes at first octave. This is doubled
-       for each additional octave. WARNING: Increasing this improves speed, 
+       for each additional octave. WARNING: Increasing this improves speed,
        however keypoint extraction becomes unreliable. */
-    const int SAMPLE_STEP0 = 1; 
+    const int SAMPLE_STEP0 = 1;
 
     int nTotalLayers = (params->nOctaveLayers+2)*params->nOctaves;
     int nMiddleLayers = params->nOctaveLayers*params->nOctaves;
@@ -567,7 +567,6 @@ struct SURFInvoker
                 DW[i*PATCH_SZ+j] = G_desc.at<float>(i,0) * G_desc.at<float>(j,0);
         }
     }
-    
     void operator()(const BlockedRange& range) const
     {
         /* X and Y gradient wavelet data */
@@ -576,7 +575,6 @@ struct SURFInvoker
         const int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
         
         const int descriptor_size = params->extended ? 128 : 64;
-        
         /* Optimisation is better using nOriSampleBound than nOriSamples for 
          array lengths.  Maybe because it is a constant known at compile time */
         const int nOriSampleBound =(2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
@@ -591,32 +589,25 @@ struct SURFInvoker
         
         int k, k1 = range.begin(), k2 = range.end();
         int maxSize = 0;
-        
         for( k = k1; k < k2; k++ )
         {
             maxSize = std::max(maxSize, ((CvSURFPoint*)cvGetSeqElem( keypoints, k ))->size);
         }
-        
         maxSize = cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f);
         Ptr<CvMat> winbuf = cvCreateMat( 1, maxSize > 0 ? maxSize*maxSize : 1, CV_8U );
-        
         for( k = k1; k < k2; k++ )
         {
             const int* sum_ptr = sum->data.i;
             int sum_cols = sum->cols;
             int i, j, kk, x, y, nangle;
-            
             float* vec;
             CvSurfHF dx_t[NX], dy_t[NY];
-            
             CvSURFPoint* kp = (CvSURFPoint*)cvGetSeqElem( keypoints, k );
             int size = kp->size;
             CvPoint2D32f center = kp->pt;
-            
             /* The sampling intervals and wavelet sized for selecting an orientation
              and building the keypoint descriptor are defined relative to 's' */
             float s = (float)size*1.2f/9.0f;
-            
             /* To find the dominant orientation, the gradients in x and y are
              sampled in a circle of radius 6s using wavelets of size 4s.
              We ensure the gradient wavelet size is even to ensure the 
@@ -680,32 +671,27 @@ struct SURFInvoker
                     besty = sumy;
                 }
             }
-            
             float descriptor_dir = cvFastArctan( besty, bestx );
             kp->dir = descriptor_dir;
-            
             if( !descriptors )
                 continue;
-            
             descriptor_dir *= (float)(CV_PI/180);
-            
             /* Extract a window of pixels around the keypoint of size 20s */
             int win_size = (int)((PATCH_SZ+1)*s);
             CV_Assert( winbuf->cols >= win_size*win_size );
-            
             CvMat win = cvMat(win_size, win_size, CV_8U, winbuf->data.ptr);
             float sin_dir = sin(descriptor_dir);
             float cos_dir = cos(descriptor_dir) ;
             
             /* Subpixel interpolation version (slower). Subpixel not required since
              the pixels will all get averaged when we scale down to 20 pixels */
-            /*  
+            /*
              float w[] = { cos_dir, sin_dir, center.x,
              -sin_dir, cos_dir , center.y };
              CvMat W = cvMat(2, 3, CV_32F, w);
              cvGetQuadrangleSubPix( img, &win, &W );
              */
-            
+
             /* Nearest neighbour version (faster) */
             float win_offset = -(float)(win_size-1)/2;
             float start_x = center.x + win_offset*cos_dir + win_offset*sin_dir;
@@ -722,11 +708,11 @@ struct SURFInvoker
                     WIN[i*win_size + j] = img->data.ptr[y*img->step + x];
                 }
             }
-            
+
             /* Scale the window to size PATCH_SZ so each pixel's size is s. This
              makes calculating the gradients with wavelets of size 2s easy */
             cvResize( &win, &_patch, CV_INTER_AREA );
-            
+
             /* Calculate gradients in x and y with wavelets of size 2s */
             for( i = 0; i < PATCH_SZ; i++ )
                 for( j = 0; j < PATCH_SZ; j++ )
@@ -737,12 +723,12 @@ struct SURFInvoker
                     DX[i][j] = vx;
                     DY[i][j] = vy;
                 }
-            
+
             /* Construct the descriptor */
             vec = (float*)cvGetSeqElem( descriptors, k );
             for( kk = 0; kk < (int)(descriptors->elem_size/sizeof(vec[0])); kk++ )
                 vec[kk] = 0;
-            double square_mag = 0;       
+            double square_mag = 0;
             if( params->extended )
             {
                 /* 128-bin descriptor */
@@ -797,7 +783,7 @@ struct SURFInvoker
                         vec+=4;
                     }
             }
-            
+
             /* unit vector is essential for contrast invariance */
             vec = (float*)cvGetSeqElem( descriptors, k );
             double scale = 1./(sqrt(square_mag) + DBL_EPSILON);
@@ -805,7 +791,7 @@ struct SURFInvoker
                 vec[kk] = (float)(vec[kk]*scale);
         }
     }
-   
+
     /* Parameters */
     const CvSURFParams* params;
     const CvMat* img;
@@ -830,7 +816,7 @@ CV_IMPL void
 cvExtractSURF( const CvArr* _img, const CvArr* _mask,
                CvSeq** _keypoints, CvSeq** _descriptors,
                CvMemStorage* storage, CvSURFParams params,
-			   int useProvidedKeyPts)
+               int useProvidedKeyPts)
 {
     CvMat *sum = 0, *mask1 = 0, *mask_sum = 0;
 
@@ -842,7 +828,7 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
     CvSeq *keypoints, *descriptors = 0;
     CvMat imghdr, *img = cvGetMat(_img, &imghdr);
     CvMat maskhdr, *mask = _mask ? cvGetMat(_mask, &maskhdr) : 0;
-    
+
     int descriptor_size = params.extended ? 128 : 64;
     const int descriptor_data_type = CV_32F;
     int i, N;
@@ -857,24 +843,24 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
 
     sum = cvCreateMat( img->rows+1, img->cols+1, CV_32SC1 );
     cvIntegral( img, sum );
-	
-	// Compute keypoints only if we are not asked for evaluating the descriptors are some given locations:
-	if (!useProvidedKeyPts)
-	{
-		if( mask )
-		{
-			mask1 = cvCreateMat( img->height, img->width, CV_8UC1 );
-			mask_sum = cvCreateMat( img->height+1, img->width+1, CV_32SC1 );
-			cvMinS( mask, 1, mask1 );
-			cvIntegral( mask1, mask_sum );
-		}
-		keypoints = icvFastHessianDetector( sum, mask_sum, storage, &params );
-	}
-	else
-	{
-		CV_Assert(useProvidedKeyPts && (_keypoints != 0) && (*_keypoints != 0));
-		keypoints = *_keypoints;
-	}
+
+    // Compute keypoints only if we are not asked for evaluating the descriptors are some given locations:
+    if (!useProvidedKeyPts)
+    {
+        if( mask )
+        {
+            mask1 = cvCreateMat( img->height, img->width, CV_8UC1 );
+            mask_sum = cvCreateMat( img->height+1, img->width+1, CV_32SC1 );
+            cvMinS( mask, 1, mask1 );
+            cvIntegral( mask1, mask_sum );
+        }
+        keypoints = icvFastHessianDetector( sum, mask_sum, storage, &params );
+    }
+    else
+    {
+        CV_Assert(useProvidedKeyPts && (_keypoints != 0) && (*_keypoints != 0));
+        keypoints = *_keypoints;
+    }
 
     N = keypoints->total;
     if( _descriptors )
@@ -935,8 +921,8 @@ SURF::SURF(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended)
 }
 
 int SURF::descriptorSize() const { return extended ? 128 : 64; }
-    
-    
+
+
 static int getPointOctave(const CvSURFPoint& kpt, const CvSURFParams& params)
 {
     int octave = 0, layer = 0, best_octave = 0;
@@ -955,7 +941,7 @@ static int getPointOctave(const CvSURFPoint& kpt, const CvSURFParams& params)
         }
     return best_octave;
 }
-    
+
 
 void SURF::operator()(const Mat& img, const Mat& mask,
                       vector<KeyPoint>& keypoints) const
@@ -999,7 +985,7 @@ void SURF::operator()(const Mat& img, const Mat& mask,
             kp.push_back(cvSURFPoint(kpt.pt, 1, cvRound(kpt.size), kpt.angle, kpt.response));
         }
     }
-    
+
     cvExtractSURF(&_img, pmask, &kp.seq, &d, storage,
         *(const CvSURFParams*)this, useProvidedKeypoints);
 
