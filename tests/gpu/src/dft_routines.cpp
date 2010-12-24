@@ -226,8 +226,9 @@ struct CV_GpuDftTest: CvTest
             srand(0);
             int cols = 2 + rand() % 100, rows = 2 + rand() % 100;
 
-            for (int inplace = 0; inplace < 2; ++inplace)
+            for (int i = 0; i < 2; ++i)
             {
+                bool inplace = i != 0;
                 testC2C("no flags", cols, rows, 0, inplace);
                 testC2C("no flags 0 1", cols, rows + 1, 0, inplace);
                 testC2C("no flags 1 0", cols, rows + 1, 0, inplace);

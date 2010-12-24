@@ -640,7 +640,8 @@ namespace cv
         //! performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix
         //!
         //! If the source matrix is not continous, then additional copy will be done,
-        //! so to avoid copying ensure the source matrix is continous one.
+        //! so to avoid copying ensure the source matrix is continous one. If you want to use
+        //! preallocated output ensure it is continuous too, otherwise it will be reallocated.
         //!
         //! Being implemented via CUFFT real-to-complex transform result contains only non-redundant values
         //! in CUFFT's format. Result as full complex matrix for such kind of transform cannot be retrieved.
