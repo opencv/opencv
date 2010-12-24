@@ -274,7 +274,7 @@ struct CV_GpuDftTest: CvTest
         rng.fill(mat, RNG::UNIFORM, Scalar::all(0.f), Scalar::all(10.f));
     }
 
-    bool cmp(const Mat& gold, const Mat& mine, float max_err=1e-3f, float scale=1.f)
+    bool cmp(const Mat& gold, const Mat& mine, float max_err=1e-3f)
     {
         if (gold.size() != mine.size())
         {
@@ -299,7 +299,7 @@ struct CV_GpuDftTest: CvTest
             for (int j = 0; j < gold.cols * gold.channels(); ++j)
             {
                 float gold_ = gold.at<float>(i, j);
-                float mine_ = mine.at<float>(i, j) * scale;
+                float mine_ = mine.at<float>(i, j);
                 if (fabs(gold_ - mine_) > max_err)
                 {
                     ts->printf(CvTS::CONSOLE, "bad values at %d %d: gold=%f, mine=%f\n", j / gold.channels(), i, gold_, mine_);
@@ -382,7 +382,7 @@ struct CV_GpuDftTest: CvTest
             d_c = GpuMat(a.rows, a.cols, CV_32F, d_c_data.ptr(), a.cols * d_c_data.elemSize());
         }
         dft(GpuMat(a), d_b, 0);
-        dft(d_b, d_c, DFT_REAL_OUTPUT, 0, odd);
+        dft(d_b, d_c, DFT_REAL_OUTPUT | DFT_SCALE, 0, odd);
 
         if (ok && inplace && d_b.ptr() != d_b_data.ptr())
         {
@@ -408,7 +408,7 @@ struct CV_GpuDftTest: CvTest
             ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
             ok = false;
         }
-        if (ok) ok = cmp(a, Mat(d_c), rows * cols * 1e-5f, 1.f / (rows * cols));
+        if (ok) ok = cmp(a, Mat(d_c), rows * cols * 1e-5f);
         if (!ok) 
             ts->printf(CvTS::CONSOLE, "testR2CThenC2R failed: hint=%s, cols=%d, rows=%d\n", hint.c_str(), cols, rows);
     }

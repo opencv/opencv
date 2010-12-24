@@ -752,7 +752,6 @@ namespace cv { namespace gpu { namespace imgproc
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums
 
-
     __global__ void mulSpectrumsKernel(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
                                        DevMem2D_<cufftComplex> c)
     {
@@ -776,10 +775,8 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall(cudaThreadSynchronize());
     }
 
-
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums_CONJ
-
 
     __global__ void mulSpectrumsKernel_CONJ(
             const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
@@ -805,10 +802,8 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall(cudaThreadSynchronize());
     }
 
-
     //////////////////////////////////////////////////////////////////////////
     // mulAndScaleSpectrums
-
 
     __global__ void mulAndScaleSpectrumsKernel(
             const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
@@ -835,10 +830,8 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall(cudaThreadSynchronize());
     }
 
-
     //////////////////////////////////////////////////////////////////////////
     // mulAndScaleSpectrums_CONJ
-
 
     __global__ void mulAndScaleSpectrumsKernel_CONJ(
             const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
@@ -864,7 +857,6 @@ namespace cv { namespace gpu { namespace imgproc
         mulAndScaleSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, scale, c);
         cudaSafeCall(cudaThreadSynchronize());
     }
-
 
 }}}
 

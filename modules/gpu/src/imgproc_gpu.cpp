@@ -1144,9 +1144,6 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     bool is_complex_input = src.channels() == 2;
     bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
 
-    // We don't support scaled transform
-    CV_Assert(!is_scaled_dft);
-
     // We don't support real-to-real transform
     CV_Assert(is_complex_input || is_complex_output);
 
@@ -1178,6 +1175,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     if (is_complex_input) 
         dft_type = is_complex_output ? CUFFT_C2C : CUFFT_C2R;
 
+    int dft_rows = src_aux.rows;
     int dft_cols = src_aux.cols;
     if (is_complex_input && !is_complex_output)
         dft_cols = (src_aux.cols - 1) * 2 + (int)odd;
@@ -1185,9 +1183,9 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
 
     cufftHandle plan;
     if (is_1d_input || is_row_dft)
-        cufftPlan1d(&plan, dft_cols, dft_type, src_aux.rows);
+        cufftPlan1d(&plan, dft_cols, dft_type, dft_rows);
     else
-        cufftPlan2d(&plan, src_aux.rows, dft_cols, dft_type);
+        cufftPlan2d(&plan, dft_rows, dft_cols, dft_type);
 
     GpuMat dst_data, dst_aux;
     int dst_cols, dst_rows;
@@ -1285,6 +1283,9 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     }
 
     cufftSafeCall(cufftDestroy(plan));
+
+    if (is_scaled_dft)
+        multiply(dst, Scalar::all(1. / (dft_rows * dft_cols)), dst);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1293,7 +1294,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
 namespace 
 {
     // Estimates optimal block size
-    void crossCorrOptBlockSize(int w, int h, int tw, int th, int& bw, int& bh)
+    void convolveOptBlockSize(int w, int h, int tw, int th, int& bw, int& bh)
     {
         int major, minor;
         getComputeCapability(getDevice(), major, minor);
@@ -1329,7 +1330,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
 
     Size block_size;
-    crossCorrOptBlockSize(result.cols, result.rows, templ.cols, templ.rows, 
+    convolveOptBlockSize(result.cols, result.rows, templ.cols, templ.rows, 
                           block_size.width, block_size.height);
 
     Size dft_size;
@@ -1367,10 +1368,11 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     {
         for (int x = 0; x < result.cols; x += block_size.width)
         {                
-            // Locate ROI in the source matrix
             Size image_roi_size;
             image_roi_size.width = std::min(x + dft_size.width, image.cols) - x;
             image_roi_size.height = std::min(y + dft_size.height, image.rows) - y;
+
+            // Locate ROI in the source matrix
             GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), image.step);
 
             // Make source image block continous
@@ -1386,14 +1388,16 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
             cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(), 
                                        result_data.ptr<cufftReal>()));
 
-            // Copy result block into appropriate part of the result matrix.
-            // We can't compute it inplace as the result of the CUFFT transforms
-            // is always continous, while the result matrix and its blocks can have gaps.
             Size result_roi_size;
             result_roi_size.width = std::min(x + block_size.width, result.cols) - x;
             result_roi_size.height = std::min(y + block_size.height, result.rows) - y;
+
             GpuMat result_roi(result_roi_size, CV_32F, (void*)(result.ptr<float>(y) + x), result.step);
             GpuMat result_block(result_roi_size, CV_32F, result_data.ptr(), dft_size.width * sizeof(cufftReal));
+
+            // Copy result block into appropriate part of the result matrix.
+            // We can't compute it inplace as the result of the CUFFT transforms
+            // is always continous, while the result matrix and its blocks can have gaps.
             result_block.copyTo(result_roi);
         }
     }
