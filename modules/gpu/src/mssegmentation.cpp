@@ -102,8 +102,8 @@ public:
     int nume_max;
     int nume;
 private:
-    Graph(const Graph&) {}
-    Graph operator =(const Graph&) {}
+    Graph(const Graph&);
+    void operator =(const Graph&);
 };
 
 
