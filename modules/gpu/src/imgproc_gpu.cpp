@@ -1147,38 +1147,27 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     // We don't support real-to-real transform
     CV_Assert(is_complex_input || is_complex_output);
 
-    GpuMat src_data, src_aux;
+    GpuMat src_data;
 
     // Make sure here we work with the continuous input, 
     // as CUFFT can't handle gaps
-    if (src.isContinuous())
-        src_data = src_aux = src;
-    else
-    {
-        src_data = GpuMat(1, src.size().area(), src.type());
-        src_aux = GpuMat(src.rows, src.cols, src.type(), src_data.ptr(),
-                         src.cols * src.elemSize());
-        src.copyTo(src_aux);
+    src_data = src;
+    createContinuous(src.rows, src.cols, src.type(), src_data);
+    if (src_data.data != src.data)
+        src.copyTo(src_data);
 
-        if (is_1d_input && !is_row_dft)
-        {
-            // If the source matrix is the single column
-            // reshape it into single row
-            int rows = std::min(src.rows, src.cols);
-            int cols = src.size().area() / rows;
-            src_aux = GpuMat(rows, cols, src.type(), src_data.ptr(), 
-                             cols * src.elemSize());
-        }
-    }
+    if (is_1d_input && !is_row_dft)
+        // If the source matrix is single column reshape it into single row
+        src_data = src_data.reshape(0, std::min(src.rows, src.cols));
 
     cufftType dft_type = CUFFT_R2C;
     if (is_complex_input) 
         dft_type = is_complex_output ? CUFFT_C2C : CUFFT_C2R;
 
-    int dft_rows = src_aux.rows;
-    int dft_cols = src_aux.cols;
+    int dft_rows = src_data.rows;
+    int dft_cols = src_data.cols;
     if (is_complex_input && !is_complex_output)
-        dft_cols = (src_aux.cols - 1) * 2 + (int)odd;
+        dft_cols = (src_data.cols - 1) * 2 + (int)odd;
     CV_Assert(dft_cols > 1);
 
     cufftHandle plan;
@@ -1187,99 +1176,45 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, int flags, int nonZeroRows, bo
     else
         cufftPlan2d(&plan, dft_rows, dft_cols, dft_type);
 
-    GpuMat dst_data, dst_aux;
     int dst_cols, dst_rows;
-    bool is_dst_mem_good;
 
     if (is_complex_input)
     {
         if (is_complex_output)
         {
-            is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32FC2 
-                              && dst.cols >= src.cols && dst.rows >= src.rows;
-
-            if (is_dst_mem_good)
-                dst_data = dst;
-            else
-            {
-                dst_data.create(1, src.size().area(), CV_32FC2);
-                dst_aux = GpuMat(src.rows, src.cols, dst_data.type(), dst_data.ptr(),
-                                 src.cols * dst_data.elemSize());
-            }
-
+            createContinuous(src.rows, src.cols, CV_32FC2, dst);
             cufftSafeCall(cufftExecC2C(
-                    plan, src_data.ptr<cufftComplex>(),
-                    dst_data.ptr<cufftComplex>(),
+                    plan, src_data.ptr<cufftComplex>(), dst.ptr<cufftComplex>(),
                     is_inverse ? CUFFT_INVERSE : CUFFT_FORWARD));
-
-            if (!is_dst_mem_good)
-            {
-                dst.create(dst_aux.size(), dst_aux.type());
-                dst_aux.copyTo(dst);
-            }
         }
         else
         {
             dst_rows = src.rows;
             dst_cols = (src.cols - 1) * 2 + (int)odd;
-            if (src_aux.size() != src.size())
+            if (src_data.size() != src.size())
             {
                 dst_rows = (src.rows - 1) * 2 + (int)odd;
                 dst_cols = src.cols;
             }
 
-            is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32F
-                              && dst.cols >= dst_cols && dst.rows >= dst_rows;
-
-            if (is_dst_mem_good)
-                dst_data = dst;
-            else
-            {
-                dst_data.create(1, dst_rows * dst_cols, CV_32F);
-                dst_aux = GpuMat(dst_rows, dst_cols, dst_data.type(), dst_data.ptr(), 
-                                 dst_cols * dst_data.elemSize());
-            }
-
+            createContinuous(dst_rows, dst_cols, CV_32F, dst);
             cufftSafeCall(cufftExecC2R(
-                    plan, src_data.ptr<cufftComplex>(), dst_data.ptr<cufftReal>()));
-
-            if (!is_dst_mem_good)
-            {
-                dst.create(dst_aux.size(), dst_aux.type());
-                dst_aux.copyTo(dst);
-            }
+                    plan, src_data.ptr<cufftComplex>(), dst.ptr<cufftReal>()));
         }
     }
     else
     {
         dst_rows = src.rows;
         dst_cols = src.cols / 2 + 1;
-        if (src_aux.size() != src.size())
+        if (src_data.size() != src.size())
         {
             dst_rows = src.rows / 2 + 1;
             dst_cols = src.cols;
         }
 
-        is_dst_mem_good = dst.isContinuous() && dst.type() == CV_32FC2 
-                          && dst.cols >= dst_cols && dst.rows >= dst_rows;
-
-        if (is_dst_mem_good)
-            dst_data = dst;
-        else
-        {
-            dst_data.create(1, dst_rows * dst_cols, CV_32FC2);
-            dst_aux = GpuMat(dst_rows, dst_cols, dst_data.type(), dst_data.ptr(), 
-                             dst_cols * dst_data.elemSize());
-        }
-
+        createContinuous(dst_rows, dst_cols, CV_32FC2, dst);
         cufftSafeCall(cufftExecR2C(
-                plan, src_data.ptr<cufftReal>(), dst_data.ptr<cufftComplex>()));
-
-        if (!is_dst_mem_good)
-        {
-            dst.create(dst_aux.size(), dst_aux.type());
-            dst_aux.copyTo(dst);
-        }
+                plan, src_data.ptr<cufftReal>(), dst.ptr<cufftComplex>()));
     }
 
     cufftSafeCall(cufftDestroy(plan));
@@ -1340,28 +1275,26 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     block_size.width = std::min(dft_size.width - templ.cols + 1, result.cols);
     block_size.height = std::min(dft_size.height - templ.rows + 1, result.rows);
 
-    GpuMat image_data(1, dft_size.area(), CV_32F);
-    GpuMat templ_data(1, dft_size.area(), CV_32F);
-    GpuMat result_data(1, dft_size.area(), CV_32F);
+    GpuMat result_data = createContinuous(dft_size, CV_32F);
 
     int spect_len = dft_size.height * (dft_size.width / 2 + 1);
-    GpuMat image_spect(1, spect_len, CV_32FC2);
-    GpuMat templ_spect(1, spect_len, CV_32FC2);
-    GpuMat result_spect(1, spect_len, CV_32FC2);
+    GpuMat image_spect = createContinuous(1, spect_len, CV_32FC2);
+    GpuMat templ_spect = createContinuous(1, spect_len, CV_32FC2);
+    GpuMat result_spect = createContinuous(1, spect_len, CV_32FC2);
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
     cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
 
+    GpuMat templ_block = createContinuous(dft_size, CV_32F);
     GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
-    GpuMat templ_block(dft_size, CV_32F, templ_data.ptr(), dft_size.width * sizeof(cufftReal));
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
                    templ_block.cols - templ_roi.cols, 0);
 
-    cufftSafeCall(cufftExecR2C(planR2C, templ_data.ptr<cufftReal>(), 
+    cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(), 
                                templ_spect.ptr<cufftComplex>()));
 
-    GpuMat image_block(dft_size, CV_32F, image_data.ptr(), dft_size.width * sizeof(cufftReal));
+    GpuMat image_block = createContinuous(dft_size, CV_32F);
 
     // Process all blocks of the result matrix
     for (int y = 0; y < result.rows; y += block_size.height)
@@ -1375,15 +1308,15 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
             // Locate ROI in the source matrix
             GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), image.step);
 
-            // Make source image block continous
+            // Make source image block is continuous
             copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
                            image_block.cols - image_roi.cols, 0);
 
-            cufftSafeCall(cufftExecR2C(planR2C, image_data.ptr<cufftReal>(), 
+            cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(), 
                                        image_spect.ptr<cufftComplex>()));
 
             mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
-                                1.f / dft_size.area(), ccorr);
+                                 1.f / dft_size.area(), ccorr);
 
             cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(), 
                                        result_data.ptr<cufftReal>()));
@@ -1392,12 +1325,10 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
             result_roi_size.width = std::min(x + block_size.width, result.cols) - x;
             result_roi_size.height = std::min(y + block_size.height, result.rows) - y;
 
-            GpuMat result_roi(result_roi_size, CV_32F, (void*)(result.ptr<float>(y) + x), result.step);
-            GpuMat result_block(result_roi_size, CV_32F, result_data.ptr(), dft_size.width * sizeof(cufftReal));
+            GpuMat result_roi(result_roi_size, result.type(), (void*)(result.ptr<float>(y) + x), result.step);
+            GpuMat result_block(result_roi_size, result_data.type(), result_data.ptr(), result_data.step);
 
-            // Copy result block into appropriate part of the result matrix.
-            // We can't compute it inplace as the result of the CUFFT transforms
-            // is always continous, while the result matrix and its blocks can have gaps.
+            // Copy block into appropriate part of the result matrix
             result_block.copyTo(result_roi);
         }
     }

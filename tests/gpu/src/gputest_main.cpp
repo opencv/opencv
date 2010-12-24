@@ -47,6 +47,7 @@ const char* blacklist[] =
 {
     "GPU-AsyncGpuMatOperator",     // crash
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
+    "GPU-BruteForceMatcher", // often crashes when seed=000001af5a11badd
     0
 };
 

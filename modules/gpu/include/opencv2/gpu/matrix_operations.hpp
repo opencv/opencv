@@ -345,6 +345,26 @@ inline GpuMat GpuMat::t() const
 
 static inline void swap( GpuMat& a, GpuMat& b ) { a.swap(b); }
 
+inline GpuMat createContinuous(int rows, int cols, int type)
+{
+    GpuMat m;
+    createContinuous(rows, cols, type, m);
+    return m;
+}
+
+inline void createContinuous(Size size, int type, GpuMat& m)
+{
+    createContinuous(size.height, size.width, type, m);
+}
+
+inline GpuMat createContinuous(Size size, int type)
+{
+    GpuMat m;
+    createContinuous(size, type, m);
+    return m;
+}
+
+
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////////// CudaMem ////////////////////////////////

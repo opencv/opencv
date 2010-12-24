@@ -411,6 +411,7 @@ struct CV_GpuDftTest: CvTest
         }
         if (ok) ok = cmp(a, Mat(d_c), rows * cols * 1e-5f);
         if (!ok) 
-            ts->printf(CvTS::CONSOLE, "testR2CThenC2R failed: hint=%s, cols=%d, rows=%d\n", hint.c_str(), cols, rows);
+            ts->printf(CvTS::CONSOLE, "testR2CThenC2R failed: hint=%s, cols=%d, rows=%d, inplace=%d\n", 
+                       hint.c_str(), cols, rows, inplace);
     }
 } CV_GpuDftTest_inst;

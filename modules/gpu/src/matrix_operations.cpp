@@ -67,6 +67,8 @@ namespace cv
         void GpuMat::create(int /*_rows*/, int /*_cols*/, int /*_type*/) { throw_nogpu(); }
         void GpuMat::release() { throw_nogpu(); }
 
+        void createContinuous(int /*rows*/, int /*cols*/, int /*type*/, GpuMat& /*m*/) { throw_nogpu(); }
+
         void CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
         bool CudaMem::canMapHostMemory() { throw_nogpu(); return false; }
         void CudaMem::release() { throw_nogpu(); }
@@ -511,6 +513,10 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
         void *dev_ptr;
         cudaSafeCall( cudaMallocPitch(&dev_ptr, &step, esz * cols, rows) );
 
+        // Single row must be continuous
+        if (rows == 1)
+            step = esz * cols;
+
         if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;
 
@@ -535,6 +541,14 @@ void cv::gpu::GpuMat::release()
     data = datastart = dataend = 0;
     step = rows = cols = 0;
     refcount = 0;
+}
+
+void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
+{
+    int area = rows * cols;
+    if (!m.isContinuous() || m.type() != type || m.size().area() != area)
+        m.create(1, area, type);
+    m = m.reshape(0, rows);
 }
 
 
