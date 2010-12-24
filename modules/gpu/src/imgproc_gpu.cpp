@@ -1255,7 +1255,6 @@ namespace
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr)
 {
-    // We must be sure we use correct OpenCV analogues for CUFFT types
     StaticAssert<sizeof(float) == sizeof(cufftReal)>::check();
     StaticAssert<sizeof(float) * 2 == sizeof(cufftComplex)>::check();
 
@@ -1278,9 +1277,9 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     GpuMat result_data = createContinuous(dft_size, CV_32F);
 
     int spect_len = dft_size.height * (dft_size.width / 2 + 1);
-    GpuMat image_spect = createContinuous(1, spect_len, CV_32FC2);
-    GpuMat templ_spect = createContinuous(1, spect_len, CV_32FC2);
-    GpuMat result_spect = createContinuous(1, spect_len, CV_32FC2);
+    GpuMat image_spect(1, spect_len, CV_32FC2);
+    GpuMat templ_spect(1, spect_len, CV_32FC2);
+    GpuMat result_spect(1, spect_len, CV_32FC2);
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
@@ -1300,35 +1299,24 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     for (int y = 0; y < result.rows; y += block_size.height)
     {
         for (int x = 0; x < result.cols; x += block_size.width)
-        {                
-            Size image_roi_size;
-            image_roi_size.width = std::min(x + dft_size.width, image.cols) - x;
-            image_roi_size.height = std::min(y + dft_size.height, image.rows) - y;
-
-            // Locate ROI in the source matrix
+        {
+            Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
+                                std::min(y + dft_size.height, image.rows) - y);
             GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), image.step);
-
-            // Make source image block is continuous
             copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
                            image_block.cols - image_roi.cols, 0);
 
             cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(), 
                                        image_spect.ptr<cufftComplex>()));
-
             mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
                                  1.f / dft_size.area(), ccorr);
-
             cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(), 
                                        result_data.ptr<cufftReal>()));
 
-            Size result_roi_size;
-            result_roi_size.width = std::min(x + block_size.width, result.cols) - x;
-            result_roi_size.height = std::min(y + block_size.height, result.rows) - y;
-
+            Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
+                                 std::min(y + block_size.height, result.rows) - y);
             GpuMat result_roi(result_roi_size, result.type(), (void*)(result.ptr<float>(y) + x), result.step);
             GpuMat result_block(result_roi_size, result_data.type(), result_data.ptr(), result_data.step);
-
-            // Copy block into appropriate part of the result matrix
             result_block.copyTo(result_roi);
         }
     }
