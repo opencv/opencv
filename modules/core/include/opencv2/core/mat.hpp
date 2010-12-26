@@ -1808,7 +1808,7 @@ template<typename _Tp> inline Point MatConstIterator_<_Tp>::pos() const
     CV_DbgAssert( m->dims <= 2 );
     if( m->isContinuous() )
     {
-        ptrdiff_t ofs = ptr - (_Tp*)m->data;
+        ptrdiff_t ofs = (const _Tp*)ptr - (const _Tp*)m->data;
         int y = (int)(ofs / m->cols), x = (int)(ofs - (ptrdiff_t)y*m->cols);
         return Point(x, y);
     }

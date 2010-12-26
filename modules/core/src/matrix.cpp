@@ -2203,7 +2203,7 @@ void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
         y = ofs/m->cols;
         int y1 = std::min(std::max((int)y, 0), m->rows-1);
         sliceStart = m->data + y1*m->step[0];
-        sliceEnd = sliceStart + (m->cols-1)*elemSize;
+        sliceEnd = sliceStart + m->cols*elemSize;
         ptr = y < 0 ? sliceStart : y >= m->rows ? sliceEnd :
             sliceStart + (ofs - y*m->cols)*elemSize;
         return;
