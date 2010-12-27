@@ -77,7 +77,9 @@ void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_n
 void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool) { throw_nogpu(); }
 void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool) { throw_nogpu(); }
 void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int) { throw_nogpu(); }
+void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&) { throw_nogpu(); }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -1211,36 +1213,65 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// crossCorr
+// convolve
 
-namespace 
+
+void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
 {
-    // Estimates optimal block size
-    void convolveOptBlockSize(int w, int h, int tw, int th, int& bw, int& bh)
-    {
-        int major, minor;
-        getComputeCapability(getDevice(), major, minor);
+    result_size = Size(image_size.width - templ_size.width + 1,
+                       image_size.height - templ_size.height + 1);
+    block_size = estimateBlockSize(result_size, templ_size);
 
-        int scale = 40;
-        int bh_min = 1024;
-        int bw_min = 1024;
+    dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
+    dft_size.height = getOptimalDFTSize(block_size.width + templ_size.height - 1);
+    createContinuous(dft_size, CV_32F, image_block);
+    createContinuous(dft_size, CV_32F, templ_block);
+    createContinuous(dft_size, CV_32F, result_data);
 
-        // Check whether we use Fermi generation or newer GPU
-        if (major >= 2) 
-        {
-            bh_min = 2048;
-            bw_min = 2048;
-        }
+    spect_len = dft_size.height * (dft_size.width / 2 + 1);
+    createContinuous(1, spect_len, CV_32FC2, image_spect);
+    createContinuous(1, spect_len, CV_32FC2, templ_spect);
+    createContinuous(1, spect_len, CV_32FC2, result_spect);
 
-        bw = std::max(tw * scale, bw_min);
-        bh = std::max(th * scale, bh_min);
-        bw = std::min(bw, w);
-        bh = std::min(bh, h);
-    }
+    block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
+    block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
 }
 
 
-void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr)
+Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size templ_size)
+{
+    int major, minor;
+    getComputeCapability(getDevice(), major, minor);
+
+    int scale = 40;
+    Size bsize_min(1024, 1024);
+
+    // Check whether we use Fermi generation or newer GPU
+    if (major >= 2) 
+    {
+        bsize_min.width = 2048;
+        bsize_min.height = 2048;
+    }
+
+    Size bsize(std::max(templ_size.width * scale, bsize_min.width),
+               std::max(templ_size.height * scale, bsize_min.height));
+
+    bsize.width = std::min(bsize.width, result_size.width);
+    bsize.height = std::min(bsize.height, result_size.height);
+    return bsize;
+}
+
+
+void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
+                       bool ccorr)
+{
+    ConvolveBuf buf;
+    convolve(image, templ, result, ccorr, buf);
+}
+
+
+void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
+                       bool ccorr, ConvolveBuf& buf)
 {
     StaticAssert<sizeof(float) == sizeof(cufftReal)>::check();
     StaticAssert<sizeof(float) * 2 == sizeof(cufftComplex)>::check();
@@ -1248,31 +1279,24 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 
-    result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    buf.create(image.size(), templ.size());
+    result.create(buf.result_size, CV_32F);
 
-    Size block_size;
-    convolveOptBlockSize(result.cols, result.rows, templ.cols, templ.rows, 
-                          block_size.width, block_size.height);
+    Size& block_size = buf.block_size;
+    Size& dft_size = buf.dft_size;
+    int& spect_len = buf.spect_len;
 
-    Size dft_size;
-    dft_size.width = getOptimalDFTSize(block_size.width + templ.cols - 1);
-    dft_size.height = getOptimalDFTSize(block_size.width + templ.rows - 1);
+    GpuMat& image_block = buf.image_block;
+    GpuMat& templ_block = buf.templ_block;
+    GpuMat& result_data = buf.result_data;
 
-    block_size.width = std::min(dft_size.width - templ.cols + 1, result.cols);
-    block_size.height = std::min(dft_size.height - templ.rows + 1, result.rows);
-
-    int spect_len = dft_size.height * (dft_size.width / 2 + 1);
-    GpuMat image_spect = createContinuous(1, spect_len, CV_32FC2);
-    GpuMat templ_spect = createContinuous(1, spect_len, CV_32FC2);
-    GpuMat result_spect = createContinuous(1, spect_len, CV_32FC2);
+    GpuMat& image_spect = buf.image_spect;
+    GpuMat& templ_spect = buf.templ_spect;
+    GpuMat& result_spect = buf.result_spect;
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
     cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
-
-    GpuMat image_block = createContinuous(dft_size, CV_32F);
-    GpuMat templ_block = createContinuous(dft_size, CV_32F);
-    GpuMat result_data = createContinuous(dft_size, CV_32F);
 
     GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
@@ -1288,9 +1312,10 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
         {
             Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
                                 std::min(y + dft_size.height, image.rows) - y);
-            GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), image.step);
-            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows, 0, 
-                           image_block.cols - image_roi.cols, 0);
+            GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), 
+                             image.step);
+            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                           0, image_block.cols - image_roi.cols, 0);
 
             cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(), 
                                        image_spect.ptr<cufftComplex>()));
@@ -1301,8 +1326,10 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
             Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
                                  std::min(y + block_size.height, result.rows) - y);
-            GpuMat result_roi(result_roi_size, result.type(), (void*)(result.ptr<float>(y) + x), result.step);
-            GpuMat result_block(result_roi_size, result_data.type(), result_data.ptr(), result_data.step);
+            GpuMat result_roi(result_roi_size, result.type(), 
+                              (void*)(result.ptr<float>(y) + x), result.step);
+            GpuMat result_block(result_roi_size, result_data.type(), 
+                                result_data.ptr(), result_data.step);
             result_block.copyTo(result_roi);
         }
     }

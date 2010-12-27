@@ -656,7 +656,34 @@ namespace cv
         //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
         //! supports source images of 32FC1 type only
         //! result matrix will have 32FC1 type
-        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false);
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
+                                 bool ccorr=false);
+
+        struct CV_EXPORTS ConvolveBuf;
+
+        //! buffered version
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
+                                 bool ccorr, ConvolveBuf& buf);
+
+        struct CV_EXPORTS ConvolveBuf
+        {
+            ConvolveBuf() {}
+            ConvolveBuf(Size image_size, Size templ_size) 
+                { create(image_size, templ_size); }
+            void create(Size image_size, Size templ_size);
+
+        private:
+            static Size estimateBlockSize(Size result_size, Size templ_size);
+            friend void convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&);
+
+            Size result_size;
+            Size block_size;
+            Size dft_size;
+            int spect_len;
+
+            GpuMat image_spect, templ_spect, result_spect;
+            GpuMat image_block, templ_block, result_data;
+        };
 
         //! computes the proximity map for the raster template and the image where the template is searched for
         CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
