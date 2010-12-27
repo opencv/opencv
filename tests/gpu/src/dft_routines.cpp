@@ -328,7 +328,7 @@ struct CV_GpuDftTest: CvTest
             d_b = GpuMat(a.rows, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
         }
 
-        dft(GpuMat(a), d_b, flags);
+        dft(GpuMat(a), d_b, Size(cols, rows), flags);
 
         bool ok = true;
         if (ok && inplace && d_b.ptr() != d_b_data.ptr())
@@ -360,9 +360,6 @@ struct CV_GpuDftTest: CvTest
         Mat a;
         gen(cols, rows, 1, a);
 
-        bool odd = false;
-        if (a.cols == 1) odd = a.rows % 2 == 1;
-        else odd = a.cols % 2 == 1;
         bool ok = true;
 
         GpuMat d_b, d_c;
@@ -382,8 +379,9 @@ struct CV_GpuDftTest: CvTest
             d_c_data.create(1, a.size().area(), CV_32F);
             d_c = GpuMat(a.rows, a.cols, CV_32F, d_c_data.ptr(), a.cols * d_c_data.elemSize());
         }
-        dft(GpuMat(a), d_b, 0);
-        dft(d_b, d_c, DFT_REAL_OUTPUT | DFT_SCALE, 0, odd);
+
+        dft(GpuMat(a), d_b, Size(cols, rows), 0);
+        dft(d_b, d_c, Size(cols, rows), DFT_REAL_OUTPUT | DFT_SCALE);
 
         if (ok && inplace && d_b.ptr() != d_b_data.ptr())
         {
