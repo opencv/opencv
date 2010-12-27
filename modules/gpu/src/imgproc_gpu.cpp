@@ -1156,25 +1156,25 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags)
     if (src_data.data != src.data)
         src.copyTo(src_data);
 
-    Size dft_size_ = dft_size;
+    Size dft_size_opt = dft_size;
     if (is_1d_input && !is_row_dft)
     {
         // If the source matrix is single column handle it as single row
-        dft_size_.width = std::max(dft_size.width, dft_size.height);
-        dft_size_.height = std::min(dft_size.width, dft_size.height);
+        dft_size_opt.width = std::max(dft_size.width, dft_size.height);
+        dft_size_opt.height = std::min(dft_size.width, dft_size.height);
     }
 
     cufftType dft_type = CUFFT_R2C;
     if (is_complex_input) 
         dft_type = is_complex_output ? CUFFT_C2C : CUFFT_C2R;
 
-    CV_Assert(dft_size_.width > 1);
+    CV_Assert(dft_size_opt.width > 1);
 
     cufftHandle plan;
     if (is_1d_input || is_row_dft)
-        cufftPlan1d(&plan, dft_size_.width, dft_type, dft_size_.height);
+        cufftPlan1d(&plan, dft_size_opt.width, dft_type, dft_size_opt.height);
     else
-        cufftPlan2d(&plan, dft_size_.height, dft_size_.width, dft_type);
+        cufftPlan2d(&plan, dft_size_opt.height, dft_size_opt.width, dft_type);
 
     if (is_complex_input)
     {
@@ -1194,7 +1194,8 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags)
     }
     else
     {
-        if (dft_size == dft_size_)
+        // We could swap dft_size for efficiency. Here we must reflect it
+        if (dft_size == dft_size_opt)
             createContinuous(Size(dft_size.width / 2 + 1, dft_size.height), CV_32FC2, dst);
         else
             createContinuous(Size(dft_size.width, dft_size.height / 2 + 1), CV_32FC2, dst);
@@ -1206,7 +1207,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags)
     cufftSafeCall(cufftDestroy(plan));
 
     if (is_scaled_dft)
-        multiply(dst, Scalar::all(1. / (dft_size.area())), dst);
+        multiply(dst, Scalar::all(1. / dft_size.area()), dst);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1260,26 +1261,25 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     block_size.width = std::min(dft_size.width - templ.cols + 1, result.cols);
     block_size.height = std::min(dft_size.height - templ.rows + 1, result.rows);
 
-    GpuMat result_data = createContinuous(dft_size, CV_32F);
-
     int spect_len = dft_size.height * (dft_size.width / 2 + 1);
-    GpuMat image_spect(1, spect_len, CV_32FC2);
-    GpuMat templ_spect(1, spect_len, CV_32FC2);
-    GpuMat result_spect(1, spect_len, CV_32FC2);
+    GpuMat image_spect = createContinuous(1, spect_len, CV_32FC2);
+    GpuMat templ_spect = createContinuous(1, spect_len, CV_32FC2);
+    GpuMat result_spect = createContinuous(1, spect_len, CV_32FC2);
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
     cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
 
+    GpuMat image_block = createContinuous(dft_size, CV_32F);
     GpuMat templ_block = createContinuous(dft_size, CV_32F);
+    GpuMat result_data = createContinuous(dft_size, CV_32F);
+
     GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
     copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
                    templ_block.cols - templ_roi.cols, 0);
 
     cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(), 
                                templ_spect.ptr<cufftComplex>()));
-
-    GpuMat image_block = createContinuous(dft_size, CV_32F);
 
     // Process all blocks of the result matrix
     for (int y = 0; y < result.rows; y += block_size.height)

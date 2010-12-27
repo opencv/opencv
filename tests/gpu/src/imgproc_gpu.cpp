@@ -768,34 +768,37 @@ struct CV_GpuColumnSumTest: CvTest
     {
         try
         {
-            int n = 375;
-            int m = 1072;
-            Mat src(n, m, CV_32F);
+            int cols = 375;
+            int rows = 1072;
+
+            Mat src(rows, cols, CV_32F);
             RNG rng(1);
             rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(1));
-            Mat dst_gold, dst2_gold;
 
-            integral(src, dst_gold, dst2_gold);
-
-            GpuMat dsrc(src);
-            GpuMat buf;
-            GpuMat dst;
-            columnSum(dsrc, buf);
-            transpose(buf, dst);
-            columnSum(dst, buf);
-            transpose(buf, dst);
+            GpuMat d_dst;
+            columnSum(GpuMat(src), d_dst);
             
-            Mat dst_ = dst;
-            for (int i = 0; i < dst_.rows; ++i)
+            Mat dst = d_dst;
+            for (int j = 0; j < src.cols; ++j)
             {
-                const double* dst_gold_data = (const double*)dst_gold.ptr(i + 1);
-                for (int j = 0; j < dst_.cols; ++j)
+                float a = src.at<float>(0, j);
+                float b = dst.at<float>(0, j);
+                if (fabs(a - b) > 0.5f)
                 {
-                    float a = (float)dst_gold_data[j + 1];
-                    float b = dst_.at<float>(i, j);
+                    ts->printf(CvTS::CONSOLE, "big diff at %d %d: %f %f\n", 0, j, a, b);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+            }
+            for (int i = 1; i < src.rows; ++i)
+            {
+                for (int j = 0; j < src.cols; ++j)
+                {
+                    float a = src.at<float>(i, j) += src.at<float>(i - 1, j);
+                    float b = dst.at<float>(i, j);
                     if (fabs(a - b) > 0.5f)
                     {
-                        ts->printf(CvTS::CONSOLE, "%d %d %f %f\n", i, j, a, b);
+                        ts->printf(CvTS::CONSOLE, "big diff at %d %d: %f %f\n", i, j, a, b);
                         ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                         return;
                     }
@@ -804,6 +807,7 @@ struct CV_GpuColumnSumTest: CvTest
         }
         catch (const Exception& e)
         {
+            ts->printf(CvTS::CONSOLE, e.what());
             if (!check_and_treat_gpu_exception(e, ts)) throw;
             return;
         }
