@@ -184,6 +184,7 @@ CvCapture* cvCreateCameraCapture_DShow( int index )
 }
 
 #ifdef _MSC_VER
+#pragma comment(lib, "strmiids.lib")
 #if defined _M_X64
 #pragma comment(lib, "videoInput64.lib")
 #else

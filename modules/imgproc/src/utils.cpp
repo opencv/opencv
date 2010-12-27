@@ -74,8 +74,8 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
 namespace cv
 {
 
-static void copyMakeBorder_8u( const uchar* src, int srcstep, Size srcroi,
-                               uchar* dst, int dststep, Size dstroi,
+static void copyMakeBorder_8u( const uchar* src, size_t srcstep, Size srcroi,
+                               uchar* dst, size_t dststep, Size dstroi,
                                int top, int left, int cn, int borderType )
 {
     const int isz = (int)sizeof(int);
@@ -155,8 +155,8 @@ static void copyMakeBorder_8u( const uchar* src, int srcstep, Size srcroi,
 }
 
 
-static void copyMakeConstBorder_8u( const uchar* src, int srcstep, Size srcroi,
-                                    uchar* dst, int dststep, Size dstroi,
+static void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, Size srcroi,
+                                    uchar* dst, size_t dststep, Size dstroi,
                                     int top, int left, int cn, const uchar* value )
 {
     int i, j;
@@ -205,14 +205,14 @@ void copyMakeBorder( const Mat& src, Mat& dst, int top, int bottom,
     if( borderType != BORDER_CONSTANT )
         copyMakeBorder_8u( src.data, src.step, src.size(),
                            dst.data, dst.step, dst.size(),
-                           top, left, src.elemSize(), borderType );
+                           top, left, (int)src.elemSize(), borderType );
     else
     {
         double buf[4];
         scalarToRawData(value, buf, src.type());
         copyMakeConstBorder_8u( src.data, src.step, src.size(),
                                 dst.data, dst.step, dst.size(),
-                                top, left, src.elemSize(), (uchar*)buf );
+                                top, left, (int)src.elemSize(), (uchar*)buf );
     }
 }
     
