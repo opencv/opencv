@@ -61,7 +61,6 @@
 
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
-#include "blobdetector.hpp"
 #include <stdarg.h>
 
 //#define ENABLE_TRIM_COL_ROW
@@ -1938,10 +1937,15 @@ void drawChessboardCorners( Mat& image, Size patternSize,
 bool findCirclesGrid( const Mat& image, Size patternSize,
                       vector<Point2f>& centers, int )
 {
-    Ptr<BlobDetector> detector = new BlobDetector();
+    Ptr<SimpleBlobDetector> detector = new SimpleBlobDetector();
     //Ptr<FeatureDetector> detector = new MserFeatureDetector();
-    vector<Point2f> keypoints;
+    vector<KeyPoint> keypoints;
     detector->detect(image, keypoints);
+    vector<Point2f> points;
+    for (size_t i = 0; i < keypoints.size(); i++)
+    {
+        points.push_back (keypoints[i].pt);
+    }
 
     CirclesGridFinderParameters parameters;
     parameters.vertexPenalty = -0.6f;
@@ -1956,7 +1960,7 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
     for (int i = 0; i < attempts; i++)
     {
       centers.clear();
-      CirclesGridFinder boxFinder(patternSize, keypoints, parameters);
+      CirclesGridFinder boxFinder(patternSize, points, parameters);
       bool isFound = false;
       try
       {
@@ -1984,7 +1988,7 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
       {
         if (centers.size() < minHomographyPoints)
           break;
-        H = CirclesGridFinder::rectifyGrid(boxFinder.getDetectedGridSize(), centers, keypoints, keypoints);
+        H = CirclesGridFinder::rectifyGrid(boxFinder.getDetectedGridSize(), centers, points, points);
       }
     }
 

@@ -1333,6 +1333,48 @@ protected:
     SURF surf;
 };
 
+class CV_EXPORTS SimpleBlobDetector : public cv::FeatureDetector
+{
+public:
+  struct CV_EXPORTS Params
+  {
+      Params();
+      float thresholdStep;
+      float minThreshold;
+      float maxThreshold;
+      float maxCentersDist;
+      int defaultKeypointSize;
+      size_t minRepeatability;
+      bool computeRadius;
+      bool isGrayscaleCentroid;
+      int centroidROIMargin;
+
+      bool filterByArea, filterByInertia, filterByCircularity, filterByColor, filterByConvexity;
+      float minArea;
+      float maxArea;
+      float minCircularity;
+      float minInertiaRatio;
+      float minConvexity;
+      uchar blobColor;
+  };
+
+  SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+protected:
+  struct CV_EXPORTS Center
+  {
+    cv::Point2d location;
+    double radius;
+    double confidence;
+  };
+
+  virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+  virtual void findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, std::vector<Center> &centers) const;
+
+  cv::Point2d computeGrayscaleCentroid(const cv::Mat &image, const std::vector<cv::Point> &contour) const;
+
+  Params params;
+};
+
 class CV_EXPORTS DenseFeatureDetector : public FeatureDetector
 {
 public:

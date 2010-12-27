@@ -44,8 +44,6 @@
 #define CIRCLESGRID_HPP_
 
 #include <fstream>
-#include <iostream>
-#include <string>
 #include <set>
 
 #include "precomp.hpp"

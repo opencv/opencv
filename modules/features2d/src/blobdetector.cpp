@@ -40,11 +40,14 @@
 //
 //M*/
 
-#include "blobdetector.hpp"
+#include "precomp.hpp"
 
 using namespace cv;
 
-BlobDetectorParameters::BlobDetectorParameters()
+/*
+ *  SimpleBlobDetector
+ */
+SimpleBlobDetector::Params::Params()
 {
   thresholdStep = 10;
   minThreshold = 50;
@@ -52,8 +55,9 @@ BlobDetectorParameters::BlobDetectorParameters()
   maxCentersDist = 10;
   defaultKeypointSize = 1;
   minRepeatability = 2;
-  filterByColor = true;
   computeRadius = true;
+  filterByColor = true;
+  blobColor = 0;
 
   isGrayscaleCentroid = false;
   centroidROIMargin = 2;
@@ -74,17 +78,12 @@ BlobDetectorParameters::BlobDetectorParameters()
   minCircularity = 0.8f;
 }
 
-BlobDetector::BlobDetector(const BlobDetectorParameters &parameters) :
+SimpleBlobDetector::SimpleBlobDetector(const SimpleBlobDetector::Params &parameters) :
   params(parameters)
 {
 }
 
-void BlobDetector::detect(const cv::Mat& image, vector<cv::Point2f>& keypoints, const cv::Mat& mask) const
-{
-  detectImpl(image, keypoints, mask);
-}
-
-Point2d BlobDetector::computeGrayscaleCentroid(const Mat &image, const vector<Point> &contour) const
+Point2d SimpleBlobDetector::computeGrayscaleCentroid(const Mat &image, const vector<Point> &contour) const
 {
   Rect rect = boundingRect(Mat(contour));
   rect.x -= params.centroidROIMargin;
@@ -113,7 +112,7 @@ Point2d BlobDetector::computeGrayscaleCentroid(const Mat &image, const vector<Po
   return centroid;
 }
 
-void BlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, vector<Center> &centers) const
+void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, vector<Center> &centers) const
 {
   centers.clear();
 
@@ -195,7 +194,7 @@ void BlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, v
 
     if (params.filterByColor)
     {
-      if (binaryImage.at<uchar> (cvRound(center.location.y), cvRound(center.location.x)) == 255)
+      if (binaryImage.at<uchar> (cvRound(center.location.y), cvRound(center.location.x)) != params.blobColor)
         continue;
     }
 
@@ -219,7 +218,7 @@ void BlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, v
   //waitKey();
 }
 
-void BlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::Point2f>& keypoints, const cv::Mat& mask) const
+void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask) const
 {
   keypoints.clear();
   Mat grayscaleImage;
@@ -282,6 +281,7 @@ void BlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::Point2f>& ke
       normalizer += centers[i][j].confidence;
     }
     sumPoint *= (1. / normalizer);
-    keypoints.push_back(sumPoint);
+    KeyPoint kpt(sumPoint, params.defaultKeypointSize);
+    keypoints.push_back(kpt);
   }
 }
