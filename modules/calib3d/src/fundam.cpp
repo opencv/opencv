@@ -260,10 +260,7 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
     if( method == CV_LMEDS )
         result = estimator.runLMeDS( M, m, &matH, tempMask, confidence, maxIters );
     else if( method == CV_RANSAC )
-    {
         result = estimator.runRANSAC( M, m, &matH, tempMask, ransacReprojThreshold, confidence, maxIters);
-        estimator.runKernel( M, m, &matH );
-    }
     else
         result = estimator.runKernel( M, m, &matH ) > 0;
 
@@ -272,6 +269,8 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
         icvCompressPoints( (CvPoint2D64f*)M->data.ptr, tempMask->data.ptr, 1, count );
         count = icvCompressPoints( (CvPoint2D64f*)m->data.ptr, tempMask->data.ptr, 1, count );
         M->cols = m->cols = count;
+        if( method == CV_RANSAC )
+            estimator.runKernel( M, m, &matH );
         estimator.refine( M, m, &matH, 10 );
     }
 
