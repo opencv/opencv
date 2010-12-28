@@ -56,6 +56,7 @@
 #include <algorithm>
 #include <sstream>
 #include <exception>
+#include <iterator>
 
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
