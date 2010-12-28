@@ -419,7 +419,7 @@ public:
                                      double TB=0.9,
                                      double CT=0.05,
                                      
-                                     uchar shadowOutputValue=127,
+                                     int shadowOutputValue=127,
                                      double tau=0.5);
     
     //! the destructor
@@ -442,7 +442,7 @@ public:
                             double TB=0.9,
                             double CT=0.05,
                             
-                            uchar nShadowDetection=127,
+                            int nShadowDetection=127,
                             double tau=0.5);
     
     void* model;

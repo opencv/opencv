@@ -539,7 +539,7 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
 BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(double alphaT,
     double sigma, int nmixtures, bool postFiltering, double minArea,
     bool detectShadows, bool removeForeground, double Tb, double Tg,
-    double TB, double CT, uchar shadowValue, double tau)
+    double TB, double CT, int shadowValue, double tau)
 {
     model = 0;
     initialize(Size(), alphaT, sigma, nmixtures, postFiltering, minArea,
@@ -550,7 +550,7 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(double alphaT,
 void BackgroundSubtractorMOG2::initialize(Size frameSize, double alphaT,
     double sigma, int nmixtures, bool postFiltering, double minArea,
     bool detectShadows, bool removeForeground, double Tb, double Tg,
-    double TB, double CT, uchar shadowValue, double tau)
+    double TB, double CT, int shadowValue, double tau)
 {
     if(!model)
         model = new CvGaussBGModel2;
@@ -605,10 +605,10 @@ void BackgroundSubtractorMOG2::operator()(const Mat& image0, Mat& fgmask0, doubl
     CvGaussBGModel2* bg_model = (CvGaussBGModel2*)model;
     
     CV_Assert(bg_model != 0);
-    Mat fgmask = fgmask0, image = image0;
+    Mat image = image0, fgmask = fgmask0;
     CV_Assert( image.type() == CV_8UC1 || image.type() == CV_8UC3 );
     
-    if( learningRate <= 0 )
+    if( learningRate < 0 )
         learningRate = bg_model->params.fAlphaT;
     if( learningRate >= 1 )
     {
@@ -653,22 +653,22 @@ void BackgroundSubtractorMOG2::operator()(const Mat& image0, Mat& fgmask0, doubl
                      
     icvUpdatePixelBackgroundGMM(&bg_model->data,&bg_model->params,alpha,image.data,fgmask.data);
     
-	if (!bg_model->params.bPostFiltering)
-        return;
-
-    //foreground filtering: filter out small regions    
-    morphologyEx(fgmask, fgmask, CV_MOP_OPEN, Mat());
-    morphologyEx(fgmask, fgmask, CV_MOP_CLOSE, Mat());
-    
-    vector<vector<Point> > contours;
-    findContours(fgmask, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
-    fgmask = Scalar::all(0);
-    
-    for( size_t i = 0; i < contours.size(); i++ )
+	if( bg_model->params.bPostFiltering )
     {
-        if( boundingRect(Mat(contours[i])).area() < bg_model->params.minArea )
-            continue;
-        drawContours(fgmask, contours, (int)i, Scalar::all(255), -1, 8, vector<Vec4i>(), 1);
+        //foreground filtering: filter out small regions    
+        morphologyEx(fgmask, fgmask, CV_MOP_OPEN, Mat());
+        morphologyEx(fgmask, fgmask, CV_MOP_CLOSE, Mat());
+        
+        vector<vector<Point> > contours;
+        findContours(fgmask, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+        fgmask = Scalar::all(0);
+        
+        for( size_t i = 0; i < contours.size(); i++ )
+        {
+            if( boundingRect(Mat(contours[i])).area() < bg_model->params.minArea )
+                continue;
+            drawContours(fgmask, contours, (int)i, Scalar::all(255), -1, 8, vector<Vec4i>(), 1);
+        }
     }
     
     fgmask.copyTo(fgmask0);
