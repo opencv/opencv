@@ -1,3 +1,8 @@
+The new OpenCV test engine is based
+on the Google C++ Testing Framework (GTest).
+Below is the original GTest README.
+-----------------------------------
+
 Google C++ Testing Framework
 ============================
 

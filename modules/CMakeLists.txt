@@ -13,6 +13,7 @@ if(MSVC OR MINGW)
    endif()
 endif()
 
+add_subdirectory(gtest)
 add_subdirectory(highgui)
 add_subdirectory(imgproc)
 add_subdirectory(legacy)

@@ -16,7 +16,3 @@ endif()
 if(WITH_TIFF AND NOT TIFF_FOUND)
 	add_subdirectory(libtiff)
 endif()
-
-if(0)
-add_subdirectory(gtest)
-endif()
