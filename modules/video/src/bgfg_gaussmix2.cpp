@@ -63,7 +63,7 @@
 //
 //
 //
-//Example usage as part of the CvBGStatModel:
+// Example usage as part of the CvBGStatModel:
 // CvBGStatModel* bg_model = cvCreateGaussianBGModel2( first_frame );
 //
 // //update for each frame
@@ -76,10 +76,109 @@
 //Date: 27-April-2005, Version:0.9
 ///////////*/
 
-#include "cvaux.h"
-#include "cvaux_mog2.h"
+#include "precomp.hpp"
 
-int _icvRemoveShadowGMM(long posPixel, 
+#define CV_BG_MODEL_MOG2		3			/* "Mixture of Gaussians 2".	*/
+
+/* default parameters of gaussian background detection algorithm */
+#define CV_BGFG_MOG2_STD_THRESHOLD            4.0f     /* lambda=2.5 is 99% */
+#define CV_BGFG_MOG2_WINDOW_SIZE              500      /* Learning rate; alpha = 1/CV_GBG_WINDOW_SIZE */
+#define CV_BGFG_MOG2_BACKGROUND_THRESHOLD     0.9f     /* threshold sum of weights for background test */
+#define CV_BGFG_MOG2_STD_THRESHOLD_GENERATE   3.0f     /* lambda=2.5 is 99% */
+#define CV_BGFG_MOG2_NGAUSSIANS               5        /* = K = number of Gaussians in mixture */
+#define CV_BGFG_MOG2_SIGMA_INIT               15.0f
+#define CV_BGFG_MOG2_MINAREA                  15.0f
+
+/* additional parameters */
+#define CV_BGFG_MOG2_CT					      0.05f     /* complexity reduction prior constant 0 - no reduction of number of components*/
+#define CV_BGFG_MOG2_SHADOW_VALUE             127       /* value to use in the segmentation mask for shadows, sot 0 not to do shadow detection*/
+#define CV_BGFG_MOG2_SHADOW_TAU               0.5f      /* Tau - shadow threshold, see the paper for explanation*/
+
+struct CvGaussBGStatModel2Params
+{  
+	bool bPostFiltering;//defult 1 - do postfiltering 
+    double  minArea; // for postfiltering
+    
+	bool bShadowDetection;//default 1 - do shadow detection 
+	bool bRemoveForeground;//default 0, set to 1 to remove foreground pixels from the image and return background image
+	bool bInit;//default 1, faster updates at start
+    
+	/////////////////////////
+	//very important parameters - things you will change
+	////////////////////////
+	float fAlphaT;
+	//alpha - speed of update - if the time interval you want to average over is T
+	//set alpha=1/T. It is also usefull at start to make T slowly increase
+	//from 1 until the desired T
+	float fTb;
+	//Tb - threshold on the squared Mahalan. dist. to decide if it is well described
+	//by the background model or not. Related to Cthr from the paper.
+	//This does not influence the update of the background. A typical value could be 4 sigma
+	//and that is Tb=4*4=16;
+	
+	/////////////////////////
+	//less important parameters - things you might change but be carefull
+	////////////////////////
+	float fTg;
+	//Tg - threshold on the squared Mahalan. dist. to decide 
+	//when a sample is close to the existing components. If it is not close
+	//to any a new component will be generated. I use 3 sigma => Tg=3*3=9.
+	//Smaller Tg leads to more generated components and higher Tg might make
+	//lead to small number of components but they can grow too large
+	float fTB;//1-cf from the paper
+	//TB - threshold when the component becomes significant enough to be included into
+	//the background model. It is the TB=1-cf from the paper. So I use cf=0.1 => TB=0.
+	//For alpha=0.001 it means that the mode should exist for approximately 105 frames before
+	//it is considered foreground
+	float fSigma;
+	//initial standard deviation  for the newly generated components. 
+	//It will will influence the speed of adaptation. A good guess should be made. 
+	//A simple way is to estimate the typical standard deviation from the images.
+	//I used here 10 as a reasonable value
+	float fCT;//CT - complexity reduction prior
+	//this is related to the number of samples needed to accept that a component
+	//actually exists. We use CT=0.05 of all the samples. By setting CT=0 you get
+	//the standard Stauffer&Grimson algorithm (maybe not exact but very similar)
+    
+	//even less important parameters
+	int nM;//max number of modes - const - 4 is usually enough
+    
+	//shadow detection parameters
+	unsigned char nShadowDetection;//do shadow detection - insert this value as the detection result
+	float fTau;
+	// Tau - shadow threshold. The shadow is detected if the pixel is darker
+	//version of the background. Tau is a threshold on how much darker the shadow can be.
+	//Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
+	//See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+};
+
+struct CvPBGMMGaussian
+{
+	float sigma;
+	float muR;
+	float muG;
+	float muB;
+	float weight;
+};
+
+struct CvGaussBGStatModel2Data
+{  
+	int nWidth,nHeight,nSize,nNBands;//image info
+	// dynamic array for the mixture of Gaussians
+    std::vector<CvPBGMMGaussian> rGMM;
+    std::vector<uchar> rnUsedModes;//number of Gaussian components per pixel
+};
+
+//only foreground image is updated
+//no filtering included
+struct CvGaussBGModel2
+{
+    CvGaussBGStatModel2Params params;
+	CvGaussBGStatModel2Data   data;
+	int                       countFrames;
+};
+
+static int _icvRemoveShadowGMM(long posPixel, 
 								float red, float green, float blue, 
 								unsigned char nModes, 
 								CvPBGMMGaussian* m_aGaussians,
@@ -137,7 +236,7 @@ int _icvRemoveShadowGMM(long posPixel,
 	return 0;
 }
 
-int _icvUpdatePixelBackgroundGMM(long posPixel, 
+static int _icvUpdatePixelBackgroundGMM(long posPixel, 
 								float red, float green, float blue, 
 								unsigned char* pModesUsed, 
 								CvPBGMMGaussian* m_aGaussians,
@@ -341,7 +440,7 @@ int _icvUpdatePixelBackgroundGMM(long posPixel,
     return bBackground;
 }
 
-void _icvReplacePixelBackgroundGMM(long pos, 
+static void _icvReplacePixelBackgroundGMM(long pos, 
 								unsigned char* pData, 
 								CvPBGMMGaussian* m_aGaussians)
 {
@@ -351,11 +450,11 @@ void _icvReplacePixelBackgroundGMM(long pos,
 }
 
 
-void icvUpdatePixelBackgroundGMM(CvGaussBGStatModel2Data* pGMMData,CvGaussBGStatModel2Params* pGMM, float m_fAlphaT, unsigned char* data,unsigned char* output)
+static void icvUpdatePixelBackgroundGMM(CvGaussBGStatModel2Data* pGMMData,CvGaussBGStatModel2Params* pGMM, float m_fAlphaT, unsigned char* data,unsigned char* output)
 {
 	int size=pGMMData->nSize;
 	unsigned char* pDataCurrent=data;
-	unsigned char* pUsedModes=pGMMData->rnUsedModes;
+	unsigned char* pUsedModes=&pGMMData->rnUsedModes[0];
 	unsigned char* pDataOutput=output;
 	//some constants
 	int m_nM=pGMM->nM;
@@ -368,7 +467,7 @@ void icvUpdatePixelBackgroundGMM(CvGaussBGStatModel2Data* pGMMData,CvGaussBGStat
 	float m_fCT=pGMM->fCT;//CT - complexity reduction prior 
 	float m_fPrune=-m_fAlphaT*m_fCT;
 	float m_fTau=pGMM->fTau;
-	CvPBGMMGaussian* m_aGaussians=pGMMData->rGMM;
+	CvPBGMMGaussian* m_aGaussians=&pGMMData->rGMM[0];
 	long posPixel=0;
 	bool m_bShadowDetection=pGMM->bShadowDetection;
 	unsigned char m_nShadowDetection=pGMM->nShadowDetection;
@@ -427,214 +526,154 @@ void icvUpdatePixelBackgroundGMM(CvGaussBGStatModel2Data* pGMMData,CvGaussBGStat
 	}
 }
 
-//////////////////////////////////////////////
-//implementation as part of the CvBGStatModel
-static void CV_CDECL icvReleaseGaussianBGModel2( CvGaussBGModel2** bg_model );
-static int CV_CDECL icvUpdateGaussianBGModel2( IplImage* curr_frame, CvGaussBGModel2*  bg_model );
 
-
-CV_IMPL CvBGStatModel*
-cvCreateGaussianBGModel2( IplImage* first_frame, CvGaussBGStatModel2Params* parameters )
+namespace cv
 {
-    CvGaussBGModel2* bg_model = 0;
-	int w,h,size;
+
+BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
+{
+    model = 0;
+    initialize(Size(), 0);
+}
+
+BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(double alphaT,
+    double sigma, int nmixtures, bool postFiltering, double minArea,
+    bool detectShadows, bool removeForeground, double Tb, double Tg,
+    double TB, double CT, uchar shadowValue, double tau)
+{
+    model = 0;
+    initialize(Size(), alphaT, sigma, nmixtures, postFiltering, minArea,
+               detectShadows, removeForeground, Tb, Tg, TB, CT, shadowValue, tau);
+}
+
     
-    CV_FUNCNAME( "cvCreateGaussianBGModel2" );
+void BackgroundSubtractorMOG2::initialize(Size frameSize, double alphaT,
+    double sigma, int nmixtures, bool postFiltering, double minArea,
+    bool detectShadows, bool removeForeground, double Tb, double Tg,
+    double TB, double CT, uchar shadowValue, double tau)
+{
+    if(!model)
+        model = new CvGaussBGModel2;
     
-    __BEGIN__;
-
-	CvGaussBGStatModel2Params params;
-    
-    if( !CV_IS_IMAGE(first_frame) )
-        CV_ERROR( CV_StsBadArg, "Invalid or NULL first_frame parameter" );
-
-	if( !(first_frame->nChannels==3) )
-        CV_ERROR( CV_StsBadArg, "Need three channel image (RGB)" );
-
-	CV_CALL( bg_model = (CvGaussBGModel2*)cvAlloc( sizeof(*bg_model) ));
-    memset( bg_model, 0, sizeof(*bg_model) );
-    bg_model->type = CV_BG_MODEL_MOG2;
-    bg_model->release = (CvReleaseBGStatModel)icvReleaseGaussianBGModel2;
-    bg_model->update = (CvUpdateBGStatModel)icvUpdateGaussianBGModel2;
-
-    //init parameters	
-    if( parameters == NULL )
-      {                        
-		/* These constants are defined in cvaux/include/cvaux.h: */
-		params.bRemoveForeground=0;
-		params.bShadowDetection = 1;
-		params.bPostFiltering=0;
-		params.minArea=CV_BGFG_MOG2_MINAREA;
-
-		//set parameters
-		// K - max number of Gaussians per pixel
-		params.nM = CV_BGFG_MOG2_NGAUSSIANS;//4;			
-		// Tb - the threshold - n var
-		//pGMM->fTb = 4*4;
-		params.fTb = CV_BGFG_MOG2_STD_THRESHOLD*CV_BGFG_MOG2_STD_THRESHOLD;
-		// Tbf - the threshold
-		//pGMM->fTB = 0.9f;//1-cf from the paper 
-		params.fTB = CV_BGFG_MOG2_BACKGROUND_THRESHOLD;
-		// Tgenerate - the threshold
-		params.fTg = CV_BGFG_MOG2_STD_THRESHOLD_GENERATE*CV_BGFG_MOG2_STD_THRESHOLD_GENERATE;//update the mode or generate new
-		//pGMM->fSigma= 11.0f;//sigma for the new mode
-		params.fSigma= CV_BGFG_MOG2_SIGMA_INIT;
-		// alpha - the learning factor
-		params.fAlphaT=1.0f/CV_BGFG_MOG2_WINDOW_SIZE;//0.003f;
-		// complexity reduction prior constant
-		params.fCT=CV_BGFG_MOG2_CT;//0.05f;
-
-		//shadow
-		// Shadow detection
-		params.nShadowDetection = CV_BGFG_MOG2_SHADOW_VALUE;//value 0 to turn off
-		params.fTau = CV_BGFG_MOG2_SHADOW_TAU;//0.5f;// Tau - shadow threshold
-    }
-    else
-    {
-        params = *parameters;
-    }
-
-	bg_model->params = params;
-
-	//allocate GMM data
-	w=first_frame->width;
-	h=first_frame->height;
-	size=w*h;
-
-	bg_model->data.nWidth=w;
-	bg_model->data.nHeight=h;
-	bg_model->data.nNBands=3;
-	bg_model->data.nSize=size;
-
-	//GMM for each pixel
-	bg_model->data.rGMM=(CvPBGMMGaussian*) malloc(size * params.nM * sizeof(CvPBGMMGaussian));
-	//used modes per pixel
-	bg_model->data.rnUsedModes = (unsigned char* ) malloc(size);
-	memset(bg_model->data.rnUsedModes,0,size);//no modes used
-  
-    //prepare storages    
-    CV_CALL( bg_model->background = cvCreateImage(cvSize(w,h), IPL_DEPTH_8U, first_frame->nChannels));
-    CV_CALL( bg_model->foreground = cvCreateImage(cvSize(w,h), IPL_DEPTH_8U, 1));
-    
-	//for eventual filtering
-    CV_CALL( bg_model->storage = cvCreateMemStorage());
-	
-	bg_model->countFrames = 0;
-
-    __END__;
-    
-    if( cvGetErrStatus() < 0 )
-    {
-        CvBGStatModel* base_ptr = (CvBGStatModel*)bg_model;
+    CvGaussBGModel2* bg_model = (CvGaussBGModel2*)model;
         
-        if( bg_model && bg_model->release )
-            bg_model->release( &base_ptr );
-        else
-            cvFree( &bg_model );
-        bg_model = 0;
-    }
+    bg_model->params.bRemoveForeground=removeForeground;
+    bg_model->params.bShadowDetection = detectShadows;
+    bg_model->params.bPostFiltering = postFiltering;
+    bg_model->params.minArea = minArea;
+    bg_model->params.nM = nmixtures;
+    bg_model->params.fTb = Tb;
+    bg_model->params.fTB = TB;
+    bg_model->params.fTg = Tg;
+    bg_model->params.fSigma = sigma;
+    bg_model->params.fAlphaT = alphaT;
+    bg_model->params.fCT = CT;
+    bg_model->params.nShadowDetection = shadowValue;
+    bg_model->params.fTau = tau;
     
-    return (CvBGStatModel*)bg_model;
-}
-
-
-static void CV_CDECL
-icvReleaseGaussianBGModel2( CvGaussBGModel2** _bg_model )
-{
-    CV_FUNCNAME( "icvReleaseGaussianBGModel2" );
-
-    __BEGIN__;
+    int w = frameSize.width;
+    int h = frameSize.height;
+    int size = w*h;
     
-    if( !_bg_model )
-        CV_ERROR( CV_StsNullPtr, "" );
-
-    if( *_bg_model )
+    if( (bg_model->data.nWidth != w ||
+        bg_model->data.nHeight != h) &&
+        w > 0 && h > 0 )
     {
-        CvGaussBGModel2* bg_model = *_bg_model;
-
-		free (bg_model->data.rGMM);
-		free (bg_model->data.rnUsedModes);
-
-        cvReleaseImage( &bg_model->background );
-        cvReleaseImage( &bg_model->foreground );
-        cvReleaseMemStorage(&bg_model->storage);
-        memset( bg_model, 0, sizeof(*bg_model) );
-        cvFree( _bg_model );
+        bg_model->data.nWidth=w;
+        bg_model->data.nHeight=h;
+        bg_model->data.nNBands=3;
+        bg_model->data.nSize=size;
+        
+        //GMM for each pixel
+        bg_model->data.rGMM.resize(size * bg_model->params.nM);
     }
-
-    __END__;
+    //used modes per pixel
+    bg_model->data.rnUsedModes.resize(0);
+    bg_model->data.rnUsedModes.resize(size, (uchar)0);
+    bg_model->params.bInit = true;
+    bg_model->countFrames = 0;
 }
 
-
-static int CV_CDECL
-icvUpdateGaussianBGModel2( IplImage* curr_frame, CvGaussBGModel2*  bg_model )
+    
+BackgroundSubtractorMOG2::~BackgroundSubtractorMOG2()
 {
+    delete (CvGaussBGModel2*)model;
+}
+
+void BackgroundSubtractorMOG2::operator()(const Mat& image0, Mat& fgmask0, double learningRate)
+{
+    CvGaussBGModel2* bg_model = (CvGaussBGModel2*)model;
+    
+    CV_Assert(bg_model != 0);
+    Mat fgmask = fgmask0, image = image0;
+    CV_Assert( image.type() == CV_8UC1 || image.type() == CV_8UC3 );
+    
+    if( learningRate <= 0 )
+        learningRate = bg_model->params.fAlphaT;
+    if( learningRate >= 1 )
+    {
+        learningRate = 1;
+        bg_model->params.bInit = true;
+    }
+    if( image.size() != Size(bg_model->data.nWidth, bg_model->data.nHeight) )
+        initialize(image.size(), learningRate, bg_model->params.fSigma,
+                   bg_model->params.nM, bg_model->params.bPostFiltering,
+                   bg_model->params.minArea, bg_model->params.bShadowDetection,
+                   bg_model->params.bRemoveForeground,
+                   bg_model->params.fTb, bg_model->params.fTg, bg_model->params.fTB,
+                   bg_model->params.fCT, bg_model->params.nShadowDetection, bg_model->params.fTau);
+    
     //int i, j, k, n;
-    int region_count = 0;
-    CvSeq *first_seq = NULL, *prev_seq = NULL, *seq = NULL;
-	float alpha,alphaInit;
+	float alpha = (float)bg_model->params.fAlphaT;
 	bg_model->countFrames++;
-	alpha=bg_model->params.fAlphaT;
-
-	if (bg_model->params.bInit){
-		//faster initial updates
-		alphaInit=(1.0f/(2*bg_model->countFrames+1));
-		if (alphaInit>alpha)
-		{
-			alpha=alphaInit;
-		}
-		else
-		{
-			bg_model->params.bInit=0;
-		}
-	}
-
-	icvUpdatePixelBackgroundGMM(&bg_model->data,&bg_model->params,alpha,(unsigned char*)curr_frame->imageData,(unsigned char*)bg_model->foreground->imageData);
     
-	if (bg_model->params.bPostFiltering==1)
-	{
-    //foreground filtering
-
-    //filter small regions
-    cvClearMemStorage(bg_model->storage);
-    
-    cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_OPEN, 1 );
-    cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_CLOSE, 1 );
-    
-    cvFindContours( bg_model->foreground, bg_model->storage, &first_seq, sizeof(CvContour), CV_RETR_LIST );
-    for( seq = first_seq; seq; seq = seq->h_next )
+	if (bg_model->params.bInit)
     {
-        CvContour* cnt = (CvContour*)seq;
-        if( cnt->rect.width * cnt->rect.height < bg_model->params.minArea )
-        {
-            //delete small contour
-            prev_seq = seq->h_prev;
-            if( prev_seq )
-            {
-                prev_seq->h_next = seq->h_next;
-                if( seq->h_next ) seq->h_next->h_prev = prev_seq;
-            }
-            else
-            {
-                first_seq = seq->h_next;
-                if( seq->h_next ) seq->h_next->h_prev = NULL;
-            }
-        }
+		//faster initial updates
+		float alphaInit = 1.0f/(2*bg_model->countFrames+1);
+		if( alphaInit > alpha )
+			alpha = alphaInit;
+		else
+			bg_model->params.bInit = false;
+	}
+    
+    if( !image.isContinuous() || image.channels() != 3 )
+    {
+        image.release();
+        image.create(image0.size(), CV_8UC3);
+        if( image0.type() == image.type() )
+            image0.copyTo(image);
         else
-        {
-            region_count++;
-        }
+            cvtColor(image0, image, CV_GRAY2BGR);
     }
-    bg_model->foreground_regions = first_seq;
-    cvZero(bg_model->foreground);
-    cvDrawContours(bg_model->foreground, first_seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
-   
-	return region_count; 
-	}
-	else
-	{
-		return 1;
-	}
+
+    if( !fgmask.isContinuous() )
+        fgmask.release();
+    fgmask.create(image.size(), CV_8UC1);
+                     
+    icvUpdatePixelBackgroundGMM(&bg_model->data,&bg_model->params,alpha,image.data,fgmask.data);
+    
+	if (!bg_model->params.bPostFiltering)
+        return;
+
+    //foreground filtering: filter out small regions    
+    morphologyEx(fgmask, fgmask, CV_MOP_OPEN, Mat());
+    morphologyEx(fgmask, fgmask, CV_MOP_CLOSE, Mat());
+    
+    vector<vector<Point> > contours;
+    findContours(fgmask, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+    fgmask = Scalar::all(0);
+    
+    for( size_t i = 0; i < contours.size(); i++ )
+    {
+        if( boundingRect(Mat(contours[i])).area() < bg_model->params.minArea )
+            continue;
+        drawContours(fgmask, contours, (int)i, Scalar::all(255), -1, 8, vector<Vec4i>(), 1);
+    }
+    
+    fgmask.copyTo(fgmask0);
+}
+
 }
 
 /* End of file. */

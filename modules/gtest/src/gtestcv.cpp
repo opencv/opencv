@@ -51,14 +51,15 @@ int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
 
 Mat randomMat(RNG& rng, Size size, int type, bool useRoi)
 {
-    
+    return Mat();
 }
 
 Mat randomMat(RNG& rng, const vector<int>& size, int type, bool useRoi)
 {
+    return Mat();
 }
     
-Mat add(const Mat& _a, double alpha, const Mat& _b, double beta,
+void add(const Mat& _a, double alpha, const Mat& _b, double beta,
         Scalar gamma, Mat& c, int ctype, bool calcAbs)
 {
     Mat a = _a, b = _b;
@@ -95,7 +96,7 @@ Mat add(const Mat& _a, double alpha, const Mat& _b, double beta,
     
     NAryMatIterator it(arrays, planes, 3);
     int i, nplanes = it.nplanes, cn=a.channels();
-    size_t total = planes[0].total(), maxsize = min(12*12*max(12/cn, 1), total);
+    size_t total = planes[0].total(), maxsize = std::min((size_t)12*12*std::max(12/cn, 1), total);
     
     CV_Assert(planes[0].rows == 1);
     buf[0].create(1, (int)maxsize, CV_64FC(cn));
@@ -142,8 +143,8 @@ Mat add(const Mat& _a, double alpha, const Mat& _b, double beta,
 }
 
 
-static template<typename _Tp1, typename _Tp2> inline void
-convert(const _Tp1* src, _Tp2* dst, size_t total, double alpha, double beta)
+template<typename _Tp1, typename _Tp2> inline void
+convert_(const _Tp1* src, _Tp2* dst, size_t total, double alpha, double beta)
 {
     size_t i;
     if( alpha == 1 && beta == 0 )
@@ -155,6 +156,37 @@ convert(const _Tp1* src, _Tp2* dst, size_t total, double alpha, double beta)
     else
         for( i = 0; i < total; i++ )
             dst[i] = saturate_cast<_Tp2>(src[i]*alpha + beta);
+}
+
+template<typename _Tp> inline void
+convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, double beta)
+{
+    switch( CV_MAT_DEPTH(dtype) )
+    {
+    case CV_8U:
+        convert_(src, (uchar*)dst, total, alpha, beta);
+        break;
+    case CV_8S:
+        convert_(src, (schar*)dst, total, alpha, beta);
+        break;
+    case CV_16U:
+        convert_(src, (ushort*)dst, total, alpha, beta);
+        break;
+    case CV_16S:
+        convert_(src, (short*)dst, total, alpha, beta);
+        break;
+    case CV_32S:
+        convert_(src, (int*)dst, total, alpha, beta);
+        break;
+    case CV_32F:
+        convert_(src, (float*)dst, total, alpha, beta);
+        break;
+    case CV_64F:
+        convert_(src, (double*)dst, total, alpha, beta);
+        break;
+    default:
+        CV_Assert(0);
+    }
 }
     
 void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
@@ -176,7 +208,7 @@ void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
     Mat planes[2];
     
     NAryMatIterator it(arrays, planes, 2);
-    size_t j, total = total = planes[0].total()*planes[0].channels();
+    size_t total = planes[0].total()*planes[0].channels();
     int i, nplanes = it.nplanes;
     
     for( i = 0; i < nplanes; i++, ++it)
@@ -186,15 +218,27 @@ void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
         
         switch( src.depth() )
         {
-        case 
-        
-        }
-        
-        for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize )
-        {
-            if( mptr[j] )
-                for( k = 0; k < elemSize; k++ )
-                    dptr[k] = sptr[k];
+        case CV_8U:
+            convertTo((const uchar*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_8S:
+            convertTo((const schar*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_16U:
+            convertTo((const ushort*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_16S:
+            convertTo((const short*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_32S:
+            convertTo((const int*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_32F:
+            convertTo((const float*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_64F:
+            convertTo((const double*)sptr, dptr, dtype, total, alpha, beta);
+            break;
         }
     }
 }
@@ -246,7 +290,7 @@ void copy(const Mat& src, Mat& dst, const Mat& mask)
 void set(Mat& dst, const Scalar& gamma, const Mat& mask)
 {
     double buf[12];
-    scalarToRawData(gama, &buf, dst.type(), dst.channels());
+    scalarToRawData(gamma, &buf, dst.type(), dst.channels());
     const uchar* gptr = (const uchar*)&buf[0];
     
     if(mask.empty())
@@ -255,7 +299,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
         Mat plane;
         NAryMatIterator it(arrays, &plane, 1);
         int i, nplanes = it.nplanes;
-        size_t j, k, elemSize = dst.elemSize(), planeSize = planes[0].total()*elemSize;
+        size_t j, k, elemSize = dst.elemSize(), planeSize = plane.total()*elemSize;
         
         for( k = 1; k < elemSize; k++ )
             if( gptr[k] != gptr[0] )
@@ -274,7 +318,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
                         dptr[k] = gptr[k];
             }
             else
-                memcpy(dtr, dst.data, planeSize);
+                memcpy(dptr, dst.data, planeSize);
         }
         return;
     }
@@ -285,7 +329,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
     Mat planes[2];
     
     NAryMatIterator it(arrays, planes, 2);
-    size_t j, k, elemSize = src.elemSize(), total = planes[0].total();
+    size_t j, k, elemSize = dst.elemSize(), total = planes[0].total();
     int i, nplanes = it.nplanes;
     
     for( i = 0; i < nplanes; i++, ++it)
@@ -303,7 +347,7 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
 }
     
     
-void minMaxFilter(const Mat& a, Mat& maxresult, const Mat& minresult, const Mat& kernel, Point anchor);
+/*void minMaxFilter(const Mat& a, Mat& maxresult, const Mat& minresult, const Mat& kernel, Point anchor);
 void filter2D(const Mat& src, Mat& dst, int ddepth, const Mat& kernel, Point anchor, double delta, int borderType);
 void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int right, int borderType, Scalar borderValue);
 void minMaxLoc(const Mat& src, double* maxval, double* minval,
@@ -314,6 +358,6 @@ bool cmpEps(const Mat& src1, const Mat& src2, int int_maxdiff, int flt_maxulp, v
 void logicOp(const Mat& src1, const Mat& src2, Mat& dst, char c);
 void logicOp(const Mat& src, const Scalar& s, Mat& dst, char c);
 void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop);
-void compare(const Mat& src, const Scalar& s, Mat& dst, int cmpop);    
+void compare(const Mat& src, const Scalar& s, Mat& dst, int cmpop);*/
 
 }

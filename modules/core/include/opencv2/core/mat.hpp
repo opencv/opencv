@@ -679,7 +679,7 @@ inline Size Mat::MSize::operator()() const
     CV_DbgAssert(p[-1] <= 2); 
     return Size(p[1], p[0]);
 }
-inline int Mat::MSize::operator[](int i) const { return p[i]; }
+inline const int& Mat::MSize::operator[](int i) const { return p[i]; }
 inline int& Mat::MSize::operator[](int i) { return p[i]; }
 inline Mat::MSize::operator const int*() const { return p; }
 
@@ -704,7 +704,7 @@ inline bool Mat::MSize::operator != (const MSize& sz) const
     
 inline Mat::MStep::MStep() { p = buf; p[0] = p[1] = 0; }
 inline Mat::MStep::MStep(size_t s) { p = buf; p[0] = s; p[1] = 0; }
-inline size_t Mat::MStep::operator[](int i) const { return p[i]; }
+inline const size_t& Mat::MStep::operator[](int i) const { return p[i]; }
 inline size_t& Mat::MStep::operator[](int i) { return p[i]; }
 inline Mat::MStep::operator size_t() const
 {

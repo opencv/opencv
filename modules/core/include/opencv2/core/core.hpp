@@ -1779,7 +1779,7 @@ public:
     {
         MSize(int* _p);
         Size operator()() const;
-        int operator[](int i) const;
+        const int& operator[](int i) const;
         int& operator[](int i);
         operator const int*() const;
         bool operator == (const MSize& sz) const;
@@ -1792,7 +1792,7 @@ public:
     {
         MStep();
         MStep(size_t s);
-        size_t operator[](int i) const;
+        const size_t& operator[](int i) const;
         size_t& operator[](int i);
         operator size_t() const;
         MStep& operator = (size_t s);

@@ -399,6 +399,55 @@ public:
     double noiseSigma;
 };	
 
+
+class CV_EXPORTS_W BackgroundSubtractorMOG2 : public BackgroundSubtractor
+{
+public:
+    //! the default constructor
+    CV_WRAP BackgroundSubtractorMOG2();
+    //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
+    CV_WRAP BackgroundSubtractorMOG2(double alphaT,
+                                     double sigma=15,
+                                     int nmixtures=5,
+                                     bool postFiltering=false,
+                                     double minArea=15,
+                                     bool detectShadows=true,
+                                     bool removeForeground=false,
+                                     
+                                     double Tb=16,
+                                     double Tg=9,
+                                     double TB=0.9,
+                                     double CT=0.05,
+                                     
+                                     uchar shadowOutputValue=127,
+                                     double tau=0.5);
+    
+    //! the destructor
+    virtual ~BackgroundSubtractorMOG2();
+    //! the update operator
+    virtual void operator()(const Mat& image, Mat& fgmask, double learningRate=0);
+    
+    //! re-initiaization method
+    virtual void initialize(Size frameSize,
+                            double alphaT,
+                            double sigma=15,
+                            int nmixtures=5,
+                            bool postFiltering=false,
+                            double minArea=15,
+                            bool detectShadows=true,
+                            bool removeForeground=false,
+                            
+                            double Tb=16,
+                            double Tg=9,
+                            double TB=0.9,
+                            double CT=0.05,
+                            
+                            uchar nShadowDetection=127,
+                            double tau=0.5);
+    
+    void* model;
+};	    
+    
 }
 #endif
 

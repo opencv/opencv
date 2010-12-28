@@ -33,7 +33,7 @@ CV_EXPORTS void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog
 CV_EXPORTS int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels);
 CV_EXPORTS Mat randomMat(RNG& rng, Size size, int type, bool useRoi);
 CV_EXPORTS Mat randomMat(RNG& rng, const vector<int>& size, int type, bool useRoi);
-CV_EXPORTS Mat add(const Mat& a, double alpha, const Mat& b, double beta,
+CV_EXPORTS void add(const Mat& a, double alpha, const Mat& b, double beta,
                       Scalar gamma, Mat& c, int ctype, bool calcAbs);
 CV_EXPORTS void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta);
 CV_EXPORTS void copy(const Mat& src, Mat& dst, const Mat& mask=Mat());
