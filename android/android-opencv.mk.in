@@ -31,7 +31,7 @@ ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/libs/armeabi-v7a
 #order of linking very important ---- may have stuff out of order here, but
 #important that modules that are more dependent come first...
 
-OPENCV_LIBS := $(OPENCV_LIB_DIRS) -lopencv_features2d  -lopencv_calib3d -lopencv_objdetect -lopencv_imgproc \
+OPENCV_LIBS := $(OPENCV_LIB_DIRS) -lopencv_calib3d -lopencv_features2d -lopencv_objdetect -lopencv_imgproc \
      -lopencv_video  -lopencv_highgui -lopencv_ml -lopencv_legacy -lopencv_core -lopencv_lapack -lopencv_flann \
     -lzlib -lpng -ljpeg -ljasper
 ANDROID_OPENCV_LIBS := $(ANDROID_OPENCV_LIB_DIRS) -landroid-opencv
