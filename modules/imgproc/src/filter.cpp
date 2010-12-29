@@ -1596,8 +1596,6 @@ struct SymmColumnVec_32f
                 {
                     f = _mm_load_ss(ky+k);
                     f = _mm_shuffle_ps(f, f, 0);
-                    S = src[k] + i;
-                    S2 = src[-k] + i;
                     x0 = _mm_sub_ps(_mm_load_ps(src[k]+i), _mm_load_ps(src[-k] + i));
                     s0 = _mm_add_ps(s0, _mm_mul_ps(x0, f));
                 }
@@ -1724,8 +1722,8 @@ struct SymmColumnSmallVec_32f
                 for( ; i <= width - 8; i += 8 )
                 {
                     __m128 s0 = d4, s1 = d4, x0, x1;
-                    x0 = _mm_sub_ps(_mm_load_ps(S0 + i), _mm_load_ps(S2 + i));
-                    x1 = _mm_sub_ps(_mm_load_ps(S0 + i + 4), _mm_load_ps(S2 + i + 4));
+                    x0 = _mm_sub_ps(_mm_load_ps(S2 + i), _mm_load_ps(S0 + i));
+                    x1 = _mm_sub_ps(_mm_load_ps(S2 + i + 4), _mm_load_ps(S0 + i + 4));
                     s0 = _mm_add_ps(s0, _mm_mul_ps(x0,k1));
                     s1 = _mm_add_ps(s1, _mm_mul_ps(x1,k1));
                     _mm_storeu_ps(dst + i, s0);
