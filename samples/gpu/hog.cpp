@@ -12,61 +12,56 @@ using namespace cv;
 
 //#define WRITE_VIDEO
 
-
-/** Contains all properties of application (including those which can be
-changed by user in runtime) */
-class Settings
+class Args
 {
 public:
-    /** Sets default values */
-    Settings();
-
-    /** Reads settings from command args */
-    static Settings Read(int argc, char** argv);
+    Args();
+    static Args read(int argc, char** argv);
 
     string src;
     bool src_is_video;
+    bool src_is_camera;
+    int camera_id;
+
     bool make_gray;
+
     bool resize_src;
-    double resize_src_scale;
+    int resized_width, resized_height;
+
     double scale;
     int nlevels;
     int gr_threshold;
     double hit_threshold;
+
     int win_width;
-    int win_stride_width;
-    int win_stride_height;
+    int win_stride_width, win_stride_height;
+
     bool gamma_corr;
 };
 
 
-/** Describes aplication logic */
 class App
 {
 public:
-    /** Initializes application */
-    App(const Settings& s);
+    App(const Args& s);
+    void run();
 
-    /** Runs demo using OpenCV highgui module for GUI building */
-    void RunOpencvGui();
+    void handleKey(char key);
 
-    /** Processes user keybord input */
-    void HandleKey(char key);
+    void hogWorkBegin();
+    void hogWorkEnd();
+    string hogWorkFps() const;
 
-    void HogWorkBegin();
-    void HogWorkEnd();
-    double HogWorkFps() const;
+    void workBegin();
+    void workEnd();
+    string workFps() const;
 
-    void WorkBegin();
-    void WorkEnd();
-    double WorkFps() const;
-
-    const string GetPerformanceSummary() const;
+    string message() const;
 
 private:
     App operator=(App&);
 
-    Settings settings;
+    Args args;
     bool running;
 
     bool use_gpu;
@@ -89,26 +84,29 @@ int main(int argc, char** argv)
 {
     try
     {
+        cout << "Histogram of Oriented Gradients descriptor and detector sample.\n";
         if (argc < 2)
         {
-            cout << "Usage:\nhog_gpu\n"
-                << "  -src <path_to_the_source>\n"
-                << "  [-src_is_video <true/false>] # says to interp. src as img or as video\n"
-                << "  [-make_gray <true/false>] # convert image to gray one or not\n"
-                << "  [-resize_src <true/false>] # do resize of the source image or not\n"
-                << "  [-resize_src_scale <double>] # preprocessing image scale factor\n"
-                << "  [-hit_threshold <double>] # classifying plane dist. threshold (0.0 usually)\n"
-                << "  [-scale <double>] # HOG window scale factor\n"
-                << "  [-nlevels <int>] # max number of HOG window scales\n"
-                << "  [-win_width <int>] # width of the window (48 or 64)\n"
-                << "  [-win_stride_width <int>] # distance by OX axis between neighbour wins\n"
-                << "  [-win_stride_height <int>] # distance by OY axis between neighbour wins\n"
-                << "  [-gr_threshold <int>] # merging similar rects constant\n"
-                << "  [-gamma_corr <int>] # do gamma correction or not\n";
+            cout << "\nUsage: hog_gpu\n"
+                << "  --src <path> # it's image file by default\n"
+                << "  [--src-is-video <true/false>] # says to interpretate src as video\n"
+                << "  [--src-is-camera <true/false>] # says to interpretate src as camera\n"
+                << "  [--make-gray <true/false>] # convert image to gray one or not\n"
+                << "  [--resize-src <true/false>] # do resize of the source image or not\n"
+                << "  [--src-width <int>] # resized image width\n"
+                << "  [--src-height <int>] # resized image height\n"
+                << "  [--hit-threshold <double>] # classifying plane distance threshold (0.0 usually)\n"
+                << "  [--scale <double>] # HOG window scale factor\n"
+                << "  [--nlevels <int>] # max number of HOG window scales\n"
+                << "  [--win-width <int>] # width of the window (48 or 64)\n"
+                << "  [--win-stride-width <int>] # distance by OX axis between neighbour wins\n"
+                << "  [--win-stride-height <int>] # distance by OY axis between neighbour wins\n"
+                << "  [--gr-threshold <int>] # merging similar rects constant\n"
+                << "  [--gamma-correct <int>] # do gamma correction or not\n";
             return 1;
         }
-        App app(Settings::Read(argc, argv));
-        app.RunOpencvGui();
+        App app(Args::read(argc, argv));
+        app.run();
     }
     catch (const Exception& e) { return cout << "Error: "  << e.what() << endl, 1; }
     catch (const exception& e) { return cout << "Error: "  << e.what() << endl, 1; }
@@ -117,56 +115,63 @@ int main(int argc, char** argv)
 }
 
 
-Settings::Settings()
+Args::Args()
 {
     src_is_video = false;
+    src_is_camera = false;
+    camera_id = 0;
+
     make_gray = false;
-    resize_src = true;
-    resize_src_scale = 1.5;
+
+    resize_src = false;
+    resized_width = 640;
+    resized_height = 480;
+
     scale = 1.05;
     nlevels = 13;
     gr_threshold = 8;
     hit_threshold = 1.4;
+
     win_width = 48;
     win_stride_width = 8;
     win_stride_height = 8;
+
     gamma_corr = true;
 }
 
 
-Settings Settings::Read(int argc, char** argv)
+Args Args::read(int argc, char** argv)
 {
-    cout << "Parsing command args" << endl;
-
-    Settings settings;
+    Args args;
     for (int i = 1; i < argc - 1; i += 2)
     {
         string key = argv[i];
         string val = argv[i + 1];
-        if (key == "-src") settings.src = val;
-        else if (key == "-src_is_video") settings.src_is_video = (val == "true");        
-        else if (key == "-make_gray") settings.make_gray = (val == "true");
-        else if (key == "-resize_src") settings.resize_src = (val == "true");
-        else if (key == "-resize_src_scale") settings.resize_src_scale = atof(val.c_str());
-        else if (key == "-hit_threshold") settings.hit_threshold = atof(val.c_str());
-        else if (key == "-scale") settings.scale = atof(val.c_str());
-        else if (key == "-nlevels") settings.nlevels = atoi(val.c_str());
-        else if (key == "-win_width") settings.win_width = atoi(val.c_str());
-        else if (key == "-win_stride_width") settings.win_stride_width = atoi(val.c_str());
-        else if (key == "-win_stride_height") settings.win_stride_height = atoi(val.c_str());
-        else if (key == "-gr_threshold") settings.gr_threshold = atoi(val.c_str());
-        else if (key == "-gamma_corr") settings.gamma_corr = atoi(val.c_str()) != 0;
-        else throw runtime_error((string("Unknown key: ") + key));
+        if (key == "--src") args.src = val;
+        else if (key == "--src-is-video") args.src_is_video = (val == "true");        
+        else if (key == "--src-is-camera") args.src_is_camera = (val == "true");        
+        else if (key == "--camera-id") args.camera_id = atoi(val.c_str());
+        else if (key == "--make-gray") args.make_gray = (val == "true");
+        else if (key == "--resize-src") args.resize_src = (val == "true");
+        else if (key == "--src-width") args.resized_width = atoi(val.c_str());
+        else if (key == "--src-height") args.resized_height = atoi(val.c_str());
+        else if (key == "--hit-threshold") args.hit_threshold = atof(val.c_str());
+        else if (key == "--scale") args.scale = atof(val.c_str());
+        else if (key == "--nlevels") args.nlevels = atoi(val.c_str());
+        else if (key == "--win-width") args.win_width = atoi(val.c_str());
+        else if (key == "--win-stride-width") args.win_stride_width = atoi(val.c_str());
+        else if (key == "--win-stride-height") args.win_stride_height = atoi(val.c_str());
+        else if (key == "--gr-threshold") args.gr_threshold = atoi(val.c_str());
+        else if (key == "--gamma-correct") args.gamma_corr = atoi(val.c_str()) != 0;
+        else throw runtime_error((string("unknown key: ") + key));
     }
-
-    cout << "Command args are parsed\n";
-    return settings;
+    return args;
 }
 
 
-App::App(const Settings &s)
+App::App(const Args& s)
 {
-    settings = s;
+    args = s;
     cout << "\nControls:\n"
          << "\tESC - exit\n"
          << "\tm - change mode GPU <-> CPU\n"
@@ -178,79 +183,81 @@ App::App(const Settings &s)
          << endl;
 
     use_gpu = true;
-    make_gray = settings.make_gray;
-    scale = settings.scale;
-    gr_threshold = settings.gr_threshold;
-    nlevels = settings.nlevels;
-    hit_threshold = settings.hit_threshold;
-    gamma_corr = settings.gamma_corr;
+    make_gray = args.make_gray;
+    scale = args.scale;
+    gr_threshold = args.gr_threshold;
+    nlevels = args.nlevels;
+    hit_threshold = args.hit_threshold;
+    gamma_corr = args.gamma_corr;
 
-    if (settings.win_width != 64 && settings.win_width != 48)
-        settings.win_width = 64;
+    if (args.win_width != 64 && args.win_width != 48)
+        args.win_width = 64;
 
     cout << "Scale: " << scale << endl;
+    if (args.resize_src)
+        cout << "Source size: (" << args.resized_width << ", " << args.resized_height << ")\n";
     cout << "Group threshold: " << gr_threshold << endl;
     cout << "Levels number: " << nlevels << endl;
-    cout << "Win width: " << settings.win_width << endl;
-    cout << "Win stride: (" << settings.win_stride_width << ", " << settings.win_stride_height << ")\n";
+    cout << "Win width: " << args.win_width << endl;
+    cout << "Win stride: (" << args.win_stride_width << ", " << args.win_stride_height << ")\n";
     cout << "Hit threshold: " << hit_threshold << endl;
     cout << "Gamma correction: " << gamma_corr << endl;
     cout << endl;
 }
 
 
-void App::RunOpencvGui()
+void App::run()
 {
     running = true;
 
-    Size win_size(settings.win_width, settings.win_width * 2); //(64, 128) or (48, 96)
-    Size win_stride(settings.win_stride_width, settings.win_stride_height);
+    Size win_size(args.win_width, args.win_width * 2); //(64, 128) or (48, 96)
+    Size win_stride(args.win_stride_width, args.win_stride_height);
 
     vector<float> detector;
-
-    if (win_size == Size(64, 128))
+    if (win_size == Size(64, 128)) 
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_64x128();
     else
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_48x96();
 
-    // GPU's HOG classifier
     cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 
                                    cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr, 
                                    cv::gpu::HOGDescriptor::DEFAULT_NLEVELS);
-    gpu_hog.setSVMDetector(detector);
-
-    // CPU's HOG classifier
     cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1, 
                               HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
+    gpu_hog.setSVMDetector(detector);
     cpu_hog.setSVMDetector(detector);
 
 #ifdef WRITE_VIDEO
     cv::VideoWriter video_writer;
-
     video_writer.open("output.avi", CV_FOURCC('x','v','i','d'), 24., cv::Size(640, 480), true);
-
     if (!video_writer.isOpened())
         throw std::runtime_error("can't create video writer");
 #endif
 
-    // Make endless cycle from video (if src is video)
     while (running)
     {
         VideoCapture vc;
         Mat frame;
 
-        if (settings.src_is_video)
+        if (args.src_is_video)
         {
-            vc.open(settings.src.c_str());
+            vc.open(args.src.c_str());
             if (!vc.isOpened())
-                throw runtime_error(string("Can't open video file: " + settings.src));
+                throw runtime_error(string("can't open video file: " + args.src));
+            vc >> frame;
+        }
+        else if (args.src_is_camera)
+        {
+            vc.open(args.camera_id);
+            if (!vc.isOpened())
+                throw runtime_error(string("can't open video file: " + args.src));
             vc >> frame;
         }
         else
         {
-            frame = imread(settings.src);
+            frame = imread(args.src);
             if (frame.empty())
-                throw runtime_error(string("Can't open image file: " + settings.src));
+                throw runtime_error(string("can't open image file: " + args.src));
         }
 
         Mat img_aux, img, img_to_show;
@@ -259,38 +266,34 @@ void App::RunOpencvGui()
         // Iterate over all frames
         while (running && !frame.empty())
         {
-            WorkBegin();
+            workBegin();
 
-            vector<Rect> found;
-
-            // Change format of the image (input must be 8UC3)
-            if (make_gray)
-                cvtColor(frame, img_aux, CV_BGR2GRAY);
-            else if (use_gpu)
-                cvtColor(frame, img_aux, CV_BGR2BGRA);
-            else
-                img_aux = frame;
+            // Change format of the image
+            if (make_gray) cvtColor(frame, img_aux, CV_BGR2GRAY);
+            else if (use_gpu) cvtColor(frame, img_aux, CV_BGR2BGRA);
+            else img_aux = frame;
 
             // Resize image
-            if (settings.resize_src)
-                resize(img_aux, img, Size(int(frame.cols * settings.resize_src_scale), int(frame.rows * settings.resize_src_scale)));
-            else
-                img = img_aux;
+            if (args.resize_src) resize(img_aux, img, Size(args.resized_width, args.resized_height));
+            else img = img_aux;
             img_to_show = img;
 
             gpu_hog.nlevels = nlevels;
             cpu_hog.nlevels = nlevels;
 
+            vector<Rect> found;
+
             // Perform HOG classification
-            HogWorkBegin();
+            hogWorkBegin();
             if (use_gpu)
             {
                 gpu_img = img;
-                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, Size(0, 0), scale, gr_threshold);
+                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, 
+                                         Size(0, 0), scale, gr_threshold);
             }
-            else
-                cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride, Size(0, 0), scale, gr_threshold);
-            HogWorkEnd();
+            else cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride, 
+                                          Size(0, 0), scale, gr_threshold);
+            hogWorkEnd();
 
             // Draw positive classified windows
             for (size_t i = 0; i < found.size(); i++)
@@ -299,17 +302,14 @@ void App::RunOpencvGui()
                 rectangle(img_to_show, r.tl(), r.br(), CV_RGB(0, 255, 0), 3);
             }
 
-            // Show results
-            putText(img_to_show, GetPerformanceSummary(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(0, 0, 255), 2);
+            putText(img_to_show, "FPS (HOG only): " + hogWorkFps(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
+            putText(img_to_show, "FPS (total): " + workFps(), Point(5, 65), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             imshow("opencv_gpu_hog", img_to_show);
-            HandleKey((char)waitKey(3));
+            handleKey((char)waitKey(3));
 
-            if (settings.src_is_video)
-            {
-                vc >> frame;
-            }
+            if (args.src_is_video || args.src_is_camera) vc >> frame;
 
-            WorkEnd();
+            workEnd();
 
 #ifdef WRITE_VIDEO
             cvtColor(img_to_show, img, CV_BGRA2BGR);
@@ -320,7 +320,7 @@ void App::RunOpencvGui()
 }
 
 
-void App::HandleKey(char key)
+void App::handleKey(char key)
 {
     switch (key)
     {
@@ -382,38 +382,35 @@ void App::HandleKey(char key)
 }
 
 
-inline void App::HogWorkBegin() { hog_work_begin = getTickCount(); }
+inline void App::hogWorkBegin() { hog_work_begin = getTickCount(); }
 
-
-inline void App::HogWorkEnd()
+inline void App::hogWorkEnd()
 {
     int64 delta = getTickCount() - hog_work_begin;
     double freq = getTickFrequency();
     hog_work_fps = freq / delta;
 }
 
+inline string App::hogWorkFps() const
+{
+    stringstream ss;
+    ss << hog_work_fps;
+    return ss.str();
+}
 
-inline double App::HogWorkFps() const { return hog_work_fps; }
 
+inline void App::workBegin() { work_begin = getTickCount(); }
 
-inline void App::WorkBegin() { work_begin = getTickCount(); }
-
-
-inline void App::WorkEnd()
+inline void App::workEnd()
 {
     int64 delta = getTickCount() - work_begin;
     double freq = getTickFrequency();
     work_fps = freq / delta;
 }
 
-
-inline double App::WorkFps() const { return work_fps; }
-
-
-inline const string App::GetPerformanceSummary() const
+inline string App::workFps() const
 {
     stringstream ss;
-    ss << (use_gpu ? "GPU" : "CPU") << " HOG FPS: " << setiosflags(ios::left) << setprecision(4) <<
-       setw(7) << HogWorkFps() << " Total FPS: " << setprecision(4) << setw(7) << WorkFps();
+    ss << work_fps;
     return ss.str();
 }

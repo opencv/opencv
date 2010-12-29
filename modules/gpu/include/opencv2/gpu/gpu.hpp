@@ -1178,21 +1178,25 @@ namespace cv
 
             size_t getDescriptorSize() const;
             size_t getBlockHistogramSize() const;
-            double getWinSigma() const;
+
+            void setSVMDetector(const vector<float>& detector);
+            bool checkDetectorSize() const;
 
             static vector<float> getDefaultPeopleDetector();
             static vector<float> getPeopleDetector_48x96();
             static vector<float> getPeopleDetector_64x128();
-            void setSVMDetector(const vector<float>& detector);
-            bool checkDetectorSize() const;
 
-            void detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0,
-                        Size win_stride=Size(), Size padding=Size());
+            void detect(const GpuMat& img, vector<Point>& found_locations, 
+                        double hit_threshold=0, Size win_stride=Size(), 
+                        Size padding=Size());
+
             void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations,
-                                  double hit_threshold=0, Size win_stride=Size(), Size padding=Size(),
-                                  double scale0=1.05, int group_threshold=2);
+                                  double hit_threshold=0, Size win_stride=Size(), 
+                                  Size padding=Size(), double scale0=1.05, 
+                                  int group_threshold=2);
 
-            void getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors,
+            void getDescriptors(const GpuMat& img, Size win_stride, 
+                                GpuMat& descriptors,
                                 int descr_format=DESCR_FORMAT_COL_BY_COL);
 
             Size win_size;
@@ -1208,6 +1212,7 @@ namespace cv
         protected:
             void computeBlockHistograms(const GpuMat& img);
             void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
+            double getWinSigma() const;
 
             static int numPartsWithin(int size, int part_size, int stride);
             static Size numPartsWithin(Size size, Size part_size, Size stride);
