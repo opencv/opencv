@@ -10,8 +10,6 @@
 using namespace std;
 using namespace cv;
 
-//#define WRITE_VIDEO
-
 class Args
 {
 public:
@@ -23,15 +21,21 @@ public:
     bool src_is_camera;
     int camera_id;
 
+    bool write_video;
+    string dst_video;
+    double dst_video_fps;
+
     bool make_gray;
 
     bool resize_src;
-    int resized_width, resized_height;
+    int width, height;
 
     double scale;
     int nlevels;
     int gr_threshold;
+
     double hit_threshold;
+    bool hit_threshold_auto;
 
     int win_width;
     int win_stride_width, win_stride_height;
@@ -93,8 +97,8 @@ int main(int argc, char** argv)
                 << "  [--src-is-camera <true/false>] # says to interpretate src as camera\n"
                 << "  [--make-gray <true/false>] # convert image to gray one or not\n"
                 << "  [--resize-src <true/false>] # do resize of the source image or not\n"
-                << "  [--src-width <int>] # resized image width\n"
-                << "  [--src-height <int>] # resized image height\n"
+                << "  [--width <int>] # resized image width\n"
+                << "  [--height <int>] # resized image height\n"
                 << "  [--hit-threshold <double>] # classifying plane distance threshold (0.0 usually)\n"
                 << "  [--scale <double>] # HOG window scale factor\n"
                 << "  [--nlevels <int>] # max number of HOG window scales\n"
@@ -102,15 +106,18 @@ int main(int argc, char** argv)
                 << "  [--win-stride-width <int>] # distance by OX axis between neighbour wins\n"
                 << "  [--win-stride-height <int>] # distance by OY axis between neighbour wins\n"
                 << "  [--gr-threshold <int>] # merging similar rects constant\n"
-                << "  [--gamma-correct <int>] # do gamma correction or not\n";
+                << "  [--gamma-correct <int>] # do gamma correction or not\n"
+                << "  [--write-video <bool>] # write video or not\n"
+                << "  [--dst-video <path>] # output video path\n"
+                << "  [--dst-video-fps <double>] # output video fps\n";
             return 1;
         }
         App app(Args::read(argc, argv));
         app.run();
     }
-    catch (const Exception& e) { return cout << "Error: "  << e.what() << endl, 1; }
-    catch (const exception& e) { return cout << "Error: "  << e.what() << endl, 1; }
-    catch(...) { return cout << "Unknown exception" << endl, 1; }
+    catch (const Exception& e) { return cout << "error: "  << e.what() << endl, 1; }
+    catch (const exception& e) { return cout << "error: "  << e.what() << endl, 1; }
+    catch(...) { return cout << "unknown exception" << endl, 1; }
     return 0;
 }
 
@@ -121,16 +128,20 @@ Args::Args()
     src_is_camera = false;
     camera_id = 0;
 
+    write_video = false;
+    dst_video_fps = 24.;
+
     make_gray = false;
 
     resize_src = false;
-    resized_width = 640;
-    resized_height = 480;
+    width = 640;
+    height = 480;
 
     scale = 1.05;
     nlevels = 13;
     gr_threshold = 8;
     hit_threshold = 1.4;
+    hit_threshold_auto = true;
 
     win_width = 48;
     win_stride_width = 8;
@@ -153,16 +164,23 @@ Args Args::read(int argc, char** argv)
         else if (key == "--camera-id") args.camera_id = atoi(val.c_str());
         else if (key == "--make-gray") args.make_gray = (val == "true");
         else if (key == "--resize-src") args.resize_src = (val == "true");
-        else if (key == "--src-width") args.resized_width = atoi(val.c_str());
-        else if (key == "--src-height") args.resized_height = atoi(val.c_str());
-        else if (key == "--hit-threshold") args.hit_threshold = atof(val.c_str());
+        else if (key == "--width") args.width = atoi(val.c_str());
+        else if (key == "--height") args.height = atoi(val.c_str());
+        else if (key == "--hit-threshold") 
+        { 
+            args.hit_threshold = atof(val.c_str()); 
+            args.hit_threshold_auto = false; 
+        }
         else if (key == "--scale") args.scale = atof(val.c_str());
         else if (key == "--nlevels") args.nlevels = atoi(val.c_str());
         else if (key == "--win-width") args.win_width = atoi(val.c_str());
         else if (key == "--win-stride-width") args.win_stride_width = atoi(val.c_str());
         else if (key == "--win-stride-height") args.win_stride_height = atoi(val.c_str());
         else if (key == "--gr-threshold") args.gr_threshold = atoi(val.c_str());
-        else if (key == "--gamma-correct") args.gamma_corr = atoi(val.c_str()) != 0;
+        else if (key == "--gamma-correct") args.gamma_corr = (val == "true");
+        else if (key == "--write-video") args.write_video = (val == "true");
+        else if (key == "--dst-video") args.dst_video = val;
+        else if (key == "--dst-video-fps") args.dst_video_fps= atof(val.c_str());
         else throw runtime_error((string("unknown key: ") + key));
     }
     return args;
@@ -187,7 +205,11 @@ App::App(const Args& s)
     scale = args.scale;
     gr_threshold = args.gr_threshold;
     nlevels = args.nlevels;
+
+    if (args.hit_threshold_auto)
+        args.hit_threshold = args.win_width == 48 ? 1.4 : 0.;
     hit_threshold = args.hit_threshold;
+
     gamma_corr = args.gamma_corr;
 
     if (args.win_width != 64 && args.win_width != 48)
@@ -195,7 +217,7 @@ App::App(const Args& s)
 
     cout << "Scale: " << scale << endl;
     if (args.resize_src)
-        cout << "Source size: (" << args.resized_width << ", " << args.resized_height << ")\n";
+        cout << "Resized source: (" << args.width << ", " << args.height << ")\n";
     cout << "Group threshold: " << gr_threshold << endl;
     cout << "Levels number: " << nlevels << endl;
     cout << "Win width: " << args.win_width << endl;
@@ -209,10 +231,12 @@ App::App(const Args& s)
 void App::run()
 {
     running = true;
+    cv::VideoWriter video_writer;
 
     Size win_size(args.win_width, args.win_width * 2); //(64, 128) or (48, 96)
     Size win_stride(args.win_stride_width, args.win_stride_height);
 
+    // Create HOG descriptors and detectors here
     vector<float> detector;
     if (win_size == Size(64, 128)) 
         detector = cv::gpu::HOGDescriptor::getPeopleDetector_64x128();
@@ -226,13 +250,6 @@ void App::run()
                               HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
     cpu_hog.setSVMDetector(detector);
-
-#ifdef WRITE_VIDEO
-    cv::VideoWriter video_writer;
-    video_writer.open("output.avi", CV_FOURCC('x','v','i','d'), 24., cv::Size(640, 480), true);
-    if (!video_writer.isOpened())
-        throw std::runtime_error("can't create video writer");
-#endif
 
     while (running)
     {
@@ -274,7 +291,7 @@ void App::run()
             else img_aux = frame;
 
             // Resize image
-            if (args.resize_src) resize(img_aux, img, Size(args.resized_width, args.resized_height));
+            if (args.resize_src) resize(img_aux, img, Size(args.width, args.height));
             else img = img_aux;
             img_to_show = img;
 
@@ -315,10 +332,18 @@ void App::run()
 
             workEnd();
 
-#ifdef WRITE_VIDEO
-            cvtColor(img_to_show, img, CV_BGRA2BGR);
-            video_writer << img;
-#endif
+            if (args.write_video)
+            {
+                if (!video_writer.isOpened())
+                {
+                    video_writer.open(args.dst_video, CV_FOURCC('x','v','i','d'), args.dst_video_fps, 
+                                      img_to_show.size(), true);
+                    if (!video_writer.isOpened())
+                        throw std::runtime_error("can't create video writer");
+                }
+                cvtColor(img_to_show, img, CV_BGRA2BGR);
+                video_writer << img;
+            }
         }
     }
 }
@@ -418,3 +443,4 @@ inline string App::workFps() const
     ss << work_fps;
     return ss.str();
 }
+
