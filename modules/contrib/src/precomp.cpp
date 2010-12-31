@@ -41,5 +41,4 @@
 
 #include "precomp.hpp"
 
-
 /* End of file. */

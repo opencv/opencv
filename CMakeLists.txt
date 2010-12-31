@@ -10,22 +10,26 @@
 # ----------------------------------------------------------------------------
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
+
+
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
 if(UNIX)
-  set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
+    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
 endif()
+
+
 # it _must_ go before PROJECT(OpenCV) in order to work
 if (NOT CMAKE_INSTALL_PREFIX)
-    if (WIN32)
+    if(WIN32)
         set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR} CACHE INTERNAL "" FORCE)
     elseif()
         set(CMAKE_INSTALL_PREFIX "/usr" CACHE INTERNAL "" FORCE)
     endif()
 endif()
 
-SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 set(CMAKE_C_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
@@ -40,13 +44,16 @@ set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
 set(CMAKE_VERBOSE OFF CACHE BOOL "Verbose mode")
 
-if (CMAKE_VERBOSE)
-        set (CMAKE_VERBOSE_MAKEFILE 1)
+if(CMAKE_VERBOSE)
+    set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
+
 
 project(OpenCV)
 
+
 cmake_minimum_required(VERSION 2.4)
+
 
 if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
@@ -56,6 +63,7 @@ endif()
 #set(CMAKE_CXX_COMPILER "/opt/BullseyeCoverage/bin/g++")
 #set(CMAKE_CXX_COMPILER_INIT "/opt/BullseyeCoverage/bin/gcc")
 
+
 # --------------------------------------------------------------
 # Indicate CMake 2.7 and above that we don't want to mix relative
 #  and absolute paths in linker lib lists.
@@ -64,6 +72,7 @@ endif()
 if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif()
+
 
 # ----------------------------------------------------------------------------
 #  Current version number:
@@ -92,14 +101,16 @@ endif()
 
 # ----------------------------------------------------------------------------
 # Build static or dynamic libs?
-# ----------------------------------------------------------------------------
 # Default: dynamic libraries:
-SET(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
-IF(BUILD_SHARED_LIBS)
-    SET(OPENCV_BUILD_SHARED_LIB 1) # For cvconfig.h, etc.
-ELSE(BUILD_SHARED_LIBS)
-    SET(OPENCV_BUILD_SHARED_LIB 0)
-ENDIF(BUILD_SHARED_LIBS)
+# ----------------------------------------------------------------------------
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+
+if(BUILD_SHARED_LIBS)
+    set(OPENCV_BUILD_SHARED_LIB 1) # For cvconfig.h, etc.
+else(BUILD_SHARED_LIBS)
+    set(OPENCV_BUILD_SHARED_LIB 0)
+endif(BUILD_SHARED_LIBS)
+
 
 # ----------------------------------------------------------------------------
 #  Variables for cvconfig.h.cmake
@@ -110,6 +121,7 @@ set(PACKAGE_NAME "opencv")
 set(PACKAGE_STRING "${PACKAGE} ${OPENCV_VERSION}")
 set(PACKAGE_TARNAME "${PACKAGE}")
 set(PACKAGE_VERSION "${OPENCV_VERSION}")
+
 
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a SVN repository
@@ -132,6 +144,7 @@ else()
     # We don't have svnversion:
     set(OPENCV_SVNVERSION "")
 endif()
+
 
 # ----------------------------------------------------------------------------
 # Detect GNU version:
@@ -166,6 +179,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
 endif()
 
+
 # ----------------------------------------------------------------------------
 # Detect Intel ICC compiler -- for -fPIC in 3rdparty ( UNIX ONLY ):
 #  see  include/opencv/cxtypes.h file for related   ICC & CV_ICC defines.
@@ -189,6 +203,7 @@ if(UNIX)
         set(CV_ICC   icc_matches_c_compiler)
     endif()
 endif()
+
 
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
@@ -299,13 +314,15 @@ if(APPLE)
     set(WITH_QUICKTIME OFF CACHE BOOL "Use QuickTime for Video I/O insted of QTKit")
 endif()
 
-set(WITH_TBB OFF CACHE BOOL "Include TBB support")
+set(WITH_TBB OFF CACHE BOOL "Include Intel TBB support")
+set(WITH_IPP OFF CACHE BOOL "Include Intel IPP support")
 set(WITH_EIGEN2 ON CACHE BOOL "Include Eigen2/Eigen3 support")
 set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
 
 if(WIN32)
-        set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
+    set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
 endif()
+
 
 # ===================================================
 # Macros that checks if module have been installed.
@@ -558,16 +575,16 @@ if (WITH_QT)
         find_package (OpenGL QUIET)
 
 
-		#if (NOT WIN32)
-		if (WITH_QT_OPENGL)
-			if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-				set(HAVE_QT_OPENGL 1)
-				add_definitions(-DHAVE_QT_OPENGL)
-				#link_directories("${OPENGL_LIBRARIES}")
-				set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-			endif()
-		 endif()
-	#endif()
+    #if (NOT WIN32)
+    if (WITH_QT_OPENGL)
+      if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
+        set(HAVE_QT_OPENGL 1)
+        add_definitions(-DHAVE_QT_OPENGL)
+        #link_directories("${OPENGL_LIBRARIES}")
+        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
+      endif()
+     endif()
+  #endif()
 
     endif()
 endif()
@@ -649,6 +666,9 @@ if (WITH_TBB)
                    elseif(MSVC90)
                        set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc9")
                    endif()
+                   elseif(MSVC10)
+                       set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc10")
+                   endif()
                    set(TBB_LIB_DIR "${_TBB_LIB_PATH}" CACHE PATH "Full path of TBB library directory")
                    link_directories("${TBB_LIB_DIR}")
                endif()
@@ -660,51 +680,69 @@ if (WITH_TBB)
             endif()
         endif()
     endif()
+#endif(WITH_TBB)
+
+
+############################ Intel IPP #############################
+set(IPP_FOUND)
+
+if(WITH_IPP)
+    include(OpenCVFindIPP.cmake)
 endif()
+
+if(IPP_FOUND)
+    add_definitions(-DHAVE_IPP)
+    include_directories(${IPP_INCLUDE_DIRS})
+    link_directories(${IPP_LIBRARY_DIRS})
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_LIBRARIES})
+endif()
+
 
 ############################### CUDA ################################
 
 if (WITH_CUDA)
-	find_package(CUDA 3.2)
-	if (CUDA_FOUND)		
-		set(HAVE_CUDA 1)
-		message(STATUS "CUDA detected: " ${CUDA_VERSION})
-		
+    find_package(CUDA 3.2)
+    if (CUDA_FOUND)
+        set(HAVE_CUDA 1)
+        message(STATUS "CUDA detected: " ${CUDA_VERSION})
+
 		set(CUDA_COMPUTE_CAPABILITIES " 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute capability")
-		set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
+    set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
 
-		set(CUDA_NVCC_FLAGS_NUM "")
+    set(CUDA_NVCC_FLAGS_NUM "")
 
-		while(NOT ${CUDA_NVCC_FLAGS_ARCH} STREQUAL "")
-		    string(REGEX MATCH "[0-9]+.[0-9]+" RESULT_NUM ${CUDA_NVCC_FLAGS_ARCH})
-		    string(REGEX MATCHALL "[0-9]" RESULT_STR ${RESULT_NUM})
-		    string(REGEX REPLACE ";" "\ " RESULT ${RESULT_STR})
-		    list(APPEND CUDA_NVCC_FLAGS_NUM ${RESULT})
-		    string(REGEX REPLACE "${RESULT_NUM}" "\ " CUDA_NVCC_FLAGS_ARCH_STR ${CUDA_NVCC_FLAGS_ARCH})
-		    string(STRIP ${CUDA_NVCC_FLAGS_ARCH_STR} CUDA_NVCC_FLAGS_ARCH)
-		endwhile()
+    while(NOT ${CUDA_NVCC_FLAGS_ARCH} STREQUAL "")
+        string(REGEX MATCH "[0-9]+.[0-9]+" RESULT_NUM ${CUDA_NVCC_FLAGS_ARCH})
+        string(REGEX MATCHALL "[0-9]" RESULT_STR ${RESULT_NUM})
+        string(REGEX REPLACE ";" "\ " RESULT ${RESULT_STR})
+        list(APPEND CUDA_NVCC_FLAGS_NUM ${RESULT})
+        string(REGEX REPLACE "${RESULT_NUM}" "\ " CUDA_NVCC_FLAGS_ARCH_STR ${CUDA_NVCC_FLAGS_ARCH})
+        string(STRIP ${CUDA_NVCC_FLAGS_ARCH_STR} CUDA_NVCC_FLAGS_ARCH)
+    endwhile()
 
-		set (OpenCV_CUDA_CC "")
-		set (loop_var "")
-		foreach( loop_var IN LISTS CUDA_NVCC_FLAGS_NUM)
-		    set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_${loop_var},code=sm_${loop_var})
-		    set (OpenCV_CUDA_CC  ${OpenCV_CUDA_CC}  -gencode arch=compute_${loop_var},code=sm_${loop_var})
-		endforeach()
+    set (OpenCV_CUDA_CC "")
+    set (loop_var "")
+    foreach( loop_var IN LISTS CUDA_NVCC_FLAGS_NUM)
+        set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_${loop_var},code=sm_${loop_var})
+        set (OpenCV_CUDA_CC  ${OpenCV_CUDA_CC}  -gencode arch=compute_${loop_var},code=sm_${loop_var})
+    endforeach()
 
-		### set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${OpenCV_COMPUTE_CAPABILITIES})
-	endif()
+    ### set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${OpenCV_COMPUTE_CAPABILITIES})
+  endif()
 endif()
+
 
 ############################### VideoInput ################################
 
 if (WIN32 AND WITH_VIDEOINPUT)
-	if(CMAKE_CXX_COMPILER MATCHES "dw2")
-	else()
-	if(NOT MINGW64)
-		  set(HAVE_VIDEOINPUT 1)
-	endif()
-	endif()
+  if(CMAKE_CXX_COMPILER MATCHES "dw2")
+  else()
+  if(NOT MINGW64)
+      set(HAVE_VIDEOINPUT 1)
+  endif()
+  endif()
 endif()
+
 
 ############################## Eigen2 ##############################
 
@@ -719,82 +757,6 @@ if(WITH_EIGEN2)
     endif()
 endif()
 
-############################### IPP ################################
-set(IPP_FOUND)
-set(OPENCV_LOADER_PATH)
-
-if(UNIX)
-if(APPLE)
-    set(OPENCV_LOADER_PATH DYLD_LIBRARY_PATH)
-else()
-    set(OPENCV_LOADER_PATH LD_LIBRARY_PATH)
-endif()
-endif()
-
-foreach(v "6.1" "6.0" "5.3" "5.2" "5.1")
-    if(NOT IPP_FOUND)
-        if(WIN32)
-            find_path(IPP_PATH "ippi-${v}.dll"
-                PATHS ${CMAKE_PROGRAM_PATH} ${CMAKE_SYSTEM_PROGRAM_PATH}
-                DOC "The path to IPP dynamic libraries")
-            if(NOT IPP_PATH)
-                find_path(IPP_PATH "ippiem64t-${v}.dll"
-                    PATHS ${CMAKE_PROGRAM_PATH} ${CMAKE_SYSTEM_PROGRAM_PATH}
-                    DOC "The path to IPP dynamic libraries")
-            endif()
-        endif()
-        if(UNIX)
-            find_path(IPP_PATH "libippi${CMAKE_SHARED_LIBRARY_SUFFIX}.${v}"
-                PATHS ${CMAKE_LIBRARY_PATH} ${CMAKE_SYSTEM_LIBRARY_PATH} ENV ${OPENCV_LOADER_PATH}
-                DOC "The path to IPP dynamic libraries")
-            if(NOT IPP_PATH)
-                find_path(IPP_PATH "libippiem64t${CMAKE_SHARED_LIBRARY_SUFFIX}.${v}"
-                    PATHS ${CMAKE_LIBRARY_PATH} ${CMAKE_SYSTEM_LIBRARY_PATH} ENV ${OPENCV_LOADER_PATH}
-                    DOC "The path to IPP dynamic libraries")
-            endif()
-        endif()
-        if(IPP_PATH)
-            file(GLOB IPP_HDRS "${IPP_PATH}/../include")
-            if(IPP_HDRS)
-                set(IPP_FOUND TRUE)
-            endif()
-        endif()
-    endif()
-endforeach()
-
-message(STATUS "IPP detected: ${IPP_FOUND}")
-
-if(WIN32 AND NOT MSVC)
-    set(IPP_FOUND)
-endif()
-
-set(USE_IPP ${IPP_FOUND} CACHE BOOL "Use IPP when available")
-
-if(IPP_FOUND AND USE_IPP)
-    add_definitions(-DHAVE_IPP)
-    include_directories("${IPP_PATH}/../include")
-    link_directories("${IPP_PATH}/../lib")
-
-    file(GLOB em64t_files "${IPP_PATH}/../lib/*em64t*")
-    set(IPP_ARCH)
-    if(em64t_files)
-        set(IPP_ARCH "em64t")
-    endif()
-
-    set(A ${CMAKE_STATIC_LIBRARY_PREFIX})
-    set(B ${IPP_ARCH}${CMAKE_STATIC_LIBRARY_SUFFIX})
-    if(WIN32)
-        set(L l)
-    else()
-        set(L)
-    endif()
-    set(IPP_LIBS ${A}ippsmerged${B} ${A}ippsemerged${B}
-                 ${A}ippimerged${B} ${A}ippiemerged${B}
-                 ${A}ippvmmerged${B} ${A}ippvmemerged${B}
-                 ${A}ippccmerged${B} ${A}ippccemerged${B}
-                 ${A}ippcvmerged${B} ${A}ippcvemerged${B}
-                 ${A}ippcore${IPP_ARCH}${L}${CMAKE_STATIC_LIBRARY_SUFFIX})
-endif()
 
 ################## Extra HighGUI libs on Windows ###################
 
@@ -825,6 +787,7 @@ endif()
 ################## LATEX ##################
 set(BUILD_LATEX_DOCS OFF CACHE BOOL "Build LaTeX OpenCV Documentation")
 
+
 ################### DOXYGEN ###############
 
 find_package(Doxygen)
@@ -832,6 +795,7 @@ find_package(Doxygen)
 if(DOXYGEN_FOUND)
     set(BUILD_DOXYGEN_DOCS ON CACHE BOOL "Generate HTML docs using Doxygen")
 endif()
+
 
 # ----------------------------------------------------------------------------
 #                   UPDATE CONFIG FILES & SCRIPTS:
@@ -850,6 +814,7 @@ set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to c
 message(STATUS "Parsing 'cvconfig.h.cmake'")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cvconfig.h.cmake" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
 
+
 # ---------------------------------------------------------------------------
 # The C+//0 include & link directories:
 # ---------------------------------------------------------------------------
@@ -858,6 +823,7 @@ include_directories("."
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv"
     )
+
 
 # ----------------------------------------------------------------------------
 #           Set the maximum level of warnings:
@@ -1054,13 +1020,14 @@ if (WIN32 AND MSVC)
     string(REPLACE "/EHsc" "/EHsc-" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
     string(REPLACE "/EHsc" "/EHsc-" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
-	string(REPLACE "/Zm1000" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-	string(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  string(REPLACE "/Zm1000" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 
 if("${CMAKE_CONFIGURE_LDFLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CONFIGURE_LDFLAGS}")
 endif("${CMAKE_CONFIGURE_LDFLAGS}")
+
 
 # ----------------------------------------------------------------------------
 #                       PROCESS SUBDIRECTORIES:
@@ -1074,6 +1041,7 @@ set(OPENCV_DOC_INSTALL_PATH doc)
 else()
 set(OPENCV_DOC_INSTALL_PATH share/opencv/doc)
 endif()
+
 
 # --------------------------------------------------------------------------------------------
 #   Installation for CMake Module:  OpenCVConfig.cmake
@@ -1279,7 +1247,7 @@ add_subdirectory(3rdparty)
 
 
 # ----------------------------------------------------------------------------
-#   Sumary:
+#   Summary:
 # ----------------------------------------------------------------------------
 message(STATUS "")
 message(STATUS "General configuration for opencv ${OPENCV_VERSION} =====================================")
@@ -1403,8 +1371,11 @@ else()
 message(STATUS "    Python numpy:              NO (Python interface will not cover OpenCV 2.x API)")
 endif()
 
-if(IPP_FOUND AND USE_IPP)
-message(STATUS "    Use IPP:                   ${IPP_PATH}")
+if(WITH_IPP AND IPP_FOUND)
+message(STATUS "    Use IPP:                   ${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
+message(STATUS "         at:                   ${IPP_ROOT_DIR}")
+elseif(WITH_IPP AND NOT IPP_FOUND)
+message(STATUS "    Use IPP:                   IPP not found")
 else()
 message(STATUS "    Use IPP:                   NO")
 endif()
@@ -1418,7 +1389,7 @@ endif()
 if (HAVE_CUDA)
 message(STATUS "    Use Cuda:                  YES")
 else()
-message(STATUS "    Use Cuda:                  No")
+message(STATUS "    Use Cuda:                  NO")
 endif()
 
 if(HAVE_EIGEN2)

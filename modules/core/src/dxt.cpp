@@ -2229,7 +2229,7 @@ void dct( const Mat& src0, Mat& dst, int flags )
     Mat src = src0;
     int type = src.type(), depth = src.depth();
     void /* *spec_dft = 0, */ *spec = 0;
-    
+
     double scale = 1.;
     int prev_len = 0, nf = 0, stage, end_stage;
     uchar *src_dft_buf = 0, *dst_dft_buf = 0;

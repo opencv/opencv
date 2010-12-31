@@ -278,7 +278,7 @@ binaryOpC1_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat )
     DT* dst = (DT*)dstmat.data;
     size_t step1 = srcmat1.step/sizeof(src1[0]);
     size_t step2 = srcmat2.step/sizeof(src2[0]);
-    size_t step = dstmat.step/sizeof(dst[0]);
+    size_t step  = dstmat.step/sizeof(dst[0]);
     Size size = getContinuousSize( srcmat1, srcmat2, dstmat, dstmat.channels() );
 
     if( size.width == 1 )
@@ -290,7 +290,8 @@ binaryOpC1_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat )
 
     for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
-        int x = vecOp(src1, src2, dst, size.width);
+        int x;
+        x = vecOp(src1, src2, dst, size.width);
         for( ; x <= size.width - 4; x += 4 )
         {
             DT f0, f1;

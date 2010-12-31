@@ -42,7 +42,9 @@
 
 #include "precomp.hpp"
 #include <iterator>
-
+#ifdef HAVE_IPP
+#include "ipp.h"
+#endif
 /****************************************************************************************\
       The code below is implementation of HOG (Histogram-of-Oriented Gradients)
       descriptor and object detection, introduced by Navneet Dalal and Bill Triggs.
@@ -216,12 +218,39 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 
     int _nbins = nbins;
     float angleScale = (float)(_nbins/CV_PI);
+#ifdef HAVE_IPP
+    Mat lutimg(img.rows,img.cols,CV_MAKETYPE(CV_32F,cn));
+    Mat hidxs(1, width, CV_32F);
+    Ipp32f *pHidxs = (Ipp32f*)hidxs.data;
+    Ipp32f *pAngles = (Ipp32f*)Angle.data;
 
+    IppiSize roiSize;
+    roiSize.width = img.cols;
+    roiSize.height = img.rows;
+    
+    for( y = 0; y < roiSize.height; y++ )
+    {
+       const uchar* imgPtr = img.data + y*img.step;
+       float* imglutPtr = (float*)(lutimg.data + y*lutimg.step);
+
+       for( x = 0; x < roiSize.width*cn; x++ )
+       {
+          imglutPtr[x] = lut[imgPtr[x]];
+       }
+    }
+    
+#endif
     for( y = 0; y < gradsize.height; y++ )
     {
+#ifdef HAVE_IPP
+        const float* imgPtr = (float*)(lutimg.data + lutimg.step*ymap[y]);
+        const float* prevPtr = (float*)(lutimg.data + lutimg.step*ymap[y-1]);
+        const float* nextPtr = (float*)(lutimg.data + lutimg.step*ymap[y+1]);
+#else
         const uchar* imgPtr = img.data + img.step*ymap[y];
         const uchar* prevPtr = img.data + img.step*ymap[y-1];
         const uchar* nextPtr = img.data + img.step*ymap[y+1];
+#endif
         float* gradPtr = (float*)grad.ptr(y);
         uchar* qanglePtr = (uchar*)qangle.ptr(y);
         
@@ -230,8 +259,13 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
             for( x = 0; x < width; x++ )
             {
                 int x1 = xmap[x];
+#ifdef HAVE_IPP
+                dbuf[x] = (float)(imgPtr[xmap[x+1]] - imgPtr[xmap[x-1]]);
+                dbuf[width + x] = (float)(nextPtr[x1] - prevPtr[x1]);
+#else
                 dbuf[x] = (float)(lut[imgPtr[xmap[x+1]]] - lut[imgPtr[xmap[x-1]]]);
                 dbuf[width + x] = (float)(lut[nextPtr[x1]] - lut[prevPtr[x1]]);
+#endif
             }
         }
         else
@@ -239,9 +273,32 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
             for( x = 0; x < width; x++ )
             {
                 int x1 = xmap[x]*3;
+                float dx0, dy0, dx, dy, mag0, mag;
+#ifdef HAVE_IPP
+                const float* p2 = imgPtr + xmap[x+1]*3;
+                const float* p0 = imgPtr + xmap[x-1]*3;
+
+                dx0 = p2[2] - p0[2];
+                dy0 = nextPtr[x1+2] - prevPtr[x1+2];
+                mag0 = dx0*dx0 + dy0*dy0;
+                
+                dx = p2[1] - p0[1];
+                dy = nextPtr[x1+1] - prevPtr[x1+1];
+                mag = dx*dx + dy*dy;
+                
+                if( mag0 < mag )
+                {
+                    dx0 = dx;
+                    dy0 = dy;
+                    mag0 = mag;
+                }
+                
+                dx = p2[0] - p0[0];
+                dy = nextPtr[x1] - prevPtr[x1];
+                mag = dx*dx + dy*dy;
+#else
                 const uchar* p2 = imgPtr + xmap[x+1]*3;
                 const uchar* p0 = imgPtr + xmap[x-1]*3;
-                float dx0, dy0, dx, dy, mag0, mag;
 
                 dx0 = lut[p2[2]] - lut[p0[2]];
                 dy0 = lut[nextPtr[x1+2]] - lut[prevPtr[x1+2]];
@@ -261,7 +318,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                 dx = lut[p2[0]] - lut[p0[0]];
                 dy = lut[nextPtr[x1]] - lut[prevPtr[x1]];
                 mag = dx*dx + dy*dy;
-                
+ #endif
                 if( mag0 < mag )
                 {
                     dx0 = dx;
@@ -273,14 +330,35 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                 dbuf[x+width] = dy0;
             }
         }
-        
-        cartToPolar( Dx, Dy, Mag, Angle, false );
-
+#ifdef HAVE_IPP
+        ippsCartToPolar_32f((const Ipp32f*)Dx.data, (const Ipp32f*)Dy.data, (Ipp32f*)Mag.data, pAngles, width);
         for( x = 0; x < width; x++ )
         {
+           if(pAngles[x] < 0.f) pAngles[x]+=(Ipp32f)(CV_PI*2.);
+        }
+
+         
+        ippsNormalize_32f(pAngles, pAngles, width, 0.5f/angleScale, 1.f/angleScale);
+        ippsFloor_32f(pAngles,(Ipp32f*)hidxs.data,width);
+        ippsSub_32f_I((Ipp32f*)hidxs.data,pAngles,width);
+        ippsMul_32f_I((Ipp32f*)Mag.data,pAngles,width);
+
+        ippsSub_32f_I(pAngles,(Ipp32f*)Mag.data,width);
+        ippsRealToCplx_32f((Ipp32f*)Mag.data,pAngles,(Ipp32fc*)gradPtr,width);
+#else
+        cartToPolar( Dx, Dy, Mag, Angle, false );
+#endif
+        for( x = 0; x < width; x++ )
+        {
+#ifdef HAVE_IPP
+            int hidx = (int)pHidxs[x];
+#else
             float mag = dbuf[x+width*2], angle = dbuf[x+width*3]*angleScale - 0.5f;
             int hidx = cvFloor(angle);
             angle -= hidx;
+            gradPtr[x*2] = mag*(1.f - angle);
+            gradPtr[x*2+1] = mag*angle;
+#endif
             if( hidx < 0 )
                 hidx += _nbins;
             else if( hidx >= _nbins )
@@ -291,9 +369,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
             hidx++;
             hidx &= hidx < _nbins ? -1 : 0;
             qanglePtr[x*2+1] = (uchar)hidx;
-            gradPtr[x*2] = mag*(1.f - angle);
-            gradPtr[x*2+1] = mag*angle;
-        }
+                    }
     }
 }
 
@@ -576,9 +652,12 @@ const float* HOGCache::getBlock(Point pt, float* buf)
     const uchar* qanglePtr = qangle.data + qangle.step*pt.y + pt.x*2;
 
     CV_Assert( blockHist != 0 );
-
+#ifdef HAVE_IPP
+    ippsZero_32f(blockHist,blockHistogramSize);
+#else
     for( k = 0; k < blockHistogramSize; k++ )
         blockHist[k] = 0.f;
+#endif
     
     const PixData* _pixData = &pixData[0];
 
@@ -658,20 +737,40 @@ const float* HOGCache::getBlock(Point pt, float* buf)
 void HOGCache::normalizeBlockHistogram(float* _hist) const
 {
     float* hist = &_hist[0];
+#ifdef HAVE_IPP
+    size_t sz = blockHistogramSize;
+#else
     size_t i, sz = blockHistogramSize;
-    
+#endif
+
     float sum = 0;
+#ifdef HAVE_IPP
+    ippsDotProd_32f(hist,hist,sz,&sum);
+#else
     for( i = 0; i < sz; i++ )
         sum += hist[i]*hist[i];
+#endif
+    
     float scale = 1.f/(std::sqrt(sum)+sz*0.1f), thresh = (float)descriptor->L2HysThreshold;
+#ifdef HAVE_IPP
+    ippsMulC_32f_I(scale,hist,sz);
+    ippsThreshold_32f_I( hist, sz, thresh, ippCmpGreater );
+    ippsDotProd_32f(hist,hist,sz,&sum);
+#else
     for( i = 0, sum = 0; i < sz; i++ )
     {
         hist[i] = std::min(hist[i]*scale, thresh);
         sum += hist[i]*hist[i];
     }
+#endif
+
     scale = 1.f/(std::sqrt(sum)+1e-3f);
+#ifdef HAVE_IPP
+    ippsMulC_32f_I(scale,hist,sz);
+#else
     for( i = 0; i < sz; i++ )
         hist[i] *= scale;
+#endif
 }
     
     
@@ -741,8 +840,12 @@ void HOGDescriptor::compute(const Mat& img, vector<float>& descriptors,
             float* dst = descriptor + bj.histOfs;
             const float* src = cache.getBlock(pt, dst);
             if( src != dst )
+#ifdef HAVE_IPP
+               ippsCopy_32f(src,dst,blockHistogramSize);
+#else
                 for( int k = 0; k < blockHistogramSize; k++ )
                     dst[k] = src[k];
+#endif
         }
     }
 }
@@ -796,18 +899,28 @@ void HOGDescriptor::detect(const Mat& img,
         }
         double s = rho;
         const float* svmVec = &svmDetector[0];
+#ifdef HAVE_IPP
+        int j;
+#else
         int j, k;
+#endif
         for( j = 0; j < nblocks; j++, svmVec += blockHistogramSize )
         {
             const HOGCache::BlockData& bj = blockData[j];
             Point pt = pt0 + bj.imgOffset;
 
             const float* vec = cache.getBlock(pt, &blockHist[0]);
+#ifdef HAVE_IPP
+            Ipp32f partSum;
+            ippsDotProd_32f(vec,svmVec,blockHistogramSize,&partSum);
+            s += (double)partSum;
+#else
             for( k = 0; k <= blockHistogramSize - 4; k += 4 )
                 s += vec[k]*svmVec[k] + vec[k+1]*svmVec[k+1] +
                     vec[k+2]*svmVec[k+2] + vec[k+3]*svmVec[k+3];
             for( ; k < blockHistogramSize; k++ )
                 s += vec[k]*svmVec[k];
+#endif
         }
         if( s >= hitThreshold )
             hits.push_back(pt0);
