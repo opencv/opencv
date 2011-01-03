@@ -260,14 +260,14 @@ endfunction()
     # Note, if several IPP installations found the newest version will be
     # selected
     # ------------------------------------------------------------------------
-    foreach(CURDIR ${CMAKE_SYSTEM_PREFIX_PATH})
-        set(CURDIR ${CURDIR}/intel)
-        file(TO_CMAKE_PATH ${CURDIR} CURDIR)
+    foreach(curdir ${CMAKE_SYSTEM_PREFIX_PATH})
+        set(curdir ${curdir}/intel)
+        file(TO_CMAKE_PATH ${curdir} CURDIR)
 
-        if(EXISTS ${CURDIR})
-            file(GLOB_RECURSE IPP_H_PATH ${CURDIR}/ippversion.h)
+        if(EXISTS ${curdir})
+            file(GLOB_RECURSE IPP_H_DIR ${curdir}/ippversion.h)
 
-            if(IPP_H_PATH)
+            if(IPP_H_DIR)
                 set(IPP_FOUND 1)
             endif()
 
@@ -276,7 +276,7 @@ endfunction()
             set(IPP_LATEST_VERSION_STR ${IPP_VERSION_STR})
 
             # look through all dirs where ippversion.h was found
-            foreach(item ${IPP_H_PATH})
+            foreach(item ${IPP_H_DIR})
 
                 # traverse up to IPPROOT level
                 get_filename_component(_FILE_PATH ${item} PATH)
@@ -285,15 +285,14 @@ endfunction()
                 # extract IPP version info
                 get_ipp_version(${_ROOT_DIR})
 
+                # remember the latest version (if many found)
                 if(${IPP_LATEST_VERSION_STR} VERSION_LESS ${IPP_VERSION_STR})
-#                if(${IPP_LATEST_VERSION_STR} VERSION_GREATER ${IPP_VERSION_STR})
                     set(IPP_LATEST_VERSION_STR   ${IPP_VERSION_STR})
                     set(IPP_LATEST_VERSION_MAJOR ${IPP_VERSION_MAJOR})
                     set(IPP_LATEST_VERSION_MINOR ${IPP_VERSION_MINOR})
                     set(IPP_LATEST_VERSION_BUILD ${IPP_VERSION_BUILD})
                     set(IPP_ROOT_DIR ${_ROOT_DIR})
                 endif()
-                
             endforeach()
         endif()
     endforeach()
@@ -301,3 +300,13 @@ endfunction()
     # set IPP INCLUDE, LIB dirs and library names
     set_ipp_variables(${IPP_LATEST_VERSION_STR})
 
+    # set CACHE variable IPP_H_PATH,
+    # path to IPP header files for the latest version
+    find_path(
+        IPP_H_PATH
+        NAMES ippversion.h
+        PATHS ${IPP_ROOT_DIR}
+        PATH_SUFFIXES include
+        DOC "The path to Intel(R) IPP header files"
+        NO_DEFAULT_PATH
+        NO_CMAKE_PATH)
