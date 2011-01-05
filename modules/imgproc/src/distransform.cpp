@@ -501,7 +501,7 @@ struct DTRowInvoker
     
     void operator()( const BlockedRange& range ) const
     {
-        const float inf = 1e6f;
+        const float inf = 1e15f;
         int i, i1 = range.begin(), i2 = range.end();
         int n = dst->cols;
         AutoBuffer<uchar> _buf((n+2)*2*sizeof(float) + (n+2)*sizeof(int));
@@ -559,7 +559,7 @@ struct DTRowInvoker
 static void
 icvTrueDistTrans( const CvMat* src, CvMat* dst )
 {
-    const float inf = 1e6f;
+    const float inf = 1e15f;
     
     if( !CV_ARE_SIZES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedSizes, "" );
