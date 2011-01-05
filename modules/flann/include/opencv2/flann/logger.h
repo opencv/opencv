@@ -48,7 +48,7 @@ class CV_EXPORTS Logger
 
 public:
 
-    Logger() : stream(stdout), logLevel(LOG_WARN) {};
+    Logger() : stream(stdout), logLevel(FLANN_LOG_WARN) {};
 
     ~Logger()
     {

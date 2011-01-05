@@ -131,10 +131,10 @@ int Logger::log(int level, const char* fmt, va_list arglist)
     }
 
 
-LOG_METHOD(fatal, LOG_FATAL)
-LOG_METHOD(error, LOG_ERROR)
-LOG_METHOD(warn, LOG_WARN)
-LOG_METHOD(info, LOG_INFO)
+LOG_METHOD(fatal, FLANN_LOG_FATAL)
+LOG_METHOD(error, FLANN_LOG_ERROR)
+LOG_METHOD(warn, FLANN_LOG_WARN)
+LOG_METHOD(info, FLANN_LOG_INFO)
 
 // ----------------------- random.cpp ---------------------------
 

@@ -1,3 +1,4 @@
+import roslib; roslib.load_manifest('opencv2')
 import unittest
 import random
 import time

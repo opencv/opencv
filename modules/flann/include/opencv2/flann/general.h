@@ -59,11 +59,11 @@ enum flann_centers_init_t {
 };
 
 enum flann_log_level_t {
-	LOG_NONE = 0,
-	LOG_FATAL = 1,
-	LOG_ERROR = 2,
-	LOG_WARN = 3,
-	LOG_INFO = 4
+	FLANN_LOG_NONE = 0,
+	FLANN_LOG_FATAL = 1,
+	FLANN_LOG_ERROR = 2,
+	FLANN_LOG_WARN = 3,
+	FLANN_LOG_INFO = 4
 };
 
 enum flann_distance_t {
