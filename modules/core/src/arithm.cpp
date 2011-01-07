@@ -48,13 +48,17 @@
 
 #include "precomp.hpp"
 
+#ifdef HAVE_IPP
+#include "ippversion.h"
+#endif
+
 namespace cv
 {
 
 #if CV_SSE2
 
 enum { ARITHM_SIMD = CV_CPU_SSE2 };
-    
+
 template<class Op8> struct VBinOp8
 {
     int operator()(const uchar* src1, const uchar* src2, uchar* dst, int len) const
@@ -193,7 +197,7 @@ struct _VAbsDiff32f
 };
 
 struct _VAnd8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_and_si128(a,b); }};
-struct _VOr8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_or_si128(a,b); }};
+struct _VOr8u  { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_or_si128(a,b); }};
 struct _VXor8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_xor_si128(a,b); }};
 
 typedef VBinOp8<_VAdd8u> VAdd8u;
@@ -228,8 +232,8 @@ typedef VBinOp8<_VXor8u> VXor8u;
 
 #else
 
-enum { ARITHM_SIMD = CV_CPU_NONE };    
-    
+enum { ARITHM_SIMD = CV_CPU_NONE };
+
 typedef NoVec VAdd8u;
 typedef NoVec VSub8u;
 typedef NoVec VMin8u;
@@ -261,6 +265,65 @@ typedef NoVec VOr8u;
 typedef NoVec VXor8u;
 
 #endif
+
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+struct ippAdd8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsAdd_8u_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippAdd16u
+{
+    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
+    {
+        ippsAdd_16u_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippAdd16s
+{
+    int operator()(const Ipp16s* src1, const Ipp16s* src2, Ipp16s* dst, int len) const
+    {
+        ippsAdd_16s_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippAdd32s
+{
+    int operator()(const Ipp32s* src1, const Ipp32s* src2, Ipp32s* dst, int len) const
+    {
+        ippsAdd_32s_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippAdd32f
+{
+    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
+    {
+        ippsAdd_32f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippAdd64f
+{
+    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
+    {
+        ippsAdd_64f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+#endif
+
 
 /****************************************************************************************\
 *                                   logical operations                                   *
@@ -399,45 +462,45 @@ bitwiseSOp_( const Mat& srcmat, Mat& dstmat, const Scalar& _scalar )
     }
 }
 
-    
+
 static void
 binaryOp( const Mat& src1, const Mat& src2, Mat& dst, BinaryFunc func, int dsttype=-1 )
 {
     if( dsttype == -1 )
         dsttype = src1.type();
     CV_Assert( src1.type() == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, dsttype);
         const Mat* arrays[] = { &src1, &src2, &dst, 0 };
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func(it.planes[0], it.planes[1], it.planes[2]);
         return;
     }
-    
+
     CV_Assert( src1.size() == src2.size() );
     dst.create( src1.size(), dsttype );
     func( src1, src2, dst );
 }
 
-    
+
 static void
 binaryMaskOp( const Mat& src1, const Mat& src2, Mat& dst,
               const Mat& mask, BinaryFunc func )
 {
     CV_Assert( src1.type() == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
         Mat planes[4];
         NAryMatIterator it(arrays, planes);
-        
+
         if( !mask.data )
             for( int i = 0; i < it.nplanes; i++, ++it )
                 func(it.planes[0], it.planes[1], it.planes[2]);
@@ -448,7 +511,7 @@ binaryMaskOp( const Mat& src1, const Mat& src2, Mat& dst,
                              func);
         return;
     }
-    
+
     CV_Assert( src1.size() == src2.size() );
     dst.create( src1.size(), src1.type() );
 
@@ -482,14 +545,14 @@ binarySMaskOp( const Mat& src1, const Scalar& s, Mat& dst,
                const Mat& mask, BinarySFuncCn func )
 {
     CV_Assert( func != 0 );
-    
+
     if( src1.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = { &src1, &dst, &mask, 0 };
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         if( !mask.data )
             for( int i = 0; i < it.nplanes; i++, ++it )
                 func(it.planes[0], it.planes[1], s);
@@ -499,7 +562,7 @@ binarySMaskOp( const Mat& src1, const Scalar& s, Mat& dst,
                               it.planes[2], func);
         return;
     }
-    
+
     dst.create( src1.size(), src1.type() );
 
     if( !mask.data )
@@ -569,12 +632,12 @@ void bitwise_not(const Mat& src, Mat& dst)
         const Mat* arrays[] = { &src, &dst, 0 };
         Mat planes[4];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             bitwise_not(it.planes[0], it.planes[1]);
         return;
     }
-    
+
     const uchar* sptr = src.data;
     dst.create( src.size(), src.type() );
     uchar* dptr = dst.data;
@@ -622,22 +685,37 @@ template<> inline uchar OpSub<uchar>::operator ()(uchar a, uchar b) const
 
 static BinaryFunc addTab[] =
 {
-    binaryOpC1_<OpAdd<uchar>,VAdd8u>, 0,
-    binaryOpC1_<OpAdd<ushort>,VAdd16u>,
-    binaryOpC1_<OpAdd<short>,VAdd16s>,
-    binaryOpC1_<OpAdd<int>,NoVec>,
-    binaryOpC1_<OpAdd<float>,VAdd32f>,
-    binaryOpC1_<OpAdd<double>,NoVec>, 0
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    binaryOpC1_<OpAdd<uchar>,  ippAdd8u>,
+    0,
+    binaryOpC1_<OpAdd<ushort>, ippAdd16u>,
+    binaryOpC1_<OpAdd<short>,  ippAdd16s>,
+    binaryOpC1_<OpAdd<int>,    ippAdd32s>,
+    binaryOpC1_<OpAdd<float>,  ippAdd32f>,
+    binaryOpC1_<OpAdd<double>, ippAdd64f>,
+    0
+#else
+    binaryOpC1_<OpAdd<uchar>,  VAdd8u>,
+    0,
+    binaryOpC1_<OpAdd<ushort>, VAdd16u>,
+    binaryOpC1_<OpAdd<short>,  VAdd16s>,
+    binaryOpC1_<OpAdd<int>,    NoVec>,
+    binaryOpC1_<OpAdd<float>,  VAdd32f>,
+    binaryOpC1_<OpAdd<double>, NoVec>,
+    0
+#endif
 };
 
 static BinaryFunc subTab[] =
 {
-    binaryOpC1_<OpSub<uchar>,VSub8u>, 0,
-    binaryOpC1_<OpSub<ushort>,VSub16u>,
-    binaryOpC1_<OpSub<short>,VSub16s>,
-    binaryOpC1_<OpSub<int>,NoVec>,
-    binaryOpC1_<OpSub<float>,VSub32f>,
-    binaryOpC1_<OpSub<double>,NoVec>, 0
+    binaryOpC1_<OpSub<uchar>,  VSub8u>,
+    0,
+    binaryOpC1_<OpSub<ushort>, VSub16u>,
+    binaryOpC1_<OpSub<short>,  VSub16s>,
+    binaryOpC1_<OpSub<int>,    NoVec>,
+    binaryOpC1_<OpSub<float>,  VSub32f>,
+    binaryOpC1_<OpSub<double>, NoVec>,
+    0
 };
 
 void add( const Mat& src1, const Mat& src2, Mat& dst )
@@ -645,19 +723,19 @@ void add( const Mat& src1, const Mat& src2, Mat& dst )
     int type = src1.type();
     BinaryFunc func = addTab[CV_MAT_DEPTH(type)];
     CV_Assert( type == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &src2, &dst, 0};
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], it.planes[2] );
         return;
     }
-    
+
     Size size = src1.size();
     CV_Assert( size == src2.size() );
     dst.create( size, type );
@@ -669,19 +747,19 @@ void subtract( const Mat& src1, const Mat& src2, Mat& dst )
     int type = src1.type();
     BinaryFunc func = subTab[CV_MAT_DEPTH(type)];
     CV_Assert( type == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &src2, &dst, 0};
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], it.planes[2] );
         return;
     }
-    
+
     Size size = src1.size();
     CV_Assert( size == src2.size() );
     dst.create( size, type );
@@ -707,12 +785,14 @@ void add(const Mat& src1, const Scalar& s, Mat& dst, const Mat& mask)
 {
     static BinarySFuncCn addSTab[] =
     {
-        binarySOpCn_<OpAdd<uchar, int, uchar> >, 0,
+        binarySOpCn_<OpAdd<uchar, int, uchar> >,
+        0,
         binarySOpCn_<OpAdd<ushort, int, ushort> >,
         binarySOpCn_<OpAdd<short, int, short> >,
         binarySOpCn_<OpAdd<int> >,
         binarySOpCn_<OpAdd<float> >,
-        binarySOpCn_<OpAdd<double> >, 0
+        binarySOpCn_<OpAdd<double> >,
+        0
     };
     int depth = src1.depth();
     binarySMaskOp(src1, s, dst, mask, addSTab[depth]);
@@ -722,12 +802,14 @@ void subtract(const Scalar& s, const Mat& src1, Mat& dst, const Mat& mask)
 {
     static BinarySFuncCn rsubSTab[] =
     {
-        binarySOpCn_<OpRSub<uchar, int, uchar> >, 0,
+        binarySOpCn_<OpRSub<uchar, int, uchar> >,
+        0,
         binarySOpCn_<OpRSub<ushort, int, ushort> >,
         binarySOpCn_<OpRSub<short, int, short> >,
         binarySOpCn_<OpRSub<int> >,
         binarySOpCn_<OpRSub<float> >,
-        binarySOpCn_<OpRSub<double> >, 0
+        binarySOpCn_<OpRSub<double> >,
+        0
     };
     int depth = src1.depth();
     binarySMaskOp(src1, s, dst, mask, rsubSTab[depth]);
@@ -755,13 +837,17 @@ mul_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double _scale )
             int i;
             for( i = 0; i <= size.width - 4; i += 4 )
             {
-                T t0 = saturate_cast<T>(src1[i] * src2[i]);
-                T t1 = saturate_cast<T>(src1[i+1] * src2[i+1]);
-                dst[i] = t0; dst[i+1] = t1;
+                T t0;
+                T t1;
+                t0 = saturate_cast<T>(src1[i  ] * src2[i  ]);
+                t1 = saturate_cast<T>(src1[i+1] * src2[i+1]);
+                dst[i  ] = t0;
+                dst[i+1] = t1;
 
                 t0 = saturate_cast<T>(src1[i+2] * src2[i+2]);
                 t1 = saturate_cast<T>(src1[i+3] * src2[i+3]);
-                dst[i+2] = t0; dst[i+3] = t1;
+                dst[i+2] = t0;
+                dst[i+3] = t1;
             }
 
             for( ; i < size.width; i++ )
@@ -798,25 +884,31 @@ void multiply(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 {
     static MulDivFunc tab[] =
     {
-        mul_<uchar, float>, 0, mul_<ushort, float>, mul_<short, float>,
-        mul_<int, double>, mul_<float, float>, mul_<double, double>, 0
+        mul_<uchar, float>,
+        0,
+        mul_<ushort, float>,
+        mul_<short, float>,
+        mul_<int, double>,
+        mul_<float, float>,
+        mul_<double, double>,
+        0
     };
 
     MulDivFunc func = tab[src1.depth()];
     CV_Assert( src1.type() == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &src2, &dst, 0};
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], it.planes[2], scale );
         return;
     }
-    
+
     CV_Assert( src1.size() == src2.size() );
     dst.create( src1.size(), src1.type() );
     func( src1, src2, dst, scale );
@@ -883,19 +975,19 @@ void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 
     MulDivFunc func = tab[src1.depth()];
     CV_Assert( src1.size() == src2.size() && src1.type() == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &src2, &dst, 0};
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], it.planes[2], scale );
         return;
     }
-    
+
     CV_Assert( src1.size() == src2.size() );
     dst.create( src1.size(), src1.type() );
     func( src1, src2, dst, scale );
@@ -954,25 +1046,31 @@ void divide(double scale, const Mat& src, Mat& dst)
 {
     static RecipFunc tab[] =
     {
-        recip_<uchar>, 0, recip_<ushort>, recip_<short>,
-        recip_<int>, recip_<float>, recip_<double>, 0
+        recip_<uchar>,
+        0,
+        recip_<ushort>,
+        recip_<short>,
+        recip_<int>,
+        recip_<float>,
+        recip_<double>,
+        0
     };
 
     RecipFunc func = tab[src.depth()];
     CV_Assert( func != 0 );
-    
+
     if( src.dims > 2 )
     {
         dst.create(src.dims, src.size, src.type());
         const Mat* arrays[] = {&src, &dst, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( scale, it.planes[0], it.planes[1] );
         return;
     }
-    
+
     dst.create( src.size(), src.type() );
     func( scale, src, dst );
 }
@@ -1122,27 +1220,33 @@ typedef void (*AddWeightedFunc)( const Mat& src1, double alpha, const Mat& src2,
 void addWeighted( const Mat& src1, double alpha, const Mat& src2,
                   double beta, double gamma, Mat& dst )
 {
-    static AddWeightedFunc tab[]=
+    static AddWeightedFunc tab[] =
     {
-        addWeighted8u, 0, addWeighted_<ushort, float>, addWeighted_<short, float>,
-        addWeighted_<int, double>, addWeighted_<float, float>, addWeighted_<double, double>, 0
+        addWeighted8u,
+        0,
+        addWeighted_<ushort, float>,
+        addWeighted_<short, float>,
+        addWeighted_<int, double>,
+        addWeighted_<float, float>,
+        addWeighted_<double, double>,
+        0
     };
 
     AddWeightedFunc func = tab[src1.depth()];
     CV_Assert( src1.type() == src2.type() && func != 0 );
-    
+
     if( src1.dims > 2 || src2.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &src2, &dst, 0};
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], alpha, it.planes[1], beta, gamma, it.planes[2] );
         return;
     }
-    
+
     CV_Assert( src1.size() == src2.size() );
     dst.create( src1.size(), src1.type() );
     func( src1, alpha, src2, beta, gamma, dst );
@@ -1176,12 +1280,14 @@ void absdiff( const Mat& src1, const Mat& src2, Mat& dst )
 {
     static BinaryFunc tab[] =
     {
-        binaryOpC1_<OpAbsDiff<uchar>,VAbsDiff8u>, 0,
+        binaryOpC1_<OpAbsDiff<uchar>,VAbsDiff8u>,
+        0,
         binaryOpC1_<OpAbsDiff<ushort>,VAbsDiff16u>,
         binaryOpC1_<OpAbsDiff<short>,VAbsDiff16s>,
         binaryOpC1_<OpAbsDiff<int>,NoVec>,
         binaryOpC1_<OpAbsDiff<float>,VAbsDiff32f>,
-        binaryOpC1_<OpAbsDiff<double>,NoVec>, 0
+        binaryOpC1_<OpAbsDiff<double>,NoVec>,
+        0
     };
 
     binaryOp(src1, src2, dst, tab[src1.depth()]);
@@ -1192,24 +1298,26 @@ void absdiff( const Mat& src1, const Scalar& s, Mat& dst )
 {
     static BinarySFuncCn tab[] =
     {
-        binarySOpCn_<OpAbsDiffS<uchar, int> >, 0,
+        binarySOpCn_<OpAbsDiffS<uchar, int> >,
+        0,
         binarySOpCn_<OpAbsDiffS<ushort, int> >,
         binarySOpCn_<OpAbsDiffS<short, int> >,
         binarySOpCn_<OpAbsDiffS<int> >,
         binarySOpCn_<OpAbsDiffS<float> >,
-        binarySOpCn_<OpAbsDiffS<double> >, 0
+        binarySOpCn_<OpAbsDiffS<double> >,
+        0
     };
 
     BinarySFuncCn func = tab[src1.depth()];
     CV_Assert(src1.channels() <= 4 && func != 0);
-    
+
     if( src1.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &dst, 0};
         Mat planes[3];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], s );
         return;
@@ -1315,33 +1423,41 @@ void inRange(const Mat& src, const Mat& lowerb,
 {
     static InRangeFunc tab[] =
     {
-        inRange_<InRangeC1<uchar, uchar> >, 0,
+        inRange_<InRangeC1<uchar, uchar> >,
+        0,
         inRange_<InRangeC1<ushort, ushort> >,
         inRange_<InRangeC1<short, short> >,
         inRange_<InRangeC1<int, int> >,
         inRange_<InRangeC1<float, float> >,
-        inRange_<InRangeC1<double, double> >, 0,
+        inRange_<InRangeC1<double, double> >,
+        0,
 
-        inRange_<InRangeC2<uchar, uchar> >, 0,
+        inRange_<InRangeC2<uchar, uchar> >,
+        0,
         inRange_<InRangeC2<ushort, ushort> >,
         inRange_<InRangeC2<short, short> >,
         inRange_<InRangeC2<int, int> >,
         inRange_<InRangeC2<float, float> >,
-        inRange_<InRangeC2<double, double> >, 0,
+        inRange_<InRangeC2<double, double> >,
+        0,
 
-        inRange_<InRangeC3<uchar, uchar> >, 0,
+        inRange_<InRangeC3<uchar, uchar> >,
+        0,
         inRange_<InRangeC3<ushort, ushort> >,
         inRange_<InRangeC3<short, short> >,
         inRange_<InRangeC3<int, int> >,
         inRange_<InRangeC3<float, float> >,
-        inRange_<InRangeC3<double, double> >, 0,
+        inRange_<InRangeC3<double, double> >,
+        0,
 
-        inRange_<InRangeC4<uchar, uchar> >, 0,
+        inRange_<InRangeC4<uchar, uchar> >,
+        0,
         inRange_<InRangeC4<ushort, ushort> >,
         inRange_<InRangeC4<short, short> >,
         inRange_<InRangeC4<int, int> >,
         inRange_<InRangeC4<float, float> >,
-        inRange_<InRangeC4<double, double> >, 0
+        inRange_<InRangeC4<double, double> >,
+        0
     };
 
     CV_Assert( src.type() == lowerb.type() && src.type() == upperb.type() && src.channels() <= 4 );
@@ -1355,12 +1471,12 @@ void inRange(const Mat& src, const Mat& lowerb,
         const Mat* arrays[] = {&src, &lowerb, &upperb, &dst, 0};
         Mat planes[4];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], it.planes[2], it.planes[3] );
         return;
     }
-    
+
     CV_Assert( src.size() == lowerb.size() && src.size() == upperb.size() );
     dst.create(src.size(), CV_8U);
     func( src, lowerb, upperb, dst );
@@ -1371,47 +1487,55 @@ void inRange(const Mat& src, const Scalar& lowerb,
 {
     static InRangeSFunc tab[] =
     {
-        inRangeS_<InRangeC1<uchar, int> >, 0,
+        inRangeS_<InRangeC1<uchar, int> >,
+        0,
         inRangeS_<InRangeC1<ushort, int> >,
         inRangeS_<InRangeC1<short, int> >,
         inRangeS_<InRangeC1<int, int> >,
         inRangeS_<InRangeC1<float, float> >,
-        inRangeS_<InRangeC1<double, double> >, 0,
+        inRangeS_<InRangeC1<double, double> >,
+        0,
 
-        inRangeS_<InRangeC2<uchar, int> >, 0,
+        inRangeS_<InRangeC2<uchar, int> >,
+        0,
         inRangeS_<InRangeC2<ushort, int> >,
         inRangeS_<InRangeC2<short, int> >,
         inRangeS_<InRangeC2<int, int> >,
         inRangeS_<InRangeC2<float, float> >,
-        inRangeS_<InRangeC2<double, double> >, 0,
+        inRangeS_<InRangeC2<double, double> >,
+        0,
 
-        inRangeS_<InRangeC3<uchar, int> >, 0,
+        inRangeS_<InRangeC3<uchar, int> >,
+        0,
         inRangeS_<InRangeC3<ushort, int> >,
         inRangeS_<InRangeC3<short, int> >,
         inRangeS_<InRangeC3<int, int> >,
         inRangeS_<InRangeC3<float, float> >,
-        inRangeS_<InRangeC3<double, double> >, 0,
+        inRangeS_<InRangeC3<double, double> >,
+        0,
 
-        inRangeS_<InRangeC4<uchar, int> >, 0,
+        inRangeS_<InRangeC4<uchar, int> >,
+        0,
         inRangeS_<InRangeC4<ushort, int> >,
         inRangeS_<InRangeC4<short, int> >,
         inRangeS_<InRangeC4<int, int> >,
         inRangeS_<InRangeC4<float, float> >,
-        inRangeS_<InRangeC4<double, double> >, 0
+        inRangeS_<InRangeC4<double, double> >,
+        0
     };
 
     CV_Assert( src.channels() <= 4 );
 
     InRangeSFunc func = tab[src.type()];
     CV_Assert( func != 0 );
-    
+
     if( src.dims > 2 )
     {
         dst.create(src.dims, src.size, CV_8U);
         const Mat* arrays[] = {&src, &dst, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], lowerb, upperb, it.planes[1] );
         return;
@@ -1453,19 +1577,27 @@ void compare( const Mat& src1, const Mat& src2, Mat& dst, int cmpOp )
 {
     static BinaryFunc tab[][8] =
     {
-        {binaryOpC1_<CmpGT<uchar>,VCmpGT8u>, 0,
-        binaryOpC1_<CmpGT<ushort>,NoVec>,
-        binaryOpC1_<CmpGT<short>,NoVec>,
-        binaryOpC1_<CmpGT<int>,NoVec>,
-        binaryOpC1_<CmpGT<float>,NoVec>,
-        binaryOpC1_<CmpGT<double>,NoVec>, 0},
+        {
+            binaryOpC1_<CmpGT<uchar>,VCmpGT8u>,
+            0,
+            binaryOpC1_<CmpGT<ushort>,NoVec>,
+            binaryOpC1_<CmpGT<short>,NoVec>,
+            binaryOpC1_<CmpGT<int>,NoVec>,
+            binaryOpC1_<CmpGT<float>,NoVec>,
+            binaryOpC1_<CmpGT<double>,NoVec>,
+            0
+        },
 
-        {binaryOpC1_<CmpEQ<uchar>,VCmpEQ8u>, 0,
-        binaryOpC1_<CmpEQ<ushort>,NoVec>,
-        binaryOpC1_<CmpEQ<ushort>,NoVec>, // same function as for ushort's
-        binaryOpC1_<CmpEQ<int>,NoVec>,
-        binaryOpC1_<CmpEQ<float>,NoVec>,
-        binaryOpC1_<CmpEQ<double>,NoVec>, 0},
+        {
+            binaryOpC1_<CmpEQ<uchar>,VCmpEQ8u>,
+            0,
+            binaryOpC1_<CmpEQ<ushort>,NoVec>,
+            binaryOpC1_<CmpEQ<ushort>,NoVec>, // same function as for ushort's
+            binaryOpC1_<CmpEQ<int>,NoVec>,
+            binaryOpC1_<CmpEQ<float>,NoVec>,
+            binaryOpC1_<CmpEQ<double>,NoVec>,
+            0
+        },
     };
 
     CV_Assert(src1.channels() == 1);
@@ -1479,20 +1611,25 @@ void compare( const Mat& src1, const Mat& src2, Mat& dst, int cmpOp )
     case CMP_GT:
     case CMP_EQ:
         break;
+
     case CMP_GE:
         std::swap( psrc1, psrc2 );
         invflag = true;
         break;
+
     case CMP_LT:
         std::swap( psrc1, psrc2 );
         break;
+
     case CMP_LE:
         invflag = true;
         break;
+
     case CMP_NE:
         cmpOp = CMP_EQ;
         invflag = true;
         break;
+
     default:
         CV_Error(CV_StsBadArg, "Unknown comparison method");
     }
@@ -1508,26 +1645,38 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
 {
     static BinarySFuncC1 tab[][8] =
     {
-        {binarySOpC1_<CmpEQ<uchar, int> >, 0,
-        binarySOpC1_<CmpEQ<ushort, int> >,
-        binarySOpC1_<CmpEQ<short, int> >,
-        binarySOpC1_<CmpEQ<int> >,
-        binarySOpC1_<CmpEQ<float> >,
-        binarySOpC1_<CmpEQ<double> >, 0},
+        {
+            binarySOpC1_<CmpEQ<uchar, int> >,
+            0,
+            binarySOpC1_<CmpEQ<ushort, int> >,
+            binarySOpC1_<CmpEQ<short, int> >,
+            binarySOpC1_<CmpEQ<int> >,
+            binarySOpC1_<CmpEQ<float> >,
+            binarySOpC1_<CmpEQ<double> >,
+            0
+        },
 
-        {binarySOpC1_<CmpGT<uchar, int> >, 0,
-        binarySOpC1_<CmpGT<ushort, int> >,
-        binarySOpC1_<CmpGT<short, int> >,
-        binarySOpC1_<CmpGT<int> >,
-        binarySOpC1_<CmpGT<float> >,
-        binarySOpC1_<CmpGT<double> >, 0},
+        {
+            binarySOpC1_<CmpGT<uchar, int> >,
+            0,
+            binarySOpC1_<CmpGT<ushort, int> >,
+            binarySOpC1_<CmpGT<short, int> >,
+            binarySOpC1_<CmpGT<int> >,
+            binarySOpC1_<CmpGT<float> >,
+            binarySOpC1_<CmpGT<double> >,
+            0
+        },
 
-        {binarySOpC1_<CmpGE<uchar, int> >, 0,
-        binarySOpC1_<CmpGE<ushort, int> >,
-        binarySOpC1_<CmpGE<short, int> >,
-        binarySOpC1_<CmpGE<int> >,
-        binarySOpC1_<CmpGE<float> >,
-        binarySOpC1_<CmpGE<double> >, 0},
+        {
+            binarySOpC1_<CmpGE<uchar, int> >,
+            0,
+            binarySOpC1_<CmpGE<ushort, int> >,
+            binarySOpC1_<CmpGE<short, int> >,
+            binarySOpC1_<CmpGE<int> >,
+            binarySOpC1_<CmpGE<float> >,
+            binarySOpC1_<CmpGE<double> >,
+            0
+        },
     };
 
     int depth = src1.depth();
@@ -1539,32 +1688,36 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
     case CMP_EQ:
     case CMP_GE:
         break;
+
     case CMP_LT:
         invflag = true;
         cmpOp = CMP_GE;
         break;
+
     case CMP_LE:
         invflag = true;
         cmpOp = CMP_GT;
         break;
+
     case CMP_NE:
         invflag = true;
         cmpOp = CMP_EQ;
         break;
+
     default:
         CV_Error(CV_StsBadArg, "Unknown comparison method");
     }
 
     BinarySFuncC1 func = tab[cmpOp == CMP_EQ ? 0 : cmpOp == CMP_GT ? 1 : 2][depth];
     CV_Assert( func != 0 );
-    
+
     if( src1.dims > 2 )
     {
         dst.create(src1.dims, src1.size, CV_8UC(src1.channels()));
         const Mat* arrays[] = {&src1, &dst, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
         {
             func( it.planes[0], it.planes[1], value );
@@ -1573,7 +1726,7 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
         }
         return;
     }
-    
+
     dst.create(src1.rows, src1.cols, CV_8UC(src1.channels()));
     func( src1, dst, value );
     if( invflag )
@@ -1607,9 +1760,14 @@ void min( const Mat& src1, const Mat& src2, Mat& dst )
 {
     static BinaryFunc tab[] =
     {
-        binaryOpC1_<MinOp<uchar>,VMin8u>, 0, binaryOpC1_<MinOp<ushort>,VMin16u>,
-        binaryOpC1_<MinOp<short>,VMin16s>, binaryOpC1_<MinOp<int>,NoVec>,
-        binaryOpC1_<MinOp<float>,VMin32f>, binaryOpC1_<MinOp<double>,NoVec>, 0
+        binaryOpC1_<MinOp<uchar>,VMin8u>,
+        0,
+        binaryOpC1_<MinOp<ushort>,VMin16u>,
+        binaryOpC1_<MinOp<short>,VMin16s>,
+        binaryOpC1_<MinOp<int>,NoVec>,
+        binaryOpC1_<MinOp<float>,VMin32f>,
+        binaryOpC1_<MinOp<double>,NoVec>,
+        0
     };
 
     binaryOp(src1, src2, dst, tab[src1.depth()]);
@@ -1619,9 +1777,14 @@ void max( const Mat& src1, const Mat& src2, Mat& dst )
 {
     static BinaryFunc tab[] =
     {
-        binaryOpC1_<MaxOp<uchar>,VMax8u>, 0, binaryOpC1_<MaxOp<ushort>,VMax16u>,
-        binaryOpC1_<MaxOp<short>,VMax16s>, binaryOpC1_<MaxOp<int>,NoVec>,
-        binaryOpC1_<MaxOp<float>,VMax32f>, binaryOpC1_<MaxOp<double>,NoVec>, 0
+        binaryOpC1_<MaxOp<uchar>,VMax8u>,
+        0,
+        binaryOpC1_<MaxOp<ushort>,VMax16u>,
+        binaryOpC1_<MaxOp<short>,VMax16s>,
+        binaryOpC1_<MaxOp<int>,NoVec>,
+        binaryOpC1_<MaxOp<float>,VMax32f>,
+        binaryOpC1_<MaxOp<double>,NoVec>,
+        0
     };
 
     binaryOp(src1, src2, dst, tab[src1.depth()]);
@@ -1631,30 +1794,33 @@ void min( const Mat& src1, double value, Mat& dst )
 {
     static BinarySFuncC1 tab[] =
     {
-        binarySOpC1_<MinOp<uchar> >, 0,
+        binarySOpC1_<MinOp<uchar> >,
+        0,
         binarySOpC1_<MinOp<ushort> >,
         binarySOpC1_<MinOp<short> >,
         binarySOpC1_<MinOp<int> >,
         binarySOpC1_<MinOp<float> >,
-        binarySOpC1_<MinOp<double> >, 0
+        binarySOpC1_<MinOp<double> >,
+        0
     };
 
     BinarySFuncC1 func = tab[src1.depth()];
     CV_Assert(func != 0);
-    
+
     if( src1.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &dst, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], value );
         return;
     }
-    
+
     dst.create(src1.size(), src1.type());
+
     return func( src1, dst, value );
 }
 
@@ -1662,34 +1828,37 @@ void max( const Mat& src1, double value, Mat& dst )
 {
     static BinarySFuncC1 tab[] =
     {
-        binarySOpC1_<MaxOp<uchar> >, 0,
+        binarySOpC1_<MaxOp<uchar> >,
+        0,
         binarySOpC1_<MaxOp<ushort> >,
         binarySOpC1_<MaxOp<short> >,
         binarySOpC1_<MaxOp<int> >,
         binarySOpC1_<MaxOp<float> >,
-        binarySOpC1_<MaxOp<double> >, 0
+        binarySOpC1_<MaxOp<double> >,
+        0
     };
 
     BinarySFuncC1 func = tab[src1.depth()];
     CV_Assert(func != 0);
-    
+
     if( src1.dims > 2 )
     {
         dst.create(src1.dims, src1.size, src1.type());
         const Mat* arrays[] = {&src1, &dst, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
-        
+
         for( int i = 0; i < it.nplanes; i++, ++it )
             func( it.planes[0], it.planes[1], value );
         return;
     }
-    
+
     dst.create(src1.size(), src1.type());
+
     return func( src1, dst, value );
 }
 
-}
+} // namespace cv
 
 /****************************************************************************************\
 *                                Earlier API: cvAdd etc.                                 *
@@ -1714,6 +1883,7 @@ cvAnd( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* m
         mask = cv::cvarrToMat(maskarr);
     cv::bitwise_and( src1, src2, dst, mask );
 }
+
 
 CV_IMPL void
 cvOr( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* maskarr )
@@ -1771,6 +1941,7 @@ cvXorS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
     cv::bitwise_xor( src, s, dst, mask );
 }
 
+
 CV_IMPL void cvAdd( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* maskarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
@@ -1780,6 +1951,7 @@ CV_IMPL void cvAdd( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, c
         mask = cv::cvarrToMat(maskarr);
     cv::add( src1, src2, dst, mask );
 }
+
 
 CV_IMPL void cvSub( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, const CvArr* maskarr )
 {
@@ -1791,6 +1963,7 @@ CV_IMPL void cvSub( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, c
     cv::subtract( src1, src2, dst, mask );
 }
 
+
 CV_IMPL void cvAddS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const CvArr* maskarr )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1),
@@ -1800,6 +1973,7 @@ CV_IMPL void cvAddS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const 
         mask = cv::cvarrToMat(maskarr);
     cv::add( src1, value, dst, mask );
 }
+
 
 CV_IMPL void cvSubRS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const CvArr* maskarr )
 {
@@ -1811,6 +1985,7 @@ CV_IMPL void cvSubRS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const
     cv::subtract( value, src1, dst, mask );
 }
 
+
 CV_IMPL void cvMul( const CvArr* srcarr1, const CvArr* srcarr2,
                     CvArr* dstarr, double scale )
 {
@@ -1819,6 +1994,7 @@ CV_IMPL void cvMul( const CvArr* srcarr1, const CvArr* srcarr2,
     CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
     cv::multiply( src1, src2, dst, scale );
 }
+
 
 CV_IMPL void cvDiv( const CvArr* srcarr1, const CvArr* srcarr2,
                     CvArr* dstarr, double scale )
@@ -1865,6 +2041,7 @@ cvAbsDiffS( const CvArr* srcarr1, CvArr* dstarr, CvScalar scalar )
     cv::absdiff( src1, scalar, dst );
 }
 
+
 CV_IMPL void
 cvInRange( const void* srcarr1, const void* srcarr2,
            const void* srcarr3, void* dstarr )
@@ -1874,6 +2051,7 @@ cvInRange( const void* srcarr1, const void* srcarr2,
 
     cv::inRange( src1, cv::cvarrToMat(srcarr2), cv::cvarrToMat(srcarr3), dst );
 }
+
 
 CV_IMPL void
 cvInRangeS( const void* srcarr1, CvScalar lowerb, CvScalar upperb, void* dstarr )
@@ -1923,6 +2101,7 @@ cvMax( const void* srcarr1, const void* srcarr2, void* dstarr )
 
     cv::max( src1, cv::cvarrToMat(srcarr2), dst );
 }
+
 
 CV_IMPL void
 cvMinS( const void* srcarr1, double value, void* dstarr )

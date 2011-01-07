@@ -1787,6 +1787,9 @@ void CvTS::print_summary_header( int streams )
 {
     char csv_header[256], *ptr = csv_header;
     int i;
+#ifdef HAVE_IPP
+    const IppLibraryVersion* ippver = ippGetLibVersion();
+#endif
 
     printf( streams, "Engine: %s\n", version );
     time_t t1;
@@ -1801,7 +1804,11 @@ void CvTS::print_summary_header( int streams )
     printf( streams, "Tested Libraries: %s\n", lib_verinfo );
     printf( streams, "Optimized Low-level Plugin\'s: %s\n", plugins );
     printf( streams, "=================================================\n");
-
+#ifdef HAVE_IPP
+    printf( streams, "Built with Intel(R) IPP\n" );
+    printf( streams, "  %s {%d.%d.%d.%d %s}\n", ippver->Version, ippver->major, ippver->minor, ippver->majorBuild, ippver->build, ippver->BuildDate );
+    printf( streams, "=================================================\n");
+#endif
     sprintf( ptr, "funcName,dataType,channels,size," );
     ptr += strlen(ptr);
 
