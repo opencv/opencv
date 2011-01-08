@@ -322,6 +322,60 @@ struct ippAdd64f
     }
 };
 
+struct ippSub8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsSub_8u_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippSub16u
+{
+    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
+    {
+        ippsSub_16u_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippSub16s
+{
+    int operator()(const Ipp16s* src1, const Ipp16s* src2, Ipp16s* dst, int len) const
+    {
+        ippsSub_16s_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippSub32s
+{
+    int operator()(const Ipp32s* src1, const Ipp32s* src2, Ipp32s* dst, int len) const
+    {
+        ippsSub_32s_Sfs(src1,src2,dst,len,0);
+        return len;
+    }
+};
+
+struct ippSub32f
+{
+    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
+    {
+        ippsSub_32f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippSub64f
+{
+    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
+    {
+        ippsSub_64f(src1,src2,dst,len);
+        return len;
+    }
+};
+
 #endif
 
 
@@ -708,6 +762,16 @@ static BinaryFunc addTab[] =
 
 static BinaryFunc subTab[] =
 {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    binaryOpC1_<OpSub<uchar>,  ippSub8u>,
+    0,
+    binaryOpC1_<OpSub<ushort>, ippSub16u>,
+    binaryOpC1_<OpSub<short>,  ippSub16s>,
+    binaryOpC1_<OpSub<int>,    ippSub32s>,
+    binaryOpC1_<OpSub<float>,  ippSub32f>,
+    binaryOpC1_<OpSub<double>, ippSub64f>,
+    0
+#else
     binaryOpC1_<OpSub<uchar>,  VSub8u>,
     0,
     binaryOpC1_<OpSub<ushort>, VSub16u>,
@@ -716,6 +780,7 @@ static BinaryFunc subTab[] =
     binaryOpC1_<OpSub<float>,  VSub32f>,
     binaryOpC1_<OpSub<double>, NoVec>,
     0
+#endif
 };
 
 void add( const Mat& src1, const Mat& src2, Mat& dst )
