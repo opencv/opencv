@@ -326,7 +326,7 @@ struct ippSub8u
 {
     int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
     {
-        ippsSub_8u_Sfs(src1,src2,dst,len,0);
+        ippsSub_8u_Sfs(src2,src1,dst,len,0);
         return len;
     }
 };
@@ -335,7 +335,7 @@ struct ippSub16u
 {
     int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
     {
-        ippsSub_16u_Sfs(src1,src2,dst,len,0);
+        ippsSub_16u_Sfs(src2,src1,dst,len,0);
         return len;
     }
 };
@@ -344,7 +344,7 @@ struct ippSub16s
 {
     int operator()(const Ipp16s* src1, const Ipp16s* src2, Ipp16s* dst, int len) const
     {
-        ippsSub_16s_Sfs(src1,src2,dst,len,0);
+        ippsSub_16s_Sfs(src2,src1,dst,len,0);
         return len;
     }
 };
@@ -353,7 +353,7 @@ struct ippSub32s
 {
     int operator()(const Ipp32s* src1, const Ipp32s* src2, Ipp32s* dst, int len) const
     {
-        ippsSub_32s_Sfs(src1,src2,dst,len,0);
+        ippsSub_32s_Sfs(src2,src1,dst,len,0);
         return len;
     }
 };
@@ -362,7 +362,7 @@ struct ippSub32f
 {
     int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
     {
-        ippsSub_32f(src1,src2,dst,len);
+        ippsSub_32f(src2,src1,dst,len);
         return len;
     }
 };
@@ -371,12 +371,144 @@ struct ippSub64f
 {
     int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
     {
-        ippsSub_64f(src1,src2,dst,len);
+        ippsSub_64f(src2,src1,dst,len);
         return len;
     }
 };
 
-#endif
+struct ippMax8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsMaxEvery_8u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMax16u
+{
+    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
+    {
+        ippsMaxEvery_16u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMax32f
+{
+    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
+    {
+        ippsMaxEvery_32f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMax64f
+{
+    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
+    {
+        ippsMaxEvery_64f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMin8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsMinEvery_8u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMin16u
+{
+    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
+    {
+        ippsMinEvery_16u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMin32f
+{
+    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
+    {
+        ippsMinEvery_32f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippMin64f
+{
+    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
+    {
+        ippsMinEvery_64f(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippAbsDiff8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        int step = len * sizeof(Ipp8u);
+        IppiSize roi = { len, 1 };
+        ippiAbsDiff_8u_C1R(src1,step,src2,step,dst,step,roi);
+        return len;
+    }
+};
+
+struct ippAbsDiff16u
+{
+    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
+    {
+        int step = len * sizeof(Ipp16u);
+        IppiSize roi = { len, 1 };
+        ippiAbsDiff_16u_C1R(src1,step,src2,step,dst,step,roi);
+        return len;
+    }
+};
+
+struct ippAbsDiff32f
+{
+    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
+    {
+        int step = len * sizeof(Ipp32f);
+        IppiSize roi = { len, 1 };
+        ippiAbsDiff_32f_C1R(src1,step,src2,step,dst,step,roi);
+        return len;
+    }
+};
+
+struct ippAnd8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsAnd_8u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippOr8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsOr_8u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+struct ippXor8u
+{
+    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
+    {
+        ippsXor_8u(src1,src2,dst,len);
+        return len;
+    }
+};
+
+#endif // defined(HAVE_IPP)
 
 
 /****************************************************************************************\
@@ -646,17 +778,29 @@ binarySMaskOp( const Mat& src1, const Scalar& s, Mat& dst,
 
 void bitwise_and(const Mat& a, const Mat& b, Mat& c, const Mat& mask)
 {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    binaryMaskOp(a, b, c, mask, bitwiseOp_<AndOp<uchar>, AndOp<int>, ippAnd8u>);
+#else
     binaryMaskOp(a, b, c, mask, bitwiseOp_<AndOp<uchar>, AndOp<int>, VAnd8u>);
+#endif
 }
 
 void bitwise_or(const Mat& a, const Mat& b, Mat& c, const Mat& mask)
 {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    binaryMaskOp(a, b, c, mask, bitwiseOp_<OrOp<uchar>, OrOp<int>, ippOr8u>);
+#else
     binaryMaskOp(a, b, c, mask, bitwiseOp_<OrOp<uchar>, OrOp<int>, VOr8u>);
+#endif
 }
 
 void bitwise_xor(const Mat& a, const Mat& b, Mat& c, const Mat& mask)
 {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    binaryMaskOp(a, b, c, mask, bitwiseOp_<XorOp<uchar>, XorOp<int>, ippXor8u>);
+#else
     binaryMaskOp(a, b, c, mask, bitwiseOp_<XorOp<uchar>, XorOp<int>, VXor8u>);
+#endif
 }
 
 void bitwise_and(const Mat& a, const Scalar& s, Mat& c, const Mat& mask)
@@ -1345,6 +1489,16 @@ void absdiff( const Mat& src1, const Mat& src2, Mat& dst )
 {
     static BinaryFunc tab[] =
     {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+        binaryOpC1_<OpAbsDiff<uchar>,ippAbsDiff8u>,
+        0,
+        binaryOpC1_<OpAbsDiff<ushort>,ippAbsDiff16u>,
+        binaryOpC1_<OpAbsDiff<short>,VAbsDiff16s>,
+        binaryOpC1_<OpAbsDiff<int>,NoVec>,
+        binaryOpC1_<OpAbsDiff<float>,ippAbsDiff32f>,
+        binaryOpC1_<OpAbsDiff<double>,NoVec>,
+        0
+#else
         binaryOpC1_<OpAbsDiff<uchar>,VAbsDiff8u>,
         0,
         binaryOpC1_<OpAbsDiff<ushort>,VAbsDiff16u>,
@@ -1353,6 +1507,7 @@ void absdiff( const Mat& src1, const Mat& src2, Mat& dst )
         binaryOpC1_<OpAbsDiff<float>,VAbsDiff32f>,
         binaryOpC1_<OpAbsDiff<double>,NoVec>,
         0
+#endif
     };
 
     binaryOp(src1, src2, dst, tab[src1.depth()]);
@@ -1825,6 +1980,16 @@ void min( const Mat& src1, const Mat& src2, Mat& dst )
 {
     static BinaryFunc tab[] =
     {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+        binaryOpC1_<MinOp<uchar>,ippMin8u>,
+        0,
+        binaryOpC1_<MinOp<ushort>,ippMin16u>,
+        binaryOpC1_<MinOp<short>,VMin16s>,
+        binaryOpC1_<MinOp<int>,NoVec>,
+        binaryOpC1_<MinOp<float>,ippMin32f>,
+        binaryOpC1_<MinOp<double>,ippMin64f>,
+        0
+#else
         binaryOpC1_<MinOp<uchar>,VMin8u>,
         0,
         binaryOpC1_<MinOp<ushort>,VMin16u>,
@@ -1833,6 +1998,7 @@ void min( const Mat& src1, const Mat& src2, Mat& dst )
         binaryOpC1_<MinOp<float>,VMin32f>,
         binaryOpC1_<MinOp<double>,NoVec>,
         0
+#endif
     };
 
     binaryOp(src1, src2, dst, tab[src1.depth()]);
@@ -1842,6 +2008,16 @@ void max( const Mat& src1, const Mat& src2, Mat& dst )
 {
     static BinaryFunc tab[] =
     {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+        binaryOpC1_<MaxOp<uchar>,ippMax8u>,
+        0,
+        binaryOpC1_<MaxOp<ushort>,ippMax16u>,
+        binaryOpC1_<MaxOp<short>,VMax16s>,
+        binaryOpC1_<MaxOp<int>,NoVec>,
+        binaryOpC1_<MaxOp<float>,ippMax32f>,
+        binaryOpC1_<MaxOp<double>,ippMax64f>,
+        0
+#else
         binaryOpC1_<MaxOp<uchar>,VMax8u>,
         0,
         binaryOpC1_<MaxOp<ushort>,VMax16u>,
@@ -1850,6 +2026,7 @@ void max( const Mat& src1, const Mat& src2, Mat& dst )
         binaryOpC1_<MaxOp<float>,VMax32f>,
         binaryOpC1_<MaxOp<double>,NoVec>,
         0
+#endif
     };
 
     binaryOp(src1, src2, dst, tab[src1.depth()]);
