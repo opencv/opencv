@@ -1,4 +1,4 @@
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iostream>
 
 using namespace cv;
