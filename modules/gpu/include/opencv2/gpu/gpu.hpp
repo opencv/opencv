@@ -1180,7 +1180,6 @@ namespace cv
             size_t getBlockHistogramSize() const;
 
             void setSVMDetector(const vector<float>& detector);
-            bool checkDetectorSize() const;
 
             static vector<float> getDefaultPeopleDetector();
             static vector<float> getPeopleDetector_48x96();
@@ -1212,7 +1211,9 @@ namespace cv
         protected:
             void computeBlockHistograms(const GpuMat& img);
             void computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle);
+
             double getWinSigma() const;
+            bool checkDetectorSize() const;
 
             static int numPartsWithin(int size, int part_size, int stride);
             static Size numPartsWithin(Size size, Size part_size, Size stride);

@@ -124,7 +124,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-5f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-4f)) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -146,7 +146,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCOEFF_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-4f)) return;
 
                     gen(image, n, m, CV_32F, cn);
                     gen(templ, h, w, CV_32F, cn);
@@ -207,66 +207,70 @@ struct CV_GpuMatchTemplateTest: CvTest
             return false;
         }
 
-        //// Debug check
-        //for (int i = 0; i < a.rows; ++i)
-        //{
-        //    for (int j = 0; j < a.cols; ++j)
-        //    {
-        //        float v1 = a.at<float>(i, j);
-        //        float v2 = b.at<float>(i, j);
-        //        if (fabs(v1 - v2) > max_err)
-        //        {
-        //            ts->printf(CvTS::CONSOLE, "%d %d %f %f\n", i, j, v1, v2);
-        //            cin.get();
-        //        }
-        //    }
-        //}
-
         return true;
     }
-
-    //void match_template_naive_SQDIFF(const Mat& a, const Mat& b, Mat& c)
-    //{
-    //    c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
-    //    for (int i = 0; i < c.rows; ++i)
-    //    {
-    //        for (int j = 0; j < c.cols; ++j)
-    //        {
-    //            float delta;
-    //            float sum = 0.f;
-    //            for (int y = 0; y < b.rows; ++y)
-    //            {
-    //                const unsigned char* arow = a.ptr(i + y);
-    //                const unsigned char* brow = b.ptr(y);
-    //                for (int x = 0; x < b.cols; ++x)
-    //                {
-    //                    delta = (float)(arow[j + x] - brow[x]);
-    //                    sum += delta * delta;
-    //                }
-    //            }
-    //            c.at<float>(i, j) = sum;
-    //        }
-    //    }
-    //}
-
-    //void match_template_naive_CCORR(const Mat& a, const Mat& b, Mat& c)
-    //{
-    //    c.create(a.rows - b.rows + 1, a.cols - b.cols + 1, CV_32F);         
-    //    for (int i = 0; i < c.rows; ++i)
-    //    {
-    //        for (int j = 0; j < c.cols; ++j)
-    //        {
-    //            float sum = 0.f;
-    //            for (int y = 0; y < b.rows; ++y)
-    //            {
-    //                const float* arow = a.ptr<float>(i + y);
-    //                const float* brow = b.ptr<float>(y);
-    //                for (int x = 0; x < b.cols; ++x)
-    //                    sum += arow[j + x] * brow[x];
-    //            }
-    //            c.at<float>(i, j) = sum;
-    //        }
-    //    }
-    //}
 } match_template_test;
 
+struct CV_GpuMatchTemplateFindPatternInBlackTest: CvTest 
+{
+    CV_GpuMatchTemplateFindPatternInBlackTest()
+            : CvTest("GPU-MatchTemplateFindPatternInBlackTest", "matchTemplate") {}
+
+    void run(int)
+    {
+        try
+        {
+            Mat image = imread(std::string(ts->get_data_path()) + "matchtemplate/black.jpg");
+            if (image.empty())
+            {
+                ts->printf(CvTS::CONSOLE, "can't open file '%s'", (std::string(ts->get_data_path()) 
+                                                                   + "matchtemplate/black.jpg").c_str());
+                ts->set_failed_test_info(CvTS::FAIL_INVALID_TEST_DATA);
+                return;
+            }
+
+            Mat pattern = imread(std::string(ts->get_data_path()) + "matchtemplate/cat.jpg");
+            if (pattern.empty())
+            {
+                ts->printf(CvTS::CONSOLE, "can't open file '%s'", (std::string(ts->get_data_path()) 
+                                                                   + "matchtemplate/cat.jpg").c_str());
+                ts->set_failed_test_info(CvTS::FAIL_INVALID_TEST_DATA);
+                return;
+            }
+
+            gpu::GpuMat d_image(image);
+            gpu::GpuMat d_pattern(pattern);
+            gpu::GpuMat d_result;
+
+            double maxValue;
+            Point maxLoc;
+            Point maxLocGold(284, 12);
+
+            gpu::matchTemplate(d_image, d_pattern, d_result, CV_TM_CCOEFF_NORMED);
+            gpu::minMaxLoc(d_result, NULL, &maxValue, NULL, &maxLoc );
+            if (maxLoc != maxLocGold)
+            {
+                ts->printf(CvTS::CONSOLE, "bad match (CV_TM_CCOEFF_NORMED): %d %d, must be at: %d %d", 
+                           maxLoc.x, maxLoc.y, maxLocGold.x, maxLocGold.y);
+                ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                return;
+            }
+
+            gpu::matchTemplate(d_image, d_pattern, d_result, CV_TM_CCORR_NORMED);
+            gpu::minMaxLoc(d_result, NULL, &maxValue, NULL, &maxLoc );
+            if (maxLoc != maxLocGold)
+            {
+                ts->printf(CvTS::CONSOLE, "bad match (CV_TM_CCORR_NORMED): %d %d, must be at: %d %d", 
+                           maxLoc.x, maxLoc.y, maxLocGold.x, maxLocGold.y);
+                ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                return;
+            }
+        }
+        catch (const Exception& e)
+        {
+            ts->printf(CvTS::CONSOLE, e.what());
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
+} match_templet_find_bordered_pattern_test;
