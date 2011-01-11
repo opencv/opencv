@@ -1,25 +1,61 @@
 #include "precomp.hpp"
+#include <iostream>
 
 using namespace cv;
+using namespace std;
+
+const int ARITHM_NTESTS = 1000;
+const int ARITHM_RNG_SEED = -1;
+const int ARITHM_MAX_NDIMS = 4;
+const int ARITHM_MAX_SIZE_LOG = 10;
+const int ARITHM_MAX_CHANNELS = 4;
+
+static void getArithmValueRange(int depth, double& minval, double& maxval)
+{
+    minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
+    maxval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? 1000000 : 1000.;
+}
+
+static double getArithmMaxErr(int depth)
+{
+    return depth < CV_32F ? 0 : 4;
+}
 
 TEST(ArithmTest, add)
 {
-    typedef uchar _Tp;
-    
-    Mat A(30,30,DataType<_Tp>::type), B(A.size(), A.type()), C0, C;
-    RNG rng(-1);
-    rng.fill(A, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
-    rng.fill(B, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
-    C0.create(A.size(), A.type());
-    int i, j, cols = A.cols*A.channels();
-    for(i = 0; i < A.rows; i++)
+    int testIdx = 0;
+    RNG rng(ARITHM_RNG_SEED);
+    for( testIdx = 0; testIdx < ARITHM_NTESTS; testIdx++ )
     {
-        const _Tp* aptr = A.ptr<_Tp>(i);
-        const _Tp* bptr = B.ptr<_Tp>(i);
-        _Tp* cptr = C0.ptr<_Tp>(i);
-        for(j = 0; j < cols; j++)
-            cptr[j] = saturate_cast<_Tp>(aptr[j] + bptr[j]);
+        double minval, maxval;
+        vector<int> size;
+        cvtest::randomSize(rng, 2, ARITHM_MAX_NDIMS, ARITHM_MAX_SIZE_LOG, size);
+        int type = cvtest::randomType(rng, cvtest::TYPE_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        int depth = CV_MAT_DEPTH(type);
+        bool haveMask = rng.uniform(0, 4) == 0;
+        
+        getArithmValueRange(depth, minval, maxval);
+        Mat src1 = cvtest::randomMat(rng, size, type, minval, maxval, true);
+        Mat src2 = cvtest::randomMat(rng, size, type, minval, maxval, true);
+        Mat dst0 = cvtest::randomMat(rng, size, type, minval, maxval, false);
+        Mat dst = cvtest::randomMat(rng, size, type, minval, maxval, true);
+        Mat mask;
+        if( haveMask )
+        {
+            mask = cvtest::randomMat(rng, size, CV_8U, 0, 2, true);
+            cvtest::copy(dst0, dst);
+            cvtest::add(src1, 1, src2, 1, Scalar::all(0), dst0, dst.type());
+            cvtest::copy(dst, dst0, mask, true);
+            add(src1, src2, dst, mask);
+        }
+        else
+        {
+            cvtest::add(src1, 1, src2, 1, Scalar::all(0), dst0, dst.type());
+            add(src1, src2, dst);
+        }
+        
+        double maxErr = getArithmMaxErr(depth);
+        vector<int> pos;
+        ASSERT_TRUE(cvtest::cmpEps(dst0, dst, maxErr, &pos)) << "position: " << Mat(pos);
     }
-    add(A, B, C);
-    EXPECT_EQ(norm(C, C0, NORM_INF), 0);
 }
