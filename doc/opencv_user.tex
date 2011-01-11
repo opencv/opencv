@@ -1,0 +1,107 @@
+\documentclass[11pt]{book}
+
+\usepackage{cite} 
+\usepackage[pdftex]{graphicx}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage[svgnames]{xcolor}
+\usepackage{framed}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{makeidx}
+\usepackage{color}
+\usepackage{verbatim}
+
+\setcounter{secnumdepth}{1}
+
+\definecolor{shadecolor}{gray}{0.95}  % Background color of title bars
+\lstset{
+language=C,
+basicstyle=\small\ttfamily,
+backgroundcolor=\color{shadecolor}
+}
+
+\definecolor{cvlinkcolor}{rgb}{0.0 0.3 0.8}
+
+% taken from http://en.wikibooks.org/wiki/LaTeX/Hyperlinks
+\hypersetup{
+    bookmarks=true,         % show bookmarks bar?
+    unicode=false,          % non-Latin characters in Acrobat’s bookmarks
+    %pdftoolbar=true,        % show Acrobat’s toolbar?
+    %pdfmenubar=true,        % show Acrobat’s menu?
+    %pdffitwindow=false,     % window fit to page when opened
+    %pdfstartview={FitH},    % fits the width of the page to the window
+    %pdftitle={My title},    % title
+    %pdfauthor={Author},     % author
+    %pdfsubject={Subject},   % subject of the document
+    %pdfcreator={Creator},   % creator of the document
+    %pdfproducer={Producer}, % producer of the document
+    %pdfkeywords={keywords}, % list of keywords
+    %pdfnewwindow=true,      % links in new window
+    colorlinks=true,       % false: boxed links; true: colored links
+    linkcolor=cvlinkcolor,  % color of internal links
+    citecolor=cvlinkcolor,        % color of links to bibliography
+    filecolor=magenta,      % color of file links
+    urlcolor=cyan           % color of external links
+}
+
+\makeindex
+
+\newcommand{\piRsquare}{\pi r^2}		% This is my own macro !!!
+
+\usepackage{helvetica}
+\usepackage{ifthen}
+\usepackage{alltt}
+\usepackage{opencv}
+
+%%% Margins %%%
+\oddsidemargin 0.0in
+\evensidemargin 0.0in
+\textwidth 6.5in
+%\headheight 1.0in
+%\topmargin 0.5in
+%\textheight 9.0in
+%\footheight 1.0in 
+%%%%%%%%%%%%%%%
+
+\title{OpenCV User Guide}		% used by \maketitle
+\author{v2.2}		                % used by \maketitle
+\date{December, 2010}				% used by \maketitle
+
+\begin{document}
+\maketitle						% automatic title!
+
+\setcounter{tocdepth}{8}
+\tableofcontents
+
+\titleformat{\subsection}
+{\titlerule
+\vspace{.8ex}%
+\normalfont\bfseries\Large}
+{\thesection.}{.5em}{}
+
+%%% Define these to get rid of warnings
+\def\genc{true}
+\def\genpy{true}
+\def\gencpp{true}
+
+\newif\ifC
+\newif\ifPy
+\newif\ifCpp
+\newif\ifCPy
+
+\Cfalse
+\Cpptrue
+\Pyfalse
+\CPyfalse
+\def\targetlang{cpp}
+\part{C++ API Reference}
+\input{opencv_guide_body}
+
+\addcontentsline{toc}{part}{Index}
+\printindex
+
+\end{document}             % End of document.

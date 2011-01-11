@@ -1,0 +1,43 @@
+\section{Basic operations with images}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                                    %
+%                                        C++                                         %
+%                                                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ifCpp
+\subsection{Input/Output}
+Load an image from a file:
+\begin{lstlisting}
+Mat img = imread(filename);
+\end{lstlisting}
+
+If you read a jpg file, a 3 channel image is created by default. If you need a grayscale image, use:
+\begin{lstlisting}
+Mat img = imread(filename, 0);
+\end{lstlisting}
+
+Save an image to a file:
+\begin{lstlisting}
+Mat img = imwrite(filename);
+\end{lstlisting}
+
+\subsection{Accessing pixel intensity values}
+
+In order to get pixel intensity value, you have to know the type of an image and the number of channels. Here is an example for a single channel grey scale image (type 8UC1) and pixel coordinates x and y:
+\begin{lstlisting}
+Scalar intensity = img.at<uchar>(x, y);
+\end{lstlisting}
+\texttt{intensity.val[0]} contains a value from 0 to 255. 
+
+Now let us consider a 3 channel image with \texttt{bgr} color ordering (the default format returned by imread):
+\begin{lstlisting}
+Scalar intensity = img.at<uchar>(x, y);
+uchar blue = intensity.val[0];
+uchar green = intensity.val[1];
+uchar red = intensity.val[2];
+\end{lstlisting}
+\fi
+
+
