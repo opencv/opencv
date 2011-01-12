@@ -407,7 +407,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
                     for( int c = 0; c < masks[iIdx].cols; c++ )
                     {
                         if( maskPtr[c] == 0 )
-                            e_allDists[iIdx](c) = std::numeric_limits<float>::min();
+                            e_allDists[iIdx](c) = -std::numeric_limits<float>::max();
                     }
                 }
             }
@@ -417,7 +417,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
             vector<vector<DMatch> >::reverse_iterator curMatches = matches.rbegin();
             for( int k = 0; k < knn; k++ )
             {
-                float totalMaxCoeff = std::numeric_limits<float>::min();
+                float totalMaxCoeff = -std::numeric_limits<float>::max();
                 int bestTrainIdx = -1, bestImgIdx = -1;
                 for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
                 {
@@ -433,7 +433,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
                 if( bestTrainIdx == -1 )
                     break;
 
-                e_allDists[bestImgIdx](bestTrainIdx) = std::numeric_limits<float>::min();
+                e_allDists[bestImgIdx](bestTrainIdx) = -std::numeric_limits<float>::max();
                 curMatches->push_back( DMatch(qIdx, bestTrainIdx, bestImgIdx, sqrt((-2)*totalMaxCoeff + queryNorm2)) );
             }
             std::sort( curMatches->begin(), curMatches->end() );
@@ -1105,20 +1105,21 @@ void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint
         for( int k = 0; k < knn; k++ )
         {
             DMatch bestMatch;
-            size_t ci = 0;
-            for( ; ci < signature.size(); ci++ )
+            size_t best_ci = -1;
+            for( size_t ci = 0; ci < signature.size(); ci++ )
             {
                 if( -signature[ci] < bestMatch.distance )
                 {
                     int imgIdx = -1, trainIdx = -1;
                     trainPointCollection.getLocalIdx( (int)ci , imgIdx, trainIdx );
                     bestMatch = DMatch( (int)queryIdx, trainIdx, imgIdx, -signature[ci] );
+                    best_ci = ci;
                 }
             }
 
             if( bestMatch.trainIdx == -1 )
                 break;
-            signature[ci] = std::numeric_limits<float>::min();
+            signature[best_ci] = -std:numeric_limits<float>::max();
             matches[queryIdx].push_back( bestMatch );
         }
     }
