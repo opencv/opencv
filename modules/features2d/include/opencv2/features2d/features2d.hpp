@@ -2075,8 +2075,8 @@ Ptr<DescriptorMatcher> BruteForceMatcher<Distance>::clone( bool emptyTrainData )
     BruteForceMatcher* matcher = new BruteForceMatcher(distance);
     if( !emptyTrainData )
     {
-        transform( trainDescCollection.begin(), trainDescCollection.end(),
-                   matcher->trainDescCollection.begin(), clone_op );
+        std::transform( trainDescCollection.begin(), trainDescCollection.end(),
+                        matcher->trainDescCollection.begin(), clone_op );
     }
     return matcher;
 }

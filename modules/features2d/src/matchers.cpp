@@ -45,8 +45,6 @@
 #include <Eigen/Array>
 #endif
 
-using namespace std;
-
 namespace cv
 {
 
@@ -566,8 +564,8 @@ Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
         //matcher->flannIndex;
         matcher->addedDescCount = addedDescCount;
         matcher->mergedDescriptors = DescriptorCollection( mergedDescriptors );
-        transform( trainDescCollection.begin(), trainDescCollection.end(),
-                   matcher->trainDescCollection.begin(), clone_op );
+        std::transform( trainDescCollection.begin(), trainDescCollection.end(),
+                        matcher->trainDescCollection.begin(), clone_op );
     }
     return matcher;
 }
@@ -631,7 +629,7 @@ GenericDescriptorMatcher::KeyPointCollection::KeyPointCollection( const KeyPoint
 {
     pointCount = collection.pointCount;
 
-    transform( collection.images.begin(), collection.images.end(), images.begin(), clone_op );
+    std::transform( collection.images.begin(), collection.images.end(), images.begin(), clone_op );
 
     keypoints.resize( collection.keypoints.size() );
     for( size_t i = 0; i < keypoints.size(); i++ )
