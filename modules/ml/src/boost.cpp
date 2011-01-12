@@ -899,6 +899,7 @@ CvBoost::CvBoost()
     data = 0;
     weak = 0;
     default_model_name = "my_boost_tree";
+
     active_vars = active_vars_abs = orig_response = sum_response = weak_eval =
         subsample_mask = weights = subtree_weights = 0;
     have_active_cat_vars = have_subsample = false;
@@ -967,7 +968,9 @@ CvBoost::CvBoost( const CvMat* _train_data, int _tflag,
     weak = 0;
     data = 0;
     default_model_name = "my_boost_tree";
-    orig_response = sum_response = weak_eval = subsample_mask = weights = 0;
+
+    active_vars = active_vars_abs = orig_response = sum_response = weak_eval =
+        subsample_mask = weights = subtree_weights = 0;
 
     train( _train_data, _tflag, _responses, _var_idx, _sample_idx,
            _var_type, _missing_mask, _params );
@@ -2115,7 +2118,8 @@ CvBoost::CvBoost( const Mat& _train_data, int _tflag,
     weak = 0;
     data = 0;
     default_model_name = "my_boost_tree";
-    orig_response = sum_response = weak_eval = subsample_mask = weights = 0;
+    active_vars = active_vars_abs = orig_response = sum_response = weak_eval =
+        subsample_mask = weights = subtree_weights = 0;
     
     train( _train_data, _tflag, _responses, _var_idx, _sample_idx,
           _var_type, _missing_mask, _params );

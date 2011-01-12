@@ -237,7 +237,7 @@ void computeDepthDiscontMask( const Mat& disp, Mat& depthDiscontMask, const Mat&
 
     Mat curDisp; disp.copyTo( curDisp );
     if( !unknDispMask.empty() )
-        curDisp.setTo( Scalar(numeric_limits<float>::min()), unknDispMask );
+        curDisp.setTo( Scalar(-numeric_limits<float>::max()), unknDispMask );
     Mat maxNeighbDisp; dilate( curDisp, maxNeighbDisp, Mat(3, 3, CV_8UC1, Scalar(1)) );
     if( !unknDispMask.empty() )
         curDisp.setTo( Scalar(numeric_limits<float>::max()), unknDispMask );

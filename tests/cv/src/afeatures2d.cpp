@@ -307,7 +307,7 @@ protected:
         CV_Assert( DataType<ValueType>::type == validDescriptors.type() );
 
         int dimension = validDescriptors.cols;
-        DistanceType curMaxDist = std::numeric_limits<DistanceType>::min();
+        DistanceType curMaxDist = -std::numeric_limits<DistanceType>::max();
         for( int y = 0; y < validDescriptors.rows; y++ )
         {
             DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
