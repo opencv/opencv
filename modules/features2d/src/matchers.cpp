@@ -1119,7 +1119,7 @@ void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint
 
             if( bestMatch.trainIdx == -1 )
                 break;
-            signature[best_ci] = -std:numeric_limits<float>::max();
+            signature[best_ci] = -std::numeric_limits<float>::max();
             matches[queryIdx].push_back( bestMatch );
         }
     }
