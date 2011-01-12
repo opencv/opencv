@@ -124,7 +124,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-4f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f)) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -146,7 +146,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCOEFF_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-4f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f)) return;
 
                     gen(image, n, m, CV_32F, cn);
                     gen(templ, h, w, CV_32F, cn);
