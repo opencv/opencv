@@ -252,6 +252,7 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
 void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, double hit_threshold, 
                                     Size win_stride, Size padding)
 {
+    CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
     CV_Assert(padding == Size(0, 0));
 
     hits.clear();
