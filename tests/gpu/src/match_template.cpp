@@ -70,17 +70,17 @@ struct CV_GpuMatchTemplateTest: CvTest
             int n, m, h, w;
             F(clock_t t;)
 
+            RNG rng(*ts->get_rng());
+
             for (int cn = 1; cn <= 4; ++cn)
             {
                 F(ts->printf(CvTS::CONSOLE, "cn: %d\n", cn);)
                 for (int i = 0; i <= 0; ++i)
                 {
-                    n = 1 + rand() % 1000;
-                    m = 1 + rand() % 1000;
-                    do h = 1 + rand() % 100; while (h > n);
-                    do w = 1 + rand() % 100; while (w > m);
-
-                    //cout << "w: " << w << " h: " << h << endl;
+                    n = rng.uniform(30, 100);
+                    m = rng.uniform(30, 100);
+                    h = rng.uniform(5, n - 1);
+                    w = rng.uniform(5, m - 1);
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -91,7 +91,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), 5 * h * w * 1e-4f)) return;
+                    if (!check(dst_gold, Mat(dst), 5 * h * w * 1e-4f, "SQDIFF 8U")) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -102,7 +102,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-5f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-5f, "SQDIFF_NOREMD 8U")) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -113,7 +113,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), 5 * h * w * cn * cn * 1e-5f)) return;
+                    if (!check(dst_gold, Mat(dst), 5 * h * w * cn * cn * 1e-5f, "CCORR 8U")) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -124,7 +124,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f, "CCORR_NORMED 8U")) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -135,7 +135,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCOEFF);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), 5 * h * w * cn * cn * 1e-5f)) return;
+                    if (!check(dst_gold, Mat(dst), 5 * h * w * cn * cn * 1e-5f, "CCOEFF 8U")) return;
 
                     gen(image, n, m, CV_8U, cn);
                     gen(templ, h, w, CV_8U, cn);
@@ -146,7 +146,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCOEFF_NORMED);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f)) return;
+                    if (!check(dst_gold, Mat(dst), h * w * 1e-6f, "CCOEFF_NORMED 8U")) return;
 
                     gen(image, n, m, CV_32F, cn);
                     gen(templ, h, w, CV_32F, cn);
@@ -157,7 +157,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_SQDIFF);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                    if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f, "SQDIFF 32F")) return;
 
                     gen(image, n, m, CV_32F, cn);
                     gen(templ, h, w, CV_32F, cn);
@@ -168,7 +168,7 @@ struct CV_GpuMatchTemplateTest: CvTest
                     F(t = clock();)
                     gpu::matchTemplate(gpu::GpuMat(image), gpu::GpuMat(templ), dst, CV_TM_CCORR);
                     F(cout << "gpu_block: " << clock() - t << endl;)
-                    if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f)) return;
+                    if (!check(dst_gold, Mat(dst), 0.25f * h * w * 1e-5f, "CCORR 32F")) return;
                 }
             }
         }
@@ -190,19 +190,33 @@ struct CV_GpuMatchTemplateTest: CvTest
             rng.fill(a, RNG::UNIFORM, Scalar::all(0.001f), Scalar::all(1.f));
     }
 
-    bool check(const Mat& a, const Mat& b, float max_err)
+    bool check(const Mat& a, const Mat& b, float max_err, const string& method="")
     {
         if (a.size() != b.size())
         {
-            ts->printf(CvTS::CONSOLE, "bad size");
+            ts->printf(CvTS::CONSOLE, "bad size, method=%s\n", method.c_str());
             ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
             return false;
         }
 
+        //for (int i = 0; i < a.rows; ++i)
+        //{
+        //    for (int j = 0; j < a.cols; ++j)
+        //    {
+        //        float a_ = a.at<float>(i, j);
+        //        float b_ = b.at<float>(i, j);
+        //        if (fabs(a_ - b_) > max_err)
+        //        {
+        //            ts->printf(CvTS::CONSOLE, "a=%f, b=%f, i=%d, j=%d\n", a_, b_, i, j);
+        //            cin.get();
+        //        }
+        //    }
+        //}
+
         float err = (float)norm(a, b, NORM_INF);
         if (err > max_err)
         {
-            ts->printf(CvTS::CONSOLE, "bad accuracy: %f\n", err);
+            ts->printf(CvTS::CONSOLE, "bad accuracy: %f, method=%s\n", err, method.c_str());
             ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
             return false;
         }

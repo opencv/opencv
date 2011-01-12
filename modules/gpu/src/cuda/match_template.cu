@@ -560,7 +560,7 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8U(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
         result.ptr(y)[x] = (ccorr - image_sum_ * templ_sum_scale) * 
-                           rsqrtf(templ_sqsum_scale * max(1.f, image_sqsum_ - weight * image_sum_ * image_sum_));
+                           rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_ - weight * image_sum_ * image_sum_));
     }
 }
 
@@ -610,8 +610,8 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC2(
                 (image_sqsum_g.ptr(y + h)[x + w] - image_sqsum_g.ptr(y)[x + w]) -
                 (image_sqsum_g.ptr(y + h)[x] - image_sqsum_g.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        float rdenom = rsqrtf(templ_sqsum_scale * max(1.f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_ 
-                                                           + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_));
+        float rdenom = rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_ 
+                                                             + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_));
         result.ptr(y)[x] = (ccorr - image_sum_r_ * templ_sum_scale_r
                                   - image_sum_g_ * templ_sum_scale_g) * rdenom;
     }
@@ -678,9 +678,9 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC3(
                 (image_sqsum_b.ptr(y + h)[x + w] - image_sqsum_b.ptr(y)[x + w]) -
                 (image_sqsum_b.ptr(y + h)[x] - image_sqsum_b.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        float rdenom = rsqrtf(templ_sqsum_scale * max(1.f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_ 
-                                                           + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
-                                                           + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_));
+        float rdenom = rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_ 
+                                                             + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
+                                                             + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_));
         result.ptr(y)[x] = (ccorr - image_sum_r_ * templ_sum_scale_r
                                   - image_sum_g_ * templ_sum_scale_g
                                   - image_sum_b_ * templ_sum_scale_b) * rdenom;
@@ -760,10 +760,10 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC4(
                 (image_sqsum_a.ptr(y + h)[x + w] - image_sqsum_a.ptr(y)[x + w]) -
                 (image_sqsum_a.ptr(y + h)[x] - image_sqsum_a.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        float rdenom = rsqrtf(templ_sqsum_scale * max(1.f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_
-                                                           + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
-                                                           + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_
-                                                           + image_sqsum_a_ - weight * image_sum_a_ * image_sum_a_));
+        float rdenom = rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_
+                                                             + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
+                                                             + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_
+                                                             + image_sqsum_a_ - weight * image_sum_a_ * image_sum_a_));
         result.ptr(y)[x] = (ccorr - image_sum_r_ * templ_sum_scale_r
                                   - image_sum_g_ * templ_sum_scale_g
                                   - image_sum_b_ * templ_sum_scale_b

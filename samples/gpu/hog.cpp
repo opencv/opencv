@@ -239,9 +239,9 @@ void App::run()
     // Create HOG descriptors and detectors here
     vector<float> detector;
     if (win_size == Size(64, 128)) 
-        detector = cv::gpu::HOGDescriptor::getPeopleDetector_64x128();
+        detector = cv::gpu::HOGDescriptor::getPeopleDetector64x128();
     else
-        detector = cv::gpu::HOGDescriptor::getPeopleDetector_48x96();
+        detector = cv::gpu::HOGDescriptor::getPeopleDetector48x96();
 
     cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 
                                    cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr, 

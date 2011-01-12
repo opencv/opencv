@@ -1182,8 +1182,8 @@ namespace cv
             void setSVMDetector(const vector<float>& detector);
 
             static vector<float> getDefaultPeopleDetector();
-            static vector<float> getPeopleDetector_48x96();
-            static vector<float> getPeopleDetector_64x128();
+            static vector<float> getPeopleDetector48x96();
+            static vector<float> getPeopleDetector64x128();
 
             void detect(const GpuMat& img, vector<Point>& found_locations, 
                         double hit_threshold=0, Size win_stride=Size(), 
