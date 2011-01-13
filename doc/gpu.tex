@@ -50,7 +50,7 @@ void merge(const GpuMat* src, size\_t n, GpuMat\& dst,\par
 void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,\par
   const Stream\& stream);}
 \begin{description}
-\cvarg{src}{Vector or pointer to array of the source matrixes.}
+\cvarg{src}{Vector or pointer to array of the source matrices.}
 \cvarg{n}{Number of source matrices.}
 \cvarg{dst}{Destination matrix.}
 \cvarg{stream}{Stream for the asynchronous versions.}
@@ -67,7 +67,7 @@ void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,\par
   const Stream\& stream);}
 \begin{description}
 \cvarg{src}{Source matrix.}
-\cvarg{dst}{Destination vector or pointer to array of single-channel matrixes.}
+\cvarg{dst}{Destination vector or pointer to array of single-channel matrices.}
 \cvarg{stream}{Stream for the asynchronous versions.}
 \end{description}
 
@@ -90,7 +90,7 @@ See also: \hyperref[cppfunc.bitwise.not]{cv::bitwise\_not}.
 
 
 \cvfunc{cv::gpu::bitwise\_or}\label{cppfunc.gpu.bitwise.or}
-Performs per-element bitwise disjunction of two matrixes.
+Performs per-element bitwise disjunction of two matrices.
 
 \cvdefCpp{void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
   const GpuMat\& mask=GpuMat());\newline
@@ -108,7 +108,7 @@ See also: \hyperref[cppfunc.bitwise.or]{cv::bitwise\_or}.
 
 
 \cvfunc{cv::gpu::bitwise\_and}\label{cppfunc.gpu.bitwise.and}
-Performs per-element bitwise conjunction of two matrixes.
+Performs per-element bitwise conjunction of two matrices.
 
 \cvdefCpp{void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
   const GpuMat\& mask=GpuMat());\newline
@@ -126,7 +126,7 @@ See also: \hyperref[cppfunc.bitwise.and]{cv::bitwise\_and}.
 
 
 \cvfunc{cv::gpu::bitwise\_xor}\label{cppfunc.gpu.bitwise.xor}
-Performs per-element bitwise "exclusive or" of two matrixes.
+Performs per-element bitwise "exclusive or" of two matrices.
 
 \cvdefCpp{void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
   const GpuMat\& mask=GpuMat());\newline
