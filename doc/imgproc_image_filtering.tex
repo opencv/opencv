@@ -1,4 +1,4 @@
-\section{Image Filtering}
+\section{Image Filtering}\ifCpp\label{section.cpp.cpu.ImageFiltering}\fi
 
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images (represented as \cvCppCross{Mat}'s), that is, for each pixel location $(x,y)$ in the source image some its (normally rectangular) neighborhood is considered and used to compute the response. In case of a linear filter it is a weighted sum of pixel values, in case of morphological operations it is the minimum or maximum etc. The computed response is stored to the destination image at the same location $(x,y)$. It means, that the output image will be of the same size as the input image. Normally, the functions supports multi-channel arrays, in which case every channel is processed independently, therefore the output image will also have the same number of channels as the input one.
 

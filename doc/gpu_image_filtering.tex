@@ -1,0 +1,283 @@
+\section{Image Filtering}
+
+Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images.
+
+See also: \hyperref[section.cpp.cpu.ImageFiltering]{Image Filtering}
+
+\cvclass{gpu::BaseRowFilter\_GPU}\label{class.gpu.BaseRowFilter}
+The base class for linear or non-linear filters that process rows of 2D arrays. Such filters are used for the "horizontal" filtering parts in separable filters.
+
+\begin{lstlisting}
+class BaseRowFilter_GPU
+{
+public:
+    BaseRowFilter_GPU(int ksize_, int anchor_);
+    virtual ~BaseRowFilter_GPU() {}
+    virtual void operator()(const GpuMat& src, GpuMat& dst) = 0;
+    int ksize, anchor;
+};
+\end{lstlisting}
+
+\cvclass{gpu::BaseColumnFilter\_GPU}\label{class.gpu.BaseColumnFilter}
+The base class for linear or non-linear filters that process columns of 2D arrays. Such filters are used for the "vertical" filtering parts in separable filters.
+
+\begin{lstlisting}
+class BaseColumnFilter_GPU
+{
+public:
+    BaseColumnFilter_GPU(int ksize_, int anchor_);
+    virtual ~BaseColumnFilter_GPU() {}
+    virtual void operator()(const GpuMat& src, GpuMat& dst) = 0;
+    int ksize, anchor;
+};
+\end{lstlisting}
+
+\cvclass{gpu::BaseFilter\_GPU}\label{class.gpu.BaseFilter}
+The base class for non-separable 2D filters. 
+
+\begin{lstlisting}
+class CV_EXPORTS BaseFilter_GPU
+{
+public:
+    BaseFilter_GPU(const Size& ksize_, const Point& anchor_);
+    virtual ~BaseFilter_GPU() {}
+    virtual void operator()(const GpuMat& src, GpuMat& dst) = 0;
+    Size ksize;
+    Point anchor;
+};
+\end{lstlisting}
+
+\cvclass{gpu::FilterEngine\_GPU}\label{class.gpu.FilterEngine}
+The base class for Filter Engine.
+
+\begin{lstlisting}
+class CV_EXPORTS FilterEngine_GPU
+{
+public:
+    virtual ~FilterEngine_GPU() {}
+
+    virtual void apply(const GpuMat& src, GpuMat& dst, 
+                       Rect roi = Rect(0,0,-1,-1)) = 0;
+};
+\end{lstlisting}
+
+The class can be used to apply an arbitrary filtering operation to an image. It contains all the necessary intermediate buffers. Pointers to the initialized \texttt{FilterEngine\_GPU} instances are returned by various \texttt{create*Filter\_GPU} functions, see below, and they are used inside high-level functions such as \cvCppCross{gpu::filter2D}, \cvCppCross{gpu::erode}, \cvCppCross{gpu::Sobel} etc.
+
+By using \texttt{FilterEngine\_GPU} instead functions you can avoid unnessesary memory allocation for intermediate buffers and get much better performance:
+
+\begin{lstlisting}
+while (...)
+{
+    cv::gpu::GpuMat src = getImg();
+    cv::gpu::GpuMat dst;
+    // Allocate and release buffers at each iterations
+    cv::gpu::GaussianBlur(src, dst, ksize, sigma1);
+}
+
+// Allocate buffers only once
+cv::Ptr<cv::gpu::FilterEngine_GPU> filter = 
+    cv::gpu::createGaussianFilter_GPU(CV_8UC4, ksize, sigma1);
+while (...)
+{
+    cv::gpu::GpuMat src = getImg();
+    cv::gpu::GpuMat dst;
+    filter->apply(src, dst, cv::Rect(0, 0, src.cols, src.rows));
+}
+// Release buffers only once
+filter.release();
+\end{lstlisting}
+
+\texttt{FilterEngine\_GPU} can process a rectangular sub-region of an image. By default, if \texttt{roi == Rect(0,0,-1,-1)}, \texttt{FilterEngine\_GPU} process inner region of image (\texttt{Rect(anchor.x, anchor.y, src\_size.width - ksize.width, src\_size.height - ksize.height)}), because some filters doesn't check indexies outside the image for better perfomace. Which filters supports processing the whole image and which not and image type limitations see below.
+
+The GPU filters doesn't support the in-place mode.
+
+See also: \hyperref[class.gpu.BaseRowFilter]{BaseRowFilter\_GPU}, \hyperref[class.gpu.BaseColumnFilter]{BaseColumnFilter\_GPU}, \hyperref[class.gpu.BaseFilter]{BaseFilter\_GPU}, \hyperref[cppfunc.gpu.createFilter2D]{createFilter2D\_GPU}, \hyperref[cppfunc.gpu.createSeparableFilter]{createSeparableFilter\_GPU}, \hyperref[cppfunc.gpu.createBoxFilter]{createBoxFilter\_GPU}, \hyperref[cppfunc.gpu.createMorphologyFilter]{createMorphologyFilter\_GPU}, \hyperref[cppfunc.gpu.createLinearFilter]{createLinearFilter\_GPU}, \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}, \hyperref[cppfunc.gpu.createDerivFilter]{createDerivFilter\_GPU}, \hyperref[cppfunc.gpu.createGaussianFilter]{createGaussianFilter\_GPU}
+
+\cvfunc{gpu::createFilter2D\_GPU}\label{cppfunc.gpu.createFilter2D}
+Create the non-separable filter engine with the specified filter.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createFilter2D\_GPU(\par const Ptr<BaseFilter\_GPU>\& filter2D, \par int srcType, int dstType);
+}
+Usually this function is used inside high-level functions, like \hyperref[cppfunc.gpu.createLinearFilter]{createLinearFilter\_GPU}, \hyperref[cppfunc.gpu.createBoxFilter]{createBoxFilter\_GPU}.
+
+\cvfunc{gpu::createSeparableFilter\_GPU}\label{cppfunc.gpu.createSeparableFilter}
+Create the separable filter engine with the specified filters.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createSeparableFilter\_GPU(\par const Ptr<BaseRowFilter\_GPU>\& rowFilter, \par const Ptr<BaseColumnFilter\_GPU>\& columnFilter, \par int srcType, int bufType, int dstType);
+}
+Usually this function is used inside high-level functions, like \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}.
+
+\cvfunc{gpu::getRowSumFilter\_GPU}\label{cppfunc.gpu.getRowSumFilter}
+Create horizontal 1D box filter. Supports only \texttt{CV\_8UC1} source type and \texttt{CV\_32FC1} sum type.
+\cvdefCpp{
+Ptr<BaseRowFilter\_GPU> getRowSumFilter\_GPU(int srcType, int sumType, \par int ksize, int anchor = -1);
+}
+
+\cvfunc{gpu::getColumnSumFilter\_GPU}\label{cppfunc.gpu.getColumnSumFilter}
+Create vertical 1D box filter. Supports only \texttt{CV\_8UC1} sum type and \texttt{CV\_32FC1} dst type.
+\cvdefCpp{
+Ptr<BaseColumnFilter\_GPU> getColumnSumFilter\_GPU(int sumType, \par int dstType, int ksize, int anchor = -1);
+}
+
+\cvfunc{gpu::createBoxFilter\_GPU}\label{cppfunc.gpu.createBoxFilter}
+Create normalized 2D box filter. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type, dst type must be the same as source type. This filter doesn't check indexies outside the image.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createBoxFilter\_GPU(int srcType, int dstType, \par const Size\& ksize, \par const Point\& anchor = Point(-1,-1));
+}
+\cvdefCpp{
+Ptr<BaseFilter\_GPU> getBoxFilter\_GPU(int srcType, int dstType, \par const Size\& ksize, \par Point anchor = Point(-1, -1));
+}
+
+\cvCppFunc{gpu::boxFilter}
+Smooths the image using the normalized box filter. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type, dst type must be the same as source type.
+\cvdefCpp{
+void boxFilter(const GpuMat\& src, GpuMat\& dst, int ddepth, Size ksize, \par Point anchor = Point(-1,-1));            
+}
+See \cvCppCross{boxFilter}, \hyperref[cppfunc.gpu.createBoxFilter]{createBoxFilter\_GPU}.
+
+\cvCppFunc{gpu::blur}
+A synonym for normalized box filter.
+\cvdefCpp{
+void blur(const GpuMat\& src, GpuMat\& dst, Size ksize, \par Point anchor = Point(-1,-1));
+}
+See \cvCppCross{blur}, \cvCppCross{gpu::boxFilter}.
+
+\cvfunc{gpu::createMorphologyFilter\_GPU}\label{cppfunc.gpu.createMorphologyFilter}
+Create 2D morphological filter. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type. This filter doesn't check indexies outside the image.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createMorphologyFilter\_GPU(int op, int type, \par const Mat\& kernel, \par const Point\& anchor = Point(-1,-1), \par int iterations = 1);
+}
+\cvdefCpp{
+Ptr<BaseFilter\_GPU> getMorphologyFilter\_GPU(int op, int type, \par const Mat\& kernel, const Size\& ksize, \par Point anchor=Point(-1,-1));
+}
+\begin{description}
+\cvarg{op} {The morphology operation id. Only \texttt{MORPH\_ERODE} and \texttt{MORPH\_DILATE} are supported.}
+\cvarg{type}{The input/output image type. Only \texttt{CV\_8UC1} and \texttt{CV\_8UC4} are supported.}
+\cvarg{kernel}{The 2D 8-bit structuring element for the morphological operation. It must be continuous matrix.}
+\cvarg{size}{The horizontal or vertical structuring element size for separable morphological operations}
+\cvarg{anchor}{The anchor position within the structuring element; negative values mean that the anchor is at the center}
+\end{description}
+See \cvCppCross{createMorphologyFilter}.
+
+\cvCppFunc{gpu::erode}
+Erodes an image by using a specific structuring element. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type.
+\cvdefCpp{
+void erode(const GpuMat\& src, GpuMat\& dst, const Mat\& kernel, \par Point anchor = Point(-1, -1), \par int iterations = 1);
+}
+See \cvCppCross{erode}, \hyperref[cppfunc.gpu.createMorphologyFilter]{createMorphologyFilter\_GPU}.
+
+\cvCppFunc{gpu::dilate}
+Dilates an image by using a specific structuring element. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type.
+\cvdefCpp{
+void dilate(const GpuMat\& src, GpuMat\& dst, const Mat\& kernel, \par Point anchor = Point(-1, -1), \par int iterations = 1);
+}
+See \cvCppCross{dilate}, \hyperref[cppfunc.gpu.createMorphologyFilter]{createMorphologyFilter\_GPU}.
+
+\cvCppFunc{gpu::morphologyEx}
+Applies an advanced morphological operation to the image. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type.
+\cvdefCpp{
+void morphologyEx(const GpuMat\& src, GpuMat\& dst, int op, \par const Mat\& kernel, \par Point anchor = Point(-1, -1), \par int iterations = 1);
+}
+See \cvCppCross{morphologyEx}.
+
+\cvfunc{gpu::createLinearFilter\_GPU}\label{cppfunc.gpu.createLinearFilter}
+Create the non-separable linear filter. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type. This filter doesn't check indexies outside the image.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createLinearFilter\_GPU(int srcType, int dstType, \par const Mat\& kernel, \par const Point\& anchor = Point(-1,-1));
+}
+\cvdefCpp{
+Ptr<BaseFilter\_GPU> getLinearFilter\_GPU(int srcType, int dstType, \par const Mat\& kernel, const Size\& ksize, \par Point anchor = Point(-1, -1));
+}
+
+\cvCppFunc{gpu::filter2D}
+Applies non-separable 2D linear filter to the image. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type.
+\cvdefCpp{
+void filter2D(const GpuMat\& src, GpuMat\& dst, int ddepth, \par const Mat\& kernel, \par Point anchor=Point(-1,-1));
+}
+See \cvCppCross{filter2D}, \hyperref[cppfunc.gpu.createLinearFilter]{createLinearFilter\_GPU}.
+
+\cvCppFunc{gpu::Laplacian}
+Applies Laplacian operator to the image. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source type. Supports only \texttt{ksize} = 1 and \texttt{ksize} = 3.
+\cvdefCpp{
+void Laplacian(const GpuMat\& src, GpuMat\& dst, int ddepth, \par int ksize = 1, double scale = 1);
+}
+See \cvCppCross{Laplacian}, \cvCppCross{gpu::filter2D}.
+
+\cvfunc{gpu::getLinearRowFilter\_GPU}\label{cppfunc.gpu.getLinearRowFilter}
+Create the primitive row filter with the specified kernel.
+\cvdefCpp{
+Ptr<BaseRowFilter\_GPU> getLinearRowFilter\_GPU(int srcType, \par int bufType, const Mat\& rowKernel, int anchor = -1, \par int borderType = BORDER\_CONSTANT);
+}
+Supports only \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_16SC1}, \texttt{CV\_16SC2}, \texttt{CV\_32SC1}, \texttt{CV\_32FC1} source type. There are two version of algorithm: NPP and OpenCV. NPP calls when \texttt{srcType == CV\_8UC1} or \texttt{srcType == CV\_8UC4} and \texttt{bufType == srcType}, otherwise calls OpenCV version. NPP supports only \texttt{BORDER\_CONSTANT} border type and doesn't check indexies outside image. OpenCV version supports only \texttt{CV\_32F} as buffer depth and \texttt{BORDER\_REFLECT101}, \texttt{BORDER\_REPLICATE} and \texttt{BORDER\_CONSTANT} border types and checks indexies outside image.
+
+See also: \hyperref[cppfunc.gpu.getLinearColumnFilter]{getLinearColumnFilter\_GPU}, \cvCppCross{createSeparableLinearFilter}.
+
+\cvfunc{gpu::getLinearColumnFilter\_GPU}\label{cppfunc.gpu.getLinearColumnFilter}
+Create the primitive column filter with the specified kernel.
+\cvdefCpp{
+Ptr<BaseColumnFilter\_GPU> getLinearColumnFilter\_GPU(int bufType, \par int dstType, const Mat\& columnKernel, int anchor = -1, \par int borderType = BORDER\_CONSTANT);
+}
+Supports only \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_16SC1}, \texttt{CV\_16SC2}, \texttt{CV\_32SC1}, \texttt{CV\_32FC1} dst type. There are two version of algorithm: NPP and OpenCV. NPP calls when \texttt{dstType == CV\_8UC1} or \texttt{dstType == CV\_8UC4} and \texttt{bufType == dstType}, otherwise calls OpenCV version. NPP supports only \texttt{BORDER\_CONSTANT} border type and doesn't check indexies outside image. OpenCV version supports only \texttt{CV\_32F} as buffer depth and \texttt{BORDER\_REFLECT101}, \texttt{BORDER\_REPLICATE} and \texttt{BORDER\_CONSTANT} border types and checks indexies outside image.
+
+See also: \hyperref[cppfunc.gpu.getLinearRowFilter]{getLinearRowFilter\_GPU}, \cvCppCross{createSeparableLinearFilter}.
+
+\cvfunc{gpu::createSeparableLinearFilter\_GPU}\label{cppfunc.gpu.createSeparableLinearFilter}
+Create the separable linear filter engine.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createSeparableLinearFilter\_GPU(int srcType, \par int dstType, const Mat\& rowKernel, const Mat\& columnKernel, \par const Point\& anchor = Point(-1,-1), \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.getLinearRowFilter]{getLinearRowFilter\_GPU}, \hyperref[cppfunc.gpu.getLinearColumnFilter]{getLinearColumnFilter\_GPU}, \cvCppCross{createSeparableLinearFilter}.
+
+\cvCppFunc{gpu::sepFilter2D}
+Applies separable 2D linear filter to the image.
+\cvdefCpp{
+void sepFilter2D(const GpuMat\& src, GpuMat\& dst, int ddepth, \par const Mat\& kernelX, const Mat\& kernelY, \par Point anchor = Point(-1,-1), \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}, \cvCppCross{sepFilter2D}.
+
+\cvfunc{gpu::createDerivFilter\_GPU}\label{cppfunc.gpu.createDerivFilter}
+Create filter engine for the generalized Sobel operator.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createDerivFilter\_GPU(int srcType, int dstType, \par int dx, int dy, int ksize, \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}, \cvCppCross{createDerivFilter}.
+
+\cvCppFunc{gpu::Sobel}
+Applies generalized Sobel operator to the image.
+\cvdefCpp{
+void Sobel(const GpuMat\& src, GpuMat\& dst, int ddepth, int dx, int dy, \par int ksize = 3, double scale = 1, \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}, \cvCppCross{Sobel}.
+
+\cvCppFunc{gpu::Scharr}
+Calculates the first x- or y- image derivative using Scharr operator.
+\cvdefCpp{
+void Scharr(const GpuMat\& src, GpuMat\& dst, int ddepth, \par int dx, int dy, double scale = 1, \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}, \cvCppCross{Scharr}.
+
+\cvfunc{gpu::createGaussianFilter\_GPU}\label{cppfunc.gpu.createGaussianFilter}
+Create the Gaussian filter engine.
+\cvdefCpp{
+Ptr<FilterEngine\_GPU> createGaussianFilter\_GPU(int type, Size ksize, \par double sigma1, double sigma2 = 0, \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.createSeparableLinearFilter]{createSeparableLinearFilter\_GPU}, \cvCppCross{createGaussianFilter}.
+
+\cvCppFunc{gpu::GaussianBlur}
+Smooths the image using Gaussian filter.
+\cvdefCpp{
+void GaussianBlur(const GpuMat\& src, GpuMat\& dst, Size ksize, \par double sigma1, double sigma2 = 0, \par int rowBorderType = BORDER\_DEFAULT, \par int columnBorderType = -1);
+}
+See \hyperref[cppfunc.gpu.createGaussianFilter]{createGaussianFilter\_GPU}, \cvCppCross{GaussianBlur}.
+
+\cvfunc{gpu::getMaxFilter\_GPU}\label{cppfunc.gpu.getMaxFilter}
+Create maximum filter. Supports only \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source and dst type.
+\cvdefCpp{
+Ptr<BaseFilter\_GPU> getMaxFilter\_GPU(int srcType, int dstType, \par const Size\& ksize, Point anchor = Point(-1,-1));
+}
+
+\cvfunc{gpu::getMinFilter\_GPU}\label{cppfunc.gpu.getMinFilter}
+Create minimum filter. Supports only \texttt{CV\_8UC1} and \texttt{CV\_8UC4} source and dst type.
+\cvdefCpp{
+Ptr<BaseFilter\_GPU> getMinFilter\_GPU(int srcType, int dstType, \par const Size\& ksize, Point anchor = Point(-1,-1));
+}
