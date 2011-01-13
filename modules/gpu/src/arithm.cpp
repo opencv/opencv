@@ -170,8 +170,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz,
-            nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
+        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
     }
     else
     {
@@ -186,8 +185,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
             pValues3[1] = nppLut3[1].ptr<Npp32s>();
             pValues3[2] = nppLut3[2].ptr<Npp32s>();
         }
-        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz,
-            pValues3, lvls.pLevels3, lvls.nValues3) );
+        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, pValues3, lvls.pLevels3, lvls.nValues3) );
     }
 }
 

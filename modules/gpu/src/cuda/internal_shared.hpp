@@ -62,7 +62,7 @@ namespace cv
             BORDER_REPLICATE_GPU,
             BORDER_CONSTANT_GPU
         };
-        
+                
         // Converts CPU border extrapolation mode into GPU internal analogue.
         // Returns true if the GPU analogue exists, false otherwise.
         bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
@@ -105,8 +105,28 @@ namespace cv
             const textureReference* tex; 
             cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
             cudaSafeCall( cudaUnbindTexture(tex) );
-        }        
+        }    
 
+        struct KeyPoint_GPU
+        {
+            float x;
+            float y;
+            float size;
+            float response;
+            float angle;
+            float octave;
+        };
+
+        enum KeypointLayout 
+        {
+            SF_X,
+            SF_Y,
+            SF_SIZE,
+            SF_RESPONSE,
+            SF_ANGLE,
+            SF_OCTAVE,
+            SF_FEATURE_STRIDE
+        };
     }
 }
 

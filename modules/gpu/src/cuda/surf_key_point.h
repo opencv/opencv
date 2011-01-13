@@ -47,29 +47,7 @@ namespace cv
 {
     namespace gpu
     {
-        namespace surf
-        {
-            struct KeyPoint_GPU
-            {
-                float x;
-                float y;
-                float size;
-                float response;
-                float angle;
-                float octave;
-            };
-
-            enum KeypointLayout 
-            {
-                SF_X,
-                SF_Y,
-                SF_SIZE,
-                SF_RESPONSE,
-                SF_ANGLE,
-                SF_OCTAVE,
-                SF_FEATURE_STRIDE
-            };
-        }
+       
     }
 }
 

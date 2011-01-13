@@ -35,6 +35,13 @@ source_group("Include" FILES ${lib_hdrs})
 file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
 
+if (HAVE_CUDA AND MSVC)
+    file(GLOB ncv_srcs "src/nvidia/*.cpp")
+	file(GLOB ncv_hdrs "src/nvidia/*.h*")
+	file(GLOB ncv_cuda "src/nvidia/*.cu")
+	source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
+endif()
+
 if (HAVE_CUDA)		
 	get_filename_component(_path_to_findnpp "${CMAKE_CURRENT_LIST_FILE}" PATH)
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_path_to_findnpp})	
@@ -68,19 +75,16 @@ if (HAVE_CUDA)
 		string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 		string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 	endif()
+   
 
-	CUDA_COMPILE(cuda_objs ${lib_cuda})
+    include(FindNPP_staging.cmake)
+    include_directories(${NPPST_INC})   
+    
+	CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
 	#CUDA_BUILD_CLEAN_TARGET()
 endif()
 
-
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${cuda_objs})
-
-IF (HAVE_CUDA)
-    include(FindNPP_staging.cmake)    
-    include_directories(${NPPST_INC})       
-    target_link_libraries(${the_target} ${NPPST_LIB})
-endif()
+add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 
 if(PCHSupport_FOUND)
 	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
@@ -114,6 +118,7 @@ target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
 if (HAVE_CUDA)
 	target_link_libraries(${the_target} ${CUDA_LIBRARIES} ${CUDA_NPP_LIBRARIES})
+    target_link_libraries(${the_target} ${NPPST_LIB})
     CUDA_ADD_CUFFT_TO_TARGET(${the_target})
 endif()
 

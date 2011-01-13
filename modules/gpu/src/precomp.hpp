@@ -71,6 +71,9 @@
     #include "npp_staging.h"
     #include "surf_key_point.h"
 
+	#include "nvidia/NCV.hpp"
+	#include "nvidia/NCVHaarObjectDetection.hpp"
+
 #define CUDART_MINIMUM_REQUIRED_VERSION 3020
 #define NPP_MINIMUM_REQUIRED_VERSION 3216
 

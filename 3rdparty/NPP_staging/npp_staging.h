@@ -188,14 +188,14 @@ struct NppStSize32u
 enum NppStStatus
 {
     //already present in NPP
- /*   NPP_SUCCESS                      = 0,   ///< Successful operation (same as NPP_NO_ERROR)
-    NPP_ERROR                        = -1,  ///< Unknown error
-    NPP_CUDA_KERNEL_EXECUTION_ERROR  = -3,  ///< CUDA kernel execution error
-    NPP_NULL_POINTER_ERROR           = -4,  ///< NULL pointer argument error
-    NPP_TEXTURE_BIND_ERROR           = -24, ///< CUDA texture binding error or non-zero offset returned
-    NPP_MEMCPY_ERROR                 = -13, ///< CUDA memory copy error
-    NPP_MEM_ALLOC_ERR                = -12, ///< CUDA memory allocation error
-    NPP_MEMFREE_ERR                  = -15, ///< CUDA memory deallocation error*/
+    //NPP_SUCCESS                      = 0,   ///< Successful operation (same as NPP_NO_ERROR)
+    //NPP_ERROR                        = -1,  ///< Unknown error
+    //NPP_CUDA_KERNEL_EXECUTION_ERROR  = -3,  ///< CUDA kernel execution error
+    //NPP_NULL_POINTER_ERROR           = -4,  ///< NULL pointer argument error
+    //NPP_TEXTURE_BIND_ERROR           = -24, ///< CUDA texture binding error or non-zero offset returned
+    //NPP_MEMCPY_ERROR                 = -13, ///< CUDA memory copy error
+    //NPP_MEM_ALLOC_ERR                = -12, ///< CUDA memory allocation error
+    //NPP_MEMFREE_ERR                  = -15, ///< CUDA memory deallocation error
 
     //to be added
     NPP_INVALID_ROI,                        ///< Invalid region of interest argument
@@ -244,7 +244,7 @@ extern "C" {
 
 /** \defgroup core_npp NPP Core
  * Basic functions for CUDA streams management.
- * WARNING: These functions couldn't be exported from NPP_staging library, so they can't be used
+ * WARNING: These functions couldn't be exported into DLL, so they can be used only with static version of NPP_staging
  * @{
  */
 
@@ -570,6 +570,13 @@ NppStStatus nppiStIntegralGetSize_8u32u(NppStSize32u roiSize, NppSt32u *pBufsize
 
 
 /**
+ * Calculates the size of the temporary buffer for integral image creation
+ * \see nppiStIntegralGetSize_8u32u
+ */
+NppStStatus nppiStIntegralGetSize_32f32f(NppStSize32u roiSize, NppSt32u *pBufsize);
+
+
+/**
  * Creates an integral image representation for the input image
  *
  * \param d_src             [IN] Source image pointer (CUDA device memory)
@@ -588,6 +595,15 @@ NppStStatus nppiStIntegral_8u32u_C1R(NppSt8u *d_src, NppSt32u srcStep,
 
 
 /**
+ * Creates an integral image representation for the input image
+ * \see nppiStIntegral_8u32u_C1R
+ */
+NppStStatus nppiStIntegral_32f32f_C1R(NppSt32f *d_src, NppSt32u srcStep,
+                                      NppSt32f *d_dst, NppSt32u dstStep, NppStSize32u roiSize,
+                                      NppSt8u *pBuffer, NppSt32u bufSize);
+
+
+/**
  * Creates an integral image representation for the input image. Host implementation
  *
  * \param h_src             [IN] Source image pointer (Host or pinned memory)
@@ -600,6 +616,14 @@ NppStStatus nppiStIntegral_8u32u_C1R(NppSt8u *d_src, NppSt32u srcStep,
  */
 NppStStatus nppiStIntegral_8u32u_C1R_host(NppSt8u *h_src, NppSt32u srcStep,
                                           NppSt32u *h_dst, NppSt32u dstStep, NppStSize32u roiSize);
+
+
+/**
+ * Creates an integral image representation for the input image. Host implementation
+ * \see nppiStIntegral_8u32u_C1R_host
+ */
+NppStStatus nppiStIntegral_32f32f_C1R_host(NppSt32f *h_src, NppSt32u srcStep,
+                                           NppSt32f *h_dst, NppSt32u dstStep, NppStSize32u roiSize);
 
 
 /**

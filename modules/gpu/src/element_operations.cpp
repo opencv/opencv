@@ -82,21 +82,16 @@ void cv::gpu::max(const GpuMat&, double, GpuMat&, const Stream&) { throw_nogpu()
 
 namespace
 {
-    typedef NppStatus (*npp_arithm_8u_t)(const Npp8u* pSrc1, int nSrc1Step, const Npp8u* pSrc2, int nSrc2Step, Npp8u* pDst, int nDstStep,
-                                         NppiSize oSizeROI, int nScaleFactor);
-    typedef NppStatus (*npp_arithm_32s_t)(const Npp32s* pSrc1, int nSrc1Step, const Npp32s* pSrc2, int nSrc2Step, Npp32s* pDst,
-                                          int nDstStep, NppiSize oSizeROI);
-    typedef NppStatus (*npp_arithm_32f_t)(const Npp32f* pSrc1, int nSrc1Step, const Npp32f* pSrc2, int nSrc2Step, Npp32f* pDst,
-                                          int nDstStep, NppiSize oSizeROI);
+    typedef NppStatus (*npp_arithm_8u_t)(const Npp8u* pSrc1, int nSrc1Step, const Npp8u* pSrc2, int nSrc2Step, Npp8u* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
+    typedef NppStatus (*npp_arithm_32s_t)(const Npp32s* pSrc1, int nSrc1Step, const Npp32s* pSrc2, int nSrc2Step, Npp32s* pDst, int nDstStep, NppiSize oSizeROI);
+    typedef NppStatus (*npp_arithm_32f_t)(const Npp32f* pSrc1, int nSrc1Step, const Npp32f* pSrc2, int nSrc2Step, Npp32f* pDst, int nDstStep, NppiSize oSizeROI);
 
     void nppArithmCaller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst,
                          npp_arithm_8u_t npp_func_8uc1, npp_arithm_8u_t npp_func_8uc4,
                          npp_arithm_32s_t npp_func_32sc1, npp_arithm_32f_t npp_func_32fc1)
     {
         CV_DbgAssert(src1.size() == src2.size() && src1.type() == src2.type());
-
         CV_Assert(src1.type() == CV_8UC1 || src1.type() == CV_8UC4 || src1.type() == CV_32SC1 || src1.type() == CV_32FC1);
-
         dst.create( src1.size(), src1.type() );
 
         NppiSize sz;
@@ -106,24 +101,16 @@ namespace
         switch (src1.type())
         {
         case CV_8UC1:
-            nppSafeCall( npp_func_8uc1(src1.ptr<Npp8u>(), src1.step,
-                src2.ptr<Npp8u>(), src2.step,
-                dst.ptr<Npp8u>(), dst.step, sz, 0) );
+            nppSafeCall( npp_func_8uc1(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz, 0) );
             break;
         case CV_8UC4:
-            nppSafeCall( npp_func_8uc4(src1.ptr<Npp8u>(), src1.step,
-                src2.ptr<Npp8u>(), src2.step,
-                dst.ptr<Npp8u>(), dst.step, sz, 0) );
+            nppSafeCall( npp_func_8uc4(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz, 0) );
             break;
         case CV_32SC1:
-            nppSafeCall( npp_func_32sc1(src1.ptr<Npp32s>(), src1.step,
-                src2.ptr<Npp32s>(), src2.step,
-                dst.ptr<Npp32s>(), dst.step, sz) );
+            nppSafeCall( npp_func_32sc1(src1.ptr<Npp32s>(), src1.step, src2.ptr<Npp32s>(), src2.step, dst.ptr<Npp32s>(), dst.step, sz) );
             break;
         case CV_32FC1:
-            nppSafeCall( npp_func_32fc1(src1.ptr<Npp32f>(), src1.step,
-                src2.ptr<Npp32f>(), src2.step,
-                dst.ptr<Npp32f>(), dst.step, sz) );
+            nppSafeCall( npp_func_32fc1(src1.ptr<Npp32f>(), src1.step, src2.ptr<Npp32f>(), src2.step, dst.ptr<Npp32f>(), dst.step, sz) );
             break;
         default:
             CV_Assert(!"Unsupported source type");
@@ -133,16 +120,15 @@ namespace
     template<int SCN> struct NppArithmScalarFunc;
     template<> struct NppArithmScalarFunc<1>
     {
-        typedef NppStatus (*func_ptr)(const Npp32f *pSrc, int nSrcStep, Npp32f nValue, Npp32f *pDst,
-                                      int nDstStep, NppiSize oSizeROI);
+        typedef NppStatus (*func_ptr)(const Npp32f *pSrc, int nSrcStep, Npp32f nValue, Npp32f *pDst, int nDstStep, NppiSize oSizeROI);
     };
     template<> struct NppArithmScalarFunc<2>
     {
-        typedef NppStatus (*func_ptr)(const Npp32fc *pSrc, int nSrcStep, Npp32fc nValue, Npp32fc *pDst,
-                                      int nDstStep, NppiSize oSizeROI);
+        typedef NppStatus (*func_ptr)(const Npp32fc *pSrc, int nSrcStep, Npp32fc nValue, Npp32fc *pDst, int nDstStep, NppiSize oSizeROI);
     };
 
     template<int SCN, typename NppArithmScalarFunc<SCN>::func_ptr func> struct NppArithmScalar;
+
     template<typename NppArithmScalarFunc<1>::func_ptr func> struct NppArithmScalar<1, func>
     {
         static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst)
@@ -254,24 +240,16 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
     switch (src1.type())
     {
     case CV_8UC1:
-        nppSafeCall( nppiAbsDiff_8u_C1R(src1.ptr<Npp8u>(), src1.step,
-            src2.ptr<Npp8u>(), src2.step,
-            dst.ptr<Npp8u>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_8u_C1R(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz) );
         break;
     case CV_8UC4:
-        nppSafeCall( nppiAbsDiff_8u_C4R(src1.ptr<Npp8u>(), src1.step,
-            src2.ptr<Npp8u>(), src2.step,
-            dst.ptr<Npp8u>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_8u_C4R(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz) );
         break;
     case CV_32SC1:
-        nppSafeCall( nppiAbsDiff_32s_C1R(src1.ptr<Npp32s>(), src1.step,
-            src2.ptr<Npp32s>(), src2.step,
-            dst.ptr<Npp32s>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_32s_C1R(src1.ptr<Npp32s>(), src1.step, src2.ptr<Npp32s>(), src2.step, dst.ptr<Npp32s>(), dst.step, sz) );
         break;
     case CV_32FC1:
-        nppSafeCall( nppiAbsDiff_32f_C1R(src1.ptr<Npp32f>(), src1.step,
-            src2.ptr<Npp32f>(), src2.step,
-            dst.ptr<Npp32f>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_32f_C1R(src1.ptr<Npp32f>(), src1.step, src2.ptr<Npp32f>(), src2.step, dst.ptr<Npp32f>(), dst.step, sz) );
         break;
     default:
         CV_Assert(!"Unsupported source type");

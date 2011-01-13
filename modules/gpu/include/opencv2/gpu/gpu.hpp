@@ -1380,87 +1380,39 @@ namespace cv
             explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
         };
 
-        ////////////////////////////////// CascadeClassifier //////////////////////////////////////////
+        ////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////
         // The cascade classifier class for object detection.
-        class CV_EXPORTS CascadeClassifier
+        class CV_EXPORTS CascadeClassifier_GPU
         {
-        public:
-            struct CV_EXPORTS DTreeNode
-            {
-                int featureIdx;
-                float threshold; // for ordered features only
-                int left;
-                int right;
-            };
-
-            struct CV_EXPORTS DTree
-            {
-                int nodeCount;
-            };
-
-            struct CV_EXPORTS Stage
-            {
-                int first;
-                int ntrees;
-                float threshold;
-            };
-
-            enum { BOOST = 0 };
-            enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
-
-            CascadeClassifier();
-            CascadeClassifier(const string& filename);
-            ~CascadeClassifier();
+        public:            
+            CascadeClassifier_GPU();
+            CascadeClassifier_GPU(const string& filename);
+            ~CascadeClassifier_GPU();
 
             bool empty() const;
             bool load(const string& filename);
-            bool read(const FileNode& node);
+            void release();
+            
+            /* returns number of detected objects */
+            int detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size());
+                                    
+            bool findLargestObject;
+            bool visualizeInPlace;
 
-            void detectMultiScale( const Mat& image, vector<Rect>& objects, double scaleFactor=1.1,
-                int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size());
-
-            bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
-            int runAt( Ptr<FeatureEvaluator>&, Point );
-
-            bool isStumpBased;
-
-            int stageType;
-            int featureType;
-            int ncategories;
-            Size origWinSize;
-
-            vector<Stage> stages;
-            vector<DTree> classifiers;
-            vector<DTreeNode> nodes;
-            vector<float> leaves;
-            vector<int> subsets;
-
-            Ptr<FeatureEvaluator> feval;
-            Ptr<CvHaarClassifierCascade> oldCascade;
+            Size getClassifierSize() const;
+        private:
+            
+            struct CascadeClassifierImpl;                        
+            CascadeClassifierImpl* impl;            
         };
-
+        
         ////////////////////////////////// SURF //////////////////////////////////////////
         
         struct CV_EXPORTS SURFParams_GPU 
         {
-            SURFParams_GPU() :
-                threshold(0.1f), 
-                nOctaves(4),
-                nIntervals(4),
-                initialScale(2.f),
-
-                l1(3.f/1.5f),
-                l2(5.f/1.5f),
-                l3(3.f/1.5f),
-                l4(1.f/1.5f),
-                edgeScale(0.81f),
-                initialStep(1),
-
-                extended(true),
-
-                featuresRatio(0.01f)
-            {
-            }
+            SURFParams_GPU() : threshold(0.1f), nOctaves(4), nIntervals(4), initialScale(2.f), 
+                l1(3.f/1.5f), l2(5.f/1.5f), l3(3.f/1.5f), l4(1.f/1.5f),
+                edgeScale(0.81f), initialStep(1), extended(true), featuresRatio(0.01f) {}
 
             //! The interest operator threshold
             float threshold;
