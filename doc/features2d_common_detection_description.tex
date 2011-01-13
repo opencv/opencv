@@ -557,7 +557,7 @@ between different algorithms solving the same problem. This section is devoted t
 that are represented as vectors in a multidimensional space. All objects that implement ''vector'' 
 descriptor matchers inherit \cvCppCross{DescriptorMatcher} interface.
 
-\cvclass{DMatch}
+\cvclass{DMatch}\label{cv.class.DMatch}
 Match between two keypoint descriptors: query descriptor index, 
 train descriptor index, train image index and distance between descriptors.
 
@@ -584,7 +584,7 @@ struct DMatch
 };
 \end{lstlisting}
 
-\cvclass{DescriptorMatcher}
+\cvclass{DescriptorMatcher}\label{cv.class.DescriptorMatcher}
 Abstract base class for matching keypoint descriptors. It has two groups 
 of match methods: for matching descriptors of one image with other image or
 with image set.
@@ -805,7 +805,7 @@ DescriptorMatcher::create( const string& descriptorMatcherType );
 Now the following matcher types are supported: \texttt{"BruteForce"} (it uses \texttt{L2}), \texttt{"BruteForce-L1"}, 
 \texttt{"BruteForce-Hamming"}, \texttt{"BruteForce-HammingLUT"}, \texttt{"FlannBased"}.
 
-\cvclass{BruteForceMatcher}
+\cvclass{BruteForceMatcher}\label{cv.class.BruteForceMatcher}
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest
 descriptor in the second set by trying each one. This descriptor matcher supports masking 
 permissible matches between descriptor sets.

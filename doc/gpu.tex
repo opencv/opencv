@@ -382,4 +382,322 @@ Returns block descriptors computed for the whole image.
 \end{description}}
 \end{description}
 
+\section{Feature detection and description}
+
+\cvclass{gpu::SURFParams\_GPU}
+Various SURF algorithm parameters. 
+
+\begin{lstlisting}
+struct SURFParams_GPU 
+{
+    SURFParams_GPU() :
+        threshold(0.1f), 
+        nOctaves(4),
+        nIntervals(4),
+        initialScale(2.f),
+
+        l1(3.f/1.5f),
+        l2(5.f/1.5f),
+        l3(3.f/1.5f),
+        l4(1.f/1.5f),
+        edgeScale(0.81f),
+        initialStep(1),
+
+        extended(true),
+
+        featuresRatio(0.01f)
+    {
+    }
+
+    //! The interest operator threshold
+    float threshold;
+    //! The number of octaves to process
+    int nOctaves;
+    //! The number of intervals in each octave
+    int nIntervals;
+    //! The scale associated with the first interval of the first octave
+    float initialScale;
+
+    //! mask parameter l_1
+    float l1;
+    //! mask parameter l_2 
+    float l2;
+    //! mask parameter l_3
+    float l3;
+    //! mask parameter l_4
+    float l4;
+    //! The amount to scale the edge rejection mask
+    float edgeScale;
+    //! The initial sampling step in pixels.
+    int initialStep;
+
+    //! True, if generate 128-len descriptors, false - 64-len descriptors
+    bool extended;
+
+    //! max features = featuresRatio * img.size().srea()
+    float featuresRatio;
+};
+\end{lstlisting}
+
+\cvclass{gpu::SURF\_GPU}
+Class for extracting Speeded Up Robust Features from an image.
+
+\begin{lstlisting}
+class SURF_GPU : public SURFParams_GPU
+{
+public:
+    //! returns the descriptor size in float's (64 or 128)
+    int descriptorSize() const;
+
+    //! upload host keypoints to device memory
+    static void uploadKeypoints(const vector<KeyPoint>& keypoints, 
+        GpuMat& keypointsGPU);
+    //! download keypoints from device to host memory
+    static void downloadKeypoints(const GpuMat& keypointsGPU, 
+        vector<KeyPoint>& keypoints);
+
+    //! download descriptors from device to host memory
+    static void downloadDescriptors(const GpuMat& descriptorsGPU, 
+        vector<float>& descriptors);
+    
+    void operator()(const GpuMat& img, const GpuMat& mask, 
+        GpuMat& keypoints);
+    
+    void operator()(const GpuMat& img, const GpuMat& mask, 
+        GpuMat& keypoints, GpuMat& descriptors, 
+        bool useProvidedKeypoints = false, 
+        bool calcOrientation = true);
+
+    void operator()(const GpuMat& img, const GpuMat& mask, 
+        std::vector<KeyPoint>& keypoints);
+
+    void operator()(const GpuMat& img, const GpuMat& mask, 
+        std::vector<KeyPoint>& keypoints, GpuMat& descriptors, 
+        bool useProvidedKeypoints = false, 
+        bool calcOrientation = true);
+    
+    void operator()(const GpuMat& img, const GpuMat& mask, 
+        std::vector<KeyPoint>& keypoints, 
+        std::vector<float>& descriptors, 
+        bool useProvidedKeypoints = false, 
+        bool calcOrientation = true);
+
+    GpuMat sum;
+    GpuMat sumf;
+
+    GpuMat mask1;
+    GpuMat maskSum;
+
+    GpuMat hessianBuffer;
+    GpuMat maxPosBuffer;
+    GpuMat featuresBuffer;
+};
+\end{lstlisting}
+
+The class \texttt{SURF\_GPU} implements Speeded Up Robust Features descriptor. There is fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option), but the descriptors can be also computed for the user-specified keypoints. Supports only 8 bit grayscale images.
+
+The class \texttt{SURF\_GPU} can store results to GPU and CPU memory and provides static functions to convert results between CPU and GPU version (\texttt{uploadKeypoints}, \texttt{downloadKeypoints}, \texttt{downloadDescriptors}). CPU results has the same format as \hyperref[cv.class.SURF]{cv::SURF} results. GPU results is stored to \texttt{GpuMat}. \texttt{keypoints} matrix is one row matrix with \texttt{CV\_32FC6} type. It contains 6 float values per feature: \texttt{x, y, size, response, angle, octave}. \texttt{descriptors} matrix is \texttt{nFeatures} x \texttt{descriptorSize} matrix with \texttt{CV\_32FC1} type.
+
+The class \texttt{SURF\_GPU} uses some buffers and provides access to it. All buffers can be safely released between function calls. 
+
+\cvclass{gpu::BruteForceMatcher\_GPU}
+Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches between descriptor sets.
+
+\begin{lstlisting}
+template<class Distance>
+class BruteForceMatcher_GPU
+{
+public:
+    // Add descriptors to train descriptor collection.
+    void add(const std::vector<GpuMat>& descCollection);
+
+    // Get train descriptors collection.
+    const std::vector<GpuMat>& getTrainDescriptors() const;
+
+    // Clear train descriptors collection.
+    void clear();
+
+    // Return true if there are not train descriptors in collection.
+    bool empty() const;
+
+    // Return true if the matcher supports mask in match methods.
+    bool isMaskSupported() const;
+
+    void matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        GpuMat& trainIdx, GpuMat& distance,
+        const GpuMat& mask = GpuMat());
+
+    static void matchDownload(const GpuMat& trainIdx, 
+        const GpuMat& distance, std::vector<DMatch>& matches);
+
+    void match(const GpuMat& queryDescs, const GpuMat& trainDescs, 
+        std::vector<DMatch>& matches, const GpuMat& mask = GpuMat());
+
+    void makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection,
+        const vector<GpuMat>& masks = std::vector<GpuMat>());
+
+    void matchCollection(const GpuMat& queryDescs, 
+        const GpuMat& trainCollection,
+        GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
+        const GpuMat& maskCollection);
+
+    static void matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, 
+        const GpuMat& distance, std::vector<DMatch>& matches);
+
+    void match(const GpuMat& queryDescs, std::vector<DMatch>& matches,
+        const std::vector<GpuMat>& masks = std::vector<GpuMat>());
+
+    void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, 
+        const GpuMat& mask = GpuMat());
+
+    static void knnMatchDownload(const GpuMat& trainIdx, 
+        const GpuMat& distance, std::vector< std::vector<DMatch> >& matches, 
+        bool compactResult = false);
+
+    void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        std::vector< std::vector<DMatch> >& matches, int k, 
+        const GpuMat& mask = GpuMat(), bool compactResult = false);
+        
+    void knnMatch(const GpuMat& queryDescs, 
+        std::vector< std::vector<DMatch> >& matches, int knn,
+        const std::vector<GpuMat>& masks = std::vector<GpuMat>(), 
+        bool compactResult = false );
+
+    void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, 
+        float maxDistance, const GpuMat& mask = GpuMat());
+
+    static void radiusMatchDownload(const GpuMat& trainIdx, 
+        const GpuMat& nMatches, const GpuMat& distance, 
+        std::vector< std::vector<DMatch> >& matches, 
+        bool compactResult = false);
+
+    void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        std::vector< std::vector<DMatch> >& matches, float maxDistance,
+        const GpuMat& mask = GpuMat(), bool compactResult = false);
+
+    void radiusMatch(const GpuMat& queryDescs, 
+        std::vector< std::vector<DMatch> >& matches, float maxDistance,
+        const std::vector<GpuMat>& masks = std::vector<GpuMat>(), 
+        bool compactResult = false);
+
+private:
+    std::vector<GpuMat> trainDescCollection;
+};
+\end{lstlisting}
+
+The class \texttt{BruteForceMatcher\_GPU} has the similar interface with class \hyperref[cv.class.DescriptorMatcher]{cv::DescriptorMatcher}. It has two groups of match methods: for matching descriptors of one image with other image or with image set. Also all functions have alternative: save results to GPU memory or to CPU memory. \texttt{BruteForceMatcher\_GPU} is templated on the distance metric as \hyperref[cv.class.BruteForceMatcher]{cv::BruteForceMatcher}, but supports only \texttt{L1} and \texttt{L2} distance types.
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::match}\label{cppfunc.gpu.BruteForceMatcher.match}
+Find the best match for each descriptor from a query set with train descriptors. This function is equivalent of \cvCppCross{DescriptorMatcher::match}.
+\cvdefCpp{
+void match(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par std::vector<DMatch>\& matches, \par const GpuMat\& mask = GpuMat());
+}
+\cvdefCpp{
+void match(const GpuMat\& queryDescs, \par std::vector<DMatch>\& matches, \par const std::vector<GpuMat>\& masks = std::vector<GpuMat>());
+}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::matchSingle}\label{cppfunc.gpu.BruteForceMatcher.matchSingle}
+Find one best match for each query descriptor. Results stored to GPU memory.
+\cvdefCpp{
+void matchSingle(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par GpuMat\& trainIdx, \par GpuMat\& distance, \par const GpuMat\& mask = GpuMat());
+}
+\begin{description}
+\cvarg{queryDescs} {Query set of descriptors.}
+\cvarg{trainDescs} {Train set of descriptors. This will not be added to train descriptors collection stored in class object.}
+\cvarg{trainIdx} {One row \texttt{CV\_32SC1} matrix. Will contain best train index for each query. If some query descriptor masked out in \texttt{mask} it will contain -1.}
+\cvarg{distance} {One row \texttt{CV\_32FC1} matrix. Will contain best distance for each query. If some query descriptor masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
+\cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
+\end{description}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::matchCollection}\label{cppfunc.gpu.BruteForceMatcher.matchCollection}
+Find one best match for each query descriptor from train collection. Results stored to GPU memory.
+\cvdefCpp{
+void matchCollection(const GpuMat\& queryDescs, \par const GpuMat\& trainCollection, \par GpuMat\& trainIdx, \par GpuMat\& imgIdx, \par GpuMat\& distance, \par const GpuMat\& maskCollection);
+}
+\begin{description}
+\cvarg{queryDescs} {Query set of descriptors.}
+\cvarg{trainCollection} {\texttt{GpuMat} with train collection. It can be obtained from train descriptors collection that was set using \texttt{add} method by \hyperref[cppfunc.gpu.BruteForceMatcher.makeGpuCollection]{makeGpuCollection}. Or it can contain user defined collection. It must be one row matrix, each element is a \texttt{DevMem2D} that points to one train descriptors matrix (matrix must have \texttt{CV\_32FC1} type).}
+\cvarg{trainIdx} {One row \texttt{CV\_32SC1} matrix. Will contain best train index for each query. If some query descriptor masked out in \texttt{mask} it will contain -1.}
+\cvarg{imgIdx} {One row \texttt{CV\_32SC1} matrix. Will contain image train index for each query. If some query descriptor masked out in \texttt{mask} it will contain -1.}
+\cvarg{distance} {One row \texttt{CV\_32FC1} matrix. Will contain best distance for each query. If some query descriptor masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
+\cvarg{maskCollection}{\texttt{GpuMat} with set of masks. It can be obtained from \texttt{std::vector<GpuMat>} by \hyperref[cppfunc.gpu.BruteForceMatcher.makeGpuCollection]{makeGpuCollection}. Or it can contain user defined mask set. It must be empty matrix or one row matrix, each element is a \texttt{PtrStep} that points to one mask (must have \texttt{CV\_8UC1} type).}
+\end{description}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::makeGpuCollection}\label{cppfunc.gpu.BruteForceMatcher.makeGpuCollection}
+Make gpu collection of train descriptors and masks in suitable format for \hyperref[cppfunc.gpu.BruteForceMatcher.matchCollection]{matchCollection} function.
+\cvdefCpp{
+void makeGpuCollection(GpuMat\& trainCollection, \par GpuMat\& maskCollection, \par const vector<GpuMat>\& masks = std::vector<GpuMat>());
+}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::matchDownload}\label{cppfunc.gpu.BruteForceMatcher.matchDownload}
+Download \texttt{trainIdx}, \texttt{imgIdx} and \texttt{distance} matrices obtained by \hyperref[cppfunc.gpu.BruteForceMatcher.matchSingle]{matchSingle} or \hyperref[cppfunc.gpu.BruteForceMatcher.matchCollection]{matchCollection} to CPU vector with \hyperref[cv.class.DMatch]{cv::DMatch}.
+\cvdefCpp{
+static void matchDownload(const GpuMat\& trainIdx, \par const GpuMat\& distance, \par std::vector<DMatch>\& matches);
+}
+\cvdefCpp{
+static void matchDownload(const GpuMat\& trainIdx, \par GpuMat\& imgIdx, \par const GpuMat\& distance, \par std::vector<DMatch>\& matches);
+}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::knnMatch}\label{cppfunc.gpu.BruteForceMatcher.knnMatch}
+Find the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in distance increasing order. This function is equivalent of \cvCppCross{DescriptorMatcher::knnMatch}.
+\cvdefCpp{
+void knnMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par std::vector< std::vector<DMatch> >\& matches, \par int k, \par const GpuMat\& mask = GpuMat(), \par bool compactResult = false);
+}
+\cvdefCpp{
+void knnMatch(const GpuMat\& queryDescs, \par std::vector< std::vector<DMatch> >\& matches, \par int k, \par const std::vector<GpuMat>\& masks = std::vector<GpuMat>(), \par bool compactResult = false );
+}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::knnMatch}\label{cppfunc.gpu.BruteForceMatcher.knnMatchSingle}
+Find the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in distance increasing order. Results stored to GPU memory.
+\cvdefCpp{
+void knnMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par GpuMat\& trainIdx, \par GpuMat\& distance, \par GpuMat\& allDist, \par int k, \par const GpuMat\& mask = GpuMat());
+}
+\begin{description}
+\cvarg{queryDescs} {Query set of descriptors.}
+\cvarg{trainDescs} {Train set of descriptors. This will not be added to train descriptors collection stored in class object.}
+\cvarg{trainIdx} {Matrix \texttt{nQueries} x \texttt{k} with type \texttt{CV\_32SC1}. \texttt{trainIdx.at<int>(queryIdx, i)} will contain index of i'th best trains. If some query descriptor masked out in \texttt{mask} it will contain -1.}
+\cvarg{distance} {Matrix \texttt{nQuery} x \texttt{k} with type \texttt{CV\_32FC1}. Will contain distance for each query and i'th best trains. If some query descriptor masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
+\cvarg{allDist} {Buffer to store all distances between query descriptors and train descriptors. It have size \texttt{nQuery} x \texttt{nTrain} and \texttt{CV\_32F} type. \texttt{allDist.at<float>(queryIdx, trainIdx)} will contain \texttt{FLT\_MAX}, if \texttt{trainIdx} is one from k best, otherwise it will contain distance between \texttt{queryIdx} and \texttt{trainIdx} descriptors.}
+\cvarg{k}{Count of best matches will be found per each query descriptor (or less if it's not possible).}
+\cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
+\end{description}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::knnMatchDownload}\label{cppfunc.gpu.BruteForceMatcher.knnMatchDownload}
+Download \texttt{trainIdx} and \texttt{distance} matrices obtained by \hyperref[cppfunc.gpu.BruteForceMatcher.knnMatchSingle]{knnMatch} to CPU vector with \hyperref[cv.class.DMatch]{cv::DMatch}. If \texttt{compactResult} is true \texttt{matches} vector will not contain matches for fully masked out query descriptors.
+\cvdefCpp{
+static void knnMatchDownload(const GpuMat\& trainIdx, \par const GpuMat\& distance, \par std::vector< std::vector<DMatch> >\& matches, \par bool compactResult = false);
+}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::radiusMatch}\label{cppfunc.gpu.BruteForceMatcher.radiusMatch}
+Find the best matches for each query descriptor which have distance less than given threshold. Found matches are returned in distance increasing order. This function is equivalent of \cvCppCross{DescriptorMatcher::radiusMatch}. Works only on device with Compute Capability \texttt{>=} 1.1.
+\cvdefCpp{
+void radiusMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par std::vector< std::vector<DMatch> >\& matches, \par float maxDistance, \par const GpuMat\& mask = GpuMat(), \par bool compactResult = false);
+}
+\cvdefCpp{
+void radiusMatch(const GpuMat\& queryDescs, \par std::vector< std::vector<DMatch> >\& matches, \par float maxDistance, \par const std::vector<GpuMat>\& masks = std::vector<GpuMat>(), \par bool compactResult = false);
+}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::radiusMatch}\label{cppfunc.gpu.BruteForceMatcher.radiusMatchSingle}
+Find the best matches for each query descriptor which have distance less than given threshold. Results stored to GPU memory. Results are not sorted by distance increasing order. Works only on device with Compute Capability \texttt{>=} 1.1.
+\cvdefCpp{
+void radiusMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par GpuMat\& trainIdx, \par GpuMat\& nMatches, \par GpuMat\& distance, \par float maxDistance, \par const GpuMat\& mask = GpuMat());
+}
+\begin{description}
+\cvarg{queryDescs} {Query set of descriptors.}
+\cvarg{trainDescs} {Train set of descriptors. This will not be added to train descriptors collection stored in class object.}
+\cvarg{trainIdx} {\texttt{trainIdx.at<int>(queryIdx, i)} will contain i'th train index \newline\texttt{(i < min(nMatches.at<unsigned int>(0, queryIdx), trainIdx.cols)}. If \texttt{trainIdx} is empty, it will be created with size \texttt{nQuery} x \texttt{nTrain}. Or it can be allocated by user (it must have \texttt{nQuery} rows and \texttt{CV\_32SC1} type). Cols can be less than \texttt{nTrain}, but it can be that matcher won't find all matches, because it haven't enough memory to store results.}
+\cvarg{nMatches} {\texttt{nMatches.at<unsigned int>(0, queryIdx)} will contain matches count for \texttt{queryIdx}. Carefully, \texttt{nMatches} can be greater than \texttt{trainIdx.cols} - it means that matcher didn't find all matches, because it didn't have enough memory.}
+\cvarg{distance} {\texttt{distance.at<int>(queryIdx, i)} will contain i'th distance \newline\texttt{(i < min(nMatches.at<unsigned int>(0, queryIdx), trainIdx.cols)}. If \texttt{trainIdx} is empty, it will be created with size \texttt{nQuery} x \texttt{nTrain}. Otherwise it must be also allocated by user (it must have the same size as \texttt{trainIdx} and \texttt{CV\_32FC1} type).}
+\cvarg{maxDistance}{The threshold to found match distances.}
+\cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
+\end{description}
+
+\cvfunc{gpu::BruteForceMatcher\_GPU::radiusMatchDownload}\label{cppfunc.gpu.BruteForceMatcher.radiusMatchDownload}
+Download \texttt{trainIdx}, \texttt{nMatches} and \texttt{distance} matrices obtained by \hyperref[cppfunc.gpu.BruteForceMatcher.radiusMatchSingle]{radiusMatch} to CPU vector with \hyperref[cv.class.DMatch]{cv::DMatch}. If \texttt{compactResult} is true \texttt{matches} vector will not contain matches for fully masked out query descriptors.
+\cvdefCpp{
+static void radiusMatchDownload(const GpuMat\& trainIdx, \par const GpuMat\& nMatches, \par const GpuMat\& distance, \par std::vector< std::vector<DMatch> >\& matches, \par bool compactResult = false);
+}
+
 \fi
