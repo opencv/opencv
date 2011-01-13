@@ -1,6 +1,8 @@
 \ifCpp
 
+
 \section{Per-element Operations}
+
 
 %can't make cvCppFunc work with underscore (even as \_)
 \cvfunc{cv::gpu::bitwise\_not}
@@ -19,6 +21,7 @@ void bitwise\_not(const GpuMat\& src, GpuMat\& dst,\par
 \end{description}
 See also: \hyperref[cppfunc.bitwise.not]{cv::bitwise\_not}.
 
+
 \cvfunc{cv::gpu::bitwise\_or}
 Performs per-element bitwise disjunction of two matrixes.
 
@@ -35,6 +38,7 @@ void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{stream}{Stream for asynchronous version.}
 \end{description}
 See also: \hyperref[cppfunc.bitwise.or]{cv::bitwise\_or}.
+
 
 \cvfunc{cv::gpu::bitwise\_and}
 Performs per-element bitwise conjunction of two matrixes.
@@ -53,6 +57,7 @@ void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \end{description}
 See also: \hyperref[cppfunc.bitwise.and]{cv::bitwise\_and}.
 
+
 \cvfunc{cv::gpu::bitwise\_xor}
 Performs per-element bitwise "exclusive or" of two matrixes.
 
@@ -70,7 +75,9 @@ void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \end{description}
 See also: \hyperref[cppfunc.bitwise.xor]{cv::bitwise\_xor}.
 
+
 \section{Image Processing}
+
 
 \cvCppFunc{gpu::meanShiftFiltering}
 Performs mean-shift filtering.
@@ -87,6 +94,7 @@ Performs mean-shift filtering.
 \cvarg{sr}{Color window radius.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
+
 
 \cvCppFunc{gpu::meanShiftProc}
 Performs mean-shift procedure and stores information about converged points in two images..
@@ -105,6 +113,7 @@ Performs mean-shift procedure and stores information about converged points in t
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
 
+
 \cvCppFunc{gpu::meanShiftSegmentation}
 Performs mean-shift segmentation of the source image and eleminates small segments.
 
@@ -122,6 +131,7 @@ Performs mean-shift segmentation of the source image and eleminates small segmen
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
 
+
 \cvCppFunc{gpu::integral}
 Computes the integral image and squared integral image.
 
@@ -135,6 +145,7 @@ void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum);}
 \end{description}
 See also: \cvCppCross{integral}.
 
+
 \cvCppFunc{gpu::sqrIntegral}
 Computes squared integral image.
 
@@ -144,6 +155,7 @@ Computes squared integral image.
 \cvarg{sqsum}{Squared integral image. Will contain 64-bit floating point values packed into 64U.}
 \end{description}
 
+
 \cvCppFunc{gpu::columnSum}
 Computes vertical (column) sum.
 
@@ -152,6 +164,7 @@ Computes vertical (column) sum.
 \cvarg{src}{Source image. Only 32FC1 images are supported for now.}
 \cvarg{sum}{Destination image. Will have 32FC1 type.}
 \end{description}
+
 
 \cvCppFunc{gpu::cornerHarris}
 Computes Harris cornerness criteria at each image pixel.
@@ -170,6 +183,7 @@ Computes Harris cornerness criteria at each image pixel.
 \end{description}
 See also: \cvCppCross{cornerHarris}.
 
+
 \cvCppFunc{gpu::cornerMinEigenVal}
 Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria.
 
@@ -186,6 +200,7 @@ Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel 
 \cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
 \end{description}
 See also: \cvCppCross{cornerMinEigenValue}.
+
 
 \cvCppFunc{gpu::mulSpectrums}
 Performs per-element multiplication of two Fourier spectrums.
@@ -204,6 +219,7 @@ Performs per-element multiplication of two Fourier spectrums.
 Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
 
 See also: \cvCppCross{mulSpectrums}.
+
 
 \cvCppFunc{gpu::mulAndScaleSpectrums}
 Performs per-element multiplication of two Fourier spectrums and scales the result.
@@ -224,7 +240,80 @@ Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format ar
 
 See also: \cvCppCross{mulSpectrums}.
 
+
+\cvCppFunc{gpu::dft}
+Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+
+\cvdefCpp{void dft(const GpuMat\& src, GpuMat\& dst, Size dft\_size, int flags=0);}
+
+\begin{description}
+\cvarg{src}{Real of complex source matrix.}
+\cvarg{dst}{Real or complex destination matrix.}
+\cvarg{dft\_size}{Size of discrete Fourier transform.}
+\cvarg{flags}{Optional flags:
+\begin{description}
+  \cvarg{DFT\_ROWS}{Transform each individual row of the source matrix.}
+  \cvarg{DFT\_SCALE}{Scale the result: divide it by the number of elements in the transform (it's obtained from \texttt{dft\_size}).
+  \cvarg{DFT\_INVERSE}{Inverse DFT must be perfromed for complex-complex case (real-complex and  complex-real cases are respectively forward and inverse always).}}
+  \cvarg{DFT\_REAL\_OUTPUT}{The source matrix is the result of real-complex transform and the destination matrix must be real.}
+\end{description}}
+\end{description}
+
+The source matrix should be continuous, otherwise reallocation and data copying will be performed. Function chooses the operation mode depending on the flags, size and channel count of the source matrix:
+\begin{itemize}
+  \item If the source matrix is complex and the output isn't specified as real then the destination matrix will be complex, will have \texttt{dft\_size} size and 32FC2 type. It will contain full result of the DFT (forward or inverse).
+  \item If the source matrix is complex and the output is specified as real then function assumes that its input is the result of the forward transform (see next item). The destionation matrix will have \texttt{dft\_size} size and 32FC1 type. It will contain result of the inverse DFT.
+  \item If the source matrix is real (i.e. its type is 32FC1) then forward DFT will be performed. The result of the DFT will be packed into complex (32FC2) matrix so its width will be \texttt{dft\_size.width / 2 + 1}, but if the source is a single column then height will be reduced.
+\end{itemize}
+
+See also: \cvCppCross{dft}.
+
+
+\cvCppFunc{gpu::convolve}
+Computes convolution (or cross-correlation) of two images.
+
+\cvdefCpp{void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
+  bool ccorr=false);\newline
+void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
+  bool ccorr, ConvolveBuf\& buf);}
+
+\begin{description}
+\cvarg{image}{Source image. Only 32FC1 images are supported for now.}
+\cvarg{templ}{Template image. Must have size not greater then \texttt{image} size and be the same type as \texttt{image}.}
+\cvarg{result}{Result image. Will have the same size and type as \texttt{image}.}
+\cvarg{ccorr}{Indicates that cross-correlation must be evaluated instead of convolution.}
+\cvarg{buf}{Optional buffer to decrease memory reallocation count (for many calls with the same sizes).}
+\end{description}
+
+
+\cvclass{gpu::ConvolveBuf}
+Memory buffer for the \cvCppCross{gpu::convolve} function.
+
+\begin{lstlisting}
+struct CV_EXPORTS ConvolveBuf
+{
+    ConvolveBuf() {}
+    ConvolveBuf(Size image_size, Size templ_size) 
+        { create(image_size, templ_size); }
+    void create(Size image_size, Size templ_size);
+
+private:
+    // Hidden
+};
+\end{lstlisting}
+
+
+\cvCppFunc{gpu::ConvolveBuf::ConvolveBuf}
+
+\cvdefCpp{ConvolveBuf();}
+Construct empty buffer which will be properly resized after first call of the convolve function.
+
+\cvdefCpp{ConvolveBuf(Size image\_size, Size templ\_size);}
+Construct buffer for the convolve function with respectively arguments.
+
+
 \section{Object Detection}
+
 
 \cvclass{gpu::HOGDescriptor}
 Histogram of Oriented Gradients descriptor and detector.
@@ -232,7 +321,6 @@ Histogram of Oriented Gradients descriptor and detector.
 \begin{lstlisting}
 struct CV_EXPORTS HOGDescriptor
 {
-public:
     enum { DEFAULT_WIN_SIGMA = -1 };
     enum { DEFAULT_NLEVELS = 64 };
     enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };
@@ -274,10 +362,14 @@ public:
     double threshold_L2hys;
     bool gamma_correction;
     int nlevels;
+
+private:
+    // Hidden
 }
 \end{lstlisting}
 
 Interfaces of all methods are kept similar to CPU HOG descriptor and detector's analogues as much as possible.
+
 
 \cvCppFunc{gpu::HOGDescriptor::HOGDescriptor}
 Creates HOG descriptor and detector.
@@ -300,35 +392,42 @@ Creates HOG descriptor and detector.
 \cvarg{nlevels}{Maximum number of detection window increases.}
 \end{description}
 
+
 \cvCppFunc{gpu::HOGDescriptor::getDescriptorSize}
 Returns number of coefficients required for the classification.
 
 \cvdefCpp{size\_t getDescriptorSize() const;}
+
 
 \cvCppFunc{gpu::HOGDescriptor::getBlockHistogramSize}
 Returns block histogram size.
 
 \cvdefCpp{size\_t getBlockHistogramSize() const;}
 
+
 \cvCppFunc{gpu::HOGDescriptor::setSVMDetector}
 Sets coefficients for the linear SVM classifier. 
 
 \cvdefCpp{void setSVMDetector(const vector<float>\& detector);}
+
 
 \cvCppFunc{gpu::HOGDescriptor::getDefaultPeopleDetector}
 Returns coefficients of the classifier trained for people detection (for default window size).
 
 \cvdefCpp{static vector<float> getDefaultPeopleDetector();}
 
+
 \cvCppFunc{gpu::HOGDescriptor::getPeopleDetector48x96}
 Returns coefficients of the classifier trained for people detection (for 48x96 windows).
 
 \cvdefCpp{static vector<float> getPeopleDetector48x96();}
 
+
 \cvCppFunc{gpu::HOGDescriptor::getPeopleDetector64x128}
 Returns coefficients of the classifier trained for people detection (for 64x128 windows).
 
 \cvdefCpp{static vector<float> getPeopleDetector64x128();}
+
 
 \cvCppFunc{gpu::HOGDescriptor::detect}
 Perfroms object detection without increasing detection window.
@@ -344,6 +443,7 @@ Perfroms object detection without increasing detection window.
 \cvarg{win\_stride}{Window stride. Must be a multiple of block stride.}
 \cvarg{padding}{Mock parameter to keep CPU interface compatibility. Must be (0,0).}
 \end{description}
+
 
 \cvCppFunc{gpu::HOGDescriptor::detectMultiScale}
 Perfroms object detection with increasing detection window.
@@ -363,6 +463,7 @@ Perfroms object detection with increasing detection window.
 \cvarg{group\_threshold}{After detection some objects could be covered by many rectangles. This coefficient regulates similarity threshold. 0 means don't perform grouping.\newline
 See \cvCppCross{groupRectangles}.}
 \end{description}
+
 
 \cvCppFunc{gpu::HOGDescriptor::getDescriptors}
 Returns block descriptors computed for the whole image. 
