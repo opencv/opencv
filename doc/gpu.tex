@@ -17,6 +17,7 @@ void bitwise\_not(const GpuMat\& src, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for asynchronous version.}
 \end{description}
+See also: \hyperref[cppfunc.bitwise.not]{cv::bitwise\_not}.
 
 \cvfunc{cv::gpu::bitwise\_or}
 Performs per-element bitwise disjunction of two matrixes.
@@ -33,6 +34,7 @@ void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for asynchronous version.}
 \end{description}
+See also: \hyperref[cppfunc.bitwise.or]{cv::bitwise\_or}.
 
 \cvfunc{cv::gpu::bitwise\_and}
 Performs per-element bitwise conjunction of two matrixes.
@@ -49,6 +51,7 @@ void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for asynchronous version.}
 \end{description}
+See also: \hyperref[cppfunc.bitwise.and]{cv::bitwise\_and}.
 
 \cvfunc{cv::gpu::bitwise\_xor}
 Performs per-element bitwise "exclusive or" of two matrixes.
@@ -65,6 +68,7 @@ void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for asynchronous version.}
 \end{description}
+See also: \hyperref[cppfunc.bitwise.xor]{cv::bitwise\_xor}.
 
 \section{Image Processing}
 
@@ -81,7 +85,7 @@ Performs mean-shift filtering.
 \cvarg{dst}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of converged point started from \texttt{(x,y)} pixel of the source image.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
-\cvarg{criteria}{Termination criteria. See \cross{TermCriteria}.}
+\cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
 
 \cvCppFunc{gpu::meanShiftProc}
@@ -98,8 +102,127 @@ Performs mean-shift procedure and stores information about converged points in t
 \cvarg{dstsp}{16SC2 matrix, which will contain coordinates of converged points and have the same size as \texttt{src}.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
-\cvarg{criteria}{Termination criteria. See \cross{TermCriteria}.}
+\cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
+
+\cvCppFunc{gpu::meanShiftSegmentation}
+Performs mean-shift segmentation of the source image and eleminates small segments.
+
+\cvdefCpp{void meanShiftSegmentation(const GpuMat\& src, Mat\& dst,\par
+  int sp, int sr, int minsize,\par
+  TermCriteria criteria = TermCriteria(TermCriteria::MAX\_ITER\par
+  + TermCriteria::EPS, 5, 1));}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{dst}{Segmented image. Will have the same size and type as \texttt{src}.}
+\cvarg{sp}{Spatial window radius.}
+\cvarg{sr}{Color window radius.}
+\cvarg{minsize}{Minimum segment size. Smaller segements will be merged.}
+\cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
+\end{description}
+
+\cvCppFunc{gpu::integral}
+Computes the integral image and squared integral image.
+
+\cvdefCpp{void integral(const GpuMat\& src, GpuMat\& sum);\newline
+void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum);}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 images are supported for now.}
+\cvarg{sum}{Integral image. Will contain 32-bit unsigned integer values packed into 32SC1.}
+\cvarg{sqsum}{Squared integral image. Will have 32FC1 type.}
+\end{description}
+See also: \cvCppCross{integral}.
+
+\cvCppFunc{gpu::sqrIntegral}
+Computes squared integral image.
+
+\cvdefCpp{void sqrIntegral(const GpuMat\& src, GpuMat\& sqsum);}
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 images are supported for now.}
+\cvarg{sqsum}{Squared integral image. Will contain 64-bit floating point values packed into 64U.}
+\end{description}
+
+\cvCppFunc{gpu::columnSum}
+Computes vertical (column) sum.
+
+\cvdefCpp{void columnSum(const GpuMat\& src, GpuMat\& sum);}
+\begin{description}
+\cvarg{src}{Source image. Only 32FC1 images are supported for now.}
+\cvarg{sum}{Destination image. Will have 32FC1 type.}
+\end{description}
+
+\cvCppFunc{gpu::cornerHarris}
+Computes Harris cornerness criteria at each image pixel.
+
+\cvdefCpp{void cornerHarris(const GpuMat\& src, GpuMat\& dst,\par
+  int blockSize, int ksize, double k,\par
+  int borderType=BORDER\_REFLECT101);}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 and 32FC1 images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and 32FC1 type and contain cornerness values.}
+\cvarg{blockSize}{Neighborhood size.}
+\cvarg{ksize}{Aperture parameter for the Sobel operator.}
+\cvarg{k}{Harris detector free parameter.}
+\cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
+\end{description}
+See also: \cvCppCross{cornerHarris}.
+
+\cvCppFunc{gpu::cornerMinEigenVal}
+Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria.
+
+\cvdefCpp{void cornerMinEigenVal(const GpuMat\& src, GpuMat\& dst,\par
+  int blockSize, int ksize,\par
+  int borderType=BORDER\_REFLECT101);}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 and 32FC1 images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and 32FC1 type and contain cornerness values.}
+\cvarg{blockSize}{Neighborhood size.}
+\cvarg{ksize}{Aperture parameter for the Sobel operator.}
+\cvarg{k}{Harris detector free parameter.}
+\cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
+\end{description}
+See also: \cvCppCross{cornerMinEigenValue}.
+
+\cvCppFunc{gpu::mulSpectrums}
+Performs per-element multiplication of two Fourier spectrums.
+
+\cvdefCpp{void mulSpectrums(const GpuMat\& a, const GpuMat\& b,\par
+  GpuMat\& c, int flags, bool conjB=false);}
+
+\begin{description}
+\cvarg{a}{First spectrum.}
+\cvarg{b}{Second spectrum. Must have the same size and type as \texttt{a}.}
+\cvarg{c}{Destination spectrum.}
+\cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
+\cvarg{conjB}{Optional flag indicates if the second spectrum must be conjugated before the multiplcation.}
+\end{description}
+
+Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
+
+See also: \cvCppCross{mulSpectrums}.
+
+\cvCppFunc{gpu::mulAndScaleSpectrums}
+Performs per-element multiplication of two Fourier spectrums and scales the result.
+
+\cvdefCpp{void mulAndScaleSpectrums(const GpuMat\& a, const GpuMat\& b,\par
+  GpuMat\& c, int flags, float scale, bool conjB=false);}
+
+\begin{description}
+\cvarg{a}{First spectrum.}
+\cvarg{b}{Second spectrum. Must have the same size and type as \texttt{a}.}
+\cvarg{c}{Destination spectrum.}
+\cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
+\cvarg{scale}{Scale constant.}
+\cvarg{conjB}{Optional flag indicates if the second spectrum must be conjugated before the multiplcation.}
+\end{description}
+
+Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
+
+See also: \cvCppCross{mulSpectrums}.
 
 \section{Object Detection}
 
@@ -237,7 +360,8 @@ Perfroms object detection with increasing detection window.
 \cvarg{win\_stride}{Window stride. Must be a multiple of block stride.}
 \cvarg{padding}{Mock parameter to keep CPU interface compatibility. Must be (0,0).}
 \cvarg{scale0}{Coefficient of the detection window increase.}
-\cvarg{group\_threshold}{After detection some objects could be covered by many rectangles. This coefficient regulates similarity threshold. 0 means don't perform grouping. See \cvCppCross{groupRectangles}}
+\cvarg{group\_threshold}{After detection some objects could be covered by many rectangles. This coefficient regulates similarity threshold. 0 means don't perform grouping.\newline
+See \cvCppCross{groupRectangles}.}
 \end{description}
 
 \cvCppFunc{gpu::HOGDescriptor::getDescriptors}
