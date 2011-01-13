@@ -546,7 +546,7 @@ namespace cv
         CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
-        //! Does mean shift segmentation with elimiation of small regions.
+        //! Does mean shift segmentation with elimination of small regions.
         CV_EXPORTS void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize,
             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
@@ -1165,7 +1165,6 @@ namespace cv
 
         struct CV_EXPORTS HOGDescriptor
         {
-        public:
             enum { DEFAULT_WIN_SIGMA = -1 };
             enum { DEFAULT_NLEVELS = 64 };
             enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };

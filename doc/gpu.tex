@@ -31,10 +31,41 @@ Creates continuous matrix in GPU memory.
 \end{description}
 
 
-\section{Per-element Operations}
+\section{Operations on Matrices}
 
 
-%can't make cvCppFunc work with underscore (even as \_)
+\cvCppFunc{gpu::merge}
+Makes multi-channel matrix out of several single-channel matrices.
+
+\cvdefCpp{void merge(const GpuMat* src, size\_t n, GpuMat\& dst);\newline
+void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst);\newline
+void merge(const GpuMat* src, size\_t n, GpuMat\& dst,\par
+  const Stream\& stream);\newline
+void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,\par
+  const Stream\& stream);}
+\begin{description}
+\cvarg{src}{Vector or pointer to array of the source matrixes.}
+\cvarg{n}{Number of source matrices.}
+\cvarg{dst}{Destination matrix.}
+\cvarg{stream}{Stream for the asynchronous versions.}
+\end{description}
+
+
+\cvCppFunc{gpu::split}
+Copies each plane of a multi-channel matrix into an array.
+
+\cvdefCpp{void split(const GpuMat\& src, GpuMat* dst);\newline
+void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst);\newline
+void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream);\newline
+void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,\par
+  const Stream\& stream);}
+\begin{description}
+\cvarg{src}{Source matrix.}
+\cvarg{dst}{Destination vector or pointer to array of single-channel matrixes.}
+\cvarg{stream}{Stream for the asynchronous versions.}
+\end{description}
+
+
 \cvfunc{cv::gpu::bitwise\_not}
 Performs per-element bitwise inversion.
 
@@ -47,7 +78,7 @@ void bitwise\_not(const GpuMat\& src, GpuMat\& dst,\par
 \cvarg{src}{Source matrix.}
 \cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src}.}
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
-\cvarg{stream}{Stream for asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 See also: \hyperref[cppfunc.bitwise.not]{cv::bitwise\_not}.
 
@@ -61,11 +92,11 @@ void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
   const GpuMat\& mask, const Stream\& stream);}
 
 \begin{description}
-\cvarg{src1}{The first source matrix.}
-\cvarg{src2}{The second source matrix. It must have the same size and type as \texttt{src1}.}
+\cvarg{src1}{First source matrix.}
+\cvarg{src2}{Second source matrix. It must have the same size and type as \texttt{src1}.}
 \cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src1}.}
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
-\cvarg{stream}{Stream for asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 See also: \hyperref[cppfunc.bitwise.or]{cv::bitwise\_or}.
 
@@ -79,11 +110,11 @@ void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
   const GpuMat\& mask, const Stream\& stream);}
 
 \begin{description}
-\cvarg{src1}{The first source matrix.}
-\cvarg{src2}{The second source matrix. It must have the same size and type as \texttt{src1}.}
+\cvarg{src1}{First source matrix.}
+\cvarg{src2}{Second source matrix. It must have the same size and type as \texttt{src1}.}
 \cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src1}.}
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
-\cvarg{stream}{Stream for asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 See also: \hyperref[cppfunc.bitwise.and]{cv::bitwise\_and}.
 
@@ -97,11 +128,11 @@ void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
   const GpuMat\& mask, const Stream\& stream);}
 
 \begin{description}
-\cvarg{src1}{The first source matrix.}
-\cvarg{src2}{The second source matrix. It must have the same size and type as \texttt{src1}.}
+\cvarg{src1}{First source matrix.}
+\cvarg{src2}{Second source matrix. It must have the same size and type as \texttt{src1}.}
 \cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src1}.}
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
-\cvarg{stream}{Stream for asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 See also: \hyperref[cppfunc.bitwise.xor]{cv::bitwise\_xor}.
 
@@ -211,6 +242,7 @@ Computes Harris cornerness criteria at each image pixel.
 \cvarg{k}{Harris detector free parameter.}
 \cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
 \end{description}
+
 See also: \cvCppCross{cornerHarris}.
 
 
@@ -229,6 +261,7 @@ Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel 
 \cvarg{k}{Harris detector free parameter.}
 \cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
 \end{description}
+
 See also: \cvCppCross{cornerMinEigenValue}.
 
 
@@ -355,11 +388,10 @@ Computes the proximity map for the raster template and the image where the templ
 \texttt{templ} is $w \times h$ then \texttt{result} must be $(W-w+1) \times (H-h+1)$.}
 \cvarg{method}{Specifies the way the template must be compared with the image.}
 \end{description}
-
 Following methods are supported for 8U images for now:
 \begin{itemize}
 \item CV\_TM\_SQDIFF \item CV\_TM\_SQDIFF\_NORMED \item CV\_TM\_CCORR \item CV\_TM\_CCORR\_NORMED \item CV\_TM\_CCOEFF \item CV\_TM\_CCOEFF\_NORMED 
-\end{itemize}\par
+\end{itemize}
 Following methods are supported for 32F images for now:
 \begin{itemize}
 \item CV\_TM\_SQDIFF \item CV\_TM\_CCORR
@@ -372,7 +404,7 @@ See also: \cvCppCross{matchTemplate}.
 
 
 \cvCppFunc{gpu::sum}
-Computes sum of array elements.
+Returns sum of array elements.
 
 \cvdefCpp{Scalar sum(const GpuMat\& src);\newline
 Scalar sum(const GpuMat\& src, GpuMat\& buf);}
@@ -383,6 +415,74 @@ Scalar sum(const GpuMat\& src, GpuMat\& buf);}
 \end{description}
 
 See also: \cvCppCross{sum}.
+
+
+\cvCppFunc{gpu::sqrSum}
+Returns squared sum of array elements.
+
+\cvdefCpp{Scalar sqrSum(const GpuMat\& src);\newline
+Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
+\begin{description}
+\cvarg{src}{Source image of any depth excepting 64F, single-channel.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+
+\cvCppFunc{gpu::minMax}
+Finds global minimum and maximum array elements and returns their values.
+
+\cvdefCpp{void minMax(const GpuMat\& src, double* minVal,\par
+  double* maxVal=0, const GpuMat\& mask=GpuMat());\newline
+void minMax(const GpuMat\& src, double* minVal, double* maxVal,\par
+  const GpuMat\& mask, GpuMat\& buf);}
+\begin{description}
+\cvarg{src}{Single-channel source image.}
+\cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
+\cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
+\cvarg{mask}{Optional mask to select a sub-array.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+See also: \cvCppCross{minMaxLoc}.
+
+
+\cvCppFunc{gpu::minMaxLoc}
+Finds global minimum and maximum array elements and returns their values with locations.
+
+\cvdefCpp{void minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,\par
+  Point* minLoc=0, Point* maxLoc=0,\par
+  const GpuMat\& mask=GpuMat());\newline
+void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,\par
+  Point* minLoc, Point* maxLoc, const GpuMat\& mask,\par
+  GpuMat\& valbuf, GpuMat\& locbuf);}
+\begin{description}
+\cvarg{src}{Single-channel source image.}
+\cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
+\cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
+\cvarg{minValLoc}{Pointer to returned minimum location. \texttt{NULL} if not required.}
+\cvarg{maxValLoc}{Pointer to returned maximum location. \texttt{NULL} if not required.}
+\cvarg{mask}{Optional mask to select a sub-array.}
+\cvarg{valbuf}{Optional values buffer. It's resized automatically.}
+\cvarg{locbuf}{Optional location buffer. It's resized automatically.}
+\end{description}
+
+Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+See also: \cvCppCross{minMaxLoc}.
+
+
+\cvCppFunc{gpu::countNonZero}
+Counts non-zero array elements.
+
+\cvdefCpp{int countNonZero(const GpuMat\& src);\newline
+int countNonZero(const GpuMat\& src, GpuMat\& buf);}
+\begin{description}
+\cvarg{src}{Single-channel source image.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+See also: \cvCppCross{countNonZero}.
 
 
 \section{Object Detection}
@@ -512,7 +612,7 @@ Perfroms object detection without increasing detection window.
 \begin{description}
 \cvarg{img}{Source image. 8UC1 and 8UC4 types are supported for now.}
 \cvarg{found\_locations}{Will contain left-top corner points of detected objects boundaries.}
-\cvarg{hit\_threshold}{The threshold for the distance between features and classifying plane. Usually it's 0, and should be specfied in the detector coefficients (as the last free coefficient), but if the free coefficient is missed (it's allowed) you can specify it manually here.}
+\cvarg{hit\_threshold}{Threshold for the distance between features and classifying plane. Usually it's 0, and should be specfied in the detector coefficients (as the last free coefficient), but if the free coefficient is missed (it's allowed) you can specify it manually here.}
 \cvarg{win\_stride}{Window stride. Must be a multiple of block stride.}
 \cvarg{padding}{Mock parameter to keep CPU interface compatibility. Must be (0,0).}
 \end{description}
