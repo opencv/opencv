@@ -204,8 +204,27 @@ void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,\par
 See also: \cvCppCross{polarToCart}.
 
 
-
 \section{Per-element Operations.}
+
+
+\cvCppFunc{add}
+Computes matrx-matrix or matrix-scalar sum.
+
+\cvdefCpp{void add(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
+\begin{description}
+\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrixes are supported for now.}
+\cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
+\cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
+\end{description}
+
+\cvdefCpp{void add(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
+\begin{description}
+\cvarg{a}{Source matrix. 32SC1 and 32FC2 matrixes are supported for now.}
+\cvarg{b}{Source scalar.}
+\cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
+\end{description}
+
+See also: \cvCppCross{add}.
 
 
 \cvfunc{cv::gpu::bitwise\_not}\label{cppfunc.gpu.bitwise.not}
