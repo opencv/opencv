@@ -9,7 +9,7 @@ Returns true if current GPU has native double support, false otherwise.
 
 \cvdefCpp{bool hasNativeDoubleSupport(int device);}
 \begin{description}
-\cvarg{device}{GPU identity.}
+\cvarg{device}{GPU identity. Can be obtained via \cvCppCross{gpu::getDevice}.}
 \end{description}
 
 
@@ -18,7 +18,7 @@ Returns true if current GPU has atomics support, false otherwise.
 
 \cvdefCpp{bool hasAtomicsSupport(int device);}
 \begin{description}
-\cvarg{device}{GPU identity.}
+\cvarg{device}{GPU identity. Can be obtained via \cvCppCross{gpu::getDevice}.}
 \end{description}
 
 
@@ -33,7 +33,7 @@ Creates continuous matrix in GPU memory.
 \cvarg{rows}{Row count.}
 \cvarg{cols}{Column count.}
 \cvarg{type}{Type of the matrix.}
-\cvarg{m}{Destionation matrix. Will do only reshape if \texttt{m} has proper type and area ($rows \times cols$).}
+\cvarg{m}{Destination matrix. Will be reshaped only if it has proper type and area ($rows \times cols$).}
 \end{description}
 
 
@@ -86,6 +86,7 @@ void bitwise\_not(const GpuMat\& src, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
+
 See also: \hyperref[cppfunc.bitwise.not]{cv::bitwise\_not}.
 
 
@@ -104,6 +105,7 @@ void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
+
 See also: \hyperref[cppfunc.bitwise.or]{cv::bitwise\_or}.
 
 
@@ -122,6 +124,7 @@ void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
+
 See also: \hyperref[cppfunc.bitwise.and]{cv::bitwise\_and}.
 
 
@@ -140,6 +143,7 @@ void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
 \cvarg{mask}{Optional operation mask. 8-bit single channel image.}
 \cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
+
 See also: \hyperref[cppfunc.bitwise.xor]{cv::bitwise\_xor}.
 
 
@@ -156,7 +160,7 @@ Performs mean-shift filtering.
 
 \begin{description}
 \cvarg{src}{Source image. Only 8UC4 images are supported for now.}
-\cvarg{dst}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of converged point started from \texttt{(x,y)} pixel of the source image.}
+\cvarg{dst}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of the converged point started from \texttt{(x,y)} pixel of the source image.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
@@ -210,6 +214,7 @@ void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum);}
 \cvarg{sum}{Integral image. Will contain 32-bit unsigned integer values packed into 32SC1.}
 \cvarg{sqsum}{Squared integral image. Will have 32FC1 type.}
 \end{description}
+
 See also: \cvCppCross{integral}.
 
 
