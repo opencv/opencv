@@ -40,13 +40,42 @@ Creates continuous matrix in GPU memory.
 \section{Operations on Matrices}
 
 
+\cvCppFunc{gpu::transpose}
+Transposes the matrix.
+
+\cvdefCpp{void transpose(const GpuMat\& src, GpuMat\& dst);}
+\begin{description}
+\cvarg{src}{Source matrix. Elements sizes 1, 4, 8 bytes are supported for now.}
+\cvarg{dst}{Destination matrix.}
+\end{description}
+
+See also: \cvCppCross{transpose}.
+
+
+\cvCppFunc{gpu::flip}
+Flips a 2D matrix around vertical, horizontal or both axes.
+
+\cvdefCpp{void flip(const GpuMat\& a, GpuMat\& b, int flipCode);}
+\begin{description}
+\cvarg{a}{Source matrix. Only 8UC1 and 8UC4 matrixes are supported for now.}
+\cvarg{b}{Destination matrix.}
+\cvarg{flipCode}{Specifies how to flip the source:
+\begin{description}
+\cvarg{0}{Flip around x-axis.}
+\cvarg{$>$0}{Flip around y-axis.}
+\cvarg{$<$0}{Flip around both axes.}
+\end{description}}
+\end{description}
+
+See also: \cvCppCross{flip}.
+
 \cvCppFunc{gpu::merge}
 Makes multi-channel matrix out of several single-channel matrices.
 
 \cvdefCpp{void merge(const GpuMat* src, size\_t n, GpuMat\& dst);\newline
-void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst);\newline
 void merge(const GpuMat* src, size\_t n, GpuMat\& dst,\par
-  const Stream\& stream);\newline
+  const Stream\& stream);\newline\newline
+void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst);\newline
 void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,\par
   const Stream\& stream);}
 \begin{description}
@@ -56,13 +85,15 @@ void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,\par
 \cvarg{stream}{Stream for the asynchronous versions.}
 \end{description}
 
+See also: \cvCppCross{merge}.
+
 
 \cvCppFunc{gpu::split}
 Copies each plane of a multi-channel matrix into an array.
 
 \cvdefCpp{void split(const GpuMat\& src, GpuMat* dst);\newline
+void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream);\newline\newline
 void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst);\newline
-void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream);\newline
 void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,\par
   const Stream\& stream);}
 \begin{description}
@@ -70,6 +101,111 @@ void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,\par
 \cvarg{dst}{Destination vector or pointer to array of single-channel matrices.}
 \cvarg{stream}{Stream for the asynchronous versions.}
 \end{description}
+
+See also: \cvCppCross{split}.
+
+
+\cvCppFunc{gpu::magnitude}
+Computes magnitude of complex vector.
+
+\cvdefCpp{void magnitude(const GpuMat\& x, GpuMat\& magnitude);}
+\begin{description}
+\cvarg{x}{Source complex matrix in the interleaved format (32FC2). }
+\cvarg{magnitude}{Destination matrix of float magnitudes (32FC1).}
+\end{description}
+
+\cvdefCpp{void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude);\newline
+void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
+  const Stream\& stream);}
+\begin{description}
+\cvarg{x}{Source matrix, containing real components (32FC1).}
+\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
+\cvarg{magnitude}{Destination matrix of float magnitudes (32FC1).}
+\cvarg{stream}{Sream for the asynchronous version.}
+\end{description}
+
+See also: \cvCppCross{magnitude}.
+
+
+\cvCppFunc{gpu::magnitudeSqr}
+Computes squared magnitude of complex vector.
+
+\cvdefCpp{void magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude);}
+\begin{description}
+\cvarg{x}{Source complex matrix in the interleaved format (32FC2). }
+\cvarg{magnitude}{Destination matrix of float magnitude squares (32FC1).}
+\end{description}
+
+\cvdefCpp{void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude);\newline
+void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
+  const Stream\& stream);}
+\begin{description}
+\cvarg{x}{Source matrix, containing real components (32FC1).}
+\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
+\cvarg{magnitude}{Destination matrix of float magnitude squares (32FC1).}
+\cvarg{stream}{Sream for the asynchronous version.}
+\end{description}
+
+
+\cvCppFunc{gpu::phase}
+Computes polar angle of each complex value.
+
+\cvdefCpp{void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,\par
+  bool angleInDegrees=false);\newline
+void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,\par
+  bool angleInDegrees, const Stream\& stream);}
+\begin{description}
+\cvarg{x}{Source matrix, containing real components (32FC1).}
+\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
+\cvarg{angle}{Destionation matrix of angles (32FC1).}
+\cvarg{angleInDegress}{Flag which indicates angles must be evaluated in degress.}
+\cvarg{stream}{Sream for the asynchronous version.}
+\end{description}
+
+See also: \cvCppCross{phase}.
+
+
+\cvCppFunc{gpu::cartToPolar}
+Converts Cartesian coordinates into polar.
+
+\cvdefCpp{void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
+  GpuMat\& angle, bool angleInDegrees=false);\newline
+void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
+  GpuMat\& angle, bool angleInDegrees, const Stream\& stream);}
+\begin{description}
+\cvarg{x}{Source matrix, containing real components (32FC1).}
+\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
+\cvarg{magnitude}{Destination matrix of float magnituds (32FC1).}
+\cvarg{angle}{Destionation matrix of angles (32FC1).}
+\cvarg{angleInDegress}{Flag which indicates angles must be evaluated in degress.}
+\cvarg{stream}{Sream for the asynchronous version.}
+\end{description}
+
+See also: \cvCppCross{cartToPolar}.
+
+
+\cvCppFunc{gpu::polarToCart}
+Converts polar coordinates into Cartesian.
+
+\cvdefCpp{void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,\par
+  GpuMat\& x, GpuMat\& y, bool angleInDegrees=false);\newline
+void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,\par
+  GpuMat\& x, GpuMat\& y, bool angleInDegrees,\par
+  const Stream\& stream);}
+\begin{description}
+\cvarg{magnitude}{Source matrix, containing magnitudes (32FC1).}
+\cvarg{angle}{Source matrix, containing angles (32FC1).}
+\cvarg{x}{Destination matrix of real components (32FC1).}
+\cvarg{y}{Destination matrix of imaginary components (32FC1).}
+\cvarg{angleInDegress}{Flag which indicates angles are in degress.}
+\cvarg{stream}{Sream for the asynchronous version.}
+\end{description}
+
+See also: \cvCppCross{polarToCart}.
+
+
+
+\section{Per-element Operations.}
 
 
 \cvfunc{cv::gpu::bitwise\_not}\label{cppfunc.gpu.bitwise.not}
@@ -287,7 +423,7 @@ Performs per-element multiplication of two Fourier spectrums.
 \cvarg{b}{Second spectrum. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destination spectrum.}
 \cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
-\cvarg{conjB}{Optional flag indicates if the second spectrum must be conjugated before the multiplcation.}
+\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
 \end{description}
 
 Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
@@ -307,7 +443,7 @@ Performs per-element multiplication of two Fourier spectrums and scales the resu
 \cvarg{c}{Destination spectrum.}
 \cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
 \cvarg{scale}{Scale constant.}
-\cvarg{conjB}{Optional flag indicates if the second spectrum must be conjugated before the multiplcation.}
+\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
 \end{description}
 
 Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
@@ -355,7 +491,7 @@ void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
 \cvarg{image}{Source image. Only 32FC1 images are supported for now.}
 \cvarg{templ}{Template image. Must have size not greater then \texttt{image} size and be the same type as \texttt{image}.}
 \cvarg{result}{Result image. Will have the same size and type as \texttt{image}.}
-\cvarg{ccorr}{Indicates that cross-correlation must be evaluated instead of convolution.}
+\cvarg{ccorr}{Flags which indicates cross-correlation must be evaluated instead of convolution.}
 \cvarg{buf}{Optional buffer to decrease memory reallocation count (for many calls with the same sizes).}
 \end{description}
 
