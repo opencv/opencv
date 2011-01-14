@@ -1,27 +1,3 @@
-\ifCpp
-
-
-\section{Initalization and Info}
-
-
-\cvCppFunc{gpu::hasNativeDoubleSupport}
-Returns true if current GPU has native double support, false otherwise.
-
-\cvdefCpp{bool hasNativeDoubleSupport(int device);}
-\begin{description}
-\cvarg{device}{GPU identity. Can be obtained via \cvCppCross{gpu::getDevice}.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasAtomicsSupport}
-Returns true if current GPU has atomics support, false otherwise.
-
-\cvdefCpp{bool hasAtomicsSupport(int device);}
-\begin{description}
-\cvarg{device}{GPU identity. Can be obtained via \cvCppCross{gpu::getDevice}.}
-\end{description}
-
-
 \section{Data Structures}
 
 
@@ -821,5 +797,3 @@ Returns block descriptors computed for the whole image.
     \cvarg{DESCR\_FORMAT\_COL\_BY\_COL}{Column-major order.}
 \end{description}}
 \end{description}
-
-\fi

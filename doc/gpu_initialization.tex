@@ -1,0 +1,69 @@
+\section{Initalization and Information}
+
+
+\cvCppFunc{gpu::getCudaEnabledDeviceCount}
+Returns number of CUDA-enabled devices installed. It is to be used before any other GPU funtions calls. If OpenCV is compiled without GPU support this function returns 0. 
+
+\cvdefCpp{int getCudaEnabledDeviceCount();}
+
+
+\cvCppFunc{gpu::setDevice}
+Sets device and initializes it for current thread. If this call is omitted, default device will be initialized.
+
+\cvdefCpp{void setDevice(int device);}
+\begin{description}
+\cvarg{device}{index of GPU device in system starting with 0.}
+\end{description}
+
+
+\cvCppFunc{gpu::getDevice}
+Returns current device index, which was set by \cvCppCross{gpu::getDevice} of initialized by default.
+
+\cvdefCpp{int getDevice();}
+
+
+\cvCppFunc{gpu::getComputeCapability}
+Returns compute capability version for given device.
+
+\cvdefCpp{void getComputeCapability(int device, int\& major, int\& minor);}
+\begin{description}
+\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
+\cvarg{major}{Major CC version.}
+\cvarg{minor}{Minor CC version.}
+\end{description}
+
+\cvCppFunc{gpu::getNumberOfSMs}
+Returns number of Streaming Multiprocessors for given device.
+
+\cvdefCpp{int getNumberOfSMs(int device);}
+\begin{description}
+\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
+\end{description}
+
+
+\cvCppFunc{gpu::getGpuMemInfo}
+Returns free and total memory for current device.
+
+\cvdefCpp{void getGpuMemInfo(size\_t\& free, size\_t\& total);}
+\begin{description}
+\cvarg{free}{Reference to free GPU memory counter.}
+\cvarg{total}{Reference to total GPU memory counter.}
+\end{description}
+
+
+\cvCppFunc{gpu::hasNativeDoubleSupport}
+Returns true if current GPU has native double support, false otherwise.
+
+\cvdefCpp{bool hasNativeDoubleSupport(int device);}
+\begin{description}
+\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
+\end{description}
+
+
+\cvCppFunc{gpu::hasAtomicsSupport}
+Returns true if current GPU has atomics support, false otherwise.
+
+\cvdefCpp{bool hasAtomicsSupport(int device);}
+\begin{description}
+\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
+\end{description} 
