@@ -188,14 +188,14 @@ struct NppStSize32u
 enum NppStStatus
 {
     //already present in NPP
-    //NPP_SUCCESS                      = 0,   ///< Successful operation (same as NPP_NO_ERROR)
-    //NPP_ERROR                        = -1,  ///< Unknown error
-    //NPP_CUDA_KERNEL_EXECUTION_ERROR  = -3,  ///< CUDA kernel execution error
-    //NPP_NULL_POINTER_ERROR           = -4,  ///< NULL pointer argument error
-    //NPP_TEXTURE_BIND_ERROR           = -24, ///< CUDA texture binding error or non-zero offset returned
-    //NPP_MEMCPY_ERROR                 = -13, ///< CUDA memory copy error
-    //NPP_MEM_ALLOC_ERR                = -12, ///< CUDA memory allocation error
-    //NPP_MEMFREE_ERR                  = -15, ///< CUDA memory deallocation error
+    __NPP_SUCCESS                      = 0,   ///< Successful operation (same as NPP_NO_ERROR)
+    __NPP_ERROR                        = -1,  ///< Unknown error
+    __NPP_CUDA_KERNEL_EXECUTION_ERROR  = -3,  ///< CUDA kernel execution error
+    __NPP_NULL_POINTER_ERROR           = -4,  ///< NULL pointer argument error
+    __NPP_TEXTURE_BIND_ERROR           = -24, ///< CUDA texture binding error or non-zero offset returned
+    __NPP_MEMCPY_ERROR                 = -13, ///< CUDA memory copy error
+    __NPP_MEM_ALLOC_ERR                = -12, ///< CUDA memory allocation error
+    __NPP_MEMFREE_ERR                  = -15, ///< CUDA memory deallocation error
 
     //to be added
     NPP_INVALID_ROI,                        ///< Invalid region of interest argument

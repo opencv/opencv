@@ -84,7 +84,7 @@ int main( int argc, const char** argv )
     
     /* parameters */
     bool useGPU = true;
-    double scale_factor = 2;
+    double scale_factor = 1;
 
     bool visualizeInPlace = false;   
     bool findLargestObject = false;    

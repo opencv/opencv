@@ -89,6 +89,7 @@ struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
         src_seg.size  = src.step * src.rows;
 
         NCVMatrixReuse<Ncv8u> d_src(src_seg, devProp.textureAlignment, src.cols, src.rows, src.step, true);        
+		ncvAssertReturn(d_src.isMemReused(), NCV_ALLOCATOR_BAD_REUSE);
         
         //NCVMatrixAlloc<Ncv8u> d_src(*gpuAllocator, src.cols, src.rows);
         //ncvAssertReturn(d_src.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
@@ -106,6 +107,7 @@ struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
         objects_seg.begin = objects_beg;
         objects_seg.size = objects.step * objects.rows;
         NCVVectorReuse<NcvRect32u> d_rects(objects_seg, objects.cols);
+		ncvAssertReturn(d_rects.isMemReused(), NCV_ALLOCATOR_BAD_REUSE);
         //NCVVectorAlloc<NcvRect32u> d_rects(*gpuAllocator, 100);        
         //ncvAssertReturn(d_rects.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);        
             
