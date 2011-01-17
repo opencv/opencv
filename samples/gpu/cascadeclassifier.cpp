@@ -75,8 +75,7 @@ int main( int argc, const char** argv )
         }
     
     namedWindow( "result", 1 );        
-    Size fontSz = cv::getTextSize("T[]", FONT_HERSHEY_SIMPLEX, 1.0, 2, 0);
-
+    
     Mat frame, frame_cpu, gray_cpu, resized_cpu, faces_downloaded, frameDisp;
     vector<Rect> facesBuf_cpu;
 
@@ -85,9 +84,11 @@ int main( int argc, const char** argv )
     /* parameters */
     bool useGPU = true;
     double scale_factor = 1;
-
+	double font_scale = 0.8;
+	
     bool visualizeInPlace = false;   
     bool findLargestObject = false;    
+	int minNeighbors = 4;
 
     printf("\t<space> - toggle GPU/CPU\n");
     printf("\tL       - toggle lagest faces\n");
@@ -118,7 +119,7 @@ int main( int argc, const char** argv )
             cascade_gpu.visualizeInPlace = visualizeInPlace;   
             cascade_gpu.findLargestObject = findLargestObject;    
 
-            detections_num = cascade_gpu.detectMultiScale( resized_gpu, facesBuf_gpu ); 
+            detections_num = cascade_gpu.detectMultiScale( resized_gpu, facesBuf_gpu, 1.2, minNeighbors); 
             facesBuf_gpu.colRange(0, detections_num).download(faces_downloaded);
         
         }
@@ -132,7 +133,7 @@ int main( int argc, const char** argv )
                 minSize = Size(cvRound(minSize.width * ratio), cvRound(minSize.height * ratio));                
             }
             
-            cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2, 4, (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0) | CV_HAAR_SCALE_IMAGE, minSize);                            
+            cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2, minNeighbors, (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0) | CV_HAAR_SCALE_IMAGE, minSize);                            
             detections_num = (int)facesBuf_cpu.size();
         }
 
@@ -150,25 +151,27 @@ int main( int argc, const char** argv )
                     cv::rectangle(resized_cpu, faces[i], Scalar(255));            
             }
         
-        Point text_pos(5, 25);
-        int offs = fontSz.height + 5;
-        Scalar color = CV_RGB(255, 0, 0);
+		int tickness = font_scale > 0.75 ? 2 : 1;
 
+        Point text_pos(5, 25);        
+        Scalar color = CV_RGB(255, 0, 0);
+		Size fontSz = cv::getTextSize("T[]", FONT_HERSHEY_SIMPLEX, font_scale, tickness, 0);
+		int offs = fontSz.height + 5;
 
         cv::cvtColor(resized_cpu, frameDisp, CV_GRAY2BGR);
 
         char buf[4096];
-        sprintf(buf, "%s, FPS = %0.3g", useGPU ? "GPU" : "CPU", 1.0/tm.getTimeSec());                       
-        putText(frameDisp, buf, text_pos, FONT_HERSHEY_SIMPLEX, 1.0, color, 2);
-        sprintf(buf, "scale = %0.3g, [%d*scale x %d*scale]", scale_factor, frame.cols, frame.rows);                       
-        putText(frameDisp, buf, text_pos+=Point(0,offs), FONT_HERSHEY_SIMPLEX, 1.0, color, 2);
-        putText(frameDisp, "Hotkeys: space, 1, Q, L, V, Esc", text_pos+=Point(0,offs), FONT_HERSHEY_SIMPLEX, 1.0, color, 2);
+        sprintf(buf, "%s, FPS = %0.3g", useGPU ? "GPU (device) " : "CPU (host)", 1.0/tm.getTimeSec());                       
+        putText(frameDisp, buf, text_pos, FONT_HERSHEY_SIMPLEX, font_scale, color, tickness);
+        sprintf(buf, "scale = %0.3g,  [%d x %d] x scale, Min neighbors = %d", scale_factor, frame.cols, frame.rows, minNeighbors);                       
+        putText(frameDisp, buf, text_pos+=Point(0,offs), FONT_HERSHEY_SIMPLEX, font_scale, color, tickness);
+        putText(frameDisp, "Hotkeys: space, 1/Q, 2/E, 3/E, L, V, Esc", text_pos+=Point(0,offs), FONT_HERSHEY_SIMPLEX, font_scale, color, tickness);
 
         if (findLargestObject)
-            putText(frameDisp, "FindLargestObject", text_pos+=Point(0,offs), FONT_HERSHEY_SIMPLEX, 1.0, color, 2);
+            putText(frameDisp, "FindLargestObject", text_pos+=Point(0,offs), FONT_HERSHEY_SIMPLEX, font_scale, color, tickness);
 
         if (visualizeInPlace && useGPU)
-            putText(frameDisp, "VisualizeInPlace", text_pos+Point(0,offs), FONT_HERSHEY_SIMPLEX, 1.0, color, 2);
+            putText(frameDisp, "VisualizeInPlace", text_pos+Point(0,offs), FONT_HERSHEY_SIMPLEX, font_scale, color, tickness);
 
         cv::imshow( "result", frameDisp);
 
@@ -176,13 +179,19 @@ int main( int argc, const char** argv )
         if( key == 27)
             break;
 
-        switch (key)
+        switch ((char)key)
         {
-        case (int)' ':  useGPU = !useGPU;  printf("Using %s\n", useGPU ? "GPU" : "CPU");break;
-        case (int)'v':  case (int)'V': visualizeInPlace = !visualizeInPlace; printf("VisualizeInPlace = %d\n", visualizeInPlace); break;
-        case (int)'l':  case (int)'L': findLargestObject = !findLargestObject;  printf("FindLargestObject = %d\n", findLargestObject); break;
-        case (int)'1':  scale_factor*=1.05; printf("Scale factor = %g\n", scale_factor); break;
-        case (int)'q':  case (int)'Q':scale_factor/=1.05; printf("Scale factor = %g\n", scale_factor); break;
+        case ' ':  useGPU = !useGPU;  printf("Using %s\n", useGPU ? "GPU" : "CPU");break;
+        case 'v':  case 'V': visualizeInPlace = !visualizeInPlace; printf("VisualizeInPlace = %d\n", visualizeInPlace); break;
+        case 'l':  case 'L': findLargestObject = !findLargestObject;  printf("FindLargestObject = %d\n", findLargestObject); break;
+        case '1':  scale_factor*=1.05; printf("Scale factor = %g\n", scale_factor); break;
+        case 'q':  case 'Q':scale_factor/=1.05; printf("Scale factor = %g\n", scale_factor); break;
+
+		case '3':  font_scale*=1.05; printf("Fond scale = %g\n", font_scale); break;
+		case 'e':  case 'E':font_scale/=1.05; printf("Fond scale = %g\n", font_scale); break;
+
+		case '2':  ++minNeighbors; printf("Min Neighbors = %g\n", minNeighbors); break;
+		case 'w':  case 'W':minNeighbors = max(minNeighbors-1, 0); printf("Min Neighbors = %g\n", minNeighbors); break;
         }
        
     }    
