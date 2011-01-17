@@ -6,7 +6,7 @@ Transposes the matrix.
 
 \cvdefCpp{void transpose(const GpuMat\& src, GpuMat\& dst);}
 \begin{description}
-\cvarg{src}{Source matrix. Elements sizes 1, 4, 8 bytes are supported for now.}
+\cvarg{src}{Source matrix. 1, 4, 8 bytes element sizes are supported for now.}
 \cvarg{dst}{Destination matrix.}
 \end{description}
 
@@ -30,20 +30,40 @@ Flips a 2D matrix around vertical, horizontal or both axes.
 
 See also: \cvCppCross{flip}.
 
+
+\cvCppFunc{gpu::LUT}
+Transforms source matrix into destination matrix using given look-up table: \texttt{dst(I) = lut(src(I))}.
+
+\cvdefCpp{void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst);}
+\begin{description}
+\cvarg{src}{Source matrix. 8UC1 and 8UC3 matrixes are supported for now.}
+\cvarg{lut}{Look-up table. Must be continuous, 8U depth matrix. Its area must satisfy to \texttt{lut.rows} $\times$ \texttt{lut.cols} = 256.}
+\cvarg{dst}{Destination matrix. Will have the same depth as \texttt{lut} and the same number of channels as \texttt{src}.}
+\end{description}
+
+See also: \cvCppCross{LUT}.
+
+
 \cvCppFunc{gpu::merge}
 Makes multi-channel matrix out of several single-channel matrices.
 
 \cvdefCpp{void merge(const GpuMat* src, size\_t n, GpuMat\& dst);\newline
 void merge(const GpuMat* src, size\_t n, GpuMat\& dst,\par
-  const Stream\& stream);\newline\newline
-void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst);\newline
+  const Stream\& stream);\newline}
+\begin{description}
+\cvarg{src}{Pointer to array of the source matrices.}
+\cvarg{n}{Number of source matrices.}
+\cvarg{dst}{Destination matrix.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+\cvdefCpp{void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst);\newline
 void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,\par
   const Stream\& stream);}
 \begin{description}
-\cvarg{src}{Vector or pointer to array of the source matrices.}
-\cvarg{n}{Number of source matrices.}
+\cvarg{src}{Vector of the source matrices.}
 \cvarg{dst}{Destination matrix.}
-\cvarg{stream}{Stream for the asynchronous versions.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{merge}.
@@ -53,14 +73,20 @@ See also: \cvCppCross{merge}.
 Copies each plane of a multi-channel matrix into an array.
 
 \cvdefCpp{void split(const GpuMat\& src, GpuMat* dst);\newline
-void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream);\newline\newline
-void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst);\newline
+void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream);}
+\begin{description}
+\cvarg{src}{Source matrix.}
+\cvarg{dst}{Pointer to array of single-channel matrices.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+\cvdefCpp{void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst);\newline
 void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,\par
   const Stream\& stream);}
 \begin{description}
 \cvarg{src}{Source matrix.}
-\cvarg{dst}{Destination vector or pointer to array of single-channel matrices.}
-\cvarg{stream}{Stream for the asynchronous versions.}
+\cvarg{dst}{Destination vector of single-channel matrices.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{split}.
