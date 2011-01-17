@@ -1,8 +1,40 @@
 \section{Matrix Reductions}
 
 
+\cvCppFunc{gpu::meanStdDev}
+Computes mean value and standard deviation of matrix elements.
+
+\cvdefCpp{void meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev);}
+\begin{description}
+\cvarg{mtx}{Source matrix. 8UC1 matrices are supported for now.}
+\cvarg{mean}{Mean value.}
+\cvarg{stddev}{Standard deviation value.}
+\end{description}
+
+See also: \cvCppCross{meanStdDev}.
+
+
+\cvCppFunc{gpu::norm}
+Returns norm of matrix (or of two matrices difference).
+
+\cvdefCpp{double norm(const GpuMat\& src1, int normType=NORM\_L2);}
+\begin{description}
+\cvarg{src1}{Source matrix. 8UC1 matrices are supported for now.}
+\cvarg{normType}{Norm type. \texttt{NORM\_L1}, \texttt{NORM\_L2} and \texttt{NORM\_INF} are supported for now.}
+\end{description}
+
+\cvdefCpp{double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM\_L2);}
+\begin{description}
+\cvarg{src1}{First source matrix. 8UC1 matrices are supported for now.}
+\cvarg{src2}{Second source matrix. Must have the same size and type as \texttt{src1}}.
+\cvarg{normType}{Norm type. \texttt{NORM\_L1}, \texttt{NORM\_L2} and \texttt{NORM\_INF} are supported for now.}
+\end{description}
+
+See also: \cvCppCross{norm}.
+
+
 \cvCppFunc{gpu::sum}
-Returns sum of array elements.
+Returns sum of matrix elements.
 
 \cvdefCpp{Scalar sum(const GpuMat\& src);\newline
 Scalar sum(const GpuMat\& src, GpuMat\& buf);}
@@ -16,7 +48,7 @@ See also: \cvCppCross{sum}.
 
 
 \cvCppFunc{gpu::sqrSum}
-Returns squared sum of array elements.
+Returns squared sum of matrix elements.
 
 \cvdefCpp{Scalar sqrSum(const GpuMat\& src);\newline
 Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
@@ -27,7 +59,7 @@ Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
 
 
 \cvCppFunc{gpu::minMax}
-Finds global minimum and maximum array elements and returns their values.
+Finds global minimum and maximum matrix elements and returns their values.
 
 \cvdefCpp{void minMax(const GpuMat\& src, double* minVal,\par
   double* maxVal=0, const GpuMat\& mask=GpuMat());\newline
@@ -37,7 +69,7 @@ void minMax(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{src}{Single-channel source image.}
 \cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
 \cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
-\cvarg{mask}{Optional mask to select a sub-array.}
+\cvarg{mask}{Optional mask to select a sub-matrix.}
 \cvarg{buf}{Optional buffer. It's resized automatically.}
 \end{description}
 
@@ -46,7 +78,7 @@ See also: \cvCppCross{minMaxLoc}.
 
 
 \cvCppFunc{gpu::minMaxLoc}
-Finds global minimum and maximum array elements and returns their values with locations.
+Finds global minimum and maximum matrix elements and returns their values with locations.
 
 \cvdefCpp{void minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,\par
   Point* minLoc=0, Point* maxLoc=0,\par
@@ -60,7 +92,7 @@ void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
 \cvarg{minValLoc}{Pointer to returned minimum location. \texttt{NULL} if not required.}
 \cvarg{maxValLoc}{Pointer to returned maximum location. \texttt{NULL} if not required.}
-\cvarg{mask}{Optional mask to select a sub-array.}
+\cvarg{mask}{Optional mask to select a sub-matrix.}
 \cvarg{valbuf}{Optional values buffer. It's resized automatically.}
 \cvarg{locbuf}{Optional location buffer. It's resized automatically.}
 \end{description}
@@ -70,7 +102,7 @@ See also: \cvCppCross{minMaxLoc}.
 
 
 \cvCppFunc{gpu::countNonZero}
-Counts non-zero array elements.
+Counts non-zero matrix elements.
 
 \cvdefCpp{int countNonZero(const GpuMat\& src);\newline
 int countNonZero(const GpuMat\& src, GpuMat\& buf);}
