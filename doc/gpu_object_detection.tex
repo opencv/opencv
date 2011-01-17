@@ -123,7 +123,7 @@ Perfroms object detection without increasing detection window.
              Size padding=Size());}
 
 \begin{description}
-\cvarg{img}{Source image. 8UC1 and 8UC4 types are supported for now.}
+\cvarg{img}{Source image. \texttt{CV\_8UC1} and \texttt{CV\_8UC4}types are supported for now.}
 \cvarg{found\_locations}{Will contain left-top corner points of detected objects boundaries.}
 \cvarg{hit\_threshold}{Threshold for the distance between features and classifying plane. Usually it's 0, and should be specfied in the detector coefficients (as the last free coefficient), but if the free coefficient is missed (it's allowed) you can specify it manually here.}
 \cvarg{win\_stride}{Window stride. Must be a multiple of block stride.}

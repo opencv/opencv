@@ -10,7 +10,7 @@ Performs mean-shift filtering.
   + TermCriteria::EPS, 5, 1));}
 
 \begin{description}
-\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC4} images are supported for now.}
 \cvarg{dst}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of the converged point started from \texttt{(x,y)} pixel of the source image.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
@@ -27,9 +27,9 @@ Performs mean-shift procedure and stores information about converged points in t
   + TermCriteria::EPS, 5, 1));}
 
 \begin{description}
-\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC4} images are supported for now.}
 \cvarg{dstr}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of converged point started from \texttt{(x,y)} pixel of the source image.}
-\cvarg{dstsp}{16SC2 matrix, which will contain coordinates of converged points and have the same size as \texttt{src}.}
+\cvarg{dstsp}{\texttt{CV\_16SC2} matrix, which will contain coordinates of converged points and have the same size as \texttt{src}.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
@@ -45,7 +45,7 @@ Performs mean-shift segmentation of the source image and eleminates small segmen
   + TermCriteria::EPS, 5, 1));}
 
 \begin{description}
-\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC4} images are supported for now.}
 \cvarg{dst}{Segmented image. Will have the same size and type as \texttt{src}.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
@@ -61,9 +61,9 @@ Computes integral image and squared integral image.
 void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum);}
 
 \begin{description}
-\cvarg{src}{Source image. Only 8UC1 images are supported for now.}
-\cvarg{sum}{Integral image. Will contain 32-bit unsigned integer values packed into 32SC1.}
-\cvarg{sqsum}{Squared integral image. Will have 32FC1 type.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC1} images are supported for now.}
+\cvarg{sum}{Integral image. Will contain 32-bit unsigned integer values packed into \texttt{CV\_32SC1}.}
+\cvarg{sqsum}{Squared integral image. Will have \texttt{CV\_32FC1} type.}
 \end{description}
 
 See also: \cvCppCross{integral}.
@@ -74,7 +74,7 @@ Computes squared integral image.
 
 \cvdefCpp{void sqrIntegral(const GpuMat\& src, GpuMat\& sqsum);}
 \begin{description}
-\cvarg{src}{Source image. Only 8UC1 images are supported for now.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC1} images are supported for now.}
 \cvarg{sqsum}{Squared integral image. Will contain 64-bit floating point values packed into 64U.}
 \end{description}
 
@@ -84,8 +84,8 @@ Computes vertical (column) sum.
 
 \cvdefCpp{void columnSum(const GpuMat\& src, GpuMat\& sum);}
 \begin{description}
-\cvarg{src}{Source image. Only 32FC1 images are supported for now.}
-\cvarg{sum}{Destination image. Will have 32FC1 type.}
+\cvarg{src}{Source image. Only \texttt{CV\_32FC1} images are supported for now.}
+\cvarg{sum}{Destination image. Will have \texttt{CV\_32FC1} type.}
 \end{description}
 
 
@@ -97,8 +97,8 @@ Computes Harris cornerness criteria at each image pixel.
   int borderType=BORDER\_REFLECT101);}
 
 \begin{description}
-\cvarg{src}{Source image. Only 8UC1 and 32FC1 images are supported for now.}
-\cvarg{dst}{Destination image. Will have the same size and 32FC1 type and contain cornerness values.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC1} and \texttt{CV\_32FC1} images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and \texttt{CV\_32FC1} type and contain cornerness values.}
 \cvarg{blockSize}{Neighborhood size.}
 \cvarg{ksize}{Aperture parameter for the Sobel operator.}
 \cvarg{k}{Harris detector free parameter.}
@@ -116,8 +116,8 @@ Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel 
   int borderType=BORDER\_REFLECT101);}
 
 \begin{description}
-\cvarg{src}{Source image. Only 8UC1 and 32FC1 images are supported for now.}
-\cvarg{dst}{Destination image. Will have the same size and 32FC1 type and contain cornerness values.}
+\cvarg{src}{Source image. Only \texttt{CV\_8UC1} and \texttt{CV\_32FC1} images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and \texttt{CV\_32FC1} type and contain cornerness values.}
 \cvarg{blockSize}{Neighborhood size.}
 \cvarg{ksize}{Aperture parameter for the Sobel operator.}
 \cvarg{k}{Harris detector free parameter.}
@@ -141,7 +141,7 @@ Performs per-element multiplication of two Fourier spectrums.
 \cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
 \end{description}
 
-Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
+Only full (i.e. not packed) \texttt{CV\_32FC2} complex spectrums in the interleaved format are supported for now.
 
 See also: \cvCppCross{mulSpectrums}.
 
@@ -161,7 +161,7 @@ Performs per-element multiplication of two Fourier spectrums and scales the resu
 \cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
 \end{description}
 
-Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
+Only full (i.e. not packed) \texttt{CV\_32FC2} complex spectrums in the interleaved format are supported for now.
 
 See also: \cvCppCross{mulSpectrums}.
 
@@ -186,9 +186,9 @@ Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating 
 
 The source matrix should be continuous, otherwise reallocation and data copying will be performed. Function chooses the operation mode depending on the flags, size and channel count of the source matrix:
 \begin{itemize}
-  \item If the source matrix is complex and the output isn't specified as real then the destination matrix will be complex, will have \texttt{dft\_size} size and 32FC2 type. It will contain full result of the DFT (forward or inverse).
-  \item If the source matrix is complex and the output is specified as real then function assumes that its input is the result of the forward transform (see next item). The destionation matrix will have \texttt{dft\_size} size and 32FC1 type. It will contain result of the inverse DFT.
-  \item If the source matrix is real (i.e. its type is 32FC1) then forward DFT will be performed. The result of the DFT will be packed into complex (32FC2) matrix so its width will be \texttt{dft\_size.width / 2 + 1}, but if the source is a single column then height will be reduced.
+  \item If the source matrix is complex and the output isn't specified as real then the destination matrix will be complex, will have \texttt{dft\_size} size and \texttt{CV\_32FC2} type. It will contain full result of the DFT (forward or inverse).
+  \item If the source matrix is complex and the output is specified as real then function assumes that its input is the result of the forward transform (see next item). The destionation matrix will have \texttt{dft\_size} size and \texttt{CV\_32FC1} type. It will contain result of the inverse DFT.
+  \item If the source matrix is real (i.e. its type is \texttt{CV\_32FC1}) then forward DFT will be performed. The result of the DFT will be packed into complex (\texttt{CV\_32FC2}) matrix so its width will be \texttt{dft\_size.width / 2 + 1}, but if the source is a single column then height will be reduced.
 \end{itemize}
 
 See also: \cvCppCross{dft}.
@@ -203,7 +203,7 @@ void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
   bool ccorr, ConvolveBuf\& buf);}
 
 \begin{description}
-\cvarg{image}{Source image. Only 32FC1 images are supported for now.}
+\cvarg{image}{Source image. Only \texttt{CV\_32FC1} images are supported for now.}
 \cvarg{templ}{Template image. Must have size not greater then \texttt{image} size and be the same type as \texttt{image}.}
 \cvarg{result}{Result image. Will have the same size and type as \texttt{image}.}
 \cvarg{ccorr}{Flags which indicates cross-correlation must be evaluated instead of convolution.}

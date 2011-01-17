@@ -6,14 +6,14 @@ Computes matrix-matrix or matrix-scalar sum.
 
 \cvdefCpp{void add(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrices are supported for now.}
+\cvarg{a}{First source matrix. \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} matrices are supported for now.}
 \cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
 \cvdefCpp{void add(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{Source matrix. 32FC1 and 32FC2 matrixes are supported for now.}
+\cvarg{a}{Source matrix. \texttt{CV\_32FC1} and \texttt{CV\_32FC2} matrixes are supported for now.}
 \cvarg{b}{Source scalar to be added to the source matrix.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
@@ -26,14 +26,14 @@ Subtracts matrix from another matrix (or scalar from matrix).
 
 \cvdefCpp{void subtract(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrices are supported for now.}
+\cvarg{a}{First source matrix. \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} matrices are supported for now.}
 \cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
 \cvdefCpp{void subtract(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{Source matrix.  32FC1 and 32FC2 matrixes are supported for now.}
+\cvarg{a}{Source matrix.  \texttt{CV\_32FC1} and \texttt{CV\_32FC2} matrixes are supported for now.}
 \cvarg{b}{Scalar to be subtracted from the source matrix \texttt{a}.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
@@ -46,14 +46,14 @@ Computes per-element product of two matrices (or of matrix and scalar).
 
 \cvdefCpp{void multiply(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrices are supported for now.}
+\cvarg{a}{First source matrix. \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} matrices are supported for now.}
 \cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destionation matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
 \cvdefCpp{void multiply(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{Source matrix.  32FC1 and 32FC2 matrixes are supported for now.}
+\cvarg{a}{Source matrix.  \texttt{CV\_32FC1} and \texttt{CV\_32FC2} matrixes are supported for now.}
 \cvarg{b}{Scalar to be multiplied by.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
@@ -66,14 +66,14 @@ Performs per-element division of two matrices (or division of matrix by scalar).
 
 \cvdefCpp{void divide(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrices are supported for now.}
+\cvarg{a}{First source matrix. \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} matrices are supported for now.}
 \cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destionation matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
 \cvdefCpp{void divide(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{Source matrix.  32FC1 and 32FC2 matrixes are supported for now.}
+\cvarg{a}{Source matrix.  \texttt{CV\_32FC1} and \texttt{CV\_32FC2} matrixes are supported for now.}
 \cvarg{b}{Scalar to be divided by.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
@@ -86,7 +86,7 @@ Computes exponent of each matrix element.
 
 \cvdefCpp{void exp(const GpuMat\& a, GpuMat\& b);}
 \begin{description}
-\cvarg{a}{Source matrix. 32FC1 matrixes are supported for now.}
+\cvarg{a}{Source matrix. \texttt{CV\_32FC1} matrixes are supported for now.}
 \cvarg{b}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
@@ -98,7 +98,7 @@ Computes natural logarithm of absolute value of each matrix element.
 
 \cvdefCpp{void log(const GpuMat\& a, GpuMat\& b);}
 \begin{description}
-\cvarg{a}{Source matrix. 32FC1 matrixes are supported for now.}
+\cvarg{a}{Source matrix. \texttt{CV\_32FC1} matrixes are supported for now.}
 \cvarg{b}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
@@ -110,14 +110,14 @@ Computes per-element absolute difference of two matrices (or of matrix and scala
 
 \cvdefCpp{void absdiff(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrices are supported for now.}
+\cvarg{a}{First source matrix. \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} matrices are supported for now.}
 \cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destionation matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
 \cvdefCpp{void absdiff(const GpuMat\& a, const Scalar\& s, GpuMat\& c);}
 \begin{description}
-\cvarg{a}{Source matrix. 32FC1 matrixes are supported for now.}
+\cvarg{a}{Source matrix. \texttt{CV\_32FC1} matrixes are supported for now.}
 \cvarg{b}{Scalar to be multiplied by.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
@@ -130,9 +130,9 @@ Compares elements of two matrices.
 
 \cvdefCpp{void compare(const GpuMat\& a, const GpuMat\& b, GpuMat\& c, int cmpop);}
 \begin{description}
-\cvarg{a}{First source matrix. 8UC4 and 32FC1 matrices are supported for now.}
+\cvarg{a}{First source matrix. \texttt{CV\_8UC4} and \texttt{CV\_32FC1} matrices are supported for now.}
 \cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
-\cvarg{c}{Destination matrix. Will have the same size as \texttt{a} and be 8UC1 type.}
+\cvarg{c}{Destination matrix. Will have the same size as \texttt{a} and be \texttt{CV\_8UC1} type.}
 \cvarg{cmpop}{Flag specifying the relation between the elements to be checked:
 \begin{description}
 \cvarg{CMP\_EQ}{$=$}

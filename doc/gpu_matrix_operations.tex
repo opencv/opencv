@@ -18,7 +18,7 @@ Flips a 2D matrix around vertical, horizontal or both axes.
 
 \cvdefCpp{void flip(const GpuMat\& a, GpuMat\& b, int flipCode);}
 \begin{description}
-\cvarg{a}{Source matrix. Only 8UC1 and 8UC4 matrixes are supported for now.}
+\cvarg{a}{Source matrix. Only \texttt{CV\_8UC1} and \texttt{CV\_8UC4} matrixes are supported for now.}
 \cvarg{b}{Destination matrix.}
 \cvarg{flipCode}{Specifies how to flip the source:
 \begin{description}
@@ -36,8 +36,8 @@ Transforms the source matrix into the destination matrix using given look-up tab
 
 \cvdefCpp{void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst);}
 \begin{description}
-\cvarg{src}{Source matrix. 8UC1 and 8UC3 matrixes are supported for now.}
-\cvarg{lut}{Look-up table. Must be continuous, 8U depth matrix. Its area must satisfy to \texttt{lut.rows} $\times$ \texttt{lut.cols} = 256.}
+\cvarg{src}{Source matrix. \texttt{CV\_8UC1} and \texttt{CV\_8UC3} matrixes are supported for now.}
+\cvarg{lut}{Look-up table. Must be continuous, \texttt{CV\_8U} depth matrix. Its area must satisfy to \texttt{lut.rows} $\times$ \texttt{lut.cols} = 256 condition.}
 \cvarg{dst}{Destination matrix. Will have the same depth as \texttt{lut} and the same number of channels as \texttt{src}.}
 \end{description}
 
@@ -97,17 +97,17 @@ Computes magnitudes of complex matrix elements.
 
 \cvdefCpp{void magnitude(const GpuMat\& x, GpuMat\& magnitude);}
 \begin{description}
-\cvarg{x}{Source complex matrix in the interleaved format (32FC2). }
-\cvarg{magnitude}{Destination matrix of float magnitudes (32FC1).}
+\cvarg{x}{Source complex matrix in the interleaved format (\texttt{CV\_32FC2}). }
+\cvarg{magnitude}{Destination matrix of float magnitudes (\texttt{CV\_32FC1}).}
 \end{description}
 
 \cvdefCpp{void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude);\newline
 void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
   const Stream\& stream);}
 \begin{description}
-\cvarg{x}{Source matrix, containing real components (32FC1).}
-\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
-\cvarg{magnitude}{Destination matrix of float magnitudes (32FC1).}
+\cvarg{x}{Source matrix, containing real components (\texttt{CV\_32FC1}).}
+\cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
+\cvarg{magnitude}{Destination matrix of float magnitudes (\texttt{CV\_32FC1}).}
 \cvarg{stream}{Sream for the asynchronous version.}
 \end{description}
 
@@ -119,17 +119,17 @@ Computes squared magnitudes of complex matrix elements.
 
 \cvdefCpp{void magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude);}
 \begin{description}
-\cvarg{x}{Source complex matrix in the interleaved format (32FC2). }
-\cvarg{magnitude}{Destination matrix of float magnitude squares (32FC1).}
+\cvarg{x}{Source complex matrix in the interleaved format (\texttt{CV\_32FC2}). }
+\cvarg{magnitude}{Destination matrix of float magnitude squares (\texttt{CV\_32FC1}).}
 \end{description}
 
 \cvdefCpp{void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude);\newline
 void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
   const Stream\& stream);}
 \begin{description}
-\cvarg{x}{Source matrix, containing real components (32FC1).}
-\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
-\cvarg{magnitude}{Destination matrix of float magnitude squares (32FC1).}
+\cvarg{x}{Source matrix, containing real components (\texttt{CV\_32FC1}).}
+\cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
+\cvarg{magnitude}{Destination matrix of float magnitude squares (\texttt{CV\_32FC1}).}
 \cvarg{stream}{Sream for the asynchronous version.}
 \end{description}
 
@@ -142,9 +142,9 @@ Computes polar angles of complex matrix elements.
 void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,\par
   bool angleInDegrees, const Stream\& stream);}
 \begin{description}
-\cvarg{x}{Source matrix, containing real components (32FC1).}
-\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
-\cvarg{angle}{Destionation matrix of angles (32FC1).}
+\cvarg{x}{Source matrix, containing real components (\texttt{CV\_32FC1}).}
+\cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
+\cvarg{angle}{Destionation matrix of angles (\texttt{CV\_32FC1}).}
 \cvarg{angleInDegress}{Flag which indicates angles must be evaluated in degress.}
 \cvarg{stream}{Sream for the asynchronous version.}
 \end{description}
@@ -160,10 +160,10 @@ Converts Cartesian coordinates into polar.
 void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
   GpuMat\& angle, bool angleInDegrees, const Stream\& stream);}
 \begin{description}
-\cvarg{x}{Source matrix, containing real components (32FC1).}
-\cvarg{y}{Source matrix, containing imaginary components (32FC1).}
-\cvarg{magnitude}{Destination matrix of float magnituds (32FC1).}
-\cvarg{angle}{Destionation matrix of angles (32FC1).}
+\cvarg{x}{Source matrix, containing real components (\texttt{CV\_32FC1}).}
+\cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
+\cvarg{magnitude}{Destination matrix of float magnituds (\texttt{CV\_32FC1}).}
+\cvarg{angle}{Destionation matrix of angles (\texttt{CV\_32FC1}).}
 \cvarg{angleInDegress}{Flag which indicates angles must be evaluated in degress.}
 \cvarg{stream}{Sream for the asynchronous version.}
 \end{description}
@@ -180,10 +180,10 @@ void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,\par
   GpuMat\& x, GpuMat\& y, bool angleInDegrees,\par
   const Stream\& stream);}
 \begin{description}
-\cvarg{magnitude}{Source matrix, containing magnitudes (32FC1).}
-\cvarg{angle}{Source matrix, containing angles (32FC1).}
-\cvarg{x}{Destination matrix of real components (32FC1).}
-\cvarg{y}{Destination matrix of imaginary components (32FC1).}
+\cvarg{magnitude}{Source matrix, containing magnitudes (\texttt{CV\_32FC1}).}
+\cvarg{angle}{Source matrix, containing angles (\texttt{CV\_32FC1}).}
+\cvarg{x}{Destination matrix of real components (\texttt{CV\_32FC1}).}
+\cvarg{y}{Destination matrix of imaginary components (\texttt{CV\_32FC1}).}
 \cvarg{angleInDegress}{Flag which indicates angles are in degress.}
 \cvarg{stream}{Sream for the asynchronous version.}
 \end{description}

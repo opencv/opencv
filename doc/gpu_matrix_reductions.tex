@@ -6,7 +6,7 @@ Computes mean value and standard deviation of matrix elements.
 
 \cvdefCpp{void meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev);}
 \begin{description}
-\cvarg{mtx}{Source matrix. 8UC1 matrices are supported for now.}
+\cvarg{mtx}{Source matrix. \texttt{CV\_8UC1} matrices are supported for now.}
 \cvarg{mean}{Mean value.}
 \cvarg{stddev}{Standard deviation value.}
 \end{description}
@@ -19,14 +19,14 @@ Returns norm of matrix (or of two matrices difference).
 
 \cvdefCpp{double norm(const GpuMat\& src1, int normType=NORM\_L2);}
 \begin{description}
-\cvarg{src1}{Source matrix. 8UC1 matrices are supported for now.}
+\cvarg{src1}{Source matrix. \texttt{CV\_8UC1} matrices are supported for now.}
 \cvarg{normType}{Norm type. \texttt{NORM\_L1}, \texttt{NORM\_L2} and \texttt{NORM\_INF} are supported for now.}
 \end{description}
 
 \cvdefCpp{double norm(const GpuMat\& src1, const GpuMat\& src2,\par
   int normType=NORM\_L2);}
 \begin{description}
-\cvarg{src1}{First source matrix. 8UC1 matrices are supported for now.}
+\cvarg{src1}{First source matrix. \texttt{CV\_8UC1} matrices are supported for now.}
 \cvarg{src2}{Second source matrix. Must have the same size and type as \texttt{src1}}.
 \cvarg{normType}{Norm type. \texttt{NORM\_L1}, \texttt{NORM\_L2} and \texttt{NORM\_INF} are supported for now.}
 \end{description}
@@ -41,7 +41,7 @@ Returns sum of matrix elements.
 Scalar sum(const GpuMat\& src, GpuMat\& buf);}
 
 \begin{description}
-\cvarg{src}{Source image of any depth excepting 64F, single-channel.}
+\cvarg{src}{Source image of any depth excepting \texttt{CV\_64F}, single-channel.}
 \cvarg{buf}{Optional buffer. It's resized automatically.}
 \end{description}
 
@@ -54,7 +54,7 @@ Returns squared sum of matrix elements.
 \cvdefCpp{Scalar sqrSum(const GpuMat\& src);\newline
 Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
 \begin{description}
-\cvarg{src}{Source image of any depth excepting 64F, single-channel.}
+\cvarg{src}{Source image of any depth excepting \texttt{CV\_64F}, single-channel.}
 \cvarg{buf}{Optional buffer. It's resized automatically.}
 \end{description}
 
@@ -74,7 +74,7 @@ void minMax(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{buf}{Optional buffer. It's resized automatically.}
 \end{description}
 
-Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+Function doesn't work with \texttt{CV\_64F} images on GPU with compute capability $<$ 1.3.\newline
 See also: \cvCppCross{minMaxLoc}.
 
 
@@ -98,7 +98,7 @@ void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{locbuf}{Optional location buffer. It's resized automatically.}
 \end{description}
 
-Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+Function doesn't work with \texttt{CV\_64F} images on GPU with compute capability $<$ 1.3.\newline
 See also: \cvCppCross{minMaxLoc}.
 
 
@@ -112,5 +112,5 @@ int countNonZero(const GpuMat\& src, GpuMat\& buf);}
 \cvarg{buf}{Optional buffer. It's resized automatically.}
 \end{description}
 
-Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+Function doesn't work with \texttt{CV\_64F} images on GPU with compute capability $<$ 1.3.\newline
 See also: \cvCppCross{countNonZero}.
