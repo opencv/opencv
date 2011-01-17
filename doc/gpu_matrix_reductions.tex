@@ -1,0 +1,83 @@
+\section{Matrix Reductions}
+
+
+\cvCppFunc{gpu::sum}
+Returns sum of array elements.
+
+\cvdefCpp{Scalar sum(const GpuMat\& src);\newline
+Scalar sum(const GpuMat\& src, GpuMat\& buf);}
+
+\begin{description}
+\cvarg{src}{Source image of any depth excepting 64F, single-channel.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+See also: \cvCppCross{sum}.
+
+
+\cvCppFunc{gpu::sqrSum}
+Returns squared sum of array elements.
+
+\cvdefCpp{Scalar sqrSum(const GpuMat\& src);\newline
+Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
+\begin{description}
+\cvarg{src}{Source image of any depth excepting 64F, single-channel.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+
+\cvCppFunc{gpu::minMax}
+Finds global minimum and maximum array elements and returns their values.
+
+\cvdefCpp{void minMax(const GpuMat\& src, double* minVal,\par
+  double* maxVal=0, const GpuMat\& mask=GpuMat());\newline
+void minMax(const GpuMat\& src, double* minVal, double* maxVal,\par
+  const GpuMat\& mask, GpuMat\& buf);}
+\begin{description}
+\cvarg{src}{Single-channel source image.}
+\cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
+\cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
+\cvarg{mask}{Optional mask to select a sub-array.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+See also: \cvCppCross{minMaxLoc}.
+
+
+\cvCppFunc{gpu::minMaxLoc}
+Finds global minimum and maximum array elements and returns their values with locations.
+
+\cvdefCpp{void minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,\par
+  Point* minLoc=0, Point* maxLoc=0,\par
+  const GpuMat\& mask=GpuMat());\newline
+void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,\par
+  Point* minLoc, Point* maxLoc, const GpuMat\& mask,\par
+  GpuMat\& valbuf, GpuMat\& locbuf);}
+\begin{description}
+\cvarg{src}{Single-channel source image.}
+\cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
+\cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
+\cvarg{minValLoc}{Pointer to returned minimum location. \texttt{NULL} if not required.}
+\cvarg{maxValLoc}{Pointer to returned maximum location. \texttt{NULL} if not required.}
+\cvarg{mask}{Optional mask to select a sub-array.}
+\cvarg{valbuf}{Optional values buffer. It's resized automatically.}
+\cvarg{locbuf}{Optional location buffer. It's resized automatically.}
+\end{description}
+
+Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+See also: \cvCppCross{minMaxLoc}.
+
+
+\cvCppFunc{gpu::countNonZero}
+Counts non-zero array elements.
+
+\cvdefCpp{int countNonZero(const GpuMat\& src);\newline
+int countNonZero(const GpuMat\& src, GpuMat\& buf);}
+\begin{description}
+\cvarg{src}{Single-channel source image.}
+\cvarg{buf}{Optional buffer. It's resized automatically.}
+\end{description}
+
+Function doesn't work with 64F images on GPU with compute capability $<$ 1.3.\newline
+See also: \cvCppCross{countNonZero}.

@@ -1,0 +1,262 @@
+\section{Image Processing}
+
+
+\cvCppFunc{gpu::meanShiftFiltering}
+Performs mean-shift filtering.
+
+\cvdefCpp{void meanShiftFiltering(const GpuMat\& src, GpuMat\& dst,\par
+  int sp, int sr,\par
+  TermCriteria criteria = TermCriteria(TermCriteria::MAX\_ITER\par
+  + TermCriteria::EPS, 5, 1));}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of the converged point started from \texttt{(x,y)} pixel of the source image.}
+\cvarg{sp}{Spatial window radius.}
+\cvarg{sr}{Color window radius.}
+\cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
+\end{description}
+
+
+\cvCppFunc{gpu::meanShiftProc}
+Performs mean-shift procedure and stores information about converged points in two images..
+
+\cvdefCpp{void meanShiftProc(const GpuMat\& src, GpuMat\& dstr, GpuMat\& dstsp,\par
+  int sp, int sr,\par
+  TermCriteria criteria = TermCriteria(TermCriteria::MAX\_ITER\par
+  + TermCriteria::EPS, 5, 1));}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{dstr}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of converged point started from \texttt{(x,y)} pixel of the source image.}
+\cvarg{dstsp}{16SC2 matrix, which will contain coordinates of converged points and have the same size as \texttt{src}.}
+\cvarg{sp}{Spatial window radius.}
+\cvarg{sr}{Color window radius.}
+\cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
+\end{description}
+
+
+\cvCppFunc{gpu::meanShiftSegmentation}
+Performs mean-shift segmentation of the source image and eleminates small segments.
+
+\cvdefCpp{void meanShiftSegmentation(const GpuMat\& src, Mat\& dst,\par
+  int sp, int sr, int minsize,\par
+  TermCriteria criteria = TermCriteria(TermCriteria::MAX\_ITER\par
+  + TermCriteria::EPS, 5, 1));}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC4 images are supported for now.}
+\cvarg{dst}{Segmented image. Will have the same size and type as \texttt{src}.}
+\cvarg{sp}{Spatial window radius.}
+\cvarg{sr}{Color window radius.}
+\cvarg{minsize}{Minimum segment size. Smaller segements will be merged.}
+\cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
+\end{description}
+
+
+\cvCppFunc{gpu::integral}
+Computes the integral image and squared integral image.
+
+\cvdefCpp{void integral(const GpuMat\& src, GpuMat\& sum);\newline
+void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum);}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 images are supported for now.}
+\cvarg{sum}{Integral image. Will contain 32-bit unsigned integer values packed into 32SC1.}
+\cvarg{sqsum}{Squared integral image. Will have 32FC1 type.}
+\end{description}
+
+See also: \cvCppCross{integral}.
+
+
+\cvCppFunc{gpu::sqrIntegral}
+Computes squared integral image.
+
+\cvdefCpp{void sqrIntegral(const GpuMat\& src, GpuMat\& sqsum);}
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 images are supported for now.}
+\cvarg{sqsum}{Squared integral image. Will contain 64-bit floating point values packed into 64U.}
+\end{description}
+
+
+\cvCppFunc{gpu::columnSum}
+Computes vertical (column) sum.
+
+\cvdefCpp{void columnSum(const GpuMat\& src, GpuMat\& sum);}
+\begin{description}
+\cvarg{src}{Source image. Only 32FC1 images are supported for now.}
+\cvarg{sum}{Destination image. Will have 32FC1 type.}
+\end{description}
+
+
+\cvCppFunc{gpu::cornerHarris}
+Computes Harris cornerness criteria at each image pixel.
+
+\cvdefCpp{void cornerHarris(const GpuMat\& src, GpuMat\& dst,\par
+  int blockSize, int ksize, double k,\par
+  int borderType=BORDER\_REFLECT101);}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 and 32FC1 images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and 32FC1 type and contain cornerness values.}
+\cvarg{blockSize}{Neighborhood size.}
+\cvarg{ksize}{Aperture parameter for the Sobel operator.}
+\cvarg{k}{Harris detector free parameter.}
+\cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
+\end{description}
+
+See also: \cvCppCross{cornerHarris}.
+
+
+\cvCppFunc{gpu::cornerMinEigenVal}
+Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria.
+
+\cvdefCpp{void cornerMinEigenVal(const GpuMat\& src, GpuMat\& dst,\par
+  int blockSize, int ksize,\par
+  int borderType=BORDER\_REFLECT101);}
+
+\begin{description}
+\cvarg{src}{Source image. Only 8UC1 and 32FC1 images are supported for now.}
+\cvarg{dst}{Destination image. Will have the same size and 32FC1 type and contain cornerness values.}
+\cvarg{blockSize}{Neighborhood size.}
+\cvarg{ksize}{Aperture parameter for the Sobel operator.}
+\cvarg{k}{Harris detector free parameter.}
+\cvarg{borderType}{Pixel extrapolation method. Only \texttt{BORDER\_REFLECT101} and \texttt{BORDER\_REPLICATE} are supported for now.}
+\end{description}
+
+See also: \cvCppCross{cornerMinEigenValue}.
+
+
+\cvCppFunc{gpu::mulSpectrums}
+Performs per-element multiplication of two Fourier spectrums.
+
+\cvdefCpp{void mulSpectrums(const GpuMat\& a, const GpuMat\& b,\par
+  GpuMat\& c, int flags, bool conjB=false);}
+
+\begin{description}
+\cvarg{a}{First spectrum.}
+\cvarg{b}{Second spectrum. Must have the same size and type as \texttt{a}.}
+\cvarg{c}{Destination spectrum.}
+\cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
+\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
+\end{description}
+
+Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
+
+See also: \cvCppCross{mulSpectrums}.
+
+
+\cvCppFunc{gpu::mulAndScaleSpectrums}
+Performs per-element multiplication of two Fourier spectrums and scales the result.
+
+\cvdefCpp{void mulAndScaleSpectrums(const GpuMat\& a, const GpuMat\& b,\par
+  GpuMat\& c, int flags, float scale, bool conjB=false);}
+
+\begin{description}
+\cvarg{a}{First spectrum.}
+\cvarg{b}{Second spectrum. Must have the same size and type as \texttt{a}.}
+\cvarg{c}{Destination spectrum.}
+\cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
+\cvarg{scale}{Scale constant.}
+\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
+\end{description}
+
+Only full (i.e. not packed) 32FC2 complex spectrums in the interleaved format are supported for now.
+
+See also: \cvCppCross{mulSpectrums}.
+
+
+\cvCppFunc{gpu::dft}
+Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+
+\cvdefCpp{void dft(const GpuMat\& src, GpuMat\& dst, Size dft\_size, int flags=0);}
+
+\begin{description}
+\cvarg{src}{Real of complex source matrix.}
+\cvarg{dst}{Real or complex destination matrix.}
+\cvarg{dft\_size}{Size of discrete Fourier transform.}
+\cvarg{flags}{Optional flags:
+\begin{description}
+  \cvarg{DFT\_ROWS}{Transform each individual row of the source matrix.}
+  \cvarg{DFT\_SCALE}{Scale the result: divide it by the number of elements in the transform (it's obtained from \texttt{dft\_size}).
+  \cvarg{DFT\_INVERSE}{Inverse DFT must be perfromed for complex-complex case (real-complex and  complex-real cases are respectively forward and inverse always).}}
+  \cvarg{DFT\_REAL\_OUTPUT}{The source matrix is the result of real-complex transform and the destination matrix must be real.}
+\end{description}}
+\end{description}
+
+The source matrix should be continuous, otherwise reallocation and data copying will be performed. Function chooses the operation mode depending on the flags, size and channel count of the source matrix:
+\begin{itemize}
+  \item If the source matrix is complex and the output isn't specified as real then the destination matrix will be complex, will have \texttt{dft\_size} size and 32FC2 type. It will contain full result of the DFT (forward or inverse).
+  \item If the source matrix is complex and the output is specified as real then function assumes that its input is the result of the forward transform (see next item). The destionation matrix will have \texttt{dft\_size} size and 32FC1 type. It will contain result of the inverse DFT.
+  \item If the source matrix is real (i.e. its type is 32FC1) then forward DFT will be performed. The result of the DFT will be packed into complex (32FC2) matrix so its width will be \texttt{dft\_size.width / 2 + 1}, but if the source is a single column then height will be reduced.
+\end{itemize}
+
+See also: \cvCppCross{dft}.
+
+
+\cvCppFunc{gpu::convolve}
+Computes convolution (or cross-correlation) of two images.
+
+\cvdefCpp{void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
+  bool ccorr=false);\newline
+void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
+  bool ccorr, ConvolveBuf\& buf);}
+
+\begin{description}
+\cvarg{image}{Source image. Only 32FC1 images are supported for now.}
+\cvarg{templ}{Template image. Must have size not greater then \texttt{image} size and be the same type as \texttt{image}.}
+\cvarg{result}{Result image. Will have the same size and type as \texttt{image}.}
+\cvarg{ccorr}{Flags which indicates cross-correlation must be evaluated instead of convolution.}
+\cvarg{buf}{Optional buffer to decrease memory reallocation count (for many calls with the same sizes).}
+\end{description}
+
+
+\cvclass{gpu::ConvolveBuf}
+Memory buffer for the \cvCppCross{gpu::convolve} function.
+
+\begin{lstlisting}
+struct CV_EXPORTS ConvolveBuf
+{
+    ConvolveBuf() {}
+    ConvolveBuf(Size image_size, Size templ_size) 
+        { create(image_size, templ_size); }
+    void create(Size image_size, Size templ_size);
+
+private:
+    // Hidden
+};
+\end{lstlisting}
+
+
+\cvCppFunc{gpu::ConvolveBuf::ConvolveBuf}
+
+\cvdefCpp{ConvolveBuf();}
+Construct empty buffer which will be properly resized after first call of the convolve function.
+
+\cvdefCpp{ConvolveBuf(Size image\_size, Size templ\_size);}
+Construct buffer for the convolve function with respectively arguments.
+
+
+\cvCppFunc{gpu::matchTemplate}
+Computes the proximity map for the raster template and the image where the template is searched for.
+
+\cvdefCpp{void matchTemplate(const GpuMat\& image, const GpuMat\& templ,\par
+  GpuMat\& result, int method);}
+
+\begin{description}
+\cvarg{image}{Source image. 32F and 8U images (1..4 channels) are supported for now.}
+\cvarg{templ}{Template image. Must have the same size and type as \texttt{image}.}
+\cvarg{result}{A map of comparison results (32FC1). If \texttt{image} is $W \times H$ and
+\texttt{templ} is $w \times h$ then \texttt{result} must be $(W-w+1) \times (H-h+1)$.}
+\cvarg{method}{Specifies the way the template must be compared with the image.}
+\end{description}
+Following methods are supported for 8U images for now:
+\begin{itemize}
+\item CV\_TM\_SQDIFF \item CV\_TM\_SQDIFF\_NORMED \item CV\_TM\_CCORR \item CV\_TM\_CCORR\_NORMED \item CV\_TM\_CCOEFF \item CV\_TM\_CCOEFF\_NORMED 
+\end{itemize}
+Following methods are supported for 32F images for now:
+\begin{itemize}
+\item CV\_TM\_SQDIFF \item CV\_TM\_CCORR
+\end{itemize}
+
+See also: \cvCppCross{matchTemplate}. 

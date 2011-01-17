@@ -1,0 +1,13 @@
+\section{Data Structures}
+
+
+\cvCppFunc{gpu::createContinuous}
+Creates continuous matrix in GPU memory.
+
+\cvdefCpp{void createContinuous(int rows, int cols, int type, GpuMat\& m);}
+\begin{description}
+\cvarg{rows}{Row count.}
+\cvarg{cols}{Column count.}
+\cvarg{type}{Type of the matrix.}
+\cvarg{m}{Destination matrix. Will be reshaped only if it has proper type and area ($rows \times cols$).}
+\end{description}

@@ -1,0 +1,96 @@
+\section{Per-element Operations.}
+
+
+\cvCppFunc{add}
+Computes matrix-matrix or matrix-scalar sum.
+
+\cvdefCpp{void add(const GpuMat\& a, const GpuMat\& b, GpuMat\& c);}
+\begin{description}
+\cvarg{a}{First source matrix. 8UC1, 8UC4, 32SC1 and 32FC2 matrixes are supported for now.}
+\cvarg{b}{Second source matrix. Must have the same size and type as \texttt{a}.}
+\cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
+\end{description}
+
+\cvdefCpp{void add(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
+\begin{description}
+\cvarg{a}{Source matrix. 32SC1 and 32FC2 matrixes are supported for now.}
+\cvarg{b}{Source scalar.}
+\cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
+\end{description}
+
+See also: \cvCppCross{add}.
+
+
+\cvfunc{cv::gpu::bitwise\_not}\label{cppfunc.gpu.bitwise.not}
+Performs per-element bitwise inversion.
+
+\cvdefCpp{void bitwise\_not(const GpuMat\& src, GpuMat\& dst,\par
+  const GpuMat\& mask=GpuMat());\newline
+void bitwise\_not(const GpuMat\& src, GpuMat\& dst,\par
+  const GpuMat\& mask, const Stream\& stream);}
+
+\begin{description}
+\cvarg{src}{Source matrix.}
+\cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src}.}
+\cvarg{mask}{Optional operation mask. 8-bit single channel image.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+See also: \hyperref[cppfunc.bitwise.not]{cv::bitwise\_not}.
+
+
+\cvfunc{cv::gpu::bitwise\_or}\label{cppfunc.gpu.bitwise.or}
+Performs per-element bitwise disjunction of two matrices.
+
+\cvdefCpp{void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
+  const GpuMat\& mask=GpuMat());\newline
+void bitwise\_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
+  const GpuMat\& mask, const Stream\& stream);}
+
+\begin{description}
+\cvarg{src1}{First source matrix.}
+\cvarg{src2}{Second source matrix. It must have the same size and type as \texttt{src1}.}
+\cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src1}.}
+\cvarg{mask}{Optional operation mask. 8-bit single channel image.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+See also: \hyperref[cppfunc.bitwise.or]{cv::bitwise\_or}.
+
+
+\cvfunc{cv::gpu::bitwise\_and}\label{cppfunc.gpu.bitwise.and}
+Performs per-element bitwise conjunction of two matrices.
+
+\cvdefCpp{void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
+  const GpuMat\& mask=GpuMat());\newline
+void bitwise\_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
+  const GpuMat\& mask, const Stream\& stream);}
+
+\begin{description}
+\cvarg{src1}{First source matrix.}
+\cvarg{src2}{Second source matrix. It must have the same size and type as \texttt{src1}.}
+\cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src1}.}
+\cvarg{mask}{Optional operation mask. 8-bit single channel image.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+See also: \hyperref[cppfunc.bitwise.and]{cv::bitwise\_and}.
+
+
+\cvfunc{cv::gpu::bitwise\_xor}\label{cppfunc.gpu.bitwise.xor}
+Performs per-element bitwise "exclusive or" of two matrices.
+
+\cvdefCpp{void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
+  const GpuMat\& mask=GpuMat());\newline
+void bitwise\_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,\par
+  const GpuMat\& mask, const Stream\& stream);}
+
+\begin{description}
+\cvarg{src1}{First source matrix.}
+\cvarg{src2}{Second source matrix. It must have the same size and type as \texttt{src1}.}
+\cvarg{dst}{Destination matrix. Will have the same size and type as \texttt{src1}.}
+\cvarg{mask}{Optional operation mask. 8-bit single channel image.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+See also: \hyperref[cppfunc.bitwise.xor]{cv::bitwise\_xor}.
