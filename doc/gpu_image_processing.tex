@@ -19,7 +19,7 @@ Performs mean-shift filtering.
 
 
 \cvCppFunc{gpu::meanShiftProc}
-Performs mean-shift procedure and stores information about converged points in two images..
+Performs mean-shift procedure and stores information about converged points in two images.
 
 \cvdefCpp{void meanShiftProc(const GpuMat\& src, GpuMat\& dstr, GpuMat\& dstsp,\par
   int sp, int sr,\par
@@ -55,7 +55,7 @@ Performs mean-shift segmentation of the source image and eleminates small segmen
 
 
 \cvCppFunc{gpu::integral}
-Computes the integral image and squared integral image.
+Computes integral image and squared integral image.
 
 \cvdefCpp{void integral(const GpuMat\& src, GpuMat\& sum);\newline
 void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum);}
@@ -172,15 +172,15 @@ Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating 
 \cvdefCpp{void dft(const GpuMat\& src, GpuMat\& dst, Size dft\_size, int flags=0);}
 
 \begin{description}
-\cvarg{src}{Real of complex source matrix.}
-\cvarg{dst}{Real or complex destination matrix.}
+\cvarg{src}{Source matrix (real or complex).}
+\cvarg{dst}{Destination matrix (real or complex).}
 \cvarg{dft\_size}{Size of discrete Fourier transform.}
 \cvarg{flags}{Optional flags:
 \begin{description}
   \cvarg{DFT\_ROWS}{Transform each individual row of the source matrix.}
   \cvarg{DFT\_SCALE}{Scale the result: divide it by the number of elements in the transform (it's obtained from \texttt{dft\_size}).
-  \cvarg{DFT\_INVERSE}{Inverse DFT must be perfromed for complex-complex case (real-complex and  complex-real cases are respectively forward and inverse always).}}
-  \cvarg{DFT\_REAL\_OUTPUT}{The source matrix is the result of real-complex transform and the destination matrix must be real.}
+  \cvarg{DFT\_INVERSE}{Inverse DFT must be perfromed for complex-complex case (real-complex and complex-real cases are respectively forward and inverse always).}}
+  \cvarg{DFT\_REAL\_OUTPUT}{The source matrix is the result of real-complex transform, so the destination matrix must be real.}
 \end{description}}
 \end{description}
 
@@ -231,14 +231,14 @@ private:
 \cvCppFunc{gpu::ConvolveBuf::ConvolveBuf}
 
 \cvdefCpp{ConvolveBuf();}
-Construct empty buffer which will be properly resized after first call of the convolve function.
+Constructs an empty buffer which will be properly resized after first call of the convolve function.
 
 \cvdefCpp{ConvolveBuf(Size image\_size, Size templ\_size);}
-Construct buffer for the convolve function with respectively arguments.
+Constructs a buffer for the convolve function with respectively arguments.
 
 
 \cvCppFunc{gpu::matchTemplate}
-Computes the proximity map for the raster template and the image where the template is searched for.
+Computes a proximity map for a raster template and an image where the template is searched for.
 
 \cvdefCpp{void matchTemplate(const GpuMat\& image, const GpuMat\& templ,\par
   GpuMat\& result, int method);}
@@ -246,15 +246,15 @@ Computes the proximity map for the raster template and the image where the templ
 \begin{description}
 \cvarg{image}{Source image. 32F and 8U images (1..4 channels) are supported for now.}
 \cvarg{templ}{Template image. Must have the same size and type as \texttt{image}.}
-\cvarg{result}{A map of comparison results (32FC1). If \texttt{image} is $W \times H$ and
+\cvarg{result}{Map containing comparison results (32FC1). If \texttt{image} is $W \times H$ and
 \texttt{templ} is $w \times h$ then \texttt{result} must be $(W-w+1) \times (H-h+1)$.}
-\cvarg{method}{Specifies the way the template must be compared with the image.}
+\cvarg{method}{Specifies the way which the template must be compared with the image.}
 \end{description}
-Following methods are supported for 8U images for now:
+Following methods are supported for the 8U images for now:
 \begin{itemize}
 \item CV\_TM\_SQDIFF \item CV\_TM\_SQDIFF\_NORMED \item CV\_TM\_CCORR \item CV\_TM\_CCORR\_NORMED \item CV\_TM\_CCOEFF \item CV\_TM\_CCOEFF\_NORMED 
 \end{itemize}
-Following methods are supported for 32F images for now:
+Following methods are supported for the 32F images for now:
 \begin{itemize}
 \item CV\_TM\_SQDIFF \item CV\_TM\_CCORR
 \end{itemize}

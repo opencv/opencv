@@ -2,7 +2,7 @@
 
 
 \cvCppFunc{gpu::transpose}
-Transposes the matrix.
+Transposes a matrix.
 
 \cvdefCpp{void transpose(const GpuMat\& src, GpuMat\& dst);}
 \begin{description}
@@ -32,7 +32,7 @@ See also: \cvCppCross{flip}.
 
 
 \cvCppFunc{gpu::LUT}
-Transforms source matrix into destination matrix using given look-up table: \texttt{dst(I) = lut(src(I))}.
+Transforms the source matrix into the destination matrix using given look-up table: \texttt{dst(I) = lut(src(I))}.
 
 \cvdefCpp{void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst);}
 \begin{description}
@@ -45,7 +45,7 @@ See also: \cvCppCross{LUT}.
 
 
 \cvCppFunc{gpu::merge}
-Makes multi-channel matrix out of several single-channel matrices.
+Makes a multi-channel matrix out of several single-channel matrices.
 
 \cvdefCpp{void merge(const GpuMat* src, size\_t n, GpuMat\& dst);\newline
 void merge(const GpuMat* src, size\_t n, GpuMat\& dst,\par
@@ -93,7 +93,7 @@ See also: \cvCppCross{split}.
 
 
 \cvCppFunc{gpu::magnitude}
-Computes magnitude of complex vector.
+Computes magnitudes of complex matrix elements.
 
 \cvdefCpp{void magnitude(const GpuMat\& x, GpuMat\& magnitude);}
 \begin{description}
@@ -115,7 +115,7 @@ See also: \cvCppCross{magnitude}.
 
 
 \cvCppFunc{gpu::magnitudeSqr}
-Computes squared magnitude of complex vector.
+Computes squared magnitudes of complex matrix elements.
 
 \cvdefCpp{void magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude);}
 \begin{description}
@@ -135,7 +135,7 @@ void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
 
 
 \cvCppFunc{gpu::phase}
-Computes polar angle of each complex value.
+Computes polar angles of complex matrix elements.
 
 \cvdefCpp{void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,\par
   bool angleInDegrees=false);\newline

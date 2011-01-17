@@ -23,7 +23,8 @@ Returns norm of matrix (or of two matrices difference).
 \cvarg{normType}{Norm type. \texttt{NORM\_L1}, \texttt{NORM\_L2} and \texttt{NORM\_INF} are supported for now.}
 \end{description}
 
-\cvdefCpp{double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM\_L2);}
+\cvdefCpp{double norm(const GpuMat\& src1, const GpuMat\& src2,\par
+  int normType=NORM\_L2);}
 \begin{description}
 \cvarg{src1}{First source matrix. 8UC1 matrices are supported for now.}
 \cvarg{src2}{Second source matrix. Must have the same size and type as \texttt{src1}}.
