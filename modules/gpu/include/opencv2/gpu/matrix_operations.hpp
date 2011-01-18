@@ -364,6 +364,10 @@ inline GpuMat createContinuous(Size size, int type)
     return m;
 }
 
+inline void ensureSizeIsEnough(Size size, int type, GpuMat& m)
+{
+    ensureSizeIsEnough(size.height, size.width, type, m);
+}
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -401,6 +405,7 @@ inline CudaMem::CudaMem(const Mat& m, int _alloc_type) : flags(0), rows(0), cols
 inline CudaMem::~CudaMem()
 {
     release();
+
 }
 
 inline CudaMem& CudaMem::operator = (const CudaMem& m)

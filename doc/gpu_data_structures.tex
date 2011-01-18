@@ -12,4 +12,24 @@ Creates continuous matrix in GPU memory.
 \cvarg{m}{Destination matrix. Will be only reshaped if it has proper type and area (\texttt{rows} $\times$ \texttt{cols}).}
 \end{description}
 
+Also the following wrappers are available:
+\cvdefCpp{GpuMat createContinuous(int rows, int cols, int type);\newline
+void createContinuous(Size size, int type, GpuMat\& m);\newline
+GpuMat createContinuous(Size size, int type);}
+
 Matrix is called continuous if its elements are stored continuously, i.e. wuthout gaps in the end of each row.
+
+
+\cvCppFunc{gpu::ensureSizeIsEnough}
+Ensures that size of matrix is big enough and matrix has proper type. The function doesn't reallocate memory if matrix has proper attributes already.
+
+\cvdefCpp{void ensureSizeIsEnough(int rows, int cols, int type, GpuMat\& m);}
+\begin{description}
+\cvarg{rows}{Minimum desired number of rows.}
+\cvarg{cols}{Minimum desired number of cols.}
+\cvarg{type}{Desired matrix type.}
+\cvarg{m}{Destination matrix.}
+\end{description}
+
+Also the following wrapper is available:
+\cvdefCpp{void ensureSizeIsEnough(Size size, int type, GpuMat\& m);}

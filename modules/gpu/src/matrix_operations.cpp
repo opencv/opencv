@@ -551,6 +551,13 @@ void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
     m = m.reshape(0, rows);
 }
 
+void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+{
+    if (m.type() == type && m.rows >= rows && m.cols >= cols)
+        return;
+    m.create(rows, cols, type);
+}
+
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////////// CudaMem //////////////////////////////

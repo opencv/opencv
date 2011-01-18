@@ -159,7 +159,7 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
 
     Size bufSize;
     sum::get_buf_size_required(src.cols, src.rows, src.channels(), bufSize.width, bufSize.height); 
-    buf.create(bufSize, CV_8U);
+    ensureSizeIsEnough(bufSize, CV_8U, buf);
 
     Caller caller = callers[hasAtomicsSupport(getDevice())][src.depth()];
     if (!caller) CV_Error(CV_StsBadArg, "sum: unsupported type");
@@ -192,7 +192,7 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
 
     Size bufSize;
     sum::get_buf_size_required(src.cols, src.rows, src.channels(), bufSize.width, bufSize.height); 
-    buf.create(bufSize, CV_8U);
+    ensureSizeIsEnough(bufSize, CV_8U, buf);
 
     Caller caller = callers[hasAtomicsSupport(getDevice())][src.depth()];
     if (!caller) CV_Error(CV_StsBadArg, "sqrSum: unsupported type");
@@ -265,7 +265,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     
     Size bufSize;
     get_buf_size_required(src.cols, src.rows, src.elemSize(), bufSize.width, bufSize.height);
-    buf.create(bufSize, CV_8U);
+    ensureSizeIsEnough(bufSize, CV_8U, buf);
 
     if (mask.empty())
     {
@@ -292,31 +292,31 @@ namespace cv { namespace gpu { namespace mathfunc { namespace minmaxloc {
 
     template <typename T> 
     void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, 
-                            int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
+                            int minloc[2], int maxloc[2], PtrStep valBuf, PtrStep locBuf);
 
     template <typename T> 
     void min_max_loc_mask_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
-                                 int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
+                                 int minloc[2], int maxloc[2], PtrStep valBuf, PtrStep locBuf);
 
     template <typename T> 
     void min_max_loc_multipass_caller(const DevMem2D src, double* minval, double* maxval, 
-                                     int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
+                                     int minloc[2], int maxloc[2], PtrStep valBuf, PtrStep locBuf);
 
     template <typename T> 
     void min_max_loc_mask_multipass_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
-                                           int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf);
+                                           int minloc[2], int maxloc[2], PtrStep valBuf, PtrStep locBuf);
 }}}}
 
 
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask)
 {    
-    GpuMat valbuf, locbuf;
-    minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valbuf, locbuf);
+    GpuMat valBuf, locBuf;
+    minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
 }
 
 
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                        const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf)
+                        const GpuMat& mask, GpuMat& valBuf, GpuMat& locBuf)
 {
     using namespace mathfunc::minmaxloc;
 
@@ -348,23 +348,23 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     int minLoc_[2];
     int maxLoc_[2];
 
-    Size valbuf_size, locbuf_size;
-    get_buf_size_required(src.cols, src.rows, src.elemSize(), valbuf_size.width, 
-                          valbuf_size.height, locbuf_size.width, locbuf_size.height);
-    valbuf.create(valbuf_size, CV_8U);
-    locbuf.create(locbuf_size, CV_8U);
+    Size valBufSize, locBufSize;
+    get_buf_size_required(src.cols, src.rows, src.elemSize(), valBufSize.width, 
+                          valBufSize.height, locBufSize.width, locBufSize.height);
+    ensureSizeIsEnough(valBufSize, CV_8U, valBuf);
+    ensureSizeIsEnough(locBufSize, CV_8U, locBuf);
 
     if (mask.empty())
     {
         Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
         if (!caller) CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
-        caller(src, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf);
+        caller(src, minVal, maxVal, minLoc_, maxLoc_, valBuf, locBuf);
     }
     else
     {
         MaskedCaller caller = masked_callers[hasAtomicsSupport(getDevice())][src.type()];
         if (!caller) CV_Error(CV_StsBadArg, "minMaxLoc: unsupported type");
-        caller(src, mask, minVal, maxVal, minLoc_, maxLoc_, valbuf, locbuf);
+        caller(src, mask, minVal, maxVal, minLoc_, maxLoc_, valBuf, locBuf);
     }
 
     if (minLoc) { minLoc->x = minLoc_[0]; minLoc->y = minLoc_[1]; }
@@ -411,9 +411,9 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     CV_Assert(src.channels() == 1);
     CV_Assert(src.type() != CV_64F || hasNativeDoubleSupport(getDevice()));
 
-    Size buf_size;
-    get_buf_size_required(src.cols, src.rows, buf_size.width, buf_size.height);
-    buf.create(buf_size, CV_8U);
+    Size bufSize;
+    get_buf_size_required(src.cols, src.rows, bufSize.width, bufSize.height);
+    ensureSizeIsEnough(bufSize, CV_8U, buf);
 
     Caller caller = callers[hasAtomicsSupport(getDevice())][src.type()];
     if (!caller) CV_Error(CV_StsBadArg, "countNonZero: unsupported type");

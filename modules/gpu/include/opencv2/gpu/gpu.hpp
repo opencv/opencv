@@ -252,8 +252,12 @@ namespace cv
     #include "GpuMat_BetaDeprecated.hpp"
 #endif
 
-        //! creates continuous GPU matrix
+        //! Creates continuous GPU matrix
         CV_EXPORTS void createContinuous(int rows, int cols, int type, GpuMat& m);
+
+        //! Ensures that size of the given matrix is not less than (rows, cols) size
+        //! and matrix type is match specified one too
+        CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
 
         //////////////////////////////// CudaMem ////////////////////////////////
         // CudaMem is limited cv::Mat with page locked memory allocation.
