@@ -122,5 +122,57 @@ CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int device)
     return major > 1 || (major == 1 && minor >= 1);
 }
 
+CV_EXPORTS bool cv::gpu::hasPtxFor(int major, int minor) 
+{
+#ifdef HAVE_PTX_FOR_NVIDIA_CC_10
+    if (major == 1 && minor == 0) return true;
+#endif
+
+#ifdef HAVE_PTX_FOR_NVIDIA_CC_11
+    if (major == 1 && minor == 1) return true;
+#endif
+
+#ifdef HAVE_PTX_FOR_NVIDIA_CC_12
+    if (major == 1 && minor == 2) return true;
+#endif
+
+#ifdef HAVE_PTX_FOR_NVIDIA_CC_13
+    if (major == 1 && minor == 3) return true;
+#endif
+
+#ifdef HAVE_PTX_FOR_NVIDIA_CC_20
+    if (major == 2 && minor == 0) return true;
+#endif
+
+#ifdef HAVE_PTX_FOR_NVIDIA_CC_21
+    if (major == 2 && minor == 1) return true;
+#endif
+
+    return false;
+}
+
+
+CV_EXPORTS bool isCompatibleWith(int device)
+{
+    // According to the CUDA C Programming Guide Version 3.2: "PTX code 
+    // produced for some specific compute capability can always be compiled to
+    // binary code of greater or equal compute capability". 
+
+    int major, minor;
+    getComputeCapability(device, major, minor);
+
+    for (; major >= 1; --major)
+    {
+        for (; minor >= 0; --minor)
+        {
+            if (hasPtxFor(major, minor))
+                return true;
+        }
+        minor = 9;
+    }
+
+    return false;
+}
+
 #endif
 

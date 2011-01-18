@@ -52,7 +52,7 @@ Returns free and total memory for the current device.
 
 
 \cvCppFunc{gpu::hasNativeDoubleSupport}
-Returns true if the specified GPU has native double support, false otherwise.
+Returns true, if the specified GPU has native double support, otherwise false.
 
 \cvdefCpp{bool hasNativeDoubleSupport(int device);}
 \begin{description}
@@ -61,9 +61,31 @@ Returns true if the specified GPU has native double support, false otherwise.
 
 
 \cvCppFunc{gpu::hasAtomicsSupport}
-Returns true if the specified GPU has atomics support, false otherwise.
+Returns true, if the specified GPU has atomics support, otherwise false.
 
 \cvdefCpp{bool hasAtomicsSupport(int device);}
 \begin{description}
 \cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
 \end{description} 
+
+
+\cvCppFunc{gpu::hasPtxFor}
+Returns true, if the GPU module was built with PTX support of the given compute capability, otherwise false.
+
+\cvdefCpp{bool hasPtxFor(int major, int minor);}
+\begin{description}
+\cvarg{major}{Major CC version.}
+\cvarg{minor}{Minor CC version.}
+\end{description}
+
+
+\cvCppFunc{gpu::isCompatibleWith}
+Returns true, if the GPU module is PTX compatible with the given NVIDIA GPU device, otherwise false.
+
+\cvdefCpp{bool isCompatibleWith(int device);}
+\begin{description}
+\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
+\end{description}
+
+According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute capability can always be compiled to binary code of greater or equal compute capability". 
+

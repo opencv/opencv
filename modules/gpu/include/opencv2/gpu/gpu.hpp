@@ -72,6 +72,12 @@ namespace cv
         CV_EXPORTS bool hasNativeDoubleSupport(int device);
         CV_EXPORTS bool hasAtomicsSupport(int device);
 
+        //! Checks if the GPU module was built with PTX support (-arch) of the given CC
+        CV_EXPORTS bool hasPtxFor(int major, int minor);
+
+        //! Checks if the GPU module is PTX compatible with the given NVIDIA device
+        CV_EXPORTS bool isCompatibleWith(int device);
+
         //////////////////////////////// Error handling ////////////////////////
 
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);

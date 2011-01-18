@@ -163,6 +163,24 @@
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
 
+/* The project was generated with 1.0 NVIDIA device arch support */
+#cmakedefine HAVE_PTX_FOR_NVIDIA_CC_10
+
+/* The project was generated with 1.1 NVIDIA device arch support */
+#cmakedefine HAVE_PTX_FOR_NVIDIA_CC_11
+
+/* The project was generated with 1.2 NVIDIA device arch support */
+#cmakedefine HAVE_PTX_FOR_NVIDIA_CC_12
+
+/* The project was generated with 1.3 NVIDIA device arch support */
+#cmakedefine HAVE_PTX_FOR_NVIDIA_CC_13
+
+/* The project was generated with 2.0 NVIDIA device arch support */
+#cmakedefine HAVE_PTX_FOR_NVIDIA_CC_20
+
+/* The project was generated with 2.1 NVIDIA device arch support */
+#cmakedefine HAVE_PTX_FOR_NVIDIA_CC_21
+
 /* VideoInput library */
 #cmakedefine HAVE_VIDEOINPUT
 
