@@ -1,0 +1,407 @@
+\section{Camera Calibration and 3d Reconstruction}
+
+
+\cvclass{gpu::StereoBM\_GPU}
+The class for computing stereo correspondence using block matching algorithm.
+
+\begin{lstlisting}
+class StereoBM_GPU
+{
+public:
+    enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
+
+    enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
+
+    StereoBM_GPU();
+    StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, 
+                 int winSize = DEFAULT_WINSZ);
+
+    void operator() (const GpuMat& left, const GpuMat& right, 
+                     GpuMat& disparity);
+    void operator() (const GpuMat& left, const GpuMat& right, 
+                     GpuMat& disparity, const Stream & stream);
+
+    static bool checkIfGpuCallReasonable();
+
+    int preset;
+    int ndisp;
+    int winSize;
+
+    float avergeTexThreshold;
+    
+    ...
+};
+\end{lstlisting}
+
+The class computes the disparity map using block matching algorithm. The class also does some pre- and post- processing steps: sobel prefilter (if use \texttt{PREFILTER\_XSOBEL} preset) and textureless threshold post processing (if \texttt{avergeTexThreshold} $>$ 0). If \texttt{avergeTexThreshold = 0} post procesing is disabled, otherwise disparity is set 0 in each point \texttt{(x, y)} where for left image $\sum HorizontalGradiensInWindow(x, y, winSize) < (winSize \cdot winSize) \cdot avergeTexThreshold$ i.e. input left image is low textured.
+
+
+\cvfunc{cv::gpu::StereoBM\_GPU::StereoBM\_GPU}\label{cppfunc.gpu.StereoBM.StereoBM}
+StereoBM\_GPU constructors.
+
+\cvdefCpp{
+StereoBM\_GPU::StereoBM\_GPU();\newline
+StereoBM\_GPU::StereoBM\_GPU(int preset, \par int ndisparities = DEFAULT\_NDISP, \par int winSize = DEFAULT\_WINSZ);
+}
+
+\begin{description}
+\cvarg{preset}{Camera-specific preset:}
+\begin{description}
+  \cvarg{BASIC\_PRESET}{Without preprocessing.}
+  \cvarg{PREFILTER\_XSOBEL}{Sobel prefilter.}
+\end{description}
+\cvarg{ndisparities}{Number of disparities. Must be multiple of 8 and less then 256.}
+\cvarg{winSize}{SAD window size.}
+\end{description}
+
+
+\cvfunc{cv::gpu::StereoBM\_GPU::operator ()}\label{cppfunc.gpu.StereoBM.operator()}
+The stereo correspondence operator. Finds the disparity for the specified rectified stereo pair.
+
+\cvdefCpp{
+void StereoBM\_GPU::operator() (const GpuMat\& left, const GpuMat\& right, \par GpuMat\& disparity);\newline
+void StereoBM\_GPU::operator() (const GpuMat\& left, const GpuMat\& right, \par GpuMat\& disparity, const Stream\& stream);
+}
+
+\begin{description}
+\cvarg{left}{Left image; supports only \texttt{CV\_8UC1} type.}
+\cvarg{right}{Right image with the same size and the same type as the left one.}
+\cvarg{disparity}{Output disparity map. It will be \texttt{CV\_8UC1} image with the same size as the input images.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+
+\cvfunc{cv::gpu::StereoBM\_GPU::checkIfGpuCallReasonable}\label{cppfunc.gpu.StereoBM.checkIfGpuCallReasonable}
+Some heuristics that tries to estmate if current GPU will be faster then CPU in this algorithm. It queries current active device.
+
+\cvdefCpp{
+bool StereoBM\_GPU::checkIfGpuCallReasonable();
+}
+
+
+\cvclass{gpu::StereoBeliefPropagation}
+The class for computing stereo correspondence using belief propagation algorithm.
+
+\begin{lstlisting}
+class StereoBeliefPropagation
+{
+public:
+    enum { DEFAULT_NDISP  = 64 };
+    enum { DEFAULT_ITERS  = 5  };
+    enum { DEFAULT_LEVELS = 5  };
+
+    static void estimateRecommendedParams(int width, int height, 
+        int& ndisp, int& iters, int& levels);
+
+    explicit StereoBeliefPropagation(int ndisp = DEFAULT_NDISP,
+        int iters  = DEFAULT_ITERS,
+        int levels = DEFAULT_LEVELS,
+        int msg_type = CV_32F);
+    StereoBeliefPropagation(int ndisp, int iters, int levels,
+        float max_data_term, float data_weight,
+        float max_disc_term, float disc_single_jump,
+        int msg_type = CV_32F);
+
+    void operator()(const GpuMat& left, const GpuMat& right, 
+                    GpuMat& disparity);
+    void operator()(const GpuMat& left, const GpuMat& right, 
+                    GpuMat& disparity, Stream& stream);
+    void operator()(const GpuMat& data, GpuMat& disparity);
+    void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream);
+
+    int ndisp;
+
+    int iters;
+    int levels;
+
+    float max_data_term;
+    float data_weight;
+    float max_disc_term;
+    float disc_single_jump;
+
+    int msg_type;
+
+    ...
+};
+\end{lstlisting}
+
+The class implements Pedro F. Felzenszwalb algorithm \cite{felzenszwalb_bp}. It can compute own data cost (using truncated linear model) or use user-provided data cost.
+
+
+\cvCppFunc{gpu::StereoBeliefPropagation::StereoBeliefPropagation}
+StereoBeliefPropagation constructors.
+
+\cvdefCpp{
+StereoBeliefPropagation::StereoBeliefPropagation(\par int ndisp = DEFAULT\_NDISP, int iters = DEFAULT\_ITERS, \par int levels = DEFAULT\_LEVELS, int msg\_type = CV\_32F);\newline
+StereoBeliefPropagation::StereoBeliefPropagation(\par int ndisp, int iters, int levels, \par float max\_data\_term, float data\_weight, \par float max\_disc\_term, float disc\_single\_jump, \par int msg\_type = CV\_32F);
+}
+
+\begin{description}
+\cvarg{ndisp}{Number of disparities.}
+\cvarg{iters}{Number of BP iterations on each level.}
+\cvarg{levels}{Number of levels.}
+\cvarg{max\_data\_term}{Truncation of data cost.}
+\cvarg{data\_weight}{Data weight.}
+\cvarg{max\_disc\_term}{Truncation of discontinuity.}
+\cvarg{disc\_single\_jump}{Discontinuity single jump.}
+\cvarg{msg\_type}{Type for messages. Supports \texttt{CV\_16SC1} and \texttt{CV\_32FC1}.}
+\end{description}
+
+\texttt{StereoBeliefPropagation} uses truncated linear model for the data cost and discontinuity term:
+\[ 
+DataCost = data\_weight \cdot \min(\lvert I_2-I_1 \rvert, max\_data\_term)
+\]
+\[
+DiscTerm = \min(disc\_single\_jump \cdot \lvert f_1-f_2 \rvert, max\_disc\_term)
+\]
+
+For more details please see \cite{felzenszwalb_bp}.
+
+By default \texttt{StereoBeliefPropagation} uses floating-point arithmetics and \texttt{CV\_32FC1} type for messages. But also it can use fixed-point arithmetics and \texttt{CV\_16SC1} type for messages for better perfomance.
+
+
+\cvCppFunc{gpu::StereoBeliefPropagation::estimateRecommendedParams}
+Some heuristics that tries to compute parameters (\texttt{ndisp}, \texttt{iters} and \texttt{levels}) for specified image size (\texttt{width} and \texttt{height}).
+
+\cvdefCpp{
+void StereoBeliefPropagation::estimateRecommendedParams(\par int width, int height, int\& ndisp, int\& iters, int\& levels);
+}
+
+
+\cvCppFunc{gpu::StereoBeliefPropagation::operator ()}
+The stereo correspondence operator. Finds the disparity for the specified rectified stereo pair or data cost.
+
+\cvdefCpp{
+void StereoBeliefPropagation::operator()(\par const GpuMat\& left, const GpuMat\& right, \par GpuMat\& disparity);\newline
+void StereoBeliefPropagation::operator()(\par const GpuMat\& left, const GpuMat\& right, \par GpuMat\& disparity, Stream\& stream);
+}
+
+\begin{description}
+\cvarg{left}{Left image; supports \texttt{CV\_8UC1}, \texttt{CV\_8UC3} and \texttt{CV\_8UC4} types.}
+\cvarg{right}{Right image with the same size and the same type as the left one.}
+\cvarg{disparity}{Output disparity map. If \texttt{disparity} is empty output type will be \texttt{CV\_16SC1}, otherwise output type will be \texttt{disparity.type()}.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+\cvdefCpp{
+void StereoBeliefPropagation::operator()(\par const GpuMat\& data, GpuMat\& disparity);\newline
+void StereoBeliefPropagation::operator()(\par const GpuMat\& data, GpuMat\& disparity, Stream\& stream);
+}
+
+\begin{description}
+\cvarg{data}{The user specified data cost. It must have \texttt{msg\_type} type and $\texttt{imgRows} \cdot \texttt{ndisp} \times \texttt{imgCols}$ size.}
+\cvarg{disparity}{Output disparity map. If \texttt{disparity} is empty output type will be \texttt{CV\_16SC1}, otherwise output type will be \texttt{disparity.type()}.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+
+\cvclass{gpu::StereoConstantSpaceBP}
+The class for computing stereo correspondence using constant space belief propagation algorithm.
+
+\begin{lstlisting}
+class StereoConstantSpaceBP
+{
+public:
+    enum { DEFAULT_NDISP    = 128 };
+    enum { DEFAULT_ITERS    = 8   };
+    enum { DEFAULT_LEVELS   = 4   };
+    enum { DEFAULT_NR_PLANE = 4   };
+
+    static void estimateRecommendedParams(int width, int height, 
+        int& ndisp, int& iters, int& levels, int& nr_plane);
+
+    explicit StereoConstantSpaceBP(int ndisp = DEFAULT_NDISP,
+        int iters    = DEFAULT_ITERS,
+        int levels   = DEFAULT_LEVELS,
+        int nr_plane = DEFAULT_NR_PLANE,
+        int msg_type = CV_32F);
+    StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
+        float max_data_term, float data_weight, 
+        float max_disc_term, float disc_single_jump,
+        int min_disp_th = 0,
+        int msg_type = CV_32F);
+
+    void operator()(const GpuMat& left, const GpuMat& right, 
+                    GpuMat& disparity);
+    void operator()(const GpuMat& left, const GpuMat& right, 
+                    GpuMat& disparity, Stream& stream);
+
+    int ndisp;
+
+    int iters;
+    int levels;
+
+    int nr_plane;
+
+    float max_data_term;
+    float data_weight;
+    float max_disc_term;
+    float disc_single_jump;
+
+    int min_disp_th;
+
+    int msg_type;
+
+    bool use_local_init_data_cost;
+    
+    ...
+};
+\end{lstlisting}
+
+The class implements Q. Yang algorithm \cite{qx_csbp}. \texttt{StereoConstantSpaceBP} can use global minimum or local minimum selection method. By default it use local minimum selection method (\texttt{use\_local\_init\_data\_cost = true}).
+
+
+\cvCppFunc{gpu::StereoConstantSpaceBP::StereoConstantSpaceBP}
+StereoConstantSpaceBP constructors.
+
+\cvdefCpp{
+StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp = DEFAULT\_NDISP, \par int iters = DEFAULT\_ITERS, int levels = DEFAULT\_LEVELS, \par int nr\_plane = DEFAULT\_NR\_PLANE, int msg\_type = CV\_32F);\newline
+StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp, int iters, \par int levels, int nr\_plane, \par float max\_data\_term, float data\_weight, \par float max\_disc\_term, float disc\_single\_jump, \par int min\_disp\_th = 0, int msg\_type = CV\_32F);
+}
+
+\begin{description}
+\cvarg{ndisp}{Number of disparities.}
+\cvarg{iters}{Number of BP iterations on each level.}
+\cvarg{levels}{Number of levels.}
+\cvarg{nr\_plane}{Number of disparity levels on the first level}
+\cvarg{max\_data\_term}{Truncation of data cost.}
+\cvarg{data\_weight}{Data weight.}
+\cvarg{max\_disc\_term}{Truncation of discontinuity.}
+\cvarg{disc\_single\_jump}{Discontinuity single jump.}
+\cvarg{min\_disp\_th}{Minimal disparity threshold.}
+\cvarg{msg\_type}{Type for messages. Supports \texttt{CV\_16SC1} and \texttt{CV\_32FC1}.}
+\end{description}
+
+\texttt{StereoConstantSpaceBP} uses truncated linear model for the data cost and discontinuity term:
+\[ 
+DataCost = data\_weight \cdot \min(\lvert I_2-I_1 \rvert, max\_data\_term)
+\]
+\[
+DiscTerm = \min(disc\_single\_jump \cdot \lvert f_1-f_2 \rvert, max\_disc\_term)
+\]
+
+For more details please see \cite{qx_csbp}.
+
+By default \texttt{StereoConstantSpaceBP} uses floating-point arithmetics and \texttt{CV\_32FC1} type for messages. But also it can use fixed-point arithmetics and \texttt{CV\_16SC1} type for messages for better perfomance.
+
+
+\cvCppFunc{gpu::StereoConstantSpaceBP::estimateRecommendedParams}
+Some heuristics that tries to compute parameters (\texttt{ndisp}, \texttt{iters}, \texttt{levels} and \texttt{nr\_plane}) for specified image size (\texttt{width} and \texttt{height}).
+
+\cvdefCpp{
+void StereoConstantSpaceBP::estimateRecommendedParams(\par int width, int height, \par int\& ndisp, int\& iters, int\& levels, int\& nr\_plane);
+}
+
+\cvCppFunc{gpu::StereoConstantSpaceBP::operator ()}
+The stereo correspondence operator. Finds the disparity for the specified rectified stereo pair.
+
+\cvdefCpp{
+void StereoConstantSpaceBP::operator()(\par const GpuMat\& left, const GpuMat\& right, \par GpuMat\& disparity);\newline
+void StereoConstantSpaceBP::operator()(\par const GpuMat\& left, const GpuMat\& right, \par GpuMat\& disparity, Stream\& stream);
+}
+
+\begin{description}
+\cvarg{left}{Left image; supports \texttt{CV\_8UC1}, \texttt{CV\_8UC3} and \texttt{CV\_8UC4} types.}
+\cvarg{right}{Right image with the same size and the same type as the left one.}
+\cvarg{disparity}{Output disparity map. If \texttt{disparity} is empty output type will be \texttt{CV\_16SC1}, otherwise output type will be \texttt{disparity.type()}.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+
+\cvclass{gpu::DisparityBilateralFilter}
+The class for disparity map refinement using joint bilateral filtering.
+
+\begin{lstlisting}
+class CV_EXPORTS DisparityBilateralFilter
+{
+public:
+    enum { DEFAULT_NDISP  = 64 };
+    enum { DEFAULT_RADIUS = 3 };
+    enum { DEFAULT_ITERS  = 1 };
+
+    explicit DisparityBilateralFilter(int ndisp = DEFAULT_NDISP, 
+        int radius = DEFAULT_RADIUS, int iters = DEFAULT_ITERS);
+
+    DisparityBilateralFilter(int ndisp, int radius, int iters, 
+        float edge_threshold, float max_disc_threshold, 
+        float sigma_range);
+
+    void operator()(const GpuMat& disparity, const GpuMat& image, 
+                    GpuMat& dst);
+    void operator()(const GpuMat& disparity, const GpuMat& image, 
+                    GpuMat& dst, Stream& stream);
+
+    ...
+};
+\end{lstlisting}
+
+The class implements disparity map refinement using joint bilateral filtering given a single color image described in \cite{qx_csbp}.
+
+
+\cvCppFunc{gpu::DisparityBilateralFilter::DisparityBilateralFilter}
+DisparityBilateralFilter constructors
+
+\cvdefCpp{
+DisparityBilateralFilter::DisparityBilateralFilter(\par int ndisp = DEFAULT\_NDISP, int radius = DEFAULT\_RADIUS, \par int iters = DEFAULT\_ITERS);\newline
+DisparityBilateralFilter::DisparityBilateralFilter(\par int ndisp, int radius, int iters, \par float edge\_threshold, float max\_disc\_threshold, \par float sigma\_range);
+}
+
+\begin{description}
+\cvarg{ndisp}{Number of disparities.}
+\cvarg{radius}{Filter radius.}
+\cvarg{iters}{Number of iterations.}
+\cvarg{edge\_threshold}{Truncation of data continuity.}
+\cvarg{max\_disc\_threshold}{Truncation of disparity continuity.}
+\cvarg{sigma\_range}{Filter range.}
+\end{description}
+
+
+\cvCppFunc{gpu::DisparityBilateralFilter::operator ()}
+Refines disparity map using joint bilateral filtering.
+
+\cvdefCpp{
+void DisparityBilateralFilter::operator()(\par const GpuMat\& disparity, const GpuMat\& image, GpuMat\& dst);\newline
+void DisparityBilateralFilter::operator()(\par const GpuMat\& disparity, const GpuMat\& image, GpuMat\& dst, \par Stream\& stream);
+}
+
+\begin{description}
+\cvarg{disparity}{Input disparity map; supports \texttt{CV\_8UC1} and \texttt{CV\_16SC1} types.}
+\cvarg{image}{Input image; supports \texttt{CV\_8UC1} and \texttt{CV\_8UC3} types.}
+\cvarg{dst}{Destination disparity map; will have the same size and type as \texttt{disparity}.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+\cvCppFunc{gpu::drawColorDisp}
+Does coloring of disparity image.
+
+\cvdefCpp{
+void drawColorDisp(const GpuMat\& src\_disp, GpuMat\& dst\_disp, int ndisp);\newline
+void drawColorDisp(const GpuMat\& src\_disp, GpuMat\& dst\_disp, int ndisp, \par const Stream\& stream);
+}
+
+\begin{description}
+\cvarg{src\_disp}{Source disparity image. Supports \texttt{CV\_8UC1} and \texttt{CV\_16SC1} types.}
+\cvarg{dst\_disp}{Output disparity image. Will have the same size as \texttt{src\_disp} and \texttt{CV\_8UC4} type in \texttt{BGRA} format (alpha = 255).}
+\cvarg{ndisp}{Number of disparities.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+This function converts $[0..ndisp)$ interval to $[0..240, 1, 1]$ in \texttt{HSV} color space, than convert \texttt{HSV} color space to \texttt{RGB}.
+
+
+\cvCppFunc{gpu::reprojectImageTo3D}
+Reprojects disparity image to 3D space.
+
+\cvdefCpp{
+void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw, \par const Mat\& Q);\newline
+void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw, \par const Mat\& Q, const Stream\& stream);
+}
+
+\begin{description}
+\cvarg{disp}{Input disparity image; supports \texttt{CV\_8U} and \texttt{CV\_16S} types.}
+\cvarg{xyzw}{Output 4-channel floating-point image of the same size as \texttt{disp}. Each element of \texttt{xyzw(x,y)} will contain the 3D coordinates \texttt{(x,y,z,1)} of the point \texttt{(x,y)}, computed from the disparity map.}
+\cvarg{Q}{$4 \times 4$ perspective transformation matrix that can be obtained via \cvCross{StereoRectify}{stereoRectify}.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+See also: \cvCppCross{reprojectImageTo3D}.

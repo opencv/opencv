@@ -264,193 +264,210 @@ Following methods are supported for the \texttt{CV\_32F} images for now:
 
 See also: \cvCppCross{matchTemplate}. 
 
+
 \cvCppFunc{gpu::remap}
 Applies a generic geometrical transformation to an image.
+
 \cvdefCpp{
 void remap(const GpuMat\& src, GpuMat\& dst, \par const GpuMat\& xmap, const GpuMat\& ymap);
 }
+
 \begin{description}
 \cvarg{src}{Source image. Only \texttt{CV\_8UC1} and \texttt{CV\_8UC3} source types are supported.}
 \cvarg{dst}{Destination image. It will have the same size as \texttt{xmap} and the same type as \texttt{src}.}
-\cvarg{xmap}{The x values. Only \texttt{CV\_32FC1} type are supported.}
-\cvarg{ymap}{The y values. Only \texttt{CV\_32FC1} type are supported.}
+\cvarg{xmap}{X values. Only \texttt{CV\_32FC1} type is supported.}
+\cvarg{ymap}{Y values. Only \texttt{CV\_32FC1} type is supported.}
 \end{description}
-The function remap transforms the source image using the specified map:
+
+The function transforms the source image using the specified map:
 \[
 \texttt{dst}(x,y) = \texttt{src}(xmap(x,y), ymap(x,y))
 \]
-Where values of pixels with non-integer coordinates are computed using bilinear interpolation.\newline
+
+Values of pixels with non-integer coordinates are computed using bilinear interpolation.
+
 See also: \cvCppCross{remap}.
 
-\cvCppFunc{gpu::drawColorDisp}
-Does coloring of disparity image.
-\cvdefCpp{
-void drawColorDisp(const GpuMat\& src\_disp, GpuMat\& dst\_disp, int ndisp);
-}
-\cvdefCpp{
-void drawColorDisp(const GpuMat\& src\_disp, GpuMat\& dst\_disp, int ndisp, \par const Stream\& stream);
-}
-\begin{description}
-\cvarg{src\_disp}{Source disparity image. Supports \texttt{CV\_8UC1} and \texttt{CV\_16SC1} types.}
-\cvarg{dst\_disp}{Output disparity image. Will have the same size as \texttt{src\_disp} and \texttt{CV\_8UC4} type in \texttt{BGRA} format (alpha = 255).}
-\cvarg{ndisp}{Number of disparities.}
-\cvarg{stream}{Stream fo async version.}
-\end{description}
-This function converts $[0..ndisp)$ interval to $[0..240, 1, 1]$ in \texttt{HSV} color space, than convert \texttt{HSV} color space to \texttt{RGB}.
-
-\cvCppFunc{gpu::reprojectImageTo3D}
-Reprojects disparity image to 3D space.
-\cvdefCpp{
-void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw, \par const Mat\& Q);
-}
-\cvdefCpp{
-void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw, \par const Mat\& Q, const Stream\& stream);
-}
-\begin{description}
-\cvarg{disp}{The input single-channel 8-bit unsigned ot 16-bit signed integer disparity image.}
-\cvarg{xyzw}{The output 4-channel floating-point image of the same size as \texttt{disp}. Each element of \texttt{xyzw(x,y)} will contain the 3D coordinates \texttt{(x,y,z,1)} of the point \texttt{(x,y)}, computed from the disparity map.}
-\cvarg{Q}{The $4 \times 4$ perspective transformation matrix that can be obtained with \cvCross{StereoRectify}{stereoRectify}.}
-\cvarg{stream}{Stream fo async version.}
-\end{description}
-See also: \cvCppCross{reprojectImageTo3D}.
 
 \cvCppFunc{gpu::cvtColor}
 Converts image from one color space to another.
+
 \cvdefCpp{
-void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn = 0);
-}
-\cvdefCpp{
+void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn = 0);\newline
 void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn, \par const Stream\& stream);
 }
+
 \begin{description}
-\cvarg{src}{The source image, 8-bit unsigned, 16-bit unsigned (\texttt{CV\_16UC...}) or single-precision floating-point.}
-\cvarg{dst}{The destination image; will have the same size and the same depth as \texttt{src}.}
-\cvarg{code}{The color space conversion code.}
-\cvarg{dcn}{The number of channels in the destination image; if the parameter is 0, the number of the channels will be derived automatically from \texttt{src} and the \texttt{code}.}
-\cvarg{stream}{Stream fo async version.}
+\cvarg{src}{Source image with \texttt{CV\_8U}, \texttt{CV\_16U} or \texttt{CV\_32F} depth and 1, 3 or 4 channels.}
+\cvarg{dst}{Destination image; will have the same size and the same depth as \texttt{src}.}
+\cvarg{code}{Color space conversion code. For details see \cvCppCross{cvtColor}. Conversion to/from Luv and Bayer color spaces doesn't supported.}
+\cvarg{dcn}{Number of channels in the destination image; if the parameter is 0, the number of the channels will be derived automatically from \texttt{src} and the \texttt{code}.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
-3-channels color spaces (like \texttt{HSV}, \texttt{XYZ}, etc) can be stored to 4-channels image for better perfomance.\newline
+
+3-channel color spaces (like \texttt{HSV}, \texttt{XYZ}, etc) can be stored to 4-channel image for better perfomance.
+
 See also: \cvCppCross{cvtColor}.
+
 
 \cvCppFunc{gpu::threshold}
 Applies a fixed-level threshold to each array element.
+
 \cvdefCpp{
 double threshold(const GpuMat\& src, GpuMat\& dst, double thresh);
 }
+
 \begin{description}
 \cvarg{src}{Source array. Supports only \texttt{CV\_32FC1} type.}
 \cvarg{dst}{Destination array; will have the same size and the same type as \texttt{src}.}
 \cvarg{thresh}{Threshold value.}
 \end{description}
-Does only \texttt{THRESH\_TRUNC} threshold.\newline
+
 See also: \cvCppCross{threshold}.
 
+
 \cvCppFunc{gpu::resize}
-Resizes the image.
+Resizes an image.
+
 \cvdefCpp{
 void resize(const GpuMat\& src, GpuMat\& dst, Size dsize, \par double fx=0, double fy=0, \par int interpolation = INTER\_LINEAR);
 }
+
 \begin{description}
-\cvarg{src}{Source image. Supports \texttt{CV\_8UC1}, \texttt{CV\_8UC4} types.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} types.}
 \cvarg{dst}{Destination image. It will have size \texttt{dsize} (when it is non-zero) or the size computed from \texttt{src.size()} and \texttt{fx} and \texttt{fy}. The type of \texttt{dst} will be the same as of \texttt{src}.}
-\cvarg{dsize}{The destination image size. If it is zero, then it is computed as: \[\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}\] Either \texttt{dsize} or both \texttt{fx} or \texttt{fy} must be non-zero.}
-\cvarg{fx}{The scale factor along the horizontal axis. When 0, it is computed as \[\texttt{(double)dsize.width/src.cols}\]} 
-\cvarg{fy}{The scale factor along the vertical axis. When 0, it is computed as \[\texttt{(double)dsize.height/src.rows}\]}
-\cvarg{interpolation}{The interpolation method. Supports only \texttt{INTER\_NEAREST} and \texttt{INTER\_LINEAR}.}
+\cvarg{dsize}{Destination image size. If it is zero, then it is computed as: 
+\[
+\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}
+\]
+Either \texttt{dsize} or both \texttt{fx} or \texttt{fy} must be non-zero.}
+\cvarg{fx}{Scale factor along the horizontal axis. When 0, it is computed as 
+\[
+\texttt{(double)dsize.width/src.cols}
+\]} 
+\cvarg{fy}{Scale factor along the vertical axis. When 0, it is computed as 
+\[
+\texttt{(double)dsize.height/src.rows}
+\]}
+\cvarg{interpolation}{Interpolation method. Supports only \texttt{INTER\_NEAREST} and \texttt{INTER\_LINEAR}.}
 \end{description}
+
 See also: \cvCppCross{resize}.
+
 
 \cvCppFunc{gpu::warpAffine}
 Applies an affine transformation to an image.
+
 \cvdefCpp{
 void warpAffine(const GpuMat\& src, GpuMat\& dst, const Mat\& M, \par Size dsize, int flags = INTER\_LINEAR);
 }
+
 \begin{description}
-\cvarg{src}{Source image. Supports 8-bit unsigned, 16-bit unsigned, 32-bit signed amd 32-bit floating one, three and four channels images.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8U}, \texttt{CV\_16U}, \texttt{CV\_32S} or \texttt{CV\_32F} depth and 1, 3 or 4 channels.}
 \cvarg{dst}{Destination image; will have size \texttt{dsize} and the same type as \texttt{src}.}
 \cvarg{M}{$2\times 3$ transformation matrix.}
 \cvarg{dsize}{Size of the destination image.}
-\cvarg{flags}{A combination of interpolation methods, see \cvCppCross{resize}, and the optional flag \texttt{WARP\_INVERSE\_MAP} that means that \texttt{M} is the inverse transformation ($\texttt{dst}\rightarrow\texttt{src}$). Supports only \texttt{INTER\_NEAREST}, \texttt{INTER\_LINEAR} and \texttt{INTER\_CUBIC} interpolation methods.}
+\cvarg{flags}{Combination of interpolation methods, see \cvCppCross{resize}, and the optional flag \texttt{WARP\_INVERSE\_MAP} that means that \texttt{M} is the inverse transformation ($\texttt{dst}\rightarrow\texttt{src}$). Supports only \texttt{INTER\_NEAREST}, \texttt{INTER\_LINEAR} and \texttt{INTER\_CUBIC} interpolation methods.}
 \end{description}
+
 See also: \cvCppCross{warpAffine}.
+
 
 \cvCppFunc{gpu::warpPerspective}
 Applies a perspective transformation to an image.
+
 \cvdefCpp{
 void warpPerspective(const GpuMat\& src, GpuMat\& dst, const Mat\& M, \par Size dsize, int flags = INTER\_LINEAR);
 }
+
 \begin{description}
-\cvarg{src}{Source image. Supports 8-bit unsigned, 16-bit unsigned, 32-bit signed amd 32-bit floating one, three and four channels images.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8U}, \texttt{CV\_16U}, \texttt{CV\_32S} or \texttt{CV\_32F} depth and 1, 3 or 4 channels.}
 \cvarg{dst}{Destination image; will have size \texttt{dsize} and the same type as \texttt{src}.}
-\cvarg{M}{$2\times 3$ transformation matrix.}
+\cvarg{M}{$2
+ 3$ transformation matrix.}
 \cvarg{dsize}{Size of the destination image.}
-\cvarg{flags}{A combination of interpolation methods, see \cvCppCross{resize}, and the optional flag \texttt{WARP\_INVERSE\_MAP} that means that \texttt{M} is the inverse transformation ($\texttt{dst}\rightarrow\texttt{src}$). Supports only \texttt{INTER\_NEAREST}, \texttt{INTER\_LINEAR} and \texttt{INTER\_CUBIC} interpolation methods.}
+\cvarg{flags}{Combination of interpolation methods, see \cvCppCross{resize}, and the optional flag \texttt{WARP\_INVERSE\_MAP} that means that \texttt{M} is the inverse transformation ($\texttt{dst}\rightarrow\texttt{src}$). Supports only \texttt{INTER\_NEAREST}, \texttt{INTER\_LINEAR} and \texttt{INTER\_CUBIC} interpolation methods.}
 \end{description}
+
 See also: \cvCppCross{warpPerspective}.
+
 
 \cvCppFunc{gpu::rotate}
 Rotates an image around the origin (0,0) and then shifts it.
+
 \cvdefCpp{
 void rotate(const GpuMat\& src, GpuMat\& dst, Size dsize, \par double angle, double xShift = 0, double yShift = 0, \par int interpolation = INTER\_LINEAR);
 }
+
 \begin{description}
-\cvarg{src}{Source image. Supports \texttt{CV\_8UC1}, \texttt{CV\_8UC4} types.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8UC1} and \texttt{CV\_8UC4} types.}
 \cvarg{dst}{Destination image; will have size \texttt{dsize} and the same type as \texttt{src}.}
 \cvarg{dsize}{Size of the destination image.}
-\cvarg{angle}{The angle of rotation in degrees.}
+\cvarg{angle}{Angle of rotation in degrees.}
 \cvarg{xShift}{Shift along horizontal axis.}
 \cvarg{yShift}{Shift along vertical axis.}
-\cvarg{interpolation}{The interpolation method. Supports only \texttt{INTER\_NEAREST}, \texttt{INTER\_LINEAR} and \texttt{INTER\_CUBIC}.}
+\cvarg{interpolation}{Interpolation method. Supports only \texttt{INTER\_NEAREST}, \texttt{INTER\_LINEAR} and \texttt{INTER\_CUBIC}.}
 \end{description}
+
 See also: \cvCppCross{gpu::warpAffine}.
 
+
 \cvCppFunc{gpu::copyMakeBorder}
-Copies 2D array to a larger destination array and pads borders with user-specifiable constant.
+Copies 2D array to a larger destination array and pads borders with the given constant.
+
 \cvdefCpp{
 void copyMakeBorder(const GpuMat\& src, GpuMat\& dst, \par int top, int bottom, int left, int right, \par const Scalar\& value = Scalar());
 }
+
 \begin{description}
-\cvarg{src}{The source image. Supports \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} types.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8UC1}, \texttt{CV\_8UC4}, \texttt{CV\_32SC1} and \texttt{CV\_32FC1} types.}
 \cvarg{dst}{The destination image; will have the same type as \texttt{src} and the size \texttt{Size(src.cols+left+right, src.rows+top+bottom)}.}
 \cvarg{top, bottom, left, right}{Specify how much pixels in each direction from the source image rectangle one needs to extrapolate, e.g. \texttt{top=1, bottom=1, left=1, right=1} mean that 1 pixel-wide border needs to be built.}
-\cvarg{value}{The border value.}
+\cvarg{value}{Border value.}
 \end{description}
+
 See also: \cvCppCross{copyMakeBorder}
 
+
 \cvCppFunc{gpu::rectStdDev}
-Computes the standard deviation of integral images. 
+Computes standard deviation of integral images. 
+
 \cvdefCpp{
 void rectStdDev(const GpuMat\& src, const GpuMat\& sqr, GpuMat\& dst, \par const Rect\& rect);
 }
+
 \begin{description}
-\cvarg{src}{The source image. Supports only \texttt{CV\_32SC1} type.}
-\cvarg{sqr}{The squared source image. Supports only \texttt{CV\_32FC1} type.}
-\cvarg{dst}{The destination image; will have the same type and the same size as \texttt{src}.}
+\cvarg{src}{Source image. Supports only \texttt{CV\_32SC1} type.}
+\cvarg{sqr}{Squared source image. Supports only \texttt{CV\_32FC1} type.}
+\cvarg{dst}{Destination image; will have the same type and the same size as \texttt{src}.}
 \cvarg{rect}{Rectangular window.}
 \end{description}
 
+
 \cvCppFunc{gpu::evenLevels}
-Compute levels with even distribution.
+Computes levels with even distribution.
+
 \cvdefCpp{
 void evenLevels(GpuMat\& levels, int nLevels, \par int lowerLevel, int upperLevel);
 }
+
 \begin{description}
-\cvarg{levels}{The destination array. \texttt{levels} will have 1 row and \texttt{nLevels} cols and \texttt{CV\_32SC1} type.}
-\cvarg{nLevels}{The number of levels being computed. \texttt{nLevels} must be at least 2}
+\cvarg{levels}{Destination array. \texttt{levels} will have 1 row and \texttt{nLevels} cols and \texttt{CV\_32SC1} type.}
+\cvarg{nLevels}{Number of levels being computed. \texttt{nLevels} must be at least 2.}
 \cvarg{lowerLevel}{Lower boundary value of the lowest level.}
 \cvarg{upperLevel}{Upper boundary value of the greatest level.}
 \end{description}
 
 \cvCppFunc{gpu::histEven}
 Calculates histogram with evenly distributed bins.
+
 \cvdefCpp{
-void histEven(const GpuMat\& src, GpuMat\& hist, \par int histSize, int lowerLevel, int upperLevel);
-}
-\cvdefCpp{
+void histEven(const GpuMat\& src, GpuMat\& hist, \par int histSize, int lowerLevel, int upperLevel);\newline
 void histEven(const GpuMat\& src, GpuMat hist[4], \par int histSize[4], int lowerLevel[4], int upperLevel[4]);
 }
+
 \begin{description}
-\cvarg{src}{The source image. Supports 8-bit unsigned, 16-bit unsigned and 16-bit one or four channel images. For four channels image all channels are processed separately.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8U}, \texttt{CV\_16U} or \texttt{CV\_16S} depth and 1 or 4 channels. For four-channel image all channels are processed separately.}
 \cvarg{hist}{Destination histogram. Will have one row, \texttt{histSize} cols and \texttt{CV\_32S} type.}
 \cvarg{histSize}{Size of histogram.}
 \cvarg{lowerLevel}{Lower boundary of lowest level bin.}
@@ -459,14 +476,14 @@ void histEven(const GpuMat\& src, GpuMat hist[4], \par int histSize[4], int lowe
 
 \cvCppFunc{gpu::histRange}
 Calculates histogram with bins determined by levels array.
+
 \cvdefCpp{
-void histRange(const GpuMat\& src, GpuMat\& hist, const GpuMat\& levels);
-}
-\cvdefCpp{
+void histRange(const GpuMat\& src, GpuMat\& hist, const GpuMat\& levels);\newline
 void histRange(const GpuMat\& src, GpuMat hist[4], \par const GpuMat levels[4]);
 }
+
 \begin{description}
-\cvarg{src}{The source image. Supports 8-bit unsigned, 16-bit unsigned and 16-bit one or four channel images. For four channels image all channels are processed separately.}
+\cvarg{src}{Source image. Supports \texttt{CV\_8U}, \texttt{CV\_16U} or \texttt{CV\_16S} depth and 1 or 4 channels. For four-channel image all channels are processed separately.}
 \cvarg{hist}{Destination histogram. Will have one row, \texttt{(levels.cols-1)} cols and \texttt{CV\_32SC1} type.}
 \cvarg{levels}{Number of levels in histogram.}
 \end{description}
