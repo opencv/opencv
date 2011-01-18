@@ -68,6 +68,7 @@ CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount()
     return count;
 }
 
+
 CV_EXPORTS string cv::gpu::getDeviceName(int device)
 {
     cudaDeviceProp prop;
@@ -75,16 +76,20 @@ CV_EXPORTS string cv::gpu::getDeviceName(int device)
     return prop.name;
 }
 
+
 CV_EXPORTS void cv::gpu::setDevice(int device)
 {
     cudaSafeCall( cudaSetDevice( device ) );
 }
+
+
 CV_EXPORTS int cv::gpu::getDevice()
 {
     int device;    
     cudaSafeCall( cudaGetDevice( &device ) );
     return device;
 }
+
 
 CV_EXPORTS void cv::gpu::getComputeCapability(int device, int& major, int& minor)
 {
@@ -94,6 +99,7 @@ CV_EXPORTS void cv::gpu::getComputeCapability(int device, int& major, int& minor
     major = prop.major;
     minor = prop.minor;
 }
+
 
 CV_EXPORTS int cv::gpu::getNumberOfSMs(int device)
 {
@@ -108,12 +114,14 @@ CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& free, size_t& total)
     cudaSafeCall( cudaMemGetInfo( &free, &total ) );
 }
 
+
 CV_EXPORTS bool cv::gpu::hasNativeDoubleSupport(int device)
 {
     int major, minor;
     getComputeCapability(device, major, minor);
     return major > 1 || (major == 1 && minor >= 3);
 }
+
 
 CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int device) 
 {
@@ -122,34 +130,88 @@ CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int device)
     return major > 1 || (major == 1 && minor >= 1);
 }
 
-CV_EXPORTS bool cv::gpu::hasPtxFor(int major, int minor) 
+
+namespace 
 {
-#ifdef HAVE_PTX_FOR_NVIDIA_CC_10
-    if (major == 1 && minor == 0) return true;
+    template <unsigned int cmp_op>
+    bool comparePairs(int lhs1, int lhs2, int rhs1, int rhs2);
+
+    template <>
+    bool comparePairs<CMP_EQ>(int lhs1, int lhs2, int rhs1, int rhs2)
+    {
+        return lhs1 == rhs1 && lhs2 == rhs2;
+    }
+
+    template <>
+    bool comparePairs<CMP_GT>(int lhs1, int lhs2, int rhs1, int rhs2)
+    {
+        return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 > rhs2);
+    }
+
+    template <>
+    bool comparePairs<CMP_GE>(int lhs1, int lhs2, int rhs1, int rhs2)
+    {
+        return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 >= rhs2);
+    }
+
+    template <>
+    bool comparePairs<CMP_LT>(int lhs1, int lhs2, int rhs1, int rhs2)
+    {
+        return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 < rhs2);
+    }
+
+
+    template <>
+    bool comparePairs<CMP_LE>(int lhs1, int lhs2, int rhs1, int rhs2)
+    {
+        return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
+    }
+
+    template <>
+    bool comparePairs<CMP_NE>(int lhs1, int lhs2, int rhs1, int rhs2)
+    {
+        return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
+    }
+}
+
+
+template <unsigned int cmp_op>
+CV_EXPORTS bool cv::gpu::checkPtxVersion(int major, int minor) 
+{
+#ifdef OPENCV_GPU_CUDA_ARCH_10
+    if (comparePairs<cmp_op>(1, 0, major, minor)) return true;
 #endif
 
-#ifdef HAVE_PTX_FOR_NVIDIA_CC_11
-    if (major == 1 && minor == 1) return true;
+#ifdef OPENCV_GPU_CUDA_ARCH_11
+    if (comparePairs<cmp_op>(1, 1, major, minor)) return true;
 #endif
 
-#ifdef HAVE_PTX_FOR_NVIDIA_CC_12
-    if (major == 1 && minor == 2) return true;
+#ifdef OPENCV_GPU_CUDA_ARCH_12
+    if (comparePairs<cmp_op>(1, 2, major, minor)) return true;
 #endif
 
-#ifdef HAVE_PTX_FOR_NVIDIA_CC_13
-    if (major == 1 && minor == 3) return true;
+#ifdef OPENCV_GPU_CUDA_ARCH_13
+    if (comparePairs<cmp_op>(1, 3, major, minor)) return true;
 #endif
 
-#ifdef HAVE_PTX_FOR_NVIDIA_CC_20
-    if (major == 2 && minor == 0) return true;
+#ifdef OPENCV_GPU_CUDA_ARCH_20
+    if (comparePairs<cmp_op>(2, 0, major, minor)) return true;
 #endif
 
-#ifdef HAVE_PTX_FOR_NVIDIA_CC_21
-    if (major == 2 && minor == 1) return true;
+#ifdef OPENCV_GPU_CUDA_ARCH_21
+    if (comparePairs<cmp_op>(2, 1, major, minor)) return true;
 #endif
 
     return false;
 }
+
+
+template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_EQ>(int major, int minor);
+template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_GT>(int major, int minor);
+template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_GE>(int major, int minor);
+template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_LT>(int major, int minor);
+template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_LE>(int major, int minor);
+template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_NE>(int major, int minor);
 
 
 CV_EXPORTS bool isCompatibleWith(int device)
@@ -161,17 +223,7 @@ CV_EXPORTS bool isCompatibleWith(int device)
     int major, minor;
     getComputeCapability(device, major, minor);
 
-    for (; major >= 1; --major)
-    {
-        for (; minor >= 0; --minor)
-        {
-            if (hasPtxFor(major, minor))
-                return true;
-        }
-        minor = 9;
-    }
-
-    return false;
+    return checkPtxVersion<CMP_LE>(major, minor);
 }
 
 #endif

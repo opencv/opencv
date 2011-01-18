@@ -69,11 +69,20 @@ Returns true, if the specified GPU has atomics support, otherwise false.
 \end{description} 
 
 
-\cvCppFunc{gpu::hasPtxFor}
+\cvCppFunc{gpu::checkPtxVersion}
 Returns true, if the GPU module was built with PTX support of the given compute capability, otherwise false.
 
-\cvdefCpp{bool hasPtxFor(int major, int minor);}
+\cvdefCpp{template $<$unsigned int cmp\_op$>$\newline
+bool checkPtxVersion(int major, int minor);}
 \begin{description}
+\cvarg{cmp\_op}{Comparison operation:
+\begin{description}
+\cvarg{CMP\_EQ}{Return true, if at least one of GPU module PTX versions matches the given one, otherwise false}
+\cvarg{CMP\_LT}{Return true, if at least one of GPU module PTX versions is less than the given one, otherwise false}
+\cvarg{CMP\_LE}{Return true, if at least one of GPU module PTX versions is less or equal to the given one, otherwise false}
+\cvarg{CMP\_GT}{Return true, if at least one of GPU module PTX versions is greater than the given one, otherwise false}
+\cvarg{CMP\_GE}{Return true, if at least one of GPU module PTX versions is greater or equal to the given one, otherwise false}
+\end{description}}
 \cvarg{major}{Major CC version.}
 \cvarg{minor}{Minor CC version.}
 \end{description}
