@@ -18,7 +18,7 @@ Flips a 2D matrix around vertical, horizontal or both axes.
 
 \cvdefCpp{void flip(const GpuMat\& a, GpuMat\& b, int flipCode);}
 \begin{description}
-\cvarg{a}{Source matrix. Only \texttt{CV\_8UC1} and \texttt{CV\_8UC4} matrixes are supported for now.}
+\cvarg{a}{Source matrix. Only \texttt{CV\_8UC1} and \texttt{CV\_8UC4} matrices are supported for now.}
 \cvarg{b}{Destination matrix.}
 \cvarg{flipCode}{Specifies how to flip the source:
 \begin{description}
@@ -32,7 +32,8 @@ See also: \cvCppCross{flip}.
 
 
 \cvCppFunc{gpu::LUT}
-Transforms the source matrix into the destination matrix using given look-up table: \texttt{dst(I) = lut(src(I))}.
+Transforms the source matrix into the destination matrix using given look-up table: 
+\[dst(I) = lut(src(I))\]
 
 \cvdefCpp{void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst);}
 \begin{description}
@@ -108,7 +109,7 @@ void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
 \cvarg{x}{Source matrix, containing real components (\texttt{CV\_32FC1}).}
 \cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
 \cvarg{magnitude}{Destination matrix of float magnitudes (\texttt{CV\_32FC1}).}
-\cvarg{stream}{Sream for the asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{magnitude}.
@@ -130,7 +131,7 @@ void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
 \cvarg{x}{Source matrix, containing real components (\texttt{CV\_32FC1}).}
 \cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
 \cvarg{magnitude}{Destination matrix of float magnitude squares (\texttt{CV\_32FC1}).}
-\cvarg{stream}{Sream for the asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 
@@ -146,7 +147,7 @@ void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,\par
 \cvarg{y}{Source matrix, containing imaginary components (\texttt{CV\_32FC1}).}
 \cvarg{angle}{Destionation matrix of angles (\texttt{CV\_32FC1}).}
 \cvarg{angleInDegress}{Flag which indicates angles must be evaluated in degress.}
-\cvarg{stream}{Sream for the asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{phase}.
@@ -165,7 +166,7 @@ void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,\par
 \cvarg{magnitude}{Destination matrix of float magnituds (\texttt{CV\_32FC1}).}
 \cvarg{angle}{Destionation matrix of angles (\texttt{CV\_32FC1}).}
 \cvarg{angleInDegress}{Flag which indicates angles must be evaluated in degress.}
-\cvarg{stream}{Sream for the asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{cartToPolar}.
@@ -185,7 +186,7 @@ void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,\par
 \cvarg{x}{Destination matrix of real components (\texttt{CV\_32FC1}).}
 \cvarg{y}{Destination matrix of imaginary components (\texttt{CV\_32FC1}).}
 \cvarg{angleInDegress}{Flag which indicates angles are in degress.}
-\cvarg{stream}{Sream for the asynchronous version.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{polarToCart}.

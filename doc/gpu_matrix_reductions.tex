@@ -41,8 +41,8 @@ Returns sum of matrix elements.
 Scalar sum(const GpuMat\& src, GpuMat\& buf);}
 
 \begin{description}
-\cvarg{src}{Source image of any depth excepting \texttt{CV\_64F}, single-channel.}
-\cvarg{buf}{Optional buffer. It's resized automatically.}
+\cvarg{src}{Source image of any depth except \texttt{CV\_64F}, single-channel.}
+\cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
 See also: \cvCppCross{sum}.
@@ -54,8 +54,8 @@ Returns squared sum of matrix elements.
 \cvdefCpp{Scalar sqrSum(const GpuMat\& src);\newline
 Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
 \begin{description}
-\cvarg{src}{Source image of any depth excepting \texttt{CV\_64F}, single-channel.}
-\cvarg{buf}{Optional buffer. It's resized automatically.}
+\cvarg{src}{Source image of any depth except \texttt{CV\_64F}, single-channel.}
+\cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
 
@@ -71,7 +71,7 @@ void minMax(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
 \cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
 \cvarg{mask}{Optional mask to select a sub-matrix.}
-\cvarg{buf}{Optional buffer. It's resized automatically.}
+\cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
 Function doesn't work with \texttt{CV\_64F} images on GPU with compute capability $<$ 1.3.\newline
@@ -94,8 +94,8 @@ void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{minValLoc}{Pointer to returned minimum location. \texttt{NULL} if not required.}
 \cvarg{maxValLoc}{Pointer to returned maximum location. \texttt{NULL} if not required.}
 \cvarg{mask}{Optional mask to select a sub-matrix.}
-\cvarg{valbuf}{Optional values buffer. It's resized automatically.}
-\cvarg{locbuf}{Optional location buffer. It's resized automatically.}
+\cvarg{valbuf}{Optional values buffer to avoid extra memory allocations. It's resized automatically.}
+\cvarg{locbuf}{Optional locations buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
 Function doesn't work with \texttt{CV\_64F} images on GPU with compute capability $<$ 1.3.\newline
@@ -109,7 +109,7 @@ Counts non-zero matrix elements.
 int countNonZero(const GpuMat\& src, GpuMat\& buf);}
 \begin{description}
 \cvarg{src}{Single-channel source image.}
-\cvarg{buf}{Optional buffer. It's resized automatically.}
+\cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
 Function doesn't work with \texttt{CV\_64F} images on GPU with compute capability $<$ 1.3.\newline

@@ -34,7 +34,7 @@ Subtracts matrix from another matrix (or scalar from matrix).
 \cvdefCpp{void subtract(const GpuMat\& a, const Scalar\& sc, GpuMat\& c);}
 \begin{description}
 \cvarg{a}{Source matrix.  \texttt{CV\_32FC1} and \texttt{CV\_32FC2} matrixes are supported for now.}
-\cvarg{b}{Scalar to be subtracted from the source matrix \texttt{a}.}
+\cvarg{b}{Scalar to be subtracted from the source matrix elements.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 
@@ -118,7 +118,7 @@ Computes per-element absolute difference of two matrices (or of matrix and scala
 \cvdefCpp{void absdiff(const GpuMat\& a, const Scalar\& s, GpuMat\& c);}
 \begin{description}
 \cvarg{a}{Source matrix. \texttt{CV\_32FC1} matrixes are supported for now.}
-\cvarg{b}{Scalar to be multiplied by.}
+\cvarg{b}{Scalar to be subtracted from the source matrix elements.}
 \cvarg{c}{Destination matrix. Will have the same size and type as \texttt{a}.}
 \end{description}
 

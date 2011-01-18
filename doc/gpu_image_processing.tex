@@ -2,7 +2,7 @@
 
 
 \cvCppFunc{gpu::meanShiftFiltering}
-Performs mean-shift filtering.
+Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point, and as the result we have new color and new position of each point.
 
 \cvdefCpp{void meanShiftFiltering(const GpuMat\& src, GpuMat\& dst,\par
   int sp, int sr,\par
@@ -11,7 +11,7 @@ Performs mean-shift filtering.
 
 \begin{description}
 \cvarg{src}{Source image. Only \texttt{CV\_8UC4} images are supported for now.}
-\cvarg{dst}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of the converged point started from \texttt{(x,y)} pixel of the source image.}
+\cvarg{dst}{Destination image, containing color of mapped points. Will have the same size and type as \texttt{src}.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
@@ -19,7 +19,7 @@ Performs mean-shift filtering.
 
 
 \cvCppFunc{gpu::meanShiftProc}
-Performs mean-shift procedure and stores information about converged points in two images.
+Performs mean-shift procedure and stores information about processed points (i.e. their colors and positions) into two images. 
 
 \cvdefCpp{void meanShiftProc(const GpuMat\& src, GpuMat\& dstr, GpuMat\& dstsp,\par
   int sp, int sr,\par
@@ -28,12 +28,14 @@ Performs mean-shift procedure and stores information about converged points in t
 
 \begin{description}
 \cvarg{src}{Source image. Only \texttt{CV\_8UC4} images are supported for now.}
-\cvarg{dstr}{Destination image. Will have the same size and type as \texttt{src}. Each pixel \texttt{(x,y)} of the destination image will contain color of converged point started from \texttt{(x,y)} pixel of the source image.}
-\cvarg{dstsp}{\texttt{CV\_16SC2} matrix, which will contain coordinates of converged points and have the same size as \texttt{src}.}
+\cvarg{dstr}{Destination image, containing color of mapped points. Will have the same size and type as \texttt{src}.}
+\cvarg{dstsp}{Destination image, containing position of mapped points. Will have the same size as \texttt{src} and \texttt{CV\_16SC2} type.}
 \cvarg{sp}{Spatial window radius.}
 \cvarg{sr}{Color window radius.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
+
+See also: \cvCppCross{gpu::meanShiftFiltering}.
 
 
 \cvCppFunc{gpu::meanShiftSegmentation}
@@ -75,7 +77,7 @@ Computes squared integral image.
 \cvdefCpp{void sqrIntegral(const GpuMat\& src, GpuMat\& sqsum);}
 \begin{description}
 \cvarg{src}{Source image. Only \texttt{CV\_8UC1} images are supported for now.}
-\cvarg{sqsum}{Squared integral image. Will contain 64-bit floating point values packed into 64U.}
+\cvarg{sqsum}{Squared integral image. Will contain 64-bit unsigned integer values packed into \texttt{CV\_64FC1}.}
 \end{description}
 
 
@@ -138,7 +140,7 @@ Performs per-element multiplication of two Fourier spectrums.
 \cvarg{b}{Second spectrum. Must have the same size and type as \texttt{a}.}
 \cvarg{c}{Destination spectrum.}
 \cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
-\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
+\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplication.}
 \end{description}
 
 Only full (i.e. not packed) \texttt{CV\_32FC2} complex spectrums in the interleaved format are supported for now.
@@ -158,7 +160,7 @@ Performs per-element multiplication of two Fourier spectrums and scales the resu
 \cvarg{c}{Destination spectrum.}
 \cvarg{flags}{Mock paramter is kept for CPU/GPU interfaces similarity.}
 \cvarg{scale}{Scale constant.}
-\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplcation.}
+\cvarg{conjB}{Optional flag which indicates the second spectrum must be conjugated before the multiplication.}
 \end{description}
 
 Only full (i.e. not packed) \texttt{CV\_32FC2} complex spectrums in the interleaved format are supported for now.
@@ -167,7 +169,7 @@ See also: \cvCppCross{mulSpectrums}.
 
 
 \cvCppFunc{gpu::dft}
-Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix. Can handle real matrices (\texttt{CV\_32FC1}) and complex matrices in the interleaved format (\texttt{CV\_32FC2}).
 
 \cvdefCpp{void dft(const GpuMat\& src, GpuMat\& dst, Size dft\_size, int flags=0);}
 
@@ -188,7 +190,7 @@ The source matrix should be continuous, otherwise reallocation and data copying 
 \begin{itemize}
   \item If the source matrix is complex and the output isn't specified as real then the destination matrix will be complex, will have \texttt{dft\_size} size and \texttt{CV\_32FC2} type. It will contain full result of the DFT (forward or inverse).
   \item If the source matrix is complex and the output is specified as real then function assumes that its input is the result of the forward transform (see next item). The destionation matrix will have \texttt{dft\_size} size and \texttt{CV\_32FC1} type. It will contain result of the inverse DFT.
-  \item If the source matrix is real (i.e. its type is \texttt{CV\_32FC1}) then forward DFT will be performed. The result of the DFT will be packed into complex (\texttt{CV\_32FC2}) matrix so its width will be \texttt{dft\_size.width / 2 + 1}, but if the source is a single column then height will be reduced.
+  \item If the source matrix is real (i.e. its type is \texttt{CV\_32FC1}) then forward DFT will be performed. The result of the DFT will be packed into complex (\texttt{CV\_32FC2}) matrix so its width will be \texttt{dft\_size.width / 2 + 1}, but if the source is a single column then height will be reduced instead of width.
 \end{itemize}
 
 See also: \cvCppCross{dft}.
@@ -207,7 +209,7 @@ void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,\par
 \cvarg{templ}{Template image. Must have size not greater then \texttt{image} size and be the same type as \texttt{image}.}
 \cvarg{result}{Result image. Will have the same size and type as \texttt{image}.}
 \cvarg{ccorr}{Flags which indicates cross-correlation must be evaluated instead of convolution.}
-\cvarg{buf}{Optional buffer to decrease memory reallocation count (for many calls with the same sizes).}
+\cvarg{buf}{Optional buffer to avoid extra memory allocations (for many calls with the same sizes).}
 \end{description}
 
 
@@ -244,17 +246,18 @@ Computes a proximity map for a raster template and an image where the template i
   GpuMat\& result, int method);}
 
 \begin{description}
-\cvarg{image}{Source image. 32F and 8U images (1..4 channels) are supported for now.}
+\cvarg{image}{Source image. \texttt{CV\_32F} and \texttt{CV\_8U} depth images (1..4 channels) are supported for now.}
 \cvarg{templ}{Template image. Must have the same size and type as \texttt{image}.}
-\cvarg{result}{Map containing comparison results (32FC1). If \texttt{image} is $W \times H$ and
+\cvarg{result}{Map containing comparison results (\texttt{CV\_32FC1}). If \texttt{image} is $W \times H$ and
 \texttt{templ} is $w \times h$ then \texttt{result} must be $(W-w+1) \times (H-h+1)$.}
 \cvarg{method}{Specifies the way which the template must be compared with the image.}
 \end{description}
-Following methods are supported for the 8U images for now:
+
+Following methods are supported for the \texttt{CV\_8U} depth images for now:
 \begin{itemize}
 \item CV\_TM\_SQDIFF \item CV\_TM\_SQDIFF\_NORMED \item CV\_TM\_CCORR \item CV\_TM\_CCORR\_NORMED \item CV\_TM\_CCOEFF \item CV\_TM\_CCOEFF\_NORMED 
 \end{itemize}
-Following methods are supported for the 32F images for now:
+Following methods are supported for the \texttt{CV\_32F} images for now:
 \begin{itemize}
 \item CV\_TM\_SQDIFF \item CV\_TM\_CCORR
 \end{itemize}

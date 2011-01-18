@@ -54,7 +54,7 @@ private:
 }
 \end{lstlisting}
 
-Interfaces of all methods are kept similar to CPU HOG descriptor and detector's analogues as much as possible.
+Interfaces of all methods are kept similar to CPU HOG descriptor and detector analogues as much as possible.
 
 
 \cvCppFunc{gpu::HOGDescriptor::HOGDescriptor}
@@ -68,7 +68,7 @@ Creates HOG descriptor and detector.
 
 \begin{description}
 \cvarg{win\_size}{Detection window size. Must be aligned to block size and block stride.}
-\cvarg{block\_size}{Block size in cells. Only (2,2) is supported for now.}
+\cvarg{block\_size}{Block size in pixels. Must be aligned to cell size. Only (16,16) is supported for now.}
 \cvarg{block\_stride}{Block stride. Must be a multiple of cell size.}
 \cvarg{cell\_size}{Cell size. Only (8, 8) is supported for now.}
 \cvarg{nbins}{Number of bins. Only 9 bins per cell is supported for now.}
@@ -116,7 +116,7 @@ Returns coefficients of the classifier trained for people detection (for 64x128 
 
 
 \cvCppFunc{gpu::HOGDescriptor::detect}
-Perfroms object detection without increasing detection window.
+Perfroms object detection without multiscale window.
 
 \cvdefCpp{void detect(const GpuMat\& img, vector<Point>\& found\_locations,\par
              double hit\_threshold=0, Size win\_stride=Size(),\par
@@ -125,14 +125,14 @@ Perfroms object detection without increasing detection window.
 \begin{description}
 \cvarg{img}{Source image. \texttt{CV\_8UC1} and \texttt{CV\_8UC4}types are supported for now.}
 \cvarg{found\_locations}{Will contain left-top corner points of detected objects boundaries.}
-\cvarg{hit\_threshold}{Threshold for the distance between features and classifying plane. Usually it's 0, and should be specfied in the detector coefficients (as the last free coefficient), but if the free coefficient is missed (it's allowed) you can specify it manually here.}
+\cvarg{hit\_threshold}{Threshold for the distance between features and SVM classifying plane. Usually it's 0 and should be specfied in the detector coefficients (as the last free coefficient), but if the free coefficient is omitted (it's allowed) you can specify it manually here.}
 \cvarg{win\_stride}{Window stride. Must be a multiple of block stride.}
 \cvarg{padding}{Mock parameter to keep CPU interface compatibility. Must be (0,0).}
 \end{description}
 
 
 \cvCppFunc{gpu::HOGDescriptor::detectMultiScale}
-Perfroms object detection several times with preliminary increase of detection window.
+Perfroms object detection with multiscale window.
 
 \cvdefCpp{void detectMultiScale(const GpuMat\& img, vector<Rect>\& found\_locations,\par
                       double hit\_threshold=0, Size win\_stride=Size(),\par
@@ -142,7 +142,7 @@ Perfroms object detection several times with preliminary increase of detection w
 \begin{description}
 \cvarg{img}{Source image. See \cvCppCross{gpu::HOGDescriptor::detect} for type limitations.}
 \cvarg{found\_locations}{Will contain detected objects boundaries.}
-\cvarg{hit\_threshold}{The threshold for the distance between features and classifying plane. See \cvCppCross{gpu::HOGDescriptor::detect} for details.}
+\cvarg{hit\_threshold}{The threshold for the distance between features and SVM classifying plane. See \cvCppCross{gpu::HOGDescriptor::detect} for details.}
 \cvarg{win\_stride}{Window stride. Must be a multiple of block stride.}
 \cvarg{padding}{Mock parameter to keep CPU interface compatibility. Must be (0,0).}
 \cvarg{scale0}{Coefficient of the detection window increase.}
@@ -152,7 +152,7 @@ See \cvCppCross{groupRectangles}.}
 
 
 \cvCppFunc{gpu::HOGDescriptor::getDescriptors}
-Returns block descriptors computed for the whole image. 
+Returns block descriptors computed for the whole image. It's mainly used for classifier learning purposes.
 
 \cvdefCpp{void getDescriptors(const GpuMat\& img, Size win\_stride,\par
                     GpuMat\& descriptors,\par
