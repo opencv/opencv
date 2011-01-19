@@ -2793,6 +2793,7 @@ static PyObject *pycvCreateMatNDHeader(PyObject *self, PyObject *args)
 
   m->data = Py_None;
   Py_INCREF(m->data);
+  delete [] dims.i;
   return (PyObject*)m;
 }
 
@@ -2806,6 +2807,7 @@ static PyObject *pycvCreateMatND(PyObject *self, PyObject *args)
     return NULL;
   cvmatnd_t *m = PyObject_NEW(cvmatnd_t, &cvmatnd_Type);
   ERRWRAP(m->a = cvCreateMatND(dims.count, dims.i, type));
+  delete [] dims.i;
   return pythonize_CvMatND(m);
 }
 
