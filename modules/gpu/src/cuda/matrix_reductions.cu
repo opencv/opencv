@@ -54,7 +54,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Performs reduction in shared memory
     template <int size, typename T>
-    __device__ void sum_in_smem(volatile T* data, const uint tid)
+    __device__ void sumInSmem(volatile T* data, const uint tid)
     {
         T sum = data[tid];
 
@@ -122,7 +122,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Estimates good thread configuration
     //  - threads variable satisfies to threads.x * threads.y == 256
-    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
+    void estimateThreadCfg(int cols, int rows, dim3& threads, dim3& grid)
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
@@ -132,17 +132,17 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     // Returns required buffer sizes
-    void get_buf_size_required(int cols, int rows, int elem_size, int& bufcols, int& bufrows)
+    void getBufSizeRequired(int cols, int rows, int elem_size, int& bufcols, int& bufrows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(cols, rows, threads, grid);
+        estimateThreadCfg(cols, rows, threads, grid);
         bufcols = grid.x * grid.y * elem_size; 
         bufrows = 2;
     }
 
 
     // Estimates device constants which are used in the kernels using specified thread configuration
-    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void setKernelConsts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -161,7 +161,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int size, typename T>
-    __device__ void find_min_max_in_smem(volatile T* minval, volatile T* maxval, const uint tid)
+    __device__ void findMinMaxInSmem(volatile T* minval, volatile T* maxval, const uint tid)
     {
         if (size >= 512) { if (tid < 256) { merge(tid, 256, minval, maxval); } __syncthreads(); }
         if (size >= 256) { if (tid < 128) { merge(tid, 128, minval, maxval); }  __syncthreads(); }
@@ -180,7 +180,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int nthreads, typename T, typename Mask>
-    __global__ void min_max_kernel(const DevMem2D src, Mask mask, T* minval, T* maxval)
+    __global__ void minMaxKernel(const DevMem2D src, Mask mask, T* minval, T* maxval)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
@@ -212,7 +212,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smaxval[tid] = mymax;
         __syncthreads();
 
-        find_min_max_in_smem<nthreads, best_type>(sminval, smaxval, tid);
+        findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
 
         if (tid == 0) 
         {
@@ -243,7 +243,7 @@ namespace cv { namespace gpu { namespace mathfunc
             smaxval[tid] = maxval[idx];
             __syncthreads();
 
-			find_min_max_in_smem<nthreads, best_type>(sminval, smaxval, tid);
+			findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
 
             if (tid == 0) 
             {
@@ -263,16 +263,16 @@ namespace cv { namespace gpu { namespace mathfunc
 
    
     template <typename T>
-    void min_max_mask_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf)
+    void minMaxMaskCaller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
 
-        min_max_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
+        minMaxKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -282,26 +282,26 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }  
 
-    template void min_max_mask_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_caller<double>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<uchar>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<ushort>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskCaller<double>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
 
 
     template <typename T>
-    void min_max_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
+    void minMaxCaller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
 
-        min_max_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
+        minMaxKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -311,17 +311,17 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }  
 
-    template void min_max_caller<uchar>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<char>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<ushort>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<short>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<int>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_caller<float>(const DevMem2D, double*,double*, PtrStep);
-    template void min_max_caller<double>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxCaller<uchar>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxCaller<char>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxCaller<ushort>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxCaller<short>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxCaller<int>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxCaller<float>(const DevMem2D, double*,double*, PtrStep);
+    template void minMaxCaller<double>(const DevMem2D, double*, double*, PtrStep);
 
 
     template <int nthreads, typename T>
-    __global__ void min_max_pass2_kernel(T* minval, T* maxval, int size)
+    __global__ void minMaxPass2Kernel(T* minval, T* maxval, int size)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
@@ -334,7 +334,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smaxval[tid] = maxval[idx];
         __syncthreads();
 
-		find_min_max_in_smem<nthreads, best_type>(sminval, smaxval, tid);
+		findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
 
         if (tid == 0) 
         {
@@ -345,17 +345,17 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    void min_max_mask_multipass_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf)
+    void minMaxMaskMultipassCaller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
 
-        min_max_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
-        min_max_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
+        minMaxKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
+        minMaxPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -365,26 +365,26 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }
 
-    template void min_max_mask_multipass_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
-    template void min_max_mask_multipass_caller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskMultipassCaller<uchar>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskMultipassCaller<char>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskMultipassCaller<ushort>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskMultipassCaller<short>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskMultipassCaller<int>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
+    template void minMaxMaskMultipassCaller<float>(const DevMem2D, const PtrStep, double*, double*, PtrStep);
 
 
     template <typename T>
-    void min_max_multipass_caller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
+    void minMaxMultipassCaller(const DevMem2D src, double* minval, double* maxval, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)buf.ptr(0);
         T* maxval_buf = (T*)buf.ptr(1);
 
-        min_max_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
-        min_max_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
+        minMaxKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
+        minMaxPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -394,12 +394,12 @@ namespace cv { namespace gpu { namespace mathfunc
         *maxval = maxval_;
     }
 
-    template void min_max_multipass_caller<uchar>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<char>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<ushort>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<short>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<int>(const DevMem2D, double*, double*, PtrStep);
-    template void min_max_multipass_caller<float>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxMultipassCaller<uchar>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxMultipassCaller<char>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxMultipassCaller<ushort>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxMultipassCaller<short>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxMultipassCaller<int>(const DevMem2D, double*, double*, PtrStep);
+    template void minMaxMultipassCaller<float>(const DevMem2D, double*, double*, PtrStep);
 
     } // namespace minmax
 
@@ -417,7 +417,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Estimates good thread configuration
     //  - threads variable satisfies to threads.x * threads.y == 256
-    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
+    void estimateThreadCfg(int cols, int rows, dim3& threads, dim3& grid)
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
@@ -427,11 +427,11 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     // Returns required buffer sizes
-    void get_buf_size_required(int cols, int rows, int elem_size, int& b1cols, 
+    void getBufSizeRequired(int cols, int rows, int elem_size, int& b1cols, 
                                int& b1rows, int& b2cols, int& b2rows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(cols, rows, threads, grid);
+        estimateThreadCfg(cols, rows, threads, grid);
         b1cols = grid.x * grid.y * elem_size; // For values
         b1rows = 2;
         b2cols = grid.x * grid.y * sizeof(int); // For locations
@@ -440,7 +440,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     // Estimates device constants which are used in the kernels using specified thread configuration
-    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void setKernelConsts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -469,8 +469,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int size, typename T>
-    __device__ void find_min_max_loc_in_smem(volatile T* minval, volatile T* maxval, volatile uint* minloc, 
-                                             volatile uint* maxloc, const uint tid)
+    __device__ void findMinMaxLocInSmem(volatile T* minval, volatile T* maxval, volatile uint* minloc, 
+                                        volatile uint* maxloc, const uint tid)
     {
         if (size >= 512) { if (tid < 256) { merge(tid, 256, minval, maxval, minloc, maxloc); } __syncthreads(); }
         if (size >= 256) { if (tid < 128) { merge(tid, 128, minval, maxval, minloc, maxloc); }  __syncthreads(); }
@@ -489,8 +489,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int nthreads, typename T, typename Mask>
-    __global__ void min_max_loc_kernel(const DevMem2D src, Mask mask, T* minval, T* maxval, 
-                                       uint* minloc, uint* maxloc)
+    __global__ void minMaxLocKernel(const DevMem2D src, Mask mask, T* minval, T* maxval, 
+                                    uint* minloc, uint* maxloc)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
@@ -503,7 +503,8 @@ namespace cv { namespace gpu { namespace mathfunc
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         T mymin = numeric_limits_gpu<T>::max();
-        T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : numeric_limits_gpu<T>::min(); 
+        T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : 
+                                                     numeric_limits_gpu<T>::min(); 
         uint myminloc = 0;
         uint mymaxloc = 0;
         uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
@@ -529,7 +530,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smaxloc[tid] = mymaxloc;
         __syncthreads();
 
-        find_min_max_loc_in_smem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+        findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
@@ -558,7 +559,7 @@ namespace cv { namespace gpu { namespace mathfunc
             smaxloc[tid] = maxloc[idx];
             __syncthreads();
 
-			find_min_max_loc_in_smem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+			findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
             if (tid == 0) 
             {
@@ -582,19 +583,20 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    void min_max_loc_mask_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
-                                 int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+    void minMaxLocMaskCaller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
+                             int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
         uint* minloc_buf = (uint*)locbuf.ptr(0);
         uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
-        min_max_loc_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        minMaxLocKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, 
+                                                           minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -610,29 +612,30 @@ namespace cv { namespace gpu { namespace mathfunc
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_mask_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_caller<double>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<uchar>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<ushort>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskCaller<double>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
 
 
     template <typename T>
-    void min_max_loc_caller(const DevMem2D src, double* minval, double* maxval, 
+    void minMaxLocCaller(const DevMem2D src, double* minval, double* maxval, 
                             int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
         uint* minloc_buf = (uint*)locbuf.ptr(0);
         uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
-        min_max_loc_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
+        minMaxLocKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, 
+                                                             minloc_buf, maxloc_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -648,18 +651,18 @@ namespace cv { namespace gpu { namespace mathfunc
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_caller<uchar>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<ushort>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_caller<double>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<uchar>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<ushort>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocCaller<double>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
 
 
     // This kernel will be used only when compute capability is 1.0
     template <int nthreads, typename T>
-    __global__ void min_max_loc_pass2_kernel(T* minval, T* maxval, uint* minloc, uint* maxloc, int size)
+    __global__ void minMaxLocPass2Kernel(T* minval, T* maxval, uint* minloc, uint* maxloc, int size)
     {
         typedef typename MinMaxTypeTraits<T>::best_type best_type;
         __shared__ best_type sminval[nthreads];
@@ -676,7 +679,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smaxloc[tid] = maxloc[idx];
         __syncthreads();
 
-		find_min_max_loc_in_smem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+		findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
         if (tid == 0) 
         {
@@ -689,58 +692,21 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    void min_max_loc_mask_multipass_caller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
-                                           int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
-    {
-        dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
-
-        T* minval_buf = (T*)valbuf.ptr(0);
-        T* maxval_buf = (T*)valbuf.ptr(1);
-        uint* minloc_buf = (uint*)locbuf.ptr(0);
-        uint* maxloc_buf = (uint*)locbuf.ptr(1);
-
-        min_max_loc_kernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
-        min_max_loc_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
-        cudaSafeCall(cudaThreadSynchronize());
-
-        T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        *minval = minval_;
-        *maxval = maxval_;
-
-        uint minloc_, maxloc_;
-        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
-        minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
-        maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
-    }
-
-    template void min_max_loc_mask_multipass_caller<uchar>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_multipass_caller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_multipass_caller<ushort>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_multipass_caller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_multipass_caller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_mask_multipass_caller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
-
-
-    template <typename T>
-    void min_max_loc_multipass_caller(const DevMem2D src, double* minval, double* maxval, 
+    void minMaxLocMaskMultipassCaller(const DevMem2D src, const PtrStep mask, double* minval, double* maxval, 
                                       int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         T* minval_buf = (T*)valbuf.ptr(0);
         T* maxval_buf = (T*)valbuf.ptr(1);
         uint* minloc_buf = (uint*)locbuf.ptr(0);
         uint* maxloc_buf = (uint*)locbuf.ptr(1);
 
-        min_max_loc_kernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, minloc_buf, maxloc_buf);
-        min_max_loc_pass2_kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        minMaxLocKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, 
+                                                           minloc_buf, maxloc_buf);
+        minMaxLocPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -756,12 +722,51 @@ namespace cv { namespace gpu { namespace mathfunc
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void min_max_loc_multipass_caller<uchar>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<ushort>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
-    template void min_max_loc_multipass_caller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskMultipassCaller<uchar>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskMultipassCaller<char>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskMultipassCaller<ushort>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskMultipassCaller<short>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskMultipassCaller<int>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMaskMultipassCaller<float>(const DevMem2D, const PtrStep, double*, double*, int[2], int[2], PtrStep, PtrStep);
+
+
+    template <typename T>
+    void minMaxLocMultipassCaller(const DevMem2D src, double* minval, double* maxval, 
+                                  int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+    {
+        dim3 threads, grid;
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
+
+        T* minval_buf = (T*)valbuf.ptr(0);
+        T* maxval_buf = (T*)valbuf.ptr(1);
+        uint* minloc_buf = (uint*)locbuf.ptr(0);
+        uint* maxloc_buf = (uint*)locbuf.ptr(1);
+
+        minMaxLocKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, 
+                                                             minloc_buf, maxloc_buf);
+        minMaxLocPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        cudaSafeCall(cudaThreadSynchronize());
+
+        T minval_, maxval_;
+        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        *minval = minval_;
+        *maxval = maxval_;
+
+        uint minloc_, maxloc_;
+        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
+        maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
+    }
+
+    template void minMaxLocMultipassCaller<uchar>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMultipassCaller<char>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMultipassCaller<ushort>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMultipassCaller<short>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMultipassCaller<int>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
+    template void minMaxLocMultipassCaller<float>(const DevMem2D, double*, double*, int[2], int[2], PtrStep, PtrStep);
 
     } // namespace minmaxloc
 
@@ -776,7 +781,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     __device__ uint blocks_finished = 0;
 
-    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
+    void estimateThreadCfg(int cols, int rows, dim3& threads, dim3& grid)
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
@@ -785,16 +790,16 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    void get_buf_size_required(int cols, int rows, int& bufcols, int& bufrows)
+    void getBufSizeRequired(int cols, int rows, int& bufcols, int& bufrows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(cols, rows, threads, grid);
+        estimateThreadCfg(cols, rows, threads, grid);
         bufcols = grid.x * grid.y * sizeof(int);
         bufrows = 1;
     }
 
 
-    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void setKernelConsts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -804,7 +809,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <int nthreads, typename T>
-    __global__ void count_non_zero_kernel(const DevMem2D src, volatile uint* count)
+    __global__ void countNonZeroKernel(const DevMem2D src, volatile uint* count)
     {
         __shared__ uint scount[nthreads];
 
@@ -823,7 +828,7 @@ namespace cv { namespace gpu { namespace mathfunc
 		scount[tid] = cnt;
 		__syncthreads();
 
-        sum_in_smem<nthreads, uint>(scount, tid);
+        sumInSmem<nthreads, uint>(scount, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
@@ -844,7 +849,7 @@ namespace cv { namespace gpu { namespace mathfunc
             scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
             __syncthreads();
 
-			sum_in_smem<nthreads, uint>(scount, tid);
+			sumInSmem<nthreads, uint>(scount, tid);
 
 			if (tid == 0) 
             {
@@ -859,15 +864,15 @@ namespace cv { namespace gpu { namespace mathfunc
 
    
     template <typename T>
-    int count_non_zero_caller(const DevMem2D src, PtrStep buf)
+    int countNonZeroCaller(const DevMem2D src, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         uint* count_buf = (uint*)buf.ptr(0);
 
-        count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
+        countNonZeroKernel<256, T><<<grid, threads>>>(src, count_buf);
         cudaSafeCall(cudaThreadSynchronize());
 
         uint count;
@@ -876,17 +881,17 @@ namespace cv { namespace gpu { namespace mathfunc
         return count;
     }  
 
-    template int count_non_zero_caller<uchar>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<char>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<ushort>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<short>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<int>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<float>(const DevMem2D, PtrStep);
-    template int count_non_zero_caller<double>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<uchar>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<char>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<ushort>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<short>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<int>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<float>(const DevMem2D, PtrStep);
+    template int countNonZeroCaller<double>(const DevMem2D, PtrStep);
 
 
     template <int nthreads, typename T>
-    __global__ void count_non_zero_pass2_kernel(uint* count, int size)
+    __global__ void countNonZeroPass2Kernel(uint* count, int size)
     {
         __shared__ uint scount[nthreads];
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -894,7 +899,7 @@ namespace cv { namespace gpu { namespace mathfunc
         scount[tid] = tid < size ? count[tid] : 0;
         __syncthreads();
 
-        sum_in_smem<nthreads, uint>(scount, tid);
+        sumInSmem<nthreads, uint>(scount, tid);
 
         if (tid == 0) 
             count[0] = scount[0];
@@ -902,16 +907,16 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    int count_non_zero_multipass_caller(const DevMem2D src, PtrStep buf)
+    int countNonZeroMultipassCaller(const DevMem2D src, PtrStep buf)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         uint* count_buf = (uint*)buf.ptr(0);
 
-        count_non_zero_kernel<256, T><<<grid, threads>>>(src, count_buf);
-        count_non_zero_pass2_kernel<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
+        countNonZeroKernel<256, T><<<grid, threads>>>(src, count_buf);
+        countNonZeroPass2Kernel<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
         cudaSafeCall(cudaThreadSynchronize());
 
         uint count;
@@ -920,12 +925,12 @@ namespace cv { namespace gpu { namespace mathfunc
         return count;
     }  
 
-    template int count_non_zero_multipass_caller<uchar>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<char>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<ushort>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<short>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<int>(const DevMem2D, PtrStep);
-    template int count_non_zero_multipass_caller<float>(const DevMem2D, PtrStep);
+    template int countNonZeroMultipassCaller<uchar>(const DevMem2D, PtrStep);
+    template int countNonZeroMultipassCaller<char>(const DevMem2D, PtrStep);
+    template int countNonZeroMultipassCaller<ushort>(const DevMem2D, PtrStep);
+    template int countNonZeroMultipassCaller<short>(const DevMem2D, PtrStep);
+    template int countNonZeroMultipassCaller<int>(const DevMem2D, PtrStep);
+    template int countNonZeroMultipassCaller<float>(const DevMem2D, PtrStep);
 
     } // namespace countnonzero
 
@@ -958,7 +963,7 @@ namespace cv { namespace gpu { namespace mathfunc
     const int threads_x = 32;
     const int threads_y = 8;
 
-    void estimate_thread_cfg(int cols, int rows, dim3& threads, dim3& grid)
+    void estimateThreadCfg(int cols, int rows, dim3& threads, dim3& grid)
     {
         threads = dim3(threads_x, threads_y);
         grid = dim3(divUp(cols, threads.x * threads.y), 
@@ -968,16 +973,16 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    void get_buf_size_required(int cols, int rows, int cn, int& bufcols, int& bufrows)
+    void getBufSizeRequired(int cols, int rows, int cn, int& bufcols, int& bufrows)
     {
         dim3 threads, grid;
-        estimate_thread_cfg(cols, rows, threads, grid);
+        estimateThreadCfg(cols, rows, threads, grid);
         bufcols = grid.x * grid.y * sizeof(double) * cn;
         bufrows = 1;
     }
 
 
-    void set_kernel_consts(int cols, int rows, const dim3& threads, const dim3& grid)
+    void setKernelConsts(int cols, int rows, const dim3& threads, const dim3& grid)
     {        
         int twidth = divUp(divUp(cols, grid.x), threads.x);
         int theight = divUp(divUp(rows, grid.y), threads.y);
@@ -986,7 +991,7 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sum_kernel(const DevMem2D src, R* result)
+    __global__ void sumKernel(const DevMem2D src, R* result)
     {
         __shared__ R smem[nthreads];
 
@@ -1006,7 +1011,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid] = sum;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
@@ -1027,7 +1032,7 @@ namespace cv { namespace gpu { namespace mathfunc
             smem[tid] = tid < gridDim.x * gridDim.y ? result[tid] : 0;
             __syncthreads();
 
-            sum_in_smem<nthreads, R>(smem, tid);
+            sumInSmem<nthreads, R>(smem, tid);
 
             if (tid == 0) 
             {
@@ -1042,7 +1047,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sum_pass2_kernel(R* result, int size)
+    __global__ void sumPass2Kernel(R* result, int size)
     {
         __shared__ R smem[nthreads];
         int tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -1050,7 +1055,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid] = tid < size ? result[tid] : 0;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem, tid);
 
         if (tid == 0) 
             result[0] = smem[0];
@@ -1058,7 +1063,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sum_kernel_C2(const DevMem2D src, typename TypeVec<R, 2>::vec_t* result)
+    __global__ void sumKernel_C2(const DevMem2D src, typename TypeVec<R, 2>::vec_t* result)
     {
         typedef typename TypeVec<T, 2>::vec_t SrcType;
         typedef typename TypeVec<R, 2>::vec_t DstType;
@@ -1086,8 +1091,8 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid + nthreads] = sum.y;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
-        sum_in_smem<nthreads, R>(smem + nthreads, tid);
+        sumInSmem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem + nthreads, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
@@ -1113,8 +1118,8 @@ namespace cv { namespace gpu { namespace mathfunc
             smem[tid + nthreads] = res.y;
             __syncthreads();
 
-            sum_in_smem<nthreads, R>(smem, tid);
-            sum_in_smem<nthreads, R>(smem + nthreads, tid);
+            sumInSmem<nthreads, R>(smem, tid);
+            sumInSmem<nthreads, R>(smem + nthreads, tid);
 
             if (tid == 0) 
             {
@@ -1137,7 +1142,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sum_pass2_kernel_C2(typename TypeVec<R, 2>::vec_t* result, int size)
+    __global__ void sumPass2Kernel_C2(typename TypeVec<R, 2>::vec_t* result, int size)
     {
         typedef typename TypeVec<R, 2>::vec_t DstType;
 
@@ -1150,8 +1155,8 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid + nthreads] = res.y;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
-        sum_in_smem<nthreads, R>(smem + nthreads, tid);
+        sumInSmem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem + nthreads, tid);
 
         if (tid == 0) 
         {
@@ -1163,7 +1168,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sum_kernel_C3(const DevMem2D src, typename TypeVec<R, 3>::vec_t* result)
+    __global__ void sumKernel_C3(const DevMem2D src, typename TypeVec<R, 3>::vec_t* result)
     {
         typedef typename TypeVec<T, 3>::vec_t SrcType;
         typedef typename TypeVec<R, 3>::vec_t DstType;
@@ -1192,9 +1197,9 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid + 2 * nthreads] = sum.z;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
-        sum_in_smem<nthreads, R>(smem + nthreads, tid);
-        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+        sumInSmem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem + nthreads, tid);
+        sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
@@ -1222,9 +1227,9 @@ namespace cv { namespace gpu { namespace mathfunc
             smem[tid + 2 * nthreads] = res.z;
             __syncthreads();
 
-            sum_in_smem<nthreads, R>(smem, tid);
-            sum_in_smem<nthreads, R>(smem + nthreads, tid);
-            sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+            sumInSmem<nthreads, R>(smem, tid);
+            sumInSmem<nthreads, R>(smem + nthreads, tid);
+            sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
 
             if (tid == 0) 
             {
@@ -1249,7 +1254,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sum_pass2_kernel_C3(typename TypeVec<R, 3>::vec_t* result, int size)
+    __global__ void sumPass2Kernel_C3(typename TypeVec<R, 3>::vec_t* result, int size)
     {
         typedef typename TypeVec<R, 3>::vec_t DstType;
 
@@ -1263,9 +1268,9 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid + 2 * nthreads] = res.z;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
-        sum_in_smem<nthreads, R>(smem + nthreads, tid);
-        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
+        sumInSmem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem + nthreads, tid);
+        sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
 
         if (tid == 0) 
         {
@@ -1277,7 +1282,7 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sum_kernel_C4(const DevMem2D src, typename TypeVec<R, 4>::vec_t* result)
+    __global__ void sumKernel_C4(const DevMem2D src, typename TypeVec<R, 4>::vec_t* result)
     {
         typedef typename TypeVec<T, 4>::vec_t SrcType;
         typedef typename TypeVec<R, 4>::vec_t DstType;
@@ -1308,10 +1313,10 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid + 3 * nthreads] = sum.w;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
-        sum_in_smem<nthreads, R>(smem + nthreads, tid);
-        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
-        sum_in_smem<nthreads, R>(smem + 3 * nthreads, tid);
+        sumInSmem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem + nthreads, tid);
+        sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
+        sumInSmem<nthreads, R>(smem + 3 * nthreads, tid);
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
@@ -1341,10 +1346,10 @@ namespace cv { namespace gpu { namespace mathfunc
             smem[tid + 3 * nthreads] = res.w;
             __syncthreads();
 
-            sum_in_smem<nthreads, R>(smem, tid);
-            sum_in_smem<nthreads, R>(smem + nthreads, tid);
-            sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
-            sum_in_smem<nthreads, R>(smem + 3 * nthreads, tid);
+            sumInSmem<nthreads, R>(smem, tid);
+            sumInSmem<nthreads, R>(smem + nthreads, tid);
+            sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
+            sumInSmem<nthreads, R>(smem + 3 * nthreads, tid);
 
             if (tid == 0) 
             {
@@ -1371,7 +1376,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sum_pass2_kernel_C4(typename TypeVec<R, 4>::vec_t* result, int size)
+    __global__ void sumPass2Kernel_C4(typename TypeVec<R, 4>::vec_t* result, int size)
     {
         typedef typename TypeVec<R, 4>::vec_t DstType;
 
@@ -1386,10 +1391,10 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid + 3 * nthreads] = res.z;
         __syncthreads();
 
-        sum_in_smem<nthreads, R>(smem, tid);
-        sum_in_smem<nthreads, R>(smem + nthreads, tid);
-        sum_in_smem<nthreads, R>(smem + 2 * nthreads, tid);
-        sum_in_smem<nthreads, R>(smem + 3 * nthreads, tid);
+        sumInSmem<nthreads, R>(smem, tid);
+        sumInSmem<nthreads, R>(smem + nthreads, tid);
+        sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
+        sumInSmem<nthreads, R>(smem + 3 * nthreads, tid);
 
         if (tid == 0) 
         {
@@ -1405,36 +1410,36 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T>
-    void sum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum, int cn)
+    void sumMultipassCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
         using namespace sum;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         switch (cn)
         {
         case 1:
-            sum_kernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
         case 2:
-            sum_kernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
         case 3:
-            sum_kernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
         case 4:
-            sum_kernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
         }
         cudaSafeCall(cudaThreadSynchronize());
@@ -1448,40 +1453,40 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }  
 
-    template void sum_multipass_caller<uchar>(const DevMem2D, PtrStep, double*, int);
-    template void sum_multipass_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sum_multipass_caller<ushort>(const DevMem2D, PtrStep, double*, int);
-    template void sum_multipass_caller<short>(const DevMem2D, PtrStep, double*, int);
-    template void sum_multipass_caller<int>(const DevMem2D, PtrStep, double*, int);
-    template void sum_multipass_caller<float>(const DevMem2D, PtrStep, double*, int);
+    template void sumMultipassCaller<uchar>(const DevMem2D, PtrStep, double*, int);
+    template void sumMultipassCaller<char>(const DevMem2D, PtrStep, double*, int);
+    template void sumMultipassCaller<ushort>(const DevMem2D, PtrStep, double*, int);
+    template void sumMultipassCaller<short>(const DevMem2D, PtrStep, double*, int);
+    template void sumMultipassCaller<int>(const DevMem2D, PtrStep, double*, int);
+    template void sumMultipassCaller<float>(const DevMem2D, PtrStep, double*, int);
 
 
     template <typename T>
-    void sum_caller(const DevMem2D src, PtrStep buf, double* sum, int cn)
+    void sumCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
         using namespace sum;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         switch (cn)
         {
         case 1:
-            sum_kernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
             break;
         case 2:
-            sum_kernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
             break;
         case 3:
-            sum_kernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
             break;
         case 4:
-            sum_kernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             break;
         }
@@ -1496,48 +1501,48 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }  
 
-    template void sum_caller<uchar>(const DevMem2D, PtrStep, double*, int);
-    template void sum_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sum_caller<ushort>(const DevMem2D, PtrStep, double*, int);
-    template void sum_caller<short>(const DevMem2D, PtrStep, double*, int);
-    template void sum_caller<int>(const DevMem2D, PtrStep, double*, int);
-    template void sum_caller<float>(const DevMem2D, PtrStep, double*, int);
+    template void sumCaller<uchar>(const DevMem2D, PtrStep, double*, int);
+    template void sumCaller<char>(const DevMem2D, PtrStep, double*, int);
+    template void sumCaller<ushort>(const DevMem2D, PtrStep, double*, int);
+    template void sumCaller<short>(const DevMem2D, PtrStep, double*, int);
+    template void sumCaller<int>(const DevMem2D, PtrStep, double*, int);
+    template void sumCaller<float>(const DevMem2D, PtrStep, double*, int);
 
 
     template <typename T>
-    void sqsum_multipass_caller(const DevMem2D src, PtrStep buf, double* sum, int cn)
+    void sqrSumMultipassCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
         using namespace sum;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         switch (cn)
         {
         case 1:
-            sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
             break;
         case 2:
-            sum_kernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
             break;
         case 3:
-            sum_kernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
             break;
         case 4:
-            sum_kernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
-            sum_pass2_kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+            sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
             break;
         }
@@ -1552,40 +1557,40 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }  
 
-    template void sqsum_multipass_caller<uchar>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_multipass_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_multipass_caller<ushort>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_multipass_caller<short>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_multipass_caller<int>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_multipass_caller<float>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumMultipassCaller<uchar>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumMultipassCaller<char>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumMultipassCaller<ushort>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumMultipassCaller<short>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumMultipassCaller<int>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumMultipassCaller<float>(const DevMem2D, PtrStep, double*, int);
 
 
     template <typename T>
-    void sqsum_caller(const DevMem2D src, PtrStep buf, double* sum, int cn)
+    void sqrSumCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
         using namespace sum;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
-        estimate_thread_cfg(src.cols, src.rows, threads, grid);
-        set_kernel_consts(src.cols, src.rows, threads, grid);
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
 
         switch (cn)
         {
         case 1:
-            sum_kernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
             break;
         case 2:
-            sum_kernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
             break;
         case 3:
-            sum_kernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
             break;
         case 4:
-            sum_kernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
+            sumKernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             break;
         }
@@ -1600,10 +1605,10 @@ namespace cv { namespace gpu { namespace mathfunc
         sum[3] = result[3];
     }
 
-    template void sqsum_caller<uchar>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_caller<char>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_caller<ushort>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_caller<short>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_caller<int>(const DevMem2D, PtrStep, double*, int);
-    template void sqsum_caller<float>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumCaller<uchar>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumCaller<char>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumCaller<ushort>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumCaller<short>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumCaller<int>(const DevMem2D, PtrStep, double*, int);
+    template void sqrSumCaller<float>(const DevMem2D, PtrStep, double*, int);
  }}}

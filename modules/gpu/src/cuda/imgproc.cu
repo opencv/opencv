@@ -719,7 +719,7 @@ namespace cv { namespace gpu { namespace imgproc
 
 ////////////////////////////// Column Sum //////////////////////////////////////
 
-    __global__ void column_sum_kernel_32F(int cols, int rows, const PtrStep src, const PtrStep dst)
+    __global__ void column_sumKernel_32F(int cols, int rows, const PtrStep src, const PtrStep dst)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -745,7 +745,7 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 threads(256);
         dim3 grid(divUp(src.cols, threads.x));
 
-        column_sum_kernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
+        column_sumKernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
         cudaSafeCall(cudaThreadSynchronize());
     }
 

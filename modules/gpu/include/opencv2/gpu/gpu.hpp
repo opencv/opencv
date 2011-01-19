@@ -72,8 +72,9 @@ namespace cv
         CV_EXPORTS bool hasNativeDoubleSupport(int device);
         CV_EXPORTS bool hasAtomicsSupport(int device);
 
-        template <unsigned int cmp_op>
-        CV_EXPORTS bool checkPtxVersion(int major, int minor);
+        CV_EXPORTS bool ptxVersionIs(int major, int minor);
+        CV_EXPORTS bool ptxVersionIsLessOrEqual(int major, int minor);
+        CV_EXPORTS bool ptxVersionIsGreaterOrEqual(int major, int minor);
 
         //! Checks if the GPU module is PTX compatible with the given NVIDIA device
         CV_EXPORTS bool isCompatibleWith(int device);

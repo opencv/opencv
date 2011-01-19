@@ -133,85 +133,81 @@ CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int device)
 
 namespace 
 {
-    template <unsigned int cmp_op>
-    bool comparePairs(int lhs1, int lhs2, int rhs1, int rhs2);
-
-    template <>
-    bool comparePairs<CMP_EQ>(int lhs1, int lhs2, int rhs1, int rhs2)
+    struct ComparerEqual 
     {
-        return lhs1 == rhs1 && lhs2 == rhs2;
-    }
+        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
+        {
+            return lhs1 == rhs1 && lhs2 == rhs2;
+        }
+    };
 
-    template <>
-    bool comparePairs<CMP_GT>(int lhs1, int lhs2, int rhs1, int rhs2)
+
+    struct ComparerLessOrEqual
     {
-        return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 > rhs2);
-    }
+        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
+        {
+            return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
+        }
+    };
 
-    template <>
-    bool comparePairs<CMP_GE>(int lhs1, int lhs2, int rhs1, int rhs2)
+
+    struct ComparerGreaterOrEqual
     {
-        return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 >= rhs2);
-    }
+        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
+        {
+            return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 >= rhs2);
+        }
+    };
 
-    template <>
-    bool comparePairs<CMP_LT>(int lhs1, int lhs2, int rhs1, int rhs2)
+
+    template <typename Comparer>
+    bool checkPtxVersion(int major, int minor, Comparer cmp) 
     {
-        return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 < rhs2);
-    }
-
-
-    template <>
-    bool comparePairs<CMP_LE>(int lhs1, int lhs2, int rhs1, int rhs2)
-    {
-        return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
-    }
-
-    template <>
-    bool comparePairs<CMP_NE>(int lhs1, int lhs2, int rhs1, int rhs2)
-    {
-        return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
-    }
-}
-
-
-template <unsigned int cmp_op>
-CV_EXPORTS bool cv::gpu::checkPtxVersion(int major, int minor) 
-{
 #ifdef OPENCV_GPU_CUDA_ARCH_10
-    if (comparePairs<cmp_op>(1, 0, major, minor)) return true;
+        if (cmp(1, 0, major, minor)) return true;
 #endif
 
 #ifdef OPENCV_GPU_CUDA_ARCH_11
-    if (comparePairs<cmp_op>(1, 1, major, minor)) return true;
+        if (cmp(1, 1, major, minor)) return true;
 #endif
 
 #ifdef OPENCV_GPU_CUDA_ARCH_12
-    if (comparePairs<cmp_op>(1, 2, major, minor)) return true;
+        if (cmp(1, 2, major, minor)) return true;
 #endif
 
 #ifdef OPENCV_GPU_CUDA_ARCH_13
-    if (comparePairs<cmp_op>(1, 3, major, minor)) return true;
+        if (cmp(1, 3, major, minor)) return true;
 #endif
 
 #ifdef OPENCV_GPU_CUDA_ARCH_20
-    if (comparePairs<cmp_op>(2, 0, major, minor)) return true;
+        if (cmp(2, 0, major, minor)) return true;
 #endif
 
 #ifdef OPENCV_GPU_CUDA_ARCH_21
-    if (comparePairs<cmp_op>(2, 1, major, minor)) return true;
+        if (cmp(2, 1, major, minor)) return true;
 #endif
 
-    return false;
+        return false;
+    }
 }
 
 
-template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_EQ>(int major, int minor);
-template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_GT>(int major, int minor);
-template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_GE>(int major, int minor);
-template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_LT>(int major, int minor);
-template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_LE>(int major, int minor);
-template CV_EXPORTS bool cv::gpu::checkPtxVersion<CMP_NE>(int major, int minor);
+CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor)
+{
+    return checkPtxVersion(major, minor, ComparerEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor)
+{
+    return checkPtxVersion(major, minor, ComparerLessOrEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor)
+{
+    return checkPtxVersion(major, minor, ComparerGreaterOrEqual());
+}
 
 
 CV_EXPORTS bool isCompatibleWith(int device)
@@ -223,7 +219,7 @@ CV_EXPORTS bool isCompatibleWith(int device)
     int major, minor;
     getComputeCapability(device, major, minor);
 
-    return checkPtxVersion<CMP_LE>(major, minor);
+    return ptxVersionIsLessOrEqual(major, minor);
 }
 
 #endif
