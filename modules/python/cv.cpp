@@ -3989,7 +3989,7 @@ void initcv()
   m = Py_InitModule(MODULESTR"", methods);
   d = PyModule_GetDict(m);
 
-  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 3057 $"));
+  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev$"));
 
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);
