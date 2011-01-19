@@ -234,21 +234,21 @@ struct CV_GpuMatchTemplateFindPatternInBlackTest: CvTest
     {
         try
         {
-            Mat image = imread(std::string(ts->get_data_path()) + "matchtemplate/black.jpg");
+            Mat image = imread(std::string(ts->get_data_path()) + "matchtemplate/black.png");
             if (image.empty())
             {
                 ts->printf(CvTS::CONSOLE, "can't open file '%s'", (std::string(ts->get_data_path()) 
-                                                                   + "matchtemplate/black.jpg").c_str());
-                ts->set_failed_test_info(CvTS::FAIL_INVALID_TEST_DATA);
+                                                                   + "matchtemplate/black.png").c_str());
+                ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
                 return;
             }
 
-            Mat pattern = imread(std::string(ts->get_data_path()) + "matchtemplate/cat.jpg");
+            Mat pattern = imread(std::string(ts->get_data_path()) + "matchtemplate/cat.png");
             if (pattern.empty())
             {
                 ts->printf(CvTS::CONSOLE, "can't open file '%s'", (std::string(ts->get_data_path()) 
-                                                                   + "matchtemplate/cat.jpg").c_str());
-                ts->set_failed_test_info(CvTS::FAIL_INVALID_TEST_DATA);
+                                                                   + "matchtemplate/cat.png").c_str());
+                ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
                 return;
             }
 

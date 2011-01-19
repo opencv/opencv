@@ -57,6 +57,9 @@ CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { throw_nogpu(); return 0
 CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& /*free*/, size_t& /*total*/)  { throw_nogpu(); } 
 CV_EXPORTS bool cv::gpu::hasNativeDoubleSupport(int /*device*/) { throw_nogpu(); return false; }
 CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int /*device*/) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor) { throw_nogpu(); return false; }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -133,33 +136,6 @@ CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int device)
 
 namespace 
 {
-    struct ComparerEqual 
-    {
-        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
-        {
-            return lhs1 == rhs1 && lhs2 == rhs2;
-        }
-    };
-
-
-    struct ComparerLessOrEqual
-    {
-        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
-        {
-            return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
-        }
-    };
-
-
-    struct ComparerGreaterOrEqual
-    {
-        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
-        {
-            return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 >= rhs2);
-        }
-    };
-
-
     template <typename Comparer>
     bool checkPtxVersion(int major, int minor, Comparer cmp) 
     {
@@ -194,18 +170,39 @@ namespace
 
 CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor)
 {
+    struct ComparerEqual 
+    {
+        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
+        {
+            return lhs1 == rhs1 && lhs2 == rhs2;
+        }
+    };
     return checkPtxVersion(major, minor, ComparerEqual());
 }
 
 
 CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor)
 {
+    struct ComparerLessOrEqual
+    {
+        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
+        {
+            return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
+        }
+    };
     return checkPtxVersion(major, minor, ComparerLessOrEqual());
 }
 
 
 CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor)
 {
+    struct ComparerGreaterOrEqual
+    {
+        bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
+        {
+            return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 >= rhs2);
+        }
+    };
     return checkPtxVersion(major, minor, ComparerGreaterOrEqual());
 }
 
