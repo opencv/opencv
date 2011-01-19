@@ -51,9 +51,9 @@ using namespace std;
     ts->set_failed_test_info(err); \
     return; }
 
-struct CV_GpuHogDetectionTest: public CvTest, public cv::gpu::HOGDescriptor
+struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
 {
-    CV_GpuHogDetectionTest(): CvTest("GPU-HOG-detect", "HOGDescriptorDetection") {}
+    CV_GpuHogDetectTestRunner(CvTS* ts_): ts(ts_) {}
 
     void run(int) 
     {       
@@ -185,13 +185,25 @@ struct CV_GpuHogDetectionTest: public CvTest, public cv::gpu::HOGDescriptor
     std::ifstream f;
 #endif
 
-} gpu_hog_detection_test;
+    CvTS* ts;
+};
 
 
-struct CV_GpuHogGetDescriptorsTest: public CvTest, public cv::gpu::HOGDescriptor
+struct CV_GpuHogDetectTest: CvTest 
 {
-    CV_GpuHogGetDescriptorsTest(): 
-        CvTest("GPU-HOG-getDescriptors", "HOGDescriptorGetDescriptors"), HOGDescriptor(cv::Size(64, 128)) {}
+    CV_GpuHogDetectTest(): CvTest("GPU-HogDetectTest", "HOGDescriptor::detect") {}
+
+    void run(int i)
+    {
+        CV_GpuHogDetectTestRunner runner(ts);
+        runner.run(i);
+    }
+} CV_GpuHogDetectTest_inst;
+
+
+struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
+{
+    CV_GpuHogGetDescriptorsTestRunner(CvTS* ts_): HOGDescriptor(cv::Size(64, 128)), ts(ts_) {}
 
     void run(int)
     {
@@ -303,5 +315,18 @@ struct CV_GpuHogGetDescriptorsTest: public CvTest, public cv::gpu::HOGDescriptor
     int blocks_per_win_x;
     int blocks_per_win_y;
     int block_hist_size;
-} gpu_hog_get_descriptors_test;
 
+    CvTS* ts;
+};
+
+
+struct CV_GpuHogGetDescriptorsTest: CvTest 
+{
+    CV_GpuHogGetDescriptorsTest(): CvTest("GPU-HogGetDescriptorsTest", "HOGDescriptor::getDescriptors") {}
+
+    void run(int i)
+    {
+        CV_GpuHogGetDescriptorsTestRunner runner(ts);
+        runner.run(i);
+    }
+} CV_GpuHogGetDescriptorsTest_inst;
