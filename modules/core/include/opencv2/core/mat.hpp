@@ -168,7 +168,7 @@ inline Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     dataend = datalimit - _step + minstep;
 }
 
-    
+
 inline Mat::Mat(const CvMat* m, bool copyData)
     : flags(MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG))),
     dims(2), rows(m->rows), cols(m->cols), data(m->data.ptr), refcount(0),

@@ -268,6 +268,16 @@ typedef NoVec VXor8u;
 
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+struct IPPArithmInitializer
+{
+    IPPArithmInitializer(void)
+    {
+      IppStatus status = ippStaticInit();
+    }
+};
+
+IPPArithmInitializer ippArithmInitializer;
+
 struct ippAdd8u
 {
     int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
