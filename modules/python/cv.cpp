@@ -14,8 +14,12 @@ static PyObject *opencv_error;
 
 struct memtrack_t {
   PyObject_HEAD
+  int owner;
   void *ptr;
+  int freeptr;
   Py_ssize_t size;
+  PyObject *backing;
+  CvArr *backingmat;
 };
 
 struct iplimage_t {
@@ -694,6 +698,7 @@ static void cvmatnd_dealloc(PyObject *self)
 {
   cvmatnd_t *pc = (cvmatnd_t*)self;
   Py_DECREF(pc->data);
+  cvFree(&pc->a);
   PyObject_Del(self);
 }
 
@@ -923,11 +928,29 @@ static void cvlineiterator_specials(void)
 
 /* memtrack */
 
+/* Motivation for memtrack is when the storage for a Mat is an array or buffer
+object.  By setting 'data' to be a memtrack, can deallocate the storage at
+object destruction.
+
+For array objects, 'backing' is the actual storage object.  memtrack holds the reference,
+then DECREF's it at dealloc.
+
+For MatND's, we need to cvDecRefData() on release, and this is what field 'backingmat' is for.
+
+If freeptr is true, then a straight cvFree() of ptr happens.
+
+*/
+
+
 static void memtrack_dealloc(PyObject *self)
 {
   memtrack_t *pi = (memtrack_t*)self;
-  // printf("===> memtrack_dealloc %p!\n", pi->ptr);
-  cvFree(&pi->ptr);
+  if (pi->backing)
+    Py_DECREF(pi->backing);
+  if (pi->backingmat)
+    cvDecRefData(pi->backingmat);
+  if (pi->freeptr)
+    cvFree(&pi->ptr);
   PyObject_Del(self);
 }
 
@@ -2188,7 +2211,11 @@ static PyObject *pythonize_CvMat(cvmat_t *m)
   memtrack_t *o = PyObject_NEW(memtrack_t, &memtrack_Type);
   size_t gap = mat->data.ptr - (uchar*)mat->refcount;
   o->ptr = mat->refcount;
+  o->owner = __LINE__;
+  o->freeptr = true;
   o->size = gap + mat->rows * mat->step;
+  o->backing = NULL;
+  o->backingmat = NULL;
   PyObject *data = PyBuffer_FromReadWriteObject((PyObject*)o, (size_t)gap, mat->rows * mat->step);
   if (data == NULL)
     return NULL;
@@ -2214,11 +2241,14 @@ static PyObject *pythonize_foreign_CvMat(cvmat_t *m)
 #else
   memtrack_t *o = PyObject_NEW(memtrack_t, &memtrack_Type);
   o->ptr = mat->data.ptr;
+  o->owner = __LINE__;
+  o->freeptr = false;
   o->size = mat->rows * mat->step;
+  o->backing = NULL;
+  o->backingmat = mat;
   PyObject *data = PyBuffer_FromReadWriteObject((PyObject*)o, (size_t)0, mat->rows * mat->step);
   if (data == NULL)
     return NULL;
-  Py_INCREF(o);   // XXX - hack to prevent free of this foreign memory
 #endif
   m->data = data;
   m->offset = 0;
@@ -2242,7 +2272,11 @@ static PyObject *pythonize_IplImage(iplimage_t *cva)
   memtrack_t *o = PyObject_NEW(memtrack_t, &memtrack_Type);
   assert(ipl->imageDataOrigin == ipl->imageData);
   o->ptr = ipl->imageDataOrigin;
+  o->owner = __LINE__;
+  o->freeptr = true;
   o->size = ipl->height * ipl->widthStep;
+  o->backing = NULL;
+  o->backingmat = NULL;
   PyObject *data = PyBuffer_FromReadWriteObject((PyObject*)o, (size_t)0, o->size);
   if (data == NULL)
     return NULL;
@@ -2253,13 +2287,11 @@ static PyObject *pythonize_IplImage(iplimage_t *cva)
   return (PyObject*)cva;
 }
 
-static PyObject *pythonize_CvMatND(cvmatnd_t *m)
+static PyObject *pythonize_CvMatND(cvmatnd_t *m, PyObject *backing = NULL)
 {
   //
   // Need to make this CvMatND look like any other, with a Python 
-  // string as its data.
-  // So copy the image data into a Python string object, then release 
-  // it.
+  // buffer object as its data.
   //
 
   CvMatND *mat = m->a;
@@ -2268,15 +2300,20 @@ static PyObject *pythonize_CvMatND(cvmatnd_t *m)
   PyObject *data = PyString_FromStringAndSize((char*)(mat->data.ptr), mat->dim[0].size * mat->dim[0].step);
 #else
   memtrack_t *o = PyObject_NEW(memtrack_t, &memtrack_Type);
-  o->ptr = cvPtr1D(mat, 0);
+  o->ptr = mat->data.ptr;
+  o->owner = __LINE__;
+  o->freeptr = false;
   o->size = cvmatnd_size(mat);
+  Py_XINCREF(backing);
+  o->backing = backing;
+  o->backingmat = mat;
   PyObject *data = PyBuffer_FromReadWriteObject((PyObject*)o, (size_t)0, o->size);
+  Py_DECREF(o); // Now 'data' holds the only reference to 'o'
   if (data == NULL)
     return NULL;
 #endif
   m->data = data;
   m->offset = 0;
-  // cvDecRefData(mat); // Ref count should be zero here, so this is a release
 
   return (PyObject*)m;
 }
@@ -2787,6 +2824,8 @@ static PyObject *pycvfromarray(PyObject *self, PyObject *args, PyObject *kw)
 static PyObject *fromarray(PyObject *o, int allowND)
 {
   PyObject *ao = PyObject_GetAttrString(o, "__array_struct__");
+  PyObject *retval;
+
   if ((ao == NULL) || !PyCObject_Check(ao)) {
     PyErr_SetString(PyExc_TypeError, "object does not have array interface");
     return NULL;
@@ -2847,7 +2886,7 @@ static PyObject *fromarray(PyObject *o, int allowND)
       return (PyObject*)failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument");
     }
     m->a->data.ptr = (uchar*)pai->data;
-    return pythonize_foreign_CvMat(m);
+    retval = pythonize_foreign_CvMat(m);
   } else {
     int dims[CV_MAX_DIM];
     int i;
@@ -2856,8 +2895,11 @@ static PyObject *fromarray(PyObject *o, int allowND)
     cvmatnd_t *m = PyObject_NEW(cvmatnd_t, &cvmatnd_Type);
     ERRWRAP(m->a = cvCreateMatND(pai->nd, dims, type));
     m->a->data.ptr = (uchar*)pai->data;
-    return pythonize_CvMatND(m);
+    
+    retval = pythonize_CvMatND(m, ao);
   }
+  Py_DECREF(ao);
+  return retval;
 }
 #endif
 
