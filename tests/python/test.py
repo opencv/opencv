@@ -1,4 +1,3 @@
-import roslib; roslib.load_manifest('opencv2')
 import unittest
 import random
 import time
@@ -628,7 +627,7 @@ class FunctionTests(OpenCVTests):
             self.assertEqual(aslist(m2), range(5, 9))
             self.assertEqual(aslist(m3), range(6, 8))
 
-    def test_grabCut(self):
+    def xtest_grabCut(self):
         image = self.get_sample("samples/c/lena.jpg", cv.CV_LOAD_IMAGE_COLOR)
         tmp1 = cv.CreateMat(1, 13 * 5, cv.CV_32FC1)
         tmp2 = cv.CreateMat(1, 13 * 5, cv.CV_32FC1)
@@ -1008,9 +1007,9 @@ class AreaTests(OpenCVTests):
 
     def test_leak(self):
         """ If CreateImage is not releasing image storage, then the loop below should use ~4GB of memory. """
-        for i in range(4000):
+        for i in range(64000):
             a = cv.CreateImage((1024,1024), cv.IPL_DEPTH_8U, 1)
-        for i in range(4000):
+        for i in range(64000):
             a = cv.CreateMat(1024, 1024, cv.CV_8UC1)
 
     def test_histograms(self):
