@@ -2905,15 +2905,50 @@ static PyObject *fromarray(PyObject *o, int allowND)
 }
 #endif
 
+class ranges {
+public:
+  Py_ssize_t len;
+  float **rr;
+  ranges() {
+    len = 0;
+    rr = NULL;
+  }
+  int fromobj(PyObject *o, const char *name = "no_name") {
+    PyObject *fi = PySequence_Fast(o, name);
+    if (fi == NULL)
+      return 0;
+    len = PySequence_Fast_GET_SIZE(fi);
+    rr = new float*[len];
+    for (Py_ssize_t i = 0; i < len; i++) {
+      PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
+      floats ff;
+      if (!convert_to_floats(item, &ff))
+        return 0;
+      rr[i] = ff.f;
+    }
+    Py_DECREF(fi);
+    return 1;
+  }
+  ~ranges() {
+    for (Py_ssize_t i = 0; i < len; i++)
+      delete rr[i];
+   delete rr;
+  }
+};
+
+static int ranges_converter(PyObject *o, ranges* dst)
+{
+  return dst->fromobj(o);
+}
+
 static PyObject *pycvCreateHist(PyObject *self, PyObject *args, PyObject *kw)
 {
   const char *keywords[] = { "dims", "type", "ranges", "uniform", NULL };
   PyObject *dims;
   int type;
-  float **ranges = NULL;
   int uniform = 1;
-
-  if (!PyArg_ParseTupleAndKeywords(args, kw, "Oi|O&i", (char**)keywords, &dims, &type, convert_to_floatPTRPTR, (void*)&ranges, &uniform)) {
+  ranges r;
+  if (!PyArg_ParseTupleAndKeywords(args, kw, "Oi|O&i", (char**)keywords, &dims, &type, ranges_converter, (void*)&r, &uniform)) {
     return NULL;
   }
   cvhistogram_t *h = PyObject_NEW(cvhistogram_t, &cvhistogram_Type);
@@ -2927,7 +2962,7 @@ static PyObject *pycvCreateHist(PyObject *self, PyObject *args, PyObject *kw)
   if (!convert_to_CvArr(h->bins, &(h->h.bins), "bins"))
     return NULL;
 
-  ERRWRAP(cvSetHistBinRanges(&(h->h), ranges, uniform));
+  ERRWRAP(cvSetHistBinRanges(&(h->h), r.rr, uniform));
 
   return (PyObject*)h;
 }
