@@ -60,6 +60,7 @@ CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int /*device*/) { throw_nogpu(); retu
 CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor) { throw_nogpu(); return false; }
 CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor) { throw_nogpu(); return false; }
 CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::isCompatibleWith(int device) { throw_nogpu(); return false; }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -207,7 +208,7 @@ CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor)
 }
 
 
-CV_EXPORTS bool isCompatibleWith(int device)
+CV_EXPORTS bool cv::gpu::isCompatibleWith(int device)
 {
     // According to the CUDA C Programming Guide Version 3.2: "PTX code 
     // produced for some specific compute capability can always be compiled to
