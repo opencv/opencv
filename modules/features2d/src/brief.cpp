@@ -49,6 +49,9 @@
 #include <arm_neon.h>
 #endif
 
+#include <iostream>
+#include <iomanip>
+
 using namespace cv;
 
 inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
@@ -116,7 +119,7 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
   static uint64_t features = android_getCpuFeatures();
   if ((features & ANDROID_CPU_ARM_FEATURE_NEON))
   {
-    for (int i = 0; i < size; i += 16)
+    for (size_t i = 0; i < size; i += 16)
     {
       uint8x16_t A_vec = vld1q_u8 (a + i);
       uint8x16_t B_vec = vld1q_u8 (b + i);
@@ -134,13 +137,26 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
     }
   }
   else
-#endif
-  for (int i = 0; i < size; i += sizeof(unsigned long))
+#endif  
+  size_t i;
+  const size_t modulo = size % sizeof(size_t);
+  const size_t end = size - modulo;
+  for (i = 0; i < end; i += sizeof(size_t))
   {
-    unsigned long a2 = *reinterpret_cast<const unsigned long*> (a + i);
-    unsigned long b2 = *reinterpret_cast<const unsigned long*> (b + i);
+    size_t a2 = *reinterpret_cast<const size_t*> (a + i);
+    size_t b2 = *reinterpret_cast<const size_t*> (b + i);
     result += __builtin_popcountl(a2 ^ b2);
   }
+  if (modulo)
+  {
+    //in the case where size is not divisible by sizeof(size_t)
+    //need to mask of the bits at the end  
+    size_t a2=0,b2=0;
+    memcpy(&a2,a+end,modulo);
+    memcpy(&b2,b+end,modulo);
+    //std::cout << std::hex << (a2^b2) << std::endl;
+    result += __builtin_popcountl(a2 ^ b2);
+  }  
   return result;
 #else
   return HammingLUT()(a,b,size);
