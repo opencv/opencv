@@ -57,9 +57,13 @@ CV_EXPORTS int cv::gpu::getNumberOfSMs(int /*device*/) { throw_nogpu(); return 0
 CV_EXPORTS void cv::gpu::getGpuMemInfo(size_t& /*free*/, size_t& /*total*/)  { throw_nogpu(); } 
 CV_EXPORTS bool cv::gpu::hasNativeDoubleSupport(int /*device*/) { throw_nogpu(); return false; }
 CV_EXPORTS bool cv::gpu::hasAtomicsSupport(int /*device*/) { throw_nogpu(); return false; }
-CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor) { throw_nogpu(); return false; }
-CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor) { throw_nogpu(); return false; }
-CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasPtxVersion(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasLessOrEqualPtxVersion(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasGreaterOrEqualPtxVersion(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasCubinVersion(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasGreaterOrEqualCubinVersion(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasVersion(int major, int minor) { throw_nogpu(); return false; }
+CV_EXPORTS bool cv::gpu::hasGreaterOrEqualVersion(int major, int minor) { throw_nogpu(); return false; }
 CV_EXPORTS bool cv::gpu::isCompatibleWith(int device) { throw_nogpu(); return false; }
 
 
@@ -140,37 +144,63 @@ namespace
     template <typename Comparer>
     bool checkPtxVersion(int major, int minor, Comparer cmp) 
     {
-#ifdef OPENCV_GPU_CUDA_ARCH_10
+#ifdef OPENCV_ARCH_PTX_10
         if (cmp(1, 0, major, minor)) return true;
 #endif
 
-#ifdef OPENCV_GPU_CUDA_ARCH_11
+#ifdef OPENCV_ARCH_PTX_11
         if (cmp(1, 1, major, minor)) return true;
 #endif
 
-#ifdef OPENCV_GPU_CUDA_ARCH_12
+#ifdef OPENCV_ARCH_PTX_12
         if (cmp(1, 2, major, minor)) return true;
 #endif
 
-#ifdef OPENCV_GPU_CUDA_ARCH_13
+#ifdef OPENCV_ARCH_PTX_13
         if (cmp(1, 3, major, minor)) return true;
 #endif
 
-#ifdef OPENCV_GPU_CUDA_ARCH_20
+#ifdef OPENCV_ARCH_PTX_20
         if (cmp(2, 0, major, minor)) return true;
 #endif
 
-#ifdef OPENCV_GPU_CUDA_ARCH_21
+#ifdef OPENCV_ARCH_PTX_21
         if (cmp(2, 1, major, minor)) return true;
 #endif
 
         return false;
     }
-}
 
+    template <typename Comparer>
+    bool checkCubinVersion(int major, int minor, Comparer cmp) 
+    {
+#ifdef OPENCV_ARCH_GPU_10
+        if (cmp(1, 0, major, minor)) return true;
+#endif
 
-CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor)
-{
+#ifdef OPENCV_ARCH_GPU_11
+        if (cmp(1, 1, major, minor)) return true;
+#endif
+
+#ifdef OPENCV_ARCH_GPU_12
+        if (cmp(1, 2, major, minor)) return true;
+#endif
+
+#ifdef OPENCV_ARCH_GPU_13
+        if (cmp(1, 3, major, minor)) return true;
+#endif
+
+#ifdef OPENCV_ARCH_GPU_20
+        if (cmp(2, 0, major, minor)) return true;
+#endif
+
+#ifdef OPENCV_ARCH_GPU_21
+        if (cmp(2, 1, major, minor)) return true;
+#endif
+
+        return false;
+    }
+
     struct ComparerEqual 
     {
         bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
@@ -178,12 +208,7 @@ CV_EXPORTS bool cv::gpu::ptxVersionIs(int major, int minor)
             return lhs1 == rhs1 && lhs2 == rhs2;
         }
     };
-    return checkPtxVersion(major, minor, ComparerEqual());
-}
 
-
-CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor)
-{
     struct ComparerLessOrEqual
     {
         bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
@@ -191,12 +216,7 @@ CV_EXPORTS bool cv::gpu::ptxVersionIsLessOrEqual(int major, int minor)
             return lhs1 < rhs1 || (lhs1 == rhs1 && lhs2 <= rhs2);
         }
     };
-    return checkPtxVersion(major, minor, ComparerLessOrEqual());
-}
 
-
-CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor)
-{
     struct ComparerGreaterOrEqual
     {
         bool operator()(int lhs1, int lhs2, int rhs1, int rhs2) const
@@ -204,7 +224,49 @@ CV_EXPORTS bool cv::gpu::ptxVersionIsGreaterOrEqual(int major, int minor)
             return lhs1 > rhs1 || (lhs1 == rhs1 && lhs2 >= rhs2);
         }
     };
+}
+
+
+CV_EXPORTS bool cv::gpu::hasPtxVersion(int major, int minor)
+{
+    return checkPtxVersion(major, minor, ComparerEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::hasLessOrEqualPtxVersion(int major, int minor)
+{
+    return checkPtxVersion(major, minor, ComparerLessOrEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::hasGreaterOrEqualPtxVersion(int major, int minor)
+{
     return checkPtxVersion(major, minor, ComparerGreaterOrEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::hasCubinVersion(int major, int minor)
+{
+    return checkCubinVersion(major, minor, ComparerEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::hasGreaterOrEqualCubinVersion(int major, int minor)
+{
+    return checkCubinVersion(major, minor, ComparerGreaterOrEqual());
+}
+
+
+CV_EXPORTS bool cv::gpu::hasVersion(int major, int minor)
+{
+    return hasPtxVersion(major, minor) || hasCubinVersion(major, minor);
+}
+
+
+CV_EXPORTS bool cv::gpu::hasGreaterOrEqualVersion(int major, int minor)
+{
+    return hasGreaterOrEqualPtxVersion(major, minor) || 
+           hasGreaterOrEqualCubinVersion(major, minor);
 }
 
 
@@ -217,7 +279,16 @@ CV_EXPORTS bool cv::gpu::isCompatibleWith(int device)
     int major, minor;
     getComputeCapability(device, major, minor);
 
-    return ptxVersionIsLessOrEqual(major, minor);
+    // Check PTX compatibility
+    if (hasLessOrEqualPtxVersion(major, minor))
+        return true;
+
+    // Check CUBIN compatibilty
+    for (int i = 0; i <= minor; ++i)
+        if (hasCubinVersion(major, i))
+            return true;
+
+    return false;
 }
 
 #endif

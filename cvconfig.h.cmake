@@ -163,23 +163,21 @@
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
 
-/* The project was generated with 1.0 NVIDIA device arch support */
-#cmakedefine OPENCV_GPU_CUDA_ARCH_10
+/* Compile for 'real' NVIDIA GPU architecture */
+#cmakedefine OPENCV_ARCH_GPU_10
+#cmakedefine OPENCV_ARCH_GPU_11
+#cmakedefine OPENCV_ARCH_GPU_12
+#cmakedefine OPENCV_ARCH_GPU_13
+#cmakedefine OPENCV_ARCH_GPU_20
+#cmakedefine OPENCV_ARCH_GPU_21
 
-/* The project was generated with 1.1 NVIDIA device arch support */
-#cmakedefine OPENCV_GPU_CUDA_ARCH_11
-
-/* The project was generated with 1.2 NVIDIA device arch support */
-#cmakedefine OPENCV_GPU_CUDA_ARCH_12
-
-/* The project was generated with 1.3 NVIDIA device arch support */
-#cmakedefine OPENCV_GPU_CUDA_ARCH_13
-
-/* The project was generated with 2.0 NVIDIA device arch support */
-#cmakedefine OPENCV_GPU_CUDA_ARCH_20
-
-/* The project was generated with 2.1 NVIDIA device arch support */
-#cmakedefine OPENCV_GPU_CUDA_ARCH_21
+/* Compile for 'virtual' NVIDIA PTX architecture */
+#cmakedefine OPENCV_ARCH_PTX_10
+#cmakedefine OPENCV_ARCH_PTX_11
+#cmakedefine OPENCV_ARCH_PTX_12
+#cmakedefine OPENCV_ARCH_PTX_13
+#cmakedefine OPENCV_ARCH_PTX_20
+#cmakedefine OPENCV_ARCH_PTX_21
 
 /* VideoInput library */
 #cmakedefine HAVE_VIDEOINPUT

@@ -700,48 +700,55 @@ endif()
 
 ############################### CUDA ################################
 
-if (WITH_CUDA)
+if(WITH_CUDA)
     find_package(CUDA 3.2)
-    if (CUDA_FOUND)
+    
+    if(CUDA_FOUND)
         set(HAVE_CUDA 1)
         message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-		set(CUDA_COMPUTE_CAPABILITIES " 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute capability")
-        set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
+		set(CUDA_ARCH_GPU "1.1 1.2 1.3 2.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for")
+        set(CUDA_ARCH_PTX "1.1 1.3 2.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")       
         
-        string(REGEX MATCH "1\\.0" STR_OPENCV_GPU_CUDA_ARCH_10 ${CUDA_COMPUTE_CAPABILITIES})
-        string(REGEX MATCH "1\\.1" STR_OPENCV_GPU_CUDA_ARCH_11 ${CUDA_COMPUTE_CAPABILITIES})
-        string(REGEX MATCH "1\\.2" STR_OPENCV_GPU_CUDA_ARCH_12 ${CUDA_COMPUTE_CAPABILITIES})
-        string(REGEX MATCH "1\\.3" STR_OPENCV_GPU_CUDA_ARCH_13 ${CUDA_COMPUTE_CAPABILITIES})
-        string(REGEX MATCH "2\\.0" STR_OPENCV_GPU_CUDA_ARCH_20 ${CUDA_COMPUTE_CAPABILITIES})
-        string(REGEX MATCH "2\\.1" STR_OPENCV_GPU_CUDA_ARCH_21 ${CUDA_COMPUTE_CAPABILITIES})
+        # Architectures to be searched for in user's input
+        set (CUDA_ARCH_ALL 1.0 1.1 1.2 1.3 2.0 2.1)
         
-        string(COMPARE EQUAL "1.0" "${STR_OPENCV_GPU_CUDA_ARCH_10}" OPENCV_GPU_CUDA_ARCH_10)
-        string(COMPARE EQUAL "1.1" "${STR_OPENCV_GPU_CUDA_ARCH_11}" OPENCV_GPU_CUDA_ARCH_11)
-        string(COMPARE EQUAL "1.2" "${STR_OPENCV_GPU_CUDA_ARCH_12}" OPENCV_GPU_CUDA_ARCH_12)
-        string(COMPARE EQUAL "1.3" "${STR_OPENCV_GPU_CUDA_ARCH_13}" OPENCV_GPU_CUDA_ARCH_13)
-        string(COMPARE EQUAL "2.0" "${STR_OPENCV_GPU_CUDA_ARCH_20}" OPENCV_GPU_CUDA_ARCH_20)
-        string(COMPARE EQUAL "2.1" "${STR_OPENCV_GPU_CUDA_ARCH_21}" OPENCV_GPU_CUDA_ARCH_21)
-
-        set(CUDA_NVCC_FLAGS_NUM "")
-
-        while(NOT ${CUDA_NVCC_FLAGS_ARCH} STREQUAL "")
-            string(REGEX MATCH "[0-9]+.[0-9]+" RESULT_NUM ${CUDA_NVCC_FLAGS_ARCH})
-            string(REGEX MATCHALL "[0-9]" RESULT_STR ${RESULT_NUM})
-            string(REGEX REPLACE ";" "\ " RESULT ${RESULT_STR})
-            list(APPEND CUDA_NVCC_FLAGS_NUM ${RESULT})
-            string(REGEX REPLACE "${RESULT_NUM}" "\ " CUDA_NVCC_FLAGS_ARCH_STR ${CUDA_NVCC_FLAGS_ARCH})
-            string(STRIP ${CUDA_NVCC_FLAGS_ARCH_STR} CUDA_NVCC_FLAGS_ARCH)
-        endwhile()
-
-        set (OpenCV_CUDA_CC "")
-        set (loop_var "")
-        foreach( loop_var IN LISTS CUDA_NVCC_FLAGS_NUM)
-            set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_${loop_var},code=sm_${loop_var})
-            set (OpenCV_CUDA_CC  ${OpenCV_CUDA_CC}  -gencode arch=compute_${loop_var},code=sm_${loop_var})
+        # Parse user's input
+        foreach(ARCH IN LISTS CUDA_ARCH_ALL)            
+            string(REGEX MATCH ${ARCH} ARCH_GPU_MATCH "${CUDA_ARCH_GPU}") 
+            string(REGEX MATCH ${ARCH} ARCH_PTX_MATCH "${CUDA_ARCH_PTX}") 
+            string(REGEX REPLACE "\\." "" ARCH_GPU_AS_NUM "${ARCH_GPU_MATCH}")
+            string(REGEX REPLACE "\\." "" ARCH_PTX_AS_NUM "${ARCH_PTX_MATCH}")
+            
+            # Define variables indicating the architectures specified by user
+            if(NOT ${ARCH_GPU_AS_NUM} STREQUAL "")
+                set(OPENCV_ARCH_GPU_${ARCH_GPU_AS_NUM} 1)
+            endif()            
+            if(NOT ${ARCH_PTX_AS_NUM} STREQUAL "")
+                set(OPENCV_ARCH_PTX_${ARCH_PTX_AS_NUM} 1)
+            endif()
+        endforeach()       
+        
+        set(NVCC_FLAGS_EXTRA "")
+        
+        # Tell nvcc to add binaries for the specified GPUs
+        string(REGEX REPLACE "\\." "" CUDA_ARCH_GPU "${CUDA_ARCH_GPU}")
+        string(REGEX MATCHALL "[0-9]+" CUDA_ARCH_GPU_LIST "${CUDA_ARCH_GPU}")
+        foreach(ARCH_GPU IN LISTS CUDA_ARCH_GPU_LIST)
+            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH_GPU},code=sm_${ARCH_GPU})
         endforeach()
-
-        ### set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${OpenCV_COMPUTE_CAPABILITIES})
+        
+        # Tell nvcc to add PTX intermediate code for the specified architectures
+        string(REGEX REPLACE "\\." "" CUDA_ARCH_PTX "${CUDA_ARCH_PTX}")
+        string(REGEX MATCHALL "[0-9]+" CUDA_ARCH_PTX_LIST "${CUDA_ARCH_PTX}")
+        foreach(ARCH_PTX IN LISTS CUDA_ARCH_PTX_LIST)
+            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH_PTX},code=compute_${ARCH_PTX})
+        endforeach()               
+             
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
+        message(STATUS "CUDA NVCC flags: ${CUDA_NVCC_FLAGS}")
+        
+        set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
     endif()
 endif()
 
