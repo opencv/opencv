@@ -59,10 +59,10 @@ struct CV_GpuMeanShiftTest : public CvTest
         int major, minor;
         cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
         
-        if (major == 1)
-            img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result_CC1X.png");
-        else
+        if (cv::gpu::hasGreaterOrEqualVersion(2, 0) && major >= 2)
             img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
+        else
+            img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result_CC1X.png");
 
         if (img.empty() || img_template.empty())
         {
@@ -205,10 +205,10 @@ struct CV_GpuMeanShiftProcTest : public CvTest
             int major, minor;
             cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
 
-            if (major == 1)
-                fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_CC1X.yaml", cv::FileStorage::READ);
-            else
+            if (cv::gpu::hasGreaterOrEqualVersion(2, 0) && major >= 2)
                 fs.open(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
+            else
+                fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_CC1X.yaml", cv::FileStorage::READ);
             fs["spmap"] >> spmap_template;
 
             for (int y = 0; y < spmap.rows; ++y) {

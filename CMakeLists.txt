@@ -707,8 +707,8 @@ if(WITH_CUDA)
         set(HAVE_CUDA 1)
         message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-        set(CUDA_ARCH_GPU "1.1 1.2 1.3 2.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for")
-        set(CUDA_ARCH_PTX "1.1 1.3 2.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")       
+        set(CUDA_ARCH_GPU "1.3 2.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for")
+        set(CUDA_ARCH_PTX "1.1 1.3" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")       
         
         # Architectures to be searched for in user's input
         set (CUDA_ARCH_ALL 1.0 1.1 1.2 1.3 2.0 2.1)
