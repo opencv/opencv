@@ -64,6 +64,16 @@ struct CV_GpuMatchTemplateTest: CvTest
     {
         try
         {
+            bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                             gpu::hasNativeDoubleSupport(gpu::getDevice());
+            if (!double_ok)
+            {
+                // For sqrIntegral
+                ts->printf(CvTS::CONSOLE, "\nCode and device double support is required (CC >= 1.3)");
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+
             Mat image, templ;
             Mat dst_gold;
             gpu::GpuMat dst;
@@ -234,6 +244,16 @@ struct CV_GpuMatchTemplateFindPatternInBlackTest: CvTest
     {
         try
         {
+            bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                             gpu::hasNativeDoubleSupport(gpu::getDevice());
+            if (!double_ok)
+            {
+                // For sqrIntegral
+                ts->printf(CvTS::CONSOLE, "\nCode and device double support is required (CC >= 1.3)");
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+
             Mat image = imread(std::string(ts->get_data_path()) + "matchtemplate/black.png");
             if (image.empty())
             {

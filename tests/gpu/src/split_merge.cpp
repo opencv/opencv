@@ -63,8 +63,12 @@ struct CV_MergeTest : public CvTest
 
 void CV_MergeTest::can_merge(size_t rows, size_t cols)
 {
+    bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+    size_t depth_end = double_ok ? CV_64F : CV_32F;
+
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
-        for (size_t depth = CV_8U; depth <= CV_64F; ++depth)
+        for (size_t depth = CV_8U; depth <= depth_end; ++depth)
         {
             vector<Mat> src;
             for (size_t i = 0; i < num_channels; ++i)
@@ -101,8 +105,12 @@ void CV_MergeTest::can_merge(size_t rows, size_t cols)
 
 void CV_MergeTest::can_merge_submatrixes(size_t rows, size_t cols)
 {
+    bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+    size_t depth_end = double_ok ? CV_64F : CV_32F;
+
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
-        for (size_t depth = CV_8U; depth <= CV_64F; ++depth)
+        for (size_t depth = CV_8U; depth <= depth_end; ++depth)
         {
             vector<Mat> src;
             for (size_t i = 0; i < num_channels; ++i) 
@@ -171,8 +179,12 @@ struct CV_SplitTest : public CvTest
 
 void CV_SplitTest::can_split(size_t rows, size_t cols)
 {
+    bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+    size_t depth_end = double_ok ? CV_64F : CV_32F;
+
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
-        for (size_t depth = CV_8U; depth <= CV_64F; ++depth)
+        for (size_t depth = CV_8U; depth <= depth_end; ++depth)
         {
             Mat src(rows, cols, CV_MAKETYPE(depth, num_channels), Scalar(1.0, 2.0, 3.0, 4.0));   
             vector<Mat> dst;
@@ -209,8 +221,12 @@ void CV_SplitTest::can_split(size_t rows, size_t cols)
 
 void CV_SplitTest::can_split_submatrix(size_t rows, size_t cols)
 {
+    bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+    size_t depth_end = double_ok ? CV_64F : CV_32F;
+
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
-        for (size_t depth = CV_8U; depth <= CV_64F; ++depth)
+        for (size_t depth = CV_8U; depth <= depth_end; ++depth)
         {
             Mat src_data(rows * 2, cols * 2, CV_MAKETYPE(depth, num_channels), Scalar(1.0, 2.0, 3.0, 4.0));   
             Mat src(src_data(Range(rows / 2, rows / 2 + rows), Range(cols / 2, cols / 2 + cols)));
@@ -276,8 +292,12 @@ struct CV_SplitMergeTest : public CvTest
 };
 
 void CV_SplitMergeTest::can_split_merge(size_t rows, size_t cols) {
+    bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+    size_t depth_end = double_ok ? CV_64F : CV_32F;
+
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
-        for (size_t depth = CV_8U; depth <= CV_64F; ++depth)
+        for (size_t depth = CV_8U; depth <= depth_end; ++depth)
         {
             Mat orig(rows, cols, CV_MAKETYPE(depth, num_channels), Scalar(1.0, 2.0, 3.0, 4.0));   
             gpu::GpuMat dev_orig(orig);

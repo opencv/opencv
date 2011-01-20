@@ -277,7 +277,10 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 
     CV_Assert(src.channels() == 1);
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
-    CV_Assert(src.type() != CV_64F || hasNativeDoubleSupport(getDevice()));
+
+    bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
+                     hasNativeDoubleSupport(getDevice());
+    CV_Assert(src.type() != CV_64F || double_ok);
 
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
@@ -373,7 +376,10 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
 
     CV_Assert(src.channels() == 1);
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
-    CV_Assert(src.type() != CV_64F || hasNativeDoubleSupport(getDevice()));
+
+    bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
+                     hasNativeDoubleSupport(getDevice());
+    CV_Assert(src.type() != CV_64F || double_ok);
 
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
@@ -452,7 +458,10 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
             countNonZeroCaller<double> };
 
     CV_Assert(src.channels() == 1);
-    CV_Assert(src.type() != CV_64F || hasNativeDoubleSupport(getDevice()));
+
+    bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
+                     hasNativeDoubleSupport(getDevice());
+    CV_Assert(src.type() != CV_64F || double_ok);
 
     Size buf_size;
     getBufSizeRequired(src.cols, src.rows, buf_size.width, buf_size.height);

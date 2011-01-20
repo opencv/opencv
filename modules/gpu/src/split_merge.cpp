@@ -73,6 +73,10 @@ namespace cv { namespace gpu { namespace split_merge
         CV_Assert(src);
         CV_Assert(n > 0);
 
+        bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
+                         hasNativeDoubleSupport(getDevice());
+        CV_Assert(src[0].depth() != CV_64F || double_ok);
+
         int depth = src[0].depth();
         Size size = src[0].size();
 
@@ -111,6 +115,10 @@ namespace cv { namespace gpu { namespace split_merge
     void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream) 
     {
         CV_Assert(dst);
+
+        bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
+                         hasNativeDoubleSupport(getDevice());
+        CV_Assert(src.depth() != CV_64F || double_ok);
 
         int depth = src.depth();
         int num_channels = src.channels();

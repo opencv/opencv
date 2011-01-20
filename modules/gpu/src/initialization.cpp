@@ -222,7 +222,7 @@ CV_EXPORTS bool cv::gpu::isCompatibleWith(int device)
     if (hasLessOrEqualPtxVersion(major, minor))
         return true;
 
-    // Check CUBIN compatibilty
+    // Check CUBIN compatibility
     for (int i = minor; i >= 0; --i)
         if (hasCubinVersion(major, i))
             return true;

@@ -659,11 +659,10 @@ struct CV_GpuMinMaxTest: public CvTest
     {
         try
         {
-            int depth_end;
-            if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) 
-                depth_end = CV_64F; 
-            else 
-                depth_end = CV_32F;
+            bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                             gpu::hasNativeDoubleSupport(gpu::getDevice());
+            int depth_end = double_ok ? CV_64F : CV_32F;
+
             for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
                 for (int i = 0; i < 3; ++i)
@@ -794,11 +793,10 @@ struct CV_GpuMinMaxLocTest: public CvTest
     {
         try 
         {
-            int depth_end;
-            if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) 
-                depth_end = CV_64F; 
-            else 
-                depth_end = CV_32F;
+            bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+                             gpu::hasNativeDoubleSupport(gpu::getDevice());
+            int depth_end = double_ok ? CV_64F : CV_32F;
+
             for (int depth = CV_8U; depth <= depth_end; ++depth)
             {
                 int rows = 1, cols = 3;
