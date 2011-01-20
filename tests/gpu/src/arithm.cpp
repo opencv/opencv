@@ -918,7 +918,7 @@ struct CV_GpuCountNonZeroTest: CvTest
 
         if (n != n_gold)
         {
-            ts->printf(CvTS::CONSOLE, "%d %d %d %d %d\n", n, n_gold, depth, cols, rows);
+            ts->printf(CvTS::LOG, "%d %d %d %d %d\n", n, n_gold, depth, cols, rows);
             n_gold = cv::countNonZero(src);
         }
 

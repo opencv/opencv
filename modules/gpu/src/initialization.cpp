@@ -145,16 +145,17 @@ namespace
     template <typename Comparer>
     bool compare(const std::string& str, int x, Comparer cmp)
     {
+        if (str.find_first_not_of(" ") == string::npos)
+            return false;
+
         std::stringstream stream(str);
-
         int val;
-        stream >> val;
 
-        while (!stream.eof() && !stream.fail())
+        while (!stream.eof())
         {
+            stream >> val;
             if (cmp(val, x))
                 return true;
-            stream >> val;
         }
 
         return false;
