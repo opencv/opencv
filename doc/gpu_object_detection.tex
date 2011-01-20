@@ -82,13 +82,13 @@ Creates HOG descriptor and detector.
 \cvCppFunc{gpu::HOGDescriptor::getDescriptorSize}
 Returns number of coefficients required for the classification.
 
-\cvdefCpp{size\_t getDescriptorSize() const;}
+\cvdefCpp{size\_t HOGDescriptor::getDescriptorSize() const;}
 
 
 \cvCppFunc{gpu::HOGDescriptor::getBlockHistogramSize}
 Returns block histogram size.
 
-\cvdefCpp{size\_t getBlockHistogramSize() const;}
+\cvdefCpp{size\_t HOGDescriptor::getBlockHistogramSize() const;}
 
 
 \cvCppFunc{gpu::HOGDescriptor::setSVMDetector}
@@ -100,25 +100,25 @@ Sets coefficients for the linear SVM classifier.
 \cvCppFunc{gpu::HOGDescriptor::getDefaultPeopleDetector}
 Returns coefficients of the classifier trained for people detection (for default window size).
 
-\cvdefCpp{static vector<float> getDefaultPeopleDetector();}
+\cvdefCpp{static vector<float> HOGDescriptor::getDefaultPeopleDetector();}
 
 
 \cvCppFunc{gpu::HOGDescriptor::getPeopleDetector48x96}
 Returns coefficients of the classifier trained for people detection (for 48x96 windows).
 
-\cvdefCpp{static vector<float> getPeopleDetector48x96();}
+\cvdefCpp{static vector<float> HOGDescriptor::getPeopleDetector48x96();}
 
 
 \cvCppFunc{gpu::HOGDescriptor::getPeopleDetector64x128}
 Returns coefficients of the classifier trained for people detection (for 64x128 windows).
 
-\cvdefCpp{static vector<float> getPeopleDetector64x128();}
+\cvdefCpp{static vector<float> HOGDescriptor::getPeopleDetector64x128();}
 
 
 \cvCppFunc{gpu::HOGDescriptor::detect}
 Perfroms object detection without multiscale window.
 
-\cvdefCpp{void detect(const GpuMat\& img, vector<Point>\& found\_locations,\par
+\cvdefCpp{void HOGDescriptor::detect(const GpuMat\& img, vector<Point>\& found\_locations,\par
              double hit\_threshold=0, Size win\_stride=Size(),\par
              Size padding=Size());}
 
@@ -134,10 +134,10 @@ Perfroms object detection without multiscale window.
 \cvCppFunc{gpu::HOGDescriptor::detectMultiScale}
 Perfroms object detection with multiscale window.
 
-\cvdefCpp{void detectMultiScale(const GpuMat\& img, vector<Rect>\& found\_locations,\par
-                      double hit\_threshold=0, Size win\_stride=Size(),\par
-                      Size padding=Size(), double scale0=1.05,\par
-                      int group\_threshold=2);}
+\cvdefCpp{void HOGDescriptor::detectMultiScale(const GpuMat\& img,\par
+  vector<Rect>\& found\_locations, double hit\_threshold=0,\par
+  Size win\_stride=Size(), Size padding=Size(),\par
+  double scale0=1.05, int group\_threshold=2);}
 
 \begin{description}
 \cvarg{img}{Source image. See \cvCppCross{gpu::HOGDescriptor::detect} for type limitations.}
@@ -154,9 +154,9 @@ See \cvCppCross{groupRectangles}.}
 \cvCppFunc{gpu::HOGDescriptor::getDescriptors}
 Returns block descriptors computed for the whole image. It's mainly used for classifier learning purposes.
 
-\cvdefCpp{void getDescriptors(const GpuMat\& img, Size win\_stride,\par
-                    GpuMat\& descriptors,\par
-                    int descr\_format=DESCR\_FORMAT\_COL\_BY\_COL);}
+\cvdefCpp{void HOGDescriptor::getDescriptors(const GpuMat\& img,\par
+  Size win\_stride, GpuMat\& descriptors,\par
+  int descr\_format=DESCR\_FORMAT\_COL\_BY\_COL);}
 
 \begin{description}
 \cvarg{img}{Source image. See \cvCppCross{gpu::HOGDescriptor::detect} for type limitations.}

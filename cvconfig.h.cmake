@@ -163,21 +163,14 @@
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
 
-/* Compile for 'real' NVIDIA GPU architecture */
-#cmakedefine OPENCV_ARCH_GPU_10
-#cmakedefine OPENCV_ARCH_GPU_11
-#cmakedefine OPENCV_ARCH_GPU_12
-#cmakedefine OPENCV_ARCH_GPU_13
-#cmakedefine OPENCV_ARCH_GPU_20
-#cmakedefine OPENCV_ARCH_GPU_21
+/* Compile for 'real' NVIDIA GPU architectures */
+#define OPENCV_ARCH_GPU "${ARCH_GPU_NO_POINTS}"
 
-/* Compile for 'virtual' NVIDIA PTX architecture */
-#cmakedefine OPENCV_ARCH_PTX_10
-#cmakedefine OPENCV_ARCH_PTX_11
-#cmakedefine OPENCV_ARCH_PTX_12
-#cmakedefine OPENCV_ARCH_PTX_13
-#cmakedefine OPENCV_ARCH_PTX_20
-#cmakedefine OPENCV_ARCH_PTX_21
+/* Compile for 'virtual' NVIDIA PTX architectures */
+#define OPENCV_ARCH_PTX "${ARCH_PTX_NO_POINTS}"
+
+/* Create PTX or CUBIN for 1.0 compute capability */
+#cmakedefine OPENCV_ARCH_GPU_OR_PTX_10
 
 /* VideoInput library */
 #cmakedefine HAVE_VIDEOINPUT

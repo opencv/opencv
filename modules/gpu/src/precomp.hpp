@@ -85,6 +85,10 @@
     #error "Insufficient NPP version, please update it."
 #endif
 
+#if defined(OPENCV_ARCH_GPU_OR_PTX_10)
+    #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
+#endif
+
     static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The called functionality is disabled for current build or platform"); }
 
 #else /* defined(HAVE_CUDA) */

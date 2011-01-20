@@ -708,47 +708,36 @@ if(WITH_CUDA)
         message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
         set(CUDA_ARCH_GPU "1.3 2.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for")
-        set(CUDA_ARCH_PTX "1.1 1.3" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")       
+        set(CUDA_ARCH_PTX "1.1 1.3" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")              
         
-        # Architectures to be searched for in user's input
-        set (CUDA_ARCH_ALL 1.0 1.1 1.2 1.3 2.0 2.1)
+        # These variables are used in config templates
+        string(REGEX REPLACE "\\." "" ARCH_GPU_NO_POINTS "${CUDA_ARCH_GPU}")
+        string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
         
-        # Parse user's input
-        foreach(ARCH IN LISTS CUDA_ARCH_ALL)            
-            string(REGEX MATCH ${ARCH} ARCH_GPU_MATCH "${CUDA_ARCH_GPU}") 
-            string(REGEX MATCH ${ARCH} ARCH_PTX_MATCH "${CUDA_ARCH_PTX}") 
-            string(REGEX REPLACE "\\." "" ARCH_GPU_AS_NUM "${ARCH_GPU_MATCH}")
-            string(REGEX REPLACE "\\." "" ARCH_PTX_AS_NUM "${ARCH_PTX_MATCH}")
-            
-            # Define variables indicating the architectures specified by user
-            if(NOT ${ARCH_GPU_AS_NUM} STREQUAL "")
-                set(OPENCV_ARCH_GPU_${ARCH_GPU_AS_NUM} 1)
-            endif()            
-            if(NOT ${ARCH_PTX_AS_NUM} STREQUAL "")
-                set(OPENCV_ARCH_PTX_${ARCH_PTX_AS_NUM} 1)
-            endif()
-        endforeach()       
+        # Ckeck if user specified 1.0 compute capability
+        string(REGEX MATCH "1.0" HAS_ARCH_10 "${CUDA_ARCH_GPU} ${CUDA_ARCH_PTX}")
+        if(NOT ${HAS_ARCH_10} STREQUAL "")
+            set(OPENCV_ARCH_GPU_OR_PTX_10 1)
+        endif()
         
         set(NVCC_FLAGS_EXTRA "")
         
         # Tell nvcc to add binaries for the specified GPUs
-        string(REGEX REPLACE "\\." "" CUDA_ARCH_GPU "${CUDA_ARCH_GPU}")
-        string(REGEX MATCHALL "[0-9]+" CUDA_ARCH_GPU_LIST "${CUDA_ARCH_GPU}")
-        foreach(ARCH_GPU IN LISTS CUDA_ARCH_GPU_LIST)
-            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH_GPU},code=sm_${ARCH_GPU})
+        string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_GPU_NO_POINTS}")
+        foreach(ARCH IN LISTS ARCH_LIST)
+            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=sm_${ARCH})
         endforeach()
         
         # Tell nvcc to add PTX intermediate code for the specified architectures
-        string(REGEX REPLACE "\\." "" CUDA_ARCH_PTX "${CUDA_ARCH_PTX}")
-        string(REGEX MATCHALL "[0-9]+" CUDA_ARCH_PTX_LIST "${CUDA_ARCH_PTX}")
-        foreach(ARCH_PTX IN LISTS CUDA_ARCH_PTX_LIST)
-            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH_PTX},code=compute_${ARCH_PTX})
+        string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
+        foreach(ARCH IN LISTS ARCH_LIST)
+            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=compute_${ARCH})
         endforeach()               
-             
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
-        message(STATUS "CUDA NVCC flags: ${CUDA_NVCC_FLAGS}")
         
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})        
         set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
+        
+        message(STATUS "CUDA NVCC flags: ${CUDA_NVCC_FLAGS}")
     endif()
 endif()
 
