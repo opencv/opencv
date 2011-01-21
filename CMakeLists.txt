@@ -323,6 +323,7 @@ if(WIN32)
     set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
 endif()
 
+set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
 
 # ===================================================
 # Macros that checks if module have been installed.
@@ -753,6 +754,28 @@ if (WIN32 AND WITH_VIDEOINPUT)
   endif()
 endif()
 
+############################### OpenNI ################################
+set(HAVE_OPENNI FALSE)
+set(HAVE_PRIME_SENSOR_FOR_OPENNI FALSE)
+
+if(WITH_OPENNI)
+    # find OpenNI library
+    unset(OPENNI_LIBRARY CACHE)
+    unset(PRIME_SENSOR_MODULES_FOR_OPENNI CACHE)
+    find_library(OPENNI_LIBRARY "OpenNI" PATHS "/usr/lib" "c:/Program Files/OpenNI/Lib" DOC "OpenNI library")
+    if(OPENNI_LIBRARY)
+        set(HAVE_OPENNI TRUE)
+        # the check: are PrimeSensor Modules for OpenNI installed?
+		if(WIN32)
+			find_file(PRIME_SENSOR_MODULES_FOR_OPENNI "XnCore.dll" PATHS "c:/Program Files/Prime Sense/Sensor/Bin" DOC "Core library of PrimeSensor Modules for OpenNI")
+		elseif(UNIX OR APPLE)
+			find_library(PRIME_SENSOR_MODULES_FOR_OPENNI "XnCore" PATHS "/usr/lib" DOC "Core library of PrimeSensor Modules for OpenNI")
+		endif()
+		if(PRIME_SENSOR_MODULES_FOR_OPENNI)
+            set(HAVE_PRIME_SENSOR_FOR_OPENNI TRUE)
+        endif()
+    endif()
+endif() #if(WITH_OPENNI)
 
 ############################## Eigen2 ##############################
 
@@ -1330,6 +1353,12 @@ else()
 message(STATUS "    OpenEXR:                   NO")
 endif()
 
+if(NOT HAVE_OPENNI OR HAVE_PRIME_SENSOR_FOR_OPENNI)
+message(STATUS "    OpenNI:                    ${HAVE_OPENNI}")
+else()
+message(STATUS "    OpenNI:                    ${HAVE_OPENNI} (WARNING: PrimeSensor Modules for OpenNI are not installed.)")
+endif() #if(NOT HAVE_OPENNI OR HAVE_PRIME_SENSOR_FOR_OPENNI)
+
 if(UNIX AND NOT APPLE)
 message(STATUS "")
 message(STATUS "  Video I/O: ")
@@ -1350,7 +1379,7 @@ else()
 message(STATUS "    V4L/V4L2:                  ${HAVE_CAMV4L}/${HAVE_CAMV4L2}")
 endif()
 message(STATUS "    Xine:                      ${HAVE_XINE}")
-endif()
+endif() #if(UNIX AND NOT APPLE)
 
 if(APPLE)
 message(STATUS "")

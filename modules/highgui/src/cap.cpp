@@ -123,6 +123,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         CV_CAP_MIL,
         CV_CAP_QT,
         CV_CAP_UNICAP,
+        CV_CAP_OPENNI,
         -1
     };
 
@@ -142,7 +143,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         defined(HAVE_CAMV4L) || defined (HAVE_CAMV4L2) || defined(HAVE_GSTREAMER) || \
         defined(HAVE_DC1394_2) || defined(HAVE_DC1394) || defined(HAVE_CMU1394) || \
         defined(HAVE_GSTREAMER) || defined(HAVE_MIL) || defined(HAVE_QUICKTIME) || \
-        defined(HAVE_UNICAP) || defined(HAVE_PVAPI)
+        defined(HAVE_UNICAP) || defined(HAVE_PVAPI) || defined(HAVE_OPENNI)
         // local variable to memorize the captured device
         CvCapture *capture;
         #endif
@@ -237,6 +238,14 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         #ifdef HAVE_PVAPI
         case CV_CAP_PVAPI:
         capture = cvCreateCameraCapture_PvAPI (index);
+        if (capture)
+            return capture;
+        break;
+        #endif
+
+        #ifdef HAVE_OPENNI
+        case CV_CAP_OPENNI:
+        capture = cvCreateCameraCapture_OpenNI (index);
         if (capture)
             return capture;
         break;

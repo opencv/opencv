@@ -112,6 +112,9 @@
 /* Xine video library */
 #cmakedefine  HAVE_XINE
 
+/* OpenNI library */
+#cmakedefine  HAVE_OPENNI
+
 /* LZ77 compression/decompression library (used for PNG) */
 #cmakedefine  HAVE_ZLIB
 

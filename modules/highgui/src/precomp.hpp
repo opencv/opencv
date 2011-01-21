@@ -121,6 +121,7 @@ CvVideoWriter* cvCreateVideoWriter_Win32( const char* filename, int fourcc,
 CvVideoWriter* cvCreateVideoWriter_VFW( const char* filename, int fourcc,
                                         double fps, CvSize frameSize, int is_color );
 CvCapture* cvCreateCameraCapture_DShow( int index );
+CvCapture* cvCreateCameraCapture_OpenNI( int index );
 
 CVAPI(int) cvHaveImageReader(const char* filename);
 CVAPI(int) cvHaveImageWriter(const char* filename);
