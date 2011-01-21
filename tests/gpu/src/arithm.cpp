@@ -49,7 +49,7 @@ using namespace std;
 using namespace gpu;
 
 #define CHECK(pred, err) if (!(pred)) { \
-    ts->printf(CvTS::LOG, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
+    ts->printf(CvTS::CONSOLE, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
     ts->set_failed_test_info(err); \
     return; }
 

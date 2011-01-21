@@ -328,13 +328,13 @@ namespace cv { namespace gpu { namespace mathfunc
         __shared__ best_type smaxval[nthreads];
         
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
-        uint idx = min(tid, gridDim.x * gridDim.y - 1);
+        uint idx = min(tid, size - 1);
 
         sminval[tid] = minval[idx];
         smaxval[tid] = maxval[idx];
         __syncthreads();
 
-		findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
+        findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
 
         if (tid == 0) 
         {
@@ -428,7 +428,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Returns required buffer sizes
     void getBufSizeRequired(int cols, int rows, int elem_size, int& b1cols, 
-                               int& b1rows, int& b2cols, int& b2rows)
+                            int& b1rows, int& b2cols, int& b2rows)
     {
         dim3 threads, grid;
         estimateThreadCfg(cols, rows, threads, grid);
@@ -623,7 +623,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     template <typename T>
     void minMaxLocCaller(const DevMem2D src, double* minval, double* maxval, 
-                            int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
+                         int minloc[2], int maxloc[2], PtrStep valbuf, PtrStep locbuf)
     {
         dim3 threads, grid;
         estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -671,7 +671,7 @@ namespace cv { namespace gpu { namespace mathfunc
         __shared__ uint smaxloc[nthreads];
 
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
-        uint idx = min(tid, gridDim.x * gridDim.y - 1);
+        uint idx = min(tid, size - 1);
 
         sminval[tid] = minval[idx];
         smaxval[tid] = maxval[idx];
@@ -679,7 +679,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smaxloc[tid] = maxloc[idx];
         __syncthreads();
 
-		findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+        findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
         if (tid == 0) 
         {
@@ -1150,7 +1150,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+        DstType res = tid < size ? result[tid] : VecTraits<DstType>::all(0);
         smem[tid] = res.x;
         smem[tid + nthreads] = res.y;
         __syncthreads();
@@ -1262,7 +1262,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+        DstType res = tid < size ? result[tid] : VecTraits<DstType>::all(0);
         smem[tid] = res.x;
         smem[tid + nthreads] = res.y;
         smem[tid + 2 * nthreads] = res.z;
@@ -1384,7 +1384,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        DstType res = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<DstType>::all(0);
+        DstType res = tid < size ? result[tid] : VecTraits<DstType>::all(0);
         smem[tid] = res.x;
         smem[tid + nthreads] = res.y;
         smem[tid + 2 * nthreads] = res.z;

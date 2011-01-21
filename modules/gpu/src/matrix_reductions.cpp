@@ -276,11 +276,11 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
             minMaxMaskCaller<double> };
 
     CV_Assert(src.channels() == 1);
+
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
 
-    bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
-                     hasNativeDoubleSupport(getDevice());
-    CV_Assert(src.type() != CV_64F || double_ok);
+    CV_Assert(src.type() != CV_64F || (hasGreaterOrEqualVersion(1, 3) && 
+                                       hasNativeDoubleSupport(getDevice())));
 
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
@@ -375,11 +375,11 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
             minMaxLocMaskCaller<double> };
 
     CV_Assert(src.channels() == 1);
+
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
 
-    bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
-                     hasNativeDoubleSupport(getDevice());
-    CV_Assert(src.type() != CV_64F || double_ok);
+    CV_Assert(src.type() != CV_64F || (hasGreaterOrEqualVersion(1, 3) && 
+                                       hasNativeDoubleSupport(getDevice())));
 
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
@@ -388,7 +388,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
 
     Size valbuf_size, locbuf_size;
     getBufSizeRequired(src.cols, src.rows, src.elemSize(), valbuf_size.width, 
-                          valbuf_size.height, locbuf_size.width, locbuf_size.height);
+                       valbuf_size.height, locbuf_size.width, locbuf_size.height);
     ensureSizeIsEnough(valbuf_size, CV_8U, valBuf);
     ensureSizeIsEnough(locbuf_size, CV_8U, locBuf);
 
@@ -459,9 +459,8 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
 
     CV_Assert(src.channels() == 1);
 
-    bool double_ok = hasGreaterOrEqualVersion(1, 3) && 
-                     hasNativeDoubleSupport(getDevice());
-    CV_Assert(src.type() != CV_64F || double_ok);
+    CV_Assert(src.type() != CV_64F || (hasGreaterOrEqualVersion(1, 3) && 
+                                       hasNativeDoubleSupport(getDevice())));
 
     Size buf_size;
     getBufSizeRequired(src.cols, src.rows, buf_size.width, buf_size.height);
