@@ -1128,7 +1128,7 @@ MatchTemplate
   CvArr templ
   CvArr result
   int method
-MatchShapes
+MatchShapes double
   CvSeq object1
   CvSeq object2
   int method
