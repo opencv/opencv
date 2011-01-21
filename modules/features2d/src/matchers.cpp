@@ -1105,7 +1105,7 @@ void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint
         for( int k = 0; k < knn; k++ )
         {
             DMatch bestMatch;
-            size_t best_ci = -1;
+            size_t best_ci = 0;
             for( size_t ci = 0; ci < signature.size(); ci++ )
             {
                 if( -signature[ci] < bestMatch.distance )
