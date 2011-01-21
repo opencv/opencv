@@ -60,11 +60,12 @@ Interfaces of all methods are kept similar to CPU HOG descriptor and detector an
 \cvCppFunc{gpu::HOGDescriptor::HOGDescriptor}
 Creates HOG descriptor and detector.
 
-\cvdefCpp{HOGDescriptor(Size win\_size=Size(64, 128), Size block\_size=Size(16, 16),\par
-          Size block\_stride=Size(8, 8), Size cell\_size=Size(8, 8),\par
-          int nbins=9, double win\_sigma=DEFAULT\_WIN\_SIGMA,\par
-          double threshold\_L2hys=0.2, bool gamma\_correction=true,\par
-          int nlevels=DEFAULT\_NLEVELS);}
+\cvdefCpp{HOGDescriptor::HOGDescriptor(Size win\_size=Size(64, 128),\par
+  Size block\_size=Size(16, 16), Size block\_stride=Size(8, 8),\par
+  Size cell\_size=Size(8, 8), int nbins=9,\par
+  double win\_sigma=DEFAULT\_WIN\_SIGMA,\par
+  double threshold\_L2hys=0.2, bool gamma\_correction=true,\par
+  int nlevels=DEFAULT\_NLEVELS);}
 
 \begin{description}
 \cvarg{win\_size}{Detection window size. Must be aligned to block size and block stride.}
@@ -94,7 +95,7 @@ Returns block histogram size.
 \cvCppFunc{gpu::HOGDescriptor::setSVMDetector}
 Sets coefficients for the linear SVM classifier. 
 
-\cvdefCpp{void setSVMDetector(const vector<float>\& detector);}
+\cvdefCpp{void HOGDescriptor::setSVMDetector(const vector<float>\& detector);}
 
 
 \cvCppFunc{gpu::HOGDescriptor::getDefaultPeopleDetector}
@@ -118,9 +119,9 @@ Returns coefficients of the classifier trained for people detection (for 64x128 
 \cvCppFunc{gpu::HOGDescriptor::detect}
 Perfroms object detection without multiscale window.
 
-\cvdefCpp{void HOGDescriptor::detect(const GpuMat\& img, vector<Point>\& found\_locations,\par
-             double hit\_threshold=0, Size win\_stride=Size(),\par
-             Size padding=Size());}
+\cvdefCpp{void HOGDescriptor::detect(const GpuMat\& img,\par
+  vector<Point>\& found\_locations, double hit\_threshold=0,\par
+  Size win\_stride=Size(), Size padding=Size());}
 
 \begin{description}
 \cvarg{img}{Source image. \texttt{CV\_8UC1} and \texttt{CV\_8UC4}types are supported for now.}
