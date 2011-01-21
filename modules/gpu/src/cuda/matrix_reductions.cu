@@ -1412,7 +1412,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sumMultipassCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
-        using namespace sum;
+        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1464,7 +1464,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sumCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
-        using namespace sum;
+        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1512,7 +1512,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sqrSumMultipassCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
-        using namespace sum;
+        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1568,7 +1568,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sqrSumCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
     {
-        using namespace sum;
+        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
