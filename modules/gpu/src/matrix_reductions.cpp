@@ -130,7 +130,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sqrSumMultipassCaller(const DevMem2D src, PtrStep buf, double* sum, int cn);
 
-    namespace sum
+    namespace sums
     {
         void getBufSizeRequired(int cols, int rows, int cn, int& bufcols, int& bufrows);
     }
@@ -161,8 +161,8 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
             sumCaller<int>, sumCaller<float>, 0 };
 
     Size buf_size;
-    sum::getBufSizeRequired(src.cols, src.rows, src.channels(), 
-                               buf_size.width, buf_size.height); 
+    sums::getBufSizeRequired(src.cols, src.rows, src.channels(), 
+                            buf_size.width, buf_size.height); 
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
@@ -206,8 +206,8 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
         callers = singlepass_callers;
 
     Size buf_size;
-    sum::getBufSizeRequired(src.cols, src.rows, src.channels(), 
-                               buf_size.width, buf_size.height); 
+    sums::getBufSizeRequired(src.cols, src.rows, src.channels(), 
+                             buf_size.width, buf_size.height); 
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller caller = callers[src.depth()];

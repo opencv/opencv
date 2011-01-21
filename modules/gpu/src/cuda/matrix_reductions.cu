@@ -938,7 +938,7 @@ namespace cv { namespace gpu { namespace mathfunc
     //////////////////////////////////////////////////////////////////////////
     // Sum
 
-    namespace sum 
+    namespace sums 
     {
 
     template <typename T> struct SumType {};
