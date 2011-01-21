@@ -1,6 +1,5 @@
 \section{Object Detection}
 
-
 \cvclass{gpu::HOGDescriptor}
 Histogram of Oriented Gradients descriptor and detector.
 
@@ -169,3 +168,99 @@ Returns block descriptors computed for the whole image. It's mainly used for cla
     \cvarg{DESCR\_FORMAT\_COL\_BY\_COL}{Column-major order.}
 \end{description}}
 \end{description}
+
+
+\cvclass{gpu::CascadeClassifier\_GPU}
+The cascade classifier class for object detection.
+
+\begin{lstlisting}
+class CV_EXPORTS CascadeClassifier_GPU
+{
+public:            
+	CascadeClassifier_GPU();
+	CascadeClassifier_GPU(const string& filename);
+	~CascadeClassifier_GPU();
+
+	bool empty() const;
+	bool load(const string& filename);
+	void release();
+	
+	/* returns number of detected objects */
+	int detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size());
+					
+        /* Finds only the largest object. Special mode for need to training*/		
+	bool findLargestObject;
+
+        /* Draws rectangles in input image */		
+	bool visualizeInPlace;
+
+	Size getClassifierSize() const;	
+};
+\end{lstlisting}
+
+\cvfunc{cv::gpu::CascadeClassifier\_GPU::CascadeClassifier\_GPU}\par
+Loads the classifier from file.
+\cvdefCpp{cv::CascadeClassifier\_GPU(const string\& filename);}
+\begin{description}
+\cvarg{filename}{Name of file from which classifier will be load. Only old haar classifier (trained by haartraining application) and NVidia's nvbin are supported.}
+\end{description}
+
+\cvfunc{cv::gpu::CascadeClassifier\_GPU::empty}
+Checks if the classifier has been loaded or not.
+\cvdefCpp{bool CascadeClassifier\_GPU::empty() const;}
+
+
+\cvfunc{cv::gpu::CascadeClassifier\_GPU::load}
+Loads the classifier from file. The previous content is destroyed.
+\cvdefCpp{bool CascadeClassifier\_GPU::load(const string\& filename);}
+\begin{description}
+\cvarg{filename}{Name of file from which classifier will be load. Only old haar classifier (trained by haartraining application) and NVidia's nvbin are supported.}
+\end{description}
+
+
+\cvfunc{cv::gpu::CascadeClassifier\_GPU::release}
+Destroys loaded classifier.
+\cvdefCpp{void CascadeClassifier\_GPU::release()}
+
+
+
+\cvfunc{cv::gpu::CascadeClassifier\_GPU::detectMultiScale}
+Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
+
+\cvdefCpp{int CascadeClassifier\_GPU::detectMultiScale(const GpuMat\& image, GpuMat\& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size());}
+\begin{description}
+\cvarg{image}{Matrix of type \texttt{CV\_8U} containing the image in which to detect objects.}
+\cvarg{objects}{Buffer to store detected objects (rectangles). If it is empty, it will be allocated with default size. If not empty, function will search not more than N objects, where N = sizeof(objectsBufer's data)/sizeof(cv::Rect).}
+\cvarg{scaleFactor}{Specifies how much the image size is reduced at each image scale.}
+\cvarg{minNeighbors}{Specifies how many neighbors should each candidate rectangle have to retain it.}
+\cvarg{minSize}{The minimum possible object size. Objects smaller than that are ignored.}
+\end{description}
+
+The function returns number of detected objects, so you can retrieve them as in following example:
+
+\begin{lstlisting}
+
+cv::gpu::CascadeClassifier_GPU cascade_gpu(...);
+
+Mat image_cpu = imread(...)
+GpuMat image_gpu(image_cpu);
+
+GpuMat objbuf;
+int detections_number = cascade_gpu.detectMultiScale( image_gpu,
+          objbuf, 1.2, minNeighbors); 
+
+Mat obj_host;
+// download only detected number of rectangles
+objbuf.colRange(0, detections_number).download(obj_host);
+
+Rect* faces = obj_host.ptr<Rect>(); 
+for(int i = 0; i < detections_num; ++i)                
+   cv::rectangle(image_cpu, faces[i], Scalar(255));  
+
+imshow("Faces", image_cpu);
+
+\end{lstlisting}
+
+
+See also: \cvCppCross{CascadeClassifier::detectMultiScale}.
+
