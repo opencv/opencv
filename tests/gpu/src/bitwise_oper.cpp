@@ -63,7 +63,7 @@ struct CV_GpuBitwiseTest: public CvTest
                          gpu::hasNativeDoubleSupport(gpu::getDevice());
         int depth_end = double_ok ? CV_64F : CV_32F;
 
-        for (int depth = CV_8U; depth <= CV_32F; ++depth)
+        for (int depth = CV_8U; depth <= depth_end; ++depth)
             for (int cn = 1; cn <= 4; ++cn)
                 for (int attempt = 0; attempt < 3; ++attempt)
                 {
