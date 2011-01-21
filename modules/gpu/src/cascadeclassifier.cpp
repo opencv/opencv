@@ -294,38 +294,38 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMa
     return numDetections;
 }
 
-	struct RectConvert
-	{
-		Rect operator()(const NcvRect32u& nr) const { return Rect(nr.x, nr.y, nr.width, nr.height); }
-		NcvRect32u operator()(const Rect& nr) const 
-		{ 
-			NcvRect32u rect;
-			rect.x = nr.x;
-			rect.y = nr.y;
-			rect.width = nr.width;
-			rect.height = nr.height;
-			return rect; 
-		}
-	};
-
-	void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
-	{
-		vector<Rect> rects(hypotheses.size());    
-		std::transform(hypotheses.begin(), hypotheses.end(), rects.begin(), RectConvert());
-	    
-		if (weights) 
-		{
-			vector<int> weights_int;
-			weights_int.assign(weights->begin(), weights->end());        
-			cv::groupRectangles(rects, weights_int, groupThreshold, eps);
-		}
-		else
-		{   
-			cv::groupRectangles(rects, groupThreshold, eps);
-		}
-		std::transform(rects.begin(), rects.end(), hypotheses.begin(), RectConvert());    
-		hypotheses.resize(rects.size());
+struct RectConvert
+{
+	Rect operator()(const NcvRect32u& nr) const { return Rect(nr.x, nr.y, nr.width, nr.height); }
+	NcvRect32u operator()(const Rect& nr) const 
+	{ 
+		NcvRect32u rect;
+		rect.x = nr.x;
+		rect.y = nr.y;
+		rect.width = nr.width;
+		rect.height = nr.height;
+		return rect; 
 	}
+};
+
+void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
+{
+	vector<Rect> rects(hypotheses.size());    
+	std::transform(hypotheses.begin(), hypotheses.end(), rects.begin(), RectConvert());
+    
+	if (weights) 
+	{
+		vector<int> weights_int;
+		weights_int.assign(weights->begin(), weights->end());        
+		cv::groupRectangles(rects, weights_int, groupThreshold, eps);
+	}
+	else
+	{   
+		cv::groupRectangles(rects, groupThreshold, eps);
+	}
+	std::transform(rects.begin(), rects.end(), hypotheses.begin(), RectConvert());    
+	hypotheses.resize(rects.size());
+}
 
 
 #if 1 /* loadFromXML implementation switch */

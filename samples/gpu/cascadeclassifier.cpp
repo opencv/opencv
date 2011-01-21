@@ -190,8 +190,8 @@ int main( int argc, const char** argv )
 		case '3':  font_scale*=1.05; printf("Fond scale = %g\n", font_scale); break;
 		case 'e':  case 'E':font_scale/=1.05; printf("Fond scale = %g\n", font_scale); break;
 
-		case '2':  ++minNeighbors; printf("Min Neighbors = %g\n", minNeighbors); break;
-		case 'w':  case 'W':minNeighbors = max(minNeighbors-1, 0); printf("Min Neighbors = %g\n", minNeighbors); break;
+		case '2':  ++minNeighbors; printf("Min Neighbors = %d\n", minNeighbors); break;
+		case 'w':  case 'W':minNeighbors = max(minNeighbors-1, 0); printf("Min Neighbors = %d\n", minNeighbors); break;
         }
        
     }    
