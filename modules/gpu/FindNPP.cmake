@@ -115,7 +115,7 @@ if(APPLE)
     # We need to add the path to cudart to the linker using rpath, since the library name for the cuda libraries is prepended with @rpath.
     get_filename_component(_cuda_path_to_npp "${CUDA_NPP_LIBRARIES}" PATH)
     if(_cuda_path_to_npp)
-        list(APPEND CUDA_NPP_LIBRARIES -Wl,-rpath "-Wl,${_cuda_path_to_npp}")
+        list(APPEND CUDA_NPP_LIBRARIES "-Wl,-rpath,${_cuda_path_to_npp}")
     endif()
 endif()
 
