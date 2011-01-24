@@ -178,7 +178,7 @@ namespace
             if (depth == CV_8U) return 300;
             break;
         case CV_TM_SQDIFF:
-            if (depth == CV_8U) return 500;
+            if (depth == CV_8U) return 300;
             break;
         }
         CV_Error(CV_StsBadArg, "getTemplateThreshold: unsupported match template mode");

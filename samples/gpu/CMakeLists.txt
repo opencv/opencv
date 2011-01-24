@@ -47,7 +47,9 @@ if (BUILD_EXAMPLES)
     foreach(sample_filename ${gpu_samples})
         get_filename_component(sample ${sample_filename} NAME_WE)
         MY_DEFINE_EXAMPLE(${sample}  ${sample_filename})
-    endforeach()
+    endforeach()   
+    
+    include("performance/CMakeLists.txt")
 endif(BUILD_EXAMPLES)
 
 if (NOT WIN32)
