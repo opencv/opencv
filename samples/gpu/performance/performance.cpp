@@ -4,20 +4,9 @@
 using namespace std;
 using namespace cv;
 
-
-void Test::gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
-{   
-    mat.create(rows, cols, type);
-
-    RNG rng(0);
-    rng.fill(mat, RNG::UNIFORM, low, high);
-}
-
-
 void Test::gen(Mat& mat, int rows, int cols, int type)
 {   
     mat.create(rows, cols, type);
-
     Mat mat8u(rows, cols * mat.elemSize(), CV_8U, mat.data, mat.step);
 
     RNG rng(0);
@@ -35,7 +24,6 @@ void TestSystem::run()
     vector<Test*>::iterator it = tests_.begin();
     for (; it != tests_.end(); ++it)
     {
-        can_flush_ = false;
         Test* test = *it;
 
         cout << endl << test->name() << ":\n";
@@ -82,6 +70,7 @@ void TestSystem::flush()
     description_.str("");
 
     cout << resetiosflags(ios_base::fixed | ios_base::left) << endl;
+    
     can_flush_ = false;
 }
 

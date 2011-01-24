@@ -1,3 +1,6 @@
+#ifndef OPENCV_GPU_SAMPLE_PERFORMANCE_H_
+#define OPENCV_GPU_SAMPLE_PERFORMANCE_H_
+
 #include <iostream>
 #include <cstdio>
 #include <vector>
@@ -7,12 +10,9 @@
 class Test
 {
 public:
-    Test(const std::string& name): name_(name) {}
+    explicit Test(const std::string& name): name_(name) {}
 
     const std::string& name() const { return name_; }
-
-    void gen(cv::Mat& mat, int rows, int cols, int type,
-             cv::Scalar low, cv::Scalar high);
 
     void gen(cv::Mat& mat, int rows, int cols, int type);
 
@@ -97,3 +97,5 @@ private:
 #define GPU_OFF TestSystem::instance()->gpuOff()
 #define SUBTEST TestSystem::instance()->subtest()
 #define DESCRIPTION TestSystem::instance()->subtest()
+
+#endif // OPENCV_GPU_SAMPLE_PERFORMANCE_H_
