@@ -124,7 +124,7 @@ int main()
             }
 
             if( capture.retrieve( validDepthMap, OPENNI_VALID_DEPTH_MASK ) )
-                imshow( "valid depth map", validDepthMap );
+                imshow( "valid depth mask", validDepthMap );
 
             if( capture.retrieve( bgrImage, OPENNI_BGR_IMAGE ) )
                 imshow( "rgb image", bgrImage );

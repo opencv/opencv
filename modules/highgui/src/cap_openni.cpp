@@ -131,10 +131,12 @@ protected:
     xn::ImageMetaData  imageMetaData;
 
     // Cameras settings:
+#if 1
     // Distance between IR projector and IR camera (in meters)
     XnDouble baseline;
     // Focal length for the IR camera in VGA resolution (in pixels)
     XnUInt64 depthFocalLength_VGA;
+#endif
     // The value for shadow (occluded pixels)
     XnUInt64 shadowValue;
     // The value for pixels without a valid disparity measurement
@@ -215,6 +217,7 @@ CvCapture_OpenNI::~CvCapture_OpenNI()
 
 void CvCapture_OpenNI::readCamerasParams()
 {
+#if 1
     XnDouble pixelSize = 0;
     if( depthGenerator.GetRealProperty( "ZPPS", pixelSize ) != XN_STATUS_OK )
         CV_Error( CV_StsError, "Could not read pixel size!" );
@@ -235,6 +238,7 @@ void CvCapture_OpenNI::readCamerasParams()
 
     // focal length from mm -> pixels (valid for 640x480)
     depthFocalLength_VGA = (XnUInt64)((double)zpd / (double)pixelSize);
+#endif
 
     if( depthGenerator.GetIntProperty( "ShadowValue", shadowValue ) != XN_STATUS_OK )
         CV_Error( CV_StsError, "Could not read shadow value!" );
@@ -305,14 +309,17 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     if( cols <= 0 || rows <= 0 )
         return 0;
 
+#if 0
     // X = (x - centerX) * depth / F[in pixels]
     // Y = (y - centerY) * depth / F[in pixels]
     // Z = depth
     // Multiply by 0.001 to convert from mm in meters.
 
+
     float mult = 0.001f / depthFocalLength_VGA;
     int centerX = cols >> 1;
     int centerY = rows >> 1;
+#endif
 
 
     cv::Mat depth;
@@ -331,7 +338,7 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
             // Check for invalid measurements
             if( d == badDepth ) // not valid
                 continue;
-
+#if 0
             // Fill in XYZ
             cv::Point3f point3D;
             point3D.x = (x - centerX) * d * mult;
@@ -339,6 +346,14 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
             point3D.z = d * 0.001f;
 
             XYZ.at<cv::Point3f>(y,x) = point3D;
+#else
+            XnPoint3D proj, real;
+            proj.X = x;
+            proj.Y = y;
+            proj.Z = d;
+            depthGenerator.ConvertProjectiveToRealWorld(1, &proj, &real);
+            XYZ.at<cv::Point3f>(y,x) = cv::Point3f( real.X*0.001f, real.Y*0.001f, real.Z*0.001f); // from mm to meters
+#endif
         }
     }
 
