@@ -138,13 +138,16 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
   }
   else
 #endif  
+  //for portability just use unsigned long -- and use the __builtin_popcountl (see docs for __builtin_popcountl)
+  //as opposed to size_t -- TODO smart switching, if the size_t is a 64bits, use __builtin_popcountll
+  typedef unsigned long pop_t;
   size_t i;
-  const size_t modulo = size % sizeof(size_t);
+  const size_t modulo = size % sizeof(pop_t);
   const size_t end = size - modulo;
-  for (i = 0; i < end; i += sizeof(size_t))
+  for (i = 0; i < end; i += sizeof(pop_t))
   {
-    size_t a2 = *reinterpret_cast<const size_t*> (a + i);
-    size_t b2 = *reinterpret_cast<const size_t*> (b + i);
+    size_t a2 = *reinterpret_cast<const pop_t*> (a + i);
+    size_t b2 = *reinterpret_cast<const pop_t*> (b + i);
     result += __builtin_popcountl(a2 ^ b2);
   }
   if (modulo)
