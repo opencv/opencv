@@ -47,7 +47,7 @@ void TestSystem::run()
     cout << setiosflags(ios_base::fixed | ios_base::left);
     cout << "\nCPU Total: " << setprecision(3) << cpu_total_ / getTickFrequency() << " sec\n";
     cout << "GPU Total: " << setprecision(3) << gpu_total_ / getTickFrequency() << " sec (x" 
-        << setprecision(3) << (double)cpu_total_ / gpu_total_ << ")\n";
+        << setprecision(3) << static_cast<double>(cpu_total_) / gpu_total_ << ")\n";
     cout << resetiosflags(ios_base::fixed | ios_base::left);
 }
 
@@ -59,7 +59,7 @@ void TestSystem::flush()
 
     int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
     int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
-    double speedup = (double)cpu_time / gpu_time;
+    double speedup = static_cast<double>(cpu_time) / gpu_time;
 
     cpu_elapsed_ = 0;
     gpu_elapsed_ = 0;
