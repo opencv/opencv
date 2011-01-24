@@ -180,30 +180,41 @@ void CV_GpuImageProcTest::run( int )
 
 ////////////////////////////////////////////////////////////////////////////////
 // threshold
-struct CV_GpuNppImageThresholdTest : public CV_GpuImageProcTest
+struct CV_GpuImageThresholdTest : public CV_GpuImageProcTest
 {
 public:
-    CV_GpuNppImageThresholdTest() : CV_GpuImageProcTest( "GPU-NppImageThreshold", "threshold" ) {}
+    CV_GpuImageThresholdTest() : CV_GpuImageProcTest( "GPU-ImageThreshold", "threshold" ) {}
 
     int test(const Mat& img)
     {
-        if (img.type() != CV_32FC1)
+        if (img.type() != CV_8UC1 && img.type() != CV_32FC1)
         {
             ts->printf(CvTS::LOG, "\nUnsupported type\n");
             return CvTS::OK;
         }
 
+        const double maxVal = img.type() == CV_8UC1 ? 255 : 1.0;
+
         cv::RNG rng(*ts->get_rng());
-        const double thresh = rng;
 
-        cv::Mat cpuRes;
-        cv::threshold(img, cpuRes, thresh, 0.0, THRESH_TRUNC);
+        int res = CvTS::OK;
 
-        GpuMat gpu1(img);
-        GpuMat gpuRes;
-        cv::gpu::threshold(gpu1, gpuRes, thresh);
+        for (int type = THRESH_BINARY; type <= THRESH_TOZERO_INV; ++type)
+        {
+            const double thresh = rng.uniform(0.0, maxVal);
 
-        return CheckNorm(cpuRes, gpuRes);
+            cv::Mat cpuRes;
+            cv::threshold(img, cpuRes, thresh, maxVal, type);
+
+            GpuMat gpu1(img);
+            GpuMat gpuRes;
+            cv::gpu::threshold(gpu1, gpuRes, thresh, maxVal, type);
+
+            if (CheckNorm(cpuRes, gpuRes) != CvTS::OK)
+                res = CvTS::FAIL_GENERIC;
+        }
+
+        return res;
     }
 };
 
@@ -822,7 +833,7 @@ struct CV_GpuColumnSumTest: CvTest
 // Placing all test definitions in one place
 // makes us know about what tests are commented.
 
-CV_GpuNppImageThresholdTest CV_GpuNppImageThreshold_test;
+CV_GpuImageThresholdTest CV_GpuImageThreshold_test;
 CV_GpuNppImageResizeTest CV_GpuNppImageResize_test;
 CV_GpuNppImageCopyMakeBorderTest CV_GpuNppImageCopyMakeBorder_test;
 CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;

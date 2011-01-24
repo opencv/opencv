@@ -587,9 +587,10 @@ namespace cv
         //! async version
         CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream);
 
-        //! applies fixed threshold to the image.
-        //! Now supports only THRESH_TRUNC threshold type and one channels float source.
-        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh);
+        //! applies fixed threshold to the image
+        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type);
+        //! async version
+        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, const Stream& stream);
 
         //! resizes the image
         //! Supports INTER_NEAREST, INTER_LINEAR

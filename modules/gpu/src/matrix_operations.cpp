@@ -90,7 +90,7 @@ namespace cv
             void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);
             void set_to_with_mask    (DevMem2D dst, int depth, const double *scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
-            void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream = 0);
+            void convert_gpu(const DevMem2D& src, int sdepth, const DevMem2D& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
         }
     }
 }
@@ -193,7 +193,7 @@ namespace
 
     void convertToKernelCaller(const GpuMat& src, GpuMat& dst)
     {
-        matrix_operations::convert_to(src, src.depth(), dst, dst.depth(), src.channels(), 1.0, 0.0);
+        matrix_operations::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0);
     }
 }
 
@@ -222,7 +222,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
     dst.create( size(), rtype );
 
     if (!noScale)
-        matrix_operations::convert_to(*psrc, sdepth, dst, ddepth, psrc->channels(), alpha, beta);
+        matrix_operations::convert_gpu(psrc->reshape(1), sdepth, dst.reshape(1), ddepth, alpha, beta);
     else
     {
         typedef void (*convert_caller_t)(const GpuMat& src, GpuMat& dst);

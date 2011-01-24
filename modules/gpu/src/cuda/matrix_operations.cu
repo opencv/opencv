@@ -42,6 +42,7 @@
 
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/transform.hpp"
 
 using namespace cv::gpu::device;
 
@@ -55,63 +56,6 @@ namespace cv { namespace gpu { namespace matrix_operations {
     template <> struct shift_and_sizeof<int> { enum { shift = 2 }; };
     template <> struct shift_and_sizeof<float> { enum { shift = 2 }; };
     template <> struct shift_and_sizeof<double> { enum { shift = 3 }; };
-    
-    template <typename T, typename DT, size_t src_elem_size, size_t dst_elem_size>
-    struct ReadWriteTraits
-    {
-        enum {shift=1};
-
-        typedef T read_type;
-        typedef DT write_type;
-    };
-    template <typename T, typename DT>
-    struct ReadWriteTraits<T, DT, 1, 1>
-    {
-        enum {shift=4};
-
-        typedef char4 read_type;
-        typedef char4 write_type;
-    };
-    template <typename T, typename DT>
-    struct ReadWriteTraits<T, DT, 2, 1>
-    {
-        enum {shift=4};
-
-        typedef short4 read_type;
-        typedef char4 write_type;
-    };
-    template <typename T, typename DT>
-    struct ReadWriteTraits<T, DT, 4, 1>
-    {
-        enum {shift=4};
-
-        typedef int4 read_type;
-        typedef char4 write_type;
-    };
-    template <typename T, typename DT>
-    struct ReadWriteTraits<T, DT, 1, 2>
-    {
-        enum {shift=2};
-
-        typedef char2 read_type;
-        typedef short2 write_type;
-    };
-    template <typename T, typename DT>
-    struct ReadWriteTraits<T, DT, 2, 2>
-    {
-        enum {shift=2};
-
-        typedef short2 read_type;
-        typedef short2 write_type;
-    };
-    template <typename T, typename DT>
-    struct ReadWriteTraits<T, DT, 4, 2>
-    {
-        enum {shift=2};
-
-        typedef int2 read_type;
-        typedef short2 write_type;
-    };
 
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
@@ -276,60 +220,35 @@ namespace cv { namespace gpu { namespace matrix_operations {
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-    template <typename T, typename DT>
-    __global__ static void convert_to(uchar* srcmat, size_t src_step, uchar* dstmat, size_t dst_step, size_t width, size_t height, double alpha, double beta)
+    template <typename T, typename D>
+    class Convertor
     {
-        typedef typename ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::read_type read_type;
-        typedef typename ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::write_type write_type;
-        const int shift = ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
+    public:
+        Convertor(double alpha_, double beta_): alpha(alpha_), beta(beta_) {}
 
-        const size_t x = threadIdx.x + blockIdx.x * blockDim.x;
-        const size_t y = threadIdx.y + blockIdx.y * blockDim.y;
-
-        if (y < height)
+        __device__ D operator()(const T& src)
         {
-            const T* src = (const T*)(srcmat + src_step * y);
-            DT* dst = (DT*)(dstmat + dst_step * y);
-            if ((x * shift) + shift - 1 < width)
-            {
-                read_type srcn_el = ((read_type*)src)[x];
-                write_type dstn_el;
-
-                const T* src1_el = (const T*) &srcn_el;
-                DT* dst1_el = (DT*) &dstn_el;
-
-                for (int i = 0; i < shift; ++i)
-                    dst1_el[i] =  saturate_cast<DT>(alpha * src1_el[i] + beta);
-
-                ((write_type*)dst)[x] = dstn_el;
-            }
-            else
-            {
-                for (int i = 0; i < shift - 1; ++i)
-                    if ((x * shift) + i < width)
-                        dst[(x * shift) + i] = saturate_cast<DT>(alpha * src[(x * shift) + i] + beta);
-            }
+            return saturate_cast<D>(alpha * src + beta);
         }
-    }    
 
-    typedef void (*CvtFunc)(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream);
-
-    template<typename T, typename DT>
-    void cvt_(const DevMem2D& src, DevMem2D& dst, size_t width, size_t height, double alpha, double beta, const cudaStream_t & stream)
+    private:
+        double alpha, beta;
+    };
+    
+    template<typename T, typename D>
+    void cvt_(const DevMem2D& src, const DevMem2D& dst, double alpha, double beta, cudaStream_t stream)
     {
-        const int shift = ReadWriteTraits<T, DT, sizeof(T), sizeof(DT)>::shift;
-
-        dim3 block(32, 8);
-        dim3 grid(divUp(width, block.x * shift), divUp(height, block.y));
-
-        convert_to<T, DT><<<grid, block, 0, stream>>>(src.data, src.step, dst.data, dst.step, width, height, alpha, beta);
-        if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+        Convertor<T, D> op(alpha, beta);
+        transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, stream);
     }
 
-    void convert_to(const DevMem2D& src, int sdepth, DevMem2D dst, int ddepth, int channels, double alpha, double beta, const cudaStream_t & stream)
+    void convert_gpu(const DevMem2D& src, int sdepth, const DevMem2D& dst, int ddepth, double alpha, double beta, 
+        cudaStream_t stream = 0)
     {
-        static CvtFunc tab[8][8] =
+        typedef void (*caller_t)(const DevMem2D& src, const DevMem2D& dst, double alpha, double beta, 
+            cudaStream_t stream);
+
+        static const caller_t tab[8][8] =
         {
             {cvt_<uchar, uchar>, cvt_<uchar, schar>, cvt_<uchar, ushort>, cvt_<uchar, short>,
             cvt_<uchar, int>, cvt_<uchar, float>, cvt_<uchar, double>, 0},
@@ -355,9 +274,10 @@ namespace cv { namespace gpu { namespace matrix_operations {
             {0,0,0,0,0,0,0,0}
         };
 
-        CvtFunc func = tab[sdepth][ddepth];
-        if (func == 0)
+        caller_t func = tab[sdepth][ddepth];
+        if (!func)
             cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
-        func(src, dst, src.cols * channels, src.rows, alpha, beta, stream);
+
+        func(src, dst, alpha, beta, stream);
     }
 }}}

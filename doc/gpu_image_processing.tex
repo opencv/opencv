@@ -314,13 +314,17 @@ See also: \cvCppCross{cvtColor}.
 Applies a fixed-level threshold to each array element.
 
 \cvdefCpp{
-double threshold(const GpuMat\& src, GpuMat\& dst, double thresh);
+double threshold(const GpuMat\& src, GpuMat\& dst, double thresh, \par double maxval, int type);\newline
+double threshold(const GpuMat\& src, GpuMat\& dst, double thresh, \par double maxval, int type, const Stream\& stream);
 }
 
 \begin{description}
-\cvarg{src}{Source array. Supports only \texttt{CV\_32FC1} type.}
+\cvarg{src}{Source array (single-channel, \texttt{CV\_64F} depth doesn't supported).}
 \cvarg{dst}{Destination array; will have the same size and the same type as \texttt{src}.}
 \cvarg{thresh}{Threshold value.}
+\cvarg{maxVal}{Maximum value to use with \texttt{THRESH\_BINARY} and \texttt{THRESH\_BINARY\_INV} thresholding types.}
+\cvarg{thresholdType}{Thresholding type. For details see \cvCppCross{threshold}. \texttt{THRESH\_OTSU} thresholding type doesn't supported.}
+\cvarg{stream}{Stream for the asynchronous version.}
 \end{description}
 
 See also: \cvCppCross{threshold}.

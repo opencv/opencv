@@ -70,7 +70,6 @@
     #include "opencv2/gpu/stream_accessor.hpp"
     #include "npp.h"    
     #include "npp_staging.h"
-    #include "surf_key_point.h"
 
 	#include "nvidia/NCV.hpp"
 	#include "nvidia/NCVHaarObjectDetection.hpp"

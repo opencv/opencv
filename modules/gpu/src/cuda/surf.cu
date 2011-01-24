@@ -46,7 +46,6 @@
 //M*/
 
 #include "internal_shared.hpp"
-#include "surf_key_point.h"
 #include "opencv2/gpu/device/limits_gpu.hpp"
 
 using namespace cv::gpu;

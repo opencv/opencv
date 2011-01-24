@@ -74,6 +74,8 @@ void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, double, GpuMat&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, double, GpuMat&, const Stream&) { throw_nogpu(); }
+double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int) {throw_nogpu(); return 0.0;}
+double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, const Stream&) {throw_nogpu(); return 0.0;}
 
 #else
 
@@ -694,6 +696,74 @@ void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& st
         max_caller<float>, max_caller<double>
     };
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
+}
+
+////////////////////////////////////////////////////////////////////////
+// threshold
+
+namespace cv { namespace gpu { namespace mathfunc
+{
+    template <typename T>
+    void threshold_gpu(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type,
+        cudaStream_t stream);
+}}}
+
+namespace
+{
+    void threshold_caller(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, 
+        cudaStream_t stream = 0)
+    {
+        using namespace cv::gpu::mathfunc;
+
+        typedef void (*caller_t)(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type,
+            cudaStream_t stream);
+
+        static const caller_t callers[] = 
+        {
+            threshold_gpu<unsigned char>, threshold_gpu<signed char>, 
+            threshold_gpu<unsigned short>, threshold_gpu<short>, threshold_gpu<int>, threshold_gpu<float>, 0
+        };
+
+        CV_Assert(src.channels() == 1 && src.depth() < CV_64F);
+        CV_Assert(type <= THRESH_TOZERO_INV);
+
+        dst.create(src.size(), src.type());
+
+        if (src.depth() != CV_32F)
+        {
+            thresh = cvFloor(thresh);
+            maxVal = cvRound(maxVal);
+        }
+
+        callers[src.depth()](src, dst, static_cast<float>(thresh), static_cast<float>(maxVal), type, stream);
+    }
+}
+
+double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type)
+{
+    if (src.type() == CV_32FC1 && type == THRESH_TRUNC)
+    {
+        dst.create(src.size(), src.type());
+
+        NppiSize sz;
+        sz.width  = src.cols;
+        sz.height = src.rows;
+
+        nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step,
+            dst.ptr<Npp32f>(), dst.step, sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
+    }
+    else
+    {
+        threshold_caller(src, dst, thresh, maxVal, type);
+    }
+
+    return thresh;
+}
+
+double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, const Stream& stream)
+{
+    threshold_caller(src, dst, thresh, maxVal, type, StreamAccessor::getStream(stream));
+    return thresh;
 }
 
 #endif
