@@ -76,6 +76,8 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
     sz.height = src.rows;
 
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, mean.val, stddev.val) );
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 
@@ -109,6 +111,8 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step,
         src2.ptr<Npp8u>(), src2.step,
         sz, &retVal) );
+
+    cudaSafeCall( cudaThreadSynchronize() );
 
     return retVal;
 }

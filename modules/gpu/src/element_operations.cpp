@@ -117,6 +117,8 @@ namespace
         default:
             CV_Assert(!"Unsupported source type");
         }
+
+        cudaSafeCall( cudaThreadSynchronize() );
     }
 
     template<int SCN> struct NppArithmScalarFunc;
@@ -142,6 +144,8 @@ namespace
             sz.height = src.rows;
 
             nppSafeCall( func(src.ptr<Npp32f>(), src.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
     template<typename NppArithmScalarFunc<2>::func_ptr func> struct NppArithmScalar<2, func>
@@ -159,6 +163,8 @@ namespace
             nValue.im = (Npp32f)sc[1];
 
             nppSafeCall( func(src.ptr<Npp32fc>(), src.step, nValue, dst.ptr<Npp32fc>(), dst.step, sz) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
 }
@@ -256,6 +262,8 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
     default:
         CV_Assert(!"Unsupported source type");
     }
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 void cv::gpu::absdiff(const GpuMat& src, const Scalar& s, GpuMat& dst)
@@ -269,6 +277,8 @@ void cv::gpu::absdiff(const GpuMat& src, const Scalar& s, GpuMat& dst)
     sz.height = src.rows;
 
     nppSafeCall( nppiAbsDiffC_32f_C1R(src.ptr<Npp32f>(), src.step, dst.ptr<Npp32f>(), dst.step, sz, (Npp32f)s[0]) );
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 
@@ -302,6 +312,8 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
             nppSafeCall( nppiCompare_8u_C4R(src1.ptr<Npp8u>(), src1.step,
                 src2.ptr<Npp8u>(), src2.step,
                 dst.ptr<Npp8u>(), dst.step, sz, nppCmpOp[cmpop]) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
         else
         {
@@ -315,6 +327,8 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
             nppSafeCall( nppiCompare_32f_C1R(src1.ptr<Npp32f>(), src1.step,
                 src2.ptr<Npp32f>(), src2.step,
                 dst.ptr<Npp8u>(), dst.step, sz, nppCmpOp[cmpop]) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
         else
         {
@@ -751,6 +765,8 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
 
         nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step,
             dst.ptr<Npp32f>(), dst.step, sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
+
+        cudaSafeCall( cudaThreadSynchronize() );
     }
     else
     {

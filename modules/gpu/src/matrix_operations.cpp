@@ -176,6 +176,8 @@ namespace
             sz.width = src.cols;
             sz.height = src.rows;
             nppSafeCall( func(src.ptr<src_t>(), src.step, dst.ptr<dst_t>(), dst.step, sz) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
     template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> struct NppCvt<CV_32F, DDEPTH, func>
@@ -188,6 +190,8 @@ namespace
             sz.width = src.cols;
             sz.height = src.rows;
             nppSafeCall( func(src.ptr<Npp32f>(), src.step, dst.ptr<dst_t>(), dst.step, sz, NPP_RND_NEAR) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
 
@@ -339,6 +343,8 @@ namespace
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), src.step, sz) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
     template<int SDEPTH, typename NppSetFunc<SDEPTH, 1>::func_ptr func> struct NppSet<SDEPTH, 1, func>
@@ -352,6 +358,8 @@ namespace
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
 
@@ -384,6 +392,8 @@ namespace
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
     template<int SDEPTH, typename NppSetMaskFunc<SDEPTH, 1>::func_ptr func> struct NppSetMask<SDEPTH, 1, func>
@@ -397,6 +407,8 @@ namespace
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
+
+            cudaSafeCall( cudaThreadSynchronize() );
         }
     };
 

@@ -103,6 +103,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
         nppSafeCall( nppiStTranspose_64u_C1R(const_cast<NppSt64u*>(src.ptr<NppSt64u>()), src.step, 
             dst.ptr<NppSt64u>(), dst.step, sz) );
     }
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -130,6 +132,8 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
             dst.ptr<Npp8u>(), dst.step, sz,
             (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
     }
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -187,6 +191,8 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
         }
         nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, pValues3, lvls.pLevels3, lvls.nValues3) );
     }
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -203,6 +209,8 @@ void cv::gpu::exp(const GpuMat& src, GpuMat& dst)
     sz.height = src.rows;
 
     nppSafeCall( nppiExp_32f_C1R(src.ptr<Npp32f>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -219,6 +227,8 @@ void cv::gpu::log(const GpuMat& src, GpuMat& dst)
     sz.height = src.rows;
 
     nppSafeCall( nppiLn_32f_C1R(src.ptr<Npp32f>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -239,6 +249,8 @@ namespace
         sz.height = src.rows;
 
         nppSafeCall( func(src.ptr<Npp32fc>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+
+        cudaSafeCall( cudaThreadSynchronize() );
     }
 }
 

@@ -71,6 +71,8 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 
     nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
         terminals.step, leftTransp.step, sznpp, labels.ptr<Npp8u>(), labels.step, buf.ptr<Npp8u>()) );
+
+    cudaSafeCall( cudaThreadSynchronize() );
 }
 
 
