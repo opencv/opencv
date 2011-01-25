@@ -107,7 +107,7 @@ TEST(dft)
     Mat src, dst;
     gpu::GpuMat d_src, d_dst;
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = 1000; size <= 8000; size *= 2)
     {
         SUBTEST << "size " << size << ", 32FC2, complex-to-complex";
 

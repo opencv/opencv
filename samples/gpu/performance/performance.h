@@ -7,6 +7,8 @@
 #include <string>
 #include <opencv2/core/core.hpp>
 
+#define TAB "    "
+
 class Runnable
 {
 public:
@@ -31,6 +33,7 @@ public:
     }
 
     void addInit(Runnable* init) { inits_.push_back(init); }
+
     void addTest(Runnable* test) { tests_.push_back(test); }
 
     void run();
@@ -65,6 +68,14 @@ private:
                   speedup_total_(0.0), num_subtests_called_(0) {};
 
     void flush_subtest_data();
+
+    void reset_subtest_data() 
+    {
+        cpu_elapsed_ = 0;
+        gpu_elapsed_ = 0;
+        description_.str("");
+        can_flush_ = false;
+    }
 
     std::vector<Runnable*> inits_;
     std::vector<Runnable*> tests_;

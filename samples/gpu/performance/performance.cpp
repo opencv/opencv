@@ -12,7 +12,7 @@ void TestSystem::run()
         (*it)->run();
 
     cout << setiosflags(ios_base::left);
-    cout << "    " << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
+    cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
         << setw(10) << "SPEEDUP" << "DESCRIPTION\n";
     cout << resetiosflags(ios_base::left);
 
@@ -21,8 +21,23 @@ void TestSystem::run()
     for (; it != tests_.end(); ++it)
     {
         cout << endl << (*it)->name() << ":\n";
-        (*it)->run();
-        flush_subtest_data();
+        try
+        {
+            (*it)->run();
+            flush_subtest_data();
+        }
+        catch (const cv::Exception& e)
+        {
+            cout << TAB << "error";
+            switch (e.code)
+            {
+                case CV_StsNoMem: cout << ": out of memory"; break;
+            }
+            if (!description_.str().empty())
+                cout << " [" << description_.str() << "]";
+            cout << endl;
+            reset_subtest_data();
+        }
     }
 
     cout << setiosflags(ios_base::fixed | ios_base::left);
@@ -39,13 +54,11 @@ void TestSystem::flush_subtest_data()
 
     int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
     int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
-    cpu_elapsed_ = 0;
-    gpu_elapsed_ = 0;
 
     double speedup = static_cast<double>(cpu_time) / std::max(1, gpu_time);
     speedup_total_ += speedup;
 
-    cout << "    " << setiosflags(ios_base::fixed | ios_base::left);
+    cout << TAB << setiosflags(ios_base::fixed | ios_base::left);
 
     stringstream stream;
     stream << cpu_time;
@@ -60,12 +73,11 @@ void TestSystem::flush_subtest_data()
     cout << setw(10) << stream.str();
 
     cout << description_.str();
-    description_.str("");
 
     cout << resetiosflags(ios_base::fixed | ios_base::left) << endl;
     
-    can_flush_ = false;
     num_subtests_called_++;
+    reset_subtest_data();
 }
 
 
@@ -77,8 +89,17 @@ void gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
 }
 
 
+int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/, 
+                             const char* /*err_msg*/, const char* /*file_name*/,
+                             int /*line*/, void* /*userdata*/)
+{
+    return 0;
+}
+
+
 int main()
 {
+    redirectError(cvErrorCallback);
     TestSystem::instance()->run();
     return 0;
 }
