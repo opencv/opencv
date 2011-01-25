@@ -1734,11 +1734,21 @@ static int convert_to_pts_npts_contours(PyObject *o, pts_npts_contours *dst, con
   return 1;
 }
 
-struct cvarrseq {
+class cvarrseq {
+public:
   union {
     CvSeq *seq;
     CvArr *mat;
   };
+  int freemat;
+  cvarrseq() {
+    freemat = false;
+  }
+  ~cvarrseq() {
+    if (freemat) {
+      cvReleaseMat((CvMat**)&mat);
+    }
+  }
 };
 
 static int is_convertible_to_mat(PyObject *o)
@@ -1782,6 +1792,7 @@ static int convert_to_cvarrseq(PyObject *o, cvarrseq *dst, const char *name = "n
     }
     assert(size != -1);
     CvMat *mt = cvCreateMat((int)PySequence_Fast_GET_SIZE(fi), 1, CV_32SC(size));
+    dst->freemat = true; // dealloc this mat when done
     for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
       PyObject *e = PySequence_Fast_GET_ITEM(fi, i);
       PyObject *fe = PySequence_Fast(e, name);
