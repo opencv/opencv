@@ -42,7 +42,6 @@ public:
     {
         int64 delta = cv::getTickCount() - cpu_started_;
         cpu_elapsed_ += delta;
-        cpu_total_ += delta; 
         can_flush_ = true;
     }  
 
@@ -52,7 +51,6 @@ public:
     {
         int64 delta = cv::getTickCount() - gpu_started_;
         gpu_elapsed_ += delta;
-        gpu_total_ += delta; 
         can_flush_ = true;
     }
 
@@ -64,9 +62,8 @@ public:
     }
 
 private:
-    TestSystem(): can_flush_(false),
-                  cpu_elapsed_(0), cpu_total_(0), 
-                  gpu_elapsed_(0), gpu_total_(0) {};
+    TestSystem(): can_flush_(false), cpu_elapsed_(0), gpu_elapsed_(0), 
+                  speedup_total_(0.0), num_subtests_called_(0) {};
 
     void flush();
 
@@ -77,8 +74,11 @@ private:
 
     bool can_flush_;
 
-    int64 cpu_started_, cpu_elapsed_, cpu_total_;
-    int64 gpu_started_, gpu_elapsed_, gpu_total_;
+    int64 cpu_started_, cpu_elapsed_;
+    int64 gpu_started_, gpu_elapsed_;
+
+    double speedup_total_;
+    int num_subtests_called_;
 };
 
 
