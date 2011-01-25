@@ -4,41 +4,35 @@
 using namespace std;
 using namespace cv;
 
-void Test::gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
-{
-    mat.create(rows, cols, type);
-
-    RNG rng(0);
-    rng.fill(mat, RNG::UNIFORM, low, high);
-}
-
-
 void TestSystem::run()
 {
+    // Run initializers
+    vector<Runnable*>::iterator it = inits_.begin();
+    for (; it != inits_.end(); ++it)
+        (*it)->run();
+
     cout << setiosflags(ios_base::left);
     cout << "    " << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
         << setw(10) << "SPEEDUP" << "DESCRIPTION\n";
     cout << resetiosflags(ios_base::left);
 
-    vector<Test*>::iterator it = tests_.begin();
+    // Run tests
+    it = tests_.begin();
     for (; it != tests_.end(); ++it)
     {
-        Test* test = *it;
-
-        cout << endl << test->name() << ":\n";
-        test->run();
-
-        flush();
+        cout << endl << (*it)->name() << ":\n";
+        (*it)->run();
+        flush_subtest_data();
     }
 
     cout << setiosflags(ios_base::fixed | ios_base::left);
-    cout << "\nAverage GPU Speedup: x" << setprecision(3) 
+    cout << "\naverage GPU speedup: x" << setprecision(3) 
         << speedup_total_ / num_subtests_called_ << endl;
     cout << resetiosflags(ios_base::fixed | ios_base::left);
 }
 
 
-void TestSystem::flush()
+void TestSystem::flush_subtest_data()
 {
     if (!can_flush_)
         return;
@@ -72,6 +66,14 @@ void TestSystem::flush()
     
     can_flush_ = false;
     num_subtests_called_++;
+}
+
+
+void gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
+{
+    mat.create(rows, cols, type);
+    RNG rng(0);
+    rng.fill(mat, RNG::UNIFORM, low, high);
 }
 
 

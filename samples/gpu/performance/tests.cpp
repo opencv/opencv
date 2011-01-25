@@ -6,21 +6,36 @@
 using namespace std;
 using namespace cv;
 
+// This code calls CUFFT DFT and initializes that lib
+INIT(CUFFT_library)
+{
+    Mat src, templ;
+    gen(src, 500, 500, CV_32F, 0, 1);
+    gen(templ, 500, 500, CV_32F, 0, 1);
+
+    gpu::GpuMat d_src(src);
+    gpu::GpuMat d_templ(templ);
+    gpu::GpuMat d_result;
+
+    gpu::matchTemplate(d_src, d_templ, d_result, CV_TM_CCORR);
+}
+
+
 TEST(matchTemplate)
 {
-    Mat image, templ, result;
-    gen(image, 3000, 3000, CV_32F, 0, 1);
+    Mat src, templ, result;
+    gen(src, 3000, 3000, CV_32F, 0, 1);
 
-    gpu::GpuMat d_image(image), d_templ, d_result;
+    gpu::GpuMat d_image(src), d_templ, d_result;
 
     for (int templ_size = 5; templ_size <= 1000; templ_size *= 2)
     {
-        SUBTEST << "img " << image.rows << ", templ " << templ_size << ", 32F, CCORR";
+        SUBTEST << "src " << src.rows << ", templ " << templ_size << ", 32F, CCORR";
 
         gen(templ, templ_size, templ_size, CV_32F, 0, 1);
 
         CPU_ON;
-        matchTemplate(image, templ, result, CV_TM_CCORR);
+        matchTemplate(src, templ, result, CV_TM_CCORR);
         CPU_OFF;
 
         d_templ = templ;
@@ -42,7 +57,7 @@ TEST(minMaxLoc)
 
     for (int size = 2000; size <= 8000; size *= 2)
     {
-        SUBTEST << "img " << size << ", 32F, no mask";
+        SUBTEST << "src " << size << ", 32F, no mask";
 
         gen(src, size, size, CV_32F, 0, 1);
 
@@ -66,7 +81,7 @@ TEST(remap)
 
     for (int size = 1000; size <= 8000; size *= 2)
     {
-        SUBTEST << "img " << size << " and 8UC1, 32FC1 maps";
+        SUBTEST << "src " << size << " and 8UC1, 32FC1 maps";
 
         gen(src, size, size, CV_8UC1, 0, 256);
         gen(xmap, size, size, CV_32F, 0, size);
