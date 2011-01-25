@@ -15,6 +15,7 @@ public:
     const std::string& name() const { return name_; }
 
     void gen(cv::Mat& mat, int rows, int cols, int type);
+    void gen(cv::Mat& mat, int rows, int cols, int type, double low, double high);
 
     virtual void run() = 0;
 
@@ -83,7 +84,7 @@ private:
 
 
 #define TEST(name) \
-    struct name##_test: public Test \
+    struct name##_test: Test \
     { \
         name##_test(): Test(#name) { TestSystem::instance()->add(this); } \
         void run(); \

@@ -14,6 +14,15 @@ void Test::gen(Mat& mat, int rows, int cols, int type)
 }
 
 
+void Test::gen(Mat& mat, int rows, int cols, int type, double low, double high)
+{
+    mat.create(rows, cols, type);
+
+    RNG rng(0);
+    rng.fill(mat, RNG::UNIFORM, Scalar::all(low), Scalar::all(high));
+}
+
+
 void TestSystem::run()
 {
     cout << setiosflags(ios_base::left);
@@ -46,12 +55,11 @@ void TestSystem::flush()
 
     int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
     int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
-
-    double speedup = static_cast<double>(cpu_time) / gpu_time;
-    speedup_total_ += speedup;
-
     cpu_elapsed_ = 0;
     gpu_elapsed_ = 0;
+
+    double speedup = static_cast<double>(cpu_time) / std::max(1, gpu_time);
+    speedup_total_ += speedup;
 
     cout << "    " << setiosflags(ios_base::fixed | ios_base::left);
 
