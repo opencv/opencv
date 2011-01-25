@@ -1,3 +1,53 @@
-The OpenCV GPU module is a set of classes and functions to utilize GPU computational capabilities.
+\section {GPU module introduction}
 
-\textbf{TO DO}
+\subsection{General information}
+
+The OpenCV GPU module is a set of classes and functions to utilize GPU computational capabilities. It is implemented using NVidia CUDA Runtime API, so only that vendor GPUs are supported. It includes utility functions, low level vision primitives as well as high level algorithms. I.e. the module is being developed as power infrastructure for fast vision algorithms building on GPU with some high level state of the art functionality.  
+
+The GPU module is designed as host level API, i.e. if a user has precompiled OpenCV GPU binaries, it is not necessary for him to have Cuda Toolkit installed and have deal with code to execute on GPU. Additional advantage of this is that with the binaries users can use any compiler for any platform. But probably a device layer API will be introduced in future to provide more agility and performance in internal GPU module implementation and more functionality for users.
+
+External dependencies of the module are only libraries included in Cuda Toolkit and NVidia Performance Primitives library (NPP). These can be downloaded from NVidia site for all supported platforms. Only comparability with the latest Cuda Toolkit and NPP is provided for trunk OpenCV version and we switch to each new release very fast. So please keep it up to date. OpenCV GPU code can be compiled only on such platforms where Cuda Runtime Toolkit is supported by NVidia.
+
+OpenCV GPU module is designed to make its usage as easier as it possible. It can be used without any knowledge about Cuda. But for advanced programming and extremely optimization it is highly recommended to learn principles of programming and optimization for GPU. This is helpful because of understanding how much each operation cost, what it does, and how is it better to call. In this case GPU module became an effective instrument of development computer vision algorithms for GPU on prototyping stage and when hard optimization is in process.
+
+The OpenCV can be compiled with enabled and disabled \texttt{WITH\_CUDA} flag in CMake. Building with the flag set will force compilation of device code from GPU module and requires dependences above installed. If OpenCV is compiled without the flag, GPU module will also be built, but all functions from it will throw \cvCppCross{Exception} with \texttt{CV\_GpuNotSupported} error code, except \cvCppCross{gpu::getCudaEnabledDeviceCount()}. The last function will return zero GPU count in this case.  Building OpenCV without CUDA does not perform device code compilation, so it does not require Cuda Toolkit installed and supported by NVidia compiler. Also such behavior makes it possible to develop in future smart enough algorithms for OpenCV, that can decide itself weather it is reasonable to call GPU or do their work in CPU or use both. Thereby disabling \texttt{WITH\_CUDA} flag will force using only CPU. The mechanism can be used also by OpenCV users in their applications to enable or disable GPU support.
+
+\subsection{Compilation for different NVidia platforms.}
+
+NVidia compiler allows generating binary output (cubin and fatbin) and intermediate code (PTX). Binary code is a code to directly run on GPU, binary code compatibility of GPU is not guaranteed across different generations. PTX generation is a building to virtual platform. A virtual GPU is defined entirely by the set of capabilities, or features, so compilation to it is just a claim what GPU features are used and what features are restricted to use (example some unsupported instructions can be emulated).
+
+On first GPU call run PTX code is passed to Just In Time (JIT) compilation for concrete GPU platform on which it is run. There is a rule that PTX code can be compiled for all newer platforms (because they will support current feature set) but not for older (because current PTX may contain features not supported by older). 
+
+By default the following images are linked to GPU module library:
+\begin{itemize}
+\item Binaries for compute capabilities 1.3 and 2.0 (controlled by \texttt{CUDA\_ARCH\_GPU} in CMake)
+\item PTX code for compute capabilities 1.1 and 1.3 (controlled by \texttt{CUDA\_ARCH\_PTX} in CMake)
+\end{itemize}
+
+That means for devices with CC 1.3 and 2.0 binary images are ready to run. For all newer platforms the PTX code for 1.3 is JITed to a binary image. For devices with 1.1 and 1.2 the PTX for 1.1 is JITed. For devices with CC 1.0 no code present and execution will fails with \cvCppCross{Exception} somewhere. For platforms where JIT compilation is performed first run will be slow.
+
+Devices with compute capability 1.0 are supported by most of GPU functionality now. There are only a couple things that can’t run on it. They are guarded with asserts. But in future the number will raise, because of CC 1.0 support requires writing special implementation for it.  We decided not to spend time for old platform support.
+
+Because of OpenCV can be compiled not for all architectures, there can be binary incompatibility between GPU and code linked to OpenCV. In this case unclear error is returned in arbitrary place. But there is a way to check for what platforms OpenCV GPU was built using \cvCppCross{gpu::isCompatibleWith} function.
+
+
+\subsection{Threading and multi-threading.}
+
+Because GPU module is written using Cuda Runtime API, it derives from the API all practices and rules to work with threads. So on first the API call a Cuda context is created implicitly, attached and made current for the calling thread and. All farther operations, such as memory allocation, GPU kernels loads and compilation, will be associated with the context and the thread. Because another thread is not attached to the context, memory allocations done in first thread are not valid for it. For second thread another context will be created on first Cuda call. So by default different threads do not share resources.
+
+But such limitation can be removed via using Cuda Driver API. (\textbf{Warning!} Interoperability between Cuda Driver and Runtime APIs is supported only in Cuda Toolkit 3.1 and latter). The Driver API allows retrieving context reference and attaching it to another thread. In this case if the context was created with shared access policy both threads can use the same resources. Shared access policy is default for implicit context creating now. 
+
+Also here is possible in Cuda Driver API to create context explicitly before first Cuda runtime call, and make it current for all necessary threads. Cuda Runtime API (and OpenCV functions respectively) will pick up it.
+
+May be in future the tricks above will be wrapped by OpenCV GPU utility functions (it is also necessary for Multi-GPU modes).
+
+\subsection{Multi-GPU}
+
+At current stage all OpenCV GPU algorithms are single GPU algorithms. So to utilize multiple GPUs users have to manually parallelize work between GPUs. Multi-GPU practices is also derived from Cuda APIs, so for detailed information please read Cuda documentation. Here is 2 ways to use several GPU:
+\begin{itemize}
+\item In case of using only synchronous functions, several threads for each GPU are created and for each thread CUDA context is initialized (explicitly by Driver API or by calling \newline \cvCppCross{cv::gpu::setDevice()}, cudaSetDevice) that is associated with the corresponding GPU (CUDA context is always associated only with one GPU).  Now each thread can workload its own GPU.
+\item In case of asynchronous functions, it is possible to create several Cuda contexts associated with different GPUs but attached to one thread. This can be done only by Driver API. Next switch between devices is done by making corresponding context current for the thread. With non-blocking GPU calls managing algorithm is clear.
+\end{itemize}
+While developing algorithms for multiple GPUs a data passing overhead have to be taken into consideration. For primitive functions and for small images it can be significant and this stops the idea to use several GPU. But for some high level algorithms Multi-GPU acceleration is suitable. For example, we have done parallelization of Stereo Block matching by dividing stereo pair on two parts horizontally with overlapping, processing each part on separate Fermi GPU, next download and merge resulting disparity. Performance for two GPU is about 180\%. As conclusion, may be in future Cuda context managing functions will be wrapped in GPU module and some multi-GPU high level algorithms be implemented. But now user has to do this manually.
+
+

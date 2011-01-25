@@ -2,13 +2,13 @@
 
 
 \cvCppFunc{gpu::getCudaEnabledDeviceCount}
-Returns number of CUDA-enabled devices installed. It is to be used before any other GPU funtions calls. If OpenCV is compiled without GPU support this function returns 0. 
+Returns number of CUDA-enabled devices installed. It is to be used before any other GPU functions calls. If OpenCV is compiled without GPU support this function returns 0. 
 
 \cvdefCpp{int getCudaEnabledDeviceCount();}
 
 
 \cvCppFunc{gpu::setDevice}
-Sets device and initializes it for current thread. If this call is omitted, default device will be initialized.
+Sets device and initializes it for current thread. Call of this function can be omitted, but in this case a default device will be initialized on fist GPU usage.
 
 \cvdefCpp{void setDevice(int device);}
 \begin{description}
@@ -140,12 +140,14 @@ Returns true, if the GPU module has PTX or CUBIN code for the given architecture
 
 
 \cvCppFunc{gpu::isCompatibleWith}
-Returns true, if the GPU module is PTX or CUBIN compatible with the given GPU device, otherwise false.
+Returns true, if the GPU module is built with PTX or CUBIN compatible with the given GPU device, otherwise false.
 
 \cvdefCpp{bool isCompatibleWith(int device);}
 \begin{description}
 \cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
 \end{description}
+
+% By default GPU module is no compiled for devices with compute capability equal to 1.0. So if you run
 
 According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute capability can always be compiled to binary code of greater or equal compute capability". 
 

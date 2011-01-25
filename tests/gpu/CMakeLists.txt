@@ -3,12 +3,17 @@
 # ----------------------------------------------------------------------------
 project(opencv_test_gpu)
 
+set(the_target "opencv_test_gpu")
+
 file(GLOB test_srcs "src/*.cpp")
-source_group("Src" FILES ${test_srcs})
 file(GLOB test_hdrs "src/*.h*")
+source_group("Src" FILES ${test_srcs})
 source_group("Include" FILES ${test_hdrs})
 
-set(the_target "opencv_test_gpu")
+file(GLOB nvidia "src/nvidia/*.*")
+SET(ncv_cpp ../../modules/gpu/src/nvidia/NCV.cpp)
+source_group("Src\\nvidia" FILES ${nvidia})
+
 
 include_directories	(
 			"${CMAKE_SOURCE_DIR}/include/opencv"
@@ -29,8 +34,15 @@ include_directories	(
 			)
 
 include_directories(../cxts)
+include_directories(../../modules/gpu/src/nvidia ../../3rdparty/NPP_staging)
 
-add_executable(${the_target} ${test_srcs} ${test_hdrs})
+
+
+add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia} ${ncv_cpp})
+
+include(../../modules/gpu/FindNPP_staging.cmake)
+include_directories(${NPPST_INC})   
+target_link_libraries(${the_target} ${NPPST_LIB})
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
