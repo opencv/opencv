@@ -132,3 +132,24 @@ TEST(cornerHarris)
         GPU_OFF;
     }
 }
+
+
+TEST(memoryAllocation)
+{
+    Mat mat;
+    gpu::GpuMat d_mat;
+
+    int begin = 100, end = 8000, step = 100;
+
+    DESCRIPTION << "32F matrices from " << begin << " to " << end;
+
+    CPU_ON;
+    for (int size = begin; size <= end; size += step)
+        mat.create(size, size, CV_32FC1);
+    CPU_OFF;
+
+    GPU_ON;
+    for (int size = begin; size <= end; size += step)
+        d_mat.create(size, size, CV_32FC1);
+    GPU_OFF;
+}
