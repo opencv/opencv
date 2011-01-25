@@ -151,7 +151,7 @@ static void translate_error_to_exception(void)
 }
 
 #define ERRCHK do { if (cvGetErrStatus() != 0) { translate_error_to_exception(); return NULL; } } while (0)
-#define ERRWRAP(F) \
+#define ERRWRAPN(F, N) \
     do { \
         try \
         { \
@@ -160,10 +160,11 @@ static void translate_error_to_exception(void)
         catch (const cv::Exception &e) \
         { \
            PyErr_SetString(opencv_error, e.err.c_str()); \
-           return NULL; \
+           return N; \
         } \
         ERRCHK; \
     } while(0)
+#define ERRWRAP(F) ERRWRAPN(F, NULL) // for most functions, exception -> NULL return
 
 /************************************************************************/
 
@@ -3139,16 +3140,16 @@ static int cvarr_SetItem(PyObject *o, PyObject *key, PyObject *v)
   }
   switch (dd.count) {
   case 1:
-    cvSet1D(cva, dd.i[0], s);
+    ERRWRAPN(cvSet1D(cva, dd.i[0], s), -1);
     break;
   case 2:
-    cvSet2D(cva, dd.i[0], dd.i[1], s);
+    ERRWRAPN(cvSet2D(cva, dd.i[0], dd.i[1], s), -1);
     break;
   case 3:
-    cvSet3D(cva, dd.i[0], dd.i[1], dd.i[2], s);
+    ERRWRAPN(cvSet3D(cva, dd.i[0], dd.i[1], dd.i[2], s), -1);
     break;
   default:
-    cvSetND(cva, dd.i, s);
+    ERRWRAPN(cvSetND(cva, dd.i, s), -1);
     // XXX - OpenCV bug? - seems as if an error in cvSetND does not set error status?
     break;
   }

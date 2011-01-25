@@ -968,6 +968,43 @@ class AreaTests(OpenCVTests):
         else:
             print "SKIPPING test_numpy - numpy support not built"
 
+    def test_boundscatch(self):
+        l2 = cv.CreateMat(256, 1, cv.CV_8U)
+        l2[0,0]     # should be OK
+        self.assertRaises(cv.error, lambda: l2[1,1])
+        l2[0]       # should be OK
+        self.assertRaises(cv.error, lambda: l2[299])
+        for n in range(1, 8):
+            l = cv.CreateMatND([2] * n, cv.CV_8U)
+            l[0] # should be OK
+            self.assertRaises(cv.error, lambda: l[999])
+
+            tup0 = (0,) * n
+            l[tup0] # should be OK
+            tup2 = (2,) * n
+            self.assertRaises(cv.error, lambda: l[tup2])
+
+    def test_stereo(self):
+        bm = cv.CreateStereoBMState()
+        def illegal_delete():
+            bm = cv.CreateStereoBMState()
+            del bm.preFilterType
+        def illegal_assign():
+            bm = cv.CreateStereoBMState()
+            bm.preFilterType = "foo"
+
+        self.assertRaises(TypeError, illegal_delete)
+        self.assertRaises(TypeError, illegal_assign)
+
+        left = self.get_sample("samples/c/lena.jpg", 0)
+        right = self.get_sample("samples/c/lena.jpg", 0)
+        disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
+        cv.FindStereoCorrespondenceBM(left, right, disparity, bm)
+
+        gc = cv.CreateStereoGCState(16, 2)
+        left_disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
+        right_disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
+
     def test_stereo(self):
         bm = cv.CreateStereoBMState()
         def illegal_delete():
