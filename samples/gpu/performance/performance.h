@@ -14,8 +14,8 @@ public:
 
     const std::string& name() const { return name_; }
 
-    void gen(cv::Mat& mat, int rows, int cols, int type);
-    void gen(cv::Mat& mat, int rows, int cols, int type, double low, double high);
+    void gen(cv::Mat& mat, int rows, int cols, int type, 
+             cv::Scalar low, cv::Scalar high);
 
     virtual void run() = 0;
 

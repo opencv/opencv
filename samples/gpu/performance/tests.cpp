@@ -1,4 +1,5 @@
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include "performance.h"
 
@@ -8,7 +9,7 @@ using namespace cv;
 TEST(matchTemplate)
 {
     Mat image, templ, result;
-    gen(image, 3000, 3000, CV_32F);
+    gen(image, 3000, 3000, CV_32F, 0, 1);
 
     gpu::GpuMat d_image(image), d_templ, d_result;
 
@@ -16,7 +17,7 @@ TEST(matchTemplate)
     {
         SUBTEST << "img " << image.rows << ", templ " << templ_size << ", 32F, CCORR";
 
-        gen(templ, templ_size, templ_size, CV_32F);
+        gen(templ, templ_size, templ_size, CV_32F, 0, 1);
 
         CPU_ON;
         matchTemplate(image, templ, result, CV_TM_CCORR);
@@ -43,7 +44,7 @@ TEST(minMaxLoc)
     {
         SUBTEST << "img " << size << ", 32F, no mask";
 
-        gen(src, size, size, CV_32F);
+        gen(src, size, size, CV_32F, 0, 1);
 
         CPU_ON;
         minMaxLoc(src, &min_val, &max_val, &min_loc, &max_loc);
@@ -67,9 +68,9 @@ TEST(remap)
     {
         SUBTEST << "img " << size << " and 8UC1, 32FC1 maps";
 
-        gen(src, size, size, CV_8UC1);
-        gen(xmap, size, size, CV_32FC1, 0, size);
-        gen(ymap, size, size, CV_32FC1, 0, size);
+        gen(src, size, size, CV_8UC1, 0, 256);
+        gen(xmap, size, size, CV_32F, 0, size);
+        gen(ymap, size, size, CV_32F, 0, size);
 
         CPU_ON;
         remap(src, dst, xmap, ymap, INTER_LINEAR);
@@ -91,11 +92,11 @@ TEST(dft)
     Mat src, dst;
     gpu::GpuMat d_src, d_dst;
 
-    for (int size = 1000; size <= 4000; size += 1000)
+    for (int size = 1000; size <= 4000; size *= 2)
     {
         SUBTEST << "size " << size << ", 32FC2, complex-to-complex";
 
-        gen(src, size, size, CV_32FC2);
+        gen(src, size, size, CV_32FC2, Scalar::all(0), Scalar::all(1));
 
         CPU_ON;
         dft(src, dst);
@@ -119,7 +120,7 @@ TEST(cornerHarris)
     {
         SUBTEST << "size " << size << ", 32FC1";
 
-        gen(src, size, size, CV_32FC1);
+        gen(src, size, size, CV_32F, 0, 1);
 
         CPU_ON;
         cornerHarris(src, dst, 5, 7, 0.1, BORDER_REFLECT101);

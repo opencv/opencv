@@ -4,22 +4,12 @@
 using namespace std;
 using namespace cv;
 
-void Test::gen(Mat& mat, int rows, int cols, int type)
-{   
-    mat.create(rows, cols, type);
-    Mat mat8u(rows, cols * mat.elemSize(), CV_8U, mat.data, mat.step);
-
-    RNG rng(0);
-    rng.fill(mat, RNG::UNIFORM, Scalar(0), Scalar(256));
-}
-
-
-void Test::gen(Mat& mat, int rows, int cols, int type, double low, double high)
+void Test::gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
 {
     mat.create(rows, cols, type);
 
     RNG rng(0);
-    rng.fill(mat, RNG::UNIFORM, Scalar::all(low), Scalar::all(high));
+    rng.fill(mat, RNG::UNIFORM, low, high);
 }
 
 
