@@ -77,6 +77,10 @@ private:
         can_flush_ = false;
     }
 
+    void printHeading();
+    void printSummary();
+    void printItem(double cpu_time, double gpu_time, double speedup);
+
     std::vector<Runnable*> inits_;
     std::vector<Runnable*> tests_;
 

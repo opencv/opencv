@@ -1,5 +1,4 @@
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include "performance.h"
 
@@ -79,7 +78,7 @@ TEST(remap)
 
     for (int size = 1000; size <= 8000; size *= 2)
     {
-        SUBTEST << "src " << size << " and 8UC1, 32FC1 maps";
+        SUBTEST << "src " << size << " and 8U, 32F maps";
 
         gen(src, size, size, CV_8UC1, 0, 256);
         gen(xmap, size, size, CV_32F, 0, size);
@@ -94,6 +93,22 @@ TEST(remap)
         d_xmap = xmap;
         d_ymap = ymap;
         d_dst.create(d_xmap.size(), d_src.type());
+
+        GPU_ON;
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap);
+        GPU_OFF;
+
+        SUBTEST << "src " << size << " and 8U, 32F singular maps";
+
+        gen(xmap, size, size, CV_32F, 0, 0);
+        gen(ymap, size, size, CV_32F, 0, 0);
+
+        CPU_ON;
+        remap(src, dst, xmap, ymap, INTER_LINEAR);
+        CPU_OFF;
+
+        d_xmap = xmap;
+        d_ymap = ymap;
 
         GPU_ON;
         gpu::remap(d_src, d_dst, d_xmap, d_ymap);
@@ -135,7 +150,7 @@ TEST(cornerHarris)
 
     for (int size = 2000; size <= 4000; size *= 2)
     {
-        SUBTEST << "size " << size << ", 32FC1";
+        SUBTEST << "size " << size << ", 32F";
 
         gen(src, size, size, CV_32F, 0, 1);
         dst.create(src.size(), src.type());
@@ -148,7 +163,7 @@ TEST(cornerHarris)
         d_dst.create(src.size(), src.type());
 
         GPU_ON;
-        gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1);
+        gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT101);
         GPU_OFF;
     }
 }

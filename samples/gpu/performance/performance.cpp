@@ -13,11 +13,7 @@ void TestSystem::run()
         (*it)->run();
     }
 
-    cout << setiosflags(ios_base::left);
-    cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
-        << setw(10) << "SPEEDUP" 
-        << "DESCRIPTION\n";
-    cout << resetiosflags(ios_base::left);
+    printHeading();
 
     // Run tests
     it = tests_.begin();
@@ -35,11 +31,7 @@ void TestSystem::run()
         }
     }
 
-    cout << setiosflags(ios_base::fixed);
-    cout << "\naverage GPU speedup: x" 
-        << setprecision(3) << speedup_total_ / num_subtests_called_ 
-        << endl;
-    cout << resetiosflags(ios_base::fixed);
+    printSummary();
 }
 
 
@@ -54,8 +46,36 @@ void TestSystem::flushSubtestData()
     double speedup = static_cast<double>(cpu_time) / std::max(1, gpu_time);
     speedup_total_ += speedup;
 
-    cout << TAB << setiosflags(ios_base::left);
+    printItem(cpu_time, gpu_time, speedup);
+    
+    num_subtests_called_++;
+    resetSubtestData();
+}
 
+
+void TestSystem::printHeading()
+{
+    cout << setiosflags(ios_base::left);
+    cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
+        << setw(10) << "SPEEDUP" 
+        << "DESCRIPTION\n";
+    cout << resetiosflags(ios_base::left);
+}
+
+
+void TestSystem::printSummary()
+{
+    cout << setiosflags(ios_base::fixed);
+    cout << "\naverage GPU speedup: x" 
+        << setprecision(3) << speedup_total_ / num_subtests_called_ 
+        << endl;
+    cout << resetiosflags(ios_base::fixed);
+}
+
+
+void TestSystem::printItem(double cpu_time, double gpu_time, double speedup)
+{
+    cout << TAB << setiosflags(ios_base::left);
     stringstream stream;
 
     stream << cpu_time;
@@ -71,9 +91,6 @@ void TestSystem::flushSubtestData()
 
     cout << description_.str();
     cout << resetiosflags(ios_base::left) << endl;
-    
-    num_subtests_called_++;
-    resetSubtestData();
 }
 
 
