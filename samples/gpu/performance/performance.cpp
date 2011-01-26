@@ -56,7 +56,7 @@ void TestSystem::flushSubtestData()
     int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
     int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
 
-    double speedup = static_cast<double>(cpu_elapsed_) / gpu_elapsed_;
+    double speedup = static_cast<double>(cpu_elapsed_) / std::max((int64)1, gpu_elapsed_);
     speedup_total_ += speedup;
 
     printItem(cpu_time, gpu_time, speedup);
@@ -80,7 +80,7 @@ void TestSystem::printSummary()
 {
     cout << setiosflags(ios_base::fixed);
     cout << "\naverage GPU speedup: x" 
-        << setprecision(3) << speedup_total_ / num_subtests_called_ 
+        << setprecision(3) << speedup_total_ / std::max(1, num_subtests_called_) 
         << endl;
     cout << resetiosflags(ios_base::fixed);
 }
