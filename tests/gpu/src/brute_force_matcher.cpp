@@ -47,134 +47,456 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-class CV_GpuBruteForceMatcherTest : public CvTest 
+class CV_GpuBruteForceMatcherTest : public CvTest
 {
 public:
-    CV_GpuBruteForceMatcherTest() : CvTest( "GPU-BruteForceMatcher", "BruteForceMatcher" ) {}
-
-protected:
-    void run(int) 
+    CV_GpuBruteForceMatcherTest() :
+        CvTest( "GPU-BruteForceMatcher", "BruteForceMatcher" ), badPart(0.01f)
     {
-        try 
+    }
+protected:
+    static const int dim = 500;
+    static const int queryDescCount = 300; // must be even number because we split train data in some cases in two
+    static const int countFactor = 4; // do not change it
+    const float badPart;
+
+    virtual void run(int);
+    void generateData(GpuMat& query, GpuMat& train);
+
+    void emptyDataTest();
+    void matchTest(const GpuMat& query, const GpuMat& train);
+    void knnMatchTest(const GpuMat& query, const GpuMat& train);
+    void radiusMatchTest(const GpuMat& query, const GpuMat& train);
+
+    BruteForceMatcher_GPU< L2<float> > dmatcher;
+};
+
+void CV_GpuBruteForceMatcherTest::emptyDataTest()
+{
+    GpuMat queryDescriptors, trainDescriptors, mask;
+    vector<GpuMat> trainDescriptorCollection, masks;
+    vector<DMatch> matches;
+    vector< vector<DMatch> > vmatches;
+
+    try
+    {
+        dmatcher.match(queryDescriptors, trainDescriptors, matches, mask);
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "match() on empty descriptors must not generate exception (1).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher.knnMatch(queryDescriptors, trainDescriptors, vmatches, 2, mask);
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "knnMatch() on empty descriptors must not generate exception (1).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher.radiusMatch(queryDescriptors, trainDescriptors, vmatches, 10.f, mask);
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "radiusMatch() on empty descriptors must not generate exception (1).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher.add(trainDescriptorCollection);
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "add() on empty descriptors must not generate exception.\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher.match(queryDescriptors, matches, masks);
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "match() on empty descriptors must not generate exception (2).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher.knnMatch(queryDescriptors, vmatches, 2, masks);
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "knnMatch() on empty descriptors must not generate exception (2).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+    try
+    {
+        dmatcher.radiusMatch( queryDescriptors, vmatches, 10.f, masks );
+    }
+    catch(...)
+    {
+        ts->printf( CvTS::LOG, "radiusMatch() on empty descriptors must not generate exception (2).\n" );
+        ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+    }
+
+}
+
+void CV_GpuBruteForceMatcherTest::generateData( GpuMat& queryGPU, GpuMat& trainGPU )
+{
+    Mat query, train;
+    RNG rng(*ts->get_rng());
+
+    // Generate query descriptors randomly.
+    // Descriptor vector elements are integer values.
+    Mat buf( queryDescCount, dim, CV_32SC1 );
+    rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
+    buf.convertTo( query, CV_32FC1 );
+
+    // Generate train decriptors as follows:
+    // copy each query descriptor to train set countFactor times
+    // and perturb some one element of the copied descriptors in
+    // in ascending order. General boundaries of the perturbation
+    // are (0.f, 1.f).
+    train.create( query.rows*countFactor, query.cols, CV_32FC1 );
+    float step = 1.f / countFactor;
+    for( int qIdx = 0; qIdx < query.rows; qIdx++ )
+    {
+        Mat queryDescriptor = query.row(qIdx);
+        for( int c = 0; c < countFactor; c++ )
         {
-            BruteForceMatcher< L2<float> > matcherCPU;
-            BruteForceMatcher_GPU< L2<float> > matcherGPU;
-            
-            vector<DMatch> matchesCPU, matchesGPU;
-            vector< vector<DMatch> > knnMatchesCPU, knnMatchesGPU;
-            vector< vector<DMatch> > radiusMatchesCPU, radiusMatchesGPU;
+            int tIdx = qIdx * countFactor + c;
+            Mat trainDescriptor = train.row(tIdx);
+            queryDescriptor.copyTo( trainDescriptor );
+            int elem = rng(dim);
+            float diff = rng.uniform( step*c, step*(c+1) );
+            trainDescriptor.at<float>(0, elem) += diff;
+        }
+    }
 
-            RNG rng(*ts->get_rng());
+    queryGPU.upload(query);
+    trainGPU.upload(train);
+}
 
-            const int desc_len = rng.uniform(40, 300);
+void CV_GpuBruteForceMatcherTest::matchTest( const GpuMat& query, const GpuMat& train )
+{
+    dmatcher.clear();
 
-            Mat queryCPU(rng.uniform(100, 300), desc_len, CV_32F);            
-            rng.fill(queryCPU, cv::RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar::all(10.0));
-            GpuMat queryGPU(queryCPU);
+    // test const version of match()
+    {
+        vector<DMatch> matches;
+        dmatcher.match( query, train, matches );
 
-            const int nTrains = rng.uniform(1, 5);
-
-            vector<Mat> trainsCPU(nTrains);
-            vector<GpuMat> trainsGPU(nTrains);
-
-            vector<Mat> masksCPU(nTrains);
-            vector<GpuMat> masksGPU(nTrains);
-
-            for (int i = 0; i < nTrains; ++i)
+        if( (int)matches.size() != queryDescCount )
+        {
+            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (1).\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
             {
-                Mat train(rng.uniform(100, 300), desc_len, CV_32F);
-                rng.fill(train, cv::RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar::all(10.0));
+                DMatch match = matches[i];
+                if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
+                    badCount++;
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (1).\n",
+                            (float)badCount/(float)queryDescCount );
+                ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+            }
+        }
+    }
 
-                trainsCPU[i] = train;
-                trainsGPU[i].upload(train);
+    // test version of match() with add()
+    {
+        vector<DMatch> matches;
+        // make add() twice to test such case
+        dmatcher.add( vector<GpuMat>(1,train.rowRange(0, train.rows/2)) );
+        dmatcher.add( vector<GpuMat>(1,train.rowRange(train.rows/2, train.rows)) );
+        // prepare masks (make first nearest match illegal)
+        vector<GpuMat> masks(2);
+        for(int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = GpuMat(query.rows, train.rows/2, CV_8UC1, Scalar::all(1));
+            for( int di = 0; di < queryDescCount/2; di++ )
+                masks[mi].col(di*countFactor).setTo(Scalar::all(0));
+        }
 
-                bool with_mask = rng.uniform(0, 10) < 5;
-                if (with_mask)
+        dmatcher.match( query, matches, masks );
+
+        if( (int)matches.size() != queryDescCount )
+        {
+            ts->printf(CvTS::LOG, "Incorrect matches count while test match() function (2).\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                DMatch match = matches[i];
+                int shift = dmatcher.isMaskSupported() ? 1 : 0;
                 {
-                    Mat mask(queryCPU.rows, train.rows, CV_8U);
-                    rng.fill(mask, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(200));
-
-                    masksCPU[i] = mask;
-                    masksGPU[i].upload(mask);
+                    if( i < queryDescCount/2 )
+                    {
+                        if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor + shift) || (match.imgIdx != 0) )
+                            badCount++;
+                    }
+                    else
+                    {
+                        if( (match.queryIdx != (int)i) || (match.trainIdx != ((int)i-queryDescCount/2)*countFactor + shift) || (match.imgIdx != 1) )
+                            badCount++;
+                    }
                 }
             }
-
-            matcherCPU.add(trainsCPU);
-            matcherGPU.add(trainsGPU);
-
-            matcherCPU.match(queryCPU, matchesCPU, masksCPU);
-            matcherGPU.match(queryGPU, matchesGPU, masksGPU);
-
-            if (!compareMatches(matchesCPU, matchesGPU))
+            if( (float)badCount > (float)queryDescCount*badPart )
             {
-                ts->printf(CvTS::LOG, "Match FAIL\n");
-                ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-                return;
-            }
-
-            const int knn = rng.uniform(3, 10);
-
-            matcherCPU.knnMatch(queryCPU, knnMatchesCPU, knn, masksCPU, true);
-            matcherGPU.knnMatch(queryGPU, knnMatchesGPU, knn, masksGPU, true);
-
-            if (!compareMatches(knnMatchesCPU, knnMatchesGPU))
-            {
-                ts->printf(CvTS::LOG, "KNN Match FAIL\n");
-                ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-                return;
-            }
-
-            const float maxDistance = rng.uniform(25.0f, 65.0f);
-            
-            matcherCPU.radiusMatch(queryCPU, radiusMatchesCPU, maxDistance, masksCPU, true);
-            matcherGPU.radiusMatch(queryGPU, radiusMatchesGPU, maxDistance, masksGPU, true);
-
-            if (!compareMatches(radiusMatchesCPU, radiusMatchesGPU))
-            {
-                ts->printf(CvTS::LOG, "Radius Match FAIL\n");
-                ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-                return;
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (2).\n",
+                            (float)badCount/(float)queryDescCount );
+                ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
             }
         }
-        catch (const cv::Exception& e) 
+    }
+}
+
+void CV_GpuBruteForceMatcherTest::knnMatchTest( const GpuMat& query, const GpuMat& train )
+{
+    dmatcher.clear();
+
+    // test const version of knnMatch()
+    {
+        const int knn = 3;
+
+        vector< vector<DMatch> > matches;
+        dmatcher.knnMatch( query, train, matches, knn );
+
+        if( (int)matches.size() != queryDescCount )
         {
-            if (!check_and_treat_gpu_exception(e, ts))
-                throw;
-            return;
+            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (1).\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
         }
-
-        ts->set_failed_test_info(CvTS::OK);
-    }
-
-private:
-    static void convertMatches(const vector< vector<DMatch> >& knnMatches, vector<DMatch>& matches)
-    {
-        matches.clear();
-        for (size_t i = 0; i < knnMatches.size(); ++i)
-            copy(knnMatches[i].begin(), knnMatches[i].end(), back_inserter(matches));
-    }
-
-    struct DMatchEqual : public binary_function<DMatch, DMatch, bool>
-    {
-        bool operator()(const DMatch& m1, const DMatch& m2) const
+        else
         {
-            return m1.imgIdx == m2.imgIdx && m1.queryIdx == m2.queryIdx && m1.trainIdx == m2.trainIdx;
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                if( (int)matches[i].size() != knn )
+                    badCount++;
+                else
+                {
+                    int localBadCount = 0;
+                    for( int k = 0; k < knn; k++ )
+                    {
+                        DMatch match = matches[i][k];
+                        if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor+k) || (match.imgIdx != 0) )
+                            localBadCount++;
+                    }
+                    badCount += localBadCount > 0 ? 1 : 0;
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (1).\n",
+                            (float)badCount/(float)queryDescCount );
+                ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+            }
         }
-    };
-    
-    static bool compareMatches(const vector<DMatch>& matches1, const vector<DMatch>& matches2)
-    {
-        if (matches1.size() != matches2.size())
-            return false;
-
-        return equal(matches1.begin(), matches1.end(), matches2.begin(), DMatchEqual());
     }
 
-    static bool compareMatches(const vector< vector<DMatch> >& matches1, const vector< vector<DMatch> >& matches2)
+    // test version of knnMatch() with add()
     {
-        vector<DMatch> m1, m2;
-        convertMatches(matches1, m1);
-        convertMatches(matches2, m2);
-        return compareMatches(m1, m2);
+        const int knn = 2;
+        vector<vector<DMatch> > matches;
+        // make add() twice to test such case
+        dmatcher.add( vector<GpuMat>(1,train.rowRange(0, train.rows/2)) );
+        dmatcher.add( vector<GpuMat>(1,train.rowRange(train.rows/2, train.rows)) );
+        // prepare masks (make first nearest match illegal)
+        vector<GpuMat> masks(2);
+        for(int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = GpuMat(query.rows, train.rows/2, CV_8UC1, Scalar::all(1));
+            for( int di = 0; di < queryDescCount/2; di++ )
+                masks[mi].col(di*countFactor).setTo(Scalar::all(0));
+        }
+
+        dmatcher.knnMatch( query, matches, knn, masks );
+
+        if( (int)matches.size() != queryDescCount )
+        {
+            ts->printf(CvTS::LOG, "Incorrect matches count while test knnMatch() function (2).\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        }
+        else
+        {
+            int badCount = 0;
+            int shift = dmatcher.isMaskSupported() ? 1 : 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                if( (int)matches[i].size() != knn )
+                    badCount++;
+                else
+                {
+                    int localBadCount = 0;
+                    for( int k = 0; k < knn; k++ )
+                    {
+                        DMatch match = matches[i][k];
+                        {
+                            if( i < queryDescCount/2 )
+                            {
+                                if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor + k + shift) ||
+                                    (match.imgIdx != 0) )
+                                    localBadCount++;
+                            }
+                            else
+                            {
+                                if( (match.queryIdx != (int)i) || (match.trainIdx != ((int)i-queryDescCount/2)*countFactor + k + shift) ||
+                                    (match.imgIdx != 1) )
+                                    localBadCount++;
+                            }
+                        }
+                    }
+                    badCount += localBadCount > 0 ? 1 : 0;
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (2).\n",
+                            (float)badCount/(float)queryDescCount );
+                ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
+            }
+        }
     }
-} brute_force_matcher_test;
+}
+
+void CV_GpuBruteForceMatcherTest::radiusMatchTest( const GpuMat& query, const GpuMat& train )
+{
+    dmatcher.clear();
+    // test const version of match()
+    {
+        const float radius = 1.f/countFactor;
+        vector< vector<DMatch> > matches;
+        dmatcher.radiusMatch( query, train, matches, radius );
+
+        if( (int)matches.size() != queryDescCount )
+        {
+            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1).\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        }
+        else
+        {
+            int badCount = 0;
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                if( (int)matches[i].size() != 1 )
+                    badCount++;
+                else
+                {
+                    DMatch match = matches[i][0];
+                    if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
+                        badCount++;
+                }
+            }
+            if( (float)badCount > (float)queryDescCount*badPart )
+            {
+                ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1).\n",
+                            (float)badCount/(float)queryDescCount );
+                ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+            }
+        }
+    }
+
+    // test version of match() with add()
+    {
+        int n = 3;
+        const float radius = 1.f/countFactor * n;
+        vector< vector<DMatch> > matches;
+        // make add() twice to test such case
+        dmatcher.add( vector<GpuMat>(1,train.rowRange(0, train.rows/2)) );
+        dmatcher.add( vector<GpuMat>(1,train.rowRange(train.rows/2, train.rows)) );
+        // prepare masks (make first nearest match illegal)
+        vector<GpuMat> masks(2);
+        for(int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = GpuMat(query.rows, train.rows/2, CV_8UC1, Scalar::all(1));
+            for( int di = 0; di < queryDescCount/2; di++ )
+                masks[mi].col(di*countFactor).setTo(Scalar::all(0));
+        }
+
+        dmatcher.radiusMatch( query, matches, radius, masks );
+
+        int curRes = CvTS::OK;
+        if( (int)matches.size() != queryDescCount )
+        {
+            ts->printf(CvTS::LOG, "Incorrect matches count while test radiusMatch() function (1).\n");
+            ts->set_failed_test_info( CvTS::FAIL_INVALID_OUTPUT );
+        }
+
+        int badCount = 0;
+        int shift = dmatcher.isMaskSupported() ? 1 : 0;
+        int needMatchCount = dmatcher.isMaskSupported() ? n-1 : n;
+        for( size_t i = 0; i < matches.size(); i++ )
+        {
+            if( (int)matches[i].size() != needMatchCount )
+                badCount++;
+            else
+            {
+                int localBadCount = 0;
+                for( int k = 0; k < needMatchCount; k++ )
+                {
+                    DMatch match = matches[i][k];
+                    {
+                        if( i < queryDescCount/2 )
+                        {
+                            if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor + k + shift) ||
+                                (match.imgIdx != 0) )
+                                localBadCount++;
+                        }
+                        else
+                        {
+                            if( (match.queryIdx != (int)i) || (match.trainIdx != ((int)i-queryDescCount/2)*countFactor + k + shift) ||
+                                (match.imgIdx != 1) )
+                                localBadCount++;
+                        }
+                    }
+                }
+                badCount += localBadCount > 0 ? 1 : 0;
+            }
+        }
+        if( (float)badCount > (float)queryDescCount*badPart )
+        {
+            curRes = CvTS::FAIL_INVALID_OUTPUT;
+            ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (2).\n",
+                        (float)badCount/(float)queryDescCount );
+            ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
+        }
+    }
+}
+
+void CV_GpuBruteForceMatcherTest::run( int )
+{
+    emptyDataTest();
+
+    GpuMat query, train;
+    generateData( query, train );
+
+    matchTest( query, train );
+
+    knnMatchTest( query, train );
+
+    radiusMatchTest( query, train );
+
+    dmatcher.clear();
+}
+
+CV_GpuBruteForceMatcherTest CV_GpuBruteForceMatcher_test;

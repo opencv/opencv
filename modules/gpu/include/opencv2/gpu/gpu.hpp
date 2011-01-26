@@ -1301,7 +1301,7 @@ namespace cv
                 const GpuMat& maskCollection);
 
             // Download trainIdx, imgIdx and distance to CPU vector with DMatch
-            static void matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, const GpuMat& distance,
+            static void matchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance,
                 std::vector<DMatch>& matches);
 
             // Find one best match from train collection for each query descriptor.
