@@ -113,13 +113,13 @@ int main()
 #endif
 
     // Print some avalible Kinect settings.
-    cout << "Depth generator output mode:" << endl <<
+    cout << "\nDepth generator output mode:" << endl <<
             "FRAME_WIDTH    " << capture.get( CV_CAP_PROP_FRAME_WIDTH ) << endl <<
             "FRAME_HEIGHT   " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FRAME_MAX_DEPTH    " << capture.get( OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
             "FPS    " << capture.get( CV_CAP_PROP_FPS ) << endl;
 
-    cout << "Image generator output mode:" << endl <<
+    cout << "\nImage generator output mode:" << endl <<
             "FRAME_WIDTH    " << capture.get( OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
             "FRAME_HEIGHT   " << capture.get( OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FPS    " << capture.get( OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
