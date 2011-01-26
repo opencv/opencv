@@ -6,42 +6,40 @@
 using namespace std;
 using namespace cv;
 
-// This code calls CUFFT DFT and initializes that lib
-INIT(CUFFT_library)
+INIT(matchTemplate)
 {
-    Mat src, templ;
-    gen(src, 500, 500, CV_32F, 0, 1);
-    gen(templ, 500, 500, CV_32F, 0, 1);
+    Mat src; gen(src, 500, 500, CV_32F, 0, 1);
+    Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
 
-    gpu::GpuMat d_src(src);
-    gpu::GpuMat d_templ(templ);
-    gpu::GpuMat d_result;
+    gpu::GpuMat d_src(src), d_templ(templ), d_dst;
 
-    gpu::matchTemplate(d_src, d_templ, d_result, CV_TM_CCORR);
+    gpu::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
 }
 
 
 TEST(matchTemplate)
 {
-    Mat src, templ, result;
+    Mat src, templ, dst;
     gen(src, 3000, 3000, CV_32F, 0, 1);
 
-    gpu::GpuMat d_image(src), d_templ, d_result;
+    gpu::GpuMat d_src(src), d_templ, d_dst;
 
-    for (int templ_size = 5; templ_size <= 1000; templ_size *= 2)
+    for (int templ_size = 5; templ_size < 200; templ_size *= 5)
     {
         SUBTEST << "src " << src.rows << ", templ " << templ_size << ", 32F, CCORR";
 
         gen(templ, templ_size, templ_size, CV_32F, 0, 1);
+        dst.create(src.rows - templ.rows + 1, src.cols - templ.cols + 1, CV_32F);
 
         CPU_ON;
-        matchTemplate(src, templ, result, CV_TM_CCORR);
+        matchTemplate(src, templ, dst, CV_TM_CCORR);
         CPU_OFF;
 
         d_templ = templ;
+        d_dst.create(d_src.rows - d_templ.rows + 1, d_src.cols - d_templ.cols + 1, CV_32F);
 
         GPU_ON;
-        gpu::matchTemplate(d_image, d_templ, d_result, CV_TM_CCORR);
+        gpu::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
         GPU_OFF;
     }
 }
@@ -86,6 +84,7 @@ TEST(remap)
         gen(src, size, size, CV_8UC1, 0, 256);
         gen(xmap, size, size, CV_32F, 0, size);
         gen(ymap, size, size, CV_32F, 0, size);
+        dst.create(xmap.size(), src.type());
 
         CPU_ON;
         remap(src, dst, xmap, ymap, INTER_LINEAR);
@@ -94,6 +93,7 @@ TEST(remap)
         d_src = src;
         d_xmap = xmap;
         d_ymap = ymap;
+        d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
         gpu::remap(d_src, d_dst, d_xmap, d_ymap);
@@ -107,17 +107,19 @@ TEST(dft)
     Mat src, dst;
     gpu::GpuMat d_src, d_dst;
 
-    for (int size = 1000; size <= 8000; size *= 2)
+    for (int size = 1000; size <= 4000; size *= 2)
     {
         SUBTEST << "size " << size << ", 32FC2, complex-to-complex";
 
         gen(src, size, size, CV_32FC2, Scalar::all(0), Scalar::all(1));
+        dst.create(src.size(), src.type());
 
         CPU_ON;
         dft(src, dst);
         CPU_OFF;
 
         d_src = src;
+        d_dst.create(d_src.size(), d_src.type());
 
         GPU_ON;
         gpu::dft(d_src, d_dst, Size(size, size));
@@ -136,12 +138,14 @@ TEST(cornerHarris)
         SUBTEST << "size " << size << ", 32FC1";
 
         gen(src, size, size, CV_32F, 0, 1);
+        dst.create(src.size(), src.type());
 
         CPU_ON;
         cornerHarris(src, dst, 5, 7, 0.1, BORDER_REFLECT101);
         CPU_OFF;
 
         d_src = src;
+        d_dst.create(src.size(), src.type());
 
         GPU_ON;
         gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1);
@@ -150,22 +154,51 @@ TEST(cornerHarris)
 }
 
 
-TEST(memoryAllocation)
+TEST(integral)
 {
-    Mat mat;
-    gpu::GpuMat d_mat;
+    Mat src, sum;
+    gpu::GpuMat d_src, d_sum;
 
-    int begin = 100, end = 8000, step = 100;
+    for (int size = 1000; size <= 8000; size *= 2)
+    {
+        SUBTEST << "size " << size << ", 8U";
 
-    DESCRIPTION << "32F matrices from " << begin << " to " << end;
+        gen(src, size, size, CV_8U, 0, 256);
+        sum.create(size + 1, size + 1, CV_32S);
 
-    CPU_ON;
-    for (int size = begin; size <= end; size += step)
-        mat.create(size, size, CV_32FC1);
-    CPU_OFF;
+        CPU_ON;
+        integral(src, sum);
+        CPU_OFF;
 
-    GPU_ON;
-    for (int size = begin; size <= end; size += step)
-        d_mat.create(size, size, CV_32FC1);
-    GPU_OFF;
+        d_src = src;
+        d_sum.create(size + 1, size + 1, CV_32S);
+
+        GPU_ON;
+        gpu::integral(d_src, d_sum);
+        GPU_OFF;
+    }
+}
+
+
+TEST(norm)
+{
+    Mat src;
+    gpu::GpuMat d_src;
+
+    for (int size = 1000; size <= 8000; size *= 2)
+    {
+        SUBTEST << "size " << size << ", 8U";
+
+        gen(src, size, size, CV_8U, 0, 256);
+
+        CPU_ON;
+        norm(src);
+        CPU_OFF;
+
+        d_src = src;
+
+        GPU_ON;
+        gpu::norm(d_src);
+        GPU_OFF;
+    }
 }

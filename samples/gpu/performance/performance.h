@@ -38,6 +38,13 @@ public:
 
     void run();
 
+    // Ends current subtest and starts new one
+    std::stringstream& subtest()
+    {
+        flushSubtestData();
+        return description_;
+    }
+
     void cpuOn() { cpu_started_ = cv::getTickCount(); }
 
     void cpuOff() 
@@ -56,20 +63,13 @@ public:
         can_flush_ = true;
     }
 
-    // Ends current subtest and starts new one
-    std::stringstream& subtest()
-    {
-        flush_subtest_data();
-        return description_;
-    }
-
 private:
     TestSystem(): can_flush_(false), cpu_elapsed_(0), gpu_elapsed_(0), 
                   speedup_total_(0.0), num_subtests_called_(0) {};
 
-    void flush_subtest_data();
+    void flushSubtestData();
 
-    void reset_subtest_data() 
+    void resetSubtestData() 
     {
         cpu_elapsed_ = 0;
         gpu_elapsed_ = 0;
@@ -93,17 +93,6 @@ private:
 };
 
 
-#define TEST(name) \
-    struct name##_test: Runnable \
-    { \
-        name##_test(): Runnable(#name) { \
-            TestSystem::instance()->addTest(this); \
-        } \
-        void run(); \
-    } name##_test_instance; \
-    void name##_test::run()
-
-
 #define INIT(name) \
     struct name##_init: Runnable \
     { \
@@ -115,12 +104,22 @@ private:
     void name##_init::run()
 
 
+#define TEST(name) \
+    struct name##_test: Runnable \
+    { \
+        name##_test(): Runnable(#name) { \
+            TestSystem::instance()->addTest(this); \
+        } \
+        void run(); \
+    } name##_test_instance; \
+    void name##_test::run()
+
+#define SUBTEST TestSystem::instance()->subtest()
+#define DESCRIPTION TestSystem::instance()->subtest()
 #define CPU_ON TestSystem::instance()->cpuOn()
 #define GPU_ON TestSystem::instance()->gpuOn()
 #define CPU_OFF TestSystem::instance()->cpuOff()
 #define GPU_OFF TestSystem::instance()->gpuOff()
-#define SUBTEST TestSystem::instance()->subtest()
-#define DESCRIPTION TestSystem::instance()->subtest()
 
 void gen(cv::Mat& mat, int rows, int cols, int type, cv::Scalar low, 
          cv::Scalar high);

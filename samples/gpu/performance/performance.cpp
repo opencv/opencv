@@ -9,11 +9,14 @@ void TestSystem::run()
     // Run initializers
     vector<Runnable*>::iterator it = inits_.begin();
     for (; it != inits_.end(); ++it)
+    {
         (*it)->run();
+    }
 
     cout << setiosflags(ios_base::left);
     cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
-        << setw(10) << "SPEEDUP" << "DESCRIPTION\n";
+        << setw(10) << "SPEEDUP" 
+        << "DESCRIPTION\n";
     cout << resetiosflags(ios_base::left);
 
     // Run tests
@@ -24,30 +27,23 @@ void TestSystem::run()
         try
         {
             (*it)->run();
-            flush_subtest_data();
+            flushSubtestData();
         }
-        catch (const cv::Exception& e)
+        catch (const cv::Exception&)
         {
-            cout << TAB << "error";
-            switch (e.code)
-            {
-                case CV_StsNoMem: cout << ": out of memory"; break;
-            }
-            if (!description_.str().empty())
-                cout << " [" << description_.str() << "]";
-            cout << endl;
-            reset_subtest_data();
+            resetSubtestData();
         }
     }
 
-    cout << setiosflags(ios_base::fixed | ios_base::left);
-    cout << "\naverage GPU speedup: x" << setprecision(3) 
-        << speedup_total_ / num_subtests_called_ << endl;
-    cout << resetiosflags(ios_base::fixed | ios_base::left);
+    cout << setiosflags(ios_base::fixed);
+    cout << "\naverage GPU speedup: x" 
+        << setprecision(3) << speedup_total_ / num_subtests_called_ 
+        << endl;
+    cout << resetiosflags(ios_base::fixed);
 }
 
 
-void TestSystem::flush_subtest_data()
+void TestSystem::flushSubtestData()
 {
     if (!can_flush_)
         return;
@@ -58,9 +54,10 @@ void TestSystem::flush_subtest_data()
     double speedup = static_cast<double>(cpu_time) / std::max(1, gpu_time);
     speedup_total_ += speedup;
 
-    cout << TAB << setiosflags(ios_base::fixed | ios_base::left);
+    cout << TAB << setiosflags(ios_base::left);
 
     stringstream stream;
+
     stream << cpu_time;
     cout << setw(10) << stream.str();
 
@@ -73,11 +70,10 @@ void TestSystem::flush_subtest_data()
     cout << setw(10) << stream.str();
 
     cout << description_.str();
-
-    cout << resetiosflags(ios_base::fixed | ios_base::left) << endl;
+    cout << resetiosflags(ios_base::left) << endl;
     
     num_subtests_called_++;
-    reset_subtest_data();
+    resetSubtestData();
 }
 
 
