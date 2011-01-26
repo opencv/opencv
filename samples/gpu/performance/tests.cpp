@@ -278,39 +278,24 @@ TEST(SURF)
 
 TEST(BruteForceMatcher)
 {
-    RNG rng(0);
-
     // Init CPU matcher
 
     int desc_len = 128;
-    int num_trains = rng.uniform(1, 5);
 
     BruteForceMatcher< L2<float> > matcher;
 
     Mat query; 
-    gen(query, rng.uniform(100, 300), desc_len, CV_32F, 0, 10);
-
-    vector<Mat> trains(num_trains);
-    for (int i = 0; i < num_trains; ++i)
-    {
-        Mat train; 
-        gen(train, rng.uniform(100, 300), desc_len, CV_32F, 0, 10);
-        trains[i] = train;
-    }
-    matcher.add(trains);
+    gen(query, 3000, desc_len, CV_32F, 0, 10);
+    
+    Mat train; 
+    gen(train, 3000, desc_len, CV_32F, 0, 10);
 
     // Init GPU matcher
 
     gpu::BruteForceMatcher_GPU< L2<float> > d_matcher;
 
     gpu::GpuMat d_query(query);
-
-    vector<gpu::GpuMat> d_trains(num_trains);
-    for (int i = 0; i < num_trains; ++i)
-    {
-        d_trains[i] = trains[i];
-    }
-    d_matcher.add(d_trains);
+    gpu::GpuMat d_train(train);
 
     // Output
     vector< vector<DMatch> > matches(1);
@@ -319,32 +304,32 @@ TEST(BruteForceMatcher)
     SUBTEST << "match";
 
     CPU_ON;
-    matcher.match(query, matches[0]);
+    matcher.match(query, train, matches[0]);
     CPU_OFF;
 
     GPU_ON;
-    d_matcher.match(d_query, d_matches[0]);
+    d_matcher.match(d_query, d_train, d_matches[0]);
     GPU_OFF;
 
     SUBTEST << "knnMatch";
-    int knn = rng.uniform(3, 10);
+    int knn = 10;
 
     CPU_ON;
-    matcher.knnMatch(query, matches, knn);
+    matcher.knnMatch(query, train, matches, knn);
     CPU_OFF;
 
     GPU_ON;
-    d_matcher.knnMatch(d_query, d_matches, knn);
+    d_matcher.knnMatch(d_query, d_train, d_matches, knn);
     GPU_OFF;
 
     SUBTEST << "radiusMatch";
-    float max_distance = rng.uniform(25.0f, 65.0f);
+    float max_distance = 45.0f;
 
     CPU_ON;
-    matcher.radiusMatch(query, matches, max_distance);
+    matcher.radiusMatch(query, train, matches, max_distance);
     CPU_OFF;
 
     GPU_ON;
-    d_matcher.radiusMatch(d_query, d_matches, max_distance);
+    d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
     GPU_OFF;
 }
