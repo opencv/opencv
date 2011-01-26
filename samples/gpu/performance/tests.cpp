@@ -1,4 +1,6 @@
+#include <stdexcept>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include "performance.h"
 
@@ -81,8 +83,20 @@ TEST(remap)
         SUBTEST << "src " << size << " and 8U, 32F maps";
 
         gen(src, size, size, CV_8UC1, 0, 256);
-        gen(xmap, size, size, CV_32F, 0, size);
-        gen(ymap, size, size, CV_32F, 0, size);
+
+        xmap.create(size, size, CV_32F);
+        ymap.create(size, size, CV_32F);
+        for (int i = 0; i < size; ++i)
+        {
+            float* xmap_row = xmap.ptr<float>(i);
+            float* ymap_row = ymap.ptr<float>(i);
+            for (int j = 0; j < size; ++j)
+            {
+                xmap_row[j] = (j - size * 0.5f) * 0.75f + size * 0.5f;
+                ymap_row[j] = (i - size * 0.5f) * 0.75f + size * 0.5f;
+            }
+        }
+
         dst.create(xmap.size(), src.type());
 
         CPU_ON;
@@ -93,22 +107,6 @@ TEST(remap)
         d_xmap = xmap;
         d_ymap = ymap;
         d_dst.create(d_xmap.size(), d_src.type());
-
-        GPU_ON;
-        gpu::remap(d_src, d_dst, d_xmap, d_ymap);
-        GPU_OFF;
-
-        SUBTEST << "src " << size << " and 8U, 32F singular maps";
-
-        gen(xmap, size, size, CV_32F, 0, 0);
-        gen(ymap, size, size, CV_32F, 0, 0);
-
-        CPU_ON;
-        remap(src, dst, xmap, ymap, INTER_LINEAR);
-        CPU_OFF;
-
-        d_xmap = xmap;
-        d_ymap = ymap;
 
         GPU_ON;
         gpu::remap(d_src, d_dst, d_xmap, d_ymap);
@@ -216,4 +214,63 @@ TEST(norm)
         gpu::norm(d_src);
         GPU_OFF;
     }
+}
+
+
+TEST(meanShift)
+{
+    int sp = 10, sr = 10;
+
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 400; size <= 800; size *= 2)
+    {
+        SUBTEST << "size " << size << ", 8UC3 vs 8UC4";
+
+        gen(src, size, size, CV_8UC3, Scalar::all(0), Scalar::all(256));
+        dst.create(src.size(), src.type());
+
+        CPU_ON;
+        pyrMeanShiftFiltering(src, dst, sp, sr);
+        CPU_OFF;
+
+        gen(src, size, size, CV_8UC4, Scalar::all(0), Scalar::all(256));
+
+        d_src = src;
+        d_dst.create(d_src.size(), d_src.type());
+
+        GPU_ON;
+        gpu::meanShiftFiltering(d_src, d_dst, sp, sr);
+        GPU_OFF;
+    }
+}
+
+
+TEST(SURF)
+{
+    Mat src1 = imread(abspath("bowlingL.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src2 = imread(abspath("bowlingR.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src1.empty()) throw runtime_error("can't open bowlingL.png");
+    if (src2.empty()) throw runtime_error("can't open bowlingR.png");
+
+    gpu::GpuMat d_src1(src1);
+    gpu::GpuMat d_src2(src2);
+
+    SURF surf;
+    vector<KeyPoint> keypoints1, keypoints2;
+
+    CPU_ON;
+    surf(src1, Mat(), keypoints1);
+    surf(src2, Mat(), keypoints2);
+    CPU_OFF;
+
+    gpu::SURF_GPU d_surf;
+    gpu::GpuMat d_keypoints1, d_keypoints2;
+    gpu::GpuMat d_descriptors1, d_descriptors2;
+
+    GPU_ON;
+    d_surf(d_src1, gpu::GpuMat(), d_keypoints1);
+    d_surf(d_src2, gpu::GpuMat(), d_keypoints2);
+    GPU_OFF;
 }

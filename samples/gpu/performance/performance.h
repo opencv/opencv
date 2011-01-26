@@ -63,6 +63,12 @@ public:
         can_flush_ = true;
     }
 
+    void setWorkingDir(const std::string& val);
+
+    const std::string& workingDir() const { return working_dir_; }
+
+    void printError(const std::string& msg);
+
 private:
     TestSystem(): can_flush_(false), cpu_elapsed_(0), gpu_elapsed_(0), 
                   speedup_total_(0.0), num_subtests_called_(0) {};
@@ -80,6 +86,8 @@ private:
     void printHeading();
     void printSummary();
     void printItem(double cpu_time, double gpu_time, double speedup);
+
+    std::string working_dir_;
 
     std::vector<Runnable*> inits_;
     std::vector<Runnable*> tests_;
@@ -127,5 +135,7 @@ private:
 
 void gen(cv::Mat& mat, int rows, int cols, int type, cv::Scalar low, 
          cv::Scalar high);
+
+std::string abspath(const std::string& relpath);
 
 #endif // OPENCV_GPU_SAMPLE_PERFORMANCE_H_
