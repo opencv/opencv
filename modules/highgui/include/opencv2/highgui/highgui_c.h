@@ -288,9 +288,9 @@ enum
 
 	CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
 
-    CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
+	CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 
-    CV_CAP_OPENNI   =900    // OpenNI (for Kinect)
+	CV_CAP_OPENNI   =900    // OpenNI (for Kinect)
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -381,6 +381,32 @@ enum
     // Data given from RGB image generator.
     OPENNI_BGR_IMAGE                 = 5,
     OPENNI_GRAY_IMAGE                = 6
+};
+
+// OpenNI map generators
+enum
+{
+    OPENNI_DEPTH_GENERATOR = 0,
+    OPENNI_IMAGE_GENERATOR = 1 << 31
+};
+
+// Properties of Kinect (additional to ones begining from CV_CAP_PROP_...)
+enum
+{
+    OPENNI_OUTPUT_MODE = 20,
+    OPENNI_FRAME_MAX_DEPTH = 21, // in mm
+    OPENNI_BASELINE = 22, // in mm
+    OPENNI_FOCAL_LENGTH = 23, // in pixels
+    OPENNI_IMAGE_GENERATOR_OUTPUT_MODE = OPENNI_IMAGE_GENERATOR + OPENNI_OUTPUT_MODE,
+    OPENNI_DEPTH_GENERATOR_BASELINE = OPENNI_DEPTH_GENERATOR + OPENNI_BASELINE,
+    OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH = OPENNI_DEPTH_GENERATOR + OPENNI_FOCAL_LENGTH
+};
+
+// Supported output modes of OpenNI image generator
+enum
+{
+    OPENNI_VGA_30HZ     = 0,
+    OPENNI_SXGA_15HZ    = 1
 };
 
 const int OPENNI_BAD_DEPTH_VAL = 0;

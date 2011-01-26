@@ -6,14 +6,20 @@
 using namespace cv;
 using namespace std;
 
-void colorizeDisparity( const Mat& gray, Mat& rgb, float S=1.f, float V=1.f )
+#define COLORIZED_DISP              1
+#define IMAGE_GENERATOR_VGA_30HZ    1
+#define FIXED_MAX_DISP              0
+
+void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, float S=1.f, float V=1.f )
 {
     CV_Assert( !gray.empty() );
     CV_Assert( gray.type() == CV_8UC1 );
 
-    // TODO do maxDisp constant (when camera properties will be accessible)
-    double maxDisp = 0;
-    minMaxLoc( gray, 0, &maxDisp );
+    if( maxDisp <= 0 )
+    {
+        maxDisp = 0;
+        minMaxLoc( gray, 0, &maxDisp );
+    }
 
     rgb.create( gray.size(), CV_8UC3 );
     for( int y = 0; y < gray.rows; y++ )
@@ -70,6 +76,18 @@ void help()
          << endl;
 }
 
+float getMaxDisparity( VideoCapture& capture )
+{
+#if FIXED_MAX_DISP
+    const int minDistance = 400; // mm
+    float b = capture.get( OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
+    float F = capture.get( OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH ); // pixels
+    return b * F / minDistance;
+#else
+    return -1;
+#endif
+}
+
 /*
  * To work with Kinect the user must install OpenNI library and PrimeSensorModule for OpenNI and
  * configure OpenCV with WITH_OPENNI flag is ON (using CMake).
@@ -87,6 +105,24 @@ int main()
         cout << "Can not open a capture object." << endl;
         return -1;
     }
+
+#if IMAGE_GENERATOR_VGA_30HZ
+    capture.set( OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, OPENNI_VGA_30HZ ); // default
+#else
+    capture.set( OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, OPENNI_SXGA_15HZ );
+#endif
+
+    // Print some avalible Kinect settings.
+    cout << "Depth generator output mode:" << endl <<
+            "FRAME_WIDTH    " << capture.get( CV_CAP_PROP_FRAME_WIDTH ) << endl <<
+            "FRAME_HEIGHT   " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
+            "FRAME_MAX_DEPTH    " << capture.get( OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
+            "FPS    " << capture.get( CV_CAP_PROP_FPS ) << endl;
+
+    cout << "Image generator output mode:" << endl <<
+            "FRAME_WIDTH    " << capture.get( OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
+            "FRAME_HEIGHT   " << capture.get( OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
+            "FPS    " << capture.get( OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
 
     for(;;)
     {
@@ -112,14 +148,14 @@ int main()
 
             if( capture.retrieve( disparityMap, OPENNI_DISPARITY_MAP ) )
             {
-#if 0 // original disparity
-                imshow( "original disparity map", disparityMap );
-#else // colorized disparity for more visibility
+#if COLORIZED_DISP // colorized disparity for more visibility
                 Mat colorDisparityMap;
-                colorizeDisparity( disparityMap, colorDisparityMap );
+                colorizeDisparity( disparityMap, colorDisparityMap, getMaxDisparity( capture ) );
                 Mat validColorDisparityMap;
                 colorDisparityMap.copyTo( validColorDisparityMap, disparityMap != OPENNI_BAD_DISP_VAL );
                 imshow( "colorized disparity map", validColorDisparityMap );
+#else // original disparity
+                imshow( "original disparity map", disparityMap );
 #endif
             }
 

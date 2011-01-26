@@ -119,6 +119,11 @@ protected:
 
     void readCamerasParams();
 
+    double getDepthGeneratorProperty(int);
+    bool setDepthGeneratorProperty(int, double);
+    double getImageGeneratorProperty(int);
+    bool setImageGeneratorProperty(int, double);
+
     // OpenNI context
     xn::Context context;
     bool m_isOpened;
@@ -126,9 +131,11 @@ protected:
     // Data generators with its metadata
     xn::DepthGenerator depthGenerator;
     xn::DepthMetaData  depthMetaData;
+    XnMapOutputMode depthOutputMode;
 
     xn::ImageGenerator imageGenerator;
     xn::ImageMetaData  imageMetaData;
+    XnMapOutputMode imageOutputMode;
 
     // Cameras settings:
 #if 1
@@ -163,17 +170,20 @@ CvCapture_OpenNI::CvCapture_OpenNI()
 {
     XnStatus status = XN_STATUS_OK;
 
-    // Initialize the context with default configuration.
-    status = context.Init();
-    m_isOpened = (status == XN_STATUS_OK);
-    
-    if( m_isOpened )
+    // Initialize image output modes (VGA_30HZ by default).
+    depthOutputMode.nXRes = imageOutputMode.nXRes = XN_VGA_X_RES;
+    depthOutputMode.nYRes = imageOutputMode.nYRes = XN_VGA_Y_RES;
+    depthOutputMode.nFPS = imageOutputMode.nFPS = 30;
+
+    m_isOpened = false;
+
+    // Initialize and configure the context.
+    if( context.Init() == XN_STATUS_OK )
     {
-        // Configure the context.
 #ifdef HACK_WITH_XML
         // Write configuration to the temporary file.
         // This is a hack, because there is a bug in RunXmlScript().
-        // TODO: remove hack when bug in RunXmlScript() will be fixed. 
+        // TODO: remove hack when bug in RunXmlScript() will be fixed.
         char xmlFilename[100];
         tmpnam( xmlFilename );
         std::ofstream outfile( xmlFilename );
@@ -187,16 +197,22 @@ CvCapture_OpenNI::CvCapture_OpenNI()
 #else
         status = context.RunXmlScript( XMLConfig.c_str() );
 #endif
-        if( status != XN_STATUS_OK )
-            CV_Error(CV_StsError, ("Failed to apply XML configuration: " + std::string(xnGetStatusString(status))).c_str() );
+        m_isOpened = ( status == XN_STATUS_OK );
+    }
 
-        // Initialize generators.
+    if( m_isOpened )
+    {
+        // Associate generators with context.
         status = depthGenerator.Create( context );
         if( status != XN_STATUS_OK )
             CV_Error(CV_StsError, ("Failed to create depth generator: " + std::string(xnGetStatusString(status))).c_str() );
         imageGenerator.Create( context );
         if( status != XN_STATUS_OK )
             CV_Error(CV_StsError, ("Failed to create image generator: " + std::string(xnGetStatusString(status))).c_str() );
+
+        // Set map output mode.
+        CV_Assert( depthGenerator.SetMapOutputMode( depthOutputMode ) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
+        CV_Assert( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK );
 
         //  Start generating data.
         status = context.StartGeneratingAll();
@@ -247,18 +263,141 @@ void CvCapture_OpenNI::readCamerasParams()
         CV_Error( CV_StsError, "Could not read no sample value!" );
 }
 
-double CvCapture_OpenNI::getProperty(int)
+double CvCapture_OpenNI::getProperty( int propIdx )
 {
-    assert(0);
-    // TODO
-    return 0;
+    double propValue = -1;
+
+    if( isOpened() )
+    {
+        if( propIdx & OPENNI_IMAGE_GENERATOR )
+        {
+            propValue = getImageGeneratorProperty( propIdx ^ OPENNI_IMAGE_GENERATOR );
+        }
+        else // depth generator (by default, OPENNI_DEPTH_GENERATOR == 0)
+        {
+            propValue = getDepthGeneratorProperty( propIdx /*^ OPENNI_DEPTH_GENERATOR*/ );
+        }
+    }
+
+    return propValue;
 }
 
-bool CvCapture_OpenNI::setProperty(int, double)
+bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
 {
-    assert(0);
-    // TODO
-    return true;
+    bool res = false;
+    if( isOpened() )
+    {
+        if( propIdx & OPENNI_IMAGE_GENERATOR )
+        {
+            res = setImageGeneratorProperty( propIdx ^ OPENNI_IMAGE_GENERATOR, propValue );
+        }
+        else // depth generator (by default, OPENNI_DEPTH_GENERATOR == 0)
+        {
+            res = setDepthGeneratorProperty( propIdx /*^ OPENNI_DEPTH_GENERATOR*/, propValue );
+        }
+    }
+
+    return false;
+}
+
+double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
+{
+    CV_Assert( depthGenerator.IsValid() );
+
+    double res = -1;
+    switch( propIdx )
+    {
+    case CV_CAP_PROP_FRAME_WIDTH :
+        res = depthOutputMode.nXRes;
+        break;
+    case CV_CAP_PROP_FRAME_HEIGHT :
+        res = depthOutputMode.nYRes;
+        break;
+    case CV_CAP_PROP_FPS :
+        res = depthOutputMode.nFPS;
+        break;
+    case OPENNI_FRAME_MAX_DEPTH :
+        res = depthGenerator.GetDeviceMaxDepth();
+        break;
+    case OPENNI_BASELINE :
+        res = baseline;
+        break;
+    case OPENNI_FOCAL_LENGTH :
+        res = depthFocalLength_VGA;
+        break;
+    default :
+        CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for getting.\n");
+    }
+
+    return res;
+}
+
+bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue )
+{
+    CV_Assert( depthGenerator.IsValid() );
+    CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for setting.\n");
+}
+
+double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
+{
+    CV_Assert( imageGenerator.IsValid() );
+
+    double res = -1;
+    switch( propIdx )
+    {
+    case CV_CAP_PROP_FRAME_WIDTH :
+        res = imageOutputMode.nXRes;
+        break;
+    case CV_CAP_PROP_FRAME_HEIGHT :
+        res = imageOutputMode.nYRes;
+        break;
+    case CV_CAP_PROP_FPS :
+        res = imageOutputMode.nFPS;
+        break;
+    default :
+        CV_Error( CV_StsBadArg, "Image generator does not support such parameter for getting.\n");
+    }
+
+    return res;
+}
+
+bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue )
+{
+    bool res = false;
+
+    CV_Assert( imageGenerator.IsValid() );
+    XnMapOutputMode newImageOutputMode = imageOutputMode;
+    switch( propIdx )
+    {
+    case OPENNI_OUTPUT_MODE :
+        switch( cvRound(propValue) )
+        {
+        case OPENNI_VGA_30HZ :
+            newImageOutputMode.nXRes = XN_VGA_X_RES;
+            newImageOutputMode.nYRes = XN_VGA_Y_RES;
+            newImageOutputMode.nFPS = 30;
+            break;
+        case OPENNI_SXGA_15HZ :
+            newImageOutputMode.nXRes = XN_SXGA_X_RES;
+            newImageOutputMode.nYRes = XN_SXGA_Y_RES;
+            newImageOutputMode.nFPS = 15;
+            break;
+        default :
+            CV_Error( CV_StsBadArg, "Unsupported image generator output mode.\n");
+        }
+        break;
+
+   default:
+        CV_Error( CV_StsBadArg, "Image generator does not support such parameter for setting.\n");
+    }
+
+    if( imageGenerator.SetMapOutputMode( newImageOutputMode ) == XN_STATUS_OK )
+    {
+        imageOutputMode = newImageOutputMode;
+        res = true;
+    }
+
+    return res;
 }
 
 bool CvCapture_OpenNI::grabFrame()
