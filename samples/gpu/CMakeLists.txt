@@ -15,6 +15,10 @@ if (BUILD_EXAMPLES)
         "${CMAKE_SOURCE_DIR}/modules/contrib/include"
         "${CMAKE_SOURCE_DIR}/modules/gpu/include"
     )   
+    
+    if(HAVE_CUDA)
+        include_directories(${CUDA_INCLUDE_DIRS})
+    endif()
 
     if(CMAKE_COMPILER_IS_GNUCXX)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
