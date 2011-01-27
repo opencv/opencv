@@ -265,7 +265,7 @@ void CvCapture_OpenNI::readCamerasParams()
 
 double CvCapture_OpenNI::getProperty( int propIdx )
 {
-    double propValue = -1;
+    double propValue = 0;
 
     if( isOpened() )
     {
@@ -304,7 +304,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
 {
     CV_Assert( depthGenerator.IsValid() );
 
-    double res = -1;
+    double res = 0;
     switch( propIdx )
     {
     case CV_CAP_PROP_FRAME_WIDTH :
@@ -342,7 +342,7 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
 {
     CV_Assert( imageGenerator.IsValid() );
 
-    double res = -1;
+    double res = 0;
     switch( propIdx )
     {
     case CV_CAP_PROP_FRAME_WIDTH :
