@@ -31,17 +31,19 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-
-void cuSafeCall(int code);
 struct Worker { void operator()(int device_id) const; };
-void destroy();
+void destroyContexts();
+
+#define cuSafeCall(code) if (code != CUDA_SUCCESS) { \
+    cout << "CUDA driver API error: code " << code \
+        << ", file " << __FILE__ << ", line " << __LINE__ << endl; \
+    destroyContexts(); \
+    exit(-1); \
+}
 
 
 // Each GPU is associated with its own context
 CUcontext contexts[2];
-
-// Auxiliary variable, stores previusly used context
-CUcontext prev_context;
 
 
 int main()
@@ -52,50 +54,61 @@ int main()
         return -1;
     }
 
-    // Save the default context
-    cuSafeCall(cuCtxAttach(&contexts[0], 0));
-    cuSafeCall(cuCtxDetach(contexts[0]));
+    cuSafeCall(cuInit(0));
 
-    // Create new context for the second GPU
+    // Create context for the first GPU
     CUdevice device;
+    cuSafeCall(cuDeviceGet(&device, 0));
+    cuSafeCall(cuCtxCreate(&contexts[0], 0, device));
+
+    CUcontext prev_context;
+    cuCtxPopCurrent(&prev_context);
+
+    // Create context for the second GPU
     cuSafeCall(cuDeviceGet(&device, 1));
-    cuSafeCall(cuCtxCreate(&contexts[1], 0, device));
+    cuSafeCall(cuCtxCreate(&contexts[1], 1, device));
 
-    // Restore the first GPU context
-    cuSafeCall(cuCtxPopCurrent(&prev_context));
+    cuCtxPopCurrent(&prev_context);
 
-    // Run 
+    // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
     parallel_do(devices, devices + 2, Worker());
 
-    // Destroy context of the second GPU
-    destroy();
-
+    destroyContexts();
     return 0;
 }
 
 
 void Worker::operator()(int device_id) const
 {
-    cout << device_id << endl;
+    cuCtxPushCurrent(contexts[device_id]);
+
+    // Generate random matrix
+    Mat src(1000, 1000, CV_32F);
+    RNG rng(0);
+    rng.fill(src, RNG::UNIFORM, 0, 1);
+
+    // Upload data on GPU
+    GpuMat d_src(src);
+    GpuMat d_dst;
+
+    transpose(d_src, d_dst);
+
+    // Deallocate here, otherwise deallocation will be performed 
+    // after context is extracted from the stack
+    d_src.release();
+    d_dst.release();
+
+    CUcontext prev_context;
+    cuCtxPopCurrent(&prev_context);
+
+    cout << "Device " << device_id << " finished\n";
 }
 
 
-void cuSafeCall(int code)
+void destroyContexts()
 {
-    if (code != CUDA_SUCCESS) 
-    {
-        cout << "CUDA driver API error: code " << code 
-            << ", file " << __FILE__ 
-            << ", line " << __LINE__ << endl;
-        destroy();
-        exit(-1);
-    }
-}
-
-
-void destroy() 
-{
+    cuCtxDestroy(contexts[0]);
     cuCtxDestroy(contexts[1]);
 }
 
