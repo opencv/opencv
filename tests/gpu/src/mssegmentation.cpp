@@ -71,7 +71,7 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
             {
                 stringstream path;
                 path << ts->get_data_path() << "meanshift/cones_segmented_sp10_sr10_minsize" << minsize;
-                if (cv::gpu::hasGreaterOrEqualVersion(2, 0) && major >= 2)
+                if (TargetArchs::hasEqualOrGreater(2, 0) && major >= 2)
                     path << ".png";
                 else
                     path << "_CC1X.png";

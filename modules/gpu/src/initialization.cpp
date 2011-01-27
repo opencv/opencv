@@ -162,49 +162,59 @@ namespace
 }
 
 
-CV_EXPORTS bool cv::gpu::hasPtxVersion(int major, int minor)
+CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::GpuFeature feature)
+{
+    if (feature == NATIVE_DOUBLE)
+        return hasEqualOrGreater(1, 3);
+    if (feature == ATOMICS)
+        return hasEqualOrGreater(1, 1);
+    return true;
+}
+
+
+CV_EXPORTS bool cv::gpu::TargetArchs::has(int major, int minor)
+{
+    return hasPtx(major, minor) || hasBin(major, minor);
+}
+
+
+CV_EXPORTS bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 {
     return ::compare(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
 }
 
 
-CV_EXPORTS bool cv::gpu::hasLessOrEqualPtxVersion(int major, int minor)
+CV_EXPORTS bool cv::gpu::TargetArchs::hasBin(int major, int minor)
+{
+    return ::compare(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
+}
+
+
+CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
     return ::compare(CUDA_ARCH_PTX, major * 10 + minor, 
                      std::less_equal<int>());
 }
 
 
-CV_EXPORTS bool cv::gpu::hasGreaterOrEqualPtxVersion(int major, int minor)
+CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
+{
+    return hasEqualOrGreaterPtx(major, minor) ||
+           hasEqualOrGreaterBin(major, minor);
+}
+
+
+CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
     return ::compare(CUDA_ARCH_PTX, major * 10 + minor, 
                      std::greater_equal<int>());
 }
 
 
-CV_EXPORTS bool cv::gpu::hasCubinVersion(int major, int minor)
-{
-    return ::compare(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
-}
-
-
-CV_EXPORTS bool cv::gpu::hasGreaterOrEqualCubinVersion(int major, int minor)
+CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
     return ::compare(CUDA_ARCH_BIN, major * 10 + minor, 
                      std::greater_equal<int>());
-}
-
-
-CV_EXPORTS bool cv::gpu::hasVersion(int major, int minor)
-{
-    return hasPtxVersion(major, minor) || hasCubinVersion(major, minor);
-}
-
-
-CV_EXPORTS bool cv::gpu::hasGreaterOrEqualVersion(int major, int minor)
-{
-    return hasGreaterOrEqualPtxVersion(major, minor) || 
-           hasGreaterOrEqualCubinVersion(major, minor);
 }
 
 
@@ -218,12 +228,12 @@ CV_EXPORTS bool cv::gpu::isCompatibleWith(int device)
     getComputeCapability(device, major, minor);
 
     // Check PTX compatibility
-    if (hasLessOrEqualPtxVersion(major, minor))
+    if (TargetArchs::hasEqualOrLessPtx(major, minor))
         return true;
 
     // Check CUBIN compatibility
     for (int i = minor; i >= 0; --i)
-        if (hasCubinVersion(major, i))
+        if (TargetArchs::hasBin(major, i))
             return true;
 
     return false;

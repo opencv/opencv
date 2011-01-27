@@ -64,6 +64,27 @@ namespace cv
         CV_EXPORTS void setDevice(int device);
         CV_EXPORTS int getDevice();
 
+        enum GpuFeature
+        {
+            NATIVE_DOUBLE,
+            ATOMICS
+        };
+
+        class CV_EXPORTS TargetArchs
+        {
+        public:
+            static bool builtWith(GpuFeature feature);
+            static bool has(int major, int minor);
+            static bool hasPtx(int major, int minor);
+            static bool hasBin(int major, int minor);
+            static bool hasEqualOrLessPtx(int major, int minor);
+            static bool hasEqualOrGreater(int major, int minor);
+            static bool hasEqualOrGreaterPtx(int major, int minor);
+            static bool hasEqualOrGreaterBin(int major, int minor);
+        private:
+            TargetArchs();
+        };
+
         CV_EXPORTS void getComputeCapability(int device, int& major, int& minor);
         CV_EXPORTS int getNumberOfSMs(int device);
 
@@ -71,16 +92,6 @@ namespace cv
 
         CV_EXPORTS bool hasNativeDoubleSupport(int device);
         CV_EXPORTS bool hasAtomicsSupport(int device);
-
-        CV_EXPORTS bool hasPtxVersion(int major, int minor);
-        CV_EXPORTS bool hasLessOrEqualPtxVersion(int major, int minor);
-        CV_EXPORTS bool hasGreaterOrEqualPtxVersion(int major, int minor);
-
-        CV_EXPORTS bool hasCubinVersion(int major, int minor);
-        CV_EXPORTS bool hasGreaterOrEqualCubinVersion(int major, int minor);
-
-        CV_EXPORTS bool hasVersion(int major, int minor);
-        CV_EXPORTS bool hasGreaterOrEqualVersion(int major, int minor);
 
         CV_EXPORTS bool isCompatibleWith(int device);
 

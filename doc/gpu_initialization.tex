@@ -68,76 +68,34 @@ Returns true, if the specified GPU has atomics support, otherwise false.
 \cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
 \end{description} 
 
+\cvclass{gpu::TargetArchs}
+This class provides functionality (as set of static methods) for checking which NVIDIA card architectures the GPU module was built for.
 
-\cvCppFunc{gpu::hasPtxVersion}
-Returns true, if the GPU module has PTX code for the given architecture, otherwise false.
+\bigskip
 
-\cvdefCpp{bool hasPtxVersion(int major, int minor);}
+The following method checks whether the module was built with the support of the given feature:
+\cvdefCpp{static bool builtWith(GpuFeature feature);}
+\begin{description}
+\cvarg{feature}{Feature to be checked. Available alternatives:
+\begin{itemize}
+\item NATIVE\_DOUBLE Native double operations support
+\item ATOMICS Atomic operations support
+\end{itemize}}
+\end{description}
+
+There are a set of methods for checking whether the module contains intermediate (PTX) or binary GPU code for the given architecture:
+\cvdefCpp{
+static bool has(int major, int minor);\newline
+static bool hasPtx(int major, int minor);\newline
+static bool hasBin(int major, int minor);\newline
+static bool hasEqualOrLessPtx(int major, int minor);\newline
+static bool hasEqualOrGreater(int major, int minor);\newline
+static bool hasEqualOrGreaterPtx(int major, int minor);\newline
+static bool hasEqualOrGreaterBin(int major, int minor);}
 \begin{description}
 \cvarg{major}{Major compute capability version.}
 \cvarg{minor}{Minor compute capability version.}
 \end{description}
-
-
-\cvCppFunc{gpu::hasLessOrEqualPtxVersion}
-Returns true, if the GPU module has PTX code for the given architecture or older one, otherwise false.
-
-\cvdefCpp{bool hasLessOrEqualPtxVersion(int major, int minor);}
-\begin{description}
-\cvarg{major}{Major compute capability version.}
-\cvarg{minor}{Minor compute capability version.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasGreaterOrEqualPtxVersion}
-Returns true, if the GPU module has PTX code for the given architecture or newer one, otherwise false.
-
-\cvdefCpp{bool hasGreaterOrEqualPtxVersion(int major, int minor);}
-\begin{description}
-\cvarg{major}{Major compute capability version.}
-\cvarg{minor}{Minor compute capability version.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasCubinVersion}
-Returns true, if the GPU module has CUBIN code for the given architecture, otherwise false.
-
-\cvdefCpp{bool hasCubinVersion(int major, int minor);}
-\begin{description}
-\cvarg{major}{Major compute capability version.}
-\cvarg{minor}{Minor compute capability version.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasGreaterOrEqualCubinVersion}
-Returns true, if the GPU module has CUBIN code for the given architecture or newer one, otherwise false.
-
-\cvdefCpp{bool hasGreaterOrEqualCubinVersion(int major, int minor);}
-\begin{description}
-\cvarg{major}{Major compute capability version.}
-\cvarg{minor}{Minor compute capability version.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasVersion}
-Returns true, if the GPU module has PTX or CUBIN code for the given architecture, otherwise false.
-
-\cvdefCpp{bool hasVersion(int major, int minor);}
-\begin{description}
-\cvarg{major}{Major compute capability version.}
-\cvarg{minor}{Minor compute capability version.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasGreaterOrEqualVersion}
-Returns true, if the GPU module has PTX or CUBIN code for the given architecture or newer one, otherwise false.
-
-\cvdefCpp{bool hasGreaterOrEqualVersion(int major, int minor);}
-\begin{description}
-\cvarg{major}{Major compute capability version.}
-\cvarg{minor}{Minor compute capability version.}
-\end{description}
-
 
 \cvCppFunc{gpu::isCompatibleWith}
 Returns true, if the GPU module is built with PTX or CUBIN compatible with the given GPU device, otherwise false.

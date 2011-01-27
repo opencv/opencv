@@ -659,7 +659,7 @@ struct CV_GpuMinMaxTest: public CvTest
     {
         try
         {
-            bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+            bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
                              gpu::hasNativeDoubleSupport(gpu::getDevice());
             int depth_end = double_ok ? CV_64F : CV_32F;
 
@@ -793,7 +793,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
     {
         try 
         {
-            bool double_ok = gpu::hasGreaterOrEqualVersion(1, 3) && 
+            bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
                              gpu::hasNativeDoubleSupport(gpu::getDevice());
             int depth_end = double_ok ? CV_64F : CV_32F;
 

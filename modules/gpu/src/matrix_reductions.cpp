@@ -170,7 +170,7 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
-    if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+    if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
         callers = singlepass_callers;
 
     Caller caller = callers[src.depth()];
@@ -206,7 +206,7 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
             sqrSumCaller<int>, sqrSumCaller<float>, 0 };
 
     Caller* callers = multipass_callers;
-    if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+    if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
         callers = singlepass_callers;
 
     Size buf_size;
@@ -283,7 +283,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
 
-    CV_Assert(src.type() != CV_64F || (hasGreaterOrEqualVersion(1, 3) && 
+    CV_Assert(src.type() != CV_64F || (TargetArchs::builtWith(NATIVE_DOUBLE) && 
                                        hasNativeDoubleSupport(getDevice())));
 
     double minVal_; if (!minVal) minVal = &minVal_;
@@ -296,7 +296,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     if (mask.empty())
     {
         Caller* callers = multipass_callers;
-        if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+        if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
             callers = singlepass_callers;
 
         Caller caller = callers[src.type()];
@@ -306,7 +306,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     else
     {
         MaskedCaller* callers = masked_multipass_callers;
-        if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+        if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
             callers = masked_singlepass_callers;
 
         MaskedCaller caller = callers[src.type()];
@@ -382,7 +382,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
 
-    CV_Assert(src.type() != CV_64F || (hasGreaterOrEqualVersion(1, 3) && 
+    CV_Assert(src.type() != CV_64F || (TargetArchs::builtWith(NATIVE_DOUBLE) && 
                                        hasNativeDoubleSupport(getDevice())));
 
     double minVal_; if (!minVal) minVal = &minVal_;
@@ -399,7 +399,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     if (mask.empty())
     {
         Caller* callers = multipass_callers;
-        if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+        if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
             callers = singlepass_callers;
 
         Caller caller = callers[src.type()];
@@ -409,7 +409,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     else
     {
         MaskedCaller* callers = masked_multipass_callers;
-        if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+        if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
             callers = masked_singlepass_callers;
 
         MaskedCaller caller = callers[src.type()];
@@ -463,7 +463,7 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
 
     CV_Assert(src.channels() == 1);
 
-    CV_Assert(src.type() != CV_64F || (hasGreaterOrEqualVersion(1, 3) && 
+    CV_Assert(src.type() != CV_64F || (TargetArchs::builtWith(NATIVE_DOUBLE) && 
                                        hasNativeDoubleSupport(getDevice())));
 
     Size buf_size;
@@ -471,7 +471,7 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
-    if (hasGreaterOrEqualVersion(1, 1) && hasAtomicsSupport(getDevice()))
+    if (TargetArchs::builtWith(ATOMICS) && hasAtomicsSupport(getDevice()))
         callers = singlepass_callers;
 
     Caller caller = callers[src.type()];

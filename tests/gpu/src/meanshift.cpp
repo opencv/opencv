@@ -59,7 +59,7 @@ struct CV_GpuMeanShiftTest : public CvTest
         int major, minor;
         cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
         
-        if (cv::gpu::hasGreaterOrEqualVersion(2, 0) && major >= 2)
+        if (cv::gpu::TargetArchs::hasEqualOrGreater(2, 0) && major >= 2)
             img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
         else
             img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result_CC1X.png");
@@ -205,7 +205,7 @@ struct CV_GpuMeanShiftProcTest : public CvTest
             int major, minor;
             cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
 
-            if (cv::gpu::hasGreaterOrEqualVersion(2, 0) && major >= 2)
+            if (cv::gpu::TargetArchs::hasEqualOrGreater(2, 0) && major >= 2)
                 fs.open(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
             else
                 fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_CC1X.yaml", cv::FileStorage::READ);
