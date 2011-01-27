@@ -167,13 +167,13 @@
 #cmakedefine HAVE_CUDA
 
 /* Compile for 'real' NVIDIA GPU architectures */
-#define OPENCV_ARCH_GPU "${ARCH_GPU_NO_POINTS}"
+#define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
 
 /* Compile for 'virtual' NVIDIA PTX architectures */
-#define OPENCV_ARCH_PTX "${ARCH_PTX_NO_POINTS}"
+#define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
 
-/* Create PTX or CUBIN for 1.0 compute capability */
-#cmakedefine OPENCV_ARCH_GPU_OR_PTX_10
+/* Create PTX or BIN for 1.0 compute capability */
+#cmakedefine CUDA_ARCH_BIN_OR_PTX_10
 
 /* VideoInput library */
 #cmakedefine HAVE_VIDEOINPUT

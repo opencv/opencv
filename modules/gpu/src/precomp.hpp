@@ -85,7 +85,7 @@
     #error "Insufficient NPP version, please update it."
 #endif
 
-#if defined(OPENCV_ARCH_GPU_OR_PTX_10)
+#if defined(CUDA_ARCH_BIN_OR_PTX_10)
     #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
 #endif
 

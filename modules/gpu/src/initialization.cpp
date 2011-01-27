@@ -164,33 +164,33 @@ namespace
 
 CV_EXPORTS bool cv::gpu::hasPtxVersion(int major, int minor)
 {
-    return ::compare(OPENCV_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
+    return ::compare(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
 }
 
 
 CV_EXPORTS bool cv::gpu::hasLessOrEqualPtxVersion(int major, int minor)
 {
-    return ::compare(OPENCV_ARCH_PTX, major * 10 + minor, 
+    return ::compare(CUDA_ARCH_PTX, major * 10 + minor, 
                      std::less_equal<int>());
 }
 
 
 CV_EXPORTS bool cv::gpu::hasGreaterOrEqualPtxVersion(int major, int minor)
 {
-    return ::compare(OPENCV_ARCH_PTX, major * 10 + minor, 
+    return ::compare(CUDA_ARCH_PTX, major * 10 + minor, 
                      std::greater_equal<int>());
 }
 
 
 CV_EXPORTS bool cv::gpu::hasCubinVersion(int major, int minor)
 {
-    return ::compare(OPENCV_ARCH_GPU, major * 10 + minor, std::equal_to<int>());
+    return ::compare(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
 }
 
 
 CV_EXPORTS bool cv::gpu::hasGreaterOrEqualCubinVersion(int major, int minor)
 {
-    return ::compare(OPENCV_ARCH_GPU, major * 10 + minor, 
+    return ::compare(CUDA_ARCH_BIN, major * 10 + minor, 
                      std::greater_equal<int>());
 }
 
