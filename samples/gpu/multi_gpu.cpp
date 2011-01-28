@@ -62,13 +62,13 @@ int main()
     cuSafeCall(cuCtxCreate(&contexts[0], 0, device));
 
     CUcontext prev_context;
-    cuCtxPopCurrent(&prev_context);
+    cuSafeCall(cuCtxPopCurrent(&prev_context));
 
     // Create context for the second GPU
     cuSafeCall(cuDeviceGet(&device, 1));
     cuSafeCall(cuCtxCreate(&contexts[1], 1, device));
 
-    cuCtxPopCurrent(&prev_context);
+    cuSafeCall(cuCtxPopCurrent(&prev_context));
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
@@ -81,35 +81,42 @@ int main()
 
 void Worker::operator()(int device_id) const
 {
-    cuCtxPushCurrent(contexts[device_id]);
+    // Set proper context
+    cuSafeCall(cuCtxPushCurrent(contexts[device_id]));
 
-    // Generate random matrix
     Mat src(1000, 1000, CV_32F);
+    Mat dst;
+
     RNG rng(0);
     rng.fill(src, RNG::UNIFORM, 0, 1);
 
-    // Upload data on GPU
+    // CPU works
+    transpose(src, dst);
+
     GpuMat d_src(src);
     GpuMat d_dst;
 
+    // GPU works
     transpose(d_src, d_dst);
 
-    // Deallocate here, otherwise deallocation will be performed 
+    // Check results
+    bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
+    cout << "GPU #" << device_id << ": "<< (passed ? "passed" : "FAILED") << endl;
+
+    // Deallocate data here, otherwise deallocation will be performed
     // after context is extracted from the stack
     d_src.release();
     d_dst.release();
 
     CUcontext prev_context;
-    cuCtxPopCurrent(&prev_context);
-
-    cout << "Device " << device_id << " finished\n";
+    cuSafeCall(cuCtxPopCurrent(&prev_context));
 }
 
 
 void destroyContexts()
 {
-    cuCtxDestroy(contexts[0]);
-    cuCtxDestroy(contexts[1]);
+    cuSafeCall(cuCtxDestroy(contexts[0]));
+    cuSafeCall(cuCtxDestroy(contexts[1]));
 }
 
 #endif
