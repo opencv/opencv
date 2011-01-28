@@ -130,18 +130,12 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
 CV_EXPORTS void cv::gpu::setDevice(int) { throw_nogpu(); } 
 CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
-cv::gpu::DeviceInfo::DeviceInfo() { throw_nogpu(); }
-cv::gpu::DeviceInfo::DeviceInfo(int) { throw_nogpu(); }
-string cv::gpu::DeviceInfo::name() const { throw_nogpu(); return ""; }
-int cv::gpu::DeviceInfo::major() const { throw_nogpu(); return 0; }
-int cv::gpu::DeviceInfo::minor() const { throw_nogpu(); return 0; }
-int cv::gpu::DeviceInfo::multiProcessorCount() const { throw_nogpu(); return 0; }
 size_t cv::gpu::DeviceInfo::freeMemory() const { throw_nogpu(); return 0; }
 size_t cv::gpu::DeviceInfo::totalMemory() const { throw_nogpu(); return 0; }
 bool cv::gpu::DeviceInfo::has(cv::gpu::GpuFeature) const { throw_nogpu(); return false; }
 bool cv::gpu::DeviceInfo::isCompatible() const { throw_nogpu(); return false; }
-void cv::gpu::DeviceInfo::query() const { throw_nogpu(); }
-void cv::gpu::DeviceInfo::queryMemory(size_t, size_t) const { throw_nogpu(); }
+void cv::gpu::DeviceInfo::query() { throw_nogpu(); }
+void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
