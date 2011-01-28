@@ -441,3 +441,83 @@ TEST(exp)
         GPU_OFF;
     }
 }
+
+
+TEST(mulSpectrums)
+{
+    Mat src1, src2, dst;
+    gpu::GpuMat d_src1, d_src2, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size;
+
+        gen(src1, size, size, CV_32FC2, Scalar::all(0), Scalar::all(1));
+        gen(src2, size, size, CV_32FC2, Scalar::all(0), Scalar::all(1));
+        dst.create(size, size, CV_32FC2);
+
+        CPU_ON;
+        mulSpectrums(src1, src2, dst, 0, true);
+        CPU_OFF;
+
+        d_src1 = src1;
+        d_src2 = src2;
+        d_dst.create(size, size, CV_32FC2);
+
+        GPU_ON;
+        gpu::mulSpectrums(d_src1, d_src2, d_dst, 0, true);
+        GPU_OFF;
+    }
+}
+
+
+TEST(resize)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size;
+
+        gen(src, size, size, CV_8U, 0, 256);
+        dst.create(size * 2, size * 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size * 2, size * 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+}
+
+
+TEST(Sobel)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32F";
+
+        gen(src, size, size, CV_32F, 0, 1);
+        dst.create(size, size, CV_32F);
+
+        CPU_ON;
+        Sobel(src, dst, dst.depth(), 1, 1);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::Sobel(d_src, d_dst, d_dst.depth(), 1, 1);
+        GPU_OFF;
+    }
+}
