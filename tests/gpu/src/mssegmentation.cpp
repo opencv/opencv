@@ -63,15 +63,13 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
 
             Mat img;
             cvtColor(img_rgb, img, CV_BGR2BGRA);
-
-            int major, minor;
-            cv::gpu::getComputeCapability(cv::gpu::getDevice(), major, minor);
+            
 
             for (int minsize = 0; minsize < 2000; minsize = (minsize + 1) * 4) 
             {
                 stringstream path;
                 path << ts->get_data_path() << "meanshift/cones_segmented_sp10_sr10_minsize" << minsize;
-                if (TargetArchs::hasEqualOrGreater(2, 0) && major >= 2)
+                if (TargetArchs::hasEqualOrGreater(2, 0) && DeviceInfo().major() >= 2)
                     path << ".png";
                 else
                     path << "_CC1X.png";

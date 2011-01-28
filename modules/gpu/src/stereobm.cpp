@@ -86,13 +86,9 @@ bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable()
     if (0 == getCudaEnabledDeviceCount())
         return false;
 
-    int device = getDevice();
+    DeviceInfo device_info;
 
-    int minor, major;
-    getComputeCapability(device, major, minor);
-    int numSM = getNumberOfSMs(device);
-
-    if (major > 1 || numSM > 16)
+    if (device_info.major() > 1 || device_info.multiProcessorCount() > 16)
         return true;
 
     return false;

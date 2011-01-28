@@ -64,7 +64,7 @@ struct CV_MergeTest : public CvTest
 void CV_MergeTest::can_merge(size_t rows, size_t cols)
 {
     bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+                     gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
     size_t depth_end = double_ok ? CV_64F : CV_32F;
 
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
@@ -106,7 +106,7 @@ void CV_MergeTest::can_merge(size_t rows, size_t cols)
 void CV_MergeTest::can_merge_submatrixes(size_t rows, size_t cols)
 {
     bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+                     gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
     size_t depth_end = double_ok ? CV_64F : CV_32F;
 
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
@@ -180,7 +180,7 @@ struct CV_SplitTest : public CvTest
 void CV_SplitTest::can_split(size_t rows, size_t cols)
 {
     bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+                     gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
     size_t depth_end = double_ok ? CV_64F : CV_32F;
 
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
@@ -222,7 +222,7 @@ void CV_SplitTest::can_split(size_t rows, size_t cols)
 void CV_SplitTest::can_split_submatrix(size_t rows, size_t cols)
 {
     bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+                     gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
     size_t depth_end = double_ok ? CV_64F : CV_32F;
 
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
@@ -293,7 +293,7 @@ struct CV_SplitMergeTest : public CvTest
 
 void CV_SplitMergeTest::can_split_merge(size_t rows, size_t cols) {
     bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                     gpu::hasNativeDoubleSupport(gpu::getDevice());
+                     gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
     size_t depth_end = double_ok ? CV_64F : CV_32F;
 
     for (size_t num_channels = 1; num_channels <= 4; ++num_channels)

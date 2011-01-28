@@ -60,7 +60,7 @@ namespace cv
         CV_EXPORTS int getCudaEnabledDeviceCount();
 
         //! Functions below throw cv::Expception if the library is compiled without Cuda.
-        CV_EXPORTS string getDeviceName(int device);
+
         CV_EXPORTS void setDevice(int device);
         CV_EXPORTS int getDevice();
 
@@ -85,15 +85,35 @@ namespace cv
             TargetArchs();
         };
 
-        CV_EXPORTS void getComputeCapability(int device, int& major, int& minor);
-        CV_EXPORTS int getNumberOfSMs(int device);
+        class CV_EXPORTS DeviceInfo
+        {
+        public:
+            DeviceInfo() : device_id_(getDevice()) { query(); }
+            DeviceInfo(int device_id) : device_id_(device_id) { query(); }
 
-        CV_EXPORTS void getGpuMemInfo(size_t& free, size_t& total);
+            string name() const { return name_; }
 
-        CV_EXPORTS bool hasNativeDoubleSupport(int device);
-        CV_EXPORTS bool hasAtomicsSupport(int device);
+            int major() const { return major_; }
+            int minor() const { return minor_; }
 
-        CV_EXPORTS bool isCompatibleWith(int device);
+            int multiProcessorCount() const { return multi_processor_count_; }
+
+            size_t freeMemory() const;
+            size_t totalMemory() const;
+
+            bool has(GpuFeature feature) const;
+            bool isCompatible() const;
+
+        private:
+            void query();
+            void queryMemory(size_t& free_memory, size_t& total_memory) const;
+
+            int device_id_;
+
+            string name_;
+            int multi_processor_count_;
+            int major_, minor_;
+        };
 
         //////////////////////////////// Error handling ////////////////////////
 

@@ -1246,14 +1246,11 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
 
 Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size templ_size)
 {
-    int major, minor;
-    getComputeCapability(getDevice(), major, minor);
-
     int scale = 40;
     Size bsize_min(1024, 1024);
 
     // Check whether we use Fermi generation or newer GPU
-    if (major >= 2) 
+    if (DeviceInfo().major() >= 2) 
     {
         bsize_min.width = 2048;
         bsize_min.height = 2048;

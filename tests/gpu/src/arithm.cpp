@@ -660,7 +660,7 @@ struct CV_GpuMinMaxTest: public CvTest
         try
         {
             bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                             gpu::hasNativeDoubleSupport(gpu::getDevice());
+                             gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
             int depth_end = double_ok ? CV_64F : CV_32F;
 
             for (int depth = CV_8U; depth <= depth_end; ++depth)
@@ -794,7 +794,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
         try 
         {
             bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                             gpu::hasNativeDoubleSupport(gpu::getDevice());
+                             gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
             int depth_end = double_ok ? CV_64F : CV_32F;
 
             for (int depth = CV_8U; depth <= depth_end; ++depth)
@@ -875,7 +875,7 @@ struct CV_GpuCountNonZeroTest: CvTest
         try
         {
             int depth_end;
-            if (cv::gpu::hasNativeDoubleSupport(cv::gpu::getDevice())) 
+            if (cv::gpu::DeviceInfo().has(cv::gpu::NATIVE_DOUBLE)) 
                 depth_end = CV_64F; 
             else 
                 depth_end = CV_32F;
