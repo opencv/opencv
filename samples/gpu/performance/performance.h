@@ -26,10 +26,10 @@ private:
 class TestSystem
 {
 public:
-    static TestSystem* instance()
+    static TestSystem& instance()
     {
         static TestSystem me;
-        return &me;
+        return me;
     }
 
     void addInit(Runnable* init) { inits_.push_back(init); }
@@ -106,10 +106,9 @@ private:
 
 
 #define INIT(name) \
-    struct name##_init: Runnable \
-    { \
+    struct name##_init: Runnable { \
         name##_init(): Runnable(#name) { \
-            TestSystem::instance()->addInit(this); \
+            TestSystem::instance().addInit(this); \
         } \
         void run(); \
     } name##_init_instance; \
@@ -117,21 +116,20 @@ private:
 
 
 #define TEST(name) \
-    struct name##_test: Runnable \
-    { \
+    struct name##_test: Runnable { \
         name##_test(): Runnable(#name) { \
-            TestSystem::instance()->addTest(this); \
+            TestSystem::instance().addTest(this); \
         } \
         void run(); \
     } name##_test_instance; \
     void name##_test::run()
 
-#define SUBTEST TestSystem::instance()->subtest()
-#define DESCRIPTION TestSystem::instance()->subtest()
-#define CPU_ON TestSystem::instance()->cpuOn()
-#define GPU_ON TestSystem::instance()->gpuOn()
-#define CPU_OFF TestSystem::instance()->cpuOff()
-#define GPU_OFF TestSystem::instance()->gpuOff()
+#define SUBTEST TestSystem::instance().subtest()
+#define DESCRIPTION TestSystem::instance().subtest()
+#define CPU_ON TestSystem::instance().cpuOn()
+#define GPU_ON TestSystem::instance().gpuOn()
+#define CPU_OFF TestSystem::instance().cpuOff()
+#define GPU_OFF TestSystem::instance().gpuOff()
 
 void gen(cv::Mat& mat, int rows, int cols, int type, cv::Scalar low, 
          cv::Scalar high);

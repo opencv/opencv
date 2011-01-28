@@ -123,7 +123,7 @@ void gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
 
 string abspath(const string& relpath)
 {
-    return TestSystem::instance()->workingDir() + relpath;
+    return TestSystem::instance().workingDir() + relpath;
 }
 
 
@@ -131,7 +131,7 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
                              const char* err_msg, const char* /*file_name*/,
                              int /*line*/, void* /*userdata*/)
 {
-    TestSystem::instance()->printError(err_msg);
+    TestSystem::instance().printError(err_msg);
     return 0;
 }
 
@@ -144,11 +144,11 @@ int main(int argc, char** argv)
     }
     else
     {
-        TestSystem::instance()->setWorkingDir(argv[1]);
+        TestSystem::instance().setWorkingDir(argv[1]);
     }
 
     redirectError(cvErrorCallback);
-    TestSystem::instance()->run();
+    TestSystem::instance().run();
 
     return 0;
 }

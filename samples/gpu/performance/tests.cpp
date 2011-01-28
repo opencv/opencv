@@ -333,3 +333,111 @@ TEST(BruteForceMatcher)
     d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
     GPU_OFF;
 }
+
+
+TEST(magnitude)
+{
+    Mat x, y, mag;
+    gpu::GpuMat d_x, d_y, d_mag;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size;
+
+        gen(x, size, size, CV_32F, 0, 1);
+        gen(y, size, size, CV_32F, 0, 1);
+        mag.create(size, size, CV_32F);
+
+        CPU_ON;
+        magnitude(x, y, mag);
+        CPU_OFF;
+
+        d_x = x;
+        d_y = y;
+        d_mag.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::magnitude(d_x, d_y, d_mag);
+        GPU_OFF;
+    }
+}
+
+
+TEST(add)
+{
+    Mat src1, src2, dst;
+    gpu::GpuMat d_src1, d_src2, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32F";
+
+        gen(src1, size, size, CV_32F, 0, 1);
+        gen(src2, size, size, CV_32F, 0, 1);
+        dst.create(size, size, CV_32F);
+
+        CPU_ON;
+        add(src1, src2, dst);
+        CPU_OFF;
+
+        d_src1 = src1;
+        d_src2 = src2;
+        d_dst.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::add(d_src1, d_src2, d_dst);
+        GPU_OFF;
+    }
+}
+
+
+TEST(log)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32F";
+
+        gen(src, size, size, CV_32F, 1, 10);
+        dst.create(size, size, CV_32F);
+
+        CPU_ON;
+        log(src, dst);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::log(d_src, d_dst);
+        GPU_OFF;
+    }
+}
+
+
+TEST(exp)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32F";
+
+        gen(src, size, size, CV_32F, 0, 1);
+        dst.create(size, size, CV_32F);
+
+        CPU_ON;
+        exp(src, dst);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::exp(d_src, d_dst);
+        GPU_OFF;
+    }
+}
