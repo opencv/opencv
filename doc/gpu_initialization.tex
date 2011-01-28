@@ -8,7 +8,7 @@ Returns number of CUDA-enabled devices installed. It is to be used before any ot
 
 
 \cvCppFunc{gpu::setDevice}
-Sets device and initializes it for current thread. Call of this function can be omitted, but in this case a default device will be initialized on fist GPU usage.
+Sets device and initializes it for the current thread. Call of this function can be omitted, but in this case a default device will be initialized on fist GPU usage.
 
 \cvdefCpp{void setDevice(int device);}
 \begin{description}
@@ -17,13 +17,13 @@ Sets device and initializes it for current thread. Call of this function can be 
 
 
 \cvCppFunc{gpu::getDevice}
-Returns current device index, which was set by \cvCppCross{gpu::getDevice} of initialized by default.
+Returns the current device index, which was set by \cvCppCross{gpu::getDevice} or initialized by default.
 
 \cvdefCpp{int getDevice();}
 
 
 \cvCppFunc{gpu::getComputeCapability}
-Returns compute capability version for given device.
+Returns compute capability version for the given device.
 
 \cvdefCpp{void getComputeCapability(int device, int\& major, int\& minor);}
 \begin{description}
@@ -42,7 +42,7 @@ Returns number of Streaming Multiprocessors for given device.
 
 
 \cvCppFunc{gpu::getGpuMemInfo}
-Returns free and total memory for the current device.
+Returns free and total memory size for the current device.
 
 \cvdefCpp{void getGpuMemInfo(size\_t\& free, size\_t\& total);}
 \begin{description}
