@@ -17,4 +17,15 @@ Image Size:\n(may not be exact)
 <string name="camera_mode_prompt">
 Camera Mode:
 </string>
+
+<string-array name="whitebalance">
+<item>auto</item>
+<item>incandescent</item>
+<item>fluorescent</item>
+<item>daylight</item>
+<item>cloudy-daylight</item>
+</string-array>
+<string name="whitebalance_prompt">
+Whitebalance:
+</string>
 </resources>

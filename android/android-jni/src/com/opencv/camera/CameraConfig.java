@@ -19,6 +19,7 @@ public class CameraConfig extends Activity {
 	public static final String IMAGE_HEIGHT = "IMAGE_HEIGHT";
 	public static final int CAMERA_MODE_BW = 0;
 	public static final int CAMERA_MODE_COLOR = 1;
+	private static final String WHITEBALANCE = "WHITEBALANCE";
 
 	public static int readCameraMode(Context ctx) {
 		// Restore preferences
@@ -26,6 +27,13 @@ public class CameraConfig extends Activity {
 				0);
 		int mode = settings.getInt(CAMERA_MODE, CAMERA_MODE_BW);
 		return mode;
+	}
+	
+	public static String readWhitebalace(Context ctx) {
+		// Restore preferences
+		SharedPreferences settings = ctx.getSharedPreferences(CAMERA_SETTINGS,
+				0);
+		return settings.getString(WHITEBALANCE, "auto");
 	}
 
 	static public void setCameraMode(Context context, String mode) {
@@ -92,11 +100,14 @@ public class CameraConfig extends Activity {
 
 		final Spinner size_spinner;
 		final Spinner mode_spinner;
+		final Spinner whitebalance_spinner;
 		size_spinner = (Spinner) findViewById(R.id.image_size);
 		mode_spinner = (Spinner) findViewById(R.id.camera_mode);
+		whitebalance_spinner = (Spinner) findViewById(R.id.whitebalance);
 
 		String strsize = sizeToString(size);
 		String strmode = modeToString(mode);
+		String wbmode = readWhitebalace(getApplicationContext());
 
 		String sizes[] = getResources().getStringArray(R.array.image_sizes);
 
@@ -118,6 +129,16 @@ public class CameraConfig extends Activity {
 		}
 		if(i <= modes.length)
 			mode_spinner.setSelection(i-1);
+		
+		i = 1;
+		String wbmodes[] =  getResources().getStringArray(R.array.whitebalance);
+		for (String x :wbmodes) {
+			if (x.equals(wbmode))
+				break;
+			i++;
+		}
+		if(i <= wbmodes.length)
+			whitebalance_spinner.setSelection(i-1);
 
 		size_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 
@@ -150,7 +171,34 @@ public class CameraConfig extends Activity {
 
 			}
 		});
+		
+		whitebalance_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 
+			@Override
+			public void onItemSelected(AdapterView<?> arg0, View spinner,
+					int position, long arg3) {
+				Object o = whitebalance_spinner.getItemAtPosition(position);
+				if (o != null)
+					setWhitebalance(spinner.getContext(), (String) o);
+
+			}
+
+
+			@Override
+			public void onNothingSelected(AdapterView<?> arg0) {
+
+			}
+		});
+
+	}
+
+	public static void setWhitebalance(Context ctx, String o) {
+		SharedPreferences settings = ctx.getSharedPreferences(CAMERA_SETTINGS,
+				0);
+		Editor editor = settings.edit();
+		editor.putString(WHITEBALANCE, o);
+		editor.commit();
+		
 	}
 
 	private String modeToString(int mode) {

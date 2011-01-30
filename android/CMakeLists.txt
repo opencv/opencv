@@ -40,6 +40,13 @@ foreach(mdir ${module_includes})
     set(android_module_include_dirs "${android_module_include_dirs} ${n_f}/include")
 endforeach()
 
+set(PossibleArmTargets
+  "armeabi armeabi-v7a;armeabi;armeabi-v7a")
+set(ARM_TARGETS "armeabi armeabi-v7a" CACHE STRING "the arm targets for android, recommend armeabi-v7a for floating point support and neon")
+set_property(CACHE ARM_TARGETS PROPERTY STRINGS ${PossibleArmTargets} )
+
+
+
 configure_file("${CMAKE_SOURCE_DIR}/Android.mk.master.in" "${CMAKE_BINARY_DIR}/Android.mk")
 configure_file("${CMAKE_SOURCE_DIR}/Application.mk.in" "${CMAKE_BINARY_DIR}/Application.mk")
 configure_file("${CMAKE_SOURCE_DIR}/AndroidManifest.xml.in" "${CMAKE_BINARY_DIR}/AndroidManifest.xml")

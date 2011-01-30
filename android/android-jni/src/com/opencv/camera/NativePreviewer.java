@@ -23,6 +23,8 @@ import com.opencv.camera.NativeProcessor.PoolCallback;
 public class NativePreviewer extends SurfaceView implements
 		SurfaceHolder.Callback, Camera.PreviewCallback, NativeProcessorCallback {
 
+	private String whitebalance_mode = "auto";
+
 	/** Constructor useful for defining a NativePreviewer in android layout xml
 	 * 
 	 * @param context
@@ -94,6 +96,7 @@ public class NativePreviewer extends SurfaceView implements
 		int mode = CameraConfig.readCameraMode(ctx);
 		setPreviewSize(size[0], size[1]);
 		setGrayscale(mode == CameraConfig.CAMERA_MODE_BW ? true : false);
+		whitebalance_mode = CameraConfig.readWhitebalace(ctx);
 	}
 
 	public void surfaceCreated(SurfaceHolder holder) {
@@ -135,8 +138,20 @@ public class NativePreviewer extends SurfaceView implements
 		
 		Log.d("NativePreviewer", "Determined compatible preview size is: (" + preview_width + "," + preview_height+")");
 
+		Log.d("NativePreviewer","Supported params: " + mCamera.getParameters().flatten());
+		
+		//this is available in 8+
+		//parameters.setExposureCompensation(0);
+		parameters.setWhiteBalance(whitebalance_mode);
+		parameters.setAntibanding(Camera.Parameters.ANTIBANDING_OFF);
+		
 		List<String> fmodes = mCamera.getParameters().getSupportedFocusModes();
+		//for(String x: fmodes){
+			
+		//}
 
+		if(parameters.get("meter-mode")!=null)
+			parameters.set("meter-mode","meter-average");
 		int idx = fmodes.indexOf(Camera.Parameters.FOCUS_MODE_INFINITY);
 		if (idx != -1) {
 			parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
@@ -151,9 +166,10 @@ public class NativePreviewer extends SurfaceView implements
 		List<String> scenemodes = mCamera.getParameters()
 				.getSupportedSceneModes();
 		if (scenemodes != null)
-			if (scenemodes.indexOf(Camera.Parameters.SCENE_MODE_STEADYPHOTO) != -1) {
+			if (scenemodes.indexOf(Camera.Parameters.SCENE_MODE_ACTION) != -1) {
 				parameters
-						.setSceneMode(Camera.Parameters.SCENE_MODE_STEADYPHOTO);
+						.setSceneMode(Camera.Parameters.SCENE_MODE_ACTION);
+				Log.d("NativePreviewer","set scenemode to action");
 			}
 
 		parameters.setPreviewSize(preview_width, preview_height);
