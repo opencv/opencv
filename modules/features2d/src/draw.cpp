@@ -88,11 +88,24 @@ static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& col
     }
 }
 
-void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImg,
+void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImage,
                     const Scalar& _color, int flags )
 {
     if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
-        cvtColor( image, outImg, CV_GRAY2BGR );
+    {
+        if( image.type() == CV_8UC3 )
+        {
+            image.copyTo( outImage );
+        }
+        else if( image.type() == CV_8UC1 )
+        {
+            cvtColor( image, outImage, CV_GRAY2BGR );
+        }
+        else
+        {
+            CV_Error( CV_StsBadArg, "Incorrect type of input image.\n" );
+        }
+    }
 
     RNG& rng=theRNG();
     bool isRandColor = _color == Scalar::all(-1);
@@ -100,7 +113,7 @@ void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& ou
     for( vector<KeyPoint>::const_iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
     {
         Scalar color = isRandColor ? Scalar(rng(256), rng(256), rng(256)) : _color;
-        _drawKeypoint( outImg, *i, color, flags );
+        _drawKeypoint( outImage, *i, color, flags );
     }
 }
 
