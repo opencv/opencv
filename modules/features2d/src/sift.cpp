@@ -56,7 +56,28 @@
 #undef  ARM_NO_SIFT
 #endif //ANDROID
 
-#ifndef ARM_NO_SIFT
+#ifdef ARM_NO_SIFT
+
+static inline void throw_nosift() { CV_Error(CV_StsBadFunc, "The library is compiled under ARM without SIFT support"); }
+
+cv::SIFT::CommonParams::CommonParams() { }
+cv::SIFT::CommonParams::CommonParams( int, int, int, int ) { throw_nosift(); }
+cv::SIFT::DetectorParams::DetectorParams() { throw_nosift(); }
+cv::SIFT::DetectorParams::DetectorParams( double, double ) { throw_nosift(); }
+cv::SIFT::DescriptorParams::DescriptorParams() { throw_nosift(); }
+cv::SIFT::DescriptorParams::DescriptorParams( double, bool, bool ) { throw_nosift(); }
+cv::SIFT::SIFT() { throw_nosift(); }
+cv::SIFT::SIFT( double, double, int, int, int, int ) { throw_nosift(); }
+cv::SIFT::SIFT( double, bool, bool, int, int, int, int ) { throw_nosift(); }
+cv::SIFT::SIFT( const CommonParams&, const DetectorParams&, const DescriptorParams& ) { throw_nosift(); }
+int cv::SIFT::descriptorSize() const {  throw_nosift(); return 0; }
+void cv::SIFT::operator()( const Mat&, const Mat&, vector<KeyPoint>& ) const { throw_nosift(); }
+void cv::SIFT::operator()( const Mat&, const Mat&, vector<KeyPoint>&, Mat&, bool ) const { throw_nosift(); }
+cv::SIFT::CommonParams cv::SIFT::getCommonParams() const {  throw_nosift(); return cv::SIFT::CommonParams(); }
+cv::SIFT::DetectorParams cv::SIFT::getDetectorParams() const {  throw_nosift(); return cv::SIFT::DetectorParams(); }
+cv::SIFT::DescriptorParams cv::SIFT::getDescriptorParams() const {  throw_nosift(); return cv::SIFT::DescriptorParams(); }
+
+#else // with SIFT
 
 #include <iostream>
 #include <limits>
@@ -2048,6 +2069,26 @@ SIFT::SIFT( const CommonParams& _commParams,
     descriptorParams = _descriptorParams;
 }
 
+int SIFT::descriptorSize() const
+{
+    return DescriptorParams::DESCRIPTOR_SIZE;
+}
+
+SIFT::CommonParams SIFT::getCommonParams () const
+{
+    return commParams;
+}
+
+SIFT::DetectorParams SIFT::getDetectorParams () const
+{
+    return detectorParams;
+}
+
+SIFT::DescriptorParams SIFT::getDescriptorParams () const
+{
+    return descriptorParams;
+}
+
 inline KeyPoint vlKeypointToOcv( const VL::Sift& vlSift, const VL::Sift::Keypoint& vlKeypoint, float angle )
 {
     float size = vlKeypoint.sigma*SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4;// 4==NBP
@@ -2189,4 +2230,4 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
         keypoints.erase( remove_if(keypoints.begin(), keypoints.end(), InvalidKeypoint()), keypoints.end());
 }
 
-#endif
+#endif // ARM_NO_SIFT

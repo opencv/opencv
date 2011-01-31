@@ -326,7 +326,7 @@ public:
           const DescriptorParams& _descriptorParams = DescriptorParams() );
 
     //! returns the descriptor size in floats (128)
-    int descriptorSize() const { return DescriptorParams::DESCRIPTOR_SIZE; }
+    int descriptorSize() const;
     //! finds the keypoints using SIFT algorithm
     void operator()(const Mat& img, const Mat& mask,
                     vector<KeyPoint>& keypoints) const;
@@ -337,9 +337,10 @@ public:
                     Mat& descriptors,
                     bool useProvidedKeypoints=false) const;
 
-    CommonParams getCommonParams () const { return commParams; }
-    DetectorParams getDetectorParams () const { return detectorParams; }
-    DescriptorParams getDescriptorParams () const { return descriptorParams; }
+    CommonParams getCommonParams () const;
+    DetectorParams getDetectorParams () const;
+    DescriptorParams getDescriptorParams () const;
+
 protected:
     CommonParams commParams;
     DetectorParams detectorParams;
