@@ -41,11 +41,23 @@ Returns sum of matrix elements.
 Scalar sum(const GpuMat\& src, GpuMat\& buf);}
 
 \begin{description}
-\cvarg{src}{Source image of any depth except \texttt{CV\_64F}, single-channel.}
+\cvarg{src}{Source image of any depth except \texttt{CV\_64F}.}
 \cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
 See also: \cvCppCross{sum}.
+
+
+\cvCppFunc{gpu::absSum}
+Returns sum of matrix elements absolute values.
+
+\cvdefCpp{Scalar absSum(const GpuMat\& src);\newline
+Scalar absSum(const GpuMat\& src, GpuMat\& buf);}
+
+\begin{description}
+\cvarg{src}{Source image of any depth except \texttt{CV\_64F}.}
+\cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
+\end{description}
 
 
 \cvCppFunc{gpu::sqrSum}
@@ -54,7 +66,7 @@ Returns squared sum of matrix elements.
 \cvdefCpp{Scalar sqrSum(const GpuMat\& src);\newline
 Scalar sqrSum(const GpuMat\& src, GpuMat\& buf);}
 \begin{description}
-\cvarg{src}{Source image of any depth except \texttt{CV\_64F}, single-channel.}
+\cvarg{src}{Source image of any depth except \texttt{CV\_64F}.}
 \cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
