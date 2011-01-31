@@ -106,9 +106,6 @@ protected:
 
     static const int outputTypesCount = 7;
 
-    static const unsigned short badDepth = 0;
-    static const unsigned int badDisparity = 0;
-
     IplImage* retrieveDepthMap();
     IplImage* retrievePointCloudMap(); 
     IplImage* retrieveDisparityMap();
@@ -414,7 +411,7 @@ bool CvCapture_OpenNI::grabFrame()
     return true;
 }
 
-inline void getDepthMapFromMetaData( const xn::DepthMetaData& depthMetaData, cv::Mat& depthMap, XnUInt64 noSampleValue, XnUInt64 shadowValue, unsigned short badDepth )
+inline void getDepthMapFromMetaData( const xn::DepthMetaData& depthMetaData, cv::Mat& depthMap, XnUInt64 noSampleValue, XnUInt64 shadowValue )
 {
     int cols = depthMetaData.XRes();
     int rows = depthMetaData.YRes();
@@ -429,7 +426,7 @@ inline void getDepthMapFromMetaData( const xn::DepthMetaData& depthMetaData, cv:
     cv::Mat badMask = (depthMap == noSampleValue) | (depthMap == shadowValue) | (depthMap == 0);
 
     // mask the pixels with invalid depth
-    depthMap.setTo( cv::Scalar::all( badDepth ), badMask );
+    depthMap.setTo( cv::Scalar::all( OPENNI_BAD_DEPTH_VAL ), badMask );
 }
 
 IplImage* CvCapture_OpenNI::retrieveDepthMap()
@@ -437,7 +434,7 @@ IplImage* CvCapture_OpenNI::retrieveDepthMap()
     if( depthMetaData.XRes() <= 0 || depthMetaData.YRes() <= 0 )
         return 0;
 
-    getDepthMapFromMetaData( depthMetaData, outputMaps[OPENNI_DEPTH_MAP].mat, noSampleValue, shadowValue, badDepth );
+    getDepthMapFromMetaData( depthMetaData, outputMaps[OPENNI_DEPTH_MAP].mat, noSampleValue, shadowValue );
 
     return outputMaps[OPENNI_DEPTH_MAP].getIplImagePtr();
 }
@@ -448,21 +445,8 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     if( cols <= 0 || rows <= 0 )
         return 0;
 
-#if 0
-    // X = (x - centerX) * depth / F[in pixels]
-    // Y = (y - centerY) * depth / F[in pixels]
-    // Z = depth
-    // Multiply by 0.001 to convert from mm in meters.
-
-
-    float mult = 0.001f / depthFocalLength_VGA;
-    int centerX = cols >> 1;
-    int centerY = rows >> 1;
-#endif
-
-
     cv::Mat depth;
-    getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue, badDepth );
+    getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
 
     const float badPoint = 0;
     cv::Mat XYZ( rows, cols, CV_32FC3, cv::Scalar::all(badPoint) );
@@ -473,26 +457,16 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
         {
 
             unsigned short d = depth.at<unsigned short>(y, x);
-
             // Check for invalid measurements
-            if( d == badDepth ) // not valid
+            if( d == OPENNI_BAD_DEPTH_VAL ) // not valid
                 continue;
-#if 0
-            // Fill in XYZ
-            cv::Point3f point3D;
-            point3D.x = (x - centerX) * d * mult;
-            point3D.y = (y - centerY) * d * mult;
-            point3D.z = d * 0.001f;
 
-            XYZ.at<cv::Point3f>(y,x) = point3D;
-#else
             XnPoint3D proj, real;
             proj.X = x;
             proj.Y = y;
             proj.Z = d;
             depthGenerator.ConvertProjectiveToRealWorld(1, &proj, &real);
             XYZ.at<cv::Point3f>(y,x) = cv::Point3f( real.X*0.001f, real.Y*0.001f, real.Z*0.001f); // from mm to meters
-#endif
         }
     }
 
@@ -502,11 +476,10 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
 }
 
 void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp, XnDouble baseline, XnUInt64 F, 
-                           XnUInt64 noSampleValue, XnUInt64 shadowValue, 
-                           short badDepth, unsigned int badDisparity )
+                           XnUInt64 noSampleValue, XnUInt64 shadowValue )
 {
     cv::Mat depth;
-    getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue, badDepth );
+    getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
     CV_Assert( depth.type() == CV_16UC1 );
 
 
@@ -515,13 +488,13 @@ void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp
     float mult = baseline /*mm*/ * F /*pixels*/;
     
     disp.create( depth.size(), CV_32FC1);
-    disp = cv::Scalar::all(badDisparity);
+    disp = cv::Scalar::all( OPENNI_BAD_DISP_VAL );
     for( int y = 0; y < disp.rows; y++ )
     {
         for( int x = 0; x < disp.cols; x++ )
         {
             unsigned short curDepth = depth.at<unsigned short>(y,x);
-            if( curDepth != badDepth )
+            if( curDepth != OPENNI_BAD_DEPTH_VAL )
                 disp.at<float>(y,x) = mult / curDepth;
         }
     }
@@ -533,8 +506,7 @@ IplImage* CvCapture_OpenNI::retrieveDisparityMap()
         return 0;
 
     cv::Mat disp32;
-    computeDisparity_32F( depthMetaData, disp32, baseline, depthFocalLength_VGA,
-                          noSampleValue, shadowValue, badDepth, badDisparity );
+    computeDisparity_32F( depthMetaData, disp32, baseline, depthFocalLength_VGA, noSampleValue, shadowValue );
 
     disp32.convertTo( outputMaps[OPENNI_DISPARITY_MAP].mat, CV_8UC1 );
     
@@ -546,8 +518,7 @@ IplImage* CvCapture_OpenNI::retrieveDisparityMap_32F()
     if( depthMetaData.XRes() <= 0 || depthMetaData.YRes() <= 0 )
         return 0;
 
-    computeDisparity_32F( depthMetaData, outputMaps[OPENNI_DISPARITY_MAP_32F].mat, baseline, depthFocalLength_VGA, 
-                          noSampleValue, shadowValue, badDepth, badDisparity );
+    computeDisparity_32F( depthMetaData, outputMaps[OPENNI_DISPARITY_MAP_32F].mat, baseline, depthFocalLength_VGA, noSampleValue, shadowValue );
 
     return outputMaps[OPENNI_DISPARITY_MAP_32F].getIplImagePtr();
 }
@@ -558,9 +529,9 @@ IplImage* CvCapture_OpenNI::retrieveValidDepthMask()
         return 0;
 
     cv::Mat depth;
-    getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue, badDepth );
+    getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
 
-    outputMaps[OPENNI_VALID_DEPTH_MASK].mat = depth != badDepth;
+    outputMaps[OPENNI_VALID_DEPTH_MASK].mat = depth != OPENNI_BAD_DEPTH_VAL;
     
     return outputMaps[OPENNI_VALID_DEPTH_MASK].getIplImagePtr();
 }

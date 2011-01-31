@@ -390,7 +390,8 @@ enum
     OPENNI_IMAGE_GENERATOR = 1 << 31
 };
 
-// Properties of Kinect (additional to ones begining from CV_CAP_PROP_...)
+// Properties of cameras avalible through OpenNI interfaces
+// (additional to ones begining from CV_CAP_PROP_...)
 enum
 {
     OPENNI_OUTPUT_MODE = 20,
