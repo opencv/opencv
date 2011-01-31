@@ -54,14 +54,16 @@ namespace cv
  */
 struct RoiPredicate
 {
-    RoiPredicate(float _minX, float _minY, float _maxX, float _maxY)
+    RoiPredicate( float _minX, float _minY, float _maxX, float _maxY )
         : minX(_minX), minY(_minY), maxX(_maxX), maxY(_maxY)
     {}
 
-    bool operator()( const KeyPoint& keyPt) const
+    bool operator()( const KeyPoint& keyPt ) const
     {
         Point2f pt = keyPt.pt;
-        return (pt.x < minX) || (pt.x >= maxX) || (pt.y < minY) || (pt.y >= maxY);
+        float eps = std::numeric_limits<float>::epsilon();
+        return (pt.x < minX + eps) || (pt.x >= maxX - eps) ||
+               (pt.y < minY + eps) || (pt.y >= maxY - eps);
     }
 
     float minX, minY, maxX, maxY;
@@ -102,14 +104,14 @@ bool DescriptorExtractor::empty() const
 }
 
 void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
-                                                 Size imageSize, int borderSize )
+                                                 Size imageSize, float borderSize )
 {
     if( borderSize > 0)
     {
         keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
-                                   RoiPredicate((float)borderSize, (float)borderSize,
-                                                (float)(imageSize.width - borderSize),
-                                                (float)(imageSize.height - borderSize))),
+                                   RoiPredicate(borderSize, borderSize,
+                                                (float)imageSize.width - borderSize,
+                                                (float)imageSize.height - borderSize)),
                          keypoints.end() );
     }
 }
