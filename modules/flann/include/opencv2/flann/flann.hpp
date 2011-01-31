@@ -94,7 +94,7 @@ public:
 
 	int size() const { return nnIndex->size(); }
 
-	const IndexParams* getIndexParameters() { return nnIndex->getParameters(); }
+	const IndexParams* getIndexParameters() { return nnIndex->getIndexParameters(); }
 
 };
 
