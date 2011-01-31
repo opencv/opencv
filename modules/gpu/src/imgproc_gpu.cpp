@@ -61,6 +61,7 @@ void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int) { throw_nogpu(); }
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int) { throw_nogpu(); }
 void cv::gpu::integral(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::integral(const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_nogpu(); }
@@ -546,6 +547,12 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
 
 void cv::gpu::integral(const GpuMat& src, GpuMat& sum)
 {
+    GpuMat buffer;
+    integralBuffered(src, sum, buffer);
+}
+
+void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer)
+{
     CV_Assert(src.type() == CV_8UC1);
 
     sum.create(src.rows + 1, src.cols + 1, CV_32S);
@@ -555,10 +562,8 @@ void cv::gpu::integral(const GpuMat& src, GpuMat& sum)
     roiSize.height = src.rows;
 
     NppSt32u bufSize;
-
     nppSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize) );
-
-    GpuMat buffer(1, bufSize, CV_8UC1);
+    ensureSizeIsEnough(1, bufSize, CV_8UC1, buffer);
 
     nppSafeCall( nppiStIntegral_8u32u_C1R(const_cast<NppSt8u*>(src.ptr<NppSt8u>()), src.step, 
         sum.ptr<NppSt32u>(), sum.step, roiSize, buffer.ptr<NppSt8u>(), bufSize) );

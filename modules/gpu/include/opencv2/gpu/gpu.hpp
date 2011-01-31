@@ -650,6 +650,9 @@ namespace cv
         //! supports only CV_8UC1 source type
         CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum);
 
+        //! buffered version
+        CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer);
+
         //! computes the integral image and integral for the squared image
         //! sum will have CV_32S type, sqsum - CV32F type
         //! supports only CV_8UC1 source type

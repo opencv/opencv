@@ -170,24 +170,26 @@ TEST(cornerHarris)
 TEST(integral)
 {
     Mat src, sum;
-    gpu::GpuMat d_src, d_sum;
+    gpu::GpuMat d_src, d_sum, d_buf;
 
-    for (int size = 1000; size <= 8000; size *= 2)
+    int size = 4000;
+
+    gen(src, size, size, CV_8U, 0, 256);
+    sum.create(size + 1, size + 1, CV_32S);
+
+    d_src = src;
+    d_sum.create(size + 1, size + 1, CV_32S);
+
+    for (int i = 0; i < 5; ++i)
     {
         SUBTEST << "size " << size << ", 8U";
-
-        gen(src, size, size, CV_8U, 0, 256);
-        sum.create(size + 1, size + 1, CV_32S);
 
         CPU_ON;
         integral(src, sum);
         CPU_OFF;
 
-        d_src = src;
-        d_sum.create(size + 1, size + 1, CV_32S);
-
         GPU_ON;
-        gpu::integral(d_src, d_sum);
+        gpu::integralBuffered(d_src, d_sum, d_buf);
         GPU_OFF;
     }
 }
