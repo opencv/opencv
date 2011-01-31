@@ -33,7 +33,7 @@ public:
 };
 \end{lstlisting}
 
-The class computes the disparity map using block matching algorithm. The class also does some pre- and post- processing steps: sobel prefilter (if use \texttt{PREFILTER\_XSOBEL} preset) and textureless threshold post processing (if \texttt{avergeTexThreshold} $>$ 0). If \texttt{avergeTexThreshold = 0} post procesing is disabled, otherwise disparity is set 0 in each point \texttt{(x, y)} where for left image $\sum HorizontalGradiensInWindow(x, y, winSize) < (winSize \cdot winSize) \cdot avergeTexThreshold$ i.e. input left image is low textured.
+This class computes the disparity map using block matching algorithm. The class also performs pre- and post- filtering steps: sobel prefiltering (if PREFILTER\_XSOBEL flag is set) and low textureness filtering (if averageTexThreshols $>$ 0). If \texttt{avergeTexThreshold = 0} low textureness filtering is disabled, otherwise disparity is set to 0 in each point \texttt{(x, y)} where for left image $\sum HorizontalGradiensInWindow(x, y, winSize) < (winSize \cdot winSize) \cdot avergeTexThreshold$ i.e. input left image is low textured.
 
 
 \cvfunc{cv::gpu::StereoBM\_GPU::StereoBM\_GPU}\label{cppfunc.gpu.StereoBM.StereoBM}
@@ -45,13 +45,13 @@ StereoBM\_GPU::StereoBM\_GPU(int preset, \par int ndisparities = DEFAULT\_NDISP,
 }
 
 \begin{description}
-\cvarg{preset}{Camera-specific preset:}
+\cvarg{preset}{Preset:}
 \begin{description}
   \cvarg{BASIC\_PRESET}{Without preprocessing.}
   \cvarg{PREFILTER\_XSOBEL}{Sobel prefilter.}
 \end{description}
-\cvarg{ndisparities}{Number of disparities. Must be multiple of 8 and less then 256.}
-\cvarg{winSize}{SAD window size.}
+\cvarg{ndisparities}{Number of disparities. Must be a multiple of 8 and less or equal then 256.}
+\cvarg{winSize}{Block size.}
 \end{description}
 
 
@@ -72,7 +72,7 @@ void StereoBM\_GPU::operator() (const GpuMat\& left, const GpuMat\& right, \par 
 
 
 \cvfunc{cv::gpu::StereoBM\_GPU::checkIfGpuCallReasonable}\label{cppfunc.gpu.StereoBM.checkIfGpuCallReasonable}
-Some heuristics that tries to estmate if current GPU will be faster then CPU in this algorithm. It queries current active device.
+Some heuristics that tries to estmate if the current GPU will be faster then CPU in this algorithm. It queries current active device.
 
 \cvdefCpp{
 bool StereoBM\_GPU::checkIfGpuCallReasonable();
@@ -127,6 +127,16 @@ public:
 
 The class implements Pedro F. Felzenszwalb algorithm \cite{felzenszwalb_bp}. It can compute own data cost (using truncated linear model) or use user-provided data cost.
 
+\textbf{Please note:} \texttt{StereoBeliefPropagation} requires a lot of memory:
+\[
+width\_step \cdot height \cdot ndisp \cdot 4 \cdot (1 + 0.25)
+\]
+for message storage and
+\[
+width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 + \dotsm + \frac{1}{4^{levels}}
+\]
+for data cost storage. \texttt{width\_step} is the number of bytes in a line including the padding.
+
 
 \cvCppFunc{gpu::StereoBeliefPropagation::StereoBeliefPropagation}
 StereoBeliefPropagation constructors.
@@ -140,9 +150,9 @@ StereoBeliefPropagation::StereoBeliefPropagation(\par int ndisp, int iters, int 
 \cvarg{ndisp}{Number of disparities.}
 \cvarg{iters}{Number of BP iterations on each level.}
 \cvarg{levels}{Number of levels.}
-\cvarg{max\_data\_term}{Truncation of data cost.}
+\cvarg{max\_data\_term}{Threshold for data cost truncation.}
 \cvarg{data\_weight}{Data weight.}
-\cvarg{max\_disc\_term}{Truncation of discontinuity.}
+\cvarg{max\_disc\_term}{Threshold for discontinuity truncation.}
 \cvarg{disc\_single\_jump}{Discontinuity single jump.}
 \cvarg{msg\_type}{Type for messages. Supports \texttt{CV\_16SC1} and \texttt{CV\_32FC1}.}
 \end{description}
@@ -157,11 +167,14 @@ DiscTerm = \min(disc\_single\_jump \cdot \lvert f_1-f_2 \rvert, max\_disc\_term)
 
 For more details please see \cite{felzenszwalb_bp}.
 
-By default \texttt{StereoBeliefPropagation} uses floating-point arithmetics and \texttt{CV\_32FC1} type for messages. But also it can use fixed-point arithmetics and \texttt{CV\_16SC1} type for messages for better perfomance.
+By default \texttt{StereoBeliefPropagation} uses floating-point arithmetics and \texttt{CV\_32FC1} type for messages. But also it can use fixed-point arithmetics and \texttt{CV\_16SC1} type for messages for better perfomance. To avoid overflow in this case, the parameters must satisfy 
+\[
+10 \cdot 2^{levels-1} \cdot max\_data\_term < SHRT\_MAX
+\]
 
 
 \cvCppFunc{gpu::StereoBeliefPropagation::estimateRecommendedParams}
-Some heuristics that tries to compute parameters (\texttt{ndisp}, \texttt{iters} and \texttt{levels}) for specified image size (\texttt{width} and \texttt{height}).
+Some heuristics that tries to compute recommended parameters (\texttt{ndisp}, \texttt{iters} and \texttt{levels}) for specified image size (\texttt{width} and \texttt{height}).
 
 \cvdefCpp{
 void StereoBeliefPropagation::estimateRecommendedParams(\par int width, int height, int\& ndisp, int\& iters, int\& levels);
@@ -248,7 +261,7 @@ public:
 };
 \end{lstlisting}
 
-The class implements Q. Yang algorithm \cite{qx_csbp}. \texttt{StereoConstantSpaceBP} can use global minimum or local minimum selection method. By default it use local minimum selection method (\texttt{use\_local\_init\_data\_cost = true}).
+The class implements Q. Yang algorithm \cite{qx_csbp}. \texttt{StereoConstantSpaceBP} supports both local minimum and global minimum data cost initialization algortihms. For more details please see the paper. By default local algorithm is used, and to enable global algorithm set \texttt{use\_local\_init\_data\_cost} to false.
 
 
 \cvCppFunc{gpu::StereoConstantSpaceBP::StereoConstantSpaceBP}
@@ -282,7 +295,10 @@ DiscTerm = \min(disc\_single\_jump \cdot \lvert f_1-f_2 \rvert, max\_disc\_term)
 
 For more details please see \cite{qx_csbp}.
 
-By default \texttt{StereoConstantSpaceBP} uses floating-point arithmetics and \texttt{CV\_32FC1} type for messages. But also it can use fixed-point arithmetics and \texttt{CV\_16SC1} type for messages for better perfomance.
+By default \texttt{StereoConstantSpaceBP} uses floating-point arithmetics and \texttt{CV\_32FC1} type for messages. But also it can use fixed-point arithmetics and \texttt{CV\_16SC1} type for messages for better perfomance. To avoid overflow in this case, the parameters must satisfy 
+\[
+10 \cdot 2^{levels-1} \cdot max\_data\_term < SHRT\_MAX
+\]
 
 
 \cvCppFunc{gpu::StereoConstantSpaceBP::estimateRecommendedParams}
@@ -335,11 +351,11 @@ public:
 };
 \end{lstlisting}
 
-The class implements disparity map refinement using joint bilateral filtering given a single color image described in \cite{qx_csbp}.
+The class implements Q. Yang algorithm \cite{qx_csbp}.
 
 
 \cvCppFunc{gpu::DisparityBilateralFilter::DisparityBilateralFilter}
-DisparityBilateralFilter constructors
+DisparityBilateralFilter constructors.
 
 \cvdefCpp{
 DisparityBilateralFilter::DisparityBilateralFilter(\par int ndisp = DEFAULT\_NDISP, int radius = DEFAULT\_RADIUS, \par int iters = DEFAULT\_ITERS);\newline
@@ -350,8 +366,8 @@ DisparityBilateralFilter::DisparityBilateralFilter(\par int ndisp, int radius, i
 \cvarg{ndisp}{Number of disparities.}
 \cvarg{radius}{Filter radius.}
 \cvarg{iters}{Number of iterations.}
-\cvarg{edge\_threshold}{Truncation of data continuity.}
-\cvarg{max\_disc\_threshold}{Truncation of disparity continuity.}
+\cvarg{edge\_threshold}{Threshold for edges.}
+\cvarg{max\_disc\_threshold}{Constant to reject outliers.}
 \cvarg{sigma\_range}{Filter range.}
 \end{description}
 

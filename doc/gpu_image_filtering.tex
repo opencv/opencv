@@ -19,6 +19,8 @@ public:
 };
 \end{lstlisting}
 
+\textbf{Please note:} This class doesn't allocate memory for destination image. Usually this class is used inside \hyperref[class.gpu.FilterEngine]{cv::gpu::FilterEngine\_GPU}.
+
 
 \cvclass{gpu::BaseColumnFilter\_GPU}\label{class.gpu.BaseColumnFilter}
 The base class for linear or non-linear filters that processes columns of 2D arrays. Such filters are used for the "vertical" filtering passes in separable filters.
@@ -33,6 +35,8 @@ public:
     int ksize, anchor;
 };
 \end{lstlisting}
+
+\textbf{Please note:} This class doesn't allocate memory for destination image. Usually this class is used inside \hyperref[class.gpu.FilterEngine]{cv::gpu::FilterEngine\_GPU}.
 
 
 \cvclass{gpu::BaseFilter\_GPU}\label{class.gpu.BaseFilter}
@@ -49,6 +53,8 @@ public:
     Point anchor;
 };
 \end{lstlisting}
+
+\textbf{Please note:} This class doesn't allocate memory for destination image. Usually this class is used inside \hyperref[class.gpu.FilterEngine]{cv::gpu::FilterEngine\_GPU}.
 
 
 \cvclass{gpu::FilterEngine\_GPU}\label{class.gpu.FilterEngine}
@@ -91,9 +97,9 @@ while (...)
 filter.release();
 \end{lstlisting}
 
-\texttt{FilterEngine\_GPU} can process a rectangular sub-region of an image. By default, if \texttt{roi == Rect(0,0,-1,-1)}, \texttt{FilterEngine\_GPU} process inner region of image (\texttt{Rect(anchor.x, anchor.y, src\_size.width - ksize.width, src\_size.height - ksize.height)}), because some filters doesn't check indexes outside the image for better perfomace. Which filters supports processing the whole image and which not and image type limitations see below.
+\texttt{FilterEngine\_GPU} can process a rectangular sub-region of an image. By default, if \texttt{roi == Rect(0,0,-1,-1)}, \texttt{FilterEngine\_GPU} processes inner region of image (\texttt{Rect(anchor.x, anchor.y, src\_size.width - ksize.width, src\_size.height - ksize.height)}), because some filters doesn't check if indices are outside the image for better perfomace. See below which filters supports processing the whole image and which not and image type limitations.
 
-The GPU filters doesn't support the in-place mode.
+\textbf{Please note:} The GPU filters doesn't support the in-place mode.
 
 See also: \hyperref[class.gpu.BaseRowFilter]{cv::gpu::BaseRowFilter\_GPU}, \hyperref[class.gpu.BaseColumnFilter]{cv::gpu::BaseColumnFilter\_GPU}, \hyperref[class.gpu.BaseFilter]{cv::gpu::BaseFilter\_GPU}, \hyperref[cppfunc.gpu.createFilter2D]{cv::gpu::createFilter2D\_GPU}, \hyperref[cppfunc.gpu.createSeparableFilter]{cv::gpu::createSeparableFilter\_GPU}, \hyperref[cppfunc.gpu.createBoxFilter]{cv::gpu::createBoxFilter\_GPU}, \hyperref[cppfunc.gpu.createMorphologyFilter]{cv::gpu::createMorphologyFilter\_GPU}, \hyperref[cppfunc.gpu.createLinearFilter]{cv::gpu::createLinearFilter\_GPU}, \hyperref[cppfunc.gpu.createSeparableLinearFilter]{cv::gpu::createSeparableLinearFilter\_GPU}, \hyperref[cppfunc.gpu.createDerivFilter]{cv::gpu::createDerivFilter\_GPU}, \hyperref[cppfunc.gpu.createGaussianFilter]{cv::gpu::createGaussianFilter\_GPU}
 
@@ -146,7 +152,7 @@ Ptr<BaseRowFilter\_GPU> getRowSumFilter\_GPU(int srcType, int sumType, \par int 
 \cvarg{anchor}{Anchor point. The default value (-1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area. 
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it. 
 
 
 \cvfunc{cv::gpu::getColumnSumFilter\_GPU}\label{cppfunc.gpu.getColumnSumFilter}
@@ -163,7 +169,7 @@ Ptr<BaseColumnFilter\_GPU> getColumnSumFilter\_GPU(int sumType, \par int dstType
 \cvarg{anchor}{Anchor point. The default value (-1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area. 
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it. 
 
 
 \cvfunc{cv::gpu::createBoxFilter\_GPU}\label{cppfunc.gpu.createBoxFilter}
@@ -183,7 +189,7 @@ Ptr<BaseFilter\_GPU> getBoxFilter\_GPU(int srcType, int dstType, \par const Size
 \cvarg{anchor}{Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{boxFilter}.
 
@@ -203,7 +209,7 @@ void boxFilter(const GpuMat\& src, GpuMat\& dst, int ddepth, Size ksize, \par Po
 \cvarg{anchor}{Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{boxFilter}, \hyperref[cppfunc.gpu.createBoxFilter]{cv::gpu::createBoxFilter\_GPU}.
 
@@ -222,7 +228,7 @@ void blur(const GpuMat\& src, GpuMat\& dst, Size ksize, \par Point anchor = Poin
 \cvarg{anchor}{Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{blur}, \cvCppCross{gpu::boxFilter}.
 
@@ -245,7 +251,7 @@ Ptr<BaseFilter\_GPU> getMorphologyFilter\_GPU(int op, int type, \par const Mat\&
 \cvarg{anchor}{Anchor position within the structuring element; negative values mean that the anchor is at the center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{createMorphologyFilter}.
 
@@ -265,7 +271,7 @@ void erode(const GpuMat\& src, GpuMat\& dst, const Mat\& kernel, \par Point anch
 \cvarg{iterations}{Number of times erosion to be applied.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{erode}, \hyperref[cppfunc.gpu.createMorphologyFilter]{cv::gpu::createMorphologyFilter\_GPU}.
 
@@ -285,7 +291,7 @@ void dilate(const GpuMat\& src, GpuMat\& dst, const Mat\& kernel, \par Point anc
 \cvarg{iterations}{Number of times dilation to be applied.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{dilate}, \hyperref[cppfunc.gpu.createMorphologyFilter]{cv::gpu::createMorphologyFilter\_GPU}.
 
@@ -313,7 +319,7 @@ void morphologyEx(const GpuMat\& src, GpuMat\& dst, int op, \par const Mat\& ker
 \cvarg{iterations}{Number of times erosion and dilation to be applied.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{morphologyEx}.
 
@@ -336,7 +342,7 @@ Ptr<BaseFilter\_GPU> getLinearFilter\_GPU(int srcType, int dstType, \par const M
 \cvarg{anchor}{Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{createLinearFilter}.
 
@@ -356,7 +362,7 @@ void filter2D(const GpuMat\& src, GpuMat\& dst, int ddepth, \par const Mat\& ker
 \cvarg{anchor}{Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor should lie within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{filter2D}, \hyperref[cppfunc.gpu.createLinearFilter]{cv::gpu::createLinearFilter\_GPU}.
 
@@ -376,7 +382,7 @@ void Laplacian(const GpuMat\& src, GpuMat\& dst, int ddepth, \par int ksize = 1,
 \cvarg{scale}{Optional scale factor for the computed Laplacian values (by default, no scaling is applied, see \cvCppCross{getDerivKernels}).}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area.
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
 See also: \cvCppCross{Laplacian}, \cvCppCross{gpu::filter2D}.
 
@@ -396,7 +402,7 @@ Ptr<BaseRowFilter\_GPU> getLinearRowFilter\_GPU(int srcType, \par int bufType, c
 \cvarg{borderType}{Pixel extrapolation method; see \cvCppCross{borderInterpolate}. About limitation see below.}
 \end{description}
 
-There are two version of algorithm: NPP and OpenCV. NPP calls when \texttt{srcType == CV\_8UC1} or \texttt{srcType == CV\_8UC4} and \texttt{bufType == srcType}, otherwise calls OpenCV version. NPP supports only \texttt{BORDER\_CONSTANT} border type and doesn't check indexes outside image. OpenCV version supports only \texttt{CV\_32F} buffer depth and \texttt{BORDER\_REFLECT101}, \texttt{BORDER\_REPLICATE} and \texttt{BORDER\_CONSTANT} border types and checks indexes outside image.
+There are two version of algorithm: NPP and OpenCV. NPP calls when \texttt{srcType == CV\_8UC1} or \texttt{srcType == CV\_8UC4} and \texttt{bufType == srcType}, otherwise calls OpenCV version. NPP supports only \texttt{BORDER\_CONSTANT} border type and doesn't check indices outside image. OpenCV version supports only \texttt{CV\_32F} buffer depth and \texttt{BORDER\_REFLECT101}, \texttt{BORDER\_REPLICATE} and \texttt{BORDER\_CONSTANT} border types and checks indices outside image.
 
 See also: \hyperref[cppfunc.gpu.getLinearColumnFilter]{cv::gpu::getLinearColumnFilter\_GPU}, \cvCppCross{createSeparableLinearFilter}.
 
@@ -416,7 +422,7 @@ Ptr<BaseColumnFilter\_GPU> getLinearColumnFilter\_GPU(int bufType, \par int dstT
 \cvarg{borderType}{Pixel extrapolation method; see \cvCppCross{borderInterpolate}. About limitation see below.}
 \end{description}
 
-There are two version of algorithm: NPP and OpenCV. NPP calls when \texttt{dstType == CV\_8UC1} or \texttt{dstType == CV\_8UC4} and \texttt{bufType == dstType}, otherwise calls OpenCV version. NPP supports only \texttt{BORDER\_CONSTANT} border type and doesn't check indexes outside image. OpenCV version supports only \texttt{CV\_32F} buffer depth and \texttt{BORDER\_REFLECT101}, \texttt{BORDER\_REPLICATE} and \texttt{BORDER\_CONSTANT} border types and checks indexes outside image.\newline
+There are two version of algorithm: NPP and OpenCV. NPP calls when \texttt{dstType == CV\_8UC1} or \texttt{dstType == CV\_8UC4} and \texttt{bufType == dstType}, otherwise calls OpenCV version. NPP supports only \texttt{BORDER\_CONSTANT} border type and doesn't check indices outside image. OpenCV version supports only \texttt{CV\_32F} buffer depth and \texttt{BORDER\_REFLECT101}, \texttt{BORDER\_REPLICATE} and \texttt{BORDER\_CONSTANT} border types and checks indices outside image.\newline
 
 See also: \hyperref[cppfunc.gpu.getLinearRowFilter]{cv::gpu::getLinearRowFilter\_GPU}, \cvCppCross{createSeparableLinearFilter}.
 
@@ -568,7 +574,7 @@ Ptr<BaseFilter\_GPU> getMaxFilter\_GPU(int srcType, int dstType, \par const Size
 \cvarg{anchor}{Anchor point. The default value (-1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area. 
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it. 
 
 
 \cvfunc{cv::gpu::getMinFilter\_GPU}\label{cppfunc.gpu.getMinFilter}
@@ -585,4 +591,4 @@ Ptr<BaseFilter\_GPU> getMinFilter\_GPU(int srcType, int dstType, \par const Size
 \cvarg{anchor}{Anchor point. The default value (-1) means that the anchor is at the kernel center.}
 \end{description}
 
-This filter doesn't check indexes outside the image, so it can process only inner area. 
+\textbf{Please note:} This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it. 

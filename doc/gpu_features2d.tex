@@ -1,62 +1,6 @@
 \section{Feature Detection and Description}
 
 
-\cvclass{gpu::SURFParams\_GPU}
-Various SURF algorithm parameters. 
-
-\begin{lstlisting}
-struct SURFParams_GPU 
-{
-    SURFParams_GPU() :
-        threshold(0.1f), 
-        nOctaves(4),
-        nIntervals(4),
-        initialScale(2.f),
-
-        l1(3.f/1.5f),
-        l2(5.f/1.5f),
-        l3(3.f/1.5f),
-        l4(1.f/1.5f),
-        edgeScale(0.81f),
-        initialStep(1),
-
-        extended(true),
-
-        featuresRatio(0.01f)
-    {
-    }
-
-    //! The interest operator threshold
-    float threshold;
-    //! The number of octaves to process
-    int nOctaves;
-    //! The number of intervals in each octave
-    int nIntervals;
-    //! The scale associated with the first interval of the first octave
-    float initialScale;
-
-    //! mask parameter l_1
-    float l1;
-    //! mask parameter l_2 
-    float l2;
-    //! mask parameter l_3
-    float l3;
-    //! mask parameter l_4
-    float l4;
-    //! The amount to scale the edge rejection mask
-    float edgeScale;
-    //! The initial sampling step in pixels.
-    int initialStep;
-
-    //! True, if generate 128-len descriptors, false - 64-len descriptors
-    bool extended;
-
-    //! max features = featuresRatio * img.size().srea()
-    float featuresRatio;
-};
-\end{lstlisting}
-
-
 \cvclass{gpu::SURF\_GPU}
 Class for extracting Speeded Up Robust Features from an image.
 
@@ -236,8 +180,8 @@ void matchSingle(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par
 \begin{description}
 \cvarg{queryDescs} {Query set of descriptors.}
 \cvarg{trainDescs} {Train set of descriptors. This will not be added to train descriptors collection stored in class object.}
-\cvarg{trainIdx} {One row \texttt{CV\_32SC1} matrix. Will contain the best train index for each query. If some query descriptors masked out in \texttt{mask} it will contain -1.}
-\cvarg{distance} {One row \texttt{CV\_32FC1} matrix. Will contain the best distance for each query. If some query descriptors masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
+\cvarg{trainIdx} {One row \texttt{CV\_32SC1} matrix. Will contain the best train index for each query. If some query descriptors are masked out in \texttt{mask} it will contain -1.}
+\cvarg{distance} {One row \texttt{CV\_32FC1} matrix. Will contain the best distance for each query. If some query descriptors are masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
 \cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
 \end{description}
 
@@ -252,9 +196,9 @@ void matchCollection(const GpuMat\& queryDescs, \par const GpuMat\& trainCollect
 \begin{description}
 \cvarg{queryDescs} {Query set of descriptors.}
 \cvarg{trainCollection} {\texttt{GpuMat} containing train collection. It can be obtained from train descriptors collection that was set using \texttt{add} method by \hyperref[cppfunc.gpu.BruteForceMatcher.makeGpuCollection]{makeGpuCollection}. Or it can contain user defined collection. It must be one row matrix, each element is a \texttt{DevMem2D} that points to one train descriptors matrix.}
-\cvarg{trainIdx} {One row \texttt{CV\_32SC1} matrix. Will contain the best train index for each query. If some query descriptors masked out in \texttt{maskCollection} it will contain -1.}
-\cvarg{imgIdx} {One row \texttt{CV\_32SC1} matrix. Will contain image train index for each query. If some query descriptors masked out in \texttt{maskCollection} it will contain -1.}
-\cvarg{distance} {One row \texttt{CV\_32FC1} matrix. Will contain the best distance for each query. If some query descriptors masked out in \texttt{maskCollection} it will contain \texttt{FLT\_MAX}.}
+\cvarg{trainIdx} {One row \texttt{CV\_32SC1} matrix. Will contain the best train index for each query. If some query descriptors are masked out in \texttt{maskCollection} it will contain -1.}
+\cvarg{imgIdx} {One row \texttt{CV\_32SC1} matrix. Will contain image train index for each query. If some query descriptors are masked out in \texttt{maskCollection} it will contain -1.}
+\cvarg{distance} {One row \texttt{CV\_32FC1} matrix. Will contain the best distance for each query. If some query descriptors are masked out in \texttt{maskCollection} it will contain \texttt{FLT\_MAX}.}
 \cvarg{maskCollection}{\texttt{GpuMat} containing set of masks. It can be obtained from \texttt{std::vector<GpuMat>} by \hyperref[cppfunc.gpu.BruteForceMatcher.makeGpuCollection]{makeGpuCollection}. Or it can contain user defined mask set. It must be empty matrix or one row matrix, each element is a \texttt{PtrStep} that points to one mask.}
 \end{description}
 
@@ -299,8 +243,8 @@ void knnMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par Gp
 \begin{description}
 \cvarg{queryDescs} {Query set of descriptors.}
 \cvarg{trainDescs} {Train set of descriptors. This will not be added to train descriptors collection stored in class object.}
-\cvarg{trainIdx} {Matrix with $\texttt{nQueries} \times \texttt{k}$ size and \texttt{CV\_32SC1} type. \texttt{trainIdx.at<int>(queryIdx, i)} will contain index of the i'th best trains. If some query descriptors masked out in \texttt{mask} it will contain -1.}
-\cvarg{distance} {Matrix with $\texttt{nQuery} \times \texttt{k}$ and \texttt{CV\_32FC1} type. Will contain distance for each query and the i'th best trains. If some query descriptors masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
+\cvarg{trainIdx} {Matrix with $\texttt{nQueries} \times \texttt{k}$ size and \texttt{CV\_32SC1} type. \texttt{trainIdx.at<int>(queryIdx, i)} will contain index of the i'th best trains. If some query descriptors are masked out in \texttt{mask} it will contain -1.}
+\cvarg{distance} {Matrix with $\texttt{nQuery} \times \texttt{k}$ and \texttt{CV\_32FC1} type. Will contain distance for each query and the i'th best trains. If some query descriptors are masked out in \texttt{mask} it will contain \texttt{FLT\_MAX}.}
 \cvarg{allDist} {Buffer to store all distances between query descriptors and train descriptors. It will have $\texttt{nQuery} \times \texttt{nTrain}$ size and \texttt{CV\_32FC1} type. \texttt{allDist.at<float>(queryIdx, trainIdx)} will contain \texttt{FLT\_MAX}, if \texttt{trainIdx} is one from k best, otherwise it will contain distance between \texttt{queryIdx} and \texttt{trainIdx} descriptors.}
 \cvarg{k}{Number of the best matches will be found per each query descriptor (or less if it's not possible).}
 \cvarg{mask}{Mask specifying permissible matches between input query and train matrices of descriptors.}
