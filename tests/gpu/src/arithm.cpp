@@ -956,6 +956,10 @@ struct CV_GpuSumTest: CvTest
             int typemax = CV_32F;
             for (int type = CV_8U; type <= typemax; ++type) 
             {
+                //
+                // sum
+                //
+
                 gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 2), src);
                 a = sum(src);
                 b = sum(GpuMat(src));
@@ -965,6 +969,7 @@ struct CV_GpuSumTest: CvTest
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                     return;
                 }
+
                 gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 3), src);
                 a = sum(src);
                 b = sum(GpuMat(src));
@@ -974,6 +979,7 @@ struct CV_GpuSumTest: CvTest
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                     return;
                 }
+
                 gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 4), src);
                 a = sum(src);
                 b = sum(GpuMat(src));
@@ -983,6 +989,7 @@ struct CV_GpuSumTest: CvTest
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                     return;
                 }
+
                 gen(1 + rand() % 500, 1 + rand() % 500, type, src);
                 a = sum(src);
                 b = sum(GpuMat(src));
@@ -992,6 +999,25 @@ struct CV_GpuSumTest: CvTest
                     ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
                     return;
                 }
+
+                //
+                // absSum
+                //
+
+                gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 1), src);
+                b = absSum(GpuMat(src));
+                a = norm(src, NORM_L1);
+                if (abs(a[0] - b[0]) > src.size().area() * max_err)
+                {
+                    ts->printf(CvTS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+
+                //
+                // sqrSum
+                //
+
                 if (type != CV_8S)
                 {
                     gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 1), src);

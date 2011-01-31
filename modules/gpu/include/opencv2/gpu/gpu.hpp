@@ -766,6 +766,14 @@ namespace cv
         //! supports only single channel images
         CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
 
+        //! computes sum of array elements absolute values
+        //! supports only single channel images
+        CV_EXPORTS Scalar absSum(const GpuMat& src);
+
+        //! computes sum of array elements absolute values
+        //! supports only single channel images
+        CV_EXPORTS Scalar absSum(const GpuMat& src, GpuMat& buf);
+
         //! computes squared sum of array elements
         //! supports only single channel images
         CV_EXPORTS Scalar sqrSum(const GpuMat& src);

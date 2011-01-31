@@ -954,6 +954,12 @@ namespace cv { namespace gpu { namespace mathfunc
     struct IdentityOp { static __device__ R call(R x) { return x; } };
 
     template <typename R> 
+    struct AbsOp { static __device__ R call(R x) { return abs(x); } };
+
+    template <>
+    struct AbsOp<uint> { static __device__ uint call(uint x) { return x; } };
+
+    template <typename R> 
     struct SqrOp { static __device__ R call(R x) { return x * x; } };
 
     __constant__ int ctwidth;
@@ -1507,6 +1513,110 @@ namespace cv { namespace gpu { namespace mathfunc
     template void sumCaller<short>(const DevMem2D, PtrStep, double*, int);
     template void sumCaller<int>(const DevMem2D, PtrStep, double*, int);
     template void sumCaller<float>(const DevMem2D, PtrStep, double*, int);
+
+
+    template <typename T>
+    void absSumMultipassCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
+    {
+        using namespace sums;
+        typedef typename SumType<T>::R R;
+
+        dim3 threads, grid;
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
+
+        switch (cn)
+        {
+        case 1:
+            sumKernel<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        case 2:
+            sumKernel_C2<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        case 3:
+            sumKernel_C3<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        case 4:
+            sumKernel_C4<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
+                    (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
+        }
+        cudaSafeCall(cudaThreadSynchronize());
+
+        R result[4] = {0, 0, 0, 0};
+        cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
+
+        sum[0] = result[0];
+        sum[1] = result[1];
+        sum[2] = result[2];
+        sum[3] = result[3];
+    }  
+
+    template void absSumMultipassCaller<uchar>(const DevMem2D, PtrStep, double*, int);
+    template void absSumMultipassCaller<char>(const DevMem2D, PtrStep, double*, int);
+    template void absSumMultipassCaller<ushort>(const DevMem2D, PtrStep, double*, int);
+    template void absSumMultipassCaller<short>(const DevMem2D, PtrStep, double*, int);
+    template void absSumMultipassCaller<int>(const DevMem2D, PtrStep, double*, int);
+    template void absSumMultipassCaller<float>(const DevMem2D, PtrStep, double*, int);
+
+
+    template <typename T>
+    void absSumCaller(const DevMem2D src, PtrStep buf, double* sum, int cn)
+    {
+        using namespace sums;
+        typedef typename SumType<T>::R R;
+
+        dim3 threads, grid;
+        estimateThreadCfg(src.cols, src.rows, threads, grid);
+        setKernelConsts(src.cols, src.rows, threads, grid);
+
+        switch (cn)
+        {
+        case 1:
+            sumKernel<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            break;
+        case 2:
+            sumKernel_C2<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            break;
+        case 3:
+            sumKernel_C3<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            break;
+        case 4:
+            sumKernel_C4<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
+                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            break;
+        }
+        cudaSafeCall(cudaThreadSynchronize());
+
+        R result[4] = {0, 0, 0, 0};
+        cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
+
+        sum[0] = result[0];
+        sum[1] = result[1];
+        sum[2] = result[2];
+        sum[3] = result[3];
+    }
+
+    template void absSumCaller<uchar>(const DevMem2D, PtrStep, double*, int);
+    template void absSumCaller<char>(const DevMem2D, PtrStep, double*, int);
+    template void absSumCaller<ushort>(const DevMem2D, PtrStep, double*, int);
+    template void absSumCaller<short>(const DevMem2D, PtrStep, double*, int);
+    template void absSumCaller<int>(const DevMem2D, PtrStep, double*, int);
+    template void absSumCaller<float>(const DevMem2D, PtrStep, double*, int);
 
 
     template <typename T>
