@@ -49,6 +49,11 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(const Ptr<AdjusterA
         escape_iters_(max_iters), min_features_(min_features), max_features_(max_features), adjuster_(a)
 {}
 
+bool DynamicAdaptedFeatureDetector::empty() const
+{
+    return adjuster_.empty() || adjuster_->empty();
+}
+
 void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
 	//for oscillation testing
