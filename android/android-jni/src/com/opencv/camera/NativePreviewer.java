@@ -25,10 +25,11 @@ public class NativePreviewer extends SurfaceView implements
 
 	private String whitebalance_mode = "auto";
 
-	/** Constructor useful for defining a NativePreviewer in android layout xml
+	/**
+	 * Constructor useful for defining a NativePreviewer in android layout xml
 	 * 
 	 * @param context
-	 * @param attributes 
+	 * @param attributes
 	 */
 	public NativePreviewer(Context context, AttributeSet attributes) {
 		super(context, attributes);
@@ -39,14 +40,16 @@ public class NativePreviewer extends SurfaceView implements
 		mHolder.addCallback(this);
 		mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
-		/* TODO get this working!  Can't figure out how to define these in xml 
+		/*
+		 * TODO get this working! Can't figure out how to define these in xml
 		 */
 		preview_width = attributes.getAttributeIntValue("opencv",
 				"preview_width", 600);
 		preview_height = attributes.getAttributeIntValue("opencv",
 				"preview_height", 600);
-		
-		Log.d("NativePreviewer", "Trying to use preview size of " + preview_width + " " + preview_height);
+
+		Log.d("NativePreviewer", "Trying to use preview size of "
+				+ preview_width + " " + preview_height);
 
 		processor = new NativeProcessor();
 
@@ -56,8 +59,11 @@ public class NativePreviewer extends SurfaceView implements
 	/**
 	 * 
 	 * @param context
-	 * @param preview_width the desired camera preview width - will attempt to get as close to this as possible
-	 * @param preview_height the desired camera preview height
+	 * @param preview_width
+	 *            the desired camera preview width - will attempt to get as
+	 *            close to this as possible
+	 * @param preview_height
+	 *            the desired camera preview height
 	 */
 	public NativePreviewer(Context context, int preview_width,
 			int preview_height) {
@@ -77,21 +83,26 @@ public class NativePreviewer extends SurfaceView implements
 		setZOrderMediaOverlay(false);
 
 	}
-	/** Only call in the oncreate function of the instantiating activity
+
+	/**
+	 * Only call in the oncreate function of the instantiating activity
 	 * 
-	 * @param width desired width
-	 * @param height desired height
+	 * @param width
+	 *            desired width
+	 * @param height
+	 *            desired height
 	 */
-	public void setPreviewSize(int width, int height){
+	public void setPreviewSize(int width, int height) {
 		preview_width = width;
 		preview_height = height;
-		
-		Log.d("NativePreviewer", "Trying to use preview size of " + preview_width + " " + preview_height);
+
+		Log.d("NativePreviewer", "Trying to use preview size of "
+				+ preview_width + " " + preview_height);
 
 	}
-	
-	public void setParamsFromPrefs(Context ctx){
-		int size[] ={0,0};
+
+	public void setParamsFromPrefs(Context ctx) {
+		int size[] = { 0, 0 };
 		CameraConfig.readImageSize(ctx, size);
 		int mode = CameraConfig.readCameraMode(ctx);
 		setPreviewSize(size[0], size[1]);
@@ -135,23 +146,33 @@ public class NativePreviewer extends SurfaceView implements
 		}
 		preview_width = best_width;
 		preview_height = best_height;
-		
-		Log.d("NativePreviewer", "Determined compatible preview size is: (" + preview_width + "," + preview_height+")");
 
-		Log.d("NativePreviewer","Supported params: " + mCamera.getParameters().flatten());
+		Log.d("NativePreviewer", "Determined compatible preview size is: ("
+				+ preview_width + "," + preview_height + ")");
+
+		Log.d("NativePreviewer", "Supported params: "
+				+ mCamera.getParameters().flatten());
+
 		
-		//this is available in 8+
-		//parameters.setExposureCompensation(0);
-		parameters.setWhiteBalance(whitebalance_mode);
-		parameters.setAntibanding(Camera.Parameters.ANTIBANDING_OFF);
-		
+		// this is available in 8+
+		// parameters.setExposureCompensation(0);
+		if (parameters.getSupportedWhiteBalance().contains(whitebalance_mode)) {
+			parameters.setWhiteBalance(whitebalance_mode);
+		}
+		if (parameters.getSupportedAntibanding().contains(
+				Camera.Parameters.ANTIBANDING_OFF)) {
+			parameters.setAntibanding(Camera.Parameters.ANTIBANDING_OFF);
+		}
+
 		List<String> fmodes = mCamera.getParameters().getSupportedFocusModes();
-		//for(String x: fmodes){
-			
-		//}
+		// for(String x: fmodes){
 
-		if(parameters.get("meter-mode")!=null)
-			parameters.set("meter-mode","meter-average");
+		// }
+		
+	
+
+		if (parameters.get("meter-mode") != null)
+			parameters.set("meter-mode", "meter-average");
 		int idx = fmodes.indexOf(Camera.Parameters.FOCUS_MODE_INFINITY);
 		if (idx != -1) {
 			parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
@@ -167,9 +188,8 @@ public class NativePreviewer extends SurfaceView implements
 				.getSupportedSceneModes();
 		if (scenemodes != null)
 			if (scenemodes.indexOf(Camera.Parameters.SCENE_MODE_ACTION) != -1) {
-				parameters
-						.setSceneMode(Camera.Parameters.SCENE_MODE_ACTION);
-				Log.d("NativePreviewer","set scenemode to action");
+				parameters.setSceneMode(Camera.Parameters.SCENE_MODE_ACTION);
+				Log.d("NativePreviewer", "set scenemode to action");
 			}
 
 		parameters.setPreviewSize(preview_width, preview_height);
@@ -456,7 +476,7 @@ public class NativePreviewer extends SurfaceView implements
 
 	public void setGrayscale(boolean b) {
 		processor.setGrayscale(b);
-		
+
 	}
 
 }
