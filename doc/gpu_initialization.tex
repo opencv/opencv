@@ -22,51 +22,96 @@ Returns the current device index, which was set by \cvCppCross{gpu::getDevice} o
 \cvdefCpp{int getDevice();}
 
 
-\cvCppFunc{gpu::getComputeCapability}
-Returns compute capability version for the given device.
+\cvclass{gpu::DeviceInfo}
+This class provides functionality for querying the specified GPU properties. 
 
-\cvdefCpp{void getComputeCapability(int device, int\& major, int\& minor);}
+\begin{lstlisting}
+class CV_EXPORTS DeviceInfo
+{
+public:
+    DeviceInfo();
+    DeviceInfo(int device_id);
+
+    string name() const;
+
+    int major() const;
+    int minor() const;
+
+    int multiProcessorCount() const;
+
+    size_t freeMemory() const;
+    size_t totalMemory() const;
+
+    bool has(GpuFeature feature) const;
+    bool isCompatible() const;
+};
+\end{lstlisting}
+
+
+\cvCppFunc{gpu::DeviceInfo::DeviceInfo}
+Constructs DeviceInfo object for the specified device. If \texttt{device\_id} parameter is missed it constructs object for the current device.
+
+\cvdefCpp{DeviceInfo::DeviceInfo();\newline
+DeviceInfo::DeviceInfo(int device\_id);}
 \begin{description}
-\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
-\cvarg{major}{Major CC version.}
-\cvarg{minor}{Minor CC version.}
+\cvarg{device\_id}{Index of the GPU device in system starting with 0.}
 \end{description}
 
-\cvCppFunc{gpu::getNumberOfSMs}
-Returns number of Streaming Multiprocessors for given device.
 
-\cvdefCpp{int getNumberOfSMs(int device);}
+\cvCppFunc{gpu::DeviceInfo::name}
+Returns the device name.
+
+\cvdefCpp{string DeviceInfo::name();}
+
+
+\cvCppFunc{gpu::DeviceInfo::major}
+Returns the major compute capability version.
+
+\cvdefCpp{int DeviceInfo::major();}
+
+
+\cvCppFunc{gpu::DeviceInfo::minor}
+Returns the minor compute capability version.
+
+\cvdefCpp{int DeviceInfo::minor();}
+
+
+\cvCppFunc{gpu::DeviceInfo::multiProcessorCount}
+Returns the number of streaming multiprocessors.
+
+\cvdefCpp{int DeviceInfo::multiProcessorCount();}
+
+
+\cvCppFunc{gpu::DeviceInfo::freeMemory}
+Returns the amount of free memory in bytes.
+
+\cvdefCpp{size\_t DeviceInfo::freeMemory();}
+
+
+\cvCppFunc{gpu::DeviceInfo::totalMemory}
+Returns the amount of total memory in bytes.
+
+\cvdefCpp{size\_t DeviceInfo::totalMemory();}
+
+
+\cvCppFunc{gpu::DeviceInfo::has}
+Returns true if the device has the given GPU feature, otherwise false.
+
+\cvdefCpp{bool DeviceInfo::has(GpuFeature feature);}
 \begin{description}
-\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
+\cvarg{feature}{Feature to be checked. Available alternatives:
+\begin{itemize}
+\item NATIVE\_DOUBLE Native double operations support
+\item ATOMICS Atomic operations support
+\end{itemize}}
 \end{description}
 
 
-\cvCppFunc{gpu::getGpuMemInfo}
-Returns free and total memory size for the current device.
+\cvCppFunc{gpu::DeviceInfo::isCompatible}
+Returns true if the GPU module can be run on the specified device, otherwise false.
 
-\cvdefCpp{void getGpuMemInfo(size\_t\& free, size\_t\& total);}
-\begin{description}
-\cvarg{free}{Reference to free GPU memory counter.}
-\cvarg{total}{Reference to total GPU memory counter.}
-\end{description}
+\cvdefCpp{bool DeviceInfo::isCompatible();}
 
-
-\cvCppFunc{gpu::hasNativeDoubleSupport}
-Returns true, if the specified GPU has native double support, otherwise false.
-
-\cvdefCpp{bool hasNativeDoubleSupport(int device);}
-\begin{description}
-\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
-\end{description}
-
-
-\cvCppFunc{gpu::hasAtomicsSupport}
-Returns true, if the specified GPU has atomics support, otherwise false.
-
-\cvdefCpp{bool hasAtomicsSupport(int device);}
-\begin{description}
-\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
-\end{description} 
 
 \cvclass{gpu::TargetArchs}
 This class provides functionality (as set of static methods) for checking which NVIDIA card architectures the GPU module was built for.
@@ -83,7 +128,7 @@ The following method checks whether the module was built with the support of the
 \end{itemize}}
 \end{description}
 
-There are a set of methods for checking whether the module contains intermediate (PTX) or binary GPU code for the given architecture:
+There are a set of methods for checking whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 \cvdefCpp{
 static bool has(int major, int minor);\newline
 static bool hasPtx(int major, int minor);\newline
@@ -95,14 +140,6 @@ static bool hasEqualOrGreaterBin(int major, int minor);}
 \begin{description}
 \cvarg{major}{Major compute capability version.}
 \cvarg{minor}{Minor compute capability version.}
-\end{description}
-
-\cvCppFunc{gpu::isCompatibleWith}
-Returns true, if the GPU module is built with PTX or CUBIN compatible with the given GPU device, otherwise false.
-
-\cvdefCpp{bool isCompatibleWith(int device);}
-\begin{description}
-\cvarg{device}{GPU index. Can be obtained via \cvCppCross{gpu::getDevice}.}
 \end{description}
 
 % By default GPU module is no compiled for devices with compute capability equal to 1.0. So if you run

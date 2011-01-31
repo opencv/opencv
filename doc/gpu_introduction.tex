@@ -28,7 +28,7 @@ That means for devices with CC 1.3 and 2.0 binary images are ready to run. For a
 
 Devices with compute capability 1.0 are supported by most of GPU functionality now (just compile the library corresponding settings).  There are only a couple things that can not run on it. They are guarded with asserts. But the in future the number will raise, because of CC 1.0 support requires writing special implementation for it. So, It is decided not to spend time for old platform support.
 
-Because of OpenCV can be compiled not for all architectures, there can be binary incompatibility between GPU and code linked to OpenCV. In this case unclear error is returned in arbitrary place. But there is a way to check if the module was build to be able to run on the given device using \cvCppCross{gpu::isCompatibleWith} function.
+Because of OpenCV can be compiled not for all architectures, there can be binary incompatibility between GPU and code linked to OpenCV. In this case unclear error is returned in arbitrary place. But there is a way to check if the module was build to be able to run on the given device using \cvCppCross{gpu::DeviceInfo::isCompatible} function.
 
 
 \subsection{Threading and multi-threading.}
