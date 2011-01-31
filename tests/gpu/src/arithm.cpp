@@ -66,45 +66,58 @@ protected:
 
     virtual int test(const Mat& mat1, const Mat& mat2) = 0;
 
-    int CheckNorm(const Mat& m1, const Mat& m2);
-    int CheckNorm(const Scalar& s1, const Scalar& s2);
-    int CheckNorm(double d1, double d2);
+    int CheckNorm(const Mat& m1, const Mat& m2, double eps = 1e-5);
+    int CheckNorm(const Scalar& s1, const Scalar& s2, double eps = 1e-5);
+    int CheckNorm(double d1, double d2, double eps = 1e-5);
 };
 
 int CV_GpuArithmTest::test(int type)
 {
     cv::Size sz(200, 200);
     cv::Mat mat1(sz, type), mat2(sz, type);
+    
     cv::RNG rng(*ts->get_rng());
-    rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
-    rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
+
+    if (type != CV_32FC1)
+    {
+        rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
+        rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
+    }
+    else
+    {
+        rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(0.1), cv::Scalar::all(1.0));
+        rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(0.1), cv::Scalar::all(1.0));
+    }
 
     return test(mat1, mat2);
 }
 
-int CV_GpuArithmTest::CheckNorm(const Mat& m1, const Mat& m2)
+int CV_GpuArithmTest::CheckNorm(const Mat& m1, const Mat& m2, double eps)
 {
     double ret = norm(m1, m2, NORM_INF);
 
-    if (ret < 1e-5)
+    if (ret < eps)
         return CvTS::OK;
 
     ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
     return CvTS::FAIL_GENERIC;
 }
 
-int CV_GpuArithmTest::CheckNorm(const Scalar& s1, const Scalar& s2)
+int CV_GpuArithmTest::CheckNorm(const Scalar& s1, const Scalar& s2, double eps)
 {
-    double ret0 = CheckNorm(s1[0], s2[0]), ret1 = CheckNorm(s1[1], s2[1]), ret2 = CheckNorm(s1[2], s2[2]), ret3 = CheckNorm(s1[3], s2[3]);
+    int ret0 = CheckNorm(s1[0], s2[0], eps), 
+        ret1 = CheckNorm(s1[1], s2[1], eps), 
+        ret2 = CheckNorm(s1[2], s2[2], eps), 
+        ret3 = CheckNorm(s1[3], s2[3], eps);
 
     return (ret0 == CvTS::OK && ret1 == CvTS::OK && ret2 == CvTS::OK && ret3 == CvTS::OK) ? CvTS::OK : CvTS::FAIL_GENERIC;
 }
 
-int CV_GpuArithmTest::CheckNorm(double d1, double d2)
+int CV_GpuArithmTest::CheckNorm(double d1, double d2, double eps)
 {
     double ret = ::fabs(d1 - d2);
 
-    if (ret < 1e-5)
+    if (ret < eps)
         return CvTS::OK;
 
     ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
@@ -245,7 +258,7 @@ struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
 	    GpuMat gpuRes;
 	    cv::gpu::divide(gpu1, gpu2, gpuRes);
 
-            return CheckNorm(cpuRes, gpuRes);
+        return CheckNorm(cpuRes, gpuRes, 1.01f);
     }
 };
 
@@ -584,7 +597,7 @@ struct CV_GpuNppImagePhaseTest : public CV_GpuArithmTest
         GpuMat gpuRes;
         cv::gpu::phase(gpu1, gpu2, gpuRes, true);
 
-        return CheckNorm(cpuRes, gpuRes);
+        return CheckNorm(cpuRes, gpuRes, 0.3f);
     }
 };
 
@@ -611,7 +624,7 @@ struct CV_GpuNppImageCartToPolarTest : public CV_GpuArithmTest
         cv::gpu::cartToPolar(gpu1, gpu2, gpuMag, gpuAngle);
 
         int magRes = CheckNorm(cpuMag, gpuMag);
-        int angleRes = CheckNorm(cpuAngle, gpuAngle);
+        int angleRes = CheckNorm(cpuAngle, gpuAngle, 0.005f);
 
         return magRes == CvTS::OK && angleRes == CvTS::OK ? CvTS::OK : CvTS::FAIL_GENERIC;
     }

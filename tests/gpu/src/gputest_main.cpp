@@ -45,7 +45,6 @@ CvTS test_system("gpu");
 
 const char* blacklist[] =
 {
-    "GPU-AsyncGpuMatOperator",     // crash
     "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
     0
 };

@@ -64,6 +64,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         {            
             return mask.ptr(queryIdx)[trainIdx] != 0;
         }
+
     private:
         PtrStep mask;
     };
@@ -82,6 +83,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         {            
             return curMask.data == 0 || curMask.ptr(queryIdx)[trainIdx] != 0;
         }
+
     private:
         PtrStep* maskCollection;
         PtrStep curMask;
@@ -102,123 +104,99 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // Reduce Sum
     
-    template <int BLOCK_DIM_X>
-    __device__ void reduceSum(float* sdiff, float mySum, int tid)
-    {
-        sdiff[tid] = mySum;
-        __syncthreads();
+    template <int BLOCK_DIM_X> __device__ void reduceSum(float* sdiff_row, float& mySum);
 
-        if (BLOCK_DIM_X == 512) 
-        {
-            if (tid < 256) 
-            { 
-                sdiff[tid] = mySum += sdiff[tid + 256]; __syncthreads(); 
-                sdiff[tid] = mySum += sdiff[tid + 128]; __syncthreads();
-                sdiff[tid] = mySum += sdiff[tid +  64]; __syncthreads();
-            }
-            volatile float* smem = sdiff;
-            smem[tid] = mySum += smem[tid + 32]; 
-            smem[tid] = mySum += smem[tid + 16]; 
-            smem[tid] = mySum += smem[tid +  8]; 
-            smem[tid] = mySum += smem[tid +  4]; 
-            smem[tid] = mySum += smem[tid +  2];
-            smem[tid] = mySum += smem[tid +  1]; 
-        }
-        if (BLOCK_DIM_X == 256)
-        {
-            if (tid < 128) 
-            { 
-                sdiff[tid] = mySum += sdiff[tid + 128]; __syncthreads(); 
-                sdiff[tid] = mySum += sdiff[tid +  64]; __syncthreads();
-            }
-            volatile float* smem = sdiff;
-            smem[tid] = mySum += smem[tid + 32]; 
-            smem[tid] = mySum += smem[tid + 16]; 
-            smem[tid] = mySum += smem[tid +  8]; 
-            smem[tid] = mySum += smem[tid +  4]; 
-            smem[tid] = mySum += smem[tid +  2];
-            smem[tid] = mySum += smem[tid +  1];
-        }
-        if (BLOCK_DIM_X == 128)
-        {
-            if (tid <  64) 
-            { 
-                sdiff[tid] = mySum += sdiff[tid +  64]; __syncthreads(); 
-            }
-            volatile float* smem = sdiff;
-            smem[tid] = mySum += smem[tid + 32]; 
-            smem[tid] = mySum += smem[tid + 16]; 
-            smem[tid] = mySum += smem[tid +  8]; 
-            smem[tid] = mySum += smem[tid +  4]; 
-            smem[tid] = mySum += smem[tid +  2];
-            smem[tid] = mySum += smem[tid +  1];
-        }
+    template <> __device__ void reduceSum<16>(float* sdiff_row, float& mySum)
+    {
+        volatile float* smem = sdiff_row;
+
+        smem[threadIdx.x] = mySum;
         
-        volatile float* smem = sdiff;
-        if (BLOCK_DIM_X == 64) 
+        if (threadIdx.x < 8) 
         {
-            if (tid < 32) 
-            {
-                smem[tid] = mySum += smem[tid + 32]; 
-                smem[tid] = mySum += smem[tid + 16]; 
-                smem[tid] = mySum += smem[tid +  8]; 
-                smem[tid] = mySum += smem[tid +  4]; 
-                smem[tid] = mySum += smem[tid +  2];
-                smem[tid] = mySum += smem[tid +  1];  
-            }
-        }
-        if (BLOCK_DIM_X == 32) 
-        {
-            if (tid < 16) 
-            {
-                smem[tid] = mySum += smem[tid + 16]; 
-                smem[tid] = mySum += smem[tid +  8]; 
-                smem[tid] = mySum += smem[tid +  4]; 
-                smem[tid] = mySum += smem[tid +  2];
-                smem[tid] = mySum += smem[tid +  1];  
-            }
-        }
-        if (BLOCK_DIM_X == 16) 
-        {
-            if (tid < 8) 
-            {
-                smem[tid] = mySum += smem[tid +  8]; 
-                smem[tid] = mySum += smem[tid +  4]; 
-                smem[tid] = mySum += smem[tid +  2];
-                smem[tid] = mySum += smem[tid +  1];  
-            }
-        }
-        if (BLOCK_DIM_X == 8) 
-        {
-            if (tid < 4) 
-            {
-                smem[tid] = mySum += smem[tid +  4]; 
-                smem[tid] = mySum += smem[tid +  2];
-                smem[tid] = mySum += smem[tid +  1];  
-            }
-        }
-        if (BLOCK_DIM_X == 4) 
-        {
-            if (tid < 2) 
-            {
-                smem[tid] = mySum += smem[tid +  2];
-                smem[tid] = mySum += smem[tid +  1];  
-            }
-        }
-        if (BLOCK_DIM_X == 2) 
-        {
-            if (tid < 1) 
-            {
-                smem[tid] = mySum += smem[tid +  1];  
-            }
+            smem[threadIdx.x] = mySum += smem[threadIdx.x + 8]; 
+            smem[threadIdx.x] = mySum += smem[threadIdx.x + 4]; 
+            smem[threadIdx.x] = mySum += smem[threadIdx.x + 2];
+            smem[threadIdx.x] = mySum += smem[threadIdx.x + 1];  
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
+    // Distance
+
+    class L1Dist
+    {
+    public:
+        __device__ L1Dist() : mySum(0.0f) {}
+
+        __device__ void reduceIter(float val1, float val2)
+        {
+            mySum += fabs(val1 - val2);
+        }
+
+        template <int BLOCK_DIM_X>
+        __device__ void reduceAll(float* sdiff_row)
+        {
+            reduceSum<BLOCK_DIM_X>(sdiff_row, mySum);
+        }
+
+        __device__ operator float() const
+        {
+            return mySum;
+        }
+
+    private:
+        float mySum;
+    };
+
+    class L2Dist
+    {
+    public:
+        __device__ L2Dist() : mySum(0.0f) {}
+
+        __device__ void reduceIter(float val1, float val2)
+        {
+            float reg = val1 - val2;
+            mySum += reg * reg;
+        }
+
+        template <int BLOCK_DIM_X>
+        __device__ void reduceAll(float* sdiff_row)
+        {
+            reduceSum<BLOCK_DIM_X>(sdiff_row, mySum);
+        }
+
+        __device__ operator float() const
+        {
+            return sqrtf(mySum);
+        }
+
+    private:
+        float mySum;
+    };
+    
+    ///////////////////////////////////////////////////////////////////////////////
+    // reduceDescDiff
+
+    template <int BLOCK_DIM_X, typename Dist, typename T> 
+    __device__ void reduceDescDiff(const T* queryDescs, const T* trainDescs, int desc_len, Dist& dist, 
+        float* sdiff_row)
+    {
+        for (int i = threadIdx.x; i < desc_len; i += BLOCK_DIM_X)
+            dist.reduceIter(queryDescs[i], trainDescs[i]);
+
+        dist.reduceAll<BLOCK_DIM_X>(sdiff_row);
+    }
+
+///////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////// Match //////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////
+    
+    ///////////////////////////////////////////////////////////////////////////////
     // loadDescsVals
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int MAX_DESCRIPTORS_LEN, typename T> 
-    __device__ void loadDescsVals(const T* descs, int desc_len, float* smem, float* queryVals)
+    template <int BLOCK_DIM_X, int MAX_DESCRIPTORS_LEN, typename T> 
+    __device__ void loadDescsVals(const T* descs, int desc_len, float* queryVals, float* smem)
     {
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
@@ -237,111 +215,45 @@ namespace cv { namespace gpu { namespace bfmatcher
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // Distance
-
-    template <int BLOCK_DIM_X>
-    class L1Dist
-    {
-    public:
-        __device__ L1Dist() : mySum(0) {}
-
-        __device__ void reduceIter(float val1, float val2)
-        {
-            mySum += fabs(val1 - val2);
-        }
-
-        __device__ void reduceAll(float* sdiff, int tid)
-        {
-            reduceSum<BLOCK_DIM_X>(sdiff, mySum, tid);
-        }
-
-        static __device__ float finalResult(float res)
-        {
-            return res;
-        }
-    private:
-        float mySum;
-    };
-
-    template <int BLOCK_DIM_X>
-    class L2Dist
-    {
-    public:
-        __device__ L2Dist() : mySum(0) {}
-
-        __device__ void reduceIter(float val1, float val2)
-        {
-            float reg = val1 - val2;
-            mySum += reg * reg;
-        }
-
-        __device__ void reduceAll(float* sdiff, int tid)
-        {
-            reduceSum<BLOCK_DIM_X>(sdiff, mySum, tid);
-        }
-
-        static __device__ float finalResult(float res)
-        {
-            return sqrtf(res);
-        }
-    private:
-        float mySum;
-    };
-    
-    ///////////////////////////////////////////////////////////////////////////////
-    // reduceDescDiff
-
-    template <int BLOCK_DIM_X, typename Dist, typename T> 
-    __device__ void reduceDescDiff(const T* queryDescs, const T* trainDescs, int desc_len, float* sdiff)
-    {
-        const int tid = threadIdx.x;
-
-        Dist dist;
-
-        for (int i = tid; i < desc_len; i += BLOCK_DIM_X)
-            dist.reduceIter(queryDescs[i], trainDescs[i]);
-
-        dist.reduceAll(sdiff, tid);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // reduceDescDiff_smem
+    // reduceDescDiffCached
 
     template <int N> struct UnrollDescDiff
     {
         template <typename Dist, typename T>
-        static __device__ void calcCheck(Dist& dist, const float* queryVals, const T* trainDescs, 
-            int ind, int desc_len)
+        static __device__ void calcCheck(const float* queryVals, const T* trainDescs, int desc_len, 
+            Dist& dist, int ind)
         {
             if (ind < desc_len)
+            {
                 dist.reduceIter(*queryVals, trainDescs[ind]);
 
-            ++queryVals;
+                ++queryVals;
 
-            UnrollDescDiff<N - 1>::calcCheck(dist, queryVals, trainDescs, ind + blockDim.x, desc_len);
+                UnrollDescDiff<N - 1>::calcCheck(queryVals, trainDescs, desc_len, dist, ind + blockDim.x);
+            }
         }
 
         template <typename Dist, typename T>
-        static __device__ void calcWithoutCheck(Dist& dist, const float* queryVals, const T* trainDescs)
+        static __device__ void calcWithoutCheck(const float* queryVals, const T* trainDescs, Dist& dist)
         {
             dist.reduceIter(*queryVals, *trainDescs);
 
             ++queryVals;
             trainDescs += blockDim.x;
 
-            UnrollDescDiff<N - 1>::calcWithoutCheck(dist, queryVals, trainDescs);
+            UnrollDescDiff<N - 1>::calcWithoutCheck(queryVals, trainDescs, dist);
         }
     };
     template <> struct UnrollDescDiff<0>
     {
         template <typename Dist, typename T>
-        static __device__ void calcCheck(Dist& dist, const float* queryVals, const T* trainDescs, 
-            int ind, int desc_len)
+        static __device__ void calcCheck(const float* queryVals, const T* trainDescs, int desc_len, 
+            Dist& dist, int ind)
         {
         }
 
         template <typename Dist, typename T>
-        static __device__ void calcWithoutCheck(Dist& dist, const float* queryVals, const T* trainDescs)
+        static __device__ void calcWithoutCheck(const float* queryVals, const T* trainDescs, Dist& dist)
         {
         }
     };
@@ -351,106 +263,82 @@ namespace cv { namespace gpu { namespace bfmatcher
     struct DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, false>
     {
         template <typename Dist, typename T>
-        static __device__ void calc(Dist& dist, const float* queryVals, const T* trainDescs, int desc_len)
+        static __device__ void calc(const float* queryVals, const T* trainDescs, int desc_len, Dist& dist)
         {
-            UnrollDescDiff<MAX_DESCRIPTORS_LEN / BLOCK_DIM_X>::calcCheck(dist, queryVals, trainDescs, 
-                threadIdx.x, desc_len);
+            UnrollDescDiff<MAX_DESCRIPTORS_LEN / BLOCK_DIM_X>::calcCheck(queryVals, trainDescs, desc_len, 
+                dist, threadIdx.x);
         }
     };
     template <int BLOCK_DIM_X, int MAX_DESCRIPTORS_LEN> 
     struct DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, true>
     {
         template <typename Dist, typename T>
-        static __device__ void calc(Dist& dist, const float* queryVals, const T* trainDescs, int desc_len)
+        static __device__ void calc(const float* queryVals, const T* trainDescs, int desc_len, Dist& dist)
         {
-            UnrollDescDiff<MAX_DESCRIPTORS_LEN / BLOCK_DIM_X>::calcWithoutCheck(dist, queryVals, 
-                trainDescs + threadIdx.x);
+            UnrollDescDiff<MAX_DESCRIPTORS_LEN / BLOCK_DIM_X>::calcWithoutCheck(queryVals, 
+                trainDescs + threadIdx.x, dist);
         }
     };
 
     template <int BLOCK_DIM_X, int MAX_DESCRIPTORS_LEN, bool DESC_LEN_EQ_MAX_LEN, typename Dist, typename T>
-    __device__ void reduceDescDiff_smem(const float* queryVals, const T* trainDescs, int desc_len, float* sdiff)
-    {
-        const int tid = threadIdx.x;
+    __device__ void reduceDescDiffCached(const float* queryVals, const T* trainDescs, int desc_len, Dist& dist, 
+        float* sdiff_row)
+    {        
+        DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN>::calc(queryVals, 
+            trainDescs, desc_len, dist);
         
-        Dist dist;
-
-        DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN>::calc(dist, queryVals, 
-            trainDescs, desc_len);
-        
-        dist.reduceAll(sdiff, tid);
+        dist.reduceAll<BLOCK_DIM_X>(sdiff_row);
     }
 
-///////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////// Match //////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
-
     ///////////////////////////////////////////////////////////////////////////////
-    // warpReduceMin
+    // warpReduceMinIdxIdx
 
     template <int BLOCK_DIM_Y> 
-    __device__ void warpReduceMin(int tid, volatile float* sdata, volatile int* strainIdx, volatile int* simgIdx)
-    {
-        float minSum = sdata[tid];
+    __device__ void warpReduceMinIdxIdx(float& myMin, int& myBestTrainIdx, int& myBestImgIdx, 
+        volatile float* sdata, volatile int* strainIdx, volatile int* simgIdx);
 
-        if (BLOCK_DIM_Y >= 64) 
+    template <> 
+    __device__ void warpReduceMinIdxIdx<16>(float& myMin, int& myBestTrainIdx, int& myBestImgIdx, 
+        volatile float* smin, volatile int* strainIdx, volatile int* simgIdx)
+    {
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        if (tid < 8)
         {
-            float reg = sdata[tid + 32];
-            if (reg < minSum)
+            myMin = smin[tid];
+            myBestTrainIdx = strainIdx[tid];
+            myBestImgIdx = simgIdx[tid];
+
+            float reg = smin[tid + 8];
+            if (reg < myMin)
             {
-                sdata[tid] = minSum = reg;
-                strainIdx[tid] = strainIdx[tid + 32];
-                simgIdx[tid] = simgIdx[tid + 32];
+                smin[tid] = myMin = reg;
+                strainIdx[tid] = myBestTrainIdx = strainIdx[tid + 8];
+                simgIdx[tid] = myBestImgIdx = simgIdx[tid + 8];
             }
-        }
-        if (BLOCK_DIM_Y >= 32) 
-        {
-            float reg = sdata[tid + 16];
-            if (reg < minSum)
+
+            reg = smin[tid + 4];
+            if (reg < myMin)
             {
-                sdata[tid] = minSum = reg;
-                strainIdx[tid] = strainIdx[tid + 16];
-                simgIdx[tid] = simgIdx[tid + 16];
+                smin[tid] = myMin = reg;
+                strainIdx[tid] = myBestTrainIdx = strainIdx[tid + 4];
+                simgIdx[tid] = myBestImgIdx = simgIdx[tid + 4];
             }
-        }
-        if (BLOCK_DIM_Y >= 16) 
-        {
-            float reg = sdata[tid + 8];
-            if (reg < minSum)
+        
+            reg = smin[tid + 2];
+            if (reg < myMin)
             {
-                sdata[tid] = minSum = reg;
-                strainIdx[tid] = strainIdx[tid + 8];
-                simgIdx[tid] = simgIdx[tid + 8];
+                smin[tid] = myMin = reg;
+                strainIdx[tid] = myBestTrainIdx = strainIdx[tid + 2];
+                simgIdx[tid] = myBestImgIdx = simgIdx[tid + 2];
             }
-        }
-        if (BLOCK_DIM_Y >= 8) 
-        { 
-            float reg = sdata[tid + 4];
-            if (reg < minSum)
+        
+            reg = smin[tid + 1];
+            if (reg < myMin)
             {
-                sdata[tid] = minSum = reg;
-                strainIdx[tid] = strainIdx[tid + 4];
-                simgIdx[tid] = simgIdx[tid + 4];
-            }
-        }
-        if (BLOCK_DIM_Y >= 4) 
-        { 
-            float reg = sdata[tid + 2];
-            if (reg < minSum)
-            {
-                sdata[tid] = minSum = reg;
-                strainIdx[tid] = strainIdx[tid + 2];
-                simgIdx[tid] = simgIdx[tid + 2];
-            }
-        }
-        if (BLOCK_DIM_Y >= 2) 
-        {
-            float reg = sdata[tid + 1];
-            if (reg < minSum)
-            {
-                sdata[tid] = minSum = reg;
-                strainIdx[tid] = strainIdx[tid + 1];
-                simgIdx[tid] = simgIdx[tid + 1];
+                smin[tid] = myMin = reg;
+                strainIdx[tid] = myBestTrainIdx = strainIdx[tid + 1];
+                simgIdx[tid] = myBestImgIdx = simgIdx[tid + 1];
             }
         }
     }
@@ -458,9 +346,9 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // findBestMatch
 
-    template <int BLOCK_DIM_Y, typename Dist>
-    __device__ void findBestMatch(int queryIdx, float myMin, int myBestTrainIdx, int myBestImgIdx, 
-        float* smin, int* strainIdx, int* simgIdx, int* trainIdx, int* imgIdx, float* distance)
+    template <int BLOCK_DIM_Y>
+    __device__ void findBestMatch(float& myMin, int& myBestTrainIdx, int& myBestImgIdx, 
+        float* smin, int* strainIdx, int* simgIdx)
     {
         if (threadIdx.x == 0)
         {
@@ -470,27 +358,13 @@ namespace cv { namespace gpu { namespace bfmatcher
         }
         __syncthreads();
 
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-
-        if (tid < 32)
-            warpReduceMin<BLOCK_DIM_Y>(tid, smin, strainIdx, simgIdx);
-
-        if (threadIdx.x == 0 && threadIdx.y == 0)
-        {
-            float minSum = smin[0];
-            int bestTrainIdx = strainIdx[0];
-            int bestImgIdx = simgIdx[0];
-
-            imgIdx[queryIdx] = bestImgIdx;
-            trainIdx[queryIdx] = bestTrainIdx;
-            distance[queryIdx] = Dist::finalResult(minSum);
-        }
+        warpReduceMinIdxIdx<BLOCK_DIM_Y>(myMin, myBestTrainIdx, myBestImgIdx, smin, strainIdx, simgIdx);
     }
     
     ///////////////////////////////////////////////////////////////////////////////
     // ReduceDescCalculator
 
-    template <int BLOCK_DIM_X, typename Dist, typename T>
+    template <int BLOCK_DIM_X, typename T>
     class ReduceDescCalculatorSimple
     {
     public:
@@ -499,29 +373,30 @@ namespace cv { namespace gpu { namespace bfmatcher
             queryDescs = queryDescs_;
         }
 
-        __device__ void calc(const T* trainDescs, int desc_len, float* sdiff_row) const
+        template <typename Dist>
+        __device__ void calc(const T* trainDescs, int desc_len, Dist& dist, float* sdiff_row) const
         {
-            reduceDescDiff<BLOCK_DIM_X, Dist>(queryDescs, trainDescs, desc_len, sdiff_row);
+            reduceDescDiff<BLOCK_DIM_X>(queryDescs, trainDescs, desc_len, dist, sdiff_row);
         }
 
     private:
         const T* queryDescs;
     };
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int MAX_DESCRIPTORS_LEN, bool DESC_LEN_EQ_MAX_LEN, 
-        typename Dist, typename T>
-    class ReduceDescCalculatorSmem
+    template <int BLOCK_DIM_X, int MAX_DESCRIPTORS_LEN, bool DESC_LEN_EQ_MAX_LEN, typename T>
+    class ReduceDescCalculatorCached
     {
     public:
         __device__ void prepare(const T* queryDescs, int desc_len, float* smem)
         {
-            loadDescsVals<BLOCK_DIM_X, BLOCK_DIM_Y, MAX_DESCRIPTORS_LEN>(queryDescs, desc_len, smem, queryVals);
+            loadDescsVals<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN>(queryDescs, desc_len, queryVals, smem);
         }
 
-        __device__ void calc(const T* trainDescs, int desc_len, float* sdiff_row) const
+        template <typename Dist>
+        __device__ void calc(const T* trainDescs, int desc_len, Dist& dist, float* sdiff_row) const
         {
-            reduceDescDiff_smem<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN, Dist>(queryVals, trainDescs, 
-                desc_len, sdiff_row);
+            reduceDescDiffCached<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN>(queryVals, trainDescs, 
+                desc_len, dist, sdiff_row);
         }
 
     private:
@@ -531,26 +406,26 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // matchDescs loop
 
-    template <typename ReduceDescCalculator, typename T, typename Mask>
-    __device__ void matchDescs(int queryIdx, const int imgIdx, const DevMem2D_<T>& trainDescs_,  
+    template <typename Dist, typename ReduceDescCalculator, typename T, typename Mask>
+    __device__ void matchDescs(int queryIdx, int imgIdx, const DevMem2D_<T>& trainDescs_,  
         const Mask& m, const ReduceDescCalculator& reduceDescCalc,
-        float* sdiff_row, float& myMin, int& myBestTrainIdx, int& myBestImgIdx)
+        float& myMin, int& myBestTrainIdx, int& myBestImgIdx, float* sdiff_row)
     {
-        const T* trainDescs = trainDescs_.ptr(threadIdx.y);
-        const int trainDescsStep = blockDim.y * trainDescs_.step / sizeof(T);
-        for (int trainIdx = threadIdx.y; trainIdx < trainDescs_.rows; 
-             trainIdx += blockDim.y, trainDescs += trainDescsStep)
+        for (int trainIdx = threadIdx.y; trainIdx < trainDescs_.rows; trainIdx += blockDim.y)
         {
             if (m(queryIdx, trainIdx))
             {
-                reduceDescCalc.calc(trainDescs, trainDescs_.cols, sdiff_row);
+                const T* trainDescs = trainDescs_.ptr(trainIdx);
+
+                Dist dist;
+
+                reduceDescCalc.calc(trainDescs, trainDescs_.cols, dist, sdiff_row);
 
                 if (threadIdx.x == 0)
                 {
-                    float reg = sdiff_row[0];
-                    if (reg < myMin)
+                    if (dist < myMin)
                     {
-                        myMin = reg;
+                        myMin = dist;
                         myBestTrainIdx = trainIdx;
                         myBestImgIdx = imgIdx;
                     }
@@ -570,18 +445,19 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
         }
 
-        template <typename ReduceDescCalculator, typename Mask>
+        template <typename Dist, typename ReduceDescCalculator, typename Mask>
         __device__ void loop(int queryIdx, Mask& m, const ReduceDescCalculator& reduceDescCalc, 
-            float* sdiff_row, float& myMin, int& myBestTrainIdx, int& myBestImgIdx) const
+            float& myMin, int& myBestTrainIdx, int& myBestImgIdx, float* sdiff_row) const
         {
-            matchDescs(queryIdx, 0, trainDescs, m, reduceDescCalc, 
-                sdiff_row, myMin, myBestTrainIdx, myBestImgIdx);
+            matchDescs<Dist>(queryIdx, 0, trainDescs, m, reduceDescCalc, 
+                myMin, myBestTrainIdx, myBestImgIdx, sdiff_row);
         }
 
         __device__ int desc_len() const
         {
             return trainDescs.cols;
         }
+
     private:
         DevMem2D_<T> trainDescs;
     };
@@ -595,16 +471,16 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
         }
 
-        template <typename ReduceDescCalculator, typename Mask>
+        template <typename Dist, typename ReduceDescCalculator, typename Mask>
         __device__ void loop(int queryIdx, Mask& m, const ReduceDescCalculator& reduceDescCalc, 
-            float* sdiff_row, float& myMin, int& myBestTrainIdx, int& myBestImgIdx) const
+            float& myMin, int& myBestTrainIdx, int& myBestImgIdx, float* sdiff_row) const
         {
             for (int imgIdx = 0; imgIdx < nImg; ++imgIdx)
             {
                 DevMem2D_<T> trainDescs = trainCollection[imgIdx];
                 m.nextMask();
-                matchDescs(queryIdx, imgIdx, trainDescs, m, reduceDescCalc, 
-                    sdiff_row, myMin, myBestTrainIdx, myBestImgIdx);
+                matchDescs<Dist>(queryIdx, imgIdx, trainDescs, m, reduceDescCalc, 
+                    myMin, myBestTrainIdx, myBestImgIdx, sdiff_row);
             }
         }
 
@@ -612,6 +488,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
             return desclen;
         }
+
     private:
         const DevMem2D_<T>* trainCollection;
         int nImg;
@@ -623,12 +500,10 @@ namespace cv { namespace gpu { namespace bfmatcher
 
     template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename ReduceDescCalculator, typename Dist, typename T, 
         typename Train, typename Mask>
-    __global__ void match(PtrStep_<T> queryDescs_, Train train, Mask mask, int* trainIdx, int* imgIdx, float* distance)
+    __global__ void match(const PtrStep_<T> queryDescs_, const Train train, const Mask mask, 
+        int* trainIdx, int* imgIdx, float* distance)
     {
-        __shared__ float sdiff[BLOCK_DIM_X * BLOCK_DIM_Y];
-        __shared__ float smin[64];
-        __shared__ int strainIdx[64];
-        __shared__ int simgIdx[64];
+        __shared__ float smem[BLOCK_DIM_X * BLOCK_DIM_Y];        
         
         const int queryIdx = blockIdx.x;
         
@@ -637,24 +512,39 @@ namespace cv { namespace gpu { namespace bfmatcher
         float myMin = numeric_limits_gpu<float>::max();
 
         {
-            float* sdiff_row = sdiff + BLOCK_DIM_X * threadIdx.y;
-            Mask m = mask;
-            ReduceDescCalculator reduceDescCalc;
-            reduceDescCalc.prepare(queryDescs_.ptr(queryIdx), train.desc_len(), sdiff);
-        
-            train.loop(queryIdx, m, reduceDescCalc, sdiff_row, myMin, myBestTrainIdx, myBestImgIdx);
-        }
+            float* sdiff_row = smem + BLOCK_DIM_X * threadIdx.y;
 
-        findBestMatch<BLOCK_DIM_Y, Dist>(queryIdx, myMin, myBestTrainIdx, myBestImgIdx, 
-            smin, strainIdx, simgIdx, trainIdx, imgIdx, distance);
+            Mask m = mask;
+
+            ReduceDescCalculator reduceDescCalc;
+
+            reduceDescCalc.prepare(queryDescs_.ptr(queryIdx), train.desc_len(), smem);
+        
+            train.template loop<Dist>(queryIdx, m, reduceDescCalc, myMin, myBestTrainIdx, myBestImgIdx, sdiff_row);
+        }
+        __syncthreads();
+
+        float* smin = smem;
+        int* strainIdx = (int*)(smin + BLOCK_DIM_Y);
+        int* simgIdx = strainIdx + BLOCK_DIM_Y;
+
+        findBestMatch<BLOCK_DIM_Y>(myMin, myBestTrainIdx, myBestImgIdx, 
+            smin, strainIdx, simgIdx);
+
+        if (threadIdx.x == 0 && threadIdx.y == 0)
+        {
+            imgIdx[queryIdx] = myBestImgIdx;
+            trainIdx[queryIdx] = myBestTrainIdx;
+            distance[queryIdx] = myMin;
+        }
     }
     
     ///////////////////////////////////////////////////////////////////////////////
     // Match kernel callers
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, template <int> class Dist, typename T, 
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, 
         typename Train, typename Mask>
-    void match_caller(const DevMem2D_<T>& queryDescs, const Train& train, 
+    void matchSimple_caller(const DevMem2D_<T>& queryDescs, const Train& train, 
         const Mask& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance)
     {
         StaticAssert<BLOCK_DIM_Y <= 64>::check(); // blockDimY vals must reduce by warp
@@ -662,15 +552,15 @@ namespace cv { namespace gpu { namespace bfmatcher
         dim3 grid(queryDescs.rows, 1, 1);
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
 
-        match<BLOCK_DIM_X, BLOCK_DIM_Y, ReduceDescCalculatorSimple<BLOCK_DIM_X, Dist<BLOCK_DIM_X>, T>, 
-            Dist<BLOCK_DIM_X>, T><<<grid, threads>>>(queryDescs, train, mask, trainIdx.data, 
+        match<BLOCK_DIM_X, BLOCK_DIM_Y, ReduceDescCalculatorSimple<BLOCK_DIM_X, T>, Dist, T>
+            <<<grid, threads>>>(queryDescs, train, mask, trainIdx.data, 
             imgIdx.data, distance.data);
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
     template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int MAX_DESCRIPTORS_LEN, bool DESC_LEN_EQ_MAX_LEN, 
-        template <int> class Dist, typename T, typename Train, typename Mask>
-    void match_smem_caller(const DevMem2D_<T>& queryDescs, const Train& train, 
+        typename Dist, typename T, typename Train, typename Mask>
+    void matchCached_caller(const DevMem2D_<T>& queryDescs, const Train& train, 
         const Mask& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance)
     {
         StaticAssert<BLOCK_DIM_Y <= 64>::check();                                // blockDimY vals must reduce by warp
@@ -680,9 +570,10 @@ namespace cv { namespace gpu { namespace bfmatcher
         dim3 grid(queryDescs.rows, 1, 1);
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
 
-        match<BLOCK_DIM_X, BLOCK_DIM_Y, ReduceDescCalculatorSmem<BLOCK_DIM_X, BLOCK_DIM_Y, 
-              MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN, Dist<BLOCK_DIM_X>, T>, 
-              Dist<BLOCK_DIM_X>, T><<<grid, threads>>>(queryDescs, train, mask, trainIdx.data, 
+        match<BLOCK_DIM_X, BLOCK_DIM_Y, 
+              ReduceDescCalculatorCached<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN, T>, 
+              Dist, T>
+              <<<grid, threads>>>(queryDescs, train, mask, trainIdx.data, 
               imgIdx.data, distance.data);
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -691,24 +582,24 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // Match kernel chooser
 
-    template <template <int> class Dist, typename T, typename Train, typename Mask>
+    template <typename Dist, typename T, typename Train, typename Mask>
     void match_chooser(const DevMem2D_<T>& queryDescs, const Train& train, 
         const Mask& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance)
     {
         if (queryDescs.cols < 64)
-            match_smem_caller<16, 16, 64, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchCached_caller<16, 16, 64, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
         else if (queryDescs.cols == 64)
-            match_smem_caller<16, 16, 64, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchCached_caller<16, 16, 64, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
         else if (queryDescs.cols < 128)
-            match_smem_caller<16, 16, 128, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchCached_caller<16, 16, 128, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
         else if (queryDescs.cols == 128)
-            match_smem_caller<16, 16, 128, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchCached_caller<16, 16, 128, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
         else if (queryDescs.cols < 256)
-            match_smem_caller<16, 16, 256, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchCached_caller<16, 16, 256, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
         else if (queryDescs.cols == 256)
-            match_smem_caller<16, 16, 256, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchCached_caller<16, 16, 256, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
         else
-            match_caller<16, 16, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
+            matchSimple_caller<16, 16, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance);
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -828,41 +719,41 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
             const T* trainDescs = trainDescs_.ptr(trainIdx);
 
-            float dist = numeric_limits_gpu<float>::max();
+            float myDist = numeric_limits_gpu<float>::max();
 
             if (mask(queryIdx, trainIdx))
             {
-                reduceDescDiff<BLOCK_DIM_X, Dist>(queryDescs, trainDescs, trainDescs_.cols, sdiff_row);
+                Dist dist;
+
+                reduceDescDiff<BLOCK_DIM_X>(queryDescs, trainDescs, trainDescs_.cols, dist, sdiff_row);
 
                 if (threadIdx.x == 0)
-                {
-                    dist = Dist::finalResult(sdiff_row[0]);
-                }
+                    myDist = dist;
             }
             
             if (threadIdx.x == 0)
-                distance.ptr(queryIdx)[trainIdx] = dist;
+                distance.ptr(queryIdx)[trainIdx] = myDist;
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // Calc distance kernel caller
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, template <int> class Dist, typename T, typename Mask>
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
     void calcDistance_caller(const DevMem2D_<T>& queryDescs, const DevMem2D_<T>& trainDescs, 
         const Mask& mask, const DevMem2Df& distance)
     {
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
         dim3 grid(queryDescs.rows, divUp(trainDescs.rows, BLOCK_DIM_Y), 1);
 
-        calcDistance<BLOCK_DIM_X, BLOCK_DIM_Y, Dist<BLOCK_DIM_X>, T><<<grid, threads>>>(
+        calcDistance<BLOCK_DIM_X, BLOCK_DIM_Y, Dist, T><<<grid, threads>>>(
             queryDescs, trainDescs, mask, distance);
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
         
     ///////////////////////////////////////////////////////////////////////////////
-    // reduceMin
+    // warpReduceMinIdx
 
     template <int BLOCK_SIZE> 
     __device__ void warpReduceMinIdx(volatile float* sdist, volatile int* strainIdx, float& myMin, int tid)
@@ -1103,25 +994,27 @@ namespace cv { namespace gpu { namespace bfmatcher
     {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
-        __shared__ float sdiff[BLOCK_DIM_X * BLOCK_DIM_Y];
+        __shared__ float smem[BLOCK_DIM_X * BLOCK_DIM_Y];
 
-        float* sdiff_row = sdiff + BLOCK_DIM_X * threadIdx.y;
+        float* sdiff_row = smem + BLOCK_DIM_X * threadIdx.y;
         
         const int queryIdx = blockIdx.x;
         const T* queryDescs = queryDescs_.ptr(queryIdx);
 
         const int trainIdx = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
+
         if (trainIdx < trainDescs_.rows)
         {
             const T* trainDescs = trainDescs_.ptr(trainIdx);
 
             if (mask(queryIdx, trainIdx))
             {
-                reduceDescDiff<BLOCK_DIM_X, Dist>(queryDescs, trainDescs, trainDescs_.cols, sdiff_row);
+                Dist dist;
+
+                reduceDescDiff<BLOCK_DIM_X>(queryDescs, trainDescs, trainDescs_.cols, dist, sdiff_row);
 
                 if (threadIdx.x == 0)
                 {
-                    float dist = Dist::finalResult(sdiff_row[0]);
                     if (dist < maxDistance)
                     {
                         unsigned int i = atomicInc(nMatches + queryIdx, (unsigned int) -1);
@@ -1141,7 +1034,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // Radius Match kernel caller
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, template <int> class Dist, typename T, typename Mask>
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
     void radiusMatch_caller(const DevMem2D_<T>& queryDescs, const DevMem2D_<T>& trainDescs, 
         float maxDistance, const Mask& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, 
         const DevMem2Df& distance)
@@ -1149,7 +1042,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
         dim3 grid(queryDescs.rows, divUp(trainDescs.rows, BLOCK_DIM_Y), 1);
 
-        radiusMatch<BLOCK_DIM_X, BLOCK_DIM_Y, Dist<BLOCK_DIM_X>, T><<<grid, threads>>>(
+        radiusMatch<BLOCK_DIM_X, BLOCK_DIM_Y, Dist, T><<<grid, threads>>>(
             queryDescs, trainDescs, maxDistance, mask, trainIdx, nMatches, distance);
 
         cudaSafeCall( cudaThreadSynchronize() );

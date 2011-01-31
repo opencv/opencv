@@ -40,119 +40,54 @@
 //M*/
 
 #include "gputest.hpp"
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <limits>
-#include <numeric>
-#include <iomanip> // for  cout << setw()
 
-using namespace cv;
 using namespace std;
-using namespace gpu;
+using namespace cv;
+using namespace cv::gpu;
 
-class CV_AsyncGpuMatTest : public CvTest
+struct CV_AsyncGpuMatTest : public CvTest
 {
-    public:
-        CV_AsyncGpuMatTest() : CvTest( "GPU-AsyncGpuMatOperator", "async" )
+    CV_AsyncGpuMatTest() : CvTest( "GPU-AsyncGpuMatOperator", "async" )
+    {
+    }
+
+    void run(int)
+    {
+        try
         {
-             rows = 234;
-            cols = 123;
+            CudaMem src(Mat::zeros(100, 100, CV_8UC1));
 
+            GpuMat gpusrc;
+            GpuMat gpudst0, gpudst1(100, 100, CV_8UC1);
+
+            CudaMem cpudst0;
+            CudaMem cpudst1;
+
+            Stream stream0, stream1;
+
+            stream0.enqueueUpload(src, gpusrc);
+            bitwise_not(gpusrc, gpudst0, GpuMat(), stream0);
+            stream0.enqueueDownload(gpudst0, cpudst0);
+
+            stream1.enqueueMemSet(gpudst1, Scalar::all(128));
+            stream1.enqueueDownload(gpudst1, cpudst1);
+            
+            stream0.waitForCompletion();
+            stream1.waitForCompletion();
+
+            Mat cpu_gold0(100, 100, CV_8UC1, Scalar::all(255));
+            Mat cpu_gold1(100, 100, CV_8UC1, Scalar::all(128));
+
+            if (norm(cpudst0, cpu_gold0, NORM_INF) > 0 || norm(cpudst1, cpu_gold1, NORM_INF) > 0)
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            else
+                ts->set_failed_test_info(CvTS::OK);
         }
-        ~CV_AsyncGpuMatTest() {}
-
-    protected:
-        void run(int);
-        template <typename T>
-        void print_mat(const T & mat, const std::string & name) const;
-        bool compare_matrix(cv::Mat & cpumat);
-
-    private:
-        int rows;
-        int cols;
-};
-
-template<typename T>
-void CV_AsyncGpuMatTest::print_mat(const T & mat, const std::string & name) const { cv::imshow(name, mat); }
-
-bool CV_AsyncGpuMatTest::compare_matrix(cv::Mat & cpumat)
-{
-    Mat cmat(cpumat.size(), cpumat.type(), Scalar::all(0));
-    GpuMat gmat0(cmat);
-    GpuMat gmat1;
-    GpuMat gmat2;
-    GpuMat gmat3;
-
-    //int64 time = getTickCount();
-
-    Stream stream;
-	stream.enqueueMemSet(gmat0, cv::Scalar::all(1), gmat1);
-	stream.enqueueMemSet(gmat0, cv::Scalar::all(1), gmat2);
-	stream.enqueueMemSet(gmat0, cv::Scalar::all(1), gmat3);
-    stream.waitForCompletion();
-
-    //int64 time1 = getTickCount();
-
-    gmat1.copyTo(gmat0);
-    gmat2.copyTo(gmat0);
-    gmat3.copyTo(gmat0);
-
-    //int64 time2 = getTickCount();
-
-    //std::cout << "\ntime async: " << std::fixed << std::setprecision(12) << double((time1 - time)  / (double)getTickFrequency());
-    //std::cout << "\ntime  sync: " << std::fixed << std::setprecision(12) << double((time2 - time1) / (double)getTickFrequency());
-    //std::cout << "\n";
-
-#ifdef PRINT_MATRIX
-    print_mat(cmat, "cpu mat");
-    print_mat(gmat0, "gpu mat 0");
-    print_mat(gmat1, "gpu mat 1");
-    print_mat(gmat2, "gpu mat 2");
-    print_mat(gmat3, "gpu mat 3");
-    cv::waitKey(0);
-#endif
-
-    double ret = norm(cmat, gmat0) + norm(cmat, gmat1) + norm(cmat, gmat2) + norm(cmat, gmat3);
-
-    if (ret < 1.0)
-        return true;
-    else
-    {
-        ts->printf(CvTS::LOG, "\nNorm: %f\n", ret);
-        return false;
+        catch(cv::Exception& e)
+        {
+            if (!check_and_treat_gpu_exception(e, ts))
+                throw; 
+            return;
+        }
     }
-}
-
-void CV_AsyncGpuMatTest::run( int /* start_from */)
-{
-    bool is_test_good = true;
-
-    Mat cpumat(rows, cols, CV_8U);
-    cpumat.setTo(Scalar::all(127));
-
-    try
-    {
-        is_test_good &= compare_matrix(cpumat);
-    }
-    catch(cv::Exception& e)
-    {
-        if (!check_and_treat_gpu_exception(e, ts))
-            throw; 
-        return;
-    }
-
-    if (is_test_good == true)
-        ts->set_failed_test_info(CvTS::OK);
-    else
-        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
-}
-
-
-/////////////////////////////////////////////////////////////////////////////
-/////////////////// tests registration  /////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////
-
-
-CV_AsyncGpuMatTest CV_AsyncGpuMatTest_test;
+} CV_AsyncGpuMatTest_test;

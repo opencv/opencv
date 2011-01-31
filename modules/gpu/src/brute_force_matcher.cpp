@@ -104,6 +104,18 @@ namespace cv { namespace gpu { namespace bfmatcher
         const DevMem2D& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, const DevMem2Df& distance);
 }}}
 
+namespace
+{
+    class ImgIdxSetter
+    {
+    public:
+        ImgIdxSetter(int imgIdx_) : imgIdx(imgIdx_) {}
+        void operator()(DMatch& m) const {m.imgIdx = imgIdx;}
+    private:
+        int imgIdx;
+    };
+}
+
 cv::gpu::BruteForceMatcher_GPU_base::BruteForceMatcher_GPU_base(DistType distType_) : distType(distType_)
 {
 }
@@ -185,7 +197,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, 
         return;
 
     CV_Assert(trainIdx.type() == CV_32SC1 && trainIdx.isContinuous());
-    CV_Assert(distance.type() == CV_32FC1 && distance.isContinuous() && distance.size().area() == trainIdx.size().area());
+    CV_Assert(distance.type() == CV_32FC1 && distance.isContinuous() && distance.cols == trainIdx.cols);
 
     const int nQuery = trainIdx.cols;
 
@@ -309,8 +321,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, 
         return;
 
     CV_Assert(trainIdx.type() == CV_32SC1 && trainIdx.isContinuous());
-    CV_Assert(imgIdx.type() == CV_32SC1 && imgIdx.isContinuous());
-    CV_Assert(distance.type() == CV_32FC1 && distance.isContinuous());
+    CV_Assert(imgIdx.type() == CV_32SC1 && imgIdx.isContinuous() && imgIdx.cols == trainIdx.cols);
+    CV_Assert(distance.type() == CV_32FC1 && distance.isContinuous() && imgIdx.cols == trainIdx.cols);
 
     const int nQuery = trainIdx.cols;
 
@@ -390,7 +402,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     trainIdx.setTo(Scalar::all(-1));
     distance.create(nQuery, k, CV_32F);
 
-    allDist.create(nQuery, nTrain, CV_32F);
+    ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, allDist);
 
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
@@ -449,18 +461,6 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     GpuMat trainIdx, distance, allDist;
     knnMatch(queryDescs, trainDescs, trainIdx, distance, allDist, k, mask);
     knnMatchDownload(trainIdx, distance, matches, compactResult);
-}
-
-namespace
-{
-    class ImgIdxSetter
-    {
-    public:
-        ImgIdxSetter(int imgIdx_) : imgIdx(imgIdx_) {}
-        void operator()(DMatch& m) const {m.imgIdx = imgIdx;}
-    private:
-        int imgIdx;
-    };
 }
 
 void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs,
@@ -538,9 +538,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
 
     CV_Assert(queryDescs.channels() == 1 && queryDescs.depth() < CV_64F);
     CV_Assert(trainDescs.type() == queryDescs.type() && trainDescs.cols == queryDescs.cols);
-    CV_Assert(trainIdx.empty() || trainIdx.rows == nQuery);
+    CV_Assert(trainIdx.empty() || (trainIdx.rows == nQuery && trainIdx.size() == distance.size()));
 
-    nMatches.create(1, nQuery, CV_32SC1);
+    ensureSizeIsEnough(1, nQuery, CV_32SC1, nMatches);
     nMatches.setTo(Scalar::all(0));
     if (trainIdx.empty())
     {
@@ -561,7 +561,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trai
         return;
 
     CV_Assert(trainIdx.type() == CV_32SC1);
-    CV_Assert(nMatches.type() == CV_32SC1 && nMatches.isContinuous() && nMatches.size().area() == trainIdx.rows);
+    CV_Assert(nMatches.type() == CV_32SC1 && nMatches.isContinuous() && nMatches.cols >= trainIdx.rows);
     CV_Assert(distance.type() == CV_32FC1 && distance.size() == trainIdx.size());
 
     const int nQuery = trainIdx.rows;

@@ -66,7 +66,10 @@ void cv::gpu::integral(const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
+//void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
+//void cv::gpu::Canny(const GpuMat&, GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
+//void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
+//void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, double, double, int) { throw_nogpu(); }
 void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*) { throw_nogpu(); }
@@ -655,34 +658,60 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 ////////////////////////////////////////////////////////////////////////
 // Canny
 
-void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
-{
-    CV_Assert(!"disabled until fix crash");
-    CV_Assert(image.type() == CV_8UC1);
-
-    GpuMat srcDx, srcDy;
-
-    Sobel(image, srcDx, -1, 1, 0, apertureSize);
-    Sobel(image, srcDy, -1, 0, 1, apertureSize);
-
-    srcDx.convertTo(srcDx, CV_32F);
-    srcDy.convertTo(srcDy, CV_32F);
-
-    edges.create(image.size(), CV_8UC1);
-
-    NppiSize sz;
-    sz.height = image.rows;
-    sz.width = image.cols;
-
-    int bufsz;
-    nppSafeCall( nppiCannyGetBufferSize(sz, &bufsz) );
-    GpuMat buf(1, bufsz, CV_8UC1);
-
-    nppSafeCall( nppiCanny_32f8u_C1R(srcDx.ptr<Npp32f>(), srcDx.step, srcDy.ptr<Npp32f>(), srcDy.step,
-        edges.ptr<Npp8u>(), edges.step, sz, (Npp32f)threshold1, (Npp32f)threshold2, buf.ptr<Npp8u>()) );
-
-    cudaSafeCall( cudaThreadSynchronize() );
-}
+//void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
+//{
+//    CV_Assert(!"disabled until fix crash");
+//
+//    GpuMat srcDx, srcDy;
+//
+//    Sobel(image, srcDx, CV_32F, 1, 0, apertureSize);
+//    Sobel(image, srcDy, CV_32F, 0, 1, apertureSize);
+//
+//    GpuMat buf;
+//
+//    Canny(srcDx, srcDy, edges, buf, threshold1, threshold2, apertureSize);
+//}
+//
+//void cv::gpu::Canny(const GpuMat& image, GpuMat& edges, GpuMat& buf, double threshold1, double threshold2, int apertureSize)
+//{
+//    CV_Assert(!"disabled until fix crash");
+//
+//    GpuMat srcDx, srcDy;
+//
+//    Sobel(image, srcDx, CV_32F, 1, 0, apertureSize);
+//    Sobel(image, srcDy, CV_32F, 0, 1, apertureSize);
+//
+//    Canny(srcDx, srcDy, edges, buf, threshold1, threshold2, apertureSize);
+//}
+//
+//void cv::gpu::Canny(const GpuMat& srcDx, const GpuMat& srcDy, GpuMat& edges, double threshold1, double threshold2, int apertureSize)
+//{
+//    CV_Assert(!"disabled until fix crash");
+//
+//    GpuMat buf;
+//    Canny(srcDx, srcDy, edges, buf, threshold1, threshold2, apertureSize);
+//}
+//
+//void cv::gpu::Canny(const GpuMat& srcDx, const GpuMat& srcDy, GpuMat& edges, GpuMat& buf, double threshold1, double threshold2, int apertureSize)
+//{
+//    CV_Assert(!"disabled until fix crash");
+//    CV_Assert(srcDx.type() == CV_32FC1 && srcDy.type() == CV_32FC1 && srcDx.size() == srcDy.size());
+//
+//    edges.create(srcDx.size(), CV_8UC1);
+//
+//    NppiSize sz;
+//    sz.height = srcDx.rows;
+//    sz.width = srcDx.cols;
+//
+//    int bufsz;
+//    nppSafeCall( nppiCannyGetBufferSize(sz, &bufsz) );
+//    ensureSizeIsEnough(1, bufsz, CV_8UC1, buf);
+//
+//    nppSafeCall( nppiCanny_32f8u_C1R(srcDx.ptr<Npp32f>(), srcDx.step, srcDy.ptr<Npp32f>(), srcDy.step,
+//        edges.ptr<Npp8u>(), edges.step, sz, (Npp32f)threshold1, (Npp32f)threshold2, buf.ptr<Npp8u>()) );
+//
+//    cudaSafeCall( cudaThreadSynchronize() );
+//}
 
 ////////////////////////////////////////////////////////////////////////
 // Histogram

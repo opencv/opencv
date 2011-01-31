@@ -51,24 +51,27 @@ class CV_GpuBruteForceMatcherTest : public CvTest
 {
 public:
     CV_GpuBruteForceMatcherTest() :
-        CvTest( "GPU-BruteForceMatcher", "BruteForceMatcher" ), badPart(0.01f)
+        CvTest( "GPU-BruteForceMatcher", "BruteForceMatcher" )
     {
     }
+
 protected:
-    static const int dim = 500;
-    static const int queryDescCount = 300; // must be even number because we split train data in some cases in two
-    static const int countFactor = 4; // do not change it
-    const float badPart;
-
     virtual void run(int);
-    void generateData(GpuMat& query, GpuMat& train);
-
+    
     void emptyDataTest();
+    void dataTest(int dim);
+    
+    void generateData(GpuMat& query, GpuMat& train, int dim);
+
     void matchTest(const GpuMat& query, const GpuMat& train);
     void knnMatchTest(const GpuMat& query, const GpuMat& train);
     void radiusMatchTest(const GpuMat& query, const GpuMat& train);
 
+private:
     BruteForceMatcher_GPU< L2<float> > dmatcher;
+
+    static const int queryDescCount = 300; // must be even number because we split train data in some cases in two
+    static const int countFactor = 4; // do not change it
 };
 
 void CV_GpuBruteForceMatcherTest::emptyDataTest()
@@ -150,7 +153,7 @@ void CV_GpuBruteForceMatcherTest::emptyDataTest()
 
 }
 
-void CV_GpuBruteForceMatcherTest::generateData( GpuMat& queryGPU, GpuMat& trainGPU )
+void CV_GpuBruteForceMatcherTest::generateData( GpuMat& queryGPU, GpuMat& trainGPU, int dim )
 {
     Mat query, train;
     RNG rng(*ts->get_rng());
@@ -209,7 +212,7 @@ void CV_GpuBruteForceMatcherTest::matchTest( const GpuMat& query, const GpuMat& 
                 if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
                     badCount++;
             }
-            if( (float)badCount > (float)queryDescCount*badPart )
+            if (badCount > 0)
             {
                 ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (1).\n",
                             (float)badCount/(float)queryDescCount );
@@ -260,7 +263,7 @@ void CV_GpuBruteForceMatcherTest::matchTest( const GpuMat& query, const GpuMat& 
                     }
                 }
             }
-            if( (float)badCount > (float)queryDescCount*badPart )
+            if (badCount > 0)
             {
                 ts->printf( CvTS::LOG, "%f - too large bad matches part while test match() function (2).\n",
                             (float)badCount/(float)queryDescCount );
@@ -305,7 +308,7 @@ void CV_GpuBruteForceMatcherTest::knnMatchTest( const GpuMat& query, const GpuMa
                     badCount += localBadCount > 0 ? 1 : 0;
                 }
             }
-            if( (float)badCount > (float)queryDescCount*badPart )
+            if (badCount > 0)
             {
                 ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (1).\n",
                             (float)badCount/(float)queryDescCount );
@@ -369,7 +372,7 @@ void CV_GpuBruteForceMatcherTest::knnMatchTest( const GpuMat& query, const GpuMa
                     badCount += localBadCount > 0 ? 1 : 0;
                 }
             }
-            if( (float)badCount > (float)queryDescCount*badPart )
+            if (badCount > 0)
             {
                 ts->printf( CvTS::LOG, "%f - too large bad matches part while test knnMatch() function (2).\n",
                             (float)badCount/(float)queryDescCount );
@@ -407,7 +410,7 @@ void CV_GpuBruteForceMatcherTest::radiusMatchTest( const GpuMat& query, const Gp
                         badCount++;
                 }
             }
-            if( (float)badCount > (float)queryDescCount*badPart )
+            if (badCount > 0)
             {
                 ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (1).\n",
                             (float)badCount/(float)queryDescCount );
@@ -473,7 +476,8 @@ void CV_GpuBruteForceMatcherTest::radiusMatchTest( const GpuMat& query, const Gp
                 badCount += localBadCount > 0 ? 1 : 0;
             }
         }
-        if( (float)badCount > (float)queryDescCount*badPart )
+
+        if (badCount > 0)
         {
             curRes = CvTS::FAIL_INVALID_OUTPUT;
             ts->printf( CvTS::LOG, "%f - too large bad matches part while test radiusMatch() function (2).\n",
@@ -483,20 +487,29 @@ void CV_GpuBruteForceMatcherTest::radiusMatchTest( const GpuMat& query, const Gp
     }
 }
 
-void CV_GpuBruteForceMatcherTest::run( int )
+void CV_GpuBruteForceMatcherTest::dataTest(int dim)
+{
+    GpuMat query, train;
+    generateData(query, train, dim);
+
+    matchTest(query, train);
+    knnMatchTest(query, train);
+    radiusMatchTest(query, train);
+
+    dmatcher.clear();
+}
+
+void CV_GpuBruteForceMatcherTest::run(int)
 {
     emptyDataTest();
 
-    GpuMat query, train;
-    generateData( query, train );
-
-    matchTest( query, train );
-
-    knnMatchTest( query, train );
-
-    radiusMatchTest( query, train );
-
-    dmatcher.clear();
+    dataTest(50);
+    dataTest(64);
+    dataTest(100);
+    dataTest(128);
+    dataTest(200);
+    dataTest(256);
+    dataTest(300);
 }
 
 CV_GpuBruteForceMatcherTest CV_GpuBruteForceMatcher_test;

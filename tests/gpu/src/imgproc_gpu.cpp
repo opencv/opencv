@@ -408,30 +408,30 @@ struct CV_GpuNppImageIntegralTest : public CV_GpuImageProcTest
 
 ////////////////////////////////////////////////////////////////////////////////
 // Canny
-struct CV_GpuNppImageCannyTest : public CV_GpuImageProcTest
-{
-    CV_GpuNppImageCannyTest() : CV_GpuImageProcTest( "GPU-NppImageCanny", "Canny" ) {}
-
-    int test(const Mat& img)
-    {
-        if (img.type() != CV_8UC1)
-        {
-            ts->printf(CvTS::LOG, "\nUnsupported type\n");
-            return CvTS::OK;
-        }
-
-        const double threshold1 = 1.0, threshold2 = 10.0;
-
-        Mat cpudst;
-        cv::Canny(img, cpudst, threshold1, threshold2);
-
-        GpuMat gpu1(img);
-        GpuMat gpudst;
-        cv::gpu::Canny(gpu1, gpudst, threshold1, threshold2);
-
-        return CheckNorm(cpudst, gpudst);
-    }
-};
+//struct CV_GpuNppImageCannyTest : public CV_GpuImageProcTest
+//{
+//    CV_GpuNppImageCannyTest() : CV_GpuImageProcTest( "GPU-NppImageCanny", "Canny" ) {}
+//
+//    int test(const Mat& img)
+//    {
+//        if (img.type() != CV_8UC1)
+//        {
+//            ts->printf(CvTS::LOG, "\nUnsupported type\n");
+//            return CvTS::OK;
+//        }
+//
+//        const double threshold1 = 1.0, threshold2 = 10.0;
+//
+//        Mat cpudst;
+//        cv::Canny(img, cpudst, threshold1, threshold2);
+//
+//        GpuMat gpu1(img);
+//        GpuMat gpudst;
+//        cv::gpu::Canny(gpu1, gpudst, threshold1, threshold2);
+//
+//        return CheckNorm(cpudst, gpudst);
+//    }
+//};
 
 ////////////////////////////////////////////////////////////////////////////////
 // cvtColor
@@ -839,7 +839,7 @@ CV_GpuNppImageCopyMakeBorderTest CV_GpuNppImageCopyMakeBorder_test;
 CV_GpuNppImageWarpAffineTest CV_GpuNppImageWarpAffine_test;
 CV_GpuNppImageWarpPerspectiveTest CV_GpuNppImageWarpPerspective_test;
 CV_GpuNppImageIntegralTest CV_GpuNppImageIntegral_test;
-CV_GpuNppImageCannyTest CV_GpuNppImageCanny_test;
+//CV_GpuNppImageCannyTest CV_GpuNppImageCanny_test;
 CV_GpuCvtColorTest CV_GpuCvtColor_test;
 CV_GpuHistogramsTest CV_GpuHistograms_test;
 CV_GpuCornerHarrisTest CV_GpuCornerHarris_test;

@@ -671,10 +671,12 @@ namespace cv
         //! output will have CV_32FC1 type
         CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect);
 
-        //! applies Canny edge detector and produces the edge map
-        //! supprots only CV_8UC1 source type
-        //! disabled until fix crash
-        CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize = 3);
+        // applies Canny edge detector and produces the edge map
+        // disabled until fix crash
+        //CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double threshold1, double threshold2, int apertureSize = 3);
+        //CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, GpuMat& buffer, double threshold1, double threshold2, int apertureSize = 3);
+        //CV_EXPORTS void Canny(const GpuMat& srcDx, const GpuMat& srcDy, GpuMat& edges, double threshold1, double threshold2, int apertureSize = 3);
+        //CV_EXPORTS void Canny(const GpuMat& srcDx, const GpuMat& srcDy, GpuMat& edges, GpuMat& buffer, double threshold1, double threshold2, int apertureSize = 3);
 
         //! computes Harris cornerness criteria at each image pixel
         CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
