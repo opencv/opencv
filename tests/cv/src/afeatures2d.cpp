@@ -73,6 +73,8 @@ protected:
 
 void CV_FeatureDetectorTest::emptyDataTest()
 {
+    assert( !fdetector.empty() && !fdetector->empty() );
+
     // One image.
     Mat image;
     vector<KeyPoint> keypoints;
@@ -172,7 +174,7 @@ void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validK
 
 void CV_FeatureDetectorTest::regressionTest()
 {
-    assert( !fdetector.empty() );
+    assert( !fdetector.empty() && !fdetector->empty() );
     string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
     string resFilename = string(ts->get_data_path()) + DETECTOR_DIR + "/" + string(name) + ".xml.gz";
 
@@ -229,7 +231,7 @@ void CV_FeatureDetectorTest::regressionTest()
 
 void CV_FeatureDetectorTest::run( int /*start_from*/ )
 {
-    if( fdetector.empty() )
+    if( fdetector.empty() || fdetector->empty() )
     {
         ts->printf( CvTS::LOG, "Feature detector is empty.\n" );
         ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
@@ -293,7 +295,7 @@ public:
             CvTest( testName, "cv::DescriptorExtractor::compute" ),
             maxDist(_maxDist), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
 protected:
-    virtual void createDescriptorExtractor() {}
+    virtual void createDescriptorExtractor(){}
 
     void compareDescriptors( const Mat& validDescriptors, const Mat& calcDescriptors )
     {
@@ -329,7 +331,7 @@ protected:
 
     void emptyDataTest()
     {
-        assert( !dextractor.empty() );
+        assert( !dextractor.empty() && !dextractor->empty() );
 
         // One image.
         Mat image;
@@ -374,7 +376,7 @@ protected:
 
     void regressionTest()
     {
-        assert( !dextractor.empty() );
+        assert( !dextractor.empty() && !dextractor->empty() );
 
         // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
@@ -449,7 +451,7 @@ protected:
     void run(int)
     {
         createDescriptorExtractor();
-        if( dextractor.empty() )
+        if( dextractor.empty() || dextractor->empty() )
         {
             ts->printf(CvTS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
@@ -495,9 +497,16 @@ public:
 protected:
     virtual void createDescriptorExtractor()
     {
+        string filename = string(CV_DescriptorExtractorTest<Distance>::ts->get_data_path()) +
+                          FEATURES2D_DIR + "/calonder_classifier.rtc";
         CV_DescriptorExtractorTest<Distance>::dextractor =
-                new CalonderDescriptorExtractor<T>( string(CV_DescriptorExtractorTest<Distance>::ts->get_data_path()) +
-                                                    FEATURES2D_DIR + "/calonder_classifier.rtc");
+                new CalonderDescriptorExtractor<T>( filename );
+        if( CV_DescriptorExtractorTest<Distance>::dextractor->empty() )
+        {
+            stringstream ss; ss << "Calonder descriptor extractor can not be loaded from file" << filename<< endl;
+            CV_DescriptorExtractorTest<Distance>::ts->printf( CvTS::LOG, ss.str().c_str() );
+            CV_DescriptorExtractorTest<Distance>::ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+        }
     }
 };
 
@@ -531,7 +540,8 @@ private:
 
 void CV_DescriptorMatcherTest::emptyDataTest()
 {
-    assert( !dmatcher.empty() );
+    assert( !dmatcher.empty() && !dmatcher->empty() );
+
     Mat queryDescriptors, trainDescriptors, mask;
     vector<Mat> trainDescriptorCollection, masks;
     vector<DMatch> matches;

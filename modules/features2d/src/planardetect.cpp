@@ -771,6 +771,10 @@ void FernClassifier::clear()
     vector<float>().swap(posteriors);
 }
 
+bool FernClassifier::empty() const
+{
+    return features.empty();
+}
 
 int FernClassifier::getLeaf(int fern, const Mat& _patch) const
 {

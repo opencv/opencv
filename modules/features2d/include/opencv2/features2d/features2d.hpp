@@ -523,6 +523,7 @@ public:
     virtual int operator()(const Mat& img, Point2f kpt, vector<float>& signature) const;
     virtual int operator()(const Mat& patch, vector<float>& signature) const;
     virtual void clear();
+    virtual bool empty() const;
     void setVerbose(bool verbose);
     
     int getClassCount() const;
@@ -1086,6 +1087,8 @@ public:
     // GetPCAFilename: get default PCA filename
     static string GetPCAFilename () { return "pca.yml"; }
 
+    virtual bool empty() const { return m_train_feature_count <= 0 ? true : false; }
+
 protected:
     CvSize m_patch_size; // patch size
     int m_pose_count; // the number of poses for each descriptor
@@ -1211,6 +1214,9 @@ public:
     virtual void read( const FileNode& );
     // Read detector object from a file node.
     virtual void write( FileStorage& ) const;
+
+    // Return true if detector object is empty
+    virtual bool empty() const;
 
     // Create feature detector by detector name.
     static Ptr<FeatureDetector> create( const string& detectorType );
@@ -1359,18 +1365,19 @@ public:
   };
 
   SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
 protected:
   struct CV_EXPORTS Center
   {
-    cv::Point2d location;
-    double radius;
-    double confidence;
+      Point2d location;
+      double radius;
+      double confidence;
   };
 
   virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
   virtual void findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, std::vector<Center> &centers) const;
 
-  cv::Point2d computeGrayscaleCentroid(const cv::Mat &image, const std::vector<cv::Point> &contour) const;
+  Point2d computeGrayscaleCentroid(const cv::Mat &image, const std::vector<cv::Point> &contour) const;
 
   Params params;
 };
@@ -1422,6 +1429,7 @@ public:
                                 int gridRows=4, int gridCols=4 );
     
     // TODO implement read/write
+    virtual bool empty() const;
 
 protected:
 	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
@@ -1442,6 +1450,7 @@ public:
     PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int levels=2 );
     
     // TODO implement read/write
+    virtual bool empty() const;
 
 protected:
 	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
@@ -1499,6 +1508,8 @@ public:
      * \param min_features the minimum desired features
 	 */
     DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjaster, int min_features=400, int max_features=500, int max_iters=5 );
+
+    virtual bool empty() const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
@@ -1607,6 +1618,8 @@ public:
     virtual int descriptorSize() const = 0;
     virtual int descriptorType() const = 0;
 
+    virtual bool empty() const;
+
     static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
 
 protected:
@@ -1680,6 +1693,8 @@ public:
     virtual int descriptorSize() const { return classifier_.classes(); }
     virtual int descriptorType() const { return DataType<T>::type; }
 
+    virtual bool empty() const;
+
 protected:
 	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
@@ -1722,6 +1737,12 @@ template<typename T>
 void CalonderDescriptorExtractor<T>::write( FileStorage& ) const
 {}
 
+template<typename T>
+bool CalonderDescriptorExtractor<T>::empty() const
+{
+    return classifier_.trees_.empty();
+}
+
 /*
  * OpponentColorDescriptorExtractor
  *
@@ -1741,6 +1762,8 @@ public:
 
     virtual int descriptorSize() const;
     virtual int descriptorType() const;
+
+    virtual bool empty() const;
 
 protected:
 	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
@@ -1766,7 +1789,7 @@ public:
     /// @todo read and write for brief
 
 protected:
-	virtual void computeImpl(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const;
+    virtual void computeImpl(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const;
 
     typedef void(*PixelTestFn)(const Mat&, const std::vector<KeyPoint>&, Mat&);
 
@@ -1924,7 +1947,7 @@ public:
     /*
      * Return true if there are not train descriptors in collection.
      */
-	bool empty() const;
+    virtual bool empty() const;
     /*
      * Return true if the matcher supports mask in match methods.
      */
@@ -2366,6 +2389,9 @@ public:
     // Writes matcher object to a file storage
     virtual void write( FileStorage& ) const;
 
+    // Return true if matching object is empty (e.g. feature detector or descriptor matcher are empty)
+    virtual bool empty() const;
+
     // Clone the matcher. If emptyTrainData is false the method create deep copy of the object, i.e. copies
     // both parameters and train data. If emptyTrainData is true the method create object copy with current parameters
     // but with empty train data.
@@ -2473,6 +2499,8 @@ public:
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage& fs ) const;
 
+    virtual bool empty() const;
+
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const;
 
 protected:
@@ -2540,6 +2568,7 @@ public:
 
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage& fs ) const;
+    virtual bool empty() const;
     
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const;
 
@@ -2586,6 +2615,7 @@ public:
 
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;
+    virtual bool empty() const;
 
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const;
 

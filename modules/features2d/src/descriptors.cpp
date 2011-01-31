@@ -96,6 +96,11 @@ void DescriptorExtractor::read( const FileNode& )
 void DescriptorExtractor::write( FileStorage& ) const
 {}
 
+bool DescriptorExtractor::empty() const
+{
+    return false;
+}
+
 void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
                                                  Size imageSize, int borderSize )
 {
@@ -359,6 +364,11 @@ int OpponentColorDescriptorExtractor::descriptorSize() const
 int OpponentColorDescriptorExtractor::descriptorType() const
 {
     return descriptorExtractor->descriptorType();
+}
+
+bool OpponentColorDescriptorExtractor::empty() const
+{
+    return descriptorExtractor.empty() || (DescriptorExtractor*)(descriptorExtractor)->empty();
 }
 
 }

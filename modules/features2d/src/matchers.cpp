@@ -213,7 +213,7 @@ void DescriptorMatcher::clear()
 
 bool DescriptorMatcher::empty() const
 {
-	return trainDescCollection.size() == 0;
+    return trainDescCollection.empty();
 }
 
 void DescriptorMatcher::train()
@@ -848,6 +848,11 @@ void GenericDescriptorMatcher::read( const FileNode& )
 void GenericDescriptorMatcher::write( FileStorage& ) const
 {}
 
+bool GenericDescriptorMatcher::empty() const
+{
+    return true;
+}
+
 /*
  * Factory function for GenericDescriptorMatch creating
  */
@@ -994,13 +999,18 @@ void OneWayDescriptorMatcher::write( FileStorage& fs ) const
     base->Write (fs);
 }
 
+bool OneWayDescriptorMatcher::empty() const
+{
+    return base.empty() || base->empty();
+}
+
 Ptr<GenericDescriptorMatcher> OneWayDescriptorMatcher::clone( bool emptyTrainData ) const
 {
     OneWayDescriptorMatcher* matcher = new OneWayDescriptorMatcher( params );
 
     if( !emptyTrainData )
     {
-        CV_Error( CV_StsNotImplemented, "deep clone dunctionality is not implemented, because "
+        CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
               "OneWayDescriptorBase has not copy constructor or clone method ");
 
         //matcher->base;
@@ -1175,6 +1185,11 @@ void FernDescriptorMatcher::write( FileStorage& fs ) const
 //    classifier->write(fs);
 }
 
+bool FernDescriptorMatcher::empty() const
+{
+    return classifier.empty() || classifier->empty();
+}
+
 Ptr<GenericDescriptorMatcher> FernDescriptorMatcher::clone( bool emptyTrainData ) const
 {
     FernDescriptorMatcher* matcher = new FernDescriptorMatcher( params );
@@ -1260,6 +1275,12 @@ void VectorDescriptorMatcher::write (FileStorage& fs) const
 {
     GenericDescriptorMatcher::write(fs);
     extractor->write (fs);
+}
+
+bool VectorDescriptorMatcher::empty() const
+{
+    return extractor.empty() || extractor->empty() ||
+           matcher.empty() || matcher->empty();
 }
 
 Ptr<GenericDescriptorMatcher> VectorDescriptorMatcher::clone( bool emptyTrainData ) const

@@ -860,8 +860,11 @@ int RTreeClassifier::countNonZeroElements(float *vec, int n, double tol)
 void RTreeClassifier::read(const char* file_name)
 {
   std::ifstream file(file_name, std::ifstream::binary);
-  read(file);
-  file.close();
+  if( file.is_open() )
+  {
+      read(file);
+      file.close();
+  }
 }
 
 void RTreeClassifier::read(std::istream &is)

@@ -96,6 +96,11 @@ void FeatureDetector::read( const FileNode& )
 void FeatureDetector::write( FileStorage& ) const
 {}
 
+bool FeatureDetector::empty() const
+{
+    return false;
+}
+
 Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
 {
     FeatureDetector* fd = 0;
@@ -488,6 +493,11 @@ GridAdaptedFeatureDetector::GridAdaptedFeatureDetector( const Ptr<FeatureDetecto
     : detector(_detector), maxTotalKeypoints(_maxTotalKeypoints), gridRows(_gridRows), gridCols(_gridCols)
 {}
 
+bool GridAdaptedFeatureDetector::empty() const
+{
+    return detector.empty() || (FeatureDetector*)detector->empty();
+}
+
 struct ResponseComparator
 {
     bool operator() (const KeyPoint& a, const KeyPoint& b)
@@ -543,6 +553,11 @@ void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>&
 PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _levels )
     : detector(_detector), levels(_levels)
 {}
+
+bool PyramidAdaptedFeatureDetector::empty() const
+{
+    return detector.empty() || (FeatureDetector*)detector->empty();
+}
 
 void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
