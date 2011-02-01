@@ -198,22 +198,24 @@ TEST(integral)
 TEST(norm)
 {
     Mat src;
-    gpu::GpuMat d_src;
+    gpu::GpuMat d_src, d_buf;
 
     for (int size = 1000; size <= 8000; size *= 2)
     {
-        SUBTEST << "size " << size << ", 8U";
+        SUBTEST << "size " << size << ", 32F";
 
-        gen(src, size, size, CV_8U, 0, 256);
+        gen(src, size, size, CV_32F, 0, 1);
 
         CPU_ON;
-        norm(src);
+        for (int i = 0; i < 10; ++i)
+            norm(src, NORM_L2);
         CPU_OFF;
 
         d_src = src;
 
         GPU_ON;
-        gpu::norm(d_src);
+        for (int i = 0; i < 10; ++i)
+            gpu::norm(d_src, NORM_L2, d_buf);
         GPU_OFF;
     }
 }

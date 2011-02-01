@@ -49,6 +49,7 @@ using namespace cv::gpu;
 
 void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_nogpu(); }
 double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
@@ -88,18 +89,24 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 
 double cv::gpu::norm(const GpuMat& src, int normType)
 {
+    GpuMat buf;
+    return norm(src, normType, buf);
+}
+
+double cv::gpu::norm(const GpuMat& src, int normType, GpuMat& buf)
+{
     GpuMat src_single_channel = src.reshape(1);
 
     if (normType == NORM_L1)
-        return absSum(src_single_channel)[0];
+        return absSum(src_single_channel, buf)[0];
 
     if (normType == NORM_L2)
-        return sqrt(sqrSum(src_single_channel)[0]);
+        return sqrt(sqrSum(src_single_channel, buf)[0]);
 
     if (normType == NORM_INF)
     {
         double min_val, max_val;
-        minMax(src_single_channel, &min_val, &max_val);
+        minMax(src_single_channel, &min_val, &max_val, GpuMat(), buf);
         return std::max(std::abs(min_val), std::abs(max_val));
     }
 
