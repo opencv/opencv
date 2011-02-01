@@ -12,8 +12,8 @@ Kinect sensor is supported through \texttt{VideoCapture} class. Depth map, rgb i
 output can be retrieved by using familiar interface of \texttt{VideoCapture}.\par
 
 In order to use Kinect with OpenCV you should do the following preliminary steps:\newline
-1) Install OpenNI library and PrimeSensor Module for OpenNI from here \url{http://www.openni.
-org/downloadfiles}. The installation should be done to default folders listed in the instruc-
+1) Install OpenNI library and PrimeSensor Module for OpenNI from here \url{http://www.openni.org/downloadfiles}. 
+The installation should be done to default folders listed in the instruc-
 tions of these products:
 \begin{lstlisting}
 OpenNI:
@@ -34,7 +34,8 @@ PrimeSensor Module:
 2) Configure OpenCV with OpenNI support by setting \texttt{WITH\_OPENNI} flag in CMake. If OpenNI
 is found in default install folders OpenCV will be built with OpenNI library regardless of whether
 PrimeSensor Module is found or not. If PrimeSensor Module was not found you will get a warning
-in CMake log. Without PrimeSensor module OpenCV will be successfully compiled with OpenNI library, but \texttt{VideoCapture} object will not grab data from Kinect sensor. \par
+in CMake log. Without PrimeSensor module OpenCV will be successfully compiled with OpenNI library, 
+but \texttt{VideoCapture} object will not grab data from Kinect sensor. \par
 
 3) Build OpenCV.\par
 
@@ -83,6 +84,6 @@ for(;;)
 }
 \end{lstlisting}
 
-For more information please refer to a kinect example of usage maps.cpp in \texttt{sample} folder.
+For more information please refer to a kinect example of usage \texttt{kinect\_maps.cpp} in \texttt{sample} folder.
 
 \fi
