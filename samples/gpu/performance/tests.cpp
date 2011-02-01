@@ -200,21 +200,21 @@ TEST(norm)
     Mat src;
     gpu::GpuMat d_src, d_buf;
 
-    for (int size = 1000; size <= 8000; size *= 2)
+    for (int size = 2000; size <= 4000; size += 1000)
     {
-        SUBTEST << "size " << size << ", 32F";
+        SUBTEST << "size " << size << ", 32FC4";
 
-        gen(src, size, size, CV_32F, 0, 1);
+        gen(src, size, size, CV_32FC4, Scalar::all(0), Scalar::all(1));
 
         CPU_ON;
-        for (int i = 0; i < 10; ++i)
+        for (int i = 0; i < 5; ++i)
             norm(src, NORM_L2);
         CPU_OFF;
 
         d_src = src;
 
         GPU_ON;
-        for (int i = 0; i < 10; ++i)
+        for (int i = 0; i < 5; ++i)
             gpu::norm(d_src, NORM_L2, d_buf);
         GPU_OFF;
     }
