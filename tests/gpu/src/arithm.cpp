@@ -697,12 +697,8 @@ struct CV_GpuMinMaxTest: public CvTest
     void test(int rows, int cols, int cn, int depth)
     {
         cv::Mat src(rows, cols, CV_MAKE_TYPE(depth, cn));
-        cv::RNG rng;
-        for (int i = 0; i < src.rows; ++i)
-        { 
-            Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
-        }
+        cv::RNG rng(*ts->get_rng());
+        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(255));
 
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
@@ -725,7 +721,6 @@ struct CV_GpuMinMaxTest: public CvTest
         }
 
         double minVal_, maxVal_;
-        cv::Point minLoc_, maxLoc_;        
         cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, cv::gpu::GpuMat(), buf);
        
         if (abs(minVal - minVal_) > 1e-3f)
@@ -743,12 +738,8 @@ struct CV_GpuMinMaxTest: public CvTest
     void test_masked(int rows, int cols, int cn, int depth)
     {
         cv::Mat src(rows, cols, CV_MAKE_TYPE(depth, cn));
-        cv::RNG rng;
-        for (int i = 0; i < src.rows; ++i)
-        { 
-            Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
-        }
+        cv::RNG rng(*ts->get_rng());
+        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(255));
 
         cv::Mat mask(src.size(), CV_8U);
         rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
@@ -832,12 +823,8 @@ struct CV_GpuMinMaxLocTest: public CvTest
     void test(int rows, int cols, int depth)
     {
         cv::Mat src(rows, cols, depth);
-        cv::RNG rng;
-        for (int i = 0; i < src.rows; ++i)
-        { 
-            Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-            rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
-        }
+        cv::RNG rng(*ts->get_rng());
+        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(255));
 
         cv::Mat mask(src.size(), CV_8U);
         rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
@@ -867,7 +854,7 @@ struct CV_GpuMinMaxLocTest: public CvTest
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;        
         cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::gpu::GpuMat(mask), valbuf, locbuf);
-       
+
         CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
         CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);
         CHECK(0 == memcmp(src.ptr(minLoc.y) + minLoc.x * src.elemSize(), src.ptr(minLoc_.y) + minLoc_.x * src.elemSize(), src.elemSize()),  
