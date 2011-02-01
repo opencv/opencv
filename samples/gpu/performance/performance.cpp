@@ -139,13 +139,9 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
 int main(int argc, char** argv)
 {
     if (argc < 2)
-    {
         cout << "Usage: performance_gpu <working_dir_with_slash>\n\n";
-    }
     else
-    {
         TestSystem::instance().setWorkingDir(argv[1]);
-    }
 
     redirectError(cvErrorCallback);
     TestSystem::instance().run();
