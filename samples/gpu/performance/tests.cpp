@@ -251,10 +251,10 @@ TEST(meanShift)
 
 TEST(SURF)
 {
-    Mat src1 = imread(abspath("bowlingL.png"), CV_LOAD_IMAGE_GRAYSCALE);
-    Mat src2 = imread(abspath("bowlingR.png"), CV_LOAD_IMAGE_GRAYSCALE);
-    if (src1.empty()) throw runtime_error("can't open bowlingL.png");
-    if (src2.empty()) throw runtime_error("can't open bowlingR.png");
+    Mat src1 = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src2 = imread(abspath("aloeR.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src1.empty()) throw runtime_error("can't open aloeL.jpg");
+    if (src2.empty()) throw runtime_error("can't open aloeR.jpg");
 
     gpu::GpuMat d_src1(src1);
     gpu::GpuMat d_src2(src2);
