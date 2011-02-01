@@ -825,6 +825,77 @@ struct CV_GpuColumnSumTest: CvTest
     }
 };
 
+struct CV_GpuNormTest : CvTest 
+{
+    CV_GpuNormTest() : CvTest("GPU-Norm", "norm") {}
+
+    void run(int)
+    {
+        try
+        {
+            RNG rng(0);
+
+            int rows = rng.uniform(1, 500);
+            int cols = rng.uniform(1, 500);
+
+            for (int cn = 1; cn <= 4; ++cn)
+            {
+                test(NORM_L1, rows, cols, CV_8U, cn, Scalar::all(0), Scalar::all(10));
+                test(NORM_L1, rows, cols, CV_8S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_L1, rows, cols, CV_16U, cn, Scalar::all(0), Scalar::all(10));
+                test(NORM_L1, rows, cols, CV_16S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_L1, rows, cols, CV_32S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_L1, rows, cols, CV_32F, cn, Scalar::all(0), Scalar::all(1));
+
+                test(NORM_L2, rows, cols, CV_8U, cn, Scalar::all(0), Scalar::all(10));
+                test(NORM_L2, rows, cols, CV_8S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_L2, rows, cols, CV_16U, cn, Scalar::all(0), Scalar::all(10));
+                test(NORM_L2, rows, cols, CV_16S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_L2, rows, cols, CV_32S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_L2, rows, cols, CV_32F, cn, Scalar::all(0), Scalar::all(1));
+
+                test(NORM_INF, rows, cols, CV_8U, cn, Scalar::all(0), Scalar::all(10));
+                test(NORM_INF, rows, cols, CV_8S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_INF, rows, cols, CV_16U, cn, Scalar::all(0), Scalar::all(10));
+                test(NORM_INF, rows, cols, CV_16S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_INF, rows, cols, CV_32S, cn, Scalar::all(-10), Scalar::all(10));
+                test(NORM_INF, rows, cols, CV_32F, cn, Scalar::all(0), Scalar::all(1));
+            }
+        }
+        catch (const cv::Exception& e)
+        {
+            ts->printf(CvTS::CONSOLE, e.what());
+            if (!check_and_treat_gpu_exception(e, ts)) throw;
+            return;
+        }
+    }
+
+    void gen(Mat& mat, int rows, int cols, int type, Scalar low, Scalar high)
+    {
+        mat.create(rows, cols, type);
+        RNG rng(0);
+        rng.fill(mat, RNG::UNIFORM, low, high);
+    }
+
+    void test(int norm_type, int rows, int cols, int depth, int cn, Scalar low, Scalar high)
+    {
+        int type = CV_MAKE_TYPE(depth, cn);
+
+        Mat src;
+        gen(src, rows, cols, type, low, high);
+
+        double gold = norm(src, norm_type);
+        double mine = norm(GpuMat(src), norm_type);
+
+        if (abs(gold - mine) > 1e-3)
+        {
+            ts->printf(CvTS::CONSOLE, "failed test: gold=%f, mine=%f, norm_type=%d, rows=%d, "
+                       "cols=%d, depth=%d, cn=%d\n", gold, mine, norm_type, rows, cols, depth, cn);
+            ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+        }
+    }
+};
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -845,4 +916,4 @@ CV_GpuHistogramsTest CV_GpuHistograms_test;
 CV_GpuCornerHarrisTest CV_GpuCornerHarris_test;
 CV_GpuCornerMinEigenValTest CV_GpuCornerMinEigenVal_test;
 CV_GpuColumnSumTest CV_GpuColumnSum_test;
-
+CV_GpuNormTest CV_GpuNormTest_test;

@@ -86,9 +86,25 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 ////////////////////////////////////////////////////////////////////////
 // norm
 
-double cv::gpu::norm(const GpuMat& src1, int normType)
+double cv::gpu::norm(const GpuMat& src, int normType)
 {
-    return norm(src1, GpuMat(src1.size(), src1.type(), Scalar::all(0.0)), normType);
+    GpuMat src_single_channel = src.reshape(1);
+
+    if (normType == NORM_L1)
+        return absSum(src_single_channel)[0];
+
+    if (normType == NORM_L2)
+        return sqrt(sqrSum(src_single_channel)[0]);
+
+    if (normType == NORM_INF)
+    {
+        double min_val, max_val;
+        minMax(src_single_channel, &min_val, &max_val);
+        return std::max(std::abs(min_val), std::abs(max_val));
+    }
+
+    CV_Error(CV_StsBadArg, "norm: unsupported norm type");
+    return 0;
 }
 
 double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)

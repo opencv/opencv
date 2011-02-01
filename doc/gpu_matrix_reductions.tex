@@ -19,7 +19,7 @@ Returns norm of matrix (or of two matrices difference).
 
 \cvdefCpp{double norm(const GpuMat\& src1, int normType=NORM\_L2);}
 \begin{description}
-\cvarg{src1}{Source matrix. \texttt{CV\_8UC1} matrices are supported for now.}
+\cvarg{src1}{Source matrix. Any matrices except 64F are supported.}
 \cvarg{normType}{Norm type. \texttt{NORM\_L1}, \texttt{NORM\_L2} and \texttt{NORM\_INF} are supported for now.}
 \end{description}
 
