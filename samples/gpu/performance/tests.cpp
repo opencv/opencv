@@ -289,10 +289,10 @@ TEST(BruteForceMatcher)
     BruteForceMatcher< L2<float> > matcher;
 
     Mat query; 
-    gen(query, 3000, desc_len, CV_32F, 0, 10);
+    gen(query, 3000, desc_len, CV_32F, 0, 1);
     
     Mat train; 
-    gen(train, 3000, desc_len, CV_32F, 0, 10);
+    gen(train, 3000, desc_len, CV_32F, 0, 1);
 
     // Init GPU matcher
 
@@ -327,7 +327,7 @@ TEST(BruteForceMatcher)
     GPU_OFF;
 
     SUBTEST << "radiusMatch";
-    float max_distance = 45.0f;
+    float max_distance = 3.8f;
 
     CPU_ON;
     matcher.radiusMatch(query, train, matches, max_distance);
@@ -524,4 +524,133 @@ TEST(Sobel)
         gpu::Sobel(d_src, d_dst, d_dst.depth(), 1, 1);
         GPU_OFF;
     }
+}
+
+
+TEST(cvtColor)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    gen(src, 4000, 4000, CV_8UC1, 0, 255);
+    d_src.upload(src);
+    
+    SUBTEST << "size 4000, CV_GRAY2BGRA";
+    
+    dst.create(src.size(), CV_8UC4);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_GRAY2BGRA, 4);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+    
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
+    GPU_OFF;
+
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
+
+    SUBTEST << "size 4000, CV_BGR2YCrCb";
+    
+    dst.create(src.size(), CV_8UC3);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_BGR2YCrCb);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+        
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
+    GPU_OFF;
+    
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
+
+    SUBTEST << "size 4000, CV_YCrCb2BGR";
+    
+    dst.create(src.size(), CV_8UC4);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_YCrCb2BGR, 4);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+        
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
+    GPU_OFF;
+    
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
+
+    SUBTEST << "size 4000, CV_BGR2XYZ";
+    
+    dst.create(src.size(), CV_8UC3);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_BGR2XYZ);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+        
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
+    GPU_OFF;
+    
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
+
+    SUBTEST << "size 4000, CV_XYZ2BGR";
+    
+    dst.create(src.size(), CV_8UC4);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_XYZ2BGR, 4);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+        
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
+    GPU_OFF;
+    
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
+
+    SUBTEST << "size 4000, CV_BGR2HSV";
+    
+    dst.create(src.size(), CV_8UC3);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_BGR2HSV);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+        
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
+    GPU_OFF;
+    
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
+
+    SUBTEST << "size 4000, CV_HSV2BGR";
+    
+    dst.create(src.size(), CV_8UC4);
+
+    CPU_ON;
+    cvtColor(src, dst, CV_HSV2BGR, 4);
+    CPU_OFF;
+    
+    d_dst.create(d_src.size(), CV_8UC4);
+        
+    GPU_ON;
+    gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
+    GPU_OFF;
+    
+    cv::swap(src, dst);
+    d_src.swap(d_dst);
 }
