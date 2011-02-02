@@ -71,11 +71,7 @@ namespace
 
 CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::GpuFeature feature)
 {
-    if (feature == NATIVE_DOUBLE)
-        return ::compareToSet(CUDA_ARCH_FEATURES, 13, std::greater_equal<int>());
-    if (feature == ATOMICS)
-        return ::compareToSet(CUDA_ARCH_FEATURES, 11, std::greater_equal<int>());
-    return true;
+    return ::compareToSet(CUDA_ARCH_FEATURES, feature, std::greater_equal<int>());
 }
 
 

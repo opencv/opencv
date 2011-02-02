@@ -66,8 +66,14 @@ namespace cv
 
         enum GpuFeature
         {
-            NATIVE_DOUBLE,
-            ATOMICS
+            COMPUTE_10 = 10,
+            COMPUTE_11 = 11,
+            COMPUTE_12 = 12,
+            COMPUTE_13 = 13,
+            COMPUTE_20 = 20,
+            COMPUTE_21 = 21,
+            ATOMICS = COMPUTE_11,
+            NATIVE_DOUBLE = COMPUTE_13
         };
 
         class CV_EXPORTS TargetArchs

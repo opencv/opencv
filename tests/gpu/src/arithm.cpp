@@ -947,6 +947,16 @@ struct CV_GpuSumTest: CvTest
                 // sum
                 //
 
+                gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 1), src);
+                a = sum(src);
+                b = sum(GpuMat(src));
+                if (abs(a[0] - b[0]) > src.size().area() * max_err)
+                {
+                    ts->printf(CvTS::CONSOLE, "1 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+
                 gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 2), src);
                 a = sum(src);
                 b = sum(GpuMat(src));

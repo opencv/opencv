@@ -1394,7 +1394,7 @@ namespace cv { namespace gpu { namespace mathfunc
         smem[tid] = res.x;
         smem[tid + nthreads] = res.y;
         smem[tid + 2 * nthreads] = res.z;
-        smem[tid + 3 * nthreads] = res.z;
+        smem[tid + 3 * nthreads] = res.w;
         __syncthreads();
 
         sumInSmem<nthreads, R>(smem, tid);
@@ -1432,21 +1432,25 @@ namespace cv { namespace gpu { namespace mathfunc
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
         case 2:
             sumKernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
         case 3:
             sumKernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
         case 4:
             sumKernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            break;
         }
         cudaSafeCall(cudaThreadSynchronize());
 
