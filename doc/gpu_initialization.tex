@@ -17,9 +17,23 @@ Sets device and initializes it for the current thread. Call of this function can
 
 
 \cvCppFunc{gpu::getDevice}
-Returns the current device index, which was set by \cvCppCross{gpu::getDevice} or initialized by default.
+Returns the current device index, which was set by {gpu::getDevice} or initialized by default.
 
 \cvdefCpp{int getDevice();}
+
+
+\cvclass{gpu::GpuFeature}\label{cpp.gpu.GpuFeature}
+GPU compute features.
+
+\begin{lstlisting}
+enum GpuFeature
+{
+    COMPUTE_10, COMPUTE_11,
+    COMPUTE_12, COMPUTE_13,
+    COMPUTE_20, COMPUTE_21,
+    ATOMICS, NATIVE_DOUBLE
+};
+\end{lstlisting}
 
 
 \cvclass{gpu::DeviceInfo}
@@ -99,11 +113,7 @@ Returns true if the device has the given GPU feature, otherwise false.
 
 \cvdefCpp{bool DeviceInfo::has(GpuFeature feature);}
 \begin{description}
-\cvarg{feature}{Feature to be checked. Available alternatives:
-\begin{itemize}
-\item NATIVE\_DOUBLE Native double operations support
-\item ATOMICS Atomic operations support
-\end{itemize}}
+\cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.GpuFeature]{gpu::GpuFeature}.}
 \end{description}
 
 
@@ -121,11 +131,7 @@ This class provides functionality (as set of static methods) for checking which 
 The following method checks whether the module was built with the support of the given feature:
 \cvdefCpp{static bool builtWith(GpuFeature feature);}
 \begin{description}
-\cvarg{feature}{Feature to be checked. Available alternatives:
-\begin{itemize}
-\item NATIVE\_DOUBLE Native double operations support
-\item ATOMICS Atomic operations support
-\end{itemize}}
+\cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.GpuFeature]{gpu::GpuFeature}.}
 \end{description}
 
 There are a set of methods for checking whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
