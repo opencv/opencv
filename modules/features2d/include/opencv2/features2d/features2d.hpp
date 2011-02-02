@@ -2273,7 +2273,6 @@ public:
 	
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
 
-    Ptr<flann::Index> flannIndex;
 protected:
     static void convertToDMatches( const DescriptorCollection& descriptors,
                                    const Mat& indices, const Mat& distances,
@@ -2286,7 +2285,7 @@ protected:
 
     Ptr<flann::IndexParams> indexParams;
     Ptr<flann::SearchParams> searchParams;
-    //Ptr<flann::Index> flannIndex;
+    Ptr<flann::Index> flannIndex;
 
     DescriptorCollection mergedDescriptors;
     int addedDescCount;
