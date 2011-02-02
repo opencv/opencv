@@ -65,7 +65,7 @@ protected:
     virtual int test(const Mat& img) = 0;
 
     int CheckNorm(const Mat& m1, const Mat& m2);  
-    int ChechSimilarity(const Mat& m1, const Mat& m2);
+    int CheckSimilarity(const Mat& m1, const Mat& m2, float max_err=1e-3f);
 };
 
 
@@ -118,14 +118,14 @@ int CV_GpuImageProcTest::CheckNorm(const Mat& m1, const Mat& m2)
     }
 }
 
-int CV_GpuImageProcTest::ChechSimilarity(const Mat& m1, const Mat& m2)
+int CV_GpuImageProcTest::CheckSimilarity(const Mat& m1, const Mat& m2, float max_err)
 {
     Mat diff;
     cv::matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
 
     float err = abs(diff.at<float>(0, 0) - 1.f);
 
-    if (err > 1e-3f)
+    if (err > max_err)
         return CvTS::FAIL_INVALID_OUTPUT;
 
     return CvTS::OK;
@@ -263,13 +263,8 @@ struct CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
             cv::gpu::resize(gpu1, gpu_res1, Size(), 2.0, 2.0, interpolations[i]);
             cv::gpu::resize(gpu_res1, gpu_res2, Size(), 0.5, 0.5, interpolations[i]);
 
-            switch (img.depth())
-            {
-            case CV_8U: 
-                if (ChechSimilarity(cpu_res2, gpu_res2) != CvTS::OK)
-                    test_res = CvTS::FAIL_GENERIC;
-                break;
-            }
+            if (CheckSimilarity(cpu_res2, gpu_res2) != CvTS::OK)
+                test_res = CvTS::FAIL_GENERIC;
         }
 
         return test_res;
@@ -346,7 +341,7 @@ struct CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
             GpuMat gpudst;
             cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), flags[i]);
 
-            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+            if (CheckSimilarity(cpudst, gpudst, 3e-3f) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
 
@@ -394,7 +389,7 @@ struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
             GpuMat gpudst;
             cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
 
-            if (CheckNorm(cpudst, gpudst) != CvTS::OK)
+            if (CheckSimilarity(cpudst, gpudst, 3e-3f) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
 
