@@ -64,7 +64,8 @@ protected:
 
     virtual int test(const Mat& img) = 0;
 
-    int CheckNorm(const Mat& m1, const Mat& m2);
+    int CheckNorm(const Mat& m1, const Mat& m2);  
+    int ChechSimilarity(const Mat& m1, const Mat& m2);
 };
 
 
@@ -115,6 +116,19 @@ int CV_GpuImageProcTest::CheckNorm(const Mat& m1, const Mat& m2)
         ts->printf(CvTS::LOG, "Norm: %f\n", ret);
         return CvTS::FAIL_GENERIC;
     }
+}
+
+int CV_GpuImageProcTest::ChechSimilarity(const Mat& m1, const Mat& m2)
+{
+    Mat diff;
+    cv::matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+
+    float err = abs(diff.at<float>(0, 0) - 1.f);
+
+    if (err > 1e-3f)
+        return CvTS::FAIL_INVALID_OUTPUT;
+
+    return CvTS::OK;
 }
 
 void CV_GpuImageProcTest::run( int )
@@ -241,14 +255,21 @@ struct CV_GpuNppImageResizeTest : public CV_GpuImageProcTest
         {
             ts->printf(CvTS::LOG, "Interpolation: %s\n", interpolations_str[i]);
 
-            Mat cpu_res;
-            cv::resize(img, cpu_res, Size(), 0.5, 0.5, interpolations[i]);
+            Mat cpu_res1, cpu_res2;
+            cv::resize(img, cpu_res1, Size(), 2.0, 2.0, interpolations[i]);
+            cv::resize(cpu_res1, cpu_res2, Size(), 0.5, 0.5, interpolations[i]);
 
-            GpuMat gpu1(img), gpu_res;
-            cv::gpu::resize(gpu1, gpu_res, Size(), 0.5, 0.5, interpolations[i]);
+            GpuMat gpu1(img), gpu_res1, gpu_res2;
+            cv::gpu::resize(gpu1, gpu_res1, Size(), 2.0, 2.0, interpolations[i]);
+            cv::gpu::resize(gpu_res1, gpu_res2, Size(), 0.5, 0.5, interpolations[i]);
 
-            if (CheckNorm(cpu_res, gpu_res) != CvTS::OK)
-                test_res = CvTS::FAIL_GENERIC;
+            switch (img.depth())
+            {
+            case CV_8U: 
+                if (ChechSimilarity(cpu_res2, gpu_res2) != CvTS::OK)
+                    test_res = CvTS::FAIL_GENERIC;
+                break;
+            }
         }
 
         return test_res;
