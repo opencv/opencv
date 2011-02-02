@@ -172,6 +172,9 @@
 /* Compile for 'virtual' NVIDIA PTX architectures */
 #define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
 
+/* NVIDIA GPU features are used */
+#define CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES}"
+
 /* Create PTX or BIN for 1.0 compute capability */
 #cmakedefine CUDA_ARCH_BIN_OR_PTX_10
 
