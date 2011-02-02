@@ -3,7 +3,7 @@
 
 \cvclass{gpu::DevMem2D\_}\label{cppfunc.gpu.DevMem2D}
 
-This is a simple lightweight class that encapsulate pitched memory on GPU. It is untented to pass to nvcc-compiled code, i.e. CUDA kernels. Its members can be called both from host and from device code.
+This is a simple lightweight class that encapsulate pitched memory on GPU. It is intended to pass to nvcc-compiled code, i.e. CUDA kernels. So it is used internally by OpenCV and by users writes own device code. Its members can be called both from host and from device code.
 
 \begin{lstlisting}
 template <typename T> struct DevMem2D_
@@ -33,7 +33,7 @@ template <typename T> struct DevMem2D_
 
 \cvclass{gpu::PtrStep\_}\label{cppfunc.gpu.PtrStep}
 
-This is structure is similar toDevMem2D\_ but contains only pointer and row step.  Width and height fields are excluded due to performance reasons.
+This is structure is similar to DevMem2D\_ but contains only pointer and row step. Width and height fields are excluded due to performance reasons. The structure is for internal use or for users who write own device code.
 
 \begin{lstlisting}
 template<typename T> struct PtrStep_
@@ -55,7 +55,7 @@ template<typename T> struct PtrStep_
 \end{lstlisting}
 
 \cvclass{gpu::PtrElemStrp\_}\
-This is structure is similar to DevMem2D\_ but contains only pointer and row step in elements. Width and height fields are excluded due to performance reasons. This class is can only be constructed if sizeof(T) is a multiple of 256.
+This is structure is similar to DevMem2D\_ but contains only pointer and row step in elements. Width and height fields are excluded due to performance reasons. This class is can only be constructed if sizeof(T) is a multiple of 256. The structure is for internal use or for users who write own device code.
 
 \begin{lstlisting}
 template<typename T> struct PtrElemStep_ : public PtrStep_<T>
