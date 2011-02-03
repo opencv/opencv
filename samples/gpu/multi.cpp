@@ -1,3 +1,6 @@
+/* This sample demonstrates the way you can perform independed tasks 
+   on the different GPUs */
+
 // Disable some warnings which are caused with CUDA headers
 #pragma warning(disable: 4201 4408 4100)
 
@@ -34,41 +37,50 @@ using namespace cv::gpu;
 struct Worker { void operator()(int device_id) const; };
 void destroyContexts();
 
-#define cuSafeCall(code) if (code != CUDA_SUCCESS) { \
+#define safeCall(code) if (code != CUDA_SUCCESS) { \
     cout << "CUDA driver API error: code " << code \
         << ", file " << __FILE__ << ", line " << __LINE__ << endl; \
     destroyContexts(); \
     exit(-1); \
 }
 
-
 // Each GPU is associated with its own context
 CUcontext contexts[2];
 
-
 int main()
 {
-    if (getCudaEnabledDeviceCount() < 2)
+    int num_devices = getCudaEnabledDeviceCount();
+
+    if (num_devices < 2)
     {
         cout << "Two or more GPUs are required\n";
         return -1;
     }
 
-    cuSafeCall(cuInit(0));
+    for (int i = 0; i < num_devices; ++i)
+    {
+        if (!DeviceInfo(i).isCompatible())
+        {
+            cout << "GPU module isn't built for GPU #" << i << " (" << DeviceInfo(i).name() << ")";
+            return -1;
+        }
+    }
 
-    // Create context for the first GPU
+    safeCall(cuInit(0));
+
+    // Create context for GPU #0
     CUdevice device;
-    cuSafeCall(cuDeviceGet(&device, 0));
-    cuSafeCall(cuCtxCreate(&contexts[0], 0, device));
+    safeCall(cuDeviceGet(&device, 0));
+    safeCall(cuCtxCreate(&contexts[0], 0, device));
 
     CUcontext prev_context;
-    cuSafeCall(cuCtxPopCurrent(&prev_context));
+    safeCall(cuCtxPopCurrent(&prev_context));
 
-    // Create context for the second GPU
-    cuSafeCall(cuDeviceGet(&device, 1));
-    cuSafeCall(cuCtxCreate(&contexts[1], 0, device));
+    // Create context for GPU #1
+    safeCall(cuDeviceGet(&device, 1));
+    safeCall(cuCtxCreate(&contexts[1], 0, device));
 
-    cuSafeCall(cuCtxPopCurrent(&prev_context));
+    safeCall(cuCtxPopCurrent(&prev_context));
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
@@ -81,8 +93,8 @@ int main()
 
 void Worker::operator()(int device_id) const
 {
-    // Set proper context
-    cuSafeCall(cuCtxPushCurrent(contexts[device_id]));
+    // Set the proper context
+    safeCall(cuCtxPushCurrent(contexts[device_id]));
 
     Mat src(1000, 1000, CV_32F);
     Mat dst;
@@ -93,15 +105,15 @@ void Worker::operator()(int device_id) const
     // CPU works
     transpose(src, dst);
 
+    // GPU works
     GpuMat d_src(src);
     GpuMat d_dst;
-
-    // GPU works
     transpose(d_src, d_dst);
 
     // Check results
     bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
-    cout << "GPU #" << device_id << ": "<< (passed ? "passed" : "FAILED") << endl;
+    cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
+        << (passed ? "passed" : "FAILED") << endl;
 
     // Deallocate data here, otherwise deallocation will be performed
     // after context is extracted from the stack
@@ -109,14 +121,14 @@ void Worker::operator()(int device_id) const
     d_dst.release();
 
     CUcontext prev_context;
-    cuSafeCall(cuCtxPopCurrent(&prev_context));
+    safeCall(cuCtxPopCurrent(&prev_context));
 }
 
 
 void destroyContexts()
 {
-    cuSafeCall(cuCtxDestroy(contexts[0]));
-    cuSafeCall(cuCtxDestroy(contexts[1]));
+    safeCall(cuCtxDestroy(contexts[0]));
+    safeCall(cuCtxDestroy(contexts[1]));
 }
 
 #endif
