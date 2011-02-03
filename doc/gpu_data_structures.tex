@@ -54,7 +54,7 @@ template<typename T> struct PtrStep_
 
 \end{lstlisting}
 
-\cvclass{gpu::PtrElemStrp\_}\
+\cvclass{gpu::PtrElemStrp\_}
 This is structure is similar to DevMem2D\_ but contains only pointer and row step in elements. Width and height fields are excluded due to performance reasons. This class is can only be constructed if sizeof(T) is a multiple of 256. The structure is for internal use or for users who write own device code.
 
 \begin{lstlisting}
