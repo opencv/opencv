@@ -782,18 +782,29 @@ if(WITH_OPENNI)
     unset(OPENNI_LIBRARY CACHE)
     unset(PRIME_SENSOR_MODULES_FOR_OPENNI CACHE)
     find_library(OPENNI_LIBRARY "OpenNI" PATHS "/usr/lib" "c:/Program Files/OpenNI/Lib" DOC "OpenNI library")
-    if(OPENNI_LIBRARY)
+
+	if(OPENNI_LIBRARY)
         set(HAVE_OPENNI TRUE)
+
+        # set OpenNI include directory
+        if(WIN32)
+            set(OPENNI_INCLUDE_DIR "c:/Program Files/OpenNI/Include")
+        elseif(UNIX OR APPLE)
+            set(OPENNI_INCLUDE_DIR "/usr/include/ni")
+        endif()
+
         # the check: are PrimeSensor Modules for OpenNI installed?
-		if(WIN32)
-			find_file(PRIME_SENSOR_MODULES_FOR_OPENNI "XnCore.dll" PATHS "c:/Program Files/Prime Sense/Sensor/Bin" DOC "Core library of PrimeSensor Modules for OpenNI")
-		elseif(UNIX OR APPLE)
-			find_library(PRIME_SENSOR_MODULES_FOR_OPENNI "XnCore" PATHS "/usr/lib" DOC "Core library of PrimeSensor Modules for OpenNI")
-		endif()
-		if(PRIME_SENSOR_MODULES_FOR_OPENNI)
+        if(WIN32)
+            find_file(PRIME_SENSOR_MODULES_FOR_OPENNI "XnCore.dll" PATHS "c:/Program Files/Prime Sense/Sensor/Bin" DOC "Core library of PrimeSensor Modules for OpenNI")
+        elseif(UNIX OR APPLE)
+            find_library(PRIME_SENSOR_MODULES_FOR_OPENNI "XnCore" PATHS "/usr/lib" DOC "Core library of PrimeSensor Modules for OpenNI")
+        endif()
+        if(PRIME_SENSOR_MODULES_FOR_OPENNI)
             set(HAVE_PRIME_SENSOR_FOR_OPENNI TRUE)
         endif()
-    endif()
+
+    endif() #if(OPENNI_LIBRARY)
+
 endif() #if(WITH_OPENNI)
 
 ############################## Eigen2 ##############################

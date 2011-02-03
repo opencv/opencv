@@ -177,12 +177,6 @@ endif()
 #OpenNI
 if(WITH_OPENNI AND HAVE_OPENNI)
     set(highgui_srcs ${highgui_srcs} src/cap_openni.cpp)
-    if(WIN32)
-            set(OPENNI_INCLUDE_DIR "c:/Program Files/OpenNI/Include")
-    elseif(UNIX OR APPLE)
-            set(OPENNI_INCLUDE_DIR "/usr/include/ni")
-    endif()
-
     include_directories(${OPENNI_INCLUDE_DIR})
 endif()
 
