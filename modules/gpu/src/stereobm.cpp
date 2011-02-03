@@ -88,7 +88,7 @@ bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable()
 
     DeviceInfo device_info;
 
-    if (device_info.major() > 1 || device_info.multiProcessorCount() > 16)
+    if (device_info.majorVersion() > 1 || device_info.multiProcessorCount() > 16)
         return true;
 
     return false;

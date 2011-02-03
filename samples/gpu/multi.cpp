@@ -59,9 +59,12 @@ int main()
 
     for (int i = 0; i < num_devices; ++i)
     {
-        if (!DeviceInfo(i).isCompatible())
+        DeviceInfo dev_info(i);
+        if (!dev_info.isCompatible())
         {
-            cout << "GPU module isn't built for GPU #" << i << " (" << DeviceInfo(i).name() << ")";
+            cout << "GPU module isn't built for GPU #" << i << " ("
+                 << dev_info.name() << ", CC " << dev_info.majorVersion()
+                 << dev_info.minorVersion() << "\n";
             return -1;
         }
     }

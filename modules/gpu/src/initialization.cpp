@@ -175,23 +175,20 @@ size_t cv::gpu::DeviceInfo::totalMemory() const
 
 bool cv::gpu::DeviceInfo::has(cv::gpu::GpuFeature feature) const
 {
-    if (feature == NATIVE_DOUBLE)
-        return major() > 1 || (major() == 1 && minor() >= 3);
-    if (feature == ATOMICS)
-        return major() > 1 || (major() == 1 && minor() >= 1);
-    return false;
+    int version = majorVersion() * 10 + minorVersion();
+    return version >= feature;
 }
 
 
 bool cv::gpu::DeviceInfo::isCompatible() const
 {
     // Check PTX compatibility
-    if (TargetArchs::hasEqualOrLessPtx(major(), minor()))
+    if (TargetArchs::hasEqualOrLessPtx(majorVersion(), minorVersion()))
         return true;
 
     // Check BIN compatibility
-    for (int i = minor(); i >= 0; --i)
-        if (TargetArchs::hasBin(major(), i))
+    for (int i = minorVersion(); i >= 0; --i)
+        if (TargetArchs::hasBin(majorVersion(), i))
             return true;
 
     return false;
@@ -204,8 +201,8 @@ void cv::gpu::DeviceInfo::query()
     cudaSafeCall(cudaGetDeviceProperties(&prop, device_id_));
     name_ = prop.name;
     multi_processor_count_ = prop.multiProcessorCount;
-    major_ = prop.major;
-    minor_ = prop.minor;
+    majorVersion_ = prop.major;
+    minorVersion_ = prop.minor;
 }
 
 

@@ -56,7 +56,8 @@ struct CV_GpuMeanShiftTest : public CvTest
         cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "meanshift/cones.png");
         cv::Mat img_template;       
         
-        if (cv::gpu::TargetArchs::builtWith(cv::gpu::COMPUTE_20) && cv::gpu::DeviceInfo().major() >= 2)
+        if (cv::gpu::TargetArchs::builtWith(cv::gpu::COMPUTE_20) &&
+            cv::gpu::DeviceInfo().has(cv::gpu::COMPUTE_20))
             img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result.png");
         else
             img_template = cv::imread(std::string(ts->get_data_path()) + "meanshift/con_result_CC1X.png");
@@ -199,7 +200,8 @@ struct CV_GpuMeanShiftProcTest : public CvTest
             cv::Mat spmap_template;
             cv::FileStorage fs;
 
-            if (cv::gpu::TargetArchs::builtWith(cv::gpu::COMPUTE_20) && cv::gpu::DeviceInfo().major() >= 2)
+            if (cv::gpu::TargetArchs::builtWith(cv::gpu::COMPUTE_20) &&
+                cv::gpu::DeviceInfo().has(cv::gpu::COMPUTE_20))
                 fs.open(std::string(ts->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
             else
                 fs.open(std::string(ts->get_data_path()) + "meanshift/spmap_CC1X.yaml", cv::FileStorage::READ);

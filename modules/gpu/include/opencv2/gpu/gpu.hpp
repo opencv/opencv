@@ -99,8 +99,8 @@ namespace cv
 
             string name() const { return name_; }
 
-            int major() const { return major_; }
-            int minor() const { return minor_; }
+            int majorVersion() const { return majorVersion_; }
+            int minorVersion() const { return minorVersion_; }
 
             int multiProcessorCount() const { return multi_processor_count_; }
 
@@ -118,7 +118,8 @@ namespace cv
 
             string name_;
             int multi_processor_count_;
-            int major_, minor_;
+            int majorVersion_;
+            int minorVersion_;
         };
 
         //////////////////////////////// Error handling ////////////////////////
