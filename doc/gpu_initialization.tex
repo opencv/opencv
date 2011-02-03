@@ -48,8 +48,8 @@ public:
 
     string name() const;
 
-    int major() const;
-    int minor() const;
+    int majorVersion() const;
+    int minorVersion() const;
 
     int multiProcessorCount() const;
 
@@ -78,16 +78,16 @@ Returns the device name.
 \cvdefCpp{string DeviceInfo::name();}
 
 
-\cvCppFunc{gpu::DeviceInfo::major}
+\cvCppFunc{gpu::DeviceInfo::majorVersion}
 Returns the major compute capability version.
 
-\cvdefCpp{int DeviceInfo::major();}
+\cvdefCpp{int DeviceInfo::majorVersion();}
 
 
-\cvCppFunc{gpu::DeviceInfo::minor}
+\cvCppFunc{gpu::DeviceInfo::minorVersion}
 Returns the minor compute capability version.
 
-\cvdefCpp{int DeviceInfo::minor();}
+\cvdefCpp{int DeviceInfo::minorVersion();}
 
 
 \cvCppFunc{gpu::DeviceInfo::multiProcessorCount}
