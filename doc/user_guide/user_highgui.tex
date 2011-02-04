@@ -13,8 +13,7 @@ output can be retrieved by using familiar interface of \texttt{VideoCapture}.\pa
 
 In order to use Kinect with OpenCV you should do the following preliminary steps:\newline
 1) Install OpenNI library and PrimeSensor Module for OpenNI from here \url{http://www.openni.org/downloadfiles}. 
-The installation should be done to default folders listed in the instruc-
-tions of these products:
+The installation should be done to default folders listed in the instructions of these products:
 \begin{lstlisting}
 OpenNI:
 	Linux & MacOSX:
@@ -25,12 +24,13 @@ OpenNI:
 		Includes into: c:/Program Files/OpenNI/Include
 PrimeSensor Module:
 	Linux & MacOSX:
-		Libs into: /usr/lib
 		Bins into: /usr/bin
 	Windows:
-		Libs into: c:/Program Files/Prime Sense/Sensor/Lib
 		Bins into: c:/Program Files/Prime Sense/Sensor/Bin
 \end{lstlisting}
+If one or both products were installed to the other folders, the user should change corresponding CMake variables 
+(\texttt{OPENNI\_LIB\_DIR}, \texttt{OPENNI\_INCLUDE\_DIR} or/and 
+\texttt{OPENNI\_PRIME\_SENSOR\_MODULE\_BIN\_DIR}).\newline
 2) Configure OpenCV with OpenNI support by setting \texttt{WITH\_OPENNI} flag in CMake. If OpenNI
 is found in default install folders OpenCV will be built with OpenNI library regardless of whether
 PrimeSensor Module is found or not. If PrimeSensor Module was not found you will get a warning

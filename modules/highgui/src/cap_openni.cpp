@@ -84,13 +84,15 @@ const std::string XMLConfig =
 class CvCapture_OpenNI : public CvCapture
 {
 public:
+    static const int INVALID_PIXEL_VAL = 0;
+
     CvCapture_OpenNI();
     virtual ~CvCapture_OpenNI();
 
-    virtual double getProperty(int);
-    virtual bool setProperty(int, double);
+    virtual double getProperty(int propIdx);
+    virtual bool setProperty(int probIdx, double propVal);
     virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
+    virtual IplImage* retrieveFrame(int outputType);
 
     bool isOpened() const;
 
@@ -116,10 +118,10 @@ protected:
 
     void readCamerasParams();
 
-    double getDepthGeneratorProperty(int);
-    bool setDepthGeneratorProperty(int, double);
-    double getImageGeneratorProperty(int);
-    bool setImageGeneratorProperty(int, double);
+    double getDepthGeneratorProperty(int propIdx);
+    bool setDepthGeneratorProperty(int propIdx, double propVal);
+    double getImageGeneratorProperty(int propIdx);
+    bool setImageGeneratorProperty(int propIdx, double propVal);
 
     // OpenNI context
     xn::Context context;
@@ -135,12 +137,12 @@ protected:
     XnMapOutputMode imageOutputMode;
 
     // Cameras settings:
-#if 1
+    // TODO find in OpenNI function to convert z->disparity and remove fields "baseline" and depthFocalLength_VGA
     // Distance between IR projector and IR camera (in meters)
     XnDouble baseline;
     // Focal length for the IR camera in VGA resolution (in pixels)
     XnUInt64 depthFocalLength_VGA;
-#endif
+
     // The value for shadow (occluded pixels)
     XnUInt64 shadowValue;
     // The value for pixels without a valid disparity measurement
@@ -230,7 +232,6 @@ CvCapture_OpenNI::~CvCapture_OpenNI()
 
 void CvCapture_OpenNI::readCamerasParams()
 {
-#if 1
     XnDouble pixelSize = 0;
     if( depthGenerator.GetRealProperty( "ZPPS", pixelSize ) != XN_STATUS_OK )
         CV_Error( CV_StsError, "Could not read pixel size!" );
@@ -239,8 +240,8 @@ void CvCapture_OpenNI::readCamerasParams()
     pixelSize *= 2.0; // in mm
 
     // focal length of IR camera in pixels for VGA resolution
-    XnUInt64 zpd; // in mm
-    if( depthGenerator.GetIntProperty( "ZPD", zpd ) != XN_STATUS_OK )
+    XnUInt64 zeroPlanDistance; // in mm
+    if( depthGenerator.GetIntProperty( "ZPD", zeroPlanDistance ) != XN_STATUS_OK )
         CV_Error( CV_StsError, "Could not read virtual plane distance!" );
 
     if( depthGenerator.GetRealProperty( "LDDIS", baseline ) != XN_STATUS_OK )
@@ -250,14 +251,13 @@ void CvCapture_OpenNI::readCamerasParams()
     baseline *= 10;
 
     // focal length from mm -> pixels (valid for 640x480)
-    depthFocalLength_VGA = (XnUInt64)((double)zpd / (double)pixelSize);
-#endif
+    depthFocalLength_VGA = (XnUInt64)((double)zeroPlanDistance / (double)pixelSize);
 
     if( depthGenerator.GetIntProperty( "ShadowValue", shadowValue ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read shadow value!" );
+        CV_Error( CV_StsError, "Could not read property \"ShadowValue\"!" );
 
     if( depthGenerator.GetIntProperty("NoSampleValue", noSampleValue ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read no sample value!" );
+        CV_Error( CV_StsError, "Could not read property \"NoSampleValue\"!" );
 }
 
 double CvCapture_OpenNI::getProperty( int propIdx )
@@ -266,13 +266,19 @@ double CvCapture_OpenNI::getProperty( int propIdx )
 
     if( isOpened() )
     {
-        if( propIdx & OPENNI_IMAGE_GENERATOR )
+        int purePropIdx = propIdx & ~CV_CAP_OPENNI_GENERATORS_MASK;
+
+        if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_IMAGE_GENERATOR )
         {
-            propValue = getImageGeneratorProperty( propIdx ^ OPENNI_IMAGE_GENERATOR );
+            propValue = getImageGeneratorProperty( purePropIdx );
         }
-        else // depth generator (by default, OPENNI_DEPTH_GENERATOR == 0)
+        else if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_DEPTH_GENERATOR )
         {
-            propValue = getDepthGeneratorProperty( propIdx /*^ OPENNI_DEPTH_GENERATOR*/ );
+            propValue = getDepthGeneratorProperty( purePropIdx );
+        }
+        else
+        {
+            CV_Error( CV_StsError, "Unsupported generator prefix!" );
         }
     }
 
@@ -284,13 +290,19 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
     bool res = false;
     if( isOpened() )
     {
-        if( propIdx & OPENNI_IMAGE_GENERATOR )
+        int purePropIdx = propIdx & ~CV_CAP_OPENNI_GENERATORS_MASK;
+
+        if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_IMAGE_GENERATOR )
         {
-            res = setImageGeneratorProperty( propIdx ^ OPENNI_IMAGE_GENERATOR, propValue );
+            res = setImageGeneratorProperty( purePropIdx, propValue );
         }
-        else // depth generator (by default, OPENNI_DEPTH_GENERATOR == 0)
+        else if( (propIdx & CV_CAP_OPENNI_GENERATORS_MASK) == CV_CAP_OPENNI_DEPTH_GENERATOR )
         {
-            res = setDepthGeneratorProperty( propIdx /*^ OPENNI_DEPTH_GENERATOR*/, propValue );
+            res = setDepthGeneratorProperty( purePropIdx, propValue );
+        }
+        else
+        {
+            CV_Error( CV_StsError, "Unsupported generator prefix!" );
         }
     }
 
@@ -313,13 +325,13 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
     case CV_CAP_PROP_FPS :
         res = depthOutputMode.nFPS;
         break;
-    case OPENNI_FRAME_MAX_DEPTH :
+    case CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH :
         res = depthGenerator.GetDeviceMaxDepth();
         break;
-    case OPENNI_BASELINE :
+    case CV_CAP_PROP_OPENNI_BASELINE :
         res = baseline;
         break;
-    case OPENNI_FOCAL_LENGTH :
+    case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
         res = depthFocalLength_VGA;
         break;
     default :
@@ -333,6 +345,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
 {
     CV_Assert( depthGenerator.IsValid() );
     CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for setting.\n");
+    return false;
 }
 
 double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
@@ -366,15 +379,15 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
     XnMapOutputMode newImageOutputMode = imageOutputMode;
     switch( propIdx )
     {
-    case OPENNI_OUTPUT_MODE :
+    case CV_CAP_PROP_OPENNI_OUTPUT_MODE :
         switch( cvRound(propValue) )
         {
-        case OPENNI_VGA_30HZ :
+        case CV_CAP_OPENNI_VGA_30HZ :
             newImageOutputMode.nXRes = XN_VGA_X_RES;
             newImageOutputMode.nYRes = XN_VGA_Y_RES;
             newImageOutputMode.nFPS = 30;
             break;
-        case OPENNI_SXGA_15HZ :
+        case CV_CAP_OPENNI_SXGA_15HZ :
             newImageOutputMode.nXRes = XN_SXGA_X_RES;
             newImageOutputMode.nYRes = XN_SXGA_Y_RES;
             newImageOutputMode.nFPS = 15;
@@ -402,7 +415,7 @@ bool CvCapture_OpenNI::grabFrame()
     if( !isOpened() )
         return false;
 
-    XnStatus status = context.WaitAnyUpdateAll();
+    XnStatus status = context.WaitAndUpdateAll();
     if( status != XN_STATUS_OK )
         return false;
 
@@ -426,7 +439,7 @@ inline void getDepthMapFromMetaData( const xn::DepthMetaData& depthMetaData, cv:
     cv::Mat badMask = (depthMap == noSampleValue) | (depthMap == shadowValue) | (depthMap == 0);
 
     // mask the pixels with invalid depth
-    depthMap.setTo( cv::Scalar::all( OPENNI_BAD_DEPTH_VAL ), badMask );
+    depthMap.setTo( cv::Scalar::all( CvCapture_OpenNI::INVALID_PIXEL_VAL ), badMask );
 }
 
 IplImage* CvCapture_OpenNI::retrieveDepthMap()
@@ -434,9 +447,9 @@ IplImage* CvCapture_OpenNI::retrieveDepthMap()
     if( depthMetaData.XRes() <= 0 || depthMetaData.YRes() <= 0 )
         return 0;
 
-    getDepthMapFromMetaData( depthMetaData, outputMaps[OPENNI_DEPTH_MAP].mat, noSampleValue, shadowValue );
+    getDepthMapFromMetaData( depthMetaData, outputMaps[CV_CAP_OPENNI_DEPTH_MAP].mat, noSampleValue, shadowValue );
 
-    return outputMaps[OPENNI_DEPTH_MAP].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_DEPTH_MAP].getIplImagePtr();
 }
 
 IplImage* CvCapture_OpenNI::retrievePointCloudMap()
@@ -449,7 +462,7 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
 
     const float badPoint = 0;
-    cv::Mat XYZ( rows, cols, CV_32FC3, cv::Scalar::all(badPoint) );
+    cv::Mat pointCloud_XYZ( rows, cols, CV_32FC3, cv::Scalar::all(badPoint) );
 
     for( int y = 0; y < rows; y++ )
     {
@@ -458,7 +471,7 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
 
             unsigned short d = depth.at<unsigned short>(y, x);
             // Check for invalid measurements
-            if( d == OPENNI_BAD_DEPTH_VAL ) // not valid
+            if( d == CvCapture_OpenNI::INVALID_PIXEL_VAL ) // not valid
                 continue;
 
             XnPoint3D proj, real;
@@ -466,13 +479,13 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
             proj.Y = y;
             proj.Z = d;
             depthGenerator.ConvertProjectiveToRealWorld(1, &proj, &real);
-            XYZ.at<cv::Point3f>(y,x) = cv::Point3f( real.X*0.001f, real.Y*0.001f, real.Z*0.001f); // from mm to meters
+            pointCloud_XYZ.at<cv::Point3f>(y,x) = cv::Point3f( real.X*0.001f, real.Y*0.001f, real.Z*0.001f); // from mm to meters
         }
     }
 
-    outputMaps[OPENNI_POINT_CLOUD_MAP].mat = XYZ;
+    outputMaps[CV_CAP_OPENNI_POINT_CLOUD_MAP].mat = pointCloud_XYZ;
 
-    return outputMaps[OPENNI_POINT_CLOUD_MAP].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_POINT_CLOUD_MAP].getIplImagePtr();
 }
 
 void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp, XnDouble baseline, XnUInt64 F, 
@@ -488,13 +501,13 @@ void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp
     float mult = baseline /*mm*/ * F /*pixels*/;
     
     disp.create( depth.size(), CV_32FC1);
-    disp = cv::Scalar::all( OPENNI_BAD_DISP_VAL );
+    disp = cv::Scalar::all( CvCapture_OpenNI::INVALID_PIXEL_VAL );
     for( int y = 0; y < disp.rows; y++ )
     {
         for( int x = 0; x < disp.cols; x++ )
         {
             unsigned short curDepth = depth.at<unsigned short>(y,x);
-            if( curDepth != OPENNI_BAD_DEPTH_VAL )
+            if( curDepth != CvCapture_OpenNI::INVALID_PIXEL_VAL )
                 disp.at<float>(y,x) = mult / curDepth;
         }
     }
@@ -508,9 +521,9 @@ IplImage* CvCapture_OpenNI::retrieveDisparityMap()
     cv::Mat disp32;
     computeDisparity_32F( depthMetaData, disp32, baseline, depthFocalLength_VGA, noSampleValue, shadowValue );
 
-    disp32.convertTo( outputMaps[OPENNI_DISPARITY_MAP].mat, CV_8UC1 );
+    disp32.convertTo( outputMaps[CV_CAP_OPENNI_DISPARITY_MAP].mat, CV_8UC1 );
     
-    return outputMaps[OPENNI_DISPARITY_MAP].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_DISPARITY_MAP].getIplImagePtr();
 }
 
 IplImage* CvCapture_OpenNI::retrieveDisparityMap_32F()
@@ -518,9 +531,9 @@ IplImage* CvCapture_OpenNI::retrieveDisparityMap_32F()
     if( depthMetaData.XRes() <= 0 || depthMetaData.YRes() <= 0 )
         return 0;
 
-    computeDisparity_32F( depthMetaData, outputMaps[OPENNI_DISPARITY_MAP_32F].mat, baseline, depthFocalLength_VGA, noSampleValue, shadowValue );
+    computeDisparity_32F( depthMetaData, outputMaps[CV_CAP_OPENNI_DISPARITY_MAP_32F].mat, baseline, depthFocalLength_VGA, noSampleValue, shadowValue );
 
-    return outputMaps[OPENNI_DISPARITY_MAP_32F].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_DISPARITY_MAP_32F].getIplImagePtr();
 }
 
 IplImage* CvCapture_OpenNI::retrieveValidDepthMask()
@@ -531,9 +544,9 @@ IplImage* CvCapture_OpenNI::retrieveValidDepthMask()
     cv::Mat depth;
     getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
 
-    outputMaps[OPENNI_VALID_DEPTH_MASK].mat = depth != OPENNI_BAD_DEPTH_VAL;
+    outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].mat = depth != CvCapture_OpenNI::INVALID_PIXEL_VAL;
     
-    return outputMaps[OPENNI_VALID_DEPTH_MASK].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].getIplImagePtr();
 }
 
 inline void getBGRImageFromMetaData( const xn::ImageMetaData& imageMetaData, cv::Mat& bgrImage )
@@ -555,9 +568,9 @@ IplImage* CvCapture_OpenNI::retrieveBGRImage()
     if( imageMetaData.XRes() <= 0 || imageMetaData.YRes() <= 0 )
         return 0;
 
-    getBGRImageFromMetaData( imageMetaData, outputMaps[OPENNI_BGR_IMAGE].mat );
+    getBGRImageFromMetaData( imageMetaData, outputMaps[CV_CAP_OPENNI_BGR_IMAGE].mat );
 
-    return outputMaps[OPENNI_BGR_IMAGE].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_BGR_IMAGE].getIplImagePtr();
 }
 
 IplImage* CvCapture_OpenNI::retrieveGrayImage()
@@ -569,41 +582,41 @@ IplImage* CvCapture_OpenNI::retrieveGrayImage()
 
     cv::Mat rgbImage;
     getBGRImageFromMetaData( imageMetaData, rgbImage );
-    cv::cvtColor( rgbImage, outputMaps[OPENNI_GRAY_IMAGE].mat, CV_BGR2GRAY );
+    cv::cvtColor( rgbImage, outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].mat, CV_BGR2GRAY );
 
-    return outputMaps[OPENNI_GRAY_IMAGE].getIplImagePtr();
+    return outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].getIplImagePtr();
 }
 
-IplImage* CvCapture_OpenNI::retrieveFrame( int dataType )
+IplImage* CvCapture_OpenNI::retrieveFrame( int outputType )
 {
     IplImage* image = 0;
-    CV_Assert( dataType < outputTypesCount && dataType >= 0);
+    CV_Assert( outputType < outputTypesCount && outputType >= 0);
 
-    if( dataType == OPENNI_DEPTH_MAP )
+    if( outputType == CV_CAP_OPENNI_DEPTH_MAP )
     {
         image = retrieveDepthMap();
     }
-    else if( dataType == OPENNI_POINT_CLOUD_MAP )
+    else if( outputType == CV_CAP_OPENNI_POINT_CLOUD_MAP )
     {
         image = retrievePointCloudMap();
     }
-    else if( dataType == OPENNI_DISPARITY_MAP )
+    else if( outputType == CV_CAP_OPENNI_DISPARITY_MAP )
     {
         image = retrieveDisparityMap();
     }
-    else if( dataType == OPENNI_DISPARITY_MAP_32F )
+    else if( outputType == CV_CAP_OPENNI_DISPARITY_MAP_32F )
     {
         image = retrieveDisparityMap_32F();
     }
-    else if( dataType == OPENNI_VALID_DEPTH_MASK )
+    else if( outputType == CV_CAP_OPENNI_VALID_DEPTH_MASK )
     {
         image = retrieveValidDepthMask();
     }
-    else if( dataType == OPENNI_BGR_IMAGE )
+    else if( outputType == CV_CAP_OPENNI_BGR_IMAGE )
     {
         image = retrieveBGRImage();
     }
-    else if( dataType == OPENNI_GRAY_IMAGE )
+    else if( outputType == CV_CAP_OPENNI_GRAY_IMAGE )
     {
         image = retrieveGrayImage();
     }
