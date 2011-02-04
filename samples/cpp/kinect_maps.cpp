@@ -95,7 +95,9 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
 {
     // set defaut values
     isColorizeDisp = true;
+    isFixedMaxDisp = false;
     isSetSXGA = false;
+
     retrievedImageFlags[0] = false;
     retrievedImageFlags[1] = true;
     retrievedImageFlags[2] = false;
@@ -110,7 +112,7 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
     {
         for( int i = 1; i < argc; i++ )
         {
-            if( !strcmp( argv[i], "--help" ) )
+            if( !strcmp( argv[i], "--help" ) || !strcmp( argv[i], "-h" ) )
             {
                 printCommandLineParams();
                 exit(0);
@@ -147,6 +149,11 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
                     cout << "No one output image is selected." << endl;
                     exit(0);
                 }
+            }
+            else
+            {
+                cout << "Unsupported command line argument: " << argv[i] << "." << endl;
+                exit(-1);
             }
         }
     }
