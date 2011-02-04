@@ -14,10 +14,12 @@ if (BUILD_EXAMPLES)
         "${CMAKE_SOURCE_DIR}/modules/legacy/include"
         "${CMAKE_SOURCE_DIR}/modules/contrib/include"
         "${CMAKE_SOURCE_DIR}/modules/gpu/include"
+		"${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia"
+		"${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )   
     
     if(HAVE_CUDA)
-        include_directories(${CUDA_INCLUDE_DIRS})
+        include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core)
     endif()
 
     if(CMAKE_COMPILER_IS_GNUCXX)

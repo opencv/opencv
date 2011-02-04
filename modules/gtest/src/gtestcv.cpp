@@ -1378,7 +1378,7 @@ cmpEpsFlt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff, size_t 
     {
         _Tp a = src1[i], b = src2[i];
         if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
-        _Tp d = std::abs(a - b);
+        _Tp d = std::abs(double(a - b));
         if( d > imaxdiff )
         {
             idx = i + startidx;

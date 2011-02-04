@@ -3,12 +3,15 @@
 # ----------------------------------------------------------------------------
 project(opencv_test_gpu)
 
+set(the_target "opencv_test_gpu")
+
 file(GLOB test_srcs "src/*.cpp")
-source_group("Src" FILES ${test_srcs})
 file(GLOB test_hdrs "src/*.h*")
+source_group("Src" FILES ${test_srcs})
 source_group("Include" FILES ${test_hdrs})
 
-set(the_target "opencv_test_gpu")
+
+
 
 include_directories	(
 			"${CMAKE_SOURCE_DIR}/include/opencv"
@@ -26,11 +29,21 @@ include_directories	(
 			"${CMAKE_SOURCE_DIR}/modules/ml/include"
 			"${CMAKE_CURRENT_SOURCE_DIR}/src"
 			"${CMAKE_CURRENT_BINARY_DIR}"
+			"${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia"
+			"${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core"
 			)
 
 include_directories(../cxts)
 
-add_executable(${the_target} ${test_srcs} ${test_hdrs})
+if(HAVE_CUDA)
+	include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
+	
+	file(GLOB nvidia "src/nvidia/*.*")
+	SET(ncv_cpp ../../modules/gpu/src/nvidia/core/NCV.cpp)
+	source_group("Src\\nvidia" FILES ${nvidia})
+endif()
+
+add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia} ${ncv_cpp})
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES

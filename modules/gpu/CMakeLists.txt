@@ -36,10 +36,12 @@ file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
 
 if (HAVE_CUDA AND MSVC)
-    file(GLOB ncv_srcs "src/nvidia/*.cpp")
-	file(GLOB ncv_hdrs "src/nvidia/*.h*")
-	file(GLOB ncv_cuda "src/nvidia/*.cu")
-	source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
+    file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
+	file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")	
+	file(GLOB_RECURSE ncv_hdr1 "src/nvidia/*.hpp")	
+	file(GLOB_RECURSE ncv_hdr2 "src/nvidia/*.h")	
+	source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdr1} ${ncv_hdr2} ${ncv_cuda})	
+	include_directories("src/nvidia/core" "src/nvidia/NPP_staging")
 endif()
 
 if (HAVE_CUDA)		
@@ -74,17 +76,13 @@ if (HAVE_CUDA)
 		string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 		string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 		string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-	endif()
-   
-
-    include(FindNPP_staging.cmake)
-    include_directories(${NPPST_INC})   
+	endif()     
     
 	CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
 	#CUDA_BUILD_CLEAN_TARGET()
 endif()
 
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
+add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdr1} ${ncv_hdr2} ${ncv_cuda} ${cuda_objs})
 
 if(PCHSupport_FOUND)
 	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
@@ -117,8 +115,7 @@ set_target_properties(${the_target} PROPERTIES
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
 if (HAVE_CUDA)
-	target_link_libraries(${the_target} ${CUDA_LIBRARIES} ${CUDA_NPP_LIBRARIES})
-    target_link_libraries(${the_target} ${NPPST_LIB})
+	target_link_libraries(${the_target} ${CUDA_LIBRARIES} ${CUDA_NPP_LIBRARIES})    
     CUDA_ADD_CUFFT_TO_TARGET(${the_target})
 endif()
 

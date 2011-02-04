@@ -1,67 +1,31 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2009-2010, NVIDIA Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
-
+#pragma warning( disable : 4201 4408 4127 4100)
 #include <cstdio>
+
+#include "cvconfig.h"
+#if !defined(HAVE_CUDA)
+	int main( int argc, const char** argv ) { return printf("Please compile the librarary with CUDA support."), -1; }
+#else
+
+
 #include <cuda_runtime.h>
-
-#define CV_NO_BACKWARD_COMPATIBILITY
-
 #include "opencv2/opencv.hpp"
-
 #include "NCVHaarObjectDetection.hpp"
 
+
+
 using namespace cv;
-using namespace std;
 
-const Size preferredVideoFrameSize(640, 480);
 
-string preferredClassifier = "haarcascade_frontalface_alt.xml";
-string wndTitle = "NVIDIA Computer Vision SDK :: Face Detection in Video Feed";
+const Size2i preferredVideoFrameSize(640, 480);
+
+std::string preferredClassifier = "haarcascade_frontalface_alt.xml";
+std::string wndTitle = "NVIDIA Computer Vision SDK :: Face Detection in Video Feed";
 
 
 void printSyntax(void)
 {
     printf("Syntax: FaceDetectionFeed.exe [-c cameranum | -v filename] classifier.xml\n");
 }
-
 
 void imagePrintf(Mat& img, int lineOffsY, Scalar color, const char *format, ...)
 {    
@@ -83,7 +47,6 @@ void imagePrintf(Mat& img, int lineOffsY, Scalar color, const char *format, ...)
     va_end(arg_ptr);    
 }
 
-
 NCVStatus process(Mat *srcdst,
                   Ncv32u width, Ncv32u height,
                   NcvBool bShowAllHypotheses, NcvBool bLargestFace,
@@ -104,15 +67,16 @@ NCVStatus process(Mat *srcdst,
     ncvAssertReturn(d_src.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
     NCVMatrixAlloc<Ncv8u> h_src(cpuAllocator, width, height);
     ncvAssertReturn(h_src.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
-    NCVVectorAlloc<NcvRect32u> d_rects(gpuAllocator, 100);        
+    NCVVectorAlloc<NcvRect32u> d_rects(gpuAllocator, 100);
     ncvAssertReturn(d_rects.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-    Mat h_src_hdr(Size(width, height), CV_8U, h_src.ptr(), h_src.stride());
+    NCV_SKIP_COND_BEGIN
 
-    NCV_SKIP_COND_BEGIN        
-    
-    (*srcdst).copyTo(h_src_hdr);
-    
+    for (Ncv32u i=0; i<(Ncv32u)srcdst->rows; i++)
+    {
+        memcpy(h_src.ptr() + i * h_src.stride(), srcdst->ptr(i), srcdst->cols);
+    }
+
     ncvStat = h_src.copySolid(d_src, 0);
     ncvAssertReturnNcvStat(ncvStat);
     ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
@@ -130,8 +94,9 @@ NCVStatus process(Mat *srcdst,
         haar.ClassifierSize,
         bShowAllHypotheses ? 0 : 4,
         1.2f, 1,
-        (bLargestFace ? NCVPipeObjDet_FindLargestObject : 0) | NCVPipeObjDet_VisualizeInPlace,
-        gpuAllocator, cpuAllocator, devProp.major, devProp.minor, 0);
+        (bLargestFace ? NCVPipeObjDet_FindLargestObject : 0)
+        | NCVPipeObjDet_VisualizeInPlace,
+        gpuAllocator, cpuAllocator, devProp, 0);
     ncvAssertReturnNcvStat(ncvStat);
     ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
 
@@ -141,13 +106,15 @@ NCVStatus process(Mat *srcdst,
     ncvAssertReturnNcvStat(ncvStat);
     ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
 
-    h_src_hdr.copyTo(*srcdst);
-    
+    for (Ncv32u i=0; i<(Ncv32u)srcdst->rows; i++)
+    {
+        memcpy(srcdst->ptr(i), h_src.ptr() + i * h_src.stride(), srcdst->cols);
+    }
+
     NCV_SKIP_COND_END
 
     return NCV_SUCCESS;
 }
-
 
 int main( int argc, const char** argv )
 {
@@ -160,14 +127,19 @@ int main( int argc, const char** argv )
     printf("  Space - Switch between NCV and OpenCV\n");
     printf("  L     - Switch between FullSearch and LargestFace modes\n");
     printf("  U     - Toggle unfiltered hypotheses visualization in FullSearch\n");
-    
-    if (argc != 4 && argc != 1)
-        return printSyntax(), -1;
-
+	
     VideoCapture capture;    
-    Size frameSize;
+    bool bQuit = false;
 
-    if (argc == 1 || strcmp(argv[1], "-c") == 0)
+    Size2i frameSize;
+
+    if (argc != 4 && argc != 1)
+    {
+        printSyntax();
+        return -1;
+    }
+
+   if (argc == 1 || strcmp(argv[1], "-c") == 0)
     {
         // Camera input is specified
         int camIdx = (argc == 3) ? atoi(argv[2]) : 0;
@@ -192,14 +164,26 @@ int main( int argc, const char** argv )
         return printSyntax(), -1;
 
     NcvBool bUseOpenCV = true;
-    NcvBool bLargestFace = true;
-    NcvBool bShowAllHypotheses = false;    
+    NcvBool bLargestFace = false; //LargestFace=true is used usually during training
+    NcvBool bShowAllHypotheses = false;
 
-    string classifierFile = (argc == 1) ? preferredClassifier : argv[3];
-    
     CascadeClassifier classifierOpenCV;
+    std::string classifierFile;
+    if (argc == 1)
+    {
+        classifierFile = preferredClassifier;
+    }
+    else
+    {
+        classifierFile.assign(argv[3]);
+    }
+
     if (!classifierOpenCV.load(classifierFile))
-        return printf("Error (in OpenCV) opening classifier\n"), printSyntax(), -1;
+    {
+        printf("Error (in OpenCV) opening classifier\n");
+        printSyntax();
+        return -1;
+    }
 
     int devId;
     ncvAssertCUDAReturn(cudaGetDevice(&devId), -1);
@@ -214,9 +198,9 @@ int main( int argc, const char** argv )
     //
     //==============================================================================
 
-    NCVMemNativeAllocator gpuCascadeAllocator(NCVMemoryTypeDevice);
+    NCVMemNativeAllocator gpuCascadeAllocator(NCVMemoryTypeDevice, devProp.textureAlignment);
     ncvAssertPrintReturn(gpuCascadeAllocator.isInitialized(), "Error creating cascade GPU allocator", -1);
-    NCVMemNativeAllocator cpuCascadeAllocator(NCVMemoryTypeHostPinned);
+    NCVMemNativeAllocator cpuCascadeAllocator(NCVMemoryTypeHostPinned, devProp.textureAlignment);
     ncvAssertPrintReturn(cpuCascadeAllocator.isInitialized(), "Error creating cascade CPU allocator", -1);
 
     Ncv32u haarNumStages, haarNumNodes, haarNumFeatures;
@@ -278,32 +262,36 @@ int main( int argc, const char** argv )
     // Main processing loop
     //
     //==============================================================================
-    
-    namedWindow(wndTitle, 1);
 
+	namedWindow(wndTitle, 1);
     Mat frame, gray, frameDisp;
 
-    for(;;)
+    do
     {
-        // For camera and video file, capture the next image                
+		// For camera and video file, capture the next image                
         capture >> frame;
         if (frame.empty())
             break;
-                
+
+        Mat gray;
         cvtColor(frame, gray, CV_BGR2GRAY);
 
+        //
         // process
+        //
+
         NcvSize32u minSize = haar.ClassifierSize;
         if (bLargestFace)
         {
             Ncv32u ratioX = preferredVideoFrameSize.width / minSize.width;
             Ncv32u ratioY = preferredVideoFrameSize.height / minSize.height;
             Ncv32u ratioSmallest = std::min(ratioX, ratioY);
-            ratioSmallest = (Ncv32u)std::max(ratioSmallest / 2.5f, 1.f);
+            ratioSmallest = std::max((Ncv32u)(ratioSmallest / 2.5f), (Ncv32u)1);
             minSize.width *= ratioSmallest;
             minSize.height *= ratioSmallest;
         }
-        
+
+        Ncv32f avgTime;
         NcvTimer timer = ncvStartTimer();
 
         if (!bUseOpenCV)
@@ -324,15 +312,16 @@ int main( int argc, const char** argv )
                 rectsOpenCV,
                 1.2f,
                 bShowAllHypotheses && !bLargestFace ? 0 : 4,
-                (bLargestFace ? CV_HAAR_FIND_BIGGEST_OBJECT : 0) | CV_HAAR_SCALE_IMAGE,
+                (bLargestFace ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
+                | CV_HAAR_SCALE_IMAGE,
                 Size(minSize.width, minSize.height));
 
             for (size_t rt = 0; rt < rectsOpenCV.size(); ++rt)
                 rectangle(gray, rectsOpenCV[rt], Scalar(255));
         }
 
-        Ncv32f avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
-        
+        avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
+
         cvtColor(gray, frameDisp, CV_GRAY2BGR);
 
         imagePrintf(frameDisp, 0, CV_RGB(255,  0,0), "Space - Switch NCV%s / OpenCV%s", bUseOpenCV?"":" (ON)", bUseOpenCV?" (ON)":"");
@@ -347,16 +336,25 @@ int main( int argc, const char** argv )
         case ' ':
             bUseOpenCV = !bUseOpenCV;
             break;
-        case 'L':case 'l':
+        case 'L':
+        case 'l':
             bLargestFace = !bLargestFace;
             break;
-        case 'U':case 'u':
+        case 'U':
+        case 'u':
             bShowAllHypotheses = !bShowAllHypotheses;
             break;
         case 27:
-            return 0;            
+            bQuit = true;
+            break;
         }
-    }
-        
+
+    } while (!bQuit);
+
+    cvDestroyWindow(wndTitle.c_str());
+
     return 0;
 }
+
+
+#endif

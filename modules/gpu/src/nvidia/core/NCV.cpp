@@ -40,15 +40,13 @@
 //M*/
 
 
-#include <precomp.hpp>
-
-
 #if !defined (HAVE_CUDA)
 
 
 #else /* !defined (HAVE_CUDA) */
 
 
+#include <ios>
 #include <stdarg.h>
 #include "NCV.hpp"
 
@@ -92,17 +90,6 @@ void ncvSetDebugOutputHandler(NCVDebugOutputHandler *func)
 // Memory wrappers and helpers
 //
 //==============================================================================
-
-
-NCVStatus GPUAlignmentValue(Ncv32u &alignment)
-{
-    int curDev;
-    cudaDeviceProp curProp;
-    ncvAssertCUDAReturn(cudaGetDevice(&curDev), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaGetDeviceProperties(&curProp, curDev), NCV_CUDA_ERROR);
-    alignment = curProp.textureAlignment; //GPUAlignmentValue(curProp.major);
-    return NCV_SUCCESS;
-}
 
 
 Ncv32u alignUp(Ncv32u what, Ncv32u alignment)
@@ -216,7 +203,7 @@ NCVMemStackAllocator::NCVMemStackAllocator(Ncv32u alignment)
 }
 
 
-NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, Ncv32u alignment)
+NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, Ncv32u alignment, void *reusePtr)
     :
     currentSize(0),
     _maxSize(0),
@@ -229,17 +216,26 @@ NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, 
 
     allocBegin = NULL;
 
-    switch (memT)
+    if (reusePtr == NULL)
     {
-    case NCVMemoryTypeDevice:
-        ncvAssertCUDAReturn(cudaMalloc(&allocBegin, capacity), );
-        break;
-    case NCVMemoryTypeHostPinned:
-        ncvAssertCUDAReturn(cudaMallocHost(&allocBegin, capacity), );
-        break;
-    case NCVMemoryTypeHostPageable:
-        allocBegin = (Ncv8u *)malloc(capacity);
-        break;
+        bReusesMemory = false;
+        switch (memT)
+        {
+        case NCVMemoryTypeDevice:
+            ncvAssertCUDAReturn(cudaMalloc(&allocBegin, capacity), );
+            break;
+        case NCVMemoryTypeHostPinned:
+            ncvAssertCUDAReturn(cudaMallocHost(&allocBegin, capacity), );
+            break;
+        case NCVMemoryTypeHostPageable:
+            allocBegin = (Ncv8u *)malloc(capacity);
+            break;
+        }
+    }
+    else
+    {
+        bReusesMemory = true;
+        allocBegin = (Ncv8u *)reusePtr;
     }
 
     if (capacity == 0)
@@ -260,18 +256,23 @@ NCVMemStackAllocator::~NCVMemStackAllocator()
     if (allocBegin != NULL)
     {
         ncvAssertPrintCheck(currentSize == 0, "NCVMemStackAllocator dtor:: not all objects were deallocated properly, forcing destruction");
-        switch (_memType)
+
+        if (!bReusesMemory)
         {
-        case NCVMemoryTypeDevice:
-            ncvAssertCUDAReturn(cudaFree(allocBegin), );
-            break;
-        case NCVMemoryTypeHostPinned:
-            ncvAssertCUDAReturn(cudaFreeHost(allocBegin), );
-            break;
-        case NCVMemoryTypeHostPageable:
-            free(allocBegin);
-            break;
+            switch (_memType)
+            {
+            case NCVMemoryTypeDevice:
+                ncvAssertCUDAReturn(cudaFree(allocBegin), );
+                break;
+            case NCVMemoryTypeHostPinned:
+                ncvAssertCUDAReturn(cudaFreeHost(allocBegin), );
+                break;
+            case NCVMemoryTypeHostPageable:
+                free(allocBegin);
+                break;
+            }
         }
+
         allocBegin = NULL;
     }
 }
@@ -356,14 +357,14 @@ size_t NCVMemStackAllocator::maxSize(void) const
 //===================================================================
 
 
-NCVMemNativeAllocator::NCVMemNativeAllocator(NCVMemoryType memT)
+NCVMemNativeAllocator::NCVMemNativeAllocator(NCVMemoryType memT, Ncv32u alignment)
     :
     currentSize(0),
     _maxSize(0),
-    _memType(memT)
+    _memType(memT),
+    _alignment(alignment)
 {
     ncvAssertPrintReturn(memT != NCVMemoryTypeNone, "NCVMemNativeAllocator ctor:: counting not permitted for this allocator type", );
-    ncvAssertPrintReturn(NCV_SUCCESS == GPUAlignmentValue(this->_alignment), "NCVMemNativeAllocator ctor:: couldn't get device _alignment", );
 }
 
 

@@ -126,7 +126,7 @@ struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
             minNeighbors,
             scaleStep, 1,
             flags,
-            *gpuAllocator, *cpuAllocator, devProp.major, devProp.minor,  0);
+            *gpuAllocator, *cpuAllocator, devProp, 0);
         ncvAssertReturnNcvStat(ncvStat);
         ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
                        
@@ -146,8 +146,8 @@ private:
         ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), NCV_CUDA_ERROR);
 
         // Load the classifier from file (assuming its size is about 1 mb) using a simple allocator
-        gpuCascadeAllocator = new NCVMemNativeAllocator(NCVMemoryTypeDevice);        
-        cpuCascadeAllocator = new NCVMemNativeAllocator(NCVMemoryTypeHostPinned);
+        gpuCascadeAllocator = new NCVMemNativeAllocator(NCVMemoryTypeDevice, devProp.textureAlignment);        
+        cpuCascadeAllocator = new NCVMemNativeAllocator(NCVMemoryTypeHostPinned, devProp.textureAlignment);
 
         ncvAssertPrintReturn(gpuCascadeAllocator->isInitialized(), "Error creating cascade GPU allocator", NCV_CUDA_ERROR);
         ncvAssertPrintReturn(cpuCascadeAllocator->isInitialized(), "Error creating cascade CPU allocator", NCV_CUDA_ERROR);
@@ -212,7 +212,7 @@ private:
         roi.height = d_src.height();
         Ncv32u numDetections;
         ncvStat = ncvDetectObjectsMultiScale_device(d_src, roi, d_rects, numDetections, haar, *h_haarStages,
-            *d_haarStages, *d_haarNodes, *d_haarFeatures, haar.ClassifierSize, 4, 1.2f, 1, 0, gpuCounter, cpuCounter, devProp.major, devProp.minor, 0);
+            *d_haarStages, *d_haarNodes, *d_haarFeatures, haar.ClassifierSize, 4, 1.2f, 1, 0, gpuCounter, cpuCounter, devProp, 0);
 
         ncvAssertReturnNcvStat(ncvStat);
         ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);

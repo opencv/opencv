@@ -3,8 +3,8 @@
 #
 # ----------------------------------------------------------------------------
 
-add_subdirectory(c)
-add_subdirectory(cpp)
+#add_subdirectory(c)
+#add_subdirectory(cpp)
 add_subdirectory(gpu)
 
 if(0)

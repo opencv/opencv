@@ -83,25 +83,25 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );
+        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );		
     }
     else if (src.elemSize() == 4)
     {
-        NppStSize32u sz;
+        NcvSize32u sz;
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiStTranspose_32u_C1R(const_cast<NppSt32u*>(src.ptr<NppSt32u>()), src.step, 
-            dst.ptr<NppSt32u>(), dst.step, sz) );
+        nppSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), src.step, 
+            dst.ptr<Ncv32u>(), dst.step, sz) );
     }
     else // if (src.elemSize() == 8)
     {
-        NppStSize32u sz;
+        NcvSize32u sz;
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiStTranspose_64u_C1R(const_cast<NppSt64u*>(src.ptr<NppSt64u>()), src.step, 
-            dst.ptr<NppSt64u>(), dst.step, sz) );
+        nppSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), src.step, 
+            dst.ptr<Ncv64u>(), dst.step, sz) );		
     }
 
     cudaSafeCall( cudaThreadSynchronize() );

@@ -75,13 +75,13 @@ struct HaarFeature64
 
 #define HaarFeature64_CreateCheck_MaxRectField                  0xFF
 
-    __host__ NCVStatus setRect(Ncv32u rectX, Ncv32u rectY, Ncv32u rectWidth, Ncv32u rectHeight, Ncv32u clsWidth, Ncv32u clsHeight)
+    __host__ NCVStatus setRect(Ncv32u rectX, Ncv32u rectY, Ncv32u rectWidth, Ncv32u rectHeight, Ncv32u /*clsWidth*/, Ncv32u /*clsHeight*/)
     {
         ncvAssertReturn(rectWidth <= HaarFeature64_CreateCheck_MaxRectField && rectHeight <= HaarFeature64_CreateCheck_MaxRectField, NCV_HAAR_TOO_LARGE_FEATURES);
-        ((NcvRect8u*)&(this->_ui2.x))->x = rectX;
-        ((NcvRect8u*)&(this->_ui2.x))->y = rectY;
-        ((NcvRect8u*)&(this->_ui2.x))->width = rectWidth;
-        ((NcvRect8u*)&(this->_ui2.x))->height = rectHeight;
+        ((NcvRect8u*)&(this->_ui2.x))->x = (Ncv8u)rectX;
+        ((NcvRect8u*)&(this->_ui2.x))->y = (Ncv8u)rectY;
+        ((NcvRect8u*)&(this->_ui2.x))->width = (Ncv8u)rectWidth;
+        ((NcvRect8u*)&(this->_ui2.x))->height = (Ncv8u)rectHeight;
         return NCV_SUCCESS;
     }
 
@@ -306,11 +306,11 @@ struct HaarStage64
 };
 
 
-NPPST_CT_ASSERT(sizeof(HaarFeature64) == 8);
-NPPST_CT_ASSERT(sizeof(HaarFeatureDescriptor32) == 4);
-NPPST_CT_ASSERT(sizeof(HaarClassifierNodeDescriptor32) == 4);
-NPPST_CT_ASSERT(sizeof(HaarClassifierNode128) == 16);
-NPPST_CT_ASSERT(sizeof(HaarStage64) == 8);
+NCV_CT_ASSERT(sizeof(HaarFeature64) == 8);
+NCV_CT_ASSERT(sizeof(HaarFeatureDescriptor32) == 4);
+NCV_CT_ASSERT(sizeof(HaarClassifierNodeDescriptor32) == 4);
+NCV_CT_ASSERT(sizeof(HaarClassifierNode128) == 16);
+NCV_CT_ASSERT(sizeof(HaarStage64) == 8);
 
 
 //==============================================================================
@@ -347,7 +347,7 @@ enum
     NCVPipeObjDet_VisualizeInPlace      = 0x004,
 };
 
-
+NCV_EXPORTS
 NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
                                             NcvSize32u srcRoi,
                                             NCVVector<NcvRect32u> &d_dstRects,
@@ -367,15 +367,14 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
 
                                             INCVMemAllocator &gpuAllocator,
                                             INCVMemAllocator &cpuAllocator,
-                                            Ncv32u devPropMajor,
-                                            Ncv32u devPropMinor,
+                                            cudaDeviceProp &devProp,
                                             cudaStream_t cuStream);
 
 
 #define OBJDET_MASK_ELEMENT_INVALID_32U     0xFFFFFFFF
 #define HAAR_STDDEV_BORDER                  1
 
-
+NCV_EXPORTS
 NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImage,
                                                NCVMatrix<Ncv32f> &d_weights,
                                                NCVMatrixAlloc<Ncv32u> &d_pixelMask,
@@ -391,11 +390,10 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
                                                Ncv32f scaleArea,
                                                INCVMemAllocator &gpuAllocator,
                                                INCVMemAllocator &cpuAllocator,
-                                               Ncv32u devPropMajor,
-                                               Ncv32u devPropMinor,
+                                               cudaDeviceProp &devProp,
                                                cudaStream_t cuStream);
 
-
+NCV_EXPORTS
 NCVStatus ncvApplyHaarClassifierCascade_host(NCVMatrix<Ncv32u> &h_integralImage,
                                              NCVMatrix<Ncv32f> &h_weights,
                                              NCVMatrixAlloc<Ncv32u> &h_pixelMask,
@@ -409,7 +407,7 @@ NCVStatus ncvApplyHaarClassifierCascade_host(NCVMatrix<Ncv32u> &h_integralImage,
                                              Ncv32u pixelStep,
                                              Ncv32f scaleArea);
 
-
+NCV_EXPORTS
 NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst,
                                  Ncv32u dstStride,
                                  Ncv32u dstWidth,
@@ -419,7 +417,7 @@ NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst,
                                  Ncv8u color,
                                  cudaStream_t cuStream);
 
-
+NCV_EXPORTS
 NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst,
                                   Ncv32u dstStride,
                                   Ncv32u dstWidth,
@@ -429,7 +427,7 @@ NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst,
                                   Ncv32u color,
                                   cudaStream_t cuStream);
 
-
+NCV_EXPORTS
 NCVStatus ncvDrawRects_8u_host(Ncv8u *h_dst,
                                Ncv32u dstStride,
                                Ncv32u dstWidth,
@@ -438,7 +436,7 @@ NCVStatus ncvDrawRects_8u_host(Ncv8u *h_dst,
                                Ncv32u numRects,
                                Ncv8u color);
 
-
+NCV_EXPORTS
 NCVStatus ncvDrawRects_32u_host(Ncv32u *h_dst,
                                 Ncv32u dstStride,
                                 Ncv32u dstWidth,
@@ -450,7 +448,7 @@ NCVStatus ncvDrawRects_32u_host(Ncv32u *h_dst,
 
 #define RECT_SIMILARITY_PROPORTION      0.2f
 
-
+NCV_EXPORTS
 NCVStatus ncvGrowDetectionsVector_device(NCVVector<Ncv32u> &pixelMask,
                                          Ncv32u numPixelMaskDetections,
                                          NCVVector<NcvRect32u> &hypotheses,
@@ -461,7 +459,7 @@ NCVStatus ncvGrowDetectionsVector_device(NCVVector<Ncv32u> &pixelMask,
                                          Ncv32f curScale,
                                          cudaStream_t cuStream);
 
-
+NCV_EXPORTS
 NCVStatus ncvGrowDetectionsVector_host(NCVVector<Ncv32u> &pixelMask,
                                        Ncv32u numPixelMaskDetections,
                                        NCVVector<NcvRect32u> &hypotheses,
@@ -471,18 +469,18 @@ NCVStatus ncvGrowDetectionsVector_host(NCVVector<Ncv32u> &pixelMask,
                                        Ncv32u rectHeight,
                                        Ncv32f curScale);
 
-
+NCV_EXPORTS
 NCVStatus ncvFilterHypotheses_host(NCVVector<NcvRect32u> &hypotheses,
                                    Ncv32u &numHypotheses,
                                    Ncv32u minNeighbors,
                                    Ncv32f intersectEps,
                                    NCVVector<Ncv32u> *hypothesesWeights);
 
-
+NCV_EXPORTS
 NCVStatus ncvHaarGetClassifierSize(const std::string &filename, Ncv32u &numStages,
                                    Ncv32u &numNodes, Ncv32u &numFeatures);
 
-
+NCV_EXPORTS
 NCVStatus ncvHaarLoadFromFile_host(const std::string &filename,
                                    HaarClassifierCascadeDescriptor &haar,
                                    NCVVector<HaarStage64> &h_HaarStages,
@@ -490,6 +488,7 @@ NCVStatus ncvHaarLoadFromFile_host(const std::string &filename,
                                    NCVVector<HaarFeature64> &h_HaarFeatures);
 
 
+NCV_EXPORTS
 NCVStatus ncvHaarStoreNVBIN_host(const std::string &filename,
                                  HaarClassifierCascadeDescriptor haar,
                                  NCVVector<HaarStage64> &h_HaarStages,

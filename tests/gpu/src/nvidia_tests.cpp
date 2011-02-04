@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -24,7 +23,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,62 +38,26 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
 
-#if _MSC_VER >= 1200
-#pragma warning( disable: 4251 4710 4711 4514 4996 )
-#endif
+#include "gputest.hpp"
+#include "cvconfig.h"
 
-#ifdef HAVE_CONFIG_H
-#include <cvconfig.h>
-#endif
+class CV_NVidiaTestsCaller : public CvTest
+{
+public:
+    CV_NVidiaTestsCaller() : CvTest("GPU-NVidia", "NVidia") {}
+    virtual ~CV_NVidiaTestsCaller() {}
 
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <iterator>
-#include <functional>
-
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-
-#if defined(HAVE_CUDA)
-
-    #include "internal_shared.hpp"
-    #include "cuda_runtime_api.h"
-    #include "cufft.h"
-    #include "opencv2/gpu/stream_accessor.hpp"
-    #include "npp.h"    
+protected:
     
-	#include "nvidia/core/NCV.hpp"
-	#include "nvidia/NPP_staging/npp_staging.hpp"
-	#include "nvidia/NCVHaarObjectDetection.hpp"
-
-#define CUDART_MINIMUM_REQUIRED_VERSION 3020
-#define NPP_MINIMUM_REQUIRED_VERSION 3216
-
-#if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-    #error "Insufficient Cuda Runtime library version, please update it."
+	void run( int )
+	{   		
+#if defined(HAVE_CUDA)
+		int main_nvidia();
+		main_nvidia();	
+		ts->set_failed_test_info(CvTS::OK);
+#else
+		ts->set_failed_test_info(CvTS::SKIPPED);
 #endif
-
-#if (NPP_VERSION_MAJOR*1000+NPP_VERSION_MINOR*100+NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-    #error "Insufficient NPP version, please update it."
-#endif
-
-#if defined(CUDA_ARCH_BIN_OR_PTX_10)
-    #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
-#endif
-
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The called functionality is disabled for current build or platform"); }
-
-#else /* defined(HAVE_CUDA) */
-
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-
-#endif /* defined(HAVE_CUDA) */
-
-#endif /* __OPENCV_PRECOMP_H__ */
+	}   
+} CV_NVidiaTestsCaller_test;

@@ -42,8 +42,49 @@
 #ifndef _ncv_hpp_
 #define _ncv_hpp_
 
+#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS //&& !defined(__CUDACC__) 
+    #define NCV_EXPORTS __declspec(dllexport)
+#else
+    #define NCV_EXPORTS
+#endif
+
 #include <cuda_runtime.h>
-#include "npp_staging.h"
+
+
+//==============================================================================
+//
+// Compile-time assert functionality
+//
+//==============================================================================
+
+
+/**
+* Compile-time assert namespace
+*/
+namespace NcvCTprep
+{
+    template <bool x>
+    struct CT_ASSERT_FAILURE;
+
+    template <>
+    struct CT_ASSERT_FAILURE<true> {};
+
+    template <int x>
+    struct assertTest{};
+}
+
+
+#define NCV_CT_PREP_PASTE_AUX(a,b)      a##b                           ///< Concatenation indirection macro
+#define NCV_CT_PREP_PASTE(a,b)          NCV_CT_PREP_PASTE_AUX(a, b)  ///< Concatenation macro
+
+
+/**
+* Performs compile-time assertion of a condition on the file scope
+*/
+#define NCV_CT_ASSERT(X) \
+    typedef NcvCTprep::assertTest<sizeof(NcvCTprep::CT_ASSERT_FAILURE< (bool)(X) >)> \
+    NCV_CT_PREP_PASTE(__ct_assert_typedef_, __LINE__)
+
 
 
 //==============================================================================
@@ -82,62 +123,72 @@ typedef              float Ncv32f;
 typedef             double Ncv64f;
 
 
-typedef struct
+struct NcvRect8u
 {
     Ncv8u x;
     Ncv8u y;
     Ncv8u width;
     Ncv8u height;
-} NcvRect8u;
+    NcvRect8u() : x(0), y(0), width(0), height(0) {};
+    NcvRect8u(Ncv8u x, Ncv8u y, Ncv8u width, Ncv8u height) : x(x), y(y), width(width), height(height) {}
+};
 
 
-typedef struct
+struct NcvRect32s
 {
     Ncv32s x;          ///< x-coordinate of upper left corner.
     Ncv32s y;          ///< y-coordinate of upper left corner.
     Ncv32s width;      ///< Rectangle width.
     Ncv32s height;     ///< Rectangle height.
-} NcvRect32s;
+    NcvRect32s() : x(0), y(0), width(0), height(0) {};
+    NcvRect32s(Ncv32s x, Ncv32s y, Ncv32s width, Ncv32s height) : x(x), y(y), width(width), height(height) {}
+};
 
 
-typedef struct
+struct NcvRect32u
 {
     Ncv32u x;          ///< x-coordinate of upper left corner.
     Ncv32u y;          ///< y-coordinate of upper left corner.
     Ncv32u width;      ///< Rectangle width.
     Ncv32u height;     ///< Rectangle height.
-} NcvRect32u;
+    NcvRect32u() : x(0), y(0), width(0), height(0) {};
+    NcvRect32u(Ncv32u x, Ncv32u y, Ncv32u width, Ncv32u height) : x(x), y(y), width(width), height(height) {}
+};
 
 
-typedef struct 
+struct NcvSize32s
 {
     Ncv32s width;  ///< Rectangle width.
     Ncv32s height; ///< Rectangle height.
-} NcvSize32s;
+    NcvSize32s() : width(0), height(0) {};
+    NcvSize32s(Ncv32s width, Ncv32s height) : width(width), height(height) {}
+};
 
 
-typedef struct 
+struct NcvSize32u
 {
     Ncv32u width;  ///< Rectangle width.
     Ncv32u height; ///< Rectangle height.
-} NcvSize32u;
+    NcvSize32u() : width(0), height(0) {};
+    NcvSize32u(Ncv32u width, Ncv32u height) : width(width), height(height) {}
+};
 
 
-NPPST_CT_ASSERT(sizeof(NcvBool) <= 4);
-NPPST_CT_ASSERT(sizeof(Ncv64s) == 8);
-NPPST_CT_ASSERT(sizeof(Ncv64u) == 8);
-NPPST_CT_ASSERT(sizeof(Ncv32s) == 4);
-NPPST_CT_ASSERT(sizeof(Ncv32u) == 4);
-NPPST_CT_ASSERT(sizeof(Ncv16s) == 2);
-NPPST_CT_ASSERT(sizeof(Ncv16u) == 2);
-NPPST_CT_ASSERT(sizeof(Ncv8s) == 1);
-NPPST_CT_ASSERT(sizeof(Ncv8u) == 1);
-NPPST_CT_ASSERT(sizeof(Ncv32f) == 4);
-NPPST_CT_ASSERT(sizeof(Ncv64f) == 8);
-NPPST_CT_ASSERT(sizeof(NcvRect8u) == sizeof(Ncv32u));
-NPPST_CT_ASSERT(sizeof(NcvRect32s) == 4 * sizeof(Ncv32s));
-NPPST_CT_ASSERT(sizeof(NcvRect32u) == 4 * sizeof(Ncv32u));
-NPPST_CT_ASSERT(sizeof(NcvSize32u) == 2 * sizeof(Ncv32u));
+NCV_CT_ASSERT(sizeof(NcvBool) <= 4);
+NCV_CT_ASSERT(sizeof(Ncv64s) == 8);
+NCV_CT_ASSERT(sizeof(Ncv64u) == 8);
+NCV_CT_ASSERT(sizeof(Ncv32s) == 4);
+NCV_CT_ASSERT(sizeof(Ncv32u) == 4);
+NCV_CT_ASSERT(sizeof(Ncv16s) == 2);
+NCV_CT_ASSERT(sizeof(Ncv16u) == 2);
+NCV_CT_ASSERT(sizeof(Ncv8s) == 1);
+NCV_CT_ASSERT(sizeof(Ncv8u) == 1);
+NCV_CT_ASSERT(sizeof(Ncv32f) == 4);
+NCV_CT_ASSERT(sizeof(Ncv64f) == 8);
+NCV_CT_ASSERT(sizeof(NcvRect8u) == sizeof(Ncv32u));
+NCV_CT_ASSERT(sizeof(NcvRect32s) == 4 * sizeof(Ncv32s));
+NCV_CT_ASSERT(sizeof(NcvRect32u) == 4 * sizeof(Ncv32u));
+NCV_CT_ASSERT(sizeof(NcvSize32u) == 2 * sizeof(Ncv32u));
 
 
 //==============================================================================
@@ -162,13 +213,13 @@ const Ncv32u K_LOG2_WARP_SIZE = 5;
 #define NCV_CT_PREP_STRINGIZE(x)        NCV_CT_PREP_STRINGIZE_AUX(x)
 
 
-void ncvDebugOutput(const char *msg, ...);
+NCV_EXPORTS void ncvDebugOutput(const char *msg, ...);
 
 
 typedef void NCVDebugOutputHandler(const char* msg);
 
 
-void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
+NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
 
 
 #define ncvAssertPrintCheck(pred, msg) \
@@ -222,6 +273,7 @@ void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
 */
 enum NCVStatus
 {
+    //NCV statuses
     NCV_SUCCESS,
 
     NCV_CUDA_ERROR,
@@ -257,6 +309,24 @@ enum NCVStatus
     NCV_NOIMPL_HAAR_TILTED_FEATURES,
 
     NCV_WARNING_HAAR_DETECTIONS_VECTOR_OVERFLOW,
+
+    //NPP statuses
+    NPPST_SUCCESS = NCV_SUCCESS,              ///< Successful operation (same as NPP_NO_ERROR)
+    NPPST_ERROR,                              ///< Unknown error
+    NPPST_CUDA_KERNEL_EXECUTION_ERROR,        ///< CUDA kernel execution error
+    NPPST_NULL_POINTER_ERROR,                 ///< NULL pointer argument error
+    NPPST_TEXTURE_BIND_ERROR,                 ///< CUDA texture binding error or non-zero offset returned
+    NPPST_MEMCPY_ERROR,                       ///< CUDA memory copy error
+    NPPST_MEM_ALLOC_ERR,                      ///< CUDA memory allocation error
+    NPPST_MEMFREE_ERR,                        ///< CUDA memory deallocation error
+
+    //NPPST statuses
+    NPPST_INVALID_ROI,                        ///< Invalid region of interest argument
+    NPPST_INVALID_STEP,                       ///< Invalid image lines step argument (check sign, alignment, relation to image width)
+    NPPST_INVALID_SCALE,                      ///< Invalid scale parameter passed
+    NPPST_MEM_INSUFFICIENT_BUFFER,            ///< Insufficient user-allocated buffer
+    NPPST_MEM_RESIDENCE_ERROR,                ///< Memory residence error detected (check if pointers should be device or pinned)
+    NPPST_MEM_INTERNAL_ERROR,                 ///< Internal memory management error
 };
 
 
@@ -285,11 +355,11 @@ enum NCVStatus
 
 typedef struct _NcvTimer *NcvTimer;
 
-NcvTimer ncvStartTimer(void);
+NCV_EXPORTS NcvTimer ncvStartTimer(void);
 
-double ncvEndQueryTimerUs(NcvTimer t);
+NCV_EXPORTS double ncvEndQueryTimerUs(NcvTimer t);
 
-double ncvEndQueryTimerMs(NcvTimer t);
+NCV_EXPORTS double ncvEndQueryTimerMs(NcvTimer t);
 
 
 //==============================================================================
@@ -300,15 +370,9 @@ double ncvEndQueryTimerMs(NcvTimer t);
 
 
 /**
-* Alignment of GPU memory chunks in bytes
-*/
-NCVStatus GPUAlignmentValue(Ncv32u &alignment);
-
-
-/**
 * Calculates the aligned top bound value
 */
-Ncv32u alignUp(Ncv32u what, Ncv32u alignment);
+NCV_EXPORTS Ncv32u alignUp(Ncv32u what, Ncv32u alignment);
 
 
 /**
@@ -326,7 +390,7 @@ enum NCVMemoryType
 /**
 * NCVMemPtr
 */
-struct NCVMemPtr
+struct NCV_EXPORTS NCVMemPtr
 {
     void *ptr;
     NCVMemoryType memtype;
@@ -337,7 +401,7 @@ struct NCVMemPtr
 /**
 * NCVMemSegment
 */
-struct NCVMemSegment
+struct NCV_EXPORTS NCVMemSegment
 {
     NCVMemPtr begin;
     size_t size;
@@ -348,7 +412,7 @@ struct NCVMemSegment
 /**
 * INCVMemAllocator (Interface)
 */
-class INCVMemAllocator
+class NCV_EXPORTS INCVMemAllocator
 {
 public:
     virtual ~INCVMemAllocator() = 0;
@@ -370,7 +434,7 @@ inline INCVMemAllocator::~INCVMemAllocator() {}
 /**
 * NCVMemStackAllocator
 */
-class NCVMemStackAllocator : public INCVMemAllocator
+class NCV_EXPORTS NCVMemStackAllocator : public INCVMemAllocator
 {
     NCVMemStackAllocator();
     NCVMemStackAllocator(const NCVMemStackAllocator &);
@@ -378,7 +442,7 @@ class NCVMemStackAllocator : public INCVMemAllocator
 public:
 
     explicit NCVMemStackAllocator(Ncv32u alignment);
-    NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, Ncv32u alignment);
+    NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, Ncv32u alignment, void *reusePtr=NULL);
     virtual ~NCVMemStackAllocator();
 
     virtual NCVStatus alloc(NCVMemSegment &seg, size_t size);
@@ -400,17 +464,18 @@ private:
     Ncv8u *end;
     size_t currentSize;
     size_t _maxSize;
+    NcvBool bReusesMemory;
 };
 
 
 /**
 * NCVMemNativeAllocator
 */
-class NCVMemNativeAllocator : public INCVMemAllocator
+class NCV_EXPORTS NCVMemNativeAllocator : public INCVMemAllocator
 {
 public:
 
-    NCVMemNativeAllocator(NCVMemoryType memT);
+    NCVMemNativeAllocator(NCVMemoryType memT, Ncv32u alignment);
     virtual ~NCVMemNativeAllocator();
 
     virtual NCVStatus alloc(NCVMemSegment &seg, size_t size);
@@ -438,9 +503,9 @@ private:
 /**
 * Copy dispatcher
 */
-NCVStatus memSegCopyHelper(void *dst, NCVMemoryType dstType,
-                           const void *src, NCVMemoryType srcType,
-                           size_t sz, cudaStream_t cuStream);
+NCV_EXPORTS NCVStatus memSegCopyHelper(void *dst, NCVMemoryType dstType,
+                                       const void *src, NCVMemoryType srcType,
+                                       size_t sz, cudaStream_t cuStream);
 
 
 /**
@@ -514,6 +579,7 @@ class NCVVectorAlloc : public NCVVector<T>
 {
     NCVVectorAlloc();
     NCVVectorAlloc(const NCVVectorAlloc &);
+	NCVVectorAlloc& operator=(const NCVVectorAlloc<T>&);	
 
 public:
 
@@ -563,8 +629,7 @@ public:
         return allocatedMem;
     }
 
-private:
-
+private:		
     INCVMemAllocator &allocator;
     NCVMemSegment allocatedMem;
 };
@@ -707,7 +772,7 @@ class NCVMatrixAlloc : public NCVMatrix<T>
 {
     NCVMatrixAlloc();
     NCVMatrixAlloc(const NCVMatrixAlloc &);
-
+	NCVMatrixAlloc& operator=(const NCVMatrixAlloc &);
 public:
 
     NCVMatrixAlloc(INCVMemAllocator &allocator, Ncv32u width, Ncv32u height, Ncv32u pitch=0)

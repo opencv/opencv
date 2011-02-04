@@ -560,16 +560,19 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer)
 
     sum.create(src.rows + 1, src.cols + 1, CV_32S);
     
-    NppStSize32u roiSize;
+    NcvSize32u roiSize;
     roiSize.width = src.cols;
     roiSize.height = src.rows;
 
-    NppSt32u bufSize;
-    nppSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize) );
+	cudaDeviceProp prop;
+	cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+
+    Ncv32u bufSize;
+    nppSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
     ensureSizeIsEnough(1, bufSize, CV_8UC1, buffer);
 
-    nppSafeCall( nppiStIntegral_8u32u_C1R(const_cast<NppSt8u*>(src.ptr<NppSt8u>()), src.step, 
-        sum.ptr<NppSt32u>(), sum.step, roiSize, buffer.ptr<NppSt8u>(), bufSize) );
+    nppSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), src.step, 
+        sum.ptr<Ncv32u>(), sum.step, roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
 
     cudaSafeCall( cudaThreadSynchronize() );
 }
@@ -600,19 +603,20 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum)
 {
     CV_Assert(src.type() == CV_8U);
 
-    NppStSize32u roiSize;
+    NcvSize32u roiSize;
     roiSize.width = src.cols;
     roiSize.height = src.rows;
 
-    NppSt32u bufSize;
-    nppSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize));
+	cudaDeviceProp prop;
+	cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+
+    Ncv32u bufSize;
+    nppSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize, prop));	
     GpuMat buf(1, bufSize, CV_8U);
 
     sqsum.create(src.rows + 1, src.cols + 1, CV_64F);
-    nppSafeCall(nppiStSqrIntegral_8u64u_C1R(
-            const_cast<NppSt8u*>(src.ptr<NppSt8u>(0)), src.step, 
-            sqsum.ptr<NppSt64u>(0), sqsum.step, roiSize, 
-            buf.ptr<NppSt8u>(0), bufSize));
+    nppSafeCall(nppiStSqrIntegral_8u64u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>(0)), src.step, 
+            sqsum.ptr<Ncv64u>(0), sqsum.step, roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
 
     cudaSafeCall( cudaThreadSynchronize() );
 }
