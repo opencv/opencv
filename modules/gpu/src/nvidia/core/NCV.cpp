@@ -73,7 +73,7 @@ void ncvDebugOutput(const char *msg, ...)
     char buffer[K_DEBUG_STRING_MAXLEN];
     va_list args;
     va_start(args, msg);
-    vsnprintf_s(buffer, K_DEBUG_STRING_MAXLEN, K_DEBUG_STRING_MAXLEN-1, msg, args);
+    vsnprintf(buffer, K_DEBUG_STRING_MAXLEN, msg, args);
     va_end (args);
     debugOutputHandler(buffer);
 }
@@ -531,6 +531,10 @@ typedef struct _NcvTimeMoment NcvTimeMoment;
         return (((double)t2->tv.tv_sec - (double)t1->tv.tv_sec) * 1000000 + (double)t2->tv.tv_usec - (double)t1->tv.tv_usec);
     }
 
+    double _ncvMomentsDiffToMilliseconds(NcvTimeMoment *t1, NcvTimeMoment *t2)
+    {
+        return ((double)t2->tv.tv_sec - (double)t1->tv.tv_sec) * 1000;
+    }
 
 #endif //#if defined(_WIN32) || defined(_WIN64)
 

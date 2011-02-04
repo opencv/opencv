@@ -30,14 +30,14 @@ void generateIntegralTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "LinIntImgW%dH%d", i, 2);
+        sprintf(testName, "LinIntImgW%dH%d", i, 2);
         testLister.add(new TestIntegralImage<T_in, T_out>(testName, src, i, 2));
     }
     for (Ncv32f _i=1.0; _i<maxHeight; _i*=1.2f)
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "LinIntImgW%dH%d", 2, i);
+        sprintf(testName, "LinIntImgW%dH%d", 2, i);
         testLister.add(new TestIntegralImage<T_in, T_out>(testName, src, 2, i));
     }
 
@@ -55,14 +55,14 @@ void generateSquaredIntegralTests(NCVAutoTestLister &testLister, NCVTestSourcePr
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "SqIntImgW%dH%d", i, 32);
+        sprintf(testName, "SqIntImgW%dH%d", i, 32);
         testLister.add(new TestIntegralImageSquared(testName, src, i, 32));
     }
     for (Ncv32f _i=1.0; _i<maxHeight; _i*=1.2f)
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "SqIntImgW%dH%d", 32, i);
+        sprintf(testName, "SqIntImgW%dH%d", 32, i);
         testLister.add(new TestIntegralImageSquared(testName, src, 32, i));
     }
 
@@ -82,7 +82,7 @@ void generateRectStdDevTests(NCVAutoTestLister &testLister, NCVTestSourceProvide
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "RectStdDevW%dH%d", i*2, i);
+        sprintf(testName, "RectStdDevW%dH%d", i*2, i);
         testLister.add(new TestRectStdDev(testName, src, i*2, i, rect, 1, true));
         testLister.add(new TestRectStdDev(testName, src, i*2, i, rect, 1.5, false));
         testLister.add(new TestRectStdDev(testName, src, i-1, i*2-1, rect, 1, false));
@@ -103,7 +103,7 @@ void generateResizeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T>
     for (Ncv32u i=1; i<480; i+=3)
     {
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "TestResize_VGA_s%d", i);
+        sprintf(testName, "TestResize_VGA_s%d", i);
         testLister.add(new TestResize<T>(testName, src, 640, 480, i, true));
         testLister.add(new TestResize<T>(testName, src, 640, 480, i, false));
     }
@@ -112,7 +112,7 @@ void generateResizeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T>
     for (Ncv32u i=1; i<1080; i+=5)
     {
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "TestResize_1080_s%d", i);
+        sprintf(testName, "TestResize_1080_s%d", i);
         testLister.add(new TestResize<T>(testName, src, 1920, 1080, i, true));
         testLister.add(new TestResize<T>(testName, src, 1920, 1080, i, false));
     }
@@ -128,13 +128,13 @@ void generateNPPSTVectorTests(NCVAutoTestLister &testLister, NCVTestSourceProvid
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "Compaction%d", i);
+        sprintf(testName, "Compaction%d", i);
         testLister.add(new TestCompact(testName, src, i, 0xFFFFFFFF, 30));
     }
     for (Ncv32u i=1; i<260; i++)
     {
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "Compaction%d", i);
+        sprintf(testName, "Compaction%d", i);
         testLister.add(new TestCompact(testName, src, i, 0xC001C0DE, 70));
         testLister.add(new TestCompact(testName, src, i, 0xC001C0DE, 0));
         testLister.add(new TestCompact(testName, src, i, 0xC001C0DE, 100));
@@ -142,13 +142,13 @@ void generateNPPSTVectorTests(NCVAutoTestLister &testLister, NCVTestSourceProvid
     for (Ncv32u i=256*256-256; i<256*256+257; i++)
     {
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "Compaction%d", i);
+        sprintf(testName, "Compaction%d", i);
         testLister.add(new TestCompact(testName, src, i, 0xFFFFFFFF, 40));
     }
     for (Ncv32u i=256*256*256-10; i<256*256*256+10; i++)
     {
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "Compaction%d", i);
+        sprintf(testName, "Compaction%d", i);
         testLister.add(new TestCompact(testName, src, i, 0x00000000, 2));
     }
 }
@@ -162,7 +162,7 @@ void generateTransposeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider
         for (int j=2; j<64; j+=4)
         {
             char testName[80];
-            sprintf_s(testName, sizeof(testName), "TestTranspose_%dx%d", i, j);
+            sprintf(testName, "TestTranspose_%dx%d", i, j);
             testLister.add(new TestTranspose<T>(testName, src, i, j));
         }
     }
@@ -172,7 +172,7 @@ void generateTransposeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider
         for (int j=1; j<2; j+=1)
         {
             char testName[80];
-            sprintf_s(testName, sizeof(testName), "TestTranspose_%dx%d", i, j);
+            sprintf(testName, "TestTranspose_%dx%d", i, j);
             testLister.add(new TestTranspose<T>(testName, src, i, j));
         }
     }
@@ -192,7 +192,7 @@ void generateDrawRectsTests(NCVAutoTestLister &testLister, NCVTestSourceProvider
         Ncv32u j = maxHeight * i / maxWidth;
         if (!j) continue;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "DrawRectsW%dH%d", i, j);
+        sprintf(testName, "DrawRectsW%dH%d", i, j);
 
         if (sizeof(T) == sizeof(Ncv32u))
         {
@@ -222,7 +222,7 @@ void generateVectorTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Nc
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "VectorGrow%d", i);
+        sprintf(testName, "VectorGrow%d", i);
         testLister.add(new TestHypothesesGrow(testName, src, 20, 20, 2.2f, i, i/2, i, i/4));
         testLister.add(new TestHypothesesGrow(testName, src, 10, 42, 1.2f, i, i, i, 0));
     }
@@ -239,7 +239,7 @@ void generateHypothesesFiltrationTests(NCVAutoTestLister &testLister, NCVTestSou
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "HypFilter%d", i);
+        sprintf(testName, "HypFilter%d", i);
         testLister.add(new TestHypothesesFilter(testName, src, i, 3, 0.2f));
         testLister.add(new TestHypothesesFilter(testName, src, i, 0, 0.2f));
         testLister.add(new TestHypothesesFilter(testName, src, i, 1, 0.1f));
@@ -265,7 +265,7 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
         for (Ncv32u j=20; j<128; j+=5)
         {
             char testName[80];
-            sprintf_s(testName, sizeof(testName), "HaarAppl%d_%d", i, j);
+            sprintf(testName, "HaarAppl%d_%d", i, j);
             testLister.add(new TestHaarCascadeApplication(testName, src, "haarcascade_frontalface_alt.xml", j, i));
         }
     }
@@ -273,7 +273,7 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
     {
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
-        sprintf_s(testName, sizeof(testName), "HaarAppl%d", i);
+        sprintf(testName, "HaarAppl%d", i);
         testLister.add(new TestHaarCascadeApplication(testName, src, "haarcascade_frontalface_alt.xml", i, i));
     }
 }

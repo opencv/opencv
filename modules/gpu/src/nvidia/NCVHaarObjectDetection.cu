@@ -56,6 +56,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
+#include <cstdio>
 
 #include "NCV.hpp"
 #include "NPP_staging/NPP_staging.hpp"
@@ -2396,11 +2397,10 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
     FILE *fp = fopen(filename.c_str(), "rb");
     ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
     Ncv32u fileVersion;
-    fread(&fileVersion, sizeof(Ncv32u), 1, fp);	
-
+    ncvAssertReturn(1 == fread(&fileVersion, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
     ncvAssertReturn(fileVersion == NVBIN_HAAR_VERSION, NCV_FILE_ERROR);
     Ncv32u fsize;
-    fread_s(&fsize, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
+    ncvAssertReturn(1 == fread(&fsize, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
     fseek(fp, 0, SEEK_END);
     Ncv32u fsizeActual = ftell(fp);
     ncvAssertReturn(fsize == fsizeActual, NCV_FILE_ERROR);
@@ -2409,7 +2409,7 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
     fdata.resize(fsize);
     Ncv32u dataOffset = 0;
     fseek(fp, 0, SEEK_SET);
-    fread(&fdata[0], fsize, 1, fp);
+    ncvAssertReturn(1 == fread(&fdata[0], fsize, 1, fp), NCV_FILE_ERROR);
     fclose(fp);
 
     //data
@@ -2458,18 +2458,17 @@ NCVStatus ncvHaarGetClassifierSize(const std::string &filename, Ncv32u &numStage
 
     if (fext == "nvbin")
     {
-        FILE *fp;
-        fopen_s(&fp, filename.c_str(), "rb");
+        FILE *fp = fopen(filename.c_str(), "rb");
         ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
         Ncv32u fileVersion;
-        fread_s(&fileVersion, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == fread(&fileVersion, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
         ncvAssertReturn(fileVersion == NVBIN_HAAR_VERSION, NCV_FILE_ERROR);
         fseek(fp, NVBIN_HAAR_SIZERESERVED, SEEK_SET);
         Ncv32u tmp;
-        fread_s(&numStages, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
-        fread_s(&tmp, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
-        fread_s(&numNodes, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
-        fread_s(&numFeatures, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == fread(&numStages,   sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+        ncvAssertReturn(1 == fread(&tmp,         sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+        ncvAssertReturn(1 == fread(&numNodes,    sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+        ncvAssertReturn(1 == fread(&numFeatures, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
         fclose(fp);
     }
     else if (fext == "xml")
@@ -2596,8 +2595,7 @@ NCVStatus ncvHaarStoreNVBIN_host(const std::string &filename,
     dataOffset = sizeof(Ncv32u);
     *(Ncv32u *)(&fdata[0]+dataOffset) = fsize;
 
-    FILE *fp;
-    fopen_s(&fp, filename.c_str(), "wb");
+    FILE *fp = fopen(filename.c_str(), "wb");
     ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
     fwrite(&fdata[0], fsize, 1, fp);
     fclose(fp);

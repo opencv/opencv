@@ -161,20 +161,32 @@ const Ncv32u NUM_SCAN_THREADS = 256;
 const Ncv32u LOG2_NUM_SCAN_THREADS = 8;
 
 
+struct T_true {};
+struct T_false {};
+template <typename T, typename U> struct is_same : T_false {};
+template <typename T> struct is_same<T, T> : T_true {};
+
+template <int v>
+struct Int2Type
+{
+    enum { value = v };
+};
+
+
 template<class T_in, class T_out>
 struct _scanElemOp
 {
     template<bool tbDoSqr>
-    static inline __host__ __device__ T_out scanElemOp(T_in elem);
-
-    template<>
-    static inline __host__ __device__ T_out scanElemOp<false>(T_in elem)
+    static inline __host__ __device__ T_out scanElemOp(T_in elem)
+    {
+        return scanElemOp_( elem, Int2Type<(int)tbDoSqr>() );
+    }
+private:
+    static inline __host__ __device__ T_out scanElemOp_(T_in elem,const Int2Type<0>&)
     {
         return (T_out)elem;
     }
-
-    template<>
-    static inline __host__ __device__ T_out scanElemOp<true>(T_in elem)
+    static inline __host__ __device__ T_out scanElemOp_(T_in elem, const Int2Type<1>&)
     {
         return (T_out)(elem*elem);
     }

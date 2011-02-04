@@ -10,6 +10,11 @@
  */
 
 #include <float.h>
+
+#if defined(__GNUC__)
+    #include <fpu_control.h>
+#endif
+
 #include "TestHaarCascadeApplication.h"
 #include "NCVHaarObjectDetection.hpp"
 
@@ -195,6 +200,24 @@ bool TestHaarCascadeApplication::process()
     }
     ncvAssertReturn(cudaSuccess == cudaStreamSynchronize(0), false);
 
+#if defined(__GNUC__)
+    //http://www.christian-seiler.de/projekte/fpmath/
+
+    fpu_control_t fpu_oldcw, fpu_cw;
+    _FPU_GETCW(fpu_oldcw); // store old cw
+     fpu_cw = (fpu_oldcw & ~_FPU_EXTENDED & ~_FPU_DOUBLE & ~_FPU_SINGLE) | _FPU_SINGLE;
+    _FPU_SETCW(fpu_cw);
+
+    // calculations here
+    ncvStat = ncvApplyHaarClassifierCascade_host(
+        h_integralImage, h_rectStdDev, h_pixelMask,
+        detectionsOnThisScale_h,
+        haar, h_HaarStages, h_HaarNodes, h_HaarFeatures, false,
+        searchRoiU, 1, 1.0f);
+    ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
+
+    _FPU_SETCW(fpu_oldcw); // restore old cw
+#else
     Ncv32u fpu_oldcw, fpu_cw;
     _controlfp_s(&fpu_cw, 0, 0);
     fpu_oldcw = fpu_cw;
@@ -206,7 +229,7 @@ bool TestHaarCascadeApplication::process()
         searchRoiU, 1, 1.0f);
     ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
     _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
-
+#endif
     NCV_SKIP_COND_END
 
     int devId;

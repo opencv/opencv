@@ -146,10 +146,10 @@ namespace NCVRuntimeTemplateBool
     {
         //Convenience function used by the user
         //Takes a variable argument list, transforms it into a list
-        static void call(Func &functor, int dummy, ...)
+        static void call(Func &functor, Ncv32u dummy, ...)
         {
             //Vector used to collect arguments
-            std::vector<int> templateParamList;
+            std::vector<NcvBool> templateParamList;
 
             //Variable argument list manipulation
             va_list listPointer;
@@ -157,7 +157,7 @@ namespace NCVRuntimeTemplateBool
             //Collect parameters into the list
             for(int i=0; i<NumArguments; i++)
             {
-                int val = va_arg(listPointer, int);
+                NcvBool val = va_arg(listPointer, NcvBool);
                 templateParamList.push_back(val);
             }
             va_end(listPointer);
@@ -168,26 +168,26 @@ namespace NCVRuntimeTemplateBool
 
         //Actual function called recursively to build a typelist based
         //on a list of values
-        static void call( Func &functor, std::vector<int> &templateParamList)
+        static void call( Func &functor, std::vector<NcvBool> &templateParamList)
         {
             //Get current parameter value in the list
-            int val = templateParamList[templateParamList.size() - 1];
+            NcvBool val = templateParamList[templateParamList.size() - 1];
             templateParamList.pop_back();
 
             //Select the compile time value to add into the typelist
-            //depending on the runtime variable and make recursive call. 
+            //depending on the runtime variable and make recursive call.
             //Both versions are really instantiated
-            if(val)
+            if (val)
             {
                 KernelCaller<
-                    Loki::Typelist<typename Loki::Int2Type<true>, TList >,
+                    Loki::Typelist<typename Loki::Int2Type<1>, TList >,
                     NumArguments-1, Func >
                     ::call(functor, templateParamList);
             }
             else
             {
-                KernelCaller< 
-                    Loki::Typelist<typename Loki::Int2Type<false>, TList >,
+                KernelCaller<
+                    Loki::Typelist<typename Loki::Int2Type<0>, TList >,
                     NumArguments-1, Func >
                     ::call(functor, templateParamList);
             }
@@ -205,7 +205,7 @@ namespace NCVRuntimeTemplateBool
             functor.call(TList()); //TList instantiated to get the method template parameter resolved
         }
 
-        static void call(Func &functor, std::vector<int> &templateParams)
+        static void call(Func &functor, std::vector<NcvBool> &templateParams)
         {
             functor.call(TList());
         }

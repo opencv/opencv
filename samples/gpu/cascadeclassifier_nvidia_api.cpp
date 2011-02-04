@@ -2,19 +2,15 @@
 #include <cstdio>
 
 #include "cvconfig.h"
-#if !defined(HAVE_CUDA)
-	int main( int argc, const char** argv ) { return printf("Please compile the librarary with CUDA support."), -1; }
+#if !defined(HAVE_CUDA) || defined(__GNUC__)
+    int main( int argc, const char** argv ) { return printf("Please compile the librarary with CUDA support."), -1; }
 #else
-
 
 #include <cuda_runtime.h>
 #include "opencv2/opencv.hpp"
 #include "NCVHaarObjectDetection.hpp"
 
-
-
 using namespace cv;
-
 
 const Size2i preferredVideoFrameSize(640, 480);
 
@@ -37,10 +33,9 @@ void imagePrintf(Mat& img, int lineOffsY, Scalar color, const char *format, ...)
 
     va_list arg_ptr;
     va_start(arg_ptr, format);
-    int len = _vscprintf(format, arg_ptr) + 1;
-    
-    vector<char> strBuf(len);    
-    vsprintf_s(&strBuf[0], len, format, arg_ptr);
+
+    char strBuf[4096];
+    vsprintf(&strBuf[0], format, arg_ptr);
 
     Point org(1, 3 * textSize.height * (lineOffsY + 1) / 2);    
     putText(img, &strBuf[0], org, fontFace, fontScale, color);
