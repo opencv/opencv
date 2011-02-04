@@ -2393,11 +2393,11 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
                                std::vector<HaarClassifierNode128> &haarClassifierNodes,
                                std::vector<HaarFeature64> &haarFeatures)
 {
-    FILE *fp;
-    fopen_s(&fp, filename.c_str(), "rb");
+    FILE *fp = fopen(filename.c_str(), "rb");
     ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
     Ncv32u fileVersion;
-    fread_s(&fileVersion, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
+    fread(&fileVersion, sizeof(Ncv32u), 1, fp);	
+
     ncvAssertReturn(fileVersion == NVBIN_HAAR_VERSION, NCV_FILE_ERROR);
     Ncv32u fsize;
     fread_s(&fsize, sizeof(Ncv32u), sizeof(Ncv32u), 1, fp);
@@ -2409,7 +2409,7 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
     fdata.resize(fsize);
     Ncv32u dataOffset = 0;
     fseek(fp, 0, SEEK_SET);
-    fread_s(&fdata[0], fsize, fsize, 1, fp);
+    fread(&fdata[0], fsize, 1, fp);
     fclose(fp);
 
     //data
