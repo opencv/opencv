@@ -167,32 +167,32 @@ TEST(cornerHarris)
 }
 
 
-//TEST(integral)
-//{
-//    Mat src, sum;
-//    gpu::GpuMat d_src, d_sum, d_buf;
-//
-//    int size = 4000;
-//
-//    gen(src, size, size, CV_8U, 0, 256);
-//    sum.create(size + 1, size + 1, CV_32S);
-//
-//    d_src = src;
-//    d_sum.create(size + 1, size + 1, CV_32S);
-//
-//    for (int i = 0; i < 5; ++i)
-//    {
-//        SUBTEST << "size " << size << ", 8U";
-//
-//        CPU_ON;
-//        integral(src, sum);
-//        CPU_OFF;
-//
-//        GPU_ON;
-//        gpu::integralBuffered(d_src, d_sum, d_buf);
-//        GPU_OFF;
-//    }
-//}
+TEST(integral)
+{
+    Mat src, sum;
+    gpu::GpuMat d_src, d_sum, d_buf;
+
+    int size = 4000;
+
+    gen(src, size, size, CV_8U, 0, 256);
+    sum.create(size + 1, size + 1, CV_32S);
+
+    d_src = src;
+    d_sum.create(size + 1, size + 1, CV_32S);
+
+    for (int i = 0; i < 5; ++i)
+    {
+        SUBTEST << "size " << size << ", 8U";
+
+        CPU_ON;
+        integral(src, sum);
+        CPU_OFF;
+
+        GPU_ON;
+        gpu::integralBuffered(d_src, d_sum, d_buf);
+        GPU_OFF;
+    }
+}
 
 
 TEST(norm)
@@ -653,4 +653,31 @@ TEST(cvtColor)
     
     cv::swap(src, dst);
     d_src.swap(d_dst);
+}
+
+
+TEST(erode)
+{
+    Mat src, dst, ker;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size;
+
+        gen(src, size, size, CV_8UC4, Scalar::all(0), Scalar::all(256));
+        ker = getStructuringElement(MORPH_RECT, Size(3, 3));
+        dst.create(src.size(), src.type());
+
+        CPU_ON;
+        erode(src, dst, ker);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(d_src.size(), d_src.type());
+
+        GPU_ON;
+        gpu::erode(d_src, d_dst, ker);
+        GPU_OFF;
+    }
 }

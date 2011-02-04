@@ -125,7 +125,6 @@ private:
     void name##_test::run()
 
 #define SUBTEST TestSystem::instance().subtest()
-#define DESCRIPTION TestSystem::instance().subtest()
 #define CPU_ON TestSystem::instance().cpuOn()
 #define GPU_ON TestSystem::instance().gpuOn()
 #define CPU_OFF TestSystem::instance().cpuOff()

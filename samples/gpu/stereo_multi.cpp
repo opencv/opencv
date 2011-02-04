@@ -60,10 +60,13 @@ void inline contextOff()
     safeCall(cuCtxPopCurrent(&prev_context));
 }
 
+// GPUs data
 GpuMat d_left[2];
 GpuMat d_right[2];
 StereoBM_GPU* bm[2];
 GpuMat d_result[2];
+
+// CPU result
 Mat result;
 
 int main(int argc, char** argv)
