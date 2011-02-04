@@ -2160,7 +2160,7 @@ CvBoost::predict( const Mat& _sample, const Mat& _missing,
             weak_responses->create(weak_count, 1, CV_32FC1);
         pwr = &(wr = *weak_responses);
     }*/
-    return predict(&sample, _missing.empty() ? &mmask : 0, 0,
+    return predict(&sample, _missing.empty() ? 0 : &mmask, 0,
                    slice == Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end),
                    raw_mode, return_sum);
 }
