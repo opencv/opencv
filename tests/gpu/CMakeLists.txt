@@ -51,10 +51,10 @@ set_target_properties(${the_target} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
 	)
 
-add_dependencies(${the_target} opencv_ts opencv_gpu opencv_highgui opencv_imgproc)
+add_dependencies(${the_target} opencv_ts opencv_gpu opencv_highgui opencv_imgproc opencv_calib3d)
 
 # Add the required libraries for linking:
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_ts opencv_gpu opencv_highgui opencv_imgproc)
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_ts opencv_gpu opencv_highgui opencv_imgproc opencv_calib3d)
 
 enable_testing()
 get_target_property(LOC ${the_target} LOCATION)

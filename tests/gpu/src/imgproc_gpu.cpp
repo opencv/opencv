@@ -912,6 +912,51 @@ struct CV_GpuNormTest : CvTest
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// reprojectImageTo3D
+class CV_GpuReprojectImageTo3DTest : public CvTest
+{
+public:
+    CV_GpuReprojectImageTo3DTest() : CvTest("GPU-ReprojectImageTo3D", "reprojectImageTo3D") {}
+
+protected:
+    void run(int)
+    {
+        Mat disp(320, 240, CV_8UC1);
+
+        RNG rng(*ts->get_rng());
+        rng.fill(disp, RNG::UNIFORM, Scalar(5), Scalar(30));
+
+        Mat Q(4, 4, CV_32FC1);
+        rng.fill(Q, RNG::UNIFORM, Scalar(0.1), Scalar(1));
+
+        Mat cpures;
+        GpuMat gpures;
+
+        reprojectImageTo3D(disp, cpures, Q, false);
+        reprojectImageTo3D(GpuMat(disp), gpures, Q);
+
+        Mat temp = gpures;
+
+        for (int y = 0; y < cpures.rows; ++y)
+        {
+            const Vec3f* cpu_row = cpures.ptr<Vec3f>(y);
+            const Vec4f* gpu_row = temp.ptr<Vec4f>(y);
+            for (int x = 0; x < cpures.cols; ++x)
+            {
+                Vec3f a = cpu_row[x];
+                Vec4f b = gpu_row[x];
+
+                if (fabs(a[0] - b[0]) > 1e-5 || fabs(a[1] - b[1]) > 1e-5 || fabs(a[2] - b[2]) > 1e-5)
+                {
+                    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+                    return;
+                }
+            }
+        }
+    }
+};
+
 /////////////////////////////////////////////////////////////////////////////
 /////////////////// tests registration  /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -933,3 +978,4 @@ CV_GpuCornerHarrisTest CV_GpuCornerHarris_test;
 CV_GpuCornerMinEigenValTest CV_GpuCornerMinEigenVal_test;
 CV_GpuColumnSumTest CV_GpuColumnSum_test;
 CV_GpuNormTest CV_GpuNormTest_test;
+CV_GpuReprojectImageTo3DTest CV_GpuReprojectImageTo3D_test;

@@ -101,13 +101,15 @@ namespace
 
             featureCounter(0), maxCounter(0)
         {
-            CV_Assert(img.type() == CV_8UC1);
+            CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
             CV_Assert(nOctaves > 0 && nIntervals > 2);
             CV_Assert(DeviceInfo().has(ATOMICS));
 
             max_features = static_cast<int>(img.size().area() * featuresRatio);
             max_candidates = static_cast<int>(1.5 * max_features);
+
+            CV_Assert(max_features > 0);
 
             featuresBuffer.create(1, max_features, CV_32FC(6));
             maxPosBuffer.create(1, max_candidates, CV_32SC4);
@@ -202,7 +204,10 @@ namespace
                 featureCounter = std::min(featureCounter, static_cast<unsigned int>(max_features));
             }
 
-            featuresBuffer.colRange(0, featureCounter).copyTo(keypoints);
+            if (featureCounter > 0)
+                featuresBuffer.colRange(0, featureCounter).copyTo(keypoints);
+            else
+                keypoints.release();
         }
 
         void findOrientation(GpuMat& keypoints)
@@ -252,83 +257,104 @@ int cv::gpu::SURF_GPU::descriptorSize() const
 
 void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMat& keypointsGPU)
 {
-    Mat keypointsCPU(1, keypoints.size(), CV_32FC(6));
-
-    const KeyPoint* keypoints_ptr = &keypoints[0];
-    KeyPoint_GPU* keypointsCPU_ptr = keypointsCPU.ptr<KeyPoint_GPU>();
-    for (size_t i = 0; i < keypoints.size(); ++i, ++keypoints_ptr, ++keypointsCPU_ptr)
+    if (keypoints.empty())
+        keypointsGPU.release();
+    else
     {
-        const KeyPoint& kp = *keypoints_ptr;
-        KeyPoint_GPU& gkp = *keypointsCPU_ptr;
+        Mat keypointsCPU(1, keypoints.size(), CV_32FC(6));
 
-        gkp.x = kp.pt.x;
-        gkp.y = kp.pt.y;
+        const KeyPoint* keypoints_ptr = &keypoints[0];
+        KeyPoint_GPU* keypointsCPU_ptr = keypointsCPU.ptr<KeyPoint_GPU>();
+        for (size_t i = 0; i < keypoints.size(); ++i, ++keypoints_ptr, ++keypointsCPU_ptr)
+        {
+            const KeyPoint& kp = *keypoints_ptr;
+            KeyPoint_GPU& gkp = *keypointsCPU_ptr;
 
-        gkp.size = kp.size;
+            gkp.x = kp.pt.x;
+            gkp.y = kp.pt.y;
 
-        gkp.octave = static_cast<float>(kp.octave);
-        gkp.angle = kp.angle;
-        gkp.response = kp.response;
+            gkp.size = kp.size;
+
+            gkp.octave = static_cast<float>(kp.octave);
+            gkp.angle = kp.angle;
+            gkp.response = kp.response;
+        }
+
+        keypointsGPU.upload(keypointsCPU);
     }
-
-    keypointsGPU.upload(keypointsCPU);
 }
 
 void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, vector<KeyPoint>& keypoints)
 {
-    CV_Assert(keypointsGPU.type() == CV_32FC(6) && keypointsGPU.rows == 1);
-
-    Mat keypointsCPU = keypointsGPU;
-    keypoints.resize(keypointsGPU.cols);
-
-    KeyPoint* keypoints_ptr = &keypoints[0];
-    const KeyPoint_GPU* keypointsCPU_ptr = keypointsCPU.ptr<KeyPoint_GPU>();
-    for (int i = 0; i < keypointsGPU.cols; ++i, ++keypoints_ptr, ++keypointsCPU_ptr)
+    if (keypointsGPU.empty())
+        keypoints.clear();
+    else
     {
-        KeyPoint& kp = *keypoints_ptr;
-        const KeyPoint_GPU& gkp = *keypointsCPU_ptr;
+        CV_Assert(keypointsGPU.type() == CV_32FC(6) && keypointsGPU.isContinuous());
 
-        kp.pt.x = gkp.x;
-        kp.pt.y = gkp.y;
+        Mat keypointsCPU = keypointsGPU;
+        keypoints.resize(keypointsGPU.cols);
 
-        kp.size = gkp.size;
+        KeyPoint* keypoints_ptr = &keypoints[0];
+        const KeyPoint_GPU* keypointsCPU_ptr = keypointsCPU.ptr<KeyPoint_GPU>();
+        for (int i = 0; i < keypointsGPU.cols; ++i, ++keypoints_ptr, ++keypointsCPU_ptr)
+        {
+            KeyPoint& kp = *keypoints_ptr;
+            const KeyPoint_GPU& gkp = *keypointsCPU_ptr;
 
-        kp.octave = static_cast<int>(gkp.octave);
-        kp.angle = gkp.angle;
-        kp.response = gkp.response;
+            kp.pt.x = gkp.x;
+            kp.pt.y = gkp.y;
+
+            kp.size = gkp.size;
+
+            kp.octave = static_cast<int>(gkp.octave);
+            kp.angle = gkp.angle;
+            kp.response = gkp.response;
+        }
     }
 }
 
 void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors)
 {
-    CV_Assert(descriptorsGPU.type() == CV_32F);
+    if (descriptorsGPU.empty())
+        descriptors.clear();
+    else
+    {
+        CV_Assert(descriptorsGPU.type() == CV_32F);
 
-    descriptors.resize(descriptorsGPU.rows * descriptorsGPU.cols);
-    Mat descriptorsCPU(descriptorsGPU.size(), CV_32F, &descriptors[0]);
-    descriptorsGPU.download(descriptorsCPU);
+        descriptors.resize(descriptorsGPU.rows * descriptorsGPU.cols);
+        Mat descriptorsCPU(descriptorsGPU.size(), CV_32F, &descriptors[0]);
+        descriptorsGPU.download(descriptorsCPU);
+    }
 }
 
 void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
 {
-    SURF_GPU_Invoker surf(*this, img, mask);
+    if (!img.empty())
+    {
+        SURF_GPU_Invoker surf(*this, img, mask);
 
-    surf.detectKeypoints(keypoints);
+        surf.detectKeypoints(keypoints);
 
-    surf.findOrientation(keypoints);
+        surf.findOrientation(keypoints);
+    }
 }
 
 void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors, 
                                    bool useProvidedKeypoints, bool calcOrientation)
 {
-    SURF_GPU_Invoker surf(*this, img, mask);
-    
-    if (!useProvidedKeypoints)
-        surf.detectKeypoints(keypoints);
-    
-    if (calcOrientation)
-        surf.findOrientation(keypoints);
+    if (!img.empty())
+    {
+        SURF_GPU_Invoker surf(*this, img, mask);
+        
+        if (!useProvidedKeypoints)
+            surf.detectKeypoints(keypoints);
+        
+        if (calcOrientation)
+            surf.findOrientation(keypoints);
 
-    surf.computeDescriptors(keypoints, descriptors, descriptorSize());
+        surf.computeDescriptors(keypoints, descriptors, descriptorSize());
+    }
 }
 
 void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector<KeyPoint>& keypoints)

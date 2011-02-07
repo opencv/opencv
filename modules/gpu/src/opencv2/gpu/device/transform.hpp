@@ -315,8 +315,8 @@ namespace cv
 { 
     namespace gpu 
     {
-        template <bool UseSmart> struct TransformChooser;
-        template<> struct TransformChooser<false>
+        template <bool UseSmart> struct TransformDispatcher;
+        template<> struct TransformDispatcher<false>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
             static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, 
@@ -350,7 +350,7 @@ namespace cv
                     cudaSafeCall( cudaThreadSynchronize() );            
             }
         };
-        template<> struct TransformChooser<true>
+        template<> struct TransformDispatcher<true>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
             static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, 
@@ -393,7 +393,7 @@ namespace cv
         static void transform_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, 
             cudaStream_t stream = 0)
         {
-            TransformChooser<device::VecTraits<T>::cn == 1 && device::VecTraits<D>::cn == 1 && device::UnReadWriteTraits<T, D>::shift != 1>::call(src, dst, op, mask, stream);
+            TransformDispatcher<device::VecTraits<T>::cn == 1 && device::VecTraits<D>::cn == 1 && device::UnReadWriteTraits<T, D>::shift != 1>::call(src, dst, op, mask, stream);
         }
 
         template <typename T, typename D, typename UnOp>
@@ -412,7 +412,7 @@ namespace cv
         static void transform_caller(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, 
             BinOp op, const Mask& mask, cudaStream_t stream = 0)
         {
-            TransformChooser<device::VecTraits<T1>::cn == 1 && device::VecTraits<T2>::cn == 1 && device::VecTraits<D>::cn == 1 && device::BinReadWriteTraits<T1, T2, D>::shift != 1>::call(src1, src2, dst, op, mask, stream);
+            TransformDispatcher<device::VecTraits<T1>::cn == 1 && device::VecTraits<T2>::cn == 1 && device::VecTraits<D>::cn == 1 && device::BinReadWriteTraits<T1, T2, D>::shift != 1>::call(src1, src2, dst, op, mask, stream);
         }
 
         template <typename T1, typename T2, typename D, typename BinOp>
