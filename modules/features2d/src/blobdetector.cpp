@@ -1,46 +1,52 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+ //
+ //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+ //
+ //  By downloading, copying, installing or using the software you agree to this license.
+ //  If you do not agree to this license, do not download, install,
+ //  copy or use the software.
+ //
+ //
+ //                           License Agreement
+ //                For Open Source Computer Vision Library
+ //
+ // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+ // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+ // Third party copyrights are property of their respective owners.
+ //
+ // Redistribution and use in source and binary forms, with or without modification,
+ // are permitted provided that the following conditions are met:
+ //
+ //   * Redistribution's of source code must retain the above copyright notice,
+ //     this list of conditions and the following disclaimer.
+ //
+ //   * Redistribution's in binary form must reproduce the above copyright notice,
+ //     this list of conditions and the following disclaimer in the documentation
+ //     and/or other materials provided with the distribution.
+ //
+ //   * The name of the copyright holders may not be used to endorse or promote products
+ //     derived from this software without specific prior written permission.
+ //
+ // This software is provided by the copyright holders and contributors "as is" and
+ // any express or implied warranties, including, but not limited to, the implied
+ // warranties of merchantability and fitness for a particular purpose are disclaimed.
+ // In no event shall the Intel Corporation or contributors be liable for any direct,
+ // indirect, incidental, special, exemplary, or consequential damages
+ // (including, but not limited to, procurement of substitute goods or services;
+ // loss of use, data, or profits; or business interruption) however caused
+ // and on any theory of liability, whether in contract, strict liability,
+ // or tort (including negligence or otherwise) arising in any way out of
+ // the use of this software, even if advised of the possibility of such damage.
+ //
+ //M*/
 
 #include "precomp.hpp"
+
+//#define DEBUG_BLOB_DETECTOR
+
+#ifdef DEBUG_BLOB_DETECTOR
+#include <opencv2/highgui/highgui.hpp>
+#endif
 
 using namespace cv;
 
@@ -116,17 +122,19 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
 {
   centers.clear();
 
-  vector<vector<Point> > contours;
+  vector < vector<Point> > contours;
   Mat tmpBinaryImage = binaryImage.clone();
   findContours(tmpBinaryImage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 
-  //Mat keypointsImage;
-  //cvtColor( binaryImage, keypointsImage, CV_GRAY2RGB );
+#ifdef DEBUG_BLOB_DETECTOR
+  Mat keypointsImage;
+  cvtColor( binaryImage, keypointsImage, CV_GRAY2RGB );
 
-  //Mat contoursImage;
-  //cvtColor( binaryImage, contoursImage, CV_GRAY2RGB );
-  //drawContours( contoursImage, contours, -1, Scalar(0,255,0) );
-  //imshow("contours", contoursImage );
+  Mat contoursImage;
+  cvtColor( binaryImage, contoursImage, CV_GRAY2RGB );
+  drawContours( contoursImage, contours, -1, Scalar(0,255,0) );
+  imshow("contours", contoursImage );
+#endif
 
   for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++)
   {
@@ -178,7 +186,7 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
 
     if (params.filterByConvexity)
     {
-      vector<Point> hull;
+      vector < Point > hull;
       convexHull(Mat(contours[contourIdx]), hull);
       double area = contourArea(Mat(contours[contourIdx]));
       double hullArea = contourArea(Mat(hull));
@@ -212,14 +220,19 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
 
     centers.push_back(center);
 
-    //circle( keypointsImage, center.location, 1, Scalar(0,0,255), 1 );
+#ifdef DEBUG_BLOB_DETECTOR
+    circle( keypointsImage, center.location, 1, Scalar(0,0,255), 1 );
+#endif
   }
-  //imshow("bk", keypointsImage );
-  //waitKey();
+#ifdef DEBUG_BLOB_DETECTOR
+  imshow("bk", keypointsImage );
+  waitKey();
+#endif
 }
 
-void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask) const
+void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat&) const
 {
+  //TODO: support mask
   keypoints.clear();
   Mat grayscaleImage;
   if (image.channels() == 3)
@@ -227,7 +240,7 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
   else
     grayscaleImage = image;
 
-  vector<vector<Center> > centers;
+  vector < vector<Center> > centers;
   for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)
   {
     Mat binarizedImage;
@@ -236,8 +249,9 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
     //Mat keypointsImage;
     //cvtColor( binarizedImage, keypointsImage, CV_GRAY2RGB );
 
-    vector<Center> curCenters;
+    vector < Center > curCenters;
     findBlobs(grayscaleImage, binarizedImage, curCenters);
+    vector < vector<Center> > newCenters;
     for (size_t i = 0; i < curCenters.size(); i++)
     {
       //circle(keypointsImage, curCenters[i].location, 1, Scalar(0,0,255),-1);
@@ -262,9 +276,12 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
       }
       if (isNew)
       {
-        centers.push_back(vector<Center> (1, curCenters[i]));
+        newCenters.push_back(vector<Center> (1, curCenters[i]));
+        //centers.push_back(vector<Center> (1, curCenters[i]));
       }
     }
+    std::copy(newCenters.begin(), newCenters.end(), std::back_inserter(centers));
+
     //imshow("binarized", keypointsImage );
     //waitKey();
   }

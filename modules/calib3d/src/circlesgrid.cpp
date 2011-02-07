@@ -1,71 +1,72 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+ //
+ //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+ //
+ //  By downloading, copying, installing or using the software you agree to this license.
+ //  If you do not agree to this license, do not download, install,
+ //  copy or use the software.
+ //
+ //
+ //                           License Agreement
+ //                For Open Source Computer Vision Library
+ //
+ // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+ // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+ // Third party copyrights are property of their respective owners.
+ //
+ // Redistribution and use in source and binary forms, with or without modification,
+ // are permitted provided that the following conditions are met:
+ //
+ //   * Redistribution's of source code must retain the above copyright notice,
+ //     this list of conditions and the following disclaimer.
+ //
+ //   * Redistribution's in binary form must reproduce the above copyright notice,
+ //     this list of conditions and the following disclaimer in the documentation
+ //     and/or other materials provided with the distribution.
+ //
+ //   * The name of the copyright holders may not be used to endorse or promote products
+ //     derived from this software without specific prior written permission.
+ //
+ // This software is provided by the copyright holders and contributors "as is" and
+ // any express or implied warranties, including, but not limited to, the implied
+ // warranties of merchantability and fitness for a particular purpose are disclaimed.
+ // In no event shall the Intel Corporation or contributors be liable for any direct,
+ // indirect, incidental, special, exemplary, or consequential damages
+ // (including, but not limited to, procurement of substitute goods or services;
+ // loss of use, data, or profits; or business interruption) however caused
+ // and on any theory of liability, whether in contract, strict liability,
+ // or tort (including negligence or otherwise) arising in any way out of
+ // the use of this software, even if advised of the possibility of such damage.
+ //
+ //M*/
 
 #include "circlesgrid.hpp"
+//#define DEBUG_CIRCLES
 
 using namespace cv;
 using namespace std;
 
-Graph::Graph(int n)
+Graph::Graph(size_t n)
 {
-  for (int i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++)
   {
     addVertex(i);
   }
 }
 
-bool Graph::doesVertexExist(int id) const
+bool Graph::doesVertexExist(size_t id) const
 {
   return (vertices.find(id) != vertices.end());
 }
 
-void Graph::addVertex(int id)
+void Graph::addVertex(size_t id)
 {
   assert( !doesVertexExist( id ) );
 
-  vertices.insert(pair<int, Vertex> (id, Vertex()));
+  vertices.insert(pair<size_t, Vertex> (id, Vertex()));
 }
 
-void Graph::addEdge(int id1, int id2)
+void Graph::addEdge(size_t id1, size_t id2)
 {
   assert( doesVertexExist( id1 ) );
   assert( doesVertexExist( id2 ) );
@@ -74,7 +75,16 @@ void Graph::addEdge(int id1, int id2)
   vertices[id2].neighbors.insert(id1);
 }
 
-bool Graph::areVerticesAdjacent(int id1, int id2) const
+void Graph::removeEdge(size_t id1, size_t id2)
+{
+  assert( doesVertexExist( id1 ) );
+  assert( doesVertexExist( id2 ) );
+
+  vertices[id1].neighbors.erase(id2);
+  vertices[id2].neighbors.erase(id1);
+}
+
+bool Graph::areVerticesAdjacent(size_t id1, size_t id2) const
 {
   assert( doesVertexExist( id1 ) );
   assert( doesVertexExist( id2 ) );
@@ -88,7 +98,7 @@ size_t Graph::getVerticesCount() const
   return vertices.size();
 }
 
-size_t Graph::getDegree(int id) const
+size_t Graph::getDegree(size_t id) const
 {
   assert( doesVertexExist(id) );
 
@@ -126,11 +136,26 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
             == infinity)
           val2 = val1;
         else
+        {
           val2 = distanceMatrix.at<int> (it2->first, it1->first) + distanceMatrix.at<int> (it1->first, it3->first);
-        distanceMatrix.at<int> (it2->first, it3->first) = std::min(val1, val2);
+        }
+        distanceMatrix.at<int> (it2->first, it3->first) = (val1 == infinity) ? val2 : std::min(val1, val2);
       }
     }
   }
+}
+
+const Graph::Neighbors& Graph::getNeighbors(size_t id) const
+{
+  assert( doesVertexExist(id) );
+
+  Vertices::const_iterator it = vertices.find(id);
+  return it->second.neighbors;
+}
+
+CirclesGridFinder::Segment::Segment(cv::Point2f _s, cv::Point2f _e) :
+  s(_s), e(_e)
+{
 }
 
 void computeShortestPath(Mat &predecessorMatrix, int v1, int v2, vector<int> &path);
@@ -151,54 +176,210 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
   edgeGain = 1;
   edgePenalty = -5;
   existingVertexGain = 0;
+
+  minRNGEdgeSwitchDist = 5.f;
+  gridType = SYMMETRIC_GRID;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const vector<Point2f> &testKeypoints,
                                      const CirclesGridFinderParameters &_parameters) :
-  patternSize(_patternSize)
+  patternSize(static_cast<size_t> (_patternSize.width), static_cast<size_t> (_patternSize.height))
 {
+  CV_Assert(_patternSize.height >= 0 && _patternSize.width >= 0);
+
   keypoints = testKeypoints;
   parameters = _parameters;
+  largeHoles = 0;
+  smallHoles = 0;
 }
 
 bool CirclesGridFinder::findHoles()
 {
-  vector<Point2f> vectors, filteredVectors, basis;
-  computeEdgeVectorsOfRNG(vectors);
-  filterOutliersByDensity(vectors, filteredVectors);
-  vector<Graph> basisGraphs;
-  findBasis(filteredVectors, basis, basisGraphs);
-  findMCS(basis, basisGraphs);
+  switch (parameters.gridType)
+  {
+    case CirclesGridFinderParameters::SYMMETRIC_GRID:
+    {
+      vector<Point2f> vectors, filteredVectors, basis;
+      Graph rng(0);
+      computeRNG(rng, vectors);
+      filterOutliersByDensity(vectors, filteredVectors);
+      vector<Graph> basisGraphs;
+      findBasis(filteredVectors, basis, basisGraphs);
+      findMCS(basis, basisGraphs);
+      break;
+    }
 
+    case CirclesGridFinderParameters::ASYMMETRIC_GRID:
+    {
+      vector<Point2f> vectors, tmpVectors, filteredVectors, basis;
+      Graph rng(0);
+      computeRNG(rng, tmpVectors);
+      rng2gridGraph(rng, vectors);
+      filterOutliersByDensity(vectors, filteredVectors);
+      vector<Graph> basisGraphs;
+      findBasis(filteredVectors, basis, basisGraphs);
+      findMCS(basis, basisGraphs);
+      eraseUsedGraph(basisGraphs);
+      holes2 = holes;
+      holes.clear();
+      findMCS(basis, basisGraphs);
+      break;
+    }
+
+    default:
+      CV_Error(CV_StsBadArg, "Unkown pattern type");
+  }
   return (isDetectionCorrect());
   //CV_Error( 0, "Detection is not correct" );
 }
 
-bool CirclesGridFinder::isDetectionCorrect()
+void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vectors) const
 {
-  if (holes.size() != patternSize.height)
-    return false;
-
-  set<int> vertices;
-  for (size_t i = 0; i < holes.size(); i++)
+  for (size_t i = 0; i < rng.getVerticesCount(); i++)
   {
-    if (holes[i].size() != patternSize.width)
-      return false;
-
-    for (size_t j = 0; j < holes[i].size(); j++)
+    Graph::Neighbors neighbors1 = rng.getNeighbors(i);
+    for (Graph::Neighbors::iterator it1 = neighbors1.begin(); it1 != neighbors1.end(); it1++)
     {
-      vertices.insert(holes[i][j]);
+      Graph::Neighbors neighbors2 = rng.getNeighbors(*it1);
+      for (Graph::Neighbors::iterator it2 = neighbors2.begin(); it2 != neighbors2.end(); it2++)
+      {
+        if (i < *it2)
+        {
+          Point2f vec1 = keypoints[i] - keypoints[*it1];
+          Point2f vec2 = keypoints[*it1] - keypoints[*it2];
+          if (norm(vec1 - vec2) < parameters.minRNGEdgeSwitchDist || norm(vec1 + vec2)
+              < parameters.minRNGEdgeSwitchDist)
+            continue;
+
+          vectors.push_back(keypoints[i] - keypoints[*it2]);
+          vectors.push_back(keypoints[*it2] - keypoints[i]);
+        }
+      }
     }
   }
+}
 
-  return vertices.size() == patternSize.area();
+void CirclesGridFinder::eraseUsedGraph(vector<Graph> &basisGraphs) const
+{
+  for (size_t i = 0; i < holes.size(); i++)
+  {
+    for (size_t j = 0; j < holes[i].size(); j++)
+    {
+      for (size_t k = 0; k < basisGraphs.size(); k++)
+      {
+        if (i != holes.size() - 1 && basisGraphs[k].areVerticesAdjacent(holes[i][j], holes[i + 1][j]))
+        {
+          basisGraphs[k].removeEdge(holes[i][j], holes[i + 1][j]);
+        }
+
+        if (j != holes[i].size() - 1 && basisGraphs[k].areVerticesAdjacent(holes[i][j], holes[i][j + 1]))
+        {
+          basisGraphs[k].removeEdge(holes[i][j], holes[i][j + 1]);
+        }
+      }
+    }
+  }
+}
+
+bool CirclesGridFinder::isDetectionCorrect()
+{
+  switch (parameters.gridType)
+  {
+    case CirclesGridFinderParameters::SYMMETRIC_GRID:
+    {
+      if (holes.size() != patternSize.height)
+        return false;
+
+      set<size_t> vertices;
+      for (size_t i = 0; i < holes.size(); i++)
+      {
+        if (holes[i].size() != patternSize.width)
+          return false;
+
+        for (size_t j = 0; j < holes[i].size(); j++)
+        {
+          vertices.insert(holes[i][j]);
+        }
+      }
+
+      return vertices.size() == patternSize.area();
+    }
+
+    case CirclesGridFinderParameters::ASYMMETRIC_GRID:
+    {
+      if (holes.size() < holes2.size() || holes[0].size() < holes2[0].size())
+      {
+        largeHoles = &holes2;
+        smallHoles = &holes;
+      }
+      else
+      {
+        largeHoles = &holes;
+        smallHoles = &holes2;
+      }
+
+      size_t largeWidth = patternSize.width;
+      size_t largeHeight = ceil(patternSize.height / 2.);
+      size_t smallWidth = patternSize.width;
+      size_t smallHeight = floor(patternSize.height / 2.);
+
+      size_t sw = smallWidth, sh = smallHeight, lw = largeWidth, lh = largeHeight;
+      if (largeHoles->size() != largeHeight)
+      {
+        std::swap(lh, lw);
+      }
+      if (smallHoles->size() != smallHeight)
+      {
+        std::swap(sh, sw);
+      }
+
+      if (largeHoles->size() != lh || smallHoles->size() != sh)
+      {
+        return false;
+      }
+
+      set<size_t> vertices;
+      for (size_t i = 0; i < largeHoles->size(); i++)
+      {
+        if (largeHoles->at(i).size() != lw)
+        {
+          return false;
+        }
+
+        for (size_t j = 0; j < largeHoles->at(i).size(); j++)
+        {
+          vertices.insert(largeHoles->at(i)[j]);
+        }
+
+        if (i < smallHoles->size())
+        {
+          if (smallHoles->at(i).size() != sw)
+          {
+            return false;
+          }
+
+          for (size_t j = 0; j < smallHoles->at(i).size(); j++)
+          {
+            vertices.insert(smallHoles->at(i)[j]);
+          }
+        }
+      }
+      return (vertices.size() == largeHeight * largeWidth + smallHeight * smallWidth);
+    }
+
+    default:
+      CV_Error(0, "Unknown pattern type");
+  }
+
+  return false;
 }
 
 void CirclesGridFinder::findMCS(const vector<Point2f> &basis, vector<Graph> &basisGraphs)
 {
+  holes.clear();
   Path longestPath;
   size_t bestGraphIdx = findLongestPath(basisGraphs, longestPath);
-  vector<int> holesRow = longestPath.vertices;
+  vector<size_t> holesRow = longestPath.vertices;
 
   while (holesRow.size() > std::max(patternSize.width, patternSize.height))
   {
@@ -209,14 +390,14 @@ void CirclesGridFinder::findMCS(const vector<Point2f> &basis, vector<Graph> &bas
   if (bestGraphIdx == 0)
   {
     holes.push_back(holesRow);
-    int w = holes[0].size();
-    int h = holes.size();
+    size_t w = holes[0].size();
+    size_t h = holes.size();
 
     //parameters.minGraphConfidence = holes[0].size() * parameters.vertexGain + (holes[0].size() - 1) * parameters.edgeGain;
     //parameters.minGraphConfidence = holes[0].size() * parameters.vertexGain + (holes[0].size() / 2) * parameters.edgeGain;
     //parameters.minGraphConfidence = holes[0].size() * parameters.existingVertexGain + (holes[0].size() / 2) * parameters.edgeGain;
     parameters.minGraphConfidence = holes[0].size() * parameters.existingVertexGain;
-    for (int i = h; i < patternSize.height; i++)
+    for (size_t i = h; i < patternSize.height; i++)
     {
       addHolesByGraph(basisGraphs, true, basis[1]);
     }
@@ -224,7 +405,7 @@ void CirclesGridFinder::findMCS(const vector<Point2f> &basis, vector<Graph> &bas
     //parameters.minGraphConfidence = holes.size() * parameters.existingVertexGain + (holes.size() / 2) * parameters.edgeGain;
     parameters.minGraphConfidence = holes.size() * parameters.existingVertexGain;
 
-    for (int i = w; i < patternSize.width; i++)
+    for (size_t i = w; i < patternSize.width; i++)
     {
       addHolesByGraph(basisGraphs, false, basis[0]);
     }
@@ -235,17 +416,17 @@ void CirclesGridFinder::findMCS(const vector<Point2f> &basis, vector<Graph> &bas
     for (size_t i = 0; i < holesRow.size(); i++)
       holes[i].push_back(holesRow[i]);
 
-    int w = holes[0].size();
-    int h = holes.size();
+    size_t w = holes[0].size();
+    size_t h = holes.size();
 
     parameters.minGraphConfidence = holes.size() * parameters.existingVertexGain;
-    for (int i = w; i < patternSize.width; i++)
+    for (size_t i = w; i < patternSize.width; i++)
     {
       addHolesByGraph(basisGraphs, false, basis[0]);
     }
 
     parameters.minGraphConfidence = holes[0].size() * parameters.existingVertexGain;
-    for (int i = h; i < patternSize.height; i++)
+    for (size_t i = h; i < patternSize.height; i++)
     {
       addHolesByGraph(basisGraphs, true, basis[1]);
     }
@@ -292,9 +473,9 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const vector<Point2f>&
   return H;
 }
 
-int CirclesGridFinder::findNearestKeypoint(Point2f pt) const
+size_t CirclesGridFinder::findNearestKeypoint(Point2f pt) const
 {
-  int bestIdx = -1;
+  size_t bestIdx = -1;
   double minDist = std::numeric_limits<double>::max();
   for (size_t i = 0; i < keypoints.size(); i++)
   {
@@ -308,9 +489,9 @@ int CirclesGridFinder::findNearestKeypoint(Point2f pt) const
   return bestIdx;
 }
 
-void CirclesGridFinder::addPoint(Point2f pt, vector<int> &points)
+void CirclesGridFinder::addPoint(Point2f pt, vector<size_t> &points)
 {
-  int ptIdx = findNearestKeypoint(pt);
+  size_t ptIdx = findNearestKeypoint(pt);
   if (norm(keypoints[ptIdx] - pt) > parameters.minDistanceToAddKeypoint)
   {
     Point2f kpt = Point2f(pt);
@@ -323,8 +504,8 @@ void CirclesGridFinder::addPoint(Point2f pt, vector<int> &points)
   }
 }
 
-void CirclesGridFinder::findCandidateLine(vector<int> &line, int seedLineIdx, bool addRow, Point2f basisVec,
-                                          vector<int> &seeds)
+void CirclesGridFinder::findCandidateLine(vector<size_t> &line, size_t seedLineIdx, bool addRow, Point2f basisVec,
+                                          vector<size_t> &seeds)
 {
   line.clear();
   seeds.clear();
@@ -351,8 +532,8 @@ void CirclesGridFinder::findCandidateLine(vector<int> &line, int seedLineIdx, bo
   assert( line.size() == seeds.size() );
 }
 
-void CirclesGridFinder::findCandidateHoles(vector<int> &above, vector<int> &below, bool addRow, Point2f basisVec,
-                                           vector<int> &aboveSeeds, vector<int> &belowSeeds)
+void CirclesGridFinder::findCandidateHoles(vector<size_t> &above, vector<size_t> &below, bool addRow, Point2f basisVec,
+                                           vector<size_t> &aboveSeeds, vector<size_t> &belowSeeds)
 {
   above.clear();
   below.clear();
@@ -360,7 +541,7 @@ void CirclesGridFinder::findCandidateHoles(vector<int> &above, vector<int> &belo
   belowSeeds.clear();
 
   findCandidateLine(above, 0, addRow, -basisVec, aboveSeeds);
-  int lastIdx = addRow ? holes.size() - 1 : holes[0].size() - 1;
+  size_t lastIdx = addRow ? holes.size() - 1 : holes[0].size() - 1;
   findCandidateLine(below, lastIdx, addRow, basisVec, belowSeeds);
 
   assert( below.size() == above.size() );
@@ -368,7 +549,7 @@ void CirclesGridFinder::findCandidateHoles(vector<int> &above, vector<int> &belo
   assert( below.size() == belowSeeds.size() );
 }
 
-bool CirclesGridFinder::areCentersNew(const vector<int> &newCenters, const vector<vector<int> > &holes)
+bool CirclesGridFinder::areCentersNew(const vector<size_t> &newCenters, const vector<vector<size_t> > &holes)
 {
   for (size_t i = 0; i < newCenters.size(); i++)
   {
@@ -385,7 +566,8 @@ bool CirclesGridFinder::areCentersNew(const vector<int> &newCenters, const vecto
 }
 
 void CirclesGridFinder::insertWinner(float aboveConfidence, float belowConfidence, float minConfidence, bool addRow,
-                                     const vector<int> &above, const vector<int> &below, vector<vector<int> > &holes)
+                                     const vector<size_t> &above, const vector<size_t> &below,
+                                     vector<vector<size_t> > &holes)
 {
   if (aboveConfidence < minConfidence && belowConfidence < minConfidence)
     return;
@@ -432,30 +614,12 @@ void CirclesGridFinder::insertWinner(float aboveConfidence, float belowConfidenc
   }
 }
 
-/*
- bool CirclesGridFinder::areVerticesAdjacent(const Graph &graph, int vertex1, int vertex2)
- {
- property_map<Graph, vertex_index_t>::type index = get(vertex_index, graph);
-
- bool areAdjacent = false;
- graph_traits<Graph>::adjacency_iterator ai;
- graph_traits<Graph>::adjacency_iterator ai_end;
-
- for (tie(ai, ai_end) = adjacent_vertices(vertex1, graph); ai != ai_end; ++ai)
- {
- if (*ai == index[vertex2])
- areAdjacent = true;
- }
-
- return areAdjacent;
- }*/
-
 float CirclesGridFinder::computeGraphConfidence(const vector<Graph> &basisGraphs, bool addRow,
-                                                const vector<int> &points, const vector<int> &seeds)
+                                                const vector<size_t> &points, const vector<size_t> &seeds)
 {
   assert( points.size() == seeds.size() );
   float confidence = 0;
-  const int vCount = basisGraphs[0].getVerticesCount();
+  const size_t vCount = basisGraphs[0].getVerticesCount();
   assert( basisGraphs[0].getVerticesCount() == basisGraphs[1].getVerticesCount() );
 
   for (size_t i = 0; i < seeds.size(); i++)
@@ -498,7 +662,7 @@ float CirclesGridFinder::computeGraphConfidence(const vector<Graph> &basisGraphs
 
 void CirclesGridFinder::addHolesByGraph(const vector<Graph> &basisGraphs, bool addRow, Point2f basisVec)
 {
-  vector<int> above, below, aboveSeeds, belowSeeds;
+  vector<size_t> above, below, aboveSeeds, belowSeeds;
   findCandidateHoles(above, below, addRow, basisVec, aboveSeeds, belowSeeds);
   float aboveConfidence = computeGraphConfidence(basisGraphs, addRow, above, aboveSeeds);
   float belowConfidence = computeGraphConfidence(basisGraphs, addRow, below, belowSeeds);
@@ -537,7 +701,7 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
   Mat bestLabels;
   TermCriteria termCriteria;
   Mat centers;
-  int clustersCount = 4;
+  const int clustersCount = 4;
   kmeans(Mat(samples).reshape(1, 0), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
          KMEANS_RANDOM_CENTERS, &centers);
   assert( centers.type() == CV_32FC1 );
@@ -555,7 +719,7 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
     }
   }
   if (basis.size() != 2)
-    CV_Error( 0, "Basis size is not 2");
+    CV_Error(0, "Basis size is not 2");
 
   if (basis[1].x > basis[0].x)
   {
@@ -565,7 +729,7 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
 
   const float minBasisDif = 2;
   if (norm(basis[0] - basis[1]) < minBasisDif)
-    CV_Error( 0, "degenerate basis" );
+    CV_Error(0, "degenerate basis" );
 
   vector<vector<Point2f> > clusters(2), hulls(2);
   for (size_t k = 0; k < samples.size(); k++)
@@ -605,10 +769,13 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
       }
     }
   }
+  if (basisGraphs.size() != 2)
+    CV_Error(0, "Number of basis graphs is not 2");
 }
 
-void CirclesGridFinder::computeEdgeVectorsOfRNG(vector<Point2f> &vectors, Mat *drawImage) const
+void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors, Mat *drawImage) const
 {
+  rng = Graph(keypoints.size());
   vectors.clear();
 
   //TODO: use more fast algorithm instead of naive N^3
@@ -639,6 +806,7 @@ void CirclesGridFinder::computeEdgeVectorsOfRNG(vector<Point2f> &vectors, Mat *d
 
       if (isNeighbors)
       {
+        rng.addEdge(i, j);
         vectors.push_back(keypoints[i] - keypoints[j]);
         if (drawImage != 0)
         {
@@ -673,7 +841,7 @@ void computePredecessorMatrix(const Mat &dm, int verticesCount, Mat &predecessor
   }
 }
 
-void computeShortestPath(Mat &predecessorMatrix, int v1, int v2, vector<int> &path)
+void computeShortestPath(Mat &predecessorMatrix, size_t v1, size_t v2, vector<size_t> &path)
 {
   if (predecessorMatrix.at<int> (v1, v2) < 0)
   {
@@ -714,7 +882,11 @@ size_t CirclesGridFinder::findLongestPath(vector<Graph> &basisGraphs, Path &best
     if (longestPaths.empty() || (maxVal == longestPaths[0].length && graphIdx == bestGraphIdx))
     {
       Path path = Path(maxLoc.x, maxLoc.y, cvRound(maxVal));
-      computeShortestPath(predecessorMatrix, maxLoc.x, maxLoc.y, path.vertices);
+      CV_Assert(maxLoc.x >= 0 && maxLoc.y >= 0)
+        ;
+      size_t id1 = static_cast<size_t> (maxLoc.x);
+      size_t id2 = static_cast<size_t> (maxLoc.y);
+      computeShortestPath(predecessorMatrix, id1, id2, path.vertices);
       longestPaths.push_back(path);
 
       int conf = 0;
@@ -847,4 +1019,191 @@ void CirclesGridFinder::getHoles(vector<Point2f> &outHoles) const
       outHoles.push_back(keypoints[holes[i][j]]);
     }
   }
+}
+
+bool areIndicesCorrect(Point pos, vector<vector<size_t> > *points)
+{
+  if (pos.y < 0 || pos.x < 0)
+    return false;
+  return (static_cast<size_t> (pos.y) < points->size() && static_cast<size_t> (pos.x) < points->at(pos.y).size());
+}
+
+void CirclesGridFinder::getAsymmetricHoles(std::vector<cv::Point2f> &outHoles) const
+{
+  outHoles.clear();
+
+  vector<Point> largeCornerIndices, smallCornerIndices;
+  vector<Point> firstSteps, secondSteps;
+  size_t cornerIdx = getFirstCorner(largeCornerIndices, smallCornerIndices, firstSteps, secondSteps);
+  CV_Assert(largeHoles != 0 && smallHoles != 0)
+    ;
+
+  Point srcLargePos = largeCornerIndices[cornerIdx];
+  Point srcSmallPos = smallCornerIndices[cornerIdx];
+
+  while (areIndicesCorrect(srcLargePos, largeHoles) || areIndicesCorrect(srcSmallPos, smallHoles))
+  {
+    Point largePos = srcLargePos;
+    while (areIndicesCorrect(largePos, largeHoles))
+    {
+      outHoles.push_back(keypoints[largeHoles->at(largePos.y)[largePos.x]]);
+      largePos += firstSteps[cornerIdx];
+    }
+    srcLargePos += secondSteps[cornerIdx];
+
+    Point smallPos = srcSmallPos;
+    while (areIndicesCorrect(smallPos, smallHoles))
+    {
+      outHoles.push_back(keypoints[smallHoles->at(smallPos.y)[smallPos.x]]);
+      smallPos += firstSteps[cornerIdx];
+    }
+    srcSmallPos += secondSteps[cornerIdx];
+  }
+}
+
+double CirclesGridFinder::getDirection(Point2f p1, Point2f p2, Point2f p3)
+{
+  Point2f a = p3 - p1;
+  Point2f b = p2 - p1;
+  return a.x * b.y - a.y * b.x;
+}
+
+bool CirclesGridFinder::areSegmentsIntersecting(Segment seg1, Segment seg2)
+{
+  bool doesStraddle1 = (getDirection(seg2.s, seg2.e, seg1.s) * getDirection(seg2.s, seg2.e, seg1.e)) < 0;
+  bool doesStraddle2 = (getDirection(seg1.s, seg1.e, seg2.s) * getDirection(seg1.s, seg1.e, seg2.e)) < 0;
+  return doesStraddle1 && doesStraddle2;
+
+  /*
+   Point2f t1 = e1-s1;
+   Point2f n1(t1.y, -t1.x);
+   double c1 = -n1.ddot(s1);
+
+   Point2f t2 = e2-s2;
+   Point2f n2(t2.y, -t2.x);
+   double c2 = -n2.ddot(s2);
+
+   bool seg1 = ((n1.ddot(s2) + c1) * (n1.ddot(e2) + c1)) <= 0;
+   bool seg1 = ((n2.ddot(s1) + c2) * (n2.ddot(e1) + c2)) <= 0;
+
+   return seg1 && seg2;
+   */
+}
+
+void CirclesGridFinder::getCornerSegments(const vector<vector<size_t> > &points, vector<vector<Segment> > &segments,
+                                          vector<Point> &cornerIndices, vector<Point> &firstSteps,
+                                          vector<Point> &secondSteps) const
+{
+  segments.clear();
+  cornerIndices.clear();
+  firstSteps.clear();
+  secondSteps.clear();
+  size_t h = points.size();
+  size_t w = points[0].size();
+  CV_Assert(h >= 2 && w >= 2)
+    ;
+
+  //all 8 segments with one end in a corner
+  vector<Segment> corner;
+  corner.push_back(Segment(keypoints[points[1][0]], keypoints[points[0][0]]));
+  corner.push_back(Segment(keypoints[points[0][0]], keypoints[points[0][1]]));
+  segments.push_back(corner);
+  cornerIndices.push_back(Point(0, 0));
+  firstSteps.push_back(Point(1, 0));
+  secondSteps.push_back(Point(0, 1));
+  corner.clear();
+
+  corner.push_back(Segment(keypoints[points[0][w - 2]], keypoints[points[0][w - 1]]));
+  corner.push_back(Segment(keypoints[points[0][w - 1]], keypoints[points[1][w - 1]]));
+  segments.push_back(corner);
+  cornerIndices.push_back(Point(w - 1, 0));
+  firstSteps.push_back(Point(0, 1));
+  secondSteps.push_back(Point(-1, 0));
+  corner.clear();
+
+  corner.push_back(Segment(keypoints[points[h - 2][w - 1]], keypoints[points[h - 1][w - 1]]));
+  corner.push_back(Segment(keypoints[points[h - 1][w - 1]], keypoints[points[h - 1][w - 2]]));
+  segments.push_back(corner);
+  cornerIndices.push_back(Point(w - 1, h - 1));
+  firstSteps.push_back(Point(-1, 0));
+  secondSteps.push_back(Point(0, -1));
+  corner.clear();
+
+  corner.push_back(Segment(keypoints[points[h - 1][1]], keypoints[points[h - 1][0]]));
+  corner.push_back(Segment(keypoints[points[h - 1][0]], keypoints[points[h - 2][0]]));
+  cornerIndices.push_back(Point(0, h - 1));
+  firstSteps.push_back(Point(0, -1));
+  secondSteps.push_back(Point(1, 0));
+  segments.push_back(corner);
+  corner.clear();
+
+  //y axis is inverted in computer vision so we check < 0
+  bool isClockwise =
+      getDirection(keypoints[points[0][0]], keypoints[points[0][w - 1]], keypoints[points[h - 1][w - 1]]) < 0;
+  if (!isClockwise)
+  {
+#ifdef DEBUG_CIRCLES
+    cout << "Corners are counterclockwise" << endl;
+#endif
+    std::reverse(segments.begin(), segments.end());
+  }
+}
+
+bool CirclesGridFinder::doesIntersectionExist(const vector<Segment> &corner, const vector<vector<Segment> > &segments)
+{
+  for (size_t i = 0; i < corner.size(); i++)
+  {
+    for (size_t j = 0; j < segments.size(); j++)
+    {
+      for (size_t k = 0; k < segments[j].size(); k++)
+      {
+        if (areSegmentsIntersecting(corner[i], segments[j][k]))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+size_t CirclesGridFinder::getFirstCorner(vector<Point> &largeCornerIndices, vector<Point> &smallCornerIndices, vector<
+    Point> &firstSteps, vector<Point> &secondSteps) const
+{
+  vector<vector<Segment> > largeSegments;
+  vector<vector<Segment> > smallSegments;
+
+  getCornerSegments(*largeHoles, largeSegments, largeCornerIndices, firstSteps, secondSteps);
+  getCornerSegments(*smallHoles, smallSegments, smallCornerIndices, firstSteps, secondSteps);
+
+  const size_t cornersCount = 4;
+  CV_Assert(largeSegments.size() == cornersCount)
+    ;
+
+  bool isInsider[cornersCount];
+
+  for (size_t i = 0; i < cornersCount; i++)
+  {
+    isInsider[i] = doesIntersectionExist(largeSegments[i], smallSegments);
+  }
+
+  int cornerIdx = 0;
+  bool waitOutsider = true;
+
+  while (true)
+  {
+    if (waitOutsider)
+    {
+      if (!isInsider[(cornerIdx + 1) % cornersCount])
+        waitOutsider = false;
+    }
+    else
+    {
+      if (isInsider[(cornerIdx + 1) % cornersCount])
+        break;
+    }
+
+    cornerIdx = (cornerIdx + 1) % cornersCount;
+  }
+
+  return cornerIdx;
 }

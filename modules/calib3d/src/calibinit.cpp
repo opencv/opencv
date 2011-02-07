@@ -1935,7 +1935,7 @@ void drawChessboardCorners( Mat& image, Size patternSize,
 }
 
 bool findCirclesGrid( const Mat& image, Size patternSize,
-                      vector<Point2f>& centers, int )
+                      vector<Point2f>& centers, int flags )
 {
     Ptr<SimpleBlobDetector> detector = new SimpleBlobDetector();
     //Ptr<FeatureDetector> detector = new MserFeatureDetector();
@@ -1944,7 +1944,7 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
     vector<Point2f> points;
     for (size_t i = 0; i < keypoints.size(); i++)
     {
-        points.push_back (keypoints[i].pt);
+      points.push_back (keypoints[i].pt);
     }
 
     CirclesGridFinderParameters parameters;
@@ -1954,8 +1954,13 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
     parameters.edgeGain = 1;
     parameters.edgePenalty = -0.6f;
 
+    if(flags & CALIB_CB_ASYMMETRIC_GRID)
+      parameters.gridType = CirclesGridFinderParameters::ASYMMETRIC_GRID;
+    if(flags & CALIB_CB_SYMMETRIC_GRID)
+      parameters.gridType = CirclesGridFinderParameters::SYMMETRIC_GRID;
+
     const int attempts = 2;
-    const int minHomographyPoints = 4;
+    const size_t minHomographyPoints = 4;
     Mat H;
     for (int i = 0; i < attempts; i++)
     {
@@ -1970,10 +1975,20 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
       {
       }
 
-      boxFinder.getHoles(centers);
-
       if (isFound)
       {
+      	switch(parameters.gridType)
+      	{
+          case CirclesGridFinderParameters::SYMMETRIC_GRID:
+            boxFinder.getHoles(centers);
+            break;
+          case CirclesGridFinderParameters::ASYMMETRIC_GRID:
+	    boxFinder.getAsymmetricHoles(centers);
+	    break;
+          default:
+            CV_Error(CV_StsBadArg, "Unkown pattern type");
+      	}
+
         if (i != 0)
         {
           Mat orgPointsMat;
@@ -1983,7 +1998,8 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
 
         return true;
       }
-
+      
+      boxFinder.getHoles(centers);
       if (i != attempts - 1)
       {
         if (centers.size() < minHomographyPoints)
