@@ -41,7 +41,7 @@ if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_hdr1 "src/nvidia/*.hpp")
     file(GLOB_RECURSE ncv_hdr2 "src/nvidia/*.h")
 
-    if (NOT MSVS)
+    if (NOT MSVC)
         file(GLOB vvv "src/nvidia/*.cu")
         list(GET vvv 0 vv)
         list(REMOVE_ITEM ncv_cuda ${vv})
