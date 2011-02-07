@@ -146,15 +146,15 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
   const size_t end = size - modulo;
   for (i = 0; i < end; i += sizeof(pop_t))
   {
-    size_t a2 = *reinterpret_cast<const pop_t*> (a + i);
-    size_t b2 = *reinterpret_cast<const pop_t*> (b + i);
+    pop_t a2 = *reinterpret_cast<const pop_t*> (a + i);
+    pop_t b2 = *reinterpret_cast<const pop_t*> (b + i);
     result += __builtin_popcountl(a2 ^ b2);
   }
   if (modulo)
   {
     //in the case where size is not divisible by sizeof(size_t)
     //need to mask of the bits at the end  
-    size_t a2=0,b2=0;
+    pop_t a2=0,b2=0;
     memcpy(&a2,a+end,modulo);
     memcpy(&b2,b+end,modulo);
     //std::cout << std::hex << (a2^b2) << std::endl;
