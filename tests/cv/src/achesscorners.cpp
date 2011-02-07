@@ -74,7 +74,7 @@ void show_points( const Mat& gray, const Mat& u, const vector<Point2f>& v, Size 
 }
 
 
-enum Pattern { CHESSBOARD, CIRCLES_GRID };
+enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
 
 class CV_ChessboardDetectorTest : public CvTest
 {
@@ -149,6 +149,9 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
         case CIRCLES_GRID:
             run_batch("circles_list.dat");
             break;
+        case ASYMMETRIC_CIRCLES_GRID:
+            run_batch("acircles_list.dat");
+            break;
     }
 }
 
@@ -170,6 +173,9 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             break;
         case CIRCLES_GRID:
             folder = string(ts.get_data_path()) + "cameracalibration/circles/";
+            break;
+        case ASYMMETRIC_CIRCLES_GRID:
+            folder = string(ts.get_data_path()) + "cameracalibration/asymmetric_circles/";
             break;
     }
 
@@ -229,7 +235,10 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 result = findChessboardCorners(gray, pattern_size, v, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);
                 break;
             case CIRCLES_GRID:
-                result = findCirclesGrid(gray, pattern_size, v);
+                result = findCirclesGrid(gray, pattern_size, v, CALIB_CB_SYMMETRIC_GRID);
+                break;
+            case ASYMMETRIC_CIRCLES_GRID:
+                result = findCirclesGrid(gray, pattern_size, v, CALIB_CB_ASYMMETRIC_GRID);
                 break;
         }
         show_points( gray, Mat(), v, pattern_size, result );
@@ -441,5 +450,6 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 
 CV_ChessboardDetectorTest chessboard_detector_test ( CHESSBOARD, "chessboard-detector", "cvFindChessboardCorners" );
 CV_ChessboardDetectorTest circlesgrid_detector_test ( CIRCLES_GRID, "circlesgrid-detector", "findCirclesGrid" );
+CV_ChessboardDetectorTest asymmetric_circlesgrid_detector_test ( ASYMMETRIC_CIRCLES_GRID, "asymmetric-circlesgrid-detector", "findCirclesGrid" );
 
 /* End of file. */
