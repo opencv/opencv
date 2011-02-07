@@ -166,12 +166,6 @@ struct T_false {};
 template <typename T, typename U> struct is_same : T_false {};
 template <typename T> struct is_same<T, T> : T_true {};
 
-template <int v>
-struct Int2Type
-{
-    enum { value = v };
-};
-
 
 template<class T_in, class T_out>
 struct _scanElemOp
@@ -179,14 +173,16 @@ struct _scanElemOp
     template<bool tbDoSqr>
     static inline __host__ __device__ T_out scanElemOp(T_in elem)
     {
-        return scanElemOp_( elem, Int2Type<(int)tbDoSqr>() );
+        return scanElemOp( elem, Int2Type<(int)tbDoSqr>() );
     }
 private:
-    static inline __host__ __device__ T_out scanElemOp_(T_in elem,const Int2Type<0>&)
+    template <int v> struct Int2Type { enum { value = v }; };
+
+    static inline __host__ __device__ T_out scanElemOp(T_in elem,const Int2Type<0>&)
     {
         return (T_out)elem;
     }
-    static inline __host__ __device__ T_out scanElemOp_(T_in elem, const Int2Type<1>&)
+    static inline __host__ __device__ T_out scanElemOp(T_in elem, const Int2Type<1>&)
     {
         return (T_out)(elem*elem);
     }

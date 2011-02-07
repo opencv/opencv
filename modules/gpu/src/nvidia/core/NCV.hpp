@@ -523,7 +523,7 @@ public:
         clear();
     }
 
-	virtual ~NCVVector() {}
+    virtual ~NCVVector() {}
 
     void clear()
     {
@@ -579,7 +579,7 @@ class NCVVectorAlloc : public NCVVector<T>
 {
     NCVVectorAlloc();
     NCVVectorAlloc(const NCVVectorAlloc &);
-	NCVVectorAlloc& operator=(const NCVVectorAlloc<T>&);	
+    NCVVectorAlloc& operator=(const NCVVectorAlloc<T>&);	
 
 public:
 
@@ -701,7 +701,7 @@ public:
         clear();
     }
 
-	virtual ~NCVMatrix() {}
+    virtual ~NCVMatrix() {}
 
 
     void clear()
@@ -772,7 +772,7 @@ class NCVMatrixAlloc : public NCVMatrix<T>
 {
     NCVMatrixAlloc();
     NCVMatrixAlloc(const NCVMatrixAlloc &);
-	NCVMatrixAlloc& operator=(const NCVMatrixAlloc &);
+    NCVMatrixAlloc& operator=(const NCVMatrixAlloc &);
 public:
 
     NCVMatrixAlloc(INCVMemAllocator &allocator, Ncv32u width, Ncv32u height, Ncv32u pitch=0)

@@ -146,10 +146,10 @@ namespace NCVRuntimeTemplateBool
     {
         //Convenience function used by the user
         //Takes a variable argument list, transforms it into a list
-        static void call(Func &functor, Ncv32u dummy, ...)
+        static void call(Func *functor, int dummy, ...)
         {
             //Vector used to collect arguments
-            std::vector<NcvBool> templateParamList;
+            std::vector<int> templateParamList;
 
             //Variable argument list manipulation
             va_list listPointer;
@@ -157,18 +157,18 @@ namespace NCVRuntimeTemplateBool
             //Collect parameters into the list
             for(int i=0; i<NumArguments; i++)
             {
-                NcvBool val = va_arg(listPointer, NcvBool);
+                int val = va_arg(listPointer, int);
                 templateParamList.push_back(val);
             }
             va_end(listPointer);
 
             //Call the actual typelist building function
-            call(functor, templateParamList);
+            call(*functor, templateParamList);
         }
 
         //Actual function called recursively to build a typelist based
         //on a list of values
-        static void call( Func &functor, std::vector<NcvBool> &templateParamList)
+        static void call( Func &functor, std::vector<int> &templateParamList)
         {
             //Get current parameter value in the list
             NcvBool val = templateParamList[templateParamList.size() - 1];
@@ -205,7 +205,7 @@ namespace NCVRuntimeTemplateBool
             functor.call(TList()); //TList instantiated to get the method template parameter resolved
         }
 
-        static void call(Func &functor, std::vector<NcvBool> &templateParams)
+        static void call(Func &functor, std::vector<int> &templateParams)
         {
             functor.call(TList());
         }

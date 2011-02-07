@@ -41,13 +41,6 @@ if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_hdr1 "src/nvidia/*.hpp")
     file(GLOB_RECURSE ncv_hdr2 "src/nvidia/*.h")
 
-    if (NOT MSVC)
-        file(GLOB vvv "src/nvidia/*.cu")
-        list(GET vvv 0 vv)
-        list(REMOVE_ITEM ncv_cuda ${vv})
-    endif()
-    message(STATUS ${ncv_cuda})
-
     source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdr1} ${ncv_hdr2} ${ncv_cuda})
     include_directories("src/nvidia/core" "src/nvidia/NPP_staging")
 endif()

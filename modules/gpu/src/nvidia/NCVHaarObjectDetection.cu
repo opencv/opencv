@@ -748,22 +748,25 @@ void applyHaarClassifierAnchorParallelDynTemplate(NcvBool tbInitMaskPositively,
                                                   NcvSize32u anchorsRoi, Ncv32u startStageInc,
                                                   Ncv32u endStageExc, Ncv32f scaleArea)
 {
+
+    applyHaarClassifierAnchorParallelFunctor functor(gridConf, blockConf, cuStream,
+                                                     d_IImg, IImgStride,
+                                                     d_weights, weightsStride,
+                                                     d_Features, d_ClassifierNodes, d_Stages,
+                                                     d_inMask, d_outMask,
+                                                     mask1Dlen, mask2Dstride,
+                                                     anchorsRoi, startStageInc,
+                                                     endStageExc, scaleArea);
+
     //Second parameter is the number of "dynamic" template parameters
     NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 5, applyHaarClassifierAnchorParallelFunctor>
-        ::call( applyHaarClassifierAnchorParallelFunctor(gridConf, blockConf, cuStream,
-                                                         d_IImg, IImgStride,
-                                                         d_weights, weightsStride,
-                                                         d_Features, d_ClassifierNodes, d_Stages,
-                                                         d_inMask, d_outMask,
-                                                         mask1Dlen, mask2Dstride,
-                                                         anchorsRoi, startStageInc,
-                                                         endStageExc, scaleArea),
-        0xC001C0DE, //this is dummy int for the va_args C compatibility
-        tbInitMaskPositively,
-        tbCacheTextureIImg,
-        tbCacheTextureCascade,
-        tbReadPixelIndexFromVector,
-        tbDoAtomicCompaction);
+        ::call( &functor,
+                0xC001C0DE, //this is dummy int for the va_args C compatibility
+                tbInitMaskPositively,
+                tbCacheTextureIImg,
+                tbCacheTextureCascade,
+                tbReadPixelIndexFromVector,
+                tbDoAtomicCompaction);
 }
 
 
@@ -851,20 +854,22 @@ void applyHaarClassifierClassifierParallelDynTemplate(NcvBool tbCacheTextureIImg
                                                       NcvSize32u anchorsRoi, Ncv32u startStageInc,
                                                       Ncv32u endStageExc, Ncv32f scaleArea)
 {
+    applyHaarClassifierClassifierParallelFunctor functor(gridConf, blockConf, cuStream,
+                                                         d_IImg, IImgStride,
+                                                         d_weights, weightsStride,
+                                                         d_Features, d_ClassifierNodes, d_Stages,
+                                                         d_inMask, d_outMask,
+                                                         mask1Dlen, mask2Dstride,
+                                                         anchorsRoi, startStageInc,
+                                                         endStageExc, scaleArea);
+
     //Second parameter is the number of "dynamic" template parameters
     NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 3, applyHaarClassifierClassifierParallelFunctor>
-        ::call( applyHaarClassifierClassifierParallelFunctor(gridConf, blockConf, cuStream,
-                                                             d_IImg, IImgStride,
-                                                             d_weights, weightsStride,
-                                                             d_Features, d_ClassifierNodes, d_Stages,
-                                                             d_inMask, d_outMask,
-                                                             mask1Dlen, mask2Dstride,
-                                                             anchorsRoi, startStageInc,
-                                                             endStageExc, scaleArea),
-        0xC001C0DE, //this is dummy int for the va_args C compatibility
-        tbCacheTextureIImg,
-        tbCacheTextureCascade,
-        tbDoAtomicCompaction);
+        ::call( &functor,
+                0xC001C0DE, //this is dummy int for the va_args C compatibility
+                tbCacheTextureIImg,
+                tbCacheTextureCascade,
+                tbDoAtomicCompaction);
 }
 
 
@@ -920,15 +925,17 @@ void initializeMaskVectorDynTemplate(NcvBool tbMaskByInmask,
                                      Ncv32u mask1Dlen, Ncv32u mask2Dstride,
                                      NcvSize32u anchorsRoi, Ncv32u step)
 {
+    initializeMaskVectorFunctor functor(gridConf, blockConf, cuStream,
+                                        d_inMask, d_outMask,
+                                        mask1Dlen, mask2Dstride,
+                                        anchorsRoi, step);
+
     //Second parameter is the number of "dynamic" template parameters
     NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 2, initializeMaskVectorFunctor>
-        ::call( initializeMaskVectorFunctor(gridConf, blockConf, cuStream,
-                                            d_inMask, d_outMask,
-                                            mask1Dlen, mask2Dstride,
-                                            anchorsRoi, step),
-        0xC001C0DE, //this is dummy int for the va_args C compatibility
-        tbMaskByInmask,
-        tbDoAtomicCompaction);
+        ::call( &functor,
+                0xC001C0DE, //this is dummy int for the va_args C compatibility
+                tbMaskByInmask,
+                tbDoAtomicCompaction);
 }
 
 

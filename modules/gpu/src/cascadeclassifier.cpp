@@ -47,7 +47,7 @@ using namespace cv::gpu;
 using namespace std;
 
 
-#if !defined (HAVE_CUDA) || (defined(_MSC_VER) && _MSC_VER != 1500) || !defined(_MSC_VER)
+#if !defined (HAVE_CUDA)
 
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()  { throw_nogpu(); }
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string&)  { throw_nogpu(); }
@@ -58,13 +58,6 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string&)  { throw_nogpu(); retur
 Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const { throw_nogpu(); return Size(); }
 
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
-
-#if defined (HAVE_CUDA)
-	NCVStatus loadFromXML(const string&, HaarClassifierCascadeDescriptor&, vector<HaarStage64>&, 
-						  vector<HaarClassifierNode128>&, vector<HaarFeature64>&) { throw_nogpu(); return NCVStatus(); }
-
-	void groupRectangles(vector<NcvRect32u>&, int, double, vector<Ncv32u>*) { throw_nogpu(); }
-#endif
 
 #else
 
@@ -270,7 +263,11 @@ Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const
 }
                             
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
-{     
+{   
+	#if !defined(_MSC_VER)
+		CV_Assert(!"FD under not-VS2008 is not implemented");
+	#endif
+
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U);
     CV_Assert( !this->empty());
         

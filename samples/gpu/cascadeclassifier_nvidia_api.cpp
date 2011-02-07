@@ -2,8 +2,8 @@
 #include <cstdio>
 
 #include "cvconfig.h"
-#if !defined(HAVE_CUDA) || defined(__GNUC__)
-    int main( int argc, const char** argv ) { return printf("Please compile the librarary with CUDA support."), -1; }
+#if !defined(HAVE_CUDA)
+    int main( int argc, const char** argv ) { return printf("Please compile the library with CUDA support."), -1; }
 #else
 
 #include <cuda_runtime.h>
