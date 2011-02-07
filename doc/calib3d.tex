@@ -626,7 +626,7 @@ drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
 Finds the centers of the cirlces' grid.
 \cvdefCpp{bool findCirclesGrid( const Mat\& image, Size patternSize,\par
                             vector<Point2f>\& centers,\par
-                            int flags=0 );}
+                            int flags=CALIB\_CB\_SYMMETRIC\_GRID );}
 \begin{description}
 \cvarg{image}{Source circles' grid view; it must be an 8-bit grayscale or color
 image}
@@ -634,7 +634,11 @@ image}
 ( patternSize = Size( points\_per\_row, points\_per\_colum ) =
 Size( columns, rows ) )}
 \cvarg{centers}{The output array of centers detected}
-\cvarg{flags}{Various operation flags, no flags are supported currently} 
+\cvarg{flags}{Various operation flags, can be one of the following values:
+\begin{description}
+ \cvarg{CALIB\_CB\_SYMMETRIC\_GRID}{use symmetric pattern of circles.}
+ \cvarg{CALIB\_CB\_ASYMMETRIC\_GRID}{use asymmetric pattern of circles.}
+\end{description}}
 \end{description}
 
 The function attempts to determine
