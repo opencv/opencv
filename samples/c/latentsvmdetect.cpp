@@ -2,6 +2,13 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
 
+#ifdef HAVE_CONFIG_H 
+#include <cvconfig.h> 
+#endif
+#ifdef HAVE_TBB
+#include "tbb/task_scheduler_init.h"
+#endif
+
 using namespace cv;
 
 void help()
@@ -9,26 +16,43 @@ void help()
 	printf( "This program demonstrated the use of the latentSVM detector.\n"
 			"It reads in a trained object model and then uses that to detect the object in an image\n"
 			"Call:\n"
-			"./latentsvmdetect [<image_filename> <model_filename]\n"
+            "./latentsvmdetect [<image_filename> <model_filename> [<threads_number>]]\n"
 			"  The defaults for image_filename and model_filename are cat.jpg and cat.xml respectively\n"
 			"  Press any key to quit.\n");
 }
 
 const char* model_filename = "cat.xml";
 const char* image_filename = "cat.jpg";
+int   tbbNumThreads = -1;
 
-void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detector)
+void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detector, int numThreads = -1)
 {
     CvMemStorage* storage = cvCreateMemStorage(0);
     CvSeq* detections = 0;
     int i = 0;
 	int64 start = 0, finish = 0;
+#ifdef HAVE_TBB
+    tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
+	if (numThreads > 0)
+	{
+		init.initialize(numThreads);
+        printf("Number of threads %i\n", numThreads);
+	}
+	else
+	{
+		printf("Number of threads is not correct for TBB version");
+		return;
+	}
+#endif
 
 	start = cvGetTickCount();
-    detections = cvLatentSvmDetectObjects(image, detector, storage);
+    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
 	finish = cvGetTickCount();
 	printf("detection time = %.3f\n", (float)(finish - start) / (float)(cvGetTickFrequency() * 1000000.0));
 
+#ifdef HAVE_TBB
+    init.terminate();
+#endif
     for( i = 0; i < detections->total; i++ )
     {
         CvObjectDetection detection = *(CvObjectDetection*)cvGetSeqElem( detections, i );
@@ -48,6 +72,10 @@ int main(int argc, char* argv[])
 	{
 		image_filename = argv[1];
 		model_filename = argv[2];
+        if (argc > 3)
+        {
+            tbbNumThreads = atoi(argv[3]);
+        }
 	}
 	IplImage* image = cvLoadImage(image_filename);
 	if (!image)
@@ -64,7 +92,7 @@ int main(int argc, char* argv[])
 		cvReleaseImage( &image );
 		return -1;
 	}
-    detect_and_draw_objects( image, detector );
+    detect_and_draw_objects( image, detector, tbbNumThreads );
     cvNamedWindow( "test", 0 );
     cvShowImage( "test", image );
     cvWaitKey(0);

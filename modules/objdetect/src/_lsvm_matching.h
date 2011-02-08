@@ -11,6 +11,10 @@
 #include "_lsvm_fft.h"
 #include "_lsvm_routine.h"
 
+#ifdef HAVE_TBB
+#include "_lsvm_tbbversion.h"
+#endif
+
 //extern "C" {
 /*
 // Function for convolution computation
@@ -352,6 +356,46 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
                              CvPoint **points, int **levels, int *kPoints,
                              CvPoint ***partsDisplacement);
 
+#ifdef HAVE_TBB
+/*
+// int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n, 
+                                   const CvLSVMFeaturePyramid *H, 
+                                   const float b, 
+                                   const int maxXBorder, const int maxYBorder,
+                                   const float scoreThreshold,
+                                   const int threadsNum,
+                                   float **score, 
+                                   CvPoint **points, int **levels, int *kPoints,
+                                   CvPoint ***partsDisplacement);
+// INPUT
+// all_F             - the set of filters (the first element is root filter, 
+                       the other - part filters)
+// n                 - the number of part filters
+// H                 - feature pyramid
+// b                 - linear term of the score function
+// maxXBorder        - the largest root filter size (X-direction)
+// maxYBorder        - the largest root filter size (Y-direction)
+// scoreThreshold    - score threshold
+// threadsNum        - number of threads that will be created using TBB version
+// OUTPUT
+// score             - score function values that exceed threshold
+// points            - the set of root filter positions (in the block space)
+// levels            - the set of levels
+// kPoints           - number of root filter positions
+// partsDisplacement - displacement of part filters (in the block space)
+// RESULT
+// Error status
+*/
+int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n, 
+                                const CvLSVMFeaturePyramid *H, 
+                                const float b, 
+                                const int maxXBorder, const int maxYBorder,
+                                const float scoreThreshold,
+                                const int threadsNum,
+                                float **score, 
+                                CvPoint **points, int **levels, int *kPoints,
+                                CvPoint ***partsDisplacement);
+#endif
 
 /*
 // Perform non-maximum suppression algorithm (described in original paper)

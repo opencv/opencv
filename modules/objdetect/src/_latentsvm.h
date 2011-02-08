@@ -248,7 +248,8 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                           int maxXBorder, int maxYBorder, 
                           float scoreThreshold,
                           CvPoint **points, int **levels, int *kPoints, 
-                          float **score, CvPoint ***partsDisplacement);
+                          float **score, CvPoint ***partsDisplacement,
+                          int numThreads CV_DEFAULT(-1));
 
 /*
 // Computation root filters displacement and values of score function
@@ -283,7 +284,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
                                         int kComponents, const int *kPartFilters,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,
-                                        float **score, int *kPoints);
+                                        float **score, int *kPoints, int numThreads);
 
 /*
 // Compute opposite point for filter box

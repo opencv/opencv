@@ -24,42 +24,68 @@
 int convolution(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *map, float *f)
 {
     int n1, m1, n2, m2, p, size, diff1, diff2;
-    int i1, i2, j1, j2, k; 
-    
-    n1 = map->sizeY;
-    m1 = map->sizeX;
-    n2 = Fi->sizeY;
-    m2 = Fi->sizeX;
-    p = map->p;
-    if (n1 < n2 || m1 < m2)
-    {
-        return FILTER_OUT_OF_BOUNDARIES;
-    }
+	int i1, i2, j1, j2, k;
+	float tmp_f1, tmp_f2, tmp_f3, tmp_f4;
+	float *pMap = NULL;
+	float *pH = NULL;
+	    
+	n1 = map->sizeY;
+	m1 = map->sizeX;
+	n2 = Fi->sizeY;
+	m2 = Fi->sizeX;
+	p = map->p;
 
-    // Computation number of positions for the filter
-    diff1 = n1 - n2 + 1;
-    diff2 = m1 - m2 + 1;
-    size = diff1 * diff2;
+	diff1 = n1 - n2 + 1;
+	diff2 = m1 - m2 + 1;
+	size = diff1 * diff2;
+	for (j1 = diff2 - 1; j1 >= 0; j1--)
+	{
+		
+		for (i1 = diff1 - 1; i1 >= 0; i1--)
+		{
+			tmp_f1 = 0.0f;
+			tmp_f2 = 0.0f;
+			tmp_f3 = 0.0f;
+			tmp_f4 = 0.0f;
+			for (i2 = 0; i2 < n2; i2++)
+			{
+				for (j2 = 0; j2 < m2; j2++)
+				{
+					pMap = map->Map + (i1 + i2) * m1 * p + (j1 + j2) * p;//sm2
+					pH = Fi->H + (i2 * m2 + j2) * p;//sm2
+					for (k = 0; k < p/4; k++)
+					{
 
-    for (i1 = 0; i1 < diff1; i1++)
-    {
-        for (j1 = 0; j1 < diff2; j1++)
-        {
-            f[i1 * diff2 + j1] = 0.0;
-            for (i2 = 0; i2 < n2; i2++)
-            {
-                for (j2 = 0; j2 < m2; j2++)
-                {
-                    for (k = 0; k < p; k++)
-                    {
-                        f[i1 * diff2 + j1] += map->Map[(i1 + i2) * m1 * p + 
-                                                       (j1 + j2) * p + k] * 
-                                              Fi->H[(i2 * m2 + j2) * p + k];
-                    }
-                }
-            }
-        }
-    }
+						tmp_f1 += pMap[4*k]*pH[4*k];//sm2
+						tmp_f2 += pMap[4*k+1]*pH[4*k+1];
+						tmp_f3 += pMap[4*k+2]*pH[4*k+2];
+						tmp_f4 += pMap[4*k+3]*pH[4*k+3];
+					}
+			
+					if (p%4==1)
+					{
+						tmp_f1 += pH[p-1]*pMap[p-1];
+					}
+					else
+					{
+						if (p%4==2)
+						{
+							tmp_f1 += pH[p-2]*pMap[p-2] + pH[p-1]*pMap[p-1];
+						}
+						else 
+						{
+							if (p%4==3)
+							{
+								tmp_f1 += pH[p-3]*pMap[p-3] + pH[p-2]*pMap[p-2] + pH[p-1]*pMap[p-1];
+							}
+						}
+					}
+					
+				}
+			}
+			f[i1 * diff2 + j1] = tmp_f1 + tmp_f2 + tmp_f3 + tmp_f4;//sm1
+		}
+	}
     return LATENT_SVM_OK;
 }
 
@@ -1340,6 +1366,320 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     
     return LATENT_SVM_OK;  
 }
+
+/*
+// Creating schedule of pyramid levels processing 
+//
+// API
+// int createSchedule(const featurePyramid *H, const filterObject **all_F,
+                      const int n, const int bx, const int by,
+                      const int threadsNum, int *kLevels, 
+                      int **processingLevels)
+// INPUT
+// H                 - feature pyramid
+// all_F             - the set of filters (the first element is root filter, 
+                       the other - part filters)
+// n                 - the number of part filters
+// bx                - size of nullable border (X direction)
+// by                - size of nullable border (Y direction)
+// threadsNum        - number of threads that will be created in TBB version
+// OUTPUT
+// kLevels           - array that contains number of levels processed 
+                       by each thread
+// processingLevels  - array that contains lists of levels processed 
+                       by each thread
+// RESULT
+// Error status
+*/
+int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F,
+                   const int n, const int bx, const int by,
+                   const int threadsNum, int *kLevels, int **processingLevels)
+{
+    int rootFilterDim, sumPartFiltersDim, i, numLevels, dbx, dby, numDotProducts;
+    int averNumDotProd, j, minValue, argMin, tmp, lambda, maxValue, k;
+    int *dotProd, *weights, *disp;
+    if (H == NULL || all_F == NULL)
+    {
+        return LATENT_SVM_TBB_SCHEDULE_CREATION_FAILED;
+    }
+    // Number of feature vectors in root filter
+    rootFilterDim = all_F[0]->sizeX * all_F[0]->sizeY;
+    // Number of feature vectors in all part filters
+    sumPartFiltersDim = 0;
+    for (i = 1; i <= n; i++)
+    {
+        sumPartFiltersDim += all_F[i]->sizeX * all_F[i]->sizeY;
+    }
+    // Number of levels which are used for computation of score function
+    numLevels = H->countLevel - H->lambda;
+    // Allocation memory for saving number of dot products that will be
+    // computed for each level of feature pyramid
+    dotProd = (int *)malloc(sizeof(int) * numLevels);
+    // Size of nullable border that's used in computing convolution
+    // of feature map with part filter
+    dbx = 2 * bx;
+    dby = 2 * by;
+    // Total number of dot products for all levels
+    numDotProducts = 0;
+    lambda = H->lambda;
+    for (i = 0; i < numLevels; i++)
+    {
+        dotProd[i] = H->pyramid[i + lambda]->sizeX * 
+                     H->pyramid[i + lambda]->sizeY * rootFilterDim +
+                     (H->pyramid[i]->sizeX + dbx) * 
+                     (H->pyramid[i]->sizeY + dby) * sumPartFiltersDim;
+        numDotProducts += dotProd[i];
+    }
+    // Average number of dot products that would be performed at the best
+    averNumDotProd = numDotProducts / threadsNum;
+    // Allocation memory for saving dot product number performed by each thread
+    weights = (int *)malloc(sizeof(int) * threadsNum);
+    // Allocation memory for saving dispertion
+    disp = (int *)malloc(sizeof(int) * threadsNum);
+    // At the first step we think of first threadsNum levels will be processed
+    // by different threads
+    for (i = 0; i < threadsNum; i++)
+    {
+        kLevels[i] = 1;
+        weights[i] = dotProd[i];
+        disp[i] = 0;
+    }
+    // Computation number of levels that will be processed by each thread
+    for (i = threadsNum; i < numLevels; i++)
+    {
+        // Search number of thread that will process level number i
+        for (j = 0; j < threadsNum; j++)
+        {
+            weights[j] += dotProd[i];
+            minValue = weights[0];
+            maxValue = weights[0];
+            for (k = 1; k < threadsNum; k++)
+            {
+                minValue = min(minValue, weights[k]);
+                maxValue = max(maxValue, weights[k]);
+            }
+            disp[j] = maxValue - minValue;
+            weights[j] -= dotProd[i];
+        }
+        minValue = disp[0];
+        argMin = 0;
+        for (j = 1; j < threadsNum; j++)
+        {
+            if (disp[j] < minValue)
+            {
+                minValue = disp[j];
+                argMin = j;
+            }
+        }
+        // Addition new level
+        kLevels[argMin]++;
+        weights[argMin] += dotProd[i];
+    }
+    for (i = 0; i < threadsNum; i++)
+    {
+        // Allocation memory for saving list of levels for each level
+        processingLevels[i] = (int *)malloc(sizeof(int) * kLevels[i]);
+        // At the first step we think of first threadsNum levels will be processed
+        // by different threads
+        processingLevels[i][0] = lambda + i;
+        kLevels[i] = 1;
+        weights[i] = dotProd[i];
+    }
+    // Creating list of levels
+    for (i = threadsNum; i < numLevels; i++)
+    {
+        for (j = 0; j < threadsNum; j++)
+        {
+            weights[j] += dotProd[i];
+            minValue = weights[0];
+            maxValue = weights[0];
+            for (k = 1; k < threadsNum; k++)
+            {
+                minValue = min(minValue, weights[k]);
+                maxValue = max(maxValue, weights[k]);
+            }
+            disp[j] = maxValue - minValue;
+            weights[j] -= dotProd[i];
+        }
+        minValue = disp[0];
+        argMin = 0;
+        for (j = 1; j < threadsNum; j++)
+        {
+            if (disp[j] < minValue)
+            {
+                minValue = disp[j];
+                argMin = j;
+            }
+        }
+        processingLevels[argMin][kLevels[argMin]] = lambda + i;
+        kLevels[argMin]++;
+        weights[argMin] += dotProd[i];
+    }
+    // Release allocated memory
+    free(weights);
+    free(dotProd);
+    free(disp);
+    return LATENT_SVM_OK;
+}
+
+#ifdef HAVE_TBB
+/*
+// int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n, 
+                                   const CvLSVMFeaturePyramid *H, 
+                                   const float b, 
+                                   const int maxXBorder, const int maxYBorder,
+                                   const float scoreThreshold,
+                                   const int threadsNum,
+                                   float **score, 
+                                   CvPoint **points, int **levels, int *kPoints,
+                                   CvPoint ***partsDisplacement);
+// INPUT
+// all_F             - the set of filters (the first element is root filter, 
+                       the other - part filters)
+// n                 - the number of part filters
+// H                 - feature pyramid
+// b                 - linear term of the score function
+// maxXBorder        - the largest root filter size (X-direction)
+// maxYBorder        - the largest root filter size (Y-direction)
+// scoreThreshold    - score threshold
+// threadsNum        - number of threads that will be created using TBB version
+// OUTPUT
+// score             - score function values that exceed threshold
+// points            - the set of root filter positions (in the block space)
+// levels            - the set of levels
+// kPoints           - number of root filter positions
+// partsDisplacement - displacement of part filters (in the block space)
+// RESULT
+// Error status
+*/
+int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n, 
+                                const CvLSVMFeaturePyramid *H, 
+                                const float b, 
+                                const int maxXBorder, const int maxYBorder,
+                                const float scoreThreshold,
+                                const int threadsNum,
+                                float **score, 
+                                CvPoint **points, int **levels, int *kPoints,
+                                CvPoint ***partsDisplacement)
+{
+    int i, j, s, f, level, numLevels;
+    float **tmpScore;
+    CvPoint ***tmpPoints;
+    CvPoint ****tmpPartsDisplacement;   
+    int *tmpKPoints;
+    int res;
+
+    int *kLevels, **procLevels;
+    int bx, by;
+    
+    // Computation the number of levels for seaching object,
+    // first lambda-levels are used for computation values
+    // of score function for each position of root filter
+    numLevels = H->countLevel - H->lambda;
+
+    kLevels = (int *)malloc(sizeof(int) * threadsNum);
+    procLevels = (int **)malloc(sizeof(int*) * threadsNum);
+    computeBorderSize(maxXBorder, maxYBorder, &bx, &by);
+    res = createSchedule(H, all_F, n, bx, by, threadsNum, kLevels, procLevels);
+    if (res != LATENT_SVM_OK)
+    {
+        for (i = 0; i < threadsNum; i++)
+        {
+            if (procLevels[i] != NULL) 
+            {
+                free(procLevels[i]);
+            }
+        }
+        free(procLevels);
+        free(kLevels);
+        return res;
+    }
+    
+    // Allocation memory for values of score function for each level
+    // that exceed threshold
+    tmpScore = (float **)malloc(sizeof(float*) * numLevels);        
+    // Allocation memory for the set of points that corresponds 
+    // to the maximum of score function
+    tmpPoints = (CvPoint ***)malloc(sizeof(CvPoint **) * numLevels);
+    for (i = 0; i < numLevels; i++)
+    {
+        tmpPoints[i] = (CvPoint **)malloc(sizeof(CvPoint *));
+    }
+    // Allocation memory for memory for saving parts displacement on each level
+    tmpPartsDisplacement = (CvPoint ****)malloc(sizeof(CvPoint ***) * numLevels);
+    for (i = 0; i < numLevels; i++)
+    {
+        tmpPartsDisplacement[i] = (CvPoint ***)malloc(sizeof(CvPoint **));
+    }
+    // Number of points that corresponds to the maximum 
+    // of score function on each level
+    tmpKPoints = (int *)malloc(sizeof(int) * numLevels);
+    for (i = 0; i < numLevels; i++)
+    {
+        tmpKPoints[i] = 0;
+    }
+
+    // Computation maxima of score function on each level
+    // and getting the maximum on all levels using TBB tasks
+    tbbTasksThresholdFunctionalScore(all_F, n, H, b, maxXBorder, maxYBorder,
+        scoreThreshold, kLevels, procLevels, 
+        threadsNum, tmpScore, tmpPoints, 
+        tmpKPoints, tmpPartsDisplacement);
+    (*kPoints) = 0;
+    for (i = 0; i < numLevels; i++)
+    {
+        (*kPoints) += tmpKPoints[i];
+    }
+        
+    // Allocation memory for levels
+    (*levels) = (int *)malloc(sizeof(int) * (*kPoints));
+    // Allocation memory for the set of points
+    (*points) = (CvPoint *)malloc(sizeof(CvPoint) * (*kPoints));   
+    // Allocation memory for parts displacement
+    (*partsDisplacement) = (CvPoint **)malloc(sizeof(CvPoint *) * (*kPoints));
+    // Allocation memory for score function values
+    (*score) = (float *)malloc(sizeof(float) * (*kPoints));
+
+    // Filling the set of points, levels and parts displacement
+    s = 0;
+    f = 0;
+    for (i = 0; i < numLevels; i++)
+    {
+        // Computation the number of level
+        level = i + H->lambda; 
+
+        // Addition a set of points
+        f += tmpKPoints[i];
+        for (j = s; j < f; j++)
+        {
+            (*levels)[j] = level;
+            (*points)[j] = (*tmpPoints[i])[j - s];
+            (*score)[j] = tmpScore[i][j - s];
+            (*partsDisplacement)[j] = (*(tmpPartsDisplacement[i]))[j - s];
+        }            
+        s = f;
+    }
+
+    // Release allocated memory
+    for (i = 0; i < numLevels; i++)
+    {
+        free(tmpPoints[i]);
+        free(tmpPartsDisplacement[i]);
+    }
+    for (i = 0; i < threadsNum; i++)
+    {
+        free(procLevels[i]);
+    }
+    free(procLevels);
+    free(kLevels);
+    free(tmpPoints);
+    free(tmpScore);
+    free(tmpKPoints);
+    free(tmpPartsDisplacement);
+
+    return LATENT_SVM_OK;
+}
+#endif
 
 void sort(int n, const float* x, int* indices)
 {

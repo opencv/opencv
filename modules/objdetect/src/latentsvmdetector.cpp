@@ -69,7 +69,8 @@ void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector)
 // CvSeq* cvLatentSvmDetectObjects(const IplImage* image, 
 //									CvLatentSvmDetector* detector, 
 //									CvMemStorage* storage, 
-//									float overlap_threshold = 0.5f);
+//									float overlap_threshold = 0.5f,
+                                    int numThreads = -1);
 // INPUT
 // image				- image to detect objects in
 // detector				- Latent SVM detector in internal representation
@@ -82,7 +83,7 @@ void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector)
 CvSeq* cvLatentSvmDetectObjects(IplImage* image, 
 								CvLatentSvmDetector* detector, 
 								CvMemStorage* storage, 
-								float overlap_threshold)
+								float overlap_threshold, int numThreads)
 {
 	CvLSVMFeaturePyramid *H = 0;
     CvPoint *points = 0, *oppPoints = 0;
@@ -103,7 +104,7 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
     // Search object
     searchObjectThresholdSomeComponents(H, (const CvLSVMFilterObject**)(detector->filters), detector->num_components, 
 		detector->num_part_filters, detector->b, detector->score_threshold, 
-                &points, &oppPoints, &score, &kPoints);
+                &points, &oppPoints, &score, &kPoints, numThreads);
     // Clipping boxes
     clippingBoxes(image->width, image->height, points, kPoints);
     clippingBoxes(image->width, image->height, oppPoints, kPoints);

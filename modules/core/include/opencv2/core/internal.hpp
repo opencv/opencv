@@ -127,6 +127,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
     #include "tbb/tbb_stddef.h"
     #if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
         #include "tbb/tbb.h"
+        #include "tbb/task.h"
         #undef min
         #undef max
     #else

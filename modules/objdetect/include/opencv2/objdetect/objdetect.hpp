@@ -247,7 +247,8 @@ CVAPI(void) cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
 // CvSeq* cvLatentSvmDetectObjects(const IplImage* image, 
 //									CvLatentSvmDetector* detector, 
 //									CvMemStorage* storage, 
-//									float overlap_threshold = 0.5f);
+//									float overlap_threshold = 0.5f,
+//                                  int numThreads = -1);
 // INPUT
 // image				- image to detect objects in
 // detector				- Latent SVM detector in internal representation
@@ -261,7 +262,8 @@ CVAPI(void) cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
 CVAPI(CvSeq*) cvLatentSvmDetectObjects(IplImage* image, 
 								CvLatentSvmDetector* detector, 
 								CvMemStorage* storage, 
-								float overlap_threshold CV_DEFAULT(0.5f));
+								float overlap_threshold CV_DEFAULT(0.5f),
+                                int numThreads CV_DEFAULT(-1));
 
 #ifdef __cplusplus
 }
