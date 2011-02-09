@@ -237,20 +237,31 @@ namespace cv { namespace gpu { namespace surf
 
 	        hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
         }
-    }   
-
-    void fasthessian_gpu(PtrStepf hessianBuffer, int nIntervals, int x_size, int y_size)
+    }
+    
+    dim3 calcBlockSize(int nIntervals)
     {
-        dim3 threads;
-        threads.x = 16;
-        threads.y = 8;
+        int threadsPerBlock = 512;
+        
+        dim3 threads;        
         threads.z = nIntervals;
+        threadsPerBlock /= nIntervals;
+        if (threadsPerBlock >= 48)
+            threads.x = 16;
+        else
+            threads.x = 8;
+        threadsPerBlock /= threads.x;
+        threads.y = threadsPerBlock;
+        
+        return threads;
+    }
 
+    void fasthessian_gpu(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads)
+    {
         dim3 grid;
         grid.x = divUp(x_size, threads.x);
         grid.y = divUp(y_size, threads.y);
-        grid.z = 1;
-
+        
   	    fasthessian<<<grid, threads>>>(hessianBuffer);
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -370,17 +381,11 @@ namespace cv { namespace gpu { namespace surf
     }
 
     void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
-        int nIntervals, int x_size, int y_size, bool use_mask)
+        int x_size, int y_size, bool use_mask, const dim3& threads)
     {
-        dim3 threads;
-        threads.x = 16;
-        threads.y = 8;
-        threads.z = nIntervals;
-
         dim3 grid;
         grid.x = divUp(x_size, threads.x - 2);
         grid.y = divUp(y_size, threads.y - 2);
-        grid.z = 1;
 
         const size_t smem_size = threads.x * threads.y * threads.z * sizeof(float);
 
@@ -565,8 +570,6 @@ namespace cv { namespace gpu { namespace surf
     
         dim3 grid;
         grid.x = maxCounter;
-        grid.y = 1; 
-        grid.z = 1;
 
         DeviceReference<unsigned int> featureCounterWrapper(featureCounter);
     
@@ -624,6 +627,7 @@ namespace cv { namespace gpu { namespace surf
 	    // - SURF says to only use a circle, but the branching logic would slow it down
 	    // - Gaussian weighting should reduce the effects of the outer points anyway
         if (tid2 < 169)
+
         {
 	        dx -=     texLookups[threadIdx.x    ][threadIdx.y    ];
 	        dx += 2.f*texLookups[threadIdx.x + 2][threadIdx.y    ];
@@ -709,8 +713,6 @@ namespace cv { namespace gpu { namespace surf
 
         dim3 grid;
         grid.x = nFeatures;
-        grid.y = 1;
-        grid.z = 1;
 
         find_orientation<<<grid, threads>>>(features);
         cudaSafeCall( cudaThreadSynchronize() );

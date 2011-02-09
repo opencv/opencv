@@ -38,6 +38,9 @@ int main(int argc, char* argv[])
     GpuMat descriptors1GPU, descriptors2GPU;
     surf(img1, GpuMat(), keypoints1GPU, descriptors1GPU);
     surf(img2, GpuMat(), keypoints2GPU, descriptors2GPU);
+    
+    cout << "FOUND " << keypoints1GPU.cols << " keypoints on first image" << endl;
+    cout << "FOUND " << keypoints2GPU.cols << " keypoints on second image" << endl;
 
     // matching descriptors
     BruteForceMatcher_GPU< L2<float> > matcher;
@@ -57,6 +60,8 @@ int main(int argc, char* argv[])
     // drawing the results
     Mat img_matches;
     drawMatches(img1, keypoints1, img2, keypoints2, matches, img_matches);
+    
+    namedWindow("matches", 0);
     imshow("matches", img_matches);
     waitKey(0);
 

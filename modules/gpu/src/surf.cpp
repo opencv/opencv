@@ -61,11 +61,13 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint
 #else /* !defined (HAVE_CUDA) */
 
 namespace cv { namespace gpu { namespace surf
-{    
-    void fasthessian_gpu(PtrStepf hessianBuffer, int nIntervals, int x_size, int y_size);
+{
+    dim3 calcBlockSize(int nIntervals);
+    
+    void fasthessian_gpu(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads);
     
     void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
-        int nIntervals, int x_size, int y_size, bool use_mask);
+        int x_size, int y_size, bool use_mask, const dim3& threads);
     
     void fh_interp_extremum_gpu(PtrStepf hessianBuffer, const int4* maxPosBuffer, unsigned int maxCounter, 
         KeyPoint_GPU* featuresBuffer, unsigned int& featureCounter);
@@ -103,7 +105,7 @@ namespace
         {
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
-            CV_Assert(nOctaves > 0 && nIntervals > 2);
+            CV_Assert(nOctaves > 0 && nIntervals > 2 && nIntervals < 22);
             CV_Assert(DeviceInfo().has(ATOMICS));
 
             max_features = static_cast<int>(img.size().area() * featuresRatio);
@@ -168,6 +170,7 @@ namespace
 
         void detectKeypoints(GpuMat& keypoints)
         {
+            dim3 threads = calcBlockSize(nIntervals);
             for(int octave = 0; octave < nOctaves; ++octave)
             {
                 int step = initialStep * (1 << octave);
@@ -189,12 +192,12 @@ namespace
                 uploadConstant("cv::gpu::surf::c_border", border);
                 uploadConstant("cv::gpu::surf::c_step",   step);
 
-                fasthessian_gpu(hessianBuffer, nIntervals, x_size, y_size);
+                fasthessian_gpu(hessianBuffer, x_size, y_size, threads);
 
                 // Reset the candidate count.
                 maxCounter = 0;
 
-                nonmaxonly_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter, nIntervals, x_size, y_size, use_mask); 
+                nonmaxonly_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter, x_size, y_size, use_mask, threads); 
                 
                 maxCounter = std::min(maxCounter, static_cast<unsigned int>(max_candidates));
 

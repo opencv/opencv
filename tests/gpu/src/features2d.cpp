@@ -149,12 +149,14 @@ void CV_GPU_SURFTest::compareKeypointSets(const vector<KeyPoint>& validKeypoints
         assert(minDist >= 0);
         if (!isSimilarKeypoints(validKeypoints[v], calcKeypoints[nearestIdx]))
         {
+            ts->printf(CvTS::LOG, "Bad keypoints accuracy.\n");
             ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
             return;
         }
 
         if (norm(validDescriptors.row(v), calcDescriptors.row(nearestIdx), NORM_L2) > 1.0f)
         {
+            ts->printf(CvTS::LOG, "Bad descriptors accuracy.\n");
             ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
             return;
         }
