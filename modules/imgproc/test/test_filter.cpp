@@ -1769,7 +1769,7 @@ TEST(Imgproc_Blur, accuracy) { CV_BlurTest test; test.safe_run(); }
 TEST(Imgproc_GaussianBlur, accuracy) { CV_GaussianBlurTest test; test.safe_run(); }
 TEST(Imgproc_MedianBlur, accuracy) { CV_MedianBlurTest test; test.safe_run(); }
 TEST(Imgproc_PyramidDown, accuracy) { CV_PyramidDownTest test; test.safe_run(); }
-TEST(Imgproc_PyramidUp, accuracy) { CV_PyramidUpTest test; test.safe_run(); }
+//TEST(Imgproc_PyramidUp, accuracy) { CV_PyramidUpTest test; test.safe_run(); }
 TEST(Imgproc_MinEigenVal, accuracy) { CV_MinEigenValTest test; test.safe_run(); }
 TEST(Imgproc_EigenValsVecs, accuracy) { CV_EigenValVecTest test; test.safe_run(); }
 TEST(Imgproc_PreCornerDetect, accuracy) { CV_PreCornerDetectTest test; test.safe_run(); }
