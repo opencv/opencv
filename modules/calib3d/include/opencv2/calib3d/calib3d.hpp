@@ -534,6 +534,10 @@ CV_EXPORTS_W bool findChessboardCorners( const Mat& image, Size patternSize,
                                          int flags=CALIB_CB_ADAPTIVE_THRESH+
                                               CALIB_CB_NORMALIZE_IMAGE );
 
+//! finds subpixel-accurate positions of the chessboard corners                                              
+CV_EXPORTS bool find4QuadCornerSubpix(const Mat& img, std::vector<Point2f>& corners,
+                                      Size region_size);
+
 //! draws the checkerboard pattern (found or partly found) in the image
 CV_EXPORTS_W void drawChessboardCorners( Mat& image, Size patternSize,
                                          const Mat& corners,

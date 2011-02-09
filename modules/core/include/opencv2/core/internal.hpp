@@ -288,14 +288,6 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 /* ! DO NOT make it an inline function */
 #define cvStackAlloc(size) cvAlignPtr( alloca((size) + CV_MALLOC_ALIGN), CV_MALLOC_ALIGN )
 
-#if defined _MSC_VER || defined __BORLANDC__
-    #define CV_BIG_INT(n)   n##I64
-    #define CV_BIG_UINT(n)  n##UI64
-#else
-    #define CV_BIG_INT(n)   n##LL
-    #define CV_BIG_UINT(n)  n##ULL
-#endif
-
 #ifndef CV_IMPL
 #define CV_IMPL CV_EXTERN_C
 #endif

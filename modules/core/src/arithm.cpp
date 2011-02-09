@@ -1158,10 +1158,10 @@ div_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double scale )
                 b *= d;
                 a *= d;
 
-                T z0 = saturate_cast<T>(src2[i+1] * src1[i] * b);
-                T z1 = saturate_cast<T>(src2[i] * src1[i+1] * b);
-                T z2 = saturate_cast<T>(src2[i+3] * src1[i+2] * a);
-                T z3 = saturate_cast<T>(src2[i+2] * src1[i+3] * a);
+                T z0 = saturate_cast<T>(src2[i+1] * ((double)src1[i] * b));
+                T z1 = saturate_cast<T>(src2[i] * ((double)src1[i+1] * b));
+                T z2 = saturate_cast<T>(src2[i+3] * ((double)src1[i+2] * a));
+                T z3 = saturate_cast<T>(src2[i+2] * ((double)src1[i+3] * a));
 
                 dst[i] = z0; dst[i+1] = z1;
                 dst[i+2] = z2; dst[i+3] = z3;
@@ -1193,7 +1193,7 @@ void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
     };
 
     MulDivFunc func = tab[src1.depth()];
-    CV_Assert( src1.size() == src2.size() && src1.type() == src2.type() && func != 0 );
+    CV_Assert( src1.type() == src2.type() && func != 0 );
 
     if( src1.dims > 2 || src2.dims > 2 )
     {
@@ -1446,7 +1446,7 @@ void addWeighted( const Mat& src1, double alpha, const Mat& src2,
         addWeighted_<ushort, float>,
         addWeighted_<short, float>,
         addWeighted_<int, double>,
-        addWeighted_<float, float>,
+        addWeighted_<float, double>,
         addWeighted_<double, double>,
         0
     };
@@ -1952,7 +1952,7 @@ void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
         {
             func( it.planes[0], it.planes[1], value );
             if( invflag )
-                bitwise_not(it.planes[2], it.planes[2]);
+                bitwise_not(it.planes[1], it.planes[1]);
         }
         return;
     }

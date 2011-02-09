@@ -45,8 +45,6 @@
 namespace cv
 {
 
-//#undef CV_SSE2
-
 template<typename T, int shift> struct FixPtCast
 {
     typedef int type1;

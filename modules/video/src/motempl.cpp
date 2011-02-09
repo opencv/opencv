@@ -468,4 +468,19 @@ double cv::calcGlobalOrientation( const Mat& orientation, const Mat& mask,
     return cvCalcGlobalOrientation(&_orientation, &_mask, &_mhi, timestamp, duration);
 }
 
+void cv::segmentMotion(const Mat& mhi, Mat& segmask,
+                       vector<Rect>& boundingRects,
+                       double timestamp, double segThresh)
+{
+    segmask.create(mhi.size(), CV_32F);
+    CvMat c_mhi = mhi, c_segmask = segmask;
+    Ptr<CvMemStorage> storage = cvCreateMemStorage();
+    Seq<CvConnectedComp> comps = cvSegmentMotion(&c_mhi, &c_segmask, storage, timestamp, segThresh);
+    Seq<CvConnectedComp>::const_iterator it(comps);
+    size_t i, ncomps = comps.size();
+    boundingRects.resize(ncomps); 
+    for( i = 0; i < ncomps; i++, ++it)
+        boundingRects[i] = (*it).rect;
+}
+    
 /* End of file. */

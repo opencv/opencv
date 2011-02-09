@@ -102,6 +102,7 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
             m.size.p = (int*)(m.step.p + _dims) + 1;
             m.size.p[-1] = _dims;
+            m.rows = m.cols = -1;
         }
     }
     
@@ -711,10 +712,19 @@ void insertImageCOI(const Mat& ch, CvArr* arr, int coi)
 
 Mat Mat::reshape(int new_cn, int new_rows) const
 {
-    CV_Assert( dims <= 2 );
-    Mat hdr = *this;
-
     int cn = channels();
+    Mat hdr = *this;
+    
+    if( dims > 2 && new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
+    {
+        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+        hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
+        hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
+        return hdr;
+    }
+    
+    CV_Assert( dims <= 2 );
+    
     if( new_cn == 0 )
         new_cn = cn;
 

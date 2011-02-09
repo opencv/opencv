@@ -549,8 +549,6 @@ namespace cv
     };
     
     
-    CV_EXPORTS bool find4QuadCornerSubpix(const Mat& img, std::vector<Point2f>& corners, Size region_size);
-    
     CV_EXPORTS int chamerMatching( Mat& img, Mat& templ,
                                    vector<vector<Point> >& results, vector<float>& cost,
                                    double templScale=1, int maxMatches = 20,

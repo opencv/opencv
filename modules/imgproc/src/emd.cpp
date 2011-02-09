@@ -1137,5 +1137,23 @@ icvDistC( const float *x, const float *y, void *user_param )
     return (float)s;
 }
 
-/* End of file. */
 
+namespace cv
+{
+    
+float EMD( const Mat& signature1, const Mat& signature2,
+           int distType, const Mat& cost, float* lowerBound, Mat* flow )
+{
+    CvMat _signature1 = signature1;
+    CvMat _signature2 = signature2;
+    CvMat _cost = cost, _flow;
+    if( flow )
+        _flow = *flow;
+    
+    return cvCalcEMD2( &_signature1, &_signature2, distType, 0, cost.empty() ? 0 : &_cost,
+                       flow ? &_flow : 0, lowerBound, 0 );
+}
+
+}
+
+/* End of file. */

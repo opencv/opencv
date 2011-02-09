@@ -380,7 +380,7 @@ void undistortPoints( const Mat& src, Mat& dst,
                           const Mat& cameraMatrix, const Mat& distCoeffs,
                           const Mat& R, const Mat& P )
 {
-    CV_Assert( src.isContinuous() && src.depth() == CV_32F &&
+    CV_Assert( src.isContinuous() && (src.depth() == CV_32F || src.depth() == CV_64F) &&
               ((src.rows == 1 && src.channels() == 2) || src.cols*src.channels() == 2));
     
     dst.create(src.size(), src.type());

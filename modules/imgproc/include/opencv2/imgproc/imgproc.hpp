@@ -666,6 +666,10 @@ CV_EXPORTS double compareHist( const SparseMat& H1, const SparseMat& H2, int met
 
 //! normalizes the grayscale image brightness and contrast by normalizing its histogram
 CV_EXPORTS_W void equalizeHist( const Mat& src, CV_OUT Mat& dst );
+    
+CV_EXPORTS float EMD( const Mat& signature1, const Mat& signature2,
+                      int distType, const Mat& cost=Mat(),
+                      float* lowerBound=0, Mat* flow=0 );
 
 //! segments the image using watershed algorithm
 CV_EXPORTS_W void watershed( const Mat& image, Mat& markers );

@@ -1275,10 +1275,10 @@ if(BUILD_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
     add_subdirectory(samples)
 endif()
 
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+#if(BUILD_TESTS)
+#    enable_testing()
+#    add_subdirectory(tests)
+#endif()
 
 add_subdirectory(3rdparty)
 

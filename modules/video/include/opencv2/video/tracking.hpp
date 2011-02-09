@@ -257,7 +257,10 @@ CV_EXPORTS_W void calcMotionGradient( const Mat& mhi, CV_OUT Mat& mask,
 CV_EXPORTS_W double calcGlobalOrientation( const Mat& orientation, const Mat& mask,
                                            const Mat& mhi, double timestamp,
                                            double duration );
-// TODO: need good API for cvSegmentMotion
+
+CV_EXPORTS_W void segmentMotion(const Mat& mhi, Mat& segmask,
+                                vector<Rect>& boundingRects,
+                                double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm
 CV_EXPORTS_W RotatedRect CamShift( const Mat& probImage, CV_IN_OUT Rect& window,

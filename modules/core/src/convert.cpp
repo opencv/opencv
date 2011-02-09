@@ -619,7 +619,7 @@ static const int FBITS = 15;
 typedef void (*CvtFunc)( const Mat& src, Mat& dst );
 typedef void (*CvtScaleFunc)( const Mat& src, Mat& dst, double scale, double shift );
 
-void convertScaleAbs( const Mat& src, Mat& dst, double scale, double shift )
+void convertScaleAbs( const Mat& src0, Mat& dst, double scale, double shift )
 {
     static CvtScaleFunc tab[] =
     {
@@ -632,13 +632,25 @@ void convertScaleAbs( const Mat& src, Mat& dst, double scale, double shift )
         cvtScale_<double, OpCvtAbs<double, uchar> >, 0
     };
 
-    Mat src0 = src;
-    dst.create( src.size(), CV_8UC(src.channels()) );
-    CvtScaleFunc func = tab[src0.depth()];
+    Mat src = src0;
+    dst.create( src.dims, src.size, CV_8UC(src.channels()) );
+    CvtScaleFunc func = tab[src.depth()];
     CV_Assert( func != 0 );
-    func( src0, dst, scale, shift );
+    
+    if( src.dims <= 2 )
+    {
+        func( src, dst, scale, shift );
+    }
+    else
+    {
+        const Mat* arrays[] = {&src, &dst, 0};
+        Mat planes[2];
+        NAryMatIterator it(arrays, planes);
+        
+        for( int i = 0; i < it.nplanes; i++, ++it )
+            func(it.planes[0], it.planes[1], scale, shift);
+    }
 }
-
 
 
 void Mat::convertTo(Mat& dst, int _type, double alpha, double beta) const
@@ -699,7 +711,7 @@ void Mat::convertTo(Mat& dst, int _type, double alpha, double beta) const
             cvtScaleInt_<ushort, OpCvtFixPt<int, ushort, FBITS>, OpCvt<float, ushort>, 0>,
             cvtScaleInt_<ushort, OpCvtFixPt<int, short, FBITS>, OpCvt<float, short>, 0>,
             cvtScale_<ushort, OpCvt<double, int> >,
-            cvtScale_<ushort, OpCvt<float, float> >,
+            cvtScale_<ushort, OpCvt<double, float> >,
             cvtScale_<ushort, OpCvt<double, double> >, 0,
         },
 
@@ -709,7 +721,7 @@ void Mat::convertTo(Mat& dst, int _type, double alpha, double beta) const
             cvtScaleInt_<short, OpCvtFixPt<int, ushort, FBITS>, OpCvt<float, ushort>, 1<<15>,
             cvtScaleInt_<short, OpCvtFixPt<int, short, FBITS>, OpCvt<float, short>, 1<<15>,
             cvtScale_<short, OpCvt<double, int> >,
-            cvtScale_<short, OpCvt<float, float> >,
+            cvtScale_<short, OpCvt<double, float> >,
             cvtScale_<short, OpCvt<double, double> >, 0,
         },
 
@@ -719,7 +731,7 @@ void Mat::convertTo(Mat& dst, int _type, double alpha, double beta) const
             cvtScale_<int, OpCvt<double, ushort> >,
             cvtScale_<int, OpCvt<double, short> >,
             cvtScale_<int, OpCvt<double, int> >,
-            cvtScale_<int, OpCvt<float, float> >,
+            cvtScale_<int, OpCvt<double, float> >,
             cvtScale_<int, OpCvt<double, double> >, 0,
         },
 

@@ -3025,8 +3025,8 @@ void sepFilter2D( const Mat& src, Mat& dst, int ddepth,
     dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
 
     Ptr<FilterEngine> f = createSeparableLinearFilter(src.type(),
-        dst.type(), kernelX, kernelY, anchor, delta, borderType );
-    f->apply(src, dst);
+        dst.type(), kernelX, kernelY, anchor, delta, borderType & ~BORDER_ISOLATED );
+    f->apply(src, dst, Rect(0,0,-1,-1), Point(), (borderType & BORDER_ISOLATED) != 0 );
 }
 
 }

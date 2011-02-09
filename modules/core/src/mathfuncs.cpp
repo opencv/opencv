@@ -47,37 +47,17 @@ namespace cv
 {
 
 static const int MAX_BLOCK_SIZE = 1024;
-
 typedef CvStatus (CV_STDCALL * MathFunc)(const void* src, void* dst, int len);
-
-#define ICV_MATH_BLOCK_SIZE  256
-
-#define _CV_SQRT_MAGIC     0xbe6f0000
-
-#define _CV_SQRT_MAGIC_DBL CV_BIG_UINT(0xbfcd460000000000)
-
-#define _CV_ATAN_CF0  (-15.8131890796f)
-#define _CV_ATAN_CF1  (61.0941945596f)
-#define _CV_ATAN_CF2  0.f /*(-0.140500406322f)*/
-
-static const float icvAtanTab[8] = { 0.f + _CV_ATAN_CF2, 90.f - _CV_ATAN_CF2,
-    180.f - _CV_ATAN_CF2, 90.f + _CV_ATAN_CF2,
-    360.f - _CV_ATAN_CF2, 270.f + _CV_ATAN_CF2,
-    180.f + _CV_ATAN_CF2, 270.f - _CV_ATAN_CF2
-};
-
-static const int icvAtanSign[8] =
-    { 0, 0x80000000, 0x80000000, 0, 0x80000000, 0, 0, 0x80000000 };
 
 float fastAtan2( float y, float x )
 {
 	double a, x2 = (double)x*x, y2 = (double)y*y;
 	if( y2 <= x2 )
 	{
-		a = (180./CV_PI)*x*y/(x2 + 0.28*y2 + DBL_EPSILON);
+        a = (180./CV_PI)*x*y*(x2 + 0.43157974*y2)/(x2*x2 + y2*(0.76443945*x2 + 0.05831938*y2) + DBL_EPSILON);
 		return (float)(x < 0 ? a + 180 : y >= 0 ? a : 360+a);
 	}
-	a = (180./CV_PI)*x*y/(y2 + 0.28*x2 + DBL_EPSILON);
+	a = (180./CV_PI)*x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + DBL_EPSILON);
 	return (float)(y >= 0 ? 90 - a : 270 - a);
 }
 
@@ -95,15 +75,20 @@ static CvStatus CV_STDCALL FastAtan2_32f(const float *Y, const float *X, float *
         Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
         __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
         __m128 _90 = _mm_set1_ps((float)(CV_PI*0.5)), _180 = _mm_set1_ps((float)CV_PI), _360 = _mm_set1_ps((float)(CV_PI*2));
-        __m128 zero = _mm_setzero_ps(), _0_28 = _mm_set1_ps(0.28f), scale4 = _mm_set1_ps(scale);
+        __m128 zero = _mm_setzero_ps(), scale4 = _mm_set1_ps(scale);
+        __m128 p0 = _mm_set1_ps(0.43157974f), q0 = _mm_set1_ps(0.76443945f), q1 = _mm_set1_ps(0.05831938f);
         
         for( ; i <= len - 4; i += 4 )
         {
             __m128 x4 = _mm_loadu_ps(X + i), y4 = _mm_loadu_ps(Y + i);
             __m128 xq4 = _mm_mul_ps(x4, x4), yq4 = _mm_mul_ps(y4, y4);
             __m128 xly = _mm_cmplt_ps(xq4, yq4);
-            __m128 z4 = _mm_div_ps(_mm_mul_ps(x4, y4), _mm_add_ps(_mm_add_ps(_mm_max_ps(xq4, yq4),
-                _mm_mul_ps(_mm_min_ps(xq4, yq4), _0_28)), eps));
+            __m128 t = _mm_min_ps(xq4, yq4);
+            xq4 = _mm_max_ps(xq4, yq4); yq4 = t;
+            __m128 z4 = _mm_div_ps(_mm_mul_ps(_mm_mul_ps(x4, y4), _mm_add_ps(xq4, _mm_mul_ps(yq4, p0))),
+                                   _mm_add_ps(eps, _mm_add_ps(_mm_mul_ps(xq4, xq4),
+                                              _mm_mul_ps(yq4, _mm_add_ps(_mm_mul_ps(xq4, q0),
+                                                                         _mm_mul_ps(yq4, q1))))));
             
             // a4 <- x < y ? 90 : 0;
             __m128 a4 = _mm_and_ps(xly, _90);
@@ -121,15 +106,19 @@ static CvStatus CV_STDCALL FastAtan2_32f(const float *Y, const float *X, float *
     }
 #endif
 	
-	for( ; i < len; i++ )
+    for( ; i < len; i++ )
 	{
-		float x = X[i], y = Y[i];
-		float a, x2 = x*x, y2 = y*y;
-		if( y2 <= x2 )
-			a = x*y/(x2 + 0.28f*y2 + (float)DBL_EPSILON) + (float)(x < 0 ? CV_PI : y >= 0 ? 0 : CV_PI*2);
-		else
-			a = (float)(y >= 0 ? CV_PI*0.5 : CV_PI*1.5) - x*y/(y2 + 0.28f*x2 + (float)DBL_EPSILON);
-		angle[i] = a*scale;
+        double x = X[i], y = Y[i], x2 = x*x, y2 = y*y, a;
+		
+        if( y2 <= x2 )
+            a = (x < 0 ? CV_PI : y >= 0 ? 0 : CV_PI*2) +
+                x*y*(x2 + 0.43157974*y2)/(x2*x2 + y2*(0.76443945*x2 + 0.05831938*y2) + (float)DBL_EPSILON);
+        else
+        {
+            a = (y >= 0 ? CV_PI*0.5 : CV_PI*1.5) -
+                x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + (float)DBL_EPSILON);
+        }
+        angle[i] = a*scale;
 	}
 
     return CV_OK;

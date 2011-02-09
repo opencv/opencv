@@ -409,7 +409,7 @@ template<> inline Vec<double, 4> SqrC4<uchar, double>::operator() (const Vec<uch
 
 
 template<class SqrOp> static void
-meanStdDev_( const Mat& srcmat, Scalar& _mean, Scalar& _stddev )
+meanStdDev_( const Mat& srcmat, Scalar& _sum, Scalar& _sqsum )
 {
     SqrOp sqr;
     typedef typename SqrOp::type1 T;
@@ -430,20 +430,13 @@ meanStdDev_( const Mat& srcmat, Scalar& _mean, Scalar& _stddev )
             sq += sqr(v);
         }
     }
-
-    _mean = _stddev = Scalar();
-    double scale = 1./std::max(size.width*size.height, 1);
-    for( int i = 0; i < DataType<ST>::channels; i++ )
-    {
-        double t = ((ST1*)&s)[i]*scale;
-        _mean.val[i] = t;
-        _stddev.val[i] = std::sqrt(std::max(((ST1*)&sq)[i]*scale - t*t, 0.));
-    }
+    _sum = rawToScalar(s);
+    _sqsum = rawToScalar(sq);
 }
 
 template<class SqrOp> static void
 meanStdDevMask_( const Mat& srcmat, const Mat& maskmat,
-                 Scalar& _mean, Scalar& _stddev )
+                 Scalar& _sum, Scalar& _sqsum, int& _nz )
 {
     SqrOp sqr;
     typedef typename SqrOp::type1 T;
@@ -470,20 +463,15 @@ meanStdDevMask_( const Mat& srcmat, const Mat& maskmat,
                 pix++;
             }
     }
-    _mean = _stddev = Scalar();
-    double scale = 1./std::max(pix, 1);
-    for( int i = 0; i < DataType<ST>::channels; i++ )
-    {
-        double t = ((ST1*)&s)[i]*scale;
-        _mean.val[i] = t;
-        _stddev.val[i] = std::sqrt(std::max(((ST1*)&sq)[i]*scale - t*t, 0.));
-    }
+    _sum = rawToScalar(s);
+    _sqsum = rawToScalar(sq);
+    _nz = pix;
 }
 
-typedef void (*MeanStdDevFunc)(const Mat& src, Scalar& mean, Scalar& stddev);
+typedef void (*MeanStdDevFunc)(const Mat& src, Scalar& s, Scalar& sq);
 
 typedef void (*MeanStdDevMaskFunc)(const Mat& src, const Mat& mask,
-                                   Scalar& mean, Scalar& stddev);
+                                   Scalar& s, Scalar& sq, int& nz);
 
 void meanStdDev( const Mat& m, Scalar& mean, Scalar& stddev, const Mat& mask )
 {
@@ -551,55 +539,53 @@ void meanStdDev( const Mat& m, Scalar& mean, Scalar& stddev, const Mat& mask )
 
     CV_Assert( m.channels() <= 4 && (mask.empty() || mask.type() == CV_8U) );
     
+    Scalar sum, sqsum;
+    int total = 0;
     MeanStdDevFunc func = tab[m.type()];
     MeanStdDevMaskFunc mfunc = mtab[m.type()];
-    CV_Assert( func != 0 || mfunc != 0 );
+    CV_Assert( func != 0 && mfunc != 0 );
     
     if( m.dims > 2 )
     {
-        Scalar s, sq;
-        double total = 0;
-        
         const Mat* arrays[] = {&m, &mask, 0};
         Mat planes[2];
         NAryMatIterator it(arrays, planes);
-        int k, cn = m.channels();
+        int nz = (int)planes[0].total();
         
         for( int i = 0; i < it.nplanes; i++, ++it )
         {
-            Scalar _mean, _stddev;
-            double nz = (double)(mask.data ? countNonZero(it.planes[1]) : it.planes[0].rows*it.planes[0].cols);
+            Scalar s, sq;
             
-            if( func )
-                func(it.planes[0], _mean, _stddev);
+            if( mask.empty() )
+                func(it.planes[0], s, sq);
             else
-                mfunc(it.planes[0], it.planes[1], _mean, _stddev);
+                mfunc(it.planes[0], it.planes[1], s, sq, nz);
             
             total += nz;
-            for( k = 0; k < cn; k++ )
-            {
-                s[k] += _mean[k]*nz;
-                sq[k] += (_stddev[k]*_stddev[k] + _mean[k]*_mean[k])*nz;
-            }
+            sum += s;
+            sqsum += sq;
         }
-        
-        mean = stddev = Scalar();
-        total = 1./std::max(total, 1.);
-        for( k = 0; k < cn; k++ )
-        {
-            mean[k] = s[k]*total;
-            stddev[k] = std::sqrt(std::max(sq[k]*total - mean[k]*mean[k], 0.));
-        }
-        return;
-    }
-    
-    if( mask.data )
-    {
-        CV_Assert( mask.size() == m.size() ); 
-        mfunc( m, mask, mean, stddev );
     }
     else
-        func( m, mean, stddev );
+    {
+        if( mask.data )
+        {
+            CV_Assert( mask.size() == m.size() ); 
+            mfunc( m, mask, sum, sqsum, total );
+        }
+        else
+        {
+            func( m, sum, sqsum );
+            total = (int)m.total();
+        }
+    }
+    
+    double scale = 1./std::max(total, 1);
+    for( int k = 0; k < 4; k++ )
+    {
+        mean[k] = sum[k]*scale;
+        stddev[k] = std::sqrt(std::max(sqsum[k]*scale - mean[k]*mean[k], 0.));
+    }
 }
 
 
@@ -607,45 +593,46 @@ void meanStdDev( const Mat& m, Scalar& mean, Scalar& stddev, const Mat& mask )
 *                                       minMaxLoc                                        *
 \****************************************************************************************/
 
-template<typename T> static void
-minMaxIndx_( const Mat& srcmat, double* minVal, double* maxVal, int* minLoc, int* maxLoc )
+template<typename T, typename WT> static void
+minMaxIndx_( const Mat& srcmat, double* _minVal, double* _maxVal,
+             size_t startIdx, size_t* _minIdx, size_t* _maxIdx )
 {
     assert( DataType<T>::type == srcmat.type() );
     const T* src = (const T*)srcmat.data;
     size_t step = srcmat.step/sizeof(src[0]);
-    T min_val = src[0], max_val = min_val;
-    int min_loc = 0, max_loc = 0;
-    int x, loc = 0;
+    WT minVal = saturate_cast<WT>(*_minVal), maxVal = saturate_cast<WT>(*_maxVal);
+    size_t minIdx = *_minIdx, maxIdx = *_maxIdx;
     Size size = getContinuousSize( srcmat );
 
-    for( ; size.height--; src += step, loc += size.width )
+    for( ; size.height--; src += step, startIdx += size.width )
     {
-        for( x = 0; x < size.width; x++ )
+        for( int x = 0; x < size.width; x++ )
         {
             T val = src[x];
-            if( val < min_val )
+            if( val < minVal )
             {
-                min_val = val;
-                min_loc = loc + x;
+                minVal = val;
+                minIdx = startIdx + x;
             }
-            else if( val > max_val )
+            if( val > maxVal )
             {
-                max_val = val;
-                max_loc = loc + x;
+                maxVal = val;
+                maxIdx = startIdx + x;
             }
         }
     }
 
-    *minLoc = min_loc;
-    *maxLoc = max_loc;
-    *minVal = min_val;
-    *maxVal = max_val;
+    *_minIdx = minIdx;
+    *_maxIdx = maxIdx;
+    *_minVal = minVal;
+    *_maxVal = maxVal;
 }
 
 
-template<typename T> static void
+template<typename T, typename WT> static void
 minMaxIndxMask_( const Mat& srcmat, const Mat& maskmat,
-    double* minVal, double* maxVal, int* minLoc, int* maxLoc )
+                 double* _minVal, double* _maxVal,
+                 size_t startIdx, size_t* _minIdx, size_t* _maxIdx )
 {
     assert( DataType<T>::type == srcmat.type() &&
         CV_8U == maskmat.type() &&
@@ -654,54 +641,40 @@ minMaxIndxMask_( const Mat& srcmat, const Mat& maskmat,
     const uchar* mask = maskmat.data;
     size_t step = srcmat.step/sizeof(src[0]);
     size_t maskstep = maskmat.step;
-    T min_val = 0, max_val = 0;
-    int min_loc = -1, max_loc = -1;
-    int x = 0, y, loc = 0;
+    WT minVal = saturate_cast<WT>(*_minVal), maxVal = saturate_cast<WT>(*_maxVal);
+    size_t minIdx = *_minIdx, maxIdx = *_maxIdx;
     Size size = getContinuousSize( srcmat, maskmat );
 
-    for( y = 0; y < size.height; y++, src += step, mask += maskstep, loc += size.width )
+    for( ; size.height--; src += step, mask += maskstep, startIdx += size.width )
     {
-        for( x = 0; x < size.width; x++ )
-            if( mask[x] != 0 )
-            {
-                min_loc = max_loc = loc + x;
-                min_val = max_val = src[x];
-                break;
-            }
-        if( x < size.width )
-            break;
-    }
-
-    for( ; y < size.height; x = 0, y++, src += step, mask += maskstep, loc += size.width )
-    {
-        for( ; x < size.width; x++ )
+        for( int x = 0; x < size.width; x++ )
         {
             T val = src[x];
             int m = mask[x];
-
-            if( val < min_val && m )
+            
+            if( val < minVal && m )
             {
-                min_val = val;
-                min_loc = loc + x;
+                minVal = val;
+                minIdx = startIdx + x;
             }
-            else if( val > max_val && m )
+            if( val > maxVal && m )
             {
-                max_val = val;
-                max_loc = loc + x;
+                maxVal = val;
+                maxIdx = startIdx + x;
             }
         }
     }
 
-    *minLoc = min_loc;
-    *maxLoc = max_loc;
-    *minVal = min_val;
-    *maxVal = max_val;
+    *_minIdx = minIdx;
+    *_maxIdx = maxIdx;
+    *_minVal = minVal;
+    *_maxVal = maxVal;
 }
 
-typedef void (*MinMaxIndxFunc)(const Mat&, double*, double*, int*, int*);
+typedef void (*MinMaxIndxFunc)(const Mat&, double*, double*, size_t, size_t*, size_t*);
 
-typedef void (*MinMaxIndxMaskFunc)(const Mat&, const Mat&,
-                                    double*, double*, int*, int*);
+typedef void (*MinMaxIndxMaskFunc)(const Mat&, const Mat&, double*, double*,
+                                   size_t, size_t*, size_t*);
 
 void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
                 Point* minLoc, Point* maxLoc, const Mat& mask )
@@ -709,15 +682,20 @@ void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
     CV_Assert(img.dims <= 2);
     
     static MinMaxIndxFunc tab[] =
-        {minMaxIndx_<uchar>, 0, minMaxIndx_<ushort>, minMaxIndx_<short>,
-        minMaxIndx_<int>, minMaxIndx_<float>, minMaxIndx_<double>, 0};
+    {
+        minMaxIndx_<uchar, int>, 0, minMaxIndx_<ushort, int>, minMaxIndx_<short, int>,
+        minMaxIndx_<int, int>, minMaxIndx_<float, float>, minMaxIndx_<double, double>, 0
+    };
     static MinMaxIndxMaskFunc tabm[] =
-        {minMaxIndxMask_<uchar>, 0, minMaxIndxMask_<ushort>, minMaxIndxMask_<short>,
-        minMaxIndxMask_<int>, minMaxIndxMask_<float>, minMaxIndxMask_<double>, 0};
+    {
+        minMaxIndxMask_<uchar, int>, 0, minMaxIndxMask_<ushort, int>, minMaxIndxMask_<short, int>,
+        minMaxIndxMask_<int, int>, minMaxIndxMask_<float, float>, minMaxIndxMask_<double, double>, 0
+    };
 
     int depth = img.depth();
-    double minval=0, maxval=0;
-    int minloc=0, maxloc=0;
+    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
+    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
+    size_t minidx = 0, maxidx = 0, startidx = 1;
 
     CV_Assert( img.channels() == 1 );
 
@@ -725,36 +703,41 @@ void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
     {
         MinMaxIndxFunc func = tab[depth];
         CV_Assert( func != 0 );
-        func( img, &minval, &maxval, &minloc, &maxloc );
+        func( img, &minval, &maxval, startidx, &minidx, &maxidx );
     }
     else
     {
         CV_Assert( img.size() == mask.size() && mask.type() == CV_8U );
         MinMaxIndxMaskFunc func = tabm[depth];
         CV_Assert( func != 0 );
-        func( img, mask, &minval, &maxval, &minloc, &maxloc );
+        func( img, mask, &minval, &maxval, startidx, &minidx, &maxidx );
     }
 
+    if( minidx == 0 )
+        minVal = maxVal = 0;
+    
     if( minVal )
         *minVal = minval;
     if( maxVal )
         *maxVal = maxval;
     if( minLoc )
     {
-        if( minloc >= 0 )
+        if( minidx > 0 )
         {
-            minLoc->y = minloc/img.cols;
-            minLoc->x = minloc - minLoc->y*img.cols;
+            minidx--;
+            minLoc->y = minidx/img.cols;
+            minLoc->x = minidx - minLoc->y*img.cols;
         }
         else
             minLoc->x = minLoc->y = -1;
     }
     if( maxLoc )
     {
-        if( maxloc >= 0 )
+        if( maxidx > 0 )
         {
-            maxLoc->y = maxloc/img.cols;
-            maxLoc->x = maxloc - maxLoc->y*img.cols;
+            maxidx--;
+            maxLoc->y = maxidx/img.cols;
+            maxLoc->x = maxidx - maxLoc->y*img.cols;
         }
         else
             maxLoc->x = maxLoc->y = -1;
@@ -764,10 +747,20 @@ void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
-    for( i = 0; i < d; i++ )
+    if( ofs > 0 )
     {
-        idx[i] = (int)(ofs / a.step[i]);
-        ofs %= a.step[i];
+        ofs--;
+        for( i = d-1; i >= 0; i-- )
+        {
+            int sz = a.size[i];
+            idx[i] = (int)(ofs % sz);
+            ofs /= sz;
+        }
+    }
+    else
+    {
+        for( i = d-1; i >= 0; i-- )
+            idx[i] = -1;
     }
 }
 
@@ -780,43 +773,60 @@ void minMaxIdx(const Mat& a, double* minVal,
         Point minLoc, maxLoc;
         minMaxLoc(a, minVal, maxVal, &minLoc, &maxLoc, mask);
         if( minIdx )
-            minIdx[0] = minLoc.x, minIdx[1] = minLoc.y;
+            minIdx[0] = minLoc.y, minIdx[1] = minLoc.x;
         if( maxIdx )
-            maxIdx[0] = maxLoc.x, maxIdx[1] = maxLoc.y;
+            maxIdx[0] = maxLoc.y, maxIdx[1] = maxLoc.x;
         return;
     }
+
+    static MinMaxIndxFunc tab[] =
+    {
+        minMaxIndx_<uchar, int>, 0, minMaxIndx_<ushort, int>, minMaxIndx_<short, int>,
+        minMaxIndx_<int, int>, minMaxIndx_<float, float>, minMaxIndx_<double, double>, 0
+    };
+    static MinMaxIndxMaskFunc tabm[] =
+    {
+        minMaxIndxMask_<uchar, int>, 0, minMaxIndxMask_<ushort, int>, minMaxIndxMask_<short, int>,
+        minMaxIndxMask_<int, int>, minMaxIndxMask_<float, float>, minMaxIndxMask_<double, double>, 0
+    };
     
     const Mat* arrays[] = {&a, &mask, 0};
     Mat planes[2];
     NAryMatIterator it(arrays, planes);
-    double minval = DBL_MAX, maxval = -DBL_MAX;
-    size_t minofs = 0, maxofs = 0, esz = a.elemSize();
     
-    for( int i = 0; i < it.nplanes; i++, ++it )
+    int depth = a.depth();
+    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
+    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
+    size_t minidx = 0, maxidx = 0;
+    size_t startidx = 1, planeSize = planes[0].total();
+    MinMaxIndxFunc func = 0;
+    MinMaxIndxMaskFunc mfunc = 0;
+    
+    if( mask.empty() )
+        func = tab[depth];
+    else
+        mfunc = tabm[depth];
+    CV_Assert( func != 0 || mfunc != 0 );
+    
+    for( int i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
     {
-        double val0 = 0, val1 = 0;
-        Point pt0, pt1;
-        minMaxLoc( it.planes[0], &val0, &val1, &pt0, &pt1, it.planes[1] );
-        if( val0 < minval )
-        {
-            minval = val0;
-            minofs = (it.planes[0].data - a.data) + pt0.x*esz;
-        }
-        if( val1 > maxval )
-        {
-            maxval = val1;
-            maxofs = (it.planes[0].data - a.data) + pt1.x*esz;
-        }
+        if( func )
+            func( planes[0], &minval, &maxval, startidx, &minidx, &maxidx );
+        else
+            mfunc( planes[0], planes[1], &minval, &maxval, startidx, &minidx, &maxidx );
     }
+    
+    if( minidx == 0 )
+        minVal = maxVal = 0;
     
     if( minVal )
         *minVal = minval;
     if( maxVal )
         *maxVal = maxval;
     if( minIdx )
-        ofs2idx(a, minofs, minIdx);
+        ofs2idx(a, minidx, minIdx);
     if( maxIdx )
-        ofs2idx(a, maxofs, maxIdx);
+        ofs2idx(a, maxidx, maxIdx);
 }    
     
 /****************************************************************************************\
@@ -922,6 +932,7 @@ static double normMaskBlock_( const Mat& srcmat, const Mat& maskmat )
     ST s0 = 0;
     WT s = 0;
     int y, remaining = BLOCK_SIZE;
+    int cn = srcmat.channels();
 
     for( y = 0; y < size.height; y++ )
     {
@@ -933,21 +944,25 @@ static double normMaskBlock_( const Mat& srcmat, const Mat& maskmat )
             int limit = std::min( remaining, size.width - x );
             remaining -= limit;
             limit += x;
-            for( ; x <= limit - 4; x += 4 )
+            int x0 = x;
+            for( int c = 0; c < cn; c++ )
             {
-                if( mask[x] )
-                    s = update(s, (WT)f(src[x]));
-                if( mask[x+1] )
-                    s = update(s, (WT)f(src[x+1]));
-                if( mask[x+2] )
-                    s = update(s, (WT)f(src[x+2]));
-                if( mask[x+3] )
-                    s = update(s, (WT)f(src[x+3]));
-            }
-            for( ; x < limit; x++ )
-            {
-                if( mask[x] )
-                    s = update(s, (WT)f(src[x]));
+                for( x = x0; x <= limit - 4; x += 4 )
+                {
+                    if( mask[x] )
+                        s = update(s, (WT)f(src[x*cn + c]));
+                    if( mask[x+1] )
+                        s = update(s, (WT)f(src[(x+1)*cn + c]));
+                    if( mask[x+2] )
+                        s = update(s, (WT)f(src[(x+2)*cn + c]));
+                    if( mask[x+3] )
+                        s = update(s, (WT)f(src[(x+3)*cn + c]));
+                }
+                for( ; x < limit; x++ )
+                {
+                    if( mask[x] )
+                        s = update(s, (WT)f(src[x*cn + c]));
+                }
             }
             if( remaining == 0 || (x == size.width && y == size.height-1) )
             {
@@ -971,27 +986,31 @@ static double normMask_( const Mat& srcmat, const Mat& maskmat )
     assert( DataType<T>::depth == srcmat.depth() );
     Size size = getContinuousSize( srcmat, maskmat );
     ST s = 0;
-
+    int cn = srcmat.channels();
+    
     for( int y = 0; y < size.height; y++ )
     {
         const T* src = (const T*)(srcmat.data + srcmat.step*y);
         const uchar* mask = maskmat.data + maskmat.step*y;
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
+        for( int c = 0; c < cn; c++ )
         {
-            if( mask[x] )
-                s = update(s, (ST)f(src[x]));
-            if( mask[x+1] )
-                s = update(s, (ST)f(src[x+1]));
-            if( mask[x+2] )
-                s = update(s, (ST)f(src[x+2]));
-            if( mask[x+3] )
-                s = update(s, (ST)f(src[x+3]));
-        }
-        for( ; x < size.width; x++ )
-        {
-            if( mask[x] )
-                s = update(s, (ST)f(src[x]));
+            int x = 0;
+            for( ; x <= size.width - 4; x += 4 )
+            {
+                if( mask[x] )
+                    s = update(s, (ST)f(src[x*cn + c]));
+                if( mask[x+1] )
+                    s = update(s, (ST)f(src[(x+1)*cn + c]));
+                if( mask[x+2] )
+                    s = update(s, (ST)f(src[(x+2)*cn + c]));
+                if( mask[x+3] )
+                    s = update(s, (ST)f(src[(x+3)*cn + c]));
+            }
+            for( ; x < size.width; x++ )
+            {
+                if( mask[x] )
+                    s = update(s, (ST)f(src[x*cn + c]));
+            }
         }
     }
     return s;
@@ -1085,6 +1104,7 @@ static double normDiffMaskBlock_( const Mat& srcmat1, const Mat& srcmat2, const 
     ST s0 = 0;
     WT s = 0;
     int y, remaining = BLOCK_SIZE;
+    int cn = srcmat1.channels();
 
     for( y = 0; y < size.height; y++ )
     {
@@ -1097,20 +1117,24 @@ static double normDiffMaskBlock_( const Mat& srcmat1, const Mat& srcmat2, const 
             int limit = std::min( remaining, size.width - x );
             remaining -= limit;
             limit += x;
-            for( ; x <= limit - 4; x += 4 )
+            int x0 = x;
+            for( int c = 0; c < cn; c++ )
             {
-                if( mask[x] )
-                    s = update(s, (WT)f(src1[x] - src2[x]));
-                if( mask[x+1] )
-                    s = update(s, (WT)f(src1[x+1] - src2[x+1]));
-                if( mask[x+2] )
-                    s = update(s, (WT)f(src1[x+2] - src2[x+2]));
-                if( mask[x+3] )
-                    s = update(s, (WT)f(src1[x+3] - src2[x+3]));
+                for( x = x0; x <= limit - 4; x += 4 )
+                {
+                    if( mask[x] )
+                        s = update(s, (WT)f(src1[x*cn + c] - src2[x*cn + c]));
+                    if( mask[x+1] )
+                        s = update(s, (WT)f(src1[(x+1)*cn + c] - src2[(x+1)*cn + c]));
+                    if( mask[x+2] )
+                        s = update(s, (WT)f(src1[(x+2)*cn + c] - src2[(x+2)*cn + c]));
+                    if( mask[x+3] )
+                        s = update(s, (WT)f(src1[(x+3)*cn + c] - src2[(x+3)*cn + c]));
+                }
+                for( ; x < limit; x++ )
+                    if( mask[x] )
+                        s = update(s, (WT)f(src1[x*cn + c] - src2[x*cn + c]));
             }
-            for( ; x < limit; x++ )
-                if( mask[x] )
-                    s = update(s, (WT)f(src1[x] - src2[x]));
             if( remaining == 0 || (x == size.width && y == size.height-1) )
             {
                 s0 = globUpdate(s0, (ST)s);
@@ -1132,28 +1156,31 @@ static double normDiffMask_( const Mat& srcmat1, const Mat& srcmat2, const Mat& 
     assert( DataType<T>::depth == srcmat1.depth() );
     Size size = getContinuousSize( srcmat1, srcmat2, maskmat );
     ST s = 0;
+    int cn = srcmat1.channels();
 
     for( int y = 0; y < size.height; y++ )
     {
         const T* src1 = (const T*)(srcmat1.data + srcmat1.step*y);
         const T* src2 = (const T*)(srcmat2.data + srcmat2.step*y);
         const uchar* mask = maskmat.data + maskmat.step*y;
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
+        for( int c = 0; c < cn; c++ )
         {
-            if( mask[x] )
-                s = update(s, (ST)f(src1[x] - src2[x]));
-            if( mask[x+1] )
-                s = update(s, (ST)f(src1[x+1] - src2[x+1]));
-            if( mask[x+2] )
-                s = update(s, (ST)f(src1[x+2] - src2[x+2]));
-            if( mask[x+3] )
-                s = update(s, (ST)f(src1[x+3] - src2[x+3]));
+            int x = 0;
+            for( ; x <= size.width - 4; x += 4 )
+            {
+                if( mask[x] )
+                    s = update(s, (ST)f(src1[x*cn + c] - src2[x*cn + c]));
+                if( mask[x+1] )
+                    s = update(s, (ST)f(src1[(x+1)*cn + c] - src2[(x+1)*cn + c]));
+                if( mask[x+2] )
+                    s = update(s, (ST)f(src1[(x+2)*cn + c] - src2[(x+2)*cn + c]));
+                if( mask[x+3] )
+                    s = update(s, (ST)f(src1[(x+3)*cn + c] - src2[(x+3)*cn + c]));
+            }
+            for( ; x < size.width; x++ )
+                if( mask[x] )
+                    s = update(s, (ST)f(src1[x*cn + c] - src2[x*cn + c]));
         }
-        for( ; x < size.width; x++ )
-            if( mask[x] )
-                s = update(s, (ST)f(src1[x] - src2[x]));
-
     }
     return s;
 }
@@ -1265,8 +1292,7 @@ double norm( const Mat& a, int normType, const Mat& mask )
         return norm(a, normType);
 
     normType &= 7;
-    CV_Assert((normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) &&
-              mask.type() == CV_8U && a.channels() == 1);
+    CV_Assert((normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) && mask.type() == CV_8U);
     NormMaskFunc func = tab[normType >> 1][a.depth()];
     CV_Assert(func != 0);
     
@@ -1405,7 +1431,7 @@ double norm( const Mat& a, const Mat& b, int normType, const Mat& mask )
     if( !mask.data )
         return norm(a, b, normType);
 
-    CV_Assert( a.type() == b.type() && mask.type() == CV_8U && a.channels() == 1);
+    CV_Assert( a.type() == b.type() && mask.type() == CV_8U);
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= 7;
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
