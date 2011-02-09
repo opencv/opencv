@@ -1631,7 +1631,7 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
 }
 
     
-template<typename _Tp> static double
+template<typename _Tp> double
 cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
            size_t startidx, size_t& idx)
 {
@@ -1651,7 +1651,7 @@ cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
 }
 
     
-template<> static double cmpUlpsInt_<int>(const int* src1, const int* src2,
+template<> double cmpUlpsInt_<int>(const int* src1, const int* src2,
                                           size_t total, int imaxdiff,
                                           size_t startidx, size_t& idx)
 {
@@ -1671,17 +1671,17 @@ template<> static double cmpUlpsInt_<int>(const int* src1, const int* src2,
 }    
     
 
-template<typename _Tp> static double
-cmpUlpsFlt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff, size_t startidx, size_t& idx)
+static double
+cmpUlpsFlt_(const int* src1, const int* src2, size_t total, int imaxdiff, size_t startidx, size_t& idx)
 {
-    const _Tp C = ((_Tp)1 << (sizeof(_Tp)*8-1)) - 1;
-    _Tp realmaxdiff = 0;
+    const int C = 0x7fffffff;
+    int realmaxdiff = 0;
     size_t i;
     for( i = 0; i < total; i++ )
     {
-        _Tp a = src1[i], b = src2[i];
+        int a = src1[i], b = src2[i];
         if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
-        _Tp diff = std::abs(a - b);
+        int diff = std::abs(a - b);
         if( realmaxdiff < diff )
         {
             realmaxdiff = diff;
@@ -1692,6 +1692,27 @@ cmpUlpsFlt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff, size_t
     return realmaxdiff;
 }
     
+
+static double
+cmpUlpsFlt_(const int64* src1, const int64* src2, size_t total, int imaxdiff, size_t startidx, size_t& idx)
+{
+    const int64 C = CV_BIG_INT(0x7fffffffffffffff);
+    double realmaxdiff = 0;
+    size_t i;
+    for( i = 0; i < total; i++ )
+    {
+        int64 a = src1[i], b = src2[i];
+        if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
+        double diff = fabs((double)a - (double)b);
+        if( realmaxdiff < diff )
+        {
+            realmaxdiff = diff;
+            if( diff > imaxdiff && idx == 0 )
+                idx = i + startidx;
+        }
+    }
+    return realmaxdiff;
+}
     
 bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdiff, vector<int>* loc)
 {

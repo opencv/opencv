@@ -46,7 +46,7 @@ int main(int, char**)
         
         if( prevgray.data )
         {
-            (prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
+            calcOpticalFlowFarneback(prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
             cvtColor(prevgray, cflow, CV_GRAY2BGR);
             drawOptFlowMap(flow, cflow, 16, 1.5, CV_RGB(0, 255, 0));
             imshow("flow", cflow);
