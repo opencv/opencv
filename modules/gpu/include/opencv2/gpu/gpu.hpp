@@ -107,7 +107,7 @@ namespace cv
             size_t freeMemory() const;
             size_t totalMemory() const;
 
-            bool has(GpuFeature feature) const;
+            bool supports(GpuFeature feature) const;
             bool isCompatible() const;
 
         private:

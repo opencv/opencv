@@ -60,7 +60,7 @@ struct CV_GpuBitwiseTest: public CvTest
         int rows, cols;
 
         bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                         gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
+                         gpu::DeviceInfo().supports(gpu::NATIVE_DOUBLE);
         int depth_end = double_ok ? CV_64F : CV_32F;
 
         for (int depth = CV_8U; depth <= depth_end; ++depth)

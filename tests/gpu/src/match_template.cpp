@@ -65,7 +65,7 @@ struct CV_GpuMatchTemplateTest: CvTest
         try
         {
             bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                             gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
+                             gpu::DeviceInfo().supports(gpu::NATIVE_DOUBLE);
             if (!double_ok)
             {
                 // For sqrIntegral
@@ -245,7 +245,7 @@ struct CV_GpuMatchTemplateFindPatternInBlackTest: CvTest
         try
         {
             bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) && 
-                             gpu::DeviceInfo().has(gpu::NATIVE_DOUBLE);
+                             gpu::DeviceInfo().supports(gpu::NATIVE_DOUBLE);
             if (!double_ok)
             {
                 // For sqrIntegral

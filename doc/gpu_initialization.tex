@@ -56,7 +56,7 @@ public:
     size_t freeMemory() const;
     size_t totalMemory() const;
 
-    bool has(GpuFeature feature) const;
+    bool supports(GpuFeature feature) const;
     bool isCompatible() const;
 };
 \end{lstlisting}
@@ -108,10 +108,10 @@ Returns the amount of total memory in bytes.
 \cvdefCpp{size\_t DeviceInfo::totalMemory();}
 
 
-\cvCppFunc{gpu::DeviceInfo::has}
+\cvCppFunc{gpu::DeviceInfo::supports}
 Returns true if the device has the given GPU feature, otherwise false.
 
-\cvdefCpp{bool DeviceInfo::has(GpuFeature feature);}
+\cvdefCpp{bool DeviceInfo::supports(GpuFeature feature);}
 \begin{description}
 \cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.GpuFeature]{cv::gpu::GpuFeature}.}
 \end{description}

@@ -128,7 +128,7 @@ CV_EXPORTS void cv::gpu::setDevice(int) { throw_nogpu(); }
 CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
 size_t cv::gpu::DeviceInfo::freeMemory() const { throw_nogpu(); return 0; }
 size_t cv::gpu::DeviceInfo::totalMemory() const { throw_nogpu(); return 0; }
-bool cv::gpu::DeviceInfo::has(cv::gpu::GpuFeature) const { throw_nogpu(); return false; }
+bool cv::gpu::DeviceInfo::supports(cv::gpu::GpuFeature) const { throw_nogpu(); return false; }
 bool cv::gpu::DeviceInfo::isCompatible() const { throw_nogpu(); return false; }
 void cv::gpu::DeviceInfo::query() { throw_nogpu(); }
 void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu(); }
@@ -173,7 +173,7 @@ size_t cv::gpu::DeviceInfo::totalMemory() const
 }
 
 
-bool cv::gpu::DeviceInfo::has(cv::gpu::GpuFeature feature) const
+bool cv::gpu::DeviceInfo::supports(cv::gpu::GpuFeature feature) const
 {
     int version = majorVersion() * 10 + minorVersion();
     return version >= feature;

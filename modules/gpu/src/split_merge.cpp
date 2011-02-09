@@ -74,7 +74,7 @@ namespace cv { namespace gpu { namespace split_merge
         CV_Assert(n > 0);
        
         bool double_ok = TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                         DeviceInfo().has(NATIVE_DOUBLE);
+                         DeviceInfo().supports(NATIVE_DOUBLE);
         CV_Assert(src[0].depth() != CV_64F || double_ok);
 
         int depth = src[0].depth();
@@ -117,7 +117,7 @@ namespace cv { namespace gpu { namespace split_merge
         CV_Assert(dst);
 
         bool double_ok = TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                         DeviceInfo().has(NATIVE_DOUBLE);
+                         DeviceInfo().supports(NATIVE_DOUBLE);
         CV_Assert(src.depth() != CV_64F || double_ok);
 
         int depth = src.depth();
