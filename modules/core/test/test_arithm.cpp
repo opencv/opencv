@@ -18,7 +18,7 @@ struct BaseElemWiseOp
     BaseElemWiseOp(int _ninputs, int _flags, double _alpha, double _beta,
                    Scalar _gamma=Scalar::all(0), int _context=1)
     : ninputs(_ninputs), flags(_flags), alpha(_alpha), beta(_beta), gamma(_gamma), context(_context) {}
-    BaseElemWiseOp() { flags = alpha = beta = 0; gamma = Scalar::all(0); }
+    BaseElemWiseOp() { flags = 0; alpha = beta = 0; gamma = Scalar::all(0); }
     virtual ~BaseElemWiseOp() {}
     virtual void op(const vector<Mat>&, Mat&, const Mat&) {}
     virtual void refop(const vector<Mat>&, Mat&, const Mat&) {}
@@ -288,7 +288,7 @@ struct LogicOp : public BaseElemWiseOp
         else
             cvtest::logicOp(src[0], src[1], dst, opcode);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -339,7 +339,7 @@ struct MinOp : public BaseElemWiseOp
     {
         cvtest::min(src[0], src[1], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -356,7 +356,7 @@ struct MaxOp : public BaseElemWiseOp
     {
         cvtest::max(src[0], src[1], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -373,7 +373,7 @@ struct MinSOp : public BaseElemWiseOp
     {
         cvtest::min(src[0], gamma[0], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -390,7 +390,7 @@ struct MaxSOp : public BaseElemWiseOp
     {
         cvtest::max(src[0], gamma[0], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -482,7 +482,7 @@ struct SetOp : public BaseElemWiseOp
     {
         dst.setTo(gamma, mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>&, Mat& dst, const Mat& mask)
     {
         cvtest::set(dst, gamma, mask);
     }
@@ -808,7 +808,7 @@ struct FlipOp : public BaseElemWiseOp
     {
         cvtest::flip(src[0], dst, flipcode);
     }
-    void generateScalars(int depth, RNG& rng)
+    void generateScalars(int, RNG& rng)
     {
         flipcode = rng.uniform(0, 3) - 1;
     }
@@ -1291,7 +1291,7 @@ TEST_P(ElemWiseTest, accuracy)
     ElemWiseOpPtr op = GetParam();
     
     int testIdx = 0;
-    RNG rng(cvtest::ARITHM_RNG_SEED);
+    RNG rng((uint64)cvtest::ARITHM_RNG_SEED);
     for( testIdx = 0; testIdx < cvtest::ARITHM_NTESTS; testIdx++ )
     {
         vector<int> size;

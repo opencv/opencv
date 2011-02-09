@@ -41,6 +41,7 @@
  //M*/
 
 #include "precomp.hpp"
+#include <iterator>
 
 //#define DEBUG_BLOB_DETECTOR
 

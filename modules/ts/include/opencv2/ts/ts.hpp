@@ -1,6 +1,10 @@
 #ifndef __OPENCV_GTESTCV_HPP__
 #define __OPENCV_GTESTCV_HPP__
 
+#ifndef GTEST_CREATE_AS_SHARED_LIBRARY
+#define GTEST_LINKED_AS_SHARED_LIBRARY 1
+#endif
+
 #include "opencv2/ts/ts_gtest.h"
 #include "opencv2/core/core.hpp"
 

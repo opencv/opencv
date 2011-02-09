@@ -184,7 +184,7 @@ test_Canny( const Mat& src, Mat& dst,
             int dxval = dx.at<short>(y, x), dyval = dy.at<short>(y, x);
             mag.at<float>(y, x) = use_true_gradient ?
                 (float)sqrt((double)(dxval*dxval + dyval*dyval)) :
-                (float)(fabs(dxval) + fabs(dyval));
+                (float)(fabs((double)dxval) + fabs((double)dyval));
         }
     }
 
