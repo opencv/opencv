@@ -445,7 +445,7 @@ void cartToPolar( const Mat& X, const Mat& Y, Mat& Mag, Mat& Angle, bool angleIn
         NAryMatIterator it(arrays, planes);
         
         for( int i = 0; i < it.nplanes; i++, ++it )
-            cartToPolar( it.planes[0], it.planes[1], it.planes[2], it.planes[2], angleInDegrees );
+            cartToPolar( it.planes[0], it.planes[1], it.planes[2], it.planes[3], angleInDegrees );
         return;
     }
     
@@ -604,7 +604,7 @@ void polarToCart( const Mat& Mag, const Mat& Angle, Mat& X, Mat& Y, bool angleIn
         NAryMatIterator it(arrays, planes);
         
         for( int i = 0; i < it.nplanes; i++, ++it )
-            polarToCart( it.planes[0], it.planes[1], it.planes[2], it.planes[2], angleInDegrees );
+            polarToCart( it.planes[0], it.planes[1], it.planes[2], it.planes[3], angleInDegrees );
         return;
     }
     

@@ -382,7 +382,7 @@ void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const in
             v[k] = &src[k];
         for( k = 0; k < n; k++ )
             v[m + k] = &dst[k];
-        NAryMatIterator it(v, planes);
+        NAryMatIterator it(v, planes, m + n);
         
         for( int i = 0; i < it.nplanes; i++, ++it )
             mixChannels( &it.planes[0], m, &it.planes[m], n, fromTo, npairs );

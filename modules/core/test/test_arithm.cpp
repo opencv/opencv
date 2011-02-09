@@ -39,7 +39,7 @@ struct BaseElemWiseOp
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
         
-    virtual int getMaxErr(int depth) { return depth < CV_32F ? 1 : 256; }    
+    virtual double getMaxErr(int depth) { return depth < CV_32F ? 1 : depth == CV_32F ? 1e-5 : 1e-12; }    
     virtual void generateScalars(int depth, RNG& rng)
     {
         const double m = 3.;
@@ -182,9 +182,9 @@ struct AddWeightedOp : public BaseAddOp
     {
         addWeighted(src[0], alpha, src[1], beta, gamma[0], dst);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
-        return depth <= CV_32S ? 2 : depth < CV_64F ? (1 << 10) : (1 << 22);
+        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-10;
     }
 };
 
@@ -199,9 +199,9 @@ struct MulOp : public BaseElemWiseOp
     {
         cvtest::multiply(src[0], src[1], dst, alpha);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
-        return depth < CV_32S ? 2 : depth < CV_32F ? 4 : 16;
+        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };    
 
@@ -216,9 +216,9 @@ struct DivOp : public BaseElemWiseOp
     {
         cvtest::divide(src[0], src[1], dst, alpha);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
-        return depth < CV_32S ? 2 : depth < CV_32F ? 4 : 16;
+        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };    
 
@@ -233,9 +233,9 @@ struct RecipOp : public BaseElemWiseOp
     {
         cvtest::divide(Mat(), src[0], dst, alpha);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
-        return depth < CV_32S ? 2 : depth < CV_32F ? 4 : 16;
+        return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
 };        
     
@@ -288,7 +288,7 @@ struct LogicOp : public BaseElemWiseOp
         else
             cvtest::logicOp(src[0], src[1], dst, opcode);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
         return 0;
     }
@@ -321,7 +321,7 @@ struct LogicSOp : public BaseElemWiseOp
         else
             cvtest::logicOp(src[0], gamma, dst, opcode);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -339,7 +339,7 @@ struct MinOp : public BaseElemWiseOp
     {
         cvtest::min(src[0], src[1], dst);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
         return 0;
     }
@@ -356,7 +356,7 @@ struct MaxOp : public BaseElemWiseOp
     {
         cvtest::max(src[0], src[1], dst);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
         return 0;
     }
@@ -373,7 +373,7 @@ struct MinSOp : public BaseElemWiseOp
     {
         cvtest::min(src[0], gamma[0], dst);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
         return 0;
     }
@@ -390,7 +390,7 @@ struct MaxSOp : public BaseElemWiseOp
     {
         cvtest::max(src[0], gamma[0], dst);
     }
-    int getMaxErr(int depth)
+    double getMaxErr(int depth)
     {
         return 0;
     }
@@ -417,7 +417,7 @@ struct CmpOp : public BaseElemWiseOp
         return cvtest::randomType(rng, cvtest::TYPE_MASK_ALL_BUT_8S, 1, 1);
     }
         
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -444,7 +444,7 @@ struct CmpSOp : public BaseElemWiseOp
     {
         return cvtest::randomType(rng, cvtest::TYPE_MASK_ALL_BUT_8S, 1, 1);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -467,7 +467,7 @@ struct CopyOp : public BaseElemWiseOp
     {
         return cvtest::randomType(rng, cvtest::TYPE_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -490,7 +490,7 @@ struct SetOp : public BaseElemWiseOp
     {
         return cvtest::randomType(rng, cvtest::TYPE_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -645,7 +645,7 @@ struct InRangeSOp : public BaseElemWiseOp
     {
         cvtest::inRangeS(src[0], gamma, gamma1, dst);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -683,7 +683,7 @@ struct InRangeOp : public BaseElemWiseOp
         
         cvtest::inRange(src[0], lb, rb, dst);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -707,9 +707,9 @@ struct ConvertScaleOp : public BaseElemWiseOp
         ddepth = cvtest::randomType(rng, cvtest::TYPE_MASK_ALL, 1, 1);
         return srctype;
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
-        return ddepth <= CV_32S ? 2 : ddepth < CV_64F ? (1 << 14) : (1 << 18);
+        return ddepth <= CV_32S ? 2 : ddepth < CV_64F ? 1e-4 : 1e-12;
     }
     void generateScalars(int depth, RNG& rng)
     {
@@ -735,6 +735,10 @@ struct ConvertScaleAbsOp : public BaseElemWiseOp
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cvtest::add(src[0], alpha, Mat(), 0, Scalar::all(gamma[0]), dst, CV_8UC(src[0].channels()), true);
+    }
+    double getMaxErr(int)
+    {
+        return 1;
     }
     void generateScalars(int depth, RNG& rng)
     {
@@ -808,7 +812,7 @@ struct FlipOp : public BaseElemWiseOp
     {
         flipcode = rng.uniform(0, 3) - 1;
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -830,7 +834,7 @@ struct TransposeOp : public BaseElemWiseOp
     {
         cvtest::transpose(src[0], dst);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -851,7 +855,7 @@ struct SetIdentityOp : public BaseElemWiseOp
     {
         cvtest::setIdentity(dst, gamma);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -868,7 +872,7 @@ struct SetZeroOp : public BaseElemWiseOp
     {
         cvtest::set(dst, Scalar::all(0));
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -951,9 +955,9 @@ struct ExpOp : public BaseElemWiseOp
     {
         cvtest::exp(src[0], dst);
     }
-    int getMaxErr(int)
+    double getMaxErr(int depth)
     {
-        return (1<<10);
+        return depth == CV_32F ? 1e-5 : 1e-12;
     }
 };        
 
@@ -982,9 +986,9 @@ struct LogOp : public BaseElemWiseOp
         cvtest::exp(src[0], temp);
         cvtest::log(temp, dst);
     }
-    int getMaxErr(int)
+    double getMaxErr(int depth)
     {
-        return (1<<10);
+        return depth == CV_32F ? 1e-5 : 1e-12;
     }
 };
 
@@ -1075,9 +1079,9 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
     {
         angleInDegrees = rng.uniform(0, 2) != 0;
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
-        return (1<<10);
+        return 1e-3;
     }
     bool angleInDegrees;
 };
@@ -1099,9 +1103,9 @@ struct MeanOp : public BaseElemWiseOp
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cvtest::mean(src[0], mask);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
-        return (1<<13);
+        return 1e-6;
     }
 };    
 
@@ -1122,9 +1126,9 @@ struct SumOp : public BaseElemWiseOp
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cvtest::mean(src[0])*(double)src[0].total();
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
-        return (1<<13);
+        return 1e-6;
     }
 };    
 
@@ -1155,7 +1159,7 @@ struct CountNonZeroOp : public BaseElemWiseOp
         dst.create(1, 1, CV_32S);
         dst.at<int>(0,0) = saturate_cast<int>(cvtest::mean(temp)[0]/255*temp.total());
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -1188,9 +1192,9 @@ struct MeanStdDevOp : public BaseElemWiseOp
         dst.at<Scalar>(0,0) = mean;
         dst.at<Scalar>(0,1) = sqmean;
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
-        return (1<<13);
+        return 1e-6;
     }
 };    
 
@@ -1222,9 +1226,9 @@ struct NormOp : public BaseElemWiseOp
     {
         normType = 1 << rng.uniform(0, 3);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
-        return (1<<13);
+        return 1e-6;
     }
     int normType;
 };        
@@ -1270,7 +1274,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
         cvtest::minMaxLoc(src[0], &minval, &maxval, &minidx, &maxidx, mask);
         saveOutput(minidx, maxidx, minval, maxval, dst);
     }
-    int getMaxErr(int)
+    double getMaxErr(int)
     {
         return 0;
     }
@@ -1375,5 +1379,4 @@ INSTANTIATE_TEST_CASE_P(Core_MeanStdDev, ElemWiseTest, ::testing::Values(ElemWis
 INSTANTIATE_TEST_CASE_P(Core_Sum, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::SumOp)));
 INSTANTIATE_TEST_CASE_P(Core_Norm, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::NormOp)));
 INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::MinMaxLocOp)));
-
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::CartToPolarToCartOp)));
