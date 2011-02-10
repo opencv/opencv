@@ -50,7 +50,6 @@ CUcontext contexts[2];
 int main()
 {
     int num_devices = getCudaEnabledDeviceCount();
-
     if (num_devices < 2)
     {
         cout << "Two or more GPUs are required\n";
@@ -69,6 +68,7 @@ int main()
         }
     }
 
+    // Init CUDA Driver API
     safeCall(cuInit(0));
 
     // Create context for GPU #0

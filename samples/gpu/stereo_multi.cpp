@@ -78,7 +78,6 @@ int main(int argc, char** argv)
     }
 
     int num_devices = getCudaEnabledDeviceCount();
-
     if (num_devices < 2)
     {
         cout << "Two or more GPUs are required\n";
@@ -111,6 +110,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // Init CUDA Driver API
     safeCall(cuInit(0));
 
     // Create context for the first GPU

@@ -71,7 +71,7 @@ public:
 
 private:
     TestSystem(): can_flush_(false), cpu_elapsed_(0), gpu_elapsed_(0), 
-                  speedup_total_(0.0), num_subtests_called_(0) {};
+                  speedup_total_(0.0), num_subtests_called_(0) {}
 
     void flushSubtestData();
 
