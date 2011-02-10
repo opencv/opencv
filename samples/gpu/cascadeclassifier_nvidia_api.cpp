@@ -326,7 +326,7 @@ int main( int argc, const char** argv )
 
         cv::imshow(wndTitle, frameDisp);
 
-        switch (cvWaitKey(1))
+        switch (cvWaitKey(3))
         {
         case ' ':
             bUseOpenCV = !bUseOpenCV;
