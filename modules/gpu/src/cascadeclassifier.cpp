@@ -264,10 +264,6 @@ Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const
                             
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
 {   
-	#if !defined(_MSC_VER)
-		CV_Assert(!"FD under not-VS2008 is not implemented");
-	#endif
-
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U);
     CV_Assert( !this->empty());
         
