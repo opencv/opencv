@@ -34,5 +34,5 @@ ANDROID_OPENCV_LIB_DIRS := -L$(OPENCV_ROOT)/android/android-jni/libs/armeabi-v7a
 OPENCV_LIBS := $(OPENCV_LIB_DIRS) -lopencv_calib3d -lopencv_features2d -lopencv_objdetect -lopencv_imgproc \
      -lopencv_video  -lopencv_highgui -lopencv_ml -lopencv_legacy -lopencv_core -lopencv_lapack -lopencv_flann \
     -lzlib -lpng -ljpeg -ljasper
-ANDROID_OPENCV_LIBS := $(ANDROID_OPENCV_LIB_DIRS) -landroid-opencv
+ANDROID_OPENCV_LIBS := -landroid-opencv $(ANDROID_OPENCV_LIB_DIRS)
     
