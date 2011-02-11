@@ -64,7 +64,10 @@ protected:
 
     virtual int test(const Mat& img) = 0;
 
-    int CheckNorm(const Mat& m1, const Mat& m2);  
+    int CheckNorm(const Mat& m1, const Mat& m2);
+
+    // Checks whether two images are similar enough using normalized
+    // cross-correlation as an error measure
     int CheckSimilarity(const Mat& m1, const Mat& m2, float max_err=1e-3f);
 };
 
@@ -97,7 +100,7 @@ int CV_GpuImageProcTest::test32SC1(const Mat& img)
 int CV_GpuImageProcTest::test32FC1(const Mat& img)
 {
     cv::Mat temp, img_C1;
-    img.convertTo(temp, CV_32F);
+    img.convertTo(temp, CV_32F, 1.f / 255.f);
     cvtColor(temp, img_C1, CV_BGR2GRAY);
 
     return test(img_C1);
@@ -317,12 +320,12 @@ struct CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
             return CvTS::OK;
         }
 
-        static const double coeffs[2][3] =
-        {
-            {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-            {sin(3.14 / 6), cos(3.14 / 6), -100.0}
-        };
-        Mat M(2, 3, CV_64F, (void*)coeffs);
+        static double reflect[2][3] = { {-1, 0, 0},
+                                        { 0, -1, 0} };
+        reflect[0][2] = img.cols;
+        reflect[1][2] = img.rows;
+
+        Mat M(2, 3, CV_64F, (void*)reflect);
 
         int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
         const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
@@ -341,7 +344,9 @@ struct CV_GpuNppImageWarpAffineTest : public CV_GpuImageProcTest
             GpuMat gpudst;
             cv::gpu::warpAffine(gpu1, gpudst, M, gpu1.size(), flags[i]);
 
-            if (CheckSimilarity(cpudst, gpudst, 3e-3f) != CvTS::OK)
+            // Check inner parts (ignoring 1 pixel width border)
+            if (CheckSimilarity(cpudst.rowRange(1, cpudst.rows - 1).colRange(1, cpudst.cols - 1),
+                                gpudst.rowRange(1, gpudst.rows - 1).colRange(1, gpudst.cols - 1)) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
 
@@ -364,13 +369,12 @@ struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
             return CvTS::OK;
         }
 
-        static const double coeffs[3][3] =
-        {
-            {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-            {sin(3.14 / 6), cos(3.14 / 6), -100.0},
-            {0.0, 0.0, 1.0}
-        };
-        Mat M(3, 3, CV_64F, (void*)coeffs);
+        static double reflect[3][3] = { { -1, 0, 0},
+                                        { 0, -1, 0},
+                                        { 0, 0, 1 }};
+        reflect[0][2] = img.cols;
+        reflect[1][2] = img.rows;
+        Mat M(3, 3, CV_64F, (void*)reflect);
 
         int flags[] = {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_NEAREST | WARP_INVERSE_MAP, INTER_LINEAR | WARP_INVERSE_MAP, INTER_CUBIC | WARP_INVERSE_MAP};
         const char* flags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
@@ -389,7 +393,9 @@ struct CV_GpuNppImageWarpPerspectiveTest : public CV_GpuImageProcTest
             GpuMat gpudst;
             cv::gpu::warpPerspective(gpu1, gpudst, M, gpu1.size(), flags[i]);
 
-            if (CheckSimilarity(cpudst, gpudst, 3e-3f) != CvTS::OK)
+            // Check inner parts (ignoring 1 pixel width border)
+            if (CheckSimilarity(cpudst.rowRange(1, cpudst.rows - 1).colRange(1, cpudst.cols - 1),
+                                gpudst.rowRange(1, gpudst.rows - 1).colRange(1, gpudst.cols - 1)) != CvTS::OK)
                 test_res = CvTS::FAIL_GENERIC;
         }
 
