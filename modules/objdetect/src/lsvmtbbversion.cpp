@@ -1,7 +1,6 @@
+#ifdef HAVE_TBB
 #include "_lsvm_tbbversion.h"
 
-
-#ifdef HAVE_TBB
 /*
 // Task class
 */
@@ -119,3 +118,4 @@ int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const i
     return LATENT_SVM_OK;
 };
 #endif
+
