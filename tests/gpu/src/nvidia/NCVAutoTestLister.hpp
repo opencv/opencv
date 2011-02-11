@@ -32,7 +32,7 @@ public:
         this->tests.push_back(test);
     }
 
-    void invoke()
+    bool invoke()
     {
         Ncv32u nPassed = 0;
         Ncv32u nFailed = 0;
@@ -106,6 +106,9 @@ public:
             nPassed,
             nFailedMem,
             nFailed);
+
+        bool passed = nFailed == 0 && nFailedMem == 0;
+        return passed;
     }
 
     ~NCVAutoTestLister()

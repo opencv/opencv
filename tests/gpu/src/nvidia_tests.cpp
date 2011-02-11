@@ -53,9 +53,16 @@ protected:
 	void run( int )
 	{   		
 #if defined(HAVE_CUDA)
-		int main_nvidia();
-		main_nvidia();	
-		ts->set_failed_test_info(CvTS::OK);
+		bool main_nvidia();
+
+		// Invoke all NVIDIA Staging tests and obtain the result
+		bool passed = main_nvidia();
+
+		if (passed)
+		    ts->set_failed_test_info(CvTS::OK);
+		else
+		    ts->set_failed_test_info(CvTS::FAIL_INVALID_OUTPUT);
+
 #else
 		ts->set_failed_test_info(CvTS::SKIPPED);
 #endif

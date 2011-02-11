@@ -284,7 +284,7 @@ static void devNullOutput(const char *msg)
 }
 
 
-int main_nvidia()
+bool main_nvidia()
 {
     printf("Testing NVIDIA Computer Vision SDK\n");
     printf("==================================\n");
@@ -330,17 +330,21 @@ int main_nvidia()
     generateHaarLoaderTests(testListerHaarLoader);
     generateHaarApplicationTests(testListerHaarAppl, testSrcFacesVGA_8u, 1280, 720);
 
-    testListerII.invoke();
-    testListerSII.invoke();
-    testListerRStdDev.invoke();
-    testListerResize.invoke();
-    testListerNPPSTVectorOperations.invoke();
-    testListerTranspose.invoke();
-    testListerVisualize.invoke();
-    testListerVectorOperations.invoke();
-    testListerHypFiltration.invoke();
-    testListerHaarLoader.invoke();
-    testListerHaarAppl.invoke();
+    // Indicate if at least one test failed
+    bool passed = true;
 
-	return 0;
+    // Invoke all tests
+    passed &= testListerII.invoke();
+    passed &= testListerSII.invoke();
+    passed &= testListerRStdDev.invoke();
+    passed &= testListerResize.invoke();
+    passed &= testListerNPPSTVectorOperations.invoke();
+    passed &= testListerTranspose.invoke();
+    passed &= testListerVisualize.invoke();
+    passed &= testListerVectorOperations.invoke();
+    passed &= testListerHypFiltration.invoke();
+    passed &= testListerHaarLoader.invoke();
+    passed &= testListerHaarAppl.invoke();
+
+    return passed;
 }
