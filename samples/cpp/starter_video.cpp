@@ -10,15 +10,20 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include <vector>
+#include <stdio.h>
 
 using namespace cv;
 using namespace std;
+
+
 
 //hide the local functions in an anon namespace
 namespace {
     void help(char** av) {
         cout << "\nThis program justs gets you started reading images from video\n"
             "Usage:\n./" << av[0] << " <video device number>\n"
+            << "q,Q,esc -- quit\n"
+            << "space   -- save frame\n\n"
             << "\tThis is a starter sample, to get you up and going in a copy pasta fashion\n"
             << "\tThe program captures frames from a camera connected to your computer.\n"
             << "\tTo find the video device number, try ls /dev/video* \n"
@@ -27,8 +32,10 @@ namespace {
     }
 
     int process(VideoCapture& capture) {
+    	int n = 0;
+    	char filename[200];
         string window_name = "video | q or esc to quit";
-        cout << "press q or esc to quit" << endl;
+        cout << "press space to save a picture. q or esc to quit" << endl;
         namedWindow(window_name, CV_WINDOW_KEEPRATIO); //resizable window;
         Mat frame;
         for (;;) {
@@ -42,6 +49,11 @@ namespace {
         case 'Q':
         case 27: //escape key
             return 0;
+        case ' ': //Save an image
+        	sprintf(filename,"filename%.3d.jpg",n++);
+        	imwrite(filename,frame);
+        	cout << "Saved " << filename << endl;
+        	break;
         default:
             break;
             }
