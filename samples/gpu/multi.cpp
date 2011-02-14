@@ -2,7 +2,9 @@
    on the different GPUs */
 
 // Disable some warnings which are caused with CUDA headers
+#if defined(_MSC_VER)
 #pragma warning(disable: 4201 4408 4100)
+#endif
 
 #include <iostream>
 #include <cvconfig.h>
