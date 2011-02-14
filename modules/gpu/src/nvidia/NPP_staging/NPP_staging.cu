@@ -178,11 +178,11 @@ struct _scanElemOp
 private:
     template <int v> struct Int2Type { enum { value = v }; };
 
-    static inline __host__ __device__ T_out scanElemOp(T_in elem,const Int2Type<0>&)
+    static inline __host__ __device__ T_out scanElemOp(T_in elem, Int2Type<0>)
     {
         return (T_out)elem;
     }
-    static inline __host__ __device__ T_out scanElemOp(T_in elem, const Int2Type<1>&)
+    static inline __host__ __device__ T_out scanElemOp(T_in elem, Int2Type<1>)
     {
         return (T_out)(elem*elem);
     }
