@@ -829,8 +829,8 @@ struct CV_GpuMinMaxLocTest: public CvTest
         cv::Mat mask(src.size(), CV_8U);
         rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
 
-        // At least one of mask elements must be non zero as OpenCV returns 0
-        // in such case, our implementation returns max value
+        // At least one of the mask elements must be non zero as OpenCV returns 0
+        // in such case, when our implementation returns maximum or minimum value
         mask.at<unsigned char>(0, 0) = 1;
 
         double minVal, maxVal;
@@ -858,10 +858,6 @@ struct CV_GpuMinMaxLocTest: public CvTest
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;        
         cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::gpu::GpuMat(mask), valbuf, locbuf);
-
-        cout << rows << " " << cols << " " << depth << endl;
-        cout << minVal << " " << minVal_ << endl;
-        cout << maxVal << " " << maxVal_ << endl;
 
         CHECK(minVal == minVal_, CvTS::FAIL_INVALID_OUTPUT);
         CHECK(maxVal == maxVal_, CvTS::FAIL_INVALID_OUTPUT);
