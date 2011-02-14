@@ -89,7 +89,7 @@ void minMax(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{src}{Single-channel source image.}
 \cvarg{minVal}{Pointer to returned minimum value. \texttt{NULL} if not required.}
 \cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
-\cvarg{mask}{Optional mask to select a sub-matrix.}
+\cvarg{mask}{Optional mask to select a sub-matrix. Please note the result is undefined in the case of empty mask.}
 \cvarg{buf}{Optional buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
 
@@ -112,7 +112,7 @@ void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,\par
 \cvarg{maxVal}{Pointer to returned maximum value. \texttt{NULL} if not required.}
 \cvarg{minValLoc}{Pointer to returned minimum location. \texttt{NULL} if not required.}
 \cvarg{maxValLoc}{Pointer to returned maximum location. \texttt{NULL} if not required.}
-\cvarg{mask}{Optional mask to select a sub-matrix.}
+\cvarg{mask}{Optional mask to select a sub-matrix. Please note the result is undefined in the case of empty mask.}
 \cvarg{valbuf}{Optional values buffer to avoid extra memory allocations. It's resized automatically.}
 \cvarg{locbuf}{Optional locations buffer to avoid extra memory allocations. It's resized automatically.}
 \end{description}
