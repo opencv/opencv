@@ -172,6 +172,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(left.rows, threads.y);
 
         comp_data<1, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -185,6 +186,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(left.rows, threads.y);
 
         comp_data<1, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -199,6 +201,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(left.rows, threads.y);
 
         comp_data<3, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -212,6 +215,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(left.rows, threads.y);
 
         comp_data<3, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -226,6 +230,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(left.rows, threads.y);
 
         comp_data<4, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -239,6 +244,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(left.rows, threads.y);
 
         comp_data<4, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -278,6 +284,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(dst_rows, threads.y);
 
         data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)src, (DevMem2D_<T>)dst);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -321,9 +328,13 @@ namespace cv { namespace gpu { namespace bp
         int src_idx = (dst_idx + 1) & 1;
 
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mus[src_idx], (DevMem2D_<T>)mus[dst_idx]);
+        cudaSafeCall( cudaGetLastError() );
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mds[src_idx], (DevMem2D_<T>)mds[dst_idx]);
+        cudaSafeCall( cudaGetLastError() );
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mls[src_idx], (DevMem2D_<T>)mls[dst_idx]);
+        cudaSafeCall( cudaGetLastError() );
         level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mrs[src_idx], (DevMem2D_<T>)mrs[dst_idx]);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -443,6 +454,7 @@ namespace cv { namespace gpu { namespace bp
         for(int t = 0; t < iters; ++t)
         {
             one_iteration<T><<<grid, threads, 0, stream>>>(t, (DevMem2D_<T>)u, (T*)d.data, (T*)l.data, (T*)r.data, (DevMem2D_<T>)data, cols, rows);
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
@@ -505,6 +517,7 @@ namespace cv { namespace gpu { namespace bp
         grid.y = divUp(disp.rows, threads.y);
 
         output<T><<<grid, threads, 0, stream>>>((DevMem2D_<T>)u, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, disp);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );

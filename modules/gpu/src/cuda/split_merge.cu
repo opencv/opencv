@@ -233,6 +233,8 @@ namespace cv { namespace gpu { namespace split_merge {
                 src[0].data, src[0].step,
                 src[1].data, src[1].step,
                 dst.rows, dst.cols, dst.data, dst.step);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -248,6 +250,8 @@ namespace cv { namespace gpu { namespace split_merge {
                 src[1].data, src[1].step,
                 src[2].data, src[2].step,
                 dst.rows, dst.cols, dst.data, dst.step);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -264,6 +268,8 @@ namespace cv { namespace gpu { namespace split_merge {
                 src[2].data, src[2].step,
                 src[3].data, src[3].step,
                 dst.rows, dst.cols, dst.data, dst.step);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -436,6 +442,8 @@ namespace cv { namespace gpu { namespace split_merge {
                 src.data, src.step, src.rows, src.cols,
                 dst[0].data, dst[0].step,
                 dst[1].data, dst[1].step);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -451,6 +459,8 @@ namespace cv { namespace gpu { namespace split_merge {
                 dst[0].data, dst[0].step,
                 dst[1].data, dst[1].step,
                 dst[2].data, dst[2].step);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }
@@ -467,6 +477,8 @@ namespace cv { namespace gpu { namespace split_merge {
                  dst[1].data, dst[1].step,
                  dst[2].data, dst[2].step,
                  dst[3].data, dst[3].step);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall(cudaThreadSynchronize());
     }

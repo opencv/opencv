@@ -329,6 +329,7 @@ namespace cv
                 grid.y = divUp(src.rows, threads.y);        
 
                 device::transformSimple<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
                     cudaSafeCall( cudaThreadSynchronize() ); 
@@ -345,6 +346,7 @@ namespace cv
                 grid.y = divUp(src1.rows, threads.y);        
 
                 device::transformSimple<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
                     cudaSafeCall( cudaThreadSynchronize() );            
@@ -365,6 +367,7 @@ namespace cv
                 grid.y = divUp(src.rows, threads.y);        
 
                 device::transformSmart<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
                     cudaSafeCall( cudaThreadSynchronize() );
@@ -383,6 +386,7 @@ namespace cv
                 grid.y = divUp(src1.rows, threads.y);        
 
                 device::transformSmart<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
                     cudaSafeCall( cudaThreadSynchronize() );            

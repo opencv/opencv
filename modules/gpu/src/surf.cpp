@@ -65,6 +65,7 @@ namespace cv { namespace gpu { namespace surf
     dim3 calcBlockSize(int nIntervals);
     
     void fasthessian_gpu(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads);
+    void fasthessian_gpu_old(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threadsOld);
     
     void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
         int x_size, int y_size, bool use_mask, const dim3& threads);
@@ -75,6 +76,7 @@ namespace cv { namespace gpu { namespace surf
     void find_orientation_gpu(KeyPoint_GPU* features, int nFeatures);
     
     void compute_descriptors_gpu(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures);
+    void compute_descriptors_gpu_old(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures);
 }}}
 
 using namespace cv::gpu::surf;
@@ -170,6 +172,10 @@ namespace
 
         void detectKeypoints(GpuMat& keypoints)
         {
+            typedef void (*fasthessian_t)(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads);
+            const fasthessian_t fasthessian = 
+                DeviceInfo().supports(COMPUTE_13) ? fasthessian_gpu : fasthessian_gpu_old;
+
             dim3 threads = calcBlockSize(nIntervals);
             for(int octave = 0; octave < nOctaves; ++octave)
             {
@@ -192,7 +198,7 @@ namespace
                 uploadConstant("cv::gpu::surf::c_border", border);
                 uploadConstant("cv::gpu::surf::c_step",   step);
 
-                fasthessian_gpu(hessianBuffer, x_size, y_size, threads);
+                fasthessian(hessianBuffer, x_size, y_size, threads);
 
                 // Reset the candidate count.
                 maxCounter = 0;
@@ -201,10 +207,13 @@ namespace
                 
                 maxCounter = std::min(maxCounter, static_cast<unsigned int>(max_candidates));
 
-                fh_interp_extremum_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter,
-                    featuresBuffer.ptr<KeyPoint_GPU>(), featureCounter);
+                if (maxCounter > 0)
+                {
+                    fh_interp_extremum_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter,
+                        featuresBuffer.ptr<KeyPoint_GPU>(), featureCounter);
 
-                featureCounter = std::min(featureCounter, static_cast<unsigned int>(max_features));
+                    featureCounter = std::min(featureCounter, static_cast<unsigned int>(max_features));
+                }
             }
 
             if (featureCounter > 0)
@@ -221,10 +230,16 @@ namespace
 
         void computeDescriptors(const GpuMat& keypoints, GpuMat& descriptors, int descriptorSize)
         {
+            typedef void (*compute_descriptors_t)(const DevMem2Df& descriptors, 
+                const KeyPoint_GPU* features, int nFeatures);
+
+            const compute_descriptors_t compute_descriptors = 
+                DeviceInfo().supports(COMPUTE_13) ? compute_descriptors_gpu : compute_descriptors_gpu_old;
+
             if (keypoints.cols > 0)
             {
                 descriptors.create(keypoints.cols, descriptorSize, CV_32F);
-                compute_descriptors_gpu(descriptors, keypoints.ptr<KeyPoint_GPU>(), keypoints.cols);
+                compute_descriptors(descriptors, keypoints.ptr<KeyPoint_GPU>(), keypoints.cols);
             }
         }
 

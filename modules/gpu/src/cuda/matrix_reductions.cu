@@ -273,6 +273,8 @@ namespace cv { namespace gpu { namespace mathfunc
         T* maxval_buf = (T*)buf.ptr(1);
 
         minMaxKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -302,6 +304,8 @@ namespace cv { namespace gpu { namespace mathfunc
         T* maxval_buf = (T*)buf.ptr(1);
 
         minMaxKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -355,7 +359,10 @@ namespace cv { namespace gpu { namespace mathfunc
         T* maxval_buf = (T*)buf.ptr(1);
 
         minMaxKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
+        cudaSafeCall( cudaGetLastError() );
         minMaxPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -384,7 +391,10 @@ namespace cv { namespace gpu { namespace mathfunc
         T* maxval_buf = (T*)buf.ptr(1);
 
         minMaxKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
+        cudaSafeCall( cudaGetLastError() );
         minMaxPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -597,6 +607,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         minMaxLocKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, 
                                                            minloc_buf, maxloc_buf);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -636,6 +648,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         minMaxLocKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, 
                                                              minloc_buf, maxloc_buf);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -706,7 +720,10 @@ namespace cv { namespace gpu { namespace mathfunc
 
         minMaxLocKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf, 
                                                            minloc_buf, maxloc_buf);
+        cudaSafeCall( cudaGetLastError() );
         minMaxLocPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -745,7 +762,10 @@ namespace cv { namespace gpu { namespace mathfunc
 
         minMaxLocKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf, 
                                                              minloc_buf, maxloc_buf);
+        cudaSafeCall( cudaGetLastError() );
         minMaxLocPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         T minval_, maxval_;
@@ -873,6 +893,8 @@ namespace cv { namespace gpu { namespace mathfunc
         uint* count_buf = (uint*)buf.ptr(0);
 
         countNonZeroKernel<256, T><<<grid, threads>>>(src, count_buf);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         uint count;
@@ -916,7 +938,10 @@ namespace cv { namespace gpu { namespace mathfunc
         uint* count_buf = (uint*)buf.ptr(0);
 
         countNonZeroKernel<256, T><<<grid, threads>>>(src, count_buf);
+        cudaSafeCall( cudaGetLastError() );
         countNonZeroPass2Kernel<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         uint count;
@@ -1430,26 +1455,42 @@ namespace cv { namespace gpu { namespace mathfunc
         case 1:
             sumKernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 2:
             sumKernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 3:
             sumKernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 4:
             sumKernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         }
         cudaSafeCall(cudaThreadSynchronize());
@@ -1500,6 +1541,8 @@ namespace cv { namespace gpu { namespace mathfunc
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             break;
         }
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         R result[4] = {0, 0, 0, 0};
@@ -1534,26 +1577,42 @@ namespace cv { namespace gpu { namespace mathfunc
         case 1:
             sumKernel<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 2:
             sumKernel_C2<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 3:
             sumKernel_C3<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 4:
             sumKernel_C4<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         }
         cudaSafeCall(cudaThreadSynchronize());
@@ -1604,6 +1663,8 @@ namespace cv { namespace gpu { namespace mathfunc
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             break;
         }
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         R result[4] = {0, 0, 0, 0};
@@ -1638,26 +1699,42 @@ namespace cv { namespace gpu { namespace mathfunc
         case 1:
             sumKernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 2:
             sumKernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 3:
             sumKernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         case 4:
             sumKernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+            cudaSafeCall( cudaGetLastError() );
+
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
                     (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+            cudaSafeCall( cudaGetLastError() );
+
             break;
         }
         cudaSafeCall(cudaThreadSynchronize());
@@ -1708,6 +1785,8 @@ namespace cv { namespace gpu { namespace mathfunc
                     src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
             break;
         }
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
 
         R result[4] = {0, 0, 0, 0};

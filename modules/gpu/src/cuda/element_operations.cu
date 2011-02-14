@@ -130,6 +130,7 @@ namespace cv { namespace gpu { namespace mathfunc
                   divUp(rows, threads.y));
 
         bitwiseUnOpKernel<opid><<<grid, threads>>>(rows, width, src, dst);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
             cudaSafeCall(cudaThreadSynchronize());
@@ -161,6 +162,7 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
         bitwiseUnOpKernel<T, opid><<<grid, threads>>>(rows, cols, cn, src, mask, dst); 
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
             cudaSafeCall(cudaThreadSynchronize());
@@ -251,6 +253,7 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 grid(divUp(width, threads.x * sizeof(uint)), divUp(rows, threads.y));
 
         bitwiseBinOpKernel<opid><<<grid, threads>>>(rows, width, src1, src2, dst);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
             cudaSafeCall(cudaThreadSynchronize());
@@ -283,7 +286,8 @@ namespace cv { namespace gpu { namespace mathfunc
         dim3 threads(16, 16);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        bitwiseBinOpKernel<T, opid><<<grid, threads>>>(rows, cols, cn, src1, src2, mask, dst); 
+        bitwiseBinOpKernel<T, opid><<<grid, threads>>>(rows, cols, cn, src1, src2, mask, dst);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
             cudaSafeCall(cudaThreadSynchronize());
@@ -384,29 +388,71 @@ namespace cv { namespace gpu { namespace mathfunc
         }
     };
     
-    struct ScalarMinOp
+    template <typename T> struct ScalarMinOp
+    {
+        T s;
+
+        explicit ScalarMinOp(T s_) : s(s_) {}
+
+        __device__ T operator()(T a)
+        {
+            return min(a, s);
+        }
+    };
+    template <> struct ScalarMinOp<float>
+    {
+        float s;
+
+        explicit ScalarMinOp(float s_) : s(s_) {}
+
+        __device__ float operator()(float a)
+        {
+            return fmin(a, s);
+        }
+    };
+    template <> struct ScalarMinOp<double>
     {
         double s;
 
         explicit ScalarMinOp(double s_) : s(s_) {}
 
-        template <typename T>
-        __device__ T operator()(T a)
+        __device__ double operator()(double a)
         {
-            return saturate_cast<T>(fmin((double)a, s));
+            return fmin(a, s);
         }
     };
     
-    struct ScalarMaxOp
+    template <typename T> struct ScalarMaxOp
+    {
+        T s;
+
+        explicit ScalarMaxOp(T s_) : s(s_) {}
+
+        __device__ T operator()(T a)
+        {
+            return max(a, s);
+        }
+    };
+    template <> struct ScalarMaxOp<float>
+    {
+        float s;
+
+        explicit ScalarMaxOp(float s_) : s(s_) {}
+
+        __device__ float operator()(float a)
+        {
+            return fmax(a, s);
+        }
+    };
+    template <> struct ScalarMaxOp<double>
     {
         double s;
 
         explicit ScalarMaxOp(double s_) : s(s_) {}
 
-        template <typename T>
-        __device__ T operator()(T a)
+        __device__ double operator()(double a)
         {
-            return saturate_cast<T>(fmax((double)a, s));
+            return fmax(a, s);
         }
     };
     
@@ -418,7 +464,7 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template void min_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
-    template void min_gpu<char  >(const DevMem2D_<char>& src1, const DevMem2D_<char>& src2, const DevMem2D_<char>& dst, cudaStream_t stream);
+    template void min_gpu<schar >(const DevMem2D_<schar>& src1, const DevMem2D_<schar>& src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
     template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, const DevMem2D_<ushort>& src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
     template void min_gpu<short >(const DevMem2D_<short>& src1, const DevMem2D_<short>& src2, const DevMem2D_<short>& dst, cudaStream_t stream);
     template void min_gpu<int   >(const DevMem2D_<int>& src1, const DevMem2D_<int>& src2, const DevMem2D_<int>& dst, cudaStream_t stream);
@@ -433,7 +479,7 @@ namespace cv { namespace gpu { namespace mathfunc
     }
     
     template void max_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
-    template void max_gpu<char  >(const DevMem2D_<char>& src1, const DevMem2D_<char>& src2, const DevMem2D_<char>& dst, cudaStream_t stream);
+    template void max_gpu<schar >(const DevMem2D_<schar>& src1, const DevMem2D_<schar>& src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
     template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, const DevMem2D_<ushort>& src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
     template void max_gpu<short >(const DevMem2D_<short>& src1, const DevMem2D_<short>& src2, const DevMem2D_<short>& dst, cudaStream_t stream);
     template void max_gpu<int   >(const DevMem2D_<int>& src1, const DevMem2D_<int>& src2, const DevMem2D_<int>& dst, cudaStream_t stream);
@@ -441,122 +487,145 @@ namespace cv { namespace gpu { namespace mathfunc
     template void max_gpu<double>(const DevMem2D_<double>& src1, const DevMem2D_<double>& src2, const DevMem2D_<double>& dst, cudaStream_t stream);
 
     template <typename T>
-    void min_gpu(const DevMem2D_<T>& src1, double src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ScalarMinOp op(src2);
+        ScalarMinOp<T> op(src2);
         transform(src1, dst, op, stream);    
     }
 
-    template void min_gpu<uchar >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
-    template void min_gpu<char  >(const DevMem2D_<char>& src1, double src2, const DevMem2D_<char>& dst, cudaStream_t stream);
-    template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, double src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
-    template void min_gpu<short >(const DevMem2D_<short>& src1, double src2, const DevMem2D_<short>& dst, cudaStream_t stream);
-    template void min_gpu<int   >(const DevMem2D_<int>& src1, double src2, const DevMem2D_<int>& dst, cudaStream_t stream);
-    template void min_gpu<float >(const DevMem2D_<float>& src1, double src2, const DevMem2D_<float>& dst, cudaStream_t stream);
+    template void min_gpu<uchar >(const DevMem2D& src1, uchar src2, const DevMem2D& dst, cudaStream_t stream);
+    template void min_gpu<schar >(const DevMem2D_<schar>& src1, schar src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
+    template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, ushort src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
+    template void min_gpu<short >(const DevMem2D_<short>& src1, short src2, const DevMem2D_<short>& dst, cudaStream_t stream);
+    template void min_gpu<int   >(const DevMem2D_<int>& src1, int src2, const DevMem2D_<int>& dst, cudaStream_t stream);
+    template void min_gpu<float >(const DevMem2D_<float>& src1, float src2, const DevMem2D_<float>& dst, cudaStream_t stream);
     template void min_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
     
     template <typename T>
-    void max_gpu(const DevMem2D_<T>& src1, double src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ScalarMaxOp op(src2);
+        ScalarMaxOp<T> op(src2);
         transform(src1, dst, op, stream);    
     }
 
-    template void max_gpu<uchar >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
-    template void max_gpu<char  >(const DevMem2D_<char>& src1, double src2, const DevMem2D_<char>& dst, cudaStream_t stream);
-    template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, double src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
-    template void max_gpu<short >(const DevMem2D_<short>& src1, double src2, const DevMem2D_<short>& dst, cudaStream_t stream);
-    template void max_gpu<int   >(const DevMem2D_<int>& src1, double src2, const DevMem2D_<int>& dst, cudaStream_t stream);
-    template void max_gpu<float >(const DevMem2D_<float>& src1, double src2, const DevMem2D_<float>& dst, cudaStream_t stream);
+    template void max_gpu<uchar >(const DevMem2D& src1, uchar src2, const DevMem2D& dst, cudaStream_t stream);
+    template void max_gpu<schar >(const DevMem2D_<schar>& src1, schar src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
+    template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, ushort src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
+    template void max_gpu<short >(const DevMem2D_<short>& src1, short src2, const DevMem2D_<short>& dst, cudaStream_t stream);
+    template void max_gpu<int   >(const DevMem2D_<int>& src1, int src2, const DevMem2D_<int>& dst, cudaStream_t stream);
+    template void max_gpu<float >(const DevMem2D_<float>& src1, float src2, const DevMem2D_<float>& dst, cudaStream_t stream);
     template void max_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
 
     
     //////////////////////////////////////////////////////////////////////////
     // threshold
 
-    class ThreshOp
+    template <typename T> struct ThreshBinary
     {
-    public:
-        ThreshOp(float thresh_, float maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
+        ThreshBinary(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
 
-    protected:
+        __device__ T operator()(const T& src) const
+        {
+            return src > thresh ? maxVal : 0;
+        }
+
+    private:
+        T thresh;
+        T maxVal;
+    };
+
+    template <typename T> struct ThreshBinaryInv
+    {
+        ThreshBinaryInv(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
+
+        __device__ T operator()(const T& src) const
+        {
+            return src > thresh ? 0 : maxVal;
+        }
+
+    private:
+        T thresh;
+        T maxVal;
+    };
+
+    template <typename T> struct ThreshTrunc
+    {
+        ThreshTrunc(T thresh_, T) : thresh(thresh_) {}
+
+        __device__ T operator()(const T& src) const
+        {
+            return min(src, thresh);
+        }
+
+    private:
+        T thresh;
+    };
+    template <> struct  ThreshTrunc<float>
+    {
+        ThreshTrunc(float thresh_, float) : thresh(thresh_) {}
+
+        __device__ float operator()(const float& src) const
+        {
+            return fmin(src, thresh);
+        }
+
+    private:
         float thresh;
-        float maxVal;
+    };
+    template <> struct  ThreshTrunc<double>
+    {
+        ThreshTrunc(double thresh_, double) : thresh(thresh_) {}
+
+        __device__ double operator()(const double& src) const
+        {
+            return fmin(src, thresh);
+        }
+
+    private:
+        double thresh;
     };
 
-    class ThreshBinary : public ThreshOp
+    template <typename T> struct ThreshToZero
     {
     public:
-        ThreshBinary(float thresh_, float maxVal_) : ThreshOp(thresh_, maxVal_) {}
+        ThreshToZero(T thresh_, T) : thresh(thresh_) {}
 
-        template<typename T>
         __device__ T operator()(const T& src) const
         {
-            return (float)src > thresh ? saturate_cast<T>(maxVal) : 0;
+            return src > thresh ? src : 0;
         }
+
+    private:
+        T thresh;
     };
 
-    class ThreshBinaryInv : public ThreshOp
+    template <typename T> struct ThreshToZeroInv
     {
     public:
-        ThreshBinaryInv(float thresh_, float maxVal_) : ThreshOp(thresh_, maxVal_) {}
+        ThreshToZeroInv(T thresh_, T) : thresh(thresh_) {}
 
-        template<typename T>
         __device__ T operator()(const T& src) const
         {
-            return (float)src > thresh ? 0 : saturate_cast<T>(maxVal);
+            return src > thresh ? 0 : src;
         }
+
+    private:
+        T thresh;
     };
 
-    class ThreshTrunc : public ThreshOp
-    {
-    public:
-        ThreshTrunc(float thresh_, float maxVal_) : ThreshOp(thresh_, maxVal_) {}
-
-        template<typename T>
-        __device__ T operator()(const T& src) const
-        {
-            return saturate_cast<T>(fmin((float)src, thresh));
-        }
-    };
-
-    class ThreshToZero : public ThreshOp
-    {
-    public:
-        ThreshToZero(float thresh_, float maxVal_) : ThreshOp(thresh_, maxVal_) {}
-
-        template<typename T>
-        __device__ T operator()(const T& src) const
-        {
-            return (float)src > thresh ? src : 0;
-        }
-    };
-
-    class ThreshToZeroInv : public ThreshOp
-    {
-    public:
-        ThreshToZeroInv(float thresh_, float maxVal_) : ThreshOp(thresh_, maxVal_) {}
-
-        template<typename T>
-        __device__ T operator()(const T& src) const
-        {
-            return (float)src > thresh ? 0 : src;
-        }
-    };
-
-    template <class Op, typename T>
-    void threshold_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, float thresh, float maxVal, 
+    template <template <typename> class Op, typename T>
+    void threshold_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, 
         cudaStream_t stream)
     {
-        Op op(thresh, maxVal);
+        Op<T> op(thresh, maxVal);
         transform(src, dst, op, stream);
     }
 
     template <typename T>
-    void threshold_gpu(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type,
+    void threshold_gpu(const DevMem2D& src, const DevMem2D& dst, T thresh, T maxVal, int type,
         cudaStream_t stream)
     {
-        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, float thresh, float maxVal, 
+        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, 
             cudaStream_t stream);
 
         static const caller_t callers[] = 
@@ -571,10 +640,11 @@ namespace cv { namespace gpu { namespace mathfunc
         callers[type]((DevMem2D_<T>)src, (DevMem2D_<T>)dst, thresh, maxVal, stream);
     }
 
-    template void threshold_gpu<uchar>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
-    template void threshold_gpu<schar>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
-    template void threshold_gpu<ushort>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
-    template void threshold_gpu<short>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
-    template void threshold_gpu<int>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
+    template void threshold_gpu<uchar>(const DevMem2D& src, const DevMem2D& dst, uchar thresh, uchar maxVal, int type, cudaStream_t stream);
+    template void threshold_gpu<schar>(const DevMem2D& src, const DevMem2D& dst, schar thresh, schar maxVal, int type, cudaStream_t stream);
+    template void threshold_gpu<ushort>(const DevMem2D& src, const DevMem2D& dst, ushort thresh, ushort maxVal, int type, cudaStream_t stream);
+    template void threshold_gpu<short>(const DevMem2D& src, const DevMem2D& dst, short thresh, short maxVal, int type, cudaStream_t stream);
+    template void threshold_gpu<int>(const DevMem2D& src, const DevMem2D& dst, int thresh, int maxVal, int type, cudaStream_t stream);
     template void threshold_gpu<float>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
+    template void threshold_gpu<double>(const DevMem2D& src, const DevMem2D& dst, double thresh, double maxVal, int type, cudaStream_t stream);
 }}}

@@ -382,6 +382,8 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
 
         init_data_cost_callers[level](rows, cols, h, w, level, ndisp, channels, stream);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
 
@@ -395,6 +397,9 @@ namespace cv { namespace gpu { namespace csbp
             get_first_k_initial_local<<<grid, threads, 0, stream>>> (data_cost_selected, disp_selected_pyr, h, w, nr_plane);
         else
             get_first_k_initial_global<<<grid, threads, 0, stream>>>(data_cost_selected, disp_selected_pyr, h, w, nr_plane);
+        
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -578,6 +583,7 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaMemcpyToSymbol(cmsg_step2,  &msg_step2,  sizeof(size_t)) );
 
         callers[level](disp_selected_pyr, data_cost, rows, cols, h, w, level, nr_plane, channels, stream);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -700,10 +706,11 @@ namespace cv { namespace gpu { namespace csbp
         grid.y = divUp(h, threads.y);
 
         init_message<<<grid, threads, 0, stream>>>(u_new, d_new, l_new, r_new,
-                                                         u_cur, d_cur, l_cur, r_cur,
-                                                         selected_disp_pyr_new, selected_disp_pyr_cur,
-                                                         data_cost_selected, data_cost,
-                                                         h, w, nr_plane, h2, w2, nr_plane2);
+                                                   u_cur, d_cur, l_cur, r_cur,
+                                                   selected_disp_pyr_new, selected_disp_pyr_cur,
+                                                   data_cost_selected, data_cost,
+                                                   h, w, nr_plane, h2, w2, nr_plane2);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -805,6 +812,7 @@ namespace cv { namespace gpu { namespace csbp
         for(int t = 0; t < iters; ++t)
         {
             compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaThreadSynchronize() );
@@ -873,7 +881,9 @@ namespace cv { namespace gpu { namespace csbp
         grid.y = divUp(disp.rows, threads.y);
 
         compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected,
-                                                         disp.data, disp.step / disp.elemSize(), disp.cols, disp.rows, nr_plane);
+                                                   disp.data, disp.step / disp.elemSize(), disp.cols, disp.rows, nr_plane);
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }

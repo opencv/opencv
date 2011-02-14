@@ -132,6 +132,8 @@ void matchTemplateNaive_CCORR_32F(const DevMem2D image, const DevMem2D templ,
                 templ.cols, templ.rows, image, templ, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -161,6 +163,8 @@ void matchTemplateNaive_CCORR_8U(const DevMem2D image, const DevMem2D templ,
                 templ.cols, templ.rows, image, templ, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -222,6 +226,8 @@ void matchTemplateNaive_SQDIFF_32F(const DevMem2D image, const DevMem2D templ,
                 templ.cols, templ.rows, image, templ, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -251,6 +257,8 @@ void matchTemplateNaive_SQDIFF_8U(const DevMem2D image, const DevMem2D templ,
                 templ.cols, templ.rows, image, templ, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -299,6 +307,8 @@ void matchTemplatePrepared_SQDIFF_8U(
                 w, h, image_sqsum, templ_sqsum, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -348,6 +358,8 @@ void matchTemplatePrepared_SQDIFF_NORMED_8U(
                 w, h, image_sqsum, templ_sqsum, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -378,6 +390,8 @@ void matchTemplatePrepared_CCOFF_8U(
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
     matchTemplatePreparedKernel_CCOFF_8U<<<grid, threads>>>(
             w, h, (float)templ_sum / (w * h), image_sum, result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -418,6 +432,8 @@ void matchTemplatePrepared_CCOFF_8UC2(
     matchTemplatePreparedKernel_CCOFF_8UC2<<<grid, threads>>>(
             w, h, (float)templ_sum_r / (w * h), (float)templ_sum_g / (w * h),
             image_sum_r, image_sum_g, result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -472,6 +488,8 @@ void matchTemplatePrepared_CCOFF_8UC3(
             (float)templ_sum_g / (w * h), 
             (float)templ_sum_b / (w * h),
             image_sum_r, image_sum_g, image_sum_b, result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -536,6 +554,8 @@ void matchTemplatePrepared_CCOFF_8UC4(
             (float)templ_sum_a / (w * h),
             image_sum_r, image_sum_g, image_sum_b, image_sum_a,
             result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -580,6 +600,8 @@ void matchTemplatePrepared_CCOFF_NORMED_8U(
     matchTemplatePreparedKernel_CCOFF_NORMED_8U<<<grid, threads>>>(
             w, h, weight, templ_sum_scale, templ_sqsum_scale, 
             image_sum, image_sqsum, result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -641,6 +663,8 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC2(
             image_sum_r, image_sqsum_r, 
             image_sum_g, image_sqsum_g, 
             result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -716,6 +740,8 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC3(
             image_sum_g, image_sqsum_g, 
             image_sum_b, image_sqsum_b, 
             result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -805,6 +831,8 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC4(
             image_sum_b, image_sqsum_b, 
             image_sum_a, image_sqsum_a, 
             result);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -847,6 +875,8 @@ void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum,
         normalizeKernel_8U<4><<<grid, threads>>>(w, h, image_sqsum, templ_sqsum, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -887,6 +917,8 @@ void extractFirstChannel_32F(const DevMem2D image, DevMem2Df result, int cn)
         extractFirstChannel_32F<4><<<grid, threads>>>(image, result);
         break;
     }
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 

@@ -137,6 +137,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaBindTexture2D(0, tex_remap, src.data, desc, src.cols, src.rows, src.step) );
 
         remap_1c<<<grid, threads>>>(xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );  
         cudaSafeCall( cudaUnbindTexture(tex_remap) );
@@ -150,6 +151,7 @@ namespace cv { namespace gpu { namespace imgproc
         grid.y = divUp(dst.rows, threads.y);
 
         remap_3c<<<grid, threads>>>(src.data, src.step, xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() ); 
     }
@@ -259,6 +261,8 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
         meanshift_kernel<<< grid, threads >>>( dst.data, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall( cudaThreadSynchronize() );
         cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
@@ -273,6 +277,8 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
         meanshiftproc_kernel<<< grid, threads >>>( dstr.data, dstr.step, dstsp.data, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall( cudaThreadSynchronize() );
         cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
@@ -388,6 +394,7 @@ namespace cv { namespace gpu { namespace imgproc
         grid.y = divUp(src.rows, threads.y);
          
         drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step, dst.data, dst.step, src.cols, src.rows, ndisp);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() ); 
@@ -401,6 +408,7 @@ namespace cv { namespace gpu { namespace imgproc
         grid.y = divUp(src.rows, threads.y);
          
         drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(short), dst.data, dst.step, src.cols, src.rows, ndisp);
+        cudaSafeCall( cudaGetLastError() );
         
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -451,6 +459,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaMemcpyToSymbol(cq, q, 16 * sizeof(float)) );
 
         reprojectImageTo3D<<<grid, threads, 0, stream>>>(disp.data, disp.step / sizeof(T), xyzw.data, xyzw.step / sizeof(float), disp.rows, disp.cols);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -491,6 +500,8 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(Dx.cols, threads.x), divUp(Dx.rows, threads.y));
 
         extractCovData_kernel<<<grid, threads>>>(Dx.cols, Dx.rows, Dx, Dy, dst);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
     }
 
@@ -597,6 +608,8 @@ namespace cv { namespace gpu { namespace imgproc
             cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size, k, dst);
             break;
         }
+
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall(cudaThreadSynchronize());
         cudaSafeCall(cudaUnbindTexture(harrisDxTex));
@@ -712,6 +725,8 @@ namespace cv { namespace gpu { namespace imgproc
             break;
         }
 
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
         cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
         cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
@@ -746,6 +761,8 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(src.cols, threads.x));
 
         column_sumKernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
     }
 
@@ -772,6 +789,8 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
         mulSpectrumsKernel<<<grid, threads>>>(a, b, c);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
     }
 
@@ -799,6 +818,8 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
         mulSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, c);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
     }
 
@@ -827,6 +848,8 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
         mulAndScaleSpectrumsKernel<<<grid, threads>>>(a, b, scale, c);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
     }
 
@@ -855,6 +878,8 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
         mulAndScaleSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, scale, c);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall(cudaThreadSynchronize());
     }
 

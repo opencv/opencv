@@ -43,6 +43,9 @@
 #include <iostream>
 #include <string>
 
+using namespace cv;
+using namespace cv::gpu;
+
 
 struct CV_GpuMeanShiftTest : public CvTest
 {
@@ -50,6 +53,14 @@ struct CV_GpuMeanShiftTest : public CvTest
 
     void run(int)
     {
+        bool cc12_ok = TargetArchs::builtWith(COMPUTE_12) && DeviceInfo().supports(COMPUTE_12);
+        if (!cc12_ok)
+        {
+            ts->printf(CvTS::CONSOLE, "\nCompute capability 1.2 is required");
+            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            return;
+        }
+
         int spatialRad = 30;
         int colorRad = 30;
 
@@ -134,6 +145,14 @@ struct CV_GpuMeanShiftProcTest : public CvTest
 
     void run(int)
     {
+        bool cc12_ok = TargetArchs::builtWith(COMPUTE_12) && DeviceInfo().supports(COMPUTE_12);
+        if (!cc12_ok)
+        {
+            ts->printf(CvTS::CONSOLE, "\nCompute capability 1.2 is required");
+            ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+            return;
+        }
+
         int spatialRad = 30;
         int colorRad = 30;
 

@@ -49,7 +49,7 @@ using namespace cv::gpu::device;
 namespace cv { namespace gpu { namespace matrix_operations {
 
     template <typename T> struct shift_and_sizeof;
-    template <> struct shift_and_sizeof<char> { enum { shift = 0 }; };
+    template <> struct shift_and_sizeof<signed char> { enum { shift = 0 }; };
     template <> struct shift_and_sizeof<unsigned char> { enum { shift = 0 }; };
     template <> struct shift_and_sizeof<short> { enum { shift = 1 }; };
     template <> struct shift_and_sizeof<unsigned short> { enum { shift = 1 }; };
@@ -84,6 +84,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
 
         copy_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>
                 ((T*)mat_src.data, (T*)mat_dst.data, (unsigned char*)mask.data, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall ( cudaThreadSynchronize() );        
@@ -94,7 +95,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
         static CopyToFunc tab[8] =
         {
             copy_to_with_mask_run<unsigned char>,
-            copy_to_with_mask_run<char>,
+            copy_to_with_mask_run<signed char>,
             copy_to_with_mask_run<unsigned short>,
             copy_to_with_mask_run<short>,
             copy_to_with_mask_run<int>,
@@ -114,7 +115,51 @@ namespace cv { namespace gpu { namespace matrix_operations {
 ////////////////////////////////// SetTo //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-    __constant__ double scalar_d[4]; 
+    __constant__ uchar scalar_8u[4];
+    __constant__ schar scalar_8s[4];
+    __constant__ ushort scalar_16u[4];
+    __constant__ short scalar_16s[4];
+    __constant__ int scalar_32s[4];
+    __constant__ float scalar_32f[4]; 
+    __constant__ double scalar_64f[4];
+
+    template <typename T> __device__ T readScalar(int i);
+    template <> __device__ uchar readScalar<uchar>(int i) {return scalar_8u[i];}
+    template <> __device__ schar readScalar<schar>(int i) {return scalar_8s[i];}
+    template <> __device__ ushort readScalar<ushort>(int i) {return scalar_16u[i];}
+    template <> __device__ short readScalar<short>(int i) {return scalar_16s[i];}
+    template <> __device__ int readScalar<int>(int i) {return scalar_32s[i];}
+    template <> __device__ float readScalar<float>(int i) {return scalar_32f[i];}
+    template <> __device__ double readScalar<double>(int i) {return scalar_64f[i];}
+
+    void writeScalar(const uchar* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_8u, vals, sizeof(uchar) * 4) );
+    }
+    void writeScalar(const schar* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_8s, vals, sizeof(schar) * 4) );
+    }
+    void writeScalar(const ushort* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_16u, vals, sizeof(ushort) * 4) );
+    }
+    void writeScalar(const short* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_16s, vals, sizeof(short) * 4) );
+    }
+    void writeScalar(const int* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_32s, vals, sizeof(int) * 4) );
+    }
+    void writeScalar(const float* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_32f, vals, sizeof(float) * 4) );
+    }
+    void writeScalar(const double* vals)
+    {
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_64f, vals, sizeof(double) * 4) );
+    }
 
     template<typename T>
     __global__ void set_to_without_mask(T * mat, int cols, int rows, int step, int channels)
@@ -125,7 +170,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
         if ((x < cols * channels ) && (y < rows))
         {
             size_t idx = y * ( step >> shift_and_sizeof<T>::shift ) + x;
-            mat[idx] = scalar_d[ x % channels ];
+            mat[idx] = readScalar<T>(x % channels);
         }
     }
 
@@ -139,82 +184,54 @@ namespace cv { namespace gpu { namespace matrix_operations {
             if (mask[y * step_mask + x / channels] != 0)
             {
                 size_t idx = y * ( step >> shift_and_sizeof<T>::shift ) + x;
-                mat[idx] = scalar_d[ x % channels ];
+                mat[idx] = readScalar<T>(x % channels);
             }
     }
-    typedef void (*SetToFunc_with_mask)(const DevMem2D& mat, const DevMem2D& mask, int channels, const cudaStream_t & stream);
-    typedef void (*SetToFunc_without_mask)(const DevMem2D& mat, int channels, const cudaStream_t & stream);
-
     template <typename T>
-    void set_to_with_mask_run(const DevMem2D& mat, const DevMem2D& mask, int channels, const cudaStream_t & stream)
+    void set_to_gpu(const DevMem2D& mat, const T* scalar, const DevMem2D& mask, int channels, cudaStream_t stream)
     {
+        writeScalar(scalar);
+
         dim3 threadsPerBlock(32, 8, 1);
         dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
 
-        set_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.data, (unsigned char *)mask.data, mat.cols, mat.rows, mat.step, channels, mask.step);
-        if (stream == 0)
-            cudaSafeCall ( cudaThreadSynchronize() );
-    }
-
-    template <typename T>
-    void set_to_without_mask_run(const DevMem2D& mat, int channels, const cudaStream_t & stream)
-    {
-        dim3 threadsPerBlock(32, 8, 1);
-        dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
-
-        set_to_without_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>((T*)mat.data, mat.cols, mat.rows, mat.step, channels);
+        set_to_with_mask<T><<<numBlocks, threadsPerBlock, 0, stream>>>((T*)mat.data, (uchar*)mask.data, mat.cols, mat.rows, mat.step, channels, mask.step);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall ( cudaThreadSynchronize() );
     }
 
-    void set_to_without_mask(DevMem2D mat, int depth, const double *scalar, int channels, const cudaStream_t & stream)
+    template void set_to_gpu<uchar >(const DevMem2D& mat, const uchar* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<schar >(const DevMem2D& mat, const schar* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<ushort>(const DevMem2D& mat, const ushort* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<short >(const DevMem2D& mat, const short* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<int   >(const DevMem2D& mat, const int* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<float >(const DevMem2D& mat, const float* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<double>(const DevMem2D& mat, const double* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
+
+    template <typename T>
+    void set_to_gpu(const DevMem2D& mat, const T* scalar, int channels, cudaStream_t stream)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(scalar_d, scalar, sizeof(double) * 4));
+        writeScalar(scalar);
 
-        static SetToFunc_without_mask tab[8] =
-        {
-            set_to_without_mask_run<unsigned char>,
-            set_to_without_mask_run<char>,
-            set_to_without_mask_run<unsigned short>,
-            set_to_without_mask_run<short>,
-            set_to_without_mask_run<int>,
-            set_to_without_mask_run<float>,
-            set_to_without_mask_run<double>,
-            0
-        };
+        dim3 threadsPerBlock(32, 8, 1);
+        dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
 
-        SetToFunc_without_mask func = tab[depth];
+        set_to_without_mask<T><<<numBlocks, threadsPerBlock, 0, stream>>>((T*)mat.data, mat.cols, mat.rows, mat.step, channels);
+        cudaSafeCall( cudaGetLastError() );
 
-        if (func == 0)
-            cv::gpu::error("Unsupported setTo operation", __FILE__, __LINE__);
-
-        func(mat, channels, stream);
+        if (stream == 0)
+            cudaSafeCall ( cudaThreadSynchronize() );
     }
 
-    void set_to_with_mask(DevMem2D mat, int depth, const double * scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream)
-    {
-        cudaSafeCall( cudaMemcpyToSymbol(scalar_d, scalar, sizeof(double) * 4));
-
-        static SetToFunc_with_mask tab[8] =
-        {
-            set_to_with_mask_run<unsigned char>,
-            set_to_with_mask_run<char>,
-            set_to_with_mask_run<unsigned short>,
-            set_to_with_mask_run<short>,
-            set_to_with_mask_run<int>,
-            set_to_with_mask_run<float>,
-            set_to_with_mask_run<double>,
-            0
-        };
-
-        SetToFunc_with_mask func = tab[depth];
-
-        if (func == 0)
-            cv::gpu::error("Unsupported setTo operation", __FILE__, __LINE__);
-
-        func(mat, mask, channels, stream);
-    }
+    template void set_to_gpu<uchar >(const DevMem2D& mat, const uchar* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<schar >(const DevMem2D& mat, const schar* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<ushort>(const DevMem2D& mat, const ushort* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<short >(const DevMem2D& mat, const short* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<int   >(const DevMem2D& mat, const int* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<float >(const DevMem2D& mat, const float* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<double>(const DevMem2D& mat, const double* scalar, int channels, cudaStream_t stream);
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////// ConvertTo ////////////////////////////////
@@ -224,7 +241,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
     class Convertor
     {
     public:
-        Convertor(double alpha_, double beta_): alpha(alpha_), beta(beta_) {}
+        Convertor(double alpha_, double beta_) : alpha(alpha_), beta(beta_) {}
 
         __device__ D operator()(const T& src)
         {
@@ -238,6 +255,8 @@ namespace cv { namespace gpu { namespace matrix_operations {
     template<typename T, typename D>
     void cvt_(const DevMem2D& src, const DevMem2D& dst, double alpha, double beta, cudaStream_t stream)
     {
+        cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
+        cudaSafeCall( cudaSetDoubleForDevice(&beta) );
         Convertor<T, D> op(alpha, beta);
         transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, stream);
     }

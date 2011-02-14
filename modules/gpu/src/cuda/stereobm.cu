@@ -325,6 +325,8 @@ template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& ri
     size_t smem_size = (BLOCK_W + N_DISPARITIES * (BLOCK_W + 2 * RADIUS)) * sizeof(unsigned int);
 
     stereoKernel<RADIUS><<<grid, threads, smem_size, stream>>>(left.data, right.data, left.step, disp, maxdisp);
+    cudaSafeCall( cudaGetLastError() );
+
     if (stream == 0)        
         cudaSafeCall( cudaThreadSynchronize() );
 };
@@ -402,6 +404,7 @@ extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, 
     grid.y = divUp(input.rows, threads.y);
 
     prefilter_kernel<<<grid, threads, 0, stream>>>(output, prefilterCap);
+    cudaSafeCall( cudaGetLastError() );
 
     if (stream == 0)   
 		cudaSafeCall( cudaThreadSynchronize() );    
@@ -526,6 +529,7 @@ extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float a
 
     size_t smem_size = (threads.x + threads.x + (winsz/2) * 2 ) * sizeof(float);
     textureness_kernel<<<grid, threads, smem_size, stream>>>(disp, winsz, avgTexturenessThreshold);
+    cudaSafeCall( cudaGetLastError() );
 
 	if (stream == 0)					
 		cudaSafeCall( cudaThreadSynchronize() );		

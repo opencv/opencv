@@ -87,8 +87,10 @@ namespace cv
         {
             void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
-            void set_to_without_mask (DevMem2D dst, int depth, const double *scalar, int channels, const cudaStream_t & stream = 0);
-            void set_to_with_mask    (DevMem2D dst, int depth, const double *scalar, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
+            template <typename T>
+            void set_to_gpu(const DevMem2D& mat, const T* scalar, int channels, cudaStream_t stream);
+            template <typename T>
+            void set_to_gpu(const DevMem2D& mat, const T* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
 
             void convert_gpu(const DevMem2D& src, int sdepth, const DevMem2D& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
         }
@@ -363,9 +365,11 @@ namespace
         }
     };
 
+    template <typename T>
     void kernelSet(GpuMat& src, const Scalar& s)
     {
-        matrix_operations::set_to_without_mask(src, src.depth(), s.val, src.channels());
+        Scalar_<T> sf = s;
+        matrix_operations::set_to_gpu(src, sf.val, src.channels(), 0);
     }
 
     template<int SDEPTH, int SCN> struct NppSetMaskFunc
@@ -412,9 +416,11 @@ namespace
         }
     };
 
+    template <typename T>
     void kernelSetMask(GpuMat& src, const Scalar& s, const GpuMat& mask)
     {
-        matrix_operations::set_to_with_mask(src, src.depth(), s.val, mask, src.channels());
+        Scalar_<T> sf = s;
+        matrix_operations::set_to_gpu(src, sf.val, mask, src.channels(), 0);
     }
 }
 
@@ -433,13 +439,13 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
         typedef void (*set_caller_t)(GpuMat& src, const Scalar& s);
         static const set_caller_t set_callers[8][4] =
         {
-            {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set,kernelSet,kernelSet,NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
-            {kernelSet,kernelSet,kernelSet,kernelSet},
-            {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set,kernelSet,kernelSet,NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
-            {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set,kernelSet,kernelSet,NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
-            {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet,kernelSet,NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
-            {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet,kernelSet,NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
-            {kernelSet,kernelSet,kernelSet,kernelSet},
+            {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set,kernelSet<uchar>,kernelSet<uchar>,NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
+            {kernelSet<schar>,kernelSet<schar>,kernelSet<schar>,kernelSet<schar>},
+            {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set,kernelSet<ushort>,kernelSet<ushort>,NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
+            {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set,kernelSet<short>,kernelSet<short>,NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
+            {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set,kernelSet<int>,kernelSet<int>,NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
+            {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set,kernelSet<float>,kernelSet<float>,NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
+            {kernelSet<double>,kernelSet<double>,kernelSet<double>,kernelSet<double>},
             {0,0,0,0}
         };
         set_callers[depth()][channels()-1](*this, s);
@@ -449,13 +455,13 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
         typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, const GpuMat& mask);
         static const set_caller_t set_callers[8][4] =
         {
-            {NppSetMask<CV_8U, 1, nppiSet_8u_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_8U, 4, nppiSet_8u_C4MR>::set},
-            {kernelSetMask,kernelSetMask,kernelSetMask,kernelSetMask},
-            {NppSetMask<CV_16U, 1, nppiSet_16u_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_16U, 4, nppiSet_16u_C4MR>::set},
-            {NppSetMask<CV_16S, 1, nppiSet_16s_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_16S, 4, nppiSet_16s_C4MR>::set},
-            {NppSetMask<CV_32S, 1, nppiSet_32s_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_32S, 4, nppiSet_32s_C4MR>::set},
-            {NppSetMask<CV_32F, 1, nppiSet_32f_C1MR>::set,kernelSetMask,kernelSetMask,NppSetMask<CV_32F, 4, nppiSet_32f_C4MR>::set},
-            {kernelSetMask,kernelSetMask,kernelSetMask,kernelSetMask},
+            {NppSetMask<CV_8U, 1, nppiSet_8u_C1MR>::set,kernelSetMask<uchar>,kernelSetMask<uchar>,NppSetMask<CV_8U, 4, nppiSet_8u_C4MR>::set},
+            {kernelSetMask<schar>,kernelSetMask<schar>,kernelSetMask<schar>,kernelSetMask<schar>},
+            {NppSetMask<CV_16U, 1, nppiSet_16u_C1MR>::set,kernelSetMask<ushort>,kernelSetMask<ushort>,NppSetMask<CV_16U, 4, nppiSet_16u_C4MR>::set},
+            {NppSetMask<CV_16S, 1, nppiSet_16s_C1MR>::set,kernelSetMask<short>,kernelSetMask<short>,NppSetMask<CV_16S, 4, nppiSet_16s_C4MR>::set},
+            {NppSetMask<CV_32S, 1, nppiSet_32s_C1MR>::set,kernelSetMask<int>,kernelSetMask<int>,NppSetMask<CV_32S, 4, nppiSet_32s_C4MR>::set},
+            {NppSetMask<CV_32F, 1, nppiSet_32f_C1MR>::set,kernelSetMask<float>,kernelSetMask<float>,NppSetMask<CV_32F, 4, nppiSet_32f_C4MR>::set},
+            {kernelSetMask<double>,kernelSetMask<double>,kernelSetMask<double>,kernelSetMask<double>},
             {0,0,0,0}
         };
         set_callers[depth()][channels()-1](*this, s, mask);

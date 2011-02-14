@@ -43,6 +43,7 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/limits_gpu.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -51,13 +52,9 @@ using namespace cv::gpu::device;
 #define CV_DESCALE(x, n) (((x) + (1 << ((n)-1))) >> (n))
 #endif
 
-#ifndef FLT_EPSILON
-    #define FLT_EPSILON     1.192092896e-07F
-#endif
-
 namespace cv { namespace gpu { namespace color
 {
-    template<typename T> struct ColorChannel {};
+    template<typename T> struct ColorChannel;
     template<> struct ColorChannel<uchar>
     {
         typedef float worktype_f;
@@ -133,6 +130,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols, bidx);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -276,6 +274,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB5x52RGB<GREEN_BITS, DSTCN><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols, bidx);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -304,6 +303,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB2RGB5x5<SRCCN, GREEN_BITS><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols, bidx);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -385,6 +385,7 @@ namespace cv { namespace gpu { namespace color
 
         Gray2RGB<DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -425,6 +426,7 @@ namespace cv { namespace gpu { namespace color
 
         Gray2RGB5x5<GREEN_BITS><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -533,6 +535,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB2Gray<SRCCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols, bidx);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -573,6 +576,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB5x52Gray<GREEN_BITS><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -698,6 +702,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB2YCrCb<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols, bidx);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -756,6 +761,7 @@ namespace cv { namespace gpu { namespace color
 
         YCrCb2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols, bidx);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -902,6 +908,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB2XYZ<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -960,6 +967,7 @@ namespace cv { namespace gpu { namespace color
 
         XYZ2RGB<SRCCN, DSTCN, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
             dst.data, dst.step, src.rows, src.cols);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1063,8 +1071,8 @@ namespace cv { namespace gpu { namespace color
             vmin = fmin(vmin, b);
 
             diff = v - vmin;
-            s = diff / (float)(fabs(v) + FLT_EPSILON);
-            diff = (float)(60. / (diff + FLT_EPSILON));
+            s = diff / (float)(fabs(v) + numeric_limits_gpu<float>::epsilon());
+            diff = (float)(60. / (diff + numeric_limits_gpu<float>::epsilon()));
 
             if (v == r)
                 h = (g - b) * diff;
@@ -1199,6 +1207,8 @@ namespace cv { namespace gpu { namespace color
             RGB2HSV<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
                 dst.data, dst.step, src.rows, src.cols, bidx);
 
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -1281,6 +1291,8 @@ namespace cv { namespace gpu { namespace color
             HSV2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
                 dst.data, dst.step, src.rows, src.cols, bidx);
 
+        cudaSafeCall( cudaGetLastError() );
+
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -1342,7 +1354,7 @@ namespace cv { namespace gpu { namespace color
             diff = vmax - vmin;
             l = (vmax + vmin) * 0.5f;
 
-            if (diff > FLT_EPSILON)
+            if (diff > numeric_limits_gpu<float>::epsilon())
             {
                 s = l < 0.5f ? diff / (vmax + vmin) : diff / (2.0f - vmax - vmin);
                 diff = 60.f / diff;
@@ -1549,6 +1561,8 @@ namespace cv { namespace gpu { namespace color
         else
             HLS2RGB<SRCCN, DSTCN, 255, T><<<grid, threads, 0, stream>>>(src.data, src.step, 
                 dst.data, dst.step, src.rows, src.cols, bidx);
+
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );

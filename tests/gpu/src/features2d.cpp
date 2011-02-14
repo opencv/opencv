@@ -154,7 +154,7 @@ void CV_GPU_SURFTest::compareKeypointSets(const vector<KeyPoint>& validKeypoints
             return;
         }
 
-        if (norm(validDescriptors.row(v), calcDescriptors.row(nearestIdx), NORM_L2) > 1.0f)
+        if (norm(validDescriptors.row(v), calcDescriptors.row(nearestIdx), NORM_L2) > 1.5f)
         {
             ts->printf(CvTS::LOG, "Bad descriptors accuracy.\n");
             ts->set_failed_test_info( CvTS::FAIL_BAD_ACCURACY );
@@ -221,10 +221,19 @@ void CV_GPU_SURFTest::regressionTest(SURF_GPU& fdetector)
 
 void CV_GPU_SURFTest::run( int /*start_from*/ )
 {
-    SURF_GPU fdetector;
+    try
+    {
+        SURF_GPU fdetector;
 
-    emptyDataTest(fdetector);
-    regressionTest(fdetector);
+        emptyDataTest(fdetector);
+        regressionTest(fdetector);
+    }
+    catch(cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw; 
+        return;
+    }
 }
 
 CV_GPU_SURFTest CV_GPU_SURF_test;

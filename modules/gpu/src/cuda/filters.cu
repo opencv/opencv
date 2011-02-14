@@ -44,198 +44,13 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vecmath.hpp"
 #include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/border_interpolate.hpp"
 
 #include "safe_call.hpp"
 #include "internal_shared.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
-
-namespace cv 
-{ 
-    namespace gpu 
-    {
-        namespace device
-        {
-            struct BrdReflect101 
-            {
-                explicit BrdReflect101(int len): last(len - 1) {}
-
-                __device__ int idx_low(int i) const
-                {
-                    return abs(i);
-                }
-
-                __device__ int idx_high(int i) const 
-                {
-                    return last - abs(last - i);
-                }
-
-                __device__ int idx(int i) const
-                {
-                    return abs(idx_high(i));
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return -last <= mini && maxi <= 2 * last;
-                }
-
-                int last;
-            };
-            template <typename D>
-            struct BrdRowReflect101: BrdReflect101
-            {
-                explicit BrdRowReflect101(int len): BrdReflect101(len) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i)]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i)]);
-                }
-            };
-            template <typename D>
-            struct BrdColReflect101: BrdReflect101
-            {
-                BrdColReflect101(int len, int step): BrdReflect101(len), step(step) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i) * step]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i) * step]);
-                }
-
-                int step;
-            };
-
-            struct BrdReplicate
-            {
-                explicit BrdReplicate(int len): last(len - 1) {}
-
-                __device__ int idx_low(int i) const
-                {
-                    return max(i, 0);
-                }
-
-                __device__ int idx_high(int i) const 
-                {
-                    return min(i, last);
-                }
-
-                __device__ int idx(int i) const
-                {
-                    return max(min(i, last), 0);
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return true;
-                }
-
-                int last;
-            };
-            template <typename D>
-            struct BrdRowReplicate: BrdReplicate
-            {
-                explicit BrdRowReplicate(int len): BrdReplicate(len) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i)]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i)]);
-                }
-            };
-            template <typename D>
-            struct BrdColReplicate: BrdReplicate
-            {
-                BrdColReplicate(int len, int step): BrdReplicate(len), step(step) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i) * step]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i) * step]);
-                }
-                int step;
-            };
-
-            template <typename D>
-            struct BrdRowConstant
-            {
-                explicit BrdRowConstant(int len_, const D& val_ = VecTraits<D>::all(0)): len(len_), val(val_) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return i >= 0 ? saturate_cast<D>(data[i]) : val;
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return i < len ? saturate_cast<D>(data[i]) : val;
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return true;
-                }
-
-                int len;
-                D val;
-            };
-            template <typename D>
-            struct BrdColConstant
-            {
-                BrdColConstant(int len_, int step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return i >= 0 ? saturate_cast<D>(data[i * step]) : val;
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return i < len ? saturate_cast<D>(data[i * step]) : val;
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return true;
-                }
-
-                int len;
-                int step;
-                D val;
-            };
-        }
-    }
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear filters
@@ -329,6 +144,7 @@ namespace cv { namespace gpu { namespace filters
         }
 
         filter_krnls::linearRowFilter<ksize, T, D><<<grid, threads>>>(src, dst, anchor, b);
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -467,6 +283,7 @@ namespace cv { namespace gpu { namespace filters
         }
 
         filter_krnls::linearColumnFilter<ksize, T, D><<<grid, threads>>>(src, dst, anchor, b);
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -705,14 +522,18 @@ namespace cv { namespace gpu { namespace bf
             for (int i = 0; i < iters; ++i)
             {
                 bf_krnls::bilateral_filter<1><<<grid, threads, 0, stream>>>(0, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
+                cudaSafeCall( cudaGetLastError() );
                 bf_krnls::bilateral_filter<1><<<grid, threads, 0, stream>>>(1, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
+                cudaSafeCall( cudaGetLastError() );
             }
             break;
         case 3:
             for (int i = 0; i < iters; ++i)
             {
                 bf_krnls::bilateral_filter<3><<<grid, threads, 0, stream>>>(0, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
+                cudaSafeCall( cudaGetLastError() );
                 bf_krnls::bilateral_filter<3><<<grid, threads, 0, stream>>>(1, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
+                cudaSafeCall( cudaGetLastError() );
             }
             break;
         default:

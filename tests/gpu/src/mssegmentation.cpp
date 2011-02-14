@@ -54,6 +54,14 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
     {
         try 
         {
+            bool cc12_ok = TargetArchs::builtWith(COMPUTE_12) && DeviceInfo().supports(COMPUTE_12);
+            if (!cc12_ok)
+            {
+                ts->printf(CvTS::CONSOLE, "\nCompute capability 1.2 is required");
+                ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+                return;
+            }
+
             Mat img_rgb = imread(string(ts->get_data_path()) + "meanshift/cones.png");
             if (img_rgb.empty())
             {

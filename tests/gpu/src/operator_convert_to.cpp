@@ -91,14 +91,14 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
                     Mat cpumatdst;
                     GpuMat gpumatdst;
 
-                    cpumatsrc.convertTo(cpumatdst, dst_type);
-                    gpumatsrc.convertTo(gpumatdst, dst_type);
+                    cpumatsrc.convertTo(cpumatdst, dst_type, 0.5, 3.0);
+                    gpumatsrc.convertTo(gpumatdst, dst_type, 0.5, 3.0);
 
                     double r = norm(cpumatdst, gpumatdst, NORM_INF);
                     if (r > 1)
                     {
                         ts->printf(CvTS::LOG, 
-                                   "\nFAILED: SRC_TYPE=%sC%d DST_TYPE=%s NORM = %d\n",
+                                   "\nFAILED: SRC_TYPE=%sC%d DST_TYPE=%s NORM = %f\n",
                                    types_str[i], c, types_str[j], r);
                         passed = false;
                     }

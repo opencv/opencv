@@ -222,6 +222,7 @@ void compute_hists(int nbins, int block_stride_x, int block_stride_y,
     int smem = hists_size + final_hists_size;
     compute_hists_kernel_many_blocks<nblocks><<<grid, threads, smem>>>(
         img_block_width, grad, qangle, scale, block_hists);
+    cudaSafeCall( cudaGetLastError() );
 
     cudaSafeCall(cudaThreadSynchronize());
 }
@@ -325,6 +326,8 @@ void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
     else
         cv::gpu::error("normalize_hists: histogram's size is too big, try to decrease number of bins", __FILE__, __LINE__);
 
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -421,6 +424,8 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
     classify_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
         img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
         block_hists, coefs, free_coef, threshold, labels);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -467,6 +472,8 @@ void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, i
                           block_stride_x;
     extract_descrs_by_rows_kernel<nthreads><<<grid, threads>>>(
         img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -515,6 +522,8 @@ void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, i
                           block_stride_x;
     extract_descrs_by_cols_kernel<nthreads><<<grid, threads>>>(
         img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -640,6 +649,8 @@ void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2D& im
         compute_gradients_8UC4_kernel<nthreads, 0><<<gdim, bdim>>>(
                 height, width, img, angle_scale, grad, qangle);
 
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -713,6 +724,8 @@ void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& im
         compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(
                 height, width, img, angle_scale, grad, qangle);
 
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -749,6 +762,8 @@ void resize_8UC4(const DevMem2D& src, DevMem2D dst)
     float sx = (float)src.cols / dst.cols;
     float sy = (float)src.rows / dst.rows;
     resize_8UC4_kernel<<<grid, threads>>>(sx, sy, dst);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 
     cudaSafeCall(cudaUnbindTexture(resize8UC4_tex));
@@ -776,6 +791,8 @@ void resize_8UC1(const DevMem2D& src, DevMem2D dst)
     float sx = (float)src.cols / dst.cols;
     float sy = (float)src.rows / dst.rows;
     resize_8UC1_kernel<<<grid, threads>>>(sx, sy, dst);
+    cudaSafeCall( cudaGetLastError() );
+
     cudaSafeCall(cudaThreadSynchronize());
 
     cudaSafeCall(cudaUnbindTexture(resize8UC1_tex));

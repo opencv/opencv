@@ -384,6 +384,14 @@ void CV_GpuBruteForceMatcherTest::knnMatchTest( const GpuMat& query, const GpuMa
 
 void CV_GpuBruteForceMatcherTest::radiusMatchTest( const GpuMat& query, const GpuMat& train )
 {
+    bool atomics_ok = TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS);
+    if (!atomics_ok)
+    {
+        ts->printf(CvTS::CONSOLE, "\nCode and device atomics support is required for radiusMatch (CC >= 1.1)");
+        ts->set_failed_test_info(CvTS::FAIL_GENERIC);
+        return;
+    }
+
     dmatcher.clear();
     // test const version of match()
     {
@@ -501,15 +509,24 @@ void CV_GpuBruteForceMatcherTest::dataTest(int dim)
 
 void CV_GpuBruteForceMatcherTest::run(int)
 {
-    emptyDataTest();
+    try
+    {
+        emptyDataTest();
 
-    dataTest(50);
-    dataTest(64);
-    dataTest(100);
-    dataTest(128);
-    dataTest(200);
-    dataTest(256);
-    dataTest(300);
+        dataTest(50);
+        dataTest(64);
+        dataTest(100);
+        dataTest(128);
+        dataTest(200);
+        dataTest(256);
+        dataTest(300);
+    }
+    catch(cv::Exception& e)
+    {
+        if (!check_and_treat_gpu_exception(e, ts))
+            throw; 
+        return;
+    }
 }
 
 CV_GpuBruteForceMatcherTest CV_GpuBruteForceMatcher_test;

@@ -435,8 +435,8 @@ namespace cv
 
             void enqueueCopy(const GpuMat& src, GpuMat& dst);
 
-            void enqueueMemSet(const GpuMat& src, Scalar val);
-            void enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask);
+            void enqueueMemSet(GpuMat& src, Scalar val);
+            void enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask);
 
             // converts matrix type, ex from float to uchar depending on type
             void enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a = 1, double b = 0);

@@ -43,15 +43,15 @@
 
 CvTS test_system("gpu");
 
-const char* blacklist[] =
-{
-    "GPU-NppImageCanny",            // NPP_TEXTURE_BIND_ERROR
-    0
-};
+//const char* blacklist[] =
+//{
+//    "GPU-NVidia",
+//    0
+//};
 
 int main( int argc, char** argv )
 {
-    return test_system.run( argc, argv, blacklist );
+    return test_system.run( argc, argv );
 }
 
 /* End of file. */

@@ -238,6 +238,46 @@ namespace cv { namespace gpu { namespace surf
 	        hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
         }
     }
+
+    __global__ void fasthessian_old(PtrStepf hessianBuffer)
+    {
+  	    // Determine the indices in the Hessian buffer
+        int gridDim_y = gridDim.y / c_nIntervals;
+        int blockIdx_y = blockIdx.y % gridDim_y;
+        int blockIdx_z = blockIdx.y / gridDim_y;
+
+        int hidx_x = threadIdx.x + blockIdx.x * blockDim.x;
+        int hidx_y = threadIdx.y + blockIdx_y * blockDim.y;
+        int hidx_z = blockIdx_z;
+
+        float fscale = calcScale(hidx_z);
+
+	    // Compute the lookup location of the mask center
+        float x = hidx_x * c_step + c_border;
+        float y = hidx_y * c_step + c_border;
+
+	    // Scale the mask dimensions according to the scale
+        if (hidx_x < c_x_size && hidx_y < c_y_size && hidx_z < c_nIntervals)
+        {
+	        float mask_width =  c_mask_width  * fscale;
+	        float mask_height = c_mask_height * fscale;
+
+	        // Compute the filter responses
+	        float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
+	        float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
+	        float Dxy = evalDxy(x, y, fscale);
+	
+	        // Combine the responses and store the Laplacian sign
+	        float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
+
+	        if (Dxx + Dyy > 0.f)
+	            setLastBit(result);
+	        else
+	            clearLastBit(result);
+
+	        hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
+        }
+    }
     
     dim3 calcBlockSize(int nIntervals)
     {
@@ -263,6 +303,21 @@ namespace cv { namespace gpu { namespace surf
         grid.y = divUp(y_size, threads.y);
         
   	    fasthessian<<<grid, threads>>>(hessianBuffer);
+        cudaSafeCall( cudaGetLastError() );
+
+        cudaSafeCall( cudaThreadSynchronize() );
+	}
+
+    void fasthessian_gpu_old(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threadsOld)
+    {
+        dim3 threads(16, 16);
+
+        dim3 grid;
+        grid.x = divUp(x_size, threads.x);
+        grid.y = divUp(y_size, threads.y) * threadsOld.z;
+        
+  	    fasthessian_old<<<grid, threads>>>(hessianBuffer);
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
 	}
@@ -395,6 +450,8 @@ namespace cv { namespace gpu { namespace surf
             nonmaxonly<WithMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
         else
             nonmaxonly<WithOutMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
+        
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -574,6 +631,7 @@ namespace cv { namespace gpu { namespace surf
         DeviceReference<unsigned int> featureCounterWrapper(featureCounter);
     
         fh_interp_extremum<<<grid, threads>>>(hessianBuffer, maxPosBuffer, featuresBuffer, featureCounterWrapper);
+        cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
     }
@@ -715,6 +773,8 @@ namespace cv { namespace gpu { namespace surf
         grid.x = nFeatures;
 
         find_orientation<<<grid, threads>>>(features);
+        cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall( cudaThreadSynchronize() );
     }
 
@@ -987,17 +1047,255 @@ namespace cv { namespace gpu { namespace surf
         if (descriptors.cols == 64)
         {
             compute_descriptors64<<<dim3(nFeatures, 1, 1), dim3(25, 4, 4)>>>(descriptors, features);
+            cudaSafeCall( cudaGetLastError() );
+
             cudaSafeCall( cudaThreadSynchronize() );
 
             normalize_descriptors<64><<<dim3(nFeatures, 1, 1), dim3(64, 1, 1)>>>(descriptors);
+            cudaSafeCall( cudaGetLastError() );
+
             cudaSafeCall( cudaThreadSynchronize() );
         }
         else
         {
             compute_descriptors128<<<dim3(nFeatures, 1, 1), dim3(25, 4, 4)>>>(descriptors, features);
+            cudaSafeCall( cudaGetLastError() );
+
             cudaSafeCall( cudaThreadSynchronize() );
 
             normalize_descriptors<128><<<dim3(nFeatures, 1, 1), dim3(128, 1, 1)>>>(descriptors);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaThreadSynchronize() );
+        }
+    }
+
+    __device__ void calc_dx_dy_old(float sdx[25], float sdy[25], const KeyPoint_GPU* features, int tid)
+    {        
+        // get the interest point parameters (x, y, scale, strength, theta)
+        __shared__ float ipt[5];
+        if (tid < 5)
+        {
+            ipt[tid] = ((float*)&features[blockIdx.x])[tid];
+        }
+        __syncthreads();
+
+        float sin_theta, cos_theta;
+        sincosf(ipt[SF_ANGLE], &sin_theta, &cos_theta);
+
+        // Compute sampling points
+        // since grids are 2D, need to compute xBlock and yBlock indices
+        const int xBlock = (blockIdx.y & 3); // blockIdx.y % 4
+        const int yBlock = (blockIdx.y >> 2); // floor(blockIdx.y/4)
+        const int xIndex = xBlock * blockDim.x + threadIdx.x;
+        const int yIndex = yBlock * blockDim.y + threadIdx.y;
+
+        // Compute rotated sampling points
+        // (clockwise rotation since we are rotating the lattice)
+        // (subtract 9.5f to start sampling at the top left of the lattice, 0.5f is to space points out properly - there is no center pixel)
+        const float sample_x = ipt[SF_X] + (cos_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE] 
+            + sin_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
+        const float sample_y = ipt[SF_Y] + (-sin_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE] 
+            + cos_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
+
+        // gather integral image lookups for Haar wavelets at each point (some lookups are shared between dx and dy)
+        //	a b c
+        //	d	f
+        //	g h i
+        const float a = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
+        const float b = tex2D(sumTex, sample_x,                sample_y - ipt[SF_SIZE]);
+        const float c = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
+        const float d = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y);
+        const float f = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y);
+        const float g = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y + ipt[SF_SIZE]);
+        const float h = tex2D(sumTex, sample_x,                sample_y + ipt[SF_SIZE]);
+        const float i = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y + ipt[SF_SIZE]);	
+
+        // compute axis-aligned HaarX, HaarY
+        // (could group the additions together into multiplications)
+        const float gauss = c_3p3gauss1D[xIndex] * c_3p3gauss1D[yIndex]; // separable because independent (circular)
+        const float aa_dx = gauss * (-(a-b-g+h) + (b-c-h+i));            // unrotated dx
+        const float aa_dy = gauss * (-(a-c-d+f) + (d-f-g+i));            // unrotated dy
+
+        // rotate responses (store all dxs then all dys)
+        // - counterclockwise rotation to rotate back to zero orientation
+        sdx[tid] = aa_dx * cos_theta - aa_dy * sin_theta;     // rotated dx
+        sdy[tid] = aa_dx * sin_theta + aa_dy * cos_theta; // rotated dy
+    }
+
+    __device__ void reduce_sum_old(float sdata[25], int tid)
+    {
+        // first step is to reduce from 25 to 16
+        if (tid < 9) // use 9 threads
+            sdata[tid] += sdata[tid + 16];
+        __syncthreads();
+
+        // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
+        if (tid < 16)
+        {
+            volatile float* smem = sdata;
+
+            smem[tid] += smem[tid + 8];
+            smem[tid] += smem[tid + 4];
+            smem[tid] += smem[tid + 2];
+            smem[tid] += smem[tid + 1];
+        }
+    }
+
+    // Spawn 16 blocks per interest point
+    // - computes unnormalized 64 dimensional descriptor, puts it into d_descriptors in the correct location
+    __global__ void compute_descriptors64_old(PtrStepf descriptors, const KeyPoint_GPU* features)
+    {
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        
+        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 2);
+        
+        // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
+        __shared__ float sdx[25]; 
+        __shared__ float sdy[25];
+
+        calc_dx_dy_old(sdx, sdy, features, tid);
+        __syncthreads();
+
+        __shared__ float sabs[25];
+
+        sabs[tid] = fabs(sdx[tid]); // |dx| array
+        __syncthreads();
+
+        reduce_sum_old(sdx, tid);
+        reduce_sum_old(sdy, tid);
+        reduce_sum_old(sabs, tid);
+
+        // write dx, dy, |dx|
+        if (tid == 0)
+        {
+            descriptors_block[0] = sdx[0];
+            descriptors_block[1] = sdy[0];
+            descriptors_block[2] = sabs[0];
+        }
+        __syncthreads();
+
+        sabs[tid] = fabs(sdy[tid]); // |dy| array
+        __syncthreads();
+        
+        reduce_sum_old(sabs, tid);
+
+        // write |dy|
+        if (tid == 0)
+        {
+            descriptors_block[3] = sabs[0];
+        }
+    }
+
+    // Spawn 16 blocks per interest point
+    // - computes unnormalized 128 dimensional descriptor, puts it into d_descriptors in the correct location
+    __global__ void compute_descriptors128_old(PtrStepf descriptors, const KeyPoint_GPU* features)
+    {
+        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        
+        // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
+        __shared__ float sdx[25]; 
+        __shared__ float sdy[25];
+        
+        calc_dx_dy_old(sdx, sdy, features, tid);
+        __syncthreads();
+
+        // sum (reduce) 5x5 area response
+        __shared__ float sd1[25];
+        __shared__ float sd2[25];
+        __shared__ float sdabs1[25]; 
+        __shared__ float sdabs2[25];
+
+        if (sdy[tid] >= 0)
+        {
+            sd1[tid] = sdx[tid];
+            sdabs1[tid] = fabs(sdx[tid]);
+            sd2[tid] = 0;
+            sdabs2[tid] = 0;
+        }
+        else
+        {
+            sd1[tid] = 0;
+            sdabs1[tid] = 0;
+            sd2[tid] = sdx[tid];
+            sdabs2[tid] = fabs(sdx[tid]);
+        }
+        __syncthreads();
+        
+        reduce_sum_old(sd1, tid);
+        reduce_sum_old(sd2, tid);
+        reduce_sum_old(sdabs1, tid);
+        reduce_sum_old(sdabs2, tid);
+
+        // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
+        if (tid == 0)
+        {
+            descriptors_block[0] = sd1[0];
+            descriptors_block[1] = sdabs1[0];
+            descriptors_block[2] = sd2[0];
+            descriptors_block[3] = sdabs2[0];
+        }
+        __syncthreads();
+
+        if (sdx[tid] >= 0)
+        {
+            sd1[tid] = sdy[tid];
+            sdabs1[tid] = fabs(sdy[tid]);
+            sd2[tid] = 0;
+            sdabs2[tid] = 0;
+        }
+        else
+        {
+            sd1[tid] = 0;
+            sdabs1[tid] = 0;
+            sd2[tid] = sdy[tid];
+            sdabs2[tid] = fabs(sdy[tid]);
+        }
+        __syncthreads();
+        
+        reduce_sum_old(sd1, tid);
+        reduce_sum_old(sd2, tid);
+        reduce_sum_old(sdabs1, tid);
+        reduce_sum_old(sdabs2, tid);
+
+        // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
+        if (tid == 0)
+        {
+            descriptors_block[4] = sd1[0];
+            descriptors_block[5] = sdabs1[0];
+            descriptors_block[6] = sd2[0];
+            descriptors_block[7] = sdabs2[0];
+        }
+    }
+
+    void compute_descriptors_gpu_old(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures)
+    {
+        // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
+        
+        if (descriptors.cols == 64)
+        {
+            compute_descriptors64_old<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaThreadSynchronize() );
+
+            normalize_descriptors<64><<<dim3(nFeatures, 1, 1), dim3(64, 1, 1)>>>(descriptors);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaThreadSynchronize() );
+        }
+        else
+        {
+            compute_descriptors128_old<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);            
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaThreadSynchronize() );
+
+            normalize_descriptors<128><<<dim3(nFeatures, 1, 1), dim3(128, 1, 1)>>>(descriptors);            
+            cudaSafeCall( cudaGetLastError() );
+
             cudaSafeCall( cudaThreadSynchronize() );
         }
     }

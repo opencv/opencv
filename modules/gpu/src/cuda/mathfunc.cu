@@ -150,6 +150,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
             x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), 
             mag.data, mag.step/mag.elemSize(), angle.data, angle.step/angle.elemSize(), scale, x.cols, x.rows);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
@@ -198,6 +199,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(), 
             angle.data, angle.step/angle.elemSize(), scale, x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), mag.cols, mag.rows);
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaThreadSynchronize() );
