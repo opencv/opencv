@@ -94,11 +94,15 @@ namespace cv
         class CV_EXPORTS DeviceInfo
         {
         public:
+            // Creates DeviceInfo object for the current GPU
             DeviceInfo() : device_id_(getDevice()) { query(); }
+
+            // Creates DeviceInfo object for the given GPU
             DeviceInfo(int device_id) : device_id_(device_id) { query(); }
 
             string name() const { return name_; }
 
+            // Return compute capability versions
             int majorVersion() const { return majorVersion_; }
             int minorVersion() const { return minorVersion_; }
 
@@ -107,7 +111,10 @@ namespace cv
             size_t freeMemory() const;
             size_t totalMemory() const;
 
+            // Checks whether device supports the given feature
             bool supports(GpuFeature feature) const;
+
+            // Checks whether the GPU module can be run on the given device
             bool isCompatible() const;
 
         private:
@@ -120,6 +127,33 @@ namespace cv
             int multi_processor_count_;
             int majorVersion_;
             int minorVersion_;
+        };
+
+        /////////////////////////// Multi GPU Manager //////////////////////////////
+
+        // Provides functionality for working with many GPUs. Object of this
+        // class must be created before any OpenCV GPU call and no call must
+        // be done after its destruction.
+        class CV_EXPORTS MultiGpuMgr
+        {
+        public:
+            MultiGpuMgr();
+
+            // Returns the current GPU id (or BAD_GPU_ID if no GPU is active)
+            int currentGpuId() const;
+
+            // Makes the given GPU active
+            void gpuOn(int gpu_id);
+
+            // Finishes the piece of work with the current GPU
+            void gpuOff();
+
+            static const int BAD_GPU_ID = -1;
+
+        private:
+            class Impl;
+
+            Ptr<Impl> impl_;
         };
 
         //////////////////////////////// Error handling ////////////////////////
@@ -1129,7 +1163,7 @@ namespace cv
 
         /////////////////////////// StereoConstantSpaceBP ///////////////////////////
         // "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
-        // Qingxiong Yang, Liang Wang†, Narendra Ahuja
+        // Qingxiong Yang, Liang Wangï¿½, Narendra Ahuja
         // http://vision.ai.uiuc.edu/~qyang6/
 
         class CV_EXPORTS StereoConstantSpaceBP
@@ -1195,7 +1229,7 @@ namespace cv
 
         /////////////////////////// DisparityBilateralFilter ///////////////////////////
         // Disparity map refinement using joint bilateral filtering given a single color image.
-        // Qingxiong Yang, Liang Wang†, Narendra Ahuja
+        // Qingxiong Yang, Liang Wangï¿½, Narendra Ahuja
         // http://vision.ai.uiuc.edu/~qyang6/
 
         class CV_EXPORTS DisparityBilateralFilter
