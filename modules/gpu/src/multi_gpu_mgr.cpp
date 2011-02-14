@@ -48,7 +48,6 @@ namespace cv { namespace gpu {
 
 class MultiGpuMgr::Impl {};
 MultiGpuMgr::MultiGpuMgr() { throw_nogpu(); }
-int MultiGpuMgr::currentGpuId() const { throw_nogpu(); return 0; }
 void MultiGpuMgr::gpuOn(int) { throw_nogpu(); }
 void MultiGpuMgr::gpuOff() { throw_nogpu(); }
 
@@ -78,31 +77,15 @@ public:
             cuSafeCall(cuCtxDestroy(contexts_[i]));
     }
 
-    int currentGpuId() const
-    {
-        if (gpu_id_stack_.empty())
-            return MultiGpuMgr::BAD_GPU_ID;
-        return gpu_id_stack_.top();
-    }
-
     void gpuOn(int gpu_id)
     {
-        if (gpu_id != currentGpuId())
-        {
-            cuSafeCall(cuCtxPushCurrent(contexts_[gpu_id]));
-            gpu_id_stack_.push(gpu_id);
-        }
+        cuSafeCall(cuCtxPushCurrent(contexts_[gpu_id]));
     }
 
     void gpuOff()
     {
-        if (gpu_id_stack_.empty())
-            return;
-
         CUcontext prev_context;
         cuSafeCall(cuCtxPopCurrent(&prev_context));
-
-        gpu_id_stack_.pop();
     }
 
 private:
@@ -113,7 +96,6 @@ private:
     }
 
     int num_devices_;
-    stack<int> gpu_id_stack_;
     vector<CUcontext> contexts_;
 };
 
@@ -134,14 +116,7 @@ MultiGpuMgr::Impl::Impl(): num_devices_(0)
 }
 
 
-
 MultiGpuMgr::MultiGpuMgr(): impl_(new Impl()) {}
-
-
-int MultiGpuMgr::currentGpuId() const
-{
-    return impl_->currentGpuId();
-}
 
 
 void MultiGpuMgr::gpuOn(int gpu_id)

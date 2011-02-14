@@ -39,11 +39,13 @@ using namespace cv::gpu;
 struct Worker { void operator()(int device_id) const; };
 void destroyContexts();
 
-#define safeCall(code) if (code != CUDA_SUCCESS) { \
-    cout << "CUDA driver API error: code " << code \
-        << ", file " << __FILE__ << ", line " << __LINE__ << endl; \
-    destroyContexts(); \
-    exit(-1); \
+#define safeCall(expr) safeCall_(expr, #expr, __FILE__, __LINE__)
+inline void safeCall_(int code, const char* expr, const char* file, int line)
+{
+    cout << "CUDA driver API error: code " << code << ", expr " << expr
+        << ", file " << file << ", line " << line << endl;
+    destroyContexts();
+    exit(-1);
 }
 
 // Each GPU is associated with its own context

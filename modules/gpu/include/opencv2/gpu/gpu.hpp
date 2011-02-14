@@ -139,9 +139,6 @@ namespace cv
         public:
             MultiGpuMgr();
 
-            // Returns the current GPU id (or BAD_GPU_ID if no GPU is active)
-            int currentGpuId() const;
-
             // Makes the given GPU active
             void gpuOn(int gpu_id);
 
