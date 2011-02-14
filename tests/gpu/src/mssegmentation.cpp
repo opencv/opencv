@@ -86,11 +86,10 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
                     ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
                     return;
                 }
-                if (abs(cv::norm(dst_rgb - dst_ref, NORM_INF)) > 1e-3) 
+                if (CheckSimilarity(dst_rgb, dst_ref, 1e-3f) != CvTS::OK)
                 {
                     ts->printf(CvTS::LOG, "\ndiffers from image *minsize%d.png\n", minsize);
                     ts->set_failed_test_info(CvTS::FAIL_BAD_ACCURACY);
-                    return;
                 }
             }
         }
@@ -103,4 +102,19 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
 
         ts->set_failed_test_info(CvTS::OK);
     }    
+
+    int CheckSimilarity(const Mat& m1, const Mat& m2, float max_err)
+    {
+        Mat diff;
+        cv::matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+
+        float err = abs(diff.at<float>(0, 0) - 1.f);
+
+        if (err > max_err)
+            return CvTS::FAIL_INVALID_OUTPUT;
+
+        return CvTS::OK;
+    }
+
+
 } ms_segm_test;
