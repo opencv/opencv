@@ -72,7 +72,7 @@ namespace cv
             FEATURE_SET_COMPUTE_13 = 13,
             FEATURE_SET_COMPUTE_20 = 20,
             FEATURE_SET_COMPUTE_21 = 21,
-            ATOMICS = FEATURE_SET_COMPUTE_11,
+            GLOBAL_ATOMICS = FEATURE_SET_COMPUTE_11,
             NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13
         };
 

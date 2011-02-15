@@ -201,7 +201,7 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
-    if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+    if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
         callers = singlepass_callers;
 
     Caller caller = callers[src.depth()];
@@ -242,7 +242,7 @@ Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
-    if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+    if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
         callers = singlepass_callers;
 
     Caller caller = callers[src.depth()];
@@ -278,7 +278,7 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
             sqrSumCaller<int>, sqrSumCaller<float>, 0 };
 
     Caller* callers = multipass_callers;
-    if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+    if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
         callers = singlepass_callers;
 
     Size buf_size;
@@ -371,7 +371,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     if (mask.empty())
     {
         Caller* callers = multipass_callers;
-        if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+        if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
             callers = singlepass_callers;
 
         Caller caller = callers[src.type()];
@@ -381,7 +381,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     else
     {
         MaskedCaller* callers = masked_multipass_callers;
-        if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+        if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
             callers = masked_singlepass_callers;
 
         MaskedCaller caller = callers[src.type()];
@@ -474,7 +474,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     if (mask.empty())
     {
         Caller* callers = multipass_callers;
-        if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+        if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
             callers = singlepass_callers;
 
         Caller caller = callers[src.type()];
@@ -484,7 +484,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     else
     {
         MaskedCaller* callers = masked_multipass_callers;
-        if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+        if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
             callers = masked_singlepass_callers;
 
         MaskedCaller caller = callers[src.type()];
@@ -546,7 +546,7 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
-    if (TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS))
+    if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
         callers = singlepass_callers;
 
     Caller caller = callers[src.type()];

@@ -41,6 +41,10 @@
 
 #ifndef _ncvruntimetemplates_hpp_
 #define _ncvruntimetemplates_hpp_
+#if _MSC_VER >= 1200
+#pragma warning( disable: 4800 )
+#endif
+
 
 #include <stdarg.h>
 #include <vector>

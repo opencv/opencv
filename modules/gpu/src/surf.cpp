@@ -108,7 +108,7 @@ namespace
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
             CV_Assert(nOctaves > 0 && nIntervals > 2 && nIntervals < 22);
-            CV_Assert(DeviceInfo().supports(ATOMICS));
+            CV_Assert(DeviceInfo().supports(GLOBAL_ATOMICS));
 
             max_features = static_cast<int>(img.size().area() * featuresRatio);
             max_candidates = static_cast<int>(1.5 * max_features);

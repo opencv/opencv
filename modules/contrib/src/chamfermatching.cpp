@@ -111,6 +111,9 @@ private:
         int scales_;
         float min_scale_;
         float max_scale_;
+
+		LocationImageRange(const LocationImageRange&);
+		LocationImageRange& operator=(const LocationImageRange&);
         
     public:
         LocationImageRange(const vector<Point>& locations, int scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
@@ -130,6 +133,8 @@ private:
         const vector<Point>& locations_;
         const vector<float>& scales_;
         
+		LocationScaleImageRange(const LocationScaleImageRange&);
+		LocationScaleImageRange& operator=(const LocationScaleImageRange&);
     public:
         LocationScaleImageRange(const vector<Point>& locations, const vector<float>& scales) :
         locations_(locations), scales_(scales)
@@ -355,6 +360,9 @@ private:
         int scale_cnt_;
         
         bool has_next_;
+
+		LocationImageIterator(const LocationImageIterator&);
+		LocationImageIterator& operator=(const LocationImageIterator&);
         
     public:
         LocationImageIterator(const vector<Point>& locations, int scales, float min_scale, float max_scale);
@@ -374,6 +382,9 @@ private:
         size_t iter_;
         
         bool has_next_;
+
+		LocationScaleImageIterator(const LocationScaleImageIterator&);
+		LocationScaleImageIterator& operator=(const LocationScaleImageIterator&);
         
     public:
         LocationScaleImageIterator(const vector<Point>& locations, const vector<float>& scales) :
@@ -714,7 +725,7 @@ float ChamferMatcher::Matching::getAngle(coordinate_t a, coordinate_t b, int& dx
         float angle = atan2((float)dy,(float)dx);
 	
 	if (angle<0) {
-                angle+=CV_PI;
+                angle+=(float)CV_PI;
 	}
 	
 	return angle;
