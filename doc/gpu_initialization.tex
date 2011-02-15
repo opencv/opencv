@@ -22,11 +22,11 @@ Returns the current device index, which was set by {gpu::getDevice} or initializ
 \cvdefCpp{int getDevice();}
 
 
-\cvclass{gpu::GpuFeature}\label{cpp.gpu.GpuFeature}
+\cvclass{gpu::FeatureSet}\label{cpp.gpu.FeatureSet}
 GPU compute features.
 
 \begin{lstlisting}
-enum GpuFeature
+enum FeatureSet
 {
     FEATURE_SET_COMPUTE_10, FEATURE_SET_COMPUTE_11,
     FEATURE_SET_COMPUTE_12, FEATURE_SET_COMPUTE_13,
@@ -56,7 +56,7 @@ public:
     size_t freeMemory() const;
     size_t totalMemory() const;
 
-    bool supports(GpuFeature feature) const;
+    bool supports(FeatureSet feature_set) const;
     bool isCompatible() const;
 };
 \end{lstlisting}
@@ -111,9 +111,9 @@ Returns the amount of total memory in bytes.
 \cvCppFunc{gpu::DeviceInfo::supports}
 Returns true if the device has the given GPU feature, otherwise false.
 
-\cvdefCpp{bool DeviceInfo::supports(GpuFeature feature);}
+\cvdefCpp{bool DeviceInfo::supports(FeatureSet feature\_set);}
 \begin{description}
-\cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.GpuFeature]{cv::gpu::GpuFeature}.}
+\cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.FeatureSet]{cv::gpu::FeatureSet}.}
 \end{description}
 
 
@@ -129,9 +129,9 @@ This class provides functionality (as set of static methods) for checking which 
 \bigskip
 
 The following method checks whether the module was built with the support of the given feature:
-\cvdefCpp{static bool builtWith(GpuFeature feature);}
+\cvdefCpp{static bool builtWith(FeatureSet feature\_set);}
 \begin{description}
-\cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.GpuFeature]{cv::gpu::GpuFeature}.}
+\cvarg{feature}{Feature to be checked. See \hyperref[cpp.gpu.FeatureSet]{cv::gpu::FeatureSet}.}
 \end{description}
 
 There are a set of methods for checking whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):

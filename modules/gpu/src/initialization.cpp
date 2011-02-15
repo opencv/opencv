@@ -48,6 +48,9 @@ using namespace cv::gpu;
 
 namespace 
 {
+    // Compares value to set using the given comparator. Returns true if
+    // there is at least one element x in the set satisfying to: x cmp value
+    // predicate.
     template <typename Comparer>
     bool compareToSet(const std::string& set_as_str, int value, Comparer cmp)
     {
@@ -69,9 +72,9 @@ namespace
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::GpuFeature feature)
+CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 {
-    return ::compareToSet(CUDA_ARCH_FEATURES, feature, std::greater_equal<int>());
+    return ::compareToSet(CUDA_ARCH_FEATURES, feature_set, std::greater_equal<int>());
 }
 
 
@@ -128,7 +131,7 @@ CV_EXPORTS void cv::gpu::setDevice(int) { throw_nogpu(); }
 CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
 size_t cv::gpu::DeviceInfo::freeMemory() const { throw_nogpu(); return 0; }
 size_t cv::gpu::DeviceInfo::totalMemory() const { throw_nogpu(); return 0; }
-bool cv::gpu::DeviceInfo::supports(cv::gpu::GpuFeature) const { throw_nogpu(); return false; }
+bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet) const { throw_nogpu(); return false; }
 bool cv::gpu::DeviceInfo::isCompatible() const { throw_nogpu(); return false; }
 void cv::gpu::DeviceInfo::query() { throw_nogpu(); }
 void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu(); }
@@ -173,10 +176,10 @@ size_t cv::gpu::DeviceInfo::totalMemory() const
 }
 
 
-bool cv::gpu::DeviceInfo::supports(cv::gpu::GpuFeature feature) const
+bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet feature_set) const
 {
     int version = majorVersion() * 10 + minorVersion();
-    return version >= feature;
+    return version >= feature_set;
 }
 
 

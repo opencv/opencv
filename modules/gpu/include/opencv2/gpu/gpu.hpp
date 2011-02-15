@@ -64,7 +64,7 @@ namespace cv
         CV_EXPORTS void setDevice(int device);
         CV_EXPORTS int getDevice();
 
-        enum GpuFeature
+        enum FeatureSet
         {
             FEATURE_SET_COMPUTE_10 = 10,
             FEATURE_SET_COMPUTE_11 = 11,
@@ -81,7 +81,7 @@ namespace cv
         class CV_EXPORTS TargetArchs
         {
         public:
-            static bool builtWith(GpuFeature feature);
+            static bool builtWith(FeatureSet feature_set);
             static bool has(int major, int minor);
             static bool hasPtx(int major, int minor);
             static bool hasBin(int major, int minor);
@@ -115,7 +115,7 @@ namespace cv
             size_t totalMemory() const;
 
             // Checks whether device supports the given feature
-            bool supports(GpuFeature feature) const;
+            bool supports(FeatureSet feature_set) const;
 
             // Checks whether the GPU module can be run on the given device
             bool isCompatible() const;
