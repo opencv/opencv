@@ -48,6 +48,7 @@ namespace cv { namespace gpu {
 
 class MultiGpuMgr::Impl {};
 MultiGpuMgr::MultiGpuMgr() { throw_nogpu(); }
+void MultiGpuMgr::init() { throw_nogpu(); }
 void MultiGpuMgr::gpuOn(int) { throw_nogpu(); }
 void MultiGpuMgr::gpuOff() { throw_nogpu(); }
 
@@ -79,6 +80,8 @@ public:
 
     void gpuOn(int gpu_id)
     {
+        if (gpu_id < 0 || gpu_id >= num_devices_)
+            CV_Error(CV_StsBadArg, "MultiGpuMgr::gpuOn: GPU ID is out of range");
         cuSafeCall(cuCtxPushCurrent(contexts_[gpu_id]));
     }
 
@@ -105,6 +108,8 @@ MultiGpuMgr::Impl::Impl(): num_devices_(0)
     num_devices_ = getCudaEnabledDeviceCount();
     contexts_.resize(num_devices_);
 
+    cuSafeCall(cuInit(0));
+
     CUdevice device;
     CUcontext prev_context;
     for (int i = 0; i < num_devices_; ++i)
@@ -116,18 +121,28 @@ MultiGpuMgr::Impl::Impl(): num_devices_(0)
 }
 
 
-MultiGpuMgr::MultiGpuMgr(): impl_(new Impl()) {}
+MultiGpuMgr::MultiGpuMgr() {}
 MultiGpuMgr::~MultiGpuMgr() {}
+
+
+void MultiGpuMgr::init()
+{
+    impl_ = Ptr<Impl>(new Impl());
+}
 
 
 void MultiGpuMgr::gpuOn(int gpu_id)
 {
+    if (impl_.empty())
+        CV_Error(CV_StsNullPtr, "MultiGpuMgr::gpuOn: must be initialized before any calls");
     impl_->gpuOn(gpu_id);
 }
 
 
 void MultiGpuMgr::gpuOff()
 {
+    if (impl_.empty())
+        CV_Error(CV_StsNullPtr, "MultiGpuMgr::gpuOff: must be initialized before any calls");
     impl_->gpuOff();
 }
 

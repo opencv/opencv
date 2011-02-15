@@ -131,14 +131,15 @@ namespace cv
 
         /////////////////////////// Multi GPU Manager //////////////////////////////
 
-        // Provides functionality for working with many GPUs. Object of this
-        // class must be created before any OpenCV GPU call and no call must
-        // be done after its destruction.
+        // Provides functionality for working with many GPUs
         class CV_EXPORTS MultiGpuMgr
         {
         public:
             MultiGpuMgr();
             ~MultiGpuMgr();
+
+            // Must be called before any other GPU calls
+            void init();
 
             // Makes the given GPU active
             void gpuOn(int gpu_id);

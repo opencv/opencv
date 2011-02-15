@@ -30,8 +30,6 @@ int main()
 
 #else
 
-#include <cuda.h>
-#include <cuda_runtime.h>
 #include "opencv2/core/internal.hpp" // For TBB wrappers
 
 using namespace std;
@@ -39,33 +37,8 @@ using namespace cv;
 using namespace cv::gpu;
 
 struct Worker { void operator()(int device_id) const; };
-void destroyContexts();
 
-#define safeCall(expr) safeCall_(expr, #expr, __FILE__, __LINE__)
-inline void safeCall_(int code, const char* expr, const char* file, int line)
-{
-    if (code != CUDA_SUCCESS)
-    {
-        cout << "CUDA driver API error: code " << code << ", expr " << expr
-            << ", file " << file << ", line " << line << endl;
-        destroyContexts();
-        exit(-1);
-    }
-}
-
-// Each GPU is associated with its own context
-CUcontext contexts[2];
-
-void inline contextOn(int id) 
-{
-    safeCall(cuCtxPushCurrent(contexts[id]));
-}
-
-void inline contextOff() 
-{
-    CUcontext prev_context;
-    safeCall(cuCtxPopCurrent(&prev_context));
-}
+MultiGpuMgr multi_gpu_mgr;
 
 // GPUs data
 GpuMat d_left[2];
@@ -90,7 +63,6 @@ int main(int argc, char** argv)
         cout << "Two or more GPUs are required\n";
         return -1;
     }
-
     for (int i = 0; i < num_devices; ++i)
     {
         DeviceInfo dev_info(i);
@@ -117,65 +89,52 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    // Init CUDA Driver API
-    safeCall(cuInit(0));
+    multi_gpu_mgr.init();
 
-    // Create context for GPU #0
-    CUdevice device;
-    safeCall(cuDeviceGet(&device, 0));
-    safeCall(cuCtxCreate(&contexts[0], 0, device));
-    contextOff();
-
-    // Create context for GPU #1
-    safeCall(cuDeviceGet(&device, 1));
-    safeCall(cuCtxCreate(&contexts[1], 0, device));
-    contextOff();
-
-    // Split source images for processing on GPU #0
-    contextOn(0);
+    // Split source images for processing on the GPU #0
+    multi_gpu_mgr.gpuOn(0);
     d_left[0].upload(left.rowRange(0, left.rows / 2));
     d_right[0].upload(right.rowRange(0, right.rows / 2));
     bm[0] = new StereoBM_GPU();
-    contextOff();
+    multi_gpu_mgr.gpuOff();
 
     // Split source images for processing on the GPU #1
-    contextOn(1);
+    multi_gpu_mgr.gpuOn(1);
     d_left[1].upload(left.rowRange(left.rows / 2, left.rows));
     d_right[1].upload(right.rowRange(right.rows / 2, right.rows));
     bm[1] = new StereoBM_GPU();
-    contextOff();
+    multi_gpu_mgr.gpuOff();
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
     parallel_do(devices, devices + 2, Worker());
 
     // Release the first GPU resources
-    contextOn(0);
+    multi_gpu_mgr.gpuOn(0);
     imshow("GPU #0 result", Mat(d_result[0]));
     d_left[0].release();
     d_right[0].release();
     d_result[0].release();
     delete bm[0];
-    contextOff();
+    multi_gpu_mgr.gpuOff();
 
     // Release the second GPU resources
-    contextOn(1);
+    multi_gpu_mgr.gpuOn(1);
     imshow("GPU #1 result", Mat(d_result[1]));
     d_left[1].release();
     d_right[1].release();
     d_result[1].release();
     delete bm[1];
-    contextOff();
+    multi_gpu_mgr.gpuOff();
 
     waitKey();
-    destroyContexts();
     return 0;
 }
 
 
 void Worker::operator()(int device_id) const
 {
-    contextOn(device_id);
+    multi_gpu_mgr.gpuOn(device_id);
 
     bm[device_id]->operator()(d_left[device_id], d_right[device_id],
                               d_result[device_id]);
@@ -183,14 +142,7 @@ void Worker::operator()(int device_id) const
     cout << "GPU #" << device_id << " (" << DeviceInfo().name()
         << "): finished\n";
 
-    contextOff();
-}
-
-
-void destroyContexts()
-{
-    safeCall(cuCtxDestroy(contexts[0]));
-    safeCall(cuCtxDestroy(contexts[1]));
+    multi_gpu_mgr.gpuOff();
 }
 
 #endif
