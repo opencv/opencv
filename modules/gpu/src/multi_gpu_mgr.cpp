@@ -117,6 +117,7 @@ MultiGpuMgr::Impl::Impl(): num_devices_(0)
 
 
 MultiGpuMgr::MultiGpuMgr(): impl_(new Impl()) {}
+MultiGpuMgr::~MultiGpuMgr() {}
 
 
 void MultiGpuMgr::gpuOn(int gpu_id)

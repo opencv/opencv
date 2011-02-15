@@ -138,6 +138,7 @@ namespace cv
         {
         public:
             MultiGpuMgr();
+            ~MultiGpuMgr();
 
             // Makes the given GPU active
             void gpuOn(int gpu_id);
@@ -148,8 +149,10 @@ namespace cv
             static const int BAD_GPU_ID = -1;
 
         private:
-            class Impl;
+            void operator=(const MultiGpuMgr&);
+            MultiGpuMgr(const MultiGpuMgr&);
 
+            class Impl;
             Ptr<Impl> impl_;
         };
 
