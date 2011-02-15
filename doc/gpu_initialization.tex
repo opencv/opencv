@@ -152,3 +152,55 @@ static bool hasEqualOrGreaterBin(int major, int minor);}
 
 According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute capability can always be compiled to binary code of greater or equal compute capability". 
 
+
+\cvclass{gpu::MultiGpuManager}
+Provides functionality for working with many GPUs.
+
+\begin{lstlisting}
+class CV_EXPORTS MultiGpuManager
+{
+public:
+    MultiGpuManager();
+    ~MultiGpuManager();
+
+    // Must be called before any other GPU calls
+    void init();
+
+    // Makes the given GPU active
+    void gpuOn(int gpu_id);
+
+    // Finishes the piece of work on the current GPU
+    void gpuOff();
+
+    static const int BAD_GPU_ID;
+};
+\end{lstlisting}
+
+
+\cvCppFunc{gpu::MultiGpuManager::MultiGpuManager}
+Creates multi GPU manager, but doesn't initialize it.
+\cvdefCpp{MultiGpuManager::MultiGpuManager}
+
+
+\cvfunc{cv::gpu::MultiGpuManager::\~{}MultiGpuManager}
+Releases multi GPU manager.
+\cvdefCpp{MultuGpuManager::\~{}multiGpuManager}
+
+
+\cvCppFunc{gpu::MultiGpuManager::init}
+Initializes multi GPU manager.
+\cvdefCpp{void MultiGpuManager::init();}
+
+
+\cvCppFunc{gpu::MultiGpuManager:gpuOn}
+Makes the given GPU active.
+\cvdefCpp{void MultiGpuManager::gpuOn(int gpu\_id);}
+\begin{description}
+\cvarg{gpu\_id}{Index of the GPU device in system starting with 0.}
+\end{description}
+
+
+\cvCppFunc{gpu::MultiGpuManager::gpuOff}
+Finishes the piece of work on the current GPU.
+\cvdefCpp{void MultiGpuManager::gpuOff();}
+
