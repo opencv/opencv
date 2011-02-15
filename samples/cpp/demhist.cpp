@@ -12,7 +12,7 @@ int _contrast = 100;
 Mat image;
 
 /* brightness/contrast callback function */
-void updateBrightnessContrast( int arg, void* )
+void updateBrightnessContrast( int /*arg*/, void* )
 {
     int histSize = 64;
     int brightness = _brightness - 100;

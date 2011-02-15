@@ -192,7 +192,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, 
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
 
-    bool cc_12 = TargetArchs::builtWith(COMPUTE_12) && DeviceInfo().supports(COMPUTE_12);
+    bool cc_12 = TargetArchs::builtWith(FEATURE_SET_COMPUTE_12) && DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
 
     // For single train there is no need to save imgIdx, so we just save imgIdx to trainIdx.
     // trainIdx store after imgIdx, so we doesn't lose it value.
@@ -320,7 +320,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDes
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
 
-    bool cc_12 = TargetArchs::builtWith(COMPUTE_12) && DeviceInfo().supports(COMPUTE_12);
+    bool cc_12 = TargetArchs::builtWith(FEATURE_SET_COMPUTE_12) && DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
 
     func(queryDescs, trainCollection, maskCollection, trainIdx, imgIdx, distance, cc_12);
 }

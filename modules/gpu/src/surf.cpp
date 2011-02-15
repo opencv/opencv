@@ -174,7 +174,7 @@ namespace
         {
             typedef void (*fasthessian_t)(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads);
             const fasthessian_t fasthessian = 
-                DeviceInfo().supports(COMPUTE_13) ? fasthessian_gpu : fasthessian_gpu_old;
+                DeviceInfo().supports(FEATURE_SET_COMPUTE_13) ? fasthessian_gpu : fasthessian_gpu_old;
 
             dim3 threads = calcBlockSize(nIntervals);
             for(int octave = 0; octave < nOctaves; ++octave)
@@ -234,7 +234,7 @@ namespace
                 const KeyPoint_GPU* features, int nFeatures);
 
             const compute_descriptors_t compute_descriptors = 
-                DeviceInfo().supports(COMPUTE_13) ? compute_descriptors_gpu : compute_descriptors_gpu_old;
+                DeviceInfo().supports(FEATURE_SET_COMPUTE_13) ? compute_descriptors_gpu : compute_descriptors_gpu_old;
 
             if (keypoints.cols > 0)
             {
