@@ -46,17 +46,17 @@
 
 namespace cv { namespace gpu {
 
-class MultiGpuMgr::Impl {};
-MultiGpuMgr::MultiGpuMgr() { throw_nogpu(); }
-void MultiGpuMgr::init() { throw_nogpu(); }
-void MultiGpuMgr::gpuOn(int) { throw_nogpu(); }
-void MultiGpuMgr::gpuOff() { throw_nogpu(); }
+class MultiGpuManager::Impl {};
+MultiGpuManager::MultiGpuManager() { throw_nogpu(); }
+MultiGpuManager::~MultiGpuManager() { throw_nogpu(); }
+void MultiGpuManager::init() { throw_nogpu(); }
+void MultiGpuManager::gpuOn(int) { throw_nogpu(); }
+void MultiGpuManager::gpuOff() { throw_nogpu(); }
 
 }}
 
 #else
 
-#include <stack>
 #include <vector>
 #include <cuda.h>
 
@@ -67,7 +67,7 @@ using namespace std;
 namespace cv { namespace gpu {
 
 
-class MultiGpuMgr::Impl
+class MultiGpuManager::Impl
 {
 public:
     Impl();
@@ -81,7 +81,7 @@ public:
     void gpuOn(int gpu_id)
     {
         if (gpu_id < 0 || gpu_id >= num_devices_)
-            CV_Error(CV_StsBadArg, "MultiGpuMgr::gpuOn: GPU ID is out of range");
+            CV_Error(CV_StsBadArg, "MultiGpuManager::gpuOn: GPU ID is out of range");
         cuSafeCall(cuCtxPushCurrent(contexts_[gpu_id]));
     }
 
@@ -103,7 +103,7 @@ private:
 };
 
 
-MultiGpuMgr::Impl::Impl(): num_devices_(0)
+MultiGpuManager::Impl::Impl(): num_devices_(0)
 {
     num_devices_ = getCudaEnabledDeviceCount();
     contexts_.resize(num_devices_);
@@ -121,28 +121,28 @@ MultiGpuMgr::Impl::Impl(): num_devices_(0)
 }
 
 
-MultiGpuMgr::MultiGpuMgr() {}
-MultiGpuMgr::~MultiGpuMgr() {}
+MultiGpuManager::MultiGpuManager() {}
+MultiGpuManager::~MultiGpuManager() {}
 
 
-void MultiGpuMgr::init()
+void MultiGpuManager::init()
 {
     impl_ = Ptr<Impl>(new Impl());
 }
 
 
-void MultiGpuMgr::gpuOn(int gpu_id)
+void MultiGpuManager::gpuOn(int gpu_id)
 {
     if (impl_.empty())
-        CV_Error(CV_StsNullPtr, "MultiGpuMgr::gpuOn: must be initialized before any calls");
+        CV_Error(CV_StsNullPtr, "MultiGpuManager::gpuOn: must be initialized before any calls");
     impl_->gpuOn(gpu_id);
 }
 
 
-void MultiGpuMgr::gpuOff()
+void MultiGpuManager::gpuOff()
 {
     if (impl_.empty())
-        CV_Error(CV_StsNullPtr, "MultiGpuMgr::gpuOff: must be initialized before any calls");
+        CV_Error(CV_StsNullPtr, "MultiGpuManager::gpuOff: must be initialized before any calls");
     impl_->gpuOff();
 }
 

@@ -76,6 +76,8 @@ namespace cv
             NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13
         };
 
+        // Gives information about what GPU archs this OpenCV GPU module was 
+        // compiled for
         class CV_EXPORTS TargetArchs
         {
         public:
@@ -91,6 +93,7 @@ namespace cv
             TargetArchs();
         };
 
+        // Gives information about the given GPU
         class CV_EXPORTS DeviceInfo
         {
         public:
@@ -132,11 +135,11 @@ namespace cv
         /////////////////////////// Multi GPU Manager //////////////////////////////
 
         // Provides functionality for working with many GPUs
-        class CV_EXPORTS MultiGpuMgr
+        class CV_EXPORTS MultiGpuManager
         {
         public:
-            MultiGpuMgr();
-            ~MultiGpuMgr();
+            MultiGpuManager();
+            ~MultiGpuManager();
 
             // Must be called before any other GPU calls
             void init();
@@ -144,14 +147,14 @@ namespace cv
             // Makes the given GPU active
             void gpuOn(int gpu_id);
 
-            // Finishes the piece of work with the current GPU
+            // Finishes the piece of work on the current GPU
             void gpuOff();
 
             static const int BAD_GPU_ID = -1;
 
         private:
-            void operator=(const MultiGpuMgr&);
-            MultiGpuMgr(const MultiGpuMgr&);
+            void operator=(const MultiGpuManager&);
+            MultiGpuManager(const MultiGpuManager&);
 
             class Impl;
             Ptr<Impl> impl_;

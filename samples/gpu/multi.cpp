@@ -36,7 +36,7 @@ using namespace cv::gpu;
 
 struct Worker { void operator()(int device_id) const; };
 
-MultiGpuMgr multi_gpu_mgr;
+MultiGpuManager multi_gpu_mgr;
 
 int main()
 {
