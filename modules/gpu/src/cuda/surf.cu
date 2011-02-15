@@ -1071,7 +1071,7 @@ namespace cv { namespace gpu { namespace surf
     }
 
     __device__ void calc_dx_dy_old(float sdx[25], float sdy[25], const KeyPoint_GPU* features, int tid)
-    {        
+    {
         // get the interest point parameters (x, y, scale, strength, theta)
         __shared__ float ipt[5];
         if (tid < 5)
@@ -1081,7 +1081,7 @@ namespace cv { namespace gpu { namespace surf
         __syncthreads();
 
         float sin_theta, cos_theta;
-        sincosf(ipt[SF_ANGLE], &sin_theta, &cos_theta);
+        sincosf(ipt[SF_ANGLE] * (CV_PI / 180.0f), &sin_theta, &cos_theta);
 
         // Compute sampling points
         // since grids are 2D, need to compute xBlock and yBlock indices
