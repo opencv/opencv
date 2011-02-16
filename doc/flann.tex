@@ -102,14 +102,14 @@ struct KMeansIndexParams : public IndexParams
     KMeansIndexParams(
         int branching = 32,
         int iterations = 11,
-        flann_centers_init_t centers_init = CENTERS_RANDOM,
+        flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
         float cb_index = 0.2 );
 };
 \end{lstlisting}
 \begin{description}
 \cvarg{branching}{ The branching factor to use for the hierarchical k-means tree }
 \cvarg{iterations}{ The maximum number of iterations to use in the k-means clustering stage when building the k-means tree. A value of -1 used here means that the k-means clustering should be iterated until convergence}
-\cvarg{centers\_init}{The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are \texttt{CENTERS\_RANDOM} (picks the initial cluster centers randomly), \texttt{CENTERS\_GONZALES} (picks the initial centers using Gonzales' algorithm) and \texttt{CENTERS\_KMEANSPP} (picks the initial centers using the algorithm suggested in \cite{arthur_kmeanspp_2007})}
+\cvarg{centers\_init}{The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are \texttt{FLANN\_CENTERS\_RANDOM} (picks the initial cluster centers randomly), \texttt{FLANN\_CENTERS\_GONZALES} (picks the initial centers using Gonzales' algorithm) and \texttt{FLANN\_CENTERS\_KMEANSPP} (picks the initial centers using the algorithm suggested in \cite{arthur_kmeanspp_2007})}
 \cvarg{cb\_index}{This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When \texttt{cb\_index} is zero the next kmeans domain to be explored is choosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain.}
 \end{description}
 
@@ -121,7 +121,7 @@ struct CompositeIndexParams : public IndexParams
         int trees = 4,
         int branching = 32,
         int iterations = 11,
-        flann_centers_init_t centers_init = CENTERS_RANDOM,
+        flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
         float cb_index = 0.2 );
 };
 \end{lstlisting}
