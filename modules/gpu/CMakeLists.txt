@@ -147,4 +147,8 @@ install(FILES ${lib_hdrs}
 #	DESTINATION include/opencv2/${name}/device
 #	COMPONENT main)
 
-
+# Test files processing is in the separated directory to avoid 'Src' source 
+# filter creation in Visual Studio 
+if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
+	add_subdirectory(test)
+endif()
