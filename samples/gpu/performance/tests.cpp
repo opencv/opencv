@@ -681,3 +681,66 @@ TEST(erode)
         GPU_OFF;
     }
 }
+
+TEST(threshold)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8U, THRESH_TRUNC";
+
+        gen(src, size, size, CV_8U, 0, 100);
+        dst.create(size, size, CV_8U);
+
+        CPU_ON; 
+        threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_8U);
+
+        GPU_ON;
+        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
+        GPU_OFF;
+    }
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8U, THRESH_BINARY";
+
+        gen(src, size, size, CV_8U, 0, 100);
+        dst.create(size, size, CV_8U);
+
+        CPU_ON; 
+        threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_8U);
+
+        GPU_ON;
+        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
+        GPU_OFF;
+    }
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32F, THRESH_TRUNC";
+
+        gen(src, size, size, CV_32F, 0, 100);
+        dst.create(size, size, CV_32F);
+
+        CPU_ON; 
+        threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
+        GPU_OFF;
+    }
+}

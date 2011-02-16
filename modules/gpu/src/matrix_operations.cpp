@@ -205,6 +205,9 @@ namespace
 
 void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double beta ) const
 {
+    CV_Assert((depth() != CV_64F && CV_MAT_DEPTH(rtype) != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
 
     if( rtype < 0 )
@@ -427,6 +430,9 @@ namespace
 GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 {
     CV_Assert(mask.type() == CV_8UC1);
+
+    CV_Assert((depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
 
     CV_DbgAssert(!this->empty());
 

@@ -101,7 +101,12 @@ void CV_GpuMatOpSetToTest::run( int /* start_from */)
         rng.fill(cpumask, RNG::UNIFORM, cv::Scalar::all(0.0), cv::Scalar(1.5));
         cv::gpu::GpuMat gpumask(cpumask);
 
-        for (int i = 0; i < 7; i++)
+        int lastType = CV_32F;
+
+        if (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE))
+            lastType = CV_64F;
+
+        for (int i = 0; i <= lastType; i++)
         {
             for (int cn = 1; cn <= 4; ++cn)
             {

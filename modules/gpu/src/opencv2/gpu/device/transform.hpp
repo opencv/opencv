@@ -393,11 +393,37 @@ namespace cv
             }
         };
 
+        template <typename T, typename D, int scn, int dcn> struct UseSmartUn_
+        {
+            static const bool value = false;
+        };
+        template <typename T, typename D> struct UseSmartUn_<T, D, 1, 1>
+        {
+            static const bool value = device::UnReadWriteTraits<T, D>::shift != 1;
+        };
+        template <typename T, typename D> struct UseSmartUn
+        {
+            static const bool value = UseSmartUn_<T, D, device::VecTraits<T>::cn, device::VecTraits<D>::cn>::value;
+        };
+
+        template <typename T1, typename T2, typename D, int src1cn, int src2cn, int dstcn> struct UseSmartBin_
+        {
+            static const bool value = false;
+        };
+        template <typename T1, typename T2, typename D> struct UseSmartBin_<T1, T2, D, 1, 1, 1>
+        {
+            static const bool value = device::BinReadWriteTraits<T1, T2, D>::shift != 1;
+        };
+        template <typename T1, typename T2, typename D> struct UseSmartBin
+        {
+            static const bool value = UseSmartBin_<T1, T2, D, device::VecTraits<T1>::cn, device::VecTraits<T2>::cn, device::VecTraits<D>::cn>::value;
+        };
+
         template <typename T, typename D, typename UnOp, typename Mask>
         static void transform_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, 
             cudaStream_t stream = 0)
         {
-            TransformDispatcher<device::VecTraits<T>::cn == 1 && device::VecTraits<D>::cn == 1 && device::UnReadWriteTraits<T, D>::shift != 1>::call(src, dst, op, mask, stream);
+            TransformDispatcher< UseSmartUn<T, D>::value >::call(src, dst, op, mask, stream);
         }
 
         template <typename T, typename D, typename UnOp>
@@ -416,7 +442,7 @@ namespace cv
         static void transform_caller(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, 
             BinOp op, const Mask& mask, cudaStream_t stream = 0)
         {
-            TransformDispatcher<device::VecTraits<T1>::cn == 1 && device::VecTraits<T2>::cn == 1 && device::VecTraits<D>::cn == 1 && device::BinReadWriteTraits<T1, T2, D>::shift != 1>::call(src1, src2, dst, op, mask, stream);
+            TransformDispatcher< UseSmartBin<T1, T2, D>::value >::call(src1, src2, dst, op, mask, stream);
         }
 
         template <typename T1, typename T2, typename D, typename BinOp>

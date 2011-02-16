@@ -54,7 +54,7 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
     {
         try 
         {
-            bool cc12_ok = TargetArchs::builtWith(COMPUTE_12) && DeviceInfo().supports(COMPUTE_12);
+            bool cc12_ok = TargetArchs::builtWith(FEATURE_SET_COMPUTE_12) && DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
             if (!cc12_ok)
             {
                 ts->printf(CvTS::CONSOLE, "\nCompute capability 1.2 is required");
@@ -77,7 +77,7 @@ struct CV_GpuMeanShiftSegmentationTest : public CvTest {
             {
                 stringstream path;
                 path << ts->get_data_path() << "meanshift/cones_segmented_sp10_sr10_minsize" << minsize;
-                if (TargetArchs::builtWith(COMPUTE_20) && DeviceInfo().supports(COMPUTE_20))
+                if (TargetArchs::builtWith(FEATURE_SET_COMPUTE_20) && DeviceInfo().supports(FEATURE_SET_COMPUTE_20))
                     path << ".png";
                 else
                     path << "_CC1X.png";

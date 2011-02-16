@@ -190,6 +190,9 @@ void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src,
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
 {
+    CV_Assert((src.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, cudaStream_t stream);
     static const set_caller_t set_callers[] =
     {
@@ -201,6 +204,11 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
 {
+    CV_Assert((src.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
+    CV_Assert(mask.type() == CV_8UC1);
+
     typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, const GpuMat& mask, cudaStream_t stream);
     static const set_caller_t set_callers[] =
     {
@@ -212,6 +220,9 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
 
 void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
 {
+    CV_Assert((src.depth() != CV_64F && CV_MAT_DEPTH(rtype) != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     bool noScale = fabs(alpha-1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
 
     if( rtype < 0 )

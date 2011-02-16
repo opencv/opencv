@@ -126,7 +126,12 @@ void CV_GpuMatOpCopyToTest::run( int /* start_from */)
 
     try
     {
-        for (int i = 0 ; i < 7; i++)
+        int lastType = CV_32F;
+
+        if (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE))
+            lastType = CV_64F;
+
+        for (int i = 0 ; i <= lastType; i++)
         {
             Mat cpumat(rows, cols, i);
             cpumat.setTo(Scalar::all(127));

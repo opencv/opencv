@@ -384,7 +384,7 @@ void CV_GpuBruteForceMatcherTest::knnMatchTest( const GpuMat& query, const GpuMa
 
 void CV_GpuBruteForceMatcherTest::radiusMatchTest( const GpuMat& query, const GpuMat& train )
 {
-    bool atomics_ok = TargetArchs::builtWith(ATOMICS) && DeviceInfo().supports(ATOMICS);
+    bool atomics_ok = TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS);
     if (!atomics_ok)
     {
         ts->printf(CvTS::CONSOLE, "\nCode and device atomics support is required for radiusMatch (CC >= 1.1)");

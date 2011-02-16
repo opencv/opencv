@@ -582,10 +582,10 @@ namespace cv { namespace gpu { namespace bfmatcher
     }
     
     ///////////////////////////////////////////////////////////////////////////////
-    // Match kernel chooser
+    // Match caller
 
     template <typename Dist, typename T, typename Train, typename Mask>
-    void match_chooser(const DevMem2D_<T>& queryDescs, const Train& train, 
+    void matchDispatcher(const DevMem2D_<T>& queryDescs, const Train& train, 
         const Mask& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
         bool cc_12)
     {
@@ -616,11 +616,11 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (mask.data)
         {
             SingleMask m(mask);
-            match_chooser<L1Dist>((DevMem2D_<T>)queryDescs, train, m, trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, train, m, trainIdx, imgIdx, distance, cc_12);
         }
         else
         {
-            match_chooser<L1Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
         }
     }
 
@@ -640,11 +640,11 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (mask.data)
         {
             SingleMask m(mask);
-            match_chooser<L2Dist>((DevMem2D_<T>)queryDescs, train, m, trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, train, m, trainIdx, imgIdx, distance, cc_12);
         }
         else
         {
-            match_chooser<L2Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
         }
     }
 
@@ -664,11 +664,11 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (maskCollection.data)
         {
             MaskCollection mask(maskCollection.data);
-            match_chooser<L1Dist>((DevMem2D_<T>)queryDescs, train, mask, trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, train, mask, trainIdx, imgIdx, distance, cc_12);
         }
         else
         {
-            match_chooser<L1Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
         }
     }
 
@@ -688,11 +688,11 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (maskCollection.data)
         {
             MaskCollection mask(maskCollection.data);
-            match_chooser<L2Dist>((DevMem2D_<T>)queryDescs, train, mask, trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, train, mask, trainIdx, imgIdx, distance, cc_12);
         }
         else
         {
-            match_chooser<L2Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
+            matchDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, train, WithOutMask(), trainIdx, imgIdx, distance, cc_12);
         }
     }
 
@@ -942,22 +942,35 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // knn match caller
 
+    template <typename Dist, typename T, typename Mask>
+    void calcDistanceDispatcher(const DevMem2D_<T>& queryDescs, const DevMem2D_<T>& trainDescs, 
+        const Mask& mask, const DevMem2Df& allDist)
+    {
+        calcDistance_caller<16, 16, Dist>(queryDescs, trainDescs, mask, allDist);
+    }
+
+    void findKnnMatchDispatcher(int knn, const DevMem2Di& trainIdx, const DevMem2Df& distance, 
+        const DevMem2Df& allDist)
+    {
+        findKnnMatch_caller<256>(knn, trainIdx, distance, allDist);
+    }
+
     template <typename T>
     void knnMatchL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist)
     {
         if (mask.data)
         {
-            calcDistance_caller<16, 16, L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            calcDistanceDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 SingleMask(mask), allDist);
         }
         else
         {
-            calcDistance_caller<16, 16, L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            calcDistanceDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 WithOutMask(), allDist);
         }
 
-        findKnnMatch_caller<256>(knn, trainIdx, distance, allDist);
+        findKnnMatchDispatcher(knn, trainIdx, distance, allDist);
     }
 
     template void knnMatchL1_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn, const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist);
@@ -973,16 +986,16 @@ namespace cv { namespace gpu { namespace bfmatcher
     {
         if (mask.data)
         {
-            calcDistance_caller<16, 16, L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            calcDistanceDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 SingleMask(mask), allDist);
         }
         else
         {
-            calcDistance_caller<16, 16, L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            calcDistanceDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 WithOutMask(), allDist);
         }
 
-        findKnnMatch_caller<256>(knn, trainIdx, distance, allDist);
+        findKnnMatchDispatcher(knn, trainIdx, distance, allDist);
     }
 
     template void knnMatchL2_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn, const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist);
@@ -1061,7 +1074,16 @@ namespace cv { namespace gpu { namespace bfmatcher
     }
     
     ///////////////////////////////////////////////////////////////////////////////
-    // Radius Match kernel chooser
+    // Radius Match caller
+
+    template <typename Dist, typename T, typename Mask>
+    void radiusMatchDispatcher(const DevMem2D_<T>& queryDescs, const DevMem2D_<T>& trainDescs, 
+        float maxDistance, const Mask& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, 
+        const DevMem2Df& distance)
+    {
+        radiusMatch_caller<16, 16, Dist>(queryDescs, trainDescs, maxDistance, mask, 
+            trainIdx, nMatches, distance);
+    }
 
     template <typename T>
     void radiusMatchL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, float maxDistance,
@@ -1069,12 +1091,12 @@ namespace cv { namespace gpu { namespace bfmatcher
     {
         if (mask.data)
         {
-            radiusMatch_caller<16, 16, L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            radiusMatchDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 maxDistance, SingleMask(mask), trainIdx, nMatches, distance);
         }
         else
         {
-            radiusMatch_caller<16, 16, L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            radiusMatchDispatcher<L1Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 maxDistance, WithOutMask(), trainIdx, nMatches, distance);
         }
     }
@@ -1092,12 +1114,12 @@ namespace cv { namespace gpu { namespace bfmatcher
     {
         if (mask.data)
         {
-            radiusMatch_caller<16, 16, L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            radiusMatchDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 maxDistance, SingleMask(mask), trainIdx, nMatches, distance);
         }
         else
         {
-            radiusMatch_caller<16, 16, L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
+            radiusMatchDispatcher<L2Dist>((DevMem2D_<T>)queryDescs, (DevMem2D_<T>)trainDescs, 
                 maxDistance, WithOutMask(), trainIdx, nMatches, distance);
         }
     }

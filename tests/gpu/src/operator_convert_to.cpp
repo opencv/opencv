@@ -66,21 +66,24 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
 {
     const Size img_size(67, 35);
 
-    const int types[] = {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F};
-    const int types_num = sizeof(types) / sizeof(int);
     const char* types_str[] = {"CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F"};
 
     bool passed = true;
     try
     {
-        for (int i = 0; i < types_num && passed; ++i)
+        int lastType = CV_32F;
+
+        if (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE))
+            lastType = CV_64F;
+
+        for (int i = 0; i <= lastType && passed; ++i)
         {
-            for (int j = 0; j < types_num && passed; ++j)
+            for (int j = 0; j <= lastType && passed; ++j)
             {
                 for (int c = 1; c < 5 && passed; ++c)
                 {
-                    const int src_type = CV_MAKETYPE(types[i], c);
-                    const int dst_type = types[j];
+                    const int src_type = CV_MAKETYPE(i, c);
+                    const int dst_type = j;
 
                     cv::RNG rng(*ts->get_rng());
 

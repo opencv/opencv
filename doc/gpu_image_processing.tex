@@ -17,6 +17,8 @@ Performs mean-shift filtering for each point of the source image. It maps each p
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
 
+\textbf{Please note:} This function works only on devices with Compute Capability $>=$ 1.2.
+
 
 \cvCppFunc{gpu::meanShiftProc}
 Performs mean-shift procedure and stores information about processed points (i.e. their colors and positions) into two images. 
@@ -34,6 +36,8 @@ Performs mean-shift procedure and stores information about processed points (i.e
 \cvarg{sr}{Color window radius.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
+
+\textbf{Please note:} This function works only on devices with Compute Capability $>=$ 1.2.
 
 See also: \cvCppCross{gpu::meanShiftFiltering}.
 
@@ -54,6 +58,8 @@ Performs mean-shift segmentation of the source image and eleminates small segmen
 \cvarg{minsize}{Minimum segment size. Smaller segements will be merged.}
 \cvarg{criteria}{Termination criteria. See \hyperref[TermCriteria]{cv::TermCriteria}.}
 \end{description}
+
+\textbf{Please note:} This function works only on devices with Compute Capability $>=$ 1.2.
 
 
 \cvCppFunc{gpu::integral}
@@ -319,7 +325,7 @@ double threshold(const GpuMat\& src, GpuMat\& dst, double thresh, \par double ma
 }
 
 \begin{description}
-\cvarg{src}{Source array (single-channel, \texttt{CV\_64F} depth isn't supported).}
+\cvarg{src}{Source array (single-channel).}
 \cvarg{dst}{Destination array; will have the same size and the same type as \texttt{src}.}
 \cvarg{thresh}{Threshold value.}
 \cvarg{maxVal}{Maximum value to use with \texttt{THRESH\_BINARY} and \texttt{THRESH\_BINARY\_INV} thresholding types.}

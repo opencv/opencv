@@ -625,7 +625,11 @@ namespace
 }
 
 void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) 
-{ 
+{
+    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -637,6 +641,10 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 
 void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream) 
 { 
+    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -648,6 +656,9 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Str
 
 void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst) 
 {
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -659,6 +670,9 @@ void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst)
 
 void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream) 
 {
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -670,6 +684,10 @@ void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& st
 
 void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) 
 { 
+    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -681,6 +699,10 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 
 void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream) 
 { 
+    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -692,6 +714,9 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Str
 
 void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst) 
 {
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -703,6 +728,9 @@ void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst)
 
 void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream) 
 {
+    CV_Assert((src1.depth() != CV_64F) || 
+        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
     typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
@@ -749,6 +777,9 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
     }
     else
     {
+        CV_Assert((src.depth() != CV_64F) || 
+            (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
+
         typedef void (*caller_t)(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, 
             cudaStream_t stream);
 

@@ -1,7 +1,55 @@
 \section{Feature Detection and Description}
 
 
-\cvclass{gpu::SURF\_GPU}
+\cvclass{gpu::SURFParams\_GPU}\label{class.gpu.SURFParams}
+Various SURF algorithm parameters.
+
+\begin{lstlisting}
+struct SURFParams_GPU 
+{
+    SURFParams_GPU() : threshold(0.1f), nOctaves(4), nIntervals(4), 
+        initialScale(2.f), l1(3.f/1.5f), l2(5.f/1.5f), l3(3.f/1.5f), 
+        l4(1.f/1.5f), edgeScale(0.81f), initialStep(1), extended(true), 
+        featuresRatio(0.01f) {}
+
+    //! The interest operator threshold
+    float threshold;
+    //! The number of octaves to process
+    int nOctaves;
+    //! The number of intervals in each octave
+    int nIntervals;
+    //! The scale associated with the first interval of the first octave
+    float initialScale;
+
+    //! mask parameter l_1
+    float l1;
+    //! mask parameter l_2 
+    float l2;
+    //! mask parameter l_3
+    float l3;
+    //! mask parameter l_4
+    float l4;
+    //! The amount to scale the edge rejection mask
+    float edgeScale;
+    //! The initial sampling step in pixels.
+    int initialStep;
+
+    //! True, if generate 128-len descriptors, false - 64-len descriptors
+    bool extended;
+
+    //! max features = featuresRatio * img.size().area()
+    float featuresRatio;
+};
+\end{lstlisting}
+
+In contrast to \hyperref[cv.class.SURF]{cv::SURF} \texttt{SURF\_GPU} works with float sources (with range [0..1]). It performs conversion after calculation of the integral by division result by 255. Please take it into consideration when change some parameters (like hessian threshold).
+
+Current \texttt{SURF\_GPU} implementation supports the number of intervals in each octave in range [3..21].
+
+See also: \hyperref[class.gpu.SURF]{cv::gpu::SURF\_GPU}.
+
+
+\cvclass{gpu::SURF\_GPU}\label{class.gpu.SURF}
 Class for extracting Speeded Up Robust Features from an image.
 
 \begin{lstlisting}
@@ -62,7 +110,7 @@ The class \texttt{SURF\_GPU} can store results to GPU and CPU memory and provide
 
 The class \texttt{SURF\_GPU} uses some buffers and provides access to it. All buffers can be safely released between function calls. 
 
-See also: \hyperref[cv.class.SURF]{cv::SURF}.
+See also: \hyperref[cv.class.SURF]{cv::SURF}, \hyperref[class.gpu.SURFParams]{cv::gpu::SURFParams\_GPU}.
 
 
 \cvclass{gpu::BruteForceMatcher\_GPU}
@@ -269,7 +317,7 @@ void radiusMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par
 void radiusMatch(const GpuMat\& queryDescs, \par std::vector< std::vector<DMatch> >\& matches, \par float maxDistance, \par const std::vector<GpuMat>\& masks = std::vector<GpuMat>(), \par bool compactResult = false);
 }
 
-This function works only on devices with Compute Capability $>=$ 1.1.
+\textbf{Please note:} This function works only on devices with Compute Capability $>=$ 1.1.
 
 See also: \cvCppCross{DescriptorMatcher::radiusMatch}.
 
@@ -293,7 +341,8 @@ void radiusMatch(const GpuMat\& queryDescs, \par const GpuMat\& trainDescs, \par
 
 In contrast to \hyperref[cppfunc.gpu.BruteForceMatcher.radiusMatch]{cv::gpu::BruteForceMather\_GPU::radiusMatch} results are not sorted by distance increasing order.
 
-This function works only on devices with Compute Capability $>=$ 1.1.
+\textbf{Please note:} This function works only on devices with Compute Capability $>=$ 1.1.
+
 
 \cvfunc{cv::gpu::BruteForceMatcher\_GPU::radiusMatchDownload}\label{cppfunc.gpu.BruteForceMatcher.radiusMatchDownload}
 Downloads \texttt{trainIdx}, \texttt{nMatches} and \texttt{distance} matrices obtained via \hyperref[cppfunc.gpu.BruteForceMatcher.radiusMatchSingle]{radiusMatch} to CPU vector with \hyperref[cv.class.DMatch]{cv::DMatch}. If \texttt{compactResult} is true \texttt{matches} vector will not contain matches for fully masked out query descriptors.
