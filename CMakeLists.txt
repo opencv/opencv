@@ -708,7 +708,7 @@ if(WITH_CUDA)
         set(HAVE_CUDA 1)
         message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-        set(CUDA_ARCH_BIN "1.3 2.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
+        set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
         set(CUDA_ARCH_PTX "1.1 1.3" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")              
         
         string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
