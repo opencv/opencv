@@ -37,14 +37,14 @@
 namespace cvflann
 {
 template <typename T> struct Datatype {};
-template<> struct Datatype<char> { static flann_datatype_t type() { return INT8; } };
-template<> struct Datatype<short> { static flann_datatype_t type() { return INT16; } };
-template<> struct Datatype<int> { static flann_datatype_t type() { return INT32; } };
-template<> struct Datatype<unsigned char> { static flann_datatype_t type() { return UINT8; } };
-template<> struct Datatype<unsigned short> { static flann_datatype_t type() { return UINT16; } };
-template<> struct Datatype<unsigned int> { static flann_datatype_t type() { return UINT32; } };
-template<> struct Datatype<float> { static flann_datatype_t type() { return FLOAT32; } };
-template<> struct Datatype<double> { static flann_datatype_t type() { return FLOAT64; } };
+template<> struct Datatype<char> { static flann_datatype_t type() { return FLANN_INT8; } };
+template<> struct Datatype<short> { static flann_datatype_t type() { return FLANN_INT16; } };
+template<> struct Datatype<int> { static flann_datatype_t type() { return FLANN_INT32; } };
+template<> struct Datatype<unsigned char> { static flann_datatype_t type() { return FLANN_UINT8; } };
+template<> struct Datatype<unsigned short> { static flann_datatype_t type() { return FLANN_UINT16; } };
+template<> struct Datatype<unsigned int> { static flann_datatype_t type() { return FLANN_UINT32; } };
+template<> struct Datatype<float> { static flann_datatype_t type() { return FLANN_FLOAT32; } };
+template<> struct Datatype<double> { static flann_datatype_t type() { return FLANN_FLOAT64; } };
 
 
 CV_EXPORTS const char* FLANN_SIGNATURE();

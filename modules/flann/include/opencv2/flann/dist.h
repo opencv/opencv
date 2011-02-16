@@ -304,21 +304,21 @@ template <typename Iterator1, typename Iterator2>
 double custom_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
 {
 	switch (flann_distance_type()) {
-	case EUCLIDEAN:
+	case FLANN_DIST_EUCLIDEAN:
 		return euclidean_dist(first1, last1, first2, acc);
-	case MANHATTAN:
+	case FLANN_DIST_MANHATTAN:
 		return manhattan_dist(first1, last1, first2, acc);
-	case MINKOWSKI:
+	case FLANN_DIST_MINKOWSKI:
 		return minkowski_dist(first1, last1, first2, acc);
-	case MAX_DIST:
+	case FLANN_DIST_MAX:
 		return max_dist(first1, last1, first2, acc);
-	case HIK:
+	case FLANN_DIST_HIST_INTERSECT:
 		return hist_intersection_dist_sq(first1, last1, first2, acc);
-	case HELLINGER:
+	case FLANN_DIST_HELLINGER:
 		return hellinger_dist(first1, last1, first2, acc);
-	case CS:
+	case FLANN_DIST_CS:
 		return chi_square_dist(first1, last1, first2, acc);
-	case KL:
+	case FLANN_DIST_KL:
 		return kl_divergence(first1, last1, first2, acc);
 	default:
 		return euclidean_dist(first1, last1, first2, acc);

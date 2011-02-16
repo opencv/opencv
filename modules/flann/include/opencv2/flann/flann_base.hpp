@@ -67,11 +67,9 @@ CV_EXPORTS void set_distance_type(flann_distance_t distance_type, int order);
 
 
 struct CV_EXPORTS SavedIndexParams : public IndexParams {
-	SavedIndexParams(std::string filename_) : IndexParams(SAVED), filename(filename_) {}
+	SavedIndexParams(std::string filename_) : IndexParams(FLANN_INDEX_SAVED), filename(filename_) {}
 
 	std::string filename;		// filename of the stored index
-
-	flann_algorithm_t getIndexType() const { return algorithm; }
 
 	void print() const
 	{
@@ -138,7 +136,7 @@ Index<T>::Index(const Matrix<T>& dataset, const IndexParams& params)
 	flann_algorithm_t index_type = params.getIndexType();
     built = false;
 
-	if (index_type==SAVED) {
+	if (index_type==FLANN_INDEX_SAVED) {
 		nnIndex = load_saved_index(dataset, ((const SavedIndexParams&)params).filename);
         built = true;
 	}

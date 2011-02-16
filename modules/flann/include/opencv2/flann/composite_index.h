@@ -40,8 +40,8 @@ namespace cvflann
 
 struct CompositeIndexParams : public IndexParams {
 	CompositeIndexParams(int trees_ = 4, int branching_ = 32, int iterations_ = 11,
-			flann_centers_init_t centers_init_ = CENTERS_RANDOM, float cb_index_ = 0.2 ) :
-		IndexParams(COMPOSITE),
+			flann_centers_init_t centers_init_ = FLANN_CENTERS_RANDOM, float cb_index_ = 0.2 ) :
+		IndexParams(FLANN_INDEX_COMPOSITE),
 		trees(trees_),
 		branching(branching_),
 		iterations(iterations_),
@@ -53,8 +53,6 @@ struct CompositeIndexParams : public IndexParams {
 	int iterations;            // max iterations to perform in one kmeans clustering (kmeans tree)
 	flann_centers_init_t centers_init;          // algorithm used for picking the initial cluster centers for kmeans tree
     float cb_index;            // cluster boundary index. Used when searching the kmeans tree
-
-	flann_algorithm_t getIndexType() const { return algorithm; }
 
 	void print() const
 	{
@@ -102,7 +100,7 @@ public:
 
     flann_algorithm_t getType() const
     {
-        return COMPOSITE;
+        return FLANN_INDEX_COMPOSITE;
     }
 
 

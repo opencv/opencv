@@ -50,11 +50,9 @@ namespace cvflann
 {
 
 struct CV_EXPORTS KDTreeIndexParams : public IndexParams {
-	KDTreeIndexParams(int trees_ = 4) : IndexParams(KDTREE), trees(trees_) {};
+	KDTreeIndexParams(int trees_ = 4) : IndexParams(FLANN_INDEX_KDTREE), trees(trees_) {};
 
 	int trees;                 // number of randomized trees to use (for kdtree)
-
-	flann_algorithm_t getIndexType() const { return algorithm; }
 
 	void print() const
 	{
@@ -167,7 +165,7 @@ public:
 
     flann_algorithm_t getType() const
     {
-        return KDTREE;
+        return FLANN_INDEX_KDTREE;
     }
 
 	/**

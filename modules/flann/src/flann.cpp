@@ -35,7 +35,7 @@ namespace cvflann
 /** Global variable indicating the distance metric
  * to be used.
  */
-flann_distance_t flann_distance_type_ = EUCLIDEAN;
+flann_distance_t flann_distance_type_ = FLANN_DIST_EUCLIDEAN;
 flann_distance_t flann_distance_type() { return flann_distance_type_; }
 
 /**
@@ -208,12 +208,12 @@ class StaticInit
 public:
 	StaticInit()
 	{
-		ParamsFactory_instance().register_<LinearIndexParams>(LINEAR);
-		ParamsFactory_instance().register_<KDTreeIndexParams>(KDTREE);
-		ParamsFactory_instance().register_<KMeansIndexParams>(KMEANS);
-		ParamsFactory_instance().register_<CompositeIndexParams>(COMPOSITE);
-		ParamsFactory_instance().register_<AutotunedIndexParams>(AUTOTUNED);
-//		ParamsFactory::instance().register_<SavedIndexParams>(SAVED);
+		ParamsFactory_instance().register_<LinearIndexParams>(FLANN_INDEX_LINEAR);
+		ParamsFactory_instance().register_<KDTreeIndexParams>(FLANN_INDEX_KDTREE);
+		ParamsFactory_instance().register_<KMeansIndexParams>(FLANN_INDEX_KMEANS);
+		ParamsFactory_instance().register_<CompositeIndexParams>(FLANN_INDEX_COMPOSITE);
+		ParamsFactory_instance().register_<AutotunedIndexParams>(FLANN_INDEX_AUTOTUNED);
+//		ParamsFactory::instance().register_<SavedIndexParams>(FLANN_INDEX_SAVED);
 	}
 };
 StaticInit __init;

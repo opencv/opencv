@@ -49,19 +49,19 @@ NNIndex<T>* create_index_by_type(const Matrix<T>& dataset, const IndexParams& pa
 
 	NNIndex<T>* nnIndex;
 	switch (index_type) {
-	case LINEAR:
+	case FLANN_INDEX_LINEAR:
 		nnIndex = new LinearIndex<T>(dataset, (const LinearIndexParams&)params);
 		break;
-	case KDTREE:
+	case FLANN_INDEX_KDTREE:
 		nnIndex = new KDTreeIndex<T>(dataset, (const KDTreeIndexParams&)params);
 		break;
-	case KMEANS:
+	case FLANN_INDEX_KMEANS:
 		nnIndex = new KMeansIndex<T>(dataset, (const KMeansIndexParams&)params);
 		break;
-	case COMPOSITE:
+	case FLANN_INDEX_COMPOSITE:
 		nnIndex = new CompositeIndex<T>(dataset, (const CompositeIndexParams&) params);
 		break;
-	case AUTOTUNED:
+	case FLANN_INDEX_AUTOTUNED:
 		nnIndex = new AutotunedIndex<T>(dataset, (const AutotunedIndexParams&) params);
 		break;
 	default:

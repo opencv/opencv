@@ -44,7 +44,7 @@ namespace cvflann
 struct AutotunedIndexParams : public IndexParams {
 	AutotunedIndexParams( float target_precision_ = 0.8, float build_weight_ = 0.01,
 			float memory_weight_ = 0, float sample_fraction_ = 0.1) :
-		IndexParams(AUTOTUNED),
+		IndexParams(FLANN_INDEX_AUTOTUNED),
 		target_precision(target_precision_),
 		build_weight(build_weight_),
 		memory_weight(memory_weight_),
@@ -54,8 +54,6 @@ struct AutotunedIndexParams : public IndexParams {
 	float build_weight;        // build tree time weighting factor
 	float memory_weight;       // index memory weighting factor
     float sample_fraction;     // what fraction of the dataset to use for autotuning
-
-	flann_algorithm_t getIndexType() const { return algorithm; }
 
 	void print() const
 	{
@@ -123,13 +121,13 @@ public:
 		logger().info("----------------------------------------------------\n");
     	flann_algorithm_t index_type = bestParams->getIndexType();
     	switch (index_type) {
-    	case LINEAR:
+    	case FLANN_INDEX_LINEAR:
     		bestIndex = new LinearIndex<ELEM_TYPE>(dataset, (const LinearIndexParams&)*bestParams);
     		break;
-    	case KDTREE:
+    	case FLANN_INDEX_KDTREE:
     		bestIndex = new KDTreeIndex<ELEM_TYPE>(dataset, (const KDTreeIndexParams&)*bestParams);
     		break;
-    	case KMEANS:
+    	case FLANN_INDEX_KMEANS:
     		bestIndex = new KMeansIndex<ELEM_TYPE>(dataset, (const KMeansIndexParams&)*bestParams);
     		break;
     	default:
@@ -211,7 +209,7 @@ public:
     */
     virtual flann_algorithm_t getType() const
     {
-    	return AUTOTUNED;
+    	return FLANN_INDEX_AUTOTUNED;
     }
 
 private:
@@ -347,7 +345,7 @@ private:
         for (size_t i=0; i<ARRAY_LEN(maxIterations); ++i) {
             for (size_t j=0; j<ARRAY_LEN(branchingFactors); ++j) {
 
-            	kmeansCosts[cnt].second.centers_init = CENTERS_RANDOM;
+            	kmeansCosts[cnt].second.centers_init = FLANN_CENTERS_RANDOM;
             	kmeansCosts[cnt].second.iterations = maxIterations[i];
             	kmeansCosts[cnt].second.branching = branchingFactors[j];
 
@@ -569,7 +567,7 @@ private:
 
             float searchTime;
             float cb_index;
-            if (bestIndex->getType() == KMEANS) {
+            if (bestIndex->getType() == FLANN_INDEX_KMEANS) {
                 logger().info("KMeans algorithm, estimating cluster border factor\n");
                 KMeansIndex<ELEM_TYPE>* kmeans = (KMeansIndex<ELEM_TYPE>*)bestIndex;
                 float bestSearchTime = -1;
