@@ -132,7 +132,7 @@ public:
 private:
   void computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors, cv::Mat *drawImage = 0) const;
   void rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vectors) const;
-  void eraseUsedGraph(vector<Graph> &basisGraphs) const;
+  void eraseUsedGraph(std::vector<Graph> &basisGraphs) const;
   void filterOutliersByDensity(const std::vector<cv::Point2f> &samples, std::vector<cv::Point2f> &filteredSamples);
   void findBasis(const std::vector<cv::Point2f> &samples, std::vector<cv::Point2f> &basis,
                  std::vector<Graph> &basisGraphs);
@@ -164,12 +164,12 @@ private:
 
   //if endpoint is on a segment then function return false
   static bool areSegmentsIntersecting(Segment seg1, Segment seg2);
-  static bool doesIntersectionExist(const vector<Segment> &corner, const vector<vector<Segment> > &segments);
-  void getCornerSegments(const vector<vector<size_t> > &points, vector<vector<Segment> > &segments,
-                         vector<cv::Point> &cornerIndices, vector<cv::Point> &firstSteps,
-                         vector<cv::Point> &secondSteps) const;
-  size_t getFirstCorner(vector<cv::Point> &largeCornerIndices, vector<cv::Point> &smallCornerIndices,
-                        vector<cv::Point> &firstSteps, vector<cv::Point> &secondSteps) const;
+  static bool doesIntersectionExist(const std::vector<Segment> &corner, const std::vector<std::vector<Segment> > &segments);
+  void getCornerSegments(const std::vector<std::vector<size_t> > &points, std::vector<std::vector<Segment> > &segments,
+                         std::vector<cv::Point> &cornerIndices, std::vector<cv::Point> &firstSteps,
+                         std::vector<cv::Point> &secondSteps) const;
+  size_t getFirstCorner(std::vector<cv::Point> &largeCornerIndices, std::vector<cv::Point> &smallCornerIndices,
+                        std::vector<cv::Point> &firstSteps, std::vector<cv::Point> &secondSteps) const;
   static double getDirection(cv::Point2f p1, cv::Point2f p2, cv::Point2f p3);
 
   std::vector<cv::Point2f> keypoints;

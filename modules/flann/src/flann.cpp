@@ -89,7 +89,7 @@ int countCorrectMatches(int* neighbors, int* groundTruth, int n)
     return count;
 }
 
-// ----------------------- logger().cpp ---------------------------
+// ----------------------- logger.cpp ---------------------------
 
 Logger logger_;
 

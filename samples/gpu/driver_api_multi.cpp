@@ -16,11 +16,11 @@
 int main()
 {
 #if !defined(HAVE_CUDA)
-    cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true).\n";
+    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true).\n";
 #endif
 
 #if !defined(HAVE_TBB)
-    cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
+    std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
 #endif
 
     return 0;
@@ -44,7 +44,7 @@ inline void safeCall_(int code, const char* expr, const char* file, int line)
 {
     if (code != CUDA_SUCCESS)
     {
-        cout << "CUDA driver API error: code " << code << ", expr " << expr
+        std::cout << "CUDA driver API error: code " << code << ", expr " << expr
             << ", file " << file << ", line " << line << endl;
         destroyContexts();
         exit(-1);
@@ -59,7 +59,7 @@ int main()
     int num_devices = getCudaEnabledDeviceCount();
     if (num_devices < 2)
     {
-        cout << "Two or more GPUs are required\n";
+        std::cout << "Two or more GPUs are required\n";
         return -1;
     }
 
@@ -68,7 +68,7 @@ int main()
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
         {
-            cout << "GPU module isn't built for GPU #" << i << " ("
+            std::cout << "GPU module isn't built for GPU #" << i << " ("
                  << dev_info.name() << ", CC " << dev_info.majorVersion()
                  << dev_info.minorVersion() << "\n";
             return -1;
@@ -122,7 +122,7 @@ void Worker::operator()(int device_id) const
 
     // Check results
     bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
-    cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
+    std::cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
         << (passed ? "passed" : "FAILED") << endl;
 
     // Deallocate data here, otherwise deallocation will be performed

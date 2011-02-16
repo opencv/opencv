@@ -32,7 +32,6 @@
 #define _OPENCV_DIST_H_
 
 #include <cmath>
-using namespace std;
 
 #include "opencv2/flann/general.h"
 

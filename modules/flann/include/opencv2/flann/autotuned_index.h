@@ -224,8 +224,8 @@ private:
         float totalCost;
     };
 
-    typedef pair<CostData, KDTreeIndexParams> KDTreeCostData;
-    typedef pair<CostData, KMeansIndexParams> KMeansCostData;
+    typedef std::pair<CostData, KDTreeIndexParams> KDTreeCostData;
+    typedef std::pair<CostData, KMeansIndexParams> KMeansCostData;
 
 
     void evaluate_kmeans(CostData& cost, const KMeansIndexParams& kmeans_params)
@@ -338,7 +338,7 @@ private:
 
         int kmeansParamSpaceSize = ARRAY_LEN(maxIterations)*ARRAY_LEN(branchingFactors);
 
-        vector<KMeansCostData> kmeansCosts(kmeansParamSpaceSize);
+        std::vector<KMeansCostData> kmeansCosts(kmeansParamSpaceSize);
 
 //        CostData* kmeansCosts = new CostData[kmeansParamSpaceSize];
 
@@ -417,7 +417,7 @@ private:
         int testTrees[] = { 1, 4, 8, 16, 32 };
 
         size_t kdtreeParamSpaceSize = ARRAY_LEN(testTrees);
-        vector<KDTreeCostData> kdtreeCosts(kdtreeParamSpaceSize);
+        std::vector<KDTreeCostData> kdtreeCosts(kdtreeParamSpaceSize);
 
         // evaluate kdtree for all parameter combinations
         int cnt = 0;
@@ -484,7 +484,7 @@ private:
     IndexParams* estimateBuildParams()
     {
         int sampleSize = int(index_params.sample_fraction*dataset.rows);
-        int testSampleSize = min(sampleSize/10, 1000);
+        int testSampleSize = std::min(sampleSize/10, 1000);
 
         logger().info("Entering autotuning, dataset size: %d, sampleSize: %d, testSampleSize: %d\n",dataset.rows, sampleSize, testSampleSize);
 
@@ -550,7 +550,7 @@ private:
 
         float speedup = 0;
 
-        int samples = (int)min(dataset.rows/10, SAMPLE_COUNT);
+        int samples = (int)std::min(dataset.rows/10, SAMPLE_COUNT);
         if (samples>0) {
             Matrix<ELEM_TYPE> testDataset = random_sample(dataset,samples);
 

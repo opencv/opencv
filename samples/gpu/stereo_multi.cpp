@@ -18,11 +18,11 @@
 int main()
 {
 #if !defined(HAVE_CUDA)
-    cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true).\n";
+    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true).\n";
 #endif
 
 #if !defined(HAVE_TBB)
-    cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
+    std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
 #endif
 
     return 0;
@@ -53,14 +53,14 @@ int main(int argc, char** argv)
 {
     if (argc < 3)
     {
-        cout << "Usage: stereo_multi_gpu <left_image> <right_image>\n";
+        std::cout << "Usage: stereo_multi_gpu <left_image> <right_image>\n";
         return -1;
     }
 
     int num_devices = getCudaEnabledDeviceCount();
     if (num_devices < 2)
     {
-        cout << "Two or more GPUs are required\n";
+        std::cout << "Two or more GPUs are required\n";
         return -1;
     }
     for (int i = 0; i < num_devices; ++i)
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
         {
-            cout << "GPU module isn't built for GPU #" << i << " ("
+            std::cout << "GPU module isn't built for GPU #" << i << " ("
                  << dev_info.name() << ", CC " << dev_info.majorVersion()
                  << dev_info.minorVersion() << "\n";
             return -1;
@@ -80,12 +80,12 @@ int main(int argc, char** argv)
     Mat right = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
     if (left.empty())
     {
-        cout << "Cannot open '" << argv[1] << "'\n";
+        std::cout << "Cannot open '" << argv[1] << "'\n";
         return -1;
     }
     if (right.empty())
     {
-        cout << "Cannot open '" << argv[2] << "'\n";
+        std::cout << "Cannot open '" << argv[2] << "'\n";
         return -1;
     }
 
@@ -139,7 +139,7 @@ void Worker::operator()(int device_id) const
     bm[device_id]->operator()(d_left[device_id], d_right[device_id],
                               d_result[device_id]);
 
-    cout << "GPU #" << device_id << " (" << DeviceInfo().name()
+    std::cout << "GPU #" << device_id << " (" << DeviceInfo().name()
         << "): finished\n";
 
     multi_gpu_mgr.gpuOff();

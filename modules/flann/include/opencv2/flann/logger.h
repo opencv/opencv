@@ -36,7 +36,6 @@
 #include <stdarg.h>
 #include "opencv2/flann/general.h"
 
-using namespace std;
 
 namespace cvflann
 {

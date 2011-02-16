@@ -36,8 +36,6 @@
 #include "opencv2/flann/general.h"
 #include "opencv2/flann/matrix.h"
 
-using namespace std;
-
 namespace cvflann
 {
 

@@ -56,7 +56,7 @@ Matrix<T> random_sample(Matrix<T>& srcMatrix, long size, bool remove = false)
             dest = srcMatrix[srcMatrix.rows-i-1];
             src = srcMatrix[r];
             for (size_t j=0;j<srcMatrix.cols;++j) {
-                swap(*src,*dest);
+                std::swap(*src,*dest);
                 src++;
                 dest++;
             }

@@ -53,11 +53,11 @@ namespace cv
 
 using std::queue;
     
-typedef pair<int,int> coordinate_t;
-typedef float orientation_t;;
-typedef vector<coordinate_t> template_coords_t;
-typedef vector<orientation_t> template_orientations_t;
-typedef pair<Point, float> location_scale_t;
+typedef std::pair<int,int> coordinate_t;
+typedef float orientation_t;
+typedef std::vector<coordinate_t> template_coords_t;
+typedef std::vector<orientation_t> template_orientations_t;
+typedef std::pair<Point, float> location_scale_t;
 
 class ChamferMatcher
 {
@@ -106,7 +106,7 @@ private:
     
     class LocationImageRange : public ImageRange
     {
-        const vector<Point>& locations_;
+        const std::vector<Point>& locations_;
         
         int scales_;
         float min_scale_;
@@ -116,7 +116,7 @@ private:
 		LocationImageRange& operator=(const LocationImageRange&);
         
     public:
-        LocationImageRange(const vector<Point>& locations, int scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
+        LocationImageRange(const std::vector<Point>& locations, int scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
         locations_(locations), scales_(scales), min_scale_(min_scale), max_scale_(max_scale)
         {
         }
@@ -130,13 +130,13 @@ private:
     
     class LocationScaleImageRange : public ImageRange
     {
-        const vector<Point>& locations_;
-        const vector<float>& scales_;
+        const std::vector<Point>& locations_;
+        const std::vector<float>& scales_;
         
 		LocationScaleImageRange(const LocationScaleImageRange&);
 		LocationScaleImageRange& operator=(const LocationScaleImageRange&);
     public:
-        LocationScaleImageRange(const vector<Point>& locations, const vector<float>& scales) :
+        LocationScaleImageRange(const std::vector<Point>& locations, const std::vector<float>& scales) :
         locations_(locations), scales_(scales)
         {
             assert(locations.size()==scales.size());
@@ -162,8 +162,8 @@ public:
         
         
     public:
-        vector<Template*> scaled_templates;
-        vector<int> addr;
+        std::vector<Template*> scaled_templates;
+        std::vector<int> addr;
         int addr_width;
         float scale;
         template_coords_t coords;
@@ -200,7 +200,7 @@ public:
          */
         Template* rescale(float scale);
         
-        vector<int>& getTemplateAddresses(int width);
+        std::vector<int>& getTemplateAddresses(int width);
     };
     
     
@@ -217,7 +217,7 @@ public:
         const Template* tpl;
     };
     
-    typedef vector<Match> Matches;
+    typedef std::vector<Match> Matches;
     
 private:
     /**
@@ -230,7 +230,7 @@ private:
         float truncate_;
         bool use_orientation_;
         
-        vector<Template*> templates;
+        std::vector<Template*> templates;
     public:
         Matching(bool use_orientation = true, float truncate = 10) : truncate_(truncate), use_orientation_(use_orientation)
         {
@@ -347,7 +347,7 @@ private:
     
     class LocationImageIterator : public ImageIterator
     {
-        const vector<Point>& locations_;
+        const std::vector<Point>& locations_;
         
         size_t iter_;
         
@@ -365,7 +365,7 @@ private:
 		LocationImageIterator& operator=(const LocationImageIterator&);
         
     public:
-        LocationImageIterator(const vector<Point>& locations, int scales, float min_scale, float max_scale);
+        LocationImageIterator(const std::vector<Point>& locations, int scales, float min_scale, float max_scale);
         
         bool hasNext() const {
             return has_next_;
@@ -376,8 +376,8 @@ private:
     
     class LocationScaleImageIterator : public ImageIterator
     {
-        const vector<Point>& locations_;
-        const vector<float>& scales_;
+        const std::vector<Point>& locations_;
+        const std::vector<float>& scales_;
         
         size_t iter_;
         
@@ -387,7 +387,7 @@ private:
 		LocationScaleImageIterator& operator=(const LocationScaleImageIterator&);
         
     public:
-        LocationScaleImageIterator(const vector<Point>& locations, const vector<float>& scales) :
+        LocationScaleImageIterator(const std::vector<Point>& locations, const std::vector<float>& scales) :
         locations_(locations), scales_(scales)
         {
             assert(locations.size()==scales.size());
@@ -511,7 +511,7 @@ ChamferMatcher::SlidingWindowImageIterator::SlidingWindowImageIterator( int widt
 
 location_scale_t ChamferMatcher::SlidingWindowImageIterator::next()
 {
-	location_scale_t next_val = make_pair(Point(x_,y_),scale_);
+	location_scale_t next_val = std::make_pair(Point(x_,y_),scale_);
 
 	x_ += x_step_;
 
@@ -544,7 +544,7 @@ ChamferMatcher::ImageIterator* ChamferMatcher::SlidingWindowImageRange::iterator
 
 
 
-ChamferMatcher::LocationImageIterator::LocationImageIterator(const vector<Point>& locations, 
+ChamferMatcher::LocationImageIterator::LocationImageIterator(const std::vector<Point>& locations, 
 																int scales = 5, 
 																float min_scale = 0.6, 
 																float max_scale = 1.6) :
@@ -562,7 +562,7 @@ ChamferMatcher::LocationImageIterator::LocationImageIterator(const vector<Point>
 
 location_scale_t ChamferMatcher::LocationImageIterator:: next()
 {
-	location_scale_t next_val = make_pair(locations_[iter_],scale_);
+	location_scale_t next_val = std::make_pair(locations_[iter_],scale_);
 
 	iter_ ++;
 	if (iter_==locations_.size()) {
@@ -583,7 +583,7 @@ location_scale_t ChamferMatcher::LocationImageIterator:: next()
 
 location_scale_t ChamferMatcher::LocationScaleImageIterator::next()
 {
-	location_scale_t next_val = make_pair(locations_[iter_],scales_[iter_]);
+	location_scale_t next_val = std::make_pair(locations_[iter_],scales_[iter_]);
 
 	iter_ ++;
 	if (iter_==locations_.size()) {
@@ -738,7 +738,7 @@ void ChamferMatcher::Matching::findContourOrientations(const template_coords_t& 
 	const int M = 5;
 	int coords_size = coords.size();
 
-	vector<float> angles(2*M);
+    std::vector<float> angles(2*M);
         orientations.insert(orientations.begin(), coords_size, float(-3*CV_PI)); // mark as invalid in the beginning
 
 	if (coords_size<2*M+1) {  // if contour not long enough to estimate orientations, abort
@@ -948,7 +948,7 @@ void ChamferMatcher::Matching::computeDistanceTransform(Mat& edges_img, Mat& dis
 	int w = s.width;
 	int h = s.height;
 	// set distance to the edge pixels to 0 and put them in the queue
-	queue<pair<int,int> > q;
+    std::queue<std::pair<int,int> > q;
 
 
 
@@ -957,7 +957,7 @@ void ChamferMatcher::Matching::computeDistanceTransform(Mat& edges_img, Mat& dis
 
 			unsigned char edge_val = edges_img.at<uchar>(y,x);
 			if ( (edge_val!=0) ) {
-				q.push(make_pair(x,y));
+				q.push(std::make_pair(x,y));
 				dist_img.at<float>(y,x)= 0;
 
 				if (&annotate_img!=NULL) {
@@ -972,7 +972,7 @@ void ChamferMatcher::Matching::computeDistanceTransform(Mat& edges_img, Mat& dis
 	}
 
 	// breadth first computation of distance transform
-	pair<int,int> crt;
+    std::pair<int,int> crt;
 	while (!q.empty()) {
 		crt = q.front();
 		q.pop();
@@ -1000,7 +1000,7 @@ void ChamferMatcher::Matching::computeDistanceTransform(Mat& edges_img, Mat& dis
 
 			if (dt==-1 || dt>dist) {
 				dist_img.at<float>(ny,nx) = dist;
-				q.push(make_pair(nx,ny));
+				q.push(std::make_pair(nx,ny));
 
 				if (&annotate_img!=NULL) {
 					annotate_img.at<Vec2i>(ny,nx)[0]=annotate_img.at<Vec2i>(y,x)[0];
@@ -1082,7 +1082,7 @@ ChamferMatcher::Match* ChamferMatcher::Matching::localChamferDistance(Point offs
 
 	float beta = 1-alpha;
 
-	vector<int>& addr = tpl->getTemplateAddresses(dist_img.cols);
+    std::vector<int>& addr = tpl->getTemplateAddresses(dist_img.cols);
 
 	float* ptr = dist_img.ptr<float>(y)+x;
 	
@@ -1271,7 +1271,7 @@ void ChamferMatcher::addMatch(float cost, Point offset, const Template* tpl)
 void ChamferMatcher::showMatch(Mat& img, int index)
 {
 	if (index>=count) {
-		cout << "Index too big.\n" << endl;
+        std::cout << "Index too big.\n" << std::endl;
 	}
 
 	assert(img.channels()==3);
@@ -1347,7 +1347,7 @@ const ChamferMatcher::Matches& ChamferMatcher::matching(Template& tpl, Mat& imag
 
     
 int chamerMatching( Mat& img, Mat& templ,
-                    vector<vector<Point> >& results, vector<float>& costs,
+                    std::vector<std::vector<Point> >& results, std::vector<float>& costs,
                     double templScale, int maxMatches, double minMatchDistance, int padX,
                     int padY, int scales, double minScale, double maxScale,
                     double orientationWeight, double truncate )
@@ -1381,7 +1381,7 @@ int chamerMatching( Mat& img, Mat& templ,
         costs[i] = (float)cval;
         
         const template_coords_t& templ_coords = match.tpl->coords;
-        vector<Point>& templPoints = results[i];
+        std::vector<Point>& templPoints = results[i];
         size_t j, npoints = templ_coords.size();
         templPoints.resize(npoints);
         

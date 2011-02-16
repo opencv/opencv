@@ -33,7 +33,6 @@
 
 
 #include <algorithm>
-using namespace std;
 
 namespace cvflann
 {
@@ -162,7 +161,7 @@ public:
 		}
 
 		/* Switch first node with last. */
-		swap(heap[1],heap[count]);
+        std::swap(heap[1],heap[count]);
 
 		count -= 1;
 		heapify(1);      /* Move new node 1 to right position. */
@@ -197,7 +196,7 @@ public:
 
 		/* If a child was smaller, than swap parent with it and Heapify. */
 		if (minloc != parent) {
-			swap(heap[parent],heap[minloc]);
+            std::swap(heap[parent],heap[minloc]);
 			heapify(minloc);
 		}
 	}

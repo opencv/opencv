@@ -109,7 +109,7 @@ public:
 
 
 template<typename T>
-NNIndex<T>* load_saved_index(const Matrix<T>& dataset, const string& filename)
+NNIndex<T>* load_saved_index(const Matrix<T>& dataset, const std::string& filename)
 {
 	FILE* fin = fopen(filename.c_str(), "rb");
 	if (fin==NULL) {
@@ -208,7 +208,7 @@ int Index<T>::radiusSearch(const Matrix<T>& query, Matrix<int>& indices, Matrix<
 	// TODO: optimise here
 	int* neighbors = resultSet.getNeighbors();
 	float* distances = resultSet.getDistances();
-	size_t count_nn = min(resultSet.size(), indices.cols);
+	size_t count_nn = std::min(resultSet.size(), indices.cols);
 
 	assert (dists.cols>=count_nn);
 
@@ -222,7 +222,7 @@ int Index<T>::radiusSearch(const Matrix<T>& query, Matrix<int>& indices, Matrix<
 
 
 template<typename T>
-void Index<T>::save(string filename)
+void Index<T>::save(std::string filename)
 {
 	FILE* fout = fopen(filename.c_str(), "wb");
 	if (fout==NULL) {

@@ -41,7 +41,6 @@
 #include "opencv2/flann/timer.h"
 
 
-using namespace std;
 
 namespace cvflann
 {
@@ -207,7 +206,7 @@ float test_index_precisions(NNIndex<ELEM_TYPE>& index, const Matrix<ELEM_TYPE>& 
 	const float SEARCH_EPS = 0.001;
 
     // make sure precisions array is sorted
-    sort(precisions, precisions+precisions_length);
+    std::sort(precisions, precisions+precisions_length);
 
     int pindex = 0;
     float precision = precisions[pindex];

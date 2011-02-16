@@ -45,8 +45,6 @@
 #include "opencv2/flann/random.h"
 #include "opencv2/flann/saving.h"
 
-using namespace std;
-
 
 namespace cvflann
 {
@@ -232,7 +230,7 @@ public:
 			/* Randomize the order of vectors to allow for unbiased sampling. */
 			for (int j = (int)size_; j > 0; --j) {
 				int rnd = rand_int(j);
-				swap(vind[j-1], vind[rnd]);
+                std::swap(vind[j-1], vind[rnd]);
 			}
 			trees[i] = divideTree(0, (int)size_ - 1);
 		}
@@ -384,7 +382,7 @@ private:
 		/* Compute mean values.  Only the first SAMPLE_MEAN values need to be
 			sampled to get a good estimate.
 		*/
-		int end = min(first + SAMPLE_MEAN, last);
+		int end = std::min(first + SAMPLE_MEAN, last);
 		for (int j = first; j <= end; ++j) {
 			ELEM_TYPE* v = dataset[vind[j]];
             for (size_t k=0; k<veclen_; ++k) {
@@ -432,7 +430,7 @@ private:
 				/* Bubble end value down to right location by repeated swapping. */
 				int j = num - 1;
 				while (j > 0  &&  v[topind[j]] > v[topind[j-1]]) {
-					swap(topind[j], topind[j-1]);
+                    std::swap(topind[j], topind[j-1]);
 					--j;
 				}
 			}
@@ -459,7 +457,7 @@ private:
 				++i;
 			} else {
 				/* Move to end of list by swapping vind i and j. */
-				swap(vind[i], vind[j]);
+                std::swap(vind[i], vind[j]);
 				--j;
 			}
 		}
@@ -506,7 +504,7 @@ private:
 
 		int checkCount = 0;
 		Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
-		vector<bool> checked(size_,false);
+        std::vector<bool> checked(size_,false);
 
 		/* Search once through each tree down to root. */
 		for (i = 0; i < numTrees; ++i) {
@@ -530,7 +528,7 @@ private:
 	 *  at least "mindistsq".
 	*/
 	void searchLevel(ResultSet<ELEM_TYPE>& result, const ELEM_TYPE* vec, Tree node, float mindistsq, int& checkCount, int maxCheck,
-			Heap<BranchSt>* heap, vector<bool>& checked)
+			Heap<BranchSt>* heap, std::vector<bool>& checked)
 	{
 		if (result.worstDist()<mindistsq) {
 //			printf("Ignoring branch, too far\n");

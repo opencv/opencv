@@ -46,11 +46,9 @@
 #include "opencv2/flann/allocator.h"
 #include "opencv2/flann/random.h"
 
-using namespace std;
 
 namespace cvflann
 {
-
 
 struct CV_EXPORTS KMeansIndexParams : public IndexParams {
 	KMeansIndexParams(int branching_ = 32, int iterations_ = 11,
@@ -353,7 +351,7 @@ class KMeansIndex : public NNIndex<ELEM_TYPE>
                 // Compute the new potential
                 double newPot = 0;
                 for (int i = 0; i < n; i++)
-                    newPot += min( flann_dist(dataset[indices[i]], dataset[indices[i]] + dataset.cols, dataset[indices[index]]), closestDistSq[i] );
+                    newPot += std::min( flann_dist(dataset[indices[i]], dataset[indices[i]] + dataset.cols, dataset[indices[index]]), closestDistSq[i] );
 
                 // Store the best result
                 if (bestNewPot < 0 || newPot < bestNewPot) {
@@ -366,7 +364,7 @@ class KMeansIndex : public NNIndex<ELEM_TYPE>
             centers[centerCount] = indices[bestNewIndex];
             currentPot = bestNewPot;
             for (int i = 0; i < n; i++)
-                closestDistSq[i] = min( flann_dist(dataset[indices[i]], dataset[indices[i]]+dataset.cols, dataset[indices[bestNewIndex]]), closestDistSq[i] );
+                closestDistSq[i] = std::min( flann_dist(dataset[indices[i]], dataset[indices[i]]+dataset.cols, dataset[indices[bestNewIndex]]), closestDistSq[i] );
         }
 
         centers_length = centerCount;
@@ -402,7 +400,7 @@ public:
         branching = params.branching;
         max_iter = params.iterations;
         if (max_iter<0) {
-        	max_iter = numeric_limits<int>::max();
+        	max_iter = (std::numeric_limits<int>::max)();
         }
         flann_centers_init_t centersInit = params.centers_init;
 
@@ -711,7 +709,7 @@ private:
 
 		if (indices_length < branching) {
 			node->indices = indices;
-            sort(node->indices,node->indices+indices_length);
+            std::sort(node->indices,node->indices+indices_length);
             node->childs = NULL;
 			return;
 		}
@@ -722,7 +720,7 @@ private:
 
 		if (centers_length<branching) {
             node->indices = indices;
-            sort(node->indices,node->indices+indices_length);
+            std::sort(node->indices,node->indices+indices_length);
             node->childs = NULL;
 			return;
 		}
@@ -859,8 +857,8 @@ private:
 					double d = flann_dist(dataset[indices[i]],dataset[indices[i]]+veclen_,zero());
 					variance += d;
 					mean_radius += sqrt(d);
-					swap(indices[i],indices[end]);
-					swap(belongs_to[i],belongs_to[end]);
+                    std::swap(indices[i],indices[end]);
+                    std::swap(belongs_to[i],belongs_to[end]);
 					end++;
 				}
 			}
@@ -1072,7 +1070,7 @@ private:
 		float meanVariance = root->variance*root->size;
 
 		while (clusterCount<clusters_length) {
-			float minVariance = numeric_limits<float>::max();
+			float minVariance = (std::numeric_limits<float>::max)();
 			int splitIndex = -1;
 
 			for (int i=0;i<clusterCount;++i) {

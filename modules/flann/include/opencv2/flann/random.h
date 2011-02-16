@@ -35,7 +35,6 @@
 #include <cstdlib>
 #include <cassert>
 
-using namespace std;
 
 namespace cvflann
 {
@@ -109,7 +108,7 @@ public:
 // 			int rand = cast(int) (drand48() * n);
 			int rnd = rand_int(i);
 			assert(rnd >=0 && rnd < i);
-			swap(vals[i-1], vals[rnd]);
+            std::swap(vals[i-1], vals[rnd]);
 		}
 
 		counter = 0;

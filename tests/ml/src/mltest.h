@@ -55,7 +55,6 @@
 #include <string>
 #include <iostream>
 
-using namespace std;
 using namespace cv;
 
 #define CV_NBAYES   "nbayes"
@@ -83,13 +82,13 @@ protected:
     virtual int validate_test_results( int testCaseIdx ) = 0;
 
     int train( int testCaseIdx );
-    float get_error( int testCaseIdx, int type, vector<float> *resp = 0 );
+    float get_error( int testCaseIdx, int type, std::vector<float> *resp = 0 );
     void save( const char* filename );
     void load( const char* filename );
 
     CvMLData data;
     string modelName, validationFN;
-    vector<string> dataSetNames;
+    std::vector<string> dataSetNames;
     FileStorage validationFS;
 
     // MLL models
@@ -103,7 +102,7 @@ protected:
     CvRTrees* rtrees;
     CvERTrees* ertrees;
 
-    map<int, int> cls_map;
+    std::map<int, int> cls_map;
 
     int64 initSeed;
 };
@@ -125,7 +124,7 @@ protected:
     virtual int run_test_case( int testCaseIdx );
     virtual int validate_test_results( int testCaseIdx );
 
-    vector<float> test_resps1, test_resps2; // predicted responses for test data
+    std::vector<float> test_resps1, test_resps2; // predicted responses for test data
     char fname1[50], fname2[50];
 };
 

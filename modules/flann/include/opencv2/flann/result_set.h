@@ -37,8 +37,6 @@
 #include <vector>
 #include "opencv2/flann/dist.h"
 
-using namespace std;
-
 
 namespace cvflann
 {
@@ -181,8 +179,8 @@ public:
 		// bubble up
 		while (i>=1 && (dists[i]<dists[i-1] || (dists[i]==dists[i-1] && indices[i]<indices[i-1]) ) ) {
 //         while (i>=1 && (dists[i]<dists[i-1]) ) {
-			swap(indices[i],indices[i-1]);
-			swap(dists[i],dists[i-1]);
+            std::swap(indices[i],indices[i-1]);
+            std::swap(dists[i],dists[i-1]);
 			i--;
 		}
 
@@ -191,7 +189,7 @@ public:
 
 	float worstDist() const
 	{
-		return (count<capacity) ? numeric_limits<float>::max() : dists[count-1];
+		return (count<capacity) ? (std::numeric_limits<float>::max)() : dists[count-1];
 	}
 };
 
@@ -215,7 +213,7 @@ class RadiusResultSet : public ResultSet<ELEM_TYPE>
 		}
 	};
 
-	vector<Item> items;
+    std::vector<Item> items;
 	float radius;
 
 	bool sorted;
