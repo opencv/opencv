@@ -35,6 +35,10 @@ void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, float S=
     }
 
     rgb.create( gray.size(), CV_8UC3 );
+    rgb = Scalar::all(0);
+    if( maxDisp < 1 )
+        return;
+
     for( int y = 0; y < gray.rows; y++ )
     {
         for( int x = 0; x < gray.cols; x++ )
