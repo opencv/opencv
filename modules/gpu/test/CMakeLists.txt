@@ -5,7 +5,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/.."
                     "${CMAKE_CURRENT_BINARY_DIR}")						
 
-set(test_deps opencv_${name} opencv_ts opencv_highgui ${DEPS})
+set(test_deps opencv_${name} opencv_ts opencv_highgui opencv_calib3d ${DEPS})
 foreach(d ${test_deps})
     if(${d} MATCHES "opencv_")
         if(${d} MATCHES "opencv_lapack")

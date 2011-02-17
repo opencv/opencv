@@ -79,4 +79,4 @@ struct CV_GpuStereoBPTest : public cvtest::BaseTest
     }
 };
 
-TEST(StereoBP, StereoBP) { CV_GpuStereoBPTest test; test.safe_run(); }
+TEST(StereoBP, regression) { CV_GpuStereoBPTest test; test.safe_run(); }
