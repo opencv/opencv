@@ -19,19 +19,28 @@ endforeach()
 file(GLOB test_srcs "*.cpp")
 file(GLOB test_hdrs "*.h*")
 
-add_executable(${the_target} ${test_srcs} ${test_hdrs})
+if(HAVE_CUDA)
+        include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
 
-if(PCHSupport_FOUND)
-    set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test_precomp.hpp)
-    if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-        if(${CMAKE_GENERATOR} MATCHES "Visual*")
-            set(${the_target}_pch "test_precomp.cpp")
-        endif()            
-        add_native_precompiled_header(${the_target} ${pch_header})
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-        add_precompiled_header(${the_target} ${pch_header})
-    endif()
+        file(GLOB nvidia "nvidia/*.*")
+        SET(ncv_cpp ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core/NCV.cpp)
+        source_group("nvidia" FILES ${nvidia})
 endif()
+
+
+add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia} ${ncv_cpp})
+
+#if(PCHSupport_FOUND)
+#    set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test_precomp.hpp)
+#    if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
+#        if(${CMAKE_GENERATOR} MATCHES "Visual*")
+#            set(${the_target}_pch "test_precomp.cpp")
+#        endif()            
+#        add_native_precompiled_header(${the_target} ${pch_header})
+#    elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
+#        add_precompiled_header(${the_target} ${pch_header})
+#    endif()
+#endif()
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES

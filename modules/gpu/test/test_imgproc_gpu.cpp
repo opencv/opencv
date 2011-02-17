@@ -907,7 +907,6 @@ TEST(copyMakeBorder, accuracy) { CV_GpuNppImageCopyMakeBorderTest test; test.saf
 TEST(warpAffine, accuracy) { CV_GpuNppImageWarpAffineTest test; test.safe_run(); }
 TEST(warpPerspective, accuracy) { CV_GpuNppImageWarpPerspectiveTest test; test.safe_run(); }
 TEST(integral, accuracy) { CV_GpuNppImageIntegralTest test; test.safe_run(); }
-//TEST(canny, accuracy) { CV_GpuNppImageCannyTest test; test.safe_run(); }
 TEST(cvtColor, accuracy) { CV_GpuCvtColorTest test; test.safe_run(); }
 TEST(histograms, accuracy) { CV_GpuHistogramsTest test; test.safe_run(); }
 TEST(cornerHearris, accuracy) { CV_GpuCornerHarrisTest test; test.safe_run(); }
