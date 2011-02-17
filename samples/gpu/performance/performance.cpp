@@ -5,13 +5,27 @@
 using namespace std;
 using namespace cv;
 
+
+void TestSystem::setWorkingDir(const string& val)
+{
+    working_dir_ = val;
+}
+
+
+void TestSystem::setTestFilter(const string& val)
+{
+    test_filter_ = val;
+}
+
+
 void TestSystem::run()
 {
-    // Run initializers
+    // Run test initializers
     vector<Runnable*>::iterator it = inits_.begin();
     for (; it != inits_.end(); ++it)
     {
-        (*it)->run();
+        if ((*it)->name().find(test_filter_, 0) != string::npos)
+            (*it)->run();
     }
 
     printHeading();
@@ -20,21 +34,24 @@ void TestSystem::run()
     it = tests_.begin();
     for (; it != tests_.end(); ++it)
     {
-        cout << endl << (*it)->name() << ":\n";
         try
         {
-            (*it)->run();
-            flushSubtestData();
+            if ((*it)->name().find(test_filter_, 0) != string::npos)
+            {
+                cout << endl << (*it)->name() << ":\n";
+                (*it)->run();
+                finishCurrentSubtest();
+            }
         }
         catch (const Exception&)
         {
             // Message is printed via callback
-            resetSubtestData();
+            resetCurrentSubtest();
         }
         catch (const runtime_error& e)
         {
             printError(e.what());
-            resetSubtestData();
+            resetCurrentSubtest();
         }
     }
 
@@ -42,27 +59,23 @@ void TestSystem::run()
 }
 
 
-void TestSystem::setWorkingDir(const string& val)
+void TestSystem::finishCurrentSubtest()
 {
-    working_dir_ = val;
-}
-
-
-void TestSystem::flushSubtestData()
-{
-    if (!can_flush_)
+    if (cur_subtest_is_empty_)
+        // There is no need to print subtest statistics
         return;
 
     int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
     int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
 
-    double speedup = static_cast<double>(cpu_elapsed_) / std::max((int64)1, gpu_elapsed_);
+    double speedup = static_cast<double>(cpu_elapsed_) /
+                     std::max((int64)1, gpu_elapsed_);
     speedup_total_ += speedup;
 
-    printItem(cpu_time, gpu_time, speedup);
+    printMetrics(cpu_time, gpu_time, speedup);
     
     num_subtests_called_++;
-    resetSubtestData();
+    resetCurrentSubtest();
 }
 
 
@@ -86,7 +99,7 @@ void TestSystem::printSummary()
 }
 
 
-void TestSystem::printItem(double cpu_time, double gpu_time, double speedup)
+void TestSystem::printMetrics(double cpu_time, double gpu_time, double speedup)
 {
     cout << TAB << setiosflags(ios_base::left);
     stringstream stream;
@@ -102,14 +115,14 @@ void TestSystem::printItem(double cpu_time, double gpu_time, double speedup)
     stream << "x" << setprecision(3) << speedup;
     cout << setw(14) << stream.str();
 
-    cout << description_.str();
+    cout << cur_subtest_description_.str();
     cout << resetiosflags(ios_base::left) << endl;
 }
 
 
 void TestSystem::printError(const std::string& msg)
 {
-    cout << TAB << "[error: " << msg << "] " << description_.str() << endl;
+    cout << TAB << "[error: " << msg << "] " << cur_subtest_description_.str() << endl;
 }
 
 
@@ -138,10 +151,12 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
 
 int main(int argc, char** argv)
 {
-    if (argc < 2)
-        cout << "Usage: performance_gpu <working_dir_with_slash>\n\n";
-    else
-        TestSystem::instance().setWorkingDir(argv[1]);
+    if (argc < 3)
+        cout << "Usage: performance_gpu <test_filter> <working_dir_with_slash>\n\n";
+    if (argc >= 2)
+        TestSystem::instance().setTestFilter(argv[1]);
+    if (argc >= 3)
+        TestSystem::instance().setWorkingDir(argv[2]);
 
     redirectError(cvErrorCallback);
     TestSystem::instance().run();
