@@ -900,7 +900,7 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
     }
     else
     {
-        vector<int> tabvec((left + right)*esz);
+        vector<int> tabvec((left + right)*esz + 1);
         int* ltab = &tabvec[0];
         int* rtab = &tabvec[left*esz];
         for( i = 0; i < left; i++ )
