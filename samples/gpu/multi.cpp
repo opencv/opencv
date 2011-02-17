@@ -61,7 +61,7 @@ int main()
     multi_gpu_mgr.init();
 
     // Execute calculation in two threads using two GPUs
-    int devices[] = {0, 2};
+    int devices[] = {0, 1};
     parallel_do(devices, devices + 2, Worker());
 
     return 0;
