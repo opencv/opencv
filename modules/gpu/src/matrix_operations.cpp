@@ -65,7 +65,7 @@ namespace cv
         GpuMat& GpuMat::setTo(const Scalar& /*s*/, const GpuMat& /*mask*/) { throw_nogpu(); return *this; }
         GpuMat GpuMat::reshape(int /*new_cn*/, int /*new_rows*/) const { throw_nogpu(); return GpuMat(); }
         void GpuMat::create(int /*_rows*/, int /*_cols*/, int /*_type*/) { throw_nogpu(); }
-        void GpuMat::release() { throw_nogpu(); }
+        void GpuMat::release() {}
 
         void createContinuous(int /*rows*/, int /*cols*/, int /*type*/, GpuMat& /*m*/) { throw_nogpu(); }
 

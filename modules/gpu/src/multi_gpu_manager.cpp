@@ -48,7 +48,7 @@ namespace cv { namespace gpu {
 
 class MultiGpuManager::Impl {};
 MultiGpuManager::MultiGpuManager() { throw_nogpu(); }
-MultiGpuManager::~MultiGpuManager() { throw_nogpu(); }
+MultiGpuManager::~MultiGpuManager() {}
 void MultiGpuManager::init() { throw_nogpu(); }
 void MultiGpuManager::gpuOn(int) { throw_nogpu(); }
 void MultiGpuManager::gpuOff() { throw_nogpu(); }
