@@ -43,7 +43,7 @@
 
 struct CV_GpuStereoBPTest : public cvtest::BaseTest
 {
-    void run(int )
+    void run(int)
     {
         cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
         cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-R.png");
@@ -55,34 +55,25 @@ struct CV_GpuStereoBPTest : public cvtest::BaseTest
             return;
         }
 
-        try
+        {cv::Mat temp; cv::cvtColor(img_l, temp, CV_BGR2BGRA); cv::swap(temp, img_l);}
+        {cv::Mat temp; cv::cvtColor(img_r, temp, CV_BGR2BGRA); cv::swap(temp, img_r);}
+
+        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+        cv::gpu::GpuMat disp;
+
+        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+
+        //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
+
+        disp.convertTo(disp, img_template.type());
+
+        double norm = cv::norm(disp, img_template, cv::NORM_INF);
+	    if (norm >= 0.5)
         {
-            {cv::Mat temp; cv::cvtColor(img_l, temp, CV_BGR2BGRA); cv::swap(temp, img_l);}
-            {cv::Mat temp; cv::cvtColor(img_r, temp, CV_BGR2BGRA); cv::swap(temp, img_r);}
-
-            cv::gpu::GpuMat disp;
-            cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
-
-            bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
-
-            //cv::imwrite(std::string(ts->get_data_path()) + "stereobp/aloe-disp.png", disp);
-
-            disp.convertTo(disp, img_template.type());
-
-	    double norm = cv::norm(disp, img_template, cv::NORM_INF);
-		if (norm >= 0.5)
-	    {
-		ts->printf(cvtest::TS::LOG, "\nStereoBP norm = %f\n", norm);
-		ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-		return;
-	    }
-	}
-	catch(const cv::Exception& e)
-	{
-	    if (!check_and_treat_gpu_exception(e, ts))
-		throw;
-	    return;
-	}
+	        ts->printf(cvtest::TS::LOG, "\nStereoBP norm = %f\n", norm);
+	        ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
+	        return;
+        }
 
         ts->set_failed_test_info(cvtest::TS::OK);
     }
