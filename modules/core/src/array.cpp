@@ -294,7 +294,8 @@ cvCloneMatND( const CvMatND* src )
     if( !CV_IS_MATND_HDR( src ))
         CV_Error( CV_StsBadArg, "Bad CvMatND header" );
 
-    int* sizes = (int*)cvStackAlloc( src->dims*sizeof(sizes[0]) );
+    CV_Assert( src->dims <= CV_MAX_DIM );
+    int sizes[CV_MAX_DIM];
 
     for( int i = 0; i < src->dims; i++ )
         sizes[i] = src->dim[i].size;
@@ -1717,7 +1718,8 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
         else
         {
             int i, n = m->dims;
-            int* _idx = (int*)cvStackAlloc(n*sizeof(_idx[0]));
+            CV_DbgAssert( n <= CV_MAX_DIM_HEAP );
+            int _idx[CV_MAX_DIM_HEAP];
             
             for( i = n - 1; i >= 0; i-- )
             {

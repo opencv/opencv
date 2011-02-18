@@ -903,8 +903,8 @@ CvDTreeSplit* CvForestERTree::find_split_ord_class( CvDTreeNode* node, int vi, f
         // calculate Gini index
         if ( !priors )
         {
-            int* lc = (int*)cvStackAlloc(m*sizeof(lc[0]));
-            int* rc = (int*)cvStackAlloc(m*sizeof(rc[0]));
+            cv::AutoBuffer<int> lrc(m*2);
+            int *lc = lrc, *rc = lc + m;
             int L = 0, R = 0;
     
             // init arrays of class instance counters on both sides of the split
@@ -939,8 +939,8 @@ CvDTreeSplit* CvForestERTree::find_split_ord_class( CvDTreeNode* node, int vi, f
         }
         else
         {
-            double* lc = (double*)cvStackAlloc(m*sizeof(lc[0]));
-            double* rc = (double*)cvStackAlloc(m*sizeof(rc[0]));
+            cv::AutoBuffer<double> lrc(m*2);
+            double *lc = lrc, *rc = lc + m;
             double L = 0, R = 0;
     
             // init arrays of class instance counters on both sides of the split
@@ -1013,7 +1013,7 @@ CvDTreeSplit* CvForestERTree::find_split_cat_class( CvDTreeNode* node, int vi, f
         const double* priors = data->have_priors ? data->priors_mult->data.db : 0;       
 
         // create random class mask
-        int *valid_cidx = (int*)cvStackAlloc(vm*sizeof(valid_cidx[0]));
+        cv::AutoBuffer<int> valid_cidx(vm);
         for (int i = 0; i < vm; i++)
         {
             valid_cidx[i] = -1;
@@ -1059,8 +1059,8 @@ CvDTreeSplit* CvForestERTree::find_split_cat_class( CvDTreeNode* node, int vi, f
             double lbest_val = 0, rbest_val = 0;
             if( !priors )
             {
-                int* lc = (int*)cvStackAlloc(cm*sizeof(lc[0]));
-                int* rc = (int*)cvStackAlloc(cm*sizeof(rc[0]));
+                cv::AutoBuffer<int> lrc(cm*2);
+                int *lc = lrc, *rc = lc + cm;
                 int L = 0, R = 0;
                 // init arrays of class instance counters on both sides of the split
                 for(int i = 0; i < cm; i++ )
@@ -1096,8 +1096,8 @@ CvDTreeSplit* CvForestERTree::find_split_cat_class( CvDTreeNode* node, int vi, f
             }
             else
             {
-                double* lc = (double*)cvStackAlloc(cm*sizeof(lc[0]));
-                double* rc = (double*)cvStackAlloc(cm*sizeof(rc[0]));
+                cv::AutoBuffer<int> lrc(cm*2);
+                int *lc = lrc, *rc = lc + cm;
                 double L = 0, R = 0;
                 // init arrays of class instance counters on both sides of the split
                 for(int i = 0; i < cm; i++ )
@@ -1333,7 +1333,7 @@ void CvForestERTree::split_node_data( CvDTreeNode* node )
     CvDTreeNode *left = 0, *right = 0;
     int new_buf_idx = data->get_child_buf_idx( node );
     CvMat* buf = data->buf;
-    int* temp_buf = (int*)cvStackAlloc(n*sizeof(temp_buf[0]));
+    cv::AutoBuffer<int> temp_buf(n);
 
     complete_node_dir(node);
 

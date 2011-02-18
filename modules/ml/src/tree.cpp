@@ -2036,7 +2036,7 @@ void CvDTree::cluster_categories( const int* vectors, int n, int m,
     // TODO: consider adding priors (class weights) and sample weights to the clustering algorithm
     int iters = 0, max_iters = 100;
     int i, j, idx;
-    double* buf = (double*)cvStackAlloc( (n + k)*sizeof(buf[0]) );
+    cv::AutoBuffer<double> buf(n + k);
     double *v_weights = buf, *c_weights = buf + n;
     bool modified = true;
     RNG* r = data->rng;
@@ -3558,40 +3558,30 @@ void CvDTree::free_tree()
 CvDTreeNode* CvDTree::predict( const CvMat* _sample,
     const CvMat* _missing, bool preprocessed_input ) const
 {
-    CvDTreeNode* result = 0;
-    int* catbuf = 0;
+    cv::AutoBuffer<int> catbuf;
 
-    CV_FUNCNAME( "CvDTree::predict" );
-
-    __BEGIN__;
-
-    int i, step, mstep = 0;
-    const float* sample;
+    int i, mstep = 0;
     const uchar* m = 0;
     CvDTreeNode* node = root;
-    const int* vtype;
-    const int* vidx;
-    const int* cmap;
-    const int* cofs;
 
     if( !node )
-        CV_ERROR( CV_StsError, "The tree has not been trained yet" );
+        CV_Error( CV_StsError, "The tree has not been trained yet" );
 
     if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
         (_sample->cols != 1 && _sample->rows != 1) ||
         (_sample->cols + _sample->rows - 1 != data->var_all && !preprocessed_input) ||
         (_sample->cols + _sample->rows - 1 != data->var_count && preprocessed_input) )
-            CV_ERROR( CV_StsBadArg,
+            CV_Error( CV_StsBadArg,
         "the input sample must be 1d floating-point vector with the same "
         "number of elements as the total number of variables used for training" );
 
-    sample = _sample->data.fl;
-    step = CV_IS_MAT_CONT(_sample->type) ? 1 : _sample->step/sizeof(sample[0]);
+    const float* sample = _sample->data.fl;
+    int step = CV_IS_MAT_CONT(_sample->type) ? 1 : _sample->step/sizeof(sample[0]);
 
     if( data->cat_count && !preprocessed_input ) // cache for categorical variables
     {
         int n = data->cat_count->cols;
-        catbuf = (int*)cvStackAlloc(n*sizeof(catbuf[0]));
+        catbuf.allocate(n);
         for( i = 0; i < n; i++ )
             catbuf[i] = -1;
     }
@@ -3599,17 +3589,17 @@ CvDTreeNode* CvDTree::predict( const CvMat* _sample,
     if( _missing )
     {
         if( !CV_IS_MAT(_missing) || !CV_IS_MASK_ARR(_missing) ||
-        !CV_ARE_SIZES_EQ(_missing, _sample) )
-            CV_ERROR( CV_StsBadArg,
+            !CV_ARE_SIZES_EQ(_missing, _sample) )
+            CV_Error( CV_StsBadArg,
         "the missing data mask must be 8-bit vector of the same size as input sample" );
         m = _missing->data.ptr;
         mstep = CV_IS_MAT_CONT(_missing->type) ? 1 : _missing->step/sizeof(m[0]);
     }
 
-    vtype = data->var_type->data.i;
-    vidx = data->var_idx && !preprocessed_input ? data->var_idx->data.i : 0;
-    cmap = data->cat_map ? data->cat_map->data.i : 0;
-    cofs = data->cat_ofs ? data->cat_ofs->data.i : 0;
+    const int* vtype = data->var_type->data.i;
+    const int* vidx = data->var_idx && !preprocessed_input ? data->var_idx->data.i : 0;
+    const int* cmap = data->cat_map ? data->cat_map->data.i : 0;
+    const int* cofs = data->cat_ofs ? data->cat_ofs->data.i : 0;
 
     while( node->Tn > pruned_tree_idx && node->left )
     {
@@ -3640,7 +3630,7 @@ CvDTreeNode* CvDTree::predict( const CvMat* _sample,
                         
                         int ival = cvRound(val);
                         if( ival != val )
-                            CV_ERROR( CV_StsBadArg,
+                            CV_Error( CV_StsBadArg,
                             "one of input categorical variable is not an integer" );
                         
                         int sh = 0;
@@ -3678,11 +3668,7 @@ CvDTreeNode* CvDTree::predict( const CvMat* _sample,
         node = dir < 0 ? node->left : node->right;
     }
 
-    result = node;
-
-    __END__;
-
-    return result;
+    return node;
 }
 
 

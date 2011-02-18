@@ -306,43 +306,37 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
     const float** _neighbors, CvMat* _neighbor_responses, CvMat* _dist ) const
 {
     float result = 0.f;
-    bool local_alloc = false;
-    float* buf = 0;
     const int max_blk_count = 128, max_buf_sz = 1 << 12;
-
-    CV_FUNCNAME( "CvKNearest::find_nearest" );
-
-    __BEGIN__;
 
     int i, count, count_scale, blk_count0, blk_count = 0, buf_sz, k1;
 
     if( !samples )
-        CV_ERROR( CV_StsError, "The search tree must be constructed first using train method" );
+        CV_Error( CV_StsError, "The search tree must be constructed first using train method" );
 
     if( !CV_IS_MAT(_samples) ||
         CV_MAT_TYPE(_samples->type) != CV_32FC1 ||
         _samples->cols != var_count )
-        CV_ERROR( CV_StsBadArg, "Input samples must be floating-point matrix (<num_samples>x<var_count>)" );
+        CV_Error( CV_StsBadArg, "Input samples must be floating-point matrix (<num_samples>x<var_count>)" );
 
     if( _results && (!CV_IS_MAT(_results) ||
         (_results->cols != 1 && _results->rows != 1) ||
         _results->cols + _results->rows - 1 != _samples->rows) )
-        CV_ERROR( CV_StsBadArg,
+        CV_Error( CV_StsBadArg,
         "The results must be 1d vector containing as much elements as the number of samples" );
 
     if( _results && CV_MAT_TYPE(_results->type) != CV_32FC1 &&
         (CV_MAT_TYPE(_results->type) != CV_32SC1 || regression))
-        CV_ERROR( CV_StsUnsupportedFormat,
+        CV_Error( CV_StsUnsupportedFormat,
         "The results must be floating-point or integer (in case of classification) vector" );
 
     if( k < 1 || k > max_k )
-        CV_ERROR( CV_StsOutOfRange, "k must be within 1..max_k range" );
+        CV_Error( CV_StsOutOfRange, "k must be within 1..max_k range" );
 
     if( _neighbor_responses )
     {
         if( !CV_IS_MAT(_neighbor_responses) || CV_MAT_TYPE(_neighbor_responses->type) != CV_32FC1 ||
             _neighbor_responses->rows != _samples->rows || _neighbor_responses->cols != k )
-            CV_ERROR( CV_StsBadArg,
+            CV_Error( CV_StsBadArg,
             "The neighbor responses (if present) must be floating-point matrix of <num_samples> x <k> size" );
     }
 
@@ -350,34 +344,28 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
     {
         if( !CV_IS_MAT(_dist) || CV_MAT_TYPE(_dist->type) != CV_32FC1 ||
             _dist->rows != _samples->rows || _dist->cols != k )
-            CV_ERROR( CV_StsBadArg,
+            CV_Error( CV_StsBadArg,
             "The distances from the neighbors (if present) must be floating-point matrix of <num_samples> x <k> size" );
     }
 
     count = _samples->rows;
-    count_scale = k*2*sizeof(float);
+    count_scale = k*2;
     blk_count0 = MIN( count, max_blk_count );
     buf_sz = MIN( blk_count0 * count_scale, max_buf_sz );
     blk_count0 = MAX( buf_sz/count_scale, 1 );
     blk_count0 += blk_count0 % 2;
     blk_count0 = MIN( blk_count0, count );
-    buf_sz = blk_count0 * count_scale + k*sizeof(float);
+    buf_sz = blk_count0 * count_scale + k;
     k1 = get_sample_count();
     k1 = MIN( k1, k );
 
-    if( buf_sz <= CV_MAX_LOCAL_SIZE )
-    {
-        buf = (float*)cvStackAlloc( buf_sz );
-        local_alloc = true;
-    }
-    else
-        CV_CALL( buf = (float*)cvAlloc( buf_sz ));
+    cv::AutoBuffer<float> buf(buf_sz);
 
     for( i = 0; i < count; i += blk_count )
     {
         blk_count = MIN( count - i, blk_count0 );
-        float* neighbor_responses = buf;
-        float* dist = buf + blk_count*k;
+        float* neighbor_responses = &buf[0];
+        float* dist = neighbor_responses + blk_count*k;
         Cv32suf* sort_buf = (Cv32suf*)(dist + blk_count*k);
 
         find_neighbors_direct( _samples, k, i, i + blk_count,
@@ -388,11 +376,6 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
         if( i == 0 )
             result = r;
     }
-
-    __END__;
-
-    if( !local_alloc )
-        cvFree( &buf );
 
     return result;
 }

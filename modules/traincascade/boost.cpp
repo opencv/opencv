@@ -1305,12 +1305,12 @@ bool CvCascadeBoost::isErrDesired()
 {
     int sCount = data->sample_count,
         numPos = 0, numNeg = 0, numFalse = 0, numPosTrue = 0;
-    float* eval = (float*) cvStackAlloc( sizeof(eval[0]) * sCount );
+    vector<float> eval(sCount);
     
     for( int i = 0; i < sCount; i++ )
         if( ((CvCascadeBoostTrainData*)data)->featureEvaluator->getCls( i ) == 1.0F )
             eval[numPos++] = predict( i, true );
-    icvSortFlt( eval, numPos, 0 );
+    icvSortFlt( &eval[0], numPos, 0 );
     int thresholdIdx = (int)((1.0F - minHitRate) * numPos);
     threshold = eval[ thresholdIdx ];
     numPosTrue = numPos - thresholdIdx;

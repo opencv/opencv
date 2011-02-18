@@ -265,30 +265,25 @@ void CvANN_MLP::create( const CvMat* _layer_sizes, int _activ_func,
 
 float CvANN_MLP::predict( const CvMat* _inputs, CvMat* _outputs ) const
 {
-    CV_FUNCNAME( "CvANN_MLP::predict" );
-
-    __BEGIN__;
-
-    double* buf;
     int i, j, n, dn = 0, l_count, dn0, buf_sz, min_buf_sz;
 
     if( !layer_sizes )
-        CV_ERROR( CV_StsError, "The network has not been initialized" );
+        CV_Error( CV_StsError, "The network has not been initialized" );
 
     if( !CV_IS_MAT(_inputs) || !CV_IS_MAT(_outputs) ||
         !CV_ARE_TYPES_EQ(_inputs,_outputs) ||
         (CV_MAT_TYPE(_inputs->type) != CV_32FC1 &&
         CV_MAT_TYPE(_inputs->type) != CV_64FC1) ||
         _inputs->rows != _outputs->rows )
-        CV_ERROR( CV_StsBadArg, "Both input and output must be floating-point matrices "
+        CV_Error( CV_StsBadArg, "Both input and output must be floating-point matrices "
                                 "of the same type and have the same number of rows" );
 
     if( _inputs->cols != layer_sizes->data.i[0] )
-        CV_ERROR( CV_StsBadSize, "input matrix must have the same number of columns as "
+        CV_Error( CV_StsBadSize, "input matrix must have the same number of columns as "
                                  "the number of neurons in the input layer" );
 
     if( _outputs->cols != layer_sizes->data.i[layer_sizes->cols - 1] )
-        CV_ERROR( CV_StsBadSize, "output matrix must have the same number of columns as "
+        CV_Error( CV_StsBadSize, "output matrix must have the same number of columns as "
                                  "the number of neurons in the output layer" );
     n = dn0 = _inputs->rows;
     min_buf_sz = 2*max_count;
@@ -301,7 +296,7 @@ float CvANN_MLP::predict( const CvMat* _inputs, CvMat* _outputs ) const
         buf_sz = dn0*min_buf_sz;
     }
 
-    buf = (double*)cvStackAlloc( buf_sz*sizeof(buf[0]) );
+    cv::AutoBuffer<double> buf(buf_sz);
     l_count = layer_sizes->cols;
 
     for( i = 0; i < n; i += dn )
@@ -310,7 +305,7 @@ float CvANN_MLP::predict( const CvMat* _inputs, CvMat* _outputs ) const
         dn = MIN( dn0, n - i );
 
         cvGetRows( _inputs, layer_in, i, i + dn );
-        cvInitMatHeader( layer_out, dn, layer_in->cols, CV_64F, buf );
+        cvInitMatHeader( layer_out, dn, layer_in->cols, CV_64F, &buf[0] );
 
         scale_input( layer_in, layer_out );
         CV_SWAP( layer_in, layer_out, temp );
@@ -331,8 +326,6 @@ float CvANN_MLP::predict( const CvMat* _inputs, CvMat* _outputs ) const
         cvGetRows( _outputs, layer_out, i, i + dn );
         scale_output( layer_in, layer_out );
     }
-
-    __END__;
 
     return 0.f;
 }

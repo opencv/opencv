@@ -274,7 +274,8 @@ bool CvModelEstimator2::runLMeDS( const CvMat* m1, const CvMat* m2, CvMat* model
 bool CvModelEstimator2::getSubset( const CvMat* m1, const CvMat* m2,
                                    CvMat* ms1, CvMat* ms2, int maxAttempts )
 {
-    int* idx = (int*)cvStackAlloc( modelPoints*sizeof(idx[0]) );
+    cv::AutoBuffer<int> _idx(modelPoints);
+    int* idx = _idx;
     int i = 0, j, k, idx_i, iters = 0;
     int type = CV_MAT_TYPE(m1->type), elemSize = CV_ELEM_SIZE(type);
     const int *m1ptr = m1->data.i, *m2ptr = m2->data.i;

@@ -266,15 +266,19 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #ifdef __GNUC__
     #undef alloca
     #define alloca __builtin_alloca
+    #define CV_HAVE_ALLOCA 1
 #elif defined WIN32 || defined _WIN32 || \
       defined WINCE || defined _MSC_VER || defined __BORLANDC__
     #include <malloc.h>
+    #define CV_HAVE_ALLOCA 1
 #elif defined HAVE_ALLOCA_H
     #include <alloca.h>
+    #define CV_HAVE_ALLOCA 1
 #elif defined HAVE_ALLOCA
     #include <stdlib.h>
+    #define CV_HAVE_ALLOCA 1
 #else
-    #error "No alloca!"
+    #undef CV_HAVE_ALLOCA
 #endif
 
 #ifdef __GNUC__
@@ -285,8 +289,10 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #define CV_DECL_ALIGNED(x)
 #endif
 
+#if CV_HAVE_ALLOCA
 /* ! DO NOT make it an inline function */
 #define cvStackAlloc(size) cvAlignPtr( alloca((size) + CV_MALLOC_ALIGN), CV_MALLOC_ALIGN )
+#endif
 
 #ifndef CV_IMPL
 #define CV_IMPL CV_EXTERN_C

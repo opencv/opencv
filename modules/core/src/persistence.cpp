@@ -3620,7 +3620,7 @@ icvReadSparseMat( CvFileStorage* fs, CvFileNode* node )
     CvSeqReader reader;
     CvSeq* elements;
     int* idx;
-    int* sizes = 0, dims, elem_type, cn;
+    int sizes[CV_MAX_DIM_HEAP], dims, elem_type, cn;
     int i;
 
     sizes_node = cvGetFileNodeByName( fs, node, "sizes" );
@@ -3635,7 +3635,6 @@ icvReadSparseMat( CvFileStorage* fs, CvFileNode* node )
     if( dims <= 0 || dims > CV_MAX_DIM_HEAP )
         CV_Error( CV_StsParseError, "Could not determine sparse matrix dimensionality" );
 
-    sizes = (int*)cvStackAlloc( dims*sizeof(sizes[0]));
     cvReadRawData( fs, sizes_node, sizes, "i" );
     elem_type = icvDecodeSimpleFormat( dt );
 

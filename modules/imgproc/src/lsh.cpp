@@ -278,9 +278,9 @@ public:
     }
   }
   void query(const scalar_type* q, int k0, int emax, double* dist, int* results) {
-    int* tmp = (int*)cvStackAlloc(sizeof(int) * emax);
+    cv::AutoBuffer<int> tmp(emax);
     typedef std::pair<int, accum_type> dr_type; // * swap int and accum_type here, for naming consistency
-    dr_type* dr = (dr_type*)cvStackAlloc(sizeof(dr_type) * k0);
+    cv::AutoBuffer<dr_type> dr(k0);
     int k1 = 0;
 
     // * handle k0 >= emax, in which case don't track max distance
@@ -294,11 +294,11 @@ public:
 	accum_type pd = (*g[l]).distance(p, q);
 	if (k1 < k0) {
 	  dr[k1++] = std::make_pair(i, pd);
-	  std::push_heap(dr, dr + k1, comp_dist);
+	  std::push_heap(&dr[0], &dr[k1], comp_dist);
 	} else if (pd < dr[0].second) {
-	  std::pop_heap(dr, dr + k0, comp_dist);
+	  std::pop_heap(&dr[0], &dr[k0], comp_dist);
 	  dr[k0 - 1] = std::make_pair(i, pd);
-	  std::push_heap(dr, dr + k0, comp_dist);
+	  std::push_heap(&dr[0], &dr[k0], comp_dist);
 	}
       }
     }

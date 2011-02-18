@@ -1592,32 +1592,22 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
                   CvMat* weak_responses, CvSlice slice,
                   bool raw_mode, bool return_sum ) const
 {
-    float* buf = 0;
-    bool allocated = false;
     float value = -FLT_MAX;
 
-    CV_FUNCNAME( "CvBoost::predict" );
-
-    __BEGIN__;
-
-    int i, weak_count, var_count;
     CvMat sample, missing;
     CvSeqReader reader;
     double sum = 0;
     int wstep = 0;
-    const int* vtype;
-    const int* cmap;
-    const int* cofs;
     const float* sample_data;
 
     if( !weak )
-        CV_ERROR( CV_StsError, "The boosted tree ensemble has not been trained yet" );
+        CV_Error( CV_StsError, "The boosted tree ensemble has not been trained yet" );
 
     if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
         (_sample->cols != 1 && _sample->rows != 1) ||
         (_sample->cols + _sample->rows - 1 != data->var_all && !raw_mode) ||
         (active_vars && _sample->cols + _sample->rows - 1 != active_vars->cols && raw_mode) )
-            CV_ERROR( CV_StsBadArg,
+            CV_Error( CV_StsBadArg,
         "the input sample must be 1d floating-point vector with the same "
         "number of elements as the total number of variables or "
         "as the number of variables used for training" );
@@ -1626,11 +1616,11 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     {
         if( !CV_IS_MAT(_missing) || !CV_IS_MASK_ARR(_missing) ||
             !CV_ARE_SIZES_EQ(_missing, _sample) )
-            CV_ERROR( CV_StsBadArg,
+            CV_Error( CV_StsBadArg,
             "the missing data mask must be 8-bit vector of the same size as input sample" );
     }
 
-    weak_count = cvSliceLength( slice, weak );
+    int i, weak_count = cvSliceLength( slice, weak );
     if( weak_count >= weak->total )
     {
         weak_count = weak->total;
@@ -1643,21 +1633,20 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
             CV_MAT_TYPE(weak_responses->type) != CV_32FC1 ||
             (weak_responses->cols != 1 && weak_responses->rows != 1) ||
             weak_responses->cols + weak_responses->rows - 1 != weak_count )
-            CV_ERROR( CV_StsBadArg,
+            CV_Error( CV_StsBadArg,
             "The output matrix of weak classifier responses must be valid "
             "floating-point vector of the same number of components as the length of input slice" );
         wstep = CV_IS_MAT_CONT(weak_responses->type) ? 1 : weak_responses->step/sizeof(float);
     }
     
-    var_count = active_vars->cols;
-    vtype = data->var_type->data.i;
-    cmap = data->cat_map->data.i;
-    cofs = data->cat_ofs->data.i;
+    int var_count = active_vars->cols;
+    const int* vtype = data->var_type->data.i;
+    const int* cmap = data->cat_map->data.i;
+    const int* cofs = data->cat_ofs->data.i;
 
     // if need, preprocess the input vector
     if( !raw_mode )
     {
-        int bufsize;
         int step, mstep = 0;
         const float* src_sample;
         const uchar* src_mask = 0;
@@ -1667,16 +1656,9 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
         const int* vidx_abs = active_vars_abs->data.i;
         bool have_mask = _missing != 0;
 
-        bufsize = var_count*(sizeof(float) + sizeof(uchar));
-        if( bufsize <= CV_MAX_LOCAL_SIZE )
-            buf = (float*)cvStackAlloc( bufsize );
-        else
-        {
-            CV_CALL( buf = (float*)cvAlloc( bufsize ));
-            allocated = true;
-        }
-        dst_sample = buf;
-        dst_mask = (uchar*)(buf + var_count);
+        cv::AutoBuffer<float> buf(var_count + (var_count+3)/4);
+        dst_sample = &buf[0];
+        dst_mask = (uchar*)&buf[var_count];
 
         src_sample = _sample->data.fl;
         step = CV_IS_MAT_CONT(_sample->type) ? 1 : _sample->step/sizeof(src_sample[0]);
@@ -1700,7 +1682,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
                     c = a;
                 int ival = cvRound(val);
                 if ( (ival != val) && (!m) )
-                    CV_ERROR( CV_StsBadArg,
+                    CV_Error( CV_StsBadArg,
                         "one of input categorical variable is not an integer" );
 
                 while( a < b )
@@ -1741,7 +1723,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     else
     {
         if( !CV_IS_MAT_CONT(_sample->type & (_missing ? _missing->type : -1)) )
-            CV_ERROR( CV_StsBadArg, "In raw mode the input vectors must be continuous" );
+            CV_Error( CV_StsBadArg, "In raw mode the input vectors must be continuous" );
     }
 
     cvStartReadSeq( weak, &reader );
@@ -1829,11 +1811,6 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
         else
             value = (float)cmap[cofs[vtype[data->var_count]] + cls_idx];
     }
-
-    __END__;
-
-    if( allocated )
-        cvFree( &buf );
 
     return value;
 }

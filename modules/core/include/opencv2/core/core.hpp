@@ -4040,6 +4040,53 @@ public:
     int index;
 };
 
+    
+class CV_EXPORTS AlgorithmImpl;
+
+/*!
+  Base class for high-level OpenCV algorithms
+*/    
+class CV_EXPORTS Algorithm
+{
+public:
+    virtual ~Algorithm();
+    virtual string name() const;
+    
+    template<typename _Tp> _Tp get(int paramId) const;
+    template<typename _Tp> bool set(int paramId, const _Tp& value);
+    string paramName(int paramId) const;
+    string paramHelp(int paramId) const;
+    int paramType(int paramId) const;
+    int findParam(const string& name) const;
+    template<typename _Tp> _Tp paramDefaultValue(int paramId) const;
+    template<typename _Tp> bool paramRange(int paramId, _Tp& minVal, _Tp& maxVal) const;
+    
+    virtual void getParams(vector<int>& ids) const;
+    virtual void write(vector<uchar>& buf) const;
+    virtual bool read(const vector<uchar>& buf);
+    
+    typedef Algorithm* (*Constructor)(void);
+    static void add(const string& name, Constructor create);
+    static void getList(vector<string>& algorithms);
+    static Ptr<Algorithm> create(const string& name);
+    
+protected:
+    template<typename _Tp> void addParam(int propId, _Tp& value, bool readOnly, const string& name,
+                                         const string& help=string(), const _Tp& defaultValue=_Tp(),
+                                         _Tp (Algorithm::*getter)()=0, bool (Algorithm::*setter)(const _Tp&)=0);
+    template<typename _Tp> void setParamRange(int propId, const _Tp& minVal, const _Tp& maxVal);
+    
+    bool set_(int paramId, int argType, const void* value);
+    void get_(int paramId, int argType, void* value);
+    void paramDefaultValue_(int paramId, int argType, void* value);
+    void paramRange_(int paramId, int argType, void* minval, void* maxval);
+    void addParam_(int propId, int argType, void* value, bool readOnly, const string& name,
+                  const string& help, const void* defaultValue, void* getter, void* setter);
+    void setParamRange_(int propId, int argType, const void* minVal, const void* maxVal);
+    
+    Ptr<AlgorithmImpl> impl;
+};
+    
 }
 
 #endif // __cplusplus

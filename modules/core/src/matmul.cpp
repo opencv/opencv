@@ -132,6 +132,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
 {
     int i, j, k, n = a_size.width, m = d_size.width, drows = d_size.height;
     const T *_a_data = a_data, *_b_data = b_data, *_c_data = c_data;
+    cv::AutoBuffer<T> _a_buf;
     T* a_buf = 0;
     size_t a_step0, a_step1, c_step0, c_step1, t_step;
 
@@ -154,16 +155,21 @@ GEMMSingleMul( const T* a_data, size_t a_step,
         CV_SWAP( a_step0, a_step1, t_step );
         n = a_size.height;
         if( a_step > 1 && n > 1 )
-            a_buf = (T*)cvStackAlloc(n*sizeof(a_data[0]));
+        {
+            _a_buf.allocate(n);
+            a_buf = _a_buf;
+        }
     }
 
     if( n == 1 ) /* external product */
     {
+        cv::AutoBuffer<T> _b_buf;
         T* b_buf = 0;
 
         if( a_step > 1 && a_size.height > 1 )
         {
-            a_buf = (T*)cvStackAlloc(drows*sizeof(a_data[0]));
+            _a_buf.allocate(drows);
+            a_buf = _a_buf;
             for( k = 0; k < drows; k++ )
                 a_buf[k] = a_data[a_step*k];
             a_data = a_buf;
@@ -171,7 +177,8 @@ GEMMSingleMul( const T* a_data, size_t a_step,
 
         if( b_step > 1 )
         {
-            b_buf = (T*)cvStackAlloc(d_size.width*sizeof(b_buf[0]) );
+            _b_buf.allocate(d_size.width);
+            b_buf = _b_buf;
             for( j = 0; j < d_size.width; j++ )
                 b_buf[j] = b_data[j*b_step];
             b_data = b_buf;
@@ -309,7 +316,8 @@ GEMMSingleMul( const T* a_data, size_t a_step,
     }
     else
     {
-        WT* d_buf = (WT*)cvStackAlloc(m*sizeof(d_buf[0]));
+        cv::AutoBuffer<WT> _d_buf(m);
+        WT* d_buf = _d_buf;
 
         for( i = 0; i < drows; i++, _a_data += a_step0, _c_data += c_step0, d_data += d_step )
         {
@@ -369,6 +377,7 @@ GEMMBlockMul( const T* a_data, size_t a_step,
 {
     int i, j, k, n = a_size.width, m = d_size.width;
     const T *_a_data = a_data, *_b_data = b_data;
+    cv::AutoBuffer<T> _a_buf;
     T* a_buf = 0;
     size_t a_step0, a_step1, t_step;
     int do_acc = flags & 16;
@@ -384,7 +393,8 @@ GEMMBlockMul( const T* a_data, size_t a_step,
     {
         CV_SWAP( a_step0, a_step1, t_step );
         n = a_size.height;
-        a_buf = (T*)cvStackAlloc(n*sizeof(a_data[0]));
+        _a_buf.allocate(n);
+        a_buf = _a_buf;
     }
 
     if( flags & GEMM_2_T )

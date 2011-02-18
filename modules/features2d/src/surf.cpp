@@ -462,11 +462,11 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
     int nTotalLayers = (params->nOctaveLayers+2)*params->nOctaves;
     int nMiddleLayers = params->nOctaveLayers*params->nOctaves;
 
-    CvMat** dets = (CvMat**)cvStackAlloc(nTotalLayers*sizeof(dets[0]));
-    CvMat** traces = (CvMat**)cvStackAlloc(nTotalLayers*sizeof(traces[0]));
-    int *sizes = (int*)cvStackAlloc(nTotalLayers*sizeof(sizes[0]));
-    int *sampleSteps = (int*)cvStackAlloc(nTotalLayers*sizeof(sampleSteps[0]));
-    int *middleIndices = (int*)cvStackAlloc(nMiddleLayers*sizeof(middleIndices[0]));
+    cv::AutoBuffer<CvMat*> dets(nTotalLayers);
+    cv::AutoBuffer<CvMat*> traces(nTotalLayers);
+    cv::AutoBuffer<int> sizes(nTotalLayers);
+    cv::AutoBuffer<int> sampleSteps(nTotalLayers);
+    cv::AutoBuffer<int> middleIndices(nMiddleLayers);
     int octave, layer, step, index, middleIndex;
  
     /* Allocate space and calculate properties of each layer */

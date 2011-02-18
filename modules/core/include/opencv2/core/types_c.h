@@ -793,7 +793,7 @@ CV_INLINE int cvIplDepth( int type )
 #define CV_TYPE_NAME_MATND    "opencv-nd-matrix"
 
 #define CV_MAX_DIM            32
-#define CV_MAX_DIM_HEAP       (1 << 16)
+#define CV_MAX_DIM_HEAP       1024
 
 typedef struct CvMatND
 {
@@ -1867,6 +1867,8 @@ typedef struct CvModuleInfo
     CvPluginFuncInfo* func_tab;
 }
 CvModuleInfo;
+
+enum { CV_PARAM_TYPE_INT=0, CV_PARAM_TYPE_REAL=1, CV_PARAM_TYPE_STRING=2, CV_PARAM_TYPE_MAT=3 };
 
 #endif /*_CXCORE_TYPES_H_*/
 

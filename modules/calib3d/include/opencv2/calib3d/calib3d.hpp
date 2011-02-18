@@ -763,7 +763,8 @@ CV_EXPORTS_W void validateDisparity( Mat& disparity, const Mat& cost,
 //! reprojects disparity image to 3D: (x,y,d)->(X,Y,Z) using the matrix Q returned by cv::stereoRectify
 CV_EXPORTS_W void reprojectImageTo3D( const Mat& disparity,
                                       CV_OUT Mat& _3dImage, const Mat& Q,
-                                      bool handleMissingValues=false );
+                                      bool handleMissingValues=false,
+                                      int ddepth=-1 );
     
 }
 

@@ -281,28 +281,20 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
 float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) const
 {
     float value = 0;
-    void* buffer = 0;
-    int allocated_buffer = 0;
 
-    CV_FUNCNAME( "CvNormalBayesClassifier::predict" );
-
-    __BEGIN__;
-
-    int i, j, k, cls = -1, _var_count, nclasses;
+    int i, j, cls = -1;
     double opt = FLT_MAX;
-    CvMat diff;
-    int rtype = 0, rstep = 0, size;
-    const int* vidx = 0;
-
-    nclasses = cls_labels->cols;
-    _var_count = avg[0]->cols;
+    int rtype = 0, rstep = 0;
+    
+    int nclasses = cls_labels->cols;
+    int _var_count = avg[0]->cols;
 
     if( !CV_IS_MAT(samples) || CV_MAT_TYPE(samples->type) != CV_32FC1 || samples->cols != var_all )
-        CV_ERROR( CV_StsBadArg,
+        CV_Error( CV_StsBadArg,
         "The input samples must be 32f matrix with the number of columns = var_all" );
 
     if( samples->rows > 1 && !results )
-        CV_ERROR( CV_StsNullPtr,
+        CV_Error( CV_StsNullPtr,
         "When the number of input samples is >1, the output vector of results must be passed" );
 
     if( results )
@@ -311,29 +303,20 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) c
         CV_MAT_TYPE(results->type) != CV_32SC1) ||
         (results->cols != 1 && results->rows != 1) ||
         results->cols + results->rows - 1 != samples->rows )
-        CV_ERROR( CV_StsBadArg, "The output array must be integer or floating-point vector "
+        CV_Error( CV_StsBadArg, "The output array must be integer or floating-point vector "
         "with the number of elements = number of rows in the input matrix" );
 
         rtype = CV_MAT_TYPE(results->type);
         rstep = CV_IS_MAT_CONT(results->type) ? 1 : results->step/CV_ELEM_SIZE(rtype);
     }
 
-    if( var_idx )
-        vidx = var_idx->data.i;
+    const int* vidx = var_idx ? var_idx->data.i : 0;
 
 // allocate memory and initializing headers for calculating
-    size = sizeof(double) * (nclasses + var_count);
-    if( size <= CV_MAX_LOCAL_SIZE )
-        buffer = cvStackAlloc( size );
-    else
-    {
-        CV_CALL( buffer = cvAlloc( size ));
-        allocated_buffer = 1;
-    }
+    cv::AutoBuffer<double> buffer(nclasses + var_count);
+    CvMat diff = cvMat( 1, var_count, CV_64FC1, &buffer[0] );
 
-    diff = cvMat( 1, var_count, CV_64FC1, buffer );
-
-    for( k = 0; k < samples->rows; k++ )
+    for( int k = 0; k < samples->rows; k++ )
     {
         int ival;
 
@@ -349,7 +332,7 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) c
             for( j = 0; j < _var_count; j++ )
                 diff.data.db[j] = avg_data[j] - x[vidx ? vidx[j] : j];
 
-            CV_CALL(cvGEMM( &diff, u, 1, 0, 0, &diff, CV_GEMM_B_T ));
+            cvGEMM( &diff, u, 1, 0, 0, &diff, CV_GEMM_B_T );
             for( j = 0; j < _var_count; j++ )
             {
                 double d = diff.data.db[j];
@@ -384,11 +367,6 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) c
             CV_CALL( cvConvertScale( &expo, _probs, 1./cvSum( &expo ).val[0] ));
         }*/
     }
-
-    __END__;
-
-    if( allocated_buffer )
-        cvFree( &buffer );
 
     return value;
 }

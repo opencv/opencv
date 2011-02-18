@@ -2753,66 +2753,72 @@ CV_IMPL int cvStereoRectifyUncalibrated(
 }
 
 
-CV_IMPL void cvReprojectImageTo3D(
-    const CvArr* disparityImage,
-    CvArr* _3dImage, const CvMat* matQ,
-    int handleMissingValues )
+void cv::reprojectImageTo3D( const Mat& disparity,
+                             Mat& _3dImage, const Mat& Q,
+                             bool handleMissingValues, int dtype )
 {
+    int stype = disparity.type();
+    
+    CV_Assert( stype == CV_8UC1 || stype == CV_16SC1 ||
+               stype == CV_32SC1 || stype == CV_32FC1 );
+    CV_Assert( Q.size() == Size(4,4) );
+    
+    if( dtype < 0 )
+        dtype = CV_32FC3;
+    else
+    {
+        dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), 3);
+        CV_Assert( dtype == CV_16SC3 || dtype == CV_32SC3 || dtype == CV_32FC3 );
+    }
+    
+    _3dImage.create(disparity.size(), CV_MAKETYPE(dtype, 3));
+    
     const double bigZ = 10000.;
     double q[4][4];
-    CvMat Q = cvMat(4, 4, CV_64F, q);
-    CvMat sstub, *src = cvGetMat( disparityImage, &sstub );
-    CvMat dstub, *dst = cvGetMat( _3dImage, &dstub );
-    int stype = CV_MAT_TYPE(src->type), dtype = CV_MAT_TYPE(dst->type);
-    int x, y, rows = src->rows, cols = src->cols;
-    float* sbuf = (float*)cvStackAlloc( cols*sizeof(sbuf[0]) );
-    float* dbuf = (float*)cvStackAlloc( cols*3*sizeof(dbuf[0]) );
+    Mat _Q(4, 4, CV_64F, q);
+    Q.convertTo(_Q, CV_64F);
+    
+    int x, cols = disparity.cols;
+    CV_Assert( cols >= 0 );
+    
+    vector<float> _sbuf(cols+1), _dbuf(cols*3+1);
+    float* sbuf = &_sbuf[0], *dbuf = &_dbuf[0];
     double minDisparity = FLT_MAX;
-
-    CV_Assert( CV_ARE_SIZES_EQ(src, dst) &&
-        (CV_MAT_TYPE(stype) == CV_8UC1 || CV_MAT_TYPE(stype) == CV_16SC1 ||
-         CV_MAT_TYPE(stype) == CV_32SC1 || CV_MAT_TYPE(stype) == CV_32FC1) &&
-        (CV_MAT_TYPE(dtype) == CV_16SC3 || CV_MAT_TYPE(dtype) == CV_32SC3 ||
-        CV_MAT_TYPE(dtype) == CV_32FC3) );
-
-    cvConvert( matQ, &Q );
 
     // NOTE: here we quietly assume that at least one pixel in the disparity map is not defined.
     // and we set the corresponding Z's to some fixed big value.
     if( handleMissingValues )
-        cvMinMaxLoc( disparityImage, &minDisparity, 0, 0, 0 ); 
-
-    for( y = 0; y < rows; y++ )
+        cv::minMaxIdx( disparity, &minDisparity, 0, 0, 0 );
+    
+    for( int y = 0; y < disparity.rows; y++ )
     {
-        const float* sptr = (const float*)(src->data.ptr + src->step*y);
-        float* dptr0 = (float*)(dst->data.ptr + dst->step*y), *dptr = dptr0;
+        float *sptr = sbuf, *dptr = dbuf;
         double qx = q[0][1]*y + q[0][3], qy = q[1][1]*y + q[1][3];
         double qz = q[2][1]*y + q[2][3], qw = q[3][1]*y + q[3][3];
 
         if( stype == CV_8UC1 )
         {
-            const uchar* sptr0 = (const uchar*)sptr;
+            const uchar* sptr0 = disparity.ptr<uchar>(y);
             for( x = 0; x < cols; x++ )
-                sbuf[x] = (float)sptr0[x];
-            sptr = sbuf;
+                sptr[x] = (float)sptr0[x];
         }
         else if( stype == CV_16SC1 )
         {
-            const short* sptr0 = (const short*)sptr;
+            const short* sptr0 = disparity.ptr<short>(y);
             for( x = 0; x < cols; x++ )
-                sbuf[x] = (float)sptr0[x];
-            sptr = sbuf;
+                sptr[x] = (float)sptr0[x];
         }
         else if( stype == CV_32SC1 )
         {
-            const int* sptr0 = (const int*)sptr;
+            const int* sptr0 = disparity.ptr<int>(y);
             for( x = 0; x < cols; x++ )
-                sbuf[x] = (float)sptr0[x];
-            sptr = sbuf;
+                sptr[x] = (float)sptr0[x];
         }
+        else
+            sptr = (float*)disparity.ptr<float>(y);
                 
-        if( dtype != CV_32FC3 )
-            dptr = dbuf;
+        if( dtype == CV_32FC3 )
+            dptr = _3dImage.ptr<float>(y);
 
         for( x = 0; x < cols; x++, qx += q[0][0], qy += q[1][0], qz += q[2][0], qw += q[3][0] )
         {
@@ -2831,21 +2837,38 @@ CV_IMPL void cvReprojectImageTo3D(
 
         if( dtype == CV_16SC3 )
         {
+            short* dptr0 = _3dImage.ptr<short>(y);
             for( x = 0; x < cols*3; x++ )
             {
                 int ival = cvRound(dptr[x]);
-                ((short*)dptr0)[x] = CV_CAST_16S(ival);
+                dptr0[x] = CV_CAST_16S(ival);
             }
         }
         else if( dtype == CV_32SC3 )
         {
+            int* dptr0 = _3dImage.ptr<int>(y);
             for( x = 0; x < cols*3; x++ )
             {
                 int ival = cvRound(dptr[x]);
-                ((int*)dptr0)[x] = ival;
+                dptr0[x] = ival;
             }
         }
     }
+}
+
+
+void cvReprojectImageTo3D( const CvArr* disparityImage,
+                           CvArr* _3dImage, const CvMat* matQ,
+                           int handleMissingValues )
+{
+    cv::Mat disp = cv::cvarrToMat(disparityImage);
+    cv::Mat _3dimg = cv::cvarrToMat(_3dImage);
+    cv::Mat mq = cv::cvarrToMat(matQ);
+    CV_Assert( disp.size() == _3dimg.size() );
+    int dtype = _3dimg.type();
+    CV_Assert( dtype == CV_16SC3 || dtype == CV_32SC3 || dtype == CV_32FC3 );
+    
+    cv::reprojectImageTo3D(disp, _3dimg, mq, handleMissingValues != 0, dtype );
 }
 
 
@@ -3427,16 +3450,6 @@ bool cv::stereoRectifyUncalibrated( const Mat& points1, const Mat& points2,
         pF = &(matF = F);
     return cvStereoRectifyUncalibrated(&_pt1, &_pt2, pF, imgSize, &_H1, &_H2, threshold) > 0;
 }
-
-void cv::reprojectImageTo3D( const Mat& disparity,
-                             Mat& _3dImage, const Mat& Q,
-                             bool handleMissingValues )
-{
-    _3dImage.create(disparity.size(), CV_32FC3);
-    CvMat _disparity = disparity, __3dImage = _3dImage, matQ = Q;
-    cvReprojectImageTo3D( &_disparity, &__3dImage, &matQ, handleMissingValues );
-}
-
 
 cv::Mat cv::getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs,
                                    Size imgSize, double alpha, Size newImgSize,

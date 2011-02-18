@@ -209,39 +209,23 @@ float
 CvEM::predict( const CvMat* _sample, CvMat* _probs ) const
 {
     float* sample_data   = 0;
-    void* buffer = 0;
-    int allocated_buffer = 0;
     int cls = 0;
 
-    CV_FUNCNAME( "CvEM::predict" );
-    __BEGIN__;
-
-    int i, k, dims;
-    int nclusters;
     int cov_mat_type = params.cov_mat_type;
     double opt = FLT_MAX;
-    size_t size;
-    CvMat diff, expo;
 
-    dims = means->cols;
-    nclusters = params.nclusters;
+    int i, dims = means->cols;
+    int nclusters = params.nclusters;
 
-    CV_CALL( cvPreparePredictData( _sample, dims, 0, params.nclusters, _probs, &sample_data ));
+    cvPreparePredictData( _sample, dims, 0, params.nclusters, _probs, &sample_data );
 
 // allocate memory and initializing headers for calculating
-    size = sizeof(double) * (nclusters + dims);
-    if( size <= CV_MAX_LOCAL_SIZE )
-        buffer = cvStackAlloc( size );
-    else
-    {
-        CV_CALL( buffer = cvAlloc( size ));
-        allocated_buffer = 1;
-    }
-    expo = cvMat( 1, nclusters, CV_64FC1, buffer );
-    diff = cvMat( 1, dims, CV_64FC1, (double*)buffer + nclusters );
+    cv::AutoBuffer<double> buffer(nclusters + dims);
+    CvMat expo = cvMat(1, nclusters, CV_64F, &buffer[0] );
+    CvMat diff = cvMat(1, dims, CV_64F, &buffer[nclusters] );
 
 // calculate the probabilities
-    for( k = 0; k < nclusters; k++ )
+    for( int k = 0; k < nclusters; k++ )
     {
         const double* mean_k = (const double*)(means->data.ptr + means->step*k);
         const double* w = (const double*)(inv_eigen_values->data.ptr + inv_eigen_values->step*k);
@@ -281,19 +265,15 @@ CvEM::predict( const CvMat* _sample, CvMat* _probs ) const
 
     if( _probs )
     {
-        CV_CALL( cvConvertScale( &expo, &expo, -0.5 ));
-        CV_CALL( cvExp( &expo, &expo ));
+        cvConvertScale( &expo, &expo, -0.5 );
+        cvExp( &expo, &expo );
         if( _probs->cols == 1 )
-            CV_CALL( cvReshape( &expo, &expo, 0, nclusters ));
-        CV_CALL( cvConvertScale( &expo, _probs, 1./cvSum( &expo ).val[0] ));
+            cvReshape( &expo, &expo, 0, nclusters );
+        cvConvertScale( &expo, _probs, 1./cvSum( &expo ).val[0] );
     }
-
-    __END__;
 
     if( sample_data != _sample->data.fl )
         cvFree( &sample_data );
-    if( allocated_buffer )
-        cvFree( &buffer );
 
     return (float)cls;
 }
