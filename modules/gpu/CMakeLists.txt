@@ -171,15 +171,13 @@ if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     file(GLOB test_hdrs "test/*.h*")
     
     if(HAVE_CUDA)
-            include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
-    
+            include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)    
             file(GLOB nvidia "test/nvidia/*.*")
-            SET(ncv_cpp ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core/NCV.cpp)
             source_group("nvidia" FILES ${nvidia})
     endif()
     
     
-    add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia} ${ncv_cpp})
+    add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia})
     
     if(PCHSupport_FOUND)
         set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
