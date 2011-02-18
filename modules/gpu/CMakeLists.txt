@@ -172,7 +172,7 @@ if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     
     if(HAVE_CUDA)
             include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)    
-            file(GLOB nvidia "test/nvidia/*.*")
+            file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")
             source_group("nvidia" FILES ${nvidia})
     endif()
     
