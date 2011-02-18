@@ -483,7 +483,7 @@ icvComputeK( CvStereoGCState* state )
     int x, y, x1, d, i, j, rows = state->left->rows, cols = state->left->cols, n = 0;
     int mind = state->minDisparity, nd = state->numberOfDisparities, maxd = mind + nd;
     int k = MIN(MAX((nd + 2)/4, 3), nd), delta, t, sum = 0;
-    vector<int> _arr(k);
+    std::vector<int> _arr(k+1);
     int *arr = &_arr[0];
 
     for( y = 0; y < rows; y++ )
@@ -902,7 +902,7 @@ CV_IMPL void cvFindStereoCorrespondenceGC( const CvArr* _left, const CvArr* _rig
     icvInitStereoConstTabs();
     icvInitGraySubpix( left, right, state->left, state->right );
     
-    vector<int> disp(state->numberOfDisparities);
+    std::vector<int> disp(state->numberOfDisparities);
     CvMat _disp = cvMat( 1, (int)disp.size(), CV_32S, &disp[0] );
     cvRange( &_disp, state->minDisparity, state->minDisparity + state->numberOfDisparities );
     cvRandShuffle( &_disp, &rng );

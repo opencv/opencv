@@ -3619,7 +3619,6 @@ icvReadSparseMat( CvFileStorage* fs, CvFileNode* node )
     CvFileNode* sizes_node;
     CvSeqReader reader;
     CvSeq* elements;
-    int* idx;
     int sizes[CV_MAX_DIM_HEAP], dims, elem_type, cn;
     int i;
 
@@ -3645,7 +3644,7 @@ icvReadSparseMat( CvFileStorage* fs, CvFileNode* node )
     mat = cvCreateSparseMat( dims, sizes, elem_type );
 
     cn = CV_MAT_CN(elem_type);
-    idx = (int*)alloca( dims*sizeof(idx[0]) );
+    int idx[CV_MAX_DIM_HEAP];
     elements = data->data.seq;
     cvStartReadRawData( fs, data, &reader );
 

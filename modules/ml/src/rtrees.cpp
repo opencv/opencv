@@ -646,7 +646,8 @@ float CvRTrees::predict( const CvMat* sample, const CvMat* missing ) const
     if( nclasses > 0 ) //classification
     {
         int max_nvotes = 0;
-        int* votes = (int*)alloca( sizeof(int)*nclasses );
+        cv::AutoBuffer<int> _votes(nclasses);
+        int* votes = _votes;
         memset( votes, 0, sizeof(*votes)*nclasses );
         for( k = 0; k < ntrees; k++ )
         {
@@ -682,7 +683,8 @@ float CvRTrees::predict_prob( const CvMat* sample, const CvMat* missing) const
 	if( nclasses == 2 ) //classification
     {
         int max_nvotes = 0;
-        int* votes = (int*)alloca( sizeof(int)*nclasses );
+        cv::AutoBuffer<int> _votes(nclasses);
+        int* votes = _votes;
         memset( votes, 0, sizeof(*votes)*nclasses );
         for( k = 0; k < ntrees; k++ )
         {
