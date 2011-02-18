@@ -232,4 +232,4 @@ struct CV_GpuBitwiseTest: public cvtest::BaseTest
     }
 };
 
-TEST(BitwiseOperations, accuracy) { CV_GpuBitwiseTest test; test; }
+TEST(BitwiseOperations, accuracy) { CV_GpuBitwiseTest test; test.safe_run(); }
