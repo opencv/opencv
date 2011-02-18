@@ -21,6 +21,8 @@
 #include "NCVAutoTestLister.hpp"
 #include "NCVTestSourceProvider.hpp"
 
+static std::string path;
+
 
 template <class T_in, class T_out>
 void generateIntegralTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T_in> &src,
@@ -252,11 +254,11 @@ void generateHypothesesFiltrationTests(NCVAutoTestLister &testLister, NCVTestSou
 
 void generateHaarLoaderTests(NCVAutoTestLister &testLister)
 {
-    testLister.add(new TestHaarCascadeLoader("haarcascade_eye.xml", "haarcascade_eye.xml"));
-    testLister.add(new TestHaarCascadeLoader("haarcascade_frontalface_alt.xml", "haarcascade_frontalface_alt.xml"));
-    testLister.add(new TestHaarCascadeLoader("haarcascade_frontalface_alt2.xml", "haarcascade_frontalface_alt2.xml"));
-    testLister.add(new TestHaarCascadeLoader("haarcascade_frontalface_alt_tree.xml", "haarcascade_frontalface_alt_tree.xml"));
-    testLister.add(new TestHaarCascadeLoader("haarcascade_eye_tree_eyeglasses.xml", "haarcascade_eye_tree_eyeglasses.xml"));
+    testLister.add(new TestHaarCascadeLoader("haarcascade_eye.xml", path + "haarcascade_eye.xml"));
+    testLister.add(new TestHaarCascadeLoader("haarcascade_frontalface_alt.xml", path + "haarcascade_frontalface_alt.xml"));
+    testLister.add(new TestHaarCascadeLoader("haarcascade_frontalface_alt2.xml", path + "haarcascade_frontalface_alt2.xml"));
+    testLister.add(new TestHaarCascadeLoader("haarcascade_frontalface_alt_tree.xml", path + "haarcascade_frontalface_alt_tree.xml"));
+    testLister.add(new TestHaarCascadeLoader("haarcascade_eye_tree_eyeglasses.xml", path + "haarcascade_eye_tree_eyeglasses.xml"));
 }
 
 
@@ -269,7 +271,7 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
         {
             char testName[80];
             sprintf(testName, "HaarAppl%d_%d", i, j);
-            testLister.add(new TestHaarCascadeApplication(testName, src, "haarcascade_frontalface_alt.xml", j, i));
+            testLister.add(new TestHaarCascadeApplication(testName, src, path + "haarcascade_frontalface_alt.xml", j, i));
         }
     }
     for (Ncv32f _i=20.0; _i<maxWidth; _i*=1.1f)
@@ -277,18 +279,20 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
         Ncv32u i = (Ncv32u)_i;
         char testName[80];
         sprintf(testName, "HaarAppl%d", i);
-        testLister.add(new TestHaarCascadeApplication(testName, src, "haarcascade_frontalface_alt.xml", i, i));
+        testLister.add(new TestHaarCascadeApplication(testName, src, path + "haarcascade_frontalface_alt.xml", i, i));
     }
 }
 
-
 static void devNullOutput(const char *msg)
 {
+
 }
 
 
-bool main_nvidia()
+bool main_nvidia(const std::string& test_data_path)
 {
+	path = test_data_path;
+
     printf("Testing NVIDIA Computer Vision SDK\n");
     printf("==================================\n");
 
@@ -311,7 +315,7 @@ bool main_nvidia()
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
     NCVTestSourceProvider<Ncv8u> testSrcRandom_8u(2010, 0, 255, 4096, 4096);
     NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, 0xFFFFFFFFFFFFFFFF, 4096, 4096);
-    NCVTestSourceProvider<Ncv8u> testSrcFacesVGA_8u("../../data/group_1_640x480_VGA.pgm");
+    NCVTestSourceProvider<Ncv8u> testSrcFacesVGA_8u(path + "group_1_640x480_VGA.pgm");
     NCVTestSourceProvider<Ncv32f> testSrcRandom_32f(2010, -1.0f, 1.0f, 4096, 4096);
 
     printf("Generating NPPST test suites\n");

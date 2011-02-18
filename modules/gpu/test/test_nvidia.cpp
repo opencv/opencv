@@ -51,12 +51,14 @@ public:
 protected:
     
 	void run( int )
-	{   		
+	{   
+		;
+
 #if defined(HAVE_CUDA)
-		bool main_nvidia();
+		bool main_nvidia(const std::string&);
 
 		// Invoke all NVIDIA Staging tests and obtain the result
-		bool passed = main_nvidia();
+		bool passed = main_nvidia(std::string(ts->get_data_path()) + "haarcascade/");
 
 		if (passed)
 		    ts->set_failed_test_info(cvtest::TS::OK);
