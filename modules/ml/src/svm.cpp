@@ -2006,16 +2006,8 @@ float CvSVM::predict( const float* row_sample, int row_len, bool returnDFVal ) c
                   params.svm_type == ONE_CLASS ? 1 : 0;
 
     float result = 0;
-    bool local_alloc = 0;
-    float* buffer = 0;
-    int buf_sz = sv_total*sizeof(buffer[0]) + (class_count+1)*sizeof(int);
-    if( buf_sz <= CV_MAX_LOCAL_SIZE )
-    {
-        buffer = (float*)cvStackAlloc( buf_sz );
-        local_alloc = true;
-    }
-    else
-        buffer = (float*)cvAlloc( buf_sz );
+    cv::AutoBuffer<float> _buffer(sv_total + (class_count+1)*2);
+    float* buffer = _buffer;
 
     if( params.svm_type == EPS_SVR ||
         params.svm_type == NU_SVR ||
@@ -2065,8 +2057,6 @@ float CvSVM::predict( const float* row_sample, int row_len, bool returnDFVal ) c
     else
         CV_Error( CV_StsBadArg, "INTERNAL ERROR: Unknown SVM type, "
                                 "the SVM structure is probably corrupted" );
-    if( !local_alloc )
-        cvFree( &buffer );
 
     return result;
 }
