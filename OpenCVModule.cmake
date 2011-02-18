@@ -100,6 +100,9 @@ macro(define_opencv_module name)
 
         file(GLOB test_srcs "test/*.cpp")
         file(GLOB test_hdrs "test/*.h*")
+		
+		source_group("Src" FILES ${test_srcs})
+		source_group("Include" FILES ${test_hdrs})
 
         set(the_target "opencv_test_${name}")
 

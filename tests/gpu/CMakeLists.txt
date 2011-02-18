@@ -38,12 +38,11 @@ include_directories(../cxts)
 if(HAVE_CUDA)
 	include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
 	
-	file(GLOB nvidia "src/nvidia/*.*")
-	SET(ncv_cpp ../../modules/gpu/src/nvidia/core/NCV.cpp)
+	file(GLOB nvidia "src/nvidia/*.*")	
 	source_group("Src\\nvidia" FILES ${nvidia})
 endif()
 
-add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia} ${ncv_cpp})
+add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia})
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES

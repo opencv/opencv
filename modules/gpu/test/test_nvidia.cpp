@@ -69,4 +69,4 @@ protected:
 	}   
 };
 
-TEST(NPP_Staging, DISABLED_multitest) { CV_NVidiaTestsCaller test; test.safe_run(); }
+TEST(NVidia, DISABLED_multitest) { CV_NVidiaTestsCaller test; test.safe_run(); }

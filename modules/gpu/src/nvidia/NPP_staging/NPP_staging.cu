@@ -1198,18 +1198,24 @@ __global__ void transpose(T *d_src, Ncv32u srcStride,
 
     Ncv32u xIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.x;
     Ncv32u yIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.y;
-    Ncv32u index_in = xIndex + yIndex * srcStride;
+    Ncv32u index_gmem = xIndex + yIndex * srcStride;
 
-    xIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.x;
-    yIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.y;
-    Ncv32u index_out = xIndex + yIndex * dstStride;
-
-    for (Ncv32u i=0; i<TRANSPOSE_TILE_DIM; i+=TRANSPOSE_BLOCK_ROWS)
+    if (xIndex < srcRoi.width)
     {
-        tile[threadIdx.y+i][threadIdx.x] = d_src[index_in+i*srcStride];
+        for (Ncv32u i=0; i<TRANSPOSE_TILE_DIM; i+=TRANSPOSE_BLOCK_ROWS)
+        {
+            if (yIndex + i < srcRoi.height)
+            {
+                tile[threadIdx.y+i][threadIdx.x] = d_src[index_gmem+i*srcStride];
+            }
+        }
     }
 
     __syncthreads();
+
+    xIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.x;
+    yIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.y;
+    index_gmem = xIndex + yIndex * dstStride;
 
     if (xIndex < srcRoi.height)
     {
@@ -1217,7 +1223,7 @@ __global__ void transpose(T *d_src, Ncv32u srcStride,
         {
             if (yIndex + i < srcRoi.width)
             {
-                d_dst[index_out+i*dstStride] = tile[threadIdx.x][threadIdx.y+i];
+                d_dst[index_gmem+i*dstStride] = tile[threadIdx.x][threadIdx.y+i];
             }
         }
     }

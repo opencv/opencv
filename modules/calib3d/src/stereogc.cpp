@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 
+using namespace std;
+
 #undef INFINITY
 #define INFINITY 10000
 #define OCCLUSION_PENALTY 10000

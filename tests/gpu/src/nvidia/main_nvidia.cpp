@@ -179,6 +179,9 @@ void generateTransposeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider
 
     testLister.add(new TestTranspose<T>("TestTranspose_VGA", src, 640, 480));
     testLister.add(new TestTranspose<T>("TestTranspose_HD1080", src, 1920, 1080));
+
+    //regression tests
+    testLister.add(new TestTranspose<T>("TestTranspose_reg_0", src, 1072, 375));
 }
 
 

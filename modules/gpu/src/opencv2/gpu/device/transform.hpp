@@ -71,21 +71,21 @@ namespace cv { namespace gpu { namespace device
     template <size_t src_elem_size, size_t dst_elem_size>
     struct UnReadWriteTraits_
     {
-        enum {shift=1};
+        enum { shift = 1 };
     };
     template <size_t src_elem_size>
     struct UnReadWriteTraits_<src_elem_size, 1>
     {
-        enum {shift=4};
+        enum { shift = 4 };
     };
     template <size_t src_elem_size>
     struct UnReadWriteTraits_<src_elem_size, 2>
     {
-        enum {shift=2};
+        enum { shift = 2 };
     };
     template <typename T, typename D> struct UnReadWriteTraits
     {
-        enum {shift=UnReadWriteTraits_<sizeof(T), sizeof(D)>::shift};
+        enum { shift = UnReadWriteTraits_<sizeof(T), sizeof(D)>::shift };
         
         typedef typename TypeVec<T, shift>::vec_t read_type;
         typedef typename TypeVec<D, shift>::vec_t write_type;
@@ -94,21 +94,21 @@ namespace cv { namespace gpu { namespace device
     template <size_t src_elem_size1, size_t src_elem_size2, size_t dst_elem_size>
     struct BinReadWriteTraits_
     {
-        enum {shift=1};
+        enum { shift = 1 };
     };
     template <size_t src_elem_size1, size_t src_elem_size2>
     struct BinReadWriteTraits_<src_elem_size1, src_elem_size2, 1>
     {
-        enum {shift=4};
+        enum { shift = 4 };
     };
     template <size_t src_elem_size1, size_t src_elem_size2>
     struct BinReadWriteTraits_<src_elem_size1, src_elem_size2, 2>
     {
-        enum {shift=2};
+        enum { shift = 2 };
     };
     template <typename T1, typename T2, typename D> struct BinReadWriteTraits
     {
-        enum {shift=BinReadWriteTraits_<sizeof(T1), sizeof(T2), sizeof(D)>::shift};
+        enum {shift = BinReadWriteTraits_<sizeof(T1), sizeof(T2), sizeof(D)>::shift};
 
         typedef typename TypeVec<T1, shift>::vec_t read_type1;
         typedef typename TypeVec<T2, shift>::vec_t read_type2;

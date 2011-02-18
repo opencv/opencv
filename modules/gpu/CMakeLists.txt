@@ -38,10 +38,9 @@ source_group("Device" FILES ${lib_device_hdrs})
 if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
     file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
-    file(GLOB_RECURSE ncv_hdr1 "src/nvidia/*.hpp")
-    file(GLOB_RECURSE ncv_hdr2 "src/nvidia/*.h")
-
-    source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdr1} ${ncv_hdr2} ${ncv_cuda})
+    file(GLOB_RECURSE ncv_hdrs "src/nvidia/*.hpp" "src/nvidia/*.h")
+    
+    source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
     include_directories("src/nvidia/core" "src/nvidia/NPP_staging")
 endif()
 
@@ -83,7 +82,7 @@ if (HAVE_CUDA)
     #CUDA_BUILD_CLEAN_TARGET()
 endif()
 
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdr1} ${ncv_hdr2} ${ncv_cuda} ${cuda_objs})
+add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 
 if(PCHSupport_FOUND)
 	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
@@ -147,10 +146,15 @@ install(FILES ${lib_hdrs}
 #	DESTINATION include/opencv2/${name}/device
 #	COMPONENT main)
 
+
+################################################################################################################
+################################      GPU Module Tests     #####################################################
+################################################################################################################
+
 # Test files processing is in the separated directory to avoid 'Src' source 
 # filter creation in Visual Studio 
 if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
-    set(the_target "opencv_test_${name}")   
+    set(the_test_target "opencv_test_${name}")   
     
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/test"
@@ -169,44 +173,46 @@ if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     
     file(GLOB test_srcs "test/*.cpp")
     file(GLOB test_hdrs "test/*.h*")
-    
+	
+	source_group("Src" FILES ${test_hdrs} ${test_srcs})
     if(HAVE_CUDA)
-            include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)    
-            file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")
-            source_group("nvidia" FILES ${nvidia})
+            include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/core ${CMAKE_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
+    
+            file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")            
+            source_group("Src\\NVidia" FILES ${nvidia})
     endif()
     
     
-    add_executable(${the_target} ${test_srcs} ${test_hdrs} ${nvidia})
+    add_executable(${the_test_target} ${test_srcs} ${test_hdrs} ${nvidia})
     
     if(PCHSupport_FOUND)
         set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
         if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
             if(${CMAKE_GENERATOR} MATCHES "Visual*")
-                set(${the_target}_pch "test/test_precomp.cpp")
+                set(${the_test_target}_pch "test/test_precomp.cpp")
             endif()            
-            add_native_precompiled_header(${the_target} ${pch_header})
+            add_native_precompiled_header(${the_test_target} ${pch_header})
         elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-            add_precompiled_header(${the_target} ${pch_header})
+            add_precompiled_header(${the_test_target} ${pch_header})
         endif()
     endif()
     
     # Additional target properties
-    set_target_properties(${the_target} PROPERTIES
+    set_target_properties(${the_test_target} PROPERTIES
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
         )
     
-    add_dependencies(${the_target} ${test_deps})
+    add_dependencies(${the_test_target} ${test_deps})
     
     # Add the required libraries for linking:
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
+    target_link_libraries(${the_test_target} ${OPENCV_LINKER_LIBS} ${test_deps})
     
     enable_testing()
-    get_target_property(LOC ${the_target} LOCATION)
-    add_test(${the_target} "${LOC}")
+    get_target_property(LOC ${the_test_target} LOCATION)
+    add_test(${the_test_target} "${LOC}")
     
     if(WIN32)
-        install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+        install(TARGETS ${the_test_target} RUNTIME DESTINATION bin COMPONENT main)
     endif()
 endif()
