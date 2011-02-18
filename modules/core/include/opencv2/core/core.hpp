@@ -4040,7 +4040,7 @@ public:
     int index;
 };
 
-    
+#if 0    
 class CV_EXPORTS AlgorithmImpl;
 
 /*!
@@ -4086,6 +4086,7 @@ protected:
     
     Ptr<AlgorithmImpl> impl;
 };
+#endif
     
 }
 
