@@ -43,9 +43,10 @@
 #include "precomp.hpp"
 #include <algorithm>
 #include <cmath>
+#include <functional>
+#include <fstream>
 #include <limits>
 #include <set>
-#include <fstream>
 
 using namespace cv;
 using namespace std;
