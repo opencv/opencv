@@ -52,9 +52,9 @@ void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
 
 #else
 
-namespace cv { namespace gpu { namespace transform_points {
-    void call(const DevMem2D_<float> src, const float* rot,
-              const float* transl, DevMem2D_<float> dst);
+namespace cv { namespace gpu { namespace transform_points 
+{
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst);
 }}}
 
 void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
@@ -73,9 +73,9 @@ void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tve
 }
 
 
-namespace cv { namespace gpu { namespace project_points {
-    void call(const DevMem2D_<float> src, const float* rot,
-              const float* transl, const float* proj, DevMem2D_<float> dst);
+namespace cv { namespace gpu { namespace project_points 
+{
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst);
 }}}
 
 void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
@@ -92,8 +92,7 @@ void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
     Rodrigues(rvec, rot);
 
     dst.create(src.size(), CV_32FC2);
-    project_points::call(src, rot.ptr<float>(), tvec.ptr<float>(),
-                         camera_mat.ptr<float>(), dst);
+    project_points::call(src, rot.ptr<float>(), tvec.ptr<float>(), camera_mat.ptr<float>(), dst);
 }
 
 #endif
