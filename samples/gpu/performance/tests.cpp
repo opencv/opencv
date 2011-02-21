@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include "performance.h"
 
@@ -741,6 +742,41 @@ TEST(threshold)
 
         GPU_ON;
         gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
+        GPU_OFF;
+    }
+}
+
+
+TEST(projectPoints)
+{
+    Mat src;
+    vector<Point2f> dst;
+    gpu::GpuMat d_src, d_dst;
+
+    Mat rvec; gen(rvec, 1, 3, CV_32F, 0, 1);
+    Mat tvec; gen(tvec, 1, 3, CV_32F, 0, 1);
+    Mat camera_mat; gen(camera_mat, 3, 3, CV_32F, 0, 1);
+    camera_mat.at<float>(0, 1) = 0.f;
+    camera_mat.at<float>(1, 0) = 0.f;
+    camera_mat.at<float>(2, 0) = 0.f;
+    camera_mat.at<float>(2, 1) = 0.f;
+
+    for (int size = 1e6, count = 0; size >= 1e5 && count < 5; size /= 1.4, count++)
+    {
+        SUBTEST << "size " << size;
+
+        gen(src, 1, size, CV_32FC3, Scalar::all(0), Scalar::all(10));
+        dst.resize(size);
+
+        CPU_ON;
+        projectPoints(src, rvec, tvec, camera_mat, Mat(), dst);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(1, size, CV_32FC2);
+
+        GPU_ON;
+        gpu::projectPoints(d_src, rvec, tvec, camera_mat, Mat(), d_dst);
         GPU_OFF;
     }
 }
