@@ -853,6 +853,14 @@ namespace cv
         CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
 
+        ///////////////////////////// Calibration 3D //////////////////////////////////
+
+        CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                        GpuMat& dst);
+
+        CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                      const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst);
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
