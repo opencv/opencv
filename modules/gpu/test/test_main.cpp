@@ -1,6 +1,13 @@
 #include "test_precomp.hpp"
 
-CV_TEST_MAIN("gpu")
-
-// Run test with --gtest_catch_exceptions flag to avoid runtime errors in 
-// the case when there is no GPU
+int main(int argc, char **argv)
+{
+    cvtest::TS::ptr()->init("gpu");
+    ::testing::InitGoogleTest(&argc, argv);
+#ifdef HAVE_CUDA
+    return RUN_ALL_TESTS();
+#else
+    std::cerr << "opencv_test_gpu: OpenCV was compiled without GPU support\n";
+    return -1;
+#endif
+}
