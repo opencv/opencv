@@ -233,8 +233,8 @@ namespace
             typedef void (*compute_descriptors_t)(const DevMem2Df& descriptors, 
                 const KeyPoint_GPU* features, int nFeatures);
 
-            const compute_descriptors_t compute_descriptors = 
-                DeviceInfo().supports(FEATURE_SET_COMPUTE_13) ? compute_descriptors_gpu : compute_descriptors_gpu_old;
+            const compute_descriptors_t compute_descriptors = compute_descriptors_gpu_old;
+                //DeviceInfo().supports(FEATURE_SET_COMPUTE_13) ? compute_descriptors_gpu : compute_descriptors_gpu_old;
 
             if (keypoints.cols > 0)
             {

@@ -122,7 +122,7 @@ namespace cv { namespace gpu { namespace surf
     __constant__ float c_dxy_scale;
     // The scale associated with the first interval of the first octave
     __constant__ float c_initialScale;
-    //! The interest operator threshold
+    // The interest operator threshold
     __constant__ float c_threshold;
 
     // Ther octave
@@ -170,31 +170,31 @@ namespace cv { namespace gpu { namespace surf
 
     __device__ float evalDxx(float x, float y, float t, float mask_width, float mask_height, float fscale)
     {
-    	float Dxx = 0.f;
-	
-	    Dxx +=     iiAreaLookupCDHalfWH(x, y, mask_height, mask_width);
-	    Dxx -= t * iiAreaLookupCDHalfWH(x, y, fscale     , mask_width);
+        float Dxx = 0.f;
 
-	    Dxx *=  1.0f / (fscale * fscale);
+        Dxx +=     iiAreaLookupCDHalfWH(x, y, mask_height, mask_width);
+        Dxx -= t * iiAreaLookupCDHalfWH(x, y, fscale     , mask_width);
 
-	    return Dxx;
+        Dxx *=  1.0f / (fscale * fscale);
+
+        return Dxx;
     }
-    
+
     __device__ float evalDxy(float x, float y, float fscale)
     {
-    	float center_offset =  c_dxy_center_offset  * fscale;
-	    float half_width    =  c_dxy_half_width     * fscale;
+        float center_offset =  c_dxy_center_offset  * fscale;
+        float half_width    =  c_dxy_half_width     * fscale;
 
-	    float Dxy = 0.f;
+        float Dxy = 0.f;
 
-	    Dxy += iiAreaLookupCDHalfWH(x - center_offset, y - center_offset, half_width, half_width);
-	    Dxy -= iiAreaLookupCDHalfWH(x - center_offset, y + center_offset, half_width, half_width);
-	    Dxy += iiAreaLookupCDHalfWH(x + center_offset, y + center_offset, half_width, half_width);
-	    Dxy -= iiAreaLookupCDHalfWH(x + center_offset, y - center_offset, half_width, half_width);
-	
-	    Dxy *= 1.0f / (fscale * fscale);
+        Dxy += iiAreaLookupCDHalfWH(x - center_offset, y - center_offset, half_width, half_width);
+        Dxy -= iiAreaLookupCDHalfWH(x - center_offset, y + center_offset, half_width, half_width);
+        Dxy += iiAreaLookupCDHalfWH(x + center_offset, y + center_offset, half_width, half_width);
+        Dxy -= iiAreaLookupCDHalfWH(x + center_offset, y - center_offset, half_width, half_width);
 
-	    return Dxy;
+        Dxy *= 1.0f / (fscale * fscale);
+
+        return Dxy;
     }
 
     __device__ float calcScale(int hidx_z)
@@ -212,30 +212,30 @@ namespace cv { namespace gpu { namespace surf
 
         float fscale = calcScale(hidx_z);
 
-	    // Compute the lookup location of the mask center
+        // Compute the lookup location of the mask center
         float x = hidx_x * c_step + c_border;
         float y = hidx_y * c_step + c_border;
 
-	    // Scale the mask dimensions according to the scale
+        // Scale the mask dimensions according to the scale
         if (hidx_x < c_x_size && hidx_y < c_y_size && hidx_z < c_nIntervals)
         {
-	        float mask_width =  c_mask_width  * fscale;
-	        float mask_height = c_mask_height * fscale;
+            float mask_width =  c_mask_width  * fscale;
+            float mask_height = c_mask_height * fscale;
 
-	        // Compute the filter responses
-	        float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
-	        float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
-	        float Dxy = evalDxy(x, y, fscale);
-	
-	        // Combine the responses and store the Laplacian sign
-	        float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
+            // Compute the filter responses
+            float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
+            float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
+            float Dxy = evalDxy(x, y, fscale);
 
-	        if (Dxx + Dyy > 0.f)
-	            setLastBit(result);
-	        else
-	            clearLastBit(result);
+            // Combine the responses and store the Laplacian sign
+            float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
 
-	        hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
+            if (Dxx + Dyy > 0.f)
+                setLastBit(result);
+            else
+                clearLastBit(result);
+
+            hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
         }
     }
 
@@ -252,33 +252,33 @@ namespace cv { namespace gpu { namespace surf
 
         float fscale = calcScale(hidx_z);
 
-	    // Compute the lookup location of the mask center
+        // Compute the lookup location of the mask center
         float x = hidx_x * c_step + c_border;
         float y = hidx_y * c_step + c_border;
 
-	    // Scale the mask dimensions according to the scale
+        // Scale the mask dimensions according to the scale
         if (hidx_x < c_x_size && hidx_y < c_y_size && hidx_z < c_nIntervals)
         {
-	        float mask_width =  c_mask_width  * fscale;
-	        float mask_height = c_mask_height * fscale;
+            float mask_width =  c_mask_width  * fscale;
+            float mask_height = c_mask_height * fscale;
 
-	        // Compute the filter responses
-	        float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
-	        float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
-	        float Dxy = evalDxy(x, y, fscale);
-	
-	        // Combine the responses and store the Laplacian sign
-	        float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
+            // Compute the filter responses
+            float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
+            float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
+            float Dxy = evalDxy(x, y, fscale);
 
-	        if (Dxx + Dyy > 0.f)
-	            setLastBit(result);
-	        else
-	            clearLastBit(result);
+            // Combine the responses and store the Laplacian sign
+            float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
 
-	        hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
+            if (Dxx + Dyy > 0.f)
+                setLastBit(result);
+            else
+                clearLastBit(result);
+
+            hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
         }
     }
-    
+
     dim3 calcBlockSize(int nIntervals)
     {
         int threadsPerBlock = 512;
@@ -302,11 +302,11 @@ namespace cv { namespace gpu { namespace surf
         grid.x = divUp(x_size, threads.x);
         grid.y = divUp(y_size, threads.y);
         
-  	    fasthessian<<<grid, threads>>>(hessianBuffer);
+        fasthessian<<<grid, threads>>>(hessianBuffer);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
-	}
+    }
 
     void fasthessian_gpu_old(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threadsOld)
     {
@@ -316,11 +316,11 @@ namespace cv { namespace gpu { namespace surf
         grid.x = divUp(x_size, threads.x);
         grid.y = divUp(y_size, threads.y) * threadsOld.z;
         
-  	    fasthessian_old<<<grid, threads>>>(hessianBuffer);
+        fasthessian_old<<<grid, threads>>>(hessianBuffer);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
-	}
+    }
 
     ////////////////////////////////////////////////////////////////////////
     // NONMAX
@@ -338,16 +338,16 @@ namespace cv { namespace gpu { namespace surf
     {
         static __device__ bool check(float x, float y, float fscale)
         {
-	        float half_width = fscale / 2;
-    
-	        float result = 0.f;
+            float half_width = fscale / 2;
+
+            float result = 0.f;
 
             result += tex2D(maskSumTex, x - half_width, y - half_width);
             result -= tex2D(maskSumTex, x + half_width, y - half_width);
             result -= tex2D(maskSumTex, x - half_width, y + half_width);
             result += tex2D(maskSumTex, x + half_width, y + half_width);
-	
-	        result /= (fscale * fscale);
+
+            result /= (fscale * fscale);
 
             return (result >= 0.5f);
         }
@@ -355,7 +355,7 @@ namespace cv { namespace gpu { namespace surf
 
     template <typename Mask>
     __global__ void nonmaxonly(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int* maxCounter)
-    {        
+    {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
         extern __shared__ float fh_vals[];
@@ -372,7 +372,7 @@ namespace cv { namespace gpu { namespace surf
             fh_vals[localLin] = hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x];
         }
         __syncthreads();
-    
+
         // Is this location one of the ones being processed for nonmax suppression.
         // Blocks overlap by one so we don't process the border threads.
         bool inBounds2 = threadIdx.x > 0 && threadIdx.x < blockDim.x-1 && hidx_x < c_x_size - 1 
@@ -381,7 +381,7 @@ namespace cv { namespace gpu { namespace surf
 
         float val = fh_vals[localLin];
 
-	    // Compute the lookup location of the mask center
+        // Compute the lookup location of the mask center
         float x = hidx_x * c_step + c_border;
         float y = hidx_y * c_step + c_border;
         float fscale = calcScale(hidx_z);
@@ -398,7 +398,7 @@ namespace cv { namespace gpu { namespace surf
             &&               val > fh_vals[localLin        + blockDim.x + 1]
             &&               val > fh_vals[localLin        + blockDim.x    ]
             &&               val > fh_vals[localLin        + blockDim.x - 1]
-      
+
             &&               val > fh_vals[localLin - zoff              + 1]
             &&               val > fh_vals[localLin - zoff                 ]
             &&               val > fh_vals[localLin - zoff              - 1]
@@ -408,7 +408,7 @@ namespace cv { namespace gpu { namespace surf
             &&               val > fh_vals[localLin - zoff + blockDim.x + 1]
             &&               val > fh_vals[localLin - zoff + blockDim.x    ]
             &&               val > fh_vals[localLin - zoff + blockDim.x - 1]
-      
+
             &&               val > fh_vals[localLin + zoff              + 1]
             &&               val > fh_vals[localLin + zoff                 ]
             &&               val > fh_vals[localLin + zoff              - 1]
@@ -423,14 +423,14 @@ namespace cv { namespace gpu { namespace surf
             if(condmax) 
             {
                 unsigned int i = atomicInc(maxCounter,(unsigned int) -1);
-      
+
                 if (i < c_max_candidates) 
                 {
-	                int4 f = {hidx_x, hidx_y, threadIdx.z, c_octave};
-	                maxPosBuffer[i] = f;	
+                    int4 f = {hidx_x, hidx_y, threadIdx.z, c_octave};
+                    maxPosBuffer[i] = f;
                 }
             }
-        }  
+        }
 
         #endif
     }
@@ -450,7 +450,7 @@ namespace cv { namespace gpu { namespace surf
             nonmaxonly<WithMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
         else
             nonmaxonly<WithOutMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
-        
+
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -462,7 +462,7 @@ namespace cv { namespace gpu { namespace surf
     #define MID_IDX 1
     __global__ void fh_interp_extremum(PtrStepf hessianBuffer, const int4* maxPosBuffer, 
         KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter)
-    {        
+    {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
         int hidx_x = maxPosBuffer[blockIdx.x].x - 1 + threadIdx.x;
@@ -481,39 +481,39 @@ namespace cv { namespace gpu { namespace surf
 
             //dxx
             H[0][0] =    fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX    ] 
-	        -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
-	        +            fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX    ];
+            -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
+            +            fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX    ];
 
             //dyy
-            H[1][1] =    fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX + 1] 
-	        -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
-	        +            fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX - 1];
-      
+            H[1][1] =    fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX + 1]
+            -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
+            +            fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX - 1];
+
             //dss
             H[2][2] =    fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX    ] 
-	        -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
-	        +            fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX    ];
+            -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
+            +            fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX    ];
 
             //dxy
             H[0][1]= 0.25f*
                 (fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX + 1] -
-		         fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX + 1] -
-		         fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX - 1] + 
-		         fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX - 1]);
-      
+                 fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX + 1] -
+                 fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX - 1] +
+                 fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX - 1]);
+
             //dxs
             H[0][2]= 0.25f*
                 (fh_vals[MID_IDX + 1][MID_IDX + 1][MID_IDX    ] -
-		         fh_vals[MID_IDX + 1][MID_IDX - 1][MID_IDX    ] -
-		         fh_vals[MID_IDX - 1][MID_IDX + 1][MID_IDX    ] + 
-		         fh_vals[MID_IDX - 1][MID_IDX - 1][MID_IDX    ]);
+                 fh_vals[MID_IDX + 1][MID_IDX - 1][MID_IDX    ] -
+                 fh_vals[MID_IDX - 1][MID_IDX + 1][MID_IDX    ] +
+                 fh_vals[MID_IDX - 1][MID_IDX - 1][MID_IDX    ]);
 
             //dys
             H[1][2]= 0.25f*
                 (fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX + 1] -
-		         fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX - 1] -
-		         fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX + 1] + 
-		         fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX - 1]);
+                 fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX - 1] -
+                 fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX + 1] +
+                 fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX - 1]);
 
             //dyx = dxy
             H[1][0] = H[0][1];
@@ -528,13 +528,13 @@ namespace cv { namespace gpu { namespace surf
 
             //dx
             dD[0] = 0.5f*(fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX    ] -
-	 	        fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX    ]);
+                fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX    ]);
             //dy
             dD[1] = 0.5f*(fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX + 1] -
-		        fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX - 1]);
+                fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX - 1]);
             //ds
             dD[2] = 0.5f*(fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX    ] -
-    		    fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX    ]);
+                fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX    ]);
 
             __shared__ float invdet;
             invdet = 1.f /
@@ -577,39 +577,39 @@ namespace cv { namespace gpu { namespace surf
             x[2] = -(Hinv[2][0]*(dD[0]) + Hinv[2][1]*(dD[1]) + Hinv[2][2]*(dD[2]));
 
             if (fabs(x[0]) < 1.f && fabs(x[1]) < 1.f && fabs(x[2]) < 1.f) 
-            { 
+            {
                 // if the step is within the interpolation region, perform it
-	
-	            // Get a new feature index.
-	            unsigned int i = atomicInc(featureCounter, (unsigned int)-1);
 
- 	            if (i < c_max_features) 
-                {	  
-	                p.x = ((float)maxPosBuffer[blockIdx.x].x + x[1]) * (float)c_step + c_border;
-	                p.y = ((float)maxPosBuffer[blockIdx.x].y + x[0]) * (float)c_step + c_border;
+                // Get a new feature index.
+                unsigned int i = atomicInc(featureCounter, (unsigned int)-1);
 
- 	                if (x[2] > 0)
- 	                {
+                if (i < c_max_features)
+                {
+                    p.x = ((float)maxPosBuffer[blockIdx.x].x + x[1]) * (float)c_step + c_border;
+                    p.y = ((float)maxPosBuffer[blockIdx.x].y + x[0]) * (float)c_step + c_border;
+
+                    if (x[2] > 0)
+                    {
                         float a = calcScale(maxPosBuffer[blockIdx.x].z);
                         float b = calcScale(maxPosBuffer[blockIdx.x].z + 1);
 
-	                    p.size = (1.f - x[2]) * a + x[2] * b;
- 	                } 
- 	                else
- 	                {
+                        p.size = (1.f - x[2]) * a + x[2] * b;
+                    }
+                    else
+                    {
                         float a = calcScale(maxPosBuffer[blockIdx.x].z);
                         float b = calcScale(maxPosBuffer[blockIdx.x].z - 1);
 
-	                    p.size = (1.f + x[2]) * a - x[2] * b;
- 	                }
+                        p.size = (1.f + x[2]) * a - x[2] * b;
+                    }
 
-	                p.octave = c_octave;
-			
-	                p.response = fh_vals[MID_IDX][MID_IDX][MID_IDX];
+                    p.octave = c_octave;
 
-	                // Should we split up this transfer over many threads?
-	                featuresBuffer[i] = p;
-	            }
+                    p.response = fh_vals[MID_IDX][MID_IDX][MID_IDX];
+
+                    // Should we split up this transfer over many threads?
+                    featuresBuffer[i] = p;
+                }
             } // If the subpixel interpolation worked
         } // If this is thread 0.
 
@@ -624,12 +624,12 @@ namespace cv { namespace gpu { namespace surf
         threads.x = 3;
         threads.y = 3;
         threads.z = 3;
-    
+
         dim3 grid;
         grid.x = maxCounter;
 
         DeviceReference<unsigned int> featureCounterWrapper(featureCounter);
-    
+
         fh_interp_extremum<<<grid, threads>>>(hessianBuffer, maxPosBuffer, featuresBuffer, featureCounterWrapper);
         cudaSafeCall( cudaGetLastError() );
 
@@ -659,7 +659,7 @@ namespace cv { namespace gpu { namespace surf
         }
 
         __shared__ float texLookups[17][17];
-    
+
         __shared__ float Edx[13*13];
         __shared__ float Edy[13*13];
         __shared__ float xys[3];
@@ -667,7 +667,7 @@ namespace cv { namespace gpu { namespace surf
         // Read my x, y, size.
         if (tid < 3)
         {
-	        xys[tid] = ((float*)(&features[blockIdx.x]))[tid];
+            xys[tid] = ((float*)(&features[blockIdx.x]))[tid];
         }
         __syncthreads();
 
@@ -680,31 +680,30 @@ namespace cv { namespace gpu { namespace surf
 
         float dx = 0.f;
         float dy = 0.f;
-	 
-	    // Computes lookups for all points in a 13x13 lattice.
-	    // - SURF says to only use a circle, but the branching logic would slow it down
-	    // - Gaussian weighting should reduce the effects of the outer points anyway
+
+        // Computes lookups for all points in a 13x13 lattice.
+        // - SURF says to only use a circle, but the branching logic would slow it down
+        // - Gaussian weighting should reduce the effects of the outer points anyway
         if (tid2 < 169)
-
         {
-	        dx -=     texLookups[threadIdx.x    ][threadIdx.y    ];
-	        dx += 2.f*texLookups[threadIdx.x + 2][threadIdx.y    ];
-	        dx -=     texLookups[threadIdx.x + 4][threadIdx.y    ];
-	        dx +=     texLookups[threadIdx.x    ][threadIdx.y + 4];
-	        dx -= 2.f*texLookups[threadIdx.x + 2][threadIdx.y + 4];
-	        dx +=     texLookups[threadIdx.x + 4][threadIdx.y + 4];
+            dx -=     texLookups[threadIdx.x    ][threadIdx.y    ];
+            dx += 2.f*texLookups[threadIdx.x + 2][threadIdx.y    ];
+            dx -=     texLookups[threadIdx.x + 4][threadIdx.y    ];
+            dx +=     texLookups[threadIdx.x    ][threadIdx.y + 4];
+            dx -= 2.f*texLookups[threadIdx.x + 2][threadIdx.y + 4];
+            dx +=     texLookups[threadIdx.x + 4][threadIdx.y + 4];
 
-	        dy -=     texLookups[threadIdx.x    ][threadIdx.y    ];
-	        dy += 2.f*texLookups[threadIdx.x    ][threadIdx.y + 2];
-	        dy -=     texLookups[threadIdx.x    ][threadIdx.y + 4];
-	        dy +=     texLookups[threadIdx.x + 4][threadIdx.y    ];
-	        dy -= 2.f*texLookups[threadIdx.x + 4][threadIdx.y + 2];
-	        dy +=     texLookups[threadIdx.x + 4][threadIdx.y + 4];
+            dy -=     texLookups[threadIdx.x    ][threadIdx.y    ];
+            dy += 2.f*texLookups[threadIdx.x    ][threadIdx.y + 2];
+            dy -=     texLookups[threadIdx.x    ][threadIdx.y + 4];
+            dy +=     texLookups[threadIdx.x + 4][threadIdx.y    ];
+            dy -= 2.f*texLookups[threadIdx.x + 4][threadIdx.y + 2];
+            dy +=     texLookups[threadIdx.x + 4][threadIdx.y + 4];
 
-	        float g = c_gauss1D[threadIdx.x] * c_gauss1D[threadIdx.y];
+            float g = c_gauss1D[threadIdx.x] * c_gauss1D[threadIdx.y];
 
-	        Edx[tid2] = dx * g;
-	        Edy[tid2] = dy * g;
+            Edx[tid2] = dx * g;
+            Edy[tid2] = dy * g;
         }
 
         __syncthreads();
@@ -713,15 +712,15 @@ namespace cv { namespace gpu { namespace surf
         // Gets 128-168
         if (tid < 41)
         {
-            Edx[tid] += Edx[tid + 128]; 
+            Edx[tid] += Edx[tid + 128];
         } 
-        __syncthreads(); 
-        if (tid < 64) 
+        __syncthreads();
+        if (tid < 64)
         {
-            Edx[tid] += Edx[tid + 64]; 
-        } 
-        __syncthreads(); 
-        if (tid < 32) 
+            Edx[tid] += Edx[tid + 64];
+        }
+        __syncthreads();
+        if (tid < 32)
         {
             volatile float* smem = Edx;
 
@@ -736,15 +735,15 @@ namespace cv { namespace gpu { namespace surf
         // Gets 128-168
         if (tid < 41) 
         {
-            Edy[tid] += Edy[tid + 128]; 
-        } 
-        __syncthreads(); 
-        if (tid < 64) 
+            Edy[tid] += Edy[tid + 128];
+        }
+        __syncthreads();
+        if (tid < 64)
         {
-            Edy[tid] += Edy[tid + 64]; 
-        } 
-        __syncthreads(); 
-        if (tid < 32) 
+            Edy[tid] += Edy[tid + 64];
+        }
+        __syncthreads();
+        if (tid < 32)
         {
             volatile float* smem = Edy;
 
@@ -755,11 +754,11 @@ namespace cv { namespace gpu { namespace surf
             smem[tid] += smem[tid + 2];
             smem[tid] += smem[tid + 1];
         }
- 
+
         // Thread 0 saves back the result.
         if (tid == 0)
         {
-	        features[blockIdx.x].angle = -atan2(Edy[0], Edx[0]) * (180.0f / CV_PI);
+            features[blockIdx.x].angle = -atan2(Edy[0], Edx[0]) * (180.0f / CV_PI);
         }
     }
 
@@ -783,13 +782,13 @@ namespace cv { namespace gpu { namespace surf
 
     // precomputed values for a Gaussian with a standard deviation of 3.3
     // - it appears SURF uses a different value, but not sure what it is
-    __constant__ float c_3p3gauss1D[20] = 
+    __constant__ float c_3p3gauss1D[20] =
     {
         0.001917811039f, 0.004382549939f, 0.009136246641f, 0.017375153068f, 0.030144587513f,
-		0.047710056854f, 0.068885910797f, 0.090734146446f, 0.109026229640f, 0.119511889092f,
-		0.119511889092f, 0.109026229640f, 0.090734146446f, 0.068885910797f, 0.047710056854f,
-		0.030144587513f, 0.017375153068f, 0.009136246641f, 0.004382549939f, 0.001917811039f
-    };   
+        0.047710056854f, 0.068885910797f, 0.090734146446f, 0.109026229640f, 0.119511889092f,
+        0.119511889092f, 0.109026229640f, 0.090734146446f, 0.068885910797f, 0.047710056854f,
+        0.030144587513f, 0.017375153068f, 0.009136246641f, 0.004382549939f, 0.001917811039f
+    };
 
     template <int BLOCK_DIM_X>
     __global__ void normalize_descriptors(PtrStepf descriptors)
@@ -806,7 +805,7 @@ namespace cv { namespace gpu { namespace surf
         if (BLOCK_DIM_X >= 128)
         {
             if (threadIdx.x < 64)
-	            sqDesc[threadIdx.x] += sqDesc[threadIdx.x + 64];
+                sqDesc[threadIdx.x] += sqDesc[threadIdx.x + 64];
             __syncthreads();
         }
 
@@ -815,57 +814,44 @@ namespace cv { namespace gpu { namespace surf
         {
             volatile float* smem = sqDesc;
 
-	        smem[threadIdx.x] += smem[threadIdx.x + 32];
-	        smem[threadIdx.x] += smem[threadIdx.x + 16];
-	        smem[threadIdx.x] += smem[threadIdx.x + 8];
-	        smem[threadIdx.x] += smem[threadIdx.x + 4];
-	        smem[threadIdx.x] += smem[threadIdx.x + 2];
-	        smem[threadIdx.x] += smem[threadIdx.x + 1];
+            smem[threadIdx.x] += smem[threadIdx.x + 32];
+            smem[threadIdx.x] += smem[threadIdx.x + 16];
+            smem[threadIdx.x] += smem[threadIdx.x + 8];
+            smem[threadIdx.x] += smem[threadIdx.x + 4];
+            smem[threadIdx.x] += smem[threadIdx.x + 2];
+            smem[threadIdx.x] += smem[threadIdx.x + 1];
         }
 
         // compute length (square root)
         __shared__ float len;
         if (threadIdx.x == 0)
         {
-	        len = sqrtf(sqDesc[0]);
+            len = sqrtf(sqDesc[0]);
         }
         __syncthreads();
 
         // normalize and store in output
-        descriptor_base[threadIdx.x] = lookup / len;	
+        descriptor_base[threadIdx.x] = lookup / len;
     }
 
-    __device__ void calc_dx_dy(float sdx[4][4][25], float sdy[4][4][25], const KeyPoint_GPU* features)
+    __device__ void calc_dx_dy(float* sdx_bin, float* sdy_bin, const float* ipt,
+                               int xIndex, int yIndex, int tid)
     {
-        // get the interest point parameters (x, y, size, response, angle)
-        __shared__ float ipt[5];
-        if (threadIdx.x < 5 && threadIdx.y == 0 && threadIdx.z == 0)
-        {
-	        ipt[threadIdx.x] = ((float*)(&features[blockIdx.x]))[threadIdx.x];
-        }
-        __syncthreads();
-
         float sin_theta, cos_theta;
         sincosf(ipt[SF_ANGLE] * (CV_PI / 180.0f), &sin_theta, &cos_theta);
-
-        // Compute sampling points
-        // since grids are 2D, need to compute xBlock and yBlock indices
-        const int xIndex = threadIdx.y * 5 + threadIdx.x % 5;
-        const int yIndex = threadIdx.z * 5 + threadIdx.x / 5;
 
         // Compute rotated sampling points
         // (clockwise rotation since we are rotating the lattice)
         // (subtract 9.5f to start sampling at the top left of the lattice, 0.5f is to space points out properly - there is no center pixel)
-        const float sample_x = ipt[SF_X] + (cos_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE] 
+        const float sample_x = ipt[SF_X] + (cos_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE]
             + sin_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
-        const float sample_y = ipt[SF_Y] + (-sin_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE] 
+        const float sample_y = ipt[SF_Y] + (-sin_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE]
             + cos_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
 
         // gather integral image lookups for Haar wavelets at each point (some lookups are shared between dx and dy)
-        //	a b c
-        //	d	f
-        //	g h i
-
+        // a b c
+        // d   f
+        // g h i
         const float a = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
         const float b = tex2D(sumTex, sample_x,                sample_y - ipt[SF_SIZE]);
         const float c = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
@@ -883,161 +869,200 @@ namespace cv { namespace gpu { namespace surf
 
         // rotate responses (store all dxs then all dys)
         // - counterclockwise rotation to rotate back to zero orientation
-        sdx[threadIdx.z][threadIdx.y][threadIdx.x] = aa_dx * cos_theta - aa_dy * sin_theta; // rotated dx
-        sdy[threadIdx.z][threadIdx.y][threadIdx.x] = aa_dx * sin_theta + aa_dy * cos_theta; // rotated dy
+        sdx_bin[tid] = aa_dx * cos_theta - aa_dy * sin_theta; // rotated dx
+        sdy_bin[tid] = aa_dx * sin_theta + aa_dy * cos_theta; // rotated dy
     }
 
-    __device__ void reduce_sum(float sdata1[4][4][25], float sdata2[4][4][25], float sdata3[4][4][25],
-        float sdata4[4][4][25])
+    __device__ void calc_dx_dy(float* sdx_bin, float* sdy_bin, const KeyPoint_GPU* features)//(float sdx[4][4][25], float sdy[4][4][25], const KeyPoint_GPU* features)
     {
-        // first step is to reduce from 25 to 16
-        if (threadIdx.x < 9) // use 9 threads
+        // get the interest point parameters (x, y, size, response, angle)
+        __shared__ float ipt[5];
+        if (threadIdx.x < 5 && threadIdx.y == 0)
         {
-	        sdata1[threadIdx.z][threadIdx.y][threadIdx.x] += sdata1[threadIdx.z][threadIdx.y][threadIdx.x + 16];
-	        sdata2[threadIdx.z][threadIdx.y][threadIdx.x] += sdata2[threadIdx.z][threadIdx.y][threadIdx.x + 16];
-	        sdata3[threadIdx.z][threadIdx.y][threadIdx.x] += sdata3[threadIdx.z][threadIdx.y][threadIdx.x + 16];
-	        sdata4[threadIdx.z][threadIdx.y][threadIdx.x] += sdata4[threadIdx.z][threadIdx.y][threadIdx.x + 16];
+            ipt[threadIdx.x] = ((float*)(&features[blockIdx.x]))[threadIdx.x];
         }
         __syncthreads();
 
-        // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
-        if (threadIdx.x < 16)
+        // Compute sampling points
+        // since grids are 2D, need to compute xBlock and yBlock indices
+        const int xBlock = (threadIdx.y & 3);  // threadIdx.y % 4
+        const int yBlock = (threadIdx.y >> 2); // floor(threadIdx.y / 4)
+        const int xIndex = (xBlock * 5) + (threadIdx.x % 5);
+        const int yIndex = (yBlock * 5) + (threadIdx.x / 5);
+
+        calc_dx_dy(sdx_bin, sdy_bin, ipt, xIndex, yIndex, threadIdx.x);
+    }
+
+    __device__ void reduce_sum25(volatile float* sdata1, volatile float* sdata2,
+                                 volatile float* sdata3, volatile float* sdata4, int tid)
+    {
+        // first step is to reduce from 25 to 16
+        if (tid < 9) // use 9 threads
         {
-            volatile float* smem = sdata1[threadIdx.z][threadIdx.y];
+            sdata1[tid] += sdata1[tid + 16];
+            sdata2[tid] += sdata2[tid + 16];
+            sdata3[tid] += sdata3[tid + 16];
+            sdata4[tid] += sdata4[tid + 16];
+        }
 
-	        smem[threadIdx.x] += smem[threadIdx.x + 8];
-	        smem[threadIdx.x] += smem[threadIdx.x + 4];
-	        smem[threadIdx.x] += smem[threadIdx.x + 2];
-	        smem[threadIdx.x] += smem[threadIdx.x + 1];
+        // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
+        if (tid < 16)
+        {
+            sdata1[tid] += sdata1[tid + 8];
+            sdata1[tid] += sdata1[tid + 4];
+            sdata1[tid] += sdata1[tid + 2];
+            sdata1[tid] += sdata1[tid + 1];
 
-            smem = sdata2[threadIdx.z][threadIdx.y];
+            sdata2[tid] += sdata2[tid + 8];
+            sdata2[tid] += sdata2[tid + 4];
+            sdata2[tid] += sdata2[tid + 2];
+            sdata2[tid] += sdata2[tid + 1];
 
-	        smem[threadIdx.x] += smem[threadIdx.x + 8];
-	        smem[threadIdx.x] += smem[threadIdx.x + 4];
-	        smem[threadIdx.x] += smem[threadIdx.x + 2];
-	        smem[threadIdx.x] += smem[threadIdx.x + 1];
+            sdata3[tid] += sdata3[tid + 8];
+            sdata3[tid] += sdata3[tid + 4];
+            sdata3[tid] += sdata3[tid + 2];
+            sdata3[tid] += sdata3[tid + 1];
 
-            smem = sdata3[threadIdx.z][threadIdx.y];
-
-	        smem[threadIdx.x] += smem[threadIdx.x + 8];
-	        smem[threadIdx.x] += smem[threadIdx.x + 4];
-	        smem[threadIdx.x] += smem[threadIdx.x + 2];
-	        smem[threadIdx.x] += smem[threadIdx.x + 1];
-
-            smem = sdata4[threadIdx.z][threadIdx.y];
-
-	        smem[threadIdx.x] += smem[threadIdx.x + 8];
-	        smem[threadIdx.x] += smem[threadIdx.x + 4];
-	        smem[threadIdx.x] += smem[threadIdx.x + 2];
-	        smem[threadIdx.x] += smem[threadIdx.x + 1];
+            sdata4[tid] += sdata4[tid + 8];
+            sdata4[tid] += sdata4[tid + 4];
+            sdata4[tid] += sdata4[tid + 2];
+            sdata4[tid] += sdata4[tid + 1];
         }
     }
 
     // Spawn 16 blocks per interest point
     // - computes unnormalized 64 dimensional descriptor, puts it into d_descriptors in the correct location
     __global__ void compute_descriptors64(PtrStepf descriptors, const KeyPoint_GPU* features)
-    {        
+    {
         // 2 floats (dx, dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float sdx[4][4][25]; 
-        __shared__ float sdy[4][4][25];
+        __shared__ float sdx   [16 * 25];
+        __shared__ float sdy   [16 * 25];
+        __shared__ float sdxabs[16 * 25];
+        __shared__ float sdyabs[16 * 25];
 
-        calc_dx_dy(sdx, sdy, features);
+        __shared__ float sdesc[64];
+
+        float* sdx_bin    = sdx    + (threadIdx.y * 25);
+        float* sdy_bin    = sdy    + (threadIdx.y * 25);
+        float* sdxabs_bin = sdxabs + (threadIdx.y * 25);
+        float* sdyabs_bin = sdyabs + (threadIdx.y * 25);
+
+        calc_dx_dy(sdx_bin, sdy_bin, features);
         __syncthreads();
 
-        __shared__ float sdxabs[4][4][25];
-        __shared__ float sdyabs[4][4][25];
-        
-        sdxabs[threadIdx.z][threadIdx.y][threadIdx.x] = fabs(sdx[threadIdx.z][threadIdx.y][threadIdx.x]); // |dx| array
-        sdyabs[threadIdx.z][threadIdx.y][threadIdx.x] = fabs(sdy[threadIdx.z][threadIdx.y][threadIdx.x]); // |dy| array
+        sdxabs_bin[threadIdx.x] = fabs(sdx_bin[threadIdx.x]); // |dx| array
+        sdyabs_bin[threadIdx.x] = fabs(sdy_bin[threadIdx.x]); // |dy| array
         __syncthreads();
 
-        reduce_sum(sdx, sdy, sdxabs, sdyabs);
+        reduce_sum25(sdx_bin, sdy_bin, sdxabs_bin, sdyabs_bin, threadIdx.x);
+        __syncthreads();
 
-        float* descriptors_block = descriptors.ptr(blockIdx.x) + threadIdx.z * 16 + threadIdx.y * 4;
+        float* sdesc_bin = sdesc + (threadIdx.y << 2);
 
         // write dx, dy, |dx|, |dy|
         if (threadIdx.x == 0)
         {
-            descriptors_block[0] = sdx[threadIdx.z][threadIdx.y][0];
-            descriptors_block[1] = sdy[threadIdx.z][threadIdx.y][0];
-            descriptors_block[2] = sdxabs[threadIdx.z][threadIdx.y][0];
-            descriptors_block[3] = sdyabs[threadIdx.z][threadIdx.y][0];
+            sdesc_bin[0] = sdx_bin[0];
+            sdesc_bin[1] = sdy_bin[0];
+            sdesc_bin[2] = sdxabs_bin[0];
+            sdesc_bin[3] = sdyabs_bin[0];
         }
-    }    
+        __syncthreads();
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        if (tid < 64)
+            descriptors.ptr(blockIdx.x)[tid] = sdesc[tid];
+    }
 
     // Spawn 16 blocks per interest point
     // - computes unnormalized 128 dimensional descriptor, puts it into d_descriptors in the correct location
     __global__ void compute_descriptors128(PtrStepf descriptors, const KeyPoint_GPU* features)
-    {        
+    {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float sdx[4][4][25]; 
-        __shared__ float sdy[4][4][25];
-        
-        calc_dx_dy(sdx, sdy, features);
-        __syncthreads();
+        __shared__ float sdx[16 * 25];
+        __shared__ float sdy[16 * 25];
 
         // sum (reduce) 5x5 area response
-        __shared__ float sd1[4][4][25];
-        __shared__ float sd2[4][4][25];
-        __shared__ float sdabs1[4][4][25]; 
-        __shared__ float sdabs2[4][4][25];
+        __shared__ float sd1[16 * 25];
+        __shared__ float sd2[16 * 25];
+        __shared__ float sdabs1[16 * 25];
+        __shared__ float sdabs2[16 * 25];
 
-        if (sdy[threadIdx.z][threadIdx.y][threadIdx.x] >= 0)
+        __shared__ float sdesc[128];
+
+        float* sdx_bin    = sdx    + (threadIdx.y * 25);
+        float* sdy_bin    = sdy    + (threadIdx.y * 25);
+        float* sd1_bin    = sd1    + (threadIdx.y * 25);
+        float* sd2_bin    = sd2    + (threadIdx.y * 25);
+        float* sdabs1_bin = sdabs1 + (threadIdx.y * 25);
+        float* sdabs2_bin = sdabs2 + (threadIdx.y * 25);
+
+        calc_dx_dy(sdx_bin, sdy_bin, features);
+        __syncthreads();
+
+        if (sdy_bin[threadIdx.x] >= 0)
         {
-            sd1[threadIdx.z][threadIdx.y][threadIdx.x] = sdx[threadIdx.z][threadIdx.y][threadIdx.x];
-            sdabs1[threadIdx.z][threadIdx.y][threadIdx.x] = fabs(sdx[threadIdx.z][threadIdx.y][threadIdx.x]);
-            sd2[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-            sdabs2[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
+            sd1_bin[threadIdx.x] = sdx_bin[threadIdx.x];
+            sdabs1_bin[threadIdx.x] = fabs(sdx_bin[threadIdx.x]);
+            sd2_bin[threadIdx.x] = 0;
+            sdabs2_bin[threadIdx.x] = 0;
         }
         else
         {
-            sd1[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-            sdabs1[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-            sd2[threadIdx.z][threadIdx.y][threadIdx.x] = sdx[threadIdx.z][threadIdx.y][threadIdx.x];
-            sdabs2[threadIdx.z][threadIdx.y][threadIdx.x] = fabs(sdx[threadIdx.z][threadIdx.y][threadIdx.x]);
+            sd1_bin[threadIdx.x] = 0;
+            sdabs1_bin[threadIdx.x] = 0;
+            sd2_bin[threadIdx.x] = sdx_bin[threadIdx.x];
+            sdabs2_bin[threadIdx.x] = fabs(sdx[threadIdx.x]);
         }
         __syncthreads();
-        
-        reduce_sum(sd1, sd2, sdabs1, sdabs2);
-        
-        float* descriptors_block = descriptors.ptr(blockIdx.x) + threadIdx.z * 32 + threadIdx.y * 8;
+
+        reduce_sum25(sd1_bin, sd2_bin, sdabs1_bin, sdabs2_bin, threadIdx.x);
+        __syncthreads();
+
+        float* sdesc_bin = sdesc + (threadIdx.y << 3);
 
         // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
         if (threadIdx.x == 0)
         {
-	        descriptors_block[0] = sd1[threadIdx.z][threadIdx.y][0];
-	        descriptors_block[1] = sdabs1[threadIdx.z][threadIdx.y][0];
-	        descriptors_block[2] = sd2[threadIdx.z][threadIdx.y][0];
-	        descriptors_block[3] = sdabs2[threadIdx.z][threadIdx.y][0];
+                sdesc_bin[0] = sd1_bin[0];
+                sdesc_bin[1] = sdabs1_bin[0];
+                sdesc_bin[2] = sd2_bin[0];
+                sdesc_bin[3] = sdabs2_bin[0];
         }
         __syncthreads();
 
-        if (sdx[threadIdx.z][threadIdx.y][threadIdx.x] >= 0)
+        if (sdx_bin[threadIdx.x] >= 0)
         {
-            sd1[threadIdx.z][threadIdx.y][threadIdx.x] = sdy[threadIdx.z][threadIdx.y][threadIdx.x];
-            sdabs1[threadIdx.z][threadIdx.y][threadIdx.x] = fabs(sdy[threadIdx.z][threadIdx.y][threadIdx.x]);
-            sd2[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-            sdabs2[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
+            sd1_bin[threadIdx.x] = sdy_bin[threadIdx.x];
+            sdabs1_bin[threadIdx.x] = fabs(sdy_bin[threadIdx.x]);
+            sd2_bin[threadIdx.x] = 0;
+            sdabs2_bin[threadIdx.x] = 0;
         }
         else
         {
-            sd1[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-            sdabs1[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-            sd2[threadIdx.z][threadIdx.y][threadIdx.x] = sdy[threadIdx.z][threadIdx.y][threadIdx.x];
-            sdabs2[threadIdx.z][threadIdx.y][threadIdx.x] = fabs(sdy[threadIdx.z][threadIdx.y][threadIdx.x]);
+            sd1_bin[threadIdx.x] = 0;
+            sdabs1_bin[threadIdx.x] = 0;
+            sd2_bin[threadIdx.x] = sdy_bin[threadIdx.x];
+            sdabs2_bin[threadIdx.x] = fabs(sdy_bin[threadIdx.x]);
         }
         __syncthreads();
 
-        reduce_sum(sd1, sd2, sdabs1, sdabs2);
+        reduce_sum25(sd1_bin, sd2_bin, sdabs1_bin, sdabs2_bin, threadIdx.x);
+        __syncthreads();
 
         // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
         if (threadIdx.x == 0)
         {
-	        descriptors_block[4] = sd1[threadIdx.z][threadIdx.y][0];
-	        descriptors_block[5] = sdabs1[threadIdx.z][threadIdx.y][0];
-	        descriptors_block[6] = sd2[threadIdx.z][threadIdx.y][0];
-	        descriptors_block[7] = sdabs2[threadIdx.z][threadIdx.y][0];
+                sdesc_bin[4] = sd1_bin[0];
+                sdesc_bin[5] = sdabs1_bin[0];
+                sdesc_bin[6] = sd2_bin[0];
+                sdesc_bin[7] = sdabs2_bin[0];
         }
+        __syncthreads();
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+        if (tid < 128)
+            descriptors.ptr(blockIdx.x)[tid] = sdesc[tid];
     }
 
     void compute_descriptors_gpu(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures)
@@ -1046,7 +1071,7 @@ namespace cv { namespace gpu { namespace surf
         
         if (descriptors.cols == 64)
         {
-            compute_descriptors64<<<dim3(nFeatures, 1, 1), dim3(25, 4, 4)>>>(descriptors, features);
+            compute_descriptors64<<<dim3(nFeatures, 1, 1), dim3(25, 16, 1)>>>(descriptors, features);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1058,7 +1083,7 @@ namespace cv { namespace gpu { namespace surf
         }
         else
         {
-            compute_descriptors128<<<dim3(nFeatures, 1, 1), dim3(25, 4, 4)>>>(descriptors, features);
+            compute_descriptors128<<<dim3(nFeatures, 1, 1), dim3(25, 16, 1)>>>(descriptors, features);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1080,110 +1105,47 @@ namespace cv { namespace gpu { namespace surf
         }
         __syncthreads();
 
-        float sin_theta, cos_theta;
-        sincosf(ipt[SF_ANGLE] * (CV_PI / 180.0f), &sin_theta, &cos_theta);
-
         // Compute sampling points
         // since grids are 2D, need to compute xBlock and yBlock indices
-        const int xBlock = (blockIdx.y & 3); // blockIdx.y % 4
+        const int xBlock = (blockIdx.y & 3);  // blockIdx.y % 4
         const int yBlock = (blockIdx.y >> 2); // floor(blockIdx.y/4)
         const int xIndex = xBlock * blockDim.x + threadIdx.x;
         const int yIndex = yBlock * blockDim.y + threadIdx.y;
 
-        // Compute rotated sampling points
-        // (clockwise rotation since we are rotating the lattice)
-        // (subtract 9.5f to start sampling at the top left of the lattice, 0.5f is to space points out properly - there is no center pixel)
-        const float sample_x = ipt[SF_X] + (cos_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE] 
-            + sin_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
-        const float sample_y = ipt[SF_Y] + (-sin_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE] 
-            + cos_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
-
-        // gather integral image lookups for Haar wavelets at each point (some lookups are shared between dx and dy)
-        //	a b c
-        //	d	f
-        //	g h i
-        const float a = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
-        const float b = tex2D(sumTex, sample_x,                sample_y - ipt[SF_SIZE]);
-        const float c = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
-        const float d = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y);
-        const float f = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y);
-        const float g = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y + ipt[SF_SIZE]);
-        const float h = tex2D(sumTex, sample_x,                sample_y + ipt[SF_SIZE]);
-        const float i = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y + ipt[SF_SIZE]);	
-
-        // compute axis-aligned HaarX, HaarY
-        // (could group the additions together into multiplications)
-        const float gauss = c_3p3gauss1D[xIndex] * c_3p3gauss1D[yIndex]; // separable because independent (circular)
-        const float aa_dx = gauss * (-(a-b-g+h) + (b-c-h+i));            // unrotated dx
-        const float aa_dy = gauss * (-(a-c-d+f) + (d-f-g+i));            // unrotated dy
-
-        // rotate responses (store all dxs then all dys)
-        // - counterclockwise rotation to rotate back to zero orientation
-        sdx[tid] = aa_dx * cos_theta - aa_dy * sin_theta;     // rotated dx
-        sdy[tid] = aa_dx * sin_theta + aa_dy * cos_theta; // rotated dy
-    }
-
-    __device__ void reduce_sum_old(float sdata[25], int tid)
-    {
-        // first step is to reduce from 25 to 16
-        if (tid < 9) // use 9 threads
-            sdata[tid] += sdata[tid + 16];
-        __syncthreads();
-
-        // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
-        if (tid < 16)
-        {
-            volatile float* smem = sdata;
-
-            smem[tid] += smem[tid + 8];
-            smem[tid] += smem[tid + 4];
-            smem[tid] += smem[tid + 2];
-            smem[tid] += smem[tid + 1];
-        }
+        calc_dx_dy(sdx, sdy, ipt, xIndex, yIndex, tid);
     }
 
     // Spawn 16 blocks per interest point
     // - computes unnormalized 64 dimensional descriptor, puts it into d_descriptors in the correct location
     __global__ void compute_descriptors64_old(PtrStepf descriptors, const KeyPoint_GPU* features)
     {
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        
-        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 2);
-        
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float sdx[25]; 
+        __shared__ float sdx[25];
         __shared__ float sdy[25];
+        __shared__ float sdxabs[25];
+        __shared__ float sdyabs[25];
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         calc_dx_dy_old(sdx, sdy, features, tid);
         __syncthreads();
 
-        __shared__ float sabs[25];
-
-        sabs[tid] = fabs(sdx[tid]); // |dx| array
+        sdxabs[tid] = fabs(sdx[tid]); // |dx| array
+        sdyabs[tid] = fabs(sdy[tid]); // |dy| array
         __syncthreads();
 
-        reduce_sum_old(sdx, tid);
-        reduce_sum_old(sdy, tid);
-        reduce_sum_old(sabs, tid);
+        reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
+        __syncthreads();
 
-        // write dx, dy, |dx|
+        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 2);
+
+        // write dx, dy, |dx|, |dy|
         if (tid == 0)
         {
             descriptors_block[0] = sdx[0];
             descriptors_block[1] = sdy[0];
-            descriptors_block[2] = sabs[0];
-        }
-        __syncthreads();
-
-        sabs[tid] = fabs(sdy[tid]); // |dy| array
-        __syncthreads();
-        
-        reduce_sum_old(sabs, tid);
-
-        // write |dy|
-        if (tid == 0)
-        {
-            descriptors_block[3] = sabs[0];
+            descriptors_block[2] = sdxabs[0];
+            descriptors_block[3] = sdyabs[0];
         }
     }
 
@@ -1191,22 +1153,20 @@ namespace cv { namespace gpu { namespace surf
     // - computes unnormalized 128 dimensional descriptor, puts it into d_descriptors in the correct location
     __global__ void compute_descriptors128_old(PtrStepf descriptors, const KeyPoint_GPU* features)
     {
-        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float sdx[25]; 
+        __shared__ float sdx[25];
         __shared__ float sdy[25];
-        
-        calc_dx_dy_old(sdx, sdy, features, tid);
-        __syncthreads();
 
         // sum (reduce) 5x5 area response
         __shared__ float sd1[25];
         __shared__ float sd2[25];
-        __shared__ float sdabs1[25]; 
+        __shared__ float sdabs1[25];
         __shared__ float sdabs2[25];
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        calc_dx_dy_old(sdx, sdy, features, tid);
+        __syncthreads();
 
         if (sdy[tid] >= 0)
         {
@@ -1223,11 +1183,11 @@ namespace cv { namespace gpu { namespace surf
             sdabs2[tid] = fabs(sdx[tid]);
         }
         __syncthreads();
-        
-        reduce_sum_old(sd1, tid);
-        reduce_sum_old(sd2, tid);
-        reduce_sum_old(sdabs1, tid);
-        reduce_sum_old(sdabs2, tid);
+
+        reduce_sum25(sd1, sd1, sdabs1, sdabs2, tid);
+        __syncthreads();
+
+        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
 
         // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
         if (tid == 0)
@@ -1254,11 +1214,9 @@ namespace cv { namespace gpu { namespace surf
             sdabs2[tid] = fabs(sdy[tid]);
         }
         __syncthreads();
-        
-        reduce_sum_old(sd1, tid);
-        reduce_sum_old(sd2, tid);
-        reduce_sum_old(sdabs1, tid);
-        reduce_sum_old(sdabs2, tid);
+
+        reduce_sum25(sd1, sd1, sdabs1, sdabs2, tid);
+        __syncthreads();
 
         // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
         if (tid == 0)
