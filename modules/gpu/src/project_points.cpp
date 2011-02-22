@@ -47,52 +47,95 @@
 void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&,
                               GpuMat&) { throw_nogpu(); }
 
+void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&,
+                              GpuMat&, const Stream&) { throw_nogpu(); }
+
 void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
                             const Mat&, const Mat&, GpuMat&) { throw_nogpu(); }
 
+void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
+                            const Mat&, const Mat&, GpuMat&, const Stream&) { throw_nogpu(); }
+
 #else
+
+using namespace cv;
+using namespace cv::gpu;
 
 namespace cv { namespace gpu { namespace transform_points 
 {
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst);
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl,
+              DevMem2D_<float3> dst, cudaStream_t stream);
 }}}
+
+namespace
+{
+    void transformPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                               GpuMat& dst, cudaStream_t stream)
+    {
+        CV_Assert(src.rows == 1 && src.cols > 0 && src.type() == CV_32FC3);
+        CV_Assert(rvec.size() == Size(3, 1) && rvec.type() == CV_32F);
+        CV_Assert(tvec.size() == Size(3, 1) && tvec.type() == CV_32F);
+
+        // Convert rotation vector into matrix
+        Mat rot;
+        Rodrigues(rvec, rot);
+
+        dst.create(src.size(), src.type());
+        transform_points::call(src, rot.ptr<float>(), tvec.ptr<float>(), dst, stream);
+    }
+}
 
 void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
                               GpuMat& dst)
 {
-    CV_Assert(src.rows == 1 && src.cols > 0 && src.type() == CV_32FC3);
-    CV_Assert(rvec.size() == Size(3, 1) && rvec.type() == CV_32F);
-    CV_Assert(tvec.size() == Size(3, 1) && tvec.type() == CV_32F);
-
-    // Convert rotation vector into matrix
-    Mat rot;
-    Rodrigues(rvec, rot);
-
-    dst.create(src.size(), src.type());
-    transform_points::call(src, rot.ptr<float>(), tvec.ptr<float>(), dst);
+    ::transformPointsCaller(src, rvec, tvec, dst, 0);
 }
 
+void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                              GpuMat& dst, const Stream& stream)
+{
+    ::transformPointsCaller(src, rvec, tvec, dst, StreamAccessor::getStream(stream));
+}
 
 namespace cv { namespace gpu { namespace project_points 
 {
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst);
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl,
+              const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
 }}}
+
+namespace
+{
+    void projectPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                             const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
+                             cudaStream_t stream)
+    {
+        CV_Assert(src.rows == 1 && src.cols > 0 && src.type() == CV_32FC3);
+        CV_Assert(rvec.size() == Size(3, 1) && rvec.type() == CV_32F);
+        CV_Assert(tvec.size() == Size(3, 1) && tvec.type() == CV_32F);
+        CV_Assert(camera_mat.size() == Size(3, 3) && camera_mat.type() == CV_32F);
+        CV_Assert(dist_coef.empty()); // Undistortion isn't supported
+
+        // Convert rotation vector into matrix
+        Mat rot;
+        Rodrigues(rvec, rot);
+
+        dst.create(src.size(), CV_32FC2);
+        project_points::call(src, rot.ptr<float>(), tvec.ptr<float>(),
+                             camera_mat.ptr<float>(), dst,stream);
+    }
+}
 
 void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
                             const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst)
 {
-    CV_Assert(src.rows == 1 && src.cols > 0 && src.type() == CV_32FC3);
-    CV_Assert(rvec.size() == Size(3, 1) && rvec.type() == CV_32F);
-    CV_Assert(tvec.size() == Size(3, 1) && tvec.type() == CV_32F);
-    CV_Assert(camera_mat.size() == Size(3, 3) && camera_mat.type() == CV_32F);
-    CV_Assert(dist_coef.empty()); // Undistortion isn't supported
+    ::projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, 0);
+}
 
-    // Convert rotation vector into matrix
-    Mat rot;
-    Rodrigues(rvec, rot);
-
-    dst.create(src.size(), CV_32FC2);
-    project_points::call(src, rot.ptr<float>(), tvec.ptr<float>(), camera_mat.ptr<float>(), dst);
+void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                            const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
+                            const Stream& stream)
+{
+    ::projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, StreamAccessor::getStream(stream));
 }
 
 #endif

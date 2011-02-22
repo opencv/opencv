@@ -858,8 +858,15 @@ namespace cv
         CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
                                         GpuMat& dst);
 
+        CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                        GpuMat& dst, const Stream& stream);
+
         CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
                                       const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst);
+
+        CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                      const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
+                                      const Stream& stream);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 

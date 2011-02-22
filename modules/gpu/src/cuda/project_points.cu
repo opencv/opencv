@@ -64,13 +64,14 @@ namespace cv { namespace gpu
         };
 
         void call(const DevMem2D_<float3> src, const float* rot,
-                  const float* transl, DevMem2D_<float3> dst)
+                  const float* transl, DevMem2D_<float3> dst,
+                  cudaStream_t stream)
         {
             cudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
-            transform(src, dst, TransformOp());
+            transform(src, dst, TransformOp(), stream);
         }
     } // namespace transform_points
 
@@ -100,7 +101,8 @@ namespace cv { namespace gpu
         };
 
         void call(const DevMem2D_<float3> src, const float* rot,
-                  const float* transl, const float* proj, DevMem2D_<float2> dst)
+                  const float* transl, const float* proj, DevMem2D_<float2> dst,
+                  cudaStream_t stream)
         {
             cudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
@@ -108,7 +110,7 @@ namespace cv { namespace gpu
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
-            transform(src, dst, ProjectOp());
+            transform(src, dst, ProjectOp(), stream);
         }
     } // namespace project_points
 

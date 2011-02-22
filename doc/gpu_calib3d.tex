@@ -421,3 +421,41 @@ void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw, \par const Mat\& Q, 
 \end{description}
 
 See also: \cvCppCross{reprojectImageTo3D}.
+
+
+\cvCppFunc{gpu::transformPoints}
+Rotates and translates points.
+
+\cvdefCpp{
+void transformPoints(const GpuMat\& src, const Mat\& rvec, \par const Mat\& tvec, GpuMat\& dst);\newline
+void transformPoints(const GpuMat\& src, const Mat\& rvec, \par const Mat\& tvec, GpuMat\& dst, const Stream\& stream);
+}
+
+\begin{description}
+\cvarg{src}{Source points. Single-row \texttt{CV\_32FC3} matrix.}
+\cvarg{rvec}{\texttt{CV\_32F} 3D rotation vector.}
+\cvarg{tvec}{\texttt{CV\_32F} 3D translation vector.}
+\cvarg{dst}{Transformed points. Single-row \texttt{CV\_32FC3} matrix.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+
+\cvCppFunc{gpu::projectPoints}
+Projects points.
+
+\cvdefCpp{
+void projectPoints(const GpuMat\& src, const Mat\& rvec, \par const Mat\& tvec, const Mat\& camera\_mat, \par const Mat\& dist\_coef, GpuMat\& dst);\newline
+void projectPoints(const GpuMat\& src, const Mat\& rvec, \par const Mat\& tvec, const Mat\& camera\_mat, \par const Mat\& dist\_coef, GpuMat\& dst, const Stream\& stream);
+}
+
+\begin{description}
+\cvarg{src}{Source points. Single-row \texttt{CV\_32FC3} matrix.}
+\cvarg{rvec}{\texttt{CV\_32F} 3D rotation vector.}
+\cvarg{tvec}{\texttt{CV\_32F} 3D translation vector.}
+\cvarg{camera\_mat}{\texttt{CV\_32F} 3x3 camera matrix.}
+\cvarg{dist\_coef}{Distortion coefficients. This parameter isn't supported for now, must be empty matrix.}
+\cvarg{dst}{Projected points. Single-row \texttt{CV\_32FC2} matrix.}
+\cvarg{stream}{Stream for the asynchronous version.}
+\end{description}
+
+See also: \cvCppCross{projectPoints}.
