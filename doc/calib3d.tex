@@ -660,7 +660,11 @@ bool patternfound = findCirclesGrid(gray, patternsize, centers);
 drawChessboardCorners(img, patternsize, Mat(centers), patternfound);
 \end{lstlisting}
 
-\textbf{Note:} the function requires some white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environment.
+You can find a printable asymmetric pattern of circles in the OpenCV
+documentation folder (doc/acircles_pattern.png).
+
+\textbf{Note:} the function requires some white space (like a circle-thick
+border, the wider the better) around the board to make the detection more robust in various environment.
 \fi
 
 \ifCPy
