@@ -306,7 +306,7 @@ public:
     
     CV_WRAP virtual bool empty() const;
     CV_WRAP bool load( const string& filename );
-    bool read( const FileNode& node );
+    virtual bool read( const FileNode& node );
     CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT vector<Rect>& objects,
                                    double scaleFactor=1.1,
@@ -343,7 +343,7 @@ protected:
     friend int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
 
     bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
-    int runAt( Ptr<FeatureEvaluator>&, Point );
+    virtual int runAt( Ptr<FeatureEvaluator>&, Point );
 
     class Data
     {
