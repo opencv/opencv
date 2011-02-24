@@ -307,7 +307,7 @@ public:
     CV_WRAP virtual bool empty() const;
     CV_WRAP bool load( const string& filename );
     bool read( const FileNode& node );
-    CV_WRAP void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT vector<Rect>& objects,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
@@ -323,7 +323,7 @@ protected:
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                     int stripSize, int yStep, double factor, vector<Rect>& candidates );
 
-private:
+protected:
     enum { BOOST = 0 };
     enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
            FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
