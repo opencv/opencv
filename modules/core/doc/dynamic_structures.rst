@@ -3,4 +3,3 @@ Dynamic Structures
 
 .. highlight:: cpp
 
-

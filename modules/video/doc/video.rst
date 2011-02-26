@@ -1,6 +1,6 @@
-**************
-Video Analysis
-**************
+*********************
+video. Video Analysis
+*********************
 
 .. toctree::
     :maxdepth: 2

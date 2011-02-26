@@ -3,144 +3,71 @@ Object Detection
 
 .. highlight:: cpp
 
-
-
 .. index:: matchTemplate
-
 
 cv::matchTemplate
 -----------------
-
-`id=0.821462672178 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/cpp/imgproc/matchTemplate>`__
-
-
-
-
 .. cfunction:: void matchTemplate( const Mat\& image, const Mat\& templ,                    Mat\& result, int method )
 
     Compares a template against overlapped image regions.
 
+    :param image: Image where the search is running; should be 8-bit or 32-bit floating-point
 
+    :param templ: Searched template; must be not greater than the source image and have the same data type
 
-
-
-    
-    :param image: Image where the search is running; should be 8-bit or 32-bit floating-point 
-    
-    
-    :param templ: Searched template; must be not greater than the source image and have the same data type 
-    
-    
     :param result: A map of comparison results; will be single-channel 32-bit floating-point.
-        If  ``image``  is  :math:`W \times H`  and ``templ``  is  :math:`w \times h`  then  ``result``  will be  :math:`(W-w+1) \times (H-h+1)` 
-    
-    
-    :param method: Specifies the comparison method (see below) 
-    
-    
-    
-The function slides through 
-``image``
-, compares the
-overlapped patches of size 
-:math:`w \times h`
-against 
-``templ``
-using the specified method and stores the comparison results to
-``result``
-. Here are the formulas for the available comparison
+        If  ``image``  is  :math:`W \times H`  and ``templ``  is  :math:`w \times h`  then  ``result``  will be  :math:`(W-w+1) \times (H-h+1)`
+    :param method: Specifies the comparison method (see below)
+
+The function slides through ``image`` , compares the
+overlapped patches of size
+:math:`w \times h` against ``templ`` using the specified method and stores the comparison results to ``result`` . Here are the formulas for the available comparison
 methods (
-:math:`I`
-denotes 
-``image``
-, 
-:math:`T`
-``template``
-,
-:math:`R`
-``result``
-). The summation is done over template and/or the
-image patch: 
+:math:`I` denotes ``image``,:math:`T` ``template``,:math:`R` ``result`` ). The summation is done over template and/or the
+image patch:
 :math:`x' = 0...w-1, y' = 0...h-1`
-
-
-    
-
 * method=CV\_TM\_SQDIFF
-    
-    
+
     .. math::
-    
-        R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2  
-    
-    
-    
+
+        R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2
 
 * method=CV\_TM\_SQDIFF\_NORMED
-    
-    
+
     .. math::
-    
-        R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}} 
-    
-    
-    
+
+        R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
 
 * method=CV\_TM\_CCORR
-    
-    
+
     .. math::
-    
-        R(x,y)= \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))  
-    
-    
-    
+
+        R(x,y)= \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))
 
 * method=CV\_TM\_CCORR\_NORMED
-    
-    
+
     .. math::
-    
-        R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I'(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}} 
-    
-    
-    
+
+        R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I'(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
 
 * method=CV\_TM\_CCOEFF
-    
-    
+
     .. math::
-    
-        R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I(x+x',y+y'))  
-    
-    
+
+        R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I(x+x',y+y'))
+
     where
-    
-    
+
     .. math::
-    
-        \begin{array}{l} T'(x',y')=T(x',y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array} 
-    
-    
-    
+
+        \begin{array}{l} T'(x',y')=T(x',y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array}
 
 * method=CV\_TM\_CCOEFF\_NORMED
-    
-    
+
     .. math::
-    
-        R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} } 
-    
-    
-    
-    
-After the function finishes the comparison, the best matches can be found as global minimums (when 
-``CV_TM_SQDIFF``
-was used) or maximums (when 
-``CV_TM_CCORR``
-or 
-``CV_TM_CCOEFF``
-was used) using the 
-:func:`minMaxLoc`
-function. In the case of a color image, template summation in the numerator and each sum in the denominator is done over all of the channels (and separate mean values are used for each channel). That is, the function can take a color template and a color image; the result will still be a single-channel image, which is easier to analyze.
+
+        R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }
+
+After the function finishes the comparison, the best matches can be found as global minimums (when ``CV_TM_SQDIFF`` was used) or maximums (when ``CV_TM_CCORR`` or ``CV_TM_CCOEFF`` was used) using the
+:func:`minMaxLoc` function. In the case of a color image, template summation in the numerator and each sum in the denominator is done over all of the channels (and separate mean values are used for each channel). That is, the function can take a color template and a color image; the result will still be a single-channel image, which is easier to analyze.
 

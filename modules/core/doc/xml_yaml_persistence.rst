@@ -3,30 +3,16 @@ XML/YAML Persistence
 
 .. highlight:: cpp
 
-
-
 .. index:: FileStorage
 
 .. _FileStorage:
 
 FileStorage
 -----------
-
-`id=0.36488878292 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/cpp/core/FileStorage>`__
-
 .. ctype:: FileStorage
 
+The XML/YAML file storage class ::
 
-
-The XML/YAML file storage class
-
-
-
-
-::
-
-
-    
     class FileStorage
     {
     public:
@@ -41,7 +27,7 @@ The XML/YAML file storage class
         FileStorage(CvFileStorage* fs);
         // the destructor; closes the file if needed
         virtual ~FileStorage();
-    
+
         // opens the specified file for reading (flags=FileStorage::READ)
         // or writing (flags=FileStorage::WRITE)
         virtual bool open(const string& filename, int flags);
@@ -49,7 +35,7 @@ The XML/YAML file storage class
         virtual bool isOpened() const;
         // closes the file
         virtual void release();
-    
+
         // returns the first top-level node
         FileNode getFirstTopLevelNode() const;
         // returns the root file node
@@ -58,31 +44,28 @@ The XML/YAML file storage class
         // returns the top-level node by name
         FileNode operator[](const string& nodename) const;
         FileNode operator[](const char* nodename) const;
-    
+
         // returns the underlying CvFileStorage*
         CvFileStorage* operator *() { return fs; }
         const CvFileStorage* operator *() const { return fs; }
-        
+
         // writes the certain number of elements of the specified format
         // (see DataType) without any headers
         void writeRaw( const string& fmt, const uchar* vec, size_t len );
-        
+
         // writes an old-style object (CvMat, CvMatND etc.)
         void writeObj( const string& name, const void* obj );
-    
+
         // returns the default object name from the filename
         // (used by cvSave() with the default object name etc.)
         static string getDefaultObjectName(const string& filename);
-    
+
         Ptr<CvFileStorage> fs;
         string elname;
         vector<char> structs;
         int state;
     };
-    
-
 ..
-
 
 .. index:: FileNode
 
@@ -90,22 +73,10 @@ The XML/YAML file storage class
 
 FileNode
 --------
-
-`id=0.228849909258 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/cpp/core/FileNode>`__
-
 .. ctype:: FileNode
 
+The XML/YAML file node class ::
 
-
-The XML/YAML file node class
-
-
-
-
-::
-
-
-    
     class CV_EXPORTS FileNode
     {
     public:
@@ -134,21 +105,18 @@ The XML/YAML file node class
         operator float() const;
         operator double() const;
         operator string() const;
-    
+
         FileNodeIterator begin() const;
         FileNodeIterator end() const;
-    
+
         void readRaw( const string& fmt, uchar* vec, size_t len ) const;
         void* readObj() const;
-    
+
         // do not use wrapper pointer classes for better efficiency
         const CvFileStorage* fs;
         const CvFileNode* node;
     };
-    
-
 ..
-
 
 .. index:: FileNodeIterator
 
@@ -156,22 +124,10 @@ The XML/YAML file node class
 
 FileNodeIterator
 ----------------
-
-`id=0.575104633905 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/cpp/core/FileNodeIterator>`__
-
 .. ctype:: FileNodeIterator
 
+The XML/YAML file node iterator class ::
 
-
-The XML/YAML file node iterator class
-
-
-
-
-::
-
-
-    
     class CV_EXPORTS FileNodeIterator
     {
     public:
@@ -181,23 +137,21 @@ The XML/YAML file node iterator class
         FileNodeIterator(const FileNodeIterator& it);
         FileNode operator *() const;
         FileNode operator ->() const;
-    
+
         FileNodeIterator& operator ++();
         FileNodeIterator operator ++(int);
         FileNodeIterator& operator --();
         FileNodeIterator operator --(int);
         FileNodeIterator& operator += (int);
         FileNodeIterator& operator -= (int);
-    
+
         FileNodeIterator& readRaw( const string& fmt, uchar* vec,
                                    size_t maxCount=(size_t)INT_MAX );
-    
+
         const CvFileStorage* fs;
         const CvFileNode* container;
         CvSeqReader reader;
         size_t remaining;
     };
-    
-
 ..
 

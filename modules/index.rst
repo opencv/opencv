@@ -10,7 +10,7 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
    core/doc/intro.rst
    core/doc/core.rst
    imgproc/doc/imgproc.rst
@@ -25,7 +25,4 @@ Contents:
 Indices and tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+* :ref:`genindex` * :ref:`modindex` * :ref:`search`

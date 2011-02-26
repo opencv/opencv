@@ -1,6 +1,6 @@
-*********************
-2D Features Framework
-*********************
+*********************************
+features2d. 2D Features Framework
+*********************************
 
 .. toctree::
     :maxdepth: 2

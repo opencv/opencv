@@ -1,11 +1,10 @@
-****************
-Machine Learning
-****************
+********************
+ml. Machine Learning
+********************
 
 The Machine Learning Library (MLL) is a set of classes and functions for statistical classification, regression and clustering of data.
 
 Most of the classification and regression algorithms are implemented as C++ classes. As the algorithms have different seta of features (like the ability to handle missing measurements, or categorical input variables etc.), there is a little common ground between the classes. This common ground is defined by the class `CvStatModel` that all the other ML classes are derived from.
-
 
 .. toctree::
     :maxdepth: 2

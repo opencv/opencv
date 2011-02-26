@@ -1,6 +1,6 @@
-****************************************
-Camera Calibration and 3D Reconstruction
-****************************************
+*************************************************
+calib3d. Camera Calibration and 3D Reconstruction
+*************************************************
 
 .. toctree::
     :maxdepth: 2

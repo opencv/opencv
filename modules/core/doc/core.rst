@@ -1,6 +1,6 @@
-******************
-Core Functionality
-******************
+****************************
+core. The Core Functionality
+****************************
 
 .. toctree::
     :maxdepth: 2

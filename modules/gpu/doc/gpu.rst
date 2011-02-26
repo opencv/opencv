@@ -1,6 +1,6 @@
-*******************************
-GPU-accelerated Computer Vision
-*******************************
+************************************
+gpu. GPU-accelerated Computer Vision
+************************************
 
 .. toctree::
     :maxdepth: 2

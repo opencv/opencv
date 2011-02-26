@@ -30,20 +30,17 @@ The API Concepts
 *"cv"* namespace
 ----------------
 
-All the OpenCV classes and functions are placed into *"cv"* namespace. Therefore, to access this functionality from your code, use 
-``cv::`` specifier or ``using namespace cv;`` directive:
+All the OpenCV classes and functions are placed into *"cv"* namespace. Therefore, to access this functionality from your code, use ``cv::`` specifier or ``using namespace cv;`` directive:
 
 .. code-block:: c
-    
+
     #include "opencv2/core/core.hpp"
     ...
     cv::Mat H = cv::findHomography(points1, points2, CV_RANSAC, 5);
     ...
 
-or
+or ::
 
-::
-    
     #include "opencv2/core/core.hpp"
     using namespace cv;
     ...
@@ -51,15 +48,12 @@ or
     ...
 
 It is probable that some of the current or future OpenCV external names conflict with STL
-or other libraries, in this case use explicit namespace specifiers to resolve the name conflicts:
+or other libraries, in this case use explicit namespace specifiers to resolve the name conflicts: ::
 
-::
-    
     Mat a(100, 100, CV_32F);
     randu(a, Scalar::all(1), Scalar::all(std::rand()));
     cv::log(a, a);
     a /= std::log(2.);
-
 
 Automatic Memory Management
 ---------------------------
@@ -68,13 +62,11 @@ OpenCV handles all the memory automatically.
 
 First of all, ``std::vector``, ``Mat`` and other data structures used by the functions and methods have destructors that deallocate the underlying memory buffers when needed.
 
-Secondly, in the case of ``Mat`` this *when needed* means that the destructors do not always deallocate the buffers, they take into account possible data sharing. That is, destructor decrements the reference counter, associated with the matrix data buffer, and the buffer is deallocated if and only if the reference counter reaches zero, that is, when no other structures refer to the same buffer. Similarly, when ``Mat`` instance is copied, not actual data is really copied; instead, the associated with it reference counter is incremented to memorize that there is another owner of the same data. There is also ``Mat::clone`` method that creates a full copy of the matrix data. Here is the example
+Secondly, in the case of ``Mat`` this *when needed* means that the destructors do not always deallocate the buffers, they take into account possible data sharing. That is, destructor decrements the reference counter, associated with the matrix data buffer, and the buffer is deallocated if and only if the reference counter reaches zero, that is, when no other structures refer to the same buffer. Similarly, when ``Mat`` instance is copied, not actual data is really copied; instead, the associated with it reference counter is incremented to memorize that there is another owner of the same data. There is also ``Mat::clone`` method that creates a full copy of the matrix data. Here is the example ::
 
-::
-    
     // create a big 8Mb matrix
     Mat A(1000, 1000, CV_64F);
-    
+
     // create another header for the same matrix;
     // this is instant operation, regardless of the matrix size.
     Mat B = A;
@@ -82,7 +74,7 @@ Secondly, in the case of ``Mat`` this *when needed* means that the destructors d
     Mat C = B.row(3);
     // now create a separate copy of the matrix
     Mat D = B.clone();
-    // copy the 5-th row of B to C, that is, copy the 5-th row of A 
+    // copy the 5-th row of B to C, that is, copy the 5-th row of A
     // to the 3-rd row of A.
     B.row(5).copyTo(C);
     // now let A and D share the data; after that the modified version
@@ -91,8 +83,8 @@ Secondly, in the case of ``Mat`` this *when needed* means that the destructors d
     // now make B an empty matrix (which references no memory buffers),
     // but the modified version of A will still be referenced by C,
     // despite that C is just a single row of the original A
-    B.release(); 
-                 
+    B.release();
+
     // finally, make a full copy of C. In result, the big modified
     // matrix will be deallocated, since it's not referenced by anyone
     C = C.clone();
@@ -107,7 +99,6 @@ one can use::
 
 That is, ``Ptr<T> ptr`` incapsulates a pointer to ``T`` instance and a reference counter associated with the pointer. See ``Ptr`` description for details.
 
-
 .. todo::
 
   Should we replace Ptr<> with the semi-standard shared_ptr<>?
@@ -118,17 +109,17 @@ Automatic Allocation of the Output Data
 OpenCV does not only deallocate the memory automatically, it can also allocate memory for the output function parameters automatically most of the time. That is, if a function has one or more input arrays (``cv::Mat`` instances) and some output arrays, the output arrays automatically allocated or reallocated. The size and type of the output arrays are determined from the input arrays' size and type. If needed, the functions take extra parameters that help to figure out the output array properties.
 
 Here is the example: ::
-    
+
     #include "cv.h"
     #include "highgui.h"
-    
+
     using namespace cv;
-    
+
     int main(int, char**)
     {
         VideoCapture cap(0);
         if(!cap.isOpened()) return -1;
-    
+
         Mat frame, edges;
         namedWindow("edges",1);
         for(;;)
@@ -150,22 +141,20 @@ The key component of this technology is the method ``Mat::create``. It takes the
 
 Some notable exceptions from this scheme are ``cv::mixChannels``, ``cv::RNG::fill`` and a few others functions and methods. They are not able to allocate the output array, so the user has to do that in advance.
 
-
 Saturation Arithmetics
 ----------------------
 
-As computer vision library, OpenCV deals a lot with image pixels that are often encoded in a compact 8- or 16-bit per channel form and thus have a limited value range. Furthermore, certain operations on images, like color space conversions, brightness/contrast adjustments, sharpening, complex interpolation (bi-cubic, Lanczos) can produce values out of the available range. If we just store the lowest 8 (16) bit of the result, that will result in some visual artifacts and may affect the further image analysis. To solve this problem, we use so-called *saturation* arithmetics, e.g. to store ``r``, a result of some operation, to 8-bit image, we find the nearest value within 0..255 range: 
+As computer vision library, OpenCV deals a lot with image pixels that are often encoded in a compact 8- or 16-bit per channel form and thus have a limited value range. Furthermore, certain operations on images, like color space conversions, brightness/contrast adjustments, sharpening, complex interpolation (bi-cubic, Lanczos) can produce values out of the available range. If we just store the lowest 8 (16) bit of the result, that will result in some visual artifacts and may affect the further image analysis. To solve this problem, we use so-called *saturation* arithmetics, e.g. to store ``r``, a result of some operation, to 8-bit image, we find the nearest value within 0..255 range:
 
 .. math::
 
-    I(x,y)= \min ( \max (\textrm{round}(r), 0), 255) 
+    I(x,y)= \min ( \max (\textrm{round}(r), 0), 255)
 
 The similar rules are applied to 8-bit signed and 16-bit signed and unsigned types. This semantics is used everywhere in the library. In C++ code it is done using ``saturate_cast<>`` functions that resembler the standard C++ cast operations. Here is the implementation of the above formula::
 
     I.at<uchar>(y, x) = saturate_cast<uchar>(r);
 
 where ``cv::uchar`` is OpenCV's 8-bit unsigned integer type. In optimized SIMD code we use specialized instructions, like SSE2' ``paddusb``, ``packuswb`` etc. to achieve exactly the same behavior as in C++ code.
-
 
 Fixed Pixel Types. Limited Use of Templates
 -------------------------------------------
@@ -182,18 +171,17 @@ Because of this, there is a limited fixed set of primitive data types that the l
   * 32-bit floating-point number (float)
   * 64-bit floating-point number (double)
   * a tuple of several elements, where all elements have the same type (one of the above). Array, which elements are such tuples, are called multi-channel arrays, as opposite to the single-channel arrays, which elements are scalar values. The maximum possible number of channels is defined by ``CV_CN_MAX`` constant (which is not smaller than 32).
-  
+
 .. todo::
   Need we extend the above list? Shouldn't we throw away 8-bit signed (schar)?
-  
+
 For these basic types there is enumeration::
 
   enum { CV_8U=0, CV_8S=1, CV_16U=2, CV_16S=3, CV_32S=4, CV_32F=5, CV_64F=6 };
-  
+
 Multi-channel (``n``-channel) types can be specified using ``CV_8UC1`` ... ``CV_64FC4`` constants (for number of channels from 1 to 4), or using ``CV_8UC(n)`` ... ``CV_64FC(n)`` or ``CV_MAKETYPE(CV_8U, n)`` ... ``CV_MAKETYPE(CV_64F, n)`` macros when the number of channels is more than 4 or unknown at compile time.
 
-.. note::
-  ``CV_32FC1 == CV_32F``, ``CV_32FC2 == CV_32FC(2) == CV_MAKETYPE(CV_32F, 2)`` and ``CV_MAKETYPE(depth, n) == ((x&7)<<3) + (n-1)``, that is, the type constant is formed from the ``depth``, taking the lowest 3 bits, and the number of channels minus 1, taking the next ``log2(CV_CN_MAX)`` bits.
+.. note:: ``CV_32FC1 == CV_32F``, ``CV_32FC2 == CV_32FC(2) == CV_MAKETYPE(CV_32F, 2)`` and ``CV_MAKETYPE(depth, n) == ((x&7)<<3) + (n-1)``, that is, the type constant is formed from the ``depth``, taking the lowest 3 bits, and the number of channels minus 1, taking the next ``log2(CV_CN_MAX)`` bits.
 
 Here are some examples::
 
@@ -219,7 +207,6 @@ The subset of supported types for each functions has been defined from practical
   Should we include such a table into the standard?
   Should we specify minimum "must-have" set of supported formats for each functions?
 
-
 Error handling
 --------------
 
@@ -227,10 +214,8 @@ OpenCV uses exceptions to signal about the critical errors. When the input data 
 
 The exceptions can be instances of ``cv::Exception`` class or its derivatives. In its turn, ``cv::Exception`` is a derivative of std::exception, so it can be gracefully handled in the code using other standard C++ library components.
 
-The exception is typically thrown using ``CV_Error(errcode, description)`` macro, or its printf-like ``CV_Error_(errcode, printf-spec, (printf-args))`` variant, or using ``CV_Assert(condition)`` macro that checks the condition and throws exception when it is not satisfied. For performance-critical code there is ``CV_DbgAssert(condition)`` that is only retained in Debug configuration. Thanks to the automatic memory management, all the intermediate buffers are automatically deallocated in the case of sudden error; user only needs to put a try statement to catch the exceptions, if needed:
+The exception is typically thrown using ``CV_Error(errcode, description)`` macro, or its printf-like ``CV_Error_(errcode, printf-spec, (printf-args))`` variant, or using ``CV_Assert(condition)`` macro that checks the condition and throws exception when it is not satisfied. For performance-critical code there is ``CV_DbgAssert(condition)`` that is only retained in Debug configuration. Thanks to the automatic memory management, all the intermediate buffers are automatically deallocated in the case of sudden error; user only needs to put a try statement to catch the exceptions, if needed: ::
 
-::
-  
     try
     {
         ... // call OpenCV
@@ -240,7 +225,6 @@ The exception is typically thrown using ``CV_Error(errcode, description)`` macro
         const char* err_msg = e.what();
         std::cout << "exception caught: " << err_msg << std::endl;
     }
-
 
 Multi-threading and reenterability
 ----------------------------------

@@ -1,6 +1,6 @@
-****************
-Object Detection
-****************
+***************************
+objdetect. Object Detection
+***************************
 
 .. toctree::
     :maxdepth: 2
