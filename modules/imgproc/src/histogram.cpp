@@ -613,10 +613,15 @@ void calcHist( const Mat* images, int nimages, const int* channels,
     const double* _uniranges = uniform ? &uniranges[0] : 0;
     
     int depth = images[0].depth();
+    
     if( depth == CV_8U )
         calcHist_8u(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
+    else if( depth == CV_16U )
+        calcHist_<ushort>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
     else if( depth == CV_32F )
         calcHist_<float>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
+    else
+        CV_Error(CV_StsUnsupportedFormat, "");
     
     ihist.convertTo(hist, CV_32F);
 }
@@ -780,8 +785,12 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     int depth = images[0].depth();
     if( depth == CV_8U )
         calcSparseHist_8u(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, uniform );
+    else if( depth == CV_16U )
+        calcSparseHist_<ushort>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, uniform );
     else if( depth == CV_32F )
         calcSparseHist_<float>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, uniform );
+    else
+        CV_Error(CV_StsUnsupportedFormat, "");
     
     if( !keepInt )
     {
@@ -1114,8 +1123,12 @@ void calcBackProject( const Mat* images, int nimages, const int* channels,
     int depth = images[0].depth();
     if( depth == CV_8U )
         calcBackProj_8u(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, (float)scale, uniform);
+    else if( depth == CV_16U )
+        calcBackProj_<ushort, ushort>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, (float)scale, uniform );
     else if( depth == CV_32F )
         calcBackProj_<float, float>(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, (float)scale, uniform );
+    else
+        CV_Error(CV_StsUnsupportedFormat, "");
 }
 
     
@@ -1269,9 +1282,14 @@ void calcBackProject( const Mat* images, int nimages, const int* channels,
     if( depth == CV_8U )
         calcSparseBackProj_8u(ptrs, deltas, imsize, hist, dims, ranges,
                               _uniranges, (float)scale, uniform);
+    else if( depth == CV_16U )
+        calcSparseBackProj_<ushort, ushort>(ptrs, deltas, imsize, hist, dims, ranges,
+                                          _uniranges, (float)scale, uniform );
     else if( depth == CV_32F )
         calcSparseBackProj_<float, float>(ptrs, deltas, imsize, hist, dims, ranges,
                                           _uniranges, (float)scale, uniform );
+    else
+        CV_Error(CV_StsUnsupportedFormat, "");
 }
 
     
