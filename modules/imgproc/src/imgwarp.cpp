@@ -1135,23 +1135,32 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
 
 
 template<typename T, typename WT>
-static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int* xofs )
+static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int* xofs,
+                             int scale_x, int scale_y )
 {
     Size ssize = src.size(), dsize = dst.size();
     int cn = src.channels();
     int dy, dx, k = 0;
-    int scale_x = ssize.width/dsize.width;
-    int scale_y = ssize.height/dsize.height;
     int area = scale_x*scale_y;
     float scale = 1.f/(scale_x*scale_y);
+    int dwidth1 = (ssize.width/scale_x)*cn; 
     dsize.width *= cn;
+    ssize.width *= cn;
 
     for( dy = 0; dy < dsize.height; dy++ )
     {
         T* D = (T*)(dst.data + dst.step*dy);
-        for( dx = 0; dx < dsize.width; dx++ )
+        int sy0 = dy*scale_y, w = sy0 + scale_y <= ssize.height ? dwidth1 : 0;
+        if( sy0 >= ssize.height )
         {
-            const T* S = (const T*)(src.data + src.step*dy*scale_y) + xofs[dx];
+            for( dx = 0; dx < dsize.width; dx++ )
+                D[dx] = 0;
+            continue;
+        }
+        
+        for( dx = 0; dx < w; dx++ )
+        {
+            const T* S = (const T*)(src.data + src.step*sy0) + xofs[dx];
             WT sum = 0;
             for( k = 0; k <= area - 4; k += 4 )
                 sum += S[ofs[k]] + S[ofs[k+1]] + S[ofs[k+2]] + S[ofs[k+3]];
@@ -1159,6 +1168,30 @@ static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int
                 sum += S[ofs[k]];
 
             D[dx] = saturate_cast<T>(sum*scale);
+        }
+        
+        for( ; dx < dsize.width; dx++ )
+        {
+            WT sum = 0;
+            int count = 0, sx0 = xofs[dx];
+            if( sx0 >= ssize.width )
+                D[dx] = 0;
+            
+            for( int sy = 0; sy < scale_y; sy++ )
+            {
+                if( sy0 + sy >= ssize.height )
+                    break;
+                const T* S = (const T*)(src.data + src.step*(sy0 + sy)) + sx0;
+                for( int sx = 0; sx < scale_x*cn; sx += cn )
+                {
+                    if( sx0 + sx >= ssize.width )
+                        break;
+                    sum += S[sx];
+                    count++;
+                }
+            }
+            
+            D[dx] = saturate_cast<T>((float)sum/count);
         }
     }
 }
@@ -1274,7 +1307,8 @@ typedef void (*ResizeFunc)( const Mat& src, Mat& dst,
                             int xmin, int xmax, int ksize );
 
 typedef void (*ResizeAreaFastFunc)( const Mat& src, Mat& dst,
-                                    const int* ofs, const int *xofs );
+                                    const int* ofs, const int *xofs,
+                                    int scale_x, int scale_y );
 
 typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const DecimateAlpha* xofs, int xofs_count );
@@ -1441,7 +1475,7 @@ void resize( const Mat& src, Mat& dst, Size dsize,
                     xofs[dx*cn + k] = sx + k;
             }
 
-            func( src, dst, ofs, xofs );
+            func( src, dst, ofs, xofs, iscale_x, iscale_y );
             return;
         }
 
