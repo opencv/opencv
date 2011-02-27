@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+#ifdef HAVE_IPP
+#include "ippversion.h"
+#endif
+
 namespace cv
 {
 
@@ -2629,11 +2633,183 @@ void mulTransposed( const Mat& src, Mat& dst, bool ata,
 *                                      Dot Product                                       *
 \****************************************************************************************/
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+
+static double ippDotProd8u(const Mat& srcmat1, const Mat& srcmat2)
+{
+    int      nchan  = srcmat1.channels();
+    Ipp64f   sum[4] = { 0.0 };
+    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
+
+    switch(nchan)
+    {
+        case 1:
+            ippiDotProd_8u64f_C1R((const Ipp8u*)srcmat1.data, (int)srcmat1.step,
+                                  (const Ipp8u*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 3:
+            ippiDotProd_8u64f_C3R((const Ipp8u*)srcmat1.data, (int)srcmat1.step,
+                                  (const Ipp8u*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 4:
+            ippiDotProd_8u64f_C4R((const Ipp8u*)srcmat1.data, (int)srcmat1.step,
+                                  (const Ipp8u*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+    }
+
+    for(int c = 1; c < nchan; c++)
+    {
+        sum[0] += sum[c];
+    }
+
+    return sum[0];
+} // ippDotProd8u()
+
+
+static double ippDotProd16u(const Mat& srcmat1, const Mat& srcmat2)
+{
+    int      nchan  = srcmat1.channels();
+    Ipp64f   sum[4] = { 0.0 };
+    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
+
+    switch(nchan)
+    {
+        case 1:
+            ippiDotProd_16u64f_C1R((const Ipp16u*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp16u*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 3:
+            ippiDotProd_16u64f_C3R((const Ipp16u*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp16u*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 4:
+            ippiDotProd_16u64f_C4R((const Ipp16u*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp16u*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+    }
+
+    for(int c = 1; c < nchan; c++)
+    {
+        sum[0] += sum[c];
+    }
+
+    return sum[0];
+} // ippDotProd16u()
+
+
+static double ippDotProd16s(const Mat& srcmat1, const Mat& srcmat2)
+{
+    int      nchan  = srcmat1.channels();
+    Ipp64f   sum[4] = { 0.0 };
+    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
+
+    switch(nchan)
+    {
+        case 1:
+            ippiDotProd_16s64f_C1R((const Ipp16s*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp16s*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 3:
+            ippiDotProd_16s64f_C3R((const Ipp16s*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp16s*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 4:
+            ippiDotProd_16s64f_C4R((const Ipp16s*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp16s*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+    }
+
+    for(int c = 1; c < nchan; c++)
+    {
+        sum[0] += sum[c];
+    }
+
+    return sum[0];
+} // ippDotProd16s()
+
+
+static double ippDotProd32s(const Mat& srcmat1, const Mat& srcmat2)
+{
+    int      nchan  = srcmat1.channels();
+    Ipp64f   sum[4] = { 0.0 };
+    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
+
+    switch(nchan)
+    {
+        case 1:
+            ippiDotProd_32s64f_C1R((const Ipp32s*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp32s*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 3:
+            ippiDotProd_32s64f_C3R((const Ipp32s*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp32s*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+
+        case 4:
+            ippiDotProd_32s64f_C4R((const Ipp32s*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp32s*)srcmat2.data, (int)srcmat2.step, roi, sum);
+            break;
+    }
+
+    for(int c = 1; c < nchan; c++)
+    {
+        sum[0] += sum[c];
+    }
+
+    return sum[0];
+} // ippDotProd32s()
+
+
+static double ippDotProd32f(const Mat& srcmat1, const Mat& srcmat2)
+{
+    int      nchan  = srcmat1.channels();
+    Ipp64f   sum[4] = { 0.0 };
+    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
+
+    switch(nchan)
+    {
+        case 1:
+            ippiDotProd_32f64f_C1R((const Ipp32f*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp32f*)srcmat2.data, (int)srcmat2.step, roi, sum, ippAlgHintAccurate);
+            break;
+
+        case 3:
+            ippiDotProd_32f64f_C3R((const Ipp32f*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp32f*)srcmat2.data, (int)srcmat2.step, roi, sum, ippAlgHintAccurate);
+            break;
+
+        case 4:
+            ippiDotProd_32f64f_C4R((const Ipp32f*)srcmat1.data, (int)srcmat1.step,
+                                   (const Ipp32f*)srcmat2.data, (int)srcmat2.step, roi, sum, ippAlgHintAccurate);
+            break;
+    }
+
+    for(int c = 1; c < nchan; c++)
+    {
+        sum[0] += sum[c];
+    }
+
+    return sum[0];
+} // ippDotProd32f()
+
+#endif
+
 template<typename T, typename WT, typename ST> static double
 dotprod_( const Mat& srcmat1, const Mat& srcmat2 )
 {
-    const T *src1 = (const T*)srcmat1.data, *src2 = (const T*)srcmat2.data;
-    size_t step1 = srcmat1.step/sizeof(src1[0]), step2 = srcmat2.step/sizeof(src2[0]);
+    const T* src1 = (const T*)srcmat1.data;
+    const T* src2 = (const T*)srcmat2.data;
+
+    size_t step1 = srcmat1.step/sizeof(src1[0]);
+    size_t step2 = srcmat2.step/sizeof(src2[0]);
+
     ST sum = 0;
     Size size = getContinuousSize( srcmat1, srcmat2, srcmat1.channels() );
 
@@ -2642,6 +2818,7 @@ dotprod_( const Mat& srcmat1, const Mat& srcmat2 )
         WT t = 0;
         for( ; size.height--; src1 += step1, src2 += step2 )
             t += (WT)src1[0]*src2[0];
+
         sum += t;
     }
     else
@@ -2652,17 +2829,19 @@ dotprod_( const Mat& srcmat1, const Mat& srcmat2 )
             WT t = 0;
             for( i = 0; i <= size.width - 4; i += 4 )
             {
-                sum += (WT)src1[i]*src2[i] +
-                    (WT)src1[i+1]*src2[i+1] +
-                    (WT)src1[i+2]*src2[i+2] +
-                    (WT)src1[i+3]*src2[i+3];
+                sum += (WT)src1[i  ]*src2[i  ] +
+                       (WT)src1[i+1]*src2[i+1] +
+                       (WT)src1[i+2]*src2[i+2] +
+                       (WT)src1[i+3]*src2[i+3];
             }
 
             for( ; i < size.width; i++ )
                 t += (WT)src1[i]*src2[i];
+
             sum += t;
         }
     }
+
     return (double)sum;
 }
 
@@ -2670,16 +2849,43 @@ typedef double (*DotProductFunc)(const Mat& src1, const Mat& src2);
 
 double Mat::dot(const Mat& mat) const
 {
-    static DotProductFunc tab[] = {
-        dotprod_<uchar, int, int64>, 0,
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    static DotProductFunc ipptab[] =
+    {
+        dotprod_<uchar, int, int64>,
+        0,
+        dotprod_<ushort, double, double>,
+        dotprod_<short, double, double>,
+        dotprod_<int, double, double>,
+        ippDotProd32f,
+        dotprod_<double, double, double>,
+        0
+    };
+#endif
+
+    static DotProductFunc tab[] =
+    {
+        dotprod_<uchar, int, int64>,
+        0,
         dotprod_<ushort, double, double>,
         dotprod_<short, double, double>,
         dotprod_<int, double, double>,
         dotprod_<float, double, double>,
-        dotprod_<double, double, double>, 0 };
+        dotprod_<double, double, double>,
+        0
+    };
 
     DotProductFunc func = tab[depth()];
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    if((*this).channels() != 2)
+    {
+        func = ipptab[depth()];
+    }
+#endif
+
     CV_Assert( mat.type() == type() && mat.size() == size() && func != 0 );
+
     return func( *this, mat );
 }
 
