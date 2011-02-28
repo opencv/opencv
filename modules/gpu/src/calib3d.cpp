@@ -173,13 +173,71 @@ namespace
             } while (was);
         }
     }
+
+    // Computes rotation, translation pair for small subsets if the input data
+    class TransformHypothesesGenerator
+    {
+    public:
+        TransformHypothesesGenerator(const Mat& object_, const Mat& image_, const Mat& camera_mat_,
+                                     int num_points_, int subset_size_, Mat rot_matrices_, Mat transl_vectors_)
+                : object(&object_), image(&image_), camera_mat(&camera_mat_), num_points(num_points_),
+                  subset_size(subset_size_), rot_matrices(rot_matrices_), transl_vectors(transl_vectors_) {}
+
+        void operator()(const BlockedRange& range) const
+        {
+            // We assume that input is undistorted
+            Mat empty_dist_coef;
+
+            // Input data for generation of the current hypothesis
+            vector<int> subset_indices(subset_size);
+            Mat_<Point3f> object_subset(1, subset_size);
+            Mat_<Point2f> image_subset(1, subset_size);
+
+            // Current hypothesis data
+            Mat rot_vec(1, 3, CV_64F);
+            Mat rot_mat(3, 3, CV_64F);
+            Mat transl_vec(1, 3, CV_64F);
+
+            for (int iter = range.begin(); iter < range.end(); ++iter)
+            {
+                selectRandom(subset_size, num_points, subset_indices);
+                for (int i = 0; i < subset_size; ++i)
+                {
+                   object_subset(0, i) = object->at<Point3f>(subset_indices[i]);
+                   image_subset(0, i) = image->at<Point2f>(subset_indices[i]);
+                }
+
+                solvePnP(object_subset, image_subset, *camera_mat, empty_dist_coef, rot_vec, transl_vec);
+
+                // Remember translation vector
+                Mat transl_vec_ = transl_vectors.colRange(iter * 3, (iter + 1) * 3);
+                transl_vec = transl_vec.reshape(0, 1);
+                transl_vec.convertTo(transl_vec_, CV_32F);
+
+                // Remember rotation matrix
+                Rodrigues(rot_vec, rot_mat);
+                Mat rot_mat_ = rot_matrices.colRange(iter * 9, (iter + 1) * 9).reshape(0, 3);
+                rot_mat.convertTo(rot_mat_, CV_32F);
+            }
+        }
+
+        const Mat* object;
+        const Mat* image;
+        const Mat* camera_mat;
+        int num_points;
+        int subset_size;
+
+        // Hypotheses storage (global)
+        Mat rot_matrices;
+        Mat transl_vectors;
+    };
 }
 
 void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
                              const Mat& dist_coef, Mat& rvec, Mat& tvec, SolvePnpRansacParams params)
 {
     CV_Assert(object.rows == 1 && object.cols > 0 && object.type() == CV_32FC3);
-    CV_Assert(image.rows == 1 && image.cols > 1 && image.type() == CV_32FC2);
+    CV_Assert(image.rows == 1 && image.cols > 0 && image.type() == CV_32FC2);
     CV_Assert(object.cols == image.cols);
     CV_Assert(camera_mat.size() == Size(3, 3) && camera_mat.type() == CV_32F);
     CV_Assert(dist_coef.empty()); // We don't support undistortion for now
@@ -187,43 +245,14 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
 
     const int num_points = object.cols;
 
-    // Current hypothesis input
-    vector<int> subset_indices(params.subset_size);
-    Mat_<Point3f> object_subset(1, params.subset_size);
-    Mat_<Point2f> image_subset(1, params.subset_size);
-
-    // Current hypothesis result
-    Mat rot_vec(1, 3, CV_64F);
-    Mat rot_mat(3, 3, CV_64F);
-    Mat transl_vec(1, 3, CV_64F);
-
-    // All hypotheses results
+    // Hypotheses storage (global)
     Mat rot_matrices(1, params.num_iters * 9, CV_32F);
     Mat transl_vectors(1, params.num_iters * 3, CV_32F);
 
-    // Generate set of (rotation, translation) hypotheses using small subsets
-    // of the input data
-    for (int iter = 0; iter < params.num_iters; ++iter) // TODO TBB?
-    {
-        selectRandom(params.subset_size, num_points, subset_indices);
-        for (int i = 0; i < params.subset_size; ++i)
-        {
-            object_subset(0, i) = object.at<Point3f>(subset_indices[i]);
-            image_subset(0, i) = image.at<Point2f>(subset_indices[i]);
-        }
-
-        solvePnP(object_subset, image_subset, camera_mat, dist_coef, rot_vec, transl_vec);
-
-        // Remember translation vector
-        Mat transl_vec_ = transl_vectors.colRange(iter * 3, (iter + 1) * 3);
-        transl_vec = transl_vec.reshape(0, 1);
-        transl_vec.convertTo(transl_vec_, CV_32F);
-
-        // Remember rotation matrix
-        Rodrigues(rot_vec, rot_mat);
-        Mat rot_mat_ = rot_matrices.colRange(iter * 9, (iter + 1) * 9).reshape(0, 3);
-        rot_mat.convertTo(rot_mat_, CV_32F);
-    }
+    // Generate set of hypotheses using small subsets of the input data
+    TransformHypothesesGenerator body(object, image, camera_mat, num_points,
+                                      params.subset_size, rot_matrices, transl_vectors);
+    parallel_for(BlockedRange(0, params.num_iters), body);
 
     // Compute scores (i.e. number of inliers) for each hypothesis
     GpuMat d_object(object);
@@ -241,7 +270,7 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
     int num_inliers = static_cast<int>(best_score);
 
     // Extract the best hypothesis data
-    rot_mat = rot_matrices.colRange(best_idx.x * 9, (best_idx.x + 1) * 9).reshape(0, 3);
+    Mat rot_mat = rot_matrices.colRange(best_idx.x * 9, (best_idx.x + 1) * 9).reshape(0, 3);
     Rodrigues(rot_mat, rvec);
     rvec = rvec.reshape(0, 1);
     tvec = transl_vectors.colRange(best_idx.x * 3, (best_idx.x + 1) * 3).clone();
@@ -277,4 +306,5 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
 }
 
 #endif
+
 

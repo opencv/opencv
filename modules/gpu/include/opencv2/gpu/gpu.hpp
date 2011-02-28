@@ -874,13 +874,11 @@ namespace cv
                                     use_extrinsic_guess(false),
                                     num_iters(100),
                                     max_dist(2.f),
-                                    min_num_inliers(-1),
                                     inliers(NULL) {}
             int subset_size;
             bool use_extrinsic_guess;
             int num_iters;
             float max_dist;
-            int min_num_inliers;
             vector<int>* inliers;
         };
 
