@@ -10,8 +10,8 @@ void help()
 		"CvRTrees rtrees;\n"
 		"CvERTrees ertrees;\n"
 		"CvGBTrees gbtrees;\n"
-		"Date is hard coded to come from filename = \"../../../OpenCV/samples/c/waveform.data\";\n"
-		"Or can come from filename = \"../../../OpenCV/samples/c/waveform.data\";\n"
+		"Date is hard coded to come from filename = \"../../../opencv/samples/c/waveform.data\";\n"
+		"Or can come from filename = \"../../../opencv/samples/c/waveform.data\";\n"
 		"Call:\n"
 		"./tree_engine\n\n");
 }
@@ -38,13 +38,13 @@ int main()
 {
     const int train_sample_count = 300;
 
-//#define LEPIOTA
-#ifdef LEPIOTA
-    const char* filename = "../../../OpenCV/samples/c/agaricus-lepiota.data";
+#define LEPIOTA //Turn on discrete data set
+#ifdef LEPIOTA   //Of course, you might have to set the path here to what's on your machine ...
+    const char* filename = "../../opencv/samples/c/agaricus-lepiota.data";
 #else
-    const char* filename = "../../../OpenCV/samples/c/waveform.data";
+    const char* filename = "../../opencv/samples/c/waveform.data";
 #endif
-
+    printf("\n Reading in %s. If it is not found, you may have to change this hard-coded path in tree_engine.cpp\n\n",filename);
     CvDTree dtree;
     CvBoost boost;
     CvRTrees rtrees;
@@ -74,7 +74,7 @@ int main()
 #ifdef LEPIOTA
         printf("======BOOST=====\n");
         boost.train( &data, CvBoostParams(CvBoost::DISCRETE, 100, 0.95, 2, false, 0));
-        print_result( boost.calc_error( &data, CV_TRAIN_ERROR ), boost.calc_error( &data ), 0 );
+        print_result( boost.calc_error( &data, CV_TRAIN_ERROR ), boost.calc_error( &data, CV_TEST_ERROR ), 0 ); //doesn't compute importance
 #endif
 
         printf("======RTREES=====\n");
@@ -87,7 +87,7 @@ int main()
 
 		printf("======GBTREES=====\n");
 		gbtrees.train( &data, CvGBTreesParams(CvGBTrees::DEVIANCE_LOSS, 100, 0.05f, 0.6f, 10, true));
-		print_result( gbtrees.calc_error( &data, CV_TRAIN_ERROR), gbtrees.calc_error( &data, CV_TEST_ERROR ), 0 );
+		print_result( gbtrees.calc_error( &data, CV_TRAIN_ERROR), gbtrees.calc_error( &data, CV_TEST_ERROR ), 0 ); //doesn't compute importance
     }
     else
         printf("File can not be read");
