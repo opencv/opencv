@@ -56,6 +56,9 @@ void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
 void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
                             const Mat&, const Mat&, GpuMat&, const Stream&) { throw_nogpu(); }
 
+void cv::gpu::solvePnpRansac(const Mat&, const Mat&, const Mat&, const Mat&,
+                             Mat&, Mat&, SolvePnpRansacParams) { throw_nogpu(); }
+
 #else
 
 using namespace cv;
@@ -103,6 +106,7 @@ namespace cv { namespace gpu { namespace project_points
               const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
 }}}
 
+
 namespace
 {
     void projectPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec,
@@ -138,4 +142,139 @@ void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
     ::projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, StreamAccessor::getStream(stream));
 }
 
+
+namespace cv { namespace gpu { namespace solve_pnp_ransac
+{
+    void computeHypothesisScores(
+            const int num_hypotheses, const int num_points, const float* rot_matrices,
+            const float3* transl_vectors, const float3* object, const float2* image,
+            const float3* camera_mat, const float dist_threshold, int* hypothesis_scores);
+}}}
+
+namespace
+{
+    // Selects subset_size random different points from [0, num_points - 1] range
+    void selectRandom(int subset_size, int num_points, vector<int>& subset)
+    {
+        subset.resize(subset_size);
+        for (int i = 0; i < subset_size; ++i)
+        {
+            bool was;
+            do
+            {
+                subset[i] = rand() % num_points;
+                was = false;
+                for (int j = 0; j < i; ++j)
+                    if (subset[j] == subset[i])
+                    {
+                        was = true;
+                        break;
+                    }
+            } while (was);
+        }
+    }
+}
+
+void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+                             const Mat& dist_coef, Mat& rvec, Mat& tvec, SolvePnpRansacParams params)
+{
+    CV_Assert(object.rows == 1 && object.cols > 0 && object.type() == CV_32FC3);
+    CV_Assert(image.rows == 1 && image.cols > 1 && image.type() == CV_32FC2);
+    CV_Assert(object.cols == image.cols);
+    CV_Assert(camera_mat.size() == Size(3, 3) && camera_mat.type() == CV_32F);
+    CV_Assert(dist_coef.empty()); // We don't support undistortion for now
+    CV_Assert(!params.use_extrinsic_guess); // We don't support initial guess for now
+
+    const int num_points = object.cols;
+
+    // Current hypothesis input
+    vector<int> subset_indices(params.subset_size);
+    Mat_<Point3f> object_subset(1, params.subset_size);
+    Mat_<Point2f> image_subset(1, params.subset_size);
+
+    // Current hypothesis result
+    Mat rot_vec(1, 3, CV_64F);
+    Mat rot_mat(3, 3, CV_64F);
+    Mat transl_vec(1, 3, CV_64F);
+
+    // All hypotheses results
+    Mat rot_matrices(1, params.num_iters * 9, CV_32F);
+    Mat transl_vectors(1, params.num_iters * 3, CV_32F);
+
+    // Generate set of (rotation, translation) hypotheses using small subsets
+    // of the input data
+    for (int iter = 0; iter < params.num_iters; ++iter) // TODO TBB?
+    {
+        selectRandom(params.subset_size, num_points, subset_indices);
+        for (int i = 0; i < params.subset_size; ++i)
+        {
+            object_subset(0, i) = object.at<Point3f>(subset_indices[i]);
+            image_subset(0, i) = image.at<Point2f>(subset_indices[i]);
+        }
+
+        solvePnP(object_subset, image_subset, camera_mat, dist_coef, rot_vec, transl_vec);
+
+        // Remember translation vector
+        Mat transl_vec_ = transl_vectors.colRange(iter * 3, (iter + 1) * 3);
+        transl_vec = transl_vec.reshape(0, 1);
+        transl_vec.convertTo(transl_vec_, CV_32F);
+
+        // Remember rotation matrix
+        Rodrigues(rot_vec, rot_mat);
+        Mat rot_mat_ = rot_matrices.colRange(iter * 9, (iter + 1) * 9).reshape(0, 3);
+        rot_mat.convertTo(rot_mat_, CV_32F);
+    }
+
+    // Compute scores (i.e. number of inliers) for each hypothesis
+    GpuMat d_object(object);
+    GpuMat d_image(image);
+    GpuMat d_hypothesis_scores(1, params.num_iters, CV_32S);
+    solve_pnp_ransac::computeHypothesisScores(
+            params.num_iters, num_points, rot_matrices.ptr<float>(), transl_vectors.ptr<float3>(),
+            d_object.ptr<float3>(), d_image.ptr<float2>(), camera_mat.ptr<float3>(),
+            params.max_dist * params.max_dist, d_hypothesis_scores.ptr<int>());
+
+    // Find the best hypothesis index
+    Point best_idx;
+    double best_score;
+    minMaxLoc(d_hypothesis_scores, NULL, &best_score, NULL, &best_idx);
+    int num_inliers = static_cast<int>(best_score);
+
+    // Extract the best hypothesis data
+    rot_mat = rot_matrices.colRange(best_idx.x * 9, (best_idx.x + 1) * 9).reshape(0, 3);
+    Rodrigues(rot_mat, rvec);
+    rvec = rvec.reshape(0, 1);
+    tvec = transl_vectors.colRange(best_idx.x * 3, (best_idx.x + 1) * 3).clone();
+    tvec = tvec.reshape(0, 1);
+
+    // Build vector of inlier indices
+    if (params.inliers != NULL)
+    {
+        params.inliers->resize(num_inliers);
+
+        Point3f p;
+        Point3f p_transf;
+        Point2f p_proj;
+        const float* rot = rot_mat.ptr<float>();
+        const float* transl = tvec.ptr<float>();
+        int inlier_id = 0;
+
+        for (int i = 0; i < num_points; ++i)
+        {
+            p = object.at<Point3f>(0, i);
+            p_transf.x = rot[0] * p.x + rot[1] * p.y + rot[2] * p.z + transl[0];
+            p_transf.y = rot[3] * p.x + rot[4] * p.y + rot[5] * p.z + transl[1];
+            p_transf.z = rot[6] * p.x + rot[7] * p.y + rot[8] * p.z + transl[2];
+            if (p_transf.z > 0.f)
+            {
+                p_proj.x = camera_mat.at<float>(0, 0) * p_transf.x / p_transf.z + camera_mat.at<float>(0, 2);
+                p_proj.y = camera_mat.at<float>(1, 1) * p_transf.x / p_transf.z + camera_mat.at<float>(1, 2);
+                if (norm(p_proj - image.at<Point2f>(0, i)) < params.max_dist)
+                    (*params.inliers)[inlier_id++] = i;
+            }
+        }
+    }
+}
+
 #endif
+

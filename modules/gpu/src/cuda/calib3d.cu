@@ -43,6 +43,8 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 
+#define SOLVE_PNP_RANSAC_NUM_ITERS 200
+
 namespace cv { namespace gpu
 {
     namespace transform_points
@@ -74,6 +76,7 @@ namespace cv { namespace gpu
             transform(src, dst, TransformOp(), stream);
         }
     } // namespace transform_points
+
 
     namespace project_points
     {
@@ -113,5 +116,76 @@ namespace cv { namespace gpu
             transform(src, dst, ProjectOp(), stream);
         }
     } // namespace project_points
+
+
+    namespace solve_pnp_ransac
+    {
+        __constant__ float3 crot_matrices[SOLVE_PNP_RANSAC_NUM_ITERS * 3];
+        __constant__ float3 ctransl_vectors[SOLVE_PNP_RANSAC_NUM_ITERS];
+        __constant__ float3 ccamera_mat[2];
+
+        __device__ float sqr(float x)
+        {
+            return x * x;
+        }
+
+        __global__ void computeHypothesisScoresKernel(
+                const int num_points, const float3* object, const float2* image,
+                const float dist_threshold, int* g_num_inliers)
+        {
+            const float3* const &rot_mat = crot_matrices + blockIdx.x * 3;
+            const float3 &transl_vec = ctransl_vectors[blockIdx.x];
+            int num_inliers = 0;
+
+            for (int i = threadIdx.x; i < num_points; i += blockDim.x)
+            {
+                float3 p = object[i];
+                p = make_float3(
+                        rot_mat[0].x * p.x + rot_mat[0].y * p.y + rot_mat[0].z * p.z + transl_vec.x,
+                        rot_mat[1].x * p.x + rot_mat[1].y * p.y + rot_mat[1].z * p.z + transl_vec.y,
+                        rot_mat[2].x * p.x + rot_mat[2].y * p.y + rot_mat[2].z * p.z + transl_vec.z);
+                if (p.z > 0)
+                {
+                    p.x = ccamera_mat[0].x * p.x / p.z + ccamera_mat[0].z;
+                    p.y = ccamera_mat[1].y * p.y / p.z + ccamera_mat[1].z;
+                    float2 image_p = image[i];
+                    if (sqr(p.x - image_p.x) + sqr(p.y - image_p.y) < dist_threshold)
+                        ++num_inliers;
+                }
+            }
+
+            extern __shared__ float s_num_inliers[];
+            s_num_inliers[threadIdx.x] = num_inliers;
+            __syncthreads();
+
+            for (int step = blockDim.x / 2; step > 0; step >>= 1)
+            {
+                if (threadIdx.x < step)
+                    s_num_inliers[threadIdx.x] += s_num_inliers[threadIdx.x + step];
+                __syncthreads();
+            }
+
+            if (threadIdx.x == 0)
+                g_num_inliers[blockIdx.x] = s_num_inliers[0];
+        }
+
+        void computeHypothesisScores(
+                const int num_hypotheses, const int num_points, const float* rot_matrices,
+                const float3* transl_vectors, const float3* object, const float2* image,
+                const float3* camera_mat, const float dist_threshold, int* hypothesis_scores)
+        {
+            cudaSafeCall(cudaMemcpyToSymbol(crot_matrices, rot_matrices, num_hypotheses * 3 * sizeof(float3)));
+            cudaSafeCall(cudaMemcpyToSymbol(ctransl_vectors, transl_vectors, num_hypotheses * sizeof(float3)));
+            cudaSafeCall(cudaMemcpyToSymbol(ccamera_mat, camera_mat, 2 * sizeof(float3)));
+
+            dim3 threads(256);
+            dim3 grid(num_hypotheses);
+            int smem_size = threads.x * sizeof(float);
+
+            computeHypothesisScoresKernel<<<grid, threads, smem_size>>>(
+                    num_points, object, image, dist_threshold, hypothesis_scores);
+            cudaSafeCall(cudaThreadSynchronize());
+        }
+    } // namespace solvepnp_ransac
 
 }} // namespace cv { namespace gpu

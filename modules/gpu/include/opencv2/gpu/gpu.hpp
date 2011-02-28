@@ -868,6 +868,25 @@ namespace cv
                                       const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
                                       const Stream& stream);
 
+        struct CV_EXPORTS SolvePnpRansacParams
+        {
+            SolvePnpRansacParams(): subset_size(4),
+                                    use_extrinsic_guess(false),
+                                    num_iters(100),
+                                    max_dist(2.f),
+                                    min_num_inliers(-1),
+                                    inliers(NULL) {}
+            int subset_size;
+            bool use_extrinsic_guess;
+            int num_iters;
+            float max_dist;
+            int min_num_inliers;
+            vector<int>* inliers;
+        };
+
+        CV_EXPORTS void solvePnpRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+                                       const Mat& dist_coef, Mat& rvec, Mat& tvec, SolvePnpRansacParams params);
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!

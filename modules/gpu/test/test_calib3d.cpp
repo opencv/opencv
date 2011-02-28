@@ -105,3 +105,31 @@ TEST(transformPoints, accuracy)
         ASSERT_LT(err.dot(err) / res_gold.dot(res_gold), 1e-3f);
     }
 }
+
+
+TEST(solvePnpRansac, accuracy)
+{
+    RNG& rng = TS::ptr()->get_rng();
+
+    const int num_points = 5000;
+    Mat object = randomMat(rng, Size(num_points, 1), CV_32FC3, 0, 100, false);
+    Mat camera_mat = randomMat(rng, Size(3, 3), CV_32F, 1, 1, false);
+    camera_mat.at<float>(0, 1) = 0.f;
+    camera_mat.at<float>(1, 0) = 0.f;
+    camera_mat.at<float>(2, 0) = 0.f;
+    camera_mat.at<float>(2, 1) = 0.f;
+
+    Mat rvec_gold = randomMat(rng, Size(3, 1), CV_32F, 0, 1, false);
+    Mat tvec_gold = randomMat(rng, Size(3, 1), CV_32F, 0, 1, false);
+
+    vector<Point2f> image_vec;
+    projectPoints(object, rvec_gold, tvec_gold, camera_mat, Mat(), image_vec);
+    Mat image(1, image_vec.size(), CV_32FC2, &image_vec[0]);
+
+    Mat rvec;
+    Mat tvec;
+    solvePnpRansac(object, image, camera_mat, Mat(), rvec, tvec, SolvePnpRansacParams());
+
+    ASSERT_LE(norm(rvec - rvec_gold), 1e-3f);
+    ASSERT_LE(norm(tvec - tvec_gold), 1e-3f);
+}
