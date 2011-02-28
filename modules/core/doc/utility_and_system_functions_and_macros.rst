@@ -5,9 +5,9 @@ Utility and System Functions and Macros
 
 .. index:: alignPtr
 
-cv::alignPtr
+alignPtr
 ------------
-.. cfunction:: template<typename _Tp> _Tp* alignPtr(_Tp* ptr, int n=sizeof(_Tp))
+.. c:function:: template<typename _Tp> _Tp* alignPtr(_Tp* ptr, int n=sizeof(_Tp))
 
     Aligns pointer to the specified number of bytes
 
@@ -23,9 +23,9 @@ The function returns the aligned pointer of the same type as the input pointer:
 
 .. index:: alignSize
 
-cv::alignSize
+alignSize
 -------------
-.. cfunction:: size_t alignSize(size_t sz, int n)
+.. c:function:: size_t alignSize(size_t sz, int n)
 
     Aligns a buffer size to the specified number of bytes
 
@@ -41,9 +41,9 @@ The function returns the minimum number that is greater or equal to ``sz`` and i
 
 .. index:: allocate
 
-cv::allocate
+allocate
 ------------
-.. cfunction:: template<typename _Tp> _Tp* allocate(size_t n)
+.. c:function:: template<typename _Tp> _Tp* allocate(size_t n)
 
     Allocates an array of elements
 
@@ -53,9 +53,9 @@ The generic function ``allocate`` allocates buffer for the specified number of e
 
 .. index:: deallocate
 
-cv::deallocate
+deallocate
 --------------
-.. cfunction:: template<typename _Tp> void deallocate(_Tp* ptr, size_t n)
+.. c:function:: template<typename _Tp> void deallocate(_Tp* ptr, size_t n)
 
     Allocates an array of elements
 
@@ -73,7 +73,7 @@ The generic function ``deallocate`` deallocates the buffer allocated with
 
 CV_Assert
 ---------
-.. cfunction:: CV_Assert(expr)
+.. c:function:: CV_Assert(expr)
 
     Checks a condition at runtime. ::
 
@@ -88,13 +88,13 @@ The macros ``CV_Assert`` and ``CV_DbgAssert`` evaluate the specified expression 
 
 .. index:: error
 
-cv::error
+error
 ---------
-.. cfunction:: void error( const Exception\& exc )
+.. c:function:: void error( const Exception\& exc )
 
-.. cfunction:: \#define CV_Error( code, msg ) <...>
+.. c:function:: \#define CV_Error( code, msg ) <...>
 
-.. cfunction:: \#define CV_Error_( code, args ) <...>
+.. c:function:: \#define CV_Error_( code, args ) <...>
 
     Signals an error and raises the exception
 
@@ -120,7 +120,7 @@ The macro ``CV_Error_`` can be used to construct the error message on-fly to inc
 
 Exception
 ---------
-.. ctype:: Exception
+.. c:type:: Exception
 
 The exception class passed to error ::
 
@@ -152,9 +152,9 @@ The class ``Exception`` encapsulates all or almost all the necessary information
 
 .. index:: fastMalloc
 
-cv::fastMalloc
+fastMalloc
 --------------
-.. cfunction:: void* fastMalloc(size_t size)
+.. c:function:: void* fastMalloc(size_t size)
 
     Allocates aligned memory buffer
 
@@ -164,9 +164,9 @@ The function allocates buffer of the specified size and returns it. When the buf
 
 .. index:: fastFree
 
-cv::fastFree
+fastFree
 ------------
-.. cfunction:: void fastFree(void* ptr)
+.. c:function:: void fastFree(void* ptr)
 
     Deallocates memory buffer
 
@@ -178,9 +178,9 @@ If NULL pointer is passed, the function does nothing.
 
 .. index:: format
 
-cv::format
+format
 ----------
-.. cfunction:: string format( const char* fmt, ... )
+.. c:function:: string format( const char* fmt, ... )
 
     Returns a text string formatted using printf-like expression
 
@@ -191,9 +191,9 @@ The function acts like ``sprintf`` , but forms and returns STL string. It can be
 
 .. index:: getNumThreads
 
-cv::getNumThreads
+getNumThreads
 -----------------
-.. cfunction:: int getNumThreads()
+.. c:function:: int getNumThreads()
 
     Returns the number of threads used by OpenCV
 
@@ -204,9 +204,9 @@ See also:
 
 .. index:: getThreadNum
 
-cv::getThreadNum
+getThreadNum
 ----------------
-.. cfunction:: int getThreadNum()
+.. c:function:: int getThreadNum()
 
     Returns index of the currently executed thread
 
@@ -217,9 +217,9 @@ See also:
 
 .. index:: getTickCount
 
-cv::getTickCount
+getTickCount
 ----------------
-.. cfunction:: int64 getTickCount()
+.. c:function:: int64 getTickCount()
 
     Returns the number of ticks
 
@@ -229,9 +229,9 @@ It can be used to initialize
 
 .. index:: getTickFrequency
 
-cv::getTickFrequency
+getTickFrequency
 --------------------
-.. cfunction:: double getTickFrequency()
+.. c:function:: double getTickFrequency()
 
     Returns the number of ticks per second
 
@@ -245,9 +245,9 @@ That is, the following code computes the execution time in seconds. ::
 
 .. index:: setNumThreads
 
-cv::setNumThreads
+setNumThreads
 -----------------
-.. cfunction:: void setNumThreads(int nthreads)
+.. c:function:: void setNumThreads(int nthreads)
 
     Sets the number of threads used by OpenCV
 

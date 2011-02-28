@@ -7,7 +7,7 @@ Initalization and Information
 
 cv::gpu::getCudaEnabledDeviceCount
 ----------------------------------
-.. cfunction:: int getCudaEnabledDeviceCount()
+.. c:function:: int getCudaEnabledDeviceCount()
 
     Returns number of CUDA-enabled devices installed. It is to be used before any other GPU functions calls. If OpenCV is compiled without GPU support this function returns 0.
 
@@ -15,7 +15,7 @@ cv::gpu::getCudaEnabledDeviceCount
 
 cv::gpu::setDevice
 ------------------
-.. cfunction:: void setDevice(int device)
+.. c:function:: void setDevice(int device)
 
     Sets device and initializes it for the current thread. Call of this function can be omitted, but in this case a default device will be initialized on fist GPU usage.
 
@@ -25,7 +25,7 @@ cv::gpu::setDevice
 
 cv::gpu::getDevice
 ------------------
-.. cfunction:: int getDevice()
+.. c:function:: int getDevice()
 
     Returns the current device index, which was set by {gpu::getDevice} or initialized by default.
 
@@ -35,7 +35,7 @@ cv::gpu::getDevice
 
 gpu::GpuFeature
 ---------------
-.. ctype:: gpu::GpuFeature
+.. c:type:: gpu::GpuFeature
 
 GPU compute features. ::
 
@@ -46,7 +46,7 @@ GPU compute features. ::
         COMPUTE_20, COMPUTE_21,
         ATOMICS, NATIVE_DOUBLE
     };
-..
+
 
 .. index:: gpu::DeviceInfo
 
@@ -54,7 +54,7 @@ GPU compute features. ::
 
 gpu::DeviceInfo
 ---------------
-.. ctype:: gpu::DeviceInfo
+.. c:type:: gpu::DeviceInfo
 
 This class provides functionality for querying the specified GPU properties. ::
 
@@ -77,15 +77,15 @@ This class provides functionality for querying the specified GPU properties. ::
         bool supports(GpuFeature feature) const;
         bool isCompatible() const;
     };
-..
+
 
 .. index:: gpu::DeviceInfo::DeviceInfo
 
 cv::gpu::DeviceInfo::DeviceInfo
 ------------------------------- ``_``
-.. cfunction:: DeviceInfo::DeviceInfo()
+.. c:function:: DeviceInfo::DeviceInfo()
 
-.. cfunction:: DeviceInfo::DeviceInfo(int device_id)
+.. c:function:: DeviceInfo::DeviceInfo(int device_id)
 
     Constructs DeviceInfo object for the specified device. If deviceidparameter is missed it constructs object for the current device.
 
@@ -95,7 +95,7 @@ cv::gpu::DeviceInfo::DeviceInfo
 
 cv::gpu::DeviceInfo::name
 -------------------------
-.. cfunction:: string DeviceInfo::name()
+.. c:function:: string DeviceInfo::name()
 
     Returns the device name.
 
@@ -103,7 +103,7 @@ cv::gpu::DeviceInfo::name
 
 cv::gpu::DeviceInfo::majorVersion
 ---------------------------------
-.. cfunction:: int DeviceInfo::majorVersion()
+.. c:function:: int DeviceInfo::majorVersion()
 
     Returns the major compute capability version.
 
@@ -111,7 +111,7 @@ cv::gpu::DeviceInfo::majorVersion
 
 cv::gpu::DeviceInfo::minorVersion
 ---------------------------------
-.. cfunction:: int DeviceInfo::minorVersion()
+.. c:function:: int DeviceInfo::minorVersion()
 
     Returns the minor compute capability version.
 
@@ -119,7 +119,7 @@ cv::gpu::DeviceInfo::minorVersion
 
 cv::gpu::DeviceInfo::multiProcessorCount
 ----------------------------------------
-.. cfunction:: int DeviceInfo::multiProcessorCount()
+.. c:function:: int DeviceInfo::multiProcessorCount()
 
     Returns the number of streaming multiprocessors.
 
@@ -127,7 +127,7 @@ cv::gpu::DeviceInfo::multiProcessorCount
 
 cv::gpu::DeviceInfo::freeMemory
 -------------------------------
-.. cfunction:: size_t DeviceInfo::freeMemory()
+.. c:function:: size_t DeviceInfo::freeMemory()
 
     Returns the amount of free memory in bytes.
 
@@ -135,7 +135,7 @@ cv::gpu::DeviceInfo::freeMemory
 
 cv::gpu::DeviceInfo::totalMemory
 --------------------------------
-.. cfunction:: size_t DeviceInfo::totalMemory()
+.. c:function:: size_t DeviceInfo::totalMemory()
 
     Returns the amount of total memory in bytes.
 
@@ -143,7 +143,7 @@ cv::gpu::DeviceInfo::totalMemory
 
 cv::gpu::DeviceInfo::supports
 -----------------------------
-.. cfunction:: bool DeviceInfo::supports(GpuFeature feature)
+.. c:function:: bool DeviceInfo::supports(GpuFeature feature)
 
     Returns true if the device has the given GPU feature, otherwise false.
 
@@ -153,7 +153,7 @@ cv::gpu::DeviceInfo::supports
 
 cv::gpu::DeviceInfo::isCompatible
 ---------------------------------
-.. cfunction:: bool DeviceInfo::isCompatible()
+.. c:function:: bool DeviceInfo::isCompatible()
 
     Returns true if the GPU module can be run on the specified device, otherwise false.
 
@@ -163,32 +163,32 @@ cv::gpu::DeviceInfo::isCompatible
 
 gpu::TargetArchs
 ----------------
-.. ctype:: gpu::TargetArchs
+.. c:type:: gpu::TargetArchs
 
 This class provides functionality (as set of static methods) for checking which NVIDIA card architectures the GPU module was built for.
 
 bigskip
 The following method checks whether the module was built with the support of the given feature:
 
-.. cfunction:: static bool builtWith(GpuFeature feature)
+.. c:function:: static bool builtWith(GpuFeature feature)
 
     :param feature: Feature to be checked. See  .
 
 There are a set of methods for checking whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
-.. cfunction:: static bool has(int major, int minor)
+.. c:function:: static bool has(int major, int minor)
 
-.. cfunction:: static bool hasPtx(int major, int minor)
+.. c:function:: static bool hasPtx(int major, int minor)
 
-.. cfunction:: static bool hasBin(int major, int minor)
+.. c:function:: static bool hasBin(int major, int minor)
 
-.. cfunction:: static bool hasEqualOrLessPtx(int major, int minor)
+.. c:function:: static bool hasEqualOrLessPtx(int major, int minor)
 
-.. cfunction:: static bool hasEqualOrGreater(int major, int minor)
+.. c:function:: static bool hasEqualOrGreater(int major, int minor)
 
-.. cfunction:: static bool hasEqualOrGreaterPtx(int major, int minor)
+.. c:function:: static bool hasEqualOrGreaterPtx(int major, int minor)
 
-.. cfunction:: static bool hasEqualOrGreaterBin(int major, int minor)
+.. c:function:: static bool hasEqualOrGreaterBin(int major, int minor)
 
     * **major** Major compute capability version.
 

@@ -31,9 +31,9 @@ Also, note that the functions do not support alpha-transparency - when the targe
 
 .. index:: circle
 
-cv::circle
+circle
 ----------
-.. cfunction:: void circle(Mat\& img, Point center, int radius,            const Scalar\& color, int thickness=1,            int lineType=8, int shift=0)
+.. c:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
 
     Draws a circle
 
@@ -56,11 +56,11 @@ given center and radius.
 
 .. index:: clipLine
 
-cv::clipLine
+clipLine
 ------------
-.. cfunction:: bool clipLine(Size imgSize, Point\& pt1, Point\& pt2)
+.. c:function:: bool clipLine(Size imgSize, Point& pt1, Point& pt2)
 
-.. cfunction:: bool clipLine(Rect imgRect, Point\& pt1, Point\& pt2)
+.. c:function:: bool clipLine(Rect imgRect, Point& pt1, Point& pt2)
 
     Clips the line against the image rectangle
 
@@ -76,11 +76,11 @@ They return ``false`` if the line segment is completely outside the rectangle an
 
 .. index:: ellipse
 
-cv::ellipse
+ellipse
 -----------
-.. cfunction:: void ellipse(Mat\& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar\& color, int thickness=1,             int lineType=8, int shift=0)
+.. c:function:: void ellipse(Mat& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar& color, int thickness=1,             int lineType=8, int shift=0)
 
-.. cfunction:: void ellipse(Mat\& img, const RotatedRect\& box, const Scalar\& color,             int thickness=1, int lineType=8)
+.. c:function:: void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,             int thickness=1, int lineType=8)
 
     Draws a simple or thick elliptic arc or an fills ellipse sector.
 
@@ -120,9 +120,9 @@ Parameters of Elliptic Arc
 
 .. index:: ellipse2Poly
 
-cv::ellipse2Poly
+ellipse2Poly
 ----------------
-.. cfunction:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>\& pts )
+.. c:function:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>& pts )
 
     Approximates an elliptic arc with a polyline
 
@@ -141,9 +141,9 @@ The function ``ellipse2Poly`` computes the vertices of a polyline that approxima
 
 .. index:: fillConvexPoly
 
-cv::fillConvexPoly
+fillConvexPoly
 ------------------
-.. cfunction:: void fillConvexPoly(Mat\& img, const Point* pts, int npts,                    const Scalar\& color, int lineType=8,                    int shift=0)
+.. c:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
 
     Fills a convex polygon.
 
@@ -166,9 +166,9 @@ line) twice at the most (though, its top-most and/or the bottom edge could be ho
 
 .. index:: fillPoly
 
-cv::fillPoly
+fillPoly
 ------------
-.. cfunction:: void fillPoly(Mat\& img, const Point** pts,               const int* npts, int ncontours,              const Scalar\& color, int lineType=8,              int shift=0, Point offset=Point() )
+.. c:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
 
     Fills the area bounded by one or more polygons
 
@@ -192,9 +192,9 @@ areas with holes, contours with self-intersections (some of thier parts), and so
 
 .. index:: getTextSize
 
-cv::getTextSize
+getTextSize
 ---------------
-.. cfunction:: Size getTextSize(const string\& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
+.. c:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
 
     Calculates the width and height of a text string.
 
@@ -234,13 +234,12 @@ That is, the following code will render some text, the tight box surrounding it 
     // then put the text itself
     putText(img, text, textOrg, fontFace, fontScale,
             Scalar::all(255), thickness, 8);
-..
 
 .. index:: line
 
-cv::line
+line
 --------
-.. cfunction:: void line(Mat\& img, Point pt1, Point pt2, const Scalar\& color,          int thickness=1, int lineType=8, int shift=0)
+.. c:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
 
     Draws a line segment connecting two points
 
@@ -277,7 +276,7 @@ the line color, the user may use the macro ``CV_RGB(r, g, b)`` .
 
 LineIterator
 ------------
-.. ctype:: LineIterator
+.. c:type:: LineIterator
 
 Class for iterating pixels on a raster line ::
 
@@ -304,7 +303,6 @@ Class for iterating pixels on a raster line ::
         int minusDelta, plusDelta;
         int minusStep, plusStep;
     };
-..
 
 The class ``LineIterator`` is used to get each pixel of a raster line. It can be treated as versatile implementation of the Bresenham algorithm, where you can stop at each pixel and do some extra processing, for example, grab pixel values along the line, or draw a line with some effect (e.g. with XOR operation).
 
@@ -317,13 +315,12 @@ The number of pixels along the line is store in ``LineIterator::count`` . ::
 
     for(int i = 0; i < it.count; i++, ++it)
         buf[i] = *(const Vec3b)*it;
-..
 
 .. index:: rectangle
 
-cv::rectangle
+rectangle
 -------------
-.. cfunction:: void rectangle(Mat\& img, Point pt1, Point pt2,               const Scalar\& color, int thickness=1,               int lineType=8, int shift=0)
+.. c:function:: void rectangle(Mat& img, Point pt1, Point pt2,               const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
 
     Draws a simple, thick, or filled up-right rectangle.
 
@@ -345,9 +342,9 @@ The function ``rectangle`` draws a rectangle outline or a filled rectangle, whic
 
 .. index:: polylines
 
-cv::polylines
+polylines
 -------------
-.. cfunction:: void polylines(Mat\& img, const Point** pts, const int* npts,               int ncontours, bool isClosed, const Scalar\& color,               int thickness=1, int lineType=8, int shift=0 )
+.. c:function:: void polylines(Mat& img, const Point** pts, const int* npts,               int ncontours, bool isClosed, const Scalar& color,               int thickness=1, int lineType=8, int shift=0 )
 
     Draws several polygonal curves
 
@@ -373,9 +370,9 @@ The function ``polylines`` draws one or more polygonal curves.
 
 .. index:: putText
 
-cv::putText
+putText
 -----------
-.. cfunction:: void putText( Mat\& img, const string\& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
+.. c:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
 
     Draws a text string
 

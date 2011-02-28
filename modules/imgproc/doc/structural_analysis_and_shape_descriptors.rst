@@ -5,9 +5,9 @@ Structural Analysis and Shape Descriptors
 
 .. index:: moments
 
-cv::moments
+moments
 -----------
-.. cfunction:: Moments moments( const Mat\& array, bool binaryImage=false )
+.. c:function:: Moments moments( const Mat& array, bool binaryImage=false )
 
     Calculates all of the moments up to the third order of a polygon or rasterized shape.
 
@@ -29,7 +29,6 @@ where the class ``Moments`` is defined as: ::
         // central normalized moments
         double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
     };
-..
 
     :param array: A raster image (single-channel, 8-bit or floating-point 2D array) or an array
             ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points ( ``Point``  or  ``Point2f`` )
@@ -77,9 +76,9 @@ See also:
 :func:`contourArea`,:func:`arcLength`
 .. index:: HuMoments
 
-cv::HuMoments
+HuMoments
 -------------
-.. cfunction:: void HuMoments( const Moments\& moments, double h[7] )
+.. c:function:: void HuMoments( const Moments& moments, double h[7] )
 
     Calculates the seven Hu invariants.
 
@@ -104,11 +103,11 @@ See also:
 :func:`matchShapes`
 .. index:: findContours
 
-cv::findContours
+findContours
 ----------------
-.. cfunction:: void findContours( const Mat\& image, vector<vector<Point> >\& contours,                   vector<Vec4i>\& hierarchy, int mode,                   int method, Point offset=Point())
+.. c:function:: void findContours( const Mat& image, vector<vector<Point> >& contours,                   vector<Vec4i>& hierarchy, int mode,                   int method, Point offset=Point())
 
-.. cfunction:: void findContours( const Mat\& image, vector<vector<Point> >\& contours,                   int mode, int method, Point offset=Point())
+.. c:function:: void findContours( const Mat& image, vector<vector<Point> >& contours,                   int mode, int method, Point offset=Point())
 
     Finds the contours in a binary image.
 
@@ -148,9 +147,9 @@ the source ``image`` is modified by this function.
 
 .. index:: drawContours
 
-cv::drawContours
+drawContours
 ----------------
-.. cfunction:: void drawContours( Mat\& image, const vector<vector<Point> >\& contours,                   int contourIdx, const Scalar\& color, int thickness=1,                   int lineType=8, const vector<Vec4i>\& hierarchy=vector<Vec4i>(),                   int maxLevel=INT_MAX, Point offset=Point() )
+.. c:function:: void drawContours( Mat& image, const vector<vector<Point> >& contours,                   int contourIdx, const Scalar& color, int thickness=1,                   int lineType=8, const vector<Vec4i>& hierarchy=vector<Vec4i>(),                   int maxLevel=INT_MAX, Point offset=Point() )
 
     Draws contours' outlines or filled contours.
 
@@ -174,6 +173,7 @@ cv::drawContours
         the specified contour is drawn. If 1, the function draws the contour(s) and all the nested contours. If 2, the function draws the contours, all the nested contours and all the nested into nested contours etc. This parameter is only taken into account when there is  ``hierarchy``  available.
 
     :param offset: The optional contour shift parameter. Shift all the drawn contours by the specified  :math:`\texttt{offset}=(dx,dy)`
+
 The function draws contour outlines in the image if
 :math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
 :math:`\texttt{thickness}<0` . Here is the example on how to retrieve connected components from the binary image and label them ::
@@ -216,15 +216,14 @@ The function draws contour outlines in the image if
         imshow( "Components", dst );
         waitKey(0);
     }
-..
 
 .. index:: approxPolyDP
 
-cv::approxPolyDP
+approxPolyDP
 ----------------
-.. cfunction:: void approxPolyDP( const Mat\& curve,                   vector<Point>\& approxCurve,                   double epsilon, bool closed )
+.. c:function:: void approxPolyDP( const Mat& curve,                   vector<Point>& approxCurve,                   double epsilon, bool closed )
 
-.. cfunction:: void approxPolyDP( const Mat\& curve,                   vector<Point2f>\& approxCurve,                   double epsilon, bool closed )
+.. c:function:: void approxPolyDP( const Mat& curve,                   vector<Point2f>& approxCurve,                   double epsilon, bool closed )
 
     Approximates polygonal curve(s) with the specified precision.
 
@@ -241,9 +240,9 @@ http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
 .. index:: arcLength
 
-cv::arcLength
+arcLength
 -------------
-.. cfunction:: double arcLength( const Mat\& curve, bool closed )
+.. c:function:: double arcLength( const Mat& curve, bool closed )
 
     Calculates a contour perimeter or a curve length.
 
@@ -255,9 +254,9 @@ The function computes the curve length or the closed contour perimeter.
 
 .. index:: boundingRect
 
-cv::boundingRect
+boundingRect
 ----------------
-.. cfunction:: Rect boundingRect( const Mat\& points )
+.. c:function:: Rect boundingRect( const Mat& points )
 
     Calculates the up-right bounding rectangle of a point set.
 
@@ -267,9 +266,9 @@ The function calculates and returns the minimal up-right bounding rectangle for 
 
 .. index:: estimateRigidTransform
 
-cv::estimateRigidTransform
+estimateRigidTransform
 --------------------------
-.. cfunction:: Mat estimateRigidTransform( const Mat\& srcpt, const Mat\& dstpt,                            bool fullAffine )
+.. c:function:: Mat estimateRigidTransform( const Mat& srcpt, const Mat& dstpt,                            bool fullAffine )
 
     Computes optimal affine transformation between two 2D point sets
 
@@ -301,9 +300,9 @@ See also:
 :func:`getAffineTransform`,:func:`getPerspectiveTransform`,:func:`findHomography`
 .. index:: estimateAffine3D
 
-cv::estimateAffine3D
+estimateAffine3D
 --------------------
-.. cfunction:: int estimateAffine3D(const Mat\& srcpt, const Mat\& dstpt, Mat\& out,                     vector<uchar>\& outliers,                     double ransacThreshold = 3.0,                     double confidence = 0.99)
+.. c:function:: int estimateAffine3D(const Mat& srcpt, const Mat& dstpt, Mat& out,                     vector<uchar>& outliers,                     double ransacThreshold = 3.0,                     double confidence = 0.99)
 
     Computes optimal affine transformation between two 3D point sets
 
@@ -322,9 +321,9 @@ The function estimates the optimal 3D affine transformation between two 3D point
 
 .. index:: contourArea
 
-cv::contourArea
+contourArea
 ---------------
-.. cfunction:: double contourArea( const Mat\& contour )
+.. c:function:: double contourArea( const Mat& contour )
 
     Calculates the contour area
 
@@ -350,17 +349,16 @@ Here is a short example: ::
     cout << "area0 =" << area0 << endl <<
             "area1 =" << area1 << endl <<
             "approx poly vertices" << approx.size() << endl;
-..
 
 .. index:: convexHull
 
-cv::convexHull
+convexHull
 --------------
-.. cfunction:: void convexHull( const Mat\& points, vector<int>\& hull,                 bool clockwise=false )
+.. c:function:: void convexHull( const Mat& points, vector<int>& hull,                 bool clockwise=false )
 
-.. cfunction:: void convexHull( const Mat\& points, vector<Point>\& hull,                 bool clockwise=false )
+.. c:function:: void convexHull( const Mat& points, vector<Point>& hull,                 bool clockwise=false )
 
-.. cfunction:: void convexHull( const Mat\& points, vector<Point2f>\& hull,                 bool clockwise=false )
+.. c:function:: void convexHull( const Mat& points, vector<Point2f>& hull,                 bool clockwise=false )
 
     Finds the convex hull of a point set.
 
@@ -380,9 +378,9 @@ that has
 
 .. index:: fitEllipse
 
-cv::fitEllipse
+fitEllipse
 --------------
-.. cfunction:: RotatedRect fitEllipse( const Mat\& points )
+.. c:function:: RotatedRect fitEllipse( const Mat& points )
 
     Fits an ellipse around a set of 2D points.
 
@@ -393,22 +391,20 @@ The function calculates the ellipse that fits best
 
 .. index:: fitLine
 
-cv::fitLine
+fitLine
 -----------
-.. cfunction:: void fitLine( const Mat\& points, Vec4f\& line, int distType,              double param, double reps, double aeps )
+.. c:function:: void fitLine( const Mat& points, Vec4f& line, int distType,              double param, double reps, double aeps )
 
-.. cfunction:: void fitLine( const Mat\& points, Vec6f\& line, int distType,              double param, double reps, double aeps )
+.. c:function:: void fitLine( const Mat& points, Vec6f& line, int distType,              double param, double reps, double aeps )
 
     Fits a line to a 2D or 3D point set.
 
     :param points: The input 2D point set, represented by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by ``vector<Point>`` ,  ``vector<Point2f>`` ,  ``vector<Point3i>``  or  ``vector<Point3f>``  converted to the matrix by  ``Mat(const vector<T>&)``  constructor
 
     :param line: The output line parameters. In the case of a 2d fitting,
-        it is a vector of 4 floats  ``(vx, vy,
-                x0, y0)``  where  ``(vx, vy)``  is a normalized vector collinear to the
+        it is a vector of 4 floats  ``(vx, vy, x0, y0)``  where  ``(vx, vy)``  is a normalized vector collinear to the
         line and  ``(x0, y0)``  is some point on the line. in the case of a
-        3D fitting it is vector of 6 floats  ``(vx, vy, vz, x0, y0, z0)``         where  ``(vx, vy, vz)``  is a normalized vector collinear to the line
-        and  ``(x0, y0, z0)``  is some point on the line
+        3D fitting it is vector of 6 floats  ``(vx, vy, vz, x0, y0, z0)`` where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is some point on the line
 
     :param distType: The distance used by the M-estimator (see the discussion)
 
@@ -466,9 +462,9 @@ http://en.wikipedia.org/wiki/M-estimator
 
 .. index:: isContourConvex
 
-cv::isContourConvex
+isContourConvex
 -------------------
-.. cfunction:: bool isContourConvex( const Mat\& contour )
+.. c:function:: bool isContourConvex( const Mat& contour )
 
     Tests contour convexity.
 
@@ -478,9 +474,9 @@ The function tests whether the input contour is convex or not. The contour must 
 
 .. index:: minAreaRect
 
-cv::minAreaRect
+minAreaRect
 ---------------
-.. cfunction:: RotatedRect minAreaRect( const Mat\& points )
+.. c:function:: RotatedRect minAreaRect( const Mat& points )
 
     Finds the minimum area rotated rectangle enclosing a 2D point set.
 
@@ -489,9 +485,9 @@ cv::minAreaRect
 The function calculates and returns the minimum area bounding rectangle (possibly rotated) for the specified point set. See the OpenCV sample ``minarea.c``
 .. index:: minEnclosingCircle
 
-cv::minEnclosingCircle
+minEnclosingCircle
 ----------------------
-.. cfunction:: void minEnclosingCircle( const Mat\& points, Point2f\& center, float\& radius )
+.. c:function:: void minEnclosingCircle( const Mat& points, Point2f& center, float& radius )
 
     Finds the minimum area circle enclosing a 2D point set.
 
@@ -504,9 +500,9 @@ cv::minEnclosingCircle
 The function finds the minimal enclosing circle of a 2D point set using iterative algorithm. See the OpenCV sample ``minarea.c``
 .. index:: matchShapes
 
-cv::matchShapes
+matchShapes
 ---------------
-.. cfunction:: double matchShapes( const Mat\& object1,                    const Mat\& object2,                    int method, double parameter=0 )
+.. c:function:: double matchShapes( const Mat& object1,                    const Mat& object2,                    int method, double parameter=0 )
 
     Compares two shapes.
 
@@ -554,9 +550,9 @@ and
 
 .. index:: pointPolygonTest
 
-cv::pointPolygonTest
+pointPolygonTest
 --------------------
-.. cfunction:: double pointPolygonTest( const Mat\& contour,                         Point2f pt, bool measureDist )
+.. c:function:: double pointPolygonTest( const Mat& contour, Point2f pt, bool measureDist )
 
     Performs point-in-contour test.
 

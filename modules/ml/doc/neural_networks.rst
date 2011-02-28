@@ -98,7 +98,7 @@ References:
 
 CvANN_MLP_TrainParams
 ---------------------
-.. ctype:: CvANN_MLP_TrainParams
+.. c:type:: CvANN_MLP_TrainParams
 
 Parameters of the MLP training algorithm. ::
 
@@ -120,6 +120,7 @@ Parameters of the MLP training algorithm. ::
         // rprop parameters
         double rp_dw0, rp_dw_plus, rp_dw_minus, rp_dw_min, rp_dw_max;
     };
+
 ..
 
 The structure has default constructor that initializes parameters for ``RPROP`` algorithm. There is also more advanced constructor to customize the parameters and/or choose backpropagation algorithm. Finally, the individual parameters can be adjusted after the structure is created.
@@ -130,7 +131,7 @@ The structure has default constructor that initializes parameters for ``RPROP`` 
 
 CvANN_MLP
 ---------
-.. ctype:: CvANN_MLP
+.. c:type:: CvANN_MLP
 
 MLP model. ::
 
@@ -210,6 +211,7 @@ MLP model. ::
         CvANN_MLP_TrainParams params;
         CvRNG rng;
     };
+    
 ..
 
 Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method ``create`` . All the weights are set to zeros. Then the network is trained using the set of input and output vectors. The training procedure can be repeated more than once, i.e. the weights can be adjusted based on the new training data.
@@ -220,7 +222,7 @@ Unlike many other models in ML that are constructed and trained at once, in the 
 
 CvANN_MLP::create
 -----------------
-.. cfunction:: void CvANN_MLP::create(  const CvMat* _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
+.. c:function:: void CvANN_MLP::create(  const CvMat* _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
 
     Constructs the MLP with the specified topology
 
@@ -238,7 +240,7 @@ The method creates a MLP network with the specified topology and assigns the sam
 
 CvANN_MLP::train
 ----------------
-.. cfunction:: int CvANN_MLP::train(  const CvMat* _inputs,  const CvMat* _outputs,                        const CvMat* _sample_weights,  const CvMat* _sample_idx=0,                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
+.. c:function:: int CvANN_MLP::train(  const CvMat* _inputs,  const CvMat* _outputs,                        const CvMat* _sample_weights,  const CvMat* _sample_idx=0,                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
 
     Trains/updates MLP.
 

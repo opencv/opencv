@@ -8,7 +8,7 @@ Qt new functions
 This figure explains the new functionalities implemented with Qt GUI. As we can see, the new GUI provides a statusbar, a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it.
 
 *
-    To attach a trackbar, the window_    name parameter must be NULL.
+    To attach a trackbar, the window name parameter must be NULL.
 
 *
     To attach a buttonbar, a button must be created.
@@ -56,13 +56,12 @@ The following code is an example used to generate the figure. ::
         cvReleaseCapture(&video);
         return 0;
     }
-..
 
 .. index:: setWindowProperty
 
-cv::setWindowProperty
+setWindowProperty
 ---------------------
-.. cfunction:: void  setWindowProperty(const string\& name, int prop_id, double prop_value)
+.. c:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
 
     Change the parameters of the window dynamically.
 
@@ -94,9 +93,9 @@ The function `` setWindowProperty`` allows to change the window's properties.
 
 .. index:: getWindowProperty
 
-cv::getWindowProperty
+getWindowProperty
 ---------------------
-.. cfunction:: void  getWindowProperty(const char* name, int prop_id)
+.. c:function:: void  getWindowProperty(const char* name, int prop_id)
 
     Get the parameters of the window.
 
@@ -118,13 +117,13 @@ The function `` getWindowProperty`` return window's properties.
 
 .. index:: fontQt
 
-cv::fontQt
+fontQt
 ----------
-.. cfunction:: CvFont fontQt(const string\& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
+.. c:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
 
     Create the font to be used to draw text on an image.
 
-    :param nameFont: Name of the font. The name should match the name of a system font (such as ``Times''). If the font is not found, a default one will be used.
+    :param nameFont: Name of the font. The name should match the name of a system font (such as *Times*). If the font is not found, a default one will be used.
 
     :param pointSize: Size of the font. If not specified, equal zero or negative, the point size of the font is set to a system-dependent default value. Generally, this is 12 points.
 
@@ -152,7 +151,6 @@ cv::fontQt
             
             * **CV_STYLE_OBLIQUE** Font is oblique
             
-
     :param spacing: Spacing between characters. Can be negative or positive
 
 The function ``fontQt`` creates a CvFont object. This CvFont is not compatible with putText.
@@ -161,13 +159,12 @@ A basic usage of this function is: ::
 
     CvFont font = fontQt(''Times'');
     addText( img1, ``Hello World !'', Point(50,50), font);
-..
 
 .. index:: addText
 
-cv::addText
+addText
 -----------
-.. cfunction:: void addText(const Mat\& img, const string\& text, Point location, CvFont *font)
+.. c:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
 
     Create the font to be used to draw text on an image
 
@@ -190,9 +187,9 @@ using a specific font
 
 .. index:: displayOverlay
 
-cv::displayOverlay
+displayOverlay
 ------------------
-.. cfunction:: void displayOverlay(const string\& name, const string\& text, int delay)
+.. c:function:: void displayOverlay(const string& name, const string& text, int delay)
 
     Display text on the window's image as an overlay for delay milliseconds. This is not editing the image's data. The text is display on the top of the image.
 
@@ -208,9 +205,9 @@ The function ``displayOverlay`` aims at displaying useful information/tips on th
 
 .. index:: displayStatusBar
 
-cv::displayStatusBar
+displayStatusBar
 --------------------
-.. cfunction:: void displayStatusBar(const string\& name, const string\& text, int delayms)
+.. c:function:: void displayStatusBar(const string& name, const string& text, int delayms)
 
     Display text on the window's statusbar as for delay milliseconds.
 
@@ -226,11 +223,10 @@ The function ``displayOverlay`` aims at displaying useful information/tips on th
 
 .. index:: createOpenGLCallback
 
-cv::createOpenGLCallback
+createOpenGLCallback
 ------------------------
-*_*
 
-.. cfunction:: void createOpenGLCallback( const string\& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
+.. c:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
 
     Create a callback function called to draw OpenGL on top the the image display by windowname.
 
@@ -278,15 +274,13 @@ The function ``createOpenGLCallback`` can be used to draw 3D data on the window.
                     glEnd();
         }
     }
-..
 
 .. index:: saveWindowParameters
 
-cv::saveWindowParameters
+saveWindowParameters
 ------------------------
-*_*
 
-.. cfunction:: void saveWindowParameters(const string\& name)
+.. c:function:: void saveWindowParameters(const string& name)
 
     Save parameters of the window windowname.
 
@@ -297,11 +291,10 @@ The function ``saveWindowParameters`` saves size, location, flags,  trackbars' v
 
 .. index:: loadWindowParameters
 
-cv::loadWindowParameters
+loadWindowParameters
 ------------------------
-*_*
 
-.. cfunction:: void loadWindowParameters(const string\& name)
+.. c:function:: void loadWindowParameters(const string& name)
 
     Load parameters of the window windowname.
 
@@ -312,11 +305,10 @@ The function ``loadWindowParameters`` load size, location, flags,  trackbars' va
 
 .. index:: createButton
 
-cv::createButton
+createButton
 ----------------
-*_*
 
-.. cfunction:: createButton( const string\& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0)
+.. c:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
 
     Create a callback function called to draw OpenGL on top the the image display by windowname.
 
@@ -329,15 +321,13 @@ cv::createButton
     :param userdata: pointer passed to the callback function.  *(Optional)*
 
 The ``button_type`` parameter can be :
-*(Optional -- Will be a push button by default.)
+    * (Optional -- Will be a push button by default.)
 
     * **CV_PUSH_BUTTON** The button will be a push button.
 
     * **CV_CHECKBOX** The button will be a checkbox button.
 
     * **CV_RADIOBOX** The button will be a radiobox button. The radiobox on the same buttonbar (same line) are exclusive; one on can be select at the time.
-
-    *
 
     * **initial_button_state** Default state of the button. Use for checkbox and radiobox, its value could be 0 or 1.  *(Optional)*
 
@@ -351,5 +341,7 @@ Here are various example of ``createButton`` function call: ::
     createButton("button3",callbackButton,&value);
     createButton("button5",callbackButton1,NULL,CV_RADIOBOX);
     createButton("button6",callbackButton2,NULL,CV_PUSH_BUTTON,1);
+
 ..
+
 

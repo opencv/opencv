@@ -83,7 +83,7 @@ training examples are recomputed at each training iteration. Examples deleted at
 
 CvBoostParams
 -------------
-.. ctype:: CvBoostParams
+.. c:type:: CvBoostParams
 
 Boosting training parameters. ::
 
@@ -109,7 +109,7 @@ The structure is derived from
 
 CvBoostTree
 -----------
-.. ctype:: CvBoostTree
+.. c:type:: CvBoostTree
 
 Weak tree classifier. ::
 
@@ -148,7 +148,7 @@ Note, that in the case of LogitBoost and Gentle AdaBoost each weak predictor is 
 
 CvBoost
 -------
-.. ctype:: CvBoost
+.. c:type:: CvBoost
 
 Boosted tree classifier. ::
 
@@ -212,7 +212,7 @@ Boosted tree classifier. ::
 
 CvBoost::train
 --------------
-.. cfunction:: bool CvBoost::train(  const CvMat* _train_data,  int _tflag,               const CvMat* _responses,  const CvMat* _var_idx=0,               const CvMat* _sample_idx=0,  const CvMat* _var_type=0,               const CvMat* _missing_mask=0,               CvBoostParams params=CvBoostParams(),               bool update=false )
+.. c:function:: bool CvBoost::train(  const CvMat* _train_data,  int _tflag,               const CvMat* _responses,  const CvMat* _var_idx=0,               const CvMat* _sample_idx=0,  const CvMat* _var_type=0,               const CvMat* _missing_mask=0,               CvBoostParams params=CvBoostParams(),               bool update=false )
 
     Trains a boosted tree classifier.
 
@@ -224,7 +224,7 @@ The train method follows the common template; the last parameter ``update`` spec
 
 CvBoost::predict
 ----------------
-.. cfunction:: float CvBoost::predict(  const CvMat* sample,  const CvMat* missing=0,                          CvMat* weak_responses=0,  CvSlice slice=CV_WHOLE_SEQ,                          bool raw_mode=false ) const
+.. c:function:: float CvBoost::predict(  const CvMat* sample,  const CvMat* missing=0,                          CvMat* weak_responses=0,  CvSlice slice=CV_WHOLE_SEQ,                          bool raw_mode=false ) const
 
     Predicts a response for the input sample.
 
@@ -236,7 +236,7 @@ The method ``CvBoost::predict`` runs the sample through the trees in the ensembl
 
 CvBoost::prune
 --------------
-.. cfunction:: void CvBoost::prune( CvSlice slice )
+.. c:function:: void CvBoost::prune( CvSlice slice )
 
     Removes the specified weak classifiers.
 
@@ -248,7 +248,7 @@ The method removes the specified weak classifiers from the sequence. Note that t
 
 CvBoost::get_weak_predictors
 ----------------------------
-.. cfunction:: CvSeq* CvBoost::get_weak_predictors()
+.. c:function:: CvSeq* CvBoost::get_weak_predictors()
 
     Returns the sequence of weak tree classifiers.
 

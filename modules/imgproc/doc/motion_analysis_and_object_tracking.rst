@@ -5,9 +5,9 @@ Motion Analysis and Object Tracking
 
 .. index:: accumulate
 
-cv::accumulate
+accumulate
 --------------
-.. cfunction:: void accumulate( const Mat\& src, Mat\& dst, const Mat\& mask=Mat() )
+.. c:function:: void accumulate( const Mat\& src, Mat\& dst, const Mat\& mask=Mat() )
 
     Adds image to the accumulator.
 
@@ -31,9 +31,9 @@ See also:
 :func:`accumulateSquare`,:func:`accumulateProduct`,:func:`accumulateWeighted`
 .. index:: accumulateSquare
 
-cv::accumulateSquare
+accumulateSquare
 --------------------
-.. cfunction:: void accumulateSquare( const Mat\& src, Mat\& dst,  const Mat\& mask=Mat() )
+.. c:function:: void accumulateSquare( const Mat\& src, Mat\& dst,  const Mat\& mask=Mat() )
 
     Adds the square of the source image to the accumulator.
 
@@ -55,9 +55,9 @@ See also:
 :func:`accumulateSquare`,:func:`accumulateProduct`,:func:`accumulateWeighted`
 .. index:: accumulateProduct
 
-cv::accumulateProduct
+accumulateProduct
 ---------------------
-.. cfunction:: void accumulateProduct( const Mat\& src1, const Mat\& src2,                        Mat\& dst, const Mat\& mask=Mat() )
+.. c:function:: void accumulateProduct( const Mat\& src1, const Mat\& src2,                        Mat\& dst, const Mat\& mask=Mat() )
 
     Adds the per-element product of two input images to the accumulator.
 
@@ -80,9 +80,9 @@ See also:
 :func:`accumulate`,:func:`accumulateSquare`,:func:`accumulateWeighted`
 .. index:: accumulateWeighted
 
-cv::accumulateWeighted
+accumulateWeighted
 ----------------------
-.. cfunction:: void accumulateWeighted( const Mat\& src, Mat\& dst,                         double alpha, const Mat\& mask=Mat() )
+.. c:function:: void accumulateWeighted( const Mat\& src, Mat\& dst,                         double alpha, const Mat\& mask=Mat() )
 
     Updates the running average.
 

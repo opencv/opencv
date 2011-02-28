@@ -68,7 +68,7 @@ Importance of each variable is computed over all the splits on this variable in 
 
 CvDTreeSplit
 ------------
-.. ctype:: CvDTreeSplit
+.. c:type:: CvDTreeSplit
 
 Decision tree node split. ::
 
@@ -97,7 +97,7 @@ Decision tree node split. ::
 
 CvDTreeNode
 -----------
-.. ctype:: CvDTreeNode
+.. c:type:: CvDTreeNode
 
 Decision tree node. ::
 
@@ -127,7 +127,7 @@ Other numerous fields of ``CvDTreeNode`` are used internally at the training sta
 
 CvDTreeParams
 -------------
-.. ctype:: CvDTreeParams
+.. c:type:: CvDTreeParams
 
 Decision tree training parameters. ::
 
@@ -164,7 +164,7 @@ The structure contains all the decision tree training parameters. There is a def
 
 CvDTreeTrainData
 ----------------
-.. ctype:: CvDTreeTrainData
+.. c:type:: CvDTreeTrainData
 
 Decision tree training data and shared data for tree ensembles. ::
 
@@ -289,7 +289,7 @@ There are 2 ways of using this structure. In simple cases (e.g. a standalone tre
 
 CvDTree
 -------
-.. ctype:: CvDTree
+.. c:type:: CvDTree
 
 Decision tree. ::
 
@@ -376,9 +376,9 @@ Decision tree. ::
 
 CvDTree::train
 --------------
-.. cfunction:: bool CvDTree::train(  const CvMat* _train_data,  int _tflag,                       const CvMat* _responses,  const CvMat* _var_idx=0,                       const CvMat* _sample_idx=0,  const CvMat* _var_type=0,                       const CvMat* _missing_mask=0,                       CvDTreeParams params=CvDTreeParams() )
+.. c:function:: bool CvDTree::train(  const CvMat* _train_data,  int _tflag,                       const CvMat* _responses,  const CvMat* _var_idx=0,                       const CvMat* _sample_idx=0,  const CvMat* _var_type=0,                       const CvMat* _missing_mask=0,                       CvDTreeParams params=CvDTreeParams() )
 
-.. cfunction:: bool CvDTree::train( CvDTreeTrainData* _train_data, const CvMat* _subsample_idx )
+.. c:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const CvMat* _subsample_idx )
 
     Trains a decision tree.
 
@@ -396,7 +396,7 @@ The second method ``train`` is mostly used for building tree ensembles. It takes
 
 CvDTree::predict
 ----------------
-.. cfunction:: CvDTreeNode* CvDTree::predict(  const CvMat* _sample,  const CvMat* _missing_data_mask=0,                                 bool raw_mode=false ) const
+.. c:function:: CvDTreeNode* CvDTree::predict(  const CvMat* _sample,  const CvMat* _missing_data_mask=0,                                 bool raw_mode=false ) const
 
     Returns the leaf node of the decision tree corresponding to the input vector.
 

@@ -5,11 +5,11 @@ Operations on Arrays
 
 .. index:: abs
 
-cv::abs
+abs
 -------
-.. cfunction:: MatExpr<...> abs(const Mat\& src)
+.. c:function:: MatExpr<...> abs(const Mat\& src)
 
-.. cfunction:: MatExpr<...> abs(const MatExpr<...>\& src)
+.. c:function:: MatExpr<...> abs(const MatExpr<...>\& src)
 
     Computes absolute value of each matrix element
 
@@ -27,13 +27,13 @@ See also:
 :ref:`Matrix Expressions`,:func:`absdiff`,
 .. index:: absdiff
 
-cv::absdiff
+absdiff
 -----------
 
-.. cfunction:: void absdiff(const Mat\& src1, const Mat\& src2, Mat\& dst)
-.. cfunction:: void absdiff(const Mat\& src1, const Scalar\& sc, Mat\& dst)
-.. cfunction:: void absdiff(const MatND\& src1, const MatND\& src2, MatND\& dst)
-.. cfunction:: void absdiff(const MatND\& src1, const Scalar\& sc, MatND\& dst)
+.. c:function:: void absdiff(const Mat\& src1, const Mat\& src2, Mat\& dst)
+.. c:function:: void absdiff(const Mat\& src1, const Scalar\& sc, Mat\& dst)
+.. c:function:: void absdiff(const MatND\& src1, const MatND\& src2, MatND\& dst)
+.. c:function:: void absdiff(const MatND\& src1, const Scalar\& sc, MatND\& dst)
 
     Computes per-element absolute difference between 2 arrays or between array and a scalar.
 
@@ -56,19 +56,19 @@ in the case of multi-channel arrays each channel is processed independently.
 
 See also: :func:`abs` .. index:: add
 
-cv::add
+add
 -------
-.. cfunction:: void add(const Mat\& src1, const Mat\& src2, Mat\& dst)
+.. c:function:: void add(const Mat\& src1, const Mat\& src2, Mat\& dst)
 
-.. cfunction:: void add(const Mat\& src1, const Mat\& src2,  Mat\& dst, const Mat\& mask)
+.. c:function:: void add(const Mat\& src1, const Mat\& src2,  Mat\& dst, const Mat\& mask)
 
-.. cfunction:: void add(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void add(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void add(const MatND\& src1, const MatND\& src2, MatND\& dst)
+.. c:function:: void add(const MatND\& src1, const MatND\& src2, MatND\& dst)
 
-.. cfunction:: void add(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask)
+.. c:function:: void add(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask)
 
-.. cfunction:: void add(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void add(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
 
     Computes the per-element sum of two arrays or an array and a scalar.
 
@@ -101,7 +101,7 @@ The first function in the above list can be replaced with matrix expressions: ::
 
     dst = src1 + src2;
     dst += src1; // equivalent to add(dst, src1, dst);
-..
+
 
 in the case of multi-channel arrays each channel is processed independently.
 
@@ -110,11 +110,11 @@ See also:
 
 .. index:: addWeighted
 
-cv::addWeighted
+addWeighted
 ---------------
-.. cfunction:: void addWeighted(const Mat\& src1, double alpha, const Mat\& src2,                 double beta, double gamma, Mat\& dst)
+.. c:function:: void addWeighted(const Mat\& src1, double alpha, const Mat\& src2,                 double beta, double gamma, Mat\& dst)
 
-.. cfunction:: void addWeighted(const MatND\& src1, double alpha, const MatND\& src2,                 double beta, double gamma, MatND\& dst)
+.. c:function:: void addWeighted(const MatND\& src1, double alpha, const MatND\& src2,                 double beta, double gamma, MatND\& dst)
 
     Computes the weighted sum of two arrays.
 
@@ -137,7 +137,7 @@ where ``I`` is multi-dimensional index of array elements.
 The first function can be replaced with a matrix expression: ::
 
     dst = src1*alpha + src2*beta + gamma;
-..
+
 
 In the case of multi-channel arrays each channel is processed independently.
 
@@ -150,13 +150,13 @@ See also:
 
 bitwise_and
 -----------
-.. cfunction:: void bitwise_and(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void bitwise_and(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void bitwise_and(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void bitwise_and(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void bitwise_and(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void bitwise_and(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
 
-.. cfunction:: void bitwise_and(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void bitwise_and(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
 
     Calculates per-element bit-wise conjunction of two arrays and an array and a scalar.
 
@@ -193,17 +193,17 @@ See also:,,
 
 bitwise_not
 -----------
-.. cfunction:: void bitwise_not(const Mat\& src, Mat\& dst)
+.. c:function:: void bitwise_not(const Mat\& src, Mat\& dst)
 
-.. cfunction:: void bitwise_not(const MatND\& src, MatND\& dst)
+.. c:function:: void bitwise_not(const MatND\& src, MatND\& dst)
 
     Inverts every bit of array
 
     :param src1: The source array
 
-    :param dst: The destination array; it is reallocated to be of the same size and
-                    the same type as  ``src`` ; see  ``Mat::create``     :param mask: The optional operation mask, 8-bit single channel array;
-                     specifies elements of the destination array to be changed
+    :param dst: The destination array; it is reallocated to be of the same size and the same type as  ``src`` ; see  ``Mat::create``
+    
+    :param mask: The optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 The functions ``bitwise_not`` compute per-element bit-wise inversion of the source array:
 
@@ -213,21 +213,19 @@ The functions ``bitwise_not`` compute per-element bit-wise inversion of the sour
 
 In the case of floating-point source array its machine-specific bit representation (usually IEEE754-compliant) is used for the operation. in the case of multi-channel arrays each channel is processed independently.
 
-See also:,,
-
 .. index:: bitwise_or
 
 .. _bitwise_or:
 
 bitwise_or
 ----------
-.. cfunction:: void bitwise_or(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void bitwise_or(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void bitwise_or(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void bitwise_or(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void bitwise_or(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void bitwise_or(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
 
-.. cfunction:: void bitwise_or(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void bitwise_or(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
 
     Calculates per-element bit-wise disjunction of two arrays and an array and a scalar.
 
@@ -265,13 +263,13 @@ See also:,,
 
 bitwise_xor
 -----------
-.. cfunction:: void bitwise_xor(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void bitwise_xor(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void bitwise_xor(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void bitwise_xor(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void bitwise_xor(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void bitwise_xor(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
 
-.. cfunction:: void bitwise_xor(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void bitwise_xor(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
 
     Calculates per-element bit-wise "exclusive or" operation on two arrays and an array and a scalar.
 
@@ -305,11 +303,11 @@ See also:,,
 
 .. index:: calcCovarMatrix
 
-cv::calcCovarMatrix
+calcCovarMatrix
 -------------------
-.. cfunction:: void calcCovarMatrix( const Mat* samples, int nsamples,                      Mat\& covar, Mat\& mean,                      int flags, int ctype=CV_64F)
+.. c:function:: void calcCovarMatrix( const Mat* samples, int nsamples,                      Mat\& covar, Mat\& mean,                      int flags, int ctype=CV_64F)
 
-.. cfunction:: void calcCovarMatrix( const Mat\& samples, Mat\& covar, Mat\& mean,                      int flags, int ctype=CV_64F)
+.. c:function:: void calcCovarMatrix( const Mat\& samples, Mat\& covar, Mat\& mean,                      int flags, int ctype=CV_64F)
 
     Calculates covariation matrix of a set of vectors
 
@@ -359,9 +357,9 @@ and, optionally, the mean vector of the set of input vectors.
 See also:
 :func:`PCA`,:func:`mulTransposed`,:func:`Mahalanobis` .. index:: cartToPolar
 
-cv::cartToPolar
+cartToPolar
 ---------------
-.. cfunction:: void cartToPolar(const Mat\& x, const Mat\& y,                 Mat\& magnitude, Mat\& angle,                 bool angleInDegrees=false)
+.. c:function:: void cartToPolar(const Mat\& x, const Mat\& y,                 Mat\& magnitude, Mat\& angle,                 bool angleInDegrees=false)
 
     Calculates the magnitude and angle of 2d vectors.
 
@@ -383,11 +381,11 @@ The angles are calculated with
 
 .. index:: checkRange
 
-cv::checkRange
+checkRange
 --------------
-.. cfunction:: bool checkRange(const Mat\& src, bool quiet=true, Point* pos=0,                double minVal=-DBL_MAX, double maxVal=DBL_MAX)
+.. c:function:: bool checkRange(const Mat\& src, bool quiet=true, Point* pos=0,                double minVal=-DBL_MAX, double maxVal=DBL_MAX)
 
-.. cfunction:: bool checkRange(const MatND\& src, bool quiet=true, int* pos=0,                double minVal=-DBL_MAX, double maxVal=DBL_MAX)
+.. c:function:: bool checkRange(const MatND\& src, bool quiet=true, int* pos=0,                double minVal=-DBL_MAX, double maxVal=DBL_MAX)
 
     Checks every element of an input array for invalid values.
 
@@ -410,15 +408,15 @@ If some values are out of range, position of the first outlier is stored in ``po
 
 .. index:: compare
 
-cv::compare
+compare
 -----------
-.. cfunction:: void compare(const Mat\& src1, const Mat\& src2, Mat\& dst, int cmpop)
+.. c:function:: void compare(const Mat\& src1, const Mat\& src2, Mat\& dst, int cmpop)
 
-.. cfunction:: void compare(const Mat\& src1, double value,  Mat\& dst, int cmpop)
+.. c:function:: void compare(const Mat\& src1, double value,  Mat\& dst, int cmpop)
 
-.. cfunction:: void compare(const MatND\& src1, const MatND\& src2,  MatND\& dst, int cmpop)
+.. c:function:: void compare(const MatND\& src1, const MatND\& src2,  MatND\& dst, int cmpop)
 
-.. cfunction:: void compare(const MatND\& src1, double value,  MatND\& dst, int cmpop)
+.. c:function:: void compare(const MatND\& src1, double value,  MatND\& dst, int cmpop)
 
     Performs per-element comparison of two arrays or an array and scalar value.
 
@@ -435,14 +433,14 @@ cv::compare
     Mat dst1 = src1 >= src2;
     Mat dst2 = src1 < 8;
     ...
-..
+
 
 See also:
 :func:`checkRange`,:func:`min`,:func:`max`,:func:`threshold`,:ref:`Matrix Expressions` .. index:: completeSymm
 
-cv::completeSymm
+completeSymm
 ----------------
-.. cfunction:: void completeSymm(Mat\& mtx, bool lowerToUpper=false)
+.. c:function:: void completeSymm(Mat\& mtx, bool lowerToUpper=false)
 
     Copies the lower or the upper half of a square matrix to another half.
 
@@ -459,9 +457,9 @@ The function ``completeSymm`` copies the lower half of a square matrix to its an
     :math:`i < j`     if ``lowerToUpper=true`` See also:
 :func:`flip`,:func:`transpose` .. index:: convertScaleAbs
 
-cv::convertScaleAbs
+convertScaleAbs
 -------------------
-.. cfunction:: void convertScaleAbs(const Mat\& src, Mat\& dst, double alpha=1, double beta=0)
+.. c:function:: void convertScaleAbs(const Mat\& src, Mat\& dst, double alpha=1, double beta=0)
 
     Scales, computes absolute values and converts the result to 8-bit.
 
@@ -487,16 +485,16 @@ in the case of multi-channel arrays the function processes each channel independ
     B = abs(B);
     // Mat_<float> B = abs(A*5+3) will also do the job,
     // but it will allocate a temporary matrix
-..
+
 
 See also:
 :func:`Mat::convertTo`,:func:`abs` .. index:: countNonZero
 
-cv::countNonZero
+countNonZero
 ----------------
-.. cfunction:: int countNonZero( const Mat\& mtx )
+.. c:function:: int countNonZero( const Mat\& mtx )
 
-.. cfunction:: int countNonZero( const MatND\& mtx )
+.. c:function:: int countNonZero( const MatND\& mtx )
 
     Counts non-zero array elements.
 
@@ -511,9 +509,9 @@ The function ``cvCountNonZero`` returns the number of non-zero elements in mtx:
 See also:
 :func:`mean`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`,:func:`calcCovarMatrix` .. index:: cubeRoot
 
-cv::cubeRoot
+cubeRoot
 ------------
-.. cfunction:: float cubeRoot(float val)
+.. c:function:: float cubeRoot(float val)
 
     Computes cube root of the argument
 
@@ -529,11 +527,11 @@ The accuracy approaches the maximum possible accuracy for single-precision data.
 
 .. index:: cvarrToMat
 
-cv::cvarrToMat
+cvarrToMat
 --------------
-.. cfunction:: Mat cvarrToMat(const CvArr* src, bool copyData=false, bool allowND=true, int coiMode=0)
+.. c:function:: Mat cvarrToMat(const CvArr* src, bool copyData=false, bool allowND=true, int coiMode=0)
 
-    Converts CvMat, IplImage or CvMatND to cv::Mat.
+    Converts CvMat, IplImage or CvMatND to Mat.
 
     :param src: The source  ``CvMat`` ,  ``IplImage``  or  ``CvMatND``     :param copyData: When it is false (default value), no data is copied, only the new header is created.
          In this case the original array should not be deallocated while the new matrix header is used. The the parameter is true, all the data is copied, then user may deallocate the original array right after the conversion
@@ -570,7 +568,7 @@ When ``copyData=false`` , the conversion is done really fast (in O(1) time) and 
     // note, that you will need to use "&"
     // to pass C & C1 to OpenCV functions, e.g:
     printf("
-..
+
 
 Normally, the function is used to convert an old-style 2D array (
 :ref:`CvMat` or
@@ -592,9 +590,9 @@ The last parameter, ``coiMode`` , specifies how to react on an image with COI se
 See also:
 :func:`cvGetImage`,:func:`cvGetMat`,:func:`cvGetMatND`,:func:`extractImageCOI`,:func:`insertImageCOI`,:func:`mixChannels` .. index:: dct
 
-cv::dct
+dct
 -------
-.. cfunction:: void dct(const Mat\& src, Mat\& dst, int flags=0)
+.. c:function:: void dct(const Mat\& src, Mat\& dst, int flags=0)
 
     Performs a forward or inverse discrete cosine transform of 1D or 2D array
 
@@ -664,21 +662,21 @@ The function chooses the mode of operation by looking at the flags and size of t
     otherwise it performs 2D transform.
 
 **Important note**
-: currently cv::dct supports even-size arrays (2, 4, 6 ...). For data analysis and approximation you can pad the array when necessary.
+: currently dct supports even-size arrays (2, 4, 6 ...). For data analysis and approximation you can pad the array when necessary.
 
 Also, the function's performance depends very much, and not monotonically, on the array size, see
 :func:`getOptimalDFTSize` . In the current implementation DCT of a vector of size ``N`` is computed via DFT of a vector of size ``N/2`` , thus the optimal DCT size
 :math:`\texttt{N}^*\geq\texttt{N}` can be computed as: ::
 
     size_t getOptimalDCTSize(size_t N) { return 2*getOptimalDFTSize((N+1)/2); }
-..
+
 
 See also:
 :func:`dft`,:func:`getOptimalDFTSize`,:func:`idct` .. index:: dft
 
-cv::dft
+dft
 -------
-.. cfunction:: void dft(const Mat\& src, Mat\& dst, int flags=0, int nonzeroRows=0)
+.. c:function:: void dft(const Mat\& src, Mat\& dst, int flags=0, int nonzeroRows=0)
 
     Performs a forward or inverse Discrete Fourier transform of 1D or 2D floating-point array.
 
@@ -803,7 +801,7 @@ Here is the sample on how to compute DFT-based convolution of two 2D real arrays
 
         // all the temporary buffers will be deallocated automatically
     }
-..
+
 
 What can be optimized in the above sample?
 
@@ -835,15 +833,15 @@ All of the above improvements have been implemented in
 See also:
 :func:`dct`,:func:`getOptimalDFTSize`,:func:`mulSpectrums`,:func:`filter2D`,:func:`matchTemplate`,:func:`flip`,:func:`cartToPolar`,:func:`magnitude`,:func:`phase` .. index:: divide
 
-cv::divide
+divide
 ----------
-.. cfunction:: void divide(const Mat\& src1, const Mat\& src2,  Mat\& dst, double scale=1)
+.. c:function:: void divide(const Mat\& src1, const Mat\& src2,  Mat\& dst, double scale=1)
 
-.. cfunction:: void divide(double scale, const Mat\& src2, Mat\& dst)
+.. c:function:: void divide(double scale, const Mat\& src2, Mat\& dst)
 
-.. cfunction:: void divide(const MatND\& src1, const MatND\& src2,  MatND\& dst, double scale=1)
+.. c:function:: void divide(const MatND\& src1, const MatND\& src2,  MatND\& dst, double scale=1)
 
-.. cfunction:: void divide(double scale, const MatND\& src2, MatND\& dst)
+.. c:function:: void divide(double scale, const MatND\& src2, MatND\& dst)
 
     Performs per-element division of two arrays or a scalar by an array.
 
@@ -868,9 +866,9 @@ The result will have the same type as ``src1`` . When ``src2(I)=0``,``dst(I)=0``
 See also:
 :func:`multiply`,:func:`add`,:func:`subtract`,:ref:`Matrix Expressions` .. index:: determinant
 
-cv::determinant
+determinant
 ---------------
-.. cfunction:: double determinant(const Mat\& mtx)
+.. c:function:: double determinant(const Mat\& mtx)
 
     Returns determinant of a square floating-point matrix.
 
@@ -887,11 +885,11 @@ For symmetric positive-determined matrices, it is also possible to compute
 See also:
 :func:`SVD`,:func:`trace`,:func:`invert`,:func:`solve`,:ref:`Matrix Expressions` .. index:: eigen
 
-cv::eigen
+eigen
 ---------
-.. cfunction:: bool eigen(const Mat\& src, Mat\& eigenvalues,  int lowindex=-1, int highindex=-1)
+.. c:function:: bool eigen(const Mat\& src, Mat\& eigenvalues,  int lowindex=-1, int highindex=-1)
 
-.. cfunction:: bool eigen(const Mat\& src, Mat\& eigenvalues,  Mat\& eigenvectors, int lowindex=-1,int highindex=-1)
+.. c:function:: bool eigen(const Mat\& src, Mat\& eigenvalues,  Mat\& eigenvectors, int lowindex=-1,int highindex=-1)
 
     Computes eigenvalues and eigenvectors of a symmetric matrix.
 
@@ -908,7 +906,7 @@ cv::eigen
 The functions ``eigen`` compute just eigenvalues, or eigenvalues and eigenvectors of symmetric matrix ``src`` : ::
 
     src*eigenvectors(i,:)' = eigenvalues(i)*eigenvectors(i,:)' (in MATLAB notation)
-..
+
 
 If either low- or highindex is supplied the other is required, too.
 Indexing is 0-based. Example: To calculate the largest eigenvector/-value set
@@ -921,11 +919,11 @@ first highindex - lowindex + 1 rows.
 See also:
 :func:`SVD`,:func:`completeSymm`,:func:`PCA` .. index:: exp
 
-cv::exp
+exp
 -------
-.. cfunction:: void exp(const Mat\& src, Mat\& dst)
+.. c:function:: void exp(const Mat\& src, Mat\& dst)
 
-.. cfunction:: void exp(const MatND\& src, MatND\& dst)
+.. c:function:: void exp(const MatND\& src, MatND\& dst)
 
     Calculates the exponent of every array element.
 
@@ -945,9 +943,9 @@ The maximum relative error is about
 See also:
 :func:`log`,:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`pow`,:func:`sqrt`,:func:`magnitude` .. index:: extractImageCOI
 
-cv::extractImageCOI
+extractImageCOI
 -------------------
-.. cfunction:: void extractImageCOI(const CvArr* src, Mat\& dst, int coi=-1)
+.. c:function:: void extractImageCOI(const CvArr* src, Mat\& dst, int coi=-1)
 
     Extract the selected image channel
 
@@ -961,9 +959,9 @@ To extract a channel from a new-style matrix, use
 :func:`split` See also:
 :func:`mixChannels`,:func:`split`,:func:`merge`,:func:`cvarrToMat`,:func:`cvSetImageCOI`,:func:`cvGetImageCOI` .. index:: fastAtan2
 
-cv::fastAtan2
+fastAtan2
 -------------
-.. cfunction:: float fastAtan2(float y, float x)
+.. c:function:: float fastAtan2(float y, float x)
 
     Calculates the angle of a 2D vector in degrees
 
@@ -979,9 +977,9 @@ measured in degrees and varies from
 
 .. index:: flip
 
-cv::flip
+flip
 --------
-.. cfunction:: void flip(const Mat\& src, Mat\& dst, int flipCode)
+.. c:function:: void flip(const Mat\& src, Mat\& dst, int flipCode)
 
     Flips a 2D array around vertical, horizontal or both axes.
 
@@ -1020,9 +1018,9 @@ The example scenarios of function use are:
 See also:
 :func:`transpose`,:func:`repeat`,:func:`completeSymm` .. index:: gemm
 
-cv::gemm
+gemm
 --------
-.. cfunction:: void gemm(const Mat\& src1, const Mat\& src2, double alpha,          const Mat\& src3, double beta, Mat\& dst, int flags=0)
+.. c:function:: void gemm(const Mat\& src1, const Mat\& src2, double alpha,          const Mat\& src3, double beta, Mat\& dst, int flags=0)
 
     Performs generalized matrix multiplication.
 
@@ -1044,20 +1042,20 @@ For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` c
 The function can be replaced with a matrix expression, e.g. the above call can be replaced with: ::
 
     dst = alpha*src1.t()*src2 + beta*src3.t();
-..
+
 
 See also:
 :func:`mulTransposed`,:func:`transform`,:ref:`Matrix Expressions` .. index:: getConvertElem
 
-cv::getConvertElem
+getConvertElem
 ------------------
-.. cfunction:: ConvertData getConvertElem(int fromType, int toType)
+.. c:function:: ConvertData getConvertElem(int fromType, int toType)
 
-.. cfunction:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
+.. c:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
 
-.. cfunction:: typedef void (*ConvertData)(const void* from, void* to, int cn)
+.. c:function:: typedef void (*ConvertData)(const void* from, void* to, int cn)
 
-.. cfunction:: typedef void (*ConvertScaleData)(const void* from, void* to,                                 int cn, double alpha, double beta)
+.. c:function:: typedef void (*ConvertScaleData)(const void* from, void* to,                                 int cn, double alpha, double beta)
 
     Returns conversion function for a single pixel
 
@@ -1080,9 +1078,9 @@ The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to 
 See also:
 :func:`Mat::convertTo`,:func:`MatND::convertTo`,:func:`SparseMat::convertTo` .. index:: getOptimalDFTSize
 
-cv::getOptimalDFTSize
+getOptimalDFTSize
 ---------------------
-.. cfunction:: int getOptimalDFTSize(int vecsize)
+.. c:function:: int getOptimalDFTSize(int vecsize)
 
     Returns optimal DFT size for a given vector size.
 
@@ -1103,9 +1101,9 @@ While the function cannot be used directly to estimate the optimal vector size f
 See also:
 :func:`dft`,:func:`dct`,:func:`idft`,:func:`idct`,:func:`mulSpectrums` .. index:: idct
 
-cv::idct
+idct
 --------
-.. cfunction:: void idct(const Mat\& src, Mat\& dst, int flags=0)
+.. c:function:: void idct(const Mat\& src, Mat\& dst, int flags=0)
 
     Computes inverse Discrete Cosine Transform of a 1D or 2D array
 
@@ -1118,9 +1116,9 @@ See
 See also:
 :func:`dct`,:func:`dft`,:func:`idft`,:func:`getOptimalDFTSize` .. index:: idft
 
-cv::idft
+idft
 --------
-.. cfunction:: void idft(const Mat\& src, Mat\& dst, int flags=0, int outputRows=0)
+.. c:function:: void idft(const Mat\& src, Mat\& dst, int flags=0, int outputRows=0)
 
     Computes inverse Discrete Fourier Transform of a 1D or 2D array
 
@@ -1137,15 +1135,15 @@ Thus, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to 
 See also:
 :func:`dft`,:func:`dct`,:func:`idct`,:func:`mulSpectrums`,:func:`getOptimalDFTSize` .. index:: inRange
 
-cv::inRange
+inRange
 -----------
-.. cfunction:: void inRange(const Mat\& src, const Mat\& lowerb,             const Mat\& upperb, Mat\& dst)
+.. c:function:: void inRange(const Mat\& src, const Mat\& lowerb,             const Mat\& upperb, Mat\& dst)
 
-.. cfunction:: void inRange(const Mat\& src, const Scalar\& lowerb,             const Scalar\& upperb, Mat\& dst)
+.. c:function:: void inRange(const Mat\& src, const Scalar\& lowerb,             const Scalar\& upperb, Mat\& dst)
 
-.. cfunction:: void inRange(const MatND\& src, const MatND\& lowerb,             const MatND\& upperb, MatND\& dst)
+.. c:function:: void inRange(const MatND\& src, const MatND\& lowerb,             const MatND\& upperb, MatND\& dst)
 
-.. cfunction:: void inRange(const MatND\& src, const Scalar\& lowerb,             const Scalar\& upperb, MatND\& dst)
+.. c:function:: void inRange(const MatND\& src, const Scalar\& lowerb,             const Scalar\& upperb, MatND\& dst)
 
     Checks if array elements lie between the elements of two other arrays.
 
@@ -1169,9 +1167,9 @@ for two-channel arrays and so forth. ``dst`` (I) is set to 255 (all ``1`` -bits)
 
 .. index:: invert
 
-cv::invert
+invert
 ----------
-.. cfunction:: double invert(const Mat\& src, Mat\& dst, int method=DECOMP_LU)
+.. c:function:: double invert(const Mat\& src, Mat\& dst, int method=DECOMP_LU)
 
     Finds the inverse or pseudo-inverse of a matrix
 
@@ -1198,11 +1196,11 @@ Similarly to ``DECOMP_LU`` , the method ``DECOMP_CHOLESKY`` works only with non-
 See also:
 :func:`solve`,:func:`SVD` .. index:: log
 
-cv::log
+log
 -------
-.. cfunction:: void log(const Mat\& src, Mat\& dst)
+.. c:function:: void log(const Mat\& src, Mat\& dst)
 
-.. cfunction:: void log(const MatND\& src, MatND\& dst)
+.. c:function:: void log(const MatND\& src, MatND\& dst)
 
     Calculates the natural logarithm of every array element.
 
@@ -1223,9 +1221,9 @@ The maximum relative error is about
 See also:
 :func:`exp`,:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`pow`,:func:`sqrt`,:func:`magnitude` .. index:: LUT
 
-cv::LUT
+LUT
 -------
-.. cfunction:: void LUT(const Mat\& src, const Mat\& lut, Mat\& dst)
+.. c:function:: void LUT(const Mat\& src, const Mat\& lut, Mat\& dst)
 
     Performs a look-up table transform of an array.
 
@@ -1248,9 +1246,9 @@ where
 See also:
 :func:`convertScaleAbs`,``Mat::convertTo`` .. index:: magnitude
 
-cv::magnitude
+magnitude
 -------------
-.. cfunction:: void magnitude(const Mat\& x, const Mat\& y, Mat\& magnitude)
+.. c:function:: void magnitude(const Mat\& x, const Mat\& y, Mat\& magnitude)
 
     Calculates magnitude of 2D vectors.
 
@@ -1265,9 +1263,9 @@ cv::magnitude
 See also:
 :func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`sqrt` .. index:: Mahalanobis
 
-cv::Mahalanobis
+Mahalanobis
 ---------------
-.. cfunction:: double Mahalanobis(const Mat\& vec1, const Mat\& vec2,  const Mat\& icovar)
+.. c:function:: double Mahalanobis(const Mat\& vec1, const Mat\& vec2,  const Mat\& icovar)
 
     Calculates the Mahalanobis distance between two vectors.
 
@@ -1289,21 +1287,21 @@ The covariance matrix may be calculated using the
 
 .. index:: max
 
-cv::max
+max
 -------
-.. cfunction:: Mat_Expr<...> max(const Mat\& src1, const Mat\& src2)
+.. c:function:: Mat_Expr<...> max(const Mat\& src1, const Mat\& src2)
 
-.. cfunction:: Mat_Expr<...> max(const Mat\& src1, double value)
+.. c:function:: Mat_Expr<...> max(const Mat\& src1, double value)
 
-.. cfunction:: Mat_Expr<...> max(double value, const Mat\& src1)
+.. c:function:: Mat_Expr<...> max(double value, const Mat\& src1)
 
-.. cfunction:: void max(const Mat\& src1, const Mat\& src2, Mat\& dst)
+.. c:function:: void max(const Mat\& src1, const Mat\& src2, Mat\& dst)
 
-.. cfunction:: void max(const Mat\& src1, double value, Mat\& dst)
+.. c:function:: void max(const Mat\& src1, double value, Mat\& dst)
 
-.. cfunction:: void max(const MatND\& src1, const MatND\& src2, MatND\& dst)
+.. c:function:: void max(const MatND\& src1, const MatND\& src2, MatND\& dst)
 
-.. cfunction:: void max(const MatND\& src1, double value, MatND\& dst)
+.. c:function:: void max(const MatND\& src1, double value, MatND\& dst)
 
     Calculates per-element maximum of two arrays or array and a scalar
 
@@ -1331,15 +1329,15 @@ The first 3 variants of the function listed above are actually a part of
 See also:
 :func:`min`,:func:`compare`,:func:`inRange`,:func:`minMaxLoc`,:ref:`Matrix Expressions` .. index:: mean
 
-cv::mean
+mean
 --------
-.. cfunction:: Scalar mean(const Mat\& mtx)
+.. c:function:: Scalar mean(const Mat\& mtx)
 
-.. cfunction:: Scalar mean(const Mat\& mtx, const Mat\& mask)
+.. c:function:: Scalar mean(const Mat\& mtx, const Mat\& mask)
 
-.. cfunction:: Scalar mean(const MatND\& mtx)
+.. c:function:: Scalar mean(const MatND\& mtx)
 
-.. cfunction:: Scalar mean(const MatND\& mtx, const MatND\& mask)
+.. c:function:: Scalar mean(const MatND\& mtx, const MatND\& mask)
 
     Calculates average (mean) of array elements
 
@@ -1358,11 +1356,11 @@ When all the mask elements are 0's, the functions return ``Scalar::all(0)`` .
 See also:
 :func:`countNonZero`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc` .. index:: meanStdDev
 
-cv::meanStdDev
+meanStdDev
 --------------
-.. cfunction:: void meanStdDev(const Mat\& mtx, Scalar\& mean,  Scalar\& stddev, const Mat\& mask=Mat())
+.. c:function:: void meanStdDev(const Mat\& mtx, Scalar\& mean,  Scalar\& stddev, const Mat\& mask=Mat())
 
-.. cfunction:: void meanStdDev(const MatND\& mtx, Scalar\& mean,  Scalar\& stddev, const MatND\& mask=MatND())
+.. c:function:: void meanStdDev(const MatND\& mtx, Scalar\& mean,  Scalar\& stddev, const MatND\& mask=MatND())
 
     Calculates mean and standard deviation of array elements
 
@@ -1389,15 +1387,15 @@ Note that the computed standard deviation is only the diagonal of the complete n
 See also:
 :func:`countNonZero`,:func:`mean`,:func:`norm`,:func:`minMaxLoc`,:func:`calcCovarMatrix` .. index:: merge
 
-cv::merge
+merge
 ---------
-.. cfunction:: void merge(const Mat* mv, size_t count, Mat\& dst)
+.. c:function:: void merge(const Mat* mv, size_t count, Mat\& dst)
 
-.. cfunction:: void merge(const vector<Mat>\& mv, Mat\& dst)
+.. c:function:: void merge(const vector<Mat>\& mv, Mat\& dst)
 
-.. cfunction:: void merge(const MatND* mv, size_t count, MatND\& dst)
+.. c:function:: void merge(const MatND* mv, size_t count, MatND\& dst)
 
-.. cfunction:: void merge(const vector<MatND>\& mv, MatND\& dst)
+.. c:function:: void merge(const vector<MatND>\& mv, MatND\& dst)
 
     Composes a multi-channel array from several single-channel arrays.
 
@@ -1418,21 +1416,21 @@ The function
 :func:`mixChannels` See also:
 :func:`mixChannels`,:func:`split`,:func:`reshape` .. index:: min
 
-cv::min
+min
 -------
-.. cfunction:: Mat_Expr<...> min(const Mat\& src1, const Mat\& src2)
+.. c:function:: Mat_Expr<...> min(const Mat\& src1, const Mat\& src2)
 
-.. cfunction:: Mat_Expr<...> min(const Mat\& src1, double value)
+.. c:function:: Mat_Expr<...> min(const Mat\& src1, double value)
 
-.. cfunction:: Mat_Expr<...> min(double value, const Mat\& src1)
+.. c:function:: Mat_Expr<...> min(double value, const Mat\& src1)
 
-.. cfunction:: void min(const Mat\& src1, const Mat\& src2, Mat\& dst)
+.. c:function:: void min(const Mat\& src1, const Mat\& src2, Mat\& dst)
 
-.. cfunction:: void min(const Mat\& src1, double value, Mat\& dst)
+.. c:function:: void min(const Mat\& src1, double value, Mat\& dst)
 
-.. cfunction:: void min(const MatND\& src1, const MatND\& src2, MatND\& dst)
+.. c:function:: void min(const MatND\& src1, const MatND\& src2, MatND\& dst)
 
-.. cfunction:: void min(const MatND\& src1, double value, MatND\& dst)
+.. c:function:: void min(const MatND\& src1, double value, MatND\& dst)
 
     Calculates per-element minimum of two arrays or array and a scalar
 
@@ -1460,13 +1458,13 @@ The first 3 variants of the function listed above are actually a part of
 See also:
 :func:`max`,:func:`compare`,:func:`inRange`,:func:`minMaxLoc`,:ref:`Matrix Expressions` .. index:: minMaxLoc
 
-cv::minMaxLoc
+minMaxLoc
 -------------
-.. cfunction:: void minMaxLoc(const Mat\& src, double* minVal,               double* maxVal=0, Point* minLoc=0,               Point* maxLoc=0, const Mat\& mask=Mat())
+.. c:function:: void minMaxLoc(const Mat\& src, double* minVal,               double* maxVal=0, Point* minLoc=0,               Point* maxLoc=0, const Mat\& mask=Mat())
 
-.. cfunction:: void minMaxLoc(const MatND\& src, double* minVal,               double* maxVal, int* minIdx=0, int* maxIdx=0,               const MatND\& mask=MatND())
+.. c:function:: void minMaxLoc(const MatND\& src, double* minVal,               double* maxVal, int* minIdx=0, int* maxIdx=0,               const MatND\& mask=MatND())
 
-.. cfunction:: void minMaxLoc(const SparseMat\& src, double* minVal,               double* maxVal, int* minIdx=0, int* maxIdx=0)
+.. c:function:: void minMaxLoc(const SparseMat\& src, double* minVal,               double* maxVal, int* minIdx=0, int* maxIdx=0)
 
     Finds global minimum and maximum in a whole array or sub-array
 
@@ -1503,15 +1501,15 @@ See also:
 
 .. index:: mixChannels
 
-cv::mixChannels
+mixChannels
 ---------------
-.. cfunction:: void mixChannels(const Mat* srcv, int nsrc, Mat* dstv, int ndst,                 const int* fromTo, size_t npairs)
+.. c:function:: void mixChannels(const Mat* srcv, int nsrc, Mat* dstv, int ndst,                 const int* fromTo, size_t npairs)
 
-.. cfunction:: void mixChannels(const MatND* srcv, int nsrc, MatND* dstv, int ndst,                 const int* fromTo, size_t npairs)
+.. c:function:: void mixChannels(const MatND* srcv, int nsrc, MatND* dstv, int ndst,                 const int* fromTo, size_t npairs)
 
-.. cfunction:: void mixChannels(const vector<Mat>\& srcv, vector<Mat>\& dstv,                 const int* fromTo, int npairs)
+.. c:function:: void mixChannels(const vector<Mat>\& srcv, vector<Mat>\& dstv,                 const int* fromTo, int npairs)
 
-.. cfunction:: void mixChannels(const vector<MatND>\& srcv, vector<MatND>\& dstv,                 const int* fromTo, int npairs)
+.. c:function:: void mixChannels(const vector<MatND>\& srcv, vector<MatND>\& dstv,                 const int* fromTo, int npairs)
 
     Copies specified channels from input arrays to the specified channels of output arrays
 
@@ -1541,7 +1539,7 @@ BGR (i.e. with R and B channels swapped) and separate alpha channel image: ::
     // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
     int from_to[] = { 0,2,  1,1,  2,0,  3,3 };
     mixChannels( &rgba, 1, out, 2, from_to, 4 );
-..
+
 
 Note that, unlike many other new-style C++ functions in OpenCV (see the introduction section and
 :func:`Mat::create` ), ``mixChannels`` requires the destination arrays be pre-allocated before calling the function.
@@ -1549,9 +1547,9 @@ Note that, unlike many other new-style C++ functions in OpenCV (see the introduc
 See also:
 :func:`split`,:func:`merge`,:func:`cvtColor` .. index:: mulSpectrums
 
-cv::mulSpectrums
+mulSpectrums
 ----------------
-.. cfunction:: void mulSpectrums(const Mat\& src1, const Mat\& src2, Mat\& dst,                  int flags, bool conj=false)
+.. c:function:: void mulSpectrums(const Mat\& src1, const Mat\& src2, Mat\& dst,                  int flags, bool conj=false)
 
     Performs per-element multiplication of two Fourier spectrums.
 
@@ -1570,11 +1568,11 @@ The function, together with
 
 .. index:: multiply
 
-cv::multiply
+multiply
 ------------
-.. cfunction:: void multiply(const Mat\& src1, const Mat\& src2,  Mat\& dst, double scale=1)
+.. c:function:: void multiply(const Mat\& src1, const Mat\& src2,  Mat\& dst, double scale=1)
 
-.. cfunction:: void multiply(const MatND\& src1, const MatND\& src2,  MatND\& dst, double scale=1)
+.. c:function:: void multiply(const MatND\& src1, const MatND\& src2,  MatND\& dst, double scale=1)
 
     Calculates the per-element scaled product of two arrays
 
@@ -1598,9 +1596,9 @@ If you are looking for a matrix product, not per-element product, see
 See also:
 :func:`add`,:func:`substract`,:func:`divide`,:ref:`Matrix Expressions`,:func:`scaleAdd`,:func:`addWeighted`,:func:`accumulate`,:func:`accumulateProduct`,:func:`accumulateSquare`,:func:`Mat::convertTo` .. index:: mulTransposed
 
-cv::mulTransposed
+mulTransposed
 -----------------
-.. cfunction:: void mulTransposed( const Mat\& src, Mat\& dst, bool aTa,                    const Mat\& delta=Mat(),                    double scale=1, int rtype=-1 )
+.. c:function:: void mulTransposed( const Mat\& src, Mat\& dst, bool aTa,                    const Mat\& delta=Mat(),                    double scale=1, int rtype=-1 )
 
     Calculates the product of a matrix and its transposition.
 
@@ -1633,21 +1631,21 @@ otherwise. The function is used to compute covariance matrix and with zero delta
 See also:
 :func:`calcCovarMatrix`,:func:`gemm`,:func:`repeat`,:func:`reduce` .. index:: norm
 
-cv::norm
+norm
 --------
-.. cfunction:: double norm(const Mat\& src1, int normType=NORM_L2)
+.. c:function:: double norm(const Mat\& src1, int normType=NORM_L2)
 
-.. cfunction:: double norm(const Mat\& src1, const Mat\& src2, int normType=NORM_L2)
+.. c:function:: double norm(const Mat\& src1, const Mat\& src2, int normType=NORM_L2)
 
-.. cfunction:: double norm(const Mat\& src1, int normType, const Mat\& mask)
+.. c:function:: double norm(const Mat\& src1, int normType, const Mat\& mask)
 
-.. cfunction:: double norm(const Mat\& src1, const Mat\& src2,  int normType, const Mat\& mask)
+.. c:function:: double norm(const Mat\& src1, const Mat\& src2,  int normType, const Mat\& mask)
 
-.. cfunction:: double norm(const MatND\& src1, int normType=NORM_L2,  const MatND\& mask=MatND())
+.. c:function:: double norm(const MatND\& src1, int normType=NORM_L2,  const MatND\& mask=MatND())
 
-.. cfunction:: double norm(const MatND\& src1, const MatND\& src2,            int normType=NORM_L2, const MatND\& mask=MatND())
+.. c:function:: double norm(const MatND\& src1, const MatND\& src2,            int normType=NORM_L2, const MatND\& mask=MatND())
 
-.. cfunction:: double norm( const SparseMat\& src, int normType )
+.. c:function:: double norm( const SparseMat\& src, int normType )
 
     Calculates absolute array norm, absolute difference norm, or relative difference norm.
 
@@ -1689,13 +1687,13 @@ A multiple-channel source arrays are treated as a single-channel, that is, the r
 
 .. index:: normalize
 
-cv::normalize
+normalize
 -------------
-.. cfunction:: void normalize( const Mat\& src, Mat\& dst,  double alpha=1, double beta=0,                int normType=NORM_L2, int rtype=-1,  const Mat\& mask=Mat())
+.. c:function:: void normalize( const Mat\& src, Mat\& dst,  double alpha=1, double beta=0,                int normType=NORM_L2, int rtype=-1,  const Mat\& mask=Mat())
 
-.. cfunction:: void normalize( const MatND\& src, MatND\& dst,  double alpha=1, double beta=0,                int normType=NORM_L2, int rtype=-1,  const MatND\& mask=MatND())
+.. c:function:: void normalize( const MatND\& src, MatND\& dst,  double alpha=1, double beta=0,                int normType=NORM_L2, int rtype=-1,  const MatND\& mask=MatND())
 
-.. cfunction:: void normalize( const SparseMat\& src, SparseMat\& dst,  double alpha, int normType )
+.. c:function:: void normalize( const SparseMat\& src, SparseMat\& dst,  double alpha, int normType )
 
     Normalizes array's norm or the range
 
@@ -1738,7 +1736,7 @@ See also:
 
 PCA
 ---
-.. ctype:: PCA
+.. c:type:: PCA
 
 Class for Principal Component Analysis ::
 
@@ -1766,7 +1764,7 @@ Class for Principal Component Analysis ::
         // or added to the reconstructed vector
         Mat mean;
     };
-..
+
 
 The class ``PCA`` is used to compute the special basis for a set of vectors. The basis will consist of eigenvectors of the covariance matrix computed from the input set of vectors. And also the class ``PCA`` can transform vectors to/from the new coordinate space, defined by the basis. Usually, in this new coordinate system each vector from the original set (and any linear combination of such vectors) can be quite accurately approximated by taking just the first few its components, corresponding to the eigenvectors of the largest eigenvalues of the covariance matrix. Geometrically it means that we compute projection of the vector to a subspace formed by a few eigenvectors corresponding to the dominant eigenvalues of the covariation matrix. And usually such a projection is very close to the original vector. That is, we can represent the original vector from a high-dimensional space with a much shorter vector consisting of the projected vector's coordinates in the subspace. Such a transformation is also known as Karhunen-Loeve Transform, or KLT. See
 http://en.wikipedia.org/wiki/Principal\_component\_analysis
@@ -1805,16 +1803,16 @@ The following sample is the function that takes two matrices. The first one stor
         }
         return pca;
     }
-..
+
 
 See also:
 :func:`calcCovarMatrix`,:func:`mulTransposed`,:func:`SVD`,:func:`dft`,:func:`dct` .. index:: PCA::PCA
 
-cv::PCA::PCA
+PCA::PCA
 ------------
-.. cfunction:: PCA::PCA()
+.. c:function:: PCA::PCA()
 
-.. cfunction:: PCA::PCA(const Mat\& data, const Mat\& mean, int flags, int maxComponents=0)
+.. c:function:: PCA::PCA(const Mat\& data, const Mat\& mean, int flags, int maxComponents=0)
 
     PCA constructors
 
@@ -1835,9 +1833,9 @@ The default constructor initializes empty PCA structure. The second constructor 
 
 .. index:: PCA::operator ()
 
-cv::PCA::operator ()
+PCA::operator ()
 --------------------
-.. cfunction:: PCA\& PCA::operator()(const Mat\& data, const Mat\& mean, int flags, int maxComponents=0)
+.. c:function:: PCA\& PCA::operator()(const Mat\& data, const Mat\& mean, int flags, int maxComponents=0)
 
     Performs Principal Component Analysis of the supplied dataset.
 
@@ -1859,11 +1857,11 @@ The computed eigenvalues are sorted from the largest to the smallest and the cor
 
 .. index:: PCA::project
 
-cv::PCA::project
+PCA::project
 ----------------
-.. cfunction:: Mat PCA::project(const Mat\& vec) const
+.. c:function:: Mat PCA::project(const Mat\& vec) const
 
-.. cfunction:: void PCA::project(const Mat\& vec, Mat\& result) const
+.. c:function:: void PCA::project(const Mat\& vec, Mat\& result) const
 
     Project vector(s) to the principal component subspace
 
@@ -1875,11 +1873,11 @@ The methods project one or more vectors to the principal component subspace, whe
 
 .. index:: PCA::backProject
 
-cv::PCA::backProject
+PCA::backProject
 --------------------
-.. cfunction:: Mat PCA::backProject(const Mat\& vec) const
+.. c:function:: Mat PCA::backProject(const Mat\& vec) const
 
-.. cfunction:: void PCA::backProject(const Mat\& vec, Mat\& result) const
+.. c:function:: void PCA::backProject(const Mat\& vec, Mat\& result) const
 
     Reconstruct vectors from their PC projections.
 
@@ -1892,9 +1890,9 @@ The methods are inverse operations to
 
 .. index:: perspectiveTransform
 
-cv::perspectiveTransform
+perspectiveTransform
 ------------------------
-.. cfunction:: void perspectiveTransform(const Mat\& src,  Mat\& dst, const Mat\& mtx )
+.. c:function:: void perspectiveTransform(const Mat\& src,  Mat\& dst, const Mat\& mtx )
 
     Performs perspective matrix transformation of vectors.
 
@@ -1930,9 +1928,9 @@ Note that the function transforms a sparse set of 2D or 3D vectors. If you want 
 See also:
 :func:`transform`,:func:`warpPerspective`,:func:`getPerspectiveTransform`,:func:`findHomography` .. index:: phase
 
-cv::phase
+phase
 ---------
-.. cfunction:: void phase(const Mat\& x, const Mat\& y, Mat\& angle,           bool angleInDegrees=false)
+.. c:function:: void phase(const Mat\& x, const Mat\& y, Mat\& angle,           bool angleInDegrees=false)
 
     Calculates the rotation angle of 2d vectors
 
@@ -1954,9 +1952,9 @@ See also:
 
 .. index:: polarToCart
 
-cv::polarToCart
+polarToCart
 ---------------
-.. cfunction:: void polarToCart(const Mat\& magnitude, const Mat\& angle,                 Mat\& x, Mat\& y, bool angleInDegrees=false)
+.. c:function:: void polarToCart(const Mat\& magnitude, const Mat\& angle,                 Mat\& x, Mat\& y, bool angleInDegrees=false)
 
     Computes x and y coordinates of 2D vectors from their magnitude and angle.
 
@@ -1976,11 +1974,11 @@ The relative accuracy of the estimated coordinates is
 See also:
 :func:`cartToPolar`,:func:`magnitude`,:func:`phase`,:func:`exp`,:func:`log`,:func:`pow`,:func:`sqrt` .. index:: pow
 
-cv::pow
+pow
 -------
-.. cfunction:: void pow(const Mat\& src, double p, Mat\& dst)
+.. c:function:: void pow(const Mat\& src, double p, Mat\& dst)
 
-.. cfunction:: void pow(const MatND\& src, double p, MatND\& dst)
+.. c:function:: void pow(const MatND\& src, double p, MatND\& dst)
 
     Raises every array element to a power.
 
@@ -1999,7 +1997,7 @@ That is, for a non-integer power exponent the absolute values of input array ele
     Mat mask = src < 0;
     pow(src, 1./5, dst);
     subtract(Scalar::all(0), dst, dst, mask);
-..
+
 
 For some values of ``p`` , such as integer values, 0.5, and -0.5, specialized faster algorithms are used.
 
@@ -2048,7 +2046,7 @@ Random number generator class. ::
         // internal state of the RNG (could change in the future)
         uint64 state;
     };
-..
+
 
 The class ``RNG`` implements random number generator. It encapsulates the RNG state (currently, a 64-bit integer) and  has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
 http://en.wikipedia.org/wiki/Multiply-with-carry
@@ -2058,11 +2056,11 @@ http://en.wikipedia.org/wiki/Ziggurat_algorithm
 
 .. index:: RNG::RNG
 
-cv::RNG::RNG
+RNG::RNG
 ------------
-.. cfunction:: RNG::RNG()
+.. c:function:: RNG::RNG()
 
-.. cfunction:: RNG::RNG(uint64 state)
+.. c:function:: RNG::RNG(uint64 state)
 
     RNG constructors
 
@@ -2072,9 +2070,9 @@ These are the RNG constructors. The first form sets the state to some pre-define
 
 .. index:: RNG::next
 
-cv::RNG::next
+RNG::next
 -------------
-.. cfunction:: unsigned RNG::next()
+.. c:function:: unsigned RNG::next()
 
     Returns the next random number
 
@@ -2082,9 +2080,9 @@ The method updates the state using MWC algorithm and returns the next 32-bit ran
 
 .. index:: RNG::operator T
 
-cv::RNG::operator T
+RNG::operator T
 -------------------
-.. cfunction:: RNG::operator uchar() RNG::operator schar() RNG::operator ushort() RNG::operator short() RNG::operator unsigned() RNG::operator int() RNG::operator float() RNG::operator double()
+.. c:function:: RNG::operator uchar() RNG::operator schar() RNG::operator ushort() RNG::operator short() RNG::operator unsigned() RNG::operator int() RNG::operator float() RNG::operator double()
 
     Returns the next random number of the specified type
 
@@ -2092,11 +2090,11 @@ Each of the methods updates the state using MWC algorithm and returns the next r
 
 .. index:: RNG::operator ()
 
-cv::RNG::operator ()
+RNG::operator ()
 --------------------
-.. cfunction:: unsigned RNG::operator ()()
+.. c:function:: unsigned RNG::operator ()()
 
-.. cfunction:: unsigned RNG::operator ()(unsigned N)
+.. c:function:: unsigned RNG::operator ()(unsigned N)
 
     Returns the next random number
 
@@ -2107,13 +2105,13 @@ The methods transforms the state using MWC algorithm and returns the next random
 
 .. index:: RNG::uniform
 
-cv::RNG::uniform
+RNG::uniform
 ----------------
-.. cfunction:: int RNG::uniform(int a, int b)
+.. c:function:: int RNG::uniform(int a, int b)
 
-.. cfunction:: float RNG::uniform(float a, float b)
+.. c:function:: float RNG::uniform(float a, float b)
 
-.. cfunction:: double RNG::uniform(double a, double b)
+.. c:function:: double RNG::uniform(double a, double b)
 
     Returns the next random number sampled from the uniform distribution
 
@@ -2123,7 +2121,7 @@ cv::RNG::uniform
 
 The methods transforms the state using MWC algorithm and returns the next uniformly-distributed random number of the specified type, deduced from the input parameter type, from the range ``[a, b)`` . There is one nuance, illustrated by the following sample: ::
 
-    cv::RNG rng;
+    RNG rng;
 
     // will always produce 0
     double a = rng.uniform(0, 1);
@@ -2140,15 +2138,15 @@ The methods transforms the state using MWC algorithm and returns the next unifor
     // will likely cause compiler error because of ambiguity:
     //  RNG::uniform(0, (int)0.999999)? or RNG::uniform((double)0, 0.99999)?
     double d = rng.uniform(0, 0.999999);
-..
+
 
 That is, the compiler does not take into account type of the variable that you assign the result of ``RNG::uniform`` to, the only thing that matters to it is the type of ``a`` and ``b`` parameters. So if you want a floating-point random number, but the range boundaries are integer numbers, either put dots in the end, if they are constants, or use explicit type cast operators, as in ``a1`` initialization above.
 
 .. index:: RNG::gaussian
 
-cv::RNG::gaussian
+RNG::gaussian
 -----------------
-.. cfunction:: double RNG::gaussian(double sigma)
+.. c:function:: double RNG::gaussian(double sigma)
 
     Returns the next random number sampled from the Gaussian distribution
 
@@ -2158,11 +2156,11 @@ The methods transforms the state using MWC algorithm and returns the next random
 
 .. index:: RNG::fill
 
-cv::RNG::fill
+RNG::fill
 -------------
-.. cfunction:: void RNG::fill( Mat\& mat, int distType, const Scalar\& a, const Scalar\& b )
+.. c:function:: void RNG::fill( Mat\& mat, int distType, const Scalar\& a, const Scalar\& b )
 
-.. cfunction:: void RNG::fill( MatND\& mat, int distType, const Scalar\& a, const Scalar\& b )
+.. c:function:: void RNG::fill( MatND\& mat, int distType, const Scalar\& a, const Scalar\& b )
 
     Fill arrays with random numbers
 
@@ -2178,11 +2176,11 @@ Each of the methods fills the matrix with the random values from the specified d
 
 .. index:: randu
 
-cv::randu
+randu
 ---------
-.. cfunction:: template<typename _Tp> _Tp randu()
+.. c:function:: template<typename _Tp> _Tp randu()
 
-.. cfunction:: void randu(Mat\& mtx, const Scalar\& low, const Scalar\& high)
+.. c:function:: void randu(Mat\& mtx, const Scalar\& low, const Scalar\& high)
 
     Generates a single uniformly-distributed random number or array of random numbers
 
@@ -2206,9 +2204,9 @@ See also:
 
 .. index:: randn
 
-cv::randn
+randn
 ---------
-.. cfunction:: void randn(Mat\& mtx, const Scalar\& mean, const Scalar\& stddev)
+.. c:function:: void randn(Mat\& mtx, const Scalar\& mean, const Scalar\& stddev)
 
     Fills array with normally distributed random numbers
 
@@ -2224,9 +2222,9 @@ is applied to the generated numbers (i.e. the values are clipped)
 See also:
 :func:`RNG`,:func:`randu` .. index:: randShuffle
 
-cv::randShuffle
+randShuffle
 ---------------
-.. cfunction:: void randShuffle(Mat\& mtx, double iterFactor=1., RNG* rng=0)
+.. c:function:: void randShuffle(Mat\& mtx, double iterFactor=1., RNG* rng=0)
 
     Shuffles the array elements randomly
 
@@ -2239,9 +2237,9 @@ cv::randShuffle
 The function ``randShuffle`` shuffles the specified 1D array by randomly choosing pairs of elements and swapping them. The number of such swap operations will be ``mtx.rows*mtx.cols*iterFactor`` See also:
 :func:`RNG`,:func:`sort` .. index:: reduce
 
-cv::reduce
+reduce
 ----------
-.. cfunction:: void reduce(const Mat\& mtx, Mat\& vec,  int dim, int reduceOp, int dtype=-1)
+.. c:function:: void reduce(const Mat\& mtx, Mat\& vec,  int dim, int reduceOp, int dtype=-1)
 
     Reduces a matrix to a vector
 
@@ -2266,11 +2264,11 @@ cv::reduce
 See also:
 :func:`repeat` .. index:: repeat
 
-cv::repeat
+repeat
 ----------
-.. cfunction:: void repeat(const Mat\& src, int ny, int nx, Mat\& dst)
+.. c:function:: void repeat(const Mat\& src, int ny, int nx, Mat\& dst)
 
-.. cfunction:: Mat repeat(const Mat\& src, int ny, int nx)
+.. c:function:: Mat repeat(const Mat\& src, int ny, int nx)
 
     Fill the destination array with repeated copies of the source array.
 
@@ -2295,21 +2293,21 @@ The second variant of the function is more convenient to use with
 
 saturate_cast
 -------------
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(unsigned char v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(unsigned char v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(signed char v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(signed char v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(unsigned short v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(unsigned short v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(signed short v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(signed short v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(int v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(int v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(unsigned int v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(unsigned int v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(float v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(float v)
 
-.. cfunction:: template<typename _Tp> inline _Tp saturate_cast(double v)
+.. c:function:: template<typename _Tp> inline _Tp saturate_cast(double v)
 
     Template function for accurate conversion from one primitive type to another
 
@@ -2319,7 +2317,7 @@ The functions ``saturate_cast`` resembles the standard C++ cast operations, such
 
     uchar a = saturate_cast<uchar>(-100); // a = 0 (UCHAR_MIN)
     short b = saturate_cast<short>(33333.33333); // b = 32767 (SHRT_MAX)
-..
+
 
 Such clipping is done when the target type is ``unsigned char, signed char, unsigned short or signed short`` - for 32-bit integers no clipping is done.
 
@@ -2330,11 +2328,11 @@ This operation is used in most simple or complex image processing functions in O
 See also:
 :func:`add`,:func:`subtract`,:func:`multiply`,:func:`divide`,:func:`Mat::convertTo` .. index:: scaleAdd
 
-cv::scaleAdd
+scaleAdd
 ------------
-.. cfunction:: void scaleAdd(const Mat\& src1, double scale,  const Mat\& src2, Mat\& dst)
+.. c:function:: void scaleAdd(const Mat\& src1, double scale,  const Mat\& src2, Mat\& dst)
 
-.. cfunction:: void scaleAdd(const MatND\& src1, double scale,  const MatND\& src2, MatND\& dst)
+.. c:function:: void scaleAdd(const MatND\& src1, double scale,  const MatND\& src2, MatND\& dst)
 
     Calculates the sum of a scaled array and another array.
 
@@ -2354,14 +2352,14 @@ The function can also be emulated with a matrix expression, for example: ::
     Mat A(3, 3, CV_64F);
     ...
     A.row(0) = A.row(1)*2 + A.row(2);
-..
+
 
 See also:
 :func:`add`,:func:`addWeighted`,:func:`subtract`,:func:`Mat::dot`,:func:`Mat::convertTo`,:ref:`Matrix Expressions` .. index:: setIdentity
 
-cv::setIdentity
+setIdentity
 ---------------
-.. cfunction:: void setIdentity(Mat\& dst, const Scalar\& value=Scalar(1))
+.. c:function:: void setIdentity(Mat\& dst, const Scalar\& value=Scalar(1))
 
     Initializes a scaled identity matrix
 
@@ -2380,15 +2378,15 @@ The function can also be emulated using the matrix initializers and the matrix e
 
     Mat A = Mat::eye(4, 3, CV_32F)*5;
     // A will be set to [[5, 0, 0], [0, 5, 0], [0, 0, 5], [0, 0, 0]]
-..
+
 
 See also:
 :func:`Mat::zeros`,:func:`Mat::ones`,:ref:`Matrix Expressions`,:func:`Mat::setTo`,:func:`Mat::operator=`,
 .. index:: solve
 
-cv::solve
+solve
 ---------
-.. cfunction:: bool solve(const Mat\& src1, const Mat\& src2,  Mat\& dst, int flags=DECOMP_LU)
+.. c:function:: bool solve(const Mat\& src1, const Mat\& src2,  Mat\& dst, int flags=DECOMP_LU)
 
     Solves one or more linear systems or least-squares problems.
 
@@ -2426,9 +2424,9 @@ Note that if you want to find unity-norm solution of an under-defined singular s
 See also:
 :func:`invert`,:func:`SVD`,:func:`eigen` .. index:: solveCubic
 
-cv::solveCubic
+solveCubic
 --------------
-.. cfunction:: void solveCubic(const Mat\& coeffs, Mat\& roots)
+.. c:function:: void solveCubic(const Mat\& coeffs, Mat\& roots)
 
     Finds the real roots of a cubic equation.
 
@@ -2454,9 +2452,9 @@ The roots are stored to ``roots`` array.
 
 .. index:: solvePoly
 
-cv::solvePoly
+solvePoly
 -------------
-.. cfunction:: void solvePoly(const Mat\& coeffs, Mat\& roots,  int maxIters=20, int fig=100)
+.. c:function:: void solvePoly(const Mat\& coeffs, Mat\& roots,  int maxIters=20, int fig=100)
 
     Finds the real or complex roots of a polynomial equation
 
@@ -2476,9 +2474,9 @@ The function ``solvePoly`` finds real and complex roots of a polynomial equation
 
 .. index:: sort
 
-cv::sort
+sort
 --------
-.. cfunction:: void sort(const Mat\& src, Mat\& dst, int flags)
+.. c:function:: void sort(const Mat\& src, Mat\& dst, int flags)
 
     Sorts each row or each column of a matrix
 
@@ -2499,9 +2497,9 @@ The function ``sort`` sorts each matrix row or each matrix column in ascending o
 See also:
 :func:`sortIdx`,:func:`randShuffle` .. index:: sortIdx
 
-cv::sortIdx
+sortIdx
 -----------
-.. cfunction:: void sortIdx(const Mat\& src, Mat\& dst, int flags)
+.. c:function:: void sortIdx(const Mat\& src, Mat\& dst, int flags)
 
     Sorts each row or each column of a matrix
 
@@ -2524,20 +2522,20 @@ The function ``sortIdx`` sorts each matrix row or each matrix column in ascendin
     // B will probably contain
     // (because of equal elements in A some permutations are possible):
     // [[1, 2, 0], [0, 2, 1], [0, 1, 2]]
-..
+
 
 See also:
 :func:`sort`,:func:`randShuffle` .. index:: split
 
-cv::split
+split
 ---------
-.. cfunction:: void split(const Mat\& mtx, Mat* mv)
+.. c:function:: void split(const Mat\& mtx, Mat* mv)
 
-.. cfunction:: void split(const Mat\& mtx, vector<Mat>\& mv)
+.. c:function:: void split(const Mat\& mtx, vector<Mat>\& mv)
 
-.. cfunction:: void split(const MatND\& mtx, MatND* mv)
+.. c:function:: void split(const MatND\& mtx, MatND* mv)
 
-.. cfunction:: void split(const MatND\& mtx, vector<MatND>\& mv)
+.. c:function:: void split(const MatND\& mtx, vector<MatND>\& mv)
 
     Divides multi-channel array into several single-channel arrays
 
@@ -2555,11 +2553,11 @@ If you need to extract a single-channel or do some other sophisticated channel p
 :func:`mixChannels` See also:
 :func:`merge`,:func:`mixChannels`,:func:`cvtColor` .. index:: sqrt
 
-cv::sqrt
+sqrt
 --------
-.. cfunction:: void sqrt(const Mat\& src, Mat\& dst)
+.. c:function:: void sqrt(const Mat\& src, Mat\& dst)
 
-.. cfunction:: void sqrt(const MatND\& src, MatND\& dst)
+.. c:function:: void sqrt(const MatND\& src, MatND\& dst)
 
     Calculates square root of array elements
 
@@ -2570,23 +2568,23 @@ cv::sqrt
 See also:
 :func:`pow`,:func:`magnitude` .. index:: subtract
 
-cv::subtract
+subtract
 ------------
-.. cfunction:: void subtract(const Mat\& src1, const Mat\& src2, Mat\& dst)
+.. c:function:: void subtract(const Mat\& src1, const Mat\& src2, Mat\& dst)
 
-.. cfunction:: void subtract(const Mat\& src1, const Mat\& src2,  Mat\& dst, const Mat\& mask)
+.. c:function:: void subtract(const Mat\& src1, const Mat\& src2,  Mat\& dst, const Mat\& mask)
 
-.. cfunction:: void subtract(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void subtract(const Mat\& src1, const Scalar\& sc,  Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void subtract(const Scalar\& sc, const Mat\& src2,  Mat\& dst, const Mat\& mask=Mat())
+.. c:function:: void subtract(const Scalar\& sc, const Mat\& src2,  Mat\& dst, const Mat\& mask=Mat())
 
-.. cfunction:: void subtract(const MatND\& src1, const MatND\& src2, MatND\& dst)
+.. c:function:: void subtract(const MatND\& src1, const MatND\& src2, MatND\& dst)
 
-.. cfunction:: void subtract(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask)
+.. c:function:: void subtract(const MatND\& src1, const MatND\& src2,  MatND\& dst, const MatND\& mask)
 
-.. cfunction:: void subtract(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void subtract(const MatND\& src1, const Scalar\& sc,  MatND\& dst, const MatND\& mask=MatND())
 
-.. cfunction:: void subtract(const Scalar\& sc, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
+.. c:function:: void subtract(const Scalar\& sc, const MatND\& src2,  MatND\& dst, const MatND\& mask=MatND())
 
     Calculates per-element difference between two arrays or array and a scalar
 
@@ -2626,7 +2624,7 @@ The first function in the above list can be replaced with matrix expressions: ::
 
     dst = src1 - src2;
     dst -= src2; // equivalent to subtract(dst, src2, dst);
-..
+
 
 See also:
 :func:`add`,:func:`addWeighted`,:func:`scaleAdd`,:func:`convertScale`,:ref:`Matrix Expressions`,.
@@ -2637,7 +2635,7 @@ See also:
 
 SVD
 ---
-.. ctype:: SVD
+.. c:type:: SVD
 
 Class for computing Singular Value Decomposition ::
 
@@ -2664,7 +2662,7 @@ Class for computing Singular Value Decomposition ::
         Mat w; // vector of singular values
         Mat vt; // the right orthogonal matrix
     };
-..
+
 
 The class ``SVD`` is used to compute Singular Value Decomposition of a floating-point matrix and then use it to solve least-square problems, under-determined linear systems, invert matrices, compute condition numbers etc.
 For a bit faster operation you can pass ``flags=SVD::MODIFY_A|...`` to modify the decomposed matrix when it is not necessarily to preserve it. If you want to compute condition number of a matrix or absolute value of its determinant - you do not need ``u`` and ``vt`` , so you can pass ``flags=SVD::NO_UV|...`` . Another flag ``FULL_UV`` indicates that full-size ``u`` and ``vt`` must be computed, which is not necessary most of the time.
@@ -2672,11 +2670,11 @@ For a bit faster operation you can pass ``flags=SVD::MODIFY_A|...`` to modify th
 See also:
 :func:`invert`,:func:`solve`,:func:`eigen`,:func:`determinant` .. index:: SVD::SVD
 
-cv::SVD::SVD
+SVD::SVD
 ------------
-.. cfunction:: SVD::SVD()
+.. c:function:: SVD::SVD()
 
-.. cfunction:: SVD::SVD( const Mat\& A, int flags=0 )
+.. c:function:: SVD::SVD( const Mat\& A, int flags=0 )
 
     SVD constructors
 
@@ -2695,9 +2693,9 @@ The first constructor initializes empty ``SVD`` structure. The second constructo
 
 .. index:: SVD::operator ()
 
-cv::SVD::operator ()
+SVD::operator ()
 --------------------
-.. cfunction:: SVD\& SVD::operator ()( const Mat\& A, int flags=0 )
+.. c:function:: SVD\& SVD::operator ()( const Mat\& A, int flags=0 )
 
     Performs SVD of a matrix
 
@@ -2716,9 +2714,9 @@ The operator performs singular value decomposition of the supplied matrix. The `
 
 .. index:: SVD::solveZ
 
-cv::SVD::solveZ
+SVD::solveZ
 ---------------
-.. cfunction:: static void SVD::solveZ( const Mat\& A, Mat\& x )
+.. c:function:: static void SVD::solveZ( const Mat\& A, Mat\& x )
 
     Solves under-determined singular linear system
 
@@ -2737,9 +2735,9 @@ of the under-determined system
 
 .. index:: SVD::backSubst
 
-cv::SVD::backSubst
+SVD::backSubst
 ------------------
-.. cfunction:: void SVD::backSubst( const Mat\& rhs, Mat\& x ) const
+.. c:function:: void SVD::backSubst( const Mat\& rhs, Mat\& x ) const
 
     Performs singular value back substitution
 
@@ -2752,15 +2750,15 @@ The method computes back substitution for the specified right-hand side:
     \texttt{x} =  \texttt{vt} ^T  \cdot diag( \texttt{w} )^{-1}  \cdot \texttt{u} ^T  \cdot \texttt{rhs} \sim \texttt{A} ^{-1}  \cdot \texttt{rhs}
 
 Using this technique you can either get a very accurate solution of convenient linear system, or the best (in the least-squares terms) pseudo-solution of an overdetermined linear system. Note that explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (e.g. ``A`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call
-:func:`solve` add pass ``cv::DECOMP_SVD`` there - it will do absolutely the same thing.
+:func:`solve` add pass ``DECOMP_SVD`` there - it will do absolutely the same thing.
 
 .. index:: sum
 
-cv::sum
+sum
 -------
-.. cfunction:: Scalar sum(const Mat\& mtx)
+.. c:function:: Scalar sum(const Mat\& mtx)
 
-.. cfunction:: Scalar sum(const MatND\& mtx)
+.. c:function:: Scalar sum(const MatND\& mtx)
 
     Calculates sum of array elements
 
@@ -2771,9 +2769,9 @@ The functions ``sum`` calculate and return the sum of array elements, independen
 See also:
 :func:`countNonZero`,:func:`mean`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`,:func:`reduce` .. index:: theRNG
 
-cv::theRNG
+theRNG
 ----------
-.. cfunction:: RNG\& theRNG()
+.. c:function:: RNG\& theRNG()
 
     Returns the default random number generator
 
@@ -2784,9 +2782,9 @@ The function ``theRNG`` returns the default random number generator. For each th
 See also:
 :func:`RNG`,:func:`randu`,:func:`randn` .. index:: trace
 
-cv::trace
+trace
 ---------
-.. cfunction:: Scalar trace(const Mat\& mtx)
+.. c:function:: Scalar trace(const Mat\& mtx)
 
     Returns the trace of a matrix
 
@@ -2800,9 +2798,9 @@ The function ``trace`` returns the sum of the diagonal elements of the matrix ``
 
 .. index:: transform
 
-cv::transform
+transform
 -------------
-.. cfunction:: void transform(const Mat\& src,  Mat\& dst, const Mat\& mtx )
+.. c:function:: void transform(const Mat\& src,  Mat\& dst, const Mat\& mtx )
 
     Performs matrix transformation of every array element.
 
@@ -2837,9 +2835,9 @@ points, arbitrary linear color space transformation (such as various kinds of RG
 See also:
 :func:`perspectiveTransform`,:func:`getAffineTransform`,:func:`estimateRigidTransform`,:func:`warpAffine`,:func:`warpPerspective` .. index:: transpose
 
-cv::transpose
+transpose
 -------------
-.. cfunction:: void transpose(const Mat\& src, Mat\& dst)
+.. c:function:: void transpose(const Mat\& src, Mat\& dst)
 
     Transposes a matrix
 

@@ -5,9 +5,9 @@ Object Detection
 
 .. index:: matchTemplate
 
-cv::matchTemplate
+matchTemplate
 -----------------
-.. cfunction:: void matchTemplate( const Mat\& image, const Mat\& templ,                    Mat\& result, int method )
+.. c:function:: void matchTemplate( const Mat\& image, const Mat\& templ,                    Mat\& result, int method )
 
     Compares a template against overlapped image regions.
 

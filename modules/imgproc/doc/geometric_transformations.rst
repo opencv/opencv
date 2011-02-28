@@ -36,9 +36,9 @@ The actual implementations of the geometrical transformations, from the most gen
 
 .. index:: convertMaps
 
-cv::convertMaps
+convertMaps
 ---------------
-.. cfunction:: void convertMaps( const Mat\& map1, const Mat\& map2,                  Mat\& dstmap1, Mat\& dstmap2,                  int dstmap1type, bool nninterpolation=false )
+.. c:function:: void convertMaps( const Mat\& map1, const Mat\& map2,                  Mat\& dstmap1, Mat\& dstmap2,                  int dstmap1type, bool nninterpolation=false )
 
     Converts image transformation maps from one representation to another
 
@@ -68,9 +68,9 @@ See also:
 :func:`remap`,:func:`undisort`,:func:`initUndistortRectifyMap`
 .. index:: getAffineTransform
 
-cv::getAffineTransform
+getAffineTransform
 ----------------------
-.. cfunction:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+.. c:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
 
     Calculates the affine transform from 3 pairs of the corresponding points
 
@@ -97,9 +97,9 @@ See also:
 :func:`warpAffine`,:func:`transform`
 .. index:: getPerspectiveTransform
 
-cv::getPerspectiveTransform
+getPerspectiveTransform
 ---------------------------
-.. cfunction:: Mat getPerspectiveTransform( const Point2f src[],  const Point2f dst[] )
+.. c:function:: Mat getPerspectiveTransform( const Point2f src[],  const Point2f dst[] )
 
     Calculates the perspective transform from 4 pairs of the corresponding points
 
@@ -126,9 +126,9 @@ See also:
 :func:`findHomography`,:func:`warpPerspective`,:func:`perspectiveTransform`
 .. index:: getRectSubPix
 
-cv::getRectSubPix
+getRectSubPix
 -----------------
-.. cfunction:: void getRectSubPix( const Mat\& image, Size patchSize,                    Point2f center, Mat\& dst, int patchType=-1 )
+.. c:function:: void getRectSubPix( const Mat\& image, Size patchSize,                    Point2f center, Mat\& dst, int patchType=-1 )
 
     Retrieves the pixel rectangle from an image with sub-pixel accuracy
 
@@ -158,9 +158,9 @@ See also:
 :func:`warpAffine`,:func:`warpPerspective`
 .. index:: getRotationMatrix2D
 
-cv::getRotationMatrix2D
+getRotationMatrix2D
 -----------------------
-.. cfunction:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
+.. c:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
 
     Calculates the affine matrix of 2d rotation.
 
@@ -188,9 +188,9 @@ See also:
 :func:`getAffineTransform`,:func:`warpAffine`,:func:`transform`
 .. index:: invertAffineTransform
 
-cv::invertAffineTransform
+invertAffineTransform
 -------------------------
-.. cfunction:: void invertAffineTransform(const Mat\& M, Mat\& iM)
+.. c:function:: void invertAffineTransform(const Mat\& M, Mat\& iM)
 
     Inverts an affine transformation
 
@@ -210,9 +210,9 @@ The result will also be a
 
 .. index:: remap
 
-cv::remap
+remap
 ---------
-.. cfunction:: void remap( const Mat\& src, Mat\& dst, const Mat\& map1, const Mat\& map2,            int interpolation, int borderMode=BORDER_CONSTANT,            const Scalar\& borderValue=Scalar())
+.. c:function:: void remap( const Mat\& src, Mat\& dst, const Mat\& map1, const Mat\& map2,            int interpolation, int borderMode=BORDER_CONSTANT,            const Scalar\& borderValue=Scalar())
 
     Applies a generic geometrical transformation to an image.
 
@@ -252,9 +252,9 @@ This function can not operate in-place.
 
 .. index:: resize
 
-cv::resize
+resize
 ----------
-.. cfunction:: void resize( const Mat\& src, Mat\& dst,             Size dsize, double fx=0, double fy=0,             int interpolation=INTER_LINEAR )
+.. c:function:: void resize( const Mat\& src, Mat\& dst,             Size dsize, double fx=0, double fy=0,             int interpolation=INTER_LINEAR )
 
     Resizes an image
 
@@ -300,28 +300,29 @@ Note that the initial ``dst`` type or size are not taken into account. Instead t
 
     // explicitly specify dsize=dst.size(); fx and fy will be computed from that.
     resize(src, dst, dst.size(), 0, 0, interpolation);
-..
+
 
 If you want to decimate the image by factor of 2 in each direction, you can call the function this way: ::
 
     // specify fx and fy and let the function to compute the destination image size.
     resize(src, dst, Size(), 0.5, 0.5, interpolation);
-..
+
 
 See also:
 :func:`warpAffine`,:func:`warpPerspective`,:func:`remap` .
 
 .. index:: warpAffine
 
-cv::warpAffine
+warpAffine
 --------------
-.. cfunction:: void warpAffine( const Mat\& src, Mat\& dst,                 const Mat\& M, Size dsize,                 int flags=INTER_LINEAR,                 int borderMode=BORDER_CONSTANT,                 const Scalar\& borderValue=Scalar())
+.. c:function:: void warpAffine( const Mat\& src, Mat\& dst,                 const Mat\& M, Size dsize,                 int flags=INTER_LINEAR,                 int borderMode=BORDER_CONSTANT,                 const Scalar\& borderValue=Scalar())
 
     Applies an affine transformation to an image.
 
     :param src: Source image
 
     :param dst: Destination image; will have size  ``dsize``  and the same type as  ``src``
+    
     :param M: :math:`2\times 3`  transformation matrix
 
     :param dsize: Size of the destination image
@@ -346,9 +347,9 @@ See also:
 :func:`warpPerspective`,:func:`resize`,:func:`remap`,:func:`getRectSubPix`,:func:`transform`
 .. index:: warpPerspective
 
-cv::warpPerspective
+warpPerspective
 -------------------
-.. cfunction:: void warpPerspective( const Mat\& src, Mat\& dst,                      const Mat\& M, Size dsize,                      int flags=INTER_LINEAR,                      int borderMode=BORDER_CONSTANT,                      const Scalar\& borderValue=Scalar())
+.. c:function:: void warpPerspective( const Mat\& src, Mat\& dst,                      const Mat\& M, Size dsize,                      int flags=INTER_LINEAR,                      int borderMode=BORDER_CONSTANT,                      const Scalar\& borderValue=Scalar())
 
     Applies a perspective transformation to an image.
 

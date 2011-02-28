@@ -7,7 +7,7 @@ Operations on Matrices
 
 cv::gpu::transpose
 ------------------
-.. cfunction:: void transpose(const GpuMat\& src, GpuMat\& dst)
+.. c:function:: void transpose(const GpuMat\& src, GpuMat\& dst)
 
     Transposes a matrix.
 
@@ -22,7 +22,7 @@ See also:
 
 cv::gpu::flip
 -------------
-.. cfunction:: void flip(const GpuMat\& a, GpuMat\& b, int flipCode)
+.. c:function:: void flip(const GpuMat\& a, GpuMat\& b, int flipCode)
 
     Flips a 2D matrix around vertical, horizontal or both axes.
 
@@ -50,7 +50,7 @@ cv::gpu::LUT
 
     dst(I) = lut(src(I))
 
-.. cfunction:: void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst)
+.. c:function:: void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst)
 
     Transforms the source matrix into the destination matrix using given look-up table:
 
@@ -67,9 +67,10 @@ See also:
 
 cv::gpu::merge
 --------------
-.. cfunction:: void merge(const GpuMat* src, size_t n, GpuMat\& dst)
+.. c:function:: void merge(const GpuMat* src, size_t n, GpuMat\& dst)
 
-.. cfunction:: void merge(const GpuMat* src, size_t n, GpuMat\& dst,   const Stream\& stream)
+.. c:function:: void merge(const GpuMat* src, size_t n, GpuMat\& dst,
+   const Stream\& stream)
 
     Makes a multi-channel matrix out of several single-channel matrices.
 
@@ -81,9 +82,10 @@ cv::gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-.. cfunction:: void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst)
+.. c:function:: void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst)
 
-.. cfunction:: void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,   const Stream\& stream)
+.. c:function:: void merge(const vector$<$GpuMat$>$\& src, GpuMat\& dst,
+   const Stream\& stream)
 
     * **src** Vector of the source matrices.
 
@@ -98,9 +100,9 @@ See also:
 
 cv::gpu::split
 --------------
-.. cfunction:: void split(const GpuMat\& src, GpuMat* dst)
+.. c:function:: void split(const GpuMat\& src, GpuMat* dst)
 
-.. cfunction:: void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream)
+.. c:function:: void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream)
 
     Copies each plane of a multi-channel matrix into an array.
 
@@ -110,9 +112,10 @@ cv::gpu::split
 
     :param stream: Stream for the asynchronous version.
 
-.. cfunction:: void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst)
+.. c:function:: void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst)
 
-.. cfunction:: void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,   const Stream\& stream)
+.. c:function:: void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,
+   const Stream\& stream)
 
     * **src** Source matrix.
 
@@ -127,7 +130,7 @@ See also:
 
 cv::gpu::magnitude
 ------------------
-.. cfunction:: void magnitude(const GpuMat\& x, GpuMat\& magnitude)
+.. c:function:: void magnitude(const GpuMat\& x, GpuMat\& magnitude)
 
     Computes magnitudes of complex matrix elements.
 
@@ -135,9 +138,10 @@ cv::gpu::magnitude
 
     :param magnitude: Destination matrix of float magnitudes ( ``CV_32FC1`` ).
 
-.. cfunction:: void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude)
+.. c:function:: void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude)
 
-.. cfunction:: void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,   const Stream\& stream)
+.. c:function:: void magnitude(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
+   const Stream\& stream)
 
     * **x** Source matrix, containing real components ( ``CV_32FC1`` ).
 
@@ -154,7 +158,7 @@ See also:
 
 cv::gpu::magnitudeSqr
 ---------------------
-.. cfunction:: void magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude)
+.. c:function:: void magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude)
 
     Computes squared magnitudes of complex matrix elements.
 
@@ -162,9 +166,10 @@ cv::gpu::magnitudeSqr
 
     :param magnitude: Destination matrix of float magnitude squares ( ``CV_32FC1`` ).
 
-.. cfunction:: void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude)
+.. c:function:: void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude)
 
-.. cfunction:: void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,   const Stream\& stream)
+.. c:function:: void magnitudeSqr(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
+   const Stream\& stream)
 
     * **x** Source matrix, containing real components ( ``CV_32FC1`` ).
 
@@ -178,9 +183,11 @@ cv::gpu::magnitudeSqr
 
 cv::gpu::phase
 --------------
-.. cfunction:: void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,   bool angleInDegrees=false)
+.. c:function:: void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,
+   bool angleInDegrees=false)
 
-.. cfunction:: void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,   bool angleInDegrees, const Stream\& stream)
+.. c:function:: void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,
+   bool angleInDegrees, const Stream\& stream)
 
     Computes polar angles of complex matrix elements.
 
@@ -201,9 +208,11 @@ See also:
 
 cv::gpu::cartToPolar
 --------------------
-.. cfunction:: void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,   GpuMat\& angle, bool angleInDegrees=false)
+.. c:function:: void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
+   GpuMat\& angle, bool angleInDegrees=false)
 
-.. cfunction:: void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,   GpuMat\& angle, bool angleInDegrees, const Stream\& stream)
+.. c:function:: void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
+   GpuMat\& angle, bool angleInDegrees, const Stream\& stream)
 
     Converts Cartesian coordinates into polar.
 
@@ -226,9 +235,12 @@ See also:
 
 cv::gpu::polarToCart
 --------------------
-.. cfunction:: void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,   GpuMat\& x, GpuMat\& y, bool angleInDegrees=false)
+.. c:function:: void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,
+   GpuMat\& x, GpuMat\& y, bool angleInDegrees=false)
 
-.. cfunction:: void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,   GpuMat\& x, GpuMat\& y, bool angleInDegrees,   const Stream\& stream)
+.. c:function:: void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,
+   GpuMat\& x, GpuMat\& y, bool angleInDegrees,
+   const Stream\& stream)
 
     Converts polar coordinates into Cartesian.
 

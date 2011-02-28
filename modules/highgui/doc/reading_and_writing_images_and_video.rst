@@ -5,9 +5,9 @@ Reading and Writing Images and Video
 
 .. index:: imdecode
 
-cv::imdecode
+imdecode
 ------------
-.. cfunction:: Mat imdecode( const Mat\& buf,  int flags )
+.. c:function:: Mat imdecode( const Mat\& buf,  int flags )
 
     Reads an image from a buffer in memory.
 
@@ -22,9 +22,9 @@ See
 
 .. index:: imencode
 
-cv::imencode
+imencode
 ------------
-.. cfunction:: bool imencode( const string\& ext,               const Mat\& img,               vector<uchar>\& buf,               const vector<int>\& params=vector<int>())
+.. c:function:: bool imencode( const string\& ext,               const Mat\& img,               vector<uchar>\& buf,               const vector<int>\& params=vector<int>())
 
     Encode an image into a memory buffer.
 
@@ -41,9 +41,9 @@ See
 
 .. index:: imread
 
-cv::imread
+imread
 ----------
-.. cfunction:: Mat imread( const string\& filename,  int flags=1 )
+.. c:function:: Mat imread( const string\& filename,  int flags=1 )
 
     Loads an image from a file.
 
@@ -98,9 +98,9 @@ On Linux, BSD flavors and other Unix-like open-source operating systems OpenCV l
 
 .. index:: imwrite
 
-cv::imwrite
+imwrite
 -----------
-.. cfunction:: bool imwrite( const string\& filename,  const Mat\& img,              const vector<int>\& params=vector<int>())
+.. c:function:: bool imwrite( const string\& filename,  const Mat\& img,              const vector<int>\& params=vector<int>())
 
     Saves an image to a specified file.
 
@@ -127,7 +127,7 @@ The function ``imwrite`` saves the image to the specified file. The image format
 
 VideoCapture
 ------------
-.. ctype:: VideoCapture
+.. c:type:: VideoCapture
 
 Class for video capturing from video files or cameras ::
 
@@ -209,13 +209,13 @@ The class provides C++ video capturing API. Here is how the class can be used: :
 
 .. index:: VideoCapture::VideoCapture
 
-cv::VideoCapture::VideoCapture
+VideoCapture::VideoCapture
 ------------------------------
-.. cfunction:: VideoCapture::VideoCapture()
+.. c:function:: VideoCapture::VideoCapture()
 
-.. cfunction:: VideoCapture::VideoCapture(const string\& filename)
+.. c:function:: VideoCapture::VideoCapture(const string\& filename)
 
-.. cfunction:: VideoCapture::VideoCapture(int device)
+.. c:function:: VideoCapture::VideoCapture(int device)
 
     :param filename: TOWRITE
 
@@ -225,9 +225,9 @@ VideoCapture constructors.
 
 .. index:: VideoCapture::get
 
-cv::VideoCapture::get
+VideoCapture::get
 ---------------------
-.. cfunction:: double VideoCapture::get(int property_id)
+.. c:function:: double VideoCapture::get(int property_id)
 
     :param property_id: Property identifier. Can be one of the following:
 
@@ -273,9 +273,9 @@ Note that when querying a property which is unsupported by the backend used by t
 
 .. index:: VideoCapture::set
 
-cv::VideoCapture::set
+VideoCapture::set
 ---------------------
-.. cfunction:: bool VideoCapture::set(int property_id, double value)
+.. c:function:: bool VideoCapture::set(int property_id, double value)
 
     :param property_id: Property identifier. Can be one of the following:
 
@@ -327,7 +327,7 @@ Sets a property in the VideoCapture backend.
 
 VideoWriter
 -----------
-.. ctype:: VideoWriter
+.. c:type:: VideoWriter
 
 Video writer class ::
 

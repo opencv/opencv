@@ -5,15 +5,16 @@ Miscellaneous Image Transformations
 
 .. index:: adaptiveThreshold
 
-cv::adaptiveThreshold
+adaptiveThreshold
 ---------------------
-.. cfunction:: void adaptiveThreshold( const Mat\& src, Mat\& dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
+.. c:function:: void adaptiveThreshold( const Mat& src, Mat& dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
 
     Applies an adaptive threshold to an array.
 
     :param src: Source 8-bit single-channel image
 
     :param dst: Destination image; will have the same size and the same type as  ``src``
+    
     :param maxValue: The non-zero value assigned to the pixels for which the condition is satisfied. See the discussion
 
     :param adaptiveMethod: Adaptive thresholding algorithm to use, ``ADAPTIVE_THRESH_MEAN_C``  or  ``ADAPTIVE_THRESH_GAUSSIAN_C``  (see the discussion)
@@ -59,9 +60,9 @@ See also:
 :func:`threshold`,:func:`blur`,:func:`GaussianBlur`
 .. index:: cvtColor
 
-cv::cvtColor
+cvtColor
 ------------
-.. cfunction:: void cvtColor( const Mat\& src, Mat\& dst, int code, int dstCn=0 )
+.. c:function:: void cvtColor( const Mat& src, Mat& dst, int code, int dstCn=0 )
 
     Converts image from one color space to another
 
@@ -71,6 +72,7 @@ cv::cvtColor
     :param code: The color space conversion code; see the discussion
 
     :param dstCn: The number of channels in the destination image; if the parameter is 0, the number of the channels will be derived automatically from  ``src``  and the  ``code``
+
 The function converts the input image from one color
 space to another. In the case of transformation to-from RGB color space the ordering of the channels should be specified explicitly (RGB or BGR).
 
@@ -91,7 +93,6 @@ but in the non-linear cases the input RGB image should be normalized to the prop
 
     img *= 1./255;
     cvtColor(img, img, CV_BGR2Luv);
-..
 
 The function can do the following transformations:
 
@@ -178,8 +179,7 @@ The function can do the following transformations:
     Y, Cr and Cb cover the whole value range.
 
 *
-    RGB
-    :math:`\leftrightarrow`     HSV ( ``CV_BGR2HSV, CV_RGB2HSV, CV_HSV2BGR, CV_HSV2RGB``     )
+    RGB :math:`\leftrightarrow` HSV ( ``CV_BGR2HSV, CV_RGB2HSV, CV_HSV2BGR, CV_HSV2RGB``     )
       in the case of 8-bit and 16-bit images
       R, G and B are converted to floating-point format and scaled to fit the 0 to 1 range
 
@@ -218,8 +218,7 @@ The function can do the following transformations:
         H, S, V are left as is
 
 *
-    RGB
-    :math:`\leftrightarrow`     HLS ( ``CV_BGR2HLS, CV_RGB2HLS, CV_HLS2BGR, CV_HLS2RGB``     ).
+    RGB :math:`\leftrightarrow` HLS ( ``CV_BGR2HLS, CV_RGB2HLS, CV_HLS2BGR, CV_HLS2RGB`` ).
       in the case of 8-bit and 16-bit images
       R, G and B are converted to floating-point format and scaled to fit the 0 to 1 range.
 
@@ -269,8 +268,7 @@ The function can do the following transformations:
         H, S, V are left as is
 
 *
-    RGB
-    :math:`\leftrightarrow`     CIE L*a*b* ( ``CV_BGR2Lab, CV_RGB2Lab, CV_Lab2BGR, CV_Lab2RGB``     )
+    RGB :math:`\leftrightarrow` CIE L*a*b* ( ``CV_BGR2Lab, CV_RGB2Lab, CV_Lab2BGR, CV_Lab2RGB`` )
       in the case of 8-bit and 16-bit images
       R, G and B are converted to floating-point format and scaled to fit the 0 to 1 range
 
@@ -326,8 +324,7 @@ The function can do the following transformations:
         L, a, b are left as is
 
 *
-    RGB
-    :math:`\leftrightarrow`     CIE L*u*v* ( ``CV_BGR2Luv, CV_RGB2Luv, CV_Luv2BGR, CV_Luv2RGB``     )
+    RGB :math:`\leftrightarrow` CIE L*u*v* ( ``CV_BGR2Luv, CV_RGB2Luv, CV_Luv2BGR, CV_Luv2RGB`` )
       in the case of 8-bit and 16-bit images
       R, G and B are converted to floating-point format and scaled to fit 0 to 1 range
 
@@ -376,8 +373,7 @@ The function can do the following transformations:
     http://www.poynton.com/ColorFAQ.html
 
 *
-    Bayer
-    :math:`\rightarrow`     RGB ( ``CV_BayerBG2BGR, CV_BayerGB2BGR, CV_BayerRG2BGR, CV_BayerGR2BGR, CV_BayerBG2RGB, CV_BayerGB2RGB, CV_BayerRG2RGB, CV_BayerGR2RGB``     ) The Bayer pattern is widely used in CCD and CMOS cameras. It allows one to get color pictures from a single plane where R,G and B pixels (sensors of a particular component) are interleaved like this:
+    Bayer :math:`\rightarrow`     RGB ( ``CV_BayerBG2BGR, CV_BayerGB2BGR, CV_BayerRG2BGR, CV_BayerGR2BGR, CV_BayerBG2RGB, CV_BayerGB2RGB, CV_BayerRG2RGB, CV_BayerGR2RGB``     ) The Bayer pattern is widely used in CCD and CMOS cameras. It allows one to get color pictures from a single plane where R,G and B pixels (sensors of a particular component) are interleaved like this:
 
     .. math::
 
@@ -395,11 +391,11 @@ The function can do the following transformations:
 
 .. index:: distanceTransform
 
-cv::distanceTransform
+distanceTransform
 ---------------------
-.. cfunction:: void distanceTransform( const Mat\& src, Mat\& dst,                        int distanceType, int maskSize )
+.. c:function:: void distanceTransform( const Mat& src, Mat& dst, int distanceType, int maskSize )
 
-.. cfunction:: void distanceTransform( const Mat\& src, Mat\& dst, Mat\& labels,                        int distanceType, int maskSize )
+.. c:function:: void distanceTransform( const Mat& src, Mat& dst, Mat& labels, int distanceType, int maskSize )
 
     Calculates the distance to the closest zero pixel for each pixel of the source image.
 
@@ -438,8 +434,12 @@ gives more accurate results). For ``a``,``b`` and ``c`` OpenCV uses the values s
 
 .. table::
 
-    ==============  ===================  ====================== ``CV_DIST_C``   :math:`(3\times 3)`  a = 1, b = 1 \
-    ==============  ===================  ====================== ``CV_DIST_L1``  :math:`(3\times 3)`  a = 1, b = 2 \ ``CV_DIST_L2``  :math:`(3\times 3)`  a=0.955, b=1.3693 \ ``CV_DIST_L2``  :math:`(5\times 5)`  a=1, b=1.4, c=2.1969 \
+    ==============  ===================  ======================
+    ``CV_DIST_C``   :math:`(3\times 3)`  a = 1, b = 1 \
+    ==============  ===================  ======================
+    ``CV_DIST_L1``  :math:`(3\times 3)`  a = 1, b = 2 \
+    ``CV_DIST_L2``  :math:`(3\times 3)`  a=0.955, b=1.3693 \
+    ``CV_DIST_L2``  :math:`(5\times 5)`  a=1, b=1.4, c=2.1969 \
     ==============  ===================  ======================
 
 Typically, for a fast, coarse distance estimation ``CV_DIST_L2``,a
@@ -459,11 +459,11 @@ Currently, this second variant can only use the approximate distance transform a
 
 .. index:: floodFill
 
-cv::floodFill
+floodFill
 -------------
-.. cfunction:: int floodFill( Mat\& image,               Point seed, Scalar newVal, Rect* rect=0,               Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),               int flags=4 )
+.. c:function:: int floodFill( Mat& image, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),               int flags=4 )
 
-.. cfunction:: int floodFill( Mat\& image, Mat\& mask,               Point seed, Scalar newVal, Rect* rect=0,               Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),               int flags=4 )
+.. c:function:: int floodFill( Mat& image, Mat& mask, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
 
     Fills a connected component with the given color.
 
@@ -544,9 +544,9 @@ See also:
 :func:`findContours`
 .. index:: inpaint
 
-cv::inpaint
+inpaint
 -----------
-.. cfunction:: void inpaint( const Mat\& src, const Mat\& inpaintMask,              Mat\& dst, double inpaintRadius, int flags )
+.. c:function:: void inpaint( const Mat& src, const Mat& inpaintMask,              Mat& dst, double inpaintRadius, int flags )
 
     Inpaints the selected region in the image.
 
@@ -555,6 +555,7 @@ cv::inpaint
     :param inpaintMask: The inpainting mask, 8-bit 1-channel image. Non-zero pixels indicate the area that needs to be inpainted.
 
     :param dst: The output image; will have the same size and the same type as  ``src``
+    
     :param inpaintRadius: The radius of a circlular neighborhood of each point inpainted that is considered by the algorithm.
 
     :param flags: The inpainting method, one of the following:
@@ -569,13 +570,13 @@ for more details.
 
 .. index:: integral
 
-cv::integral
+integral
 ------------
-.. cfunction:: void integral( const Mat\& image, Mat\& sum, int sdepth=-1 )
+.. c:function:: void integral( const Mat& image, Mat& sum, int sdepth=-1 )
 
-.. cfunction:: void integral( const Mat\& image, Mat\& sum, Mat\& sqsum, int sdepth=-1 )
+.. c:function:: void integral( const Mat& image, Mat& sum, Mat& sqsum, int sdepth=-1 )
 
-.. cfunction:: void integral( const Mat\& image, Mat\& sum,  Mat\& sqsum, Mat\& tilted, int sdepth=-1 )
+.. c:function:: void integral( const Mat& image, Mat& sum,  Mat& sqsum, Mat& tilted, int sdepth=-1 )
 
     Calculates the integral of an image.
 
@@ -586,8 +587,10 @@ cv::integral
     :param sqsum: The integral image for squared pixel values,  :math:`(W+1)\times (H+1)` , double precision floating-point (64f)
 
     :param tilted: The integral for the image rotated by 45 degrees,  :math:`(W+1)\times (H+1)` , the same data type as  ``sum``
+    
     :param sdepth: The desired depth of the integral and the tilted integral images,  ``CV_32S`` ,   ``CV_32F``  or  ``CV_64F``
-The functions ``integral`` calculate one or more integral images for the source image as following:
+
+The functions calculate one or more integral images for the source image as following:
 
 .. math::
 
@@ -619,15 +622,16 @@ As a practical example, the next figure shows the calculation of the integral of
 
 .. index:: threshold
 
-cv::threshold
+threshold
 -------------
-.. cfunction:: double threshold( const Mat\& src, Mat\& dst, double thresh,                  double maxVal, int thresholdType )
+.. c:function:: double threshold( const Mat& src, Mat& dst, double thresh,                  double maxVal, int thresholdType )
 
     Applies a fixed-level threshold to each array element
 
     :param src: Source array (single-channel, 8-bit of 32-bit floating point)
 
     :param dst: Destination array; will have the same size and the same type as  ``src``
+    
     :param thresh: Threshold value
 
     :param maxVal: Maximum value to use with  ``THRESH_BINARY``  and  ``THRESH_BINARY_INV``  thresholding types
@@ -684,15 +688,16 @@ See also:
 :func:`adaptiveThreshold`,:func:`findContours`,:func:`compare`,:func:`min`,:func:`max`
 .. index:: watershed
 
-cv::watershed
+watershed
 -------------
-.. cfunction:: void watershed( const Mat\& image, Mat\& markers )
+.. c:function:: void watershed( const Mat& image, Mat& markers )
 
     Does marker-based image segmentation using watershed algrorithm
 
     :param image: The input 8-bit 3-channel image.
 
     :param markers: The input/output 32-bit single-channel image (map) of markers. It should have the same size as  ``image``
+
 The function implements one of the variants
 of watershed, non-parametric marker-based segmentation algorithm,
 described in
@@ -722,9 +727,9 @@ See also:
 :func:`findContours`
 .. index:: grabCut
 
-cv::grabCut
+grabCut
 -----------
-.. cfunction:: void grabCut(const Mat\& image, Mat\& mask, Rect rect,                       Mat\& bgdModel, Mat\& fgdModel, int iterCount, int mode )
+.. c:function:: void grabCut(const Mat& image, Mat& mask, Rect rect, Mat& bgdModel, Mat& fgdModel, int iterCount, int mode )
 
     Runs GrabCut algorithm
 
@@ -740,15 +745,16 @@ cv::grabCut
         * **GC_PR_BGD** Likely a foreground pixel
 
     :param rect: The ROI containing the segmented object. The pixels outside of the ROI are marked as "certainly a background". The parameter is only used when  ``mode==GC_INIT_WITH_RECT``
+    
     :param bgdModel, fgdModel: Temporary arrays used for segmentation. Do not modify them while you are processing the same image
 
     :param iterCount: The number of iterations the algorithm should do before returning the result. Note that the result can be refined with further calls with the  ``mode==GC_INIT_WITH_MASK``  or  ``mode==GC_EVAL``
+    
     :param mode: The operation mode
 
         * **GC_INIT_WITH_RECT** The function initializes the state and the mask using the provided rectangle. After that it runs  ``iterCount``  iterations of the algorithm
 
-        * **GC_INIT_WITH_MASK** The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined, then all the pixels outside of the ROI are automatically initialized with  ``GC_BGD``
-        .
+        * **GC_INIT_WITH_MASK** The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined, then all the pixels outside of the ROI are automatically initialized with  ``GC_BGD``.
 
         * **GC_EVAL** The value means that algorithm should just resume.
 

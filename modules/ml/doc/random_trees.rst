@@ -53,7 +53,7 @@ In random trees there is no need for any accuracy estimation procedures, such as
 
 CvRTParams
 ----------
-.. ctype:: CvRTParams
+.. c:type:: CvRTParams
 
 Training Parameters of Random Trees. ::
 
@@ -86,7 +86,7 @@ The set of training parameters for the forest is the superset of the training pa
 
 CvRTrees
 --------
-.. ctype:: CvRTrees
+.. c:type:: CvRTrees
 
 Random Trees. ::
 
@@ -136,7 +136,7 @@ Random Trees. ::
 
 CvRTrees::train
 ---------------
-.. cfunction:: bool CvRTrees::train(  const CvMat* train_data,  int tflag,                      const CvMat* responses,  const CvMat* comp_idx=0,                      const CvMat* sample_idx=0,  const CvMat* var_type=0,                      const CvMat* missing_mask=0,                      CvRTParams params=CvRTParams() )
+.. c:function:: bool CvRTrees::train(  const CvMat* train_data,  int tflag,                      const CvMat* responses,  const CvMat* comp_idx=0,                      const CvMat* sample_idx=0,  const CvMat* var_type=0,                      const CvMat* missing_mask=0,                      CvRTParams params=CvRTParams() )
 
     Trains the Random Trees model.
 
@@ -149,7 +149,7 @@ The method ``CvRTrees::train`` is very similar to the first form of ``CvDTree::t
 
 CvRTrees::predict
 -----------------
-.. cfunction:: double CvRTrees::predict(  const CvMat* sample,  const CvMat* missing=0 ) const
+.. c:function:: double CvRTrees::predict(  const CvMat* sample,  const CvMat* missing=0 ) const
 
     Predicts the output for the input sample.
 
@@ -161,7 +161,7 @@ The input parameters of the prediction method are the same as in ``CvDTree::pred
 
 CvRTrees::get_var_importance
 ----------------------------
-.. cfunction:: const CvMat* CvRTrees::get_var_importance() const
+.. c:function:: const CvMat* CvRTrees::get_var_importance() const
 
     Retrieves the variable importance array.
 
@@ -173,7 +173,7 @@ The method returns the variable importance vector, computed at the training stag
 
 CvRTrees::get_proximity
 -----------------------
-.. cfunction:: float CvRTrees::get_proximity(  const CvMat* sample_1,  const CvMat* sample_2 ) const
+.. c:function:: float CvRTrees::get_proximity(  const CvMat* sample_1,  const CvMat* sample_2 ) const
 
     Retrieves the proximity measure between two training samples.
 

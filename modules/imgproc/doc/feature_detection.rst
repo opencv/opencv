@@ -5,15 +5,16 @@ Feature Detection
 
 .. index:: Canny
 
-cv::Canny
+Canny
 ---------
-.. cfunction:: void Canny( const Mat\& image, Mat\& edges,            double threshold1, double threshold2,            int apertureSize=3, bool L2gradient=false )
+.. c:function:: void Canny( const Mat& image, Mat& edges,            double threshold1, double threshold2,            int apertureSize=3, bool L2gradient=false )
 
     Finds edges in an image using Canny algorithm.
 
     :param image: Single-channel 8-bit input image
 
     :param edges: The output edge map. It will have the same size and the same type as  ``image``
+
     :param threshold1: The first threshold for the hysteresis procedure
 
     :param threshold2: The second threshold for the hysteresis procedure
@@ -27,20 +28,22 @@ http://en.wikipedia.org/wiki/Canny_edge_detector
 
 .. index:: cornerEigenValsAndVecs
 
-cv::cornerEigenValsAndVecs
+cornerEigenValsAndVecs
 --------------------------
-.. cfunction:: void cornerEigenValsAndVecs( const Mat\& src, Mat\& dst,                            int blockSize, int apertureSize,                            int borderType=BORDER_DEFAULT )
+.. c:function:: void cornerEigenValsAndVecs( const Mat& src, Mat& dst,                            int blockSize, int apertureSize,                            int borderType=BORDER_DEFAULT )
 
     Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
     :param src: Input single-channel 8-bit or floating-point image
 
     :param dst: Image to store the results. It will have the same size as  ``src``  and the type  ``CV_32FC(6)``
+    
     :param blockSize: Neighborhood size (see discussion)
 
     :param apertureSize: Aperture parameter for the  :func:`Sobel`  operator
 
     :param boderType: Pixel extrapolation method; see  :func:`borderInterpolate`
+
 For every pixel
 :math:`p` , the function ``cornerEigenValsAndVecs`` considers a ``blockSize`` :math:`\times` ``blockSize`` neigborhood
 :math:`S(p)` . It calculates the covariation matrix of derivatives over the neighborhood as:
@@ -56,28 +59,28 @@ After that it finds eigenvectors and eigenvalues of
 :math:`M` and stores them into destination image in the form
 :math:`(\lambda_1, \lambda_2, x_1, y_1, x_2, y_2)` where
 
-* :math:`\lambda_1, \lambda_2`     are the eigenvalues of
-    :math:`M`     ; not sorted
+* :math:`\lambda_1, \lambda_2` are the eigenvalues of :math:`M`; not sorted
 
-* :math:`x_1, y_1`     are the eigenvectors corresponding to
-    :math:`\lambda_1`
-* :math:`x_2, y_2`     are the eigenvectors corresponding to
-    :math:`\lambda_2`
+* :math:`x_1, y_1` are the eigenvectors corresponding to :math:`\lambda_1`
+    
+* :math:`x_2, y_2` are the eigenvectors corresponding to :math:`\lambda_2`
+
 The output of the function can be used for robust edge or corner detection.
 
 See also:
 :func:`cornerMinEigenVal`,:func:`cornerHarris`,:func:`preCornerDetect`
 .. index:: cornerHarris
 
-cv::cornerHarris
+cornerHarris
 ----------------
-.. cfunction:: void cornerHarris( const Mat\& src, Mat\& dst, int blockSize,                  int apertureSize, double k,                  int borderType=BORDER_DEFAULT )
+.. c:function:: void cornerHarris( const Mat& src, Mat& dst, int blockSize,                  int apertureSize, double k,                  int borderType=BORDER_DEFAULT )
 
     Harris edge detector.
 
     :param src: Input single-channel 8-bit or floating-point image
 
     :param dst: Image to store the Harris detector responses; will have type  ``CV_32FC1``  and the same size as  ``src``
+    
     :param blockSize: Neighborhood size (see the discussion of  :func:`cornerEigenValsAndVecs` )
 
     :param apertureSize: Aperture parameter for the  :func:`Sobel`  operator
@@ -85,6 +88,7 @@ cv::cornerHarris
     :param k: Harris detector free parameter. See the formula below
 
     :param boderType: Pixel extrapolation method; see  :func:`borderInterpolate`
+
 The function runs the Harris edge detector on the image. Similarly to
 :func:`cornerMinEigenVal` and
 :func:`cornerEigenValsAndVecs` , for each pixel
@@ -101,20 +105,22 @@ Corners in the image can be found as the local maxima of this response map.
 
 .. index:: cornerMinEigenVal
 
-cv::cornerMinEigenVal
+cornerMinEigenVal
 ---------------------
-.. cfunction:: void cornerMinEigenVal( const Mat\& src, Mat\& dst,                        int blockSize, int apertureSize=3,                        int borderType=BORDER_DEFAULT )
+.. c:function:: void cornerMinEigenVal( const Mat& src, Mat& dst,                        int blockSize, int apertureSize=3,                        int borderType=BORDER_DEFAULT )
 
     Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
     :param src: Input single-channel 8-bit or floating-point image
 
     :param dst: Image to store the minimal eigenvalues; will have type  ``CV_32FC1``  and the same size as  ``src``
+    
     :param blockSize: Neighborhood size (see the discussion of  :func:`cornerEigenValsAndVecs` )
 
     :param apertureSize: Aperture parameter for the  :func:`Sobel`  operator
 
     :param boderType: Pixel extrapolation method; see  :func:`borderInterpolate`
+
 The function is similar to
 :func:`cornerEigenValsAndVecs` but it calculates and stores only the minimal eigenvalue of the covariation matrix of derivatives, i.e.
 :math:`\min(\lambda_1, \lambda_2)` in terms of the formulae in
@@ -122,9 +128,9 @@ The function is similar to
 
 .. index:: cornerSubPix
 
-cv::cornerSubPix
+cornerSubPix
 ----------------
-.. cfunction:: void cornerSubPix( const Mat\& image, vector<Point2f>\& corners,                   Size winSize, Size zeroZone,                   TermCriteria criteria )
+.. c:function:: void cornerSubPix( const Mat& image, vector<Point2f>& corners,                   Size winSize, Size zeroZone,                   TermCriteria criteria )
 
     Refines the corner locations.
 
@@ -178,9 +184,9 @@ The algorithm sets the center of the neighborhood window at this new center
 
 .. index:: goodFeaturesToTrack
 
-cv::goodFeaturesToTrack
+goodFeaturesToTrack
 -----------------------
-.. cfunction:: void goodFeaturesToTrack( const Mat\& image, vector<Point2f>\& corners,                         int maxCorners, double qualityLevel, double minDistance,                         const Mat\& mask=Mat(), int blockSize=3,                         bool useHarrisDetector=false, double k=0.04 )
+.. c:function:: void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,                         int maxCorners, double qualityLevel, double minDistance,                         const Mat& mask=Mat(), int blockSize=3,                         bool useHarrisDetector=false, double k=0.04 )
 
     Determines strong corners on an image.
 
@@ -197,18 +203,18 @@ cv::goodFeaturesToTrack
     :param mask: The optional region of interest. If the image is not empty (then it needs to have the type  ``CV_8UC1``  and the same size as  ``image`` ), it will specify the region in which the corners are detected
 
     :param blockSize: Size of the averaging block for computing derivative covariation matrix over each pixel neighborhood, see  :func:`cornerEigenValsAndVecs`
+    
     :param useHarrisDetector: Indicates, whether to use   operator or  :func:`cornerMinEigenVal`
+    
     :param k: Free parameter of Harris detector
 
-The function finds the most prominent corners in the image or in the specified image region, as described
-in
-Shi94
-:
+The function finds the most prominent corners in the image or in the specified image region, as described in Shi94:
 
 #.
     the function first calculates the corner quality measure at every source image pixel using the
     :func:`cornerMinEigenVal`     or
     :func:`cornerHarris`
+    
 #.
     then it performs non-maxima suppression (the local maxima in
     :math:`3\times 3`     neighborhood
@@ -226,23 +232,25 @@ Shi94
     :math:`pt_j`     if there is a stronger corner
     :math:`pt_i`     (
     :math:`i < j`     ) such that the distance between them is less than ``minDistance``
+    
 The function can be used to initialize a point-based tracker of an object.
 
 Note that the if the function is called with different values ``A`` and ``B`` of the parameter ``qualityLevel`` , and ``A`` > {B}, the vector of returned corners with ``qualityLevel=A`` will be the prefix of the output vector with ``qualityLevel=B`` .
 
-See also:
-:func:`cornerMinEigenVal`,:func:`cornerHarris`,:func:`calcOpticalFlowPyrLK`,:func:`estimateRigidMotion`,:func:`PlanarObjectDetector`,:func:`OneWayDescriptor`
+See also: :func:`cornerMinEigenVal`, :func:`cornerHarris`, :func:`calcOpticalFlowPyrLK`, :func:`estimateRigidMotion`, :func:`PlanarObjectDetector`, :func:`OneWayDescriptor`
+
 .. index:: HoughCircles
 
-cv::HoughCircles
+HoughCircles
 ----------------
-.. cfunction:: void HoughCircles( Mat\& image, vector<Vec3f>\& circles,                 int method, double dp, double minDist,                 double param1=100, double param2=100,                 int minRadius=0, int maxRadius=0 )
+.. c:function:: void HoughCircles( Mat& image, vector<Vec3f>& circles, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
 
     Finds circles in a grayscale image using a Hough transform.
 
     :param image: The 8-bit, single-channel, grayscale input image
 
     :param circles: The output vector of found circles. Each vector is encoded as 3-element floating-point vector  :math:`(x, y, radius)`
+    
     :param method: Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  Yuen90 .
 
     :param dp: The inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator will have the same resolution as the input image, if  ``dp=2``  - accumulator will have half as big width and height, etc
@@ -289,7 +297,6 @@ The function finds circles in a grayscale image using some modification of Hough
         imshow( "circles", img );
         return 0;
     }
-..
 
 Note that usually the function detects the circles' centers well, however it may fail to find the correct radii. You can assist the function by specifying the radius range ( ``minRadius`` and ``maxRadius`` ) if you know it, or you may ignore the returned radius, use only the center and find the correct radius using some additional procedure.
 
@@ -297,9 +304,9 @@ See also:
 :func:`fitEllipse`,:func:`minEnclosingCircle`
 .. index:: HoughLines
 
-cv::HoughLines
+HoughLines
 --------------
-.. cfunction:: void HoughLines( Mat\& image, vector<Vec2f>\& lines,                 double rho, double theta, int threshold,                 double srn=0, double stn=0 )
+.. c:function:: void HoughLines( Mat& image, vector<Vec2f>& lines,                 double rho, double theta, int threshold,                 double srn=0, double stn=0 )
 
     Finds lines in a binary image using standard Hough transform.
 
@@ -316,14 +323,15 @@ cv::HoughLines
     :param srn: For the multi-scale Hough transform it is the divisor for the distance resolution  ``rho`` . The coarse accumulator distance resolution will be  ``rho``  and the accurate accumulator resolution will be  ``rho/srn`` . If both  ``srn=0``  and  ``stn=0``  then the classical Hough transform is used, otherwise both these parameters should be positive.
 
     :param stn: For the multi-scale Hough transform it is the divisor for the distance resolution  ``theta``
+    
 The function implements standard or standard multi-scale Hough transform algorithm for line detection. See
 :func:`HoughLinesP` for the code example.
 
 .. index:: HoughLinesP
 
-cv::HoughLinesP
+HoughLinesP
 ---------------
-.. cfunction:: void HoughLinesP( Mat\& image, vector<Vec4i>\& lines,                  double rho, double theta, int threshold,                  double minLineLength=0, double maxLineGap=0 )
+.. c:function:: void HoughLinesP( Mat& image, vector<Vec4i>& lines,                  double rho, double theta, int threshold,                  double minLineLength=0, double maxLineGap=0 )
 
     Finds lines segments in a binary image using probabilistic Hough transform.
 
@@ -397,7 +405,6 @@ Matas00
         waitKey(0);
         return 0;
     }
-..
 
 This is the sample picture the function parameters have been tuned for:
 
@@ -409,17 +416,20 @@ And this is the output of the above program in the case of probabilistic Hough t
 
 .. index:: preCornerDetect
 
-cv::preCornerDetect
+preCornerDetect
 -------------------
-.. cfunction:: void preCornerDetect( const Mat\& src, Mat\& dst, int apertureSize,                     int borderType=BORDER_DEFAULT )
+.. c:function:: void preCornerDetect( const Mat& src, Mat& dst, int apertureSize,                     int borderType=BORDER_DEFAULT )
 
     Calculates the feature map for corner detection
 
     :param src: The source single-channel 8-bit of floating-point image
 
     :param dst: The output image; will have type  ``CV_32F``  and the same size as  ``src``
+    
     :param apertureSize: Aperture size of  :func:`Sobel`
+    
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+    
 The function calculates the complex spatial derivative-based function of the source image
 
 .. math::
@@ -438,5 +448,5 @@ The corners can be found as local maximums of the functions, as shown below: ::
     // dilation with 3x3 rectangular structuring element
     dilate(corners, dilated_corners, Mat(), 1);
     Mat corner_mask = corners == dilated_corners;
-..
+
 

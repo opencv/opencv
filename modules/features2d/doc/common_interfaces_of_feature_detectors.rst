@@ -14,7 +14,7 @@ inherit
 
 KeyPoint
 --------
-.. ctype:: KeyPoint
+.. c:type:: KeyPoint
 
 Data structure for salient point detectors. ::
 
@@ -73,7 +73,7 @@ Data structure for salient point detectors. ::
 
 FeatureDetector
 ---------------
-.. ctype:: FeatureDetector
+.. c:type:: FeatureDetector
 
 Abstract base class for 2D image feature detectors. ::
 
@@ -101,9 +101,9 @@ Abstract base class for 2D image feature detectors. ::
 
 .. index:: FeatureDetector::detect
 
-cv::FeatureDetector::detect
+FeatureDetector::detect
 ---------------------------
-.. cfunction:: void FeatureDetector::detect( const Mat\& image,                                vector<KeyPoint>\& keypoints,                                 const Mat\& mask=Mat() ) const
+.. c:function:: void FeatureDetector::detect( const Mat\& image,                                vector<KeyPoint>\& keypoints,                                 const Mat\& mask=Mat() ) const
 
     Detect keypoints in an image (first variant) or image set (second variant).
 
@@ -114,7 +114,7 @@ cv::FeatureDetector::detect
     :param mask: Mask specifying where to look for keypoints (optional). Must be a char matrix
                              with non-zero values in the region of interest.
 
-.. cfunction:: void FeatureDetector::detect( const vector<Mat>\& images,                                                            vector<vector<KeyPoint> >\& keypoints,                                                             const vector<Mat>\& masks=vector<Mat>() ) const
+.. c:function:: void FeatureDetector::detect( const vector<Mat>\& images,                                                            vector<vector<KeyPoint> >\& keypoints,                                                             const vector<Mat>\& masks=vector<Mat>() ) const
 
     * **images** Images set.
 
@@ -125,9 +125,9 @@ cv::FeatureDetector::detect
 
 .. index:: FeatureDetector::read
 
-cv::FeatureDetector::read
+FeatureDetector::read
 -------------------------
-.. cfunction:: void FeatureDetector::read( const FileNode\& fn )
+.. c:function:: void FeatureDetector::read( const FileNode\& fn )
 
     Read feature detector object from file node.
 
@@ -135,9 +135,9 @@ cv::FeatureDetector::read
 
 .. index:: FeatureDetector::write
 
-cv::FeatureDetector::write
+FeatureDetector::write
 --------------------------
-.. cfunction:: void FeatureDetector::write( FileStorage\& fs ) const
+.. c:function:: void FeatureDetector::write( FileStorage\& fs ) const
 
     Write feature detector object to file storage.
 
@@ -145,10 +145,10 @@ cv::FeatureDetector::write
 
 .. index:: FeatureDetector::create
 
-cv::FeatureDetector::create
+FeatureDetector::create
 ---------------------------
 :func:`FeatureDetector`
-.. cfunction:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )
+.. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )
 
     Feature detector factory that creates of given type with
 default parameters (rather using default constructor).
@@ -176,7 +176,7 @@ e.g. ``"GridFAST"``,``"PyramidSTAR"`` , etc.
 
 FastFeatureDetector
 -------------------
-.. ctype:: FastFeatureDetector
+.. c:type:: FastFeatureDetector
 
 Wrapping class for feature detection using
 :func:`FAST` method. ::
@@ -198,7 +198,7 @@ Wrapping class for feature detection using
 
 GoodFeaturesToTrackDetector
 ---------------------------
-.. ctype:: GoodFeaturesToTrackDetector
+.. c:type:: GoodFeaturesToTrackDetector
 
 Wrapping class for feature detection using
 :func:`goodFeaturesToTrack` function. ::
@@ -241,7 +241,7 @@ Wrapping class for feature detection using
 
 MserFeatureDetector
 -------------------
-.. ctype:: MserFeatureDetector
+.. c:type:: MserFeatureDetector
 
 Wrapping class for feature detection using
 :func:`MSER` class. ::
@@ -267,7 +267,7 @@ Wrapping class for feature detection using
 
 StarFeatureDetector
 -------------------
-.. ctype:: StarFeatureDetector
+.. c:type:: StarFeatureDetector
 
 Wrapping class for feature detection using
 :func:`StarDetector` class. ::
@@ -291,7 +291,7 @@ Wrapping class for feature detection using
 
 SiftFeatureDetector
 -------------------
-.. ctype:: SiftFeatureDetector
+.. c:type:: SiftFeatureDetector
 
 Wrapping class for feature detection using
 :func:`SIFT` class. ::
@@ -320,7 +320,7 @@ Wrapping class for feature detection using
 
 SurfFeatureDetector
 -------------------
-.. ctype:: SurfFeatureDetector
+.. c:type:: SurfFeatureDetector
 
 Wrapping class for feature detection using
 :func:`SURF` class. ::
@@ -343,7 +343,7 @@ Wrapping class for feature detection using
 
 GridAdaptedFeatureDetector
 --------------------------
-.. ctype:: GridAdaptedFeatureDetector
+.. c:type:: GridAdaptedFeatureDetector
 
 Adapts a detector to partition the source image into a grid and detect
 points in each cell. ::
@@ -374,7 +374,7 @@ points in each cell. ::
 
 PyramidAdaptedFeatureDetector
 -----------------------------
-.. ctype:: PyramidAdaptedFeatureDetector
+.. c:type:: PyramidAdaptedFeatureDetector
 
 Adapts a detector to detect points over multiple levels of a Gaussian
 pyramid. Useful for detectors that are not inherently scaled. ::
@@ -397,7 +397,7 @@ pyramid. Useful for detectors that are not inherently scaled. ::
 
 DynamicAdaptedFeatureDetector
 -----------------------------
-.. ctype:: DynamicAdaptedFeatureDetector
+.. c:type:: DynamicAdaptedFeatureDetector
 
 An adaptively adjusting detector that iteratively detects until the desired number
 of features are found.
@@ -442,9 +442,9 @@ Here is a sample of how to create a DynamicAdaptedFeatureDetector. ::
 
 .. index:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 
-cv::DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
+DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
-.. cfunction:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>\& adjaster,       int min_features,   int max_features,   int max_iters )
+.. c:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>\& adjaster,       int min_features,   int max_features,   int max_iters )
 
     DynamicAdaptedFeatureDetector constructor.
 
@@ -464,7 +464,7 @@ cv::DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 
 AdjusterAdapter
 ---------------
-.. ctype:: AdjusterAdapter
+.. c:type:: AdjusterAdapter
 
 A feature detector parameter adjuster interface, this is used by the
 :func:`DynamicAdaptedFeatureDetector` and is a wrapper for
@@ -485,9 +485,9 @@ See
 
 .. index:: AdjusterAdapter::tooFew
 
-cv::AdjusterAdapter::tooFew
+AdjusterAdapter::tooFew
 ---------------------------
-.. cfunction:: virtual void tooFew(int min, int n_detected) = 0
+.. c:function:: virtual void tooFew(int min, int n_detected) = 0
 
 Too few features were detected so, adjust the detector parameters accordingly - so that the next
 detection detects more features.
@@ -506,9 +506,9 @@ An example implementation of this is ::
 
 .. index:: AdjusterAdapter::tooMany
 
-cv::AdjusterAdapter::tooMany
+AdjusterAdapter::tooMany
 ----------------------------
-.. cfunction:: virtual void tooMany(int max, int n_detected) = 0
+.. c:function:: virtual void tooMany(int max, int n_detected) = 0
 
     Too many features were detected so, adjust the detector parameters accordingly - so that the next
 detection detects less features.
@@ -527,9 +527,9 @@ An example implementation of this is ::
 
 .. index:: AdjusterAdapter::good
 
-cv::AdjusterAdapter::good
+AdjusterAdapter::good
 -------------------------
-.. cfunction:: virtual bool good() const = 0
+.. c:function:: virtual bool good() const = 0
 
     Are params maxed out or still valid? Returns false if the parameters can't be adjusted any more.
 
@@ -547,7 +547,7 @@ An example implementation of this is ::
 
 FastAdjuster
 ------------
-.. ctype:: FastAdjuster
+.. c:type:: FastAdjuster
 
 An
 :func:`AdjusterAdapter` for the
@@ -568,7 +568,7 @@ threshhold by 1 ::
 
 StarAdjuster
 ------------
-.. ctype:: StarAdjuster
+.. c:type:: StarAdjuster
 
 An
 :func:`AdjusterAdapter` for the
@@ -588,7 +588,7 @@ StarFeatureDetector. ::
 
 SurfAdjuster
 ------------
-.. ctype:: SurfAdjuster
+.. c:type:: SurfAdjuster
 
 An
 :func:`AdjusterAdapter` for the

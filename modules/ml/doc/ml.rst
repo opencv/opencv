@@ -16,6 +16,6 @@ Most of the classification and regression algorithms are implemented as C++ clas
     decision_trees
     boosting
     random_trees
-    expectation-maximization
+    expectation_maximization
     neural_networks
 

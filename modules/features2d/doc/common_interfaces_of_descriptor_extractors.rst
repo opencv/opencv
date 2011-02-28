@@ -15,7 +15,7 @@ descriptor extractors inherit
 
 DescriptorExtractor
 -------------------
-.. ctype:: DescriptorExtractor
+.. c:type:: DescriptorExtractor
 
 Abstract base class for computing descriptors for image keypoints. ::
 
@@ -51,9 +51,9 @@ descriptors as a
 
 .. index:: DescriptorExtractor::compute
 
-cv::DescriptorExtractor::compute
+DescriptorExtractor::compute
 --------------------------------
-.. cfunction:: void DescriptorExtractor::compute( const Mat\& image,                                      vector<KeyPoint>\& keypoints,                                                                      Mat\& descriptors ) const
+.. c:function:: void DescriptorExtractor::compute( const Mat\& image,                                      vector<KeyPoint>\& keypoints,                                                                      Mat\& descriptors ) const
 
     Compute the descriptors for a set of keypoints detected in an image (first variant)
 or image set (second variant).
@@ -64,7 +64,7 @@ or image set (second variant).
 
     :param descriptors: The descriptors. Row i is the descriptor for keypoint i.
 
-.. cfunction:: void DescriptorExtractor::compute( const vector<Mat>\& images,                                                           vector<vector<KeyPoint> >\& keypoints,                                                       vector<Mat>\& descriptors ) const
+.. c:function:: void DescriptorExtractor::compute( const vector<Mat>\& images,                                                           vector<vector<KeyPoint> >\& keypoints,                                                       vector<Mat>\& descriptors ) const
 
     * **images** The image set.
 
@@ -77,9 +77,9 @@ or image set (second variant).
 
 .. index:: DescriptorExtractor::read
 
-cv::DescriptorExtractor::read
+DescriptorExtractor::read
 -----------------------------
-.. cfunction:: void DescriptorExtractor::read( const FileNode\& fn )
+.. c:function:: void DescriptorExtractor::read( const FileNode\& fn )
 
     Read descriptor extractor object from file node.
 
@@ -87,9 +87,9 @@ cv::DescriptorExtractor::read
 
 .. index:: DescriptorExtractor::write
 
-cv::DescriptorExtractor::write
+DescriptorExtractor::write
 ------------------------------
-.. cfunction:: void DescriptorExtractor::write( FileStorage\& fs ) const
+.. c:function:: void DescriptorExtractor::write( FileStorage\& fs ) const
 
     Write descriptor extractor object to file storage.
 
@@ -97,10 +97,10 @@ cv::DescriptorExtractor::write
 
 .. index:: DescriptorExtractor::create
 
-cv::DescriptorExtractor::create
+DescriptorExtractor::create
 -------------------------------
 :func:`DescriptorExtractor`
-.. cfunction:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string\& descriptorExtractorType )
+.. c:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string\& descriptorExtractorType )
 
     Descriptor extractor factory that creates of given type with
 default parameters (rather using default constructor).
@@ -123,7 +123,7 @@ e.g. ``"OpponentSIFT"`` , etc.
 
 SiftDescriptorExtractor
 -----------------------
-.. ctype:: SiftDescriptorExtractor
+.. c:type:: SiftDescriptorExtractor
 
 Wrapping class for descriptors computing using
 :func:`SIFT` class. ::
@@ -155,7 +155,7 @@ Wrapping class for descriptors computing using
 
 SurfDescriptorExtractor
 -----------------------
-.. ctype:: SurfDescriptorExtractor
+.. c:type:: SurfDescriptorExtractor
 
 Wrapping class for descriptors computing using
 :func:`SURF` class. ::
@@ -181,7 +181,7 @@ Wrapping class for descriptors computing using
 
 CalonderDescriptorExtractor
 ---------------------------
-.. ctype:: CalonderDescriptorExtractor
+.. c:type:: CalonderDescriptorExtractor
 
 Wrapping class for descriptors computing using
 :func:`RTreeClassifier` class. ::
@@ -207,7 +207,7 @@ Wrapping class for descriptors computing using
 
 OpponentColorDescriptorExtractor
 --------------------------------
-.. ctype:: OpponentColorDescriptorExtractor
+.. c:type:: OpponentColorDescriptorExtractor
 
 Adapts a descriptor extractor to compute descripors in Opponent Color Space
 (refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
@@ -235,7 +235,7 @@ them into a single color descriptor. ::
 
 BriefDescriptorExtractor
 ------------------------
-.. ctype:: BriefDescriptorExtractor
+.. c:type:: BriefDescriptorExtractor
 
 Class for computing BRIEF descriptors described in paper of Calonder M., Lepetit V.,
 Strecha C., Fua P.: ''BRIEF: Binary Robust Independent Elementary Features.''

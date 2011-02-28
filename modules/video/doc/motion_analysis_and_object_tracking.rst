@@ -5,9 +5,9 @@ Motion Analysis and Object Tracking
 
 .. index:: calcOpticalFlowPyrLK
 
-cv::calcOpticalFlowPyrLK
+calcOpticalFlowPyrLK
 ------------------------
-.. cfunction:: void calcOpticalFlowPyrLK( const Mat\& prevImg, const Mat\& nextImg,        const vector<Point2f>\& prevPts, vector<Point2f>\& nextPts,        vector<uchar>\& status, vector<float>\& err,         Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(            TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),        double derivLambda=0.5, int flags=0 )
+.. c:function:: void calcOpticalFlowPyrLK( const Mat\& prevImg, const Mat\& nextImg,        const vector<Point2f>\& prevPts, vector<Point2f>\& nextPts,        vector<uchar>\& status, vector<float>\& err,         Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(            TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),        double derivLambda=0.5, int flags=0 )
 
     Calculates the optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids
 
@@ -38,9 +38,9 @@ Bouguet00
 
 .. index:: calcOpticalFlowFarneback
 
-cv::calcOpticalFlowFarneback
+calcOpticalFlowFarneback
 ----------------------------
-.. cfunction:: void calcOpticalFlowFarneback( const Mat\& prevImg, const Mat\& nextImg,                               Mat\& flow, double pyrScale, int levels, int winsize,                               int iterations, int polyN, double polySigma, int flags )
+.. c:function:: void calcOpticalFlowFarneback( const Mat\& prevImg, const Mat\& nextImg,                               Mat\& flow, double pyrScale, int levels, int winsize,                               int iterations, int polyN, double polySigma, int flags )
 
     Computes dense optical flow using Gunnar Farneback's algorithm
 
@@ -73,9 +73,9 @@ The function finds optical flow for each ``prevImg`` pixel using the alorithm so
 
 .. index:: updateMotionHistory
 
-cv::updateMotionHistory
+updateMotionHistory
 -----------------------
-.. cfunction:: void updateMotionHistory( const Mat\& silhouette, Mat\& mhi,                          double timestamp, double duration )
+.. c:function:: void updateMotionHistory( const Mat\& silhouette, Mat\& mhi,                          double timestamp, double duration )
 
     Updates the motion history image by a moving silhouette.
 
@@ -105,9 +105,9 @@ See also the OpenCV sample ``motempl.c`` that demonstrates the use of all the mo
 
 .. index:: calcMotionGradient
 
-cv::calcMotionGradient
+calcMotionGradient
 ----------------------
-.. cfunction:: void calcMotionGradient( const Mat\& mhi, Mat\& mask,                         Mat\& orientation,                         double delta1, double delta2,                         int apertureSize=3 )
+.. c:function:: void calcMotionGradient( const Mat\& mhi, Mat\& mask,                         Mat\& orientation,                         double delta1, double delta2,                         int apertureSize=3 )
 
     Calculates the gradient orientation of a motion history image.
 
@@ -138,9 +138,9 @@ The function calculates the gradient orientation at each pixel
 
 .. index:: calcGlobalOrientation
 
-cv::calcGlobalOrientation
+calcGlobalOrientation
 -------------------------
-.. cfunction:: double calcGlobalOrientation( const Mat\& orientation, const Mat\& mask,                              const Mat\& mhi, double timestamp,                              double duration )
+.. c:function:: double calcGlobalOrientation( const Mat\& orientation, const Mat\& mask,                              const Mat\& mhi, double timestamp,                              double duration )
 
     Calculates the global motion orientation in some selected region.
 
@@ -158,9 +158,9 @@ weight and the motion occurred in the past has smaller weight, as recorded in ``
 
 .. index:: CamShift
 
-cv::CamShift
+CamShift
 ------------
-.. cfunction:: RotatedRect CamShift( const Mat\& probImage, Rect\& window,                      TermCriteria criteria )
+.. c:function:: RotatedRect CamShift( const Mat\& probImage, Rect\& window,                      TermCriteria criteria )
 
     Finds the object center, size, and orientation
 
@@ -178,9 +178,9 @@ See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
 .. index:: meanShift
 
-cv::meanShift
+meanShift
 -------------
-.. cfunction:: int meanShift( const Mat\& probImage, Rect\& window,               TermCriteria criteria )
+.. c:function:: int meanShift( const Mat\& probImage, Rect\& window,               TermCriteria criteria )
 
     Finds the object on a back projection image.
 
@@ -203,7 +203,7 @@ The function implements iterative object search algorithm. It takes the object b
 
 KalmanFilter
 ------------
-.. ctype:: KalmanFilter
+.. c:type:: KalmanFilter
 
 Kalman filter class ::
 

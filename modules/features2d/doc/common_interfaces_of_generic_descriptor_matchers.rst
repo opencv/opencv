@@ -18,7 +18,7 @@ There are descriptors such as One way descriptor and Ferns that have ``GenericDe
 
 GenericDescriptorMatcher
 ------------------------
-.. ctype:: GenericDescriptorMatcher
+.. c:type:: GenericDescriptorMatcher
 
 Abstract interface for a keypoint descriptor extracting and matching.
 There is
@@ -92,9 +92,9 @@ with image set. ::
 
 .. index:: GenericDescriptorMatcher::add
 
-cv::GenericDescriptorMatcher::add
+GenericDescriptorMatcher::add
 ---------------------------------
-.. cfunction:: void GenericDescriptorMatcher::add( const vector<Mat>\& images,                        vector<vector<KeyPoint> >\& keypoints )
+.. c:function:: void GenericDescriptorMatcher::add( const vector<Mat>\& images,                        vector<vector<KeyPoint> >\& keypoints )
 
     Adds images and keypoints from them to the train collection (descriptors are supposed to be calculated here).
 If train collection is not empty new image and keypoints from them will be added to
@@ -107,56 +107,56 @@ existing data.
 
 .. index:: GenericDescriptorMatcher::getTrainImages
 
-cv::GenericDescriptorMatcher::getTrainImages
+GenericDescriptorMatcher::getTrainImages
 --------------------------------------------
-.. cfunction:: const vector<Mat>\& GenericDescriptorMatcher::getTrainImages() const
+.. c:function:: const vector<Mat>\& GenericDescriptorMatcher::getTrainImages() const
 
     Returns train image collection.
 
 .. index:: GenericDescriptorMatcher::getTrainKeypoints
 
-cv::GenericDescriptorMatcher::getTrainKeypoints
+GenericDescriptorMatcher::getTrainKeypoints
 -----------------------------------------------
-.. cfunction:: const vector<vector<KeyPoint> >\&  GenericDescriptorMatcher::getTrainKeypoints() const
+.. c:function:: const vector<vector<KeyPoint> >\&  GenericDescriptorMatcher::getTrainKeypoints() const
 
     Returns train keypoints collection.
 
 .. index:: GenericDescriptorMatcher::clear
 
-cv::GenericDescriptorMatcher::clear
+GenericDescriptorMatcher::clear
 -----------------------------------
-.. cfunction:: void GenericDescriptorMatcher::clear()
+.. c:function:: void GenericDescriptorMatcher::clear()
 
     Clear train collection (iamges and keypoints).
 
 .. index:: GenericDescriptorMatcher::train
 
-cv::GenericDescriptorMatcher::train
+GenericDescriptorMatcher::train
 -----------------------------------
-.. cfunction:: void GenericDescriptorMatcher::train()
+.. c:function:: void GenericDescriptorMatcher::train()
 
     Train the object, e.g. tree-based structure to extract descriptors or
 to optimize descriptors matching.
 
 .. index:: GenericDescriptorMatcher::isMaskSupported
 
-cv::GenericDescriptorMatcher::isMaskSupported
+GenericDescriptorMatcher::isMaskSupported
 ---------------------------------------------
-.. cfunction:: void GenericDescriptorMatcher::isMaskSupported()
+.. c:function:: void GenericDescriptorMatcher::isMaskSupported()
 
     Returns true if generic descriptor matcher supports masking permissible matches.
 
 .. index:: GenericDescriptorMatcher::classify
 
-cv::GenericDescriptorMatcher::classify
+GenericDescriptorMatcher::classify
 --------------------------------------
 :func:`GenericDescriptorMatcher::add`
-.. cfunction:: void GenericDescriptorMatcher::classify(  const Mat\& queryImage,           vector<KeyPoint>\& queryKeypoints,           const Mat\& trainImage,           vector<KeyPoint>\& trainKeypoints ) const
+.. c:function:: void GenericDescriptorMatcher::classify(  const Mat\& queryImage,           vector<KeyPoint>\& queryKeypoints,           const Mat\& trainImage,           vector<KeyPoint>\& trainKeypoints ) const
 
     Classifies query keypoints under keypoints of one train image qiven as input argument
 (first version of the method) or train image collection that set using (second version).
 
-.. cfunction:: void GenericDescriptorMatcher::classify( const Mat\& queryImage,           vector<KeyPoint>\& queryKeypoints )
+.. c:function:: void GenericDescriptorMatcher::classify( const Mat\& queryImage,           vector<KeyPoint>\& queryKeypoints )
 
     :param queryImage: The query image.
 
@@ -168,16 +168,16 @@ cv::GenericDescriptorMatcher::classify
 
 .. index:: GenericDescriptorMatcher::match
 
-cv::GenericDescriptorMatcher::match
+GenericDescriptorMatcher::match
 -----------------------------------
 :func:`GenericDescriptorMatcher::add` :func:`DescriptorMatcher::match`
-.. cfunction:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<DMatch>\& matches, const Mat\& mask=Mat() ) const
+.. c:function:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<DMatch>\& matches, const Mat\& mask=Mat() ) const
 
     Find best match for query keypoints to the training set. In first version of method
 one train image and keypoints detected on it - are input arguments. In second version
 query keypoints are matched to training collectin that set using . As in the mask can be set.
 
-.. cfunction:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,          vector<DMatch>\& matches,           const vector<Mat>\& masks=vector<Mat>() )
+.. c:function:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,          vector<DMatch>\& matches,           const vector<Mat>\& masks=vector<Mat>() )
 
     :param queryImage: Query image.
 
@@ -199,50 +199,50 @@ query keypoints are matched to training collectin that set using . As in the mas
 
 .. index:: GenericDescriptorMatcher::knnMatch
 
-cv::GenericDescriptorMatcher::knnMatch
+GenericDescriptorMatcher::knnMatch
 --------------------------------------
 :func:`GenericDescriptorMatcher::match` :func:`DescriptorMatcher::knnMatch`
-.. cfunction:: void GenericDescriptorMatcher::knnMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<vector<DMatch> >\& matches, int k,       const Mat\& mask=Mat(), bool compactResult=false ) const
+.. c:function:: void GenericDescriptorMatcher::knnMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<vector<DMatch> >\& matches, int k,       const Mat\& mask=Mat(), bool compactResult=false ) const
 
     Find the knn best matches for each keypoint from a query set with train keypoints.
 Found knn (or less if not possible) matches are returned in distance increasing order.
 Details see in and .
 
-.. cfunction:: void GenericDescriptorMatcher::knnMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      vector<vector<DMatch> >\& matches, int k,       const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
+.. c:function:: void GenericDescriptorMatcher::knnMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      vector<vector<DMatch> >\& matches, int k,       const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
 .. index:: GenericDescriptorMatcher::radiusMatch
 
-cv::GenericDescriptorMatcher::radiusMatch
+GenericDescriptorMatcher::radiusMatch
 -----------------------------------------
 :func:`GenericDescriptorMatcher::match` :func:`DescriptorMatcher::radiusMatch`
-.. cfunction:: void GenericDescriptorMatcher::radiusMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<vector<DMatch> >\& matches, float maxDistance,       const Mat\& mask=Mat(), bool compactResult=false ) const
+.. c:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<vector<DMatch> >\& matches, float maxDistance,       const Mat\& mask=Mat(), bool compactResult=false ) const
 
     Find the best matches for each query keypoint which have distance less than given threshold.
 Found matches are returned in distance increasing order. Details see in and .
 
-.. cfunction:: void GenericDescriptorMatcher::radiusMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      vector<vector<DMatch> >\& matches, float maxDistance,       const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
+.. c:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      vector<vector<DMatch> >\& matches, float maxDistance,       const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
 .. index:: GenericDescriptorMatcher::read
 
-cv::GenericDescriptorMatcher::read
+GenericDescriptorMatcher::read
 ----------------------------------
-.. cfunction:: void GenericDescriptorMatcher::read( const FileNode\& fn )
+.. c:function:: void GenericDescriptorMatcher::read( const FileNode\& fn )
 
     Reads matcher object from a file node.
 
 .. index:: GenericDescriptorMatcher::write
 
-cv::GenericDescriptorMatcher::write
+GenericDescriptorMatcher::write
 -----------------------------------
-.. cfunction:: void GenericDescriptorMatcher::write( FileStorage\& fs ) const
+.. c:function:: void GenericDescriptorMatcher::write( FileStorage\& fs ) const
 
     Writes match object to a file storage
 
 .. index:: GenericDescriptorMatcher::clone
 
-cv::GenericDescriptorMatcher::clone
+GenericDescriptorMatcher::clone
 -----------------------------------
-.. cfunction:: Ptr<GenericDescriptorMatcher>\\GenericDescriptorMatcher::clone( bool emptyTrainData ) const
+.. c:function:: Ptr<GenericDescriptorMatcher>\\GenericDescriptorMatcher::clone( bool emptyTrainData ) const
 
     Clone the matcher.
 
@@ -256,7 +256,7 @@ cv::GenericDescriptorMatcher::clone
 
 OneWayDescriptorMatcher
 -----------------------
-.. ctype:: OneWayDescriptorMatcher
+.. c:type:: OneWayDescriptorMatcher
 
 Wrapping class for computing, matching and classification of descriptors using
 :func:`OneWayDescriptorBase` class. ::
@@ -317,7 +317,7 @@ Wrapping class for computing, matching and classification of descriptors using
 
 FernDescriptorMatcher
 ---------------------
-.. ctype:: FernDescriptorMatcher
+.. c:type:: FernDescriptorMatcher
 
 Wrapping class for computing, matching and classification of descriptors using
 :func:`FernClassifier` class. ::
@@ -376,7 +376,7 @@ Wrapping class for computing, matching and classification of descriptors using
 
 VectorDescriptorMatcher
 -----------------------
-.. ctype:: VectorDescriptorMatcher
+.. c:type:: VectorDescriptorMatcher
 
 Class used for matching descriptors that can be described as vectors in a finite-dimensional space. ::
 

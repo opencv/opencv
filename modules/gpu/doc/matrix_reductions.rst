@@ -7,7 +7,7 @@ Matrix Reductions
 
 cv::gpu::meanStdDev
 -------------------
-.. cfunction:: void meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+.. c:function:: void meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
     Computes mean value and standard deviation of matrix elements.
 
@@ -24,7 +24,7 @@ See also:
 
 cv::gpu::norm
 -------------
-.. cfunction:: double norm(const GpuMat\& src, int normType=NORM_L2)
+.. c:function:: double norm(const GpuMat\& src, int normType=NORM_L2)
 
     Returns norm of matrix (or of two matrices difference).
 
@@ -32,7 +32,7 @@ cv::gpu::norm
 
     :param normType: Norm type.  ``NORM_L1`` ,  ``NORM_L2``  and  ``NORM_INF``  are supported for now.
 
-.. cfunction:: double norm(const GpuMat\& src, int normType, GpuMat\& buf)
+.. c:function:: double norm(const GpuMat\& src, int normType, GpuMat\& buf)
 
     * **src** Source matrix. Any matrices except 64F are supported.
 
@@ -40,7 +40,8 @@ cv::gpu::norm
 
     * **buf** Optional buffer to avoid extra memory allocations. It's resized automatically.
 
-.. cfunction:: double norm(const GpuMat\& src1, const GpuMat\& src2,   int normType=NORM_L2)
+.. c:function:: double norm(const GpuMat\& src1, const GpuMat\& src2,
+   int normType=NORM_L2)
 
     * **src1** First source matrix.  ``CV_8UC1``  matrices are supported for now.
 
@@ -56,9 +57,9 @@ See also:
 
 cv::gpu::sum
 ------------
-.. cfunction:: Scalar sum(const GpuMat\& src)
+.. c:function:: Scalar sum(const GpuMat\& src)
 
-.. cfunction:: Scalar sum(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: Scalar sum(const GpuMat\& src, GpuMat\& buf)
 
     Returns sum of matrix elements.
 
@@ -73,9 +74,9 @@ See also:
 
 cv::gpu::absSum
 ---------------
-.. cfunction:: Scalar absSum(const GpuMat\& src)
+.. c:function:: Scalar absSum(const GpuMat\& src)
 
-.. cfunction:: Scalar absSum(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: Scalar absSum(const GpuMat\& src, GpuMat\& buf)
 
     Returns sum of matrix elements absolute values.
 
@@ -87,9 +88,9 @@ cv::gpu::absSum
 
 cv::gpu::sqrSum
 ---------------
-.. cfunction:: Scalar sqrSum(const GpuMat\& src)
+.. c:function:: Scalar sqrSum(const GpuMat\& src)
 
-.. cfunction:: Scalar sqrSum(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: Scalar sqrSum(const GpuMat\& src, GpuMat\& buf)
 
     Returns squared sum of matrix elements.
 
@@ -101,9 +102,11 @@ cv::gpu::sqrSum
 
 cv::gpu::minMax
 ---------------
-.. cfunction:: void minMax(const GpuMat\& src, double* minVal,   double* maxVal=0, const GpuMat\& mask=GpuMat())
+.. c:function:: void minMax(const GpuMat\& src, double* minVal,
+   double* maxVal=0, const GpuMat\& mask=GpuMat())
 
-.. cfunction:: void minMax(const GpuMat\& src, double* minVal, double* maxVal,   const GpuMat\& mask, GpuMat\& buf)
+.. c:function:: void minMax(const GpuMat\& src, double* minVal, double* maxVal,
+   const GpuMat\& mask, GpuMat\& buf)
 
     Finds global minimum and maximum matrix elements and returns their values.
 
@@ -126,9 +129,13 @@ See also:
 
 cv::gpu::minMaxLoc
 ------------------
-.. cfunction:: void minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,   Point* minLoc=0, Point* maxLoc=0,   const GpuMat\& mask=GpuMat())
+.. c:function:: void minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,
+   Point* minLoc=0, Point* maxLoc=0,
+   const GpuMat\& mask=GpuMat())
 
-.. cfunction:: void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,   Point* minLoc, Point* maxLoc, const GpuMat\& mask,   GpuMat\& valbuf, GpuMat\& locbuf)
+.. c:function:: void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,
+   Point* minLoc, Point* maxLoc, const GpuMat\& mask,
+   GpuMat\& valbuf, GpuMat\& locbuf)
 
     Finds global minimum and maximum matrix elements and returns their values with locations.
 
@@ -157,9 +164,9 @@ See also:
 
 cv::gpu::countNonZero
 ---------------------
-.. cfunction:: int countNonZero(const GpuMat\& src)
+.. c:function:: int countNonZero(const GpuMat\& src)
 
-.. cfunction:: int countNonZero(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: int countNonZero(const GpuMat\& src, GpuMat\& buf)
 
     Counts non-zero matrix elements.
 

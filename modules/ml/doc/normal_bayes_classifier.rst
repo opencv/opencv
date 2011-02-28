@@ -13,7 +13,7 @@ This is a simple classification model assuming that feature vectors from each cl
 
 CvNormalBayesClassifier
 -----------------------
-.. ctype:: CvNormalBayesClassifier
+.. c:type:: CvNormalBayesClassifier
 
 Bayes classifier for normally distributed data. ::
 
@@ -48,7 +48,7 @@ Bayes classifier for normally distributed data. ::
 
 CvNormalBayesClassifier::train
 ------------------------------
-.. cfunction:: bool CvNormalBayesClassifier::train(  const CvMat* _train_data,  const CvMat* _responses,                 const CvMat* _var_idx =0,  const CvMat* _sample_idx=0,  bool update=false )
+.. c:function:: bool CvNormalBayesClassifier::train(  const CvMat* _train_data,  const CvMat* _responses,                 const CvMat* _var_idx =0,  const CvMat* _sample_idx=0,  bool update=false )
 
     Trains the model.
 
@@ -62,7 +62,7 @@ In addition, there is an ``update`` flag that identifies whether the model shoul
 
 CvNormalBayesClassifier::predict
 --------------------------------
-.. cfunction:: float CvNormalBayesClassifier::predict(  const CvMat* samples,  CvMat* results=0 ) const
+.. c:function:: float CvNormalBayesClassifier::predict(  const CvMat* samples,  CvMat* results=0 ) const
 
     Predicts the response for sample(s)
 

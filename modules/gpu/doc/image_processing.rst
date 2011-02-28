@@ -7,7 +7,10 @@ Image Processing
 
 cv::gpu::meanShiftFiltering
 ---------------------------
-.. cfunction:: void meanShiftFiltering(const GpuMat\& src, GpuMat\& dst,   int sp, int sr,   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER   + TermCriteria::EPS, 5, 1))
+.. c:function:: void meanShiftFiltering(const GpuMat\& src, GpuMat\& dst,
+   int sp, int sr,
+   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
+   + TermCriteria::EPS, 5, 1))
 
     Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point, and as the result we have new color and new position of each point.
 
@@ -25,7 +28,10 @@ cv::gpu::meanShiftFiltering
 
 cv::gpu::meanShiftProc
 ----------------------
-.. cfunction:: void meanShiftProc(const GpuMat\& src, GpuMat\& dstr, GpuMat\& dstsp,   int sp, int sr,   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER   + TermCriteria::EPS, 5, 1))
+.. c:function:: void meanShiftProc(const GpuMat\& src, GpuMat\& dstr, GpuMat\& dstsp,
+   int sp, int sr,
+   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
+   + TermCriteria::EPS, 5, 1))
 
     Performs mean-shift procedure and stores information about processed points (i.e. their colors and positions) into two images.
 
@@ -48,7 +54,10 @@ See also:
 
 cv::gpu::meanShiftSegmentation
 ------------------------------
-.. cfunction:: void meanShiftSegmentation(const GpuMat\& src, Mat\& dst,   int sp, int sr, int minsize,   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER   + TermCriteria::EPS, 5, 1))
+.. c:function:: void meanShiftSegmentation(const GpuMat\& src, Mat\& dst,
+   int sp, int sr, int minsize,
+   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
+   + TermCriteria::EPS, 5, 1))
 
     Performs mean-shift segmentation of the source image and eleminates small segments.
 
@@ -68,9 +77,9 @@ cv::gpu::meanShiftSegmentation
 
 cv::gpu::integral
 -----------------
-.. cfunction:: void integral(const GpuMat\& src, GpuMat\& sum)
+.. c:function:: void integral(const GpuMat\& src, GpuMat\& sum)
 
-.. cfunction:: void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum)
+.. c:function:: void integral(const GpuMat\& src, GpuMat\& sum, GpuMat\& sqsum)
 
     Computes integral image and squared integral image.
 
@@ -87,7 +96,7 @@ See also:
 
 cv::gpu::sqrIntegral
 --------------------
-.. cfunction:: void sqrIntegral(const GpuMat\& src, GpuMat\& sqsum)
+.. c:function:: void sqrIntegral(const GpuMat\& src, GpuMat\& sqsum)
 
     Computes squared integral image.
 
@@ -99,7 +108,7 @@ cv::gpu::sqrIntegral
 
 cv::gpu::columnSum
 ------------------
-.. cfunction:: void columnSum(const GpuMat\& src, GpuMat\& sum)
+.. c:function:: void columnSum(const GpuMat\& src, GpuMat\& sum)
 
     Computes vertical (column) sum.
 
@@ -111,7 +120,9 @@ cv::gpu::columnSum
 
 cv::gpu::cornerHarris
 ---------------------
-.. cfunction:: void cornerHarris(const GpuMat\& src, GpuMat\& dst,   int blockSize, int ksize, double k,   int borderType=BORDER_REFLECT101)
+.. c:function:: void cornerHarris(const GpuMat\& src, GpuMat\& dst,
+   int blockSize, int ksize, double k,
+   int borderType=BORDER_REFLECT101)
 
     Computes Harris cornerness criteria at each image pixel.
 
@@ -134,7 +145,9 @@ See also:
 
 cv::gpu::cornerMinEigenVal
 --------------------------
-.. cfunction:: void cornerMinEigenVal(const GpuMat\& src, GpuMat\& dst,   int blockSize, int ksize,   int borderType=BORDER_REFLECT101)
+.. c:function:: void cornerMinEigenVal(const GpuMat\& src, GpuMat\& dst,
+   int blockSize, int ksize,
+   int borderType=BORDER_REFLECT101)
 
     Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria.
 
@@ -157,7 +170,8 @@ See also:
 
 cv::gpu::mulSpectrums
 ---------------------
-.. cfunction:: void mulSpectrums(const GpuMat\& a, const GpuMat\& b,   GpuMat\& c, int flags, bool conjB=false)
+.. c:function:: void mulSpectrums(const GpuMat\& a, const GpuMat\& b,
+   GpuMat\& c, int flags, bool conjB=false)
 
     Performs per-element multiplication of two Fourier spectrums.
 
@@ -180,7 +194,8 @@ See also:
 
 cv::gpu::mulAndScaleSpectrums
 -----------------------------
-.. cfunction:: void mulAndScaleSpectrums(const GpuMat\& a, const GpuMat\& b,   GpuMat\& c, int flags, float scale, bool conjB=false)
+.. c:function:: void mulAndScaleSpectrums(const GpuMat\& a, const GpuMat\& b,
+   GpuMat\& c, int flags, float scale, bool conjB=false)
 
     Performs per-element multiplication of two Fourier spectrums and scales the result.
 
@@ -205,7 +220,7 @@ See also:
 
 cv::gpu::dft
 ------------ ``_`` ``_``
-.. cfunction:: void dft(const GpuMat\& src, GpuMat\& dst, Size dft_size, int flags=0)
+.. c:function:: void dft(const GpuMat\& src, GpuMat\& dst, Size dft_size, int flags=0)
 
     Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix. Can handle real matrices (CV32FC1) and complex matrices in the interleaved format (CV32FC2).
 
@@ -244,9 +259,11 @@ See also:
 
 cv::gpu::convolve
 -----------------
-.. cfunction:: void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,   bool ccorr=false)
+.. c:function:: void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,
+   bool ccorr=false)
 
-.. cfunction:: void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,   bool ccorr, ConvolveBuf\& buf)
+.. c:function:: void convolve(const GpuMat\& image, const GpuMat\& templ, GpuMat\& result,
+   bool ccorr, ConvolveBuf\& buf)
 
     Computes convolution (or cross-correlation) of two images.
 
@@ -266,7 +283,7 @@ cv::gpu::convolve
 
 gpu::ConvolveBuf
 ----------------
-.. ctype:: gpu::ConvolveBuf
+.. c:type:: gpu::ConvolveBuf
 
 Memory buffer for the
 :func:`gpu::convolve` function. ::
@@ -281,17 +298,17 @@ Memory buffer for the
     private:
         // Hidden
     };
-..
+
 
 .. index:: gpu::ConvolveBuf::ConvolveBuf
 
 cv::gpu::ConvolveBuf::ConvolveBuf
 ---------------------------------
-.. cfunction:: ConvolveBuf::ConvolveBuf()
+.. c:function:: ConvolveBuf::ConvolveBuf()
 
 Constructs an empty buffer which will be properly resized after first call of the convolve function.
 
-.. cfunction:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
+.. c:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
 Constructs a buffer for the convolve function with respectively arguments.
 
@@ -299,7 +316,8 @@ Constructs a buffer for the convolve function with respectively arguments.
 
 cv::gpu::matchTemplate
 ----------------------
-.. cfunction:: void matchTemplate(const GpuMat\& image, const GpuMat\& templ,   GpuMat\& result, int method)
+.. c:function:: void matchTemplate(const GpuMat\& image, const GpuMat\& templ,
+   GpuMat\& result, int method)
 
     Computes a proximity map for a raster template and an image where the template is searched for.
 
@@ -307,37 +325,24 @@ cv::gpu::matchTemplate
 
     :param templ: Template image. Must have the same size and type as  ``image`` .
 
-    :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image``  is  :math:`W \times H`  and ``templ``  is  :math:`w \times h`  then  ``result``  must be  :math:`(W-w+1) \times (H-h+1)` .
+    :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image``  is  :math:`W \times H`  and
+ ``templ``  is  :math:`w \times h`  then  ``result``  must be  :math:`(W-w+1) \times (H-h+1)` .
 
     :param method: Specifies the way which the template must be compared with the image.
 
 Following methods are supported for the ``CV_8U`` depth images for now:
 
-*
-    CV_    TM_    SQDIFF
-
-*
-    CV_    TM_    SQDIFF_    NORMED
-
-*
-    CV_    TM_    CCORR
-
-*
-    CV_    TM_    CCORR_    NORMED
-
-*
-    CV_    TM_    CCOEFF
-
-*
-    CV_    TM_    CCOEFF_    NORMED
+ * CV_TM_SQDIFF
+ * CV_TM_SQDIFF_NORMED
+ * CV_TM_CCORR
+ * CV_TM_CCORR_NORMED
+ * CV_TM_CCOEFF
+ * CV_TM_CCOEFF_NORMED
 
 Following methods are supported for the ``CV_32F`` images for now:
 
-*
-    CV_    TM_    SQDIFF
-
-*
-    CV_    TM_    CCORR
+ * CV_TM_SQDIFF
+ * CV_TM_CCORR
 
 See also:
 :func:`matchTemplate` .
@@ -346,7 +351,7 @@ See also:
 
 cv::gpu::remap
 --------------
-.. cfunction:: void remap(const GpuMat\& src, GpuMat\& dst,  const GpuMat\& xmap, const GpuMat\& ymap)
+.. c:function:: void remap(const GpuMat\& src, GpuMat\& dst,  const GpuMat\& xmap, const GpuMat\& ymap)
 
     Applies a generic geometrical transformation to an image.
 
@@ -373,9 +378,9 @@ See also:
 
 cv::gpu::cvtColor
 -----------------
-.. cfunction:: void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn = 0)
+.. c:function:: void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn = 0)
 
-.. cfunction:: void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn,  const Stream\& stream)
+.. c:function:: void cvtColor(const GpuMat\& src, GpuMat\& dst, int code, int dcn,  const Stream\& stream)
 
     Converts image from one color space to another.
 
@@ -398,9 +403,9 @@ See also:
 
 cv::gpu::threshold
 ------------------
-.. cfunction:: double threshold(const GpuMat\& src, GpuMat\& dst, double thresh,  double maxval, int type)
+.. c:function:: double threshold(const GpuMat\& src, GpuMat\& dst, double thresh,  double maxval, int type)
 
-.. cfunction:: double threshold(const GpuMat\& src, GpuMat\& dst, double thresh,  double maxval, int type, const Stream\& stream)
+.. c:function:: double threshold(const GpuMat\& src, GpuMat\& dst, double thresh,  double maxval, int type, const Stream\& stream)
 
     Applies a fixed-level threshold to each array element.
 
@@ -423,7 +428,7 @@ See also:
 
 cv::gpu::resize
 ---------------
-.. cfunction:: void resize(const GpuMat\& src, GpuMat\& dst, Size dsize,  double fx=0, double fy=0,  int interpolation = INTER_LINEAR)
+.. c:function:: void resize(const GpuMat\& src, GpuMat\& dst, Size dsize,  double fx=0, double fy=0,  int interpolation = INTER_LINEAR)
 
     Resizes an image.
 
@@ -435,7 +440,8 @@ cv::gpu::resize
 
         .. math::
 
-             \texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))} 
+            
+ \texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))} 
 
         Either  ``dsize``  or both  ``fx``  or  ``fy``  must be non-zero.
 
@@ -443,13 +449,15 @@ cv::gpu::resize
 
         .. math::
 
-             \texttt{(double)dsize.width/src.cols} 
+            
+ \texttt{(double)dsize.width/src.cols} 
 
     :param fy: Scale factor along the vertical axis. When 0, it is computed as 
 
         .. math::
 
-             \texttt{(double)dsize.height/src.rows} 
+            
+ \texttt{(double)dsize.height/src.rows} 
 
     :param interpolation: Interpolation method. Supports only  ``INTER_NEAREST``  and  ``INTER_LINEAR`` .
 
@@ -460,7 +468,7 @@ See also:
 
 cv::gpu::warpAffine
 -------------------
-.. cfunction:: void warpAffine(const GpuMat\& src, GpuMat\& dst, const Mat\& M,  Size dsize, int flags = INTER_LINEAR)
+.. c:function:: void warpAffine(const GpuMat\& src, GpuMat\& dst, const Mat\& M,  Size dsize, int flags = INTER_LINEAR)
 
     Applies an affine transformation to an image.
 
@@ -481,7 +489,7 @@ See also:
 
 cv::gpu::warpPerspective
 ------------------------
-.. cfunction:: void warpPerspective(const GpuMat\& src, GpuMat\& dst, const Mat\& M,  Size dsize, int flags = INTER_LINEAR)
+.. c:function:: void warpPerspective(const GpuMat\& src, GpuMat\& dst, const Mat\& M,  Size dsize, int flags = INTER_LINEAR)
 
     Applies a perspective transformation to an image.
 
@@ -503,7 +511,7 @@ See also:
 
 cv::gpu::rotate
 ---------------
-.. cfunction:: void rotate(const GpuMat\& src, GpuMat\& dst, Size dsize,  double angle, double xShift = 0, double yShift = 0,  int interpolation = INTER_LINEAR)
+.. c:function:: void rotate(const GpuMat\& src, GpuMat\& dst, Size dsize,  double angle, double xShift = 0, double yShift = 0,  int interpolation = INTER_LINEAR)
 
     Rotates an image around the origin (0,0) and then shifts it.
 
@@ -528,7 +536,7 @@ See also:
 
 cv::gpu::copyMakeBorder
 -----------------------
-.. cfunction:: void copyMakeBorder(const GpuMat\& src, GpuMat\& dst,  int top, int bottom, int left, int right,  const Scalar\& value = Scalar())
+.. c:function:: void copyMakeBorder(const GpuMat\& src, GpuMat\& dst,  int top, int bottom, int left, int right,  const Scalar\& value = Scalar())
 
     Copies 2D array to a larger destination array and pads borders with the given constant.
 
@@ -546,7 +554,7 @@ See also:
 
 cv::gpu::rectStdDev
 -------------------
-.. cfunction:: void rectStdDev(const GpuMat\& src, const GpuMat\& sqr, GpuMat\& dst,  const Rect\& rect)
+.. c:function:: void rectStdDev(const GpuMat\& src, const GpuMat\& sqr, GpuMat\& dst,  const Rect\& rect)
 
     Computes standard deviation of integral images.
 
@@ -562,7 +570,7 @@ cv::gpu::rectStdDev
 
 cv::gpu::evenLevels
 -------------------
-.. cfunction:: void evenLevels(GpuMat\& levels, int nLevels,  int lowerLevel, int upperLevel)
+.. c:function:: void evenLevels(GpuMat\& levels, int nLevels,  int lowerLevel, int upperLevel)
 
     Computes levels with even distribution.
 
@@ -578,9 +586,9 @@ cv::gpu::evenLevels
 
 cv::gpu::histEven
 -----------------
-.. cfunction:: void histEven(const GpuMat\& src, GpuMat\& hist,  int histSize, int lowerLevel, int upperLevel)
+.. c:function:: void histEven(const GpuMat\& src, GpuMat\& hist,  int histSize, int lowerLevel, int upperLevel)
 
-.. cfunction:: void histEven(const GpuMat\& src, GpuMat hist[4],  int histSize[4], int lowerLevel[4], int upperLevel[4])
+.. c:function:: void histEven(const GpuMat\& src, GpuMat hist[4],  int histSize[4], int lowerLevel[4], int upperLevel[4])
 
     Calculates histogram with evenly distributed bins.
 
@@ -598,9 +606,9 @@ cv::gpu::histEven
 
 cv::gpu::histRange
 ------------------
-.. cfunction:: void histRange(const GpuMat\& src, GpuMat\& hist, const GpuMat\& levels)
+.. c:function:: void histRange(const GpuMat\& src, GpuMat\& hist, const GpuMat\& levels)
 
-.. cfunction:: void histRange(const GpuMat\& src, GpuMat hist[4],  const GpuMat levels[4])
+.. c:function:: void histRange(const GpuMat\& src, GpuMat hist[4],  const GpuMat levels[4])
 
     Calculates histogram with bins determined by levels array.
 

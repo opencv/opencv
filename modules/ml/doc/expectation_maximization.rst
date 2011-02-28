@@ -88,7 +88,7 @@ already a good enough approximation).
 
 CvEMParams
 ----------
-.. ctype:: CvEMParams
+.. c:type:: CvEMParams
 
 Parameters of the EM algorithm. ::
 
@@ -134,7 +134,7 @@ The structure has 2 constructors, the default one represents a rough rule-of-thu
 
 CvEM
 ----
-.. ctype:: CvEM
+.. c:type:: CvEM
 
 EM model. ::
 
@@ -194,7 +194,7 @@ EM model. ::
 
 CvEM::train
 -----------
-.. cfunction:: void CvEM::train(  const CvMat* samples,  const CvMat*  sample_idx=0,                    CvEMParams params=CvEMParams(),  CvMat* labels=0 )
+.. c:function:: void CvEM::train(  const CvMat* samples,  const CvMat*  sample_idx=0,                    CvEMParams params=CvEMParams(),  CvMat* labels=0 )
 
     Estimates the Gaussian mixture parameters from the sample set.
 

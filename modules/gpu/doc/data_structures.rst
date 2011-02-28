@@ -9,7 +9,7 @@ Data Structures
 
 gpu::DevMem2D_
 --------------
-.. ctype:: gpu::DevMem2D_
+.. c:type:: gpu::DevMem2D_
 
 This is a simple lightweight class that encapsulate pitched memory on GPU. It is intended to pass to nvcc-compiled code, i.e. CUDA kernels. So it is used internally by OpenCV and by users writes own device code. Its members can be called both from host and from device code. ::
 
@@ -35,7 +35,7 @@ This is a simple lightweight class that encapsulate pitched memory on GPU. It is
         __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0);
         __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
     };
-..
+
 
 .. index:: gpu::PtrStep_
 
@@ -43,7 +43,7 @@ This is a simple lightweight class that encapsulate pitched memory on GPU. It is
 
 gpu::PtrStep_
 -------------
-.. ctype:: gpu::PtrStep_
+.. c:type:: gpu::PtrStep_
 
 This is structure is similar to DevMem2D_but contains only pointer and row step. Width and height fields are excluded due to performance reasons. The structure is for internal use or for users who write own device code. ::
 
@@ -62,7 +62,7 @@ This is structure is similar to DevMem2D_but contains only pointer and row step.
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0);
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
     };
-..
+
 
 .. index:: gpu::PtrElemStrp_
 
@@ -70,7 +70,7 @@ This is structure is similar to DevMem2D_but contains only pointer and row step.
 
 gpu::PtrElemStrp_
 -----------------
-.. ctype:: gpu::PtrElemStrp_
+.. c:type:: gpu::PtrElemStrp_
 
 This is structure is similar to DevMem2D_but contains only pointer and row step in elements. Width and height fields are excluded due to performance reasons. This class is can only be constructed if sizeof(T) is a multiple of 256. The structure is for internal use or for users who write own device code. ::
 
@@ -80,7 +80,7 @@ This is structure is similar to DevMem2D_but contains only pointer and row step 
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0);
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
     };
-..
+
 
 .. index:: gpu::GpuMat
 
@@ -88,7 +88,7 @@ This is structure is similar to DevMem2D_but contains only pointer and row step 
 
 gpu::GpuMat
 -----------
-.. ctype:: gpu::GpuMat
+.. c:type:: gpu::GpuMat
 
 The base storage class for GPU memory with reference counting. Its interface is almost
 :func:`Mat` interface with some limitations, so using it won't be a problem. The limitations are no arbitrary dimensions support (only 2D), no functions that returns references to its data (because references on GPU are not valid for CPU), no expression templates technique support. Because of last limitation please take care with overloaded matrix operators - they cause memory allocations. The GpuMat class is convertible to
@@ -129,7 +129,7 @@ In contrast with
             //! download async
             void download(CudaMem& m, Stream& stream) const;
     };
-..
+
 
 **Please note:**
 Is it a bad practice to leave static or global GpuMat variables allocated, i.e. to rely on its destructor. That is because destruction order of such variables and CUDA context is undefined and GPU memory release function returns error if CUDA context has been destroyed before.
@@ -142,7 +142,7 @@ See also:
 
 gpu::CudaMem
 ------------
-.. ctype:: gpu::CudaMem
+.. c:type:: gpu::CudaMem
 
 This is a class with reference counting that wraps special memory type allocation functions from CUDA. Its interface is also
 :func:`Mat` -like but with additional memory type parameter:
@@ -183,16 +183,16 @@ Please note that allocation size of such memory types is usually limited. For mo
 
             int alloc_type;
     };
-..
+
 
 .. index:: gpu::CudaMem::createMatHeader
 
 cv::gpu::CudaMem::createMatHeader
 ---------------------------------
 :func:`Mat`
-.. cfunction:: Mat CudaMem::createMatHeader() const
+.. c:function:: Mat CudaMem::createMatHeader() const
 
-.. cfunction:: CudaMem::operator Mat() const
+.. c:function:: CudaMem::operator Mat() const
 
     Creates header without reference counting to CudaMem data.
 
@@ -201,9 +201,9 @@ cv::gpu::CudaMem::createMatHeader
 cv::gpu::CudaMem::createGpuMatHeader
 ------------------------------------
 :func:`gpu::GpuMat` ``_``
-.. cfunction:: GpuMat CudaMem::createGpuMatHeader() const
+.. c:function:: GpuMat CudaMem::createGpuMatHeader() const
 
-.. cfunction:: CudaMem::operator GpuMat() const
+.. c:function:: CudaMem::operator GpuMat() const
 
     Maps CPU memory to GPU address space and creates header without reference counting for it. This can be done only if memory was allocated with ALLOCZEROCOPYflag and if it is supported by hardware (laptops often share video and CPU memory, so address spaces can be mapped, and that eliminates extra copy).
 
@@ -211,7 +211,7 @@ cv::gpu::CudaMem::createGpuMatHeader
 
 cv::gpu::CudaMem::canMapHostMemory
 ---------------------------------- ``_``
-.. cfunction:: static bool CudaMem::canMapHostMemory()
+.. c:function:: static bool CudaMem::canMapHostMemory()
 
     Returns true if the current hardware supports address space mapping and ALLOCZEROCOPYmemory allocation
 
@@ -221,7 +221,7 @@ cv::gpu::CudaMem::canMapHostMemory
 
 gpu::Stream
 -----------
-.. ctype:: gpu::Stream
+.. c:type:: gpu::Stream
 
 This class encapsulated queue of the asynchronous calls. Some functions have overloads with additional
 :func:`gpu::Stream` parameter. The overloads do initialization work (allocate output buffers, upload constants, etc.), start GPU kernel and return before results are ready. A check if all operation are complete can be performed via
@@ -266,13 +266,13 @@ This class encapsulated queue of the asynchronous calls. Some functions have ove
             void enqueueConvert(const GpuMat& src, GpuMat& dst, int type,
                     double a = 1, double b = 0);
     };
-..
+
 
 .. index:: gpu::Stream::queryIfComplete
 
 cv::gpu::Stream::queryIfComplete
 --------------------------------
-.. cfunction:: bool Stream::queryIfComplete()
+.. c:function:: bool Stream::queryIfComplete()
 
     Returns true if the current stream queue is finished, otherwise false.
 
@@ -280,7 +280,7 @@ cv::gpu::Stream::queryIfComplete
 
 cv::gpu::Stream::waitForCompletion
 ----------------------------------
-.. cfunction:: void Stream::waitForCompletion()
+.. c:function:: void Stream::waitForCompletion()
 
     Blocks until all operations in the stream are complete.
 
@@ -290,7 +290,7 @@ cv::gpu::Stream::waitForCompletion
 
 gpu::StreamAccessor
 -------------------
-.. ctype:: gpu::StreamAccessor
+.. c:type:: gpu::StreamAccessor
 
 This class provides possibility to get ``cudaStream_t`` from
 :func:`gpu::Stream` . This class is declared in ``stream_accessor.hpp`` because that is only public header that depend on Cuda Runtime API. Including it will bring the dependency to your code. ::
@@ -299,13 +299,13 @@ This class provides possibility to get ``cudaStream_t`` from
     {
             CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
     };
-..
+
 
 .. index:: gpu::createContinuous
 
 cv::gpu::createContinuous
 -------------------------
-.. cfunction:: void createContinuous(int rows, int cols, int type, GpuMat\& m)
+.. c:function:: void createContinuous(int rows, int cols, int type, GpuMat\& m)
 
     Creates continuous matrix in GPU memory.
 
@@ -319,11 +319,11 @@ cv::gpu::createContinuous
 
 Also the following wrappers are available:
 
-.. cfunction:: GpuMat createContinuous(int rows, int cols, int type)
+.. c:function:: GpuMat createContinuous(int rows, int cols, int type)
 
-.. cfunction:: void createContinuous(Size size, int type, GpuMat\& m)
+.. c:function:: void createContinuous(Size size, int type, GpuMat\& m)
 
-.. cfunction:: GpuMat createContinuous(Size size, int type)
+.. c:function:: GpuMat createContinuous(Size size, int type)
 
 Matrix is called continuous if its elements are stored continuously, i.e. wuthout gaps in the end of each row.
 
@@ -331,7 +331,7 @@ Matrix is called continuous if its elements are stored continuously, i.e. wuthou
 
 cv::gpu::ensureSizeIsEnough
 ---------------------------
-.. cfunction:: void ensureSizeIsEnough(int rows, int cols, int type, GpuMat\& m)
+.. c:function:: void ensureSizeIsEnough(int rows, int cols, int type, GpuMat\& m)
 
     Ensures that size of matrix is big enough and matrix has proper type. The function doesn't reallocate memory if the  matrix has proper attributes already.
 
@@ -345,5 +345,5 @@ cv::gpu::ensureSizeIsEnough
 
 Also the following wrapper is available:
 
-.. cfunction:: void ensureSizeIsEnough(Size size, int type, GpuMat\& m)
+.. c:function:: void ensureSizeIsEnough(Size size, int type, GpuMat\& m)
 

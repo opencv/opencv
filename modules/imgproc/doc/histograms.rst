@@ -5,11 +5,11 @@ Histograms
 
 .. index:: calcHist
 
-cv::calcHist
+calcHist
 ------------
-.. cfunction:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               MatND\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
+.. c:function:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               MatND\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
 
-.. cfunction:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               SparseMat\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
+.. c:function:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               SparseMat\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
 
     Calculates histogram of a set of arrays
 
@@ -93,15 +93,15 @@ input arrays. The sample below shows how to compute 2D Hue-Saturation histogram 
         imshow( "H-S Histogram", histImg );
         waitKey();
     }
-..
+
 
 .. index:: calcBackProject
 
-cv::calcBackProject
+calcBackProject
 -------------------
-.. cfunction:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const MatND\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
+.. c:function:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const MatND\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
 
-.. cfunction:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const SparseMat\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
+.. c:function:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const SparseMat\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
 
     Calculates the back projection of a histogram.
 
@@ -137,11 +137,11 @@ See also:
 :func:`calcHist`
 .. index:: compareHist
 
-cv::compareHist
+compareHist
 ---------------
-.. cfunction:: double compareHist( const MatND\& H1, const MatND\& H2, int method )
+.. c:function:: double compareHist( const MatND\& H1, const MatND\& H2, int method )
 
-.. cfunction:: double compareHist( const SparseMat\& H1,  const SparseMat\& H2, int method )
+.. c:function:: double compareHist( const SparseMat\& H1,  const SparseMat\& H2, int method )
 
     Compares two histograms
 
@@ -201,9 +201,9 @@ While the function works well with 1-, 2-, 3-dimensional dense histograms, it ma
 
 .. index:: equalizeHist
 
-cv::equalizeHist
+equalizeHist
 ----------------
-.. cfunction:: void equalizeHist( const Mat\& src, Mat\& dst )
+.. c:function:: void equalizeHist( const Mat\& src, Mat\& dst )
 
     Equalizes the histogram of a grayscale image.
 

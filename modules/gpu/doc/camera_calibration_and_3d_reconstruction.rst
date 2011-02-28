@@ -9,7 +9,7 @@ Camera Calibration and 3d Reconstruction
 
 gpu::StereoBM_GPU
 -----------------
-.. ctype:: gpu::StereoBM_GPU
+.. c:type:: gpu::StereoBM_GPU
 
 The class for computing stereo correspondence using block matching algorithm. ::
 
@@ -39,7 +39,7 @@ The class for computing stereo correspondence using block matching algorithm. ::
 
         ...
     };
-..
+
 
 This class computes the disparity map using block matching algorithm. The class also performs pre- and post- filtering steps: sobel prefiltering (if PREFILTER_XSOBEL flag is set) and low textureness filtering (if averageTexThreshols
 :math:`>` 0). If ``avergeTexThreshold = 0`` low textureness filtering is disabled, otherwise disparity is set to 0 in each point ``(x, y)`` where for left image
@@ -51,9 +51,9 @@ This class computes the disparity map using block matching algorithm. The class 
 
 cv::gpu::StereoBM_GPU::StereoBM_GPU
 -----------------------------------_
-.. cfunction:: StereoBM_GPU::StereoBM_GPU()
+.. c:function:: StereoBM_GPU::StereoBM_GPU()
 
-.. cfunction:: StereoBM_GPU::StereoBM_GPU(int preset,  int ndisparities = DEFAULT_NDISP,  int winSize = DEFAULT_WINSZ)
+.. c:function:: StereoBM_GPU::StereoBM_GPU(int preset,  int ndisparities = DEFAULT_NDISP,  int winSize = DEFAULT_WINSZ)
 
     StereoBMGPU constructors.
 
@@ -73,9 +73,9 @@ cv::gpu::StereoBM_GPU::StereoBM_GPU
 
 cv::gpu::StereoBM_GPU::operator ()
 ----------------------------------
-.. cfunction:: void StereoBM_GPU::operator() (const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity)
+.. c:function:: void StereoBM_GPU::operator() (const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity)
 
-.. cfunction:: void StereoBM_GPU::operator() (const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity, const Stream\& stream)
+.. c:function:: void StereoBM_GPU::operator() (const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity, const Stream\& stream)
 
     The stereo correspondence operator. Finds the disparity for the specified rectified stereo pair.
 
@@ -93,7 +93,7 @@ cv::gpu::StereoBM_GPU::operator ()
 
 cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable
 -----------------------------------------------
-.. cfunction:: bool StereoBM_GPU::checkIfGpuCallReasonable()
+.. c:function:: bool StereoBM_GPU::checkIfGpuCallReasonable()
 
     Some heuristics that tries to estmate if the current GPU will be faster then CPU in this algorithm. It queries current active device.
 
@@ -103,7 +103,7 @@ cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable
 
 gpu::StereoBeliefPropagation
 ----------------------------
-.. ctype:: gpu::StereoBeliefPropagation
+.. c:type:: gpu::StereoBeliefPropagation
 
 The class for computing stereo correspondence using belief propagation algorithm. ::
 
@@ -147,7 +147,7 @@ The class for computing stereo correspondence using belief propagation algorithm
 
         ...
     };
-..
+
 
 The class implements Pedro F. Felzenszwalb algorithm
 felzenszwalb_bp
@@ -171,9 +171,9 @@ for data cost storage. ``width_step`` is the number of bytes in a line including
 
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation
 ---------------------------------------------------------
-.. cfunction:: StereoBeliefPropagation::StereoBeliefPropagation( int ndisp = DEFAULT_NDISP, int iters = DEFAULT_ITERS,  int levels = DEFAULT_LEVELS, int msg_type = CV_32F)
+.. c:function:: StereoBeliefPropagation::StereoBeliefPropagation( int ndisp = DEFAULT_NDISP, int iters = DEFAULT_ITERS,  int levels = DEFAULT_LEVELS, int msg_type = CV_32F)
 
-.. cfunction:: StereoBeliefPropagation::StereoBeliefPropagation( int ndisp, int iters, int levels,  float max_data_term, float data_weight,  float max_disc_term, float disc_single_jump,  int msg_type = CV_32F)
+.. c:function:: StereoBeliefPropagation::StereoBeliefPropagation( int ndisp, int iters, int levels,  float max_data_term, float data_weight,  float max_disc_term, float disc_single_jump,  int msg_type = CV_32F)
 
     StereoBeliefPropagation constructors.
 
@@ -216,7 +216,7 @@ By default ``StereoBeliefPropagation`` uses floating-point arithmetics and ``CV_
 
 cv::gpu::StereoBeliefPropagation::estimateRecommendedParams
 ----------------------------------------------------------- ```` ```` ```` ```` ````
-.. cfunction:: void StereoBeliefPropagation::estimateRecommendedParams( int width, int height, int\& ndisp, int\& iters, int\& levels)
+.. c:function:: void StereoBeliefPropagation::estimateRecommendedParams( int width, int height, int\& ndisp, int\& iters, int\& levels)
 
     Some heuristics that tries to compute recommended parameters (ndisp, itersand levels) for specified image size (widthand height).
 
@@ -224,9 +224,9 @@ cv::gpu::StereoBeliefPropagation::estimateRecommendedParams
 
 cv::gpu::StereoBeliefPropagation::operator ()
 ---------------------------------------------
-.. cfunction:: void StereoBeliefPropagation::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity)
+.. c:function:: void StereoBeliefPropagation::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity)
 
-.. cfunction:: void StereoBeliefPropagation::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity, Stream\& stream)
+.. c:function:: void StereoBeliefPropagation::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity, Stream\& stream)
 
     The stereo correspondence operator. Finds the disparity for the specified rectified stereo pair or data cost.
 
@@ -238,9 +238,9 @@ cv::gpu::StereoBeliefPropagation::operator ()
 
     :param stream: Stream for the asynchronous version.
 
-.. cfunction:: void StereoBeliefPropagation::operator()( const GpuMat\& data, GpuMat\& disparity)
+.. c:function:: void StereoBeliefPropagation::operator()( const GpuMat\& data, GpuMat\& disparity)
 
-.. cfunction:: void StereoBeliefPropagation::operator()( const GpuMat\& data, GpuMat\& disparity, Stream\& stream)
+.. c:function:: void StereoBeliefPropagation::operator()( const GpuMat\& data, GpuMat\& disparity, Stream\& stream)
 
     * **data** The user specified data cost. It must have  ``msg_type``  type and  :math:`\texttt{imgRows} \cdot \texttt{ndisp} \times \texttt{imgCols}`  size.
 
@@ -254,7 +254,7 @@ cv::gpu::StereoBeliefPropagation::operator ()
 
 gpu::StereoConstantSpaceBP
 --------------------------
-.. ctype:: gpu::StereoConstantSpaceBP
+.. c:type:: gpu::StereoConstantSpaceBP
 
 The class for computing stereo correspondence using constant space belief propagation algorithm. ::
 
@@ -305,7 +305,7 @@ The class for computing stereo correspondence using constant space belief propag
 
         ...
     };
-..
+
 
 The class implements Q. Yang algorithm
 qx_csbp
@@ -315,9 +315,9 @@ qx_csbp
 
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 -----------------------------------------------------
-.. cfunction:: StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp = DEFAULT_NDISP,  int iters = DEFAULT_ITERS, int levels = DEFAULT_LEVELS,  int nr_plane = DEFAULT_NR_PLANE, int msg_type = CV_32F)
+.. c:function:: StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp = DEFAULT_NDISP,  int iters = DEFAULT_ITERS, int levels = DEFAULT_LEVELS,  int nr_plane = DEFAULT_NR_PLANE, int msg_type = CV_32F)
 
-.. cfunction:: StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp, int iters,  int levels, int nr_plane,  float max_data_term, float data_weight,  float max_disc_term, float disc_single_jump,  int min_disp_th = 0, int msg_type = CV_32F)
+.. c:function:: StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp, int iters,  int levels, int nr_plane,  float max_data_term, float data_weight,  float max_disc_term, float disc_single_jump,  int min_disp_th = 0, int msg_type = CV_32F)
 
     StereoConstantSpaceBP constructors.
 
@@ -364,7 +364,7 @@ By default ``StereoConstantSpaceBP`` uses floating-point arithmetics and ``CV_32
 
 cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams
 --------------------------------------------------------- ```` ```` ```` ``_`` ```` ````
-.. cfunction:: void StereoConstantSpaceBP::estimateRecommendedParams( int width, int height,  int\& ndisp, int\& iters, int\& levels, int\& nr_plane)
+.. c:function:: void StereoConstantSpaceBP::estimateRecommendedParams( int width, int height,  int\& ndisp, int\& iters, int\& levels, int\& nr_plane)
 
     Some heuristics that tries to compute parameters (ndisp, iters, levelsand nrplane) for specified image size (widthand height).
 
@@ -372,9 +372,9 @@ cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams
 
 cv::gpu::StereoConstantSpaceBP::operator ()
 -------------------------------------------
-.. cfunction:: void StereoConstantSpaceBP::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity)
+.. c:function:: void StereoConstantSpaceBP::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity)
 
-.. cfunction:: void StereoConstantSpaceBP::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity, Stream\& stream)
+.. c:function:: void StereoConstantSpaceBP::operator()( const GpuMat\& left, const GpuMat\& right,  GpuMat\& disparity, Stream\& stream)
 
     The stereo correspondence operator. Finds the disparity for the specified rectified stereo pair.
 
@@ -392,7 +392,7 @@ cv::gpu::StereoConstantSpaceBP::operator ()
 
 gpu::DisparityBilateralFilter
 -----------------------------
-.. ctype:: gpu::DisparityBilateralFilter
+.. c:type:: gpu::DisparityBilateralFilter
 
 The class for disparity map refinement using joint bilateral filtering. ::
 
@@ -417,7 +417,7 @@ The class for disparity map refinement using joint bilateral filtering. ::
 
         ...
     };
-..
+
 
 The class implements Q. Yang algorithm
 qx_csbp
@@ -427,9 +427,9 @@ qx_csbp
 
 cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter
 -----------------------------------------------------------
-.. cfunction:: DisparityBilateralFilter::DisparityBilateralFilter( int ndisp = DEFAULT_NDISP, int radius = DEFAULT_RADIUS,  int iters = DEFAULT_ITERS)
+.. c:function:: DisparityBilateralFilter::DisparityBilateralFilter( int ndisp = DEFAULT_NDISP, int radius = DEFAULT_RADIUS,  int iters = DEFAULT_ITERS)
 
-.. cfunction:: DisparityBilateralFilter::DisparityBilateralFilter( int ndisp, int radius, int iters,  float edge_threshold, float max_disc_threshold,  float sigma_range)
+.. c:function:: DisparityBilateralFilter::DisparityBilateralFilter( int ndisp, int radius, int iters,  float edge_threshold, float max_disc_threshold,  float sigma_range)
 
     DisparityBilateralFilter constructors.
 
@@ -449,9 +449,9 @@ cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter
 
 cv::gpu::DisparityBilateralFilter::operator ()
 ----------------------------------------------
-.. cfunction:: void DisparityBilateralFilter::operator()( const GpuMat\& disparity, const GpuMat\& image, GpuMat\& dst)
+.. c:function:: void DisparityBilateralFilter::operator()( const GpuMat\& disparity, const GpuMat\& image, GpuMat\& dst)
 
-.. cfunction:: void DisparityBilateralFilter::operator()( const GpuMat\& disparity, const GpuMat\& image, GpuMat\& dst,  Stream\& stream)
+.. c:function:: void DisparityBilateralFilter::operator()( const GpuMat\& disparity, const GpuMat\& image, GpuMat\& dst,  Stream\& stream)
 
     Refines disparity map using joint bilateral filtering.
 
@@ -467,9 +467,9 @@ cv::gpu::DisparityBilateralFilter::operator ()
 
 cv::gpu::drawColorDisp
 ----------------------
-.. cfunction:: void drawColorDisp(const GpuMat\& src_disp, GpuMat\& dst_disp, int ndisp)
+.. c:function:: void drawColorDisp(const GpuMat\& src_disp, GpuMat\& dst_disp, int ndisp)
 
-.. cfunction:: void drawColorDisp(const GpuMat\& src_disp, GpuMat\& dst_disp, int ndisp,  const Stream\& stream)
+.. c:function:: void drawColorDisp(const GpuMat\& src_disp, GpuMat\& dst_disp, int ndisp,  const Stream\& stream)
 
     Does coloring of disparity image.
 
@@ -489,9 +489,9 @@ This function converts
 
 cv::gpu::reprojectImageTo3D
 ---------------------------
-.. cfunction:: void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw,  const Mat\& Q)
+.. c:function:: void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw,  const Mat\& Q)
 
-.. cfunction:: void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw,  const Mat\& Q, const Stream\& stream)
+.. c:function:: void reprojectImageTo3D(const GpuMat\& disp, GpuMat\& xyzw,  const Mat\& Q, const Stream\& stream)
 
     Reprojects disparity image to 3D space.
 

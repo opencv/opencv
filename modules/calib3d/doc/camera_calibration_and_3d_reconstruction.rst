@@ -77,25 +77,19 @@ be used for images of
 
 The functions below use the above model to
 
-*
-    Project 3D points to the image plane given intrinsic and extrinsic parameters
+ * Project 3D points to the image plane given intrinsic and extrinsic parameters
 
-*
-    Compute extrinsic parameters given intrinsic parameters, a few 3D points and their projections.
+ * Compute extrinsic parameters given intrinsic parameters, a few 3D points and their projections.
 
-*
-    Estimate intrinsic and extrinsic camera parameters from several views of a known calibration pattern (i.e. every view is described by several 3D-2D point correspondences).
+ * Estimate intrinsic and extrinsic camera parameters from several views of a known calibration pattern (i.e. every view is described by several 3D-2D point correspondences).
 
-*
-    Estimate the relative position and orientation of the stereo camera "heads" and compute the
-    *rectification*
-    transformation that makes the camera optical axes parallel.
+ * Estimate the relative position and orientation of the stereo camera "heads" and compute the *rectification* transformation that makes the camera optical axes parallel.
 
 .. index:: calibrateCamera
 
 cv::calibrateCamera
 -------------------
-.. cfunction:: double calibrateCamera( const vector<vector<Point3f> >\& objectPoints,                      const vector<vector<Point2f> >\& imagePoints,                      Size imageSize,                      Mat\& cameraMatrix, Mat\& distCoeffs,                      vector<Mat>\& rvecs, vector<Mat>\& tvecs,                      int flags=0 )
+.. c:function:: double calibrateCamera( const vector<vector<Point3f> >& objectPoints, const vector<vector<Point2f> >& imagePoints,                      Size imageSize, Mat& cameraMatrix, Mat& distCoeffs, vector<Mat>& rvecs, vector<Mat>& tvecs, int flags=0 )
 
     Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
@@ -168,7 +162,7 @@ See also:
 
 cv::calibrationMatrixValues
 ---------------------------
-.. cfunction:: void calibrationMatrixValues( const Mat\& cameraMatrix,                              Size imageSize,                              double apertureWidth,                              double apertureHeight,                              double\& fovx,                              double\& fovy,                              double\& focalLength,                              Point2d\& principalPoint,                              double\& aspectRatio )
+.. c:function:: void calibrationMatrixValues( const Mat& cameraMatrix,                              Size imageSize,                              double apertureWidth,                              double apertureHeight,                              double& fovx,                              double& fovy,                              double& focalLength,                              Point2d& principalPoint,                              double& aspectRatio )
 
     Computes some useful camera characteristics from the camera matrix
 
@@ -188,15 +182,16 @@ cv::calibrationMatrixValues
     :param principalPoint: The principal point in pixels
 
     :param aspectRatio: :math:`f_y/f_x`
+    
 The function computes various useful camera characteristics from the previously estimated camera matrix.
 
 .. index:: composeRT
 
 cv::composeRT
 -------------
-.. cfunction:: void composeRT( const Mat\& rvec1, const Mat\& tvec1,                const Mat\& rvec2, const Mat\& tvec2,                Mat\& rvec3, Mat\& tvec3 )
+.. c:function:: void composeRT( const Mat& rvec1, const Mat& tvec1, const Mat& rvec2, const Mat& tvec2, Mat& rvec3, Mat& tvec3 )
 
-.. cfunction:: void composeRT( const Mat\& rvec1, const Mat\& tvec1,                const Mat\& rvec2, const Mat\& tvec2,                Mat\& rvec3, Mat\& tvec3,                Mat\& dr3dr1, Mat\& dr3dt1,                Mat\& dr3dr2, Mat\& dr3dt2,                Mat\& dt3dr1, Mat\& dt3dt1,                Mat\& dt3dr2, Mat\& dt3dt2 )
+.. c:function:: void composeRT( const Mat& rvec1, const Mat& tvec1, const Mat& rvec2, const Mat& tvec2, Mat& rvec3, Mat& tvec3,                Mat& dr3dr1, Mat& dr3dt1, Mat& dr3dr2, Mat& dr3dt2, Mat& dt3dr1, Mat& dt3dt1, Mat& dt3dr2, Mat& dt3dt2 )
 
     Combines two rotation-and-shift transformations
 
@@ -213,35 +208,35 @@ cv::composeRT
     :param tvec3: The output translation vector of the superposition
 
     :param d??d??: The optional output derivatives of  ``rvec3``  or  ``tvec3``  w.r.t.  ``rvec?``  or  ``tvec?``
+
 The functions compute:
 
 .. math::
 
     \begin{array}{l} \texttt{rvec3} =  \mathrm{rodrigues} ^{-1} \left ( \mathrm{rodrigues} ( \texttt{rvec2} )  \cdot \mathrm{rodrigues} ( \texttt{rvec1} ) \right )  \\ \texttt{tvec3} =  \mathrm{rodrigues} ( \texttt{rvec2} )  \cdot \texttt{tvec1} +  \texttt{tvec2} \end{array} ,
 
-where
-:math:`\mathrm{rodrigues}` denotes a rotation vector to rotation matrix transformation, and
-:math:`\mathrm{rodrigues}^{-1}` denotes the inverse transformation, see
-:func:`Rodrigues` .
+where :math:`\mathrm{rodrigues}` denotes a rotation vector to rotation matrix transformation, and
+:math:`\mathrm{rodrigues}^{-1}` denotes the inverse transformation, see :func:`Rodrigues`.
 
-Also, the functions can compute the derivatives of the output vectors w.r.t the input vectors (see
-:func:`matMulDeriv` ).
-The functions are used inside
-:func:`stereoCalibrate` but can also be used in your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a function that contains matrix multiplication.
+Also, the functions can compute the derivatives of the output vectors w.r.t the input vectors (see :func:`matMulDeriv` ).
+The functions are used inside :func:`stereoCalibrate` but can also be used in your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a function that contains matrix multiplication.
 
 .. index:: computeCorrespondEpilines
 
 cv::computeCorrespondEpilines
 -----------------------------
-.. cfunction:: void computeCorrespondEpilines( const Mat\& points,                                int whichImage, const Mat\& F,                                vector<Vec3f>\& lines )
+.. c:function:: void computeCorrespondEpilines( const Mat& points, int whichImage, const Mat& F,                                vector<Vec3f>& lines )
 
     For points in one image of a stereo pair, computes the corresponding epilines in the other image.
 
     :param points: The input points.  :math:`N \times 1`  or  :math:`1 \times N`  matrix of type  ``CV_32FC2``  or  ``vector<Point2f>``
+    
     :param whichImage: Index of the image (1 or 2) that contains the  ``points``
+    
     :param F: The fundamental matrix that can be estimated using  :ref:`FindFundamentalMat`         or  :ref:`StereoRectify` .
 
-    :param lines: The output vector of the corresponding to the points epipolar lines in the other image.   Each line  :math:`ax + by + c=0`  is encoded by 3 numbers  :math:`(a, b, c)`
+    :param lines: The output vector of the corresponding to the points epipolar lines in the other image. Each line :math:`ax + by + c=0`  is encoded by 3 numbers  :math:`(a, b, c)`
+    
 For every point in one of the two images of a stereo-pair the function finds the equation of the
 corresponding epipolar line in the other image.
 
@@ -269,9 +264,9 @@ Line coefficients are defined up to a scale. They are normalized, such that
 
 cv::convertPointsHomogeneous
 ----------------------------
-.. cfunction:: void convertPointsHomogeneous( const Mat\& src, vector<Point3f>\& dst )
+.. c:function:: void convertPointsHomogeneous( const Mat& src, vector<Point3f>& dst )
 
-.. cfunction:: void convertPointsHomogeneous( const Mat\& src, vector<Point2f>\& dst )
+.. c:function:: void convertPointsHomogeneous( const Mat& src, vector<Point2f>& dst )
 
     Convert points to/from homogeneous coordinates.
 
@@ -279,10 +274,7 @@ cv::convertPointsHomogeneous
 
     :param dst: The output vector of 2D or 2D points
 
-The
-functions convert
-2D or 3D points from/to homogeneous coordinates, or simply
-copy or transpose
+The functions convert 2D or 3D points from/to homogeneous coordinates, or simply copy or transpose
 the array. If the input array dimensionality is larger than the output, each coordinate is divided by the last coordinate:
 
 .. math::
@@ -295,9 +287,9 @@ If the output array dimensionality is larger, an extra 1 is appended to each poi
 
 cv::decomposeProjectionMatrix
 -----------------------------
-.. cfunction:: void decomposeProjectionMatrix( const Mat\& projMatrix,                                Mat\& cameraMatrix,                                Mat\& rotMatrix, Mat\& transVect )
+.. c:function:: void decomposeProjectionMatrix( const Mat& projMatrix,                                Mat& cameraMatrix,                                Mat& rotMatrix, Mat& transVect )
 
-.. cfunction:: void decomposeProjectionMatrix( const Mat\& projMatrix,                                 Mat\& cameraMatrix,                                Mat\& rotMatrix, Mat\& transVect,                                Mat\& rotMatrixX, Mat\& rotMatrixY,                                Mat\& rotMatrixZ, Vec3d\& eulerAngles )
+.. c:function:: void decomposeProjectionMatrix( const Mat& projMatrix,                                 Mat& cameraMatrix,                                Mat& rotMatrix, Mat& transVect,                                Mat& rotMatrixX, Mat& rotMatrixY,                                Mat& rotMatrixZ, Vec3d& eulerAngles )
 
     Decomposes the projection matrix into a rotation matrix and a camera matrix.
 
@@ -328,7 +320,7 @@ The function is based on
 
 cv::drawChessboardCorners
 -------------------------
-.. cfunction:: void drawChessboardCorners( Mat\& image, Size patternSize,                            const Mat\& corners,                            bool patternWasFound )
+.. c:function:: void drawChessboardCorners( Mat& image, Size patternSize,                            const Mat& corners,                            bool patternWasFound )
 
     Renders the detected chessboard corners.
 
@@ -346,7 +338,7 @@ The function draws the individual chessboard corners detected as red circles if 
 
 cv::findChessboardCorners
 -------------------------
-.. cfunction:: bool findChessboardCorners( const Mat\& image, Size patternSize,                            vector<Point2f>\& corners,                            int flags=CV_CALIB_CB_ADAPTIVE_THRESH+                                 CV_CALIB_CB_NORMALIZE_IMAGE )
+.. c:function:: bool findChessboardCorners( const Mat& image, Size patternSize,                            vector<Point2f>& corners,                            int flags=CV_CALIB_CB_ADAPTIVE_THRESH+                                 CV_CALIB_CB_NORMALIZE_IMAGE )
 
     Finds the positions of the internal corners of the chessboard.
 
@@ -398,7 +390,6 @@ Sample usage of detecting and drawing chessboard corners: ::
         TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
 
     drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
-..
 
 **Note:**
 the function requires some white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environment (otherwise if there is no border and the background is dark, the outer black squares could not be segmented properly and so the square grouping and ordering algorithm will fail).
@@ -407,7 +398,7 @@ the function requires some white space (like a square-thick border, the wider th
 
 cv::findCirclesGrid
 -------------------
-.. cfunction:: bool findCirclesGrid( const Mat\& image, Size patternSize,                            vector<Point2f>\& centers,                            int flags=CALIB_CB_SYMMETRIC_GRID )
+.. c:function:: bool findCirclesGrid( const Mat& image, Size patternSize,                            vector<Point2f>& centers,                            int flags=CALIB_CB_SYMMETRIC_GRID )
 
     Finds the centers of the cirlces' grid.
 
@@ -443,7 +434,6 @@ Sample usage of detecting and drawing circles' centers: ::
     bool patternfound = findCirclesGrid(gray, patternsize, centers);
 
     drawChessboardCorners(img, patternsize, Mat(centers), patternfound);
-..
 
 **Note:**
 the function requires some white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environment.
@@ -452,7 +442,7 @@ the function requires some white space (like a square-thick border, the wider th
 
 cv::solvePnP
 ------------
-.. cfunction:: void solvePnP( const Mat\& objectPoints,               const Mat\& imagePoints,               const Mat\& cameraMatrix,               const Mat\& distCoeffs,               Mat\& rvec, Mat\& tvec,               bool useExtrinsicGuess=false )
+.. c:function:: void solvePnP( const Mat& objectPoints,               const Mat& imagePoints,               const Mat& cameraMatrix,               const Mat& distCoeffs,               Mat& rvec, Mat& tvec,               bool useExtrinsicGuess=false )
 
     Finds the object pose from the 3D-2D point correspondences
 
@@ -476,9 +466,9 @@ The function estimates the object pose given a set of object points, their corre
 
 cv::findFundamentalMat
 ----------------------
-.. cfunction:: Mat findFundamentalMat( const Mat\& points1, const Mat\& points2,                        vector<uchar>\& status, int method=FM_RANSAC,                        double param1=3., double param2=0.99 )
+.. c:function:: Mat findFundamentalMat( const Mat& points1, const Mat& points2,                        vector<uchar>& status, int method=FM_RANSAC,                        double param1=3., double param2=0.99 )
 
-.. cfunction:: Mat findFundamentalMat( const Mat\& points1, const Mat\& points2,                        int method=FM_RANSAC,                        double param1=3., double param2=0.99 )
+.. c:function:: Mat findFundamentalMat( const Mat& points1, const Mat& points2,                        int method=FM_RANSAC,                        double param1=3., double param2=0.99 )
 
     Calculates the fundamental matrix from the corresponding points in two images.
 
@@ -532,17 +522,16 @@ corresponding to the specified points. It can also be passed to
 
     Mat fundamental_matrix =
      findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
-..
 
 .. index:: findHomography
 
 cv::findHomography
 ------------------
-.. cfunction:: Mat findHomography( const Mat\& srcPoints, const Mat\& dstPoints,                    Mat\& status, int method=0,                    double ransacReprojThreshold=3 )
+.. c:function:: Mat findHomography( const Mat& srcPoints, const Mat& dstPoints,                    Mat& status, int method=0,                    double ransacReprojThreshold=3 )
 
-.. cfunction:: Mat findHomography( const Mat\& srcPoints, const Mat\& dstPoints,                    vector<uchar>\& status, int method=0,                    double ransacReprojThreshold=3 )
+.. c:function:: Mat findHomography( const Mat& srcPoints, const Mat& dstPoints,                    vector<uchar>& status, int method=0,                    double ransacReprojThreshold=3 )
 
-.. cfunction:: Mat findHomography( const Mat\& srcPoints, const Mat\& dstPoints,                    int method=0, double ransacReprojThreshold=3 )
+.. c:function:: Mat findHomography( const Mat& srcPoints, const Mat& dstPoints,                    int method=0, double ransacReprojThreshold=3 )
 
     Finds the perspective transformation between two planes.
 
@@ -568,10 +557,7 @@ cv::findHomography
 
     :param status: The optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  *Note that the input mask values are ignored.*
 
-The
-functions find and return
-the perspective transformation
-:math:`H` between the source and the destination planes:
+The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 
 .. math::
 
@@ -622,7 +608,7 @@ See also:
 
 cv::getDefaultNewCameraMatrix
 -----------------------------
-.. cfunction:: Mat getDefaultNewCameraMatrix(                               const Mat\& cameraMatrix,                               Size imgSize=Size(),                               bool centerPrincipalPoint=false )
+.. c:function:: Mat getDefaultNewCameraMatrix(                               const Mat& cameraMatrix,                               Size imgSize=Size(),                               bool centerPrincipalPoint=false )
 
     Returns the default new camera matrix
 
@@ -652,7 +638,7 @@ By default, the undistortion functions in OpenCV (see ``initUndistortRectifyMap`
 
 cv::getOptimalNewCameraMatrix
 -----------------------------
-.. cfunction:: Mat getOptimalNewCameraMatrix(      const Mat\& cameraMatrix, const Mat\& distCoeffs,      Size imageSize, double alpha, Size newImageSize=Size(),      Rect* validPixROI=0)
+.. c:function:: Mat getOptimalNewCameraMatrix( const Mat& cameraMatrix, const Mat& distCoeffs, Size imageSize, double alpha, Size newImageSize=Size(), Rect* validPixROI=0)
 
     Returns the new camera matrix based on the free scaling parameter
 
@@ -668,8 +654,8 @@ cv::getOptimalNewCameraMatrix
     :param newImageSize: The image size after rectification. By default it will be set to  ``imageSize`` .
 
     :param validPixROI: The optional output rectangle that will outline all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ref:`StereoRectify`
-The function computes
-and returns
+    
+The function computes and returns
 the optimal new camera matrix based on the free scaling parameter. By varying  this parameter the user may retrieve only sensible pixels ``alpha=0`` , keep all the original image pixels if there is valuable information in the corners ``alpha=1`` , or get something in between. When ``alpha>0`` , the undistortion result will likely have some black pixels corresponding to "virtual" pixels outside of the captured distorted image. The original camera matrix, distortion coefficients, the computed new camera matrix and the ``newImageSize`` should be passed to
 :ref:`InitUndistortRectifyMap` to produce the maps for
 :ref:`Remap` .
@@ -678,15 +664,18 @@ the optimal new camera matrix based on the free scaling parameter. By varying  t
 
 cv::initCameraMatrix2D
 ----------------------
-.. cfunction:: Mat initCameraMatrix2D( const vector<vector<Point3f> >\& objectPoints,                        const vector<vector<Point2f> >\& imagePoints,                        Size imageSize, double aspectRatio=1.)
+.. c:function:: Mat initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints, const vector<vector<Point2f> >& imagePoints, Size imageSize, double aspectRatio=1.)
 
     Finds the initial camera matrix from the 3D-2D point correspondences
 
     :param objectPoints: The vector of vectors of the object points. See  :func:`calibrateCamera`
+    
     :param imagePoints: The vector of vectors of the corresponding image points. See  :func:`calibrateCamera`
+    
     :param imageSize: The image size in pixels; used to initialize the principal point
 
     :param aspectRatio: If it is zero or negative, both  :math:`f_x`  and  :math:`f_y`  are estimated independently. Otherwise  :math:`f_x = f_y * \texttt{aspectRatio}`
+    
 The function estimates and returns the initial camera matrix for camera calibration process.
 Currently, the function only supports planar calibration patterns, i.e. patterns where each object point has z-coordinate =0.
 
@@ -694,19 +683,23 @@ Currently, the function only supports planar calibration patterns, i.e. patterns
 
 cv::initUndistortRectifyMap
 ---------------------------
-.. cfunction:: void initUndistortRectifyMap( const Mat\& cameraMatrix,                           const Mat\& distCoeffs, const Mat\& R,                           const Mat\& newCameraMatrix,                           Size size, int m1type,                           Mat\& map1, Mat\& map2 )
+
+.. c:function:: void initUndistortRectifyMap( const Mat& cameraMatrix,                           const Mat& distCoeffs, const Mat& R,                           const Mat& newCameraMatrix,                           Size size, int m1type,                           Mat& map1, Mat& map2 )
 
     Computes the undistortion and rectification transformation map.
 
     :param cameraMatrix: The input camera matrix  :math:`A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}`
+    
     :param distCoeffs: The input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
     :param R: The optional rectification transformation in object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :ref:`StereoRectify`  can be passed here. If the matrix is  empty  , the identity transformation is assumed
 
     :param newCameraMatrix: The new camera matrix  :math:`A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}`
+    
     :param size: The undistorted image size
 
     :param m1type: The type of the first output map, can be  ``CV_32FC1``  or  ``CV_16SC2`` . See  :func:`convertMaps`
+    
     :param map1: The first output map
 
     :param map2: The second output map
@@ -744,7 +737,8 @@ where the ``cameraMatrix`` can be chosen arbitrarily.
 
 cv::matMulDeriv
 ---------------
-.. cfunction:: void matMulDeriv( const Mat\& A, const Mat\& B, Mat\& dABdA, Mat\& dABdB )
+
+.. c:function:: void matMulDeriv( const Mat& A, const Mat& B, Mat& dABdA, Mat& dABdB )
 
     Computes partial derivatives of the matrix product w.r.t each multiplied matrix
 
@@ -753,7 +747,9 @@ cv::matMulDeriv
     :param B: The second multiplied matrix
 
     :param dABdA: The first output derivative matrix  ``d(A*B)/dA``  of size  :math:`\texttt{A.rows*B.cols} \times {A.rows*A.cols}`
+    
     :param dABdA: The second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}`
+
 The function computes the partial derivatives of the elements of the matrix product
 :math:`A*B` w.r.t. the elements of each of the two input matrices. The function is used to compute Jacobian matrices in
 :func:`stereoCalibrate` , but can also be used in any other similar optimization function.
@@ -762,18 +758,21 @@ The function computes the partial derivatives of the elements of the matrix prod
 
 cv::projectPoints
 -----------------
-.. cfunction:: void projectPoints( const Mat\& objectPoints,                    const Mat\& rvec, const Mat\& tvec,                    const Mat\& cameraMatrix,                    const Mat\& distCoeffs,                    vector<Point2f>\& imagePoints )
 
-.. cfunction:: void projectPoints( const Mat\& objectPoints,                    const Mat\& rvec, const Mat\& tvec,                    const Mat\& cameraMatrix,                    const Mat\& distCoeffs,                    vector<Point2f>\& imagePoints,                    Mat\& dpdrot, Mat\& dpdt, Mat\& dpdf,                    Mat\& dpdc, Mat\& dpddist,                    double aspectRatio=0 )
+.. c:function:: void projectPoints( const Mat& objectPoints, const Mat& rvec, const Mat& tvec, const Mat& cameraMatrix,                    const Mat& distCoeffs, vector<Point2f>& imagePoints )
+
+.. c:function:: void projectPoints( const Mat& objectPoints, const Mat& rvec, const Mat& tvec, const Mat& cameraMatrix,                    const Mat& distCoeffs, vector<Point2f>& imagePoints, Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist, double aspectRatio=0 )
 
     Project 3D points on to an image plane.
 
     :param objectPoints: The array of object points, 3xN or Nx3 1-channel or 1xN or Nx1 3-channel  (or  ``vector<Point3f>`` )  , where N is the number of points in the view
 
     :param rvec: The rotation vector, see  :ref:`Rodrigues2`
+    
     :param tvec: The translation vector
 
     :param cameraMatrix: The camera matrix  :math:`A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}`
+    
     :param distCoeffs: The input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
     :param imagePoints: The output array of image points, 2xN or Nx2 1-channel or 1xN or Nx1 2-channel  (or  ``vector<Point2f>`` )
@@ -783,7 +782,9 @@ cv::projectPoints
     :param dpdt: Optional 2Nx3 matrix of derivatives of image points with respect to components of the translation vector
 
     :param dpdf: Optional 2Nx2 matrix of derivatives of image points with respect to  :math:`f_x`  and  :math:`f_y`
+    
     :param dpdc: Optional 2Nx2 matrix of derivatives of image points with respect to  :math:`c_x`  and  :math:`c_y`
+    
     :param dpddist: Optional 2Nx4 matrix of derivatives of image points with respect to distortion coefficients
 
 The function computes projections of 3D
@@ -804,7 +805,8 @@ Note, that by setting ``rvec=tvec=(0,0,0)`` , or by setting ``cameraMatrix`` to 
 
 cv::reprojectImageTo3D
 ----------------------
-.. cfunction:: void reprojectImageTo3D( const Mat\& disparity,                         Mat\& _3dImage, const Mat\& Q,                         bool handleMissingValues=false )
+
+.. c:function:: void reprojectImageTo3D( const Mat& disparity,                         Mat& _3dImage, const Mat& Q,                         bool handleMissingValues=false )
 
     Reprojects disparity image to 3D space.
 
@@ -814,6 +816,7 @@ cv::reprojectImageTo3D
          Each element of  ``_3dImage(x,y)``  will contain the 3D coordinates of the point  ``(x,y)`` , computed from the disparity map.
 
     :param Q: The  :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ref:`StereoRectify`
+    
     :param handleMissingValues: If true, when the pixels with the minimal disparity (that corresponds to the outliers; see  :ref:`FindStereoCorrespondenceBM` ) will be transformed to 3D points with some very large Z value (currently set to 10000)
 
 The function transforms 1-channel disparity map to 3-channel image representing a 3D surface. That is, for each pixel ``(x,y)`` and the corresponding disparity ``d=disparity(x,y)`` it computes:
@@ -831,9 +834,9 @@ The matrix ``Q`` can be arbitrary
 
 cv::RQDecomp3x3
 ---------------
-.. cfunction:: void RQDecomp3x3( const Mat\& M, Mat\& R, Mat\& Q )
+.. c:function:: void RQDecomp3x3( const Mat& M, Mat& R, Mat& Q )
 
-.. cfunction:: Vec3d RQDecomp3x3( const Mat\& M, Mat\& R, Mat\& Q,                   Mat\& Qx, Mat\& Qy, Mat\& Qz )
+.. c:function:: Vec3d RQDecomp3x3( const Mat& M, Mat& R, Mat& Q,                   Mat& Qx, Mat& Qy, Mat& Qz )
 
     Computes the 'RQ' decomposition of 3x3 matrices.
 
@@ -860,9 +863,9 @@ that could be used in OpenGL.
 
 cv::Rodrigues
 -------------
-.. cfunction:: void Rodrigues(const Mat\& src, Mat\& dst)
+.. c:function:: void Rodrigues(const Mat& src, Mat& dst)
 
-.. cfunction:: void Rodrigues(const Mat\& src, Mat\& dst, Mat\& jacobian)
+.. c:function:: void Rodrigues(const Mat& src, Mat& dst, Mat& jacobian)
 
     Converts a rotation matrix to a rotation vector or vice versa.
 
@@ -894,7 +897,7 @@ used in the global 3D geometry optimization procedures like
 
 StereoBM
 --------
-.. ctype:: StereoBM
+.. c:type:: StereoBM
 
 The class for computing stereo correspondence using block matching algorithm. ::
 
@@ -920,11 +923,9 @@ The class for computing stereo correspondence using block matching algorithm. ::
 
         Ptr<CvStereoBMState> state;
     };
-..
 
-The class is a C++ wrapper for
-and the associated functions. In particular, ``StereoBM::operator ()`` is the wrapper for
-:ref:`FindStereoCorrespondceBM` . See the respective descriptions.
+The class is a C++ wrapper for and the associated functions. In particular, ``StereoBM::operator ()`` is the wrapper for
+:ref:`FindStereoCorrespondceBM`. See the respective descriptions.
 
 .. index:: StereoSGBM
 
@@ -932,7 +933,7 @@ and the associated functions. In particular, ``StereoBM::operator ()`` is the wr
 
 StereoSGBM
 ----------
-.. ctype:: StereoSGBM
+.. c:type:: StereoSGBM
 
 The class for computing stereo correspondence using semi-global block matching algorithm. ::
 
@@ -961,7 +962,6 @@ The class for computing stereo correspondence using semi-global block matching a
 
         ...
     };
-..
 
 The class implements modified H. Hirschmuller algorithm
 HH08
@@ -988,9 +988,9 @@ HH08
 
 cv::StereoSGBM::StereoSGBM
 --------------------------
-.. cfunction:: StereoSGBM::StereoSGBM()
+.. c:function:: StereoSGBM::StereoSGBM()
 
-.. cfunction:: StereoSGBM::StereoSGBM(              int minDisparity, int numDisparities, int SADWindowSize,             int P1=0, int P2=0, int disp12MaxDiff=0,             int preFilterCap=0, int uniquenessRatio=0,             int speckleWindowSize=0, int speckleRange=0,             bool fullDP=false)
+.. c:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0,             int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
 
     StereoSGBM constructors
 
@@ -998,9 +998,7 @@ cv::StereoSGBM::StereoSGBM
 
     :param numDisparities: This is maximum disparity minus minimum disparity. Always greater than 0. In the current implementation this parameter must be divisible by 16.
 
-    :param SADWindowSize: The matched block size. Must be an odd number  ``>=1`` . Normally, it should be somewhere in  ``3..11``  range
-
-    .
+    :param SADWindowSize: The matched block size. Must be an odd number  ``>=1`` . Normally, it should be somewhere in  ``3..11``  range.
 
     :param P1, P2: Parameters that control disparity smoothness. The larger the values, the smoother the disparity.  ``P1``  is the penalty on the disparity change by plus or minus 1 between neighbor pixels.  ``P2``  is the penalty on the disparity change by more than 1 between neighbor pixels. The algorithm requires  ``P2 > P1`` . See  ``stereo_match.cpp``  sample where some reasonably good  ``P1``  and  ``P2``  values are shown (like  ``8*number_of_image_channels*SADWindowSize*SADWindowSize``  and  ``32*number_of_image_channels*SADWindowSize*SADWindowSize`` , respectively).
 
@@ -1015,13 +1013,15 @@ cv::StereoSGBM::StereoSGBM
     :param speckleRange: Maximum disparity variation within each connected component. If you do speckle filtering, set it to some positive value, multiple of 16. Normally, 16 or 32 is good enough.
 
     :param fullDP: Set it to  ``true``  to run full-scale 2-pass dynamic programming algorithm. It will consume O(W*H*numDisparities) bytes, which is large for 640x480 stereo and huge for HD-size pictures. By default this is  ``false``
+
 The first constructor initializes ``StereoSGBM`` with all the default parameters (so actually one will only have to set ``StereoSGBM::numberOfDisparities`` at minimum). The second constructor allows you to set each parameter to a custom value.
 
 .. index:: StereoSGBM::operator ()
 
 cv::StereoSGBM::operator ()
 ---------------------------
-.. cfunction:: void SGBM::operator()(const Mat\& left, const Mat\& right, Mat\& disp)
+
+.. c:function:: void SGBM::operator()(const Mat& left, const Mat& right, Mat& disp)
 
     Computes disparity using SGBM algorithm for a rectified stereo pair
 
@@ -1037,7 +1037,7 @@ The method executes SGBM algorithm on a rectified stereo pair. See ``stereo_matc
 
 cv::stereoCalibrate
 -------------------
-.. cfunction:: double stereoCalibrate( const vector<vector<Point3f> >\& objectPoints,                      const vector<vector<Point2f> >\& imagePoints1,                      const vector<vector<Point2f> >\& imagePoints2,                      Mat\& cameraMatrix1, Mat\& distCoeffs1,                      Mat\& cameraMatrix2, Mat\& distCoeffs2,                      Size imageSize, Mat\& R, Mat\& T,                      Mat\& E, Mat\& F,                      TermCriteria term_crit = TermCriteria(TermCriteria::COUNT+                         TermCriteria::EPS, 30, 1e-6),                      int flags=CALIB_FIX_INTRINSIC )
+.. c:function:: double stereoCalibrate( const vector<vector<Point3f> >& objectPoints, const vector<vector<Point2f> >& imagePoints1,                      const vector<vector<Point2f> >& imagePoints2, Mat& cameraMatrix1, Mat& distCoeffs1, Mat& cameraMatrix2, Mat& distCoeffs2,                      Size imageSize, Mat& R, Mat& T, Mat& E, Mat& F, TermCriteria term_crit = TermCriteria(TermCriteria::COUNT+                         TermCriteria::EPS, 30, 1e-6), int flags=CALIB_FIX_INTRINSIC )
 
     Calibrates stereo camera.
 
@@ -1123,9 +1123,9 @@ The function returns the final value of the re-projection error.
 
 cv::stereoRectify
 -----------------
-.. cfunction:: void stereoRectify( const Mat\& cameraMatrix1, const Mat\& distCoeffs1,                    const Mat\& cameraMatrix2, const Mat\& distCoeffs2,                    Size imageSize, const Mat\& R, const Mat\& T,                    Mat\& R1, Mat\& R2, Mat\& P1, Mat\& P2, Mat\& Q,                    int flags=CALIB_ZERO_DISPARITY )
+.. c:function:: void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1, const Mat& cameraMatrix2, const Mat& distCoeffs2,                    Size imageSize, const Mat& R, const Mat& T, Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q, int flags=CALIB_ZERO_DISPARITY )
 
-.. cfunction:: void stereoRectify( const Mat\& cameraMatrix1, const Mat\& distCoeffs1,                    const Mat\& cameraMatrix2, const Mat\& distCoeffs2,                    Size imageSize, const Mat\& R, const Mat\& T,                    Mat\& R1, Mat\& R2, Mat\& P1, Mat\& P2, Mat\& Q,                    double alpha, Size newImageSize=Size(),                    Rect* roi1=0, Rect* roi2=0,                    int flags=CALIB_ZERO_DISPARITY )
+.. c:function:: void stereoRectify( const Mat& cameraMatrix1, const Mat& distCoeffs1, const Mat& cameraMatrix2, const Mat& distCoeffs2,                    Size imageSize, const Mat& R, const Mat& T, Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q, double alpha, Size newImageSize=Size(),                    Rect* roi1=0, Rect* roi2=0, int flags=CALIB_ZERO_DISPARITY )
 
     Computes rectification transforms for each head of a calibrated stereo camera.
 
@@ -1198,7 +1198,7 @@ Below is the screenshot from ``stereo_calib.cpp`` sample. Some red horizontal li
 
 cv::stereoRectifyUncalibrated
 -----------------------------
-.. cfunction:: bool stereoRectifyUncalibrated( const Mat\& points1,                                const Mat\& points2,                                const Mat\& F, Size imgSize,                                Mat\& H1, Mat\& H2,                                double threshold=5 )
+.. c:function:: bool stereoRectifyUncalibrated( const Mat& points1, const Mat& points2, const Mat& F, Size imgSize,                                Mat& H1, Mat& H2, double threshold=5 )
 
     Computes rectification transform for uncalibrated stereo camera.
 
@@ -1227,14 +1227,16 @@ Note that while the algorithm does not need to know the intrinsic parameters of 
 
 cv::undistort
 -------------
-.. cfunction:: void undistort( const Mat\& src, Mat\& dst, const Mat\& cameraMatrix,                const Mat\& distCoeffs, const Mat\& newCameraMatrix=Mat() )
+.. c:function:: void undistort( const Mat& src, Mat& dst, const Mat& cameraMatrix,                const Mat& distCoeffs, const Mat& newCameraMatrix=Mat() )
 
     Transforms an image to compensate for lens distortion.
 
     :param src: The input (distorted) image
 
     :param dst: The output (corrected) image; will have the same size and the same type as  ``src``
+    
     :param cameraMatrix: The input camera matrix  :math:`A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}`
+    
     :param distCoeffs: The input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
     :param newCameraMatrix: Camera matrix of the distorted image. By default it is the same as  ``cameraMatrix`` , but you may additionally scale and shift the result by using some different matrix
@@ -1259,9 +1261,9 @@ The camera matrix and the distortion parameters can be determined using
 
 cv::undistortPoints
 -------------------
-.. cfunction:: void undistortPoints( const Mat\& src, vector<Point2f>\& dst,                      const Mat\& cameraMatrix, const Mat\& distCoeffs,                      const Mat\& R=Mat(), const Mat\& P=Mat())
+.. c:function:: void undistortPoints( const Mat& src, vector<Point2f>& dst, const Mat& cameraMatrix, const Mat& distCoeffs,                      const Mat& R=Mat(), const Mat& P=Mat())
 
-.. cfunction:: void undistortPoints( const Mat\& src, Mat\& dst,                      const Mat\& cameraMatrix, const Mat\& distCoeffs,                      const Mat\& R=Mat(), const Mat\& P=Mat())
+.. c:function:: void undistortPoints( const Mat& src, Mat& dst, const Mat& cameraMatrix, const Mat& distCoeffs, const Mat& R=Mat(), const Mat& P=Mat())
 
     Computes the ideal point coordinates from the observed point coordinates.
 
@@ -1270,6 +1272,7 @@ cv::undistortPoints
     :param dst: The output ideal point coordinates, after undistortion and reverse perspective transformation .
 
     :param cameraMatrix: The camera matrix  :math:`\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}`
+    
     :param distCoeffs: The input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
     :param R: The rectification transformation in object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :func:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used
@@ -1291,7 +1294,6 @@ The function is similar to
     x = X/W, y = Y/W
     u' = x*fx' + cx'
     v' = y*fy' + cy',
-..
 
 where undistort() is approximate iterative algorithm that estimates the normalized original point coordinates out of the normalized distorted point coordinates ("normalized" means that the coordinates do not depend on the camera matrix).
 

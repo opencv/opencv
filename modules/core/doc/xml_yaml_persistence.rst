@@ -9,7 +9,7 @@ XML/YAML Persistence
 
 FileStorage
 -----------
-.. ctype:: FileStorage
+.. c:type:: FileStorage
 
 The XML/YAML file storage class ::
 
@@ -73,7 +73,7 @@ The XML/YAML file storage class ::
 
 FileNode
 --------
-.. ctype:: FileNode
+.. c:type:: FileNode
 
 The XML/YAML file node class ::
 
@@ -124,7 +124,7 @@ The XML/YAML file node class ::
 
 FileNodeIterator
 ----------------
-.. ctype:: FileNodeIterator
+.. c:type:: FileNodeIterator
 
 The XML/YAML file node iterator class ::
 

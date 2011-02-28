@@ -5,14 +5,14 @@ Drawing Function of Keypoints and Matches
 
 .. index:: drawMatches
 
-cv::drawMatches
+drawMatches
 ---------------
-.. cfunction:: void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,          const Mat\& img2, const vector<KeyPoint>\& keypoints2,          const vector<DMatch>\& matches1to2, Mat\& outImg,          const Scalar\& matchColor=Scalar::all(-1),           const Scalar\& singlePointColor=Scalar::all(-1),          const vector<char>\& matchesMask=vector<char>(),          int flags=DrawMatchesFlags::DEFAULT )
+.. c:function:: void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,          const Mat\& img2, const vector<KeyPoint>\& keypoints2,          const vector<DMatch>\& matches1to2, Mat\& outImg,          const Scalar\& matchColor=Scalar::all(-1),           const Scalar\& singlePointColor=Scalar::all(-1),          const vector<char>\& matchesMask=vector<char>(),          int flags=DrawMatchesFlags::DEFAULT )
 
     This function draws matches of keypints from two images on output image.
 Match is a line connecting two keypoints (circles).
 
-.. cfunction:: void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,           const Mat\& img2, const vector<KeyPoint>\& keypoints2,           const vector<vector<DMatch> >\& matches1to2, Mat\& outImg,           const Scalar\& matchColor=Scalar::all(-1),            const Scalar\& singlePointColor=Scalar::all(-1),           const vector<vector<char>>\& matchesMask=           vector<vector<char> >(),           int flags=DrawMatchesFlags::DEFAULT )
+.. c:function:: void drawMatches( const Mat\& img1, const vector<KeyPoint>\& keypoints1,           const Mat\& img2, const vector<KeyPoint>\& keypoints2,           const vector<vector<DMatch> >\& matches1to2, Mat\& outImg,           const Scalar\& matchColor=Scalar::all(-1),            const Scalar\& singlePointColor=Scalar::all(-1),           const vector<vector<char>>\& matchesMask=           vector<vector<char> >(),           int flags=DrawMatchesFlags::DEFAULT )
 
     :param img1: First source image.
 
@@ -60,9 +60,9 @@ Match is a line connecting two keypoints (circles).
 
 .. index:: drawKeypoints
 
-cv::drawKeypoints
+drawKeypoints
 -----------------
-.. cfunction:: void drawKeypoints( const Mat\& image,           const vector<KeyPoint>\& keypoints,           Mat\& outImg, const Scalar\& color=Scalar::all(-1),           int flags=DrawMatchesFlags::DEFAULT )
+.. c:function:: void drawKeypoints( const Mat\& image,           const vector<KeyPoint>\& keypoints,           Mat\& outImg, const Scalar\& color=Scalar::all(-1),           int flags=DrawMatchesFlags::DEFAULT )
 
     Draw keypoints.
 

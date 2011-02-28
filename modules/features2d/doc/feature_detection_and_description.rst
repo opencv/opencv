@@ -5,9 +5,9 @@ Feature detection and description
 
 .. index:: FAST
 
-cv::FAST
+FAST
 --------
-.. cfunction:: void FAST( const Mat\& image, vector<KeyPoint>\& keypoints,            int threshold, bool nonmaxSupression=true )
+.. c:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
 
     Detects corners using FAST algorithm by E. Rosten (''Machine learning for high-speed corner detection'', 2006).
 
@@ -26,7 +26,7 @@ cv::FAST
 
 MSER
 ----
-.. ctype:: MSER
+.. c:type:: MSER
 
 Maximally-Stable Extremal Region Extractor ::
 
@@ -45,11 +45,9 @@ Maximally-Stable Extremal Region Extractor ::
         // the optional mask marks the area where MSERs are searched for
         void operator()( const Mat& image, vector<vector<Point> >& msers, const Mat& mask ) const;
     };
-..
 
 The class encapsulates all the parameters of MSER (see
-http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions
-) extraction algorithm.
+http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions) extraction algorithm.
 
 .. index:: StarDetector
 
@@ -57,7 +55,7 @@ http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions
 
 StarDetector
 ------------
-.. ctype:: StarDetector
+.. c:type:: StarDetector
 
 Implements Star keypoint detector ::
 
@@ -86,7 +84,6 @@ Implements Star keypoint detector ::
         // finds keypoints in an image
         void operator()(const Mat& image, vector<KeyPoint>& keypoints) const;
     };
-..
 
 The class implements a modified version of CenSurE keypoint detector described in
 Agrawal08
@@ -97,7 +94,7 @@ Agrawal08
 
 SIFT
 ----
-.. ctype:: SIFT
+.. c:type:: SIFT
 
 Class for extracting keypoints and computing descriptors using approach named Scale Invariant Feature Transform (SIFT). ::
 
@@ -179,7 +176,7 @@ Class for extracting keypoints and computing descriptors using approach named Sc
     protected:
         ...
     };
-..
+
 
 .. index:: SURF
 
@@ -187,14 +184,14 @@ Class for extracting keypoints and computing descriptors using approach named Sc
 
 SURF
 ----
-.. ctype:: SURF
+.. c:type:: SURF
 
 Class for extracting Speeded Up Robust Features from an image. ::
 
     class SURF : public CvSURFParams
     {
     public:
-        // default constructor
+        // c:function::default constructor
         SURF();
         // constructor that initializes all the algorithm parameters
         SURF(double _hessianThreshold, int _nOctaves=4,
@@ -213,11 +210,8 @@ Class for extracting Speeded Up Robust Features from an image. ::
                         vector<float>& descriptors,
                         bool useProvidedKeypoints=false) const;
     };
-..
 
-The class ``SURF`` implements Speeded Up Robust Features descriptor
-Bay06
-.
+The class ``SURF`` implements Speeded Up Robust Features descriptor Bay06.
 There is fast multi-scale Hessian keypoint detector that can be used to find the keypoints
 (which is the default option), but the descriptors can be also computed for the user-specified keypoints.
 The function can be used for object tracking and localization, image stitching etc. See the ``find_obj.cpp`` demo in OpenCV samples directory.
@@ -228,7 +222,7 @@ The function can be used for object tracking and localization, image stitching e
 
 RandomizedTree
 --------------
-.. ctype:: RandomizedTree
+.. c:type:: RandomizedTree
 
 The class contains base structure for ``RTreeClassifier`` ::
 
@@ -241,10 +235,10 @@ The class contains base structure for ``RTreeClassifier`` ::
             ~RandomizedTree();
 
             void train(std::vector<BaseKeypoint> const& base_set,
-                     cv::RNG &rng, int depth, int views,
+                     RNG &rng, int depth, int views,
                      size_t reduced_num_dim, int num_quant_bits);
             void train(std::vector<BaseKeypoint> const& base_set,
-                     cv::RNG &rng, PatchGenerator &make_patch, int depth,
+                     RNG &rng, PatchGenerator &make_patch, int depth,
                      int views, size_t reduced_num_dim, int num_quant_bits);
 
             // following two funcs are EXPERIMENTAL
@@ -281,11 +275,11 @@ The class contains base structure for ``RTreeClassifier`` ::
             uchar **posteriors2_;     // 16-bytes aligned posteriors
             std::vector<int> leaf_counts_;
 
-            void createNodes(int num_nodes, cv::RNG &rng);
+            void createNodes(int num_nodes, RNG &rng);
             void allocPosteriorsAligned(int num_leaves, int num_classes);
             void freePosteriors(int which);
                      // which: 1=posteriors_, 2=posteriors2_, 3=both
-            void init(int classes, int depth, cv::RNG &rng);
+            void init(int classes, int depth, RNG &rng);
             void addExample(int class_id, uchar* patch_data);
             void finalize(size_t reduced_num_dim, int num_quant_bits);
             int getIndex(uchar* patch_data) const;
@@ -297,19 +291,18 @@ The class contains base structure for ``RTreeClassifier`` ::
             void compressLeaves(size_t reduced_num_dim);
             void estimateQuantPercForPosteriors(float perc[2]);
     };
-..
 
 .. index:: RandomizedTree::train
 
-cv::RandomizedTree::train
+RandomizedTree::train
 -------------------------
-.. cfunction:: void train(std::vector<BaseKeypoint> const\& base_set, cv::RNG \&rng,                         PatchGenerator \&make_patch, int depth, int views, size_t reduced_num_dim,                         int num_quant_bits)
+.. c:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
     Trains a randomized tree using input set of keypoints
 
-.. cfunction:: void train(std::vector<BaseKeypoint> const\& base_set, cv::RNG \&rng,                         PatchGenerator \&make_patch, int depth, int views, size_t reduced_num_dim,                         int num_quant_bits)
+.. c:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
-    {Vector of ``BaseKeypoint``     type. Contains keypoints from the image are used for training}
+    {Vector of ``BaseKeypoint`` type. Contains keypoints from the image are used for training}
     {Random numbers generator is used for training}
     {Patch generator is used for training}
     {Maximum tree depth}
@@ -319,13 +312,13 @@ cv::RandomizedTree::train
 
 .. index:: RandomizedTree::read
 
-cv::RandomizedTree::read
+RandomizedTree::read
 ------------------------
-.. cfunction:: read(const char* file_name, int num_quant_bits)
+.. c:function:: read(const char* file_name, int num_quant_bits)
 
     Reads pre-saved randomized tree from file or stream
 
-.. cfunction:: read(std::istream \&is, int num_quant_bits)
+.. c:function:: read(std::istream \&is, int num_quant_bits)
 
     :param file_name: Filename of file contains randomized tree data
 
@@ -335,13 +328,13 @@ cv::RandomizedTree::read
 
 .. index:: RandomizedTree::write
 
-cv::RandomizedTree::write
+RandomizedTree::write
 -------------------------
-.. cfunction:: void write(const char* file_name) const
+.. c:function:: void write(const char* file_name) const
 
     Writes current randomized tree to a file or stream
 
-.. cfunction:: void write(std::ostream \&os) const
+.. c:function:: void write(std::ostream \&os) const
 
     :param file_name: Filename of file where randomized tree data will be stored
 
@@ -349,9 +342,9 @@ cv::RandomizedTree::write
 
 .. index:: RandomizedTree::applyQuantization
 
-cv::RandomizedTree::applyQuantization
+RandomizedTree::applyQuantization
 -------------------------------------
-.. cfunction:: void applyQuantization(int num_quant_bits)
+.. c:function:: void applyQuantization(int num_quant_bits)
 
     Applies quantization to the current randomized tree
 
@@ -363,7 +356,7 @@ cv::RandomizedTree::applyQuantization
 
 RTreeNode
 ---------
-.. ctype:: RTreeNode
+.. c:type:: RTreeNode
 
 The class contains base structure for ``RandomizedTree`` ::
 
@@ -384,7 +377,6 @@ The class contains base structure for ``RandomizedTree`` ::
                     return patch_data[offset1] > patch_data[offset2];
             }
     };
-..
 
 .. index:: RTreeClassifier
 
@@ -392,7 +384,7 @@ The class contains base structure for ``RandomizedTree`` ::
 
 RTreeClassifier
 ---------------
-.. ctype:: RTreeClassifier
+.. c:type:: RTreeClassifier
 
 The class contains ``RTreeClassifier`` . It represents calonder descriptor which was originally introduced by Michael Calonder ::
 
@@ -405,7 +397,7 @@ The class contains ``RTreeClassifier`` . It represents calonder descriptor which
             RTreeClassifier();
 
             void train(std::vector<BaseKeypoint> const& base_set,
-                    cv::RNG &rng,
+                    RNG &rng,
                     int num_trees = RTreeClassifier::DEFAULT_TREES,
                     int depth = DEFAULT_DEPTH,
                     int views = DEFAULT_VIEWS,
@@ -413,7 +405,7 @@ The class contains ``RTreeClassifier`` . It represents calonder descriptor which
                     int num_quant_bits = DEFAULT_NUM_QUANT_BITS,
                              bool print_status = true);
             void train(std::vector<BaseKeypoint> const& base_set,
-                    cv::RNG &rng,
+                    RNG &rng,
                     PatchGenerator &make_patch,
                     int num_trees = RTreeClassifier::DEFAULT_TREES,
                     int depth = DEFAULT_DEPTH,
@@ -457,17 +449,16 @@ The class contains ``RTreeClassifier`` . It represents calonder descriptor which
             int original_num_classes_;
             bool keep_floats_;
     };
-..
 
 .. index:: RTreeClassifier::train
 
-cv::RTreeClassifier::train
+RTreeClassifier::train
 --------------------------
-.. cfunction:: void train(std::vector<BaseKeypoint> const\& base_set,                          cv::RNG \&rng,                         int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH,                         int views = DEFAULT_VIEWS,                         size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+.. c:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
     Trains a randomized tree classificator using input set of keypoints
 
-.. cfunction:: void train(std::vector<BaseKeypoint> const\& base_set,                         cv::RNG \&rng,                          PatchGenerator \&make_patch,                         int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH,                         int views = DEFAULT_VIEWS,                         size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+.. c:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
     {Vector of ``BaseKeypoint``     type. Contains keypoints from the image are used for training}
     {Random numbers generator is used for training}
@@ -481,34 +472,35 @@ cv::RTreeClassifier::train
 
 .. index:: RTreeClassifier::getSignature
 
-cv::RTreeClassifier::getSignature
+RTreeClassifier::getSignature
 ---------------------------------
-.. cfunction:: void getSignature(IplImage *patch, uchar *sig)
+.. c:function:: void getSignature(IplImage *patch, uchar *sig)
 
     Returns signature for image patch
 
-.. cfunction:: void getSignature(IplImage *patch, float *sig)
+.. c:function:: void getSignature(IplImage *patch, float *sig)
 
     {Image patch to calculate signature for}
     {Output signature (array dimension is ``reduced_num_dim)``     }
 
 .. index:: RTreeClassifier::getSparseSignature
 
-cv::RTreeClassifier::getSparseSignature
---------------------------------------- ````
-.. cfunction:: void getSparseSignature(IplImage *patch, float *sig,                  float thresh)
+RTreeClassifier::getSparseSignature
+--------------------------------------- 
+
+.. c:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
 
     The function is simular to getSignaturebut uses the threshold for removing all signature elements less than the threshold. So that the signature is compressed
 
     {Image patch to calculate signature for}
-    {Output signature (array dimension is ``reduced_num_dim)``     }
+    {Output signature (array dimension is ``reduced_num_dim)``}
     {The threshold that is used for compressing the signature}
 
 .. index:: RTreeClassifier::countNonZeroElements
 
-cv::RTreeClassifier::countNonZeroElements
+RTreeClassifier::countNonZeroElements
 -----------------------------------------
-.. cfunction:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
+.. c:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
 
     The function returns the number of non-zero elements in the input array.
 
@@ -520,13 +512,13 @@ cv::RTreeClassifier::countNonZeroElements
 
 .. index:: RTreeClassifier::read
 
-cv::RTreeClassifier::read
+RTreeClassifier::read
 -------------------------
-.. cfunction:: read(const char* file_name)
+.. c:function:: read(const char* file_name)
 
     Reads pre-saved RTreeClassifier from file or stream
 
-.. cfunction:: read(std::istream \&is)
+.. c:function:: read(std::istream& is)
 
     :param file_name: Filename of file contains randomized tree data
 
@@ -534,13 +526,13 @@ cv::RTreeClassifier::read
 
 .. index:: RTreeClassifier::write
 
-cv::RTreeClassifier::write
+RTreeClassifier::write
 --------------------------
-.. cfunction:: void write(const char* file_name) const
+.. c:function:: void write(const char* file_name) const
 
     Writes current RTreeClassifier to a file or stream
 
-.. cfunction:: void write(std::ostream \&os) const
+.. c:function:: void write(std::ostream \&os) const
 
     :param file_name: Filename of file where randomized tree data will be stored
 
@@ -548,9 +540,9 @@ cv::RTreeClassifier::write
 
 .. index:: RTreeClassifier::setQuantization
 
-cv::RTreeClassifier::setQuantization
+RTreeClassifier::setQuantization
 ------------------------------------
-.. cfunction:: void setQuantization(int num_quant_bits)
+.. c:function:: void setQuantization(int num_quant_bits)
 
     Applies quantization to the current randomized tree
 
@@ -569,26 +561,26 @@ Below there is an example of ``RTreeClassifier`` usage for feature matching. The
     cvExtractSURF( train_image, 0, &objectKeypoints, &objectDescriptors,
                      storage, params );
 
-    cv::RTreeClassifier detector;
-    int patch_width = cv::PATCH_SIZE;
-    iint patch_height = cv::PATCH_SIZE;
-    vector<cv::BaseKeypoint> base_set;
+    RTreeClassifier detector;
+    int patch_width = PATCH_SIZE;
+    iint patch_height = PATCH_SIZE;
+    vector<BaseKeypoint> base_set;
     int i=0;
     CvSURFPoint* point;
     for (i=0;i<(n_points > 0 ? n_points : objectKeypoints->total);i++)
     {
             point=(CvSURFPoint*)cvGetSeqElem(objectKeypoints,i);
             base_set.push_back(
-                    cv::BaseKeypoint(point->pt.x,point->pt.y,train_image));
+                    BaseKeypoint(point->pt.x,point->pt.y,train_image));
     }
 
             //Detector training
-     cv::RNG rng( cvGetTickCount() );
-    cv::PatchGenerator gen(0,255,2,false,0.7,1.3,-CV_PI/3,CV_PI/3,
+     RNG rng( cvGetTickCount() );
+    PatchGenerator gen(0,255,2,false,0.7,1.3,-CV_PI/3,CV_PI/3,
                             -CV_PI/3,CV_PI/3);
 
     printf("RTree Classifier training...n");
-    detector.train(base_set,rng,gen,24,cv::DEFAULT_DEPTH,2000,
+    detector.train(base_set,rng,gen,24,DEFAULT_DEPTH,2000,
             (int)base_set.size(), detector.DEFAULT_NUM_QUANT_BITS);
     printf("Donen");
 
@@ -643,5 +635,5 @@ Below there is an example of ``RTreeClassifier`` usage for feature matching. The
             }
             cvResetImageROI(test_image);
     }
-..
 
+..
