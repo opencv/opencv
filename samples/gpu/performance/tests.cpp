@@ -761,7 +761,7 @@ TEST(projectPoints)
     camera_mat.at<float>(2, 0) = 0.f;
     camera_mat.at<float>(2, 1) = 0.f;
 
-    for (int size = 1e6, count = 0; size >= 1e5 && count < 5; size /= 1.4, count++)
+    for (int size = (int)1e6, count = 0; size >= 1e5 && count < 5; size = int(size / 1.4), count++)
     {
         SUBTEST << "size " << size;
 
