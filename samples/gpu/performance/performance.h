@@ -100,7 +100,7 @@ private:
 };
 
 
-#define INIT(name) \
+#define GLOBAL_INIT(name) \
     struct name##_init: Runnable { \
         name##_init(): Runnable(#name) { \
             TestSystem::instance().addInit(this); \

@@ -8,19 +8,19 @@
 using namespace std;
 using namespace cv;
 
-INIT(matchTemplate)
+void InitMatchTemplate()
 {
     Mat src; gen(src, 500, 500, CV_32F, 0, 1);
     Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
-
     gpu::GpuMat d_src(src), d_templ(templ), d_dst;
-
     gpu::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
 }
 
 
 TEST(matchTemplate)
 {
+    InitMatchTemplate();
+
     Mat src, templ, dst;
     gen(src, 3000, 3000, CV_32F, 0, 1);
 
@@ -779,4 +779,49 @@ TEST(projectPoints)
         gpu::projectPoints(d_src, rvec, tvec, camera_mat, Mat(), d_dst);
         GPU_OFF;
     }
+}
+
+
+void InitSolvePnpRansac()
+{
+    Mat object; gen(object, 1, 4, CV_32FC3, Scalar::all(0), Scalar::all(100));
+    Mat image; gen(image, 1, 4, CV_32FC2, Scalar::all(0), Scalar::all(100));
+    Mat rvec, tvec;
+    gpu::solvePnpRansac(object, image, Mat::eye(3, 3, CV_32F), Mat(), rvec, tvec, 
+                        gpu::SolvePnpRansacParams());
+}
+
+
+// It's not very correct test as solvePnP and solvePnpRansac use different algorithms internally
+// TODO add proper test after CPU solvePnpRansac being added
+TEST(solvePnpRansac)
+{
+    InitSolvePnpRansac();
+
+    int num_points = 1000000;
+
+    Mat object; gen(object, 1, num_points, CV_32FC3, Scalar::all(0), Scalar::all(100));
+    Mat camera_mat; gen(camera_mat, 3, 3, CV_32F, 0.5, 1);
+    camera_mat.at<float>(0, 1) = 0.f;
+    camera_mat.at<float>(1, 0) = 0.f;
+    camera_mat.at<float>(2, 0) = 0.f;
+    camera_mat.at<float>(2, 1) = 0.f;
+
+    Mat rvec_gold; gen(rvec_gold, 1, 3, CV_32F, 0, 1);
+    Mat tvec_gold; gen(tvec_gold, 1, 3, CV_32F, 0, 1);
+
+    vector<Point2f> image_vec;
+    projectPoints(object, rvec_gold, tvec_gold, camera_mat, Mat(), image_vec);
+    Mat image(1, image_vec.size(), CV_32FC2, &image_vec[0]);
+
+    Mat rvec, tvec;
+
+    CPU_ON;
+    solvePnP(object, image, camera_mat, Mat(), rvec, tvec);
+    CPU_OFF;
+
+    GPU_ON;
+    gpu::SolvePnpRansacParams params;
+    gpu::solvePnpRansac(object, image, camera_mat, Mat(), rvec, tvec, params);
+    GPU_OFF;
 }

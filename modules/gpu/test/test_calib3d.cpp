@@ -113,7 +113,7 @@ TEST(solvePnpRansac, accuracy)
 
     const int num_points = 5000;
     Mat object = randomMat(rng, Size(num_points, 1), CV_32FC3, 0, 100, false);
-    Mat camera_mat = randomMat(rng, Size(3, 3), CV_32F, 1, 1, false);
+    Mat camera_mat = randomMat(rng, Size(3, 3), CV_32F, 0.5, 1, false);
     camera_mat.at<float>(0, 1) = 0.f;
     camera_mat.at<float>(1, 0) = 0.f;
     camera_mat.at<float>(2, 0) = 0.f;

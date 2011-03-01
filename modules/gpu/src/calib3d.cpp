@@ -243,6 +243,7 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
     CV_Assert(!params.use_extrinsic_guess); // We don't support initial guess for now
 
     const int num_points = object.cols;
+    CV_Assert(num_points >= params.subset_size);
 
     // Unapply distortion and intrinsic camera transformations
     Mat eye_camera_mat = Mat::eye(3, 3, CV_32F);
