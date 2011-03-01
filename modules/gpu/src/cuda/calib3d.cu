@@ -122,7 +122,6 @@ namespace cv { namespace gpu
     {
         __constant__ float3 crot_matrices[SOLVE_PNP_RANSAC_NUM_ITERS * 3];
         __constant__ float3 ctransl_vectors[SOLVE_PNP_RANSAC_NUM_ITERS];
-        __constant__ float3 ccamera_mat[2];
 
         __device__ float sqr(float x)
         {
@@ -146,8 +145,8 @@ namespace cv { namespace gpu
                         rot_mat[2].x * p.x + rot_mat[2].y * p.y + rot_mat[2].z * p.z + transl_vec.z);
                 if (p.z > 0)
                 {
-                    p.x = ccamera_mat[0].x * p.x / p.z + ccamera_mat[0].z;
-                    p.y = ccamera_mat[1].y * p.y / p.z + ccamera_mat[1].z;
+                    p.x /= p.z;
+                    p.y /= p.z;
                     float2 image_p = image[i];
                     if (sqr(p.x - image_p.x) + sqr(p.y - image_p.y) < dist_threshold)
                         ++num_inliers;
@@ -172,11 +171,10 @@ namespace cv { namespace gpu
         void computeHypothesisScores(
                 const int num_hypotheses, const int num_points, const float* rot_matrices,
                 const float3* transl_vectors, const float3* object, const float2* image,
-                const float3* camera_mat, const float dist_threshold, int* hypothesis_scores)
+                const float dist_threshold, int* hypothesis_scores)
         {
             cudaSafeCall(cudaMemcpyToSymbol(crot_matrices, rot_matrices, num_hypotheses * 3 * sizeof(float3)));
             cudaSafeCall(cudaMemcpyToSymbol(ctransl_vectors, transl_vectors, num_hypotheses * sizeof(float3)));
-            cudaSafeCall(cudaMemcpyToSymbol(ccamera_mat, camera_mat, 2 * sizeof(float3)));
 
             dim3 threads(256);
             dim3 grid(num_hypotheses);
