@@ -276,23 +276,24 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
     int num_inliers = static_cast<int>(best_score);
 
     // Extract the best hypothesis data
+
     Mat rot_mat = rot_matrices.colRange(best_idx.x * 9, (best_idx.x + 1) * 9).reshape(0, 3);
     Rodrigues(rot_mat, rvec);
     rvec = rvec.reshape(0, 1);
+
     tvec = transl_vectors.colRange(best_idx.x * 3, (best_idx.x + 1) * 3).clone();
     tvec = tvec.reshape(0, 1);
 
     // Build vector of inlier indices
     if (params.inliers != NULL)
     {
-        params.inliers->resize(num_inliers);
+        params.inliers->clear();
+        params.inliers->reserve(num_inliers);
 
-        Point3f p;
-        Point3f p_transf;
+        Point3f p, p_transf;
         Point2f p_proj;
         const float* rot = rot_mat.ptr<float>();
         const float* transl = tvec.ptr<float>();
-        int inlier_id = 0;
 
         for (int i = 0; i < num_points; ++i)
         {
@@ -305,7 +306,7 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
                 p_proj.x = p_transf.x / p_transf.z;
                 p_proj.y = p_transf.y / p_transf.z;
                 if (norm(p_proj - image_normalized.at<Point2f>(0, i)) < params.max_dist)
-                    (*params.inliers)[inlier_id++] = i;
+                    params.inliers->push_back(i);
             }
         }
     }
