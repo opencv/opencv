@@ -301,13 +301,10 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
             p_transf.x = rot[0] * p.x + rot[1] * p.y + rot[2] * p.z + transl[0];
             p_transf.y = rot[3] * p.x + rot[4] * p.y + rot[5] * p.z + transl[1];
             p_transf.z = rot[6] * p.x + rot[7] * p.y + rot[8] * p.z + transl[2];
-            if (p_transf.z > 0.f)
-            {
-                p_proj.x = p_transf.x / p_transf.z;
-                p_proj.y = p_transf.y / p_transf.z;
-                if (norm(p_proj - image_normalized.at<Point2f>(0, i)) < params.max_dist)
-                    params.inliers->push_back(i);
-            }
+            p_proj.x = p_transf.x / p_transf.z;
+            p_proj.y = p_transf.y / p_transf.z;
+            if (norm(p_proj - image_normalized.at<Point2f>(0, i)) < params.max_dist)
+                params.inliers->push_back(i);
         }
     }
 }

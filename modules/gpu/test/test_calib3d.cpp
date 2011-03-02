@@ -128,7 +128,10 @@ TEST(solvePnpRansac, accuracy)
 
     Mat rvec;
     Mat tvec;
-    solvePnpRansac(object, image, camera_mat, Mat(), rvec, tvec, SolvePnpRansacParams());
+    SolvePnpRansacParams params;
+    vector<int> inliers;
+    params.inliers = &inliers;
+    solvePnpRansac(object, image, camera_mat, Mat(), rvec, tvec, params);
 
     ASSERT_LE(norm(rvec - rvec_gold), 1e-3f);
     ASSERT_LE(norm(tvec - tvec_gold), 1e-3f);

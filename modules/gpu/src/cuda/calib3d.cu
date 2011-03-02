@@ -143,14 +143,11 @@ namespace cv { namespace gpu
                         rot_mat[0].x * p.x + rot_mat[0].y * p.y + rot_mat[0].z * p.z + transl_vec.x,
                         rot_mat[1].x * p.x + rot_mat[1].y * p.y + rot_mat[1].z * p.z + transl_vec.y,
                         rot_mat[2].x * p.x + rot_mat[2].y * p.y + rot_mat[2].z * p.z + transl_vec.z);
-                if (p.z > 0)
-                {
-                    p.x /= p.z;
-                    p.y /= p.z;
-                    float2 image_p = image[i];
-                    if (sqr(p.x - image_p.x) + sqr(p.y - image_p.y) < dist_threshold)
-                        ++num_inliers;
-                }
+                p.x /= p.z;
+                p.y /= p.z;
+                float2 image_p = image[i];
+                if (sqr(p.x - image_p.x) + sqr(p.y - image_p.y) < dist_threshold)
+                    ++num_inliers;
             }
 
             extern __shared__ float s_num_inliers[];
