@@ -5,9 +5,9 @@ Matrix Reductions
 
 .. index:: gpu::meanStdDev
 
-cv::gpu::meanStdDev
+gpu::meanStdDev
 -------------------
-.. c:function:: void meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+.. c:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
     Computes mean value and standard deviation of matrix elements.
 
@@ -22,9 +22,9 @@ See also:
 
 .. index:: gpu::norm
 
-cv::gpu::norm
+gpu::norm
 -------------
-.. c:function:: double norm(const GpuMat\& src, int normType=NORM_L2)
+.. c:function:: double gpu::norm(const GpuMat\& src, int normType=NORM_L2)
 
     Returns norm of matrix (or of two matrices difference).
 
@@ -45,8 +45,7 @@ cv::gpu::norm
 
     * **src1** First source matrix.  ``CV_8UC1``  matrices are supported for now.
 
-    * **src2** Second source matrix. Must have the same size and type as  ``src1``
-    .
+    * **src2** Second source matrix. Must have the same size and type as  ``src1``.
 
     * **normType** Norm type.  ``NORM_L1`` ,  ``NORM_L2``  and  ``NORM_INF``  are supported for now.
 
@@ -55,11 +54,11 @@ See also:
 
 .. index:: gpu::sum
 
-cv::gpu::sum
+gpu::sum
 ------------
-.. c:function:: Scalar sum(const GpuMat\& src)
+.. c:function:: Scalar gpu::sum(const GpuMat\& src)
 
-.. c:function:: Scalar sum(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: Scalar gpu::sum(const GpuMat\& src, GpuMat\& buf)
 
     Returns sum of matrix elements.
 
@@ -72,11 +71,11 @@ See also:
 
 .. index:: gpu::absSum
 
-cv::gpu::absSum
+gpu::absSum
 ---------------
-.. c:function:: Scalar absSum(const GpuMat\& src)
+.. c:function:: Scalar gpu::absSum(const GpuMat\& src)
 
-.. c:function:: Scalar absSum(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: Scalar gpu::absSum(const GpuMat\& src, GpuMat\& buf)
 
     Returns sum of matrix elements absolute values.
 
@@ -86,11 +85,11 @@ cv::gpu::absSum
 
 .. index:: gpu::sqrSum
 
-cv::gpu::sqrSum
+gpu::sqrSum
 ---------------
-.. c:function:: Scalar sqrSum(const GpuMat\& src)
+.. c:function:: Scalar gpu::sqrSum(const GpuMat\& src)
 
-.. c:function:: Scalar sqrSum(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: Scalar gpu::sqrSum(const GpuMat\& src, GpuMat\& buf)
 
     Returns squared sum of matrix elements.
 
@@ -100,13 +99,11 @@ cv::gpu::sqrSum
 
 .. index:: gpu::minMax
 
-cv::gpu::minMax
+gpu::minMax
 ---------------
-.. c:function:: void minMax(const GpuMat\& src, double* minVal,
-   double* maxVal=0, const GpuMat\& mask=GpuMat())
+.. c:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal=0, const GpuMat\& mask=GpuMat())
 
-.. c:function:: void minMax(const GpuMat\& src, double* minVal, double* maxVal,
-   const GpuMat\& mask, GpuMat\& buf)
+.. c:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal, const GpuMat\& mask, GpuMat\& buf)
 
     Finds global minimum and maximum matrix elements and returns their values.
 
@@ -127,13 +124,13 @@ See also:
 
 .. index:: gpu::minMaxLoc
 
-cv::gpu::minMaxLoc
+gpu::minMaxLoc
 ------------------
-.. c:function:: void minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,
+.. c:function:: void gpu::minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,
    Point* minLoc=0, Point* maxLoc=0,
    const GpuMat\& mask=GpuMat())
 
-.. c:function:: void minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,
+.. c:function:: void gpu::minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,
    Point* minLoc, Point* maxLoc, const GpuMat\& mask,
    GpuMat\& valbuf, GpuMat\& locbuf)
 
@@ -162,11 +159,11 @@ See also:
 
 .. index:: gpu::countNonZero
 
-cv::gpu::countNonZero
+gpu::countNonZero
 ---------------------
-.. c:function:: int countNonZero(const GpuMat\& src)
+.. c:function:: int gpu::countNonZero(const GpuMat\& src)
 
-.. c:function:: int countNonZero(const GpuMat\& src, GpuMat\& buf)
+.. c:function:: int gpu::countNonZero(const GpuMat\& src, GpuMat\& buf)
 
     Counts non-zero matrix elements.
 

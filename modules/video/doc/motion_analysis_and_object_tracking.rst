@@ -32,6 +32,7 @@ calcOpticalFlowPyrLK
     :param flags: The operation flags:
 
             * **OPTFLOW_USE_INITIAL_FLOW** use initial estimations stored in  ``nextPts`` . If the flag is not set, then initially  :math:`\texttt{nextPts}\leftarrow\texttt{prevPts}`
+            
 The function implements the sparse iterative version of the Lucas-Kanade optical flow in pyramids, see
 Bouguet00
 .
@@ -86,6 +87,7 @@ updateMotionHistory
     :param timestamp: Current time in milliseconds or other units
 
     :param duration: Maximal duration of the motion track in the same units as  ``timestamp``
+
 The function updates the motion history image as following:
 
 .. math::
@@ -145,11 +147,15 @@ calcGlobalOrientation
     Calculates the global motion orientation in some selected region.
 
     :param orientation: Motion gradient orientation image, calculated by the function  :func:`calcMotionGradient`
+    
     :param mask: Mask image. It may be a conjunction of a valid gradient mask, also calculated by  :func:`calcMotionGradient` , and the mask of the region, whose direction needs to be calculated
 
     :param mhi: The motion history image, calculated by  :func:`updateMotionHistory`
+    
     :param timestamp: The timestamp passed to  :func:`updateMotionHistory`
+    
     :param duration: Maximal duration of motion track in milliseconds, passed to  :func:`updateMotionHistory`
+
 The function calculates the average
 motion direction in the selected region and returns the angle between
 0 degrees  and 360 degrees. The average direction is computed from
@@ -165,9 +171,11 @@ CamShift
     Finds the object center, size, and orientation
 
     :param probImage: Back projection of the object histogram; see  :func:`calcBackProject`
+    
     :param window: Initial search window
 
     :param criteria: Stop criteria for the underlying  :func:`meanShift`
+
 The function implements the CAMSHIFT object tracking algrorithm
 Bradski98
 .
@@ -237,7 +245,7 @@ Kalman filter class ::
                                 //    P(k)=(I-K(k)*H)*P'(k)
         ...
     };
-..
+
 
 The class implements standard Kalman filter
 http://en.wikipedia.org/wiki/Kalman_filter

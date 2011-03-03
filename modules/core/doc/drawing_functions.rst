@@ -116,7 +116,7 @@ explains the meaning of the parameters.
 
 Parameters of Elliptic Arc
 
-.. image:: ../../pics/ellipse.png
+.. image:: pics/ellipse.png
 
 .. index:: ellipse2Poly
 

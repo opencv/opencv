@@ -40,7 +40,7 @@ Bayes classifier for normally distributed data. ::
     protected:
         ...
     };
-..
+
 
 .. index:: CvNormalBayesClassifier::train
 

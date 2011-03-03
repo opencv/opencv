@@ -36,12 +36,12 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
     protected:
         ...
     };
-..
+
 
 .. index:: BOWTrainer::add
 
 BOWTrainer::add
-------------------- ````
+-------------------
 .. c:function:: void BOWTrainer::add( const Mat\& descriptors )
 
     Add descriptors to training set. The training set will be clustered using clustermethod to construct vocabulary.
@@ -70,14 +70,11 @@ BOWTrainer::cluster
 -----------------------
 .. c:function:: Mat BOWTrainer::cluster() const
 
-    Cluster train descriptors. Vocabulary consists from cluster centers. So this method
-returns vocabulary. In first method variant the stored in object train descriptors will be
-clustered, in second variant -- input descriptors will be clustered.
+    Cluster train descriptors. Vocabulary consists from cluster centers. So this method returns vocabulary. In first method variant the stored in object train descriptors will be clustered, in second variant -- input descriptors will be clustered.
 
 .. c:function:: Mat BOWTrainer::cluster( const Mat\& descriptors ) const
 
-    :param descriptors: Descriptors to cluster. Each row of  ``descriptors``                                                 matrix is a one descriptor. Descriptors will not be added
-                                                to the inner train descriptor set.
+    :param descriptors: Descriptors to cluster. Each row of  ``descriptors``                                                 matrix is a one descriptor. Descriptors will not be added to the inner train descriptor set.
 
 .. index:: BOWKMeansTrainer
 
@@ -103,7 +100,7 @@ BOWKMeansTrainer
     protected:
         ...
     };
-..
+
 
 To gain an understanding of constructor parameters see
 :func:`kmeans` function
@@ -117,35 +114,32 @@ BOWImgDescriptorExtractor
 -------------------------
 .. c:type:: BOWImgDescriptorExtractor
 
-Class to compute image descriptor using ''bad of visual words''. In few,
- such computing consists from the following steps:
- 1. Compute descriptors for given image and it's keypoints set,
-\
-2. Find nearest visual words from vocabulary for each keypoint descriptor,
-\
-3. Image descriptor is a normalized histogram of vocabulary words encountered in the image. I.e.
- ``i`` -bin of the histogram is a frequency of ``i`` -word of vocabulary in the given image. ::
+Class to compute image descriptor using ''bad of visual words''. In few, such computing consists from the following steps:
 
-    class BOWImgDescriptorExtractor
-    {
-    public:
-        BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
-                                   const Ptr<DescriptorMatcher>& dmatcher );
-        virtual ~BOWImgDescriptorExtractor(){}
+    #. Compute descriptors for given image and it's keypoints set
+    #. Find nearest visual words from vocabulary for each keypoint descriptor,
+    #. Image descriptor is a normalized histogram of vocabulary words encountered in the image. I.e. ``i`` -bin of the histogram is a frequency of ``i`` -word of vocabulary in the given image. ::
 
-        void setVocabulary( const Mat& vocabulary );
-        const Mat& getVocabulary() const;
-        void compute( const Mat& image, vector<KeyPoint>& keypoints,
-                      Mat& imgDescriptor,
-                      vector<vector<int> >* pointIdxsOfClusters=0,
-                      Mat* descriptors=0 );
-        int descriptorSize() const;
-        int descriptorType() const;
+        class BOWImgDescriptorExtractor
+        {
+        public:
+            BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
+                                       const Ptr<DescriptorMatcher>& dmatcher );
+            virtual ~BOWImgDescriptorExtractor(){}
 
-    protected:
-        ...
-    };
-..
+            void setVocabulary( const Mat& vocabulary );
+            const Mat& getVocabulary() const;
+            void compute( const Mat& image, vector<KeyPoint>& keypoints,
+                          Mat& imgDescriptor,
+                          vector<vector<int> >* pointIdxsOfClusters=0,
+                          Mat* descriptors=0 );
+            int descriptorSize() const;
+            int descriptorType() const;
+
+        protected:
+            ...
+        };
+
 
 .. index:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 
@@ -155,11 +149,9 @@ BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 
     Constructor.
 
-    :param dextractor: Descriptor extractor that will be used to compute descriptors
-                                           for input image and it's keypoints.
+    :param dextractor: Descriptor extractor that will be used to compute descriptors for input image and it's keypoints.
 
-    :param dmatcher: Descriptor matcher that will be used to find nearest word of trained vocabulary to
-                                         each keupoints descriptor of the image.
+    :param dmatcher: Descriptor matcher that will be used to find nearest word of trained vocabulary to each keupoints descriptor of the image.
 
 .. index:: BOWImgDescriptorExtractor::setVocabulary
 
@@ -169,8 +161,7 @@ BOWImgDescriptorExtractor::setVocabulary
 
     Method to set visual vocabulary.
 
-    :param vocabulary: Vocabulary (can be trained using inheritor of  :func:`BOWTrainer` ).
-                                           Each row of vocabulary is a one visual word (cluster center).
+    :param vocabulary: Vocabulary (can be trained using inheritor of  :func:`BOWTrainer` ). Each row of vocabulary is a one visual word (cluster center).
 
 .. index:: BOWImgDescriptorExtractor::getVocabulary
 
@@ -194,8 +185,7 @@ BOWImgDescriptorExtractor::compute
 
     :param imgDescriptor: This is output, i.e. computed image descriptor.
 
-    :param pointIdxsOfClusters: Indices of keypoints which belong to the cluster, i.e. ``pointIdxsOfClusters[i]``  is keypoint indices which belong
-                                to the  ``i-`` cluster (word of vocabulary) (returned if it is not 0.)
+    :param pointIdxsOfClusters: Indices of keypoints which belong to the cluster, i.e. ``pointIdxsOfClusters[i]``  is keypoint indices which belong to the  ``i-`` cluster (word of vocabulary) (returned if it is not 0.)
 
     :param descriptors: Descriptors of the image keypoints (returned if it is not 0.)
 

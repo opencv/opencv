@@ -98,7 +98,7 @@ Boosting training parameters. ::
         CvBoostParams( int boost_type, int weak_count, double weight_trim_rate,
                        int max_depth, bool use_surrogates, const float* priors );
     };
-..
+
 
 The structure is derived from
 :ref:`CvDTreeParams` , but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
@@ -130,7 +130,7 @@ Weak tree classifier. ::
         ...
         CvBoost* ensemble;
     };
-..
+
 
 The weak classifier, a component of the boosted tree classifier
 :ref:`CvBoost` , is a derivative of
@@ -204,7 +204,7 @@ Boosted tree classifier. ::
         CvSeq* weak;
         ...
     };
-..
+
 
 .. index:: CvBoost::train
 

@@ -76,7 +76,7 @@ Training Parameters of Random Trees. ::
                     int _nactive_vars, int max_tree_count,
                     float forest_accuracy, int termcrit_type );
     };
-..
+
 
 The set of training parameters for the forest is the superset of the training parameters for a single tree. However, Random trees do not need all the functionality/features of decision trees, most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
 
@@ -128,7 +128,7 @@ Random Trees. ::
         int nclasses;
         ...
     };
-..
+
 
 .. index:: CvRTrees::train
 
@@ -295,5 +295,5 @@ Example: Prediction of mushroom goodness using random trees classifier ::
         cvReleaseFileStorage(&storage);
         return 0;
     }
-..
+
 

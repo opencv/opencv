@@ -5,9 +5,9 @@ Operations on Matrices
 
 .. index:: gpu::transpose
 
-cv::gpu::transpose
+gpu::transpose
 ------------------
-.. c:function:: void transpose(const GpuMat\& src, GpuMat\& dst)
+.. c:function:: void gpu::transpose(const GpuMat\& src, GpuMat\& dst)
 
     Transposes a matrix.
 
@@ -20,9 +20,9 @@ See also:
 
 .. index:: gpu::flip
 
-cv::gpu::flip
+gpu::flip
 -------------
-.. c:function:: void flip(const GpuMat\& a, GpuMat\& b, int flipCode)
+.. c:function:: void gpu::flip(const GpuMat\& a, GpuMat\& b, int flipCode)
 
     Flips a 2D matrix around vertical, horizontal or both axes.
 
@@ -44,13 +44,13 @@ See also:
 
 .. index:: gpu::LUT
 
-cv::gpu::LUT
+gpu::LUT
 ------------
 .. math::
 
     dst(I) = lut(src(I))
 
-.. c:function:: void LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst)
+.. c:function:: void gpu::LUT(const GpuMat\& src, const Mat\& lut, GpuMat\& dst)
 
     Transforms the source matrix into the destination matrix using given look-up table:
 
@@ -65,11 +65,11 @@ See also:
 
 .. index:: gpu::merge
 
-cv::gpu::merge
+gpu::merge
 --------------
-.. c:function:: void merge(const GpuMat* src, size_t n, GpuMat\& dst)
+.. c:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat\& dst)
 
-.. c:function:: void merge(const GpuMat* src, size_t n, GpuMat\& dst,
+.. c:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat\& dst,
    const Stream\& stream)
 
     Makes a multi-channel matrix out of several single-channel matrices.
@@ -98,11 +98,11 @@ See also:
 
 .. index:: gpu::split
 
-cv::gpu::split
+gpu::split
 --------------
-.. c:function:: void split(const GpuMat\& src, GpuMat* dst)
+.. c:function:: void gpu::split(const GpuMat\& src, GpuMat* dst)
 
-.. c:function:: void split(const GpuMat\& src, GpuMat* dst, const Stream\& stream)
+.. c:function:: void gpu::split(const GpuMat\& src, GpuMat* dst, const Stream\& stream)
 
     Copies each plane of a multi-channel matrix into an array.
 
@@ -112,9 +112,9 @@ cv::gpu::split
 
     :param stream: Stream for the asynchronous version.
 
-.. c:function:: void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst)
+.. c:function:: void gpu::split(const GpuMat\& src, vector$<$GpuMat$>$\& dst)
 
-.. c:function:: void split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,
+.. c:function:: void gpu::split(const GpuMat\& src, vector$<$GpuMat$>$\& dst,
    const Stream\& stream)
 
     * **src** Source matrix.
@@ -128,9 +128,9 @@ See also:
 
 .. index:: gpu::magnitude
 
-cv::gpu::magnitude
+gpu::magnitude
 ------------------
-.. c:function:: void magnitude(const GpuMat\& x, GpuMat\& magnitude)
+.. c:function:: void gpu::magnitude(const GpuMat\& x, GpuMat\& magnitude)
 
     Computes magnitudes of complex matrix elements.
 
@@ -156,9 +156,9 @@ See also:
 
 .. index:: gpu::magnitudeSqr
 
-cv::gpu::magnitudeSqr
+gpu::magnitudeSqr
 ---------------------
-.. c:function:: void magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude)
+.. c:function:: void gpu::magnitudeSqr(const GpuMat\& x, GpuMat\& magnitude)
 
     Computes squared magnitudes of complex matrix elements.
 
@@ -181,9 +181,9 @@ cv::gpu::magnitudeSqr
 
 .. index:: gpu::phase
 
-cv::gpu::phase
+gpu::phase
 --------------
-.. c:function:: void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,
+.. c:function:: void gpu::phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,
    bool angleInDegrees=false)
 
 .. c:function:: void phase(const GpuMat\& x, const GpuMat\& y, GpuMat\& angle,
@@ -206,9 +206,9 @@ See also:
 
 .. index:: gpu::cartToPolar
 
-cv::gpu::cartToPolar
+gpu::cartToPolar
 --------------------
-.. c:function:: void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
+.. c:function:: void gpu::cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
    GpuMat\& angle, bool angleInDegrees=false)
 
 .. c:function:: void cartToPolar(const GpuMat\& x, const GpuMat\& y, GpuMat\& magnitude,
@@ -233,12 +233,12 @@ See also:
 
 .. index:: gpu::polarToCart
 
-cv::gpu::polarToCart
+gpu::polarToCart
 --------------------
-.. c:function:: void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,
+.. c:function:: void gpu::polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,
    GpuMat\& x, GpuMat\& y, bool angleInDegrees=false)
 
-.. c:function:: void polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,
+.. c:function:: void gpu::polarToCart(const GpuMat\& magnitude, const GpuMat\& angle,
    GpuMat\& x, GpuMat\& y, bool angleInDegrees,
    const Stream\& stream)
 

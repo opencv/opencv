@@ -38,7 +38,7 @@ Base class for the statistical models in ML. ::
         virtual void write( CvFileStorage* storage, const char* name )=0;
         virtual void read( CvFileStorage* storage, CvFileNode* node )=0;
     };
-..
+
 
 In this declaration some methods are commented off. Actually, these are methods for which there is no unified API (with the exception of the default constructor), however, there are many similarities in the syntax and semantics that are briefly described below in this section, as if they are a part of the base class.
 
@@ -85,7 +85,7 @@ The destructor of the base class is declared as virtual, so it is safe to write 
         model = new CvDTree(... /* Decision tree params */);
     ...
     delete model;
-..
+
 
 Normally, the destructor of each derived class does nothing, but in this instance it calls the overridden method ``clear()`` that deallocates all the memory.
 

@@ -3,13 +3,13 @@ Data Structures
 
 .. highlight:: cpp
 
-.. index:: gpu::DevMem2D_
+.. index:: gpu::DevMem2D\_
 
 .. _gpu::DevMem2D_:
 
-gpu::DevMem2D_
---------------
-.. c:type:: gpu::DevMem2D_
+gpu::DevMem2D\_
+---------------
+.. c:type:: gpu::DevMem2D\_
 
 This is a simple lightweight class that encapsulate pitched memory on GPU. It is intended to pass to nvcc-compiled code, i.e. CUDA kernels. So it is used internally by OpenCV and by users writes own device code. Its members can be called both from host and from device code. ::
 
@@ -21,7 +21,7 @@ This is a simple lightweight class that encapsulate pitched memory on GPU. It is
         size_t step;
 
         DevMem2D_() : cols(0), rows(0), data(0), step(0){};
-        DevMem2D_(int rows_, int cols_, T *data_, size_t step_);
+        DevMem2D_(int rows, int cols, T *data, size_t step);
 
         template <typename U>
         explicit DevMem2D_(const DevMem2D_<U>& d);
@@ -37,15 +37,15 @@ This is a simple lightweight class that encapsulate pitched memory on GPU. It is
     };
 
 
-.. index:: gpu::PtrStep_
+.. index:: gpu::PtrStep\_
 
-.. _gpu::PtrStep_:
+.. gpu::PtrStep\_:
 
-gpu::PtrStep_
--------------
-.. c:type:: gpu::PtrStep_
+gpu::PtrStep\_
+--------------
+.. c:type:: gpu::PtrStep\_
 
-This is structure is similar to DevMem2D_but contains only pointer and row step. Width and height fields are excluded due to performance reasons. The structure is for internal use or for users who write own device code. ::
+This is structure is similar to DevMem2D\_ but contains only pointer and row step. Width and height fields are excluded due to performance reasons. The structure is for internal use or for users who write own device code. ::
 
     template<typename T> struct PtrStep_
     {
@@ -64,13 +64,13 @@ This is structure is similar to DevMem2D_but contains only pointer and row step.
     };
 
 
-.. index:: gpu::PtrElemStrp_
+.. index:: gpu::PtrElemStrp\_
 
-.. _gpu::PtrElemStrp_:
+.. gpu::PtrElemStrp\_:
 
-gpu::PtrElemStrp_
------------------
-.. c:type:: gpu::PtrElemStrp_
+gpu::PtrElemStrp\_
+------------------
+.. c:type:: gpu::PtrElemStrp\_
 
 This is structure is similar to DevMem2D_but contains only pointer and row step in elements. Width and height fields are excluded due to performance reasons. This class is can only be constructed if sizeof(T) is a multiple of 256. The structure is for internal use or for users who write own device code. ::
 
@@ -84,7 +84,7 @@ This is structure is similar to DevMem2D_but contains only pointer and row step 
 
 .. index:: gpu::GpuMat
 
-.. _gpu::GpuMat:
+.. gpu::GpuMat:
 
 gpu::GpuMat
 -----------
@@ -136,9 +136,8 @@ Is it a bad practice to leave static or global GpuMat variables allocated, i.e. 
 
 See also:
 :func:`Mat`
-.. index:: gpu::CudaMem
 
-.. _gpu::CudaMem:
+.. index:: gpu::CudaMem
 
 gpu::CudaMem
 ------------
@@ -187,18 +186,18 @@ Please note that allocation size of such memory types is usually limited. For mo
 
 .. index:: gpu::CudaMem::createMatHeader
 
-cv::gpu::CudaMem::createMatHeader
+gpu::CudaMem::createMatHeader
 ---------------------------------
-:func:`Mat`
-.. c:function:: Mat CudaMem::createMatHeader() const
 
-.. c:function:: CudaMem::operator Mat() const
+.. cpp:function:: Mat CudaMem::createMatHeader() const
+
+.. cpp:function:: CudaMem::operator Mat() const
 
     Creates header without reference counting to CudaMem data.
 
 .. index:: gpu::CudaMem::createGpuMatHeader
 
-cv::gpu::CudaMem::createGpuMatHeader
+gpu::CudaMem::createGpuMatHeader
 ------------------------------------
 :func:`gpu::GpuMat` ``_``
 .. c:function:: GpuMat CudaMem::createGpuMatHeader() const
@@ -209,8 +208,8 @@ cv::gpu::CudaMem::createGpuMatHeader
 
 .. index:: gpu::CudaMem::canMapHostMemory
 
-cv::gpu::CudaMem::canMapHostMemory
----------------------------------- ``_``
+gpu::CudaMem::canMapHostMemory
+----------------------------------
 .. c:function:: static bool CudaMem::canMapHostMemory()
 
     Returns true if the current hardware supports address space mapping and ALLOCZEROCOPYmemory allocation
@@ -270,7 +269,7 @@ This class encapsulated queue of the asynchronous calls. Some functions have ove
 
 .. index:: gpu::Stream::queryIfComplete
 
-cv::gpu::Stream::queryIfComplete
+gpu::Stream::queryIfComplete
 --------------------------------
 .. c:function:: bool Stream::queryIfComplete()
 
@@ -278,7 +277,7 @@ cv::gpu::Stream::queryIfComplete
 
 .. index:: gpu::Stream::waitForCompletion
 
-cv::gpu::Stream::waitForCompletion
+gpu::Stream::waitForCompletion
 ----------------------------------
 .. c:function:: void Stream::waitForCompletion()
 
@@ -303,7 +302,7 @@ This class provides possibility to get ``cudaStream_t`` from
 
 .. index:: gpu::createContinuous
 
-cv::gpu::createContinuous
+gpu::createContinuous
 -------------------------
 .. c:function:: void createContinuous(int rows, int cols, int type, GpuMat\& m)
 
@@ -329,7 +328,7 @@ Matrix is called continuous if its elements are stored continuously, i.e. wuthou
 
 .. index:: gpu::ensureSizeIsEnough
 
-cv::gpu::ensureSizeIsEnough
+gpu::ensureSizeIsEnough
 ---------------------------
 .. c:function:: void ensureSizeIsEnough(int rows, int cols, int type, GpuMat\& m)
 

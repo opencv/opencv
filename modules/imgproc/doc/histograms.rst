@@ -210,6 +210,7 @@ equalizeHist
     :param src: The source 8-bit single channel image
 
     :param dst: The destination image; will have the same size and the same type as  ``src``
+
 The function equalizes the histogram of the input image using the following algorithm:
 
 #.
@@ -230,5 +231,5 @@ The function equalizes the histogram of the input image using the following algo
     transform the image using
     :math:`H'`     as a look-up table:
     :math:`\texttt{dst}(x,y) = H'(\texttt{src}(x,y))`
-The algorithm normalizes the brightness and increases the contrast of the image.
 
+The algorithm normalizes the brightness and increases the contrast of the image.

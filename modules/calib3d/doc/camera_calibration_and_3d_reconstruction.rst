@@ -15,7 +15,19 @@ or
 
 .. math::
 
-    s  \vecthree{u}{v}{1} =  \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1} \begin{bmatrix} r_{11} & r_{12} & r_{13} & t_1  \\ r_{21} & r_{22} & r_{23} & t_2  \\ r_{31} & r_{32} & r_{33} & t_3 \end{bmatrix} \begin{bmatrix} X \\ Y \\ Z \\ 1  \end{bmatrix}
+    s  \vecthree{u}{v}{1} =  \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
+    
+    \begin{bmatrix}
+    r_{11} & r_{12} & r_{13} & t_1  \\
+    r_{21} & r_{22} & r_{23} & t_2  \\
+    r_{31} & r_{32} & r_{33} & t_3
+    \end{bmatrix}
+    \begin{bmatrix}
+    X \\
+    Y \\
+    Z \\
+    1
+    \end{bmatrix}
 
 Where
 :math:`(X, Y, Z)` are the coordinates of a 3D point in the world
@@ -45,7 +57,13 @@ to the following (when
 
 .. math::
 
-    \begin{array}{l} \vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\ x' = x/z \\ y' = y/z \\ u = f_x*x' + c_x \\ v = f_y*y' + c_y \end{array}
+    \begin{array}{l}
+    \vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\
+    x' = x/z \\
+    y' = y/z \\
+    u = f_x*x' + c_x \\
+    v = f_y*y' + c_y
+    \end{array}
 
 Real lenses usually have some distortion, mostly
 radial distortion and slight tangential distortion. So, the above model
@@ -207,7 +225,7 @@ cv::composeRT
 
     :param tvec3: The output translation vector of the superposition
 
-    :param d??d??: The optional output derivatives of  ``rvec3``  or  ``tvec3``  w.r.t.  ``rvec?``  or  ``tvec?``
+    :param d*d*: The optional output derivatives of  ``rvec3``  or  ``tvec3``  w.r.t.  ``rvec?``  or  ``tvec?``
 
 The functions compute:
 
@@ -1192,7 +1210,7 @@ The matrices, together with ``R1`` and ``R2`` , can then be passed to
 
 Below is the screenshot from ``stereo_calib.cpp`` sample. Some red horizontal lines, as you can see, pass through the corresponding image regions, i.e. the images are well rectified (which is what most stereo correspondence algorithms rely on). The green rectangles are ``roi1`` and ``roi2`` - indeed, their interior are all valid pixels.
 
-.. image:: ../../pics/stereo_undistort.jpg
+.. image:: pics/stereo_undistort.jpg
 
 .. index:: stereoRectifyUncalibrated
 

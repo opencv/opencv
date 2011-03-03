@@ -139,7 +139,9 @@ getRectSubPix
     :param center: Floating point coordinates of the extracted rectangle center within the source image. The center must be inside the image
 
     :param dst: The extracted patch; will have the size  ``patchSize``  and the same number of channels as  ``src``
+    
     :param patchType: The depth of the extracted pixels. By default they will have the same depth as  ``src``
+
 The function ``getRectSubPix`` extracts pixels from ``src`` :
 
 .. math::

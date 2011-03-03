@@ -43,7 +43,7 @@ K Nearest Neighbors model. ::
     protected:
         ...
     };
-..
+
 
 .. index:: CvKNearest::train
 
@@ -164,5 +164,5 @@ If only a single input vector is passed, all output matrices are optional and th
         cvReleaseMat( &trainData );
         return 0;
     }
-..
+
 

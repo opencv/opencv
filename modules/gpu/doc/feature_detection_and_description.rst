@@ -5,7 +5,7 @@ Feature Detection and Description
 
 .. index:: gpu::SURF_GPU
 
-.. _gpu::SURF_GPU:
+.. gpu::SURF_GPU:
 
 gpu::SURF_GPU
 -------------
@@ -77,7 +77,7 @@ See also:
 
 .. index:: gpu::BruteForceMatcher_GPU
 
-.. _gpu::BruteForceMatcher_GPU:
+.. gpu::BruteForceMatcher_GPU:
 
 gpu::BruteForceMatcher_GPU
 --------------------------
@@ -168,34 +168,30 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
     };
 
 
-The class ``BruteForceMatcher_GPU`` has the similar interface to class
-. It has two groups of match methods: for matching descriptors of one image with other image or with image set. Also all functions have alternative: save results to GPU memory or to CPU memory.
- ``Distance`` template parameter is kept for CPU/GPU interfaces similarity. ``BruteForceMatcher_GPU`` supports only ``L1<float>`` and ``L2<float>`` distance types.
+The class ``BruteForceMatcher_GPU`` has the similar interface to class. It has two groups of match methods: for matching descriptors of one image with other image or with image set. Also all functions have alternative: save results to GPU memory or to CPU memory. ``Distance`` template parameter is kept for CPU/GPU interfaces similarity. ``BruteForceMatcher_GPU`` supports only ``L1<float>`` and ``L2<float>`` distance types.
 
-See also:,.
+.. index:: gpu::BruteForceMatcher_GPU::match
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::match
+.. gpu::BruteForceMatcher_GPU::match:
 
-.. _cv::gpu::BruteForceMatcher_GPU::match:
-
-cv::gpu::BruteForceMatcher_GPU::match
+gpu::BruteForceMatcher_GPU::match
 -------------------------------------
-.. c:function:: void match(const GpuMat\& queryDescs,  const GpuMat\& trainDescs,  std::vector<DMatch>\& matches,  const GpuMat\& mask = GpuMat())
+.. c:function:: void match(const GpuMat&queryDescs,  const GpuMat&trainDescs,  std::vector<DMatch>&matches,  const GpuMat&mask = GpuMat())
 
-.. c:function:: void match(const GpuMat\& queryDescs,  std::vector<DMatch>\& matches,  const std::vector<GpuMat>\& masks = std::vector<GpuMat>())
+.. c:function:: void match(const GpuMat&queryDescs,  std::vector<DMatch>&matches,  const std::vector<GpuMat>&masks = std::vector<GpuMat>())
 
     Finds the best match for each descriptor from a query set with train descriptors.
 
 See also:
 :func:`DescriptorMatcher::match` .
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::matchSingle
+.. index:: gpu::BruteForceMatcher_GPU::matchSingle
 
-.. _cv::gpu::BruteForceMatcher_GPU::matchSingle:
+.. gpu::BruteForceMatcher_GPU::matchSingle:
 
-cv::gpu::BruteForceMatcher_GPU::matchSingle
+gpu::BruteForceMatcher_GPU::matchSingle
 -------------------------------------------
-.. c:function:: void matchSingle(const GpuMat\& queryDescs,  const GpuMat\& trainDescs,  GpuMat\& trainIdx,  GpuMat\& distance,  const GpuMat\& mask = GpuMat())
+.. c:function:: void matchSingle(const GpuMat&queryDescs,  const GpuMat&trainDescs,  GpuMat&trainIdx,  GpuMat&distance,  const GpuMat&mask = GpuMat())
 
     Finds the best match for each query descriptor. Results will be stored to GPU memory.
 
@@ -206,13 +202,13 @@ cv::gpu::BruteForceMatcher_GPU::matchSingle
 
     :param mask: Mask specifying permissible matches between input query and train matrices of descriptors.
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::matchCollection
+.. index:: gpu::BruteForceMatcher_GPU::matchCollection
 
-.. _cv::gpu::BruteForceMatcher_GPU::matchCollection:
+.. gpu::BruteForceMatcher_GPU::matchCollection:
 
-cv::gpu::BruteForceMatcher_GPU::matchCollection
+gpu::BruteForceMatcher_GPU::matchCollection
 -----------------------------------------------
-.. c:function:: void matchCollection(const GpuMat\& queryDescs,  const GpuMat\& trainCollection,  GpuMat\& trainIdx,  GpuMat\& imgIdx,  GpuMat\& distance,  const GpuMat\& maskCollection)
+.. c:function:: void matchCollection(const GpuMat&queryDescs,  const GpuMat&trainCollection,  GpuMat&trainIdx,  GpuMat&imgIdx,  GpuMat&distance,  const GpuMat&maskCollection)
 
     Find the best match for each query descriptor from train collection. Results will be stored to GPU memory.
 
@@ -225,50 +221,50 @@ cv::gpu::BruteForceMatcher_GPU::matchCollection
 
     :param maskCollection: ``GpuMat``  containing set of masks. It can be obtained from  ``std::vector<GpuMat>``  by  . Or it can contain user defined mask set. It must be empty matrix or one row matrix, each element is a  ``PtrStep``  that points to one mask.
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::makeGpuCollection
+.. index:: gpu::BruteForceMatcher_GPU::makeGpuCollection
 
-.. _cv::gpu::BruteForceMatcher_GPU::makeGpuCollection:
+.. gpu::BruteForceMatcher_GPU::makeGpuCollection:
 
-cv::gpu::BruteForceMatcher_GPU::makeGpuCollection
+gpu::BruteForceMatcher_GPU::makeGpuCollection
 -------------------------------------------------
-.. c:function:: void makeGpuCollection(GpuMat\& trainCollection,  GpuMat\& maskCollection,  const vector<GpuMat>\& masks = std::vector<GpuMat>())
+.. c:function:: void makeGpuCollection(GpuMat&trainCollection,  GpuMat&maskCollection,  const vector<GpuMat>&masks = std::vector<GpuMat>())
 
     Makes gpu collection of train descriptors and masks in suitable format for function.
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::matchDownload
+.. index:: gpu::BruteForceMatcher_GPU::matchDownload
 
-.. _cv::gpu::BruteForceMatcher_GPU::matchDownload:
+.. gpu::BruteForceMatcher_GPU::matchDownload:
 
-cv::gpu::BruteForceMatcher_GPU::matchDownload
---------------------------------------------- ```` ```` ````
-.. c:function:: void matchDownload(const GpuMat\& trainIdx,  const GpuMat\& distance,  std::vector<DMatch>\& matches)
+gpu::BruteForceMatcher_GPU::matchDownload
+---------------------------------------------
+.. c:function:: void matchDownload(const GpuMat&trainIdx,  const GpuMat&distance,  std::vector<DMatch>&matches)
 
-.. c:function:: void matchDownload(const GpuMat\& trainIdx,  GpuMat\& imgIdx,  const GpuMat\& distance,  std::vector<DMatch>\& matches)
+.. c:function:: void matchDownload(const GpuMat&trainIdx,  GpuMat&imgIdx,  const GpuMat&distance,  std::vector<DMatch>&matches)
 
     Downloads trainIdx, imgIdxand distancematrices obtained via or to CPU vector with .
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::knnMatch
+.. index:: gpu::BruteForceMatcher_GPU::knnMatch
 
-.. _cv::gpu::BruteForceMatcher_GPU::knnMatch:
+.. gpu::BruteForceMatcher_GPU::knnMatch:
 
-cv::gpu::BruteForceMatcher_GPU::knnMatch
+gpu::BruteForceMatcher_GPU::knnMatch
 ----------------------------------------
-.. c:function:: void knnMatch(const GpuMat\& queryDescs,  const GpuMat\& trainDescs,  std::vector< std::vector<DMatch> >\& matches,  int k,  const GpuMat\& mask = GpuMat(),  bool compactResult = false)
+.. c:function:: void knnMatch(const GpuMat&queryDescs,  const GpuMat&trainDescs,  std::vector< std::vector<DMatch> >&matches,  int k,  const GpuMat&mask = GpuMat(),  bool compactResult = false)
 
     Finds the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in distance increasing order.
 
-.. c:function:: void knnMatch(const GpuMat\& queryDescs,  std::vector< std::vector<DMatch> >\& matches,  int k,  const std::vector<GpuMat>\& masks = std::vector<GpuMat>(),  bool compactResult = false )
+.. c:function:: void knnMatch(const GpuMat&queryDescs,  std::vector< std::vector<DMatch> >&matches,  int k,  const std::vector<GpuMat>&masks = std::vector<GpuMat>(),  bool compactResult = false )
 
 See also:
 :func:`DescriptorMatcher::knnMatch` .
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::knnMatch
+.. index:: gpu::BruteForceMatcher_GPU::knnMatch
 
-.. _cv::gpu::BruteForceMatcher_GPU::knnMatch:
+.. gpu::BruteForceMatcher_GPU::knnMatch:
 
-cv::gpu::BruteForceMatcher_GPU::knnMatch
+gpu::BruteForceMatcher_GPU::knnMatch
 ----------------------------------------
-.. c:function:: void knnMatch(const GpuMat\& queryDescs,  const GpuMat\& trainDescs,  GpuMat\& trainIdx,  GpuMat\& distance,  GpuMat\& allDist,  int k,  const GpuMat\& mask = GpuMat())
+.. c:function:: void knnMatch(const GpuMat&queryDescs,  const GpuMat&trainDescs,  GpuMat&trainIdx,  GpuMat&distance,  GpuMat&allDist,  int k,  const GpuMat&mask = GpuMat())
 
     Finds the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in distance increasing order. Results will be stored to GPU memory.
 
@@ -285,27 +281,27 @@ cv::gpu::BruteForceMatcher_GPU::knnMatch
 
     :param mask: Mask specifying permissible matches between input query and train matrices of descriptors.
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::knnMatchDownload
+.. index:: gpu::BruteForceMatcher_GPU::knnMatchDownload
 
-.. _cv::gpu::BruteForceMatcher_GPU::knnMatchDownload:
+.. gpu::BruteForceMatcher_GPU::knnMatchDownload:
 
-cv::gpu::BruteForceMatcher_GPU::knnMatchDownload
------------------------------------------------- ```` ```` ```` ````
-.. c:function:: void knnMatchDownload(const GpuMat\& trainIdx,  const GpuMat\& distance,  std::vector< std::vector<DMatch> >\& matches,  bool compactResult = false)
+gpu::BruteForceMatcher_GPU::knnMatchDownload
+------------------------------------------------
+.. c:function:: void knnMatchDownload(const GpuMat&trainIdx,  const GpuMat&distance,  std::vector< std::vector<DMatch> >&matches,  bool compactResult = false)
 
     Downloads trainIdxand distancematrices obtained via to CPU vector with . If compactResultis true matchesvector will not contain matches for fully masked out query descriptors.
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::radiusMatch
+.. index:: gpu::BruteForceMatcher_GPU::radiusMatch
 
-.. _cv::gpu::BruteForceMatcher_GPU::radiusMatch:
+.. gpu::BruteForceMatcher_GPU::radiusMatch:
 
-cv::gpu::BruteForceMatcher_GPU::radiusMatch
+gpu::BruteForceMatcher_GPU::radiusMatch
 -------------------------------------------
-.. c:function:: void radiusMatch(const GpuMat\& queryDescs,  const GpuMat\& trainDescs,  std::vector< std::vector<DMatch> >\& matches,  float maxDistance,  const GpuMat\& mask = GpuMat(),  bool compactResult = false)
+.. c:function:: void radiusMatch(const GpuMat&queryDescs,  const GpuMat&trainDescs,  std::vector< std::vector<DMatch> >&matches,  float maxDistance,  const GpuMat&mask = GpuMat(),  bool compactResult = false)
 
     Finds the best matches for each query descriptor which have distance less than given threshold. Found matches are returned in distance increasing order.
 
-.. c:function:: void radiusMatch(const GpuMat\& queryDescs,  std::vector< std::vector<DMatch> >\& matches,  float maxDistance,  const std::vector<GpuMat>\& masks = std::vector<GpuMat>(),  bool compactResult = false)
+.. c:function:: void radiusMatch(const GpuMat&queryDescs,  std::vector< std::vector<DMatch> >&matches,  float maxDistance,  const std::vector<GpuMat>&masks = std::vector<GpuMat>(),  bool compactResult = false)
 
 This function works only on devices with Compute Capability
 :math:`>=` 1.1.
@@ -313,13 +309,13 @@ This function works only on devices with Compute Capability
 See also:
 :func:`DescriptorMatcher::radiusMatch` .
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::radiusMatch
+.. index:: gpu::BruteForceMatcher_GPU::radiusMatch
 
-.. _cv::gpu::BruteForceMatcher_GPU::radiusMatch:
+.. gpu::BruteForceMatcher_GPU::radiusMatch:
 
-cv::gpu::BruteForceMatcher_GPU::radiusMatch
+gpu::BruteForceMatcher_GPU::radiusMatch
 -------------------------------------------
-.. c:function:: void radiusMatch(const GpuMat\& queryDescs,  const GpuMat\& trainDescs,  GpuMat\& trainIdx,  GpuMat\& nMatches,  GpuMat\& distance,  float maxDistance,  const GpuMat\& mask = GpuMat())
+.. c:function:: void radiusMatch(const GpuMat&queryDescs,  const GpuMat&trainDescs,  GpuMat&trainIdx,  GpuMat&nMatches,  GpuMat&distance,  float maxDistance,  const GpuMat&mask = GpuMat())
 
     Finds the best matches for each query descriptor which have distance less than given threshold. Results will be stored to GPU memory.
 
@@ -335,19 +331,18 @@ cv::gpu::BruteForceMatcher_GPU::radiusMatch
 
     :param mask: Mask specifying permissible matches between input query and train matrices of descriptors.
 
-In contrast to
-results are not sorted by distance increasing order.
+In contrast to results are not sorted by distance increasing order.
 
 This function works only on devices with Compute Capability
 :math:`>=` 1.1.
 
-.. index:: cv::gpu::BruteForceMatcher_GPU::radiusMatchDownload
+.. index:: gpu::BruteForceMatcher_GPU::radiusMatchDownload
 
-.. _cv::gpu::BruteForceMatcher_GPU::radiusMatchDownload:
+.. gpu::BruteForceMatcher_GPU::radiusMatchDownload:
 
-cv::gpu::BruteForceMatcher_GPU::radiusMatchDownload
---------------------------------------------------- ```` ```` ```` ```` ````
-.. c:function:: void radiusMatchDownload(const GpuMat\& trainIdx,  const GpuMat\& nMatches,  const GpuMat\& distance,  std::vector< std::vector<DMatch> >\& matches,  bool compactResult = false)
+gpu::BruteForceMatcher_GPU::radiusMatchDownload
+---------------------------------------------------
+.. c:function:: void radiusMatchDownload(const GpuMat&trainIdx,  const GpuMat&nMatches,  const GpuMat&distance,  std::vector< std::vector<DMatch> >&matches,  bool compactResult = false)
 
     Downloads trainIdx, nMatchesand distancematrices obtained via to CPU vector with . If compactResultis true matchesvector will not contain matches for fully masked out query descriptors.
 

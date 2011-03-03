@@ -65,7 +65,6 @@ The XML/YAML file storage class ::
         vector<char> structs;
         int state;
     };
-..
 
 .. index:: FileNode
 
@@ -116,7 +115,6 @@ The XML/YAML file node class ::
         const CvFileStorage* fs;
         const CvFileNode* node;
     };
-..
 
 .. index:: FileNodeIterator
 
@@ -153,5 +151,6 @@ The XML/YAML file node iterator class ::
         CvSeqReader reader;
         size_t remaining;
     };
+
 ..
 

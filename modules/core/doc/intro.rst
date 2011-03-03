@@ -133,7 +133,6 @@ Here is the example: ::
         }
         return 0;
     }
-..
 
 The array ``frame`` is automatically allocated by ``>>`` operator, since the video frame resolution and bit-depth is known to the video capturing module. The array ``edges`` is automatically allocated by ``cvtColor`` function. It will have the same size and the bit-depth as the input array, and the number of channels will be 1, because we passed the color conversion code ``CV_BGR2GRAY`` (that means color to grayscale conversion). Note that ``frame`` and ``edges`` will be allocated only once during the first execution of the loop body, since all the next video frames will have the same resolution (unless user somehow changes the video resolution, in this case the arrays will be automatically reallocated).
 

@@ -124,7 +124,7 @@ Parameters of the EM algorithm. ::
         const CvMat** covs;
         CvTermCriteria term_crit;
     };
-..
+
 
 The structure has 2 constructors, the default one represents a rough rule-of-thumb, with another one it is possible to override a variety of parameters, from a single number of mixtures (the only essential problem-dependent parameter), to the initial values for the mixture parameters.
 
@@ -186,7 +186,7 @@ EM model. ::
         CvMat* inv_eigen_values;
         CvMat** cov_rotate_mats;
     };
-..
+
 
 .. index:: CvEM::train
 
@@ -311,5 +311,5 @@ Example: Clustering random samples of multi-Gaussian distribution using EM ::
         cvReleaseMat( &labels );
         return 0;
     }
-..
+
 

@@ -30,7 +30,7 @@ Base class for computing feature values in cascade classifiers. ::
 
         static Ptr<FeatureEvaluator> create(int type);
     };
-..
+
 
 .. index:: FeatureEvaluator::read
 
@@ -190,7 +190,7 @@ The cascade classifier class for object detection. ::
         Ptr<FeatureEvaluator> feval; // pointer to feature evaluator
         Ptr<CvHaarClassifierCascade> oldCascade; // pointer to old cascade
     };
-..
+
 
 .. index:: CascadeClassifier::CascadeClassifier
 

@@ -82,7 +82,7 @@ Support Vector Machines. ::
     protected:
         ...
     };
-..
+
 
 .. index:: CvSVMParams
 
@@ -114,7 +114,7 @@ SVM training parameters. ::
         CvMat*      class_weights; // for CV_SVM_C_SVC
         CvTermCriteria term_crit; // termination criteria
     };
-..
+
 
 The structure must be initialized and passed to the training method of
 :ref:`CvSVM` .
@@ -199,7 +199,6 @@ CvSVM::get_default_grid
             * **CvSVM::COEF**
 
             * **CvSVM::DEGREE**
-            .
 
         The grid will be generated for the parameter with this ID.
 

@@ -25,7 +25,7 @@ There is
 :func:`DescriptorExtractor` and
 :func:`DescriptorMatcher` for these purposes too, but their interfaces are intended for descriptors
 represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors.
-As
+
 :func:`DescriptorMatcher`,``GenericDescriptorMatcher`` has two groups
 of match methods: for matching keypoints of one image with other image or
 with image set. ::
@@ -88,7 +88,7 @@ with image set. ::
     protected:
         ...
     };
-..
+
 
 .. index:: GenericDescriptorMatcher::add
 
@@ -96,9 +96,7 @@ GenericDescriptorMatcher::add
 ---------------------------------
 .. c:function:: void GenericDescriptorMatcher::add( const vector<Mat>\& images,                        vector<vector<KeyPoint> >\& keypoints )
 
-    Adds images and keypoints from them to the train collection (descriptors are supposed to be calculated here).
-If train collection is not empty new image and keypoints from them will be added to
-existing data.
+    Adds images and keypoints from them to the train collection (descriptors are supposed to be calculated here). If train collection is not empty new image and keypoints from them will be added to existing data.
 
     :param images: Image collection.
 
@@ -135,8 +133,7 @@ GenericDescriptorMatcher::train
 -----------------------------------
 .. c:function:: void GenericDescriptorMatcher::train()
 
-    Train the object, e.g. tree-based structure to extract descriptors or
-to optimize descriptors matching.
+    Train the object, e.g. tree-based structure to extract descriptors or to optimize descriptors matching.
 
 .. index:: GenericDescriptorMatcher::isMaskSupported
 
@@ -153,8 +150,7 @@ GenericDescriptorMatcher::classify
 :func:`GenericDescriptorMatcher::add`
 .. c:function:: void GenericDescriptorMatcher::classify(  const Mat\& queryImage,           vector<KeyPoint>\& queryKeypoints,           const Mat\& trainImage,           vector<KeyPoint>\& trainKeypoints ) const
 
-    Classifies query keypoints under keypoints of one train image qiven as input argument
-(first version of the method) or train image collection that set using (second version).
+    Classifies query keypoints under keypoints of one train image qiven as input argument (first version of the method) or train image collection that set using (second version).
 
 .. c:function:: void GenericDescriptorMatcher::classify( const Mat\& queryImage,           vector<KeyPoint>\& queryKeypoints )
 
@@ -173,9 +169,7 @@ GenericDescriptorMatcher::match
 :func:`GenericDescriptorMatcher::add` :func:`DescriptorMatcher::match`
 .. c:function:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<DMatch>\& matches, const Mat\& mask=Mat() ) const
 
-    Find best match for query keypoints to the training set. In first version of method
-one train image and keypoints detected on it - are input arguments. In second version
-query keypoints are matched to training collectin that set using . As in the mask can be set.
+    Find best match for query keypoints to the training set. In first version of method one train image and keypoints detected on it - are input arguments. In second version query keypoints are matched to training collectin that set using . As in the mask can be set.
 
 .. c:function:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,          vector<DMatch>\& matches,           const vector<Mat>\& masks=vector<Mat>() )
 
@@ -204,9 +198,7 @@ GenericDescriptorMatcher::knnMatch
 :func:`GenericDescriptorMatcher::match` :func:`DescriptorMatcher::knnMatch`
 .. c:function:: void GenericDescriptorMatcher::knnMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<vector<DMatch> >\& matches, int k,       const Mat\& mask=Mat(), bool compactResult=false ) const
 
-    Find the knn best matches for each keypoint from a query set with train keypoints.
-Found knn (or less if not possible) matches are returned in distance increasing order.
-Details see in and .
+    Find the knn best matches for each keypoint from a query set with train keypoints. Found knn (or less if not possible) matches are returned in distance increasing order. Details see in and.
 
 .. c:function:: void GenericDescriptorMatcher::knnMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      vector<vector<DMatch> >\& matches, int k,       const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
@@ -217,8 +209,7 @@ GenericDescriptorMatcher::radiusMatch
 :func:`GenericDescriptorMatcher::match` :func:`DescriptorMatcher::radiusMatch`
 .. c:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<vector<DMatch> >\& matches, float maxDistance,       const Mat\& mask=Mat(), bool compactResult=false ) const
 
-    Find the best matches for each query keypoint which have distance less than given threshold.
-Found matches are returned in distance increasing order. Details see in and .
+    Find the best matches for each query keypoint which have distance less than given threshold. Found matches are returned in distance increasing order. Details see in and .
 
 .. c:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      vector<vector<DMatch> >\& matches, float maxDistance,       const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
@@ -309,11 +300,9 @@ Wrapping class for computing, matching and classification of descriptors using
     protected:
         ...
     };
-..
+
 
 .. index:: FernDescriptorMatcher
-
-.. _FernDescriptorMatcher:
 
 FernDescriptorMatcher
 ---------------------
@@ -368,7 +357,7 @@ Wrapping class for computing, matching and classification of descriptors using
     protected:
             ...
     };
-..
+
 
 .. index:: VectorDescriptorMatcher
 
@@ -400,11 +389,11 @@ Class used for matching descriptors that can be described as vectors in a finite
     protected:
         ...
     };
-..
+
 
 Example of creating: ::
 
     VectorDescriptorMatcher matcher( new SurfDescriptorExtractor,
                                      new BruteForceMatcher<L2<float> > );
-..
+
 

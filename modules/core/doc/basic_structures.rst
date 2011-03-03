@@ -455,16 +455,14 @@ Template class for short numerical vectors ::
     typedef Vec<double, 3> Vec3d;
     typedef Vec<double, 4> Vec4d;
     typedef Vec<double, 6> Vec6d;
-.. ``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``,``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to
-:ref:`CvScalar` or
-:ref:`Scalar` . The elements of ``Vec`` are accessed using ``operator[]`` . All the expected vector operations are implemented too:
+
+``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``,``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to :ref:`CvScalar` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. All the expected vector operations are implemented too:
 
 *
     :math:`\texttt{v1} = \texttt{v2} \pm \texttt{v3}`,    :math:`\texttt{v1} = \texttt{v2} * \alpha`,    :math:`\texttt{v1} = \alpha * \texttt{v2}`     (plus the corresponding augmenting operations; note that these operations apply
     to the each computed vector component)
 
-* ``v1 == v2, v1 != v2`` * ``norm(v1)``     (
-    :math:`L_2`     -norm)
+* ``v1 == v2, v1 != v2`` * ``norm(v1)``     (:math:`L_2`-norm)
 
 The class ``Vec`` is commonly used to describe pixel types of multi-channel arrays, see ``Mat_`` description.
 
@@ -742,10 +740,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
 
     ..
 
-    Thanks to the additional ``datastart``     and ``dataend``     members, it is possible to
-          compute the relative sub-array position in the main
-    *"container"*
-    array using ``locateROI()``     :
+    Thanks to the additional ``datastart``     and ``dataend``     members, it is possible to compute the relative sub-array position in the main *"container"* array using ``locateROI()``:
 
     ::
 
@@ -792,17 +787,9 @@ There are many different ways to create ``Mat`` object. Here are the some popula
 
         ..
 
-    partial yet very common cases of this "user-allocated data" case are conversions
-            from
-    :ref:`CvMat`     and
-    :ref:`IplImage`     to ``Mat``     . For this purpose there are special constructors
-            taking pointers to ``CvMat``     or ``IplImage``     and the optional
-            flag indicating whether to copy the data or not.
+        partial yet very common cases of this "user-allocated data" case are conversions from :ref:`CvMat`     and :ref:`IplImage` to ``Mat``. For this purpose there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
-            Backward conversion from ``Mat``     to ``CvMat``     or ``IplImage``     is provided via cast operators ``Mat::operator CvMat() const``     an ``Mat::operator IplImage()``     .
-            The operators do
-    *not*
-    copy the data.
+        Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` an ``Mat::operator IplImage()``. The operators do *not* copy the data.
 
     ::
 
@@ -915,11 +902,11 @@ for a scalar ( ``Scalar`` ),
     :math:`A.t() \sim A^t` *
     matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
 
-    :math:`A.inv([method]) \sim A^{-1}, A.inv([method])*B \sim X:\,AX=B` *
+    :math:`A.inv([method]) \sim A^{-1}, A.inv([method])*B \sim X:\,AX=B`
+    
+*
     comparison:
-    :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`     .
-              The result of comparison is 8-bit single channel mask, which elements are set to 255
-              (if the particular element or pair of elements satisfy the condition) and 0 otherwise.
+    :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`. The result of comparison is 8-bit single channel mask, which elements are set to 255 (if the particular element or pair of elements satisfy the condition) and 0 otherwise.
 
 *
     bitwise logical operations: ``A & B, A & s, A | B, A | s, A textasciicircum B, A textasciicircum s, ~ A`` *
@@ -935,17 +922,12 @@ for a scalar ( ``Scalar`` ),
     :func:`determinant`,    :func:`repeat`     etc.
 
 *
-    matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers,
-              matrix constructors and operators that extract sub-matrices (see
-    :ref:`Mat`     description).
+    matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ref:`Mat`     description).
 
 *
-    verb
-    "Mat_<destination_type>()" constructors to cast the result to the proper type.
+    ``Mat_<destination_type>()`` constructors to cast the result to the proper type.
 
-Note, however, that comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or
-verb
-"Mat_<T>()" constuctor calls to resolve possible ambiguity.
+Note, however, that comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve possible ambiguity.
 
 Below is the formal description of the ``Mat`` methods.
 
@@ -2410,8 +2392,8 @@ Template sparse n-dimensional array class derived from
         SparseMatIterator_<_Tp> end();
         SparseMatConstIterator_<_Tp> end() const;
     };
-.. ``SparseMat_`` is a thin wrapper on top of
-:ref:`SparseMat` , made in the same way as ``Mat_`` .
+    
+``SparseMat_`` is a thin wrapper on top of :ref:`SparseMat` , made in the same way as ``Mat_`` .
 It simplifies notation of some operations, and that's it. ::
 
     int sz[] = {10, 20, 30};

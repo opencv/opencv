@@ -112,7 +112,6 @@ The macro ``CV_Error_`` can be used to construct the error message on-fly to inc
     CV_Error_(CV_StsOutOfRange,
         ("the matrix element (
         i, j, mtx.at<float>(i,j)))
-..
 
 .. index:: Exception
 
@@ -145,7 +144,6 @@ The exception class passed to error ::
         // the source file line where the error happened
         int line;
     };
-..
 
 The class ``Exception`` encapsulates all or almost all the necessary information about the error happened in the program. The exception is usually constructed and thrown implicitly, via ``CV_Error`` and ``CV_Error_`` macros, see
 :func:`error` .
@@ -241,7 +239,6 @@ That is, the following code computes the execution time in seconds. ::
     double t = (double)getTickCount();
     // do something ...
     t = ((double)getTickCount() - t)/getTickFrequency();
-..
 
 .. index:: setNumThreads
 

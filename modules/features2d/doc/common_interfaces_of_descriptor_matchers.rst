@@ -40,7 +40,7 @@ train descriptor index, train image index and distance between descriptors. ::
         // less is better
         bool operator<( const DMatch &m ) const;
     };
-..
+
 
 .. index:: DescriptorMatcher
 
@@ -102,16 +102,15 @@ with image set. ::
         vector<Mat> trainDescCollection;
         ...
     };
-..
+
 
 .. index:: DescriptorMatcher::add
 
 DescriptorMatcher::add
--------------------------- ````
+--------------------------
 .. c:function:: void add( const vector<Mat>\& descriptors )
 
-    Add descriptors to train descriptor collection. If collection trainDescCollectionis not empty
-the new descriptors are added to existing train descriptors.
+    Add descriptors to train descriptor collection. If collection trainDescCollectionis not empty the new descriptors are added to existing train descriptors.
 
     :param descriptors: Descriptors to add. Each  ``descriptors[i]``  is a set of descriptors
                             from the same (one) train image.
@@ -119,7 +118,7 @@ the new descriptors are added to existing train descriptors.
 .. index:: DescriptorMatcher::getTrainDescriptors
 
 DescriptorMatcher::getTrainDescriptors
------------------------------------------- ````
+------------------------------------------
 .. c:function:: const vector<Mat>\& getTrainDescriptors() const
 
     Returns constant link to the train descriptor collection (i.e. trainDescCollection).
@@ -154,23 +153,15 @@ DescriptorMatcher::train
 ----------------------------
 .. c:function:: void DescriptorMatcher::train()
 
-    Train descriptor matcher (e.g. train flann index).  In all methods to match the method train()
-is run every time before matching. Some descriptor matchers (e.g. BruteForceMatcher) have empty
-implementation of this method, other matchers realy train their inner structures (e.g. FlannBasedMatcher
-trains flann::Index)
+    Train descriptor matcher (e.g. train flann index).  In all methods to match the method train() is run every time before matching. Some descriptor matchers (e.g. BruteForceMatcher) have empty implementation of this method, other matchers realy train their inner structures (e.g. FlannBasedMatcher trains flann::Index)
 
 .. index:: DescriptorMatcher::match
 
 DescriptorMatcher::match
----------------------------- ```` ```` ```` ````
+----------------------------
 .. c:function:: void DescriptorMatcher::match( const Mat\& queryDescriptors,                           const Mat\& trainDescriptors,               vector<DMatch>\& matches,              const Mat\& mask=Mat() ) const
 
-    Find the best match for each descriptor from a query set with train descriptors.
-Supposed that the query descriptors are of keypoints detected on the same query image.
-In first variant of this method train descriptors are set as input argument and
-supposed that they are of keypoints detected on the same train image. In second variant
-of the method train descriptors collection that was set using addmethod is used.
-Optional mask (or masks) can be set to describe which descriptors can be matched. queryDescriptors[i]can be matched with trainDescriptors[j]only if mask.at<uchar>(i,j)is non-zero.
+    Find the best match for each descriptor from a query set with train descriptors. Supposed that the query descriptors are of keypoints detected on the same query image. In first variant of this method train descriptors are set as input argument and supposed that they are of keypoints detected on the same train image. In second variant of the method train descriptors collection that was set using addmethod is used. Optional mask (or masks) can be set to describe which descriptors can be matched. queryDescriptors[i] can be matched with trainDescriptors[j] only if mask.at<uchar>(i,j)is non-zero.
 
 .. c:function:: void DescriptorMatcher::match( const Mat\& queryDescriptors,                                   vector<DMatch>\& matches,                  const vector<Mat>\& masks=vector<Mat>() )
 
@@ -194,9 +185,7 @@ DescriptorMatcher::knnMatch
 :func:`DescriptorMatcher::match`
 .. c:function:: void DescriptorMatcher::knnMatch( const Mat\& queryDescriptors,       const Mat\& trainDescriptors,       vector<vector<DMatch> >\& matches,       int k, const Mat\& mask=Mat(),       bool compactResult=false ) const
 
-    Find the k best matches for each descriptor from a query set with train descriptors.
-Found k (or less if not possible) matches are returned in distance increasing order.
-Details about query and train descriptors see in .
+    Find the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in distance increasing order. Details about query and train descriptors see in .
 
 .. c:function:: void DescriptorMatcher::knnMatch( const Mat\& queryDescriptors,           vector<vector<DMatch> >\& matches, int k,      const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
@@ -215,9 +204,7 @@ DescriptorMatcher::radiusMatch
 :func:`DescriptorMatcher::match`
 .. c:function:: void DescriptorMatcher::radiusMatch( const Mat\& queryDescriptors,           const Mat\& trainDescriptors,           vector<vector<DMatch> >\& matches,           float maxDistance, const Mat\& mask=Mat(),           bool compactResult=false ) const
 
-    Find the best matches for each query descriptor which have distance less than given threshold.
-Found matches are returned in distance increasing order. Details about query and train
-descriptors see in .
+    Find the best matches for each query descriptor which have distance less than given threshold. Found matches are returned in distance increasing order. Details about query and train descriptors see in.
 
 .. c:function:: void DescriptorMatcher::radiusMatch( const Mat\& queryDescriptors,           vector<vector<DMatch> >\& matches,           float maxDistance,      const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
@@ -246,8 +233,7 @@ DescriptorMatcher::create
 :func:`DescriptorMatcher`
 .. c:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string\& descriptorMatcherType )
 
-    Descriptor matcher factory that creates of
-given type with default parameters (rather using default constructor).
+    Descriptor matcher factory that creates of given type with default parameters (rather using default constructor).
 
     :param descriptorMatcherType: Descriptor matcher type.
 
@@ -261,9 +247,7 @@ BruteForceMatcher
 -----------------
 .. c:type:: BruteForceMatcher
 
-Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest
-descriptor in the second set by trying each one. This descriptor matcher supports masking
-permissible matches between descriptor sets. ::
+Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches between descriptor sets. ::
 
     template<class Distance>
     class BruteForceMatcher : public DescriptorMatcher
@@ -277,10 +261,9 @@ permissible matches between descriptor sets. ::
     protected:
         ...
     }
-..
 
-For efficiency, BruteForceMatcher is templated on the distance metric.
-For float descriptors, a common choice would be ``L2<float>`` . Class of supported distances are: ::
+
+For efficiency, BruteForceMatcher is templated on the distance metric. For float descriptors, a common choice would be ``L2<float>``. Class of supported distances are: ::
 
     template<typename T>
     struct Accumulator
@@ -340,7 +323,7 @@ For float descriptors, a common choice would be ``L2<float>`` . Class of support
                                int size ) const;
         ...
     };
-..
+
 
 .. index:: FlannBasedMatcher
 
@@ -350,14 +333,7 @@ FlannBasedMatcher
 -----------------
 .. c:type:: FlannBasedMatcher
 
-Flann based descriptor matcher. This matcher trains
-:func:`flann::Index` on
-train descriptor collection and calls it's nearest search methods to find best matches.
-So this matcher may be faster in cases of matching to large train collection than
-brute force matcher. ``FlannBasedMatcher`` does not support masking permissible
-matches between descriptor sets, because
-:func:`flann::Index` does not
-support this. ::
+Flann based descriptor matcher. This matcher trains :func:`flann::Index` on train descriptor collection and calls it's nearest search methods to find best matches. So this matcher may be faster in cases of matching to large train collection than brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches between descriptor sets, because :func:`flann::Index` does not support this. ::
 
     class FlannBasedMatcher : public DescriptorMatcher
     {
@@ -376,5 +352,6 @@ support this. ::
     protected:
         ...
     };
+
 ..
 

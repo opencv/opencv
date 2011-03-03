@@ -89,7 +89,7 @@ Decision tree node split. ::
             ord;
         };
     };
-..
+
 
 .. index:: CvDTreeNode
 
@@ -117,7 +117,7 @@ Decision tree node. ::
         int depth;
         ...
     };
-..
+
 
 Other numerous fields of ``CvDTreeNode`` are used internally at the training stage.
 
@@ -154,7 +154,7 @@ Decision tree training parameters. ::
                        bool _use_1se_rule, bool _truncate_pruned_tree,
                        const float* _priors );
     };
-..
+
 
 The structure contains all the decision tree training parameters. There is a default constructor that initializes all the parameters with the default values tuned for standalone classification tree. Any of the parameters can be overridden then, or the structure may be fully initialized using the advanced variant of the constructor.
 
@@ -260,7 +260,7 @@ Decision tree training data and shared data for tree ensembles. ::
 
         CvRNG rng;
     };
-..
+
 
 This structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains 3 types of information:
 
@@ -368,7 +368,7 @@ Decision tree. ::
 
         CvDTreeTrainData* data;
     };
-..
+
 
 .. index:: CvDTree::train
 

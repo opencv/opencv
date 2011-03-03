@@ -13,18 +13,21 @@ abs
 
     Computes absolute value of each matrix element
 
-    :param src: matrix or matrix expression ``abs`` is a meta-function that is expanded to one of
-:func:`absdiff` forms:
+    :param src: matrix or matrix expression
+    
+``abs`` is a meta-function that is expanded to one of :func:`absdiff` forms:
 
-* ``C = abs(A-B)``     is equivalent to ``absdiff(A, B, C)``     and
+    * ``C = abs(A-B)``     is equivalent to ``absdiff(A, B, C)``     and
 
-* ``C = abs(A)``     is equivalent to ``absdiff(A, Scalar::all(0), C)``     .
+    * ``C = abs(A)``     is equivalent to ``absdiff(A, Scalar::all(0), C)``     .
 
-* ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to ``convertScaleAbs(A, C, alpha, beta)`` The output matrix will have the same size and the same type as the input one
+    * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to ``convertScaleAbs(A, C, alpha, beta)``.
+    
+The output matrix will have the same size and the same type as the input one
 (except for the last case, where ``C`` will be ``depth=CV_8U`` ).
 
-See also:
-:ref:`Matrix Expressions`,:func:`absdiff`,
+See also: :ref:`Matrix Expressions`, :func:`absdiff`
+
 .. index:: absdiff
 
 absdiff
@@ -38,8 +41,13 @@ absdiff
     Computes per-element absolute difference between 2 arrays or between array and a scalar.
 
     :param src1: The first input array
-    :param src2: The second input array; Must be the same size and same type as  ``src1``     :param sc: Scalar; the second input parameter
-    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create`` The functions ``absdiff`` compute:
+    :param src2: The second input array; Must be the same size and same type as  ``src1``
+    
+    :param sc: Scalar; the second input parameter
+    
+    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``
+    
+The functions ``absdiff`` compute:
 
  * absolute difference between two arrays:
 
@@ -54,7 +62,9 @@ absdiff
 where  ``I`` is multi-dimensional index of array elements.
 in the case of multi-channel arrays each channel is processed independently.
 
-See also: :func:`abs` .. index:: add
+See also: :func:`abs`
+
+.. index:: add
 
 add
 -------
@@ -74,10 +84,13 @@ add
 
     :param src1: The first source array
 
-    :param src2: The second source array. It must have the same size and same type as  ``src1``     :param sc: Scalar; the second input parameter
+    :param src2: The second source array. It must have the same size and same type as  ``src1``
+    
+    :param sc: Scalar; the second input parameter
 
-    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``     :param mask: The optional operation mask, 8-bit single channel array;
-                     specifies elements of the destination array to be changed
+    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``
+    
+    :param mask: The optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 The functions ``add`` compute:
 
@@ -122,9 +135,13 @@ addWeighted
 
     :param alpha: Weight for the first array elements
 
-    :param src2: The second source array; must have the same size and same type as  ``src1``     :param beta: Weight for the second array elements
+    :param src2: The second source array; must have the same size and same type as  ``src1``
+    
+    :param beta: Weight for the second array elements
 
-    :param dst: The destination array; it will have the same size and same type as  ``src1``     :param gamma: Scalar, added to each sum
+    :param dst: The destination array; it will have the same size and same type as  ``src1``
+    
+    :param gamma: Scalar, added to each sum
 
 The functions ``addWeighted`` calculate the weighted sum of two arrays as follows:
 
@@ -146,8 +163,6 @@ See also:
 
 .. index:: bitwise_and
 
-.. _bitwise_and:
-
 bitwise_and
 -----------
 .. c:function:: void bitwise_and(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
@@ -162,10 +177,13 @@ bitwise_and
 
     :param src1: The first source array
 
-    :param src2: The second source array. It must have the same size and same type as  ``src1``     :param sc: Scalar; the second input parameter
+    :param src2: The second source array. It must have the same size and same type as  ``src1``
+    
+    :param sc: Scalar; the second input parameter
 
-    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``     :param mask: The optional operation mask, 8-bit single channel array;
-                     specifies elements of the destination array to be changed
+    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``     
+    
+    :param mask: The optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 The functions ``bitwise_and`` compute per-element bit-wise logical conjunction:
 
@@ -188,8 +206,6 @@ In the case of floating-point arrays their machine-specific bit representations 
 See also:,,
 
 .. index:: bitwise_not
-
-.. _bitwise_not:
 
 bitwise_not
 -----------
@@ -215,8 +231,6 @@ In the case of floating-point source array its machine-specific bit representati
 
 .. index:: bitwise_or
 
-.. _bitwise_or:
-
 bitwise_or
 ----------
 .. c:function:: void bitwise_or(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
@@ -231,11 +245,13 @@ bitwise_or
 
     :param src1: The first source array
 
-    :param src2: The second source array. It must have the same size and same type as  ``src1``     :param sc: Scalar; the second input parameter
+    :param src2: The second source array. It must have the same size and same type as  ``src1``
+    
+    :param sc: Scalar; the second input parameter
 
-    :param dst: The destination array; it is reallocated to be of the same size and
-                    the same type as  ``src1`` ; see  ``Mat::create``     :param mask: The optional operation mask, 8-bit single channel array;
-                     specifies elements of the destination array to be changed
+    :param dst: The destination array; it is reallocated to be of the same size and the same type as  ``src1`` ; see  ``Mat::create``
+    
+    :param mask: The optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 The functions ``bitwise_or`` compute per-element bit-wise logical disjunction
 
@@ -259,8 +275,6 @@ See also:,,
 
 .. index:: bitwise_xor
 
-.. _bitwise_xor:
-
 bitwise_xor
 -----------
 .. c:function:: void bitwise_xor(const Mat\& src1, const Mat\& src2, Mat\& dst, const Mat\& mask=Mat())
@@ -275,11 +289,13 @@ bitwise_xor
 
     :param src1: The first source array
 
-    :param src2: The second source array. It must have the same size and same type as  ``src1``     :param sc: Scalar; the second input parameter
+    :param src2: The second source array. It must have the same size and same type as  ``src1``
+    
+    :param sc: Scalar; the second input parameter
 
-    :param dst: The destination array; it is reallocated to be of the same size and
-                    the same type as  ``src1`` ; see  ``Mat::create``     :param mask: The optional operation mask, 8-bit single channel array;
-                     specifies elements of the destination array to be changed
+    :param dst: The destination array; it is reallocated to be of the same size and the same type as  ``src1`` ; see  ``Mat::create``
+    
+    :param mask: The optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 The functions ``bitwise_xor`` compute per-element bit-wise logical "exclusive or" operation
 
@@ -325,23 +341,17 @@ calcCovarMatrix
 
                 .. math::
 
-                      \texttt{scale}   \cdot  [  \texttt{vects}  [0]-  \texttt{mean}  , \texttt{vects}  [1]-  \texttt{mean}  ,...]^T  \cdot  [ \texttt{vects}  [0]- \texttt{mean}  , \texttt{vects}  [1]- \texttt{mean}  ,...]
-,                that is, the covariance matrix will be  :math:`\texttt{nsamples} \times \texttt{nsamples}` .
-                Such an unusual covariance matrix is used for fast PCA
-                of a set of very large vectors (see, for example, the EigenFaces technique
-                for face recognition). Eigenvalues of this "scrambled" matrix will
-                match the eigenvalues of the true covariance matrix and the "true"
-                eigenvectors can be easily calculated from the eigenvectors of the
-                "scrambled" covariance matrix.
+                      \texttt{scale}   \cdot  [  \texttt{vects}  [0]-  \texttt{mean}  , \texttt{vects}  [1]-  \texttt{mean}  ,...]^T  \cdot  [ \texttt{vects}  [0]- \texttt{mean}  , \texttt{vects}  [1]- \texttt{mean}  ,...],
+                      
+                that is, the covariance matrix will be  :math:`\texttt{nsamples} \times \texttt{nsamples}` . Such an unusual covariance matrix is used for fast PCA of a set of very large vectors (see, for example, the EigenFaces technique for face recognition). Eigenvalues of this "scrambled" matrix will match the eigenvalues of the true covariance matrix and the "true" eigenvectors can be easily calculated from the eigenvectors of the "scrambled" covariance matrix.
 
             * **CV_COVAR_NORMAL** The output covariance matrix is calculated as:
 
                 .. math::
 
-                      \texttt{scale}   \cdot  [  \texttt{vects}  [0]-  \texttt{mean}  , \texttt{vects}  [1]-  \texttt{mean}  ,...]  \cdot  [ \texttt{vects}  [0]- \texttt{mean}  , \texttt{vects}  [1]- \texttt{mean}  ,...]^T
-,                that is,  ``covar``  will be a square matrix
-                of the same size as the total number of elements in each
-                input vector. One and only one of  ``CV_COVAR_SCRAMBLED``  and ``CV_COVAR_NORMAL``  must be specified
+                      \texttt{scale}   \cdot  [  \texttt{vects}  [0]-  \texttt{mean}  , \texttt{vects}  [1]-  \texttt{mean}  ,...]  \cdot  [ \texttt{vects}  [0]- \texttt{mean}  , \texttt{vects}  [1]- \texttt{mean}  ,...]^T,
+                      
+                that is,  ``covar``  will be a square matrix of the same size as the total number of elements in each input vector. One and only one of  ``CV_COVAR_SCRAMBLED``  and ``CV_COVAR_NORMAL``  must be specified
 
             * **CV_COVAR_USE_AVG** If the flag is specified, the function does not calculate  ``mean``  from the input vectors, but, instead, uses the passed  ``mean``  vector. This is useful if  ``mean``  has been pre-computed or known a-priori, or if the covariance matrix is calculated by parts - in this case,  ``mean``  is not a mean vector of the input sub-set of vectors, but rather the mean vector of the whole set.
 
@@ -355,7 +365,9 @@ The functions ``calcCovarMatrix`` calculate the covariance matrix
 and, optionally, the mean vector of the set of input vectors.
 
 See also:
-:func:`PCA`,:func:`mulTransposed`,:func:`Mahalanobis` .. index:: cartToPolar
+:func:`PCA`,:func:`mulTransposed`,:func:`Mahalanobis`
+
+.. index:: cartToPolar
 
 cartToPolar
 ---------------
@@ -365,8 +377,11 @@ cartToPolar
 
     :param x: The array of x-coordinates; must be single-precision or double-precision floating-point array
 
-    :param y: The array of y-coordinates; it must have the same size and same type as  ``x``     :param magnitude: The destination array of magnitudes of the same size and same type as  ``x``     :param angle: The destination array of angles of the same size and same type as  ``x`` .
-        The angles are measured in radians  :math:`(0`  to  :math:`2 \pi )`  or in degrees (0 to 360 degrees).
+    :param y: The array of y-coordinates; it must have the same size and same type as  ``x``
+    
+    :param magnitude: The destination array of magnitudes of the same size and same type as  ``x``
+    
+    :param angle: The destination array of angles of the same size and same type as  ``x``. The angles are measured in radians  :math:`(0`  to  :math:`2 \pi )`  or in degrees (0 to 360 degrees).
 
     :param angleInDegrees: The flag indicating whether the angles are measured in radians, which is default mode, or in degrees
 
@@ -422,13 +437,27 @@ compare
 
     :param src1: The first source array
 
-    :param src2: The second source array; must have the same size and same type as  ``src1``     :param value: The scalar value to compare each array element with
+    :param src2: The second source array; must have the same size and same type as  ``src1``
+    
+    :param value: The scalar value to compare each array element with
 
-    :param dst: The destination array; will have the same size as  ``src1``  and type= ``CV_8UC1``     :param cmpop: The flag specifying the relation between the elements to be checked
+    :param dst: The destination array; will have the same size as  ``src1``  and type= ``CV_8UC1``
+    
+    :param cmpop: The flag specifying the relation between the elements to be checked
 
-            * **CMP_EQ** :math:`\texttt{src1}(I) = \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) = \texttt{value}`             * **CMP_GT** :math:`\texttt{src1}(I) > \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) > \texttt{value}`             * **CMP_GE** :math:`\texttt{src1}(I) \geq \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) \geq \texttt{value}`             * **CMP_LT** :math:`\texttt{src1}(I) < \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) < \texttt{value}`             * **CMP_LE** :math:`\texttt{src1}(I) \leq \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) \leq \texttt{value}`             * **CMP_NE** :math:`\texttt{src1}(I) \ne \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) \ne \texttt{value}` The functions ``compare`` compare each element of ``src1`` with the corresponding element of ``src2`` or with real scalar ``value`` . When the comparison result is true, the corresponding element of destination array is set to 255, otherwise it is set to 0:
+            * **CMP_EQ** :math:`\texttt{src1}(I) = \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) = \texttt{value}`
+            * **CMP_GT** :math:`\texttt{src1}(I) > \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) > \texttt{value}`
+            * **CMP_GE** :math:`\texttt{src1}(I) \geq \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) \geq \texttt{value}`             
+            * **CMP_LT** :math:`\texttt{src1}(I) < \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) < \texttt{value}`             
+            * **CMP_LE** :math:`\texttt{src1}(I) \leq \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) \leq \texttt{value}`             
+            * **CMP_NE** :math:`\texttt{src1}(I) \ne \texttt{src2}(I)`  or  :math:`\texttt{src1}(I) \ne \texttt{value}`
+            
+The functions ``compare`` compare each element of ``src1`` with the corresponding element of ``src2`` or with real scalar ``value`` . When the comparison result is true, the corresponding element of destination array is set to 255, otherwise it is set to 0:
 
-* ``dst(I) = src1(I) cmpop src2(I) ? 255 : 0`` * ``dst(I) = src1(I) cmpop value ? 255 : 0`` The comparison operations can be replaced with the equivalent matrix expressions: ::
+    * ``dst(I) = src1(I) cmpop src2(I) ? 255 : 0``
+    * ``dst(I) = src1(I) cmpop value ? 255 : 0``
+    
+The comparison operations can be replaced with the equivalent matrix expressions: ::
 
     Mat dst1 = src1 >= src2;
     Mat dst2 = src1 < 8;
@@ -436,7 +465,9 @@ compare
 
 
 See also:
-:func:`checkRange`,:func:`min`,:func:`max`,:func:`threshold`,:ref:`Matrix Expressions` .. index:: completeSymm
+:func:`checkRange`,:func:`min`,:func:`max`,:func:`threshold`,:ref:`Matrix Expressions`
+
+.. index:: completeSymm
 
 completeSymm
 ----------------
@@ -452,10 +483,15 @@ The function ``completeSymm`` copies the lower half of a square matrix to its an
 
 *
     :math:`\texttt{mtx}_{ij}=\texttt{mtx}_{ji}`     for
-    :math:`i > j`     if ``lowerToUpper=false`` *
+    :math:`i > j`     if ``lowerToUpper=false``
+    
+*
     :math:`\texttt{mtx}_{ij}=\texttt{mtx}_{ji}`     for
-    :math:`i < j`     if ``lowerToUpper=true`` See also:
-:func:`flip`,:func:`transpose` .. index:: convertScaleAbs
+    :math:`i < j`     if ``lowerToUpper=true``
+    
+See also: :func:`flip`,:func:`transpose`
+
+.. index:: convertScaleAbs
 
 convertScaleAbs
 -------------------
@@ -488,7 +524,9 @@ in the case of multi-channel arrays the function processes each channel independ
 
 
 See also:
-:func:`Mat::convertTo`,:func:`abs` .. index:: countNonZero
+:func:`Mat::convertTo`,:func:`abs`
+
+.. index:: countNonZero
 
 countNonZero
 ----------------
@@ -507,7 +545,9 @@ The function ``cvCountNonZero`` returns the number of non-zero elements in mtx:
     \sum _{I: \; \texttt{mtx} (I) \ne0 } 1
 
 See also:
-:func:`mean`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`,:func:`calcCovarMatrix` .. index:: cubeRoot
+:func:`mean`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`,:func:`calcCovarMatrix`
+
+.. index:: cubeRoot
 
 cubeRoot
 ------------
@@ -517,13 +557,8 @@ cubeRoot
 
     :param val: The function argument
 
-The function ``cubeRoot`` computes
-:math:`\sqrt[3]{\texttt{val}}` .
-Negative arguments are handled correctly,
-*NaN*
-and
-:math:`\pm\infty` are not handled.
-The accuracy approaches the maximum possible accuracy for single-precision data.
+The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly, *NaN*
+and :math:`\pm\infty` are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
 
 .. index:: cvarrToMat
 
@@ -533,11 +568,11 @@ cvarrToMat
 
     Converts CvMat, IplImage or CvMatND to Mat.
 
-    :param src: The source  ``CvMat`` ,  ``IplImage``  or  ``CvMatND``     :param copyData: When it is false (default value), no data is copied, only the new header is created.
-         In this case the original array should not be deallocated while the new matrix header is used. The the parameter is true, all the data is copied, then user may deallocate the original array right after the conversion
+    :param src: The source  ``CvMat`` ,  ``IplImage``  or  ``CvMatND``
+    
+    :param copyData: When it is false (default value), no data is copied, only the new header is created. In this case the original array should not be deallocated while the new matrix header is used. The the parameter is true, all the data is copied, then user may deallocate the original array right after the conversion
 
-    :param allowND: When it is true (default value), then  ``CvMatND``  is converted to  ``Mat``  if it's possible
-        (e.g. then the data is contiguous). If it's not possible, or when the parameter is false, the function will report an error
+    :param allowND: When it is true (default value), then  ``CvMatND``  is converted to  ``Mat``  if it's possible (e.g. then the data is contiguous). If it's not possible, or when the parameter is false, the function will report an error
 
     :param coiMode: The parameter specifies how the IplImage COI (when set) is handled.
 
@@ -588,7 +623,9 @@ The last parameter, ``coiMode`` , specifies how to react on an image with COI se
 :func:`insertImageCOI` , respectively).
 
 See also:
-:func:`cvGetImage`,:func:`cvGetMat`,:func:`cvGetMatND`,:func:`extractImageCOI`,:func:`insertImageCOI`,:func:`mixChannels` .. index:: dct
+:func:`cvGetImage`,:func:`cvGetMat`,:func:`cvGetMatND`,:func:`extractImageCOI`,:func:`insertImageCOI`,:func:`mixChannels` 
+
+.. index:: dct
 
 dct
 -------
@@ -598,7 +635,9 @@ dct
 
     :param src: The source floating-point array
 
-    :param dst: The destination array; will have the same size and same type as  ``src``     :param flags: Transformation flags, a combination of the following values
+    :param dst: The destination array; will have the same size and same type as  ``src``
+    
+    :param flags: Transformation flags, a combination of the following values
 
             * **DCT_INVERSE** do an inverse 1D or 2D transform instead of the default forward transform.
 
@@ -672,7 +711,9 @@ Also, the function's performance depends very much, and not monotonically, on th
 
 
 See also:
-:func:`dft`,:func:`getOptimalDFTSize`,:func:`idct` .. index:: dft
+:func:`dft`,:func:`getOptimalDFTSize`,:func:`idct`
+
+.. index:: dft
 
 dft
 -------
@@ -682,7 +723,9 @@ dft
 
     :param src: The source array, real or complex
 
-    :param dst: The destination array, which size and type depends on the  ``flags``     :param flags: Transformation flags, a combination of the following values
+    :param dst: The destination array, which size and type depends on the  ``flags``
+    
+    :param flags: Transformation flags, a combination of the following values
 
             * **DFT_INVERSE** do an inverse 1D or 2D transform instead of the default forward transform.
 
@@ -806,32 +849,19 @@ Here is the sample on how to compute DFT-based convolution of two 2D real arrays
 What can be optimized in the above sample?
 
 *
-    since we passed
-    :math:`\texttt{nonzeroRows} \ne 0`     to the forward transform calls and
-        since we copied ``A``     / ``B``     to the top-left corners of ``tempA``     / ``tempB``     , respectively,
-        it's not necessary to clear the whole ``tempA``     and ``tempB``     ;
-        it is only necessary to clear the ``tempA.cols - A.cols``     ( ``tempB.cols - B.cols``     )
-        rightmost columns of the matrices.
+    since we passed :math:`\texttt{nonzeroRows} \ne 0`     to the forward transform calls and since we copied ``A``     / ``B``     to the top-left corners of ``tempA``     / ``tempB``     , respectively, it's not necessary to clear the whole ``tempA``     and ``tempB``     ; it is only necessary to clear the ``tempA.cols - A.cols``     ( ``tempB.cols - B.cols``     ) rightmost columns of the matrices.
 
-*
-    this DFT-based convolution does not have to be applied to the whole big arrays,
-        especially if ``B``     is significantly smaller than ``A``     or vice versa.
-        Instead, we can compute convolution by parts. For that we need to split the destination array ``C``     into multiple tiles and for each tile estimate, which parts of ``A``     and ``B``     are required to compute convolution in this tile. If the tiles in ``C``     are too small,
-        the speed will decrease a lot, because of repeated work - in the ultimate case, when each tile in ``C``     is a single pixel,
-        the algorithm becomes equivalent to the naive convolution algorithm.
-        If the tiles are too big, the temporary arrays ``tempA``     and ``tempB``     become too big
-        and there is also slowdown because of bad cache locality. So there is optimal tile size somewhere in the middle.
+* this DFT-based convolution does not have to be applied to the whole big arrays, especially if ``B``     is significantly smaller than ``A``     or vice versa. Instead, we can compute convolution by parts. For that we need to split the destination array ``C``     into multiple tiles and for each tile estimate, which parts of ``A``     and ``B``     are required to compute convolution in this tile. If the tiles in ``C``     are too small, the speed will decrease a lot, because of repeated work - in the ultimate case, when each tile in ``C``     is a single pixel, the algorithm becomes equivalent to the naive convolution algorithm. If the tiles are too big, the temporary arrays ``tempA``     and ``tempB``     become too big and there is also slowdown because of bad cache locality. So there is optimal tile size somewhere in the middle.
 
 *
     if the convolution is done by parts, since different tiles in ``C``     can be computed in parallel, the loop can be threaded.
 
-All of the above improvements have been implemented in
-:func:`matchTemplate` and
-:func:`filter2D` , therefore, by using them, you can get even better performance than with the above theoretically optimal implementation (though, those two functions actually compute cross-correlation, not convolution, so you will need to "flip" the kernel or the image around the center using
-:func:`flip` ).
+All of the above improvements have been implemented in :func:`matchTemplate` and :func:`filter2D` , therefore, by using them, you can get even better performance than with the above theoretically optimal implementation (though, those two functions actually compute cross-correlation, not convolution, so you will need to "flip" the kernel or the image around the center using :func:`flip` ).
 
 See also:
-:func:`dct`,:func:`getOptimalDFTSize`,:func:`mulSpectrums`,:func:`filter2D`,:func:`matchTemplate`,:func:`flip`,:func:`cartToPolar`,:func:`magnitude`,:func:`phase` .. index:: divide
+:func:`dct`,:func:`getOptimalDFTSize`,:func:`mulSpectrums`,:func:`filter2D`,:func:`matchTemplate`,:func:`flip`,:func:`cartToPolar`,:func:`magnitude`,:func:`phase`
+
+.. index:: divide
 
 divide
 ----------
@@ -847,9 +877,13 @@ divide
 
     :param src1: The first source array
 
-    :param src2: The second source array; should have the same size and same type as  ``src1``     :param scale: Scale factor
+    :param src2: The second source array; should have the same size and same type as  ``src1``
+    
+    :param scale: Scale factor
 
-    :param dst: The destination array; will have the same size and same type as  ``src2`` The functions ``divide`` divide one array by another:
+    :param dst: The destination array; will have the same size and same type as  ``src2``
+    
+The functions ``divide`` divide one array by another:
 
 .. math::
 
@@ -864,7 +898,9 @@ or a scalar by array, when there is no ``src1`` :
 The result will have the same type as ``src1`` . When ``src2(I)=0``,``dst(I)=0`` too.
 
 See also:
-:func:`multiply`,:func:`add`,:func:`subtract`,:ref:`Matrix Expressions` .. index:: determinant
+:func:`multiply`,:func:`add`,:func:`subtract`,:ref:`Matrix Expressions`
+
+.. index:: determinant
 
 determinant
 ---------------
@@ -883,7 +919,9 @@ For symmetric positive-determined matrices, it is also possible to compute
 :math:`W` .
 
 See also:
-:func:`SVD`,:func:`trace`,:func:`invert`,:func:`solve`,:ref:`Matrix Expressions` .. index:: eigen
+:func:`SVD`,:func:`trace`,:func:`invert`,:func:`solve`,:ref:`Matrix Expressions`
+
+.. index:: eigen
 
 eigen
 ---------
@@ -893,15 +931,15 @@ eigen
 
     Computes eigenvalues and eigenvectors of a symmetric matrix.
 
-    :param src: The input matrix; must have  ``CV_32FC1``  or  ``CV_64FC1``  type, square size and be symmetric:  :math:`\texttt{src}^T=\texttt{src}`     :param eigenvalues: The output vector of eigenvalues of the same type as  ``src`` ; The eigenvalues are stored in the descending order.
+    :param src: The input matrix; must have  ``CV_32FC1``  or  ``CV_64FC1``  type, square size and be symmetric:  :math:`\texttt{src}^T=\texttt{src}`
+    
+    :param eigenvalues: The output vector of eigenvalues of the same type as  ``src`` ; The eigenvalues are stored in the descending order.
 
     :param eigenvectors: The output matrix of eigenvectors; It will have the same size and the same type as  ``src`` ; The eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding eigenvalues
 
-    :param lowindex: Optional index of largest eigenvalue/-vector to calculate.
-        (See below.)
+    :param lowindex: Optional index of largest eigenvalue/-vector to calculate. (See below.)
 
-    :param highindex: Optional index of smallest eigenvalue/-vector to calculate.
-        (See below.)
+    :param highindex: Optional index of smallest eigenvalue/-vector to calculate. (See below.)
 
 The functions ``eigen`` compute just eigenvalues, or eigenvalues and eigenvectors of symmetric matrix ``src`` : ::
 
@@ -917,7 +955,9 @@ matrix with eigenvalues. The selected eigenvectors/-values are always in the
 first highindex - lowindex + 1 rows.
 
 See also:
-:func:`SVD`,:func:`completeSymm`,:func:`PCA` .. index:: exp
+:func:`SVD`,:func:`completeSymm`,:func:`PCA`
+
+.. index:: exp
 
 exp
 -------
@@ -929,7 +969,9 @@ exp
 
     :param src: The source array
 
-    :param dst: The destination array; will have the same size and same type as  ``src`` The function ``exp`` calculates the exponent of every element of the input array:
+    :param dst: The destination array; will have the same size and same type as  ``src``
+
+The function ``exp`` calculates the exponent of every element of the input array:
 
 .. math::
 
@@ -941,7 +983,9 @@ The maximum relative error is about
 :math:`\pm \infty` ) are not handled.
 
 See also:
-:func:`log`,:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`pow`,:func:`sqrt`,:func:`magnitude` .. index:: extractImageCOI
+:func:`log`,:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`pow`,:func:`sqrt`,:func:`magnitude`
+
+.. index:: extractImageCOI
 
 extractImageCOI
 -------------------
@@ -949,15 +993,20 @@ extractImageCOI
 
     Extract the selected image channel
 
-    :param src: The source array. It should be a pointer to  :ref:`CvMat`  or  :ref:`IplImage`     :param dst: The destination array; will have single-channel, and the same size and the same depth as  ``src``     :param coi: If the parameter is  ``>=0`` , it specifies the channel to extract;
-        If it is  ``<0`` ,  ``src``  must be a pointer to  ``IplImage``  with valid COI set - then the selected COI is extracted.
+    :param src: The source array. It should be a pointer to  :ref:`CvMat`  or  :ref:`IplImage`
+    
+    :param dst: The destination array; will have single-channel, and the same size and the same depth as  ``src``
+    
+    :param coi: If the parameter is  ``>=0`` , it specifies the channel to extract; If it is  ``<0`` ,  ``src``  must be a pointer to  ``IplImage``  with valid COI set - then the selected COI is extracted.
 
 The function ``extractImageCOI`` is used to extract image COI from an old-style array and put the result to the new-style C++ matrix. As usual, the destination matrix is reallocated using ``Mat::create`` if needed.
 
 To extract a channel from a new-style matrix, use
 :func:`mixChannels` or
 :func:`split` See also:
-:func:`mixChannels`,:func:`split`,:func:`merge`,:func:`cvarrToMat`,:func:`cvSetImageCOI`,:func:`cvGetImageCOI` .. index:: fastAtan2
+:func:`mixChannels`,:func:`split`,:func:`merge`,:func:`cvarrToMat`,:func:`cvSetImageCOI`,:func:`cvGetImageCOI`
+
+.. index:: fastAtan2
 
 fastAtan2
 -------------
@@ -985,8 +1034,9 @@ flip
 
     :param src: The source array
 
-    :param dst: The destination array; will have the same size and same type as  ``src``     :param flipCode: Specifies how to flip the array:
-        0 means flipping around the x-axis, positive (e.g., 1) means flipping around y-axis, and negative (e.g., -1) means flipping around both axes. See also the discussion below for the formulas.
+    :param dst: The destination array; will have the same size and same type as  ``src``
+    
+    :param flipCode: Specifies how to flip the array: 0 means flipping around the x-axis, positive (e.g., 1) means flipping around y-axis, and negative (e.g., -1) means flipping around both axes. See also the discussion below for the formulas.
 
 The function ``flip`` flips the array in one of three different ways (row and column indices are 0-based):
 
@@ -1015,8 +1065,9 @@ The example scenarios of function use are:
     :math:`\texttt{flipCode} > 0`     or
     :math:`\texttt{flipCode} = 0`     )
 
-See also:
-:func:`transpose`,:func:`repeat`,:func:`completeSymm` .. index:: gemm
+See also: :func:`transpose`,:func:`repeat`,:func:`completeSymm`
+
+.. index:: gemm
 
 gemm
 --------
@@ -1026,14 +1077,23 @@ gemm
 
     :param src1: The first multiplied input matrix; should have  ``CV_32FC1`` ,  ``CV_64FC1`` ,  ``CV_32FC2``  or  ``CV_64FC2``  type
 
-    :param src2: The second multiplied input matrix; should have the same type as  ``src1``     :param alpha: The weight of the matrix product
+    :param src2: The second multiplied input matrix; should have the same type as  ``src1``
+    
+    :param alpha: The weight of the matrix product
 
-    :param src3: The third optional delta matrix added to the matrix product; should have the same type as  ``src1``  and  ``src2``     :param beta: The weight of  ``src3``     :param dst: The destination matrix; It will have the proper size and the same type as input matrices
+    :param src3: The third optional delta matrix added to the matrix product; should have the same type as  ``src1``  and  ``src2``
+    
+    :param beta: The weight of  ``src3``
+    
+    :param dst: The destination matrix; It will have the proper size and the same type as input matrices
 
     :param flags: Operation flags:
 
-            * **GEMM_1_T** transpose  ``src1``             * **GEMM_2_T** transpose  ``src2``             * **GEMM_3_T** transpose  ``src3`` The function performs generalized matrix multiplication and similar to the corresponding functions ``*gemm`` in BLAS level 3.
-For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
+            * **GEMM_1_T** transpose  ``src1``
+            * **GEMM_2_T** transpose  ``src2``
+            * **GEMM_3_T** transpose  ``src3``
+            
+The function performs generalized matrix multiplication and similar to the corresponding functions ``*gemm`` in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
 
 .. math::
 
@@ -1045,7 +1105,9 @@ The function can be replaced with a matrix expression, e.g. the above call can b
 
 
 See also:
-:func:`mulTransposed`,:func:`transform`,:ref:`Matrix Expressions` .. index:: getConvertElem
+:func:`mulTransposed`,:func:`transform`,:ref:`Matrix Expressions`
+
+.. index:: getConvertElem
 
 getConvertElem
 ------------------
@@ -1076,7 +1138,9 @@ getConvertElem
 The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to the functions for converting individual pixels from one type to another. While the main function purpose is to convert single pixels (actually, for converting sparse matrices from one type to another), you can use them to convert the whole row of a dense matrix or the whole matrix at once, by setting ``cn = matrix.cols*matrix.rows*matrix.channels()`` if the matrix data is continuous.
 
 See also:
-:func:`Mat::convertTo`,:func:`MatND::convertTo`,:func:`SparseMat::convertTo` .. index:: getOptimalDFTSize
+:func:`Mat::convertTo`,:func:`MatND::convertTo`,:func:`SparseMat::convertTo`
+
+.. index:: getOptimalDFTSize
 
 getOptimalDFTSize
 ---------------------
@@ -1099,7 +1163,9 @@ The function returns a negative number if ``vecsize`` is too large (very close t
 While the function cannot be used directly to estimate the optimal vector size for DCT transform (since the current DCT implementation supports only even-size vectors), it can be easily computed as ``getOptimalDFTSize((vecsize+1)/2)*2`` .
 
 See also:
-:func:`dft`,:func:`dct`,:func:`idft`,:func:`idct`,:func:`mulSpectrums` .. index:: idct
+:func:`dft`,:func:`dct`,:func:`idft`,:func:`idct`,:func:`mulSpectrums`
+
+.. index:: idct
 
 idct
 --------
@@ -1109,31 +1175,39 @@ idct
 
     :param src: The source floating-point single-channel array
 
-    :param dst: The destination array. Will have the same size and same type as  ``src``     :param flags: The operation flags. ``idct(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DCT_INVERSE)`` .
-See
-:func:`dct` for details.
+    :param dst: The destination array. Will have the same size and same type as  ``src``
+    
+    :param flags: The operation flags.
+    
+``idct(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DCT_INVERSE)``.
 
-See also:
-:func:`dct`,:func:`dft`,:func:`idft`,:func:`getOptimalDFTSize` .. index:: idft
+See also: :func:`dct`,:func:`dft`,:func:`idft`,:func:`getOptimalDFTSize`
+
+.. index:: idft
 
 idft
 --------
-.. c:function:: void idft(const Mat\& src, Mat\& dst, int flags=0, int outputRows=0)
+.. c:function:: void idft(const Mat& src, Mat& dst, int flags=0, int outputRows=0)
 
     Computes inverse Discrete Fourier Transform of a 1D or 2D array
 
     :param src: The source floating-point real or complex array
 
-    :param dst: The destination array, which size and type depends on the  ``flags``     :param flags: The operation flags. See  :func:`dft`     :param nonzeroRows: The number of  ``dst``  rows to compute.
-        The rest of the rows will have undefined content.
-        See the convolution sample in  :func:`dft`  description ``idft(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DFT_INVERSE)`` .
-See
-:func:`dft` for details.
+    :param dst: The destination array, which size and type depends on the  ``flags``
+    
+    :param flags: The operation flags. See  :func:`dft`
+    
+    :param nonzeroRows: The number of  ``dst``  rows to compute. The rest of the rows will have undefined content. See the convolution sample in  :func:`dft`  description
+    
+``idft(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DFT_INVERSE)`` .
+
+See :func:`dft` for details.
 Note, that none of ``dft`` and ``idft`` scale the result by default.
 Thus, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to make these transforms mutually inverse.
 
-See also:
-:func:`dft`,:func:`dct`,:func:`idct`,:func:`mulSpectrums`,:func:`getOptimalDFTSize` .. index:: inRange
+See also: :func:`dft`,:func:`dct`,:func:`idct`,:func:`mulSpectrums`,:func:`getOptimalDFTSize`
+
+.. index:: inRange
 
 inRange
 -----------
@@ -1149,7 +1223,11 @@ inRange
 
     :param src: The first source array
 
-    :param lowerb: The inclusive lower boundary array of the same size and type as  ``src``     :param upperb: The exclusive upper boundary array of the same size and type as  ``src``     :param dst: The destination array, will have the same size as  ``src``  and  ``CV_8U``  type
+    :param lowerb: The inclusive lower boundary array of the same size and type as  ``src``
+    
+    :param upperb: The exclusive upper boundary array of the same size and type as  ``src``
+    
+    :param dst: The destination array, will have the same size as  ``src``  and  ``CV_8U``  type
 
 The functions ``inRange`` do the range check for every element of the input array:
 
@@ -1175,7 +1253,9 @@ invert
 
     :param src: The source floating-point  :math:`M \times N`  matrix
 
-    :param dst: The destination matrix; will have  :math:`N \times M`  size and the same type as  ``src``     :param flags: The inversion method :
+    :param dst: The destination matrix; will have  :math:`N \times M`  size and the same type as  ``src``
+    
+    :param flags: The inversion method :
 
             * **DECOMP_LU** Gaussian elimination with optimal pivot element chosen
 
@@ -1194,7 +1274,9 @@ In the case of ``DECOMP_SVD`` method, the function returns the inversed conditio
 Similarly to ``DECOMP_LU`` , the method ``DECOMP_CHOLESKY`` works only with non-singular square matrices. In this case the function stores the inverted matrix in ``dst`` and returns non-zero, otherwise it returns 0.
 
 See also:
-:func:`solve`,:func:`SVD` .. index:: log
+:func:`solve`,:func:`SVD`
+
+.. index:: log
 
 log
 -------
@@ -1206,7 +1288,9 @@ log
 
     :param src: The source array
 
-    :param dst: The destination array; will have the same size and same type as  ``src`` The function ``log`` calculates the natural logarithm of the absolute value of every element of the input array:
+    :param dst: The destination array; will have the same size and same type as  ``src``
+    
+The function ``log`` calculates the natural logarithm of the absolute value of every element of the input array:
 
 .. math::
 
@@ -1219,7 +1303,9 @@ The maximum relative error is about
 :math:`\pm \infty` ) are not handled.
 
 See also:
-:func:`exp`,:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`pow`,:func:`sqrt`,:func:`magnitude` .. index:: LUT
+:func:`exp`,:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`pow`,:func:`sqrt`,:func:`magnitude`
+
+.. index:: LUT
 
 LUT
 -------
@@ -1231,7 +1317,9 @@ LUT
 
     :param lut: Look-up table of 256 elements. In the case of multi-channel source array, the table should either have a single channel (in this case the same table is used for all channels) or the same number of channels as in the source array
 
-    :param dst: Destination array; will have the same size and the same number of channels as  ``src`` , and the same depth as  ``lut`` The function ``LUT`` fills the destination array with values from the look-up table. Indices of the entries are taken from the source array. That is, the function processes each element of ``src`` as follows:
+    :param dst: Destination array; will have the same size and the same number of channels as  ``src`` , and the same depth as  ``lut``
+    
+The function ``LUT`` fills the destination array with values from the look-up table. Indices of the entries are taken from the source array. That is, the function processes each element of ``src`` as follows:
 
 .. math::
 
@@ -1244,7 +1332,9 @@ where
     d =  \fork{0}{if \texttt{src} has depth \texttt{CV\_8U}}{128}{if \texttt{src} has depth \texttt{CV\_8S}}
 
 See also:
-:func:`convertScaleAbs`,``Mat::convertTo`` .. index:: magnitude
+:func:`convertScaleAbs`,``Mat::convertTo``
+
+.. index:: magnitude
 
 magnitude
 -------------
@@ -1254,14 +1344,20 @@ magnitude
 
     :param x: The floating-point array of x-coordinates of the vectors
 
-    :param y: The floating-point array of y-coordinates of the vectors; must have the same size as  ``x``     :param dst: The destination array; will have the same size and same type as  ``x`` The function ``magnitude`` calculates magnitude of 2D vectors formed from the corresponding elements of ``x`` and ``y`` arrays:
+    :param y: The floating-point array of y-coordinates of the vectors; must have the same size as  ``x``
+    
+    :param dst: The destination array; will have the same size and same type as  ``x``
+    
+The function ``magnitude`` calculates magnitude of 2D vectors formed from the corresponding elements of ``x`` and ``y`` arrays:
 
 .. math::
 
     \texttt{dst} (I) =  \sqrt{\texttt{x}(I)^2 + \texttt{y}(I)^2}
 
 See also:
-:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`sqrt` .. index:: Mahalanobis
+:func:`cartToPolar`,:func:`polarToCart`,:func:`phase`,:func:`sqrt`
+
+.. index:: Mahalanobis
 
 Mahalanobis
 ---------------
@@ -1307,9 +1403,13 @@ max
 
     :param src1: The first source array
 
-    :param src2: The second source array of the same size and type as  ``src1``     :param value: The real scalar value
+    :param src2: The second source array of the same size and type as  ``src1``
+    
+    :param value: The real scalar value
 
-    :param dst: The destination array; will have the same size and type as  ``src1`` The functions ``max`` compute per-element maximum of two arrays:
+    :param dst: The destination array; will have the same size and type as  ``src1``
+    
+The functions ``max`` compute per-element maximum of two arrays:
 
 .. math::
 
@@ -1327,7 +1427,9 @@ The first 3 variants of the function listed above are actually a part of
 :ref:`Matrix Expressions` , they return the expression object that can be further transformed, or assigned to a matrix, or passed to a function etc.
 
 See also:
-:func:`min`,:func:`compare`,:func:`inRange`,:func:`minMaxLoc`,:ref:`Matrix Expressions` .. index:: mean
+:func:`min`,:func:`compare`,:func:`inRange`,:func:`minMaxLoc`,:ref:`Matrix Expressions`
+
+.. index:: mean
 
 mean
 --------
@@ -1354,7 +1456,9 @@ The functions ``mean`` compute mean value ``M`` of array elements, independently
 When all the mask elements are 0's, the functions return ``Scalar::all(0)`` .
 
 See also:
-:func:`countNonZero`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc` .. index:: meanStdDev
+:func:`countNonZero`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`
+
+.. index:: meanStdDev
 
 meanStdDev
 --------------
@@ -1385,7 +1489,9 @@ Note that the computed standard deviation is only the diagonal of the complete n
 :func:`calcCovarMatrix` .
 
 See also:
-:func:`countNonZero`,:func:`mean`,:func:`norm`,:func:`minMaxLoc`,:func:`calcCovarMatrix` .. index:: merge
+:func:`countNonZero`,:func:`mean`,:func:`norm`,:func:`minMaxLoc`,:func:`calcCovarMatrix`
+
+.. index:: merge
 
 merge
 ---------
@@ -1414,7 +1520,9 @@ The functions ``merge`` merge several single-channel arrays (or rather interleav
 The function
 :func:`split` does the reverse operation and if you need to merge several multi-channel images or shuffle channels in some other advanced way, use
 :func:`mixChannels` See also:
-:func:`mixChannels`,:func:`split`,:func:`reshape` .. index:: min
+:func:`mixChannels`,:func:`split`,:func:`reshape`
+
+.. index:: min
 
 min
 -------
@@ -1436,9 +1544,13 @@ min
 
     :param src1: The first source array
 
-    :param src2: The second source array of the same size and type as  ``src1``     :param value: The real scalar value
+    :param src2: The second source array of the same size and type as  ``src1``
+    
+    :param value: The real scalar value
 
-    :param dst: The destination array; will have the same size and type as  ``src1`` The functions ``min`` compute per-element minimum of two arrays:
+    :param dst: The destination array; will have the same size and type as  ``src1``
+    
+The functions ``min`` compute per-element minimum of two arrays:
 
 .. math::
 
@@ -1456,7 +1568,9 @@ The first 3 variants of the function listed above are actually a part of
 :ref:`Matrix Expressions` , they return the expression object that can be further transformed, or assigned to a matrix, or passed to a function etc.
 
 See also:
-:func:`max`,:func:`compare`,:func:`inRange`,:func:`minMaxLoc`,:ref:`Matrix Expressions` .. index:: minMaxLoc
+:func:`max`,:func:`compare`,:func:`inRange`,:func:`minMaxLoc`,:ref:`Matrix Expressions`
+
+.. index:: minMaxLoc
 
 minMaxLoc
 -------------
@@ -1516,11 +1630,16 @@ mixChannels
     :param srcv: The input array or vector of matrices.
         All the matrices must have the same size and the same depth
 
-    :param nsrc: The number of elements in  ``srcv``     :param dstv: The output array or vector of matrices.
-        All the matrices  *must be allocated* , their size and depth must be the same as in  ``srcv[0]``     :param ndst: The number of elements in  ``dstv``     :param fromTo: The array of index pairs, specifying which channels are copied and where. ``fromTo[k*2]``  is the 0-based index of the input channel in  ``srcv``  and ``fromTo[k*2+1]``  is the index of the output channel in  ``dstv`` . Here the continuous channel numbering is used, that is,
-        the first input image channels are indexed from  ``0``  to  ``srcv[0].channels()-1`` ,
-        the second input image channels are indexed from  ``srcv[0].channels()``  to ``srcv[0].channels() + srcv[1].channels()-1``  etc., and the same scheme is used for the output image channels.
-        As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero. ``npairs`` The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
+    :param nsrc: The number of elements in  ``srcv``
+    
+    :param dstv: The output array or vector of matrices. All the matrices  *must be allocated* , their size and depth must be the same as in  ``srcv[0]``
+        
+    :param ndst: The number of elements in  ``dstv``
+    
+    :param fromTo: The array of index pairs, specifying which channels are copied and where. ``fromTo[k*2]``  is the 0-based index of the input channel in  ``srcv``  and ``fromTo[k*2+1]``  is the index of the output channel in  ``dstv`` . Here the continuous channel numbering is used, that is, the first input image channels are indexed from  ``0``  to  ``srcv[0].channels()-1`` , the second input image channels are indexed from  ``srcv[0].channels()``  to ``srcv[0].channels() + srcv[1].channels()-1``  etc., and the same scheme is used for the output image channels. As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero. ``npairs``
+    
+The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
+    
 :func:`split` and
 :func:`merge` and some forms of
 :func:`cvtColor` are partial cases of ``mixChannels`` .
@@ -1545,7 +1664,9 @@ Note that, unlike many other new-style C++ functions in OpenCV (see the introduc
 :func:`Mat::create` ), ``mixChannels`` requires the destination arrays be pre-allocated before calling the function.
 
 See also:
-:func:`split`,:func:`merge`,:func:`cvtColor` .. index:: mulSpectrums
+:func:`split`,:func:`merge`,:func:`cvtColor`
+
+.. index:: mulSpectrums
 
 mulSpectrums
 ----------------
@@ -1555,7 +1676,11 @@ mulSpectrums
 
     :param src1: The first source array
 
-    :param src2: The second source array; must have the same size and the same type as  ``src1``     :param dst: The destination array; will have the same size and the same type as  ``src1``     :param flags: The same flags as passed to  :func:`dft` ; only the flag  ``DFT_ROWS``  is checked for
+    :param src2: The second source array; must have the same size and the same type as  ``src1``
+    
+    :param dst: The destination array; will have the same size and the same type as  ``src1``
+    
+    :param flags: The same flags as passed to  :func:`dft` ; only the flag  ``DFT_ROWS``  is checked for
 
     :param conj: The optional flag that conjugate the second source array before the multiplication (true) or not (false)
 
@@ -1578,7 +1703,11 @@ multiply
 
     :param src1: The first source array
 
-    :param src2: The second source array of the same size and the same type as  ``src1``     :param dst: The destination array; will have the same size and the same type as  ``src1``     :param scale: The optional scale factor
+    :param src2: The second source array of the same size and the same type as  ``src1``
+    
+    :param dst: The destination array; will have the same size and the same type as  ``src1``
+    
+    :param scale: The optional scale factor
 
 The function ``multiply`` calculates the per-element product of two arrays:
 
@@ -1594,7 +1723,9 @@ If you are looking for a matrix product, not per-element product, see
 :func:`gemm` .
 
 See also:
-:func:`add`,:func:`substract`,:func:`divide`,:ref:`Matrix Expressions`,:func:`scaleAdd`,:func:`addWeighted`,:func:`accumulate`,:func:`accumulateProduct`,:func:`accumulateSquare`,:func:`Mat::convertTo` .. index:: mulTransposed
+:func:`add`,:func:`substract`,:func:`divide`,:ref:`Matrix Expressions`,:func:`scaleAdd`,:func:`addWeighted`,:func:`accumulate`,:func:`accumulateProduct`,:func:`accumulateSquare`,:func:`Mat::convertTo`
+
+.. index:: mulTransposed
 
 mulTransposed
 -----------------
@@ -1612,7 +1743,9 @@ mulTransposed
 
     :param scale: The optional scale factor for the matrix product
 
-    :param rtype: When it's negative, the destination matrix will have the same type as  ``src`` . Otherwise, it will have  ``type=CV_MAT_DEPTH(rtype)`` , which should be either  ``CV_32F``  or  ``CV_64F`` The function ``mulTransposed`` calculates the product of ``src`` and its transposition:
+    :param rtype: When it's negative, the destination matrix will have the same type as  ``src`` . Otherwise, it will have  ``type=CV_MAT_DEPTH(rtype)`` , which should be either  ``CV_32F``  or  ``CV_64F``
+    
+The function ``mulTransposed`` calculates the product of ``src`` and its transposition:
 
 .. math::
 
@@ -1629,7 +1762,9 @@ otherwise. The function is used to compute covariance matrix and with zero delta
 :math:`B=A^T` .
 
 See also:
-:func:`calcCovarMatrix`,:func:`gemm`,:func:`repeat`,:func:`reduce` .. index:: norm
+:func:`calcCovarMatrix`,:func:`gemm`,:func:`repeat`,:func:`reduce`
+
+.. index:: norm
 
 norm
 --------
@@ -1651,7 +1786,9 @@ norm
 
     :param src1: The first source array
 
-    :param src2: The second source array of the same size and the same type as  ``src1``     :param normType: Type of the norm; see the discussion below
+    :param src2: The second source array of the same size and the same type as  ``src1``
+    
+    :param normType: Type of the norm; see the discussion below
 
     :param mask: The optional operation mask
 
@@ -1699,13 +1836,17 @@ normalize
 
     :param src: The source array
 
-    :param dst: The destination array; will have the same size as  ``src``     :param alpha: The norm value to normalize to or the lower range boundary in the case of range normalization
+    :param dst: The destination array; will have the same size as  ``src``
+    
+    :param alpha: The norm value to normalize to or the lower range boundary in the case of range normalization
 
     :param beta: The upper range boundary in the case of range normalization; not used for norm normalization
 
     :param normType: The normalization type, see the discussion
 
-    :param rtype: When the parameter is negative, the destination array will have the same type as  ``src`` , otherwise it will have the same number of channels as  ``src``  and the depth ``=CV_MAT_DEPTH(rtype)``     :param mask: The optional operation mask
+    :param rtype: When the parameter is negative, the destination array will have the same type as  ``src`` , otherwise it will have the same number of channels as  ``src``  and the depth ``=CV_MAT_DEPTH(rtype)``
+    
+    :param mask: The optional operation mask
 
 The functions ``normalize`` scale and shift the source array elements, so that
 
@@ -1730,9 +1871,9 @@ The optional mask specifies the sub-array to be normalize, that is, the norm or 
 in the case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this, the range transformation for sparse matrices is not allowed, since it can shift the zero level.
 
 See also:
-:func:`norm`,:func:`Mat::convertScale`,:func:`MatND::convertScale`,:func:`SparseMat::convertScale` .. index:: PCA
+:func:`norm`,:func:`Mat::convertScale`,:func:`MatND::convertScale`,:func:`SparseMat::convertScale`
 
-.. _PCA:
+.. index:: PCA
 
 PCA
 ---
@@ -1806,7 +1947,9 @@ The following sample is the function that takes two matrices. The first one stor
 
 
 See also:
-:func:`calcCovarMatrix`,:func:`mulTransposed`,:func:`SVD`,:func:`dft`,:func:`dct` .. index:: PCA::PCA
+:func:`calcCovarMatrix`,:func:`mulTransposed`,:func:`SVD`,:func:`dft`,:func:`dct`
+
+.. index:: PCA::PCA
 
 PCA::PCA
 ------------
@@ -1899,7 +2042,9 @@ perspectiveTransform
     :param src: The source two-channel or three-channel floating-point array;
                     each element is 2D/3D vector to be transformed
 
-    :param dst: The destination array; it will have the same size and same type as  ``src``     :param mtx: :math:`3\times 3`  or  :math:`4 \times 4`  transformation matrix
+    :param dst: The destination array; it will have the same size and same type as  ``src``
+    
+    :param mtx: :math:`3\times 3`  or  :math:`4 \times 4`  transformation matrix
 
 The function ``perspectiveTransform`` transforms every element of ``src``,by treating it as 2D or 3D vector, in the following way (here 3D vector transformation is shown; in the case of 2D vector transformation the
 :math:`z` component is omitted):
@@ -1926,7 +2071,9 @@ Note that the function transforms a sparse set of 2D or 3D vectors. If you want 
 :func:`findHomography` .
 
 See also:
-:func:`transform`,:func:`warpPerspective`,:func:`getPerspectiveTransform`,:func:`findHomography` .. index:: phase
+:func:`transform`,:func:`warpPerspective`,:func:`getPerspectiveTransform`,:func:`findHomography`
+
+.. index:: phase
 
 phase
 ---------
@@ -1936,7 +2083,11 @@ phase
 
     :param x: The source floating-point array of x-coordinates of 2D vectors
 
-    :param y: The source array of y-coordinates of 2D vectors; must have the same size and the same type as  ``x``     :param angle: The destination array of vector angles; it will have the same size and same type as  ``x``     :param angleInDegrees: When it is true, the function will compute angle in degrees, otherwise they will be measured in radians
+    :param y: The source array of y-coordinates of 2D vectors; must have the same size and the same type as  ``x``     
+    
+    :param angle: The destination array of vector angles; it will have the same size and same type as  ``x``
+    
+    :param angleInDegrees: When it is true, the function will compute angle in degrees, otherwise they will be measured in radians
 
 The function ``phase`` computes the rotation angle of each 2D vector that is formed from the corresponding elements of ``x`` and ``y`` :
 
@@ -1958,9 +2109,15 @@ polarToCart
 
     Computes x and y coordinates of 2D vectors from their magnitude and angle.
 
-    :param magnitude: The source floating-point array of magnitudes of 2D vectors. It can be an empty matrix ( ``=Mat()`` ) - in this case the function assumes that all the magnitudes are =1. If it's not empty, it must have the same size and same type as  ``angle``     :param angle: The source floating-point array of angles of the 2D vectors
+    :param magnitude: The source floating-point array of magnitudes of 2D vectors. It can be an empty matrix ( ``=Mat()`` ) - in this case the function assumes that all the magnitudes are =1. If it's not empty, it must have the same size and same type as  ``angle``
+    
+    :param angle: The source floating-point array of angles of the 2D vectors
 
-    :param x: The destination array of x-coordinates of 2D vectors; will have the same size and the same type as  ``angle``     :param y: The destination array of y-coordinates of 2D vectors; will have the same size and the same type as  ``angle``     :param angleInDegrees: When it is true, the input angles are measured in degrees, otherwise they are measured in radians
+    :param x: The destination array of x-coordinates of 2D vectors; will have the same size and the same type as  ``angle``     
+    
+    :param y: The destination array of y-coordinates of 2D vectors; will have the same size and the same type as  ``angle``     
+    
+    :param angleInDegrees: When it is true, the input angles are measured in degrees, otherwise they are measured in radians
 
 The function ``polarToCart`` computes the cartesian coordinates of each 2D vector represented by the corresponding elements of ``magnitude`` and ``angle`` :
 
@@ -1972,7 +2129,9 @@ The relative accuracy of the estimated coordinates is
 :math:`\sim\,10^{-6}` .
 
 See also:
-:func:`cartToPolar`,:func:`magnitude`,:func:`phase`,:func:`exp`,:func:`log`,:func:`pow`,:func:`sqrt` .. index:: pow
+:func:`cartToPolar`,:func:`magnitude`,:func:`phase`,:func:`exp`,:func:`log`,:func:`pow`,:func:`sqrt`
+
+.. index:: pow
 
 pow
 -------
@@ -1986,7 +2145,9 @@ pow
 
     :param p: The exponent of power
 
-    :param dst: The destination array; will have the same size and the same type as  ``src`` The function ``pow`` raises every element of the input array to ``p`` :
+    :param dst: The destination array; will have the same size and the same type as  ``src``
+
+The function ``pow`` raises every element of the input array to ``p`` :
 
 .. math::
 
@@ -2166,7 +2327,9 @@ RNG::fill
 
     :param mat: 2D or N-dimensional matrix. Currently matrices with more than 4 channels are not supported by the methods. Use  :func:`reshape`  as a possible workaround.
 
-    :param distType: The distribution type,  ``RNG::UNIFORM``  or  ``RNG::NORMAL``     :param a: The first distribution parameter. In the case of uniform distribution this is inclusive lower boundary. In the case of normal distribution this is mean value.
+    :param distType: The distribution type,  ``RNG::UNIFORM``  or  ``RNG::NORMAL``
+    
+    :param a: The first distribution parameter. In the case of uniform distribution this is inclusive lower boundary. In the case of normal distribution this is mean value.
 
     :param b: The second distribution parameter. In the case of uniform distribution this is non-inclusive upper boundary. In the case of normal distribution this is standard deviation.
 
@@ -2220,7 +2383,9 @@ The function ``randn`` fills the matrix ``mtx`` with normally distributed random
 is applied to the generated numbers (i.e. the values are clipped)
 
 See also:
-:func:`RNG`,:func:`randu` .. index:: randShuffle
+:func:`RNG`,:func:`randu`
+
+.. index:: randShuffle
 
 randShuffle
 ---------------
@@ -2235,7 +2400,9 @@ randShuffle
     :param rng: The optional random number generator used for shuffling. If it is zero,  :func:`theRNG` () is used instead
 
 The function ``randShuffle`` shuffles the specified 1D array by randomly choosing pairs of elements and swapping them. The number of such swap operations will be ``mtx.rows*mtx.cols*iterFactor`` See also:
-:func:`RNG`,:func:`sort` .. index:: reduce
+:func:`RNG`,:func:`sort`
+
+.. index:: reduce
 
 reduce
 ----------
@@ -2259,10 +2426,14 @@ reduce
 
             * **CV_REDUCE_MIN** The output is the minimum (column/row-wise) of all of the matrix's rows/columns.
 
-    :param dtype: When it is negative, the destination vector will have the same type as the source matrix, otherwise, its type will be  ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), mtx.channels())`` The function ``reduce`` reduces matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of an raster image. In the case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
+    :param dtype: When it is negative, the destination vector will have the same type as the source matrix, otherwise, its type will be  ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), mtx.channels())``
+    
+The function ``reduce`` reduces matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of an raster image. In the case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
 See also:
-:func:`repeat` .. index:: repeat
+:func:`repeat`
+
+.. index:: repeat
 
 repeat
 ----------
@@ -2274,7 +2445,9 @@ repeat
 
     :param src: The source array to replicate
 
-    :param dst: The destination array; will have the same type as  ``src``     :param ny: How many times the  ``src``  is repeated along the vertical axis
+    :param dst: The destination array; will have the same type as  ``src``
+    
+    :param ny: How many times the  ``src``  is repeated along the vertical axis
 
     :param nx: How many times the  ``src``  is repeated along the horizontal axis
 
@@ -2287,9 +2460,9 @@ The functions
 
 The second variant of the function is more convenient to use with
 :ref:`Matrix Expressions` See also:
-:func:`reduce`,:ref:`Matrix Expressions` .. index:: saturate_cast
+:func:`reduce`,:ref:`Matrix Expressions`
 
-.. _saturate_cast:
+.. index:: saturate_cast
 
 saturate_cast
 -------------
@@ -2326,7 +2499,9 @@ When the parameter is floating-point value and the target type is an integer (8-
 This operation is used in most simple or complex image processing functions in OpenCV.
 
 See also:
-:func:`add`,:func:`subtract`,:func:`multiply`,:func:`divide`,:func:`Mat::convertTo` .. index:: scaleAdd
+:func:`add`,:func:`subtract`,:func:`multiply`,:func:`divide`,:func:`Mat::convertTo`
+
+.. index:: scaleAdd
 
 scaleAdd
 ------------
@@ -2340,8 +2515,11 @@ scaleAdd
 
     :param scale: Scale factor for the first array
 
-    :param src2: The second source array; must have the same size and the same type as  ``src1``     :param dst: The destination array; will have the same size and the same type as  ``src1`` The function ``cvScaleAdd`` is one of the classical primitive linear algebra operations, known as ``DAXPY`` or ``SAXPY`` in `BLAS <http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms>`_
-. It calculates the sum of a scaled array and another array:
+    :param src2: The second source array; must have the same size and the same type as  ``src1``
+    
+    :param dst: The destination array; will have the same size and the same type as  ``src1``
+    
+The function ``scaleAdd`` is one of the classical primitive linear algebra operations, known as ``DAXPY`` or ``SAXPY`` in `BLAS <http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms>`_. It calculates the sum of a scaled array and another array:
 
 .. math::
 
@@ -2355,7 +2533,9 @@ The function can also be emulated with a matrix expression, for example: ::
 
 
 See also:
-:func:`add`,:func:`addWeighted`,:func:`subtract`,:func:`Mat::dot`,:func:`Mat::convertTo`,:ref:`Matrix Expressions` .. index:: setIdentity
+:func:`add`,:func:`addWeighted`,:func:`subtract`,:func:`Mat::dot`,:func:`Mat::convertTo`,:ref:`Matrix Expressions`
+
+.. index:: setIdentity
 
 setIdentity
 ---------------
@@ -2408,7 +2588,9 @@ solve
 
             * **DECOMP_QR** QR factorization; the system can be over-defined and/or the matrix  ``src1``  can be singular
 
-            * **DECOMP_NORMAL** While all the previous flags are mutually exclusive, this flag can be used together with any of the previous. It means that the normal equations  :math:`\texttt{src1}^T\cdot\texttt{src1}\cdot\texttt{dst}=\texttt{src1}^T\texttt{src2}`  are solved instead of the original system  :math:`\texttt{src1}\cdot\texttt{dst}=\texttt{src2}` The function ``solve`` solves a linear system or least-squares problem (the latter is possible with SVD or QR methods, or by specifying the flag ``DECOMP_NORMAL`` ):
+            * **DECOMP_NORMAL** While all the previous flags are mutually exclusive, this flag can be used together with any of the previous. It means that the normal equations  :math:`\texttt{src1}^T\cdot\texttt{src1}\cdot\texttt{dst}=\texttt{src1}^T\texttt{src2}`  are solved instead of the original system  :math:`\texttt{src1}\cdot\texttt{dst}=\texttt{src2}`
+            
+The function ``solve`` solves a linear system or least-squares problem (the latter is possible with SVD or QR methods, or by specifying the flag ``DECOMP_NORMAL`` ):
 
 .. math::
 
@@ -2422,7 +2604,9 @@ Note that if you want to find unity-norm solution of an under-defined singular s
 :func:`SVD::solveZ` instead.
 
 See also:
-:func:`invert`,:func:`SVD`,:func:`eigen` .. index:: solveCubic
+:func:`invert`,:func:`SVD`,:func:`eigen`
+
+.. index:: solveCubic
 
 solveCubic
 --------------
@@ -2482,7 +2666,9 @@ sort
 
     :param src: The source single-channel array
 
-    :param dst: The destination array of the same size and the same type as  ``src``     :param flags: The operation flags, a combination of the following values:
+    :param dst: The destination array of the same size and the same type as  ``src``
+    
+    :param flags: The operation flags, a combination of the following values:
 
             * **CV_SORT_EVERY_ROW** Each matrix row is sorted independently
 
@@ -2495,7 +2681,9 @@ sort
 The function ``sort`` sorts each matrix row or each matrix column in ascending or descending order. If you want to sort matrix rows or columns lexicographically, you can use STL ``std::sort`` generic function with the proper comparison predicate.
 
 See also:
-:func:`sortIdx`,:func:`randShuffle` .. index:: sortIdx
+:func:`sortIdx`,:func:`randShuffle`
+
+.. index:: sortIdx
 
 sortIdx
 -----------
@@ -2505,7 +2693,9 @@ sortIdx
 
     :param src: The source single-channel array
 
-    :param dst: The destination integer array of the same size as  ``src``     :param flags: The operation flags, a combination of the following values:
+    :param dst: The destination integer array of the same size as  ``src``
+    
+    :param flags: The operation flags, a combination of the following values:
 
             * **CV_SORT_EVERY_ROW** Each matrix row is sorted independently
 
@@ -2525,7 +2715,9 @@ The function ``sortIdx`` sorts each matrix row or each matrix column in ascendin
 
 
 See also:
-:func:`sort`,:func:`randShuffle` .. index:: split
+:func:`sort`,:func:`randShuffle`
+
+.. index:: split
 
 split
 ---------
@@ -2551,7 +2743,9 @@ The functions ``split`` split multi-channel array into separate single-channel a
 
 If you need to extract a single-channel or do some other sophisticated channel permutation, use
 :func:`mixChannels` See also:
-:func:`merge`,:func:`mixChannels`,:func:`cvtColor` .. index:: sqrt
+:func:`merge`,:func:`mixChannels`,:func:`cvtColor`
+
+.. index:: sqrt
 
 sqrt
 --------
@@ -2563,10 +2757,14 @@ sqrt
 
     :param src: The source floating-point array
 
-    :param dst: The destination array; will have the same size and the same type as  ``src`` The functions ``sqrt`` calculate square root of each source array element. in the case of multi-channel arrays each channel is processed independently. The function accuracy is approximately the same as of the built-in ``std::sqrt`` .
+    :param dst: The destination array; will have the same size and the same type as  ``src``
+    
+The functions ``sqrt`` calculate square root of each source array element. in the case of multi-channel arrays each channel is processed independently. The accuracy is approximately the same as of the built-in ``std::sqrt`` .
 
 See also:
-:func:`pow`,:func:`magnitude` .. index:: subtract
+:func:`pow`,:func:`magnitude`
+
+.. index:: subtract
 
 subtract
 ------------
@@ -2590,10 +2788,13 @@ subtract
 
     :param src1: The first source array
 
-    :param src2: The second source array. It must have the same size and same type as  ``src1``     :param sc: Scalar; the first or the second input parameter
+    :param src2: The second source array. It must have the same size and same type as  ``src1``
+    
+    :param sc: Scalar; the first or the second input parameter
 
-    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``     :param mask: The optional operation mask, 8-bit single channel array;
-                     specifies elements of the destination array to be changed
+    :param dst: The destination array; it will have the same size and same type as  ``src1`` ; see  ``Mat::create``     
+    
+    :param mask: The optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 The functions ``subtract`` compute
 
@@ -2668,7 +2869,9 @@ The class ``SVD`` is used to compute Singular Value Decomposition of a floating-
 For a bit faster operation you can pass ``flags=SVD::MODIFY_A|...`` to modify the decomposed matrix when it is not necessarily to preserve it. If you want to compute condition number of a matrix or absolute value of its determinant - you do not need ``u`` and ``vt`` , so you can pass ``flags=SVD::NO_UV|...`` . Another flag ``FULL_UV`` indicates that full-size ``u`` and ``vt`` must be computed, which is not necessary most of the time.
 
 See also:
-:func:`invert`,:func:`solve`,:func:`eigen`,:func:`determinant` .. index:: SVD::SVD
+:func:`invert`,:func:`solve`,:func:`eigen`,:func:`determinant`
+
+.. index:: SVD::SVD
 
 SVD::SVD
 ------------
@@ -2741,7 +2944,9 @@ SVD::backSubst
 
     Performs singular value back substitution
 
-    :param rhs: The right-hand side of a linear system  :math:`\texttt{A} \texttt{x} = \texttt{rhs}`  being solved, where  ``A``  is the matrix passed to  :func:`SVD::SVD`  or  :func:`SVD::operator ()`     :param x: The found solution of the system
+    :param rhs: The right-hand side of a linear system  :math:`\texttt{A} \texttt{x} = \texttt{rhs}`  being solved, where  ``A``  is the matrix passed to  :func:`SVD::SVD`  or  :func:`SVD::operator ()`
+    
+    :param x: The found solution of the system
 
 The method computes back substitution for the specified right-hand side:
 
@@ -2767,7 +2972,9 @@ sum
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
 
 See also:
-:func:`countNonZero`,:func:`mean`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`,:func:`reduce` .. index:: theRNG
+:func:`countNonZero`,:func:`mean`,:func:`meanStdDev`,:func:`norm`,:func:`minMaxLoc`,:func:`reduce`
+
+.. index:: theRNG
 
 theRNG
 ----------
@@ -2780,7 +2987,9 @@ The function ``theRNG`` returns the default random number generator. For each th
 :func:`randn` instead. But if you are going to generate many random numbers inside a loop, it will be much faster to use this function to retrieve the generator and then use ``RNG::operator _Tp()`` .
 
 See also:
-:func:`RNG`,:func:`randu`,:func:`randn` .. index:: trace
+:func:`RNG`,:func:`randu`,:func:`randn`
+
+.. index:: trace
 
 trace
 ---------
@@ -2804,7 +3013,11 @@ transform
 
     Performs matrix transformation of every array element.
 
-    :param src: The source array; must have as many channels (1 to 4) as  ``mtx.cols``  or  ``mtx.cols-1``     :param dst: The destination array; will have the same size and depth as  ``src``  and as many channels as  ``mtx.rows``     :param mtx: The transformation matrix
+    :param src: The source array; must have as many channels (1 to 4) as  ``mtx.cols``  or  ``mtx.cols-1``
+    
+    :param dst: The destination array; will have the same size and depth as  ``src``  and as many channels as  ``mtx.rows``     
+    
+    :param mtx: The transformation matrix
 
 The function ``transform`` performs matrix transformation of every element of array ``src`` and stores the results in ``dst`` :
 
@@ -2833,7 +3046,9 @@ points, arbitrary linear color space transformation (such as various kinds of RG
 :math:`\rightarrow` YUV transforms), shuffling the image channels and so forth.
 
 See also:
-:func:`perspectiveTransform`,:func:`getAffineTransform`,:func:`estimateRigidTransform`,:func:`warpAffine`,:func:`warpPerspective` .. index:: transpose
+:func:`perspectiveTransform`,:func:`getAffineTransform`,:func:`estimateRigidTransform`,:func:`warpAffine`,:func:`warpPerspective`
+
+.. index:: transpose
 
 transpose
 -------------
@@ -2843,8 +3058,9 @@ transpose
 
     :param src: The source array
 
-    :param dst: The destination array of the same type as  ``src`` The function
-:func:`transpose` transposes the matrix ``src`` :
+    :param dst: The destination array of the same type as  ``src``
+    
+The function :func:`transpose` transposes the matrix ``src`` :
 
 .. math::
 

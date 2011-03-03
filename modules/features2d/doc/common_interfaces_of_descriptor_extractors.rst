@@ -11,8 +11,6 @@ descriptor extractors inherit
 
 .. index:: DescriptorExtractor
 
-.. _DescriptorExtractor:
-
 DescriptorExtractor
 -------------------
 .. c:type:: DescriptorExtractor
@@ -40,7 +38,7 @@ Abstract base class for computing descriptors for image keypoints. ::
     protected:
         ...
     };
-..
+
 
 In this interface we assume a keypoint descriptor can be represented as a
 dense, fixed-dimensional vector of some basic type. Most descriptors used
@@ -55,8 +53,7 @@ DescriptorExtractor::compute
 --------------------------------
 .. c:function:: void DescriptorExtractor::compute( const Mat\& image,                                      vector<KeyPoint>\& keypoints,                                                                      Mat\& descriptors ) const
 
-    Compute the descriptors for a set of keypoints detected in an image (first variant)
-or image set (second variant).
+    Compute the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
     :param image: The image.
 
@@ -102,24 +99,21 @@ DescriptorExtractor::create
 :func:`DescriptorExtractor`
 .. c:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string\& descriptorExtractorType )
 
-    Descriptor extractor factory that creates of given type with
-default parameters (rather using default constructor).
+    Descriptor extractor factory that creates of given type with default parameters (rather using default constructor).
 
     :param descriptorExtractorType: Descriptor extractor type.
 
 Now the following descriptor extractor types are supported:
-\ ``"SIFT"`` --
-:func:`SiftFeatureDetector`,\ ``"SURF"`` --
-:func:`SurfFeatureDetector`,\ ``"BRIEF"`` --
-:func:`BriefFeatureDetector` .
-\
+
+ * ``"SIFT"`` -- :func:`SiftFeatureDetector`,
+ * ``"SURF"`` -- :func:`SurfFeatureDetector`,
+ * ``"BRIEF"`` -- :func:`BriefFeatureDetector` .
+
 Also combined format is supported: descriptor extractor adapter name ( ``"Opponent"`` --
 :func:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
 e.g. ``"OpponentSIFT"`` , etc.
 
 .. index:: SiftDescriptorExtractor
-
-.. _SiftDescriptorExtractor:
 
 SiftDescriptorExtractor
 -----------------------
@@ -147,11 +141,9 @@ Wrapping class for descriptors computing using
     protected:
         ...
     }
-..
+
 
 .. index:: SurfDescriptorExtractor
-
-.. _SurfDescriptorExtractor:
 
 SurfDescriptorExtractor
 -----------------------
@@ -173,11 +165,9 @@ Wrapping class for descriptors computing using
     protected:
         ...
     }
-..
+
 
 .. index:: CalonderDescriptorExtractor
-
-.. _CalonderDescriptorExtractor:
 
 CalonderDescriptorExtractor
 ---------------------------
@@ -199,7 +189,7 @@ Wrapping class for descriptors computing using
     protected:
         ...
     }
-..
+
 
 .. index:: OpponentColorDescriptorExtractor
 
@@ -227,7 +217,7 @@ them into a single color descriptor. ::
     protected:
         ...
     };
-..
+
 
 .. index:: BriefDescriptorExtractor
 
@@ -257,5 +247,5 @@ Strecha C., Fua P.: ''BRIEF: Binary Robust Independent Elementary Features.''
     protected:
         ...
     };
-..
+
 

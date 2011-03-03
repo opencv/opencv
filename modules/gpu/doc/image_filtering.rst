@@ -9,8 +9,6 @@ See also:
 
 .. index:: gpu::BaseRowFilter_GPU
 
-.. _gpu::BaseRowFilter_GPU:
-
 gpu::BaseRowFilter_GPU
 ----------------------
 .. c:type:: gpu::BaseRowFilter_GPU
@@ -33,8 +31,6 @@ This class doesn't allocate memory for destination image. Usually this class is 
 
 .. index:: gpu::BaseColumnFilter_GPU
 
-.. _gpu::BaseColumnFilter_GPU:
-
 gpu::BaseColumnFilter_GPU
 -------------------------
 .. c:type:: gpu::BaseColumnFilter_GPU
@@ -56,8 +52,6 @@ This class doesn't allocate memory for destination image. Usually this class is 
 .
 
 .. index:: gpu::BaseFilter_GPU
-
-.. _gpu::BaseFilter_GPU:
 
 gpu::BaseFilter_GPU
 -------------------
@@ -82,8 +76,6 @@ This class doesn't allocate memory for destination image. Usually this class is 
 
 .. index:: gpu::FilterEngine_GPU
 
-.. _gpu::FilterEngine_GPU:
-
 gpu::FilterEngine_GPU
 ---------------------
 .. c:type:: gpu::FilterEngine_GPU
@@ -107,19 +99,19 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
 
     while (...)
     {
-        cv::gpu::GpuMat src = getImg();
-        cv::gpu::GpuMat dst;
+        gpu::GpuMat src = getImg();
+        gpu::GpuMat dst;
         // Allocate and release buffers at each iterations
-        cv::gpu::GaussianBlur(src, dst, ksize, sigma1);
+        gpu::GaussianBlur(src, dst, ksize, sigma1);
     }
 
     // Allocate buffers only once
-    cv::Ptr<cv::gpu::FilterEngine_GPU> filter =
-        cv::gpu::createGaussianFilter_GPU(CV_8UC4, ksize, sigma1);
+    cv::Ptr<gpu::FilterEngine_GPU> filter =
+        gpu::createGaussianFilter_GPU(CV_8UC4, ksize, sigma1);
     while (...)
     {
-        cv::gpu::GpuMat src = getImg();
-        cv::gpu::GpuMat dst;
+        gpu::GpuMat src = getImg();
+        gpu::GpuMat dst;
         filter->apply(src, dst, cv::Rect(0, 0, src.cols, src.rows));
     }
     // Release buffers only once
@@ -130,15 +122,11 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
 **Please note:**
 The GPU filters doesn't support the in-place mode.
 
-See also:,,,,,,,,,,
+.. index:: gpu::createFilter2D_GPU
 
-.. index:: cv::gpu::createFilter2D_GPU
-
-.. _cv::gpu::createFilter2D_GPU:
-
-cv::gpu::createFilter2D_GPU
+gpu::createFilter2D_GPU
 ---------------------------
-.. c:function:: Ptr<FilterEngine_GPU> createFilter2D_GPU( const Ptr<BaseFilter_GPU>\& filter2D,  int srcType, int dstType)
+.. c:function:: Ptr<FilterEngine_GPU> createFilter2D_GPU( const Ptr<BaseFilter_GPU>& filter2D,  int srcType, int dstType)
 
     Creates non-separable filter engine with the specified filter.
 
@@ -150,13 +138,11 @@ cv::gpu::createFilter2D_GPU
 
 Usually this function is used inside high-level functions, like,.
 
-.. index:: cv::gpu::createSeparableFilter_GPU
+.. index:: gpu::createSeparableFilter_GPU
 
-.. _cv::gpu::createSeparableFilter_GPU:
-
-cv::gpu::createSeparableFilter_GPU
+gpu::createSeparableFilter_GPU
 ----------------------------------
-.. c:function:: Ptr<FilterEngine_GPU> createSeparableFilter_GPU( const Ptr<BaseRowFilter_GPU>\& rowFilter,  const Ptr<BaseColumnFilter_GPU>\& columnFilter,  int srcType, int bufType, int dstType)
+.. c:function:: Ptr<FilterEngine_GPU> createSeparableFilter_GPU( const Ptr<BaseRowFilter_GPU>& rowFilter,  const Ptr<BaseColumnFilter_GPU>& columnFilter,  int srcType, int bufType, int dstType)
 
     Creates separable filter engine with the specified filters.
 
@@ -172,11 +158,9 @@ cv::gpu::createSeparableFilter_GPU
 Usually this function is used inside high-level functions, like
 .
 
-.. index:: cv::gpu::getRowSumFilter_GPU
+.. index:: gpu::getRowSumFilter_GPU
 
-.. _cv::gpu::getRowSumFilter_GPU:
-
-cv::gpu::getRowSumFilter_GPU
+gpu::getRowSumFilter_GPU
 ----------------------------
 .. c:function:: Ptr<BaseRowFilter_GPU> getRowSumFilter_GPU(int srcType, int sumType,  int ksize, int anchor = -1)
 
@@ -193,11 +177,9 @@ cv::gpu::getRowSumFilter_GPU
 **Please note:**
 This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
-.. index:: cv::gpu::getColumnSumFilter_GPU
+.. index:: gpu::getColumnSumFilter_GPU
 
-.. _cv::gpu::getColumnSumFilter_GPU:
-
-cv::gpu::getColumnSumFilter_GPU
+gpu::getColumnSumFilter_GPU
 -------------------------------
 .. c:function:: Ptr<BaseColumnFilter_GPU> getColumnSumFilter_GPU(int sumType,  int dstType, int ksize, int anchor = -1)
 
@@ -214,17 +196,15 @@ cv::gpu::getColumnSumFilter_GPU
 **Please note:**
 This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
-.. index:: cv::gpu::createBoxFilter_GPU
+.. index:: gpu::createBoxFilter_GPU
 
-.. _cv::gpu::createBoxFilter_GPU:
-
-cv::gpu::createBoxFilter_GPU
+gpu::createBoxFilter_GPU
 ----------------------------
-.. c:function:: Ptr<FilterEngine_GPU> createBoxFilter_GPU(int srcType, int dstType,  const Size\& ksize,  const Point\& anchor = Point(-1,-1))
+.. c:function:: Ptr<FilterEngine_GPU> createBoxFilter_GPU(int srcType, int dstType,  const Size& ksize,  const Point& anchor = Point(-1,-1))
 
     Creates normalized 2D box filter.
 
-.. c:function:: Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType,  const Size\& ksize,  Point anchor = Point(-1, -1))
+.. c:function:: Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType,  const Size& ksize,  Point anchor = Point(-1, -1))
 
     :param srcType: Input image type. Supports  ``CV_8UC1``  and  ``CV_8UC4`` .
 
@@ -237,14 +217,13 @@ cv::gpu::createBoxFilter_GPU
 **Please note:**
 This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
-See also:
-:func:`boxFilter` .
+See also: :func:`boxFilter` .
 
 .. index:: gpu::boxFilter
 
-cv::gpu::boxFilter
+gpu::boxFilter
 ------------------
-.. c:function:: void boxFilter(const GpuMat\& src, GpuMat\& dst, int ddepth, Size ksize,  Point anchor = Point(-1,-1))
+.. c:function:: void gpu::boxFilter(const GpuMat& src, GpuMat& dst, int ddepth, Size ksize,  Point anchor = Point(-1,-1))
 
     Smooths the image using the normalized box filter.
 
@@ -266,9 +245,9 @@ See also:
 
 .. index:: gpu::blur
 
-cv::gpu::blur
+gpu::blur
 -------------
-.. c:function:: void blur(const GpuMat\& src, GpuMat\& dst, Size ksize,  Point anchor = Point(-1,-1))
+.. c:function:: void gpu::blur(const GpuMat& src, GpuMat& dst, Size ksize,  Point anchor = Point(-1,-1))
 
     A synonym for normalized box filter.
 
@@ -286,17 +265,15 @@ This filter doesn't check out of border accesses, so only proper submatrix of bi
 See also:
 :func:`blur`,:func:`gpu::boxFilter` .
 
-.. index:: cv::gpu::createMorphologyFilter_GPU
+.. index:: gpu::createMorphologyFilter_GPU
 
-.. _cv::gpu::createMorphologyFilter_GPU:
-
-cv::gpu::createMorphologyFilter_GPU
+gpu::createMorphologyFilter_GPU
 -----------------------------------
-.. c:function:: Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type,  const Mat\& kernel,  const Point\& anchor = Point(-1,-1),  int iterations = 1)
+.. c:function:: Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type,  const Mat& kernel,  const Point& anchor = Point(-1,-1),  int iterations = 1)
 
     Creates 2D morphological filter.
 
-.. c:function:: Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type,  const Mat\& kernel, const Size\& ksize,  Point anchor=Point(-1,-1))
+.. c:function:: Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type,  const Mat& kernel, const Size& ksize,  Point anchor=Point(-1,-1))
 
     {Morphology operation id. Only ``MORPH_ERODE``     and ``MORPH_DILATE``     are supported.}
 
@@ -316,9 +293,9 @@ See also:
 
 .. index:: gpu::erode
 
-cv::gpu::erode
+gpu::erode
 --------------
-.. c:function:: void erode(const GpuMat\& src, GpuMat\& dst, const Mat\& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
+.. c:function:: void gpu::erode(const GpuMat& src, GpuMat& dst, const Mat& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
 
     Erodes an image by using a specific structuring element.
 
@@ -340,9 +317,9 @@ See also:
 
 .. index:: gpu::dilate
 
-cv::gpu::dilate
+gpu::dilate
 ---------------
-.. c:function:: void dilate(const GpuMat\& src, GpuMat\& dst, const Mat\& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
+.. c:function:: void gpu::dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
 
     Dilates an image by using a specific structuring element.
 
@@ -364,9 +341,9 @@ See also:
 
 .. index:: gpu::morphologyEx
 
-cv::gpu::morphologyEx
+gpu::morphologyEx
 ---------------------
-.. c:function:: void morphologyEx(const GpuMat\& src, GpuMat\& dst, int op,  const Mat\& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
+.. c:function:: void gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op,  const Mat& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
 
     Applies an advanced morphological operation to image.
 
@@ -398,17 +375,15 @@ This filter doesn't check out of border accesses, so only proper submatrix of bi
 See also:
 :func:`morphologyEx` .
 
-.. index:: cv::gpu::createLinearFilter_GPU
+.. index:: gpu::createLinearFilter_GPU
 
-.. _cv::gpu::createLinearFilter_GPU:
-
-cv::gpu::createLinearFilter_GPU
+gpu::createLinearFilter_GPU
 -------------------------------
-.. c:function:: Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType,  const Mat\& kernel,  const Point\& anchor = Point(-1,-1))
+.. c:function:: Ptr<FilterEngine_GPU> gpu::createLinearFilter_GPU(int srcType, int dstType,  const Mat& kernel,  const Point& anchor = Point(-1,-1))
 
     Creates the non-separable linear filter.
 
-.. c:function:: Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType,  const Mat\& kernel, const Size\& ksize,  Point anchor = Point(-1, -1))
+.. c:function:: Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType,  const Mat& kernel, const Size& ksize,  Point anchor = Point(-1, -1))
 
     :param srcType: Input image type. Supports  ``CV_8UC1``  and  ``CV_8UC4`` .
 
@@ -428,9 +403,9 @@ See also:
 
 .. index:: gpu::filter2D
 
-cv::gpu::filter2D
+gpu::filter2D
 -----------------
-.. c:function:: void filter2D(const GpuMat\& src, GpuMat\& dst, int ddepth,  const Mat\& kernel,  Point anchor=Point(-1,-1))
+.. c:function:: void gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth,  const Mat& kernel,  Point anchor=Point(-1,-1))
 
     Applies non-separable 2D linear filter to image.
 
@@ -452,9 +427,9 @@ See also:
 
 .. index:: gpu::Laplacian
 
-cv::gpu::Laplacian
+gpu::Laplacian
 ------------------
-.. c:function:: void Laplacian(const GpuMat\& src, GpuMat\& dst, int ddepth,  int ksize = 1, double scale = 1)
+.. c:function:: void gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth,  int ksize = 1, double scale = 1)
 
     Applies Laplacian operator to image.
 
@@ -474,13 +449,11 @@ This filter doesn't check out of border accesses, so only proper submatrix of bi
 See also:
 :func:`Laplacian`,:func:`gpu::filter2D` .
 
-.. index:: cv::gpu::getLinearRowFilter_GPU
+.. index:: gpu::getLinearRowFilter_GPU
 
-.. _cv::gpu::getLinearRowFilter_GPU:
-
-cv::gpu::getLinearRowFilter_GPU
+gpu::getLinearRowFilter_GPU
 -------------------------------
-.. c:function:: Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType,  int bufType, const Mat\& rowKernel, int anchor = -1,  int borderType = BORDER_CONSTANT)
+.. c:function:: Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType,  int bufType, const Mat& rowKernel, int anchor = -1,  int borderType = BORDER_CONSTANT)
 
     Creates primitive row filter with the specified kernel.
 
@@ -498,13 +471,11 @@ There are two version of algorithm: NPP and OpenCV. NPP calls when ``srcType == 
 
 See also:,:func:`createSeparableLinearFilter` .
 
-.. index:: cv::gpu::getLinearColumnFilter_GPU
+.. index:: gpu::getLinearColumnFilter_GPU
 
-.. _cv::gpu::getLinearColumnFilter_GPU:
-
-cv::gpu::getLinearColumnFilter_GPU
+gpu::getLinearColumnFilter_GPU
 ----------------------------------
-.. c:function:: Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType,  int dstType, const Mat\& columnKernel, int anchor = -1,  int borderType = BORDER_CONSTANT)
+.. c:function:: Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType,  int dstType, const Mat& columnKernel, int anchor = -1,  int borderType = BORDER_CONSTANT)
 
     Creates the primitive column filter with the specified kernel.
 
@@ -521,13 +492,11 @@ cv::gpu::getLinearColumnFilter_GPU
 There are two version of algorithm: NPP and OpenCV. NPP calls when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType`` , otherwise calls OpenCV version. NPP supports only ``BORDER_CONSTANT`` border type and doesn't check indices outside image. OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE`` and ``BORDER_CONSTANT`` border types and checks indices outside image.
 See also:,:func:`createSeparableLinearFilter` .
 
-.. index:: cv::gpu::createSeparableLinearFilter_GPU
+.. index:: gpu::createSeparableLinearFilter_GPU
 
-.. _cv::gpu::createSeparableLinearFilter_GPU:
-
-cv::gpu::createSeparableLinearFilter_GPU
+gpu::createSeparableLinearFilter_GPU
 ----------------------------------------
-.. c:function:: Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType,  int dstType, const Mat\& rowKernel, const Mat\& columnKernel,  const Point\& anchor = Point(-1,-1),  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
+.. c:function:: Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType,  int dstType, const Mat& rowKernel, const Mat& columnKernel,  const Point& anchor = Point(-1,-1),  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
     Creates the separable linear filter engine.
 
@@ -546,9 +515,9 @@ See also:,,
 
 .. index:: gpu::sepFilter2D
 
-cv::gpu::sepFilter2D
+gpu::sepFilter2D
 --------------------
-.. c:function:: void sepFilter2D(const GpuMat\& src, GpuMat\& dst, int ddepth,  const Mat\& kernelX, const Mat\& kernelY,  Point anchor = Point(-1,-1),  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
+.. c:function:: void gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth,  const Mat& kernelX, const Mat& kernelY,  Point anchor = Point(-1,-1),  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
     Applies separable 2D linear filter to the image.
 
@@ -566,11 +535,9 @@ cv::gpu::sepFilter2D
 
 See also:,:func:`sepFilter2D` .
 
-.. index:: cv::gpu::createDerivFilter_GPU
+.. index:: gpu::createDerivFilter_GPU
 
-.. _cv::gpu::createDerivFilter_GPU:
-
-cv::gpu::createDerivFilter_GPU
+gpu::createDerivFilter_GPU
 ------------------------------
 .. c:function:: Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType,  int dx, int dy, int ksize,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
@@ -592,9 +559,9 @@ See also:,:func:`createDerivFilter` .
 
 .. index:: gpu::Sobel
 
-cv::gpu::Sobel
+gpu::Sobel
 --------------
-.. c:function:: void Sobel(const GpuMat\& src, GpuMat\& dst, int ddepth, int dx, int dy,  int ksize = 3, double scale = 1,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
+.. c:function:: void gpu::Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy,  int ksize = 3, double scale = 1,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
     Applies generalized Sobel operator to the image.
 
@@ -618,9 +585,9 @@ See also:,:func:`Sobel` .
 
 .. index:: gpu::Scharr
 
-cv::gpu::Scharr
+gpu::Scharr
 ---------------
-.. c:function:: void Scharr(const GpuMat\& src, GpuMat\& dst, int ddepth,  int dx, int dy, double scale = 1,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
+.. c:function:: void gpu::Scharr(const GpuMat& src, GpuMat& dst, int ddepth,  int dx, int dy, double scale = 1,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
     Calculates the first x- or y- image derivative using Scharr operator.
 
@@ -636,14 +603,11 @@ cv::gpu::Scharr
 
     :param scale: Optional scale factor for the computed derivative values (by default, no scaling is applied, see  :func:`getDerivKernels` ).
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method, see  :func:`borderInterpolate`
-See also:,:func:`Scharr` .
+    :param rowBorderType, columnBorderType: Pixel extrapolation method, see  :func:`borderInterpolate` See also:,:func:`Scharr` .
 
-.. index:: cv::gpu::createGaussianFilter_GPU
+.. index:: gpu::createGaussianFilter_GPU
 
-.. _cv::gpu::createGaussianFilter_GPU:
-
-cv::gpu::createGaussianFilter_GPU
+gpu::createGaussianFilter_GPU
 ---------------------------------
 .. c:function:: Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize,  double sigmaX, double sigmaY = 0,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
@@ -663,9 +627,9 @@ See also:,:func:`createGaussianFilter` .
 
 .. index:: gpu::GaussianBlur
 
-cv::gpu::GaussianBlur
+gpu::GaussianBlur
 ---------------------
-.. c:function:: void GaussianBlur(const GpuMat\& src, GpuMat\& dst, Size ksize,  double sigmaX, double sigmaY = 0,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
+.. c:function:: void gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize,  double sigmaX, double sigmaY = 0,  int rowBorderType = BORDER_DEFAULT,  int columnBorderType = -1)
 
     Smooths the image using Gaussian filter.
 
@@ -681,13 +645,11 @@ cv::gpu::GaussianBlur
 
 See also:,:func:`GaussianBlur` .
 
-.. index:: cv::gpu::getMaxFilter_GPU
+.. index:: gpu::getMaxFilter_GPU
 
-.. _cv::gpu::getMaxFilter_GPU:
-
-cv::gpu::getMaxFilter_GPU
+gpu::getMaxFilter_GPU
 -------------------------
-.. c:function:: Ptr<BaseFilter_GPU> getMaxFilter_GPU(int srcType, int dstType,  const Size\& ksize, Point anchor = Point(-1,-1))
+.. c:function:: Ptr<BaseFilter_GPU> getMaxFilter_GPU(int srcType, int dstType,  const Size& ksize, Point anchor = Point(-1,-1))
 
     Creates maximum filter.
 
@@ -702,13 +664,11 @@ cv::gpu::getMaxFilter_GPU
 **Please note:**
 This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
 
-.. index:: cv::gpu::getMinFilter_GPU
+.. index:: gpu::getMinFilter_GPU
 
-.. _cv::gpu::getMinFilter_GPU:
-
-cv::gpu::getMinFilter_GPU
+gpu::getMinFilter_GPU
 -------------------------
-.. c:function:: Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType,  const Size\& ksize, Point anchor = Point(-1,-1))
+.. c:function:: Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType,  const Size& ksize, Point anchor = Point(-1,-1))
 
     Creates minimum filter.
 

@@ -14,6 +14,7 @@ imdecode
     :param buf: The input array of vector of bytes
 
     :param flags: The same flags as in  :ref:`imread`
+    
 The function reads image from the specified buffer in memory.
 If the buffer is too short or contains invalid data, the empty matrix will be returned.
 
@@ -35,6 +36,7 @@ imencode
     :param buf: The output buffer; resized to fit the compressed image
 
     :param params: The format-specific parameters; see  :ref:`imwrite`
+
 The function compresses the image and stores it in the memory buffer, which is resized to fit the result.
 See
 :ref:`imwrite` for the list of supported formats and the flags description.
@@ -175,7 +177,7 @@ Class for video capturing from video files or cameras ::
     protected:
         ...
     };
-..
+
 
 The class provides C++ video capturing API. Here is how the class can be used: ::
 
@@ -205,7 +207,7 @@ The class provides C++ video capturing API. Here is how the class can be used: :
         // the camera will be deinitialized automatically in VideoCapture destructor
         return 0;
     }
-..
+
 
 .. index:: VideoCapture::VideoCapture
 
@@ -361,5 +363,6 @@ Video writer class ::
     protected:
         ...
     };
+
 ..
 

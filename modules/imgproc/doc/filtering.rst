@@ -360,10 +360,13 @@ bilateralFilter
     :param src: The source 8-bit or floating-point, 1-channel or 3-channel image
 
     :param dst: The destination image; will have the same size and the same type as  ``src``
+    
     :param d: The diameter of each pixel neighborhood, that is used during filtering. If it is non-positive, it's computed from  ``sigmaSpace``
+    
     :param sigmaColor: Filter sigma in the color space. Larger value of the parameter means that farther colors within the pixel neighborhood (see  ``sigmaSpace`` ) will be mixed together, resulting in larger areas of semi-equal color
 
     :param sigmaSpace: Filter sigma in the coordinate space. Larger value of the parameter means that farther pixels will influence each other (as long as their colors are close enough; see  ``sigmaColor`` ). Then  ``d>0`` , it specifies the neighborhood size regardless of  ``sigmaSpace`` , otherwise  ``d``  is proportional to  ``sigmaSpace``
+
 The function applies bilateral filtering to the input image, as described in
 http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html
 
@@ -378,6 +381,7 @@ blur
     :param src: The source image
 
     :param dst: The destination image; will have the same size and the same type as  ``src``
+    
     :param ksize: The smoothing kernel size
 
     :param anchor: The anchor point. The default value  ``Point(-1,-1)``  means that the anchor is at the kernel center
@@ -404,9 +408,11 @@ borderInterpolate
     Computes source location of extrapolated pixel
 
     :param p: 0-based coordinate of the extrapolated pixel along one of the axes, likely <0 or >= ``len``
+    
     :param len: length of the array along the corresponding axis
 
     :param borderType: the border type, one of the  ``BORDER_*`` , except for  ``BORDER_TRANSPARENT``  and  ``BORDER_ISOLATED`` . When  ``borderType==BORDER_CONSTANT``  the function always returns -1, regardless of  ``p``  and  ``len``
+
 The function computes and returns the coordinate of the donor pixel, corresponding to the specified extrapolated pixel when using the specified extrapolation border mode. For example, if we use ``BORDER_WRAP`` mode in the horizontal direction, ``BORDER_REFLECT_101`` in the vertical direction and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floating-point image ``img`` , it will be ::
 
     float val = img.at<float>(borderInterpolate(100, img.rows, BORDER_REFLECT_101),
@@ -419,6 +425,7 @@ Normally, the function is not called directly; it is used inside
 
 See also:
 :func:`FilterEngine`,:func:`copyMakeBorder`
+
 .. index:: boxFilter
 
 boxFilter
@@ -430,6 +437,7 @@ boxFilter
     :param src: The source image
 
     :param dst: The destination image; will have the same size and the same type as  ``src``
+    
     :param ksize: The smoothing kernel size
 
     :param anchor: The anchor point. The default value  ``Point(-1,-1)``  means that the anchor is at the kernel center
@@ -486,10 +494,13 @@ copyMakeBorder
     :param src: The source image
 
     :param dst: The destination image; will have the same type as  ``src``  and the size  ``Size(src.cols+left+right, src.rows+top+bottom)``
+    
     :param top, bottom, left, right: Specify how much pixels in each direction from the source image rectangle one needs to extrapolate, e.g.  ``top=1, bottom=1, left=1, right=1``  mean that 1 pixel-wide border needs to be built
 
     :param borderType: The border type; see  :func:`borderInterpolate`
+    
     :param value: The border value if  ``borderType==BORDER_CONSTANT``
+    
 The function copies the source image into the middle of the destination image. The areas to the left, to the right, above and below the copied source image will be filled with extrapolated pixels. This is not what
 :func:`FilterEngine` or based on it filtering functions do (they extrapolate pixels on-fly), but what other more complex functions, including your own, may do to simplify image boundary handling.
 
@@ -527,14 +538,19 @@ createBoxFilter
     :param srcType: The source image type
 
     :param sumType: The intermediate horizontal sum type; must have as many channels as  ``srcType``
+    
     :param dstType: The destination image type; must have as many channels as  ``srcType``
+    
     :param ksize: The aperture size
 
     :param anchor: The anchor position with the kernel; negative values mean that the anchor is at the kernel center
 
     :param normalize: Whether the sums are normalized or not; see  :func:`boxFilter`
+    
     :param scale: Another way to specify normalization in lower-level  ``getColumnSumFilter``
+    
     :param borderType: Which border type to use; see  :func:`borderInterpolate`
+
 The function is a convenience function that retrieves horizontal sum primitive filter with
 :func:`getRowSumFilter` , vertical sum filter with
 :func:`getColumnSumFilter` , constructs new
@@ -558,14 +574,16 @@ createDerivFilter
     :param srcType: The source image type
 
     :param dstType: The destination image type; must have as many channels as  ``srcType``
+    
     :param dx: The derivative order in respect with x
 
     :param dy: The derivative order in respect with y
 
     :param ksize: The aperture size; see  :func:`getDerivKernels`
+    
     :param borderType: Which border type to use; see  :func:`borderInterpolate`
-The function
-:func:`createDerivFilter` is a small convenience function that retrieves linear filter coefficients for computing image derivatives using
+
+The function :func:`createDerivFilter` is a small convenience function that retrieves linear filter coefficients for computing image derivatives using
 :func:`getDerivKernels` and then creates a separable linear filter with
 :func:`createSeparableLinearFilter` . The function is used by
 :func:`Sobel` and
@@ -585,11 +603,14 @@ createGaussianFilter
     :param type: The source and the destination image type
 
     :param ksize: The aperture size; see  :func:`getGaussianKernel`
+    
     :param sigmaX: The Gaussian sigma in the horizontal direction; see  :func:`getGaussianKernel`
+    
     :param sigmaY: The Gaussian sigma in the vertical direction; if 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}`
+    
     :param borderType: Which border type to use; see  :func:`borderInterpolate`
-The function
-:func:`createGaussianFilter` computes Gaussian kernel coefficients and then returns separable linear filter for that kernel. The function is used by
+
+The function :func:`createGaussianFilter` computes Gaussian kernel coefficients and then returns separable linear filter for that kernel. The function is used by
 :func:`GaussianBlur` . Note that while the function takes just one data type, both for input and output, you can pass by this limitation by calling
 :func:`getGaussianKernel` and then
 :func:`createSeparableFilter` directly.
@@ -610,6 +631,7 @@ createLinearFilter
     :param srcType: The source image type
 
     :param dstType: The destination image type; must have as many channels as  ``srcType``
+    
     :param kernel: The 2D array of filter coefficients
 
     :param anchor: The anchor point within the kernel; special value  ``Point(-1,-1)``  means that the anchor is at the kernel center
@@ -620,6 +642,7 @@ createLinearFilter
                      the parameter specifies the number of the fractional bits
 
     :param rowBorderType, columnBorderType: The pixel extrapolation methods in the horizontal and the vertical directions; see  :func:`borderInterpolate`
+    
     :param borderValue: Used in case of constant border
 
 The function returns pointer to 2D linear filter for the specified kernel, the source array type and the destination array type. The function is a higher-level function that calls ``getLinearFilter`` and passes the retrieved 2D filter to
@@ -644,6 +667,7 @@ createMorphologyFilter
     Creates engine for non-separable morphological operations
 
     :param op: The morphology operation id,  ``MORPH_ERODE``  or  ``MORPH_DILATE``
+    
     :param type: The input/output image type
 
     :param element: The 2D 8-bit structuring element for the morphological operation. Non-zero elements indicate the pixels that belong to the element
@@ -653,6 +677,7 @@ createMorphologyFilter
     :param anchor: The anchor position within the structuring element; negative values mean that the anchor is at the center
 
     :param rowBorderType, columnBorderType: The pixel extrapolation methods in the horizontal and the vertical directions; see  :func:`borderInterpolate`
+    
     :param borderValue: The border value in case of a constant border. The default value, \   ``morphologyDefaultBorderValue`` , has the special meaning. It is transformed  :math:`+\inf`  for the erosion and to  :math:`-\inf`  for the dilation, which means that the minimum (maximum) is effectively computed only over the pixels that are inside the image.
 
 The functions construct primitive morphological filtering operations or a filter engine based on them. Normally it's enough to use
@@ -678,7 +703,9 @@ createSeparableLinearFilter
     :param srcType: The source array type
 
     :param dstType: The destination image type; must have as many channels as  ``srcType``
+    
     :param bufType: The inermediate buffer type; must have as many channels as  ``srcType``
+    
     :param rowKernel: The coefficients for filtering each row
 
     :param columnKernel: The coefficients for filtering each column
@@ -691,6 +718,7 @@ createSeparableLinearFilter
                      the parameter specifies the number of the fractional bits
 
     :param rowBorderType, columnBorderType: The pixel extrapolation methods in the horizontal and the vertical directions; see  :func:`borderInterpolate`
+    
     :param borderValue: Used in case of a constant border
 
     :param symmetryType: The type of each of the row and column kernel; see  :func:`getKernelType` .
@@ -714,6 +742,7 @@ dilate
     :param src: The source image
 
     :param dst: The destination image. It will have the same size and the same type as  ``src``
+    
     :param element: The structuring element used for dilation. If  ``element=Mat()`` , a  :math:`3\times 3`  rectangular structuring element is used
 
     :param anchor: Position of the anchor within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the element center
@@ -721,7 +750,9 @@ dilate
     :param iterations: The number of times dilation is applied
 
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+    
     :param borderValue: The border value in case of a constant border. The default value has a special meaning, see  :func:`createMorphologyFilter`
+    
 The function dilates the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the maximum is taken:
 
 .. math::
@@ -743,6 +774,7 @@ erode
     :param src: The source image
 
     :param dst: The destination image. It will have the same size and the same type as  ``src``
+    
     :param element: The structuring element used for dilation. If  ``element=Mat()`` , a  :math:`3\times 3`  rectangular structuring element is used
 
     :param anchor: Position of the anchor within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the element center
@@ -750,7 +782,9 @@ erode
     :param iterations: The number of times erosion is applied
 
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+    
     :param borderValue: The border value in case of a constant border. The default value has a special meaning, see  :func:`createMorphoogyFilter`
+    
 The function erodes the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the minimum is taken:
 
 .. math::
@@ -761,6 +795,7 @@ The function supports the in-place mode. Erosion can be applied several ( ``iter
 
 See also:
 :func:`dilate`,:func:`morphologyEx`,:func:`createMorphologyFilter`
+
 .. index:: filter2D
 
 filter2D
@@ -772,13 +807,17 @@ filter2D
     :param src: The source image
 
     :param dst: The destination image. It will have the same size and the same number of channels as  ``src``
+    
     :param ddepth: The desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()``
+    
     :param kernel: Convolution kernel (or rather a correlation kernel), a single-channel floating point matrix. If you want to apply different kernels to different channels, split the image into separate color planes using  :func:`split`  and process them individually
 
     :param anchor: The anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor should lie within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center
 
     :param delta: The optional value added to the filtered pixels before storing them in  ``dst``
+    
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+
 The function applies an arbitrary linear filter to the image. In-place operation is supported. When the aperture is partially outside the image, the function interpolates outlier pixel values according to the specified border mode.
 
 The function does actually computes correlation, not the convolution:
@@ -797,6 +836,7 @@ The function uses
 
 See also:
 :func:`sepFilter2D`,:func:`createLinearFilter`,:func:`dft`,:func:`matchTemplate`
+
 .. index:: GaussianBlur
 
 GaussianBlur
@@ -808,9 +848,13 @@ GaussianBlur
     :param src: The source image
 
     :param dst: The destination image; will have the same size and the same type as  ``src``
+    
     :param ksize: The Gaussian kernel size;  ``ksize.width``  and  ``ksize.height``  can differ, but they both must be positive and odd. Or, they can be zero's, then they are computed from  ``sigma*``
+    
     :param sigmaX, sigmaY: The Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively, see  :func:`getGaussianKernel` . To fully control the result regardless of possible future modification of all this semantics, it is recommended to specify all of  ``ksize`` ,  ``sigmaX``  and  ``sigmaY``
+    
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+
 The function convolves the source image with the specified Gaussian kernel. In-place filtering is supported.
 
 See also:
@@ -824,7 +868,9 @@ getDerivKernels
     Returns filter coefficients for computing spatial image derivatives
 
     :param kx: The output matrix of row filter coefficients; will have type  ``ktype``
+    
     :param ky: The output matrix of column filter coefficients; will have type  ``ktype``
+    
     :param dx: The derivative order in respect with x
 
     :param dy: The derivative order in respect with y
@@ -834,6 +880,7 @@ getDerivKernels
     :param normalize: Indicates, whether to normalize (scale down) the filter coefficients or not. In theory the coefficients should have the denominator  :math:`=2^{ksize*2-dx-dy-2}` . If you are going to filter floating-point images, you will likely want to use the normalized kernels. But if you compute derivatives of a 8-bit image, store the results in 16-bit image and wish to preserve all the fractional bits, you may want to set  ``normalize=false`` .
 
     :param ktype: The type of filter coefficients. It can be  ``CV_32f``  or  ``CV_64F``
+
 The function computes and returns the filter coefficients for spatial image derivatives. When ``ksize=CV_SCHARR`` , the Scharr
 :math:`3 \times 3` kernels are generated, see
 :func:`Scharr` . Otherwise, Sobel kernels are generated, see
@@ -853,6 +900,7 @@ getGaussianKernel
 
     :param sigma: The Gaussian standard deviation. If it is non-positive, it is computed from  ``ksize``  as  \ ``sigma = 0.3*(ksize/2 - 1) + 0.8``
     :param ktype: The type of filter coefficients. It can be  ``CV_32f``  or  ``CV_64F``
+
 The function computes and returns the
 :math:`\texttt{ksize} \times 1` matrix of Gaussian filter coefficients:
 
@@ -893,6 +941,7 @@ The function analyzes the kernel coefficients and returns the corresponding kern
 
     * **KERNEL_SMOOTH** All the kernel elements are non-negative and sum to 1. E.g. the Gaussian kernel is both smooth kernel and symmetrical, so the function will return  ``KERNEL_SMOOTH | KERNEL_SYMMETRICAL``
     * **KERNEL_INTEGER** Al the kernel coefficients are integer numbers. This flag can be combined with  ``KERNEL_SYMMETRICAL``  or  ``KERNEL_ASYMMETRICAL``
+    
 .. index:: getStructuringElement
 
 getStructuringElement
@@ -903,15 +952,15 @@ getStructuringElement
 
     :param shape: The element shape, one of:
 
-    * ``MORPH_RECT``         - rectangular structuring element
+      * ``MORPH_RECT``         - rectangular structuring element
 
         .. math::
 
             E_{ij}=1
 
-    * ``MORPH_ELLIPSE``         - elliptic structuring element, i.e. a filled ellipse inscribed into the rectangle
- ``Rect(0, 0, esize.width, 0.esize.height)``
-    * ``MORPH_CROSS``         - cross-shaped structuring element:
+      * ``MORPH_ELLIPSE``         - elliptic structuring element, i.e. a filled ellipse inscribed into the rectangle ``Rect(0, 0, esize.width, 0.esize.height)``
+    
+      * ``MORPH_CROSS``         - cross-shaped structuring element:
 
         .. math::
 
@@ -934,7 +983,9 @@ medianBlur
     Smoothes image using median filter
 
     :param src: The source 1-, 3- or 4-channel image. When  ``ksize``  is 3 or 5, the image depth should be  ``CV_8U`` ,  ``CV_16U``  or  ``CV_32F`` . For larger aperture sizes it can only be  ``CV_8U``
+    
     :param dst: The destination array; will have the same size and the same type as  ``src``
+    
     :param ksize: The aperture linear size. It must be odd and more than 1, i.e. 3, 5, 7 ...
 
 The function smoothes image using the median filter with
@@ -953,6 +1004,7 @@ morphologyEx
     :param src: Source image
 
     :param dst: Destination image. It will have the same size and the same type as  ``src``
+    
     :param element: Structuring element
 
     :param op: Type of morphological operation, one of the following:
@@ -970,7 +1022,9 @@ morphologyEx
     :param iterations: Number of times erosion and dilation are applied
 
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+    
     :param borderValue: The border value in case of a constant border. The default value has a special meaning, see  :func:`createMorphoogyFilter`
+
 The function can perform advanced morphological transformations using erosion and dilation as basic operations.
 
 Opening:
@@ -1018,6 +1072,7 @@ Laplacian
     :param src: Source image
 
     :param dst: Destination image; will have the same size and the same number of channels as  ``src``
+    
     :param ddepth: The desired depth of the destination image
 
     :param ksize: The aperture size used to compute the second-derivative filters, see  :func:`getDerivKernels` . It must be positive and odd
@@ -1025,7 +1080,9 @@ Laplacian
     :param scale: The optional scale factor for the computed Laplacian values (by default, no scaling is applied, see  :func:`getDerivKernels` )
 
     :param delta: The optional delta value, added to the results prior to storing them in  ``dst``
+    
     :param borderType: The pixel extrapolation method, see  :func:`borderInterpolate`
+
 The function calculates the Laplacian of the source image by adding up the second x and y derivatives calculated using the Sobel operator:
 
 .. math::
@@ -1052,6 +1109,7 @@ pyrDown
     :param src: The source image
 
     :param dst: The destination image. It will have the specified size and the same type as  ``src``
+    
     :param dstsize: Size of the destination image. By default it is computed as  ``Size((src.cols+1)/2, (src.rows+1)/2)`` . But in any case the following conditions should be satisfied:
 
         .. math::
@@ -1078,6 +1136,7 @@ pyrUp
     :param src: The source image
 
     :param dst: The destination image. It will have the specified size and the same type as  ``src``
+    
     :param dstsize: Size of the destination image. By default it is computed as  ``Size(src.cols*2, (src.rows*2)`` . But in any case the following conditions should be satisfied:
 
         .. math::
@@ -1099,6 +1158,7 @@ sepFilter2D
     :param src: The source image
 
     :param dst: The destination image; will have the same size and the same number of channels as  ``src``
+    
     :param ddepth: The destination image depth
 
     :param rowKernel: The coefficients for filtering each row
@@ -1110,6 +1170,7 @@ sepFilter2D
     :param delta: The value added to the filtered results before storing them
 
     :param borderType: The pixel extrapolation method; see  :func:`borderInterpolate`
+
 The function applies a separable linear filter to the image. That is, first, every row of ``src`` is filtered with 1D kernel ``rowKernel`` . Then, every column of the result is filtered with 1D kernel ``columnKernel`` and the final result shifted by ``delta`` is stored in ``dst`` .
 
 See also:
@@ -1126,6 +1187,7 @@ Sobel
     :param src: The source image
 
     :param dst: The destination image; will have the same size and the same number of channels as  ``src``
+    
     :param ddepth: The destination image depth
 
     :param xorder: Order of the derivative x
@@ -1137,7 +1199,9 @@ Sobel
     :param scale: The optional scale factor for the computed derivative values (by default, no scaling is applied, see  :func:`getDerivKernels` )
 
     :param delta: The optional delta value, added to the results prior to storing them in  ``dst``
+    
     :param borderType: The pixel extrapolation method, see  :func:`borderInterpolate`
+
 In all cases except 1, an
 :math:`\texttt{ksize} \times
 \texttt{ksize}` separable kernel will be used to calculate the
@@ -1192,6 +1256,7 @@ Scharr
     :param src: The source image
 
     :param dst: The destination image; will have the same size and the same number of channels as  ``src``
+    
     :param ddepth: The destination image depth
 
     :param xorder: Order of the derivative x
@@ -1201,7 +1266,9 @@ Scharr
     :param scale: The optional scale factor for the computed derivative values (by default, no scaling is applied, see  :func:`getDerivKernels` )
 
     :param delta: The optional delta value, added to the results prior to storing them in  ``dst``
+    
     :param borderType: The pixel extrapolation method, see  :func:`borderInterpolate`
+    
 The function computes the first x- or y- spatial image derivative using Scharr operator. The call
 
 .. math::
