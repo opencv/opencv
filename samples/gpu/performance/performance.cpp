@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <stdexcept>
+#include <string>
 #include "performance.h"
 
 using namespace std;
@@ -151,12 +152,25 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
 
 int main(int argc, char** argv)
 {
-    if (argc < 3)
-        cout << "Usage: performance_gpu <test_filter> <working_dir_with_slash>\n\n";
-    if (argc >= 2)
-        TestSystem::instance().setTestFilter(argv[1]);
-    if (argc >= 3)
-        TestSystem::instance().setWorkingDir(argv[2]);
+    // Parse command line arguments
+    for (int i = 1; i < argc; ++i)
+    {
+        string key = argv[i];
+        if (key == "--help")
+        {
+            cout << "Usage: performance_gpu [--filter <test_filter>] [--working-dir <working_dir_with_slash>]\n";
+            return 0;
+        }
+        if (key == "--filter" && i + 1 < argc)
+            TestSystem::instance().setTestFilter(argv[++i]);
+        else if (key == "--working-dir" && i + 1 < argc)
+            TestSystem::instance().setWorkingDir(argv[++i]);
+        else 
+        {
+            cout << "Unknown parameter: '" << key << "'" << endl;
+            return -1;
+        }
+    }
 
     redirectError(cvErrorCallback);
     TestSystem::instance().run();
