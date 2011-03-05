@@ -1,8 +1,6 @@
 Common Interfaces of Feature Detectors
 ======================================
 
-.. highlight:: cpp
-
 Feature detectors in OpenCV have wrappers with common interface that enables to switch easily
 between different algorithms solving the same problem. All objects that implement keypoint detectors
 inherit
@@ -1005,11 +1003,10 @@ AdjusterAdapter::good
 
     Are params maxed out or still valid? Returns false if the parameters can't be adjusted any more. An example implementation of this is ::
 
-    bool FastAdjuster::good() const
-    {
-            return (thresh_ > 1) && (thresh_ < 200);
-    }
-
+        bool FastAdjuster::good() const
+        {
+            return (thresh > 1) && (thresh < 200);
+        }
 
 .. index:: FastAdjuster
 

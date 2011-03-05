@@ -14,21 +14,11 @@ There are descriptors such as One way descriptor and Ferns that have ``GenericDe
 
 .. index:: GenericDescriptorMatcher
 
-.. _GenericDescriptorMatcher:
-
 GenericDescriptorMatcher
 ------------------------
 .. c:type:: GenericDescriptorMatcher
 
-Abstract interface for a keypoint descriptor extracting and matching.
-There is
-:func:`DescriptorExtractor` and
-:func:`DescriptorMatcher` for these purposes too, but their interfaces are intended for descriptors
-represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors.
-
-:func:`DescriptorMatcher`,``GenericDescriptorMatcher`` has two groups
-of match methods: for matching keypoints of one image with other image or
-with image set. ::
+Abstract interface for a keypoint descriptor extracting and matching. There is :func:`DescriptorExtractor` and :func:`DescriptorMatcher` for these purposes too, but their interfaces are intended for descriptors represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors. :func:`DescriptorMatcher`,``GenericDescriptorMatcher`` has two groups of match methods: for matching keypoints of one image with other image or with image set. ::
 
     class GenericDescriptorMatcher
     {

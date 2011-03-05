@@ -1,8 +1,6 @@
 Geometric Image Transformations
 ===============================
 
-.. highlight:: cpp
-
 The functions in this section perform various geometrical transformations of 2D images. That is, they do not change the image content, but deform the pixel grid, and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel
 :math:`(x, y)` of the destination image, the functions compute coordinates of the corresponding "donor" pixel in the source image and copy the pixel value, that is:
 

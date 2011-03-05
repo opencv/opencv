@@ -1,9 +1,7 @@
 Qt new functions
 ================
 
-.. highlight:: cpp
-
-.. image:: ../../pics/Qt_GUI.png
+.. image:: pics/qtgui.png
 
 This figure explains the new functionalities implemented with Qt GUI. As we can see, the new GUI provides a statusbar, a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it.
 

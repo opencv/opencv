@@ -1,8 +1,6 @@
 Structural Analysis and Shape Descriptors
 =========================================
 
-.. highlight:: cpp
-
 .. index:: moments
 
 moments
@@ -572,5 +570,5 @@ edge.
 
 Here is the sample output of the function, where each image pixel is tested against the contour.
 
-.. image:: ../../pics/pointpolygon.png
+.. image:: pics/pointpolygon.png
 

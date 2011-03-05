@@ -1,8 +1,6 @@
 Object Detection
 ================
 
-.. highlight:: cpp
-
 .. index:: matchTemplate
 
 matchTemplate

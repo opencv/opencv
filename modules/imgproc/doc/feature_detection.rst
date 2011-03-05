@@ -1,8 +1,6 @@
 Feature Detection
 =================
 
-.. highlight:: cpp
-
 .. index:: Canny
 
 Canny
@@ -146,7 +144,7 @@ cornerSubPix
 
 The function iterates to find the sub-pixel accurate location of corners, or radial saddle points, as shown in on the picture below.
 
-.. image:: ../../pics/cornersubpix.png
+.. image:: pics/cornersubpix.png
 
 Sub-pixel accurate corner locator is based on the observation that every vector from the center
 :math:`q` to a point
@@ -408,11 +406,11 @@ Matas00
 
 This is the sample picture the function parameters have been tuned for:
 
-.. image:: ../../pics/building.jpg
+.. image:: pics/building.jpg
 
 And this is the output of the above program in the case of probabilistic Hough transform
 
-.. image:: ../../pics/houghp.png
+.. image:: pics/houghp.png
 
 .. index:: preCornerDetect
 

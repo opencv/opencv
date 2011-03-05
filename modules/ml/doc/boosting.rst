@@ -1,8 +1,6 @@
 Boosting
 ========
 
-.. highlight:: cpp
-
 A common machine learning task is supervised learning. In supervised learning, the goal is to learn the functional relationship
 :math:`F: y = F(x)` between the input
 :math:`x` and the output

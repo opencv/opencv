@@ -2,6 +2,8 @@
 imgproc. Image Processing
 *************************
 
+.. highlight:: cpp
+
 .. toctree::
     :maxdepth: 2
 
@@ -10,7 +12,6 @@ imgproc. Image Processing
     miscellaneous_transformations
     histograms
     structural_analysis_and_shape_descriptors
-    planar_subdivisions
     motion_analysis_and_object_tracking
     feature_detection
     object_detection

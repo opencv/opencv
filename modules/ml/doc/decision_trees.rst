@@ -1,8 +1,6 @@
 Decision Trees
 ==============
 
-.. highlight:: cpp
-
 The ML classes discussed in this section implement Classification And Regression Tree algorithms, which are described in `[Breiman84] <#paper_Breiman84>`_
 .
 

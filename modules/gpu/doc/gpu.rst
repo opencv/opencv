@@ -9,7 +9,7 @@ gpu. GPU-accelerated Computer Vision
     initalization_and_information
     data_structures
     operations_on_matrices
-    per_element_operations.
+    per_element_operations
     image_processing
     matrix_reductions
     object_detection

@@ -9,8 +9,6 @@ This is a simple classification model assuming that feature vectors from each cl
 
 .. index:: CvNormalBayesClassifier
 
-.. _CvNormalBayesClassifier:
-
 CvNormalBayesClassifier
 -----------------------
 .. c:type:: CvNormalBayesClassifier

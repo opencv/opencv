@@ -5,8 +5,6 @@ Cascade Classification
 
 .. index:: FeatureEvaluator
 
-.. _FeatureEvaluator:
-
 FeatureEvaluator
 ----------------
 .. c:type:: FeatureEvaluator

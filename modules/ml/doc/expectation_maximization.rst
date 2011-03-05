@@ -1,8 +1,6 @@
 Expectation-Maximization
 ========================
 
-.. highlight:: cpp
-
 The EM (Expectation-Maximization) algorithm estimates the parameters of the multivariate probability density function in the form of a Gaussian mixture distribution with a specified number of mixtures.
 
 Consider the set of the feature vectors

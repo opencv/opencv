@@ -5,8 +5,6 @@ Statistical Models
 
 .. index:: CvStatModel
 
-.. _CvStatModel:
-
 CvStatModel
 -----------
 .. c:type:: CvStatModel

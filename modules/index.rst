@@ -8,6 +8,8 @@ Welcome to opencvstd's documentation!
 
 Contents:
 
+.. highlight:: cpp
+
 .. toctree::
    :maxdepth: 2
 

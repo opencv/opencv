@@ -1,8 +1,6 @@
 Camera Calibration and 3D Reconstruction
 ========================================
 
-.. highlight:: cpp
-
 The functions in this section use the so-called pinhole camera model. That
 is, a scene view is formed by projecting 3D points into the image plane
 using a perspective transformation.
@@ -15,8 +13,7 @@ or
 
 .. math::
 
-    s  \vecthree{u}{v}{1} =  \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
-    
+    s  \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
     \begin{bmatrix}
     r_{11} & r_{12} & r_{13} & t_1  \\
     r_{21} & r_{22} & r_{23} & t_2  \\

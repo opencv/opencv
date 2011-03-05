@@ -1,8 +1,6 @@
 Miscellaneous Image Transformations
 ===================================
 
-.. highlight:: cpp
-
 .. index:: adaptiveThreshold
 
 adaptiveThreshold
@@ -616,7 +614,7 @@ As a practical example, the next figure shows the calculation of the integral of
 
 \begin{center}
 
-.. image:: ../../pics/integral.png
+.. image:: pics/integral.png
 
 \end{center}
 
@@ -682,7 +680,7 @@ value using Otsu's algorithm and uses it instead of the specified ``thresh`` .
 The function returns the computed threshold value.
 Currently, Otsu's method is implemented only for 8-bit images.
 
-.. image:: ../../pics/threshold.png
+.. image:: pics/threshold.png
 
 See also:
 :func:`adaptiveThreshold`,:func:`findContours`,:func:`compare`,:func:`min`,:func:`max`

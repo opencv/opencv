@@ -1,16 +1,14 @@
 Neural Networks
 ===============
 
-.. highlight:: cpp
-
 ML implements feed-forward artificial neural networks, more particularly, multi-layer perceptrons (MLP), the most commonly used type of neural networks. MLP consists of the input layer, output layer and one or more hidden layers. Each layer of MLP includes one or more neurons that are directionally linked with the neurons from the previous and the next layer. Here is an example of a 3-layer perceptron with 3 inputs, 2 outputs and the hidden layer including 5 neurons:
 
-.. image:: ../../pics/mlp_.png
+.. image:: pics/mlp.png
 
 All the neurons in MLP are similar. Each of them has several input links (i.e. it takes the output values from several neurons in the previous layer on input) and several output links (i.e. it passes the response to several neurons in the next layer). The values retrieved from the previous layer are summed with certain weights, individual for each neuron, plus the bias term, and the sum is transformed using the activation function
 :math:`f` that may be also different for different neurons. Here is the picture:
 
-.. image:: ../../pics/neuron_model.png
+.. image:: pics/neuron_model.png
 
 In other words, given the outputs
 :math:`x_j` of the layer
@@ -36,7 +34,7 @@ Different activation functions may be used, ML implements 3 standard ones:
     :math:`f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}`     ), the default choice for MLP; the standard sigmoid with
     :math:`\beta =1, \alpha =1`     is shown below:
 
-    .. image:: ../../pics/sigmoid_bipolar.png
+    .. image:: pics/sigmoid_bipolar.png
 
 *
     Gaussian function ( ``CvANN_MLP::GAUSSIAN``     ):

@@ -2,8 +2,6 @@
 Introduction
 ************
 
-.. highlight:: cpp
-
 OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is open-source BSD-licensed library that includes several hundreds computer vision algorithms. It is very popular in the Computer Vision community. Some people call it “de-facto standard” API. The document aims to specify the stable parts of the library, as well as some abstract interfaces for high-level interfaces, with the final goal to make it an official standard.
 
 API specifications in the document use the standard C++ (http://www.open-std.org/jtc1/sc22/wg21/) and the standard C++ library.

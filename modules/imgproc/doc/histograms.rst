@@ -1,8 +1,6 @@
 Histograms
 ==========
 
-.. highlight:: cpp
-
 .. index:: calcHist
 
 calcHist
