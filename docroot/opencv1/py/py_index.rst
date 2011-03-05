@@ -1,5 +1,6 @@
+################
 Python Reference
-~~~~~~~~~~~~~~~~
+################
 
 .. highlight:: python
 
