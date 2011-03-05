@@ -480,6 +480,38 @@ cv::solvePnP
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, i.e. the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
 :ref:`ProjectPoints2` ) ``objectPoints`` .
 
+.. index:: solvePnPRansac
+
+cv::solvePnPRansac
+------------
+.. c:function:: void solvePnPRansac( const Mat& objectPoints,               const Mat& imagePoints,               const Mat& cameraMatrix,               const Mat& distCoeffs,               Mat& rvec,               Mat& tvec,               bool useExtrinsicGuess=false,               int iterationsCount = 100,               float reprojectionError = 8.0,               int minInliersCount = 100,               vector<int>* inliers = NULL  )
+
+    Finds the object pose from the 3D-2D point correspondences
+
+    :param objectPoints: The array of object points in the object coordinate space, 3xN or Nx3 1-channel, or 1xN or Nx1 3-channel, where N is the number of points.  Can also pass  ``vector<Point3f>``  here.
+
+    :param imagePoints: The array of corresponding image points, 2xN or Nx2 1-channel or 1xN or Nx1 2-channel, where N is the number of points.  Can also pass  ``vector<Point2f>``  here.
+
+    :param cameraMatrix: The input camera matrix  :math:`A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}`
+    :param distCoeffs: The input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+
+    :param rvec: The output rotation vector (see  :ref:`Rodrigues2` ) that (together with  ``tvec`` ) brings points from the model coordinate system to the camera coordinate system
+
+    :param tvec: The output translation vector
+
+    :param useExtrinsicGuess: If true (1), the function will use the provided  ``rvec``  and  ``tvec``  as the initial approximations of the rotation and translation vectors, respectively, and will further optimize them.
+
+    :param iterationsCount: The number of iterations 
+    
+    :param reprojectionError: If distance between image point and object point projected with using found rvec and tvec less reprojectionError, it is inlier.
+   
+    :param minInliersCount: If the algorithm at some stage finds inliers more than minInliersCount it finishs.
+    
+    :param inliers: The output vector that contained indices of inliers in objectPoints and imagePoints
+
+The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, i.e. the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
+:ref:`ProjectPoints2` ) ``objectPoints`` . Through the use of RANSAC function is resistant to outliers.
+
 .. index:: findFundamentalMat
 
 cv::findFundamentalMat

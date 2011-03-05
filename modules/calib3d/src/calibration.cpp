@@ -3276,28 +3276,6 @@ void cv::projectPoints( const Mat& opoints,
                       &_imagePoints, &_dpdrot, &_dpdt, &_dpdf, &_dpdc, &_dpddist, aspectRatio );
 }
 
-void cv::solvePnP( const Mat& opoints, const Mat& ipoints,
-                   const Mat& cameraMatrix, const Mat& distCoeffs,
-                   Mat& rvec, Mat& tvec, bool useExtrinsicGuess )
-{
-    CV_Assert(opoints.isContinuous() && opoints.depth() == CV_32F &&
-              ((opoints.rows == 1 && opoints.channels() == 3) ||
-               opoints.cols*opoints.channels() == 3) &&
-              ipoints.isContinuous() && ipoints.depth() == CV_32F &&
-              ((ipoints.rows == 1 && ipoints.channels() == 2) ||
-              ipoints.cols*ipoints.channels() == 2));
-    
-    rvec.create(3, 1, CV_64F);
-    tvec.create(3, 1, CV_64F);
-    CvMat _objectPoints = opoints, _imagePoints = ipoints;
-    CvMat _cameraMatrix = cameraMatrix, _distCoeffs = distCoeffs;
-    CvMat _rvec = rvec, _tvec = tvec;
-    cvFindExtrinsicCameraParams2(&_objectPoints, &_imagePoints, &_cameraMatrix,
-                                 distCoeffs.data ? &_distCoeffs : 0,
-                                 &_rvec, &_tvec, useExtrinsicGuess );
-}
-
-
 cv::Mat cv::initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints,
                                 const vector<vector<Point2f> >& imagePoints,
                                 Size imageSize, double aspectRatio )

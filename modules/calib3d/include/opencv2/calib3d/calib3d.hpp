@@ -519,6 +519,19 @@ CV_EXPORTS_W void solvePnP( const Mat& objectPoints,
                             CV_OUT Mat& rvec, CV_OUT Mat& tvec,
                             bool useExtrinsicGuess=false );
 
+//! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
+CV_EXPORTS_W void solvePnPRansac( const Mat& objectPoints,
+                                  const Mat& imagePoints,
+                                  const Mat& cameraMatrix,
+                                  const Mat& distCoeffs,
+                                  CV_OUT Mat& rvec,
+                                  CV_OUT Mat& tvec,
+                                  bool useExtrinsicGuess = false,
+                                  int iterationsCount = 100,
+                                  float reprojectionError = 8.0,
+                                  int minInliersCount = 100,
+                                  CV_OUT vector<int>* inliers = NULL );
+
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( const vector<vector<Point3f> >& objectPoints,
                                    const vector<vector<Point2f> >& imagePoints,
