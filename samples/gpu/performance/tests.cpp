@@ -787,8 +787,7 @@ void InitSolvePnpRansac()
     Mat object; gen(object, 1, 4, CV_32FC3, Scalar::all(0), Scalar::all(100));
     Mat image; gen(image, 1, 4, CV_32FC2, Scalar::all(0), Scalar::all(100));
     Mat rvec, tvec;
-    gpu::solvePnpRansac(object, image, Mat::eye(3, 3, CV_32F), Mat(), rvec, tvec, 
-                        gpu::SolvePnpRansacParams());
+    gpu::solvePnPRansac(object, image, Mat::eye(3, 3, CV_32F), Mat(), rvec, tvec);
 }
 
 
@@ -811,21 +810,16 @@ TEST(solvePnpRansac)
         Mat rvec, tvec;
         const int num_iters = 200;
         const float max_dist = 2.0f;
-        vector<int> inliers_cpu;
+        vector<int> inliers_cpu, inliers_gpu;
 
         CPU_ON;
         solvePnPRansac(object, image, camera_mat, Mat(), rvec, tvec, false, num_iters, 
                        max_dist, int(num_points * 0.05), &inliers_cpu);
         CPU_OFF;
 
-        gpu::SolvePnpRansacParams params;
-        params.num_iters = num_iters;
-        params.max_dist = max_dist;
-        vector<int> inliers_gpu;
-        params.inliers = &inliers_gpu;
-
         GPU_ON;
-        gpu::solvePnpRansac(object, image, camera_mat, Mat(), rvec, tvec, params);
+        gpu::solvePnPRansac(object, image, camera_mat, Mat(), rvec, tvec, false, num_iters,
+                            max_dist, int(num_points * 0.05), &inliers_gpu);
         GPU_OFF;
     }
 }

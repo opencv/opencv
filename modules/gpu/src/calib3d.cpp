@@ -56,8 +56,8 @@ void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
 void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
                             const Mat&, const Mat&, GpuMat&, const Stream&) { throw_nogpu(); }
 
-void cv::gpu::solvePnpRansac(const Mat&, const Mat&, const Mat&, const Mat&,
-                             Mat&, Mat&, SolvePnpRansacParams) { throw_nogpu(); }
+void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, 
+                             Mat&, Mat&, bool, int, float, int, vector<int>*) { throw_nogpu(); }
 
 #else
 
@@ -235,18 +235,21 @@ namespace
     };
 }
 
-void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
-                             const Mat& dist_coef, Mat& rvec, Mat& tvec, SolvePnpRansacParams params)
+void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+                             const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess,
+                             int num_iters, float max_dist, int min_inlier_count, 
+                             vector<int>* inliers)
 {
     CV_Assert(object.rows == 1 && object.cols > 0 && object.type() == CV_32FC3);
     CV_Assert(image.rows == 1 && image.cols > 0 && image.type() == CV_32FC2);
     CV_Assert(object.cols == image.cols);
     CV_Assert(camera_mat.size() == Size(3, 3) && camera_mat.type() == CV_32F);
-    CV_Assert(!params.use_extrinsic_guess); // We don't support initial guess for now
-    CV_Assert(params.num_iters <= solve_pnp_ransac::maxNumIters());
+    CV_Assert(!use_extrinsic_guess); // We don't support initial guess for now
+    CV_Assert(num_iters <= solve_pnp_ransac::maxNumIters());
 
+    const int subset_size = 4;
     const int num_points = object.cols;
-    CV_Assert(num_points >= params.subset_size);
+    CV_Assert(num_points >= subset_size);
 
     // Unapply distortion and intrinsic camera transformations
     Mat eye_camera_mat = Mat::eye(3, 3, CV_32F);
@@ -255,21 +258,21 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
     undistortPoints(image, image_normalized, camera_mat, dist_coef, Mat(), eye_camera_mat);
 
     // Hypotheses storage (global)
-    Mat rot_matrices(1, params.num_iters * 9, CV_32F);
-    Mat transl_vectors(1, params.num_iters * 3, CV_32F);
+    Mat rot_matrices(1, num_iters * 9, CV_32F);
+    Mat transl_vectors(1, num_iters * 3, CV_32F);
 
     // Generate set of hypotheses using small subsets of the input data
     TransformHypothesesGenerator body(object, image_normalized, empty_dist_coef, eye_camera_mat, 
-                                      num_points, params.subset_size, rot_matrices, transl_vectors);
-    parallel_for(BlockedRange(0, params.num_iters), body);
+                                      num_points, subset_size, rot_matrices, transl_vectors);
+    parallel_for(BlockedRange(0, num_iters), body);
 
     // Compute scores (i.e. number of inliers) for each hypothesis
     GpuMat d_object(object);
     GpuMat d_image_normalized(image_normalized);
-    GpuMat d_hypothesis_scores(1, params.num_iters, CV_32S);
+    GpuMat d_hypothesis_scores(1, num_iters, CV_32S);
     solve_pnp_ransac::computeHypothesisScores(
-            params.num_iters, num_points, rot_matrices.ptr<float>(), transl_vectors.ptr<float3>(),
-            d_object.ptr<float3>(), d_image_normalized.ptr<float2>(), params.max_dist * params.max_dist, 
+            num_iters, num_points, rot_matrices.ptr<float>(), transl_vectors.ptr<float3>(),
+            d_object.ptr<float3>(), d_image_normalized.ptr<float2>(), max_dist * max_dist, 
             d_hypothesis_scores.ptr<int>());
 
     // Find the best hypothesis index
@@ -288,10 +291,10 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
     tvec = tvec.reshape(0, 1);
 
     // Build vector of inlier indices
-    if (params.inliers != NULL)
+    if (inliers != NULL)
     {
-        params.inliers->clear();
-        params.inliers->reserve(num_inliers);
+        inliers->clear();
+        inliers->reserve(num_inliers);
 
         Point3f p, p_transf;
         Point2f p_proj;
@@ -306,8 +309,8 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
             p_transf.z = rot[6] * p.x + rot[7] * p.y + rot[8] * p.z + transl[2];
             p_proj.x = p_transf.x / p_transf.z;
             p_proj.y = p_transf.y / p_transf.z;
-            if (norm(p_proj - image_normalized.at<Point2f>(0, i)) < params.max_dist)
-                params.inliers->push_back(i);
+            if (norm(p_proj - image_normalized.at<Point2f>(0, i)) < max_dist)
+                inliers->push_back(i);
         }
     }
 }

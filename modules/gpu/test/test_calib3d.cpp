@@ -107,7 +107,7 @@ TEST(transformPoints, accuracy)
 }
 
 
-TEST(solvePnpRansac, accuracy)
+TEST(solvePnPRansac, accuracy)
 {
     RNG& rng = TS::ptr()->get_rng();
 
@@ -126,12 +126,9 @@ TEST(solvePnpRansac, accuracy)
     projectPoints(object, rvec_gold, tvec_gold, camera_mat, Mat(), image_vec);
     Mat image(1, image_vec.size(), CV_32FC2, &image_vec[0]);
 
-    Mat rvec;
-    Mat tvec;
-    SolvePnpRansacParams params;
+    Mat rvec, tvec;
     vector<int> inliers;
-    params.inliers = &inliers;
-    solvePnpRansac(object, image, camera_mat, Mat(), rvec, tvec, params);
+    gpu::solvePnPRansac(object, image, camera_mat, Mat(), rvec, tvec, false, 200, 2.f, 100, &inliers);
 
     ASSERT_LE(norm(rvec - rvec_gold), 1e-3f);
     ASSERT_LE(norm(tvec - tvec_gold), 1e-3f);
