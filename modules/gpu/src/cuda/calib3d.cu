@@ -43,7 +43,7 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 
-#define SOLVE_PNP_RANSAC_NUM_ITERS 200
+#define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
 namespace cv { namespace gpu
 {
@@ -120,8 +120,13 @@ namespace cv { namespace gpu
 
     namespace solve_pnp_ransac
     {
-        __constant__ float3 crot_matrices[SOLVE_PNP_RANSAC_NUM_ITERS * 3];
-        __constant__ float3 ctransl_vectors[SOLVE_PNP_RANSAC_NUM_ITERS];
+        __constant__ float3 crot_matrices[SOLVE_PNP_RANSAC_MAX_NUM_ITERS * 3];
+        __constant__ float3 ctransl_vectors[SOLVE_PNP_RANSAC_MAX_NUM_ITERS];
+
+        int maxNumIters()
+        {
+            return SOLVE_PNP_RANSAC_MAX_NUM_ITERS;
+        }
 
         __device__ float sqr(float x)
         {

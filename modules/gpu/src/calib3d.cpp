@@ -145,6 +145,8 @@ void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
 
 namespace cv { namespace gpu { namespace solve_pnp_ransac
 {
+    int maxNumIters();
+
     void computeHypothesisScores(
             const int num_hypotheses, const int num_points, const float* rot_matrices,
             const float3* transl_vectors, const float3* object, const float2* image,
@@ -241,6 +243,7 @@ void cv::gpu::solvePnpRansac(const Mat& object, const Mat& image, const Mat& cam
     CV_Assert(object.cols == image.cols);
     CV_Assert(camera_mat.size() == Size(3, 3) && camera_mat.type() == CV_32F);
     CV_Assert(!params.use_extrinsic_guess); // We don't support initial guess for now
+    CV_Assert(params.num_iters <= solve_pnp_ransac::maxNumIters());
 
     const int num_points = object.cols;
     CV_Assert(num_points >= params.subset_size);
