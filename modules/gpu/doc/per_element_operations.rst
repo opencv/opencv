@@ -7,7 +7,7 @@ Per-element Operations.
 
 gpu::add
 ------------
-.. c:function:: void gpu::add(const GpuMat\& a, const GpuMat\& b, GpuMat\& c)
+.. c:function:: void gpu::add(const GpuMat& a, const GpuMat& b, GpuMat& c)
 
     Computes matrix-matrix or matrix-scalar sum.
 
@@ -17,7 +17,7 @@ gpu::add
 
     :param c: Destination matrix. Will have the same size and type as  ``a`` .
 
-.. c:function:: void gpu::add(const GpuMat\& a, const Scalar\& sc, GpuMat\& c)
+.. c:function:: void gpu::add(const GpuMat& a, const Scalar& sc, GpuMat& c)
 
     * **a** Source matrix.  ``CV_32FC1``  and  ``CV_32FC2``  matrixes are supported for now.
 
@@ -32,7 +32,7 @@ See also:
 
 gpu::subtract
 -----------------
-.. c:function:: void gpu::subtract(const GpuMat\& a, const GpuMat\& b, GpuMat\& c)
+.. c:function:: void gpu::subtract(const GpuMat& a, const GpuMat& b, GpuMat& c)
 
     Subtracts matrix from another matrix (or scalar from matrix).
 
@@ -42,7 +42,7 @@ gpu::subtract
 
     :param c: Destination matrix. Will have the same size and type as  ``a`` .
 
-.. c:function:: void subtract(const GpuMat\& a, const Scalar\& sc, GpuMat\& c)
+.. c:function:: void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c)
 
     * **a** Source matrix.   ``CV_32FC1``  and  ``CV_32FC2``  matrixes are supported for now.
 
@@ -57,7 +57,7 @@ See also:
 
 gpu::multiply
 -----------------
-.. c:function:: void gpu::multiply(const GpuMat\& a, const GpuMat\& b, GpuMat\& c)
+.. c:function:: void gpu::multiply(const GpuMat& a, const GpuMat& b, GpuMat& c)
 
     Computes per-element product of two matrices (or of matrix and scalar).
 
@@ -67,7 +67,7 @@ gpu::multiply
 
     :param c: Destionation matrix. Will have the same size and type as  ``a`` .
 
-.. c:function:: void multiply(const GpuMat\& a, const Scalar\& sc, GpuMat\& c)
+.. c:function:: void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c)
 
     * **a** Source matrix.   ``CV_32FC1``  and  ``CV_32FC2``  matrixes are supported for now.
 
@@ -82,7 +82,7 @@ See also:
 
 gpu::divide
 ---------------
-.. c:function:: void gpu::divide(const GpuMat\& a, const GpuMat\& b, GpuMat\& c)
+.. c:function:: void gpu::divide(const GpuMat& a, const GpuMat& b, GpuMat& c)
 
     Performs per-element division of two matrices (or division of matrix by scalar).
 
@@ -92,7 +92,7 @@ gpu::divide
 
     :param c: Destionation matrix. Will have the same size and type as  ``a`` .
 
-.. c:function:: void divide(const GpuMat\& a, const Scalar\& sc, GpuMat\& c)
+.. c:function:: void divide(const GpuMat& a, const Scalar& sc, GpuMat& c)
 
     * **a** Source matrix.   ``CV_32FC1``  and  ``CV_32FC2``  matrixes are supported for now.
 
@@ -110,7 +110,7 @@ See also:
 
 gpu::exp
 ------------
-.. c:function:: void gpu::exp(const GpuMat\& a, GpuMat\& b)
+.. c:function:: void gpu::exp(const GpuMat& a, GpuMat& b)
 
     Computes exponent of each matrix element.
 
@@ -125,7 +125,7 @@ See also:
 
 gpu::log
 ------------
-.. c:function:: void gpu::log(const GpuMat\& a, GpuMat\& b)
+.. c:function:: void gpu::log(const GpuMat& a, GpuMat& b)
 
     Computes natural logarithm of absolute value of each matrix element.
 
@@ -140,7 +140,7 @@ See also:
 
 gpu::absdiff
 ----------------
-.. c:function:: void gpu::absdiff(const GpuMat\& a, const GpuMat\& b, GpuMat\& c)
+.. c:function:: void gpu::absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c)
 
     Computes per-element absolute difference of two matrices (or of matrix and scalar).
 
@@ -150,7 +150,7 @@ gpu::absdiff
 
     :param c: Destionation matrix. Will have the same size and type as  ``a`` .
 
-.. c:function:: void absdiff(const GpuMat\& a, const Scalar\& s, GpuMat\& c)
+.. c:function:: void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c)
 
     * **a** Source matrix.  ``CV_32FC1``  matrixes are supported for now.
 
@@ -165,7 +165,7 @@ See also:
 
 gpu::compare
 ----------------
-.. c:function:: void gpu::compare(const GpuMat\& a, const GpuMat\& b, GpuMat\& c, int cmpop)
+.. c:function:: void gpu::compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop)
 
     Compares elements of two matrices.
 
@@ -190,15 +190,11 @@ See also:
 
 .. index:: gpu::bitwise_not
 
-.. _gpu::bitwise_not:
-
 gpu::bitwise_not
 --------------------
-.. c:function:: void gpu::bitwise_not(const GpuMat\& src, GpuMat\& dst,
-   const GpuMat\& mask=GpuMat())
+.. c:function:: void gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat())
 
-.. c:function:: void gpu::bitwise_not(const GpuMat\& src, GpuMat\& dst,
-   const GpuMat\& mask, const Stream\& stream)
+.. c:function:: void gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
     Performs per-element bitwise inversion.
 
@@ -210,20 +206,14 @@ gpu::bitwise_not
 
     :param stream: Stream for the asynchronous version.
 
-See also:
-.
 
 .. index:: gpu::bitwise_or
 
-.. _gpu::bitwise_or:
-
 gpu::bitwise_or
 -------------------
-.. c:function:: void gpu::bitwise_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const GpuMat\& mask=GpuMat())
+.. c:function:: void gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat())
 
-.. c:function:: void gpu::bitwise_or(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const GpuMat\& mask, const Stream\& stream)
+.. c:function:: void gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
     Performs per-element bitwise disjunction of two matrices.
 
@@ -237,20 +227,13 @@ gpu::bitwise_or
 
     :param stream: Stream for the asynchronous version.
 
-See also:
-.
-
 .. index:: gpu::bitwise_and
-
-.. _gpu::bitwise_and:
 
 gpu::bitwise_and
 --------------------
-.. c:function:: void gpu::bitwise_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const GpuMat\& mask=GpuMat())
+.. c:function:: void gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat())
 
-.. c:function:: void gpu::bitwise_and(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const GpuMat\& mask, const Stream\& stream)
+.. c:function:: void gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
     Performs per-element bitwise conjunction of two matrices.
 
@@ -264,20 +247,14 @@ gpu::bitwise_and
 
     :param stream: Stream for the asynchronous version.
 
-See also:
-.
 
 .. index:: gpu::bitwise_xor
 
-.. _gpu::bitwise_xor:
-
 gpu::bitwise_xor
 --------------------
-.. c:function:: void gpu::bitwise_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const GpuMat\& mask=GpuMat())
+.. c:function:: void gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat())
 
-.. c:function:: void gpu::bitwise_xor(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const GpuMat\& mask, const Stream\& stream)
+.. c:function:: void gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
     Performs per-element bitwise "exclusive or" of two matrices.
 
@@ -291,19 +268,16 @@ gpu::bitwise_xor
 
     :param stream: Stream for the asynchronous version.
 
-See also:
-.
 
 .. index:: gpu::min
 
 gpu::min
 ------------
-.. c:function:: void gpu::min(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst)
+.. c:function:: void gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 
-.. c:function:: void gpu::min(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const Stream\& stream)
+.. c:function:: void gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream)
 
-    Computes per-element minimum of two matrices (or of matrix and scalar).
+    Computes per-element minimum of two matrices (or a matrix and a scalar).
 
     :param src1: First source matrix.
 
@@ -313,10 +287,10 @@ gpu::min
 
     :param stream: Stream for the asynchronous version.
 
-.. c:function:: void gpu::min(const GpuMat\& src1, double src2, GpuMat\& dst)
+.. c:function:: void gpu::min(const GpuMat& src1, double src2, GpuMat& dst)
 
-.. c:function:: void gpu::min(const GpuMat\& src1, double src2, GpuMat\& dst,
-   const Stream\& stream)
+.. c:function:: void gpu::min(const GpuMat& src1, double src2, GpuMat& dst,
+   const Stream& stream)
 
     * **src1** Source matrix.
 
@@ -333,33 +307,25 @@ See also:
 
 gpu::max
 ------------
-.. c:function:: void gpu::max(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst)
+.. c:function:: void gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
 
-.. c:function:: void gpu::max(const GpuMat\& src1, const GpuMat\& src2, GpuMat\& dst,
-   const Stream\& stream)
+.. c:function:: void gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream)
 
-    Computes per-element maximum of two matrices (or of matrix and scalar).
+.. c:function:: void gpu::max(const GpuMat& src1, double value, GpuMat& dst)
+
+.. c:function:: void gpu::max(const GpuMat& src1, double value, GpuMat& dst, const Stream& stream)
+
+    Computes per-element maximum of two matrices (or a matrix and a scalar).
 
     :param src1: First source matrix.
 
     :param src2: Second source matrix.
+    
+    :param value: The scalar value to compare ``src1`` elements with
 
     :param dst: Destination matrix. Will have the same size and type as  ``src1`` .
 
     :param stream: Stream for the asynchronous version.
-
-.. c:function:: void max(const GpuMat\& src1, double src2, GpuMat\& dst)
-
-.. c:function:: void max(const GpuMat\& src1, double src2, GpuMat\& dst,
-   const Stream\& stream)
-
-    * **src1** Source matrix.
-
-    * **src2** Scalar to be compared with.
-
-    * **dst** Destination matrix. Will have the same size and type as  ``src1`` .
-
-    * **stream** Stream for the asynchronous version.
 
 See also:
 :func:`max` .

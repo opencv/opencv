@@ -3,9 +3,11 @@ Feature Detection
 
 .. index:: Canny
 
+.. _Canny:
+
 Canny
 ---------
-.. c:function:: void Canny( const Mat& image, Mat& edges,            double threshold1, double threshold2,            int apertureSize=3, bool L2gradient=false )
+.. c:function:: void Canny( const Mat& image, Mat& edges, double threshold1, double threshold2, int apertureSize=3, bool L2gradient=false )
 
     Finds edges in an image using Canny algorithm.
 
@@ -26,9 +28,12 @@ http://en.wikipedia.org/wiki/Canny_edge_detector
 
 .. index:: cornerEigenValsAndVecs
 
+.. _cornerEigenValsAndVecs:
+
 cornerEigenValsAndVecs
---------------------------
-.. c:function:: void cornerEigenValsAndVecs( const Mat& src, Mat& dst,                            int blockSize, int apertureSize,                            int borderType=BORDER_DEFAULT )
+----------------------
+
+.. c:function:: void cornerEigenValsAndVecs( const Mat& src, Mat& dst, int blockSize, int apertureSize, int borderType=BORDER_DEFAULT )
 
     Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
@@ -67,11 +72,15 @@ The output of the function can be used for robust edge or corner detection.
 
 See also:
 :func:`cornerMinEigenVal`,:func:`cornerHarris`,:func:`preCornerDetect`
+
 .. index:: cornerHarris
 
+.. _cornerHarris:
+
 cornerHarris
-----------------
-.. c:function:: void cornerHarris( const Mat& src, Mat& dst, int blockSize,                  int apertureSize, double k,                  int borderType=BORDER_DEFAULT )
+------------
+
+.. c:function:: void cornerHarris( const Mat& src, Mat& dst, int blockSize, int apertureSize, double k, int borderType=BORDER_DEFAULT )
 
     Harris edge detector.
 
@@ -103,9 +112,12 @@ Corners in the image can be found as the local maxima of this response map.
 
 .. index:: cornerMinEigenVal
 
+.. _cornerMinEigenVal:
+
 cornerMinEigenVal
----------------------
-.. c:function:: void cornerMinEigenVal( const Mat& src, Mat& dst,                        int blockSize, int apertureSize=3,                        int borderType=BORDER_DEFAULT )
+-----------------
+
+.. c:function:: void cornerMinEigenVal( const Mat& src, Mat& dst, int blockSize, int apertureSize=3, int borderType=BORDER_DEFAULT )
 
     Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
@@ -126,9 +138,11 @@ The function is similar to
 
 .. index:: cornerSubPix
 
+.. _cornerSubPix:
+
 cornerSubPix
 ----------------
-.. c:function:: void cornerSubPix( const Mat& image, vector<Point2f>& corners,                   Size winSize, Size zeroZone,                   TermCriteria criteria )
+.. c:function:: void cornerSubPix( const Mat& image, vector<Point2f>& corners, Size winSize, Size zeroZone, TermCriteria criteria )
 
     Refines the corner locations.
 
@@ -182,9 +196,12 @@ The algorithm sets the center of the neighborhood window at this new center
 
 .. index:: goodFeaturesToTrack
 
+.. _goodFeaturesToTrack:
+
 goodFeaturesToTrack
------------------------
-.. c:function:: void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,                         int maxCorners, double qualityLevel, double minDistance,                         const Mat& mask=Mat(), int blockSize=3,                         bool useHarrisDetector=false, double k=0.04 )
+-------------------
+
+.. c:function:: void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners, int maxCorners, double qualityLevel, double minDistance, const Mat& mask=Mat(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
 
     Determines strong corners on an image.
 
@@ -239,8 +256,11 @@ See also: :func:`cornerMinEigenVal`, :func:`cornerHarris`, :func:`calcOpticalFlo
 
 .. index:: HoughCircles
 
+.. _HoughCircles:
+
 HoughCircles
-----------------
+------------
+
 .. c:function:: void HoughCircles( Mat& image, vector<Vec3f>& circles, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
 
     Finds circles in a grayscale image using a Hough transform.
@@ -300,11 +320,15 @@ Note that usually the function detects the circles' centers well, however it may
 
 See also:
 :func:`fitEllipse`,:func:`minEnclosingCircle`
+
 .. index:: HoughLines
 
+.. _HoughLines:
+
 HoughLines
---------------
-.. c:function:: void HoughLines( Mat& image, vector<Vec2f>& lines,                 double rho, double theta, int threshold,                 double srn=0, double stn=0 )
+----------
+
+.. c:function:: void HoughLines( Mat& image, vector<Vec2f>& lines, double rho, double theta, int threshold, double srn=0, double stn=0 )
 
     Finds lines in a binary image using standard Hough transform.
 
@@ -327,9 +351,12 @@ The function implements standard or standard multi-scale Hough transform algorit
 
 .. index:: HoughLinesP
 
+.. _HoughLinesP:
+
 HoughLinesP
----------------
-.. c:function:: void HoughLinesP( Mat& image, vector<Vec4i>& lines,                  double rho, double theta, int threshold,                  double minLineLength=0, double maxLineGap=0 )
+-----------
+
+.. c:function:: void HoughLinesP( Mat& image, vector<Vec4i>& lines, double rho, double theta, int threshold, double minLineLength=0, double maxLineGap=0 )
 
     Finds lines segments in a binary image using probabilistic Hough transform.
 
@@ -414,9 +441,12 @@ And this is the output of the above program in the case of probabilistic Hough t
 
 .. index:: preCornerDetect
 
+.. _preCornerDetect:
+
 preCornerDetect
--------------------
-.. c:function:: void preCornerDetect( const Mat& src, Mat& dst, int apertureSize,                     int borderType=BORDER_DEFAULT )
+---------------
+
+.. c:function:: void preCornerDetect( const Mat& src, Mat& dst, int apertureSize, int borderType=BORDER_DEFAULT )
 
     Calculates the feature map for corner detection
 

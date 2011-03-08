@@ -61,7 +61,7 @@ so the error on the test set usually starts increasing after the network
 size reaches some limit. Besides, the larger networks are train much
 longer than the smaller ones, so it is reasonable to preprocess the data
 (using
-:ref:`CalcPCA` or similar technique) and train a smaller network
+:ref:`PCA::operator ()` or similar technique) and train a smaller network
 on only the essential features.
 
 Another feature of the MLP's is their inability to handle categorical

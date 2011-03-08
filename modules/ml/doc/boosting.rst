@@ -1,3 +1,5 @@
+.. _Boosting:
+
 Boosting
 ========
 
@@ -7,7 +9,7 @@ A common machine learning task is supervised learning. In supervised learning, t
 :math:`y` . Predicting the qualitative output is called classification, while predicting the quantitative output is called regression.
 
 Boosting is a powerful learning concept, which provide a solution to the supervised classification learning task. It combines the performance of many "weak" classifiers to produce a powerful 'committee'
-:ref:`HTF01` . A weak classifier is only required to be better than chance, and thus can be very simple and computationally inexpensive. Many of them smartly combined, however, results in a strong classifier, which often outperforms most 'monolithic' strong classifiers such as SVMs and Neural Networks.
+:ref:`[HTF01] <HTF01>` . A weak classifier is only required to be better than chance, and thus can be very simple and computationally inexpensive. Many of them smartly combined, however, results in a strong classifier, which often outperforms most 'monolithic' strong classifiers such as SVMs and Neural Networks.
 
 Decision trees are the most popular weak classifiers used in boosting schemes. Often the simplest decision trees with only a single split node per tree (called stumps) are sufficient.
 
@@ -20,7 +22,7 @@ The boosted model is based on
 :math:`K` -component vector. Each component encodes a feature relevant for the learning task at hand. The desired two-class output is encoded as -1 and +1.
 
 Different variants of boosting are known such as Discrete Adaboost, Real AdaBoost, LogitBoost, and Gentle AdaBoost
-:ref:`FHT98` . All of them are very similar in their overall structure. Therefore, we will look only at the standard two-class Discrete AdaBoost algorithm as shown in the box below. Each sample is initially assigned the same weight (step 2). Next a weak classifier
+:ref:`[FHT98] <FHT98>` . All of them are very similar in their overall structure. Therefore, we will look only at the standard two-class Discrete AdaBoost algorithm as shown in the box below. Each sample is initially assigned the same weight (step 2). Next a weak classifier
 :math:`f_{m(x)}` is trained on the weighted training data (step 3a). Its weighted training error and scaling factor
 :math:`c_m` is computed (step 3b). The weights are increased for training samples, which have been misclassified (step 3c). All weights are then normalized, and the process of finding the next weak classifier continues for another
 :math:`M` -1 times. The final classifier
@@ -65,15 +67,20 @@ As well as the classical boosting methods, the current implementation supports 2
 :math:`>` 2 classes there is the
 **AdaBoost.MH**
 algorithm, described in
-:ref:`FHT98` , that reduces the problem to the 2-class problem, yet with a much larger training set.
+:ref:`[FHT98] <FHT98>` , that reduces the problem to the 2-class problem, yet with a much larger training set.
 
 In order to reduce computation time for boosted models without substantially losing accuracy, the influence trimming technique may be employed. As the training algorithm proceeds and the number of trees in the ensemble is increased, a larger number of the training samples are classified correctly and with increasing confidence, thereby those samples receive smaller weights on the subsequent iterations. Examples with very low relative weight have small impact on training of the weak classifier. Thus such examples may be excluded during the weak classifier training without having much effect on the induced classifier. This process is controlled with the weight_trim_rate parameter. Only examples with the summary fraction weight_trim_rate of the total weight mass are used in the weak classifier training. Note that the weights for
 **all**
 training examples are recomputed at each training iteration. Examples deleted at a particular iteration may be used again for learning some of the weak classifiers further
-:ref:`FHT98` .
+:ref:`[FHT98] <FHT98>` .
 
-**[HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. The Elements of Statistical Learning: Data Mining, Inference, and Prediction. Springer Series in Statistics. 2001.**
-**[FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. Additive Logistic Regression: a Statistical View of Boosting. Technical Report, Dept. of Statistics, Stanford University, 1998.**
+.. _HTF01:
+
+[HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. The Elements of Statistical Learning: Data Mining, Inference, and Prediction. Springer Series in Statistics. 2001.**
+
+.. _FHT98:
+
+[FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. Additive Logistic Regression: a Statistical View of Boosting. Technical Report, Dept. of Statistics, Stanford University, 1998.**
 
 .. index:: CvBoostParams
 

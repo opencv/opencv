@@ -3,6 +3,8 @@ Histograms
 
 .. index:: calcHist
 
+.. _calcHist:
+
 calcHist
 ------------
 .. c:function:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               MatND\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
@@ -95,6 +97,8 @@ input arrays. The sample below shows how to compute 2D Hue-Saturation histogram 
 
 .. index:: calcBackProject
 
+.. _calcBackProject:
+
 calcBackProject
 -------------------
 .. c:function:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const MatND\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
@@ -133,10 +137,14 @@ That is the approximate algorithm of
 
 See also:
 :func:`calcHist`
+
 .. index:: compareHist
 
+.. _compareHist:
+
 compareHist
----------------
+-----------
+
 .. c:function:: double compareHist( const MatND\& H1, const MatND\& H2, int method )
 
 .. c:function:: double compareHist( const SparseMat\& H1,  const SparseMat\& H2, int method )
@@ -198,6 +206,8 @@ While the function works well with 1-, 2-, 3-dimensional dense histograms, it ma
 :func:`calcEMD` function.
 
 .. index:: equalizeHist
+
+.. _equalizeHist:
 
 equalizeHist
 ----------------

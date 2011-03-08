@@ -2,11 +2,9 @@
 Introduction
 ************
 
-OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is open-source BSD-licensed library that includes several hundreds computer vision algorithms. It is very popular in the Computer Vision community. Some people call it “de-facto standard” API. The document aims to specify the stable parts of the library, as well as some abstract interfaces for high-level interfaces, with the final goal to make it an official standard.
+OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is open-source BSD-licensed library that includes several hundreds computer vision algorithms. The document describes the so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API. The latter is described in opencv1x.pdf.
 
-API specifications in the document use the standard C++ (http://www.open-std.org/jtc1/sc22/wg21/) and the standard C++ library.
-
-The current OpenCV implementation has a modular structure (i.e. the binary package includes several shared or static libraries), where we have:
+OpenCV has a modular structure (i.e. package includes several shared or static libraries). The modules are:
 
  * **core** - the compact module defining basic data structures, including the dense multi-dimensional array ``Mat``, and basic functions, used by all other modules.
  * **imgproc** - image processing module that includes linear and non-linear image filtering, geometrical image transformations (resize, affine and perspective warping, generic table-based remap), color space conversion, histograms etc.
@@ -18,9 +16,7 @@ The current OpenCV implementation has a modular structure (i.e. the binary packa
  * **gpu** - GPU-accelerated algorithms from different OpenCV modules.
  * ... some other helper modules, such as FLANN and Google test wrappers, Python bindings etc.
 
-Although the alternative implementations of the proposed standard may be structured differently, the proposed standard draft is organized by the functionality groups that reflect the decomposition of the library by modules.
-
-Below are the other main concepts of the OpenCV API, implied everywhere in the document.
+The further chapters of the document describe functionality of each module. But first, let's make an overview of the common API concepts, used thoroughly in the library.
 
 The API Concepts
 ================

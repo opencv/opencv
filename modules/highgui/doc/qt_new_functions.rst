@@ -57,6 +57,8 @@ The following code is an example used to generate the figure. ::
 
 .. index:: setWindowProperty
 
+.. _setWindowProperty:
+
 setWindowProperty
 ---------------------
 .. c:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
@@ -114,6 +116,8 @@ See
 The function `` getWindowProperty`` return window's properties.
 
 .. index:: fontQt
+
+.. _fontQt:
 
 fontQt
 ----------

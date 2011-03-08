@@ -1,7 +1,7 @@
+.. _Random Trees:
+
 Random Trees
 ============
-
-.. highlight:: cpp
 
 Random trees have been introduced by Leo Breiman and Adele Cutler:
 http://www.stat.berkeley.edu/users/breiman/RandomForests/

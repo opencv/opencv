@@ -3,6 +3,8 @@ Miscellaneous Image Transformations
 
 .. index:: adaptiveThreshold
 
+.. _adaptiveThreshold:
+
 adaptiveThreshold
 ---------------------
 .. c:function:: void adaptiveThreshold( const Mat& src, Mat& dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
@@ -56,7 +58,11 @@ The function can process the image in-place.
 
 See also:
 :func:`threshold`,:func:`blur`,:func:`GaussianBlur`
+
+
 .. index:: cvtColor
+
+.. _cvtColor:
 
 cvtColor
 ------------
@@ -389,6 +395,8 @@ The function can do the following transformations:
 
 .. index:: distanceTransform
 
+.. _distanceTransform:
+
 distanceTransform
 ---------------------
 .. c:function:: void distanceTransform( const Mat& src, Mat& dst, int distanceType, int maskSize )
@@ -456,6 +464,8 @@ That is, the function provides a very fast way to compute Voronoi diagram for th
 Currently, this second variant can only use the approximate distance transform algorithm.
 
 .. index:: floodFill
+
+.. _floodFill:
 
 floodFill
 -------------
@@ -540,7 +550,10 @@ By using these functions you can either mark a connected component with the spec
 
 See also:
 :func:`findContours`
+
 .. index:: inpaint
+
+.. _inpaint:
 
 inpaint
 -----------
@@ -567,6 +580,8 @@ http://en.wikipedia.org/wiki/Inpainting
 for more details.
 
 .. index:: integral
+
+.. _integral:
 
 integral
 ------------
@@ -619,6 +634,8 @@ As a practical example, the next figure shows the calculation of the integral of
 \end{center}
 
 .. index:: threshold
+
+.. _threshold:
 
 threshold
 -------------
@@ -684,7 +701,10 @@ Currently, Otsu's method is implemented only for 8-bit images.
 
 See also:
 :func:`adaptiveThreshold`,:func:`findContours`,:func:`compare`,:func:`min`,:func:`max`
+
 .. index:: watershed
+
+.. _watershed:
 
 watershed
 -------------
@@ -723,10 +743,14 @@ can be found in OpenCV samples directory; see ``watershed.cpp`` demo.
 
 See also:
 :func:`findContours`
+
 .. index:: grabCut
 
+.. _grabCut:
+
 grabCut
------------
+-------
+
 .. c:function:: void grabCut(const Mat& image, Mat& mask, Rect rect, Mat& bgdModel, Mat& fgdModel, int iterCount, int mode )
 
     Runs GrabCut algorithm
@@ -756,7 +780,5 @@ grabCut
 
         * **GC_EVAL** The value means that algorithm should just resume.
 
-The function implements the `GrabCut <http://en.wikipedia.org/wiki/GrabCut>`_
-image segmentation algorithm.
+The function implements the `GrabCut image segmentation algorithm <http://en.wikipedia.org/wiki/GrabCut>`_.
 See the sample grabcut.cpp on how to use the function.
-

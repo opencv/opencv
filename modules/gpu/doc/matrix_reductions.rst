@@ -126,13 +126,9 @@ See also:
 
 gpu::minMaxLoc
 ------------------
-.. c:function:: void gpu::minMaxLoc(const GpuMat\& src, double\* minVal, double* maxVal=0,
-   Point* minLoc=0, Point* maxLoc=0,
-   const GpuMat\& mask=GpuMat())
+.. c:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, const GpuMat& mask=GpuMat())
 
-.. c:function:: void gpu::minMaxLoc(const GpuMat\& src, double* minVal, double* maxVal,
-   Point* minLoc, Point* maxLoc, const GpuMat\& mask,
-   GpuMat\& valbuf, GpuMat\& locbuf)
+.. c:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf)
 
     Finds global minimum and maximum matrix elements and returns their values with locations.
 

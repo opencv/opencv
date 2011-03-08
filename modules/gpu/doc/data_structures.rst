@@ -84,8 +84,6 @@ This is structure is similar to DevMem2D_but contains only pointer and row step 
 
 .. index:: gpu::GpuMat
 
-.. gpu::GpuMat:
-
 gpu::GpuMat
 -----------
 .. c:type:: gpu::GpuMat
@@ -215,8 +213,6 @@ gpu::CudaMem::canMapHostMemory
     Returns true if the current hardware supports address space mapping and ALLOCZEROCOPYmemory allocation
 
 .. index:: gpu::Stream
-
-.. _gpu::Stream:
 
 gpu::Stream
 -----------

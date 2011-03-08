@@ -5,9 +5,11 @@ User Interface
 
 .. index:: createTrackbar
 
+.. _createTrackbar:
+
 createTrackbar
 ------------------
-.. c:function:: int createTrackbar( const string\& trackbarname,                    const string\& winname,                    int* value, int count,                    TrackbarCallback onChange CV_DEFAULT(0),                    void* userdata CV_DEFAULT(0))
+.. c:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange CV_DEFAULT(0), void* userdata CV_DEFAULT(0))
 
     Creates a trackbar and attaches it to the specified window
 
@@ -43,7 +45,7 @@ By clicking on the label of each trackbar, it is possible to edit the trackbar's
 
 getTrackbarPos
 ------------------
-.. c:function:: int getTrackbarPos( const string\& trackbarname,  const string\& winname )
+.. c:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
 
     Returns the trackbar position.
 
@@ -61,9 +63,11 @@ qt-specific details:
 
 .. index:: imshow
 
+.. _imshow:
+
 imshow
 ----------
-.. c:function:: void imshow( const string\& winname,  const Mat\& image )
+.. c:function:: void imshow( const string& winname, const Mat& image )
 
     Displays the image in the specified window
 
@@ -84,9 +88,11 @@ The function ``imshow`` displays the image in the specified window. If the windo
 
 .. index:: namedWindow
 
+.. _namedWindow:
+
 namedWindow
 ---------------
-.. c:function:: void namedWindow( const string\& winname,  int flags )
+.. c:function:: void namedWindow( const string& winname, int flags )
 
     Creates a window.
 
@@ -104,27 +110,29 @@ qt-specific details:
 
     * **flags** Flags of the window. Currently the supported flags are:
 
-            * **CV_WINDOW_NORMAL or CV_WINDOW_AUTOSIZE:**   ``CV_WINDOW_NORMAL``  let the user resize the window, whereas   ``CV_WINDOW_AUTOSIZE``  adjusts automatically the window's size to fit the displayed image (see  :ref:`ShowImage` ), and the user can not change the window size manually.
+            * **CV_WINDOW_NORMAL or CV_WINDOW_AUTOSIZE:**   ``CV_WINDOW_NORMAL``  let the user resize the window, whereas   ``CV_WINDOW_AUTOSIZE``  adjusts automatically the window's size to fit the displayed image (see  :ref:`imshow` ), and the user can not change the window size manually.
 
             * **CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO:** ``CV_WINDOW_FREERATIO``  adjust the image without respect the its ration, whereas  ``CV_WINDOW_KEEPRATIO``  keep the image's ratio.
 
             * **CV_GUI_NORMAL or CV_GUI_EXPANDED:**   ``CV_GUI_NORMAL``  is the old way to draw the window without statusbar and toolbar, whereas  ``CV_GUI_EXPANDED``  is the new enhance GUI.
 
-        This parameter is optional. The default flags set for a new window are  ``CV_WINDOW_AUTOSIZE`` ,  ``CV_WINDOW_KEEPRATIO`` , and  ``CV_GUI_EXPANDED`` .
+        This parameter is optional. The default flags set for a new window are  ``CV_WINDOW_AUTOSIZE`` , ``CV_WINDOW_KEEPRATIO`` , and  ``CV_GUI_EXPANDED`` .
 
         However, if you want to modify the flags, you can combine them using OR operator, ie:
 
         ::
 
-            namedWindow( ``myWindow'',  ``CV_WINDOW_NORMAL``   textbar   ``CV_GUI_NORMAL`` );
+            namedWindow( ``myWindow'', ``CV_WINDOW_NORMAL``   textbar   ``CV_GUI_NORMAL`` );
 
         ..
 
 .. index:: setTrackbarPos
 
+.. _setTrackbarPos:
+
 setTrackbarPos
 ------------------
-.. c:function:: void setTrackbarPos( const string\& trackbarname,  const string\& winname, int pos )
+.. c:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
 
     Sets the trackbar position.
 
@@ -143,6 +151,8 @@ qt-specific details:
     * **winname** Name of the window which is the parent of trackbar. Can be NULL if the trackbar is attached to the control panel.
 
 .. index:: waitKey
+
+.. _waitKey:
 
 waitKey
 -----------

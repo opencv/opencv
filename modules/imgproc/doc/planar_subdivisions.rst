@@ -1,5 +1,0 @@
-Planar Subdivisions
-===================
-
-.. highlight:: cpp
-

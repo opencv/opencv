@@ -1,7 +1,7 @@
+.. _Bayes Classifier:
+
 Normal Bayes Classifier
 =======================
-
-.. highlight:: cpp
 
 This is a simple classification model assuming that feature vectors from each class are normally distributed (though, not necessarily independently distributed), so the whole data distribution function is assumed to be a Gaussian mixture, one component per  class. Using the training data the algorithm estimates mean vectors and covariance matrices for every class, and then it uses them for prediction.
 

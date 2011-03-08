@@ -34,19 +34,25 @@ The actual implementations of the geometrical transformations, from the most gen
 
 .. index:: convertMaps
 
+.. _convertMaps:
+
 convertMaps
----------------
-.. c:function:: void convertMaps( const Mat\& map1, const Mat\& map2,                  Mat\& dstmap1, Mat\& dstmap2,                  int dstmap1type, bool nninterpolation=false )
+-----------
+
+.. c:function:: void convertMaps( const Mat& map1, const Mat& map2, Mat& dstmap1, Mat& dstmap2, int dstmap1type, bool nninterpolation=false )
 
     Converts image transformation maps from one representation to another
 
     :param map1: The first input map of type  ``CV_16SC2``  or  ``CV_32FC1``  or  ``CV_32FC2``
+    
     :param map2: The second input map of type  ``CV_16UC1``  or  ``CV_32FC1``  or none (empty matrix), respectively
 
     :param dstmap1: The first output map; will have type  ``dstmap1type``  and the same size as  ``src``
+    
     :param dstmap2: The second output map
 
-    :param dstmap1type: The type of the first output map; should be  ``CV_16SC2`` ,  ``CV_32FC1``  or  ``CV_32FC2``
+    :param dstmap1type: The type of the first output map; should be  ``CV_16SC2`` , ``CV_32FC1``  or  ``CV_32FC2``
+    
     :param nninterpolation: Indicates whether the fixed-point maps will be used for nearest-neighbor or for more complex interpolation
 
 The function converts a pair of maps for
@@ -64,7 +70,10 @@ The function converts a pair of maps for
 
 See also:
 :func:`remap`,:func:`undisort`,:func:`initUndistortRectifyMap`
+
 .. index:: getAffineTransform
+
+.. _getAffineTransform:
 
 getAffineTransform
 ----------------------
@@ -76,8 +85,7 @@ getAffineTransform
 
     :param dst: Coordinates of the corresponding triangle vertices in the destination image
 
-The function calculates the
-:math:`2 \times 3` matrix of an affine transform such that:
+The function calculates the :math:`2 \times 3` matrix of an affine transform such that:
 
 .. math::
 
@@ -93,11 +101,15 @@ where
 
 See also:
 :func:`warpAffine`,:func:`transform`
+
+
 .. index:: getPerspectiveTransform
+
+.. _getPerspectiveTransform:
 
 getPerspectiveTransform
 ---------------------------
-.. c:function:: Mat getPerspectiveTransform( const Point2f src[],  const Point2f dst[] )
+.. c:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
     Calculates the perspective transform from 4 pairs of the corresponding points
 
@@ -105,8 +117,7 @@ getPerspectiveTransform
 
     :param dst: Coordinates of the corresponding quadrangle vertices in the destination image
 
-The function calculates the
-:math:`3 \times 3` matrix of a perspective transform such that:
+The function calculates the :math:`3 \times 3` matrix of a perspective transform such that:
 
 .. math::
 
@@ -122,11 +133,14 @@ where
 
 See also:
 :func:`findHomography`,:func:`warpPerspective`,:func:`perspectiveTransform`
+
 .. index:: getRectSubPix
+
+.. getRectSubPix:
 
 getRectSubPix
 -----------------
-.. c:function:: void getRectSubPix( const Mat\& image, Size patchSize,                    Point2f center, Mat\& dst, int patchType=-1 )
+.. c:function:: void getRectSubPix( const Mat& image, Size patchSize, Point2f center, Mat& dst, int patchType=-1 )
 
     Retrieves the pixel rectangle from an image with sub-pixel accuracy
 
@@ -156,7 +170,10 @@ the pixel values outside of the image.
 
 See also:
 :func:`warpAffine`,:func:`warpPerspective`
+
 .. index:: getRotationMatrix2D
+
+.. _getRotationMatrix2D:
 
 getRotationMatrix2D
 -----------------------
@@ -186,11 +203,14 @@ The transformation maps the rotation center to itself. If this is not the purpos
 
 See also:
 :func:`getAffineTransform`,:func:`warpAffine`,:func:`transform`
+
 .. index:: invertAffineTransform
+
+.. _invertAffineTransform:
 
 invertAffineTransform
 -------------------------
-.. c:function:: void invertAffineTransform(const Mat\& M, Mat\& iM)
+.. c:function:: void invertAffineTransform(const Mat& M, Mat& iM)
 
     Inverts an affine transformation
 
@@ -210,18 +230,21 @@ The result will also be a
 
 .. index:: remap
 
+.. _remap:
+
 remap
----------
-.. c:function:: void remap( const Mat\& src, Mat\& dst, const Mat\& map1, const Mat\& map2,            int interpolation, int borderMode=BORDER_CONSTANT,            const Scalar\& borderValue=Scalar())
+-----
+
+.. c:function:: void remap( const Mat& src, Mat& dst, const Mat& map1, const Mat& map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies a generic geometrical transformation to an image.
 
     :param src: Source image
 
     :param dst: Destination image. It will have the same size as  ``map1``  and the same type as  ``src``
-    :param map1: The first map of either  ``(x,y)``  points or just  ``x``  values having type  ``CV_16SC2`` ,  ``CV_32FC1``  or  ``CV_32FC2`` . See  :func:`convertMaps`  for converting floating point representation to fixed-point for speed.
+    :param map1: The first map of either  ``(x,y)``  points or just  ``x``  values having type  ``CV_16SC2`` , ``CV_32FC1``  or  ``CV_32FC2`` . See  :func:`convertMaps`  for converting floating point representation to fixed-point for speed.
 
-    :param map2: The second map of  ``y``  values having type  ``CV_16UC1`` ,  ``CV_32FC1``  or none (empty map if map1 is  ``(x,y)``  points), respectively
+    :param map2: The second map of  ``y``  values having type  ``CV_16UC1`` , ``CV_32FC1``  or none (empty map if map1 is  ``(x,y)``  points), respectively
 
     :param interpolation: The interpolation method, see  :func:`resize` . The method  ``INTER_AREA``  is not supported by this function
 
@@ -252,9 +275,12 @@ This function can not operate in-place.
 
 .. index:: resize
 
+.. _resize:
+
 resize
 ----------
-.. c:function:: void resize( const Mat\& src, Mat\& dst,             Size dsize, double fx=0, double fy=0,             int interpolation=INTER_LINEAR )
+
+.. c:function:: void resize( const Mat& src, Mat& dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
 
     Resizes an image
 
@@ -313,9 +339,11 @@ See also:
 
 .. index:: warpAffine
 
+.. _warpAffine:
+
 warpAffine
 --------------
-.. c:function:: void warpAffine( const Mat\& src, Mat\& dst,                 const Mat\& M, Size dsize,                 int flags=INTER_LINEAR,                 int borderMode=BORDER_CONSTANT,                 const Scalar\& borderValue=Scalar())
+.. c:function:: void warpAffine( const Mat& src, Mat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies an affine transformation to an image.
 
@@ -337,7 +365,7 @@ The function ``warpAffine`` transforms the source image using the specified matr
 
 .. math::
 
-    \texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13},  \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})
+    \texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13}, \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})
 
 when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is first inverted with
 :func:`invertAffineTransform` and then put in the formula above instead of ``M`` .
@@ -345,11 +373,14 @@ The function can not operate in-place.
 
 See also:
 :func:`warpPerspective`,:func:`resize`,:func:`remap`,:func:`getRectSubPix`,:func:`transform`
+
 .. index:: warpPerspective
+
+.. _warpPerspective:
 
 warpPerspective
 -------------------
-.. c:function:: void warpPerspective( const Mat\& src, Mat\& dst,                      const Mat\& M, Size dsize,                      int flags=INTER_LINEAR,                      int borderMode=BORDER_CONSTANT,                      const Scalar\& borderValue=Scalar())
+.. c:function:: void warpPerspective( const Mat& src, Mat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies a perspective transformation to an image.
 
@@ -378,4 +409,5 @@ when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is firs
 The function can not operate in-place.
 
 See also:
-:func:`warpAffine`,:func:`resize`,:func:`remap`,:func:`getRectSubPix`,:func:`perspectiveTransform` 
+:func:`warpAffine`,:func:`resize`,:func:`remap`,:func:`getRectSubPix`,:func:`perspectiveTransform`
+ 

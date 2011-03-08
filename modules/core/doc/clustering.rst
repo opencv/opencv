@@ -1,12 +1,13 @@
 Clustering
 ==========
 
-.. highlight:: cpp
-
 .. index:: kmeans
 
+.. _kmeans:
+
 kmeans
-----------
+------
+
 .. c:function:: double kmeans( const Mat\& samples, int clusterCount, Mat\& labels,               TermCriteria termcrit, int attempts,               int flags, Mat* centers )
 
     Finds the centers of clusters and groups the input samples around the clusters.

@@ -5,6 +5,8 @@ Reading and Writing Images and Video
 
 .. index:: imdecode
 
+.. _imdecode:
+
 imdecode
 ------------
 .. c:function:: Mat imdecode( const Mat\& buf,  int flags )
@@ -22,6 +24,8 @@ See
 :ref:`imread` for the list of supported formats and the flags description.
 
 .. index:: imencode
+
+.. _imencode:
 
 imencode
 ------------
@@ -43,6 +47,8 @@ See
 
 .. index:: imread
 
+.. _imread:
+
 imread
 ----------
 .. c:function:: Mat imread( const string\& filename,  int flags=1 )
@@ -61,34 +67,19 @@ imread
 
 The function ``imread`` loads an image from the specified file and returns it. If the image can not be read (because of missing file, improper permissions, unsupported or invalid format), the function returns empty matrix ( ``Mat::data==NULL`` ).Currently, the following file formats are supported:
 
-*
-    Windows bitmaps - ``*.bmp, *.dib``     (always supported)
+ * Windows bitmaps - ``*.bmp, *.dib`` (always supported)
 
-*
-    JPEG files - ``*.jpeg, *.jpg, *.jpe``     (see
-    **Note2**
-    )
+ * JPEG files - ``*.jpeg, *.jpg, *.jpe`` (see **Note2**)
 
-*
-    JPEG 2000 files - ``*.jp2``     (see
-    **Note2**
-    )
+ * JPEG 2000 files - ``*.jp2`` (see **Note2**)
 
-*
-    Portable Network Graphics - ``*.png``     (see
-    **Note2**
-    )
+ * Portable Network Graphics - ``*.png`` (see **Note2**)
 
-*
-    Portable image format - ``*.pbm, *.pgm, *.ppm``     (always supported)
+ * Portable image format - ``*.pbm, *.pgm, *.ppm``     (always supported)
 
-*
-    Sun rasters - ``*.sr, *.ras``     (always supported)
+ * Sun rasters - ``*.sr, *.ras``     (always supported)
 
-*
-    TIFF files - ``*.tiff, *.tif``     (see
-    **Note2**
-    )
+ * TIFF files - ``*.tiff, *.tif`` (see **Note2**)
 
 **Note1**
 : The function determines type of the image by the content, not by the file extension.
@@ -99,6 +90,8 @@ The function ``imread`` loads an image from the specified file and returns it. I
 On Linux, BSD flavors and other Unix-like open-source operating systems OpenCV looks for the supplied with OS image codecs. Please, install the relevant packages (do not forget the development files, e.g. "libjpeg-dev" etc. in Debian and Ubuntu) in order to get the codec support, or turn on ``OPENCV_BUILD_3RDPARTY_LIBS`` flag in CMake.
 
 .. index:: imwrite
+
+.. _imwrite:
 
 imwrite
 -----------
@@ -211,6 +204,8 @@ The class provides C++ video capturing API. Here is how the class can be used: :
 
 .. index:: VideoCapture::VideoCapture
 
+.. _VideoCapture::VideoCapture:
+
 VideoCapture::VideoCapture
 ------------------------------
 .. c:function:: VideoCapture::VideoCapture()
@@ -226,6 +221,8 @@ VideoCapture::VideoCapture
 VideoCapture constructors.
 
 .. index:: VideoCapture::get
+
+.. _VideoCapture::get:
 
 VideoCapture::get
 ---------------------
@@ -274,6 +271,8 @@ VideoCapture::get
 Note that when querying a property which is unsupported by the backend used by the VideoCapture class, the value 0 is returned.
 
 .. index:: VideoCapture::set
+
+.. _VideoCapture::set:
 
 VideoCapture::set
 ---------------------

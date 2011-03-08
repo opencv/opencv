@@ -57,7 +57,7 @@ Alternatively, the algorithm may start with the M-step when the initial values f
 :math:`p_{i,k}` can be provided. Another alternative when
 :math:`p_{i,k}` are unknown, is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
 :math:`p_{i,k}` . Often (and in ML) the
-:ref:`KMeans2` algorithm is used for that purpose.
+:ref:`kmeans` algorithm is used for that purpose.
 
 One of the main that EM algorithm should deal with is the large number
 of parameters to estimate. The majority of the parameters sits in
@@ -197,12 +197,12 @@ CvEM::train
     Estimates the Gaussian mixture parameters from the sample set.
 
 Unlike many of the ML models, EM is an unsupervised learning algorithm and it does not take responses (class labels or the function values) on input. Instead, it computes the
-:ref:`MLE` of the Gaussian mixture parameters from the input sample set, stores all the parameters inside the structure:
+*Maximum Likelihood Estimate* of the Gaussian mixture parameters from the input sample set, stores all the parameters inside the structure:
 :math:`p_{i,k}` in ``probs``,:math:`a_k` in ``means`` :math:`S_k` in ``covs[k]``,:math:`\pi_k` in ``weights`` and optionally computes the output "class label" for each sample:
 :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (i.e. indices of the most-probable mixture for each sample).
 
 The trained model can be used further for prediction, just like any other classifier. The model trained is similar to the
-:ref:`Bayes classifier` .
+:ref:`Bayes classifier`.
 
 Example: Clustering random samples of multi-Gaussian distribution using EM ::
 

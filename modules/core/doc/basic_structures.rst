@@ -3,6 +3,8 @@ Basic Structures
 
 .. highlight:: cpp
 
+.. _DataType:
+
 DataType
 --------
 
@@ -32,9 +34,8 @@ Template "traits" class for other OpenCV primitive data types ::
         };
     };
 
-The template class ``DataType`` is descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char, bool, signed char, unsigned short, signed short, int, float, double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. If you are familiar with OpenCV
-:ref:`CvMat` 's type notation, CV_8U ... CV_32FC3, CV_64FC2 etc., then a primitive type can be defined as a type for which you can give a unique identifier in a form ``CV_<bit-depth>{U|S|F}C<number_of_channels>`` . A universal OpenCV structure able to store a single instance of such primitive data type is
-:ref:`Vec` . Multiple instances of such a type can be stored to a ``std::vector``,``Mat``,``Mat_``,``SparseMat``,``SparseMat_`` or any other container that is able to store
+The template class ``DataType`` is descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in a form ``CV_<bit-depth>{U|S|F}C<number_of_channels>``, for example, ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3`` etc. A universal OpenCV structure, which is able to store a single instance of such primitive data type is
+:ref:`Vec`. Multiple instances of such a type can be stored to a ``std::vector``,``Mat``,``Mat_``,``SparseMat``,``SparseMat_`` or any other container that is able to store
 :ref:`Vec` instances.
 
 The class ``DataType`` is basically used to provide some description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It's not ``DataType`` itself that is used, but its specialized versions, such as: ::
@@ -205,8 +206,7 @@ Template class for specfying image or rectangle size. ::
 
 
 The class ``Size_`` is similar to ``Point_`` , except that the two members are called ``width`` and ``height`` instead of ``x`` and ``y`` . The structure can be converted to and from the old OpenCV structures
-:ref:`CvSize` and
-:ref:`CvSize2D32f` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
+``CvSize`` and ``CvSize2D32f`` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
 
 OpenCV defines the following type aliases: ::
 
@@ -267,7 +267,7 @@ Another assumption OpenCV usually makes is that the top and left boundary of the
           y  \leq pt.y < y+height
 
 And virtually every loop over an image
-:ref:`ROI` in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
+ROI in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
 
     for(int y = roi.y; y < roi.y + rect.height; y++)
         for(int x = roi.x; x < roi.x + rect.width; x++)
@@ -309,6 +309,8 @@ For user convenience, the following type alias is available: ::
     typedef Rect_<int> Rect;
 
 
+.. _RotatedRect:
+
 RotatedRect
 -----------
 
@@ -336,8 +338,7 @@ Possibly rotated rectangle ::
     };
 
 
-The class ``RotatedRect`` replaces the old
-:ref:`CvBox2D` and fully compatible with it.
+The class ``RotatedRect`` replaces the old ``CvBox2D`` and fully compatible with it.
 
 TermCriteria
 ------------
@@ -368,8 +369,9 @@ Termination criteria for iterative algorithms ::
     };
 
 
-The class ``TermCriteria`` replaces the old
-:ref:`CvTermCriteria` and fully compatible with it.
+The class ``TermCriteria`` replaces the old ``CvTermCriteria`` and fully compatible with it.
+
+.. _Matx:
 
 Matx
 ----
@@ -419,6 +421,8 @@ The class represents small matrices, which type and size are known at compile ti
     cout << sum(Mat(m*m.t())) << endl;
 
 
+.. _Vec:
+
 Vec
 ---
 
@@ -456,7 +460,7 @@ Template class for short numerical vectors ::
     typedef Vec<double, 4> Vec4d;
     typedef Vec<double, 6> Vec6d;
 
-``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``,``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to :ref:`CvScalar` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. All the expected vector operations are implemented too:
+``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``,``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to ``CvScalar`` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. All the expected vector operations are implemented too:
 
 *
     :math:`\texttt{v1} = \texttt{v2} \pm \texttt{v3}`,    :math:`\texttt{v1} = \texttt{v2} * \alpha`,    :math:`\texttt{v1} = \alpha * \texttt{v2}`     (plus the corresponding augmenting operations; note that these operations apply
@@ -465,6 +469,8 @@ Template class for short numerical vectors ::
 * ``v1 == v2, v1 != v2`` * ``norm(v1)``     (:math:`L_2`-norm)
 
 The class ``Vec`` is commonly used to describe pixel types of multi-channel arrays, see ``Mat_`` description.
+
+.. _Scalar:
 
 Scalar\_
 --------
@@ -491,7 +497,9 @@ Scalar\_
 
 
 The template class ``Scalar_`` and it's double-precision instantiation ``Scalar`` represent 4-element vector. Being derived from ``Vec<_Tp, 4>`` , they can be used as typical 4-element vectors, but in addition they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values and it is a drop-in replacement for
-:ref:`CvScalar` that was used for the same purpose in the earlier versions of OpenCV.
+``CvScalar`` that was used for the same purpose in the earlier versions of OpenCV.
+
+.. _Range:
 
 Range
 -----
@@ -529,6 +537,8 @@ The static method ``Range::all()`` returns some special variable that means "the
         }
     }
 
+
+.. _Ptr:
 
 Ptr
 ---
@@ -619,6 +629,8 @@ However, if the object is deallocated in a different way, then the specialized m
 : The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for
 :ref:`Mat` and other C++ OpenCV classes that operate on the reference counters.
 
+.. _Mat:
+
 Mat
 ---
 
@@ -675,6 +687,7 @@ That is, the data layout in ``Mat`` is fully compatible with ``CvMat``,``IplImag
 There are many different ways to create ``Mat`` object. Here are the some popular ones:
 
 *
+    
     using ``create(nrows, ncols, type)``     method or
         the similar constructor ``Mat(nrows, ncols, type[, fillValue])``     constructor.
         A new array of the specified size and specifed type will be allocated. ``type``     has the same meaning as in
@@ -695,6 +708,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
         or type are different from the specified.
 
 *
+    
     similarly to above, you can create a multi-dimensional array:
 
     ::
@@ -708,6 +722,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
     note that it is pass number of dimensions =1 to the ``Mat``     constructor, but the created array will be 2-dimensional, with the number of columns set to 1. That's why ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty)
 
 *
+    
     by using a copy constructor or assignment operator, where on the right side it can
           be a array or expression, see below. Again, as noted in the introduction,
           array assignment is O(1) operation because it only copies the header
@@ -715,6 +730,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
           (a.k.a. deep) copy of the array when you need it.
 
 *
+    
     by constructing a header for a part of another array. It can be a single row, single column,
           several rows, several columns, rectangular region in the array (called a minor in algebra) or
           a diagonal. Such operations are also O(1), because the new header will reference the same data.
@@ -760,6 +776,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
           of the extracted sub-matrices.
 
 *
+    
     by making a header for user-allocated-data. It can be useful for
 
     #.
@@ -787,7 +804,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
 
         ..
 
-        partial yet very common cases of this "user-allocated data" case are conversions from :ref:`CvMat`     and :ref:`IplImage` to ``Mat``. For this purpose there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
+        partial yet very common cases of this "user-allocated data" case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
         Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` an ``Mat::operator IplImage()``. The operators do *not* copy the data.
 
@@ -802,6 +819,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
     ..
 
 *
+    
     by using MATLAB-style array initializers, ``zeros(), ones(), eye()``     , e.g.:
 
     ::
@@ -812,6 +830,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
     ..
 
 *
+    
     by using comma-separated initializer:
 
     ::
@@ -878,6 +897,8 @@ Finally, there are STL-style iterators that are smart enough to skip gaps betwee
 
 The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including ``std::sort()`` .
 
+.. _MatrixExpressions:
+
 Matrix Expressions
 ------------------
 
@@ -933,6 +954,8 @@ Below is the formal description of the ``Mat`` methods.
 
 .. index:: Mat::Mat
 
+.. _Mat::Mat:
+
 Mat::Mat
 ------------
 .. c:function:: (1) Mat::Mat()
@@ -941,39 +964,39 @@ Mat::Mat
 
 .. c:function:: (3) Mat::Mat(Size size, int type)
 
-.. c:function:: (4) Mat::Mat(int rows, int cols, int type, const Scalar\& s)
+.. c:function:: (4) Mat::Mat(int rows, int cols, int type, const Scalar& s)
 
-.. c:function:: (5) Mat::Mat(Size size, int type, const Scalar\& s)
+.. c:function:: (5) Mat::Mat(Size size, int type, const Scalar& s)
 
-.. c:function:: (6) Mat::Mat(const Mat\& m)
+.. c:function:: (6) Mat::Mat(const Mat& m)
 
 .. c:function:: (7) Mat::Mat(int rows, int cols, int type, void* data, size_t step=AUTO_STEP)
 
 .. c:function:: (8) Mat::Mat(Size size, int type, void* data, size_t step=AUTO_STEP)
 
-.. c:function:: (9) Mat::Mat(const Mat\& m, const Range\& rowRange, const Range\& colRange)
+.. c:function:: (9) Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
 
-.. c:function:: (10) Mat::Mat(const Mat\& m, const Rect\& roi)
+.. c:function:: (10) Mat::Mat(const Mat& m, const Rect& roi)
 
 .. c:function:: (11) Mat::Mat(const CvMat* m, bool copyData=false)
 
 .. c:function:: (12) Mat::Mat(const IplImage* img, bool copyData=false)
 
-.. c:function:: (13) template<typename T, int n> explicit Mat::Mat(const Vec<T, n>\& vec, bool copyData=true)
+.. c:function:: (13) template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
-.. c:function:: (14) template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>\& vec, bool copyData=true)
+.. c:function:: (14) template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>& vec, bool copyData=true)
 
-.. c:function:: (15) template<typename T> explicit Mat::Mat(const vector<T>\& vec, bool copyData=false)
+.. c:function:: (15) template<typename T> explicit Mat::Mat(const vector<T>& vec, bool copyData=false)
 
-.. c:function:: (16) Mat::Mat(const MatExpr\& expr)
+.. c:function:: (16) Mat::Mat(const MatExpr& expr)
 
 .. c:function:: (17) Mat::Mat(int ndims, const int* sizes, int type)
 
-.. c:function:: (18) Mat::Mat(int ndims, const int* sizes, int type, const Scalar\& s)
+.. c:function:: (18) Mat::Mat(int ndims, const int* sizes, int type, const Scalar& s)
 
 .. c:function:: (19) Mat::Mat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0)
 
-.. c:function:: (20) Mat::Mat(const Mat\& m, const Range* ranges)
+.. c:function:: (20) Mat::Mat(const Mat& m, const Range* ranges)
 
     Various array constructors
 
@@ -1013,7 +1036,7 @@ Mat::Mat
 
     .
 
-    :param expr: Matrix expression. See  :ref:`Matrix Expressions` .
+    :param expr: Matrix expression. See  :ref:`MatrixExpressions`.
 
 These are various constructors that form a matrix. As noticed in the
 , often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is dereferenced, or be allocated with
@@ -1021,9 +1044,9 @@ These are various constructors that form a matrix. As noticed in the
 
 .. index:: Mat::Mat
 
-Mat::Mat
+Mat::~Mat
 ------------
-.. c:function:: Mat::\textasciitilde Mat()
+.. cpp:function:: Mat::~Mat()
 
     Matrix destructor
 
@@ -1034,11 +1057,11 @@ The matrix destructor calls
 
 Mat::operator =
 -------------------
-.. c:function:: Mat\& Mat::operator = (const Mat\& m)
+.. cpp:function:: Mat& Mat::operator = (const Mat& m)
 
-.. c:function:: Mat\& Mat::operator = (const MatExpr_Base\& expr)
+.. cpp:function:: Mat& Mat::operator = (const MatExpr_Base& expr)
 
-.. c:function:: Mat\& operator = (const Scalar\& s)
+.. cpp:function:: Mat& operator = (const Scalar& s)
 
     Matrix assignment operators
 
@@ -1054,18 +1077,20 @@ These are the available assignment operators, and they all are very different, s
 
 Mat::operator MatExpr
 -------------------------
-.. c:function:: Mat::operator MatExpr_<Mat, Mat>() const
+.. cpp:function:: Mat::operator MatExpr_<Mat, Mat>() const
 
     Mat-to-MatExpr cast operator
 
 The cast operator should not be called explicitly. It is used internally by the
-:ref:`Matrix Expressions` engine.
+:ref:`MatrixExpressions` engine.
 
 .. index:: Mat::row
 
+.. _Mat::row:
+
 Mat::row
 ------------
-.. c:function:: Mat Mat::row(int i) const
+.. cpp:function:: Mat Mat::row(int i) const
 
     Makes a matrix header for the specified matrix row
 
@@ -1101,9 +1126,11 @@ This is because ``A.row(i)`` forms a temporary header, which is further assigned
 
 .. index:: Mat::col
 
+.. _Mat::col:
+
 Mat::col
 ------------
-.. c:function:: Mat Mat::col(int j) const
+.. cpp:function:: Mat Mat::col(int j) const
 
     Makes a matrix header for the specified matrix column
 
@@ -1114,11 +1141,13 @@ The method makes a new header for the specified matrix column and returns it. Th
 
 .. index:: Mat::rowRange
 
+.. _Mat::rowRange:
+
 Mat::rowRange
 -----------------
-.. c:function:: Mat Mat::rowRange(int startrow, int endrow) const
+.. cpp:function:: Mat Mat::rowRange(int startrow, int endrow) const
 
-.. c:function:: Mat Mat::rowRange(const Range\& r) const
+.. cpp:function:: Mat Mat::rowRange(const Range& r) const
 
     Makes a matrix header for the specified row span
 
@@ -1134,11 +1163,13 @@ The method makes a new header for the specified row span of the matrix. Similarl
 
 .. index:: Mat::colRange
 
+.. _Mat::colRange:
+
 Mat::colRange
 -----------------
-.. c:function:: Mat Mat::colRange(int startcol, int endcol) const
+.. cpp:function:: Mat Mat::colRange(int startcol, int endcol) const
 
-.. c:function:: Mat Mat::colRange(const Range\& r) const
+.. cpp:function:: Mat Mat::colRange(const Range& r) const
 
     Makes a matrix header for the specified row span
 
@@ -1154,9 +1185,13 @@ The method makes a new header for the specified column span of the matrix. Simil
 
 .. index:: Mat::diag
 
+.. _Mat::diag:
+
 Mat::diag
 -------------
-.. c:function:: Mat Mat::diag(int d) const static Mat Mat::diag(const Mat\& matD)
+.. cpp:function:: Mat Mat::diag(int d) const
+
+.. cpp:function:: static Mat Mat::diag(const Mat& matD)
 
     Extracts diagonal from a matrix, or creates a diagonal matrix.
 
@@ -1176,9 +1211,11 @@ The method makes a new header for the specified matrix diagonal. The new matrix 
 
 .. index:: Mat::clone
 
+.. _Mat::clone:
+
 Mat::clone
 --------------
-.. c:function:: Mat Mat::clone() const
+.. cpp:function:: Mat Mat::clone() const
 
     Creates full copy of the array and the underlying data.
 
@@ -1186,9 +1223,12 @@ The method creates full copy of the array. The original ``step[]`` are not taken
 
 .. index:: Mat::copyTo
 
+.. _Mat::copyTo:
+
 Mat::copyTo
 ---------------
-.. c:function:: void Mat::copyTo( Mat\& m ) const void Mat::copyTo( Mat\& m, const Mat\& mask ) const
+.. cpp:function:: void Mat::copyTo( Mat& m ) const
+.. cpp:function:: void Mat::copyTo( Mat& m, const Mat& mask ) const
 
     Copies the matrix to another one.
 
@@ -1207,9 +1247,11 @@ When the operation mask is specified, and the ``Mat::create`` call shown above r
 
 .. index:: Mat::convertTo
 
+.. _Mat::convertTo:
+
 Mat::convertTo
 ------------------
-.. c:function:: void Mat::convertTo( Mat\& m, int rtype, double alpha=1, double beta=0 ) const
+.. cpp:function:: void Mat::convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const
 
     Converts array to another datatype with optional scaling.
 
@@ -1231,7 +1273,7 @@ The method converts source pixel values to the target datatype. ``saturate_cast<
 
 Mat::assignTo
 -----------------
-.. c:function:: void Mat::assignTo( Mat\& m, int type=-1 ) const
+.. cpp:function:: void Mat::assignTo( Mat& m, int type=-1 ) const
 
     Functional form of convertTo
 
@@ -1240,13 +1282,13 @@ Mat::assignTo
     :param type: The desired destination array depth (or -1 if it should be the same as the source one).
 
 This is internal-use method called by the
-:ref:`Matrix Expressions` engine.
+:ref:`MatrixExpressions` engine.
 
 .. index:: Mat::setTo
 
 Mat::setTo
 --------------
-.. c:function:: Mat\& Mat::setTo(const Scalar\& s, const Mat\& mask=Mat())
+.. c:function:: Mat& Mat::setTo(const Scalar& s, const Mat& mask=Mat())
 
     Sets all or some of the array elements to the specified value.
 
@@ -1258,7 +1300,7 @@ Mat::setTo
 
 Mat::reshape
 ----------------
-.. c:function:: Mat Mat::reshape(int cn, int rows=0) const
+.. cpp:function:: Mat Mat::reshape(int cn, int rows=0) const
 
     Changes the 2D matrix's shape and/or the number of channels without copying the data.
 
@@ -1292,7 +1334,7 @@ Here is some small example. Assuming, there is a set of 3D points that are store
 
 Mat::t
 ----------
-.. c:function:: MatExpr Mat::t() const
+.. cpp:function:: MatExpr Mat::t() const
 
     Transposes the matrix
 
@@ -1307,7 +1349,7 @@ It does not perform the actual transposition, but returns a temporary "matrix tr
 
 Mat::inv
 ------------
-.. c:function:: MatExpr Mat::inv(int method=DECOMP_LU) const
+.. cpp:function:: MatExpr Mat::inv(int method=DECOMP_LU) const
 
     Inverses the matrix
 
@@ -1325,9 +1367,9 @@ The method performs matrix inversion by means of matrix expressions, i.e. a temp
 
 Mat::mul
 ------------
-.. c:function:: MatExpr Mat::mul(const Mat\& m, double scale=1) const
+.. cpp:function:: MatExpr Mat::mul(const Mat& m, double scale=1) const
 
-.. c:function:: MatExpr Mat::mul(const MatExpr\& m, double scale=1) const
+.. cpp:function:: MatExpr Mat::mul(const MatExpr& m, double scale=1) const
 
     Performs element-wise multiplication or division of the two matrices
 
@@ -1346,7 +1388,7 @@ Here is a example: ::
 
 Mat::cross
 --------------
-.. c:function:: Mat Mat::cross(const Mat\& m) const
+.. cpp:function:: Mat Mat::cross(const Mat& m) const
 
     Computes cross-product of two 3-element vectors
 
@@ -1358,7 +1400,7 @@ The method computes cross-product of the two 3-element vectors. The vectors must
 
 Mat::dot
 ------------
-.. c:function:: double Mat::dot(const Mat\& m) const
+.. cpp:function:: double Mat::dot(const Mat& m) const
 
     Computes dot-product of two vectors
 
@@ -1370,7 +1412,9 @@ The method computes dot-product of the two matrices. If the matrices are not sin
 
 Mat::zeros
 --------------
-.. c:function:: static MatExpr Mat::zeros(int rows, int cols, int type) static MatExpr Mat::zeros(Size size, int type) static MatExpr Mat::zeros(int ndims, const int* sizes, int type)
+.. cpp:function:: static MatExpr Mat::zeros(int rows, int cols, int type)
+.. cpp:function:: static MatExpr Mat::zeros(Size size, int type)
+.. cpp:function:: static MatExpr Mat::zeros(int ndims, const int* sizes, int type)
 
     Returns zero array of the specified size and type
 
@@ -1396,7 +1440,9 @@ Note that in the above sample a new matrix will be allocated only if ``A`` is no
 
 Mat::ones
 -------------
-.. c:function:: static MatExpr Mat::ones(int rows, int cols, int type) static MatExpr Mat::ones(Size size, int type) static MatExpr Mat::ones(int ndims, const int* sizes, int type)
+.. cpp:function:: static MatExpr Mat::ones(int rows, int cols, int type)
+.. cpp:function:: static MatExpr Mat::ones(Size size, int type)
+.. cpp:function:: static MatExpr Mat::ones(int ndims, const int* sizes, int type)
 
     Returns array of all 1's of the specified size and type
 
@@ -1422,7 +1468,8 @@ The above operation will not form 100x100 matrix of ones and then multiply it by
 
 Mat::eye
 ------------
-.. c:function:: static MatExpr Mat::eye(int rows, int cols, int type) static MatExpr Mat::eye(Size size, int type)
+.. cpp:function:: static MatExpr Mat::eye(int rows, int cols, int type)
+.. cpp:function:: static MatExpr Mat::eye(Size size, int type)
 
     Returns identity matrix of the specified size and type
 
@@ -1441,9 +1488,13 @@ The method returns Matlab-style identity matrix initializer, similarly to
 
 .. index:: Mat::create
 
+.. _Mat::create:
+
 Mat::create
 ---------------
-.. c:function:: void Mat::create(int rows, int cols, int type) void Mat::create(Size size, int type) void Mat::create(int ndims, const int* sizes, int type)
+.. cpp:function:: void Mat::create(int rows, int cols, int type)
+.. cpp:function:: void Mat::create(Size size, int type)
+.. cpp:function:: void Mat::create(int ndims, const int* sizes, int type)
 
     Allocates new array data if needed.
 
@@ -1493,9 +1544,11 @@ because ``cvtColor`` , as well as most of OpenCV functions, calls Mat::create() 
 
 .. index:: Mat::addref
 
+.. _Mat::addref:
+
 Mat::addref
 ---------------
-.. c:function:: void Mat::addref()
+.. cpp:function:: void Mat::addref()
 
     Increments the reference counter
 
@@ -1504,9 +1557,11 @@ The method increments the reference counter, associated with the matrix data. If
 
 .. index:: Mat::release
 
+.. _Mat::release:
+
 Mat::release
 ----------------
-.. c:function:: void Mat::release()
+.. cpp:function:: void Mat::release()
 
     Decrements the reference counter and deallocates the matrix if needed
 
@@ -1517,9 +1572,11 @@ This method can be called manually to force the matrix data deallocation. But si
 
 .. index:: Mat::resize
 
+.. _Mat::resize:
+
 Mat::resize
 ---------------
-.. c:function:: void Mat::resize( size_t sz ) const
+.. cpp:function:: void Mat::resize( size_t sz ) const
 
     Changes the number of matrix rows
 
@@ -1533,7 +1590,8 @@ The method changes the number of matrix rows. If the matrix is reallocated, the 
 
 Mat::push_back
 --------------
-.. c:function:: template<typename T> void Mat::push_back(const T\& elem) template<typename T> void Mat::push_back(const Mat_<T>\& elem)
+.. c:function:: template<typename T> void Mat::push_back(const T& elem)
+.. c:function:: template<typename T> void Mat::push_back(const Mat_<T>& elem)
 
     Adds elements to the bottom of the matrix
 
@@ -1557,9 +1615,11 @@ The method removes one or more rows from the bottom of the matrix.
 
 .. index:: Mat::locateROI
 
+.. _Mat::locateROI:
+
 Mat::locateROI
 ------------------
-.. c:function:: void Mat::locateROI( Size\& wholeSize, Point\& ofs ) const
+.. cpp:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
 
     Locates matrix header within a parent matrix
 
@@ -1572,9 +1632,11 @@ After you extracted a submatrix from a matrix using
 
 .. index:: Mat::adjustROI
 
+.. _Mat::adjustROI:
+
 Mat::adjustROI
 ------------------
-.. c:function:: Mat\& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
+.. cpp:function:: Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
 
     Adjust submatrix size and position within the parent matrix
 
@@ -1604,11 +1666,15 @@ See also
 
 .. index:: Mat::operator()
 
+.. _Mat::operator ():
+
 Mat::operator()
 -------------------
-.. c:function:: Mat Mat::operator()( Range rowRange, Range colRange ) const
+.. cpp:function:: Mat Mat::operator()( Range rowRange, Range colRange ) const
 
-.. c:function:: Mat Mat::operator()( const Rect\& roi ) const Mat Mat::operator()( const Ranges* ranges ) const
+.. cpp:function:: Mat Mat::operator()( const Rect& roi ) const
+
+.. cpp:function:: Mat Mat::operator()( const Ranges* ranges ) const
 
     Extracts a rectangular submatrix
 
@@ -1624,7 +1690,7 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 
 Mat::operator CvMat
 -----------------------
-.. c:function:: Mat::operator CvMat() const
+.. cpp:function:: Mat::operator CvMat(void) const
 
     Creates CvMat header for the matrix
 
@@ -1643,7 +1709,7 @@ where ``mycvOldFunc`` is some function written to work with OpenCV 1.x data stru
 
 Mat::operator IplImage
 --------------------------
-.. c:function:: Mat::operator IplImage() const
+.. cpp:function:: Mat::operator IplImage(void) const
 
     Creates IplImage header for the matrix
 
@@ -1651,9 +1717,11 @@ The operator makes IplImage header for the matrix without copying the underlying
 
 .. index:: Mat::total
 
+.. _Mat::total:
+
 Mat::total
 --------------
-.. c:function:: size_t Mat::total() const
+.. cpp:function:: size_t Mat::total(void) const
 
     Returns the total number of array elements.
 
@@ -1661,9 +1729,11 @@ The method returns the number of array elements (e.g. number of pixels if the ar
 
 .. index:: Mat::isContinuous
 
+.. _Mat::isContinuous:
+
 Mat::isContinuous
 ---------------------
-.. c:function:: bool Mat::isContinuous() const
+.. cpp:function:: bool Mat::isContinuous(void) const
 
     Reports whether the matrix is continuous or not
 
@@ -1733,9 +1803,11 @@ Also, note that we use another OpenCV idiom in this function - we call
 
 .. index:: Mat::elemSize
 
+.. _Mat::elemSize:
+
 Mat::elemSize
 -----------------
-.. c:function:: size_t Mat::elemSize() const
+.. cpp:function:: size_t Mat::elemSize(void) const
 
     Returns matrix element size in bytes
 
@@ -1743,9 +1815,11 @@ The method returns the matrix element size in bytes. For example, if the matrix 
 
 .. index:: Mat::elemSize1
 
+.. _Mat::elemSize1:
+
 Mat::elemSize1
 ------------------
-.. c:function:: size_t Mat::elemSize1() const
+.. cpp:function:: size_t Mat::elemSize1(void) const
 
     Returns size of each matrix element channel in bytes
 
@@ -1753,9 +1827,11 @@ The method returns the matrix element channel size in bytes, that is, it ignores
 
 .. index:: Mat::type
 
+.. _Mat::type:
+
 Mat::type
 -------------
-.. c:function:: int Mat::type() const
+.. cpp:function:: int Mat::type(void) const
 
     Returns matrix element type
 
@@ -1763,9 +1839,11 @@ The method returns the matrix element type, an id, compatible with the ``CvMat``
 
 .. index:: Mat::depth
 
+.. _Mat::depth:
+
 Mat::depth
 --------------
-.. c:function:: int Mat::depth() const
+.. cpp:function:: int Mat::depth(void) const
 
     Returns matrix element depth
 
@@ -1787,9 +1865,11 @@ The method returns the matrix element depth id, i.e. the type of each individual
 
 .. index:: Mat::channels
 
+.. _Mat::channels:
+
 Mat::channels
 -----------------
-.. c:function:: int Mat::channels() const
+.. cpp:function:: int Mat::channels(void) const
 
     Returns matrix element depth
 
@@ -1797,9 +1877,11 @@ The method returns the number of matrix channels.
 
 .. index:: Mat::step1
 
+.. _Mat::step1:
+
 Mat::step1
 --------------
-.. c:function:: size_t Mat::step1() const
+.. cpp:function:: size_t Mat::step1(void) const
 
     Returns normalized step
 
@@ -1808,9 +1890,11 @@ The method returns the matrix step, divided by
 
 .. index:: Mat::size
 
+.. _Mat::size:
+
 Mat::size
 -------------
-.. c:function:: Size Mat::size() const
+.. cpp:function:: Size Mat::size(void) const
 
     Returns the matrix size
 
@@ -1818,15 +1902,19 @@ The method returns the matrix size: ``Size(cols, rows)`` .
 
 .. index:: Mat::empty
 
+.. _Mat::empty:
+
 Mat::empty
 --------------
-.. c:function:: bool Mat::empty() const
+.. cpp:function:: bool Mat::empty(void) const
 
     Returns true if the array has no elemens
 
 The method returns true if ``Mat::total()`` is 0 or if ``Mat::data`` is NULL. Because of ``pop_back()`` and ``resize()`` methods ``M.total() == 0`` does not imply that ``M.data == NULL`` .
 
 .. index:: Mat::ptr
+
+.. _Mat::ptr:
 
 Mat::ptr
 ------------
@@ -1847,27 +1935,29 @@ The methods return ``uchar*`` or typed pointer to the specified matrix row. See 
 
 .. index:: Mat::at
 
+.. _Mat::at:
+
 Mat::at
 -----------
-.. c:function:: template<typename T> T\& Mat::at(int i) const
+.. c:function:: template<typename T> T& Mat::at(int i) const
 
-.. c:function:: template<typename T> const T\& Mat::at(int i) const
+.. c:function:: template<typename T> const T& Mat::at(int i) const
 
-.. c:function:: template<typename T> T\& Mat::at(int i, int j)
+.. c:function:: template<typename T> T& Mat::at(int i, int j)
 
-.. c:function:: template<typename T> const T\& Mat::at(int i, int j) const
+.. c:function:: template<typename T> const T& Mat::at(int i, int j) const
 
-.. c:function:: template<typename T> T\& Mat::at(Point pt)
+.. c:function:: template<typename T> T& Mat::at(Point pt)
 
-.. c:function:: template<typename T> const T\& Mat::at(Point pt) const
+.. c:function:: template<typename T> const T& Mat::at(Point pt) const
 
-.. c:function:: template<typename T> T\& Mat::at(int i, int j, int k)
+.. c:function:: template<typename T> T& Mat::at(int i, int j, int k)
 
-.. c:function:: template<typename T> const T\& Mat::at(int i, int j, int k) const
+.. c:function:: template<typename T> const T& Mat::at(int i, int j, int k) const
 
-.. c:function:: template<typename T> T\& Mat::at(const int* idx)
+.. c:function:: template<typename T> T& Mat::at(const int* idx)
 
-.. c:function:: template<typename T> const T\& Mat::at(const int* idx) const
+.. c:function:: template<typename T> const T& Mat::at(const int* idx) const
 
     Return reference to the specified array element
 
@@ -1888,6 +1978,8 @@ Here is an example of initialization of a Hilbert matrix: ::
 
 
 .. index:: Mat::begin
+
+.. _Mat::begin:
 
 Mat::begin
 --------------
@@ -1928,6 +2020,8 @@ The methods return the matrix read-only or read-write iterators. The use of matr
 
 
 .. index:: Mat::end
+
+.. _Mat::end:
 
 Mat::end
 ------------
@@ -1987,6 +2081,8 @@ This is simple - just pass ``Vec`` as ``Mat_`` parameter: ::
             img(i,j)[2] ^= (uchar)(i ^ j);
 
 
+.. _NAryMatIterator:
+
 NAryMatIterator
 ---------------
 
@@ -2013,7 +2109,7 @@ n-ary multi-dimensional array iterator ::
 
 
 The class is used for implementation of unary, binary and, generally, n-ary element-wise operations on multi-dimensional arrays. Some of the arguments of n-ary function may be continuous arrays, some may be not. It is possible to use conventional
-:ref:`MatIterator` 's for each array, but it can be a big overhead to increment all of the iterators after each small operations. That's where ``NAryMatIterator`` can be used. Using it, you can iterate though several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same). On each iteration ``it.planes[0]``,``it.planes[1]`` , ... will be the slices of the corresponding matrices.
+``MatIterator`` 's for each array, but it can be a big overhead to increment all of the iterators after each small operations. That's where ``NAryMatIterator`` can be used. Using it, you can iterate though several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same). On each iteration ``it.planes[0]``,``it.planes[1]`` , ... will be the slices of the corresponding matrices.
 
 Here is an example of how you can compute a normalized and thresholded 3D color histogram: ::
 
@@ -2056,6 +2152,8 @@ Here is an example of how you can compute a normalized and thresholded 3D color 
             it.planes[0] *= s;
     }
 
+
+.. _SparseMat:
 
 SparseMat
 ---------
@@ -2278,9 +2376,7 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
     ..
 
 #.
-    sparse matrix iterators. Like
-    :ref:`Mat`     iterators and unlike
-    :ref:`MatND`     iterators, the sparse matrix iterators are STL-style, that is, the iteration loop is familiar to C++ users:
+    sparse matrix iterators. They are similar to ``MatIterator``, but different from :ref:`NAryMatIterator`.     That is, the iteration loop is familiar to STL users:
 
     ::
 
@@ -2362,7 +2458,6 @@ Template sparse n-dimensional array class derived from
         SparseMat_& operator = (const SparseMat& m);
         SparseMat_& operator = (const SparseMat_& m);
         SparseMat_& operator = (const Mat& m);
-        SparseMat_& operator = (const MatND& m);
 
         // equivalent to the correspoding parent class methods
         SparseMat_ clone() const;

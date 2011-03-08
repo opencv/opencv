@@ -1,5 +1,0 @@
-Dynamic Structures
-==================
-
-.. highlight:: cpp
-
