@@ -791,7 +791,7 @@ void InitSolvePnpRansac()
 }
 
 
-TEST(solvePnpRansac)
+TEST(solvePnPRansac)
 {
     InitSolvePnpRansac();
 

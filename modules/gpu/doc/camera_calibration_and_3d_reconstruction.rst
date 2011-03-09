@@ -510,3 +510,35 @@ gpu::reprojectImageTo3D
 See also:
 :func:`reprojectImageTo3D` .
 
+.. index:: gpu::solvePnPRansac
+
+gpu::solvePnPRansac
+-------------------
+
+.. c:function:: void gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat, const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false, int num_iters=100, float max_dist=8.0, int min_inlier_count=100, vector<int>* inliers=NULL)
+
+    Finds the object pose from the 3D-2D point correspondences.
+    
+    :param object: Single-row matrix of object points.
+    
+    :param image: Single-row matrix of image points.
+    
+    :param camera_mat: 3x3 matrix of intrinsic camera parameters.
+    
+    :param dist_coef: Distortion coefficients. See :c:func:`undistortPoints` for details.
+    
+    :param rvec: Output 3D rotation vector.
+    
+    :param tvec: Output 3D translation vector.
+    
+    :param use_extrinsic_guess: Indicates the function must use ``rvec`` and ``tvec`` as initial transformation guess. It isn't supported for now.
+    
+    :param num_iters: Maximum number of RANSAC iterations.
+    
+    :param max_dist: Euclidean distance threshold to detect whether point is inlier or not.
+    
+    :param min_inlier_count: Indicates the function must stop if greater or equal number of inliers is achieved. It isn't supported for now.
+    
+    :param inliers: Output vector of inlier indices.   
+
+See also :c:func:`solvePnPRansac`.    
