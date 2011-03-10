@@ -48,7 +48,6 @@ using namespace std;
 
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "aloe.png";
-const string VALID_FILE_NAME = "surf.xml.gz";
 
 class CV_GPU_SURFTest : public cvtest::BaseTest
 {
@@ -59,17 +58,20 @@ public:
 
 protected:
     bool isSimilarKeypoints(const KeyPoint& p1, const KeyPoint& p2);
+    int getValidCount(const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2, const vector<DMatch>& matches);
     void compareKeypointSets(const vector<KeyPoint>& validKeypoints, const vector<KeyPoint>& calcKeypoints,
                              const Mat& validDescriptors, const Mat& calcDescriptors);
 
-    void emptyDataTest(SURF_GPU& fdetector);
-    void regressionTest(SURF_GPU& fdetector);
+    void emptyDataTest();
+    void accuracyTest();
 
     virtual void run(int);
 };
 
-void CV_GPU_SURFTest::emptyDataTest(SURF_GPU& fdetector)
+void CV_GPU_SURFTest::emptyDataTest()
 {
+    SURF_GPU fdetector;
+
     GpuMat image;
     vector<KeyPoint> keypoints;
     vector<float> descriptors;
@@ -114,116 +116,80 @@ bool CV_GPU_SURFTest::isSimilarKeypoints(const KeyPoint& p1, const KeyPoint& p2)
             p1.class_id == p2.class_id );
 }
 
+int CV_GPU_SURFTest::getValidCount(const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+                     const vector<DMatch>& matches)
+{
+    int count = 0;
+
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+        const DMatch& m = matches[i];
+
+        const KeyPoint& kp1 = keypoints1[m.queryIdx];
+        const KeyPoint& kp2 = keypoints2[m.trainIdx];
+
+        if (isSimilarKeypoints(kp1, kp2))
+            ++count;
+    }
+
+    return count;
+}
+
 void CV_GPU_SURFTest::compareKeypointSets(const vector<KeyPoint>& validKeypoints, const vector<KeyPoint>& calcKeypoints, 
                                           const Mat& validDescriptors, const Mat& calcDescriptors)
 {
-    if (validKeypoints.size() != calcKeypoints.size())
+    BruteForceMatcher< L2<float> > matcher;
+    vector<DMatch> matches;
+
+    matcher.match(validDescriptors, calcDescriptors, matches);
+
+    int validCount = getValidCount(validKeypoints, calcKeypoints, matches);
+    float validRatio = (float)validCount / matches.size();
+
+    if (validRatio < 0.5f)
     {
-        ts->printf(cvtest::TS::LOG, "Keypoints sizes doesn't equal (validCount = %d, calcCount = %d).\n",
-                   validKeypoints.size(), calcKeypoints.size());
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        ts->printf(cvtest::TS::LOG, "Bad accuracy - %f.\n", validRatio);
+        ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
         return;
-    }
-    if (validDescriptors.size() != calcDescriptors.size())
-    {
-        ts->printf(cvtest::TS::LOG, "Descriptors sizes doesn't equal.\n");
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        return;
-    }
-    for (size_t v = 0; v < validKeypoints.size(); v++)
-    {
-        int nearestIdx = -1;
-        float minDist = std::numeric_limits<float>::max();
-
-        for (size_t c = 0; c < calcKeypoints.size(); c++)
-        {
-            float curDist = (float)norm(calcKeypoints[c].pt - validKeypoints[v].pt);
-            if (curDist < minDist)
-            {
-                minDist = curDist;
-                nearestIdx = c;
-            }
-        }
-
-        assert(minDist >= 0);
-        if (!isSimilarKeypoints(validKeypoints[v], calcKeypoints[nearestIdx]))
-        {
-            ts->printf(cvtest::TS::LOG, "Bad keypoints accuracy.\n");
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
-
-        if (norm(validDescriptors.row(v), calcDescriptors.row(nearestIdx), NORM_L2) > 1.5f)
-        {
-            ts->printf(cvtest::TS::LOG, "Bad descriptors accuracy.\n");
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
     }
 }
 
-void CV_GPU_SURFTest::regressionTest(SURF_GPU& fdetector)
+void CV_GPU_SURFTest::accuracyTest()
 {
     string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
-    string resFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + VALID_FILE_NAME;
 
     // Read the test image.
-    GpuMat image(imread(imgFilename, 0));
+    Mat image = imread(imgFilename, 0);
     if (image.empty())
     {
         ts->printf( cvtest::TS::LOG, "Image %s can not be read.\n", imgFilename.c_str() );
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
     }
-
-    FileStorage fs(resFilename, FileStorage::READ);
+    
+    Mat mask(image.size(), CV_8UC1, Scalar::all(1));
+    mask(Range(0, image.rows / 2), Range(0, image.cols / 2)).setTo(Scalar::all(0));
 
     // Compute keypoints.
-    GpuMat mask(image.size(), CV_8UC1, Scalar::all(1));
-    mask(Range(0, image.rows / 2), Range(0, image.cols / 2)).setTo(Scalar::all(0));
     vector<KeyPoint> calcKeypoints;
-    GpuMat calcDespcriptors;
-    fdetector(image, mask, calcKeypoints, calcDespcriptors);
+    GpuMat calcDescriptors;
+    SURF_GPU fdetector; fdetector.extended = false;
+    fdetector(GpuMat(image), GpuMat(mask), calcKeypoints, calcDescriptors);
 
-    if (fs.isOpened()) // Compare computed and valid keypoints.
-    {
-        // Read validation keypoints set.
-        vector<KeyPoint> validKeypoints;
-        Mat validDespcriptors;
-        read(fs["keypoints"], validKeypoints);
-        read(fs["descriptors"], validDespcriptors);
-        if (validKeypoints.empty() || validDespcriptors.empty())
-        {
-            ts->printf(cvtest::TS::LOG, "Validation file can not be read.\n");
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-            return;
-        }
+    // Calc validation keypoints set.
+    vector<KeyPoint> validKeypoints;
+    vector<float> validDescriptors;
+    SURF fdetector_gold; fdetector_gold.extended = false;
+    fdetector_gold(image, mask, validKeypoints, validDescriptors);
 
-        compareKeypointSets(validKeypoints, calcKeypoints, validDespcriptors, calcDespcriptors);
-    }
-    else // Write detector parameters and computed keypoints as validation data.
-    {
-        fs.open(resFilename, FileStorage::WRITE);
-        if (!fs.isOpened())
-        {
-            ts->printf(cvtest::TS::LOG, "File %s can not be opened to write.\n", resFilename.c_str());
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-            return;
-        }
-        else
-        {
-            write(fs, "keypoints", calcKeypoints);
-            write(fs, "descriptors", (Mat)calcDespcriptors);
-        }
-    }
+    compareKeypointSets(validKeypoints, calcKeypoints, 
+        Mat(validKeypoints.size(), fdetector_gold.descriptorSize(), CV_32F, &validDescriptors[0]), calcDescriptors);
 }
 
 void CV_GPU_SURFTest::run( int /*start_from*/ )
 {
-    SURF_GPU fdetector;
-
-    emptyDataTest(fdetector);
-    regressionTest(fdetector);
+    emptyDataTest();
+    accuracyTest();
 }
 
-TEST(SURF, empty_data_and_regression) { CV_GPU_SURFTest test; test.safe_run(); }
+TEST(SURF, empty_data_and_accuracy) { CV_GPU_SURFTest test; test.safe_run(); }

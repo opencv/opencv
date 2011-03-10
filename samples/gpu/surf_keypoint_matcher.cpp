@@ -51,10 +51,10 @@ int main(int argc, char* argv[])
     vector<KeyPoint> keypoints1, keypoints2;
     vector<float> descriptors1, descriptors2;
     vector<DMatch> matches;
-    SURF_GPU::downloadKeypoints(keypoints1GPU, keypoints1);
-    SURF_GPU::downloadKeypoints(keypoints2GPU, keypoints2);
-    SURF_GPU::downloadDescriptors(descriptors1GPU, descriptors1);
-    SURF_GPU::downloadDescriptors(descriptors2GPU, descriptors2);
+    surf.downloadKeypoints(keypoints1GPU, keypoints1);
+    surf.downloadKeypoints(keypoints2GPU, keypoints2);
+    surf.downloadDescriptors(descriptors1GPU, descriptors1);
+    surf.downloadDescriptors(descriptors2GPU, descriptors2);
     BruteForceMatcher_GPU< L2<float> >::matchDownload(trainIdx, distance, matches);
 
     // drawing the results

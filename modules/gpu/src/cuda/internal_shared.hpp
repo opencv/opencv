@@ -111,20 +111,20 @@ namespace cv
         {
             float x;
             float y;
+            float laplacian;
             float size;
-            float response;
-            float angle;
-            float octave;
+            float dir;
+            float hessian;
         };
 
         enum KeypointLayout 
         {
             SF_X,
             SF_Y,
+            SF_LAPLACIAN,
             SF_SIZE,
-            SF_RESPONSE,
-            SF_ANGLE,
-            SF_OCTAVE,
+            SF_DIR,
+            SF_HESSIAN,
             SF_FEATURE_STRIDE
         };
     }

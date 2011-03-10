@@ -48,123 +48,93 @@ using namespace std;
 
 #if !defined (HAVE_CUDA)
 
+cv::gpu::SURF_GPU::SURF_GPU() { throw_nogpu(); }
+cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float) { throw_nogpu(); }
 int cv::gpu::SURF_GPU::descriptorSize() const { throw_nogpu(); return 0;}
 void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, vector<float>&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, GpuMat&, bool, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, vector<float>&, bool, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, GpuMat&, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, vector<float>&, bool) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 namespace cv { namespace gpu { namespace surf
 {
-    dim3 calcBlockSize(int nIntervals);
-    
-    void fasthessian_gpu(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads);
-    void fasthessian_gpu_old(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threadsOld);
-    
-    void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
-        int x_size, int y_size, bool use_mask, const dim3& threads);
-    
-    void fh_interp_extremum_gpu(PtrStepf hessianBuffer, const int4* maxPosBuffer, unsigned int maxCounter, 
-        KeyPoint_GPU* featuresBuffer, unsigned int& featureCounter);
-    
-    void find_orientation_gpu(KeyPoint_GPU* features, int nFeatures);
-    
+    void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers);
+
+    void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
+        int img_rows, int img_cols, int octave, bool use_mask, int nLayers);
+
+    void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter);
+
+    void icvCalcOrientation_gpu(const KeyPoint_GPU* featureBuffer, int nFeatures, KeyPoint_GPU* keypoints, unsigned int* keypointCounter);
+
     void compute_descriptors_gpu(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures);
-    void compute_descriptors_gpu_old(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures);
 }}}
 
 using namespace cv::gpu::surf;
 
 namespace
 {
-    class SURF_GPU_Invoker : private SURFParams_GPU
+    class SURF_GPU_Invoker : private CvSURFParams
     {
     public:
-        SURF_GPU_Invoker(SURF_GPU& surf, const GpuMat& img, const GpuMat& mask) : 
-            SURFParams_GPU(surf),
+        SURF_GPU_Invoker(SURF_GPU& surf, const GpuMat& img, const GpuMat& mask) :
+            CvSURFParams(surf),
 
-            sum(surf.sum), sumf(surf.sumf),
+            sum(surf.sum), mask1(surf.mask1), maskSum(surf.maskSum), intBuffer(surf.intBuffer), det(surf.det), trace(surf.trace),
 
-            mask1(surf.mask1), maskSum(surf.maskSum),
-
-            hessianBuffer(surf.hessianBuffer), 
-            maxPosBuffer(surf.maxPosBuffer), 
-            featuresBuffer(surf.featuresBuffer),
+            maxPosBuffer(surf.maxPosBuffer), featuresBuffer(surf.featuresBuffer), keypointsBuffer(surf.keypointsBuffer),
 
             img_cols(img.cols), img_rows(img.rows),
 
-            use_mask(!mask.empty()),
-
-            mask_width(0), mask_height(0),
-
-            featureCounter(0), maxCounter(0)
+            use_mask(!mask.empty())
         {
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
-            CV_Assert(nOctaves > 0 && nIntervals > 2 && nIntervals < 22);
-            CV_Assert(DeviceInfo().supports(GLOBAL_ATOMICS));
+            CV_Assert(nOctaves > 0 && nOctaveLayers > 0);
+            CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
 
-            max_features = static_cast<int>(img.size().area() * featuresRatio);
-            max_candidates = static_cast<int>(1.5 * max_features);
+            maxKeypoints = static_cast<int>(img.size().area() * surf.keypointsRatio);
+            maxFeatures = static_cast<int>(1.5 * maxKeypoints);
+            maxCandidates = static_cast<int>(1.5 * maxFeatures);
 
-            CV_Assert(max_features > 0);
-
-            featuresBuffer.create(1, max_features, CV_32FC(6));
-            maxPosBuffer.create(1, max_candidates, CV_32SC4);
-
-            mask_width = l2 * 0.5f;
-            mask_height = 1.0f + l1;
-
-            // Dxy gap half-width
-            float dxy_center_offset = 0.5f * (l4 + l3);
-            // Dxy squares half-width
-            float dxy_half_width = 0.5f * l3;
-
-            // rescale edge_scale to fit with the filter dimensions
-            float dxy_scale = edgeScale * std::pow((2.f + 2.f * l1) * l2 / (4.f * l3 * l3), 2.f);
+            CV_Assert(maxKeypoints > 0);
             
-            // Compute border required such that the filters don't overstep the image boundaries	        
-	        float smax0 = 2.0f * initialScale + 0.5f;
-            int border0 = static_cast<int>(std::ceil(smax0 * std::max(std::max(mask_width, mask_height), l3 + l4 * 0.5f)));
+            cudaSafeCall( cudaMalloc((void**)&d_counters, (nOctaves + 2) * sizeof(unsigned int)) );
+            cudaSafeCall( cudaMemset(d_counters, 0, (nOctaves + 2) * sizeof(unsigned int)) );
 
-            int width0 = (img_cols - 2 * border0) / initialStep;
-            int height0 = (img_rows - 2 * border0) / initialStep;
+            uploadConstant("cv::gpu::surf::c_max_candidates",    maxCandidates);
+            uploadConstant("cv::gpu::surf::c_max_features",      maxFeatures);
+            uploadConstant("cv::gpu::surf::c_max_keypoints",     maxKeypoints);
+            uploadConstant("cv::gpu::surf::c_img_rows",          img_rows);
+            uploadConstant("cv::gpu::surf::c_img_cols",          img_cols);
+            uploadConstant("cv::gpu::surf::c_nOctaveLayers",     nOctaveLayers);
+            uploadConstant("cv::gpu::surf::c_hessianThreshold",  static_cast<float>(hessianThreshold));
 
-            uploadConstant("cv::gpu::surf::c_max_candidates",    max_candidates);
-            uploadConstant("cv::gpu::surf::c_max_features",      max_features);
-            uploadConstant("cv::gpu::surf::c_nIntervals",        nIntervals);
-            uploadConstant("cv::gpu::surf::c_mask_width",        mask_width);
-            uploadConstant("cv::gpu::surf::c_mask_height",       mask_height);
-            uploadConstant("cv::gpu::surf::c_dxy_center_offset", dxy_center_offset);
-            uploadConstant("cv::gpu::surf::c_dxy_half_width",    dxy_half_width);
-            uploadConstant("cv::gpu::surf::c_dxy_scale",         dxy_scale);
-            uploadConstant("cv::gpu::surf::c_initialScale",      initialScale);
-            uploadConstant("cv::gpu::surf::c_threshold",         threshold);
-            
-            hessianBuffer.create(height0 * nIntervals, width0, CV_32F);
+            bindTexture("cv::gpu::surf::imgTex", (DevMem2D)img);
 
-            integral(img, sum);
-            sum.convertTo(sumf, CV_32F, 1.0 / 255.0);
-            
-            bindTexture("cv::gpu::surf::sumTex", (DevMem2Df)sumf);
+            integralBuffered(img, sum, intBuffer);
+            bindTexture("cv::gpu::surf::sumTex", (DevMem2D_<unsigned int>)sum);
 
-            if (!mask.empty())
-		    {
+            if (use_mask)
+            {
                 min(mask, 1.0, mask1);
-                integral(mask1, maskSum);
-            
-                bindTexture("cv::gpu::surf::maskSumTex", (DevMem2Di)maskSum);
-		    }
+                integralBuffered(mask1, maskSum, intBuffer);
+
+                bindTexture("cv::gpu::surf::maskSumTex", (DevMem2D_<unsigned int>)maskSum);
+            }
         }
 
         ~SURF_GPU_Invoker()
         {
+            cudaSafeCall( cudaFree(d_counters) );
+
+            unbindTexture("cv::gpu::surf::imgTex");
             unbindTexture("cv::gpu::surf::sumTex");
             if (use_mask)
                 unbindTexture("cv::gpu::surf::maskSumTex");
@@ -172,100 +142,113 @@ namespace
 
         void detectKeypoints(GpuMat& keypoints)
         {
-            typedef void (*fasthessian_t)(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads);
-            const fasthessian_t fasthessian = 
-                DeviceInfo().supports(FEATURE_SET_COMPUTE_13) ? fasthessian_gpu : fasthessian_gpu_old;
+            ensureSizeIsEnough(img_rows * (nOctaveLayers + 2), img_cols, CV_32FC1, det);
+            ensureSizeIsEnough(img_rows * (nOctaveLayers + 2), img_cols, CV_32FC1, trace);
+            
+            ensureSizeIsEnough(1, maxCandidates, CV_32SC4, maxPosBuffer);
+            ensureSizeIsEnough(1, maxFeatures, CV_32FC(6), featuresBuffer);
 
-            dim3 threads = calcBlockSize(nIntervals);
-            for(int octave = 0; octave < nOctaves; ++octave)
+            for (int octave = 0; octave < nOctaves; ++octave)
             {
-                int step = initialStep * (1 << octave);
+                const int layer_rows = img_rows >> octave;
+                const int layer_cols = img_cols >> octave;
 
-                // Compute border required such that the filters don't overstep the image boundaries
-                float d = (initialScale * (1 << octave)) / (nIntervals - 2);
-	            float smax = initialScale * (1 << octave) + d * (nIntervals - 2.0f) + 0.5f;
-                int border = static_cast<int>(std::ceil(smax * std::max(std::max(mask_width, mask_height), l3 + l4 * 0.5f)));
-                
-                int x_size = (img_cols - 2 * border) / step;
-                int y_size = (img_rows - 2 * border) / step;
-                
-                if (x_size <= 0 || y_size <= 0)
-                    break;
+                uploadConstant("cv::gpu::surf::c_octave",     octave);
+                uploadConstant("cv::gpu::surf::c_layer_rows", layer_rows);
+                uploadConstant("cv::gpu::surf::c_layer_cols", layer_cols);
 
-                uploadConstant("cv::gpu::surf::c_octave", octave);
-                uploadConstant("cv::gpu::surf::c_x_size", x_size);
-                uploadConstant("cv::gpu::surf::c_y_size", y_size);
-                uploadConstant("cv::gpu::surf::c_border", border);
-                uploadConstant("cv::gpu::surf::c_step",   step);
+                icvCalcLayerDetAndTrace_gpu(det, trace, img_rows, img_cols, octave, nOctaveLayers);
 
-                fasthessian(hessianBuffer, x_size, y_size, threads);
+                icvFindMaximaInLayer_gpu(det, trace, maxPosBuffer.ptr<int4>(), d_counters + 2 + octave,
+                    img_rows, img_cols, octave, use_mask, nOctaveLayers);
 
-                // Reset the candidate count.
-                maxCounter = 0;
-
-                nonmaxonly_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter, x_size, y_size, use_mask, threads); 
-                
-                maxCounter = std::min(maxCounter, static_cast<unsigned int>(max_candidates));
+                unsigned int maxCounter;
+                cudaSafeCall( cudaMemcpy(&maxCounter, d_counters + 2 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+                maxCounter = std::min(maxCounter, static_cast<unsigned int>(maxCandidates));
 
                 if (maxCounter > 0)
                 {
-                    fh_interp_extremum_gpu(hessianBuffer, maxPosBuffer.ptr<int4>(), maxCounter,
-                        featuresBuffer.ptr<KeyPoint_GPU>(), featureCounter);
-
-                    featureCounter = std::min(featureCounter, static_cast<unsigned int>(max_features));
+                    icvInterpolateKeypoint_gpu(det, maxPosBuffer.ptr<int4>(), maxCounter, 
+                        featuresBuffer.ptr<KeyPoint_GPU>(), d_counters);
                 }
             }
+            unsigned int featureCounter;
+            cudaSafeCall( cudaMemcpy(&featureCounter, d_counters, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
 
-            if (featureCounter > 0)
-                featuresBuffer.colRange(0, featureCounter).copyTo(keypoints);
-            else
-                keypoints.release();
+            findOrientation(featuresBuffer.colRange(0, featureCounter), keypoints);
         }
 
-        void findOrientation(GpuMat& keypoints)
+        void findOrientation(const GpuMat& features, GpuMat& keypoints)
         {
-            if (keypoints.cols > 0)
-                find_orientation_gpu(keypoints.ptr<KeyPoint_GPU>(), keypoints.cols);
+            if (features.cols > 0)
+            {
+                ensureSizeIsEnough(1, maxKeypoints, CV_32FC(6), keypointsBuffer);
+
+                icvCalcOrientation_gpu(features.ptr<KeyPoint_GPU>(), features.cols, keypointsBuffer.ptr<KeyPoint_GPU>(), 
+                    d_counters + 1);
+
+                unsigned int keypointsCounter;
+                cudaSafeCall( cudaMemcpy(&keypointsCounter, d_counters + 1, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+                keypointsCounter = std::min(keypointsCounter, static_cast<unsigned int>(maxKeypoints));
+
+                if (keypointsCounter > 0)
+                    keypointsBuffer.colRange(0, keypointsCounter).copyTo(keypoints);
+                else
+                    keypoints.release();
+            }
         }
 
         void computeDescriptors(const GpuMat& keypoints, GpuMat& descriptors, int descriptorSize)
         {
-            typedef void (*compute_descriptors_t)(const DevMem2Df& descriptors, 
-                const KeyPoint_GPU* features, int nFeatures);
-
-            const compute_descriptors_t compute_descriptors = compute_descriptors_gpu_old;
-                //DeviceInfo().supports(FEATURE_SET_COMPUTE_13) ? compute_descriptors_gpu : compute_descriptors_gpu_old;
-
             if (keypoints.cols > 0)
             {
                 descriptors.create(keypoints.cols, descriptorSize, CV_32F);
-                compute_descriptors(descriptors, keypoints.ptr<KeyPoint_GPU>(), keypoints.cols);
+                compute_descriptors_gpu(descriptors, keypoints.ptr<KeyPoint_GPU>(), keypoints.cols);
             }
         }
 
     private:
         GpuMat& sum;
-        GpuMat& sumf;
-
         GpuMat& mask1;
         GpuMat& maskSum;
+        GpuMat& intBuffer;
 
-        GpuMat& hessianBuffer;
+        GpuMat& det;
+        GpuMat& trace;
+
         GpuMat& maxPosBuffer;
         GpuMat& featuresBuffer;
+        GpuMat& keypointsBuffer;
 
         int img_cols, img_rows;
 
         bool use_mask;
-        
-        float mask_width, mask_height;
 
-        unsigned int featureCounter;
-        unsigned int maxCounter;
+        int maxCandidates;
+        int maxFeatures;
+        int maxKeypoints;
 
-        int max_candidates;
-        int max_features;
+        unsigned int* d_counters;
     };
+}
+
+cv::gpu::SURF_GPU::SURF_GPU()
+{
+    hessianThreshold = 100;
+    extended = 1;
+    nOctaves = 4;
+    nOctaveLayers = 2;
+    keypointsRatio = 0.01f;
+}
+
+cv::gpu::SURF_GPU::SURF_GPU(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, float _keypointsRatio)
+{
+    hessianThreshold = _threshold;
+    extended = _extended;
+    nOctaves = _nOctaves;
+    nOctaveLayers = _nOctaveLayers;
+    keypointsRatio = _keypointsRatio;
 }
 
 int cv::gpu::SURF_GPU::descriptorSize() const
@@ -281,24 +264,61 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMa
     {
         Mat keypointsCPU(1, keypoints.size(), CV_32FC(6));
 
-        const KeyPoint* keypoints_ptr = &keypoints[0];
-        KeyPoint_GPU* keypointsCPU_ptr = keypointsCPU.ptr<KeyPoint_GPU>();
-        for (size_t i = 0; i < keypoints.size(); ++i, ++keypoints_ptr, ++keypointsCPU_ptr)
+        for (size_t i = 0; i < keypoints.size(); ++i)
         {
-            const KeyPoint& kp = *keypoints_ptr;
-            KeyPoint_GPU& gkp = *keypointsCPU_ptr;
+            const KeyPoint& kp = keypoints[i];
+            KeyPoint_GPU& gkp = keypointsCPU.ptr<KeyPoint_GPU>()[i];
 
             gkp.x = kp.pt.x;
             gkp.y = kp.pt.y;
 
+            gkp.laplacian = 1.0f;
+
             gkp.size = kp.size;
 
-            gkp.octave = static_cast<float>(kp.octave);
-            gkp.angle = kp.angle;
-            gkp.response = kp.response;
+            gkp.dir = kp.angle;
+            gkp.hessian = kp.response;
         }
 
         keypointsGPU.upload(keypointsCPU);
+    }
+}
+
+namespace
+{
+    int calcSize(int octave, int layer)
+    {
+        /* Wavelet size at first layer of first octave. */
+        const int HAAR_SIZE0 = 9;
+
+        /* Wavelet size increment between layers. This should be an even number,
+         such that the wavelet sizes in an octave are either all even or all odd.
+         This ensures that when looking for the neighbours of a sample, the layers
+         above and below are aligned correctly. */
+        const int HAAR_SIZE_INC = 6;
+
+        return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
+    }
+
+    int getPointOctave(const KeyPoint_GPU& kpt, const CvSURFParams& params)
+    {
+        int best_octave = 0;
+        float min_diff = numeric_limits<float>::max();
+        for (int octave = 1; octave < params.nOctaves; ++octave)
+        {
+            for (int layer = 0; layer < params.nOctaveLayers; ++layer)
+            {
+                float diff = std::abs(kpt.size - (float)calcSize(octave, layer));
+                if (min_diff > diff)
+                {
+                    min_diff = diff;
+                    best_octave = octave;
+                    if (min_diff == 0)
+                        return best_octave;
+                }
+            }
+        }
+        return best_octave;
     }
 }
 
@@ -313,21 +333,23 @@ void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, vector<Key
         Mat keypointsCPU = keypointsGPU;
         keypoints.resize(keypointsGPU.cols);
 
-        KeyPoint* keypoints_ptr = &keypoints[0];
-        const KeyPoint_GPU* keypointsCPU_ptr = keypointsCPU.ptr<KeyPoint_GPU>();
-        for (int i = 0; i < keypointsGPU.cols; ++i, ++keypoints_ptr, ++keypointsCPU_ptr)
+        for (int i = 0; i < keypointsGPU.cols; ++i)
         {
-            KeyPoint& kp = *keypoints_ptr;
-            const KeyPoint_GPU& gkp = *keypointsCPU_ptr;
+            KeyPoint& kp = keypoints[i];
+            const KeyPoint_GPU& gkp = keypointsCPU.ptr<KeyPoint_GPU>()[i];
 
             kp.pt.x = gkp.x;
             kp.pt.y = gkp.y;
 
             kp.size = gkp.size;
 
-            kp.octave = static_cast<int>(gkp.octave);
-            kp.angle = gkp.angle;
-            kp.response = gkp.response;
+            kp.angle = gkp.dir;
+
+            kp.response = gkp.hessian;
+
+            kp.octave = getPointOctave(gkp, *this);
+
+            kp.class_id = static_cast<int>(gkp.laplacian);
         }
     }
 }
@@ -353,23 +375,24 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat
         SURF_GPU_Invoker surf(*this, img, mask);
 
         surf.detectKeypoints(keypoints);
-
-        surf.findOrientation(keypoints);
     }
 }
 
 void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors, 
-                                   bool useProvidedKeypoints, bool calcOrientation)
+                                   bool useProvidedKeypoints)
 {
     if (!img.empty())
     {
         SURF_GPU_Invoker surf(*this, img, mask);
-        
+    
         if (!useProvidedKeypoints)
             surf.detectKeypoints(keypoints);
-        
-        if (calcOrientation)
-            surf.findOrientation(keypoints);
+        else
+        {
+            GpuMat keypointsBuf;
+            surf.findOrientation(keypoints, keypointsBuf);
+            keypointsBuf.copyTo(keypoints);
+        }
 
         surf.computeDescriptors(keypoints, descriptors, descriptorSize());
     }
@@ -385,24 +408,24 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector
 }
 
 void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector<KeyPoint>& keypoints, 
-    GpuMat& descriptors, bool useProvidedKeypoints, bool calcOrientation)
+    GpuMat& descriptors, bool useProvidedKeypoints)
 {
     GpuMat keypointsGPU;
 
     if (useProvidedKeypoints)
         uploadKeypoints(keypoints, keypointsGPU);    
 
-    (*this)(img, mask, keypointsGPU, descriptors, useProvidedKeypoints, calcOrientation);
+    (*this)(img, mask, keypointsGPU, descriptors, useProvidedKeypoints);
 
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
 void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector<KeyPoint>& keypoints, 
-    vector<float>& descriptors, bool useProvidedKeypoints, bool calcOrientation)
+    vector<float>& descriptors, bool useProvidedKeypoints)
 {
     GpuMat descriptorsGPU;
 
-    (*this)(img, mask, keypoints, descriptorsGPU, useProvidedKeypoints, calcOrientation);
+    (*this)(img, mask, keypoints, descriptorsGPU, useProvidedKeypoints);
 
     downloadDescriptors(descriptorsGPU, descriptors);
 }

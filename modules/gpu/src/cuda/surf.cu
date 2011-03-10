@@ -56,267 +56,132 @@ using namespace cv::gpu::device;
 namespace cv { namespace gpu { namespace surf
 {
     ////////////////////////////////////////////////////////////////////////
-    // Help funcs
-
-    // Wrapper for host reference to pass into kernel
-    template <typename T> 
-    class DeviceReference
-    {
-    public:
-        explicit DeviceReference(T& host_val) : d_ptr(0), h_ptr(&host_val)
-        {
-            cudaSafeCall( cudaMalloc((void**)&d_ptr, sizeof(T)) );
-            cudaSafeCall( cudaMemcpy(d_ptr, h_ptr, sizeof(T), cudaMemcpyHostToDevice) );
-        }
-
-        ~DeviceReference()
-        {            
-            cudaSafeCall( cudaMemcpy(h_ptr, d_ptr, sizeof(T), cudaMemcpyDeviceToHost) );
-            cudaSafeCall( cudaFree(d_ptr) );
-        }
-
-        // Casting to device pointer
-        operator T*() {return d_ptr;}
-        operator const T*() const {return d_ptr;}
-    private:
-        T* d_ptr;
-        T* h_ptr;
-    };
-
-    __device__ void clearLastBit(int* f)
-    {
-        *f &= ~0x1;
-    }
-    __device__ void clearLastBit(float& f)
-    {
-        clearLastBit((int*)&f);
-    }
-
-    __device__ void setLastBit(int* f)
-    {
-        *f |= 0x1;
-    }
-    __device__ void setLastBit(float& f)
-    {
-        setLastBit((int*)&f);
-    }
-
-    ////////////////////////////////////////////////////////////////////////
     // Global parameters
 
     // The maximum number of features (before subpixel interpolation) that memory is reserved for.
     __constant__ int c_max_candidates;
     // The maximum number of features that memory is reserved for.
     __constant__ int c_max_features;
-    // The number of intervals in the octave.
-    __constant__ int c_nIntervals;
-    // Mask sizes derived from the mask parameters
-    __constant__ float c_mask_width;
-    // Mask sizes derived from the mask parameters
-    __constant__ float c_mask_height;
-    // Mask sizes derived from the mask parameters
-    __constant__ float c_dxy_center_offset;
-    // Mask sizes derived from the mask parameters
-    __constant__ float c_dxy_half_width;
-    // Mask sizes derived from the mask parameters
-    __constant__ float c_dxy_scale;
-    // The scale associated with the first interval of the first octave
-    __constant__ float c_initialScale;
-    // The interest operator threshold
-    __constant__ float c_threshold;
+    // The maximum number of keypoints that memory is reserved for.
+    __constant__ int c_max_keypoints;
+    // The image size.
+    __constant__ int c_img_rows;
+    __constant__ int c_img_cols;
+    // The number of layers.
+    __constant__ int c_nOctaveLayers;
+    // The hessian threshold.
+    __constant__ float c_hessianThreshold;
 
-    // Ther octave
+    // The current octave.
     __constant__ int c_octave;
-    // The width of the octave buffer.
-    __constant__ int c_x_size;
-    // The height of the octave buffer.
-    __constant__ int c_y_size;
-    // The size of the octave border in pixels.
-    __constant__ int c_border;
-    // The step size used in this octave in pixels.
-    __constant__ int c_step;
+    // The current layer size.
+    __constant__ int c_layer_rows;
+    __constant__ int c_layer_cols;
 
     ////////////////////////////////////////////////////////////////////////
     // Integral image texture
 
-    texture<float, 2, cudaReadModeElementType> sumTex(0, cudaFilterModeLinear, cudaAddressModeClamp);
+    typedef texture<unsigned int, 2, cudaReadModeElementType> IntTex;
 
-    __device__ float iiAreaLookupCDHalfWH(float cx, float cy, float halfWidth, float halfHeight)
+    IntTex sumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+
+    template <int N>
+    __device__ float icvCalcHaarPattern(const IntTex& tex, const float src[][5], int oldSize, int newSize, int y, int x)
     {
-        float result = 0.f;
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
+        typedef double real_t;        
+        #else
+        typedef float  real_t;
+        #endif
 
-        result += tex2D(sumTex, cx - halfWidth, cy - halfHeight);
-        result -= tex2D(sumTex, cx + halfWidth, cy - halfHeight);
-        result -= tex2D(sumTex, cx - halfWidth, cy + halfHeight);
-        result += tex2D(sumTex, cx + halfWidth, cy + halfHeight);
+        float ratio = (float)newSize / oldSize;
+        
+        real_t d = 0;
 
-        return result;
+        #pragma unroll
+        for (int k = 0; k < N; ++k)
+        {
+            int dx1 = __float2int_rn(ratio * src[k][0]);
+            int dy1 = __float2int_rn(ratio * src[k][1]);
+            int dx2 = __float2int_rn(ratio * src[k][2]);
+            int dy2 = __float2int_rn(ratio * src[k][3]);
+
+            real_t t = 0;
+            t += tex2D(tex, x + dx1, y + dy1);
+            t -= tex2D(tex, x + dx1, y + dy2);
+            t -= tex2D(tex, x + dx2, y + dy1);
+            t += tex2D(tex, x + dx2, y + dy2);
+
+            d += t * src[k][4] / ((dx2 - dx1) * (dy2 - dy1));
+        }
+
+        return (float)d;
     }
 
     ////////////////////////////////////////////////////////////////////////
     // Hessian
 
-    __device__ float evalDyy(float x, float y, float t, float mask_width, float mask_height, float fscale)
+    __constant__ float c_DX [3][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
+    __constant__ float c_DY [3][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
+    __constant__ float c_DXY[4][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
+
+    __host__ __device__ int calcSize(int octave, int layer)
     {
-        float Dyy = 0.f;
+        /* Wavelet size at first layer of first octave. */
+        const int HAAR_SIZE0 = 9;
 
-        Dyy +=     iiAreaLookupCDHalfWH(x, y, mask_width, mask_height);
-        Dyy -= t * iiAreaLookupCDHalfWH(x, y, mask_width, fscale);
+        /* Wavelet size increment between layers. This should be an even number,
+         such that the wavelet sizes in an octave are either all even or all odd.
+         This ensures that when looking for the neighbours of a sample, the layers
+         above and below are aligned correctly. */
+        const int HAAR_SIZE_INC = 6;
 
-        Dyy *=  1.0f / (fscale * fscale);
-
-        return Dyy;
+        return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
     }
 
-    __device__ float evalDxx(float x, float y, float t, float mask_width, float mask_height, float fscale)
+    __global__ void icvCalcLayerDetAndTrace(PtrStepf det, PtrStepf trace)
     {
-        float Dxx = 0.f;
+        // Determine the indices
+        const int gridDim_y = gridDim.y / (c_nOctaveLayers + 2);
+        const int blockIdx_y = blockIdx.y % gridDim_y;
+        const int blockIdx_z = blockIdx.y / gridDim_y;
 
-        Dxx +=     iiAreaLookupCDHalfWH(x, y, mask_height, mask_width);
-        Dxx -= t * iiAreaLookupCDHalfWH(x, y, fscale     , mask_width);
+        const int j = threadIdx.x + blockIdx.x * blockDim.x;
+        const int i = threadIdx.y + blockIdx_y * blockDim.y;
+        const int layer = blockIdx_z;
 
-        Dxx *=  1.0f / (fscale * fscale);
+        const int size = calcSize(c_octave, layer);
 
-        return Dxx;
-    }
+        const int samples_i = 1 + ((c_img_rows - size) >> c_octave);
+        const int samples_j = 1 + ((c_img_cols - size) >> c_octave);
 
-    __device__ float evalDxy(float x, float y, float fscale)
-    {
-        float center_offset =  c_dxy_center_offset  * fscale;
-        float half_width    =  c_dxy_half_width     * fscale;
+        /* Ignore pixels where some of the kernel is outside the image */
+        const int margin = (size >> 1) >> c_octave;
 
-        float Dxy = 0.f;
-
-        Dxy += iiAreaLookupCDHalfWH(x - center_offset, y - center_offset, half_width, half_width);
-        Dxy -= iiAreaLookupCDHalfWH(x - center_offset, y + center_offset, half_width, half_width);
-        Dxy += iiAreaLookupCDHalfWH(x + center_offset, y + center_offset, half_width, half_width);
-        Dxy -= iiAreaLookupCDHalfWH(x + center_offset, y - center_offset, half_width, half_width);
-
-        Dxy *= 1.0f / (fscale * fscale);
-
-        return Dxy;
-    }
-
-    __device__ float calcScale(int hidx_z)
-    {
-        float d = (c_initialScale * (1 << c_octave)) / (c_nIntervals - 2);
-        return c_initialScale * (1 << c_octave) + d * (hidx_z - 1.0f) + 0.5f;
-    }
-    
-    __global__ void fasthessian(PtrStepf hessianBuffer)
-    {
-  	    // Determine the indices in the Hessian buffer
-        int hidx_x = threadIdx.x + blockIdx.x * blockDim.x;
-        int hidx_y = threadIdx.y + blockIdx.y * blockDim.y;
-        int hidx_z = threadIdx.z;
-
-        float fscale = calcScale(hidx_z);
-
-        // Compute the lookup location of the mask center
-        float x = hidx_x * c_step + c_border;
-        float y = hidx_y * c_step + c_border;
-
-        // Scale the mask dimensions according to the scale
-        if (hidx_x < c_x_size && hidx_y < c_y_size && hidx_z < c_nIntervals)
+        if (size <= c_img_rows && size <= c_img_cols && i < samples_i && j < samples_j)
         {
-            float mask_width =  c_mask_width  * fscale;
-            float mask_height = c_mask_height * fscale;
+            const float dx  = icvCalcHaarPattern<3>(sumTex, c_DX , 9, size, i << c_octave, j << c_octave);
+            const float dy  = icvCalcHaarPattern<3>(sumTex, c_DY , 9, size, i << c_octave, j << c_octave);
+            const float dxy = icvCalcHaarPattern<4>(sumTex, c_DXY, 9, size, i << c_octave, j << c_octave);
 
-            // Compute the filter responses
-            float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
-            float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
-            float Dxy = evalDxy(x, y, fscale);
-
-            // Combine the responses and store the Laplacian sign
-            float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
-
-            if (Dxx + Dyy > 0.f)
-                setLastBit(result);
-            else
-                clearLastBit(result);
-
-            hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
+            det.ptr(layer * c_layer_rows + i + margin)[j + margin] = dx * dy - 0.81f * dxy * dxy;
+            trace.ptr(layer * c_layer_rows + i + margin)[j + margin] = dx + dy;
         }
     }
 
-    __global__ void fasthessian_old(PtrStepf hessianBuffer)
+    void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers)
     {
-  	    // Determine the indices in the Hessian buffer
-        int gridDim_y = gridDim.y / c_nIntervals;
-        int blockIdx_y = blockIdx.y % gridDim_y;
-        int blockIdx_z = blockIdx.y / gridDim_y;
+        const int min_size = calcSize(octave, 0);
+        const int max_samples_i = 1 + ((img_rows - min_size) >> octave);
+        const int max_samples_j = 1 + ((img_cols - min_size) >> octave);
 
-        int hidx_x = threadIdx.x + blockIdx.x * blockDim.x;
-        int hidx_y = threadIdx.y + blockIdx_y * blockDim.y;
-        int hidx_z = blockIdx_z;
-
-        float fscale = calcScale(hidx_z);
-
-        // Compute the lookup location of the mask center
-        float x = hidx_x * c_step + c_border;
-        float y = hidx_y * c_step + c_border;
-
-        // Scale the mask dimensions according to the scale
-        if (hidx_x < c_x_size && hidx_y < c_y_size && hidx_z < c_nIntervals)
-        {
-            float mask_width =  c_mask_width  * fscale;
-            float mask_height = c_mask_height * fscale;
-
-            // Compute the filter responses
-            float Dyy = evalDyy(x, y, c_mask_height, mask_width, mask_height, fscale);
-            float Dxx = evalDxx(x, y, c_mask_height, mask_width, mask_height, fscale);
-            float Dxy = evalDxy(x, y, fscale);
-
-            // Combine the responses and store the Laplacian sign
-            float result = (Dxx * Dyy) - c_dxy_scale * (Dxy * Dxy);
-
-            if (Dxx + Dyy > 0.f)
-                setLastBit(result);
-            else
-                clearLastBit(result);
-
-            hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x] = result;
-        }
-    }
-
-    dim3 calcBlockSize(int nIntervals)
-    {
-        int threadsPerBlock = 512;
-        
-        dim3 threads;        
-        threads.z = nIntervals;
-        threadsPerBlock /= nIntervals;
-        if (threadsPerBlock >= 48)
-            threads.x = 16;
-        else
-            threads.x = 8;
-        threadsPerBlock /= threads.x;
-        threads.y = threadsPerBlock;
-        
-        return threads;
-    }
-
-    void fasthessian_gpu(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threads)
-    {
-        dim3 grid;
-        grid.x = divUp(x_size, threads.x);
-        grid.y = divUp(y_size, threads.y);
-        
-        fasthessian<<<grid, threads>>>(hessianBuffer);
-        cudaSafeCall( cudaGetLastError() );
-
-        cudaSafeCall( cudaThreadSynchronize() );
-    }
-
-    void fasthessian_gpu_old(PtrStepf hessianBuffer, int x_size, int y_size, const dim3& threadsOld)
-    {
         dim3 threads(16, 16);
 
         dim3 grid;
-        grid.x = divUp(x_size, threads.x);
-        grid.y = divUp(y_size, threads.y) * threadsOld.z;
-        
-        fasthessian_old<<<grid, threads>>>(hessianBuffer);
+        grid.x = divUp(max_samples_j, threads.x);
+        grid.y = divUp(max_samples_i, threads.y) * (nOctaveLayers + 2);
+
+        icvCalcLayerDetAndTrace<<<grid, threads>>>(det, trace);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -325,109 +190,113 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // NONMAX
     
-    texture<int, 2, cudaReadModeElementType> maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+    IntTex maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
     struct WithOutMask
     {
-        static __device__ bool check(float, float, float)
+        static __device__ bool check(int, int, int)
         {
             return true;
         }
     };
+
+    __constant__ float c_DM[1][5] = {{0, 0, 9, 9, 1}};
+
     struct WithMask
     {
-        static __device__ bool check(float x, float y, float fscale)
+        static __device__ bool check(int sum_i, int sum_j, int size)
         {
-            float half_width = fscale / 2;
-
-            float result = 0.f;
-
-            result += tex2D(maskSumTex, x - half_width, y - half_width);
-            result -= tex2D(maskSumTex, x + half_width, y - half_width);
-            result -= tex2D(maskSumTex, x - half_width, y + half_width);
-            result += tex2D(maskSumTex, x + half_width, y + half_width);
-
-            result /= (fscale * fscale);
-
-            return (result >= 0.5f);
+            float mval = icvCalcHaarPattern<1>(maskSumTex, c_DM , 9, size, sum_i, sum_j);
+            return (mval >= 0.5);
         }
     };
 
     template <typename Mask>
-    __global__ void nonmaxonly(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int* maxCounter)
+    __global__ void icvFindMaximaInLayer(PtrStepf det, PtrStepf trace, int4* maxPosBuffer, unsigned int* maxCounter)
     {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
-        extern __shared__ float fh_vals[];
+        extern __shared__ float N9[];
 
         // The hidx variables are the indices to the hessian buffer.
-        int hidx_x = threadIdx.x + blockIdx.x * (blockDim.x - 2);
-        int hidx_y = threadIdx.y + blockIdx.y * (blockDim.y - 2);
-        int hidx_z = threadIdx.z;
-        int localLin = threadIdx.x + threadIdx.y * blockDim.x + threadIdx.z * blockDim.x * blockDim.y;
+        const int gridDim_y = gridDim.y / c_nOctaveLayers;
+        const int blockIdx_y = blockIdx.y % gridDim_y;
+        const int blockIdx_z = blockIdx.y / gridDim_y;
+
+        const int layer = blockIdx_z + 1;
+
+        const int size = calcSize(c_octave, layer);
+
+        /* Ignore pixels without a 3x3x3 neighbourhood in the layer above */
+        const int margin = ((calcSize(c_octave, layer + 1) >> 1) >> c_octave) + 1;
+
+        const int j = threadIdx.x + blockIdx.x * (blockDim.x - 2) + margin - 1;
+        const int i = threadIdx.y + blockIdx_y * (blockDim.y - 2) + margin - 1;
 
         // Is this thread within the hessian buffer?
-        if (hidx_x < c_x_size && hidx_y < c_y_size && hidx_z < c_nIntervals)
-        {
-            fh_vals[localLin] = hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x];
-        }
+        const int zoff = blockDim.x * blockDim.y;
+        const int localLin = threadIdx.x + threadIdx.y * blockDim.x + zoff;
+        N9[localLin - zoff] = det.ptr(c_layer_rows * (layer - 1) + i)[j];
+        N9[localLin       ] = det.ptr(c_layer_rows * (layer    ) + i)[j];
+        N9[localLin + zoff] = det.ptr(c_layer_rows * (layer + 1) + i)[j];
         __syncthreads();
 
-        // Is this location one of the ones being processed for nonmax suppression.
-        // Blocks overlap by one so we don't process the border threads.
-        bool inBounds2 = threadIdx.x > 0 && threadIdx.x < blockDim.x-1 && hidx_x < c_x_size - 1 
-            &&           threadIdx.y > 0 && threadIdx.y < blockDim.y-1 && hidx_y < c_y_size - 1
-            &&           threadIdx.z > 0 && threadIdx.z < blockDim.z-1;
-
-        float val = fh_vals[localLin];
-
-        // Compute the lookup location of the mask center
-        float x = hidx_x * c_step + c_border;
-        float y = hidx_y * c_step + c_border;
-        float fscale = calcScale(hidx_z);
-
-        if (inBounds2 && val >= c_threshold && Mask::check(x, y, fscale))
+        if (i < c_layer_rows - margin && j < c_layer_cols - margin && threadIdx.x > 0 && threadIdx.x < blockDim.x - 1 && threadIdx.y > 0 && threadIdx.y < blockDim.y - 1)
         {
-            // Check to see if we have a max (in its 26 neighbours)
-            int zoff = blockDim.x * blockDim.y;
-            bool condmax  =  val > fh_vals[localLin                     + 1]
-            &&               val > fh_vals[localLin                     - 1]
-            &&               val > fh_vals[localLin        - blockDim.x + 1]
-            &&               val > fh_vals[localLin        - blockDim.x    ]
-            &&               val > fh_vals[localLin        - blockDim.x - 1]
-            &&               val > fh_vals[localLin        + blockDim.x + 1]
-            &&               val > fh_vals[localLin        + blockDim.x    ]
-            &&               val > fh_vals[localLin        + blockDim.x - 1]
+            float val0 = N9[localLin];
 
-            &&               val > fh_vals[localLin - zoff              + 1]
-            &&               val > fh_vals[localLin - zoff                 ]
-            &&               val > fh_vals[localLin - zoff              - 1]
-            &&               val > fh_vals[localLin - zoff - blockDim.x + 1]
-            &&               val > fh_vals[localLin - zoff - blockDim.x    ]
-            &&               val > fh_vals[localLin - zoff - blockDim.x - 1]
-            &&               val > fh_vals[localLin - zoff + blockDim.x + 1]
-            &&               val > fh_vals[localLin - zoff + blockDim.x    ]
-            &&               val > fh_vals[localLin - zoff + blockDim.x - 1]
-
-            &&               val > fh_vals[localLin + zoff              + 1]
-            &&               val > fh_vals[localLin + zoff                 ]
-            &&               val > fh_vals[localLin + zoff              - 1]
-            &&               val > fh_vals[localLin + zoff - blockDim.x + 1]
-            &&               val > fh_vals[localLin + zoff - blockDim.x    ]
-            &&               val > fh_vals[localLin + zoff - blockDim.x - 1]
-            &&               val > fh_vals[localLin + zoff + blockDim.x + 1]
-            &&               val > fh_vals[localLin + zoff + blockDim.x    ]
-            &&               val > fh_vals[localLin + zoff + blockDim.x - 1]
-            ;
-
-            if(condmax) 
+            if (val0 > c_hessianThreshold)
             {
-                unsigned int i = atomicInc(maxCounter,(unsigned int) -1);
+                // Coordinates for the start of the wavelet in the sum image. There
+                // is some integer division involved, so don't try to simplify this
+                // (cancel out sampleStep) without checking the result is the same
+                const int sum_i = (i - ((size >> 1) >> c_octave)) << c_octave;
+                const int sum_j = (j - ((size >> 1) >> c_octave)) << c_octave;
 
-                if (i < c_max_candidates) 
+                if (Mask::check(sum_i, sum_j, size))
                 {
-                    int4 f = {hidx_x, hidx_y, threadIdx.z, c_octave};
-                    maxPosBuffer[i] = f;
+                    // Check to see if we have a max (in its 26 neighbours)
+                    const bool condmax = val0 > N9[localLin - 1 - blockDim.x - zoff]
+                    &&                   val0 > N9[localLin     - blockDim.x - zoff]
+                    &&                   val0 > N9[localLin + 1 - blockDim.x - zoff]
+                    &&                   val0 > N9[localLin - 1              - zoff]
+                    &&                   val0 > N9[localLin                  - zoff]
+                    &&                   val0 > N9[localLin + 1              - zoff]
+                    &&                   val0 > N9[localLin - 1 + blockDim.x - zoff]
+                    &&                   val0 > N9[localLin     + blockDim.x - zoff]
+                    &&                   val0 > N9[localLin + 1 + blockDim.x - zoff]
+
+                    &&                   val0 > N9[localLin - 1 - blockDim.x]
+                    &&                   val0 > N9[localLin     - blockDim.x]
+                    &&                   val0 > N9[localLin + 1 - blockDim.x]
+                    &&                   val0 > N9[localLin - 1             ]
+                    &&                   val0 > N9[localLin + 1             ]
+                    &&                   val0 > N9[localLin - 1 + blockDim.x]
+                    &&                   val0 > N9[localLin     + blockDim.x]
+                    &&                   val0 > N9[localLin + 1 + blockDim.x]
+
+                    &&                   val0 > N9[localLin - 1 - blockDim.x + zoff]
+                    &&                   val0 > N9[localLin     - blockDim.x + zoff]
+                    &&                   val0 > N9[localLin + 1 - blockDim.x + zoff]
+                    &&                   val0 > N9[localLin - 1              + zoff]
+                    &&                   val0 > N9[localLin                  + zoff]
+                    &&                   val0 > N9[localLin + 1              + zoff]
+                    &&                   val0 > N9[localLin - 1 + blockDim.x + zoff]
+                    &&                   val0 > N9[localLin     + blockDim.x + zoff]
+                    &&                   val0 > N9[localLin + 1 + blockDim.x + zoff]
+                    ;
+
+                    if(condmax)
+                    {
+                        unsigned int ind = atomicInc(maxCounter,(unsigned int) -1);
+
+                        if (ind < c_max_candidates)
+                        {
+                            const int laplacian = (int) copysignf(1.0f, trace.ptr(layer * c_layer_rows + i)[j]);
+
+                            maxPosBuffer[ind] = make_int4(j, i, layer, laplacian);
+                        }
+                    }
                 }
             }
         }
@@ -435,21 +304,26 @@ namespace cv { namespace gpu { namespace surf
         #endif
     }
 
-    void nonmaxonly_gpu(PtrStepf hessianBuffer, int4* maxPosBuffer, unsigned int& maxCounter, 
-        int x_size, int y_size, bool use_mask, const dim3& threads)
+    void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
+        int img_rows, int img_cols, int octave, bool use_mask, int nOctaveLayers)
     {
+        const int layer_rows = img_rows >> octave;
+        const int layer_cols = img_cols >> octave;
+
+        int min_margin = ((calcSize(octave, 2) >> 1) >> octave) + 1;
+
+        dim3 threads(16, 16);
+
         dim3 grid;
-        grid.x = divUp(x_size, threads.x - 2);
-        grid.y = divUp(y_size, threads.y - 2);
+        grid.x = divUp(layer_cols - 2 * min_margin, threads.x - 2);
+        grid.y = divUp(layer_rows - 2 * min_margin, threads.y - 2) * nOctaveLayers;
 
-        const size_t smem_size = threads.x * threads.y * threads.z * sizeof(float);
-
-        DeviceReference<unsigned int> maxCounterWrapper(maxCounter);
+        const size_t smem_size = threads.x * threads.y * 3 * sizeof(float);
 
         if (use_mask)
-            nonmaxonly<WithMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
+            icvFindMaximaInLayer<WithMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter);
         else
-            nonmaxonly<WithOutMask><<<grid, threads, smem_size>>>(hessianBuffer, maxPosBuffer, maxCounterWrapper);
+            icvFindMaximaInLayer<WithOutMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter);
 
         cudaSafeCall( cudaGetLastError() );
 
@@ -459,166 +333,117 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // INTERPOLATION
     
-    #define MID_IDX 1
-    __global__ void fh_interp_extremum(PtrStepf hessianBuffer, const int4* maxPosBuffer, 
-        KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter)
+    __global__ void icvInterpolateKeypoint(PtrStepf det, const int4* maxPosBuffer, KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter)
     {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
-        int hidx_x = maxPosBuffer[blockIdx.x].x - 1 + threadIdx.x;
-        int hidx_y = maxPosBuffer[blockIdx.x].y - 1 + threadIdx.y;
-        int hidx_z = maxPosBuffer[blockIdx.x].z - 1 + threadIdx.z;
+        const int4 maxPos = maxPosBuffer[blockIdx.x];
 
-        __shared__ float fh_vals[3][3][3];
+        const int j = maxPos.x - 1 + threadIdx.x;
+        const int i = maxPos.y - 1 + threadIdx.y;
+        const int layer = maxPos.z - 1 + threadIdx.z;
+
+        __shared__ float N9[3][3][3];
         __shared__ KeyPoint_GPU p;
 
-        fh_vals[threadIdx.z][threadIdx.y][threadIdx.x] = hessianBuffer.ptr(c_y_size * hidx_z + hidx_y)[hidx_x];
+         N9[threadIdx.z][threadIdx.y][threadIdx.x] = det.ptr(c_layer_rows * layer + i)[j];
         __syncthreads();
 
         if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0)
         {
-            __shared__ float H[3][3];
-
-            //dxx
-            H[0][0] =    fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX    ] 
-            -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
-            +            fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX    ];
-
-            //dyy
-            H[1][1] =    fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX + 1]
-            -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
-            +            fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX - 1];
-
-            //dss
-            H[2][2] =    fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX    ] 
-            -       2.0f*fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX    ]
-            +            fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX    ];
-
-            //dxy
-            H[0][1]= 0.25f*
-                (fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX + 1] -
-                 fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX + 1] -
-                 fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX - 1] +
-                 fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX - 1]);
-
-            //dxs
-            H[0][2]= 0.25f*
-                (fh_vals[MID_IDX + 1][MID_IDX + 1][MID_IDX    ] -
-                 fh_vals[MID_IDX + 1][MID_IDX - 1][MID_IDX    ] -
-                 fh_vals[MID_IDX - 1][MID_IDX + 1][MID_IDX    ] +
-                 fh_vals[MID_IDX - 1][MID_IDX - 1][MID_IDX    ]);
-
-            //dys
-            H[1][2]= 0.25f*
-                (fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX + 1] -
-                 fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX - 1] -
-                 fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX + 1] +
-                 fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX - 1]);
-
-            //dyx = dxy
-            H[1][0] = H[0][1];
-
-            //dsx = dxs
-            H[2][0] = H[0][2];
-
-            //dsy = dys
-            H[2][1] = H[1][2];
-
             __shared__ float dD[3];
 
             //dx
-            dD[0] = 0.5f*(fh_vals[MID_IDX    ][MID_IDX + 1][MID_IDX    ] -
-                fh_vals[MID_IDX    ][MID_IDX - 1][MID_IDX    ]);
+            dD[0] = -0.5f * (N9[1][1][2] - N9[1][1][0]);
             //dy
-            dD[1] = 0.5f*(fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX + 1] -
-                fh_vals[MID_IDX    ][MID_IDX    ][MID_IDX - 1]);
+            dD[1] = -0.5f * (N9[1][2][1] - N9[1][0][1]);
             //ds
-            dD[2] = 0.5f*(fh_vals[MID_IDX + 1][MID_IDX    ][MID_IDX    ] -
-                fh_vals[MID_IDX - 1][MID_IDX    ][MID_IDX    ]);
+            dD[2] = -0.5f * (N9[2][1][1] - N9[0][1][1]);
 
-            __shared__ float invdet;
-            invdet = 1.f /
-                (
-                H[0][0]*H[1][1]*H[2][2] 
-                +   H[0][1]*H[1][2]*H[2][0]
-                +   H[0][2]*H[1][0]*H[2][1]
-                -   H[0][0]*H[1][2]*H[2][1]
-                -   H[0][1]*H[1][0]*H[2][2]
-                -   H[0][2]*H[1][1]*H[2][0]
-                );
+            __shared__ float H[3][3];
 
-            //   // 1-based entries of a 3x3 inverse
-            //   /*             [ |a22 a23|   |a12 a13|  |a12 a13|]     */
-            //   /*             [ |a32 a33|  -|a32 a33|  |a22 a23|]     */
-            //   /*             [                                 ]     */
-            //   /*             [ |a21 a23|   |a11 a13|  |a11 a13|]     */
-            //   /*    A^(-1) = [-|a31 a33|   |a31 a33| -|a21 a23|] / d */
-            //   /*             [                                 ]     */
-            //   /*             [ |a21 a22|   |a11 a12|  |a11 a12|]     */
-            //   /*             [ |a31 a32|  -|a31 a32|  |a21 a22|]     */
+            //dxx
+            H[0][0] = N9[1][1][0] - 2.0f * N9[1][1][1] + N9[1][1][2];
+            //dxy
+            H[0][1]= 0.25f * (N9[1][2][2] - N9[1][2][0] - N9[1][0][2] + N9[1][0][0]);
+            //dxs
+            H[0][2]= 0.25f * (N9[2][1][2] - N9[2][1][0] - N9[0][1][2] + N9[0][1][0]);
+            //dyx = dxy
+            H[1][0] = H[0][1];
+            //dyy
+            H[1][1] = N9[1][0][1] - 2.0f * N9[1][1][1] + N9[1][2][1];
+            //dys
+            H[1][2]= 0.25f * (N9[2][2][1] - N9[2][0][1] - N9[0][2][1] + N9[0][0][1]);
+            //dsx = dxs
+            H[2][0] = H[0][2];
+            //dsy = dys
+            H[2][1] = H[1][2];
+            //dss
+            H[2][2] = N9[0][1][1] - 2.0f * N9[1][1][1] + N9[2][1][1];
 
-            __shared__ float Hinv[3][3];
-            Hinv[0][0] =  invdet*(H[1][1]*H[2][2]-H[1][2]*H[2][1]);
-            Hinv[0][1] = -invdet*(H[0][1]*H[2][2]-H[0][2]*H[2][1]);
-            Hinv[0][2] =  invdet*(H[0][1]*H[1][2]-H[0][2]*H[1][1]);
+            float det = H[0][0] * (H[1][1] * H[2][2] - H[1][2] * H[2][1])
+              - H[0][1] * (H[1][0] * H[2][2] - H[1][2] * H[2][0])
+              + H[0][2] * (H[1][0] * H[2][1] - H[1][1] * H[2][0]);
 
-            Hinv[1][0] = -invdet*(H[1][0]*H[2][2]-H[1][2]*H[2][0]);
-            Hinv[1][1] =  invdet*(H[0][0]*H[2][2]-H[0][2]*H[2][0]);
-            Hinv[1][2] = -invdet*(H[0][0]*H[1][2]-H[0][2]*H[1][0]);
-
-            Hinv[2][0] =  invdet*(H[1][0]*H[2][1]-H[1][1]*H[2][0]);
-            Hinv[2][1] = -invdet*(H[0][0]*H[2][1]-H[0][1]*H[2][0]);
-            Hinv[2][2] =  invdet*(H[0][0]*H[1][1]-H[0][1]*H[1][0]);
-
-            __shared__ float x[3];
-
-            x[0] = -(Hinv[0][0]*(dD[0]) + Hinv[0][1]*(dD[1]) + Hinv[0][2]*(dD[2]));
-            x[1] = -(Hinv[1][0]*(dD[0]) + Hinv[1][1]*(dD[1]) + Hinv[1][2]*(dD[2]));
-            x[2] = -(Hinv[2][0]*(dD[0]) + Hinv[2][1]*(dD[1]) + Hinv[2][2]*(dD[2]));
-
-            if (fabs(x[0]) < 1.f && fabs(x[1]) < 1.f && fabs(x[2]) < 1.f) 
+            if (det != 0.0f)
             {
-                // if the step is within the interpolation region, perform it
+                float invdet = 1.0f / det;
 
-                // Get a new feature index.
-                unsigned int i = atomicInc(featureCounter, (unsigned int)-1);
+                __shared__ float x[3];
 
-                if (i < c_max_features)
+                x[0] = invdet * 
+                    (dD[0] * (H[1][1] * H[2][2] - H[1][2] * H[2][1]) -
+                     H[0][1] * (dD[1] * H[2][2] - H[1][2] * dD[2]) +
+                     H[0][2] * (dD[1] * H[2][1] - H[1][1] * dD[2]));
+
+                x[1] = invdet * 
+                    (H[0][0] * (dD[1] * H[2][2] - H[1][2] * dD[2]) -
+                     dD[0] * (H[1][0] * H[2][2] - H[1][2] * H[2][0]) +
+                     H[0][2] * (H[1][0] * dD[2] - dD[1] * H[2][0]));
+
+                x[2] = invdet * 
+                    (H[0][0] * (H[1][1] * dD[2] - dD[1] * H[2][1]) -
+                     H[0][1] * (H[1][0] * dD[2] - dD[1] * H[2][0]) +
+                     dD[0] * (H[1][0] * H[2][1] - H[1][1] * H[2][0]));
+
+                if (fabs(x[0]) <= 1.f && fabs(x[1]) <= 1.f && fabs(x[2]) <= 1.f)
                 {
-                    p.x = ((float)maxPosBuffer[blockIdx.x].x + x[1]) * (float)c_step + c_border;
-                    p.y = ((float)maxPosBuffer[blockIdx.x].y + x[0]) * (float)c_step + c_border;
+                    // if the step is within the interpolation region, perform it
 
-                    if (x[2] > 0)
+                    // Get a new feature index.
+                    unsigned int ind = atomicInc(featureCounter, (unsigned int)-1);
+
+                    if (ind < c_max_features)
                     {
-                        float a = calcScale(maxPosBuffer[blockIdx.x].z);
-                        float b = calcScale(maxPosBuffer[blockIdx.x].z + 1);
+                        const int size = calcSize(c_octave, maxPos.z);
 
-                        p.size = (1.f - x[2]) * a + x[2] * b;
+                        const int sum_i = (maxPos.y - ((size >> 1) >> c_octave)) << c_octave;
+                        const int sum_j = (maxPos.x - ((size >> 1) >> c_octave)) << c_octave;
+                        
+                        const float center_i = sum_i + (float)(size - 1) / 2;
+                        const float center_j = sum_j + (float)(size - 1) / 2;
+
+                        p.x = center_j + x[0] * (1 << c_octave);
+                        p.y = center_i + x[1] * (1 << c_octave);
+
+                        int ds = size - calcSize(c_octave, maxPos.z - 1);
+                        p.size = roundf(size + x[2] * ds);
+
+                        p.laplacian = maxPos.w;
+                        p.dir = 0.0f;
+                        p.hessian = N9[1][1][1];
+
+                        // Should we split up this transfer over many threads?
+                        featuresBuffer[ind] = p;
                     }
-                    else
-                    {
-                        float a = calcScale(maxPosBuffer[blockIdx.x].z);
-                        float b = calcScale(maxPosBuffer[blockIdx.x].z - 1);
-
-                        p.size = (1.f + x[2]) * a - x[2] * b;
-                    }
-
-                    p.octave = c_octave;
-
-                    p.response = fh_vals[MID_IDX][MID_IDX][MID_IDX];
-
-                    // Should we split up this transfer over many threads?
-                    featuresBuffer[i] = p;
-                }
-            } // If the subpixel interpolation worked
+                } // If the subpixel interpolation worked
+            }
         } // If this is thread 0.
 
         #endif
     }
-    #undef MID_IDX
 
-    void fh_interp_extremum_gpu(PtrStepf hessianBuffer, const int4* maxPosBuffer, unsigned int maxCounter, 
-        KeyPoint_GPU* featuresBuffer, unsigned int& featureCounter)
+    void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter)
     {
         dim3 threads;
         threads.x = 3;
@@ -628,9 +453,7 @@ namespace cv { namespace gpu { namespace surf
         dim3 grid;
         grid.x = maxCounter;
 
-        DeviceReference<unsigned int> featureCounterWrapper(featureCounter);
-
-        fh_interp_extremum<<<grid, threads>>>(hessianBuffer, maxPosBuffer, featuresBuffer, featureCounterWrapper);
+        icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featuresBuffer, featureCounter);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -639,139 +462,217 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // Orientation
 
-    // precomputed values for a Gaussian with a standard deviation of 2
-    __constant__ float c_gauss1D[13] = 
-    {
-        0.002215924206f, 0.008764150247f, 0.026995483257f, 0.064758797833f, 
-        0.120985362260f, 0.176032663382f, 0.199471140201f, 0.176032663382f, 
-        0.120985362260f, 0.064758797833f, 0.026995483257f, 0.008764150247f, 
-        0.002215924206f
-    };
+    #define ORI_SEARCH_INC 5
+    #define ORI_WIN        60
+    #define ORI_SAMPLES    113
 
-    __global__ void find_orientation(KeyPoint_GPU* features)
-    {
-        int tid = threadIdx.y * 17 + threadIdx.x;
-        int tid2 = numeric_limits_gpu<int>::max();
+    __constant__ float c_aptX[ORI_SAMPLES] = {-6, -5, -5, -5, -5, -5, -5, -5, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6};
+    __constant__ float c_aptY[ORI_SAMPLES] = {0, -3, -2, -1, 0, 1, 2, 3, -4, -3, -2, -1, 0, 1, 2, 3, 4, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -4, -3, -2, -1, 0, 1, 2, 3, 4, -3, -2, -1, 0, 1, 2, 3, 0};
+    __constant__ float c_aptW[ORI_SAMPLES] = {0.001455130288377404f, 0.001707611023448408f, 0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f, 0.003238451667129993f, 0.002547456417232752f, 0.001707611023448408f, 0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 0.00665318313986063f, 0.00720730796456337f, 0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 0.002003900473937392f, 0.001707611023448408f, 0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 0.01164754293859005f, 0.01261763460934162f, 0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f, 0.0035081731621176f, 0.001707611023448408f, 0.002547456417232752f, 0.005233579315245152f, 0.009162282571196556f, 0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 0.01366852037608624f, 0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.003238451667129993f, 0.00665318313986063f, 0.01164754293859005f, 0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 0.01737609319388866f, 0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.001455130288377404f, 0.0035081731621176f, 0.00720730796456337f, 0.01261763460934162f, 0.0188232995569706f, 0.02392910048365593f, 0.02592208795249462f, 0.02392910048365593f, 0.0188232995569706f, 0.01261763460934162f, 0.00720730796456337f, 0.0035081731621176f, 0.001455130288377404f, 0.003238451667129993f, 0.00665318313986063f, 0.01164754293859005f, 0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 0.01737609319388866f, 0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.002547456417232752f, 0.005233579315245152f, 0.009162282571196556f, 0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 0.01366852037608624f, 0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.001707611023448408f, 0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 0.01164754293859005f, 0.01261763460934162f, 0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f, 0.0035081731621176f, 0.001707611023448408f, 0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 0.00665318313986063f, 0.00720730796456337f, 0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 0.002003900473937392f, 0.001707611023448408f, 0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f, 0.003238451667129993f, 0.002547456417232752f, 0.001707611023448408f, 0.001455130288377404f};
+    
+    __constant__ float c_NX[2][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
+    __constant__ float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
-        if (threadIdx.x < 13 && threadIdx.y < 13) 
-        {
-            tid2 = threadIdx.y * 13 + threadIdx.x;
-        }
+    __global__ void icvCalcOrientation(const KeyPoint_GPU* featureBuffer, KeyPoint_GPU* keypoints, unsigned int* keypointCounter)
+    {        
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
-        __shared__ float texLookups[17][17];
+        __shared__ float s_X[128];
+        __shared__ float s_Y[128];
+        __shared__ float s_angle[128];
 
-        __shared__ float Edx[13*13];
-        __shared__ float Edy[13*13];
-        __shared__ float xys[3];
+        __shared__ float s_sumx[64 * 4];
+        __shared__ float s_sumy[64 * 4];
 
-        // Read my x, y, size.
-        if (tid < 3)
-        {
-            xys[tid] = ((float*)(&features[blockIdx.x]))[tid];
-        }
+        __shared__ float s_feature[6];
+
+        if (threadIdx.x < 6 && threadIdx.y == 0)
+            s_feature[threadIdx.x] = ((float*)(&featureBuffer[blockIdx.x]))[threadIdx.x];
         __syncthreads();
 
-        // Read all texture locations into memory
-        // Maybe I should use __mul24 here?
-        texLookups[threadIdx.x][threadIdx.y] = tex2D(sumTex, xys[SF_X] + ((int)threadIdx.x - 8) * xys[SF_SIZE], 
-                  xys[SF_Y] + ((int)threadIdx.y - 8) * xys[SF_SIZE]);
 
-        __syncthreads();
+        /* The sampling intervals and wavelet sized for selecting an orientation
+         and building the keypoint descriptor are defined relative to 's' */
+        const float s = s_feature[SF_SIZE] * 1.2f / 9.0f;
 
-        float dx = 0.f;
-        float dy = 0.f;
+        /* To find the dominant orientation, the gradients in x and y are
+         sampled in a circle of radius 6s using wavelets of size 4s.
+         We ensure the gradient wavelet size is even to ensure the
+         wavelet pattern is balanced and symmetric around its center */
+        const int grad_wav_size = 2 * __float2int_rn(2.0f * s);
 
-        // Computes lookups for all points in a 13x13 lattice.
-        // - SURF says to only use a circle, but the branching logic would slow it down
-        // - Gaussian weighting should reduce the effects of the outer points anyway
-        if (tid2 < 169)
+        // check when grad_wav_size is too big
+        if ((c_img_rows + 1) >= grad_wav_size && (c_img_cols + 1) >= grad_wav_size)
         {
-            dx -=     texLookups[threadIdx.x    ][threadIdx.y    ];
-            dx += 2.f*texLookups[threadIdx.x + 2][threadIdx.y    ];
-            dx -=     texLookups[threadIdx.x + 4][threadIdx.y    ];
-            dx +=     texLookups[threadIdx.x    ][threadIdx.y + 4];
-            dx -= 2.f*texLookups[threadIdx.x + 2][threadIdx.y + 4];
-            dx +=     texLookups[threadIdx.x + 4][threadIdx.y + 4];
+            // Calc X, Y, angle and store it to shared memory
+            {
+                const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-            dy -=     texLookups[threadIdx.x    ][threadIdx.y    ];
-            dy += 2.f*texLookups[threadIdx.x    ][threadIdx.y + 2];
-            dy -=     texLookups[threadIdx.x    ][threadIdx.y + 4];
-            dy +=     texLookups[threadIdx.x + 4][threadIdx.y    ];
-            dy -= 2.f*texLookups[threadIdx.x + 4][threadIdx.y + 2];
-            dy +=     texLookups[threadIdx.x + 4][threadIdx.y + 4];
+                float X = 0.0f, Y = 0.0f, angle = 0.0f;
 
-            float g = c_gauss1D[threadIdx.x] * c_gauss1D[threadIdx.y];
+                if (tid < ORI_SAMPLES)
+                {
+                    const float margin = (float)(grad_wav_size - 1) / 2.0f;
+                    const int x = __float2int_rn(s_feature[SF_X] + c_aptX[tid] * s - margin);
+                    const int y = __float2int_rn(s_feature[SF_Y] + c_aptY[tid] * s - margin);
 
-            Edx[tid2] = dx * g;
-            Edy[tid2] = dy * g;
+                    if ((unsigned)y < (unsigned)((c_img_rows + 1) - grad_wav_size) && (unsigned)x < (unsigned)((c_img_cols + 1) - grad_wav_size))
+                    {
+                        X = c_aptW[tid] * icvCalcHaarPattern<2>(sumTex, c_NX, 4, grad_wav_size, y, x);
+                        Y = c_aptW[tid] * icvCalcHaarPattern<2>(sumTex, c_NY, 4, grad_wav_size, y, x);
+                    
+                        angle = atan2f(Y, X);
+                        if (angle < 0)
+                            angle += 2.0f * CV_PI;
+                        angle *= 180.0f / CV_PI;
+                    }
+                }
+                if (tid < 128)
+                {
+                    s_X[tid] = X;
+                    s_Y[tid] = Y;
+                    s_angle[tid] = angle;
+                }
+            }
+            __syncthreads();
+
+            float bestx = 0, besty = 0, best_mod = 0;
+
+            #pragma unroll
+            for (int i = 0; i < 18; ++i)
+            {
+                const int dir = (i * 4 + threadIdx.y) * ORI_SEARCH_INC;
+
+                float sumx = 0.0f, sumy = 0.0f;
+                int d = abs(__float2int_rn(s_angle[threadIdx.x]) - dir);
+                if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
+                {
+                    sumx = s_X[threadIdx.x];
+                    sumy = s_Y[threadIdx.x];
+                }
+                d = abs(__float2int_rn(s_angle[threadIdx.x + 64]) - dir);
+                if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
+                {
+                    sumx += s_X[threadIdx.x + 64];
+                    sumy += s_Y[threadIdx.x + 64];
+                }
+
+                float* s_sumx_row = s_sumx + threadIdx.y * 64;
+                float* s_sumy_row = s_sumy + threadIdx.y * 64;
+
+                s_sumx_row[threadIdx.x] = sumx;
+                s_sumy_row[threadIdx.x] = sumy;
+                __syncthreads();
+
+                if (threadIdx.x < 32)
+                {
+                    volatile float* v_sumx_row = s_sumx_row;
+                    volatile float* v_sumy_row = s_sumy_row;
+
+                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 32];
+                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 32];
+
+                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 16];
+                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 16];
+
+                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 8];
+                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 8];
+
+                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 4];
+                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 4];
+
+                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 2];
+                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 2];
+
+                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 1];
+                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 1];
+                }
+
+                const float temp_mod = sumx * sumx + sumy * sumy;
+                if (temp_mod > best_mod)
+                {
+                    best_mod = temp_mod;
+                    bestx = sumx;
+                    besty = sumy;
+                }
+                __syncthreads();
+            }
+
+            if (threadIdx.x == 0)
+            {
+                s_X[threadIdx.y] = bestx;
+                s_Y[threadIdx.y] = besty;
+                s_angle[threadIdx.y] = best_mod;
+            }
+            __syncthreads();
+
+            if (threadIdx.x < 2 && threadIdx.y == 0)
+            {
+                volatile float* v_x = s_X;
+                volatile float* v_y = s_Y;
+                volatile float* v_mod = s_angle;
+
+                bestx = v_x[threadIdx.x];
+                besty = v_y[threadIdx.x];
+                best_mod = v_mod[threadIdx.x];
+
+                float temp_mod = v_mod[threadIdx.x + 2];
+                if (temp_mod > best_mod)
+                {
+                    v_x[threadIdx.x] = bestx = v_x[threadIdx.x + 2];
+                    v_y[threadIdx.x] = besty = v_y[threadIdx.x + 2];
+                    v_mod[threadIdx.x] = best_mod = temp_mod;
+                }
+                temp_mod = v_mod[threadIdx.x + 1];
+                if (temp_mod > best_mod)
+                {
+                    v_x[threadIdx.x] = bestx = v_x[threadIdx.x + 1];
+                    v_y[threadIdx.x] = besty = v_y[threadIdx.x + 1];
+                }
+            }
+
+            if (threadIdx.x == 0 && threadIdx.y == 0 && best_mod != 0)
+            {
+                // Get a new feature index.
+                unsigned int ind = atomicInc(keypointCounter, (unsigned int)-1);
+
+                if (ind < c_max_keypoints)
+                {
+                    float kp_dir = atan2f(besty, bestx);
+                    if (kp_dir < 0)
+                        kp_dir += 2.0f * CV_PI;
+                    kp_dir *= 180.0f / CV_PI;
+                    __shared__ KeyPoint_GPU kp;
+
+                    kp.x = s_feature[SF_X];
+                    kp.y = s_feature[SF_Y];
+                    kp.laplacian = s_feature[SF_LAPLACIAN];
+                    kp.size = s_feature[SF_SIZE];
+                    kp.dir = kp_dir;
+                    kp.hessian = s_feature[SF_HESSIAN];
+
+                    keypoints[ind] = kp;
+                }
+            }
         }
 
-        __syncthreads();
-
-        // This is a scan to get the summed dx, dy values.
-        // Gets 128-168
-        if (tid < 41)
-        {
-            Edx[tid] += Edx[tid + 128];
-        } 
-        __syncthreads();
-        if (tid < 64)
-        {
-            Edx[tid] += Edx[tid + 64];
-        }
-        __syncthreads();
-        if (tid < 32)
-        {
-            volatile float* smem = Edx;
-
-            smem[tid] += smem[tid + 32];
-            smem[tid] += smem[tid + 16];
-            smem[tid] += smem[tid + 8];
-            smem[tid] += smem[tid + 4];
-            smem[tid] += smem[tid + 2];
-            smem[tid] += smem[tid + 1];
-        }
-
-        // Gets 128-168
-        if (tid < 41) 
-        {
-            Edy[tid] += Edy[tid + 128];
-        }
-        __syncthreads();
-        if (tid < 64)
-        {
-            Edy[tid] += Edy[tid + 64];
-        }
-        __syncthreads();
-        if (tid < 32)
-        {
-            volatile float* smem = Edy;
-
-            smem[tid] += smem[tid + 32];
-            smem[tid] += smem[tid + 16];
-            smem[tid] += smem[tid + 8];
-            smem[tid] += smem[tid + 4];
-            smem[tid] += smem[tid + 2];
-            smem[tid] += smem[tid + 1];
-        }
-
-        // Thread 0 saves back the result.
-        if (tid == 0)
-        {
-            features[blockIdx.x].angle = -atan2(Edy[0], Edx[0]) * (180.0f / CV_PI);
-        }
+        #endif
     }
 
-    void find_orientation_gpu(KeyPoint_GPU* features, int nFeatures) 
+    #undef ORI_SEARCH_INC
+    #undef ORI_WIN
+    #undef ORI_SAMPLES
+
+    void icvCalcOrientation_gpu(const KeyPoint_GPU* featureBuffer, int nFeatures, KeyPoint_GPU* keypoints, unsigned int* keypointCounter) 
     {
         dim3 threads;
-        threads.x = 17;
-        threads.y = 17;
+        threads.x = 64;
+        threads.y = 4;
 
         dim3 grid;
         grid.x = nFeatures;
 
-        find_orientation<<<grid, threads>>>(features);
+        icvCalcOrientation<<<grid, threads>>>(featureBuffer, keypoints, keypointCounter);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -780,117 +681,119 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // Descriptors
 
-    // precomputed values for a Gaussian with a standard deviation of 3.3
-    // - it appears SURF uses a different value, but not sure what it is
-    __constant__ float c_3p3gauss1D[20] =
+    #define PATCH_SZ 20
+
+    texture<unsigned char, 2, cudaReadModeElementType> imgTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+
+    __constant__ float c_DW[PATCH_SZ * PATCH_SZ] = 
     {
-        0.001917811039f, 0.004382549939f, 0.009136246641f, 0.017375153068f, 0.030144587513f,
-        0.047710056854f, 0.068885910797f, 0.090734146446f, 0.109026229640f, 0.119511889092f,
-        0.119511889092f, 0.109026229640f, 0.090734146446f, 0.068885910797f, 0.047710056854f,
-        0.030144587513f, 0.017375153068f, 0.009136246641f, 0.004382549939f, 0.001917811039f
+        3.695352233989979e-006f, 8.444558261544444e-006f, 1.760426494001877e-005f, 3.34794785885606e-005f, 5.808438800158911e-005f, 9.193058212986216e-005f, 0.0001327334757661447f, 0.0001748319627949968f, 0.0002100782439811155f, 0.0002302826324012131f, 0.0002302826324012131f, 0.0002100782439811155f, 0.0001748319627949968f, 0.0001327334757661447f, 9.193058212986216e-005f, 5.808438800158911e-005f, 3.34794785885606e-005f, 1.760426494001877e-005f, 8.444558261544444e-006f, 3.695352233989979e-006f, 
+        8.444558261544444e-006f, 1.929736572492402e-005f, 4.022897701361217e-005f, 7.650675252079964e-005f, 0.0001327334903180599f, 0.0002100782585330308f, 0.0003033203829545528f, 0.0003995231236331165f, 0.0004800673632416874f, 0.0005262381164357066f, 0.0005262381164357066f, 0.0004800673632416874f, 0.0003995231236331165f, 0.0003033203829545528f, 0.0002100782585330308f, 0.0001327334903180599f, 7.650675252079964e-005f, 4.022897701361217e-005f, 1.929736572492402e-005f, 8.444558261544444e-006f, 
+        1.760426494001877e-005f, 4.022897701361217e-005f, 8.386484114453197e-005f, 0.0001594926579855382f, 0.0002767078403849155f, 0.0004379475140012801f, 0.0006323281559161842f, 0.0008328808471560478f, 0.001000790391117334f, 0.001097041997127235f, 0.001097041997127235f, 0.001000790391117334f, 0.0008328808471560478f, 0.0006323281559161842f, 0.0004379475140012801f, 0.0002767078403849155f, 0.0001594926579855382f, 8.386484114453197e-005f, 4.022897701361217e-005f, 1.760426494001877e-005f, 
+        3.34794785885606e-005f, 7.650675252079964e-005f, 0.0001594926579855382f, 0.0003033203247468919f, 0.0005262380582280457f, 0.0008328807889483869f, 0.001202550483867526f, 0.001583957928232849f, 0.001903285388834775f, 0.002086334861814976f, 0.002086334861814976f, 0.001903285388834775f, 0.001583957928232849f, 0.001202550483867526f, 0.0008328807889483869f, 0.0005262380582280457f, 0.0003033203247468919f, 0.0001594926579855382f, 7.650675252079964e-005f, 3.34794785885606e-005f, 
+        5.808438800158911e-005f, 0.0001327334903180599f, 0.0002767078403849155f, 0.0005262380582280457f, 0.0009129836107604206f, 0.001444985857233405f, 0.002086335094645619f, 0.002748048631474376f, 0.00330205773934722f, 0.003619635012000799f, 0.003619635012000799f, 0.00330205773934722f, 0.002748048631474376f, 0.002086335094645619f, 0.001444985857233405f, 0.0009129836107604206f, 0.0005262380582280457f, 0.0002767078403849155f, 0.0001327334903180599f, 5.808438800158911e-005f, 
+        9.193058212986216e-005f, 0.0002100782585330308f, 0.0004379475140012801f, 0.0008328807889483869f, 0.001444985857233405f, 0.002286989474669099f, 0.00330205773934722f, 0.004349356517195702f, 0.00522619066759944f, 0.005728822201490402f, 0.005728822201490402f, 0.00522619066759944f, 0.004349356517195702f, 0.00330205773934722f, 0.002286989474669099f, 0.001444985857233405f, 0.0008328807889483869f, 0.0004379475140012801f, 0.0002100782585330308f, 9.193058212986216e-005f, 
+        0.0001327334757661447f, 0.0003033203829545528f, 0.0006323281559161842f, 0.001202550483867526f, 0.002086335094645619f, 0.00330205773934722f, 0.004767658654600382f, 0.006279794964939356f, 0.007545807864516974f, 0.008271530270576477f, 0.008271530270576477f, 0.007545807864516974f, 0.006279794964939356f, 0.004767658654600382f, 0.00330205773934722f, 0.002086335094645619f, 0.001202550483867526f, 0.0006323281559161842f, 0.0003033203829545528f, 0.0001327334757661447f, 
+        0.0001748319627949968f, 0.0003995231236331165f, 0.0008328808471560478f, 0.001583957928232849f, 0.002748048631474376f, 0.004349356517195702f, 0.006279794964939356f, 0.008271529339253902f, 0.009939077310264111f, 0.01089497376233339f, 0.01089497376233339f, 0.009939077310264111f, 0.008271529339253902f, 0.006279794964939356f, 0.004349356517195702f, 0.002748048631474376f, 0.001583957928232849f, 0.0008328808471560478f, 0.0003995231236331165f, 0.0001748319627949968f, 
+        0.0002100782439811155f, 0.0004800673632416874f, 0.001000790391117334f, 0.001903285388834775f, 0.00330205773934722f, 0.00522619066759944f, 0.007545807864516974f, 0.009939077310264111f, 0.01194280479103327f, 0.01309141051024199f, 0.01309141051024199f, 0.01194280479103327f, 0.009939077310264111f, 0.007545807864516974f, 0.00522619066759944f, 0.00330205773934722f, 0.001903285388834775f, 0.001000790391117334f, 0.0004800673632416874f, 0.0002100782439811155f, 
+        0.0002302826324012131f, 0.0005262381164357066f, 0.001097041997127235f, 0.002086334861814976f, 0.003619635012000799f, 0.005728822201490402f, 0.008271530270576477f, 0.01089497376233339f, 0.01309141051024199f, 0.01435048412531614f, 0.01435048412531614f, 0.01309141051024199f, 0.01089497376233339f, 0.008271530270576477f, 0.005728822201490402f, 0.003619635012000799f, 0.002086334861814976f, 0.001097041997127235f, 0.0005262381164357066f, 0.0002302826324012131f, 
+        0.0002302826324012131f, 0.0005262381164357066f, 0.001097041997127235f, 0.002086334861814976f, 0.003619635012000799f, 0.005728822201490402f, 0.008271530270576477f, 0.01089497376233339f, 0.01309141051024199f, 0.01435048412531614f, 0.01435048412531614f, 0.01309141051024199f, 0.01089497376233339f, 0.008271530270576477f, 0.005728822201490402f, 0.003619635012000799f, 0.002086334861814976f, 0.001097041997127235f, 0.0005262381164357066f, 0.0002302826324012131f, 
+        0.0002100782439811155f, 0.0004800673632416874f, 0.001000790391117334f, 0.001903285388834775f, 0.00330205773934722f, 0.00522619066759944f, 0.007545807864516974f, 0.009939077310264111f, 0.01194280479103327f, 0.01309141051024199f, 0.01309141051024199f, 0.01194280479103327f, 0.009939077310264111f, 0.007545807864516974f, 0.00522619066759944f, 0.00330205773934722f, 0.001903285388834775f, 0.001000790391117334f, 0.0004800673632416874f, 0.0002100782439811155f, 
+        0.0001748319627949968f, 0.0003995231236331165f, 0.0008328808471560478f, 0.001583957928232849f, 0.002748048631474376f, 0.004349356517195702f, 0.006279794964939356f, 0.008271529339253902f, 0.009939077310264111f, 0.01089497376233339f, 0.01089497376233339f, 0.009939077310264111f, 0.008271529339253902f, 0.006279794964939356f, 0.004349356517195702f, 0.002748048631474376f, 0.001583957928232849f, 0.0008328808471560478f, 0.0003995231236331165f, 0.0001748319627949968f, 
+        0.0001327334757661447f, 0.0003033203829545528f, 0.0006323281559161842f, 0.001202550483867526f, 0.002086335094645619f, 0.00330205773934722f, 0.004767658654600382f, 0.006279794964939356f, 0.007545807864516974f, 0.008271530270576477f, 0.008271530270576477f, 0.007545807864516974f, 0.006279794964939356f, 0.004767658654600382f, 0.00330205773934722f, 0.002086335094645619f, 0.001202550483867526f, 0.0006323281559161842f, 0.0003033203829545528f, 0.0001327334757661447f, 
+        9.193058212986216e-005f, 0.0002100782585330308f, 0.0004379475140012801f, 0.0008328807889483869f, 0.001444985857233405f, 0.002286989474669099f, 0.00330205773934722f, 0.004349356517195702f, 0.00522619066759944f, 0.005728822201490402f, 0.005728822201490402f, 0.00522619066759944f, 0.004349356517195702f, 0.00330205773934722f, 0.002286989474669099f, 0.001444985857233405f, 0.0008328807889483869f, 0.0004379475140012801f, 0.0002100782585330308f, 9.193058212986216e-005f, 
+        5.808438800158911e-005f, 0.0001327334903180599f, 0.0002767078403849155f, 0.0005262380582280457f, 0.0009129836107604206f, 0.001444985857233405f, 0.002086335094645619f, 0.002748048631474376f, 0.00330205773934722f, 0.003619635012000799f, 0.003619635012000799f, 0.00330205773934722f, 0.002748048631474376f, 0.002086335094645619f, 0.001444985857233405f, 0.0009129836107604206f, 0.0005262380582280457f, 0.0002767078403849155f, 0.0001327334903180599f, 5.808438800158911e-005f, 
+        3.34794785885606e-005f, 7.650675252079964e-005f, 0.0001594926579855382f, 0.0003033203247468919f, 0.0005262380582280457f, 0.0008328807889483869f, 0.001202550483867526f, 0.001583957928232849f, 0.001903285388834775f, 0.002086334861814976f, 0.002086334861814976f, 0.001903285388834775f, 0.001583957928232849f, 0.001202550483867526f, 0.0008328807889483869f, 0.0005262380582280457f, 0.0003033203247468919f, 0.0001594926579855382f, 7.650675252079964e-005f, 3.34794785885606e-005f, 
+        1.760426494001877e-005f, 4.022897701361217e-005f, 8.386484114453197e-005f, 0.0001594926579855382f, 0.0002767078403849155f, 0.0004379475140012801f, 0.0006323281559161842f, 0.0008328808471560478f, 0.001000790391117334f, 0.001097041997127235f, 0.001097041997127235f, 0.001000790391117334f, 0.0008328808471560478f, 0.0006323281559161842f, 0.0004379475140012801f, 0.0002767078403849155f, 0.0001594926579855382f, 8.386484114453197e-005f, 4.022897701361217e-005f, 1.760426494001877e-005f, 
+        8.444558261544444e-006f, 1.929736572492402e-005f, 4.022897701361217e-005f, 7.650675252079964e-005f, 0.0001327334903180599f, 0.0002100782585330308f, 0.0003033203829545528f, 0.0003995231236331165f, 0.0004800673632416874f, 0.0005262381164357066f, 0.0005262381164357066f, 0.0004800673632416874f, 0.0003995231236331165f, 0.0003033203829545528f, 0.0002100782585330308f, 0.0001327334903180599f, 7.650675252079964e-005f, 4.022897701361217e-005f, 1.929736572492402e-005f, 8.444558261544444e-006f, 
+        3.695352233989979e-006f, 8.444558261544444e-006f, 1.760426494001877e-005f, 3.34794785885606e-005f, 5.808438800158911e-005f, 9.193058212986216e-005f, 0.0001327334757661447f, 0.0001748319627949968f, 0.0002100782439811155f, 0.0002302826324012131f, 0.0002302826324012131f, 0.0002100782439811155f, 0.0001748319627949968f, 0.0001327334757661447f, 9.193058212986216e-005f, 5.808438800158911e-005f, 3.34794785885606e-005f, 1.760426494001877e-005f, 8.444558261544444e-006f, 3.695352233989979e-006f
     };
 
-    template <int BLOCK_DIM_X>
-    __global__ void normalize_descriptors(PtrStepf descriptors)
+    __device__ void calcPATCH(float s_PATCH[6][6], float s_pt[5], int i1, int j1, int i2, int j2)
     {
-        // no need for thread ID
-        float* descriptor_base = descriptors.ptr(blockIdx.x);
+        const float centerX = s_pt[SF_X];
+        const float centerY = s_pt[SF_Y];
+        const float size = s_pt[SF_SIZE];
+        const float descriptor_dir = s_pt[SF_DIR] * (float)(CV_PI / 180);
 
-        // read in the unnormalized descriptor values (squared)
-        __shared__ float sqDesc[BLOCK_DIM_X];
-        const float lookup = descriptor_base[threadIdx.x];
-        sqDesc[threadIdx.x] = lookup * lookup;
-        __syncthreads();
+        /* The sampling intervals and wavelet sized for selecting an orientation
+         and building the keypoint descriptor are defined relative to 's' */
+        const float s = size * 1.2f / 9.0f;
 
-        if (BLOCK_DIM_X >= 128)
-        {
-            if (threadIdx.x < 64)
-                sqDesc[threadIdx.x] += sqDesc[threadIdx.x + 64];
-            __syncthreads();
-        }
+        /* Extract a window of pixels around the keypoint of size 20s */
+        const int win_size = (int)((PATCH_SZ + 1) * s);
 
-        // reduction to get total
-        if (threadIdx.x < 32)
-        {
-            volatile float* smem = sqDesc;
+        float sin_dir;
+        float cos_dir;
+        sincosf(descriptor_dir, &sin_dir, &cos_dir);
 
-            smem[threadIdx.x] += smem[threadIdx.x + 32];
-            smem[threadIdx.x] += smem[threadIdx.x + 16];
-            smem[threadIdx.x] += smem[threadIdx.x + 8];
-            smem[threadIdx.x] += smem[threadIdx.x + 4];
-            smem[threadIdx.x] += smem[threadIdx.x + 2];
-            smem[threadIdx.x] += smem[threadIdx.x + 1];
-        }
+        /* Nearest neighbour version (faster) */
+        const float win_offset = -(float)(win_size - 1) / 2; 
 
-        // compute length (square root)
-        __shared__ float len;
-        if (threadIdx.x == 0)
-        {
-            len = sqrtf(sqDesc[0]);
-        }
-        __syncthreads();
+        /* Scale the window to size PATCH_SZ so each pixel's size is s. This
+           makes calculating the gradients with wavelets of size 2s easy */
+        const float icoo = ((float)i1 / (PATCH_SZ + 1)) * win_size;
+        const float jcoo = ((float)j1 / (PATCH_SZ + 1)) * win_size;
 
-        // normalize and store in output
-        descriptor_base[threadIdx.x] = lookup / len;
+        const int i = __float2int_rd(icoo);
+        const int j = __float2int_rd(jcoo);
+
+        float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
+        float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;
+
+        float res = tex2D(imgTex, pixel_x, pixel_y) * (i + 1 - icoo) * (j + 1 - jcoo);
+
+        pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i + 1) * sin_dir;
+        pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i + 1) * cos_dir;
+
+        res += tex2D(imgTex, pixel_x, pixel_y) * (icoo - i) * (j + 1 - jcoo);
+
+        pixel_x = centerX + (win_offset + j + 1) * cos_dir + (win_offset + i + 1) * sin_dir;
+        pixel_y = centerY - (win_offset + j + 1) * sin_dir + (win_offset + i + 1) * cos_dir;
+
+        res += tex2D(imgTex, pixel_x, pixel_y) * (icoo - i) * (jcoo - j);
+        
+        pixel_x = centerX + (win_offset + j + 1) * cos_dir + (win_offset + i) * sin_dir;
+        pixel_y = centerY - (win_offset + j + 1) * sin_dir + (win_offset + i) * cos_dir;
+
+        res += tex2D(imgTex, pixel_x, pixel_y) * (i + 1 - icoo) * (jcoo - j);
+
+        s_PATCH[i2][j2] = (unsigned char)res;
     }
 
-    __device__ void calc_dx_dy(float* sdx_bin, float* sdy_bin, const float* ipt,
-                               int xIndex, int yIndex, int tid)
-    {
-        float sin_theta, cos_theta;
-        sincosf(ipt[SF_ANGLE] * (CV_PI / 180.0f), &sin_theta, &cos_theta);
-
-        // Compute rotated sampling points
-        // (clockwise rotation since we are rotating the lattice)
-        // (subtract 9.5f to start sampling at the top left of the lattice, 0.5f is to space points out properly - there is no center pixel)
-        const float sample_x = ipt[SF_X] + (cos_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE]
-            + sin_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
-        const float sample_y = ipt[SF_Y] + (-sin_theta * ((float) (xIndex-9.5f)) * ipt[SF_SIZE]
-            + cos_theta * ((float) (yIndex-9.5f)) * ipt[SF_SIZE]);
-
-        // gather integral image lookups for Haar wavelets at each point (some lookups are shared between dx and dy)
-        // a b c
-        // d   f
-        // g h i
-        const float a = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
-        const float b = tex2D(sumTex, sample_x,                sample_y - ipt[SF_SIZE]);
-        const float c = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y - ipt[SF_SIZE]);
-        const float d = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y);
-        const float f = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y);
-        const float g = tex2D(sumTex, sample_x - ipt[SF_SIZE], sample_y + ipt[SF_SIZE]);
-        const float h = tex2D(sumTex, sample_x,                sample_y + ipt[SF_SIZE]);
-        const float i = tex2D(sumTex, sample_x + ipt[SF_SIZE], sample_y + ipt[SF_SIZE]);
-
-        // compute axis-aligned HaarX, HaarY
-        // (could group the additions together into multiplications)
-        const float gauss = c_3p3gauss1D[xIndex] * c_3p3gauss1D[yIndex]; // separable because independent (circular)
-        const float aa_dx = gauss * (-(a-b-g+h) + (b-c-h+i));            // unrotated dx
-        const float aa_dy = gauss * (-(a-c-d+f) + (d-f-g+i));            // unrotated dy
-
-        // rotate responses (store all dxs then all dys)
-        // - counterclockwise rotation to rotate back to zero orientation
-        sdx_bin[tid] = aa_dx * cos_theta - aa_dy * sin_theta; // rotated dx
-        sdy_bin[tid] = aa_dx * sin_theta + aa_dy * cos_theta; // rotated dy
-    }
-
-    __device__ void calc_dx_dy(float* sdx_bin, float* sdy_bin, const KeyPoint_GPU* features)//(float sdx[4][4][25], float sdy[4][4][25], const KeyPoint_GPU* features)
+    __device__ void calc_dx_dy(float s_PATCH[6][6], float s_dx_bin[25], float s_dy_bin[25], const KeyPoint_GPU* keypoints, int tid)
     {
         // get the interest point parameters (x, y, size, response, angle)
-        __shared__ float ipt[5];
-        if (threadIdx.x < 5 && threadIdx.y == 0)
+        __shared__ float s_pt[5];
+        if (tid < 5)
         {
-            ipt[threadIdx.x] = ((float*)(&features[blockIdx.x]))[threadIdx.x];
+            s_pt[tid] = ((float*)(&keypoints[blockIdx.x]))[tid];
         }
         __syncthreads();
 
         // Compute sampling points
         // since grids are 2D, need to compute xBlock and yBlock indices
-        const int xBlock = (threadIdx.y & 3);  // threadIdx.y % 4
-        const int yBlock = (threadIdx.y >> 2); // floor(threadIdx.y / 4)
-        const int xIndex = (xBlock * 5) + (threadIdx.x % 5);
-        const int yIndex = (yBlock * 5) + (threadIdx.x / 5);
+        const int xBlock = (blockIdx.y & 3);  // blockIdx.y % 4
+        const int yBlock = (blockIdx.y >> 2); // floor(blockIdx.y/4)
+        const int xIndex = xBlock * blockDim.x + threadIdx.x;
+        const int yIndex = yBlock * blockDim.y + threadIdx.y;
 
-        calc_dx_dy(sdx_bin, sdy_bin, ipt, xIndex, yIndex, threadIdx.x);
+        calcPATCH(s_PATCH, s_pt, yIndex, xIndex, threadIdx.y, threadIdx.x);
+        if (threadIdx.x == 0)
+            calcPATCH(s_PATCH, s_pt, yIndex, xBlock * blockDim.x + 5, threadIdx.y, 5);
+        if (threadIdx.y == 0)
+            calcPATCH(s_PATCH, s_pt, yBlock * blockDim.y + 5, xIndex, 5, threadIdx.x);
+        if (threadIdx.x == 0 && threadIdx.y == 0)
+            calcPATCH(s_PATCH, s_pt, xBlock * blockDim.x + 5, yBlock * blockDim.y + 5, 5, 5);
+        __syncthreads();
+
+        const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
+
+        const float vx = (s_PATCH[threadIdx.y    ][threadIdx.x + 1] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y + 1][threadIdx.x    ]) * dw;
+        const float vy = (s_PATCH[threadIdx.y + 1][threadIdx.x    ] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y    ][threadIdx.x + 1]) * dw;
+
+        s_dx_bin[tid] = vx;
+        s_dy_bin[tid] = vy;
     }
 
     __device__ void reduce_sum25(volatile float* sdata1, volatile float* sdata2,
@@ -934,192 +837,8 @@ namespace cv { namespace gpu { namespace surf
     // - computes unnormalized 64 dimensional descriptor, puts it into d_descriptors in the correct location
     __global__ void compute_descriptors64(PtrStepf descriptors, const KeyPoint_GPU* features)
     {
-        // 2 floats (dx, dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float sdx   [16 * 25];
-        __shared__ float sdy   [16 * 25];
-        __shared__ float sdxabs[16 * 25];
-        __shared__ float sdyabs[16 * 25];
-
-        __shared__ float sdesc[64];
-
-        float* sdx_bin    = sdx    + (threadIdx.y * 25);
-        float* sdy_bin    = sdy    + (threadIdx.y * 25);
-        float* sdxabs_bin = sdxabs + (threadIdx.y * 25);
-        float* sdyabs_bin = sdyabs + (threadIdx.y * 25);
-
-        calc_dx_dy(sdx_bin, sdy_bin, features);
-        __syncthreads();
-
-        sdxabs_bin[threadIdx.x] = fabs(sdx_bin[threadIdx.x]); // |dx| array
-        sdyabs_bin[threadIdx.x] = fabs(sdy_bin[threadIdx.x]); // |dy| array
-        __syncthreads();
-
-        reduce_sum25(sdx_bin, sdy_bin, sdxabs_bin, sdyabs_bin, threadIdx.x);
-        __syncthreads();
-
-        float* sdesc_bin = sdesc + (threadIdx.y << 2);
-
-        // write dx, dy, |dx|, |dy|
-        if (threadIdx.x == 0)
-        {
-            sdesc_bin[0] = sdx_bin[0];
-            sdesc_bin[1] = sdy_bin[0];
-            sdesc_bin[2] = sdxabs_bin[0];
-            sdesc_bin[3] = sdyabs_bin[0];
-        }
-        __syncthreads();
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        if (tid < 64)
-            descriptors.ptr(blockIdx.x)[tid] = sdesc[tid];
-    }
-
-    // Spawn 16 blocks per interest point
-    // - computes unnormalized 128 dimensional descriptor, puts it into d_descriptors in the correct location
-    __global__ void compute_descriptors128(PtrStepf descriptors, const KeyPoint_GPU* features)
-    {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float sdx[16 * 25];
-        __shared__ float sdy[16 * 25];
-
-        // sum (reduce) 5x5 area response
-        __shared__ float sd1[16 * 25];
-        __shared__ float sd2[16 * 25];
-        __shared__ float sdabs1[16 * 25];
-        __shared__ float sdabs2[16 * 25];
-
-        __shared__ float sdesc[128];
-
-        float* sdx_bin    = sdx    + (threadIdx.y * 25);
-        float* sdy_bin    = sdy    + (threadIdx.y * 25);
-        float* sd1_bin    = sd1    + (threadIdx.y * 25);
-        float* sd2_bin    = sd2    + (threadIdx.y * 25);
-        float* sdabs1_bin = sdabs1 + (threadIdx.y * 25);
-        float* sdabs2_bin = sdabs2 + (threadIdx.y * 25);
-
-        calc_dx_dy(sdx_bin, sdy_bin, features);
-        __syncthreads();
-
-        if (sdy_bin[threadIdx.x] >= 0)
-        {
-            sd1_bin[threadIdx.x] = sdx_bin[threadIdx.x];
-            sdabs1_bin[threadIdx.x] = fabs(sdx_bin[threadIdx.x]);
-            sd2_bin[threadIdx.x] = 0;
-            sdabs2_bin[threadIdx.x] = 0;
-        }
-        else
-        {
-            sd1_bin[threadIdx.x] = 0;
-            sdabs1_bin[threadIdx.x] = 0;
-            sd2_bin[threadIdx.x] = sdx_bin[threadIdx.x];
-            sdabs2_bin[threadIdx.x] = fabs(sdx[threadIdx.x]);
-        }
-        __syncthreads();
-
-        reduce_sum25(sd1_bin, sd2_bin, sdabs1_bin, sdabs2_bin, threadIdx.x);
-        __syncthreads();
-
-        float* sdesc_bin = sdesc + (threadIdx.y << 3);
-
-        // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
-        if (threadIdx.x == 0)
-        {
-                sdesc_bin[0] = sd1_bin[0];
-                sdesc_bin[1] = sdabs1_bin[0];
-                sdesc_bin[2] = sd2_bin[0];
-                sdesc_bin[3] = sdabs2_bin[0];
-        }
-        __syncthreads();
-
-        if (sdx_bin[threadIdx.x] >= 0)
-        {
-            sd1_bin[threadIdx.x] = sdy_bin[threadIdx.x];
-            sdabs1_bin[threadIdx.x] = fabs(sdy_bin[threadIdx.x]);
-            sd2_bin[threadIdx.x] = 0;
-            sdabs2_bin[threadIdx.x] = 0;
-        }
-        else
-        {
-            sd1_bin[threadIdx.x] = 0;
-            sdabs1_bin[threadIdx.x] = 0;
-            sd2_bin[threadIdx.x] = sdy_bin[threadIdx.x];
-            sdabs2_bin[threadIdx.x] = fabs(sdy_bin[threadIdx.x]);
-        }
-        __syncthreads();
-
-        reduce_sum25(sd1_bin, sd2_bin, sdabs1_bin, sdabs2_bin, threadIdx.x);
-        __syncthreads();
-
-        // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
-        if (threadIdx.x == 0)
-        {
-                sdesc_bin[4] = sd1_bin[0];
-                sdesc_bin[5] = sdabs1_bin[0];
-                sdesc_bin[6] = sd2_bin[0];
-                sdesc_bin[7] = sdabs2_bin[0];
-        }
-        __syncthreads();
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        if (tid < 128)
-            descriptors.ptr(blockIdx.x)[tid] = sdesc[tid];
-    }
-
-    void compute_descriptors_gpu(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures)
-    {
-        // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
-        
-        if (descriptors.cols == 64)
-        {
-            compute_descriptors64<<<dim3(nFeatures, 1, 1), dim3(25, 16, 1)>>>(descriptors, features);
-            cudaSafeCall( cudaGetLastError() );
-
-            cudaSafeCall( cudaThreadSynchronize() );
-
-            normalize_descriptors<64><<<dim3(nFeatures, 1, 1), dim3(64, 1, 1)>>>(descriptors);
-            cudaSafeCall( cudaGetLastError() );
-
-            cudaSafeCall( cudaThreadSynchronize() );
-        }
-        else
-        {
-            compute_descriptors128<<<dim3(nFeatures, 1, 1), dim3(25, 16, 1)>>>(descriptors, features);
-            cudaSafeCall( cudaGetLastError() );
-
-            cudaSafeCall( cudaThreadSynchronize() );
-
-            normalize_descriptors<128><<<dim3(nFeatures, 1, 1), dim3(128, 1, 1)>>>(descriptors);
-            cudaSafeCall( cudaGetLastError() );
-
-            cudaSafeCall( cudaThreadSynchronize() );
-        }
-    }
-
-    __device__ void calc_dx_dy_old(float sdx[25], float sdy[25], const KeyPoint_GPU* features, int tid)
-    {
-        // get the interest point parameters (x, y, scale, strength, theta)
-        __shared__ float ipt[5];
-        if (tid < 5)
-        {
-            ipt[tid] = ((float*)&features[blockIdx.x])[tid];
-        }
-        __syncthreads();
-
-        // Compute sampling points
-        // since grids are 2D, need to compute xBlock and yBlock indices
-        const int xBlock = (blockIdx.y & 3);  // blockIdx.y % 4
-        const int yBlock = (blockIdx.y >> 2); // floor(blockIdx.y/4)
-        const int xIndex = xBlock * blockDim.x + threadIdx.x;
-        const int yIndex = yBlock * blockDim.y + threadIdx.y;
-
-        calc_dx_dy(sdx, sdy, ipt, xIndex, yIndex, tid);
-    }
-
-    // Spawn 16 blocks per interest point
-    // - computes unnormalized 64 dimensional descriptor, puts it into d_descriptors in the correct location
-    __global__ void compute_descriptors64_old(PtrStepf descriptors, const KeyPoint_GPU* features)
-    {
-        // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
+        __shared__ float s_PATCH[6][6];
         __shared__ float sdx[25];
         __shared__ float sdy[25];
         __shared__ float sdxabs[25];
@@ -1127,7 +846,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        calc_dx_dy_old(sdx, sdy, features, tid);
+        calc_dx_dy(s_PATCH, sdx, sdy, features, tid);
         __syncthreads();
 
         sdxabs[tid] = fabs(sdx[tid]); // |dx| array
@@ -1151,9 +870,10 @@ namespace cv { namespace gpu { namespace surf
 
     // Spawn 16 blocks per interest point
     // - computes unnormalized 128 dimensional descriptor, puts it into d_descriptors in the correct location
-    __global__ void compute_descriptors128_old(PtrStepf descriptors, const KeyPoint_GPU* features)
+    __global__ void compute_descriptors128(PtrStepf descriptors, const KeyPoint_GPU* features)
     {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
+        __shared__ float s_PATCH[6][6];
         __shared__ float sdx[25];
         __shared__ float sdy[25];
 
@@ -1165,7 +885,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        calc_dx_dy_old(sdx, sdy, features, tid);
+        calc_dx_dy(s_PATCH, sdx, sdy, features, tid);
         __syncthreads();
 
         if (sdy[tid] >= 0)
@@ -1184,7 +904,7 @@ namespace cv { namespace gpu { namespace surf
         }
         __syncthreads();
 
-        reduce_sum25(sd1, sd1, sdabs1, sdabs2, tid);
+        reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
         __syncthreads();
 
         float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
@@ -1215,7 +935,7 @@ namespace cv { namespace gpu { namespace surf
         }
         __syncthreads();
 
-        reduce_sum25(sd1, sd1, sdabs1, sdabs2, tid);
+        reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
         __syncthreads();
 
         // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
@@ -1228,13 +948,56 @@ namespace cv { namespace gpu { namespace surf
         }
     }
 
-    void compute_descriptors_gpu_old(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures)
+    template <int BLOCK_DIM_X> __global__ void normalize_descriptors(PtrStepf descriptors)
+    {
+        // no need for thread ID
+        float* descriptor_base = descriptors.ptr(blockIdx.x);
+
+        // read in the unnormalized descriptor values (squared)
+        __shared__ float sqDesc[BLOCK_DIM_X];
+        const float lookup = descriptor_base[threadIdx.x];
+        sqDesc[threadIdx.x] = lookup * lookup;
+        __syncthreads();
+
+        if (BLOCK_DIM_X >= 128)
+        {
+            if (threadIdx.x < 64)
+                sqDesc[threadIdx.x] += sqDesc[threadIdx.x + 64];
+            __syncthreads();
+        }
+
+        // reduction to get total
+        if (threadIdx.x < 32)
+        {
+            volatile float* smem = sqDesc;
+
+            smem[threadIdx.x] += smem[threadIdx.x + 32];
+            smem[threadIdx.x] += smem[threadIdx.x + 16];
+            smem[threadIdx.x] += smem[threadIdx.x + 8];
+            smem[threadIdx.x] += smem[threadIdx.x + 4];
+            smem[threadIdx.x] += smem[threadIdx.x + 2];
+            smem[threadIdx.x] += smem[threadIdx.x + 1];
+        }
+
+        // compute length (square root)
+        __shared__ float len;
+        if (threadIdx.x == 0)
+        {
+            len = sqrtf(sqDesc[0]);
+        }
+        __syncthreads();
+
+        // normalize and store in output
+        descriptor_base[threadIdx.x] = lookup / len;
+    }
+
+    void compute_descriptors_gpu(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures)
     {
         // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
         
         if (descriptors.cols == 64)
         {
-            compute_descriptors64_old<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);
+            compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1246,7 +1009,7 @@ namespace cv { namespace gpu { namespace surf
         }
         else
         {
-            compute_descriptors128_old<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);            
+            compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);            
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );

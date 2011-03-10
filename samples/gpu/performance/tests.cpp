@@ -264,10 +264,11 @@ TEST(SURF)
 
     SURF surf;
     vector<KeyPoint> keypoints1, keypoints2;
+    vector<float> descriptors1, descriptors2;
 
     CPU_ON;
-    surf(src1, Mat(), keypoints1);
-    surf(src2, Mat(), keypoints2);
+    surf(src1, Mat(), keypoints1, descriptors1);
+    surf(src2, Mat(), keypoints2, descriptors2);
     CPU_OFF;
 
     gpu::SURF_GPU d_surf;
@@ -275,8 +276,8 @@ TEST(SURF)
     gpu::GpuMat d_descriptors1, d_descriptors2;
 
     GPU_ON;
-    d_surf(d_src1, gpu::GpuMat(), d_keypoints1);
-    d_surf(d_src2, gpu::GpuMat(), d_keypoints2);
+    d_surf(d_src1, gpu::GpuMat(), d_keypoints1, d_descriptors1);
+    d_surf(d_src2, gpu::GpuMat(), d_keypoints2, d_descriptors2);
     GPU_OFF;
 }
 
