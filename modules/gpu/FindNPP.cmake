@@ -99,7 +99,7 @@ endif()
 
 if(NOT EXISTS ${CUDA_NPP_LIBRARIES} OR NOT EXISTS ${CUDA_NPP_INCLUDES}/npp.h)
     set(CUDA_NPP_FOUND FALSE)	
-    message(FATAL_ERROR "NPP headers/libraries are not found. Please specify CUDA_NPP_LIBRARY_ROOT_DIR in CMake or set $NPP_ROOT_DIR.")	
+    message(FATAL_ERROR "NPP headers/libraries are not found. Please specify CUDA_NPP_LIBRARY_ROOT_DIR in CMake or set $CUDA_NPP_ROOT.")	
 endif()
 
 include( FindPackageHandleStandardArgs ) 
