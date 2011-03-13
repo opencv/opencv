@@ -1705,6 +1705,7 @@ CVAPI(double) cvGetTickFrequency( void );
 #define CV_CPU_SSSE3   5
 #define CV_CPU_SSE4_1  6
 #define CV_CPU_SSE4_2  7
+#define CV_CPU_POPCNT  8
 #define CV_CPU_AVX    10
 #define CV_HARDWARE_MAX_FEATURE 255
 

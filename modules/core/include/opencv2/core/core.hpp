@@ -262,6 +262,7 @@ CV_EXPORTS int64 getCPUTickCount();
   - CV_CPU_SSSE3 - SSSE 3
   - CV_CPU_SSE4_1 - SSE 4.1
   - CV_CPU_SSE4_2 - SSE 4.2
+  - CV_CPU_POPCNT - POPCOUNT
   - CV_CPU_AVX - AVX
   
   \note {Note that the function output is not static. Once you called cv::useOptimized(false),

@@ -139,6 +139,7 @@ struct HWFeatures
             f.have[CV_CPU_SSSE3]  = (cpuid_data[2] & (1<<9)) != 0;
             f.have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
+            f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
             f.have[CV_CPU_AVX]    = (cpuid_data[2] & (1<<28)) != 0;
         }
 
