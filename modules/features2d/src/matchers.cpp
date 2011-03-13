@@ -159,18 +159,11 @@ const Mat DescriptorMatcher::DescriptorCollection::getDescriptor( int globalDesc
 
 void DescriptorMatcher::DescriptorCollection::getLocalIdx( int globalDescIdx, int& imgIdx, int& localDescIdx ) const
 {
-    imgIdx = -1;
-    CV_Assert( globalDescIdx < size() );
-    for( size_t i = 1; i < startIdxs.size(); i++ )
-    {
-        if( globalDescIdx < startIdxs[i] )
-        {
-            imgIdx = (int)(i - 1);
-            break;
-        }
-    }
-    imgIdx = imgIdx == -1 ? (int)(startIdxs.size() - 1) : imgIdx;
-    localDescIdx = globalDescIdx - startIdxs[imgIdx];
+    CV_Assert( (globalDescIdx>=0) && (globalDescIdx < size()) );
+    std::vector<int>::const_iterator img_it = std::upper_bound(startIdxs.begin(), startIdxs.end(), globalDescIdx);
+    --img_it;
+    imgIdx = img_it - startIdxs.begin();
+    localDescIdx = globalDescIdx - (*img_it);
 }
 
 int DescriptorMatcher::DescriptorCollection::size() const
