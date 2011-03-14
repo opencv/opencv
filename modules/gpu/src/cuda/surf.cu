@@ -81,20 +81,18 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // Integral image texture
 
-    typedef texture<unsigned int, 2, cudaReadModeElementType> IntTex;
+    texture<unsigned int, 2, cudaReadModeElementType> sumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+    texture<unsigned int, 2, cudaReadModeElementType> maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-    IntTex sumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
-
-    template <int N>
-    __device__ float icvCalcHaarPattern(const IntTex& tex, const float src[][5], int oldSize, int newSize, int y, int x)
-    {
-        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
+    template <int N> __device__ float icvCalcHaarPatternSum(const float src[][5], int oldSize, int newSize, int y, int x)
+	{
+		#if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
         typedef double real_t;        
         #else
         typedef float  real_t;
         #endif
 
-        float ratio = (float)newSize / oldSize;
+		float ratio = (float)newSize / oldSize;
         
         real_t d = 0;
 
@@ -107,10 +105,10 @@ namespace cv { namespace gpu { namespace surf
             int dy2 = __float2int_rn(ratio * src[k][3]);
 
             real_t t = 0;
-            t += tex2D(tex, x + dx1, y + dy1);
-            t -= tex2D(tex, x + dx1, y + dy2);
-            t -= tex2D(tex, x + dx2, y + dy1);
-            t += tex2D(tex, x + dx2, y + dy2);
+            t += tex2D(sumTex, x + dx1, y + dy1);
+            t -= tex2D(sumTex, x + dx1, y + dy2);
+            t -= tex2D(sumTex, x + dx2, y + dy1);
+            t += tex2D(sumTex, x + dx2, y + dy2);
 
             d += t * src[k][4] / ((dx2 - dx1) * (dy2 - dy1));
         }
@@ -155,14 +153,14 @@ namespace cv { namespace gpu { namespace surf
         const int samples_i = 1 + ((c_img_rows - size) >> c_octave);
         const int samples_j = 1 + ((c_img_cols - size) >> c_octave);
 
-        /* Ignore pixels where some of the kernel is outside the image */
+        // Ignore pixels where some of the kernel is outside the image
         const int margin = (size >> 1) >> c_octave;
 
         if (size <= c_img_rows && size <= c_img_cols && i < samples_i && j < samples_j)
         {
-            const float dx  = icvCalcHaarPattern<3>(sumTex, c_DX , 9, size, i << c_octave, j << c_octave);
-            const float dy  = icvCalcHaarPattern<3>(sumTex, c_DY , 9, size, i << c_octave, j << c_octave);
-            const float dxy = icvCalcHaarPattern<4>(sumTex, c_DXY, 9, size, i << c_octave, j << c_octave);
+            const float dx  = icvCalcHaarPatternSum<3>(c_DX , 9, size, i << c_octave, j << c_octave);
+            const float dy  = icvCalcHaarPatternSum<3>(c_DY , 9, size, i << c_octave, j << c_octave);
+            const float dxy = icvCalcHaarPatternSum<4>(c_DXY, 9, size, i << c_octave, j << c_octave);
 
             det.ptr(layer * c_layer_rows + i + margin)[j + margin] = dx * dy - 0.81f * dxy * dxy;
             trace.ptr(layer * c_layer_rows + i + margin)[j + margin] = dx + dy;
@@ -190,8 +188,6 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // NONMAX
     
-    IntTex maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
-
     struct WithOutMask
     {
         static __device__ bool check(int, int, int)
@@ -200,14 +196,36 @@ namespace cv { namespace gpu { namespace surf
         }
     };
 
-    __constant__ float c_DM[1][5] = {{0, 0, 9, 9, 1}};
+    __constant__ float c_DM[5] = {0, 0, 9, 9, 1};
 
     struct WithMask
     {
         static __device__ bool check(int sum_i, int sum_j, int size)
         {
-            float mval = icvCalcHaarPattern<1>(maskSumTex, c_DM , 9, size, sum_i, sum_j);
-            return (mval >= 0.5);
+			#if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
+			typedef double real_t;        
+			#else
+			typedef float  real_t;
+			#endif
+
+			float ratio = (float)size / 9.0f;
+	        
+			real_t d = 0;
+
+			int dx1 = __float2int_rn(ratio * c_DM[0]);
+			int dy1 = __float2int_rn(ratio * c_DM[1]);
+			int dx2 = __float2int_rn(ratio * c_DM[2]);
+			int dy2 = __float2int_rn(ratio * c_DM[3]);
+
+			real_t t = 0;
+			t += tex2D(sumTex, sum_j + dx1, sum_i + dy1);
+			t -= tex2D(sumTex, sum_j + dx1, sum_i + dy2);
+			t -= tex2D(sumTex, sum_j + dx2, sum_i + dy1);
+			t += tex2D(sumTex, sum_j + dx2, sum_i + dy2);
+
+			d += t * c_DM[4] / ((dx2 - dx1) * (dy2 - dy1));
+
+            return (d >= 0.5);
         }
     };
 
@@ -227,7 +245,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int size = calcSize(c_octave, layer);
 
-        /* Ignore pixels without a 3x3x3 neighbourhood in the layer above */
+        // Ignore pixels without a 3x3x3 neighbourhood in the layer above
         const int margin = ((calcSize(c_octave, layer + 1) >> 1) >> c_octave) + 1;
 
         const int j = threadIdx.x + blockIdx.x * (blockDim.x - 2) + margin - 1;
@@ -346,7 +364,7 @@ namespace cv { namespace gpu { namespace surf
         __shared__ float N9[3][3][3];
         __shared__ KeyPoint_GPU p;
 
-         N9[threadIdx.z][threadIdx.y][threadIdx.x] = det.ptr(c_layer_rows * layer + i)[j];
+        N9[threadIdx.z][threadIdx.y][threadIdx.x] = det.ptr(c_layer_rows * layer + i)[j];
         __syncthreads();
 
         if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0)
@@ -518,8 +536,8 @@ namespace cv { namespace gpu { namespace surf
 
                     if ((unsigned)y < (unsigned)((c_img_rows + 1) - grad_wav_size) && (unsigned)x < (unsigned)((c_img_cols + 1) - grad_wav_size))
                     {
-                        X = c_aptW[tid] * icvCalcHaarPattern<2>(sumTex, c_NX, 4, grad_wav_size, y, x);
-                        Y = c_aptW[tid] * icvCalcHaarPattern<2>(sumTex, c_NY, 4, grad_wav_size, y, x);
+                        X = c_aptW[tid] * icvCalcHaarPatternSum<2>(c_NX, 4, grad_wav_size, y, x);
+                        Y = c_aptW[tid] * icvCalcHaarPatternSum<2>(c_NY, 4, grad_wav_size, y, x);
                     
                         angle = atan2f(Y, X);
                         if (angle < 0)
