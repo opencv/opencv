@@ -13,21 +13,27 @@ gpu::SURF_GPU
 
 Class for extracting Speeded Up Robust Features from an image. ::
 
-    class SURF_GPU : public SURFParams_GPU
+    class SURF_GPU : public CvSURFParams
     {
     public:
+        //! the default constructor
+        SURF_GPU();
+        //! the full constructor taking all the necessary parameters
+        explicit SURF_GPU(double _hessianThreshold, int _nOctaves=4,
+             int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f);
+
         //! returns the descriptor size in float's (64 or 128)
         int descriptorSize() const;
 
         //! upload host keypoints to device memory
-        static void uploadKeypoints(const vector<KeyPoint>& keypoints,
+        void uploadKeypoints(const vector<KeyPoint>& keypoints,
             GpuMat& keypointsGPU);
         //! download keypoints from device to host memory
-        static void downloadKeypoints(const GpuMat& keypointsGPU,
+        void downloadKeypoints(const GpuMat& keypointsGPU,
             vector<KeyPoint>& keypoints);
 
         //! download descriptors from device to host memory
-        static void downloadDescriptors(const GpuMat& descriptorsGPU,
+        void downloadDescriptors(const GpuMat& descriptorsGPU,
             vector<float>& descriptors);
 
         void operator()(const GpuMat& img, const GpuMat& mask,
@@ -52,22 +58,23 @@ Class for extracting Speeded Up Robust Features from an image. ::
             bool useProvidedKeypoints = false,
             bool calcOrientation = true);
 
-        GpuMat sum;
-        GpuMat sumf;
+        //! max keypoints = keypointsRatio * img.size().area()
+        float keypointsRatio;
 
-        GpuMat mask1;
-        GpuMat maskSum;
+        GpuMat sum, mask1, maskSum, intBuffer;
 
-        GpuMat hessianBuffer;
+        GpuMat det, trace;
+
         GpuMat maxPosBuffer;
         GpuMat featuresBuffer;
+        GpuMat keypointsBuffer;
     };
 
 
 The class ``SURF_GPU`` implements Speeded Up Robust Features descriptor. There is fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option), but the descriptors can be also computed for the user-specified keypoints. Supports only 8 bit grayscale images.
 
-The class ``SURF_GPU`` can store results to GPU and CPU memory and provides static functions to convert results between CPU and GPU version ( ``uploadKeypoints``,``downloadKeypoints``,``downloadDescriptors`` ). CPU results has the same format as
-results. GPU results are stored to ``GpuMat`` . ``keypoints`` matrix is one row matrix with ``CV_32FC6`` type. It contains 6 float values per feature: ``x, y, size, response, angle, octave`` . ``descriptors`` matrix is
+The class ``SURF_GPU`` can store results to GPU and CPU memory and provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``,``downloadKeypoints``,``downloadDescriptors`` ). CPU results has the same format as ``SURF``
+results. GPU results are stored to ``GpuMat`` . ``keypoints`` matrix is one row matrix with ``CV_32FC6`` type. It contains 6 float values per feature: ``x, y, laplacian, size, dir, hessian`` . ``descriptors`` matrix is
 :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with ``CV_32FC1`` type.
 
 The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
