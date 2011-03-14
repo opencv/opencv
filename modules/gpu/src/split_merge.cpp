@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <vector>
 
 using namespace std;
 
