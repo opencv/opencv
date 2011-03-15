@@ -48,14 +48,15 @@
 
 #include "precomp.hpp"
 
-#ifdef __arm__
-#define ARM_NO_SIFT
-#endif
+//#ifdef __arm__
+//#define ARM_NO_SIFT
+//#endif
 
-#ifdef ANDROID
-#undef  ARM_NO_SIFT
-#endif //ANDROID
+//#ifdef ANDROID
+//#undef  ARM_NO_SIFT
+//#endif //ANDROID
 
+#undef ARM_NO_SIFT
 #ifdef ARM_NO_SIFT
 
 static inline void throw_nosift() { CV_Error(CV_StsBadFunc, "The library is compiled under ARM without SIFT support"); }
