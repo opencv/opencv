@@ -218,10 +218,10 @@ namespace cv { namespace gpu { namespace surf
 			int dy2 = __float2int_rn(ratio * c_DM[3]);
 
 			real_t t = 0;
-			t += tex2D(sumTex, sum_j + dx1, sum_i + dy1);
-			t -= tex2D(sumTex, sum_j + dx1, sum_i + dy2);
-			t -= tex2D(sumTex, sum_j + dx2, sum_i + dy1);
-			t += tex2D(sumTex, sum_j + dx2, sum_i + dy2);
+			t += tex2D(maskSumTex, sum_j + dx1, sum_i + dy1);
+			t -= tex2D(maskSumTex, sum_j + dx1, sum_i + dy2);
+			t -= tex2D(maskSumTex, sum_j + dx2, sum_i + dy1);
+			t += tex2D(maskSumTex, sum_j + dx2, sum_i + dy2);
 
 			d += t * c_DM[4] / ((dx2 - dx1) * (dy2 - dy1));
 
