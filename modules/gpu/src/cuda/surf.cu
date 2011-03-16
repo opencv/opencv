@@ -47,6 +47,7 @@
 
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -85,14 +86,14 @@ namespace cv { namespace gpu { namespace surf
     texture<unsigned int, 2, cudaReadModeElementType> maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
     template <int N> __device__ float icvCalcHaarPatternSum(const float src[][5], int oldSize, int newSize, int y, int x)
-	{
-		#if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
+    {
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
         typedef double real_t;        
         #else
         typedef float  real_t;
         #endif
 
-		float ratio = (float)newSize / oldSize;
+        float ratio = (float)newSize / oldSize;
         
         real_t d = 0;
 
@@ -202,30 +203,24 @@ namespace cv { namespace gpu { namespace surf
     {
         static __device__ bool check(int sum_i, int sum_j, int size)
         {
-			#if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
-			typedef double real_t;        
-			#else
-			typedef float  real_t;
-			#endif
+            float ratio = (float)size / 9.0f;
+            
+            float d = 0;
 
-			float ratio = (float)size / 9.0f;
-	        
-			real_t d = 0;
+            int dx1 = __float2int_rn(ratio * c_DM[0]);
+            int dy1 = __float2int_rn(ratio * c_DM[1]);
+            int dx2 = __float2int_rn(ratio * c_DM[2]);
+            int dy2 = __float2int_rn(ratio * c_DM[3]);
 
-			int dx1 = __float2int_rn(ratio * c_DM[0]);
-			int dy1 = __float2int_rn(ratio * c_DM[1]);
-			int dx2 = __float2int_rn(ratio * c_DM[2]);
-			int dy2 = __float2int_rn(ratio * c_DM[3]);
+            float t = 0;
+            t += tex2D(maskSumTex, sum_j + dx1, sum_i + dy1);
+            t -= tex2D(maskSumTex, sum_j + dx1, sum_i + dy2);
+            t -= tex2D(maskSumTex, sum_j + dx2, sum_i + dy1);
+            t += tex2D(maskSumTex, sum_j + dx2, sum_i + dy2);
 
-			real_t t = 0;
-			t += tex2D(maskSumTex, sum_j + dx1, sum_i + dy1);
-			t -= tex2D(maskSumTex, sum_j + dx1, sum_i + dy2);
-			t -= tex2D(maskSumTex, sum_j + dx2, sum_i + dy1);
-			t += tex2D(maskSumTex, sum_j + dx2, sum_i + dy2);
+            d += t * c_DM[4] / ((dx2 - dx1) * (dy2 - dy1));
 
-			d += t * c_DM[4] / ((dx2 - dx1) * (dy2 - dy1));
-
-            return (d >= 0.5);
+            return (d >= 0.5f);
         }
     };
 
@@ -727,8 +722,42 @@ namespace cv { namespace gpu { namespace surf
         3.695352233989979e-006f, 8.444558261544444e-006f, 1.760426494001877e-005f, 3.34794785885606e-005f, 5.808438800158911e-005f, 9.193058212986216e-005f, 0.0001327334757661447f, 0.0001748319627949968f, 0.0002100782439811155f, 0.0002302826324012131f, 0.0002302826324012131f, 0.0002100782439811155f, 0.0001748319627949968f, 0.0001327334757661447f, 9.193058212986216e-005f, 5.808438800158911e-005f, 3.34794785885606e-005f, 1.760426494001877e-005f, 8.444558261544444e-006f, 3.695352233989979e-006f
     };
 
-    __device__ void calcPATCH(float s_PATCH[6][6], float s_pt[5], int i1, int j1, int i2, int j2)
+    __device__ unsigned char calcWin(int i, int j, float centerX, float centerY, float win_offset, float cos_dir, float sin_dir)
     {
+        float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
+        float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;
+
+        return tex2D(imgTex, pixel_x, pixel_y);
+    }
+
+    __device__ unsigned char calcPATCH(int i1, int j1, float centerX, float centerY, float win_offset, float cos_dir, float sin_dir, int win_size)
+    {
+        /* Scale the window to size PATCH_SZ so each pixel's size is s. This
+           makes calculating the gradients with wavelets of size 2s easy */
+        const float icoo = ((float)i1 / (PATCH_SZ + 1)) * win_size;
+        const float jcoo = ((float)j1 / (PATCH_SZ + 1)) * win_size;
+
+        const int i = __float2int_rd(icoo);
+        const int j = __float2int_rd(jcoo);
+
+        float res = calcWin(i, j, centerX, centerY, win_offset, cos_dir, sin_dir) * (i + 1 - icoo) * (j + 1 - jcoo);
+        res += calcWin(i + 1, j, centerX, centerY, win_offset, cos_dir, sin_dir) * (icoo - i) * (j + 1 - jcoo);
+        res += calcWin(i + 1, j + 1, centerX, centerY, win_offset, cos_dir, sin_dir) * (icoo - i) * (jcoo - j);
+        res += calcWin(i, j + 1, centerX, centerY, win_offset, cos_dir, sin_dir) * (i + 1 - icoo) * (jcoo - j);
+
+        return saturate_cast<unsigned char>(res);
+    }  
+
+    __device__ void calc_dx_dy(float s_dx_bin[25], float s_dy_bin[25], const KeyPoint_GPU* keypoints, int tid)
+    {
+        __shared__ float s_PATCH[6][6];
+
+        // get the interest point parameters (x, y, size, response, angle)
+        __shared__ float s_pt[5];
+        if (threadIdx.y == 0)
+            s_pt[threadIdx.x] = ((float*)(&keypoints[blockIdx.x]))[threadIdx.x];
+        __syncthreads();
+
         const float centerX = s_pt[SF_X];
         const float centerY = s_pt[SF_Y];
         const float size = s_pt[SF_SIZE];
@@ -748,47 +777,6 @@ namespace cv { namespace gpu { namespace surf
         /* Nearest neighbour version (faster) */
         const float win_offset = -(float)(win_size - 1) / 2; 
 
-        /* Scale the window to size PATCH_SZ so each pixel's size is s. This
-           makes calculating the gradients with wavelets of size 2s easy */
-        const float icoo = ((float)i1 / (PATCH_SZ + 1)) * win_size;
-        const float jcoo = ((float)j1 / (PATCH_SZ + 1)) * win_size;
-
-        const int i = __float2int_rd(icoo);
-        const int j = __float2int_rd(jcoo);
-
-        float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
-        float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;
-
-        float res = tex2D(imgTex, pixel_x, pixel_y) * (i + 1 - icoo) * (j + 1 - jcoo);
-
-        pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i + 1) * sin_dir;
-        pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i + 1) * cos_dir;
-
-        res += tex2D(imgTex, pixel_x, pixel_y) * (icoo - i) * (j + 1 - jcoo);
-
-        pixel_x = centerX + (win_offset + j + 1) * cos_dir + (win_offset + i + 1) * sin_dir;
-        pixel_y = centerY - (win_offset + j + 1) * sin_dir + (win_offset + i + 1) * cos_dir;
-
-        res += tex2D(imgTex, pixel_x, pixel_y) * (icoo - i) * (jcoo - j);
-        
-        pixel_x = centerX + (win_offset + j + 1) * cos_dir + (win_offset + i) * sin_dir;
-        pixel_y = centerY - (win_offset + j + 1) * sin_dir + (win_offset + i) * cos_dir;
-
-        res += tex2D(imgTex, pixel_x, pixel_y) * (i + 1 - icoo) * (jcoo - j);
-
-        s_PATCH[i2][j2] = (unsigned char)res;
-    }
-
-    __device__ void calc_dx_dy(float s_PATCH[6][6], float s_dx_bin[25], float s_dy_bin[25], const KeyPoint_GPU* keypoints, int tid)
-    {
-        // get the interest point parameters (x, y, size, response, angle)
-        __shared__ float s_pt[5];
-        if (tid < 5)
-        {
-            s_pt[tid] = ((float*)(&keypoints[blockIdx.x]))[tid];
-        }
-        __syncthreads();
-
         // Compute sampling points
         // since grids are 2D, need to compute xBlock and yBlock indices
         const int xBlock = (blockIdx.y & 3);  // blockIdx.y % 4
@@ -796,13 +784,13 @@ namespace cv { namespace gpu { namespace surf
         const int xIndex = xBlock * blockDim.x + threadIdx.x;
         const int yIndex = yBlock * blockDim.y + threadIdx.y;
 
-        calcPATCH(s_PATCH, s_pt, yIndex, xIndex, threadIdx.y, threadIdx.x);
+        s_PATCH[threadIdx.y][threadIdx.x] = calcPATCH(yIndex, xIndex, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
         if (threadIdx.x == 0)
-            calcPATCH(s_PATCH, s_pt, yIndex, xBlock * blockDim.x + 5, threadIdx.y, 5);
+            s_PATCH[threadIdx.y][5] = calcPATCH(yIndex, xBlock * blockDim.x + 5, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
         if (threadIdx.y == 0)
-            calcPATCH(s_PATCH, s_pt, yBlock * blockDim.y + 5, xIndex, 5, threadIdx.x);
+            s_PATCH[5][threadIdx.x] = calcPATCH(yBlock * blockDim.y + 5, xIndex, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
         if (threadIdx.x == 0 && threadIdx.y == 0)
-            calcPATCH(s_PATCH, s_pt, xBlock * blockDim.x + 5, yBlock * blockDim.y + 5, 5, 5);
+            s_PATCH[5][5] = calcPATCH(yBlock * blockDim.y + 5, xBlock * blockDim.x + 5, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
         __syncthreads();
 
         const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
@@ -814,8 +802,7 @@ namespace cv { namespace gpu { namespace surf
         s_dy_bin[tid] = vy;
     }
 
-    __device__ void reduce_sum25(volatile float* sdata1, volatile float* sdata2,
-                                 volatile float* sdata3, volatile float* sdata4, int tid)
+    __device__ void reduce_sum25(volatile float* sdata1, volatile float* sdata2, volatile float* sdata3, volatile float* sdata4, int tid)
     {
         // first step is to reduce from 25 to 16
         if (tid < 9) // use 9 threads
@@ -851,12 +838,9 @@ namespace cv { namespace gpu { namespace surf
         }
     }
 
-    // Spawn 16 blocks per interest point
-    // - computes unnormalized 64 dimensional descriptor, puts it into d_descriptors in the correct location
-    __global__ void compute_descriptors64(PtrStepf descriptors, const KeyPoint_GPU* features)
+	__global__ void compute_descriptors64(PtrStepf descriptors, const KeyPoint_GPU* features)
     {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float s_PATCH[6][6];
         __shared__ float sdx[25];
         __shared__ float sdy[25];
         __shared__ float sdxabs[25];
@@ -864,7 +848,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        calc_dx_dy(s_PATCH, sdx, sdy, features, tid);
+        calc_dx_dy(sdx, sdy, features, tid);
         __syncthreads();
 
         sdxabs[tid] = fabs(sdx[tid]); // |dx| array
@@ -886,12 +870,9 @@ namespace cv { namespace gpu { namespace surf
         }
     }
 
-    // Spawn 16 blocks per interest point
-    // - computes unnormalized 128 dimensional descriptor, puts it into d_descriptors in the correct location
-    __global__ void compute_descriptors128(PtrStepf descriptors, const KeyPoint_GPU* features)
+	__global__ void compute_descriptors128(PtrStepf descriptors, const KeyPoint_GPU* features)
     {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-        __shared__ float s_PATCH[6][6];
         __shared__ float sdx[25];
         __shared__ float sdy[25];
 
@@ -903,7 +884,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        calc_dx_dy(s_PATCH, sdx, sdy, features, tid);
+        calc_dx_dy(sdx, sdy, features, tid);
         __syncthreads();
 
         if (sdy[tid] >= 0)
