@@ -17,4 +17,4 @@ add_custom_target(refman1
                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                   COMMENT "Generating the OpenCV 1.x Reference Manual")
 
-install(FILES ${CURRENT_BINARY_DIR}/opencv1x.pdf DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT main)
+#install(FILES ${CURRENT_BINARY_DIR}/opencv1x.pdf DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT main)
