@@ -49,7 +49,7 @@ using namespace std;
 #if !defined (HAVE_CUDA)
 
 cv::gpu::SURF_GPU::SURF_GPU() { throw_nogpu(); }
-cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float) { throw_nogpu(); }
+cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_nogpu(); }
 int cv::gpu::SURF_GPU::descriptorSize() const { throw_nogpu(); return 0;}
 void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
@@ -92,7 +92,9 @@ namespace
 
             img_cols(img.cols), img_rows(img.rows),
 
-            use_mask(!mask.empty())
+            use_mask(!mask.empty()),
+
+            upright(surf.upright)
         {
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
@@ -176,7 +178,15 @@ namespace
             cudaSafeCall( cudaMemcpy(&featureCounter, d_counters, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
             featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
 
-            findOrientation(featuresBuffer.colRange(0, featureCounter), keypoints);
+            if (!upright)
+                findOrientation(featuresBuffer.colRange(0, featureCounter), keypoints);
+            else
+            {
+                if (featureCounter > 0)
+                    featuresBuffer.colRange(0, featureCounter).copyTo(keypoints);
+                else
+                    keypoints.release();
+            }
         }
 
         void findOrientation(const GpuMat& features, GpuMat& keypoints)
@@ -225,6 +235,8 @@ namespace
 
         bool use_mask;
 
+        bool upright;
+
         int maxCandidates;
         int maxFeatures;
         int maxKeypoints;
@@ -240,15 +252,17 @@ cv::gpu::SURF_GPU::SURF_GPU()
     nOctaves = 4;
     nOctaveLayers = 2;
     keypointsRatio = 0.01f;
+    upright = false;
 }
 
-cv::gpu::SURF_GPU::SURF_GPU(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, float _keypointsRatio)
+cv::gpu::SURF_GPU::SURF_GPU(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, float _keypointsRatio, bool _upright)
 {
     hessianThreshold = _threshold;
     extended = _extended;
     nOctaves = _nOctaves;
     nOctaveLayers = _nOctaveLayers;
     keypointsRatio = _keypointsRatio;
+    upright = _upright;
 }
 
 int cv::gpu::SURF_GPU::descriptorSize() const
@@ -387,7 +401,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat
     
         if (!useProvidedKeypoints)
             surf.detectKeypoints(keypoints);
-        else
+        else if (!upright)
         {
             GpuMat keypointsBuf;
             surf.findOrientation(keypoints, keypointsBuf);

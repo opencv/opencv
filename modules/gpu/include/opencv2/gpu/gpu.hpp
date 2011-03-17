@@ -1545,7 +1545,7 @@ namespace cv
             SURF_GPU();
             //! the full constructor taking all the necessary parameters
             explicit SURF_GPU(double _hessianThreshold, int _nOctaves=4,
-                 int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f);
+                 int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f, bool _upright = false);
 
             //! returns the descriptor size in float's (64 or 128)
             int descriptorSize() const;
@@ -1568,16 +1568,18 @@ namespace cv
             //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
             void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors, 
                 bool useProvidedKeypoints = false);
-        
+
             void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
             void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors, 
                 bool useProvidedKeypoints = false);
-            
+
             void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
                 bool useProvidedKeypoints = false);
 
             //! max keypoints = keypointsRatio * img.size().area()
             float keypointsRatio;
+
+            bool upright;
 
             GpuMat sum, mask1, maskSum, intBuffer;
 
