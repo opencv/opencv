@@ -234,6 +234,8 @@ integral( const Mat& src, Mat& sum, Mat* _sqsum, Mat* _tilted, int sdepth )
         func = integral_<uchar, float, double>;
     else if( depth == CV_8U && sdepth == CV_64F )
         func = integral_<uchar, double, double>;
+    else if( depth == CV_32F && sdepth == CV_32F )
+        func = integral_<float, float, double>;
     else if( depth == CV_32F && sdepth == CV_64F )
         func = integral_<float, double, double>;
     else if( depth == CV_64F && sdepth == CV_64F )
