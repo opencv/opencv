@@ -34,16 +34,11 @@ class PatternMaker:
   def makeACirclesPattern(self):
     spacing = self.square_size
     r = spacing / 5.0
-    row_shift = 0
-    for y in range(1,self.rows+1):
-      for x in range(1,self.cols+1):  
-        dot = SVG("circle", cx= (x + row_shift/2.0) * spacing, cy=y * spacing, r=r, fill="black")
+    for i in range(0,self.rows):
+      for j in range(0,self.cols):  
+        dot = SVG("circle", cx= ((j*2 + i%2)*spacing) + spacing, cy=self.height - (i * spacing + spacing), r=r, fill="black")
         self.g.append(dot)
-      #this makes the pattern asymetric
-      if row_shift is 0:
-        row_shift = 1
-      else:
-        row_shift = 0        
+        
   def makeCheckerboardPattern(self):
     spacing = self.square_size
     r = spacing / 5.0
