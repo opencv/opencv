@@ -5,6 +5,8 @@
 #define GTEST_LINKED_AS_SHARED_LIBRARY 1
 #endif
 
+#include <cstdarg> // for va_list
+
 #include "opencv2/ts/ts_gtest.h"
 #include "opencv2/core/core.hpp"
 
