@@ -2001,6 +2001,7 @@ public:
         return layer_sizes && weights &&
             (unsigned)layer <= (unsigned)layer_sizes->cols ? weights[layer] : 0;
     }
+    virtual void calc_activ_func_deriv( CvMat* xf, CvMat* deriv, const double* bias ) const;
 
 protected:
 
@@ -2015,7 +2016,6 @@ protected:
     virtual int train_rprop( CvVectors _ivecs, CvVectors _ovecs, const double* _sw );
 
     virtual void calc_activ_func( CvMat* xf, const double* bias ) const;
-    virtual void calc_activ_func_deriv( CvMat* xf, CvMat* deriv, const double* bias ) const;
     virtual void set_activ_func( int _activ_func=SIGMOID_SYM,
                                  double _f_param1=0, double _f_param2=0 );
     virtual void init_weights();

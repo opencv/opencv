@@ -40,6 +40,10 @@
 
 #include "precomp.hpp"
 
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#endif
+
 CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
 {
     term_crit = cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 1000, 0.01 );
@@ -1019,6 +1023,196 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
     return iter;
 }
 
+struct rprop_loop {
+  rprop_loop(const CvANN_MLP* _point, double**& _weights, int& _count, int& _ivcount, CvVectors* _x0, 
+     int& _l_count, CvMat*& _layer_sizes, int& _ovcount, int& _max_count,
+     CvVectors* _u, const double*& _sw, double& _inv_count, CvMat*& _dEdw, int& _dcount0, double* _E, int _buf_sz) 
+  {
+    point = _point;
+    weights = _weights;
+    count = _count;
+    ivcount = _ivcount;
+    x0 = _x0;
+    l_count = _l_count;
+    layer_sizes = _layer_sizes;
+    ovcount = _ovcount;
+    max_count = _max_count;
+    u = _u;
+    sw = _sw;
+    inv_count = _inv_count;
+    dEdw = _dEdw;
+    dcount0 = _dcount0;
+    E = _E;
+    buf_sz = _buf_sz;
+  }
+  
+  const CvANN_MLP* point;
+  double** weights;
+  int count;
+  int ivcount;
+  CvVectors* x0;
+  int l_count;
+  CvMat* layer_sizes;
+  int ovcount;
+  int max_count;
+  CvVectors* u;
+  const double* sw;
+  double inv_count;
+  CvMat* dEdw;
+  int dcount0;
+  double* E;
+  int buf_sz;
+
+  
+  void operator()( const cv::BlockedRange& range ) const
+  {
+    double* buf_ptr;
+    double** x = 0;
+    double **df = 0;    
+    int total = 0;
+    
+    for(int i = 0; i < l_count; i++ )
+        total += layer_sizes->data.i[i];
+    CvMat* buf;
+    buf = cvCreateMat( 1, buf_sz, CV_64F );
+    x = (double**)cvAlloc( total*2*sizeof(x[0]) );
+    df = x + total;
+    buf_ptr = buf->data.db;
+    for(int i = 0; i < l_count; i++ )
+    {
+        x[i] = buf_ptr;
+        df[i] = x[i] + layer_sizes->data.i[i]*dcount0;
+        buf_ptr += (df[i] - x[i])*2;
+    }
+
+    for(int si = range.begin(); si < range.end(); si++ )
+    {
+        if (si % dcount0 != 0) continue;
+        int n1, n2, j, k;
+        double* w;
+        CvMat _w, _dEdw, hdr1, hdr2, ghdr1, ghdr2, _df;
+        CvMat *x1, *x2, *grad1, *grad2, *temp;
+        int dcount = 0;
+
+        dcount = MIN(count - si , dcount0 );
+        w = weights[0];
+        grad1 = &ghdr1; grad2 = &ghdr2;
+        x1 = &hdr1; x2 = &hdr2;
+
+        // grab and preprocess input data
+        if( x0->type == CV_32F )
+	{
+            for(int i = 0; i < dcount; i++ )
+            {
+                const float* x0data = x0->data.fl[si+i];
+                double* xdata = x[0]+i*ivcount;
+                for( j = 0; j < ivcount; j++ )
+                    xdata[j] = x0data[j]*w[j*2] + w[j*2+1];
+            }
+	}
+        else
+            for(int i = 0; i < dcount; i++ )
+            {
+                const double* x0data = x0->data.db[si+i];
+                double* xdata = x[0]+i*ivcount;
+                for( j = 0; j < ivcount; j++ )
+                    xdata[j] = x0data[j]*w[j*2] + w[j*2+1];
+            }  
+        cvInitMatHeader( x1, dcount, ivcount, CV_64F, x[0] );
+
+        // forward pass, compute y[i]=w*x[i-1], x[i]=f(y[i]), df[i]=f'(y[i])
+        for(int i = 1; i < l_count; i++ )
+        {
+            cvInitMatHeader( x2, dcount, layer_sizes->data.i[i], CV_64F, x[i] );
+            cvInitMatHeader( &_w, x1->cols, x2->cols, CV_64F, weights[i] );
+            cvGEMM( x1, &_w, 1, 0, 0, x2 );
+            _df = *x2;
+            _df.data.db = df[i];
+            point->calc_activ_func_deriv( x2, &_df, _w.data.db + _w.rows*_w.cols );
+            CV_SWAP( x1, x2, temp );
+        }
+        cvInitMatHeader( grad1, dcount, ovcount, CV_64F, buf_ptr );
+
+        w = weights[l_count+1];
+        grad2->data.db = buf_ptr + max_count*dcount;
+
+        // calculate error
+        if( u->type == CV_32F )
+            for(int i = 0; i < dcount; i++ )
+            {
+                const float* udata = u->data.fl[si+i];
+                const double* xdata = x[l_count-1] + i*ovcount;
+                double* gdata = grad1->data.db + i*ovcount;
+                double sweight = sw ? sw[si+i] : inv_count, E1 = 0;
+
+                for( j = 0; j < ovcount; j++ )
+                {
+                    double t = udata[j]*w[j*2] + w[j*2+1] - xdata[j];
+                    gdata[j] = t*sweight;
+                    E1 += t*t;
+                }
+                *E += sweight*E1;
+            }
+        else
+            for(int i = 0; i < dcount; i++ )
+            {
+                const double* udata = u->data.db[si+i];
+                const double* xdata = x[l_count-1] + i*ovcount;
+                double* gdata = grad1->data.db + i*ovcount;
+                double sweight = sw ? sw[si+i] : inv_count, E1 = 0;
+
+                for(int j = 0; j < ovcount; j++ )
+                {
+                    double t = udata[j]*w[j*2] + w[j*2+1] - xdata[j];
+                    gdata[j] = t*sweight;
+                    E1 += t*t;
+                }
+                *E += sweight*E1;
+            }
+            
+        // backward pass, update dEdw
+        #ifdef HAVE_TBB
+        static tbb::spin_mutex mutex;
+        tbb::spin_mutex::scoped_lock lock;
+        #endif
+        for(int i = l_count-1; i > 0; i-- )
+        {
+            n1 = layer_sizes->data.i[i-1]; n2 = layer_sizes->data.i[i];
+            cvInitMatHeader( &_df, dcount, n2, CV_64F, df[i] );
+            cvMul( grad1, &_df, grad1 );
+            #ifdef HAVE_TBB
+            lock.acquire(mutex);
+            #endif
+            cvInitMatHeader( &_dEdw, n1, n2, CV_64F, dEdw->data.db+(weights[i]-weights[0]) );
+            cvInitMatHeader( x1, dcount, n1, CV_64F, x[i-1] );
+            cvGEMM( x1, grad1, 1, &_dEdw, 1, &_dEdw, CV_GEMM_A_T );
+
+            // update bias part of dEdw
+           for( k = 0; k < dcount; k++ )
+           {
+               double* dst = _dEdw.data.db + n1*n2;
+               const double* src = grad1->data.db + k*n2;
+               for( j = 0; j < n2; j++ )
+                   dst[j] += src[j];
+           }
+           
+           if (i > 1)
+               cvInitMatHeader( &_w, n1, n2, CV_64F, weights[i] );
+           #ifdef HAVE_TBB
+           lock.release();
+           #endif
+           cvInitMatHeader( grad2, dcount, n1, CV_64F, grad2->data.db );
+           if( i > 1 )
+               cvGEMM( grad1, &_w, 1, 0, 0, grad2, CV_GEMM_B_T );
+           CV_SWAP( grad1, grad2, temp );
+        }
+    }
+    cvFree(&x);
+    cvReleaseMat( &buf );
+}
+
+};
+
 
 int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
 {
@@ -1107,108 +1301,10 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
         double E = 0;
 
         // first, iterate through all the samples and compute dEdw
-        for( si = 0; si < count; si += dcount )
-        {
-            dcount = MIN( count - si, dcount0 );
-            w = weights[0];
-            grad1 = &ghdr1; grad2 = &ghdr2;
-            x1 = &hdr1; x2 = &hdr2;
-
-            // grab and preprocess input data
-            if( x0.type == CV_32F )
-                for( i = 0; i < dcount; i++ )
-                {
-                    const float* x0data = x0.data.fl[si+i];
-                    double* xdata = x[0]+i*ivcount;
-                    for( j = 0; j < ivcount; j++ )
-                        xdata[j] = x0data[j]*w[j*2] + w[j*2+1];
-                }
-            else
-                for( i = 0; i < dcount; i++ )
-                {
-                    const double* x0data = x0.data.db[si+i];
-                    double* xdata = x[0]+i*ivcount;
-                    for( j = 0; j < ivcount; j++ )
-                        xdata[j] = x0data[j]*w[j*2] + w[j*2+1];
-                }
-
-            cvInitMatHeader( x1, dcount, ivcount, CV_64F, x[0] );
-
-            // forward pass, compute y[i]=w*x[i-1], x[i]=f(y[i]), df[i]=f'(y[i])
-            for( i = 1; i < l_count; i++ )
-            {
-                cvInitMatHeader( x2, dcount, layer_sizes->data.i[i], CV_64F, x[i] );
-                cvInitMatHeader( &_w, x1->cols, x2->cols, CV_64F, weights[i] );
-                cvGEMM( x1, &_w, 1, 0, 0, x2 );
-                _df = *x2;
-                _df.data.db = df[i];
-                calc_activ_func_deriv( x2, &_df, _w.data.db + _w.rows*_w.cols );
-                CV_SWAP( x1, x2, temp );
-            }
-
-            cvInitMatHeader( grad1, dcount, ovcount, CV_64F, buf_ptr );
-            w = weights[l_count+1];
-            grad2->data.db = buf_ptr + max_count*dcount;
-
-            // calculate error
-            if( u.type == CV_32F )
-                for( i = 0; i < dcount; i++ )
-                {
-                    const float* udata = u.data.fl[si+i];
-                    const double* xdata = x[l_count-1] + i*ovcount;
-                    double* gdata = grad1->data.db + i*ovcount;
-                    double sweight = sw ? sw[si+i] : inv_count, E1 = 0;
-
-                    for( j = 0; j < ovcount; j++ )
-                    {
-                        double t = udata[j]*w[j*2] + w[j*2+1] - xdata[j];
-                        gdata[j] = t*sweight;
-                        E1 += t*t;
-                    }
-                    E += sweight*E1;
-                }
-            else
-                for( i = 0; i < dcount; i++ )
-                {
-                    const double* udata = u.data.db[si+i];
-                    const double* xdata = x[l_count-1] + i*ovcount;
-                    double* gdata = grad1->data.db + i*ovcount;
-                    double sweight = sw ? sw[si+i] : inv_count, E1 = 0;
-
-                    for( j = 0; j < ovcount; j++ )
-                    {
-                        double t = udata[j]*w[j*2] + w[j*2+1] - xdata[j];
-                        gdata[j] = t*sweight;
-                        E1 += t*t;
-                    }
-                    E += sweight*E1;
-                }
-
-            // backward pass, update dEdw
-            for( i = l_count-1; i > 0; i-- )
-            {
-                n1 = layer_sizes->data.i[i-1]; n2 = layer_sizes->data.i[i];
-                cvInitMatHeader( &_df, dcount, n2, CV_64F, df[i] );
-                cvMul( grad1, &_df, grad1 );
-                cvInitMatHeader( &_dEdw, n1, n2, CV_64F, dEdw->data.db+(weights[i]-weights[0]) );
-                cvInitMatHeader( x1, dcount, n1, CV_64F, x[i-1] );
-                cvGEMM( x1, grad1, 1, &_dEdw, 1, &_dEdw, CV_GEMM_A_T );
-                // update bias part of dEdw
-                for( k = 0; k < dcount; k++ )
-                {
-                    double* dst = _dEdw.data.db + n1*n2;
-                    const double* src = grad1->data.db + k*n2;
-                    for( j = 0; j < n2; j++ )
-                        dst[j] += src[j];
-                }
-                cvInitMatHeader( &_w, n1, n2, CV_64F, weights[i] );
-                cvInitMatHeader( grad2, dcount, n1, CV_64F, grad2->data.db );
-
-                if( i > 1 )
-                    cvGEMM( grad1, &_w, 1, 0, 0, grad2, CV_GEMM_B_T );
-                CV_SWAP( grad1, grad2, temp );
-            }
-        }
+        cv::parallel_for(cv::BlockedRange(0, count), 
+            rprop_loop(this, weights, count, ivcount, &x0, l_count, layer_sizes, 
+                       ovcount, max_count, &u, sw, inv_count, dEdw, dcount0, &E, buf_sz)
+        );
 
         // now update weights
         for( i = 1; i < l_count; i++ )
