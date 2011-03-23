@@ -1,3 +1,5 @@
+.. _ImageFiltering:
+
 Image Filtering
 ===============
 

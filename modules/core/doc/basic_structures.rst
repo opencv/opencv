@@ -343,6 +343,8 @@ The class ``RotatedRect`` replaces the old ``CvBox2D`` and fully compatible with
 TermCriteria
 ------------
 
+.. c:type:: TermCriteria
+
 Termination criteria for iterative algorithms ::
 
     class TermCriteria
@@ -633,6 +635,8 @@ However, if the object is deallocated in a different way, then the specialized m
 
 Mat
 ---
+
+.. c:type:: Mat
 
 OpenCV C++ n-dimensional dense array class. ::
 
