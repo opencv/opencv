@@ -94,16 +94,16 @@ struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
                 f.write((char*)&val, sizeof(val));
             }
         }
-        size_t nlocations = locations.size();
+        int nlocations = locations.size();
         f.write((char*)&nlocations, sizeof(nlocations));
-        for (size_t i = 0; i < locations.size(); ++i)
+        for (int i = 0; i < locations.size(); ++i)
             f.write((char*)&locations[i], sizeof(locations[i]));
     }
 #else
     void compare(const cv::Mat& block_hists, const std::vector<cv::Point>& locations) 
     {
         int rows, cols;
-        size_t nlocations;
+        int nlocations;
 
         f.read((char*)&rows, sizeof(rows));
         f.read((char*)&cols, sizeof(cols));
@@ -119,8 +119,8 @@ struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
             }
         }
         f.read((char*)&nlocations, sizeof(nlocations));
-        CHECK(nlocations == locations.size(), cvtest::TS::FAIL_INVALID_OUTPUT);
-        for (size_t i = 0; i < nlocations; ++i)
+        CHECK(nlocations == static_cast<int>(locations.size()), cvtest::TS::FAIL_INVALID_OUTPUT);
+        for (int i = 0; i < nlocations; ++i)
         {
             cv::Point location;
             f.read((char*)&location, sizeof(location));
