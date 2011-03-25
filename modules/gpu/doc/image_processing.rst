@@ -55,9 +55,9 @@ gpu::meanShiftSegmentation
 ------------------------------
 .. cpp:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
-    Performs mean-shift segmentation of the source image and eleminates small segments.
+    Performs mean-shift segmentation of the source image and eliminates small segments.
 
-    :param src: Source image. Only ``CV_8UC4`` images are supported for now.
+    :param src: Source ``CV_8UC4`` image.
 
     :param dst: Segmented image. Will have the same size and type as ``src``.
 
@@ -65,7 +65,7 @@ gpu::meanShiftSegmentation
 
     :param sr: Color window radius.
 
-    :param minsize: Minimum segment size. Smaller segements will be merged.
+    :param minsize: Minimum segment size. Smaller segements will be eliminated.
 
     :param criteria: Termination criteria. See :c:type:`TermCriteria`.
 
