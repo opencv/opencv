@@ -306,7 +306,7 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
         }
     }
 
-    return false;
+    return res;
 }
 
 double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
