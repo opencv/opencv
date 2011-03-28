@@ -14,13 +14,6 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
 					"${CMAKE_CURRENT_SOURCE_DIR}/src"
 					"${CMAKE_CURRENT_BINARY_DIR}")
 
-foreach(d ${DEPS})
-	if(${d} MATCHES "opencv_")
-		string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-		include_directories("${d_dir}/include")
-	endif()
-endforeach()
-
 file(GLOB lib_srcs "src/*.cpp")
 file(GLOB lib_int_hdrs "src/*.h*")
 file(GLOB lib_cuda "src/cuda/*.cu*")
@@ -81,6 +74,13 @@ if (HAVE_CUDA)
     CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
     #CUDA_BUILD_CLEAN_TARGET()
 endif()
+
+foreach(d ${DEPS})
+	if(${d} MATCHES "opencv_")
+		string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+		include_directories("${d_dir}/include")
+	endif()
+endforeach()
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 
