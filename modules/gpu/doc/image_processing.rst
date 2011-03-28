@@ -3,41 +3,42 @@ Image Processing
 
 .. highlight:: cpp
 
-
-
 .. index:: gpu::meanShiftFiltering
 
 gpu::meanShiftFiltering
 ---------------------------
-.. cpp:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. cpp:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst,
+   int sp, int sr,
+   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
+   + TermCriteria::EPS, 5, 1))
 
-    Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point, and as the result we have new color and new position of each point.
+    Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point. As a result, we have a new color and new position of each point.
 
-    :param src: Source image. Only ``CV_8UC4`` images are supported for now.
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
-    :param dst: Destination image, containing color of mapped points. Will have the same size and type as ``src``.
+    :param dst: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
 
     :param sp: Spatial window radius.
 
     :param sr: Color window radius.
 
     :param criteria: Termination criteria. See :c:type:`TermCriteria`.
-
-
 
 .. index:: gpu::meanShiftProc
 
 gpu::meanShiftProc
 ----------------------
-.. cpp:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. cpp:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp,
+   int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
+   + TermCriteria::EPS, 5, 1))
 
-    Performs mean-shift procedure and stores information about processed points (i.e. their colors and positions) into two images.
+    Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
-    :param src: Source image. Only ``CV_8UC4`` images are supported for now.
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
-    :param dstr: Destination image, containing color of mapped points. Will have the same size and type as ``src``.
+    :param dstr: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
 
-    :param dstsp: Destination image, containing position of mapped points. Will have the same size as ``src`` and ``CV_16SC2`` type.
+    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src``. The type is  ``CV_16SC2``.
 
     :param sp: Spatial window radius.
 
@@ -45,9 +46,8 @@ gpu::meanShiftProc
 
     :param criteria: Termination criteria. See :c:type:`TermCriteria`.
 
-See also: :cpp:func:`gpu::meanShiftFiltering`.
-
-
+See Also:
+:c:func:`gpu::meanShiftFiltering` .
 
 .. index:: gpu::meanShiftSegmentation
 
@@ -55,21 +55,19 @@ gpu::meanShiftSegmentation
 ------------------------------
 .. cpp:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
-    Performs mean-shift segmentation of the source image and eliminates small segments.
+    Performs a mean-shift segmentation of the source image and eleminates small segments.
 
-    :param src: Source ``CV_8UC4`` image.
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
-    :param dst: Segmented image. Will have the same size and type as ``src``.
+    :param dst: Segmented image. The size and type is the same as  ``src`` .
 
     :param sp: Spatial window radius.
 
     :param sr: Color window radius.
 
-    :param minsize: Minimum segment size. Smaller segements will be eliminated.
+    :param minsize: Minimum segment size. Smaller segements are merged.
 
     :param criteria: Termination criteria. See :c:type:`TermCriteria`.
-
-
 
 .. index:: gpu::integral
 
@@ -79,17 +77,16 @@ gpu::integral
 
 .. cpp:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum)
 
-    Computes integral image and squared integral image.
+    Computes an integral image and a squared integral image.
 
-    :param src: Source image. Only ``CV_8UC1`` images are supported for now.
+    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
 
-    :param sum: Integral image. Will contain 32-bit unsigned integer values packed into ``CV_32SC1``.
+    :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
 
-    :param sqsum: Squared integral image. Will have ``CV_32FC1`` type.
+    :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
-See also: :c:func:`integral`.
-
-
+See Also:
+:c:func:`integral` .
 
 .. index:: gpu::sqrIntegral
 
@@ -97,13 +94,11 @@ gpu::sqrIntegral
 --------------------
 .. cpp:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum)
 
-    Computes squared integral image.
+    Computes a squared integral image.
 
-    :param src: Source image. Only ``CV_8UC1`` images are supported for now.
+    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
 
-    :param sqsum: Squared integral image. Will contain 64-bit unsigned integer values packed into ``CV_64FC1``.
-
-
+    :param sqsum: Squared integral image containing 64-bit unsigned integer values packed into  ``CV_64FC1`` .
 
 .. index:: gpu::columnSum
 
@@ -111,25 +106,25 @@ gpu::columnSum
 ------------------
 .. cpp:function:: void gpu::columnSum(const GpuMat& src, GpuMat& sum)
 
-    Computes vertical (column) sum.
+    Computes a vertical (column) sum.
 
-    :param src: Source image. Only ``CV_32FC1`` images are supported for now.
+    :param src: Source image. Only  ``CV_32FC1`` images are supported for now.
 
-    :param sum: Destination image. Will have ``CV_32FC1`` type.
-
-
+    :param sum: Destination image of the  ``CV_32FC1`` type.
 
 .. index:: gpu::cornerHarris
 
 gpu::cornerHarris
 ---------------------
-.. cpp:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101)
+.. cpp:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst,
+   int blockSize, int ksize, double k,
+   int borderType=BORDER_REFLECT101)
 
-    Computes Harris cornerness criteria at each image pixel.
+    Computes the Harris cornerness criteria at each image pixel.
 
-    :param src: Source image. Only ``CV_8UC1`` and ``CV_32FC1`` images are supported for now.
+    :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
-    :param dst: Destination image. Will have the same size and ``CV_32FC1`` type and contain cornerness values.
+    :param dst: Destination image containing cornerness values. The size is the same. The type is ``CV_32FC1`` .
 
     :param blockSize: Neighborhood size.
 
@@ -137,23 +132,24 @@ gpu::cornerHarris
 
     :param k: Harris detector free parameter.
 
-    :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
+    :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
-See also: :c:func:`cornerHarris`.
-
-
+See Also:
+:c:func:`cornerHarris` .
 
 .. index:: gpu::cornerMinEigenVal
 
 gpu::cornerMinEigenVal
 --------------------------
-.. cpp:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
+.. cpp:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst,
+   int blockSize, int ksize,
+   int borderType=BORDER_REFLECT101)
 
-    Computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria.
+    Computes the minimum eigen value of 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
 
-    :param src: Source image. Only ``CV_8UC1`` and ``CV_32FC1`` images are supported for now.
+    :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
-    :param dst: Destination image. Will have the same size and ``CV_32FC1`` type and contain cornerness values.
+    :param dst: Destination image containing cornerness values. The size is the same. The type is  ``CV_32FC1``.
 
     :param blockSize: Neighborhood size.
 
@@ -165,57 +161,55 @@ gpu::cornerMinEigenVal
 
 See also: :c:func:`cornerMinEigenVal`.
 
-
-
 .. index:: gpu::mulSpectrums
 
 gpu::mulSpectrums
 ---------------------
-.. cpp:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
+.. cpp:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b,
+   GpuMat& c, int flags, bool conjB=false)
 
-    Performs per-element multiplication of two Fourier spectrums.
+    Performs a per-element multiplication of two Fourier spectrums.
 
     :param a: First spectrum.
 
-    :param b: Second spectrum. Must have the same size and type as ``a``.
+    :param b: Second spectrum. The size and type is the same as  ``a`` .
 
     :param c: Destination spectrum.
 
-    :param flags: Mock paramter is kept for CPU/GPU interfaces similarity.
+    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
 
-    :param conjB: Optional flag which indicates the second spectrum must be conjugated before the multiplication.
+    :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
 
-Only full (i.e. not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
+    Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-See also: :c:func:`mulSpectrums`.
-
-
+See Also:
+:c:func:`mulSpectrums` .
 
 .. index:: gpu::mulAndScaleSpectrums
 
 gpu::mulAndScaleSpectrums
 -----------------------------
-.. cpp:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
+.. cpp:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b,
+   GpuMat& c, int flags, float scale, bool conjB=false)
 
-    Performs per-element multiplication of two Fourier spectrums and scales the result.
+    Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
     :param a: First spectrum.
 
-    :param b: Second spectrum. Must have the same size and type as ``a``.
+    :param b: Second spectrum. The size and type is the same as  ``a`` .
 
     :param c: Destination spectrum.
 
-    :param flags: Mock paramter is kept for CPU/GPU interfaces similarity.
+    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
 
     :param scale: Scale constant.
 
-    :param conjB: Optional flag which indicates the second spectrum must be conjugated before the multiplication.
+    :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
 
-Only full (i.e. not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
+    Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-See also: :c:func:`mulSpectrums`.
-
-
+See Also:
+:c:func:`mulSpectrums` .
 
 .. index:: gpu::dft
 
@@ -223,7 +217,7 @@ gpu::dft
 ------------
 .. cpp:function:: void gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0)
 
-    Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix. Can handle real matrices ``CV32FC1`` and complex matrices in the interleaved format ``CV32FC2``.
+    Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix. Use to handle real matrices (CV32FC1) and complex matrices in the interleaved format (CV32FC2).
 
     :param src: Source matrix (real or complex).
 
@@ -235,55 +229,62 @@ gpu::dft
 
             * **DFT_ROWS** Transform each individual row of the source matrix.
 
-            * **DFT_SCALE** Scale the result: divide it by the number of elements in the transform (it's obtained from ``dft_size``).
+            * **DFT_SCALE** Scale the result: divide it by the number of elements in the transform (obtained from  ``dft_size`` ).
 
-            * **DFT_INVERSE** Inverse DFT must be perfromed for complex-complex case (real-complex and complex-real cases are respectively forward and inverse always).
+            * **DFT_INVERSE** Invert DFT. Use for complex-complex cases (real-complex and complex-real cases are respectively forward and inverse always).
 
-            * **DFT_REAL_OUTPUT** The source matrix is the result of real-complex transform, so the destination matrix must be real.
+            * **DFT_REAL_OUTPUT** Specify the output as real. The source matrix is the result of real-complex transform, so the destination matrix must be real.
+            
 
-The source matrix should be continuous, otherwise reallocation and data copying will be performed. Function chooses the operation mode depending on the flags, size and channel count of the source matrix:
+    The source matrix should be continuous, otherwise reallocation and data copying is performed. The function chooses an operation mode depending on the flags, size, and channel count of the source matrix:
 
-* If the source matrix is complex and the output isn't specified as real then the destination matrix will be complex, will have ``dft_size`` size and ``CV_32FC2`` type. It will contain full result of the DFT (forward or inverse).
+    *
+        If the source matrix is complex and the output is not specified as real, the destination matrix is complex, has the ``dft_size``    size and ``CV_32FC2``    type. The destination matrix contains a full result of the DFT (forward or inverse).
 
-* If the source matrix is complex and the output is specified as real then function assumes that its input is the result of the forward transform (see next item). The destionation matrix will have ``dft_size`` size and ``CV_32FC1`` type. It will contain result of the inverse DFT.
+    *
+        If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see next item). The destionation matrix has the ``dft_size``    size and ``CV_32FC1``    type. It contains the result of the inverse DFT.
 
-* If the source matrix is real (i.e. its type is ``CV_32FC1``) then forward DFT will be performed. The result of the DFT will be packed into complex (``CV_32FC2``) matrix so its width will be ``dft_size.width / 2 + 1``, but if the source is a single column then height will be reduced instead of width.
+    *
+        If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
-See also: :c:func:`dft`.
-
-
+See Also:
+:c:func:`dft` .
 
 .. index:: gpu::convolve
 
 gpu::convolve
 -----------------
-.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
+.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
+   bool ccorr=false)
 
-.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf)
+.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
+   bool ccorr, ConvolveBuf& buf)
 
     Computes convolution (or cross-correlation) of two images.
 
-    :param image: Source image. Only ``CV_32FC1`` images are supported for now.
+    :param image: Source image. Only  ``CV_32FC1`` images are supported for now.
 
-    :param templ: Template image. Must have size not greater then ``image`` size and be the same type as ``image``.
+    :param templ: Template image. The size is not greater than the  ``image`` size. The type is the same as  ``image`` .
 
-    :param result: Result image. Will have the same size and type as ``image``.
+    :param result: Result image. The size and type is the same as  ``image`` .
 
-    :param ccorr: Flags which indicates cross-correlation must be evaluated instead of convolution.
+    :param ccorr: Flags to evaluate cross-correlation instead of convolution.
 
     :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 
-
-
 .. index:: gpu::ConvolveBuf
+
+.. _gpu::ConvolveBuf:
 
 gpu::ConvolveBuf
 ----------------
 .. cpp:class:: gpu::ConvolveBuf
 
-Memory buffer for the :cpp:func:`gpu::convolve` function. ::
+    Provides a memory buffer for the
+    :c:func:`gpu::convolve` function. 
+::
 
-    struct ConvolveBuf
+    struct CV_EXPORTS ConvolveBuf
     {
         ConvolveBuf() {}
         ConvolveBuf(Size image_size, Size templ_size)
@@ -295,82 +296,79 @@ Memory buffer for the :cpp:func:`gpu::convolve` function. ::
     };
 
 
-
 .. index:: gpu::ConvolveBuf::ConvolveBuf
 
 gpu::ConvolveBuf::ConvolveBuf
 ---------------------------------
-.. cpp:function:: gpu::ConvolveBuf::ConvolveBuf()
+.. cpp:function:: ConvolveBuf::ConvolveBuf()
 
-Constructs an empty buffer which will be properly resized after first call of the convolve function.
+    Constructs an empty buffer that will be properly resized after the first call of the 
+    :c:func:`convolve` function.
 
-.. cpp:function:: gpu::ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
+.. cpp:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
-Constructs a buffer for the convolve function with respectively arguments.
-
-
+    Constructs a buffer for the 
+    :c:func:`convolve` function with respective arguments.
 
 .. index:: gpu::matchTemplate
 
 gpu::matchTemplate
 ----------------------
-.. cpp:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
+.. cpp:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ,
+   GpuMat& result, int method)
 
     Computes a proximity map for a raster template and an image where the template is searched for.
 
-    :param image: Source image. ``CV_32F`` and ``CV_8U`` depth images (1..4 channels) are supported for now.
+    :param image: Source image.  ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
 
-    :param templ: Template image. Must have the same size and type as ``image``.
+    :param templ: Template image. The size and type is the same as  ``image`` .
 
-    :param result: Map containing comparison results (``CV_32FC1``). If ``image`` is ``W`` :math:`\times` ``H`` and ``templ`` is ``w`` :math:`\times` ``h`` then ``result`` must be ``(W-w+1)`` :math:`\times` ``(H-h+1)``.
+    :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image`` is  *W x H*  and ``templ`` is  *w x h*, then  ``result`` must be *W-w+1 x H-h+1*.
 
-    :param method: Specifies the way which the template must be compared with the image.
+    :param method: Specifies the way to compare the template with the image.
 
-Following methods are supported for the ``CV_8U`` depth images for now:
+    The following methods are supported for the ``CV_8U`` depth images for now:
 
- * CV_TM_SQDIFF
- * CV_TM_SQDIFF_NORMED
- * CV_TM_CCORR
- * CV_TM_CCORR_NORMED
- * CV_TM_CCOEFF
- * CV_TM_CCOEFF_NORMED
+    * CV_TM_SQDIFF
+    * CV_TM_SQDIFF_NORMED
+    * CV_TM_CCORR
+    * CV_TM_CCORR_NORMED
+    * CV_TM_CCOEFF
+    * CV_TM_CCOEFF_NORMED
 
-Following methods are supported for the ``CV_32F`` images for now:
+    The following methods are supported for the ``CV_32F`` images for now:
 
- * CV_TM_SQDIFF
- * CV_TM_CCORR
+    * CV_TM_SQDIFF
+    * CV_TM_CCORR
 
-See also: :c:func:`matchTemplate`.
-
-
+See Also:
+:c:func:`matchTemplate` .
 
 .. index:: gpu::remap
 
 gpu::remap
 --------------
-.. cpp:function:: void gpu::remap(const GpuMat& src, GpuMat& dst,  const GpuMat& xmap, const GpuMat& ymap)
+.. cpp:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
 
     Applies a generic geometrical transformation to an image.
 
-    :param src: Source image. Only ``CV_8UC1`` and ``CV_8UC3`` source types are supported.
+    :param src: Source image. Only  ``CV_8UC1`` and  ``CV_8UC3`` source types are supported.
 
-    :param dst: Destination image. It will have the same size as ``xmap`` and the same type as ``src``.
+    :param dst: Destination image. The size is the same as  ``xmap`` . The type is the same as  ``src`` .
 
-    :param xmap: X values. Only ``CV_32FC1`` type is supported.
+    :param xmap: X values. Only  ``CV_32FC1`` type is supported.
 
-    :param ymap: Y values. Only ``CV_32FC1`` type is supported.
+    :param ymap: Y values. Only  ``CV_32FC1`` type is supported.
 
-The function transforms the source image using the specified map:
+    The function transforms the source image using the specified map:
 
-.. math::
+    .. math::
 
-    dst(x,y) = src(xmap(x,y), ymap(x,y))
+        \texttt{dst} (x,y) =  \texttt{src} (xmap(x,y), ymap(x,y))
 
-Values of pixels with non-integer coordinates are computed using bilinear interpolation.
+    Values of pixels with non-integer coordinates are computed using bilinear interpolation.
 
-See also: :c:func:`remap`.
-
-
+See Also: :c:func:`remap` .
 
 .. index:: gpu::cvtColor
 
@@ -378,25 +376,24 @@ gpu::cvtColor
 -----------------
 .. cpp:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0)
 
-.. cpp:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn,  const Stream& stream)
+.. cpp:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
 
     Converts image from one color space to another.
 
-    :param src: Source image with ``CV_8U``, ``CV_16U`` or ``CV_32F`` depth and 1, 3 or 4 channels.
+    :param src: Source image with  ``CV_8U``, ``CV_16U``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image; will have the same size and the same depth as ``src``.
+    :param dst: Destination image. The size and depth is the same as  ``src`` .
 
-    :param code: Color space conversion code. For details see :c:func:`cvtColor`. Conversion to/from Luv and Bayer color spaces doesn't supported.
+    :param code: Color space conversion code. For details, see  :func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
 
-    :param dcn: Number of channels in the destination image; if the parameter is 0, the number of the channels will be derived automatically from ``src`` and the ``code``.
+    :param dcn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src`` and the  ``code`` .
 
     :param stream: Stream for the asynchronous version.
 
-3-channel color spaces (like ``HSV``, ``XYZ``, etc) can be stored to 4-channel image for better perfomance.
+    3-channel color spaces (like ``HSV``,``XYZ``, and so on) can be stored to a 4-channel image for better perfomance.
 
-See also: :c:func:`cvtColor`.
-
-
+See Also:
+:func:`cvtColor` .
 
 .. index:: gpu::threshold
 
@@ -408,21 +405,20 @@ gpu::threshold
 
     Applies a fixed-level threshold to each array element.
 
-    :param src: Source array (single-channel, ``CV_64F`` depth isn't supported).
+    :param src: Source array (single-channel). ``CV_64F`` depth is not supported.
 
-    :param dst: Destination array; will have the same size and the same type as ``src``.
+    :param dst: Destination array. The size and type is the same as  ``src`` .
 
     :param thresh: Threshold value.
 
-    :param maxVal: Maximum value to use with ``THRESH_BINARY`` and ``THRESH_BINARY_INV`` thresholding types.
+    :param maxVal: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
 
-    :param thresholdType: Thresholding type. For details see :c:func:`threshold`. ``THRESH_OTSU`` thresholding type doesn't supported.
+    :param thresholdType: Threshold type. For details, see  :func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`threshold`.
-
-
+See Also:
+:func:`threshold` .
 
 .. index:: gpu::resize
 
@@ -432,35 +428,32 @@ gpu::resize
 
     Resizes an image.
 
-    :param src: Source image. Supports ``CV_8UC1`` and ``CV_8UC4`` types.
+    :param src: Source image. Supports  the ``CV_8UC1`` and  ``CV_8UC4`` types.
 
-    :param dst: Destination image. It will have size ``dsize`` (when it is non-zero) or the size computed from ``src.size()`` and ``fx`` and ``fy``. The type of ``dst`` will be the same as of ``src``.
+    :param dst: Destination image. The size is ``dsize`` (when it is non-zero) or the size is computed from  ``src.size()``, ``fx``, and  ``fy`` . The type is the same as  ``src`` .
 
-    :param dsize: Destination image size. If it is zero, then it is computed as: 
-
-        .. math::
-            
-            dsize = Size(round(fx*src.cols), round(fy*src.rows))
-
-        Either ``dsize`` or both ``fx`` or ``fy`` must be non-zero.
-
-    :param fx: Scale factor along the horizontal axis. When 0, it is computed as 
+    :param dsize: Destination image size. If it is zero, it is computed as: 
 
         .. math::
-            
-            (double)dsize.width/src.cols
+            \texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))} 
 
-    :param fy: Scale factor along the vertical axis. When 0, it is computed as 
+        Either  ``dsize`` or both  ``fx`` and  ``fy`` must be non-zero.
+
+    :param fx: Scale factor along the horizontal axis. If it is zero, it is computed as: 
 
         .. math::
-            
-            (double)dsize.height/src.rows
 
-    :param interpolation: Interpolation method. Supports only ``INTER_NEAREST`` and ``INTER_LINEAR``.
+            \texttt{(double)dsize.width/src.cols} 
 
-See also: :c:func:`resize`.
+    :param fy: Scale factor along the vertical axis. If it is zero, it is computed as: 
 
+        .. math::
 
+            \texttt{(double)dsize.height/src.rows} 
+
+    :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` and  ``INTER_LINEAR`` are supported.
+
+See Also: :func:`resize` .
 
 .. index:: gpu::warpAffine
 
@@ -470,19 +463,18 @@ gpu::warpAffine
 
     Applies an affine transformation to an image.
 
-    :param src: Source image. Supports ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth and 1, 3 or 4 channels.
+    :param src: Source image. Supports  ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image; will have size ``dsize`` and the same type as ``src``.
+    :param dst: Destination image. The size is  ``dsize`` . The type is the same as  ``src`` .
 
-    :param M: :math:`2 \times 3`  transformation matrix.
+    :param M: *2x3*  transformation matrix.
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods, see :c:func:`resize`, and the optional flag ``WARP_INVERSE_MAP`` that means that ``M`` is the inverse transformation(:math:`dst \rightarrow src` ). Supports only  ``INTER_NEAREST``, ``INTER_LINEAR`` and ``INTER_CUBIC`` interpolation methods.
+    :param flags: Combination of interpolation methods (see  :func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
-See also: :c:func:`warpAffine`.
-
-
+See Also:
+:func:`warpAffine` .
 
 .. index:: gpu::warpPerspective
 
@@ -492,19 +484,18 @@ gpu::warpPerspective
 
     Applies a perspective transformation to an image.
 
-    :param src: Source image. Supports ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth and 1, 3 or 4 channels.
+    :param src: Source image. Supports  ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image; will have size ``dsize`` and the same type as ``src``.
+    :param dst: Destination image. The size is  ``dsize`` . The type is the same as  ``src`` .
 
-    :param M: :math:`2 \times 3` transformation matrix.
+    :param M: *3x3* transformation matrix.
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods, see :c:func:`resize`, and the optional flag ``WARP_INVERSE_MAP`` that means that ``M`` is the inverse transformation (:math:`dst \rightarrow src` ). Supports only  ``INTER_NEAREST``, ``INTER_LINEAR`` and ``INTER_CUBIC`` interpolation methods.
+    :param flags: Combination of interpolation methods (see  :func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
-See also: :c:func:`warpPerspective`.
-
-
+See Also:
+:func:`warpPerspective` .
 
 .. index:: gpu::rotate
 
@@ -514,23 +505,22 @@ gpu::rotate
 
     Rotates an image around the origin (0,0) and then shifts it.
 
-    :param src: Source image. Supports ``CV_8UC1`` and ``CV_8UC4`` types.
+    :param src: Source image. Supports  ``CV_8UC1`` and  ``CV_8UC4`` types.
 
-    :param dst: Destination image; will have size ``dsize`` and the same type as ``src``.
+    :param dst: Destination image. The size is  ``dsize`` . The type is the same as  ``src`` .
 
     :param dsize: Size of the destination image.
 
     :param angle: Angle of rotation in degrees.
 
-    :param xShift: Shift along horizontal axis.
+    :param xShift: Shift along the horizontal axis.
 
-    :param yShift: Shift along vertical axis.
+    :param yShift: Shift along the vertical axis.
 
-    :param interpolation: Interpolation method. Supports only ``INTER_NEAREST``, ``INTER_LINEAR`` and ``INTER_CUBIC``.
+    :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
 
-See also: :cpp:func:`gpu::warpAffine`.
-
-
+See Also:
+:func:`gpu::warpAffine` .
 
 .. index:: gpu::copyMakeBorder
 
@@ -538,37 +528,33 @@ gpu::copyMakeBorder
 -----------------------
 .. cpp:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar())
 
-    Copies 2D array to a larger destination array and pads borders with the given constant.
+    Copies a 2D array to a larger destination array and pads borders with the given constant.
 
-    :param src: Source image. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` types.
+    :param src: Source image. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and  ``CV_32FC1`` types are supported.
 
-    :param dst: The destination image; will have the same type as ``src`` and the size ``Size(src.cols+left+right, src.rows+top+bottom)``.
+    :param dst: Destination image. The type is the same as  ``src`` . The size is  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
 
-    :param top, bottom, left, right: Specify how much pixels in each direction from the source image rectangle one needs to extrapolate, e.g. ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
+    :param top, bottom, left, right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
 
     :param value: Border value.
 
-See also: :c:func:`copyMakeBorder`.
-
-
-
+See Also:
+:func:`copyMakeBorder`
 .. index:: gpu::rectStdDev
 
 gpu::rectStdDev
 -------------------
 .. cpp:function:: void gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect)
 
-    Computes standard deviation of integral images.
+    Computes a standard deviation of integral images.
 
-    :param src: Source image. Supports only ``CV_32SC1`` type.
+    :param src: Source image. Only the ``CV_32SC1`` type is supported.
 
-    :param sqr: Squared source image. Supports only ``CV_32FC1`` type.
+    :param sqr: Squared source image. Only  the ``CV_32FC1`` type is supported.
 
-    :param dst: Destination image; will have the same type and the same size as ``src``.
+    :param dst: Destination image. The type and size is the same as  ``src`` .
 
     :param rect: Rectangular window.
-
-
 
 .. index:: gpu::evenLevels
 
@@ -578,15 +564,13 @@ gpu::evenLevels
 
     Computes levels with even distribution.
 
-    :param levels: Destination array. ``levels`` will have 1 row and ``nLevels`` cols and ``CV_32SC1`` type.
+    :param levels: Destination array.  ``levels`` has 1 row, ``nLevels`` columns, and the ``CV_32SC1`` type.
 
-    :param nLevels: Number of levels being computed. ``nLevels`` must be at least 2.
+    :param nLevels: Number of computed levels.  ``nLevels`` must be at least 2.
 
     :param lowerLevel: Lower boundary value of the lowest level.
 
     :param upperLevel: Upper boundary value of the greatest level.
-
-
 
 .. index:: gpu::histEven
 
@@ -596,19 +580,17 @@ gpu::histEven
 
 .. cpp:function:: void gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
 
-    Calculates histogram with evenly distributed bins.
+    Calculates a histogram with evenly distributed bins.
 
-    :param src: Source image. Supports ``CV_8U``, ``CV_16U`` or ``CV_16S`` depth and 1 or 4 channels. For four-channel image all channels are processed separately.
+    :param src: Source image. ``CV_8U``, ``CV_16U``, or ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
-    :param hist: Destination histogram. Will have one row, ``histSize`` cols and ``CV_32S`` type.
+    :param hist: Destination histogram with one row, ``histSize`` columns, and the ``CV_32S`` type.
 
-    :param histSize: Size of histogram.
+    :param histSize: Size of the histogram.
 
-    :param lowerLevel: Lower boundary of lowest level bin.
+    :param lowerLevel: Lower boundary of lowest-level bin.
 
-    :param upperLevel: Upper boundary of highest level bin.
-
-
+    :param upperLevel: Upper boundary of highest-level bin.
 
 .. index:: gpu::histRange
 
@@ -616,12 +598,13 @@ gpu::histRange
 ------------------
 .. cpp:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 
-.. cpp:function:: void gpu::histRange(const GpuMat& src, GpuMat hist[4],  const GpuMat levels[4])
+.. cpp:function:: void gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
 
-    Calculates histogram with bins determined by levels array.
+    Calculates a histogram with bins determined by the `levels` array.
 
-    :param src: Source image. Supports ``CV_8U``, ``CV_16U`` or ``CV_16S`` depth and 1 or 4 channels. For four-channel image all channels are processed separately.
+    :param src: Source image. ``CV_8U``, ``CV_16U``, or  ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
-    :param hist: Destination histogram. Will have one row, ``(levels.cols-1)`` cols and ``CV_32SC1`` type.
+    :param hist: Destination histogram with one row, ``(levels.cols-1)`` columns, and the  ``CV_32SC1`` type.
 
-    :param levels: Number of levels in histogram.
+    :param levels: Number of levels in the histogram.
+
