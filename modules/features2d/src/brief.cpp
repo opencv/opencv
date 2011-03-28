@@ -138,27 +138,24 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
   }
   else
 #endif  
-  //for portability just use unsigned long -- and use the __builtin_popcountl (see docs for __builtin_popcountl)
-  //as opposed to size_t -- TODO smart switching, if the size_t is a 64bits, use __builtin_popcountll
-  typedef unsigned long pop_t;
-  size_t i;
+  //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
+  typedef unsigned long long pop_t;
   const size_t modulo = size % sizeof(pop_t);
-  const size_t end = size - modulo;
-  for (i = 0; i < end; i += sizeof(pop_t))
-  {
-    pop_t a2 = *reinterpret_cast<const pop_t*> (a + i);
-    pop_t b2 = *reinterpret_cast<const pop_t*> (b + i);
-    result += __builtin_popcountl(a2 ^ b2);
-  }
+  const pop_t * a2 = reinterpret_cast<const pop_t*> (a);
+  const pop_t * b2 = reinterpret_cast<const pop_t*> (b);
+  const pop_t * a2_end = a2 + (size/sizeof(pop_t));
+
+  for (; a2 != a2_end; ++a2, ++b2)
+    result += __builtin_popcountll((*a2) ^ (*b2));
+
   if (modulo)
   {
     //in the case where size is not divisible by sizeof(size_t)
-    //need to mask of the bits at the end  
-    pop_t a2=0,b2=0;
-    memcpy(&a2,a+end,modulo);
-    memcpy(&b2,b+end,modulo);
-    //std::cout << std::hex << (a2^b2) << std::endl;
-    result += __builtin_popcountl(a2 ^ b2);
+    //need to mask off the bits at the end  
+    pop_t a_final=0,b_final=0;
+    memcpy(&a_final,a2,modulo);
+    memcpy(&b_final,b2,modulo);
+    result += __builtin_popcountll(a_final ^ b_final);
   }  
   return result;
 #else
