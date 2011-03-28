@@ -3,7 +3,7 @@ gpu. GPU-accelerated Computer Vision
 ************************************
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     introduction
     initalization_and_information

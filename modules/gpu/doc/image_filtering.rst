@@ -3,13 +3,9 @@ Image Filtering
 
 .. highlight:: cpp
 
-
-
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images.
 
 See also: :ref:`ImageFiltering`.
-
-
 
 .. index:: gpu::BaseRowFilter_GPU
 
@@ -28,9 +24,8 @@ The base class for linear or non-linear filters that processes rows of 2D arrays
         int ksize, anchor;
     };
 
-**Please note:** This class doesn't allocate memory for destination image. Usually this class is used inside :cpp:class:`gpu::FilterEngine_GPU`.
 
-
+**Note:** This class does not allocate memory for a destination image. Usually this class is used inside :cpp:class:`gpu::FilterEngine_GPU`.
 
 .. index:: gpu::BaseColumnFilter_GPU
 
@@ -49,9 +44,9 @@ The base class for linear or non-linear filters that processes columns of 2D arr
         int ksize, anchor;
     };
 
-**Please note:** This class doesn't allocate memory for destination image. Usually this class is used inside :cpp:class:`gpu::FilterEngine_GPU`.
 
-
+**Note:**
+This class does not allocate memory for a destination image. Usually this class is used inside :cpp:class:`gpu::FilterEngine_GPU`.
 
 .. index:: gpu::BaseFilter_GPU
 
@@ -72,9 +67,8 @@ The base class for non-separable 2D filters. ::
     };
 
 
-**Please note:** This class doesn't allocate memory for destination image. Usually this class is used inside :cpp:class:`gpu::FilterEngine_GPU`.
-
-
+**Note:**
+This class does not allocate memory for a destination image. Usually this class is used inside :cpp:class:`gpu::FilterEngine_GPU`.
 
 .. index:: gpu::FilterEngine_GPU
 
@@ -93,7 +87,9 @@ The base class for Filter Engine. ::
                            Rect roi = Rect(0,0,-1,-1)) = 0;
     };
 
-The class can be used to apply an arbitrary filtering operation to an image. It contains all the necessary intermediate buffers. Pointers to the initialized ``FilterEngine_GPU`` instances are returned by various ``create*Filter_GPU`` functions, see below, and they are used inside high-level functions such as :cpp:func:`gpu::filter2D`, :cpp:func:`gpu::erode`, :cpp:func:`gpu::Sobel` etc.
+
+The class can be used to apply an arbitrary filtering operation to an image. It contains all the necessary intermediate buffers. Pointers to the initialized ``FilterEngine_GPU`` instances are returned by various ``create*Filter_GPU`` functions (see below), and they are used inside high-level functions such as
+:func:`gpu::filter2D`,:func:`gpu::erode`,:func:`gpu::Sobel` , and others.
 
 By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary memory allocation for intermediate buffers and get much better performance: ::
 
@@ -117,31 +113,27 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
     // Release buffers only once
     filter.release();
 
-``FilterEngine_GPU`` can process a rectangular sub-region of an image. By default, if ``roi == Rect(0,0,-1,-1)``, ``FilterEngine_GPU`` processes inner region of image (``Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height)``), because some filters doesn't check if indices are outside the image for better perfomace. See below which filters supports processing the whole image and which not and image type limitations.
+ ``FilterEngine_GPU`` can process a rectangular sub-region of an image. By default, if ``roi == Rect(0,0,-1,-1)``,``FilterEngine_GPU`` processes the inner region of an image ( ``Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height)`` ), because some filters do not check whether indices are outside the image for better perfomance. See below to understand which filters support processing the whole image and which do not and identify image type limitations.
 
-**Please note:** The GPU filters doesn't support the in-place mode.
+**Note:** The GPU filters do not support the in-place mode.
 
 See also: :cpp:class:`gpu::BaseRowFilter_GPU`, :cpp:class:`gpu::BaseColumnFilter_GPU`, :cpp:class:`gpu::BaseFilter_GPU`, :cpp:func:`gpu::createFilter2D_GPU`, :cpp:func:`gpu::createSeparableFilter_GPU`, :cpp:func:`gpu::createBoxFilter_GPU`, :cpp:func:`gpu::createMorphologyFilter_GPU`, :cpp:func:`gpu::createLinearFilter_GPU`, :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :cpp:func:`gpu::createDerivFilter_GPU`, :cpp:func:`gpu::createGaussianFilter_GPU`.
-
-
 
 .. index:: gpu::createFilter2D_GPU
 
 gpu::createFilter2D_GPU
 ---------------------------
-.. cpp:function:: Ptr<FilterEngine_GPU> gpu::createFilter2D_GPU(const Ptr<BaseFilter_GPU>& filter2D, int srcType, int dstType)
+.. cpp:function:: Ptr<FilterEngine_GPU> gpu::createFilter2D_GPU( const Ptr<BaseFilter_GPU>& filter2D, int srcType, int dstType)
 
-    Creates non-separable filter engine with the specified filter.
-    
+    Creates a non-separable filter engine with the specified filter.
+
     :param filter2D: Non-separable 2D filter.
 
-    :param srcType: Input image type. It must be supported by ``filter2D``.
+    :param srcType: Input image type. It must be supported by  ``filter2D`` .
 
-    :param dstType: Output image type. It must be supported by ``filter2D``.
+    :param dstType: Output image type. It must be supported by  ``filter2D`` .
 
-Usually this function is used inside high-level functions, like :cpp:func:`gpu::createLinearFilter_GPU`, :cpp:func:`gpu::createBoxFilter_GPU`.
-
-
+	Usually this function is used inside such high-level functions as :cpp:func:`gpu::createLinearFilter_GPU`, :cpp:func:`gpu::createBoxFilter_GPU`.
 
 .. index:: gpu::createSeparableFilter_GPU
 
@@ -149,21 +141,19 @@ gpu::createSeparableFilter_GPU
 ----------------------------------
 .. cpp:function:: Ptr<FilterEngine_GPU> gpu::createSeparableFilter_GPU( const Ptr<BaseRowFilter_GPU>& rowFilter, const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType)
 
-    Creates separable filter engine with the specified filters.
-    
-    :param rowFilter: "Horizontal" 1D filter.
+    Creates a separable filter engine with the specified filters.
 
+    :param rowFilter: "Horizontal" 1D filter.
+    
     :param columnFilter: "Vertical" 1D filter.
 
-    :param srcType: Input image type. It must be supported by ``rowFilter``.
+    :param srcType: Input image type. It must be supported by  ``rowFilter``.
 
-    :param bufType: Buffer image type. It must be supported by ``rowFilter`` and ``columnFilter``.
+    :param bufType: Buffer image type. It must be supported by  ``rowFilter``  and  ``columnFilter``.
 
-    :param dstType: Output image type. It must be supported by ``columnFilter``.
+    :param dstType: Output image type. It must be supported by  ``columnFilter``.
 
-Usually this function is used inside high-level functions, like :cpp:func:`gpu::createSeparableLinearFilter_GPU`.
-
-
+	Usually this function is used inside such high-level functions as :cpp:func:`gpu::createSeparableLinearFilter_GPU`.
 
 .. index:: gpu::getRowSumFilter_GPU
 
@@ -171,7 +161,7 @@ gpu::getRowSumFilter_GPU
 ----------------------------
 .. cpp:function:: Ptr<BaseRowFilter_GPU> gpu::getRowSumFilter_GPU(int srcType, int sumType, int ksize, int anchor = -1)
 
-    Creates horizontal 1D box filter.
+    Creates a horizontal 1D box filter.
 
     :param srcType: Input image type. Only ``CV_8UC1`` type is supported for now.
 
@@ -181,17 +171,15 @@ gpu::getRowSumFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
-
-
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. index:: gpu::getColumnSumFilter_GPU
 
 gpu::getColumnSumFilter_GPU
 -------------------------------
-.. cpp:function:: Ptr<BaseColumnFilter_GPU> gpu::getColumnSumFilter_GPU(int sumType,  int dstType, int ksize, int anchor = -1)
+.. cpp:function:: Ptr<BaseColumnFilter_GPU> gpu::getColumnSumFilter_GPU(int sumType, int dstType, int ksize, int anchor = -1)
 
-    Creates vertical 1D box filter.
+    Creates a vertical 1D box filter.
 
     :param sumType: Input image type. Only ``CV_8UC1`` type is supported for now.
 
@@ -201,9 +189,7 @@ gpu::getColumnSumFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
-
-
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. index:: gpu::createBoxFilter_GPU
 
@@ -211,9 +197,9 @@ gpu::createBoxFilter_GPU
 ----------------------------
 .. cpp:function:: Ptr<FilterEngine_GPU> gpu::createBoxFilter_GPU(int srcType, int dstType, const Size& ksize, const Point& anchor = Point(-1,-1))
 
-.. cpp:function:: Ptr<BaseFilter_GPU> gpu::getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
+    Creates a normalized 2D box filter.
 
-    Creates normalized 2D box filter.
+.. cpp:function:: Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
 
     :param srcType: Input image type. Supports ``CV_8UC1`` and ``CV_8UC4``.
 
@@ -221,13 +207,11 @@ gpu::createBoxFilter_GPU
 
     :param ksize: Kernel size.
 
-    :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
+    :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`boxFilter`.
-
-
+See Also: :c:func:`boxFilter`.
 
 .. index:: gpu::boxFilter
 
@@ -237,43 +221,39 @@ gpu::boxFilter
 
     Smooths the image using the normalized box filter.
 
-    :param src: Input image. Supports ``CV_8UC1`` and ``CV_8UC4`` source types.
+    :param src: Input image. ``CV_8UC1`` and ``CV_8UC4`` source types are supported.
 
-    :param dst: Output image type. Will have the same size and the same type as ``src``.
+    :param dst: Output image type. The size and type is the same as ``src``.
 
-    :param ddepth: Output image depth. Support only the same as source depth (``CV_8U``) or -1 what means use source depth.
+    :param ddepth: Output image depth. If -1, the output image will have the same depth as the input one. The only values allowed here are ``CV_8U`` and -1.
 
     :param ksize: Kernel size.
 
-    :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
+    :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`boxFilter`, :cpp:func:`gpu::createBoxFilter_GPU`.
-
-
+See Also: :c:func:`boxFilter`.
 
 .. index:: gpu::blur
 
 gpu::blur
 -------------
-.. cpp:function:: void gpu::blur(const GpuMat& src, GpuMat& dst, Size ksize,  Point anchor = Point(-1,-1))
+.. cpp:function:: void gpu::blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1))
 
-    A synonym for normalized box filter.
+    Acts as a synonym for the normalized box filter.
 
-    :param src: Input image. Supports ``CV_8UC1`` and ``CV_8UC4`` source type.
+    :param src: Input image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
-    :param dst: Output image type. Will have the same size and the same type as ``src``.
+    :param dst: Output image type. The size and type is the same as  ``src`` .
 
     :param ksize: Kernel size.
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`blur`, :cpp:func:`gpu::boxFilter`.
-
-
+See Also: :c:func:`blur`, :cpp:func:`gpu::boxFilter`.
 
 .. index:: gpu::createMorphologyFilter_GPU
 
@@ -281,25 +261,23 @@ gpu::createMorphologyFilter_GPU
 -----------------------------------
 .. cpp:function:: Ptr<FilterEngine_GPU> gpu::createMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1)
 
-.. cpp:function:: Ptr<BaseFilter_GPU> gpu::getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, Point anchor=Point(-1,-1))
+    Creates a 2D morphological filter.
 
-    Creates 2D morphological filter.
-    
-    :param op: Morphology operation id. Only ``MORPH_ERODE`` and ``MORPH_DILATE`` are supported.
+.. cpp:function:: Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, Point anchor=Point(-1,-1))
 
-    :param type: Input/output image type. Only ``CV_8UC1`` and ``CV_8UC4`` are supported.
+    {Morphology operation id. Only ``MORPH_ERODE``     and ``MORPH_DILATE``     are supported.}
+
+    :param type: Input/output image type. Only  ``CV_8UC1``  and  ``CV_8UC4``  are supported.
 
     :param kernel: 2D 8-bit structuring element for the morphological operation.
 
-    :param size: Horizontal or vertical structuring element size for separable morphological operations.
+    :param size: Size of a horizontal or vertical structuring element used for separable morphological operations.
 
-    :param anchor: Anchor position within the structuring element; negative values mean that the anchor is at the center.
+    :param anchor: Anchor position within the structuring element. Negative values mean that the anchor is at the center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`createMorphologyFilter`.
-
-
+See Also: :c:func:`createMorphologyFilter`.
 
 .. index:: gpu::erode
 
@@ -309,21 +287,19 @@ gpu::erode
 
     Erodes an image by using a specific structuring element.
 
-    :param src: Source image. Only ``CV_8UC1`` and ``CV_8UC4`` types are supported.
+    :param src: Source image. Only  ``CV_8UC1``  and  ``CV_8UC4``  types are supported.
 
-    :param dst: Destination image. It will have the same size and the same type as ``src``.
+    :param dst: Destination image. The size and type is the same as  ``src`` .
 
-    :param kernel: Structuring element used for dilation. If ``kernel=Mat()``, a :math:`3 \times 3` rectangular structuring element is used.
+    :param kernel: Structuring element used for dilation. If  ``kernel=Mat()``, a  3x3 rectangular structuring element is used.
 
-    :param anchor: Position of the anchor within the element. The default value ``(-1, -1)``  means that the anchor is at the element center.
+    :param anchor: Position of an anchor within the element. The default value  ``(-1, -1)``  means that the anchor is at the element center.
 
     :param iterations: Number of times erosion to be applied.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`erode`, :cpp:func:`gpu::createMorphologyFilter_GPU`.
-
-
+See Also: :c:func:`erode`.
 
 .. index:: gpu::dilate
 
@@ -333,57 +309,54 @@ gpu::dilate
 
     Dilates an image by using a specific structuring element.
 
-    :param src: Source image. Supports ``CV_8UC1`` and ``CV_8UC4`` source types.
+    :param src: Source image. ``CV_8UC1`` and ``CV_8UC4`` source types are supported.
 
-    :param dst: Destination image. It will have the same size and the same type as ``src``.
+    :param dst: Destination image. The size and type is the same as ``src``.
 
-    :param kernel: Structuring element used for dilation. If ``kernel=Mat()``, a :math:`3 \times 3` rectangular structuring element is used.
+    :param kernel: Structuring element used for dilation. If  ``kernel=Mat()``, a  3x3 rectangular structuring element is used.
 
-    :param anchor: Position of the anchor within the element. The default value ``(-1, -1)``  means that the anchor is at the element center.
+    :param anchor: Position of an anchor within the element. The default value  ``(-1, -1)``  means that the anchor is at the element center.
 
     :param iterations: Number of times dilation to be applied.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`dilate`, :cpp:func:`gpu::createMorphologyFilter_GPU`.
-
-
+See Also: :c:func:`dilate`.
 
 .. index:: gpu::morphologyEx
 
 gpu::morphologyEx
 ---------------------
-.. cpp:function:: void gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op,  const Mat& kernel,  Point anchor = Point(-1, -1),  int iterations = 1)
+.. cpp:function:: void gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1)
 
-    Applies an advanced morphological operation to image.
+    Applies an advanced morphological operation to an image.
 
-    :param src: Source image. Supports ``CV_8UC1`` and ``CV_8UC4`` source type.
+    :param src: Source image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
-    :param dst: Destination image. It will have the same size and the same type as ``src``.
-
-    :param op: Type of morphological operation, one of the following:
+    :param dst: Destination image. The size and type is the same as  ``src``
+    
+    :param op: Type of morphological operation. The following types are possible:
         
-            * **MORPH_OPEN** opening
+        * **MORPH_OPEN** opening
             
-            * **MORPH_CLOSE** closing
+        * **MORPH_CLOSE** closing
             
-            * **MORPH_GRADIENT** morphological gradient
+        * **MORPH_GRADIENT** morphological gradient
             
-            * **MORPH_TOPHAT** "top hat"
+        * **MORPH_TOPHAT** "top hat"
             
-            * **MORPH_BLACKHAT** "black hat"
+        * **MORPH_BLACKHAT** "black hat"
+            
 
     :param kernel: Structuring element.
 
-    :param anchor: Position of the anchor within the element. The default value ``(-1, -1)`` means that the anchor is at the element center.
+    :param anchor: Position of an anchor within the element. The default value ``Point(-1, -1)`` means that the anchor is at the element center.
 
     :param iterations: Number of times erosion and dilation to be applied.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`morphologyEx`.
-
-
+See Also: :c:func:`morphologyEx` .
 
 .. index:: gpu::createLinearFilter_GPU
 
@@ -391,25 +364,23 @@ gpu::createLinearFilter_GPU
 -------------------------------
 .. cpp:function:: Ptr<FilterEngine_GPU> gpu::createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Point& anchor = Point(-1,-1))
 
+    Creates a non-separable linear filter.
+
 .. cpp:function:: Ptr<BaseFilter_GPU> gpu::getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize, Point anchor = Point(-1, -1))
 
-    Creates the non-separable linear filter.
+    :param srcType: Input image type. ``CV_8UC1``  and  ``CV_8UC4`` types are supported.
 
-    :param srcType: Input image type. Supports ``CV_8UC1`` and ``CV_8UC4``.
+    :param dstType: Output image type. The same type as ``src`` is supported.
 
-    :param dstType: Output image type. Supports only the same as source type.
-
-    :param kernel: 2D array of filter coefficients. This filter works with integers kernels, if ``kernel`` has ``float`` or ``double`` type it will be used fixed point arithmetic.
+    :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing.
 
     :param ksize: Kernel size.
 
-    :param anchor: Anchor point. The default value ``(-1, -1)`` means that the anchor is at the kernel center.
+    :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`createLinearFilter`.
-
-
+See Also: :c:func:`createLinearFilter`.
 
 .. index:: gpu::filter2D
 
@@ -417,23 +388,21 @@ gpu::filter2D
 -----------------
 .. cpp:function:: void gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1))
 
-    Applies non-separable 2D linear filter to image.
+    Applies the non-separable 2D linear filter to an image.
 
-    :param src: Source image. Supports ``CV_8UC1`` and ``CV_8UC4`` source types.
+    :param src: Source image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
-    :param dst: Destination image. It will have the same size and the same number of channels as ``src``.
+    :param dst: Destination image. The size and the number of channels is the same as  ``src`` .
 
-    :param ddepth: The desired depth of the destination image. If it is negative, it will be the same as ``src.depth()``. Supports only the same depth as source image.
+    :param ddepth: Desired depth of the destination image. If it is negative, it is the same as  ``src.depth()`` . It supports only the same depth as the source image depth.
 
-    :param kernel: 2D array of filter coefficients. This filter works with integers kernels, if ``kernel`` has ``float`` or ``double`` type it will use fixed point arithmetic.
+    :param kernel: 2D array of filter coefficients. This filter works with integers kernels. If  ``kernel``  has a ``float``  or  ``double``  type, it uses fixed-point arithmetic.
 
-    :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor should lie within the kernel. The special default value ``(-1,-1)`` means that the anchor is at the kernel center.
+    :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`filter2D`, :cpp:func:`gpu::createLinearFilter_GPU`.
-
-
+See Also: :c:func:`filter2D`.
 
 .. index:: gpu::Laplacian
 
@@ -441,23 +410,22 @@ gpu::Laplacian
 ------------------
 .. cpp:function:: void gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1)
 
-    Applies Laplacian operator to image.
+    Applies the Laplacian operator to an image.
 
-    :param src: Source image. Supports ``CV_8UC1`` and ``CV_8UC4`` source types.
+    :param src: Source image. ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
-    :param dst: Destination image; will have the same size and the same number of channels as ``src``.
+    :param dst: Destination image. The size and number of channels is the same as  ``src`` .
 
-    :param ddepth: Desired depth of the destination image. Supports only tha same depth as source image depth.
+    :param ddepth: Desired depth of the destination image. It supports only the same depth as the source image depth.
 
-    :param ksize: Aperture size used to compute the second-derivative filters, see :c:func:`getDerivKernels`. It must be positive and odd. Supports only ``ksize`` = 1 and ``ksize`` = 3.
+    :param ksize: Aperture size used to compute the second-derivative filters (see :c:func:`getDerivKernels`). It must be positive and odd. Only  ``ksize``  = 1 and  ``ksize``  = 3 are supported.
 
-    :param scale: Optional scale factor for the computed Laplacian values (by default, no scaling is applied, see  :c:func:`getDerivKernels`).
+    :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :c:func:`getDerivKernels` ).
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:**
+	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See also: :c:func:`Laplacian`, :cpp:func:`gpu::filter2D`.
-
-
+See Also: :c:func:`Laplacian`,:func:`gpu::filter2D` .
 
 .. index:: gpu::getLinearRowFilter_GPU
 
@@ -465,23 +433,23 @@ gpu::getLinearRowFilter_GPU
 -------------------------------
 .. cpp:function:: Ptr<BaseRowFilter_GPU> gpu::getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, int anchor = -1, int borderType = BORDER_CONSTANT)
 
-    Creates primitive row filter with the specified kernel.
+    Creates a primitive row filter with the specified kernel.
 
-    :param srcType: Source array type. Supports only ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param srcType: Source array type. Only  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param bufType: Inermediate buffer type; must have as many channels as ``srcType``.
+    :param bufType: Intermediate buffer type with as many channels as  ``srcType`` .
 
     :param rowKernel: Filter coefficients.
 
-    :param anchor: Anchor position within the kernel; negative values mean that anchor is positioned at the aperture center.
+    :param anchor: Anchor position within the kernel. Negative values mean that the anchor is positioned at the aperture center.
 
-    :param borderType: Pixel extrapolation method; see :c:func:`borderInterpolate`. About limitation see below.
+    :param borderType: Pixel extrapolation method. For details, see :c:func:`borderInterpolate`. For details on limitations, see below.
 
-There are two version of algorithm: NPP and OpenCV. NPP calls when ``srcType == CV_8UC1`` or ``srcType == CV_8UC4`` and ``bufType == srcType``, otherwise calls OpenCV version. NPP supports only ``BORDER_CONSTANT`` border type and doesn't check indices outside image. OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE`` and ``BORDER_CONSTANT`` border types and checks indices outside image.
+	There are two versions of the algorithm: NPP and OpenCV.
+	* NPP version is called when ``srcType == CV_8UC1`` or ``srcType == CV_8UC4`` and ``bufType == srcType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
+	* OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside the image.
 
-See also: :cpp:func:`gpu::getLinearColumnFilter_GPU`, :c:func:`createSeparableLinearFilter`.
-
-
+See Also:,:func:`createSeparableLinearFilter` .
 
 .. index:: gpu::getLinearColumnFilter_GPU
 
@@ -489,45 +457,44 @@ gpu::getLinearColumnFilter_GPU
 ----------------------------------
 .. cpp:function:: Ptr<BaseColumnFilter_GPU> gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor = -1, int borderType = BORDER_CONSTANT)
 
-    Creates the primitive column filter with the specified kernel.
+    Creates a primitive column filter with the specified kernel.
 
-    :param bufType: Inermediate buffer type; must have as many channels as ``dstType``.
+    :param bufType: Inermediate buffer type with as many channels as  ``dstType`` .
 
-    :param dstType: Destination array type. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` destination types.
+    :param dstType: Destination array type. ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` destination types are supported.
 
     :param columnKernel: Filter coefficients.
 
-    :param anchor: Anchor position within the kernel; negative values mean that anchor is positioned at the aperture center.
+    :param anchor: Anchor position within the kernel. Negative values mean that the anchor is positioned at the aperture center.
 
-    :param borderType: Pixel extrapolation method; see :c:func:`borderInterpolate`. About limitation see below.
+    :param borderType: Pixel extrapolation method. For details, see  :c:func:`borderInterpolate` . For details on limitations, see below.
 
-There are two version of algorithm: NPP and OpenCV. NPP calls when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType``, otherwise calls OpenCV version. NPP supports only ``BORDER_CONSTANT`` border type and doesn't check indices outside image. OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE`` and ``BORDER_CONSTANT`` border types and checks indices outside image.
-
+	There are two versions of the algorithm: NPP and OpenCV.
+	* NPP version is called when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
+	* OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside image.
+	
 See also: :cpp:func:`gpu::getLinearRowFilter_GPU`, :c:func:`createSeparableLinearFilter`.
-
-
 
 .. index:: gpu::createSeparableLinearFilter_GPU
 
 gpu::createSeparableLinearFilter_GPU
 ----------------------------------------
-.. cpp:function:: Ptr<FilterEngine_GPU> gpu::createSeparableLinearFilter_GPU(int srcType,  int dstType, const Mat& rowKernel, const Mat& columnKernel, const Point& anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
+.. cpp:function:: Ptr<FilterEngine_GPU> gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel, const Point& anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Creates the separable linear filter engine.
+    Creates a separable linear filter engine.
 
-    :param srcType: Source array type. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param srcType: Source array type.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dstType: Destination array type. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` destination types.
+    :param dstType: Destination array type.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  destination types are supported.
 
     :param rowKernel, columnKernel: Filter coefficients.
 
-    :param anchor: Anchor position within the kernel; negative values mean that anchor is positioned at the aperture center.
+    :param anchor: Anchor position within the kernel. Negative values mean that anchor is positioned at the aperture center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method in the horizontal and the vertical directions; see :c:func:`borderInterpolate`. About limitation see :cpp:func:`gpu::getLinearRowFilter_GPU`, cpp:func:`gpu::getLinearColumnFilter_GPU`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method in the horizontal and vertical directions For details, see  :c:func:`borderInterpolate`. For details on limitations, see :cpp:func:`gpu::getLinearRowFilter_GPU`, cpp:func:`gpu::getLinearColumnFilter_GPU`.
+
 
 See also: :cpp:func:`gpu::getLinearRowFilter_GPU`, :cpp:func:`gpu::getLinearColumnFilter_GPU`, :c:func:`createSeparableLinearFilter`.
-
-
 
 .. index:: gpu::sepFilter2D
 
@@ -535,47 +502,43 @@ gpu::sepFilter2D
 --------------------
 .. cpp:function:: void gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Applies separable 2D linear filter to the image.
+    Applies a separable 2D linear filter to an image.
 
-    :param src: Source image. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image; will have the same size and the same number of channels as ``src``.
+    :param dst: Destination image. The size and number of channels is the same as  ``src`` .
 
-    :param ddepth: Destination image depth. Supports ``CV_8U``, ``CV_16S``, ``CV_32S`` and ``CV_32F``.
+    :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
     :param kernelX, kernelY: Filter coefficients.
 
-    :param anchor: Anchor position within the kernel; The default value ``(-1, 1)`` means that the anchor is at the kernel center.
+    :param anchor: Anchor position within the kernel. The default value ``(-1, 1)`` means that the anchor is at the kernel center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method; see :c:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :c:func:`borderInterpolate`.
 
 See also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:func:`sepFilter2D`.
-
-
 
 .. index:: gpu::createDerivFilter_GPU
 
 gpu::createDerivFilter_GPU
 ------------------------------
-.. cpp:function:: Ptr<FilterEngine_GPU> gpu::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
+.. cpp:function:: Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Creates filter engine for the generalized Sobel operator.
+    Creates a filter engine for the generalized Sobel operator.
 
-    :param srcType: Source image type. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param srcType: Source image type.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dstType: Destination image type; must have as many channels as ``srcType``. Supports ``CV_8U``, ``CV_16S``, ``CV_32S`` and ``CV_32F`` depths.
+    :param dstType: Destination image type with as many channels as  ``srcType`` .  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F``  depths are supported.
 
-    :param dx: Derivative order in respect with x.
+    :param dx: Derivative order in respect of x.
 
-    :param dy: Derivative order in respect with y.
+    :param dy: Derivative order in respect of y.
 
-    :param ksize: Aperture size; see :c:func:`getDerivKernels`.
+    :param ksize: Aperture size. See  :c:func:`getDerivKernels` for details.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method; see :c:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :c:func:`borderInterpolate` for details.
 
 See also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:func:`createDerivFilter`.
-
-
 
 .. index:: gpu::Sobel
 
@@ -583,27 +546,25 @@ gpu::Sobel
 --------------
 .. cpp:function:: void gpu::Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Applies generalized Sobel operator to the image.
+    Applies the generalized Sobel operator to an image.
 
-    :param src: Source image. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image. Will have the same size and number of channels as source image.
+    :param dst: Destination image. The size and number of channels is the same as source image has.
 
-    :param ddepth: Destination image depth. Supports ``CV_8U``, ``CV_16S``, ``CV_32S`` and ``CV_32F``.
+    :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
-    :param dx: Derivative order in respect with x.
+    :param dx: Derivative order in respect of x.
 
-    :param dy: Derivative order in respect with y.
+    :param dy: Derivative order in respect of y.
 
-    :param ksize: Size of the extended Sobel kernel, must be 1, 3, 5 or 7.
+    :param ksize: Size of the extended Sobel kernel. Possible valies are 1, 3, 5 or 7.
 
-    :param scale: Optional scale factor for the computed derivative values (by default, no scaling is applied, see :c:func:`getDerivKernels`).
+    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. For details, see  :c:func:`getDerivKernels` .
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method; see :c:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :c:func:`borderInterpolate` for details.
 
 See also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:func:`Sobel`.
-
-
 
 .. index:: gpu::Scharr
 
@@ -611,25 +572,23 @@ gpu::Scharr
 ---------------
 .. cpp:function:: void gpu::Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Calculates the first x- or y- image derivative using Scharr operator.
+    Calculates the first x- or y- image derivative using the Scharr operator.
 
-    :param src: Source image. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image; will have the same size and the same number of channels as ``src``.
+    :param dst: Destination image. The size and number of channels is the same as  ``src`` has.
 
-    :param ddepth: Destination image depth. Supports ``CV_8U``, ``CV_16S``, ``CV_32S`` and ``CV_32F``.
+    :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
     :param xorder: Order of the derivative x.
 
     :param yorder: Order of the derivative y.
 
-    :param scale: Optional scale factor for the computed derivative values (by default, no scaling is applied, see :c:func:`getDerivKernels`).
+    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :c:func:`getDerivKernels`  for details.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method, see :c:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :c:func:`borderInterpolate`  and :c:func:`Scharr` .
 
 See also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:func:`Scharr`.
-
-
 
 .. index:: gpu::createGaussianFilter_GPU
 
@@ -637,21 +596,19 @@ gpu::createGaussianFilter_GPU
 ---------------------------------
 .. cpp:function:: Ptr<FilterEngine_GPU> gpu::createGaussianFilter_GPU(int type, Size ksize, double sigmaX, double sigmaY = 0, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Creates Gaussian filter engine.
+    Creates a Gaussian filter engine.
 
-    :param type: Source and the destination image type. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``.
+    :param type: Source and destination image type.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` are supported.
 
-    :param ksize: Aperture size; see :c:func:`getGaussianKernel`.
+    :param ksize: Aperture size. See  :c:func:`getGaussianKernel` for details.
 
-    :param sigmaX: Gaussian sigma in the horizontal direction; see :c:func:`getGaussianKernel`.
+    :param sigmaX: Gaussian sigma in the horizontal direction. See  :c:func:`getGaussianKernel` for details.
 
-    :param sigmaY: Gaussian sigma in the vertical direction; if 0, then :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}`.
+    :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
 
-    :param rowBorderType, columnBorderType: Which border type to use; see :c:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Border type to use. See  :c:func:`borderInterpolate` for details.
 
 See also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:func:`createGaussianFilter`.
-
-
 
 .. index:: gpu::GaussianBlur
 
@@ -659,21 +616,19 @@ gpu::GaussianBlur
 ---------------------
 .. cpp:function:: void gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigmaX, double sigmaY = 0, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
-    Smooths the image using Gaussian filter.
+    Smooths an image using the Gaussian filter.
 
-    :param src: Source image. Supports ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` source types.
+    :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image; will have the same size and the same type as ``src``.
+    :param dst: Destination image. The size and type is the same as  ``src`` has.
 
-    :param ksize: Gaussian kernel size; ``ksize.width`` and ``ksize.height`` can differ, but they both must be positive and odd. Or, they can be zero's, then they are computed from ``sigmaX`` amd ``sigmaY``.
+    :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigmaX``  and  ``sigmaY`` .
 
-    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If ``sigmaY`` is zero, it is set to be equal to ``sigmaX``. If they are both zeros, they are computed from ``ksize.width`` and ``ksize.height``, respectively, see :c:func:`getGaussianKernel`. To fully control the result regardless of possible future modification of all this semantics, it is recommended to specify all of ``ksize``, ``sigmaX`` and ``sigmaY``.
+    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :c:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize``, ``sigmaX``, and  ``sigmaY`` .
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method; see :c:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :c:func:`borderInterpolate` for details.
 
 See also: :cpp:func:`gpu::createGaussianFilter_GPU`, :c:func:`GaussianBlur`.
-
-
 
 .. index:: gpu::getMaxFilter_GPU
 
@@ -681,34 +636,32 @@ gpu::getMaxFilter_GPU
 -------------------------
 .. cpp:function:: Ptr<BaseFilter_GPU> gpu::getMaxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1))
 
-    Creates maximum filter.
+    Creates the maximum filter.
 
-    :param srcType: Input image type. Supports only ``CV_8UC1`` and ``CV_8UC4``.
+    :param srcType: Input image type. Only  ``CV_8UC1``  and  ``CV_8UC4`` are supported.
 
-    :param dstType: Output image type. Supports only the same type as source.
+    :param dstType: Output image type. It supports only the same type as the source type.
 
     :param ksize: Kernel size.
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
-
-
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. index:: gpu::getMinFilter_GPU
 
 gpu::getMinFilter_GPU
 -------------------------
-.. cpp:function:: Ptr<BaseFilter_GPU> gpu::getMinFilter_GPU(int srcType, int dstType,  const Size& ksize, Point anchor = Point(-1,-1))
+.. cpp:function:: Ptr<BaseFilter_GPU> gpu::getMinFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1))
 
-    Creates minimum filter.
+    Creates the minimum filter.
 
-    :param srcType: Input image type. Supports only ``CV_8UC1`` and ``CV_8UC4``.
+    :param srcType: Input image type. Only  ``CV_8UC1``  and  ``CV_8UC4`` are supported.
 
-    :param dstType: Output image type. Supports only the same type as source.
+    :param dstType: Output image type. It supports only the same type as the source type.
 
     :param ksize: Kernel size.
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-**Please note:** This filter doesn't check out of border accesses, so only proper submatrix of bigger matrix have to be passed to it.
+	**Note:** This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.

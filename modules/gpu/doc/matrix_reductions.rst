@@ -3,133 +3,109 @@ Matrix Reductions
 
 .. highlight:: cpp
 
-
-
 .. index:: gpu::meanStdDev
 
 gpu::meanStdDev
 -------------------
-.. cpp:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev)
+.. cpp:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
-    Computes mean value and standard deviation of matrix elements.
+    Computes a mean value and a standard deviation of matrix elements.
 
-    :param mtx: Source matrix. ``CV_8UC1`` matrices are supported for now.
+    :param mtx: Source matrix.  ``CV_8UC1``  matrices are supported for now.
 
     :param mean: Mean value.
 
     :param stddev: Standard deviation value.
 
-See also: :c:func:`meanStdDev`.
-
-
+See Also: :c:func:`meanStdDev` .
 
 .. index:: gpu::norm
 
 gpu::norm
 -------------
-.. cpp:function:: double gpu::norm(const GpuMat& src, int normType=NORM_L2)
+.. cpp:function:: double gpu::norm(const GpuMat\& src1, int normType=NORM_L2)
+.. cpp:function:: double gpu::norm(const GpuMat\& src1, int normType, GpuMat\& buf)
+.. cpp:function:: double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM_L2)
 
-    Returns norm of matrix (or of two matrices difference).
+    Returns the norm of matrix (or difference of two matrices).
 
-    :param src: Source matrix. Any matrices except 64F are supported.
+    :param src1: The source matrix. Any matrices except 64F are supported.
 
-    :param normType: Norm type. ``NORM_L1``, ``NORM_L2`` and ``NORM_INF`` are supported for now.
+    :param src2: The second source matrix (if any). The size and type is the same as ``src1``.
 
-.. cpp:function:: double gpu::norm(const GpuMat& src, int normType, GpuMat& buf)
+    :param normType: Norm type.  ``NORM_L1`` ,  ``NORM_L2`` , and  ``NORM_INF``  are supported for now.
 
-    :param src: Source matrix. Any matrices except 64F are supported.
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-    :param normType: Norm type. ``NORM_L1``, ``NORM_L2`` and ``NORM_INF`` are supported for now.
-
-    :param buf: Optional buffer to avoid extra memory allocations. It's resized automatically.
-
-.. cpp:function:: double gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2)
-
-    :param src1: First source matrix. ``CV_8UC1`` matrices are supported for now.
-
-    :param src2: Second source matrix. Must have the same size and type as ``src1``.
-
-    :param normType: Norm type. ``NORM_L1``, ``NORM_L2`` and ``NORM_INF`` are supported for now.
-
-See also: :c:func:`norm`.
-
-
+See Also: :c:func:`norm`.
 
 .. index:: gpu::sum
 
 gpu::sum
 ------------
-.. cpp:function:: Scalar gpu::sum(const GpuMat& src)
+.. cpp:function:: Scalar gpu::sum(const GpuMat\& src)
 
-.. cpp:function:: Scalar gpu::sum(const GpuMat& src, GpuMat& buf)
+.. cpp:function:: Scalar gpu::sum(const GpuMat\& src, GpuMat\& buf)
 
-    Returns sum of matrix elements.
+    Returns the sum of matrix elements.
 
-    :param src: Source image of any depth except ``CV_64F``.
+    :param src: Source image of any depth except for ``CV_64F`` .
 
-    :param buf: Optional buffer to avoid extra memory allocations. It's resized automatically.
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See also: :c:func:`sum`.
-
-
+See Also: :c:func:`sum` .
 
 .. index:: gpu::absSum
 
 gpu::absSum
 ---------------
-.. cpp:function:: Scalar gpu::absSum(const GpuMat& src)
+.. cpp:function:: Scalar gpu::absSum(const GpuMat\& src)
 
-.. cpp:function:: Scalar gpu::absSum(const GpuMat& src, GpuMat\& buf)
+.. cpp:function:: Scalar gpu::absSum(const GpuMat\& src, GpuMat\& buf)
 
-    Returns sum of matrix elements absolute values.
+    Returns the sum of absolute values for matrix elements.
 
-    :param src: Source image of any depth except ``CV_64F``.
+    :param src: Source image of any depth except for ``CV_64F`` .
 
-    :param buf: Optional buffer to avoid extra memory allocations. It's resized automatically.
-
-
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 .. index:: gpu::sqrSum
 
 gpu::sqrSum
 ---------------
-.. cpp:function:: Scalar gpu::sqrSum(const GpuMat& src)
+.. cpp:function:: Scalar gpu::sqrSum(const GpuMat\& src)
 
-.. cpp:function:: Scalar gpu::sqrSum(const GpuMat& src, GpuMat\& buf)
+.. cpp:function:: Scalar gpu::sqrSum(const GpuMat\& src, GpuMat\& buf)
 
-    Returns squared sum of matrix elements.
+    Returns the squared sum of matrix elements.
 
-    :param src: Source image of any depth except ``CV_64F``.
+    :param src: Source image of any depth except for ``CV_64F`` .
 
-    :param buf: Optional buffer to avoid extra memory allocations. It's resized automatically.
-
-
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 .. index:: gpu::minMax
 
 gpu::minMax
 ---------------
-.. cpp:function:: void gpu::minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat())
+.. cpp:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal=0, const GpuMat\& mask=GpuMat())
 
-.. cpp:function:: void gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf)
+.. cpp:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal, const GpuMat\& mask, GpuMat\& buf)
 
     Finds global minimum and maximum matrix elements and returns their values.
 
     :param src: Single-channel source image.
 
-    :param minVal: Pointer to returned minimum value. ``NULL`` if not required.
+    :param minVal: Pointer to the returned minimum value.  Use ``NULL``  if not required.
 
-    :param maxVal: Pointer to returned maximum value. ``NULL`` if not required.
+    :param maxVal: Pointer to the returned maximum value.  Use ``NULL``  if not required.
 
     :param mask: Optional mask to select a sub-matrix.
 
-    :param buf: Optional buffer to avoid extra memory allocations. It's resized automatically.
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-Function doesn't work with ``CV_64F`` images on GPU with compute capability :math:`<` 1.3.
-
-See also: :c:func:`minMaxLoc`.
-
-
+	The Function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
+	
+See Also: :c:func:`minMaxLoc` .
 
 .. index:: gpu::minMaxLoc
 
@@ -143,40 +119,38 @@ gpu::minMaxLoc
 
     :param src: Single-channel source image.
 
-    :param minVal: Pointer to returned minimum value. ``NULL`` if not required.
+    :param minVal: Pointer to the returned minimum value. Use ``NULL``  if not required.
 
-    :param maxVal: Pointer to returned maximum value. ``NULL`` if not required.
+    :param maxVal: Pointer to the returned maximum value. Use ``NULL``  if not required.
 
-    :param minValLoc: Pointer to returned minimum location. ``NULL`` if not required.
+    :param minValLoc: Pointer to the returned minimum location. Use ``NULL``  if not required.
 
-    :param maxValLoc: Pointer to returned maximum location. ``NULL`` if not required.
+    :param maxValLoc: Pointer to the returned maximum location. Use ``NULL``  if not required.
 
     :param mask: Optional mask to select a sub-matrix.
 
-    :param valbuf: Optional values buffer to avoid extra memory allocations. It's resized automatically.
+    :param valbuf: Optional values buffer to avoid extra memory allocations. It is resized automatically.
 
-    :param locbuf: Optional locations buffer to avoid extra memory allocations. It's resized automatically.
+    :param locbuf: Optional locations buffer to avoid extra memory allocations. It is resized automatically.
 
-Function doesn't work with ``CV_64F`` images on GPU with compute capability :math:`<` 1.3.
+	The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
 
-See also: :c:func:`minMaxLoc`.
-
-
+See Also: :c:func:`minMaxLoc` .
 
 .. index:: gpu::countNonZero
 
 gpu::countNonZero
 ---------------------
-.. cpp:function:: int gpu::countNonZero(const GpuMat& src)
+.. cpp:function:: int gpu::countNonZero(const GpuMat\& src)
 
-.. cpp:function:: int gpu::countNonZero(const GpuMat& src, GpuMat& buf)
+.. cpp:function:: int gpu::countNonZero(const GpuMat\& src, GpuMat\& buf)
 
     Counts non-zero matrix elements.
 
     :param src: Single-channel source image.
 
-    :param buf: Optional buffer to avoid extra memory allocations. It's resized automatically.
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-Function doesn't work with ``CV_64F`` images on GPU with compute capability :math:`<` 1.3.
-
-See also: :c:func:`countNonZero`.
+	The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
+	
+	See Also: :c:func:`countNonZero` .

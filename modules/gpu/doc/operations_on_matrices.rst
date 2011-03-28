@@ -3,8 +3,6 @@ Operations on Matrices
 
 .. highlight:: cpp
 
-
-
 .. index:: gpu::transpose
 
 gpu::transpose
@@ -17,56 +15,49 @@ gpu::transpose
 
     :param dst: Destination matrix.
 
-See also: :c:func:`transpose`.
-
-
+See Also:
+:c:func:`transpose` .
 
 .. index:: gpu::flip
 
 gpu::flip
 -------------
-.. cpp:function:: void gpu::flip(const GpuMat& a, GpuMat& b, int flipCode)
+.. cpp:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 
-    Flips a 2D matrix around vertical, horizontal or both axes.
+    Flips a 2D matrix around vertical, horizontal, or both axes.
 
-    :param a: Source matrix. Only ``CV_8UC1`` and ``CV_8UC4`` matrices are supported for now.
+    :param src: Source matrix. Only  ``CV_8UC1``  and  ``CV_8UC4``  matrices are supported for now.
 
-    :param b: Destination matrix.
+    :param dst: Destination matrix.
 
-    :param flipCode: Specifies how to flip the source:
+    :param flipCode: Flip mode for the source:
         
-            * **0** Flip around x-axis.
+            * ``0`` Flips around x-axis.
             
-            * **:math:`>`0** Flip around y-axis.
+            * ``>0`` Flips around y-axis.
             
-            * **:math:`<`0** Flip around both axes.
+            * ``<0`` Flips around both axes.
+            
 
-See also: :c:func:`flip`.
-
-
+See Also:
+:c:func:`flip` .
 
 .. index:: gpu::LUT
 
 gpu::LUT
 ------------
-
 .. cpp:function:: void gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
 
-    Transforms the source matrix into the destination matrix using given look-up table:
+    Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))``
 
-    .. math::
+    :param src: Source matrix.  ``CV_8UC1``  and  ``CV_8UC3``  matrices are supported for now.
 
-        dst(I) = lut(src(I))
+    :param lut: Look-up table of 256 elements. Must be continuous, ``CV_8U`` matrix.
 
-    :param src: Source matrix. ``CV_8UC1`` and ``CV_8UC3`` matrixes are supported for now.
+    :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src`` .
+            
 
-    :param lut: Look-up table. Must be continuous, ``CV_8U`` depth matrix. Its area must satisfy to ``lut.rows`` :math:`\times` ``lut.cols`` = 256 condition.
-
-    :param dst: Destination matrix. Will have the same depth as ``lut`` and the same number of channels as ``src``.
-
-See also: :c:func:`LUT`.
-
-
+See Also: :c:func:`LUT` .
 
 .. index:: gpu::merge
 
@@ -76,9 +67,13 @@ gpu::merge
 
 .. cpp:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, const Stream& stream)
 
+.. cpp:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst)
+
+.. cpp:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream)
+
     Makes a multi-channel matrix out of several single-channel matrices.
 
-    :param src: Pointer to array of the source matrices.
+    :param src: Array/vector of source matrices.
 
     :param n: Number of source matrices.
 
@@ -86,19 +81,7 @@ gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-.. cpp:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst)
-
-.. cpp:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream)
-
-    :param src: Vector of the source matrices.
-
-    :param dst: Destination matrix.
-
-    :param stream: Stream for the asynchronous version.
-
-See also: :c:func:`merge`.
-
-
+See Also: :c:func:`merge` .
 
 .. index:: gpu::split
 
@@ -108,44 +91,34 @@ gpu::split
 
 .. cpp:function:: void gpu::split(const GpuMat& src, GpuMat* dst, const Stream& stream)
 
-    Copies each plane of a multi-channel matrix into an array.
-
-    :param src: Source matrix.
-
-    :param dst: Pointer to array of single-channel matrices.
-
-    :param stream: Stream for the asynchronous version.
-
 .. cpp:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst)
 
 .. cpp:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream)
 
+    Copies each plane of a multi-channel matrix into an array.
+
     :param src: Source matrix.
 
-    :param dst: Destination vector of single-channel matrices.
+    :param dst: The destination array/vector of single-channel matrices.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`split`.
-
-
+See Also: :c:func:`split`.
 
 .. index:: gpu::magnitude
 
 gpu::magnitude
 ------------------
-.. cpp:function:: void gpu::magnitude(const GpuMat& x, GpuMat& magnitude)
-
-    Computes magnitudes of complex matrix elements.
-
-    :param x: Source complex matrix in the interleaved format (``CV_32FC2``).
-
-    :param magnitude: Destination matrix of float magnitudes (``CV_32FC1``).
+.. cpp:function:: void gpu::magnitude(const GpuMat& xy, GpuMat& magnitude)
 
 .. cpp:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
 
 .. cpp:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
 
+    Computes magnitudes of complex matrix elements.
+
+    :param xy: Source complex matrix in the interleaved format (``CV_32FC2``).
+    
     :param x: Source matrix, containing real components (``CV_32FC1``).
 
     :param y: Source matrix, containing imaginary components (``CV_32FC1``).
@@ -154,25 +127,22 @@ gpu::magnitude
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`magnitude`.
-
-
+See Also:
+:c:func:`magnitude` .
 
 .. index:: gpu::magnitudeSqr
 
 gpu::magnitudeSqr
 ---------------------
-.. cpp:function:: void gpu::magnitudeSqr(const GpuMat& x, GpuMat& magnitude)
-
-    Computes squared magnitudes of complex matrix elements.
-
-    :param x: Source complex matrix in the interleaved format (``CV_32FC2``).
-
-    :param magnitude: Destination matrix of float magnitude squares (``CV_32FC1``).
+.. cpp:function:: void gpu::magnitudeSqr(const GpuMat& xy, GpuMat& magnitude)
 
 .. cpp:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
 
 .. cpp:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
+
+    Computes squared magnitudes of complex matrix elements.
+
+    :param xy: Source complex matrix in the interleaved format (``CV_32FC2``).
 
     :param x: Source matrix, containing real components (``CV_32FC1``).
 
@@ -181,8 +151,6 @@ gpu::magnitudeSqr
     :param magnitude: Destination matrix of float magnitude squares (``CV_32FC1``).
 
     :param stream: Stream for the asynchronous version.
-
-
 
 .. index:: gpu::phase
 
@@ -194,19 +162,18 @@ gpu::phase
 
     Computes polar angles of complex matrix elements.
 
-    :param x: Source matrix, containing real components (``CV_32FC1``).
+    :param x: Source matrix containing real components (``CV_32FC1``).
 
-    :param y: Source matrix, containing imaginary components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components (``CV_32FC1``).
 
     :param angle: Destionation matrix of angles (``CV_32FC1``).
 
-    :param angleInDegress: Flag which indicates angles must be evaluated in degress.
+    :param angleInDegress: Flag for angles that must be evaluated in degress.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`phase`.
-
-
+See Also:
+:c:func:`phase` .
 
 .. index:: gpu::cartToPolar
 
@@ -218,21 +185,20 @@ gpu::cartToPolar
 
     Converts Cartesian coordinates into polar.
 
-    :param x: Source matrix, containing real components (``CV_32FC1``).
+    :param x: Source matrix containing real components (``CV_32FC1``).
 
-    :param y: Source matrix, containing imaginary components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components (``CV_32FC1``).
 
-    :param magnitude: Destination matrix of float magnituds (``CV_32FC1``).
+    :param magnitude: Destination matrix of float magnitudes (``CV_32FC1``).
 
     :param angle: Destionation matrix of angles (``CV_32FC1``).
 
-    :param angleInDegress: Flag which indicates angles must be evaluated in degress.
+    :param angleInDegress: Flag for angles that must be evaluated in degress.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`cartToPolar`.
-
-
+See Also:
+:c:func:`cartToPolar` .
 
 .. index:: gpu::polarToCart
 
@@ -244,16 +210,17 @@ gpu::polarToCart
 
     Converts polar coordinates into Cartesian.
 
-    :param magnitude: Source matrix, containing magnitudes (``CV_32FC1``).
+    :param magnitude: Source matrix containing magnitudes (``CV_32FC1``).
 
-    :param angle: Source matrix, containing angles (``CV_32FC1``).
+    :param angle: Source matrix containing angles (``CV_32FC1``).
 
     :param x: Destination matrix of real components (``CV_32FC1``).
 
     :param y: Destination matrix of imaginary components (``CV_32FC1``).
 
-    :param angleInDegress: Flag which indicates angles are in degress.
+    :param angleInDegress: Flag that indicates angles in degress.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`polarToCart`.
+See Also:
+:c:func:`polarToCart` .
