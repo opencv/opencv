@@ -294,7 +294,7 @@ gpu::Stream::waitForCompletion
 
 gpu::StreamAccessor
 -------------------
-.. c:type:: gpu::StreamAccessor
+.. cpp:class:: gpu::StreamAccessor
 
 This class provides possibility to get ``cudaStream_t`` from :cpp:class:`gpu::Stream`. This class is declared in ``stream_accessor.hpp`` because that is only public header that depend on Cuda Runtime API. Including it will bring the dependency to your code. ::
 

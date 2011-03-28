@@ -185,7 +185,7 @@ gpu::DeviceInfo::isCompatible
 
 gpu::TargetArchs
 ----------------
-.. c:type:: gpu::TargetArchs
+.. cpp:class:: gpu::TargetArchs
 
 This class provides functionality (as set of static methods) for checking which NVIDIA card architectures the GPU module was built for.
 
@@ -223,7 +223,7 @@ According to the CUDA C Programming Guide Version 3.2: "PTX code produced for so
 
 gpu::MultiGpuManager
 --------------------
-.. c:type:: gpu::MultiGpuManager
+.. cpp:class:: gpu::MultiGpuManager
 
 Provides functionality for working with many GPUs. ::
 

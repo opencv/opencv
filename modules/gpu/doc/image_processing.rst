@@ -163,7 +163,7 @@ gpu::cornerMinEigenVal
 
     :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
 
-See also: :c:func:`cornerMinEigenValue`.
+See also: :c:func:`cornerMinEigenVal`.
 
 
 
@@ -279,7 +279,7 @@ gpu::convolve
 
 gpu::ConvolveBuf
 ----------------
-.. c:type:: gpu::ConvolveBuf
+.. cpp:class:: gpu::ConvolveBuf
 
 Memory buffer for the :cpp:func:`gpu::convolve` function. ::
 

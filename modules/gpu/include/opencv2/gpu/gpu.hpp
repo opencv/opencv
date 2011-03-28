@@ -1576,7 +1576,7 @@ namespace cv
             void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
                 bool useProvidedKeypoints = false);
 
-            //! max keypoints = keypointsRatio * img.size().area()
+            //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
             float keypointsRatio;
 
             bool upright;

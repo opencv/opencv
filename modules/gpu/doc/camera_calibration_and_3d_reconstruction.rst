@@ -150,7 +150,7 @@ The class for computing stereo correspondence using belief propagation algorithm
         ...
     };
 
-The class implements Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006.]. It can compute own data cost (using truncated linear model) or use user-provided data cost.
+The class implements Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006]. It can compute own data cost (using truncated linear model) or use user-provided data cost.
 
 **Please note:** ``StereoBeliefPropagation`` requires a lot of memory:
 
@@ -162,7 +162,7 @@ for message storage and
 
 .. math::
 
-    width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 +  \dotsm + \frac{1}{4^{levels}}
+    width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 +  \dotsm + \frac{1}{4^{levels}})
 
 for data cost storage. ``width_step`` is the number of bytes in a line including the padding.
 
@@ -204,7 +204,7 @@ gpu::StereoBeliefPropagation::StereoBeliefPropagation
 
     DiscTerm =  \min(disc\_single\_jump \cdot \lvert f_1-f_2 \rvert, max\_disc\_term)
 
-For more details please see [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006.].
+For more details please see [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006].
 
 By default :cpp:class:`StereoBeliefPropagation` uses floating-point arithmetics and ``CV_32FC1`` type for messages. But also it can use fixed-point arithmetics and ``CV_16SC1`` type for messages for better perfomance. To avoid overflow in this case, the parameters must satisfy
 

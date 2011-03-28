@@ -101,9 +101,9 @@ namespace
             CV_Assert(nOctaves > 0 && nOctaveLayers > 0);
             CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
 
-            maxKeypoints = static_cast<int>(img.size().area() * surf.keypointsRatio);
-            maxFeatures = static_cast<int>(1.5 * maxKeypoints);
-            maxCandidates = static_cast<int>(1.5 * maxFeatures);
+            maxKeypoints = min(static_cast<int>(img.size().area() * surf.keypointsRatio), 65535);
+            maxFeatures = min(static_cast<int>(1.5 * maxKeypoints), 65535);
+            maxCandidates = min(static_cast<int>(1.5 * maxFeatures), 65535);
 
             CV_Assert(maxKeypoints > 0);
             
