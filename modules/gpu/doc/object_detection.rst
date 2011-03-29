@@ -9,7 +9,7 @@ gpu::HOGDescriptor
 ------------------
 .. cpp:class:: gpu::HOGDescriptor
 
-    Histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. Histogram of oriented gradients for human detection. 2005.] descriptor and detector.
+     Provides a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. Histogram of oriented gradients for human detection. 2005.] descriptor and detector.
 ::
 
     struct CV_EXPORTS HOGDescriptor
@@ -61,7 +61,7 @@ gpu::HOGDescriptor
     }
 
 
-Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
+	Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
 
 .. index:: gpu::HOGDescriptor::HOGDescriptor
 
@@ -74,7 +74,7 @@ gpu::HOGDescriptor::HOGDescriptor
    double threshold_L2hys=0.2, bool gamma_correction=true,
    int nlevels=DEFAULT_NLEVELS)
 
-    Creates ``HOG`` descriptor and detector.
+    Creates the ``HOG`` descriptor and detector.
 
     :param win_size: Detection window size. Align to block size and block stride.
 

@@ -308,13 +308,13 @@ gpu::BruteForceMatcher_GPU::radiusMatch
 
     :param queryDescs: Query set of descriptors.
     
-    :param trainDescs: Training set of descriptors.It is not added to train descriptors collection stored in the class object.
+    :param trainDescs: Training set of descriptors. It is not added to train descriptors collection stored in the class object.
     
     :param trainIdx: ``trainIdx.at<int>(i, j)`` is the index of j-th training descriptor which is close enough to i-th query descriptor. If ``trainIdx`` is empty, it is created with the size ``queryDescs.rows x trainDescs.rows``. When the matrix is pre-allocated, it can have less than ``trainDescs.rows`` columns. Then the function will return as many matches for each query descriptors as fit into the matrix.
     
     :param nMatches: ``nMatches.at<unsigned int>(0, i)`` contains the number of matching descriptors for the i-th query descriptor. The value can be larger than ``trainIdx.cols`` - it means that the function could not store all the matches since it did not have enough memory.
     
-    :param distance: ``distance.at<int>(i, j)`` is the distance between the j-th match for the j-th query descriptor and the this very query descriptor. The matrix will have ``CV_32FC1`` type and the same size as ``trainIdx``.
+    :param distance: ``distance.at<int>(i, j)`` Distance between the j-th match for the j-th query descriptor and this very query descriptor. The matrix has the ``CV_32FC1`` type and the same size as ``trainIdx``.
 
     :param maxDistance: Distance threshold.
 

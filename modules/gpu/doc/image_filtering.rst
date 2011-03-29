@@ -203,7 +203,7 @@ gpu::createBoxFilter_GPU
 
     :param srcType: Input image type. Supports ``CV_8UC1`` and ``CV_8UC4``.
 
-    :param dstType: Output image type. Supports only the same as source type.
+    :param dstType: Output image type.  It supports only the same as the source type.
 
     :param ksize: Kernel size.
 
@@ -225,7 +225,7 @@ gpu::boxFilter
 
     :param dst: Output image type. The size and type is the same as ``src``.
 
-    :param ddepth: Output image depth. If -1, the output image will have the same depth as the input one. The only values allowed here are ``CV_8U`` and -1.
+    :param ddepth: Output image depth. If -1, the output image has the same depth as the input one. The only values allowed here are ``CV_8U`` and -1.
 
     :param ksize: Kernel size.
 
@@ -245,7 +245,7 @@ gpu::blur
 
     :param src: Input image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
-    :param dst: Output image type. The size and type is the same as  ``src`` .
+    :param dst: Output image type with the same size and type as  ``src`` .
 
     :param ksize: Kernel size.
 
@@ -289,7 +289,7 @@ gpu::erode
 
     :param src: Source image. Only  ``CV_8UC1``  and  ``CV_8UC4``  types are supported.
 
-    :param dst: Destination image. The size and type is the same as  ``src`` .
+    :param dst: Destination image with the same size and type as  ``src`` .
 
     :param kernel: Structuring element used for dilation. If  ``kernel=Mat()``, a  3x3 rectangular structuring element is used.
 
@@ -311,7 +311,7 @@ gpu::dilate
 
     :param src: Source image. ``CV_8UC1`` and ``CV_8UC4`` source types are supported.
 
-    :param dst: Destination image. The size and type is the same as ``src``.
+    :param dst: Destination image with the same size and type as ``src``.
 
     :param kernel: Structuring element used for dilation. If  ``kernel=Mat()``, a  3x3 rectangular structuring element is used.
 
@@ -333,7 +333,7 @@ gpu::morphologyEx
 
     :param src: Source image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
-    :param dst: Destination image. The size and type is the same as  ``src``
+    :param dst: Destination image with the same size and type as  ``src``
     
     :param op: Type of morphological operation. The following types are possible:
         
@@ -506,7 +506,7 @@ gpu::sepFilter2D
 
     :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image. The size and number of channels is the same as  ``src`` .
+    :param dst: Destination image with the same size and number of channels as  ``src`` .
 
     :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
@@ -550,7 +550,7 @@ gpu::Sobel
 
     :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image. The size and number of channels is the same as source image has.
+    :param dst: Destination image with the same size and number of channels as source image.
 
     :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
@@ -576,7 +576,7 @@ gpu::Scharr
 
     :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image. The size and number of channels is the same as  ``src`` has.
+    :param dst: Destination image with the same size and number of channels as  ``src`` has.
 
     :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
@@ -620,7 +620,7 @@ gpu::GaussianBlur
 
     :param src: Source image.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  source types are supported.
 
-    :param dst: Destination image. The size and type is the same as  ``src`` has.
+    :param dst: Destination image with the same size and type as  ``src``.
 
     :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigmaX``  and  ``sigmaY`` .
 

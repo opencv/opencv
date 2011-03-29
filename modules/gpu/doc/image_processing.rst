@@ -16,7 +16,7 @@ gpu::meanShiftFiltering
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
-    :param dst: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
+    :param dst: Destination image containing the color of mapped points. It has the same size and type as  ``src`` .
 
     :param sp: Spatial window radius.
 
@@ -38,7 +38,7 @@ gpu::meanShiftProc
 
     :param dstr: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
 
-    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src``. The type is  ``CV_16SC2``.
+    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src`` size. The type is  ``CV_16SC2``.
 
     :param sp: Spatial window radius.
 
@@ -59,7 +59,7 @@ gpu::meanShiftSegmentation
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
-    :param dst: Segmented image. The size and type is the same as  ``src`` .
+    :param dst: Segmented image with the same size and type as  ``src`` .
 
     :param sp: Spatial window radius.
 
@@ -172,7 +172,7 @@ gpu::mulSpectrums
 
     :param a: First spectrum.
 
-    :param b: Second spectrum. The size and type is the same as  ``a`` .
+    :param b: Second spectrum with the same size and type as  ``a`` .
 
     :param c: Destination spectrum.
 
@@ -196,7 +196,7 @@ gpu::mulAndScaleSpectrums
 
     :param a: First spectrum.
 
-    :param b: Second spectrum. The size and type is the same as  ``a`` .
+    :param b: Second spectrum with the same size and type as  ``a`` .
 
     :param c: Destination spectrum.
 
@@ -321,7 +321,7 @@ gpu::matchTemplate
 
     :param image: Source image.  ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
 
-    :param templ: Template image. The size and type is the same as  ``image`` .
+    :param templ: Template image with the size and type the same as  ``image`` .
 
     :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image`` is  *W x H*  and ``templ`` is  *w x h*, then  ``result`` must be *W-w+1 x H-h+1*.
 
@@ -354,7 +354,7 @@ gpu::remap
 
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_8UC3`` source types are supported.
 
-    :param dst: Destination image. The size is the same as  ``xmap`` . The type is the same as  ``src`` .
+    :param dst: Destination image with the size the same as  ``xmap`` and the type the same as  ``src`` .
 
     :param xmap: X values. Only  ``CV_32FC1`` type is supported.
 
@@ -382,7 +382,7 @@ gpu::cvtColor
 
     :param src: Source image with  ``CV_8U``, ``CV_16U``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image. The size and depth is the same as  ``src`` .
+    :param dst: Destination image with the same size and depth as  ``src`` .
 
     :param code: Color space conversion code. For details, see  :func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
 
@@ -407,7 +407,7 @@ gpu::threshold
 
     :param src: Source array (single-channel). ``CV_64F`` depth is not supported.
 
-    :param dst: Destination array. The size and type is the same as  ``src`` .
+    :param dst: Destination array with the same size and type as  ``src`` .
 
     :param thresh: Threshold value.
 
@@ -430,7 +430,7 @@ gpu::resize
 
     :param src: Source image. Supports  the ``CV_8UC1`` and  ``CV_8UC4`` types.
 
-    :param dst: Destination image. The size is ``dsize`` (when it is non-zero) or the size is computed from  ``src.size()``, ``fx``, and  ``fy`` . The type is the same as  ``src`` .
+    :param dst: Destination image  with the same type as  ``src`` . The size is ``dsize`` (when it is non-zero) or the size is computed from  ``src.size()``, ``fx``, and  ``fy`` .
 
     :param dsize: Destination image size. If it is zero, it is computed as: 
 
@@ -465,7 +465,7 @@ gpu::warpAffine
 
     :param src: Source image. Supports  ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image. The size is  ``dsize`` . The type is the same as  ``src`` .
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
 
     :param M: *2x3*  transformation matrix.
 
@@ -486,7 +486,7 @@ gpu::warpPerspective
 
     :param src: Source image. Supports  ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image. The size is  ``dsize`` . The type is the same as  ``src`` .
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
 
     :param M: *3x3* transformation matrix.
 
@@ -507,7 +507,7 @@ gpu::rotate
 
     :param src: Source image. Supports  ``CV_8UC1`` and  ``CV_8UC4`` types.
 
-    :param dst: Destination image. The size is  ``dsize`` . The type is the same as  ``src`` .
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
 
     :param dsize: Size of the destination image.
 
@@ -532,7 +532,7 @@ gpu::copyMakeBorder
 
     :param src: Source image. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and  ``CV_32FC1`` types are supported.
 
-    :param dst: Destination image. The type is the same as  ``src`` . The size is  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
 
     :param top, bottom, left, right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
 
@@ -552,7 +552,7 @@ gpu::rectStdDev
 
     :param sqr: Squared source image. Only  the ``CV_32FC1`` type is supported.
 
-    :param dst: Destination image. The type and size is the same as  ``src`` .
+    :param dst: Destination image with the same type and size as  ``src`` .
 
     :param rect: Rectangular window.
 

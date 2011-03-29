@@ -13,15 +13,15 @@ gpu::add
 
 .. cpp:function:: void gpu::add(const GpuMat& src1, const Scalar& src2, GpuMat& dst)
 
-    Computes matrix-matrix or matrix-scalar sum.
+    Computes a matrix-matrix or matrix-scalar sum.
 
     :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar to be added to ``src1``.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
-See also: :c:func:`add`.
+See Also: :c:func:`add`.
 
 .. index:: gpu::subtract
 
@@ -37,9 +37,9 @@ gpu::subtract
 
     :param src2: Second source matrix or a scalar to be subtracted from ``src1``.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
-See also: :c:func:`subtract`.
+See Also: :c:func:`subtract`.
 
 
 
@@ -51,15 +51,15 @@ gpu::multiply
 
 .. cpp:function:: void gpu::multiply(const GpuMat& src1, const Scalar& src2, GpuMat& dst)
 
-    Computes matrix-matrix or matrix-scalar per-element product.
+    Computes a matrix-matrix or matrix-scalar per-element product.
 
     :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar to be multiplied by ``src1`` elements.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
-See also: :c:func:`multiply`.
+See Also: :c:func:`multiply`.
 
 
 .. index:: gpu::divide
@@ -70,17 +70,17 @@ gpu::divide
 
 .. cpp:function:: void gpu::divide(const GpuMat& src1, const Scalar& src2, GpuMat& dst)
 
-    Computes matrix-matrix or matrix-scalar sum.
+    Computes a matrix-matrix or matrix-scalar sum.
 
     :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar. The ``src1`` elements are divided by it.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
-This function in contrast to :c:func:`divide` uses round-down rounding mode.
+	This function, in contrast to :c:func:`divide`, uses a round-down rounding mode.
 
-See also: :c:func:`divide`.
+See Also: :c:func:`divide`.
 
 
 
@@ -90,13 +90,13 @@ gpu::exp
 ------------
 .. cpp:function:: void gpu::exp(const GpuMat& src, GpuMat& dst)
 
-    Computes exponent of each matrix element.
+    Computes an exponent of each matrix element.
 
     :param src: Source matrix. ``CV_32FC1`` matrixes are supported for now.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src``.
+    :param dst: Destination matrix with the same size and type as ``src``.
 
-See also: :c:func:`exp`.
+See Also: :c:func:`exp`.
 
 
 
@@ -106,13 +106,13 @@ gpu::log
 ------------
 .. cpp:function:: void gpu::log(const GpuMat& src, GpuMat& dst)
 
-    Computes natural logarithm of absolute value of each matrix element.
+    Computes a natural logarithm of absolute value of each matrix element.
 
     :param src: Source matrix. ``CV_32FC1`` matrixes are supported for now.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src``.
+    :param dst: Destination matrix with the same size and type as ``src``.
 
-See also: :c:func:`log`.
+See Also: :c:func:`log`.
 
 
 
@@ -130,9 +130,9 @@ gpu::absdiff
 
     :param src2: Second source matrix or a scalar to be added to ``src1``.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
-See also: :c:func:`absdiff`.
+See Also: :c:func:`absdiff`.
 
 .. index:: gpu::compare
 
@@ -144,9 +144,9 @@ gpu::compare
 
     :param src1: First source matrix. ``CV_8UC4`` and ``CV_32FC1`` matrices are supported for now.
 
-    :param src2: Second source matrix. Must have the same size and type as ``a``.
+    :param src2: Second source matrix with the same size and type as ``a``.
 
-    :param dst: Destination matrix. Will have the same size as ``a`` and be ``CV_8UC1`` type.
+    :param dst: Destination matrix with the same size as ``a`` and the ``CV_8UC1`` type.
 
     :param cmpop: Flag specifying the relation between the elements to be checked:
         
@@ -157,7 +157,7 @@ gpu::compare
             * **CMP_LE:** ``src1(.) <= src2(.)``
             * **CMP_NE:** ``src1(.) != src2(.)``
 
-See also: :c:func:`compare`.
+See Also: :c:func:`compare`.
 
 
 .. index:: gpu::bitwise_not
@@ -172,7 +172,7 @@ gpu::bitwise_not
 
     :param src: Source matrix.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src``.
+    :param dst: Destination matrix with the same size and type as ``src``.
 
     :param mask: Optional operation mask. 8-bit single channel image.
 
@@ -192,9 +192,9 @@ gpu::bitwise_or
 
     :param src1: First source matrix.
 
-    :param src2: Second source matrix. It must have the same size and type as ``src1``.
+    :param src2: Second source matrix with the same size and type as ``src1``.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
     :param mask: Optional operation mask. 8-bit single channel image.
 
@@ -214,9 +214,9 @@ gpu::bitwise_and
 
     :param src1: First source matrix.
 
-    :param src2: Second source matrix. It must have the same size and type as ``src1``.
+    :param src2: Second source matrix with the same size and type as ``src1``.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
     :param mask: Optional operation mask. 8-bit single channel image.
 
@@ -236,9 +236,9 @@ gpu::bitwise_xor
 
     :param src1: First source matrix.
 
-    :param src2: Second source matrix. It must have the same size and type as ``src1``.
+    :param src2: Second source matrix with the same size and type as ``src1``.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
     :param mask: Optional operation mask. 8-bit single channel image.
 
@@ -258,17 +258,17 @@ gpu::min
 
 .. cpp:function:: void gpu::min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream)
 
-    Computes per-element minimum of two matrices (or a matrix and a scalar).
+    Computes the per-element minimum of two matrices (or a matrix and a scalar).
 
     :param src1: First source matrix.
 
-    :param src2: Second source matrix or a scalar to compare compare ``src1`` elements with.
+    :param src2: Second source matrix or a scalar to compare ``src1`` elements with.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`min`.
+See Also: :c:func:`min`.
 
 
 
@@ -284,14 +284,14 @@ gpu::max
 
 .. cpp:function:: void gpu::max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream)
 
-    Computes per-element maximum of two matrices (or a matrix and a scalar).
+    Computes the per-element maximum of two matrices (or a matrix and a scalar).
 
     :param src1: First source matrix.
 
     :param src2: Second source matrix or a scalar to compare ``src1`` elements with.
 
-    :param dst: Destination matrix. Will have the same size and type as ``src1``.
+    :param dst: Destination matrix with the same size and type as ``src1``.
 
     :param stream: Stream for the asynchronous version.
 
-See also: :c:func:`max`.
+See Also: :c:func:`max`.

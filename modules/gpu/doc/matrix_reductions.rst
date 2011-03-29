@@ -31,7 +31,7 @@ gpu::norm
 
     :param src1: The source matrix. Any matrices except 64F are supported.
 
-    :param src2: The second source matrix (if any). The size and type is the same as ``src1``.
+    :param src2: The second source matrix (if any) with the same size and type as ``src1``.
 
     :param normType: Norm type.  ``NORM_L1`` ,  ``NORM_L2`` , and  ``NORM_INF``  are supported for now.
 
