@@ -1353,14 +1353,20 @@ namespace cv
             GpuMat detector;
 
             // Results of the last classification step
-            GpuMat labels;
+            GpuMat labels, labels_buf;
             Mat labels_host;
 
             // Results of the last histogram evaluation step
-            GpuMat block_hists;
+            GpuMat block_hists, block_hists_buf;
 
             // Gradients conputation results
-            GpuMat grad, qangle;
+            GpuMat grad, qangle, grad_buf, qangle_buf;
+
+			// returns subbuffer with required size, reallocates buffer if nessesary.
+			static GpuMat getBuffer(const Size& sz, int type, GpuMat& buf);
+			static GpuMat getBuffer(int rows, int cols, int type, GpuMat& buf);
+
+			std::vector<GpuMat> image_scales;
         };
 
 
