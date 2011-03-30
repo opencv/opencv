@@ -223,7 +223,7 @@ gpu::BruteForceMatcher_GPU::matchCollection
     
     :param distance: The output single-row ``CV_32FC1`` matrix that contains the best distance for each query. If some query descriptors are masked out in ``maskCollection``  , it contains ``FLT_MAX``.
 
-    :param maskCollection: ``GpuMat``  containing a set of masks. It can be obtained from  ``std::vector<GpuMat>``  by  ?? or it may contain  a user-defined mask set. This is an empty matrix or one-row matrix where each element is a  ``PtrStep``  that points to one mask.
+    :param maskCollection: ``GpuMat``  containing a set of masks. It can be obtained from  ``std::vector<GpuMat>``  by  :cpp:func:`gpu::BruteForceMatcher_GPU::makeGpuCollection` or it may contain  a user-defined mask set. This is an empty matrix or one-row matrix where each element is a  ``PtrStep``  that points to one mask.
 
 .. index:: gpu::BruteForceMatcher_GPU::makeGpuCollection
 

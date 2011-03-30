@@ -33,7 +33,7 @@ gpu::getDevice
 
 gpu::GpuFeature
 ---------------
-.. c:type:: gpu::GpuFeature
+.. cpp:class:: gpu::GpuFeature
     
 This class provides GPU computing features. 
 ::
@@ -146,7 +146,7 @@ gpu::DeviceInfo::supports
 
     Provides information on GPU feature support. This function returns true if the device has the specified GPU feature, otherwise returns false.
 
-    :param feature: Feature to be checked. See  ?.
+    :param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
 
 .. index:: gpu::DeviceInfo::isCompatible
 
@@ -170,7 +170,7 @@ The following method checks whether the module was built with the support of the
 
 .. cpp:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
 
-    :param feature: Feature to be checked. See  ?.
+    :param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
@@ -188,9 +188,9 @@ There is a set of methods to check whether the module contains intermediate (PTX
 
     .. cpp:function:: static bool gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 
-        * **major** Major compute capability version.
+        :param major: Major compute capability version.
 
-        * **minor** Minor compute capability version.
+        :param minor: Minor compute capability version.
 
     According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute capability can always be compiled to binary code of greater or equal compute capability".
 

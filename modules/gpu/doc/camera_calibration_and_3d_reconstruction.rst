@@ -340,9 +340,7 @@ gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 
     DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)
 
-For more details, see
-qx_csbp ??
-.
+For more details, see [Q. Yang, L. Wang, and N. Ahuja. A constant-space belief propagation algorithm for stereo matching. In CVPR, 2010].
 
 By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better perfomance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
