@@ -184,7 +184,7 @@ latex_documents = [
    u'', 'manual'),
 ]
 
-latex_elements = {'preamble': '\usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}'}
+latex_elements = {'preamble': '\usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}'}
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
