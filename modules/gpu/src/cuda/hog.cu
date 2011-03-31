@@ -50,10 +50,6 @@
   #endif
 #endif
 
-#ifndef div_up
-#define div_up(n, grain) (((n) + (grain) - 1) / (grain))
-#endif
-
 // Other values are not supported
 #define CELL_WIDTH 8
 #define CELL_HEIGHT 8
@@ -208,7 +204,7 @@ void compute_hists(int nbins, int block_stride_x, int block_stride_y,
     int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y) / 
                            block_stride_y;
 
-    dim3 grid(div_up(img_block_width, nblocks), img_block_height);
+    dim3 grid(divUp(img_block_width, nblocks), img_block_height);
     dim3 threads(32, 2, nblocks);
 
     cudaSafeCall(cudaFuncSetCacheConfig(compute_hists_kernel_many_blocks<nblocks>, 
@@ -311,7 +307,7 @@ void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
 
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
     int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y) / block_stride_y;
-    dim3 grid(div_up(img_block_width, nblocks), img_block_height);
+    dim3 grid(divUp(img_block_width, nblocks), img_block_height);
 
     if (nthreads == 32)
         normalize_hists_kernel_many_blocks<32, nblocks><<<grid, threads>>>(block_hist_size, img_block_width, block_hists, threshold);
@@ -395,9 +391,7 @@ __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const
     }
 
     if (threadIdx.x == 0)
-        labels[blockIdx.y * img_win_width + blockIdx.x * blockDim.z + win_x] 
-            = (product + free_coef >= threshold);
-
+        labels[blockIdx.y * img_win_width + blockIdx.x * blockDim.z + win_x] = (product + free_coef >= threshold);
 }
 
 
@@ -414,13 +408,11 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
     int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
 
     dim3 threads(nthreads, 1, nblocks);
-    dim3 grid(div_up(img_win_width, nblocks), img_win_height);
+    dim3 grid(divUp(img_win_width, nblocks), img_win_height);
 
-    cudaSafeCall(cudaFuncSetCacheConfig(classify_hists_kernel_many_blocks<nthreads, nblocks>, 
-                                        cudaFuncCachePreferL1));
+    cudaSafeCall(cudaFuncSetCacheConfig(classify_hists_kernel_many_blocks<nthreads, nblocks>, cudaFuncCachePreferL1));
 
-    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
-                          block_stride_x;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
     classify_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
         img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
         block_hists, coefs, free_coef, threshold, labels);
@@ -434,9 +426,8 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
 
 
 template <int nthreads>
-__global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, 
-                                              const int win_block_stride_y, const float* block_hists, 
-                                              PtrElemStepf descriptors)
+__global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, const int win_block_stride_y, 
+											  const float* block_hists, PtrElemStepf descriptors)
 {
     // Get left top corner of the window in src
     const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
@@ -455,9 +446,8 @@ __global__ void extract_descrs_by_rows_kernel(const int img_block_width, const i
 }
 
 
-void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, 
-                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
-                            DevMem2Df descriptors)
+void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x, 
+							int height, int width, float* block_hists, DevMem2Df descriptors)
 {
     const int nthreads = 256;
 
@@ -468,8 +458,7 @@ void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, i
     dim3 threads(nthreads, 1);
     dim3 grid(img_win_width, img_win_height);
 
-    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
-                          block_stride_x;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
     extract_descrs_by_rows_kernel<nthreads><<<grid, threads>>>(
         img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
     cudaSafeCall( cudaGetLastError() );
@@ -640,20 +629,16 @@ void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2D& im
     const int nthreads = 256;
 
     dim3 bdim(nthreads, 1);
-    dim3 gdim(div_up(width, bdim.x), div_up(height, bdim.y));
+    dim3 gdim(divUp(width, bdim.x), divUp(height, bdim.y));
 
     if (correct_gamma)
-        compute_gradients_8UC4_kernel<nthreads, 1><<<gdim, bdim>>>(
-                height, width, img, angle_scale, grad, qangle);
+        compute_gradients_8UC4_kernel<nthreads, 1><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
     else
-        compute_gradients_8UC4_kernel<nthreads, 0><<<gdim, bdim>>>(
-                height, width, img, angle_scale, grad, qangle);
+        compute_gradients_8UC4_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
 
     cudaSafeCall( cudaGetLastError() );
-
     cudaSafeCall(cudaThreadSynchronize());
 }
-
 
 template <int nthreads, int correct_gamma>
 __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrElemStep img, 
@@ -715,17 +700,14 @@ void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& im
     const int nthreads = 256;
 
     dim3 bdim(nthreads, 1);
-    dim3 gdim(div_up(width, bdim.x), div_up(height, bdim.y));
+    dim3 gdim(divUp(width, bdim.x), divUp(height, bdim.y));
 
     if (correct_gamma)
-        compute_gradients_8UC1_kernel<nthreads, 1><<<gdim, bdim>>>(
-                height, width, img, angle_scale, grad, qangle);
+        compute_gradients_8UC1_kernel<nthreads, 1><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
     else
-        compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(
-                height, width, img, angle_scale, grad, qangle);
+        compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
 
     cudaSafeCall( cudaGetLastError() );
-
     cudaSafeCall(cudaThreadSynchronize());
 }
 
@@ -735,67 +717,58 @@ void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& im
 // Resize
 
 texture<uchar4, 2, cudaReadModeNormalizedFloat> resize8UC4_tex;
-texture<unsigned char, 2, cudaReadModeNormalizedFloat> resize8UC1_tex;
+texture<uchar,  2, cudaReadModeNormalizedFloat> resize8UC1_tex;
 
-
-extern "C" __global__ void resize_8UC4_kernel(float sx, float sy, DevMem2D dst)
+__global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar> dst, int colOfs)
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < dst.cols && y < dst.rows)
+        ((unsigned char*)dst.ptr(y))[x] = tex2D(resize8UC1_tex, x * sx + colOfs, y * sy) * 255;
+}
+
+__global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar4> dst, int colOfs)
+{
+    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < dst.cols && y < dst.rows)
+	{        
+		float4 val = tex2D(resize8UC4_tex, x * sx + colOfs, y * sy);
+        dst.ptr(y)[x] = make_uchar4(val.x * 255, val.y * 255, val.z * 255, val.w * 255);
+	}
+}
+
+template<class T, class TEX> 
+static void resize_for_hog(const DevMem2D& src, DevMem2D dst, TEX& tex)
+{
+    tex.filterMode = cudaFilterModeLinear;
+
+    size_t texOfs = 0;
+    int colOfs = 0;
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();    
+    cudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
+
+    if (texOfs != 0) 
     {
-        float4 val = tex2D(resize8UC4_tex, x * sx, y * sy);
-        ((uchar4*)dst.ptr(y))[x] = make_uchar4(val.x * 255, val.y * 255, val.z * 255, val.w * 255);
-    }
-}
-
-
-void resize_8UC4(const DevMem2D& src, DevMem2D dst)
-{
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-    cudaBindTexture2D(0, resize8UC4_tex, src.data, desc, src.cols, src.rows, src.step);
-    resize8UC4_tex.filterMode = cudaFilterModeLinear;
+        colOfs = static_cast<int>( texOfs/sizeof(T) );
+        cudaSafeCall( cudaUnbindTexture(tex) );
+        cudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
+    }    
 
     dim3 threads(32, 8);
-    dim3 grid(div_up(dst.cols, threads.x), div_up(dst.rows, threads.y));
-    float sx = (float)src.cols / dst.cols;
-    float sy = (float)src.rows / dst.rows;
-    resize_8UC4_kernel<<<grid, threads>>>(sx, sy, dst);
+    dim3 grid(divUp(dst.cols, threads.x), divUp(dst.rows, threads.y));
+    float sx = static_cast<float>(src.cols) / dst.cols;
+    float sy = static_cast<float>(src.rows) / dst.rows;
+    resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (DevMem2D_<T>)dst, colOfs);
     cudaSafeCall( cudaGetLastError() );
-
     cudaSafeCall(cudaThreadSynchronize());
-
-    cudaSafeCall(cudaUnbindTexture(resize8UC4_tex));
-}
-
-
-extern "C" __global__ void resize_8UC1_kernel(float sx, float sy, DevMem2D dst)
-{
-    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (x < dst.cols && y < dst.rows)
-        ((unsigned char*)dst.ptr(y))[x] = tex2D(resize8UC1_tex, x * sx, y * sy) * 255;
-}
-
-
-void resize_8UC1(const DevMem2D& src, DevMem2D dst)
-{
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-    cudaBindTexture2D(0, resize8UC1_tex, src.data, desc, src.cols, src.rows, src.step);
-    resize8UC1_tex.filterMode = cudaFilterModeLinear;
-
-    dim3 threads(32, 8);
-    dim3 grid(div_up(dst.cols, threads.x), div_up(dst.rows, threads.y));
-    float sx = (float)src.cols / dst.cols;
-    float sy = (float)src.rows / dst.rows;
-    resize_8UC1_kernel<<<grid, threads>>>(sx, sy, dst);
-    cudaSafeCall( cudaGetLastError() );
-
-    cudaSafeCall(cudaThreadSynchronize());
-
     cudaSafeCall(cudaUnbindTexture(resize8UC1_tex));
 }
+
+void resize_8UC1(const DevMem2D& src, DevMem2D dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
+void resize_8UC4(const DevMem2D& src, DevMem2D dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
 
 }}}
