@@ -1799,7 +1799,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                     
                     double dax1 = a[1].x - a[0].x, day1 = a[1].y - a[0].y;
                     double dax2 = a[2].x - a[0].x, day2 = a[2].y - a[0].y;
-                    double dbx1 = b[1].x - b[0].y, dby1 = b[1].y - b[0].y;
+                    double dbx1 = b[1].x - b[0].x, dby1 = b[1].y - b[0].y;
                     double dbx2 = b[2].x - b[0].x, dby2 = b[2].y - b[0].y;
                     const double eps = 0.01;
 
