@@ -15,13 +15,13 @@ gpu::add
 
     Computes a matrix-matrix or matrix-scalar sum.
 
-    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
+    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar to be added to ``src1``.
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`add`.
+See Also: :c:func:`add`
 
 .. index:: gpu::subtract
 
@@ -31,15 +31,15 @@ gpu::subtract
 
 .. cpp:function:: void gpu::subtract(const GpuMat& src1, const Scalar& src2, GpuMat& dst)
 
-    Computes matrix-matrix or matrix-scalar difference.
+    Computes a matrix-matrix or matrix-scalar difference.
 
-    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
+    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar to be subtracted from ``src1``.
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`subtract`.
+See Also: :c:func:`subtract`
 
 
 
@@ -53,13 +53,13 @@ gpu::multiply
 
     Computes a matrix-matrix or matrix-scalar per-element product.
 
-    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
+    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar to be multiplied by ``src1`` elements.
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`multiply`.
+See Also: :c:func:`multiply`
 
 
 .. index:: gpu::divide
@@ -72,7 +72,7 @@ gpu::divide
 
     Computes a matrix-matrix or matrix-scalar sum.
 
-    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
+    :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and ``CV_32FC1`` matrices are supported for now.
 
     :param src2: Second source matrix or a scalar. The ``src1`` elements are divided by it.
 
@@ -80,7 +80,7 @@ gpu::divide
 
 	This function, in contrast to :c:func:`divide`, uses a round-down rounding mode.
 
-See Also: :c:func:`divide`.
+See Also: :c:func:`divide`
 
 
 
@@ -96,7 +96,7 @@ gpu::exp
 
     :param dst: Destination matrix with the same size and type as ``src``.
 
-See Also: :c:func:`exp`.
+See Also: :c:func:`exp`
 
 
 
@@ -112,7 +112,7 @@ gpu::log
 
     :param dst: Destination matrix with the same size and type as ``src``.
 
-See Also: :c:func:`log`.
+See Also: :c:func:`log`
 
 
 
@@ -132,7 +132,7 @@ gpu::absdiff
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`absdiff`.
+See Also: :c:func:`absdiff`
 
 .. index:: gpu::compare
 
@@ -157,7 +157,7 @@ gpu::compare
             * **CMP_LE:** ``src1(.) <= src2(.)``
             * **CMP_NE:** ``src1(.) != src2(.)``
 
-See Also: :c:func:`compare`.
+See Also: :c:func:`compare`
 
 
 .. index:: gpu::bitwise_not
@@ -168,7 +168,7 @@ gpu::bitwise_not
 
 .. cpp:function:: void gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
-    Performs per-element bitwise inversion.
+    Performs a per-element bitwise inversion.
 
     :param src: Source matrix.
 
@@ -188,7 +188,7 @@ gpu::bitwise_or
 
 .. cpp:function:: void gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
-    Performs per-element bitwise disjunction of two matrices.
+    Performs a per-element bitwise disjunction of two matrices.
 
     :param src1: First source matrix.
 
@@ -210,7 +210,7 @@ gpu::bitwise_and
 
 .. cpp:function:: void gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
-    Performs per-element bitwise conjunction of two matrices.
+    Performs a per-element bitwise conjunction of two matrices.
 
     :param src1: First source matrix.
 
@@ -232,7 +232,7 @@ gpu::bitwise_xor
 
 .. cpp:function:: void gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
-    Performs per-element bitwise "exclusive or" of two matrices.
+    Performs a per-element bitwise "exclusive or" operation of two matrices.
 
     :param src1: First source matrix.
 
@@ -268,7 +268,7 @@ gpu::min
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`min`.
+See Also: :c:func:`min`
 
 
 
@@ -294,4 +294,4 @@ gpu::max
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`max`.
+See Also: :c:func:`max`

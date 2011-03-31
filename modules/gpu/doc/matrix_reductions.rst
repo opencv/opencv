@@ -17,7 +17,7 @@ gpu::meanStdDev
 
     :param stddev: Standard deviation value.
 
-See Also: :c:func:`meanStdDev` .
+See Also: :c:func:`meanStdDev` 
 
 .. index:: gpu::norm
 
@@ -37,7 +37,7 @@ gpu::norm
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See Also: :c:func:`norm`.
+See Also: :c:func:`norm`
 
 .. index:: gpu::sum
 
@@ -53,7 +53,7 @@ gpu::sum
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See Also: :c:func:`sum` .
+See Also: :c:func:`sum` 
 
 .. index:: gpu::absSum
 
@@ -103,9 +103,9 @@ gpu::minMax
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-	The Function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
+The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
 	
-See Also: :c:func:`minMaxLoc` .
+See Also: :c:func:`minMaxLoc` 
 
 .. index:: gpu::minMaxLoc
 
@@ -135,7 +135,7 @@ gpu::minMaxLoc
 
 	The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
 
-See Also: :c:func:`minMaxLoc` .
+See Also: :c:func:`minMaxLoc` 
 
 .. index:: gpu::countNonZero
 
@@ -153,4 +153,4 @@ gpu::countNonZero
 
 	The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
 	
-	See Also: :c:func:`countNonZero` .
+	See Also: :c:func:`countNonZero` 

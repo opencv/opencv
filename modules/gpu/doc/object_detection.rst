@@ -9,7 +9,7 @@ gpu::HOGDescriptor
 ------------------
 .. cpp:class:: gpu::HOGDescriptor
 
-     Provides a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. Histogram of oriented gradients for human detection. 2005.] descriptor and detector.
+This class provides a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. Histogram of oriented gradients for human detection. 2005.] descriptor and detector.
 ::
 
     struct CV_EXPORTS HOGDescriptor
@@ -61,7 +61,7 @@ gpu::HOGDescriptor
     }
 
 
-	Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
+Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
 
 .. index:: gpu::HOGDescriptor::HOGDescriptor
 
@@ -150,17 +150,17 @@ gpu::HOGDescriptor::detect
    vector<Point>\& found_locations, double hit_threshold=0,
    Size win_stride=Size(), Size padding=Size())
 
-    Performs object detection without a multi-scale window.
+	Performs object detection without a multi-scale window.
 
-    :param img: Source image.  ``CV_8UC1``  and  ``CV_8UC4`` types are supported for now.
+	:param img: Source image.  ``CV_8UC1``  and  ``CV_8UC4`` types are supported for now.
 
-    :param found_locations: Left-top corner points of detected objects boundaries.
+	:param found_locations: Left-top corner points of detected objects boundaries.
 
     :param hit_threshold: Threshold for the distance between features and SVM classifying plane. Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient). But if the free coefficient is omitted (which is allowed), you can specify it manually here.
 
-    :param win_stride: Window stride. It must be a multiple of block stride.
+	:param win_stride: Window stride. It must be a multiple of block stride.
 
-    :param padding: Mock parameter to keep the CPU interface compatibility. Must be (0,0).
+	:param padding: Mock parameter to keep the CPU interface compatibility. It must be (0,0).
 
 .. index:: gpu::HOGDescriptor::detectMultiScale
 
@@ -171,7 +171,7 @@ gpu::HOGDescriptor::detectMultiScale
    Size win_stride=Size(), Size padding=Size(),
    double scale0=1.05, int group_threshold=2)
 
-    Performs object detection with a multi-scale window.
+	Performs object detection with a multi-scale window.
 
     :param img: Source image. See  :func:`gpu::HOGDescriptor::detect`  for type limitations.
 
@@ -181,12 +181,11 @@ gpu::HOGDescriptor::detectMultiScale
 
     :param win_stride: Window stride. It must be a multiple of block stride.
 
-    :param padding: Mock parameter to keep the CPU interface compatibility. Must be (0,0).
+    :param padding: Mock parameter to keep the CPU interface compatibility. It must be (0,0).
 
     :param scale0: Coefficient of the detection window increase.
 
-    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See
-    :func:`groupRectangles` .
+    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :func:`groupRectangles` .
 
 .. index:: gpu::HOGDescriptor::getDescriptors
 
@@ -217,7 +216,7 @@ gpu::CascadeClassifier_GPU
 --------------------------
 .. cpp:class:: gpu::CascadeClassifier_GPU
 
-    The cascade classifier class used for object detection. 
+This cascade classifier class is used for object detection. 
 ::
 
     class CV_EXPORTS CascadeClassifier_GPU
@@ -252,7 +251,7 @@ gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
 
     Loads the classifier from a file.
 
-    :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the haartraining application) and NVidia's ``nvbin`` are supported.
+    :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported.
 
 .. index:: gpu::CascadeClassifier_GPU::empty
 
@@ -274,7 +273,7 @@ gpu::CascadeClassifier_GPU::load
 
     Loads the classifier from a file. The previous content is destroyed.
 
-    :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the haartraining application) and NVidia's ``nvbin`` are supported.
+    :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported.
 
 .. index:: gpu::CascadeClassifier_GPU::release
 
@@ -294,7 +293,7 @@ gpu::CascadeClassifier_GPU::detectMultiScale
 
     :param image: Matrix of type  ``CV_8U``  containing an image where objects should be detected.
 
-    :param objects: Buffer to store detected objects (rectangles). If it is empty, it is allocated with the default size. If not empty, the function searches not more than N objects, where N = sizeof(objectsBufer's data)/sizeof(cv::Rect).
+    :param objects: Buffer to store detected objects (rectangles). If it is empty, it is allocated with the default size. If not empty, the function searches not more than N objects, where ``N = sizeof(objectsBufer's data)/sizeof(cv::Rect)``.
 
     :param scaleFactor: Value to specify how much the image size is reduced at each image scale.
 
@@ -302,7 +301,8 @@ gpu::CascadeClassifier_GPU::detectMultiScale
 
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
-    The function returns the number of detected objects, so you can retrieve them as in the following example: ::
+    The function returns the number of detected objects, so you can retrieve them as in the following example: 
+::
 
     gpu::CascadeClassifier_GPU cascade_gpu(...);
 
@@ -324,5 +324,5 @@ gpu::CascadeClassifier_GPU::detectMultiScale
     imshow("Faces", image_cpu);
 
 
-See Also: :c:func:`CascadeClassifier::detectMultiScale` .
+See Also: :c:func:`CascadeClassifier::detectMultiScale` 
 

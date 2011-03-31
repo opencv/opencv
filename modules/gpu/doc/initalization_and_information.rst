@@ -17,7 +17,7 @@ gpu::setDevice
 ------------------
 .. cpp:function:: void setDevice(int device)
 
-    Sets a device and initializes it for the current thread. If call of this function is omitted, a default device is initialized at the fist GPU usage.
+    Sets a device and initializes it for the current thread. If the call of this function is omitted, a default device is initialized at the fist GPU usage.
 
     :param device: System index of a GPU device starting with 0.
 
@@ -27,7 +27,7 @@ gpu::getDevice
 ------------------
 .. cpp:function:: int getDevice()
 
-    Returns the current device index that was set by {gpu::getDevice} or initialized by default.
+    Returns the current device index that was set by ``{gpu::getDevice}`` or initialized by default.
 
 .. index:: gpu::GpuFeature
 
@@ -81,7 +81,7 @@ This class provides functionality for querying the specified GPU properties.
 .. Comment: two lines below look like a bug
 
 gpu::DeviceInfo::DeviceInfo
-------------------------------- ``_``
+------------------------------- 
 .. cpp:function:: gpu::DeviceInfo::DeviceInfo()
 
 .. cpp:function:: gpu::DeviceInfo::DeviceInfo(int device_id)
@@ -144,7 +144,7 @@ gpu::DeviceInfo::supports
 -----------------------------
 .. cpp:function:: bool gpu::DeviceInfo::supports(GpuFeature feature)
 
-    Provides information on GPU feature support. This function returns true if the device has the specified GPU feature, otherwise returns false.
+    Provides information on GPU feature support. This function returns true if the device has the specified GPU feature. Otherwise, it returns false.
 
     :param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
 
@@ -154,7 +154,7 @@ gpu::DeviceInfo::isCompatible
 ---------------------------------
 .. cpp:function:: bool gpu::DeviceInfo::isCompatible()
 
-    Checks the GPU module and device compatibility. This function returns true if the GPU module can be run on the specified device, otherwise returns false.
+    Checks the GPU module and device compatibility. This function returns ``true`` if the GPU module can be run on the specified device. Otherwise, it returns false.
 
 .. index:: gpu::TargetArchs
 
@@ -164,13 +164,13 @@ gpu::TargetArchs
 ----------------
 .. cpp:class:: gpu::TargetArchs
 
-This class provides a set of static methods to check what NVIDIA card architecture the GPU module was built for.
+This class provides a set of static methods to check what NVIDIA* card architecture the GPU module was built for.
 
 The following method checks whether the module was built with the support of the given feature:
 
-.. cpp:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
+	.. cpp:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
 
-    :param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
+		:param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
@@ -192,7 +192,7 @@ There is a set of methods to check whether the module contains intermediate (PTX
 
         :param minor: Minor compute capability version.
 
-    According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute capability can always be compiled to binary code of greater or equal compute capability".
+According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute capability can always be compiled to binary code of greater or equal compute capability".
 
 
 .. index:: gpu::MultiGpuManager
@@ -201,7 +201,7 @@ gpu::MultiGpuManager
 --------------------
 .. cpp:class:: gpu::MultiGpuManager
 
-Provides functionality for working with many GPUs. ::
+This class provides functionality for working with many GPUs. ::
 
     class MultiGpuManager
     {
@@ -229,7 +229,7 @@ gpu::MultiGpuManager::MultiGpuManager
 ----------------------------------------
 .. cpp:function:: gpu::MultiGpuManager::MultiGpuManager()
 
-    Creates multi GPU manager, but doesn't initialize it.
+    Creates a multi-GPU manager but does not initialize it.
 
 
 
@@ -239,7 +239,7 @@ gpu::MultiGpuManager::~MultiGpuManager
 ----------------------------------------
 .. cpp:function:: gpu::MultiGpuManager::~MultiGpuManager()
 
-    Releases multi GPU manager.
+    Releases a multi-GPU manager.
 
 
 
@@ -249,7 +249,7 @@ gpu::MultiGpuManager::init
 ----------------------------------------
 .. cpp:function:: void gpu::MultiGpuManager::init()
 
-    Initializes multi GPU manager.
+    Initializes a multi-GPU manager.
 
 
 
@@ -259,9 +259,9 @@ gpu::MultiGpuManager::gpuOn
 ----------------------------------------
 .. cpp:function:: void gpu::MultiGpuManager::gpuOn(int gpu_id)
 
-    Makes the given GPU active.
+    Activates the given GPU.
     
-    :param gpu_id: Index of the GPU device in system starting with 0.
+    :param gpu_id: System index of the GPU device starting with 0.
 
 
 
@@ -271,5 +271,5 @@ gpu::MultiGpuManager::gpuOff
 ----------------------------------------
 .. cpp:function:: void gpu::MultiGpuManager::gpuOff()
 
-    Finishes the piece of work on the current GPU.
+    Finishes a piece of work on the current GPU.
 

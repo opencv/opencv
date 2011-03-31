@@ -7,8 +7,7 @@ gpu::DevMem2D\_
 ---------------
 .. cpp:class:: gpu::DevMem2D\_
 
-This lightweight class encapsulates pitched memory on a GPU and is passed to nvcc-compiled code (CUDA kernels). Typically, it is used internally by OpenCV and by users who write device code. You can call its members from both host and device code. 
-::
+This lightweight class encapsulates pitched memory on a GPU and is passed to nvcc-compiled code (CUDA kernels). Typically, it is used internally by OpenCV and by users who write device code. You can call its members from both host and device code. ::
 
     template <typename T> struct DevMem2D_
     {
@@ -103,9 +102,10 @@ This is a base storage class for GPU memory with reference counting. Its interfa
 *   
     no expression templates technique support
     
-Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :cpp:class:`gpu::DevMem2D_` and :cpp:class:`gpu::PtrStep_` so it can be passed to directly to kernel.
+Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :cpp:class:`gpu::DevMem2D_` and :cpp:class:`gpu::PtrStep_` so it can be passed directly to kernel.
 
 **Note:**
+
 In contrast with :c:type:`Mat`, in most cases ``GpuMat::isContinuous() == false`` . This means that rows are aligned to size depending on the hardware. Single-row ``GpuMat`` is always a continuous matrix. ::
 
     class CV_EXPORTS GpuMat
@@ -141,6 +141,7 @@ In contrast with :c:type:`Mat`, in most cases ``GpuMat::isContinuous() == false`
 
 
 **Note:**
+
 You are not recommended to leave static or global ``GpuMat`` variables allocated, that is to rely on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory release function returns error if the CUDA context has been destroyed before.
 
 See Also:
@@ -156,14 +157,15 @@ This class with reference counting wraps special memory type allocation function
 :func:`Mat`-like but with additional memory type parameters.
     
 *
-    ``ALLOC_PAGE_LOCKED``:  Sets a page locked memory type, used commonly for fast and asynchronous upload/download data from/to GPU.
+    ``ALLOC_PAGE_LOCKED``:  Sets a page locked memory type, used commonly for fast and asynchronous uploading/downloading data from/to GPU.
 *
     ``ALLOC_ZEROCOPY``:  Specifies a zero copy memory allocation that enables mapping the host memory to GPU address space, if supported.
 *
     ``ALLOC_WRITE_COMBINED``:  Sets the write combined buffer that is not cached by CPU. Such buffers are used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache utilization.
 
 **Note:**
-Allocation size of such memory types is usually limited. For more details please see "CUDA 2.2 Pinned Memory APIs" document or "CUDA_C Programming Guide".
+
+Allocation size of such memory types is usually limited. For more details, see "CUDA 2.2 Pinned Memory APIs" document or "CUDA C Programming Guide".
 ::
 
     class CV_EXPORTS CudaMem
@@ -212,7 +214,7 @@ gpu::CudaMem::createGpuMatHeader
 
 .. cpp:function:: GpuMat gpu::CudaMem::createGpuMatHeader() const
 
-    Maps CPU memory to GPU address space and creates :cpp:class:`gpu::GpuMat` header without reference counting for it. This can be done only if memory was allocated with ``ALLOC_ZEROCOPY`` flag and if it is supported by the hardware (laptops often share video and CPU memory, so address spaces can be mapped, and that eliminates an extra copy).
+    Maps CPU memory to GPU address space and creates the :cpp:class:`gpu::GpuMat` header without reference counting for it. This can be done only if memory was allocated with the ``ALLOC_ZEROCOPY`` flag and if it is supported by the hardware (laptops often share video and CPU memory, so address spaces can be mapped, which eliminates an extra copy).
 
 .. index:: gpu::CudaMem::canMapHostMemory
 
@@ -220,7 +222,7 @@ gpu::CudaMem::canMapHostMemory
 ----------------------------------
 .. cpp:function:: static bool gpu::CudaMem::canMapHostMemory()
 
-    Returns true if the current hardware supports address space mapping and ``ALLOC_ZEROCOPY`` memory allocation.
+    Returns ``true`` if the current hardware supports address space mapping and ``ALLOC_ZEROCOPY`` memory allocation.
 
 .. index:: gpu::Stream
 
@@ -228,9 +230,10 @@ gpu::Stream
 -----------
 .. cpp:class:: gpu::Stream
 
-This class encapsulated a queue of asynchronous calls. Some functions have overloads with the additional ``gpu::Stream`` parameter. The overloads do initialization work (allocate output buffers, upload constants, and so on), start the GPU kernel, and return before results are ready. You can check whether all operation are complete via :cpp:func:`gpu::Stream::queryIfComplete`. You can asynchronously upload/download data from/to page-locked buffers, using :cpp:class:`gpu::CudaMem` or :c:type:`Mat` header that points to a region of :cpp:class:`gpu::CudaMem`.
+This class encapsulates a queue of asynchronous calls. Some functions have overloads with the additional ``gpu::Stream`` parameter. The overloads do initialization work (allocate output buffers, upload constants, and so on), start the GPU kernel, and return before results are ready. You can check whether all operations are complete via :cpp:func:`gpu::Stream::queryIfComplete`. You can asynchronously upload/download data from/to page-locked buffers, using the :cpp:class:`gpu::CudaMem` or :c:type:`Mat` header that points to a region of :cpp:class:`gpu::CudaMem`.
 
 **Note:**
+
 Currently, you may face problems if an operation is enqueued twice with different data. Some functions use the constant GPU memory, and next call may update the memory before the previous one has been finished. But calling different operations asynchronously is safe because each operation has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are also safe. 
 ::
 
@@ -275,7 +278,7 @@ gpu::Stream::queryIfComplete
 --------------------------------
 .. cpp:function:: bool gpu::Stream::queryIfComplete()
 
-    Returns true if the current stream queue is finished, otherwise false.
+    Returns ``true`` if the current stream queue is finished. Otherwise, it returns false.
 
 .. index:: gpu::Stream::waitForCompletion
 
@@ -283,7 +286,7 @@ gpu::Stream::waitForCompletion
 ----------------------------------
 .. cpp:function:: void gpu::Stream::waitForCompletion()
 
-    Blocks until all operations in the stream are complete.
+    Blocks ?? until all operations in the stream are complete.
 
 .. index:: gpu::StreamAccessor
 
@@ -318,14 +321,14 @@ gpu::createContinuous
 
     The following wrappers are also available:
     
-    *
-        .. cpp:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
-    *
-        .. cpp:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
-    *
-        .. cpp:function:: GpuMat gpu::createContinuous(Size size, int type)
+    
+		* .. cpp:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
+    
+		* .. cpp:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
+    
+		* .. cpp:function:: GpuMat gpu::createContinuous(Size size, int type)
 
-    Matrix is called continuous if its elements are stored continuously, that is wuthout gaps in the end of each row.
+    Matrix is called continuous if its elements are stored continuously, that is without gaps in the end of each row.
 
 .. index:: gpu::ensureSizeIsEnough
 
@@ -341,13 +344,13 @@ gpu::ensureSizeIsEnough
 
     :param cols: Minimum desired number of columns.
     
-    :param size: rows and cols passed as a structure
+    :param size: Rows and coumns passed as a structure.
 
     :param type: Desired matrix type.
 
     :param m: Destination matrix.
 
-    The following wrapper is also available:
+    The following wrapper is also available: ??
 
     
 

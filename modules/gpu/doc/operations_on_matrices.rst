@@ -16,7 +16,7 @@ gpu::transpose
     :param dst: Destination matrix.
 
 See Also:
-:c:func:`transpose` .
+:c:func:`transpose` 
 
 .. index:: gpu::flip
 
@@ -40,7 +40,7 @@ gpu::flip
             
 
 See Also:
-:c:func:`flip` .
+:c:func:`flip` 
 
 .. index:: gpu::LUT
 
@@ -52,12 +52,12 @@ gpu::LUT
 
     :param src: Source matrix.  ``CV_8UC1``  and  ``CV_8UC3``  matrices are supported for now.
 
-    :param lut: Look-up table of 256 elements. Must be continuous, ``CV_8U`` matrix.
+    :param lut: Look-up table of 256 elements. It is a continuous ``CV_8U`` matrix.
 
-    :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src`` .
+    :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src``.
             
 
-See Also: :c:func:`LUT` .
+See Also: :c:func:`LUT` 
 
 .. index:: gpu::merge
 
@@ -81,7 +81,7 @@ gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`merge` .
+See Also: :c:func:`merge` 
 
 .. index:: gpu::split
 
@@ -103,7 +103,7 @@ gpu::split
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`split`.
+See Also: :c:func:`split`
 
 .. index:: gpu::magnitude
 
@@ -119,16 +119,16 @@ gpu::magnitude
 
     :param xy: Source complex matrix in the interleaved format (``CV_32FC2``).
     
-    :param x: Source matrix, containing real components (``CV_32FC1``).
+    :param x: Source matrix containing real components (``CV_32FC1``).
 
-    :param y: Source matrix, containing imaginary components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components (``CV_32FC1``).
 
     :param magnitude: Destination matrix of float magnitudes (``CV_32FC1``).
 
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`magnitude` .
+:c:func:`magnitude` 
 
 .. index:: gpu::magnitudeSqr
 
@@ -144,9 +144,9 @@ gpu::magnitudeSqr
 
     :param xy: Source complex matrix in the interleaved format (``CV_32FC2``).
 
-    :param x: Source matrix, containing real components (``CV_32FC1``).
+    :param x: Source matrix containing real components (``CV_32FC1``).
 
-    :param y: Source matrix, containing imaginary components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components (``CV_32FC1``).
 
     :param magnitude: Destination matrix of float magnitude squares (``CV_32FC1``).
 
@@ -173,7 +173,7 @@ gpu::phase
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`phase` .
+:c:func:`phase` 
 
 .. index:: gpu::cartToPolar
 
@@ -198,7 +198,7 @@ gpu::cartToPolar
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`cartToPolar` .
+:c:func:`cartToPolar` 
 
 .. index:: gpu::polarToCart
 
@@ -223,4 +223,4 @@ gpu::polarToCart
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`polarToCart` .
+:c:func:`polarToCart` 
