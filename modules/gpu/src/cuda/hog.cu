@@ -507,8 +507,7 @@ void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, i
     dim3 threads(nthreads, 1);
     dim3 grid(img_win_width, img_win_height);
 
-    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
-                          block_stride_x;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
     extract_descrs_by_cols_kernel<nthreads><<<grid, threads>>>(
         img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
     cudaSafeCall( cudaGetLastError() );
@@ -689,7 +688,7 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
         hidx = (hidx + cnbins) % cnbins;
 
         ((uchar2*)qangle.ptr(blockIdx.y))[x] = make_uchar2(hidx, (hidx + 1) % cnbins);
-        ((float2*)grad.ptr(blockIdx.y))[x] = make_float2(mag * (1.f - ang), mag * ang);
+        ((float2*)  grad.ptr(blockIdx.y))[x] = make_float2(mag * (1.f - ang), mag * ang);
     }
 }
 
@@ -725,7 +724,7 @@ __global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar> dst, 
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < dst.cols && y < dst.rows)
-        ((unsigned char*)dst.ptr(y))[x] = tex2D(resize8UC1_tex, x * sx + colOfs, y * sy) * 255;
+        dst.ptr(y)[x] = tex2D(resize8UC1_tex, x * sx + colOfs, y * sy) * 255;
 }
 
 __global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar4> dst, int colOfs)
@@ -760,12 +759,14 @@ static void resize_for_hog(const DevMem2D& src, DevMem2D dst, TEX& tex)
 
     dim3 threads(32, 8);
     dim3 grid(divUp(dst.cols, threads.x), divUp(dst.rows, threads.y));
-    float sx = static_cast<float>(src.cols) / dst.cols;
+    
+	float sx = static_cast<float>(src.cols) / dst.cols;
     float sy = static_cast<float>(src.rows) / dst.rows;
+
     resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (DevMem2D_<T>)dst, colOfs);
     cudaSafeCall( cudaGetLastError() );
-    cudaSafeCall(cudaThreadSynchronize());
-    cudaSafeCall(cudaUnbindTexture(resize8UC1_tex));
+    cudaSafeCall( cudaThreadSynchronize() );
+    cudaSafeCall( cudaUnbindTexture(tex) );
 }
 
 void resize_8UC1(const DevMem2D& src, DevMem2D dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
