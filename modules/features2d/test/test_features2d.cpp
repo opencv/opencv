@@ -56,8 +56,8 @@ const string IMAGE_FILENAME = "tsukuba.png";
 class CV_FeatureDetectorTest : public cvtest::BaseTest
 {
 public:
-    CV_FeatureDetectorTest( const Ptr<FeatureDetector>& _fdetector ) :
-        fdetector(_fdetector) {}
+    CV_FeatureDetectorTest( const string& _name, const Ptr<FeatureDetector>& _fdetector ) :
+        name(_name), fdetector(_fdetector) {}
 
 protected:
     bool isSimilarKeypoints( const KeyPoint& p1, const KeyPoint& p2 );
@@ -68,6 +68,7 @@ protected:
 
     virtual void run( int );
 
+    string name;
     Ptr<FeatureDetector> fdetector;
 };
 
@@ -288,9 +289,9 @@ public:
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
 
-    CV_DescriptorExtractorTest( DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
+    CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
                                 Distance d = Distance() ):
-            maxDist(_maxDist), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
+            name(_name), maxDist(_maxDist), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
 
@@ -476,6 +477,7 @@ protected:
     const DistanceType maxDist;
     const float prevTime;
 
+    string name;
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
 
@@ -506,8 +508,8 @@ protected:
 class CV_DescriptorMatcherTest : public cvtest::BaseTest
 {
 public:
-    CV_DescriptorMatcherTest( const Ptr<DescriptorMatcher>& _dmatcher, float _badPart ) :
-        badPart(_badPart), dmatcher(_dmatcher)
+    CV_DescriptorMatcherTest( const string& _name, const Ptr<DescriptorMatcher>& _dmatcher, float _badPart ) :
+        name(_name), badPart(_badPart), dmatcher(_dmatcher)
         {}
 protected:
     static const int dim = 500;
@@ -523,7 +525,9 @@ protected:
     void knnMatchTest( const Mat& query, const Mat& train );
     void radiusMatchTest( const Mat& query, const Mat& train );
 
+    string name;
     Ptr<DescriptorMatcher> dmatcher;
+
 private:
     CV_DescriptorMatcherTest& operator=(const CV_DescriptorMatcherTest&) { return *this; }
 };
@@ -953,86 +957,136 @@ void CV_DescriptorMatcherTest::run( int )
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
+/****************************************************************************************\
+*                                Tests registrations                                     *
+\****************************************************************************************/
+
 /*
  * Detectors
- * "detector-fast, detector-gftt, detector-harris, detector-mser, detector-sift, detector-star, detector-surf, detector-grid-fast, detector-pyramid-fast"
  */
 
-/*CV_FeatureDetectorTest fastTest( "detector-fast", FeatureDetector::create("FAST") );
-CV_FeatureDetectorTest gfttTest( "detector-gftt", FeatureDetector::create("GFTT") );
-CV_FeatureDetectorTest harrisTest( "detector-harris", FeatureDetector::create("HARRIS") );
-CV_FeatureDetectorTest mserTest( "detector-mser", FeatureDetector::create("MSER") );
-CV_FeatureDetectorTest siftTest( "detector-sift", FeatureDetector::create("SIFT") );
-CV_FeatureDetectorTest starTest( "detector-star", FeatureDetector::create("STAR") );
-CV_FeatureDetectorTest surfTest( "detector-surf", FeatureDetector::create("SURF") );
-CV_FeatureDetectorTest gridFastfTest( "detector-grid-fast", FeatureDetector::create("GridFAST") );
-CV_FeatureDetectorTest pyramidFastTest( "detector-pyramid-fast", FeatureDetector::create("PyramidFAST") );*/
+TEST( Features2d_Detector_FAST, regression )
+{
+    CV_FeatureDetectorTest test( "detector-fast", FeatureDetector::create("FAST") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_GFTT, regression )
+{
+    CV_FeatureDetectorTest test( "detector-gftt", FeatureDetector::create("GFTT") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_Harris, regression )
+{
+    CV_FeatureDetectorTest test( "detector-harris", FeatureDetector::create("HARRIS") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_MSER, regression )
+{
+    CV_FeatureDetectorTest test( "detector-mser", FeatureDetector::create("MSER") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_SIFT, regression )
+{
+    CV_FeatureDetectorTest test( "detector-sift", FeatureDetector::create("SIFT") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_STAR, regression )
+{
+    CV_FeatureDetectorTest test( "detector-star", FeatureDetector::create("STAR") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_SURF, regression )
+{
+    CV_FeatureDetectorTest test( "detector-surf", FeatureDetector::create("SURF") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_GridFAST, regression )
+{
+    CV_FeatureDetectorTest test( "detector-grid-fast", FeatureDetector::create("GridFAST") );
+    test.safe_run();
+}
+
+TEST( Features2d_Detector_PyramidFAST, regression )
+{
+    CV_FeatureDetectorTest test( "detector-pyramid-fast", FeatureDetector::create("PyramidFAST") );
+    test.safe_run();
+}
 
 /*
  * Descriptors
- * "descriptor-sift, descriptor-surf, descriptor-calonder-uchar, descriptor-calonder-float, descriptor-brief, descriptor-opponent-sift, descriptor-opponent-surf"
  */
-TEST( Features2d_Descriptor_SIFT, regression )
+TEST( Features2d_DescriptorExtractor_SIFT, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( 0.03f, DescriptorExtractor::create("SIFT"), 8.06652f  );
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-sift", 0.03f,
+                                                  DescriptorExtractor::create("SIFT"), 8.06652f  );
     test.safe_run();
 }
 
-TEST( Features2d_Descriptor_SURF, regression )
+TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( 0.035f, DescriptorExtractor::create("SURF"), 0.147372f );
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.035f,
+                                                 DescriptorExtractor::create("SURF"), 0.147372f );
     test.safe_run();
 }
 
-TEST( Features2d_Descriptor_BRIEF, regression )
+TEST( Features2d_DescriptorExtractor_BRIEF, regression )
 {
-    CV_DescriptorExtractorTest<Hamming> test( 1, DescriptorExtractor::create("BRIEF"), 0.00527548f );
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brief",  1,
+                                               DescriptorExtractor::create("BRIEF"), 0.00527548f );
     test.safe_run();
 }
 
-TEST( Features2d_Descriptor_OpponentSIFT, regression )
+TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( 0.18f, DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-sift", 0.18f,
+                                                 DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
     test.safe_run();
 }
- 
-TEST( Features2d_Descriptor_OpponentSURF, regression )
+
+TEST( Features2d_DescriptorExtractor_OpponentSURF, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( 0.18f, DescriptorExtractor::create("OpponentSURF"), 0.147372f );
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-surf",  0.18f,
+                                                 DescriptorExtractor::create("OpponentSURF"), 0.147372f );
     test.safe_run();
 }
 
 #if CV_SSE2
-TEST( Features2d_Descriptor_Calonder_uchar, regression )
+TEST( Features2d_DescriptorExtractor_Calonder_uchar, regression )
 {
-    CV_CalonderDescriptorExtractorTest<uchar, L2<uchar> > test( 
-                                                             std::numeric_limits<float>::epsilon() + 1,
-                                                             0.0132175f );
+    CV_CalonderDescriptorExtractorTest<uchar, L2<uchar> > test( "descriptor-calonder-uchar",
+                                                                std::numeric_limits<float>::epsilon() + 1,
+                                                                0.0132175f );
     test.safe_run();
 }
 
-TEST( Features2d_Descriptor_Calonder_float, regression )
+TEST( Features2d_DescriptorExtractor_Calonder_float, regression )
 {
-    CV_CalonderDescriptorExtractorTest<float, L2<float> > test( 
-                                                             std::numeric_limits<float>::epsilon(),
-                                                             0.0221308f );
+    CV_CalonderDescriptorExtractorTest<float, L2<float> > test( "descriptor-calonder-float",
+                                                                std::numeric_limits<float>::epsilon(),
+                                                                0.0221308f );
     test.safe_run();
 }
 #endif // CV_SSE2
 
 /*
  * Matchers
- * "descriptor-matcher-brute-force, descriptor-matcher-flann-based"
  */
-TEST( Features2d_DescriptorMatcher_BruteForce_L2, accuracy )
+TEST( Features2d_DescriptorMatcher_BruteForce, regression )
 {
-    CV_DescriptorMatcherTest test( new BruteForceMatcher<L2<float> >, 0.01f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force", new BruteForceMatcher<L2<float> >, 0.01f );
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorMatcher_FLANN, accuracy )
+TEST( Features2d_DescriptorMatcher_FlannBased, regression )
 {
-    CV_DescriptorMatcherTest test( new FlannBasedMatcher, 0.04f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based", new FlannBasedMatcher, 0.04f );
     test.safe_run();
 }
 
