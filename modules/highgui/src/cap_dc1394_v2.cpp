@@ -190,6 +190,7 @@ static CvDC1394 dc1394;
 class CvCaptureCAM_DC1394_v2_CPP : public CvCapture
 {
 public:
+    static int dc1394properties[CV_CAP_PROP_MAX_DC1394];
     CvCaptureCAM_DC1394_v2_CPP();
     virtual ~CvCaptureCAM_DC1394_v2_CPP()
     {
@@ -236,8 +237,31 @@ protected:
     bool rectify;
     bool init_rectify;
     IplImage *maps[NIMG][2];
+    dc1394featureset_t feature_set;
 };
-
+//mapping CV_CAP_PROP_ to DC1394_FEATUREs
+int CvCaptureCAM_DC1394_v2_CPP::dc1394properties[CV_CAP_PROP_MAX_DC1394] = {
+-1, //no corresponding feature for CV_CAP_PROP_POS_MSEC
+-1,-1,-1,-1,
+DC1394_FEATURE_FRAME_RATE, //CV_CAP_PROP_FPS - fps can be set for format 7 only!
+-1,-1,-1,-1,
+DC1394_FEATURE_BRIGHTNESS,//CV_CAP_PROP_BRIGHTNESS 10
+-1,
+DC1394_FEATURE_SATURATION,//CV_CAP_PROP_SATURATION
+DC1394_FEATURE_HUE,
+DC1394_FEATURE_GAIN,
+DC1394_FEATURE_SHUTTER, //CV_CAP_PROP_EXPOSURE
+-1,//CV_CAP_PROP_CONVERT_RGB
+DC1394_FEATURE_WHITE_BALANCE, //corresponds to CV_CAP_PROP_WHITE_BALANCE_BLUE_U and CV_CAP_PROP_WHITE_BALANCE_RED_V, see set function to check these props are set
+-1,-1,
+DC1394_FEATURE_SHARPNESS, //20
+DC1394_FEATURE_EXPOSURE, //CV_CAP_PROP_AUTO_EXPOSURE - this is auto exposure according to the IIDC standard
+DC1394_FEATURE_GAMMA, //CV_CAP_PROP_GAMMA
+DC1394_FEATURE_TEMPERATURE, //CV_CAP_PROP_TEMPERATURE
+DC1394_FEATURE_TRIGGER, //CV_CAP_PROP_TRIGGER
+DC1394_FEATURE_TRIGGER_DELAY, //CV_CAP_PROP_TRIGGER_DELAY
+DC1394_FEATURE_WHITE_BALANCE//CV_CAP_PROP_WHITE_BALANCE_RED_V
+};
 CvCaptureCAM_DC1394_v2_CPP::CvCaptureCAM_DC1394_v2_CPP()
 {
     guid = 0;
@@ -411,7 +435,11 @@ bool CvCaptureCAM_DC1394_v2_CPP::open(int index)
         goto _exit_;
 
     cameraId = dcCam->vendor_id;
-    result = true;
+    //get all features
+    if (dc1394_feature_get_all(dcCam,&feature_set) == DC1394_SUCCESS)
+        result = true;
+    else
+        result = false;
 
 _exit_:
     if (cameraList)
@@ -579,13 +607,27 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId)
         return fps;
     case CV_CAP_PROP_RECTIFICATION:
         return rectify ? 1 : 0;
-//    case CV_CAP_PROP_BRIGHTNESS :
-//    case CV_CAP_PROP_CONTRAST :
-//    case CV_CAP_PROP_WHITE_BALANCE :
+    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+        if (dc1394_feature_whitebalance_get_value(dcCam,
+                                                  &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value,
+                                                  &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value) == DC1394_SUCCESS)
+        return feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value;
+        break;
+    case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+        if (dc1394_feature_whitebalance_get_value(dcCam,
+                                                  &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value,
+                                                  &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value) == DC1394_SUCCESS)
+        return feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value;
+        break;
     default:
-        ;
+        if (propId<CV_CAP_PROP_MAX_DC1394 && dc1394properties[propId]!=-1
+            && dcCam)
+            //&& feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].on_off_capable)
+            if (dc1394_feature_get_value(dcCam,(dc1394feature_t)dc1394properties[propId],
+                &feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value) == DC1394_SUCCESS)
+              return feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value;
     }
-    return 0;
+    return -1; // the value of the feature can be 0, so returning 0 as an error is wrong
 }
 
 bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
@@ -617,8 +659,86 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
     case CV_CAP_PROP_MODE:
         userMode = cvRound(value);
         break;
-    default:
-        return false;
+        //The code below is based on coriander, callbacks.c:795, refer to case RANGE_MENU_MAN :
+         default:
+             if (propId<CV_CAP_PROP_MAX_DC1394 && dc1394properties[propId]!=-1
+                 && dcCam)
+             {
+                 if (cvRound(value) == CV_CAP_PROP_DC1394_OFF)
+                     if ((feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].on_off_capable)
+                         && (dc1394_feature_set_power(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_OFF)==DC1394_SUCCESS))
+                         {
+                         feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].is_on=DC1394_OFF;
+                         return true;
+                         }
+                 else
+                     return false;
+                 //try to turn the feature ON, feature can be ON and at the same time it can be not capable to change state to OFF
+                 if ( feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].is_on == DC1394_OFF &&
+                      (feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].on_off_capable == DC1394_TRUE))
+                 {
+                     if (dc1394_feature_set_power(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_ON) == DC1394_SUCCESS)
+                       feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].is_on=DC1394_ON;
+                 }
+                 //turn off absolute mode - the actual value will be stored in the value field,
+                 //otherwise it would be stored into CSR (control and status register) absolute value
+                 if (feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].absolute_capable
+                     && dc1394_feature_set_absolute_control(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_OFF) !=DC1394_SUCCESS)
+                     return false;
+                 else
+                     feature_set.feature[(dc1394feature_t)dc1394properties[propId]-DC1394_FEATURE_MIN].abs_control=DC1394_OFF;
+                 //set AUTO
+                 if (cvRound(value) == CV_CAP_PROP_DC1394_MODE_AUTO)
+                 {
+                     if (dc1394_feature_set_mode(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_FEATURE_MODE_AUTO)!=DC1394_SUCCESS)
+                         return false;
+                     feature_set.feature[(dc1394feature_t)dc1394properties[propId]-DC1394_FEATURE_MIN].current_mode=DC1394_FEATURE_MODE_AUTO;
+                     return true;
+                 }
+                 //set ONE PUSH
+                 if (cvRound(value) == CV_CAP_PROP_DC1394_MODE_ONE_PUSH_AUTO)
+                 {
+                     //have to set to manual first, otherwise one push will be ignored (AVT  manual 4.3.0 p. 115)
+                     if (dc1394_feature_set_mode(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_FEATURE_MODE_ONE_PUSH_AUTO)!=DC1394_SUCCESS)
+                         return false;
+                     //will change to
+                     feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].current_mode=DC1394_FEATURE_MODE_ONE_PUSH_AUTO;
+                     return true;
+                 }
+                 //set the feature to MANUAL mode,
+                 if (dc1394_feature_set_mode(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_FEATURE_MODE_MANUAL)!=DC1394_SUCCESS)
+                     return false;
+                 else
+                     feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].current_mode=DC1394_FEATURE_MODE_MANUAL;
+                 // if property is one of the white balance features treat it in different way
+                 if (propId == CV_CAP_PROP_WHITE_BALANCE_BLUE_U)
+                 {
+                     if (dc1394_feature_whitebalance_set_value(dcCam,cvRound(value), feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].RV_value)!=DC1394_SUCCESS)
+                         return false;
+                     else
+                     {
+                         feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value = cvRound(value);
+                         return true;
+                     }
+                 }
+                 if (propId == CV_CAP_PROP_WHITE_BALANCE_RED_V)
+                 {
+                     if (dc1394_feature_whitebalance_set_value(dcCam,feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].BU_value,cvRound(value))!=DC1394_SUCCESS)
+                         return false;
+                     else
+                     {
+                         feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value = cvRound(value);
+                         return true;
+                     }
+                 }
+                 // finally set the feature
+                 if (dc1394_feature_set_value(dcCam,(dc1394feature_t)dc1394properties[propId],cvRound(value)) == DC1394_SUCCESS)
+                 {
+                     feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value = value;
+                     return true;
+                 }
+             }
+             return false;
     }
     return true;
 }

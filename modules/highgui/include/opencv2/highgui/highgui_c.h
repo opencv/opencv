@@ -315,6 +315,12 @@ CVAPI(void) cvReleaseCapture( CvCapture** capture );
 
 enum
 {
+    // modes of the controlling registers (can be: auto, manual, auto single push, absolute Latter allowed with any other mode)
+    // every feature can have only one mode turned on at a time
+    CV_CAP_PROP_DC1394_OFF         = -4,  //turn the feature off (not controlled manually nor automatically)
+    CV_CAP_PROP_DC1394_MODE_MANUAL = -3, //set automatically when a value of the feature is set by the user
+    CV_CAP_PROP_DC1394_MODE_AUTO = -2,
+    CV_CAP_PROP_DC1394_MODE_ONE_PUSH_AUTO = -1,
 	CV_CAP_PROP_POS_MSEC       =0,
 	CV_CAP_PROP_POS_FRAMES     =1,
 	CV_CAP_PROP_POS_AVI_RATIO  =2,
@@ -332,20 +338,29 @@ enum
 	CV_CAP_PROP_GAIN          =14,
 	CV_CAP_PROP_EXPOSURE      =15,
 	CV_CAP_PROP_CONVERT_RGB   =16,
-	CV_CAP_PROP_WHITE_BALANCE =17,
+    CV_CAP_PROP_WHITE_BALANCE_BLUE_U =17,
 	CV_CAP_PROP_RECTIFICATION =18,
 	CV_CAP_PROP_MONOCROME	  =19,
-
+    CV_CAP_PROP_SHARPNESS     =20,
+    CV_CAP_PROP_AUTO_EXPOSURE =21, // exposure control done by camera,
+                                   // user can adjust refernce level
+                                   // using this feature
+    CV_CAP_PROP_GAMMA         =22,
+    CV_CAP_PROP_TEMPERATURE   =23,
+    CV_CAP_PROP_TRIGGER       =24,
+    CV_CAP_PROP_TRIGGER_DELAY =25,
+    CV_CAP_PROP_WHITE_BALANCE_RED_V =26,
+    CV_CAP_PROP_MAX_DC1394    =27,
 	// OpenNI map generators
     CV_CAP_OPENNI_DEPTH_GENERATOR = 0,
     CV_CAP_OPENNI_IMAGE_GENERATOR = 1 << 31,
     CV_CAP_OPENNI_GENERATORS_MASK = 1 << 31,
 
     // Properties of cameras avalible through OpenNI interfaces
-    CV_CAP_PROP_OPENNI_OUTPUT_MODE      = 20,
-    CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH  = 21, // in mm
-    CV_CAP_PROP_OPENNI_BASELINE         = 22, // in mm
-    CV_CAP_PROP_OPENNI_FOCAL_LENGTH     = 23, // in pixels
+    CV_CAP_PROP_OPENNI_OUTPUT_MODE      = 100,
+    CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH  = 101, // in mm
+    CV_CAP_PROP_OPENNI_BASELINE         = 102, // in mm
+    CV_CAP_PROP_OPENNI_FOCAL_LENGTH     = 103, // in pixels
     CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE,
     CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE,
     CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH
