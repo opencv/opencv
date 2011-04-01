@@ -324,9 +324,7 @@ public:
     int get_var_count() const;
     int get_sample_count() const;
     bool is_regression() const;
-
-protected:
-
+    
     virtual float write_results( int k, int k1, int start, int end,
         const float* neighbor_responses, const float* dist, CvMat* _results,
         CvMat* _neighbor_responses, CvMat* _dist, Cv32suf* sort_buf ) const;
@@ -334,6 +332,7 @@ protected:
     virtual void find_neighbors_direct( const CvMat* _samples, int k, int start, int end,
         float* neighbor_responses, const float** neighbors, float* dist ) const;
 
+protected:
 
     int max_k, var_count;
     int total;
@@ -2001,6 +2000,7 @@ public:
         return layer_sizes && weights &&
             (unsigned)layer <= (unsigned)layer_sizes->cols ? weights[layer] : 0;
     }
+
     virtual void calc_activ_func_deriv( CvMat* xf, CvMat* deriv, const double* bias ) const;
 
 protected:

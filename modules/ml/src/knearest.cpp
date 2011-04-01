@@ -300,7 +300,54 @@ float CvKNearest::write_results( int k, int k1, int start, int end,
     return result;
 }
 
+struct P1 {
+  P1(const CvKNearest* _pointer, int _buf_sz, int _k, const CvMat* __samples, const float** __neighbors,
+     int _k1, CvMat* __results, CvMat* __neighbor_responses, CvMat* __dist, float* _result)
+  {
+    pointer = _pointer;
+    k = _k;
+    _samples = __samples;
+    _neighbors = __neighbors;
+    k1 = _k1;
+    _results = __results;
+    _neighbor_responses = __neighbor_responses;
+    _dist = __dist;
+    result = _result;
+    buf_sz = _buf_sz;
+  }
+  
+  const CvKNearest* pointer;
+  int k;
+  const CvMat* _samples;
+  const float** _neighbors;
+  int k1;
+  CvMat* _results;
+  CvMat* _neighbor_responses;
+  CvMat* _dist;
+  float* result;
+  int buf_sz;
+  
+  void operator()( const cv::BlockedRange& range ) const
+  {
+    cv::AutoBuffer<float> buf(buf_sz);
+    for(int i = range.begin(); i < range.end(); i += 1 )
+    {
+        float* neighbor_responses = &buf[0];
+        float* dist = neighbor_responses + 1*k;
+        Cv32suf* sort_buf = (Cv32suf*)(dist + 1*k);
 
+        pointer->find_neighbors_direct( _samples, k, i, i + 1,
+                    neighbor_responses, _neighbors, dist );
+
+        float r = pointer->write_results( k, k1, i, i + 1, neighbor_responses, dist,
+                                 _results, _neighbor_responses, _dist, sort_buf );
+
+        if( i == 0 )
+            *result = r;
+    }
+  }
+
+};
 
 float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
     const float** _neighbors, CvMat* _neighbor_responses, CvMat* _dist ) const
@@ -359,23 +406,9 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
     k1 = get_sample_count();
     k1 = MIN( k1, k );
 
-    cv::AutoBuffer<float> buf(buf_sz);
-
-    for( i = 0; i < count; i += blk_count )
-    {
-        blk_count = MIN( count - i, blk_count0 );
-        float* neighbor_responses = &buf[0];
-        float* dist = neighbor_responses + blk_count*k;
-        Cv32suf* sort_buf = (Cv32suf*)(dist + blk_count*k);
-
-        find_neighbors_direct( _samples, k, i, i + blk_count,
-                    neighbor_responses, _neighbors, dist );
-
-        float r = write_results( k, k1, i, i + blk_count, neighbor_responses, dist,
-                                 _results, _neighbor_responses, _dist, sort_buf );
-        if( i == 0 )
-            result = r;
-    }
+    cv::parallel_for(cv::BlockedRange(0, count), P1(this, buf_sz, k, _samples, _neighbors, k1,
+                                                    _results, _neighbor_responses, _dist, &result)
+    );
 
     return result;
 }
