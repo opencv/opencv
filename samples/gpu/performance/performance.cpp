@@ -6,19 +6,6 @@
 using namespace std;
 using namespace cv;
 
-
-void TestSystem::setWorkingDir(const string& val)
-{
-    working_dir_ = val;
-}
-
-
-void TestSystem::setTestFilter(const string& val)
-{
-    test_filter_ = val;
-}
-
-
 void TestSystem::run()
 {
     // Run test initializers

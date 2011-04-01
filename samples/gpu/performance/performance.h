@@ -12,8 +12,11 @@
 class Runnable
 {
 public:
-    explicit Runnable(const std::string& name): name_(name) {}
-    const std::string& name() const { return name_; }
+    explicit Runnable(const std::string& name): name_(name) {}  
+    virtual ~Runnable() {}
+    
+    const std::string& name() const { return name_; }    
+    
     virtual void run() = 0;
 
 private:
@@ -30,10 +33,10 @@ public:
         return me;
     }
 
-    void setWorkingDir(const std::string& val);
+    void setWorkingDir(const std::string& val) { working_dir_ = val; }
     const std::string& workingDir() const { return working_dir_; }
 
-    void setTestFilter(const std::string& val);
+    void setTestFilter(const std::string& val) { test_filter_ = val; }
     const std::string& testFilter() const { return test_filter_; }
 
     void addInit(Runnable* init) { inits_.push_back(init); }
