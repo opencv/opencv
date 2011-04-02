@@ -38,6 +38,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
