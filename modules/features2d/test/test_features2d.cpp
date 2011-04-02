@@ -1086,4 +1086,3 @@ TEST( Features2d_DescriptorMatcher_FlannBased, regression )
     CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based", new FlannBasedMatcher, 0.04f );
     test.safe_run();
 }
-
