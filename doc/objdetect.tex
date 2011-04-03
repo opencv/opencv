@@ -79,7 +79,7 @@ typedef struct CvHaarFeature
     int  tilted;  /* 0 means up-right feature, 1 means 45--rotated feature */
 
     /* 2-3 rectangles with weights of opposite signs and
-       with absolute values inversely proportional to the areas of the 
+       with absolute values inversely proportional to the areas of the
        rectangles.  If rect[2].weight !=0, then
        the feature consists of 3 rectangles, otherwise it consists of 2 */
     struct
@@ -90,9 +90,9 @@ typedef struct CvHaarFeature
 }
 CvHaarFeature;
 
-/* a single tree classifier (stump in the simplest case) that returns the 
-   response for the feature at the particular image location (i.e. pixel 
-   sum over subrectangles of the window) and gives out a value depending 
+/* a single tree classifier (stump in the simplest case) that returns the
+   response for the feature at the particular image location (i.e. pixel
+   sum over subrectangles of the window) and gives out a value depending
    on the response */
 typedef struct CvHaarClassifier
 {
@@ -101,11 +101,11 @@ typedef struct CvHaarClassifier
     /* these are "parallel" arrays. Every index \texttt{i}
        corresponds to a node of the decision tree (root has 0-th index).
 
-       left[i] - index of the left child (or negated index if the 
+       left[i] - index of the left child (or negated index if the
          left child is a leaf)
-       right[i] - index of the right child (or negated index if the 
+       right[i] - index of the right child (or negated index if the
           right child is a leaf)
-       threshold[i] - branch threshold. if feature responce is <= threshold, 
+       threshold[i] - branch threshold. if feature responce is <= threshold,
                     left branch is chosen, otherwise right branch is chosen.
        alpha[i] - output value correponding to the leaf. */
     CvHaarFeature* haar_feature;
@@ -141,16 +141,16 @@ typedef struct CvHaarClassifierCascade
 {
     int  flags; /* signature */
     int  count; /* number of stages */
-    CvSize orig_window_size; /* original object size (the cascade is 
+    CvSize orig_window_size; /* original object size (the cascade is
                             trained for) */
 
     /* these two parameters are set by cvSetImagesForHaarClassifierCascade */
     CvSize real_window_size; /* current object size */
     double scale; /* current scale */
     CvHaarStageClassifier* stage_classifier; /* array of stage classifiers */
-    CvHidHaarClassifierCascade* hid_cascade; /* hidden optimized 
-                        representation of the 
-                        cascade, created by 
+    CvHidHaarClassifierCascade* hid_cascade; /* hidden optimized
+                        representation of the
+                        cascade, created by
                 cvSetImagesForHaarClassifierCascade */
 }
 CvHaarClassifierCascade;
@@ -370,13 +370,13 @@ Base class for computing feature values in cascade classifiers.
 \begin{lstlisting}
 class CV_EXPORTS FeatureEvaluator
 {
-public:    
-    enum { HAAR = 0, LBP = 1 }; // supported feature types 
+public:
+    enum { HAAR = 0, LBP = 1 }; // supported feature types
     virtual ~FeatureEvaluator(); // destructor
     virtual bool read(const FileNode& node);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
-    
+
     virtual bool setImage(const Mat& img, Size origWinSize);
     virtual bool setWindow(Point p);
 
@@ -428,7 +428,7 @@ bool FeatureEvaluator::setImage(const Mat\& img, Size origWinSize);
 Sets window in the current image in which the features will be computed (called by \cvCppCross{CascadeClassifier::runAt}).
 
 \cvdefCpp{
-bool FeatureEvaluator::setWindow(Point p); 
+bool FeatureEvaluator::setWindow(Point p);
 }
 
 \begin{description}
@@ -477,21 +477,21 @@ The cascade classifier class for object detection.
 class CascadeClassifier
 {
 public:
-	// structure for storing tree node
-    struct CV_EXPORTS DTreeNode 
+    // structure for storing tree node
+    struct CV_EXPORTS DTreeNode
     {
         int featureIdx; // feature index on which is a split
         float threshold; // split threshold of ordered features only
         int left; // left child index in the tree nodes array
         int right; // right child index in the tree nodes array
     };
-    
+
     // structure for storing desision tree
-    struct CV_EXPORTS DTree 
+    struct CV_EXPORTS DTree
     {
         int nodeCount; // nodes count
     };
-    
+
     // structure for storing cascade stage (BOOST only for now)
     struct CV_EXPORTS Stage
     {
@@ -499,27 +499,27 @@ public:
         int ntrees; // number of trees
         float threshold; // treshold of stage sum
     };
-    
+
     enum { BOOST = 0 }; // supported stage types
-    
+
     // mode of detection (see parameter flags in function HaarDetectObjects)
     enum { DO_CANNY_PRUNING = CV_HAAR_DO_CANNY_PRUNING,
            SCALE_IMAGE = CV_HAAR_SCALE_IMAGE,
            FIND_BIGGEST_OBJECT = CV_HAAR_FIND_BIGGEST_OBJECT,
-           DO_ROUGH_SEARCH = CV_HAAR_DO_ROUGH_SEARCH }; 
+           DO_ROUGH_SEARCH = CV_HAAR_DO_ROUGH_SEARCH };
 
     CascadeClassifier(); // default constructor
     CascadeClassifier(const string& filename);
     ~CascadeClassifier(); // destructor
-    
+
     bool empty() const;
     bool load(const string& filename);
     bool read(const FileNode& node);
 
-    void detectMultiScale( const Mat& image, vector<Rect>& objects, 
-                           double scaleFactor=1.1, int minNeighbors=3, 
-						   int flags=0, Size minSize=Size());
-    
+    void detectMultiScale( const Mat& image, vector<Rect>& objects,
+                           double scaleFactor=1.1, int minNeighbors=3,
+                           int flags=0, Size minSize=Size());
+
     bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
     int runAt( Ptr<FeatureEvaluator>&, Point );
 
@@ -527,9 +527,9 @@ public:
 
     int stageType; // stage type (BOOST only for now)
     int featureType; // feature type (HAAR or LBP for now)
-    int ncategories; // number of categories (for categorical features only) 
+    int ncategories; // number of categories (for categorical features only)
     Size origWinSize; // size of training images
-    
+
     vector<Stage> stages; // vector of stages (BOOST for now)
     vector<DTree> classifiers; // vector of decision trees
     vector<DTreeNode> nodes; // vector of tree nodes
@@ -635,5 +635,150 @@ Groups the object candidate rectangles
 \cvarg{eps}{The relative difference between sides of the rectangles to merge them into a group}
 \end{description}
 
-The function is a wrapper for a generic function \cvCppCross{partition}. It clusters all the input rectangles using the rectangle equivalence criteria, that combines rectangles that have similar sizes and similar locations (the similarity is defined by \texttt{eps}). When \texttt{eps=0}, no clustering is done at all. If $\texttt{eps}\rightarrow +\inf$, all the rectangles will be put in one cluster. Then, the small clusters, containing less than or equal to \texttt{groupThreshold} rectangles, will be rejected. In each other cluster the average rectangle will be computed and put into the output rectangle list.  
+The function is a wrapper for a generic function \cvCppCross{partition}. It clusters all the input rectangles using the rectangle equivalence criteria, that combines rectangles that have similar sizes and similar locations (the similarity is defined by \texttt{eps}). When \texttt{eps=0}, no clustering is done at all. If $\texttt{eps}\rightarrow +\inf$, all the rectangles will be put in one cluster. Then, the small clusters, containing less than or equal to \texttt{groupThreshold} rectangles, will be rejected. In each other cluster the average rectangle will be computed and put into the output rectangle list.
 \fi
+
+\ifC
+
+\section{Discriminatively Trained Part Based Models for Object Detection}
+
+\subsection{Discriminatively Trained Part Based Models for Object Detection}
+
+The object detector described below has been initially proposed by
+P.F. Felzenszwalb in \cvCPyCross{Felzenszwalb10}.  It is based on a
+Dalal-Triggs detector that uses a single filter on histogram of
+oriented gradients (HOG) features to represent an object category.
+This detector uses a sliding window approach, where a filter is
+applied at all positions and scales of an image. The first
+innovation is enriching the Dalal-Triggs model using a
+star-structured part-based model defined by a "root" filter
+(analogous to the Dalal-Triggs filter) plus a set of parts filters
+and associated deformation models. The score of one of star models
+at a particular position and scale within an image is the score of
+the root filter at the given location plus the sum over parts of the
+maximum, over placements of that part, of the part filter score on
+its location minus a deformation cost measuring the deviation of the
+part from its ideal location relative to the root. Both root and
+part filter scores are defined by the dot product between a filter
+(a set of weights) and a subwindow of a feature pyramid computed
+from the input image. Another improvement is a representation of the
+class of models by a mixture of star models. The score of a mixture
+model at a particular position and scale is the maximum over
+components, of the score of that component model at the given
+location.
+
+\fi
+
+\ifC
+
+\cvclass{CvLSVMFilterPosition, CvLSVMFilterObject,
+CvLatentSvmDetector, CvObjectDetection}
+
+\begin{lstlisting}
+/* DataType: STRUCT position
+   Structure describes the position of the filter in the feature pyramid
+   l - level in the feature pyramid
+   (x, y) - coordinate in level l */
+typedef struct {
+    unsigned int x;
+    unsigned int y;
+    unsigned int l;
+} CvLSVMFilterPosition;
+
+/* DataType: STRUCT filterObject
+   Description of the filter, which corresponds to the part of the object
+   V               - ideal (penalty = 0) position of the partial filter
+                     from the root filter position (V_i in the paper)
+   penaltyFunction - vector describes penalty function (d_i in the paper)
+                     pf[0] * x + pf[1] * y + pf[2] * x^2 + pf[3] * y^2
+   FILTER DESCRIPTION
+     Rectangular map (sizeX x sizeY),
+     every cell stores feature vector (dimension = p)
+   H               - matrix of feature vectors
+                     to set and get feature vectors (i,j)
+                     used formula H[(j * sizeX + i) * p + k], where
+                     k - component of feature vector in cell (i, j)
+   END OF FILTER DESCRIPTION
+   xp              - auxillary parameter for internal use
+                     size of row in feature vectors
+                     (yp = (int) (p / xp); p = xp * yp) */
+typedef struct{
+    CvLSVMFilterPosition V;
+    float fineFunction[4];
+    unsigned int sizeX;
+    unsigned int sizeY;
+    unsigned int p;
+    unsigned int xp;
+    float *H;
+} CvLSVMFilterObject;
+
+/* data type: STRUCT CvLatentSvmDetector
+   structure contains internal representation of trained Latent SVM detector
+   num_filters          - total number of filters (root plus part) in model
+   num_components       - number of components in model
+   num_part_filters     - array containing number of part filters for each component
+   filters              - root and part filters for all model components
+   b                    - biases for all model components
+   score_threshold      - confidence level threshold */
+typedef struct CvLatentSvmDetector {
+    int num_filters;
+    int num_components;
+    int* num_part_filters;
+    CvLSVMFilterObject** filters;
+    float* b;
+    float score_threshold;
+} CvLatentSvmDetector;
+
+/* data type: STRUCT CvObjectDetection
+   structure contains the bounding box and confidence level for detected object
+   rect                 - bounding box for a detected object
+   score                - confidence level */
+typedef struct CvObjectDetection {
+    CvRect rect;
+    float score;
+} CvObjectDetection;
+
+\end{lstlisting}
+
+\fi
+
+
+\ifC
+
+\cvCPyFunc{LoadLatentSvmDetector} Loads trained detector from a file
+
+\cvdefC{ CvLatentSvmDetector* cvLoadLatentSvmDetector( \par const
+char* filename); }
+
+\begin{description}
+\cvarg{filename}{Name of the file containing the description of a
+trained detector}
+\end{description}
+
+\fi
+
+\cvCPyFunc{LatentSvmDetectObjects} Detects objects in the image.
+
+\cvdefC{ void cvLatentSvmDetectObjects( \par IplImage* image,
+                                \par CvLatentSvmDetector* detector,
+                                \par CvMemStorage* storage,
+                                \par float overlap\_threshold CV\_DEFAULT(0.5f),
+                                \par int numThreads CV\_DEFAULT(-1));
+}
+
+\begin{description}
+\cvarg{image}{Image to detect objects in} \cvarg{detector}{LatentSVM
+detector in internal representation} \cvarg{storage}{Memory storage
+to store the resultant sequence of the object candidate rectangles}
+\cvarg{overlap\_threshod}{Threshold for the non-maximum suppression
+algorithm} \cvarg{numThreads}{Number of threads used in parallel
+version of the algorithm}
+\end{description}
+
+% \begin{description}
+% \cvarg{directory}{Name of the directory containing the description
+% of a trained cascade classifier} \cvarg{orig\_window\_size}{Original
+% size of the objects the cascade has been trained on. Note that it is
+% not stored in the cascade and therefore must be specified
+% separately}
+% \end{description}

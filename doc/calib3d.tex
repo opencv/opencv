@@ -421,12 +421,12 @@ typedef struct CvStereoBMState
     int       speckleWindowSize; // the maximum area of speckles to remove
                                  // (set to 0 to disable speckle filtering)
     int       speckleRange; // acceptable range of disparity variation in each connected component
-    
-    int trySmallerWindows; // not used 
+
+    int trySmallerWindows; // not used
     CvRect roi1, roi2; // clipping ROIs
-    
-    int disp12MaxDiff; // maximum allowed disparity difference in the left-right check 
-    
+
+    int disp12MaxDiff; // maximum allowed disparity difference in the left-right check
+
     // internal data
     ...
 }
@@ -606,16 +606,16 @@ Size patternsize(8,6); //interior number of corners
 Mat gray = ....; //source image
 vector<Point2f> corners; //this will be filled by the detected corners
 
-//CALIB_CB_FAST_CHECK saves a lot of time on images 
+//CALIB_CB_FAST_CHECK saves a lot of time on images
 //that don't contain any chessboard corners
-bool patternfound = findChessboardCorners(gray, patternsize, corners, 
-	CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE 
-	+ CALIB_CB_FAST_CHECK);
+bool patternfound = findChessboardCorners(gray, patternsize, corners,
+    CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE
+    + CALIB_CB_FAST_CHECK);
 
 if(patternfound)
-  cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1), 
+  cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1),
     TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
-    
+
 drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
 \end{lstlisting}
 
@@ -656,12 +656,12 @@ Mat gray = ....; //source image
 vector<Point2f> centers; //this will be filled by the detected centers
 
 bool patternfound = findCirclesGrid(gray, patternsize, centers);
-    
+
 drawChessboardCorners(img, patternsize, Mat(centers), patternfound);
 \end{lstlisting}
 
 You can find a printable asymmetric pattern of circles in the OpenCV
-documentation folder (doc/acircles_pattern.png).
+documentation folder (doc/acircles\_pattern.png).
 
 \textbf{Note:} the function requires some white space (like a circle-thick
 border, the wider the better) around the board to make the detection more robust in various environment.
@@ -920,7 +920,7 @@ void cvFindStereoCorrespondenceGC( \par const CvArr* left, \par const CvArr* rig
 \cvarg{useDisparityGuess}{If the parameter is not zero, the algorithm will start with pre-defined disparity maps. Both dispLeft and dispRight should be valid disparity maps. Otherwise, the function starts with blank disparity maps (all pixels are marked as occlusions).}
 \end{description}
 
-The function computes disparity maps for the input rectified stereo pair. Note that the left disparity image will contain values in the following range: 
+The function computes disparity maps for the input rectified stereo pair. Note that the left disparity image will contain values in the following range:
 
 \[
 -\texttt{state->numberOfDisparities}-\texttt{state->minDisparity}
@@ -932,10 +932,10 @@ or
 dispLeft(x,y) == \texttt{CV\_STEREO\_GC\_OCCLUSION}
 \]
 
-and for the right disparity image the following will be true: 
+and for the right disparity image the following will be true:
 
 \[
-\texttt{state->minDisparity} \le dispRight(x,y) 
+\texttt{state->minDisparity} \le dispRight(x,y)
 < \texttt{state->minDisparity} + \texttt{state->numberOfDisparities}
 \]
 
@@ -1039,7 +1039,7 @@ Returns the new camera matrix based on the free scaling parameter
     \par const Mat\& cameraMatrix, const Mat\& distCoeffs,
     \par Size imageSize, double alpha, Size newImageSize=Size(),
     \par Rect* validPixROI=0);}
-    
+
 \begin{description}
 \cvarg{cameraMatrix}{The input camera matrix}
 \cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
@@ -1064,7 +1064,7 @@ Finds the initial camera matrix from the 3D-2D point correspondences
                                      \par const CvMat* imagePoints,
                                      \par const CvMat* npoints, CvSize imageSize,
                                      \par CvMat* cameraMatrix,
-                                     \par double aspectRatio=1.);}                                     
+                                     \par double aspectRatio=1.);}
 \cvdefPy{InitIntrinsicParams2D(objectPoints, imagePoints, npoints, imageSize, cameraMatrix, aspectRatio=1.) -> None}
 \cvdefCpp{Mat initCameraMatrix2D( const vector<vector<Point3f> >\& objectPoints,\par
                         const vector<vector<Point2f> >\& imagePoints,\par
@@ -1074,7 +1074,7 @@ Finds the initial camera matrix from the 3D-2D point correspondences
 \cvarg{objectPoints}{The joint array of object points; see \cvCross{CalibrateCamera2}{calibrateCamera}}
 \cvarg{imagePoints}{The joint array of object point projections; see \cvCross{CalibrateCamera2}{calibrateCamera}}
 \cvarg{npoints}{The array of point counts; see \cvCross{CalibrateCamera2}{calibrateCamera}}
-\fi    
+\fi
 \ifCpp
 \cvarg{objectPoints}{The vector of vectors of the object points. See \cvCppCross{calibrateCamera}}
 \cvarg{imagePoints}{The vector of vectors of the corresponding image points. See \cvCppCross{calibrateCamera}}
@@ -1153,9 +1153,9 @@ map_x(u,v) \leftarrow x" f_x + c_x \\
 map_y(u,v) \leftarrow y" f_y + c_y
 \end{array}
 \]
-where $(k_1, k_2, p_1, p_2[, k_3])$ are the distortion coefficients. 
- 
-In the case of a stereo camera this function is called twice, once for each camera head, after \cvCross{StereoRectify}{stereoRectify}, which in its turn is called after \cvCross{StereoCalibrate}{stereoCalibrate}. But if the stereo camera was not calibrated, it is still possible to compute the rectification transformations directly from the fundamental matrix using \cvCross{StereoRectifyUncalibrated}{stereoRectifyUncalibrated}. For each camera the function computes homography \texttt{H} as the rectification transformation in pixel domain, not a rotation matrix \texttt{R} in 3D space. The \texttt{R} can be computed from \texttt{H} as 
+where $(k_1, k_2, p_1, p_2[, k_3])$ are the distortion coefficients.
+
+In the case of a stereo camera this function is called twice, once for each camera head, after \cvCross{StereoRectify}{stereoRectify}, which in its turn is called after \cvCross{StereoCalibrate}{stereoCalibrate}. But if the stereo camera was not calibrated, it is still possible to compute the rectification transformations directly from the fundamental matrix using \cvCross{StereoRectifyUncalibrated}{stereoRectifyUncalibrated}. For each camera the function computes homography \texttt{H} as the rectification transformation in pixel domain, not a rotation matrix \texttt{R} in 3D space. The \texttt{R} can be computed from \texttt{H} as
 
 \[ \texttt{R} = \texttt{cameraMatrix}^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix} \]
 
@@ -1280,8 +1280,8 @@ Reprojects disparity image to 3D space.
 \cvarg{Q}{The $4 \times 4$ perspective transformation matrix that can be obtained with \cvCross{StereoRectify}{stereoRectify}}
 \cvarg{handleMissingValues}{If true, when the pixels with the minimal disparity (that corresponds to the outliers; see \cvCross{FindStereoCorrespondenceBM}{StereoBM}) will be transformed to 3D points with some very large Z value (currently set to 10000)}
 \end{description}
- 
-The function transforms 1-channel disparity map to 3-channel image representing a 3D surface. That is, for each pixel \texttt{(x,y)} and the corresponding disparity \texttt{d=disparity(x,y)} it computes: 
+
+The function transforms 1-channel disparity map to 3-channel image representing a 3D surface. That is, for each pixel \texttt{(x,y)} and the corresponding disparity \texttt{d=disparity(x,y)} it computes:
 
 \[\begin{array}{l}
 [X\; Y\; Z\; W]^T = \texttt{Q}*[x\; y\; \texttt{disparity}(x,y)\; 1]^T \\
@@ -1348,7 +1348,7 @@ Releases block matching stereo correspondence structure.
 \cvarg{state}{Double pointer to the released structure.}
 \end{description}
 
-The function releases the stereo correspondence structure and all the associated internal buffers. 
+The function releases the stereo correspondence structure and all the associated internal buffers.
 
 \cvCPyFunc{ReleaseStereoGCState}
 Releases the state structure of the graph cut-based stereo correspondence algorithm.
@@ -1360,7 +1360,7 @@ Releases the state structure of the graph cut-based stereo correspondence algori
 \cvarg{state}{Double pointer to the released structure.}
 \end{description}
 
-The function releases the stereo correspondence structure and all the associated internal buffers. 
+The function releases the stereo correspondence structure and all the associated internal buffers.
 
 \fi
 
@@ -1460,9 +1460,9 @@ class StereoSGBM
                int speckleWindowSize=0, int speckleRange=0,
                bool fullDP=false);
     virtual ~StereoSGBM();
-    
+
     virtual void operator()(const Mat& left, const Mat& right, Mat& disp);
-    
+
     int minDisparity;
     int numberOfDisparities;
     int SADWindowSize;
@@ -1473,7 +1473,7 @@ class StereoSGBM
     int speckleRange;
     int disp12MaxDiff;
     bool fullDP;
-    
+
     ...
 };
 \end{lstlisting}
@@ -1576,7 +1576,7 @@ Calibrates stereo camera.
     \cvarg{distCoeffs}{The input/output vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. \cvCpp{On output vector length depends on the flags.}}
     \cvarg{cameraMatrix2}{The input/output second camera matrix, as cameraMatrix1.}
     \cvarg{distCoeffs2}{The input/output lens distortion coefficients for the second camera, as \texttt{distCoeffs1}.}
-\cvarg{imageSize}{Size of the image, used only to initialize intrinsic camera matrix.} 
+\cvarg{imageSize}{Size of the image, used only to initialize intrinsic camera matrix.}
 \cvarg{R}{The output rotation matrix between the 1st and the 2nd cameras' coordinate systems.}
 \cvarg{T}{The output translation vector between the cameras' coordinate systems.}
 \cvarg{E}{The \cvCPy{optional} output essential matrix.}
@@ -1668,10 +1668,10 @@ void stereoRectify( const Mat\& cameraMatrix1, const Mat\& distCoeffs1,\par
 \cvarg{roi1, roi2}{The optional output rectangles inside the rectified images where all the pixels are valid. If \texttt{alpha=0}, the ROIs will cover the whole images, otherwise they likely be smaller, see the picture below}
 \end{description}
 
-The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, that makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. On input the function takes the matrices computed by \cvCppCross{stereoCalibrate} and on output it gives 2 rotation matrices and also 2 projection matrices in the new coordinates. The 2 cases are distinguished by the function are: 
+The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, that makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. On input the function takes the matrices computed by \cvCppCross{stereoCalibrate} and on output it gives 2 rotation matrices and also 2 projection matrices in the new coordinates. The 2 cases are distinguished by the function are:
 
 \begin{enumerate}
-\item Horizontal stereo, when 1st and 2nd camera views are shifted relative to each other mainly along the x axis (with possible small vertical shift). Then in the rectified images the corresponding epipolar lines in left and right cameras will be horizontal and have the same y-coordinate. P1 and P2 will look as: 
+\item Horizontal stereo, when 1st and 2nd camera views are shifted relative to each other mainly along the x axis (with possible small vertical shift). Then in the rectified images the corresponding epipolar lines in left and right cameras will be horizontal and have the same y-coordinate. P1 and P2 will look as:
 
 \[\texttt{P1}=
 \begin{bmatrix}
@@ -1711,9 +1711,9 @@ f & 0 & cx & 0\\
 \]
 
 where $T_y$ is vertical shift between the cameras and $cy_1=cy_2$ if \texttt{CALIB\_ZERO\_DISPARITY} is set.
-\end{enumerate} 
+\end{enumerate}
 
-As you can see, the first 3 columns of \texttt{P1} and \texttt{P2} will effectively be the new "rectified" camera matrices. 
+As you can see, the first 3 columns of \texttt{P1} and \texttt{P2} will effectively be the new "rectified" camera matrices.
 The matrices, together with \texttt{R1} and \texttt{R2}, can then be passed to \cvCross{InitUndistortRectifyMap}{initUndistortRectifyMap} to initialize the rectification map for each camera.
 
 Below is the screenshot from \texttt{stereo\_calib.cpp} sample. Some red horizontal lines, as you can see, pass through the corresponding image regions, i.e. the images are well rectified (which is what most stereo correspondence algorithms rely on). The green rectangles are \texttt{roi1} and \texttt{roi2} - indeed, their interior are all valid pixels.
@@ -1746,7 +1746,7 @@ Computes rectification transform for uncalibrated stereo camera.
 Otherwise all the points are considered inliers.}
 \end{description}
 
-The function computes the rectification transformations without knowing intrinsic parameters of the cameras and their relative position in space, hence the suffix "Uncalibrated". Another related difference from \cvCross{StereoRectify}{stereoRectify} is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations, encoded by the homography matrices \texttt{H1} and \texttt{H2}. The function implements the algorithm \cite{Hartley99}. 
+The function computes the rectification transformations without knowing intrinsic parameters of the cameras and their relative position in space, hence the suffix "Uncalibrated". Another related difference from \cvCross{StereoRectify}{stereoRectify} is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations, encoded by the homography matrices \texttt{H1} and \texttt{H2}. The function implements the algorithm \cite{Hartley99}.
 
 Note that while the algorithm does not need to know the intrinsic parameters of the cameras, it heavily depends on the epipolar geometry. Therefore, if the camera lenses have significant distortion, it would better be corrected before computing the fundamental matrix and calling this function. For example, distortion coefficients can be estimated for each head of stereo camera separately by using \cvCross{CalibrateCamera2}{calibrateCamera} and then the images can be corrected using \cvCross{Undistort2}{undistort}, or just the point coordinates can be corrected with \cvCross{UndistortPoints}{undistortPoints}.
 
@@ -1807,7 +1807,7 @@ void undistortPoints( const Mat\& src, Mat\& dst,\par
 
 \begin{description}
 
-\cvarg{src}{The observed point coordinates, 1xN or Nx1 2-channel (CV\_32FC2 or CV\_64FC2).} 
+\cvarg{src}{The observed point coordinates, 1xN or Nx1 2-channel (CV\_32FC2 or CV\_64FC2).}
 \cvarg{dst}{The output ideal point coordinates, after undistortion and reverse perspective transformation\cvCPy{, same format as \texttt{src}}.}
 \cvarg{cameraMatrix}{The camera matrix $\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}$}
 \cvarg{distCoeffs}\cvarg{distCoeffs}{The input vector of distortion coefficients $(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])$ of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.}
