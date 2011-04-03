@@ -8,18 +8,18 @@ Basic Structures
 DataType
 --------
 
-Template "traits" class for other OpenCV primitive data types ::
+Template "trait" class for other OpenCV primitive data types ::
 
     template<typename _Tp> class DataType
     {
-        // value_type is always a synonym for _Tp.
+        // value_type is always a synonym to _Tp.
         typedef _Tp value_type;
 
         // intermediate type used for operations on _Tp.
-        // it is int for uchar, signed char, unsigned short, signed short and int,
+        // it is int for uchar, signed char, unsigned short, signed short, and int,
         // float for float, double for double, ...
         typedef <...> work_type;
-        // in the case of multi-channel data it is the data type of each channel
+        // in the case of multi-channel data, it is the data type of each channel
         typedef <...> channel_type;
         enum
         {
@@ -34,11 +34,11 @@ Template "traits" class for other OpenCV primitive data types ::
         };
     };
 
-The template class ``DataType`` is descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in a form ``CV_<bit-depth>{U|S|F}C<number_of_channels>``, for example, ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3`` etc. A universal OpenCV structure, which is able to store a single instance of such primitive data type is
-:ref:`Vec`. Multiple instances of such a type can be stored to a ``std::vector``,``Mat``,``Mat_``,``SparseMat``,``SparseMat_`` or any other container that is able to store
+The template class ``DataType`` is a descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C<number_of_channels>``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure, which is able to store a single instance of such a primitive data type, is
+:ref:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``,``Mat``,``Mat_``,``SparseMat``,``SparseMat_``, or any other container that is able to store
 :ref:`Vec` instances.
 
-The class ``DataType`` is basically used to provide some description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It's not ``DataType`` itself that is used, but its specialized versions, such as: ::
+The ``DataType`` class is basically used to provide a description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not ``DataType`` itself that is used, but its specialized versions, such as: ::
 
     template<> class DataType<uchar>
     {
@@ -60,17 +60,17 @@ The class ``DataType`` is basically used to provide some description of such pri
     };
     ...
 
-The main purpose of the classes is to convert compile-time type information to OpenCV-compatible data type identifier, for example: ::
+The main purpose of this class is to convert compilation-time type information to an OpenCV-compatible data type identifier, for example: ::
 
-    // allocates 30x40 floating-point matrix
+    // allocates a 30x40 floating-point matrix
     Mat A(30, 40, DataType<float>::type);
 
     Mat B = Mat_<std::complex<double> >(3, 3);
-    // the statement below will print 6, 2 /* i.e. depth == CV_64F, channels == 2 */
+    // the statement below will print 6, 2 /*, that is depth == CV_64F, channels == 2 */
     cout << B.depth() << ", " << B.channels() << endl;
 
 
-that is, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV (the matrix ``B`` intialization above compiles because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` ). Also, this mechanism is useful (and used in OpenCV this way) for generic algorithms implementations.
+So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV (the matrix ``B`` intialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` ). Also, this mechanism is useful (and used in OpenCV this way) for generic algorithms implementations.
 
 Point\_
 -------
@@ -108,7 +108,7 @@ Template class for 2D points ::
 The class represents a 2D point, specified by its coordinates
 :math:`x` and
 :math:`y` .
-Instance of the class is interchangeable with C structures ``CvPoint`` and ``CvPoint2D32f`` . There is also cast operator to convert point coordinates to the specified type. The conversion from floating-point coordinates to integer coordinates is done by rounding; in general case the conversion uses
+Instance of the class is interchangeable with C structures, ``CvPoint`` and ``CvPoint2D32f`` . There is also a cast operator to convert point coordinates to the specified type. The conversion from floating-point coordinates to integer coordinates is done by rounding. Commonly, the conversion uses this
 operation on each of the coordinates. Besides the class members listed in the declaration above, the following operations on points are implemented: ::
 
         pt1 = pt2 + pt3;
@@ -122,7 +122,7 @@ operation on each of the coordinates. Besides the class members listed in the de
         pt1 == pt2;
         pt1 != pt2;
 
-For user convenience, the following type aliases are defined: ::
+For your convenience, the following type aliases are defined: ::
 
     typedef Point_<int> Point2i;
     typedef Point2i Point;
@@ -164,10 +164,10 @@ Template class for 3D points ::
     };
 
 
-The class represents a 3D point, specified by its coordinates
+The class represents a 3D point specified by its coordinates
 :math:`x`,:math:`y` and
 :math:`z` .
-Instance of the class is interchangeable with C structure ``CvPoint2D32f`` . Similarly to ``Point_`` , the 3D points' coordinates can be converted to another type, and the vector arithmetic and comparison operations are also supported.
+Instance of the class is interchangeable with the C structure ``CvPoint2D32f`` . Similarly to ``Point_`` , the 3D points' coordinates can be converted to another type. The vector arithmetic and comparison operations are also supported.
 
 The following type aliases are available: ::
 
@@ -179,7 +179,7 @@ The following type aliases are available: ::
 Size\_
 ------
 
-Template class for specfying image or rectangle size. ::
+Template class for specfying an image or rectangle size. ::
 
     template<typename _Tp> class Size_
     {
@@ -205,7 +205,7 @@ Template class for specfying image or rectangle size. ::
     };
 
 
-The class ``Size_`` is similar to ``Point_`` , except that the two members are called ``width`` and ``height`` instead of ``x`` and ``y`` . The structure can be converted to and from the old OpenCV structures
+The class ``Size_`` is similar to ``Point_``  except that the two members are called ``width`` and ``height`` instead of ``x`` and ``y`` . The structure can be converted to and from the old OpenCV structures
 ``CvSize`` and ``CvSize2D32f`` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
 
 OpenCV defines the following type aliases: ::
@@ -259,7 +259,7 @@ Template class for 2D rectangles ::
 
 The rectangle is described by the coordinates of the top-left corner (which is the default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV; though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner), the rectangle width and height.
 
-Another assumption OpenCV usually makes is that the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not, for example, the method ``Rect_::contains`` returns true if
+Another assumption OpenCV usually makes is that the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not. For example, the method ``Rect_::contains`` returns ``true`` if
 
 .. math::
 
@@ -279,10 +279,10 @@ ROI in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
 In addition to the class members, the following operations on rectangles are implemented:
 
 *
-    :math:`\texttt{rect} = \texttt{rect} \pm \texttt{point}`     (shifting rectangle by a certain offset)
+    :math:`\texttt{rect} = \texttt{rect} \pm \texttt{point}`     (shifting a rectangle by a certain offset)
 
 *
-    :math:`\texttt{rect} = \texttt{rect} \pm \texttt{size}`     (expanding or shrinking rectangle by a certain amount)
+    :math:`\texttt{rect} = \texttt{rect} \pm \texttt{size}`     (expanding or shrinking a rectangle by a certain amount)
 
 * ``rect += point, rect -= point, rect += size, rect -= size``     (augmenting operations)
 
@@ -294,7 +294,7 @@ In addition to the class members, the following operations on rectangles are imp
 
 * ``rect == rect1, rect != rect1``     (rectangle comparison)
 
-Example. Here is how the partial ordering on rectangles can be established (rect1
+This is an example how the partial ordering on rectangles can be established (rect1
 :math:`\subseteq` rect2): ::
 
     template<typename _Tp> inline bool
@@ -304,7 +304,7 @@ Example. Here is how the partial ordering on rectangles can be established (rect
     }
 
 
-For user convenience, the following type alias is available: ::
+For your convenience, the following type alias is available: ::
 
     typedef Rect_<int> Rect;
 
@@ -314,7 +314,7 @@ For user convenience, the following type alias is available: ::
 RotatedRect
 -----------
 
-Possibly rotated rectangle ::
+Template class for rotated rectangles ::
 
     class RotatedRect
     {
@@ -338,14 +338,14 @@ Possibly rotated rectangle ::
     };
 
 
-The class ``RotatedRect`` replaces the old ``CvBox2D`` and fully compatible with it.
+The class ``RotatedRect`` replaces the old ``CvBox2D`` and is fully compatible with it.
 
 TermCriteria
 ------------
 
 .. c:type:: TermCriteria
 
-Termination criteria for iterative algorithms ::
+Template class defining termination criteria for iterative algorithms ::
 
     class TermCriteria
     {
@@ -357,7 +357,7 @@ Termination criteria for iterative algorithms ::
         // type can be MAX_ITER, EPS or MAX_ITER+EPS.
         // type = MAX_ITER means that only the number of iterations does matter;
         // type = EPS means that only the required precision (epsilon) does matter
-        //    (though, most algorithms put some limit on the number of iterations anyway)
+        //    (though, most algorithms limit the number of iterations anyway)
         // type = MAX_ITER + EPS means that algorithm stops when
         // either the specified number of iterations is made,
         // or when the specified accuracy is achieved - whatever happens first.
@@ -371,7 +371,7 @@ Termination criteria for iterative algorithms ::
     };
 
 
-The class ``TermCriteria`` replaces the old ``CvTermCriteria`` and fully compatible with it.
+The class ``TermCriteria`` replaces the old ``CvTermCriteria`` and is fully compatible with it.
 
 .. _Matx:
 
@@ -412,9 +412,9 @@ Template class for small matrices ::
     typedef Matx<double, 6, 6> Matx66d;
 
 
-The class represents small matrices, which type and size are known at compile time. If you need more flexible type, use
-:ref:`Mat` . The elements of a matrix ``M`` are accessible using ``M(i,j)`` notation, and most of the common matrix operations (see also
-:ref:`MatrixExpressions` ) are available. If you need to do some operation on ``Matx`` that is not implemented, it is easy to convert the matrix to
+The class represents small matrices, whose type and size are known at compilation time. If you need a more flexible type, use
+:ref:`Mat` . The elements of the matrix ``M`` are accessible using the ``M(i,j)`` notation, and most of the common matrix operations (see also
+:ref:`MatrixExpressions` ) are available. If you need to do an operation on ``Matx`` that is not implemented, it is easy to convert the matrix to
 :ref:`Mat` and backwards. ::
 
     Matx33f m(1, 2, 3,
@@ -466,18 +466,18 @@ Template class for short numerical vectors ::
 
 *
     :math:`\texttt{v1} = \texttt{v2} \pm \texttt{v3}`,    :math:`\texttt{v1} = \texttt{v2} * \alpha`,    :math:`\texttt{v1} = \alpha * \texttt{v2}`     (plus the corresponding augmenting operations; note that these operations apply
-    to the each computed vector component)
+    to each computed vector component)
 
 * ``v1 == v2, v1 != v2`` * ``norm(v1)``     (:math:`L_2`-norm)
 
-The class ``Vec`` is commonly used to describe pixel types of multi-channel arrays, see ``Mat_`` description.
+The ``Vec`` class is commonly used to describe pixel types of multi-channel arrays. See ``Mat_`` for details.
 
 .. _Scalar:
 
 Scalar\_
 --------
 
-4-element vector ::
+Template class for a 4-element vector ::
 
     template<typename _Tp> class Scalar_ : public Vec<_Tp, 4>
     {
@@ -498,7 +498,7 @@ Scalar\_
     typedef Scalar_<double> Scalar;
 
 
-The template class ``Scalar_`` and it's double-precision instantiation ``Scalar`` represent 4-element vector. Being derived from ``Vec<_Tp, 4>`` , they can be used as typical 4-element vectors, but in addition they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values and it is a drop-in replacement for
+The template class ``Scalar_`` and its double-precision instantiation ``Scalar`` represent a 4-element vector. Being derived from ``Vec<_Tp, 4>`` , they can be used as typical 4-element vectors, but in addition they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values and it is a drop-in replacement for
 ``CvScalar`` that was used for the same purpose in the earlier versions of OpenCV.
 
 .. _Range:
@@ -506,7 +506,7 @@ The template class ``Scalar_`` and it's double-precision instantiation ``Scalar`
 Range
 -----
 
-Specifies a continuous subsequence (a.k.a. slice) of a sequence. ::
+Template class specifying a continuous subsequence (a.k.a. slice) of a sequence. ::
 
     class Range
     {
@@ -524,10 +524,10 @@ Specifies a continuous subsequence (a.k.a. slice) of a sequence. ::
 
 
 The class is used to specify a row or column span in a matrix (
-:ref:`Mat` ), and for many other purposes. ``Range(a,b)`` is basically the same as ``a:b`` in Matlab or ``a..b`` in Python. As in Python, ``start`` is inclusive left boundary of the range, and ``end`` is exclusive right boundary of the range. Such a half-opened interval is usually denoted as
+:ref:`Mat` ) and for many other purposes. ``Range(a,b)`` is basically the same as ``a:b`` in Matlab or ``a..b`` in Python. As in Python, ``start`` is an inclusive left boundary of the range and ``end`` is an exclusive right boundary of the range. Such a half-opened interval is usually denoted as
 :math:`[start,end)` .
 
-The static method ``Range::all()`` returns some special variable that means "the whole sequence" or "the whole range", just like " ``:`` " in Matlab or " ``...`` " in Python. All the methods and functions in OpenCV that take ``Range`` support this special ``Range::all()`` value, but of course, in the case of your own custom processing you will probably have to check and handle it explicitly: ::
+The static method ``Range::all()`` returns a special variable that means "the whole sequence" or "the whole range", just like " ``:`` " in Matlab or " ``...`` " in Python. All the methods and functions in OpenCV that take ``Range`` support this special ``Range::all()`` value. But, of course, in case of your own custom processing, you will probably have to check and handle it explicitly: ::
 
     void my_function(..., const Range& r, ....)
     {
@@ -545,7 +545,7 @@ The static method ``Range::all()`` returns some special variable that means "the
 Ptr
 ---
 
-A template class for smart reference-counting pointers ::
+Template class for smart reference-counting pointers ::
 
     template<typename _Tp> class Ptr
     {
@@ -589,27 +589,27 @@ A template class for smart reference-counting pointers ::
     };
 
 
-The class ``Ptr<_Tp>`` is a template class that wraps pointers of the corresponding type. It is similar to ``shared_ptr`` that is a part of Boost library (
+The ``Ptr<_Tp>`` class is a template class that wraps pointers of the corresponding type. It is similar to ``shared_ptr`` that is part of the Boost library (
 http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm
-) and also a part of the `C++0x <http://en.wikipedia.org/wiki/C++0x>`_
+) and also part of the `C++0x <http://en.wikipedia.org/wiki/C++0x>`_
 standard.
 
 By using this class you can get the following capabilities:
 
 *
-    default constructor, copy constructor and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets etc, copy constructor or assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may have been written in C. However, copy constructors and default constructors can simplify programming a lot; besides, they are often required (e.g. by STL containers). By wrapping a pointer to such a complex object ``TObj``     to ``Ptr<TObj>``     you will automatically get all of the necessary constructors and the assignment operator.
+    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets, and others, copy constructor or assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may have been written in C. However, copy constructors and default constructors can simplify programming a lot; besides, they are often required (for example, by STL containers). By wrapping a pointer to such a complex object ``TObj``     to ``Ptr<TObj>`` , you will automatically get all of the necessary constructors and the assignment operator.
 
 *
-    all the above-mentioned operations running very fast, regardless of the data size, i.e. as "O(1)" operations. Indeed, while some structures, like ``std::vector``     provide a copy constructor and an assignment operator, the operations may take considerable time if the data structures are big. But if the structures are put into ``Ptr<>``     , the overhead becomes small and independent of the data size.
+    All the above-mentioned operations running very fast, regardless of the data size, that is like "O(1)" operations. Indeed, while some structures, like ``std::vector`` ,   provide a copy constructor and an assignment operator, the operations may take a considerable amount of time if the data structures are big. But if the structures are put into ``Ptr<>``     , the overhead becomes small and independent of the data size.
 
 *
-    automatic destruction, even for C structures. See the example below with ``FILE*``     .
+    Automatic destruction, even for C structures. See the example below with ``FILE*``     .
 
 *
-    heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can only store objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead, but when you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
+    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can only store objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead but when you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
 
-The class ``Ptr`` treats the wrapped object as a black box, the reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is incapsulated in ``Ptr::delete_obj()`` method, which is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
-However, if the object is deallocated in a different way, then the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as following: ::
+The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is incapsulated in the ``Ptr::delete_obj()`` method that is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
+However, if the object is deallocated in a different way, then the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as follows: ::
 
     template<> inline void Ptr<FILE>::delete_obj()
     {
@@ -628,6 +628,7 @@ However, if the object is deallocated in a different way, then the specialized m
 
 
 **Note**
+
 : The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for
 :ref:`Mat` and other C++ OpenCV classes that operate on the reference counters.
 
@@ -678,67 +679,67 @@ The class ``Mat`` represents an n-dimensional dense numerical single-channel or 
 
     addr(M_{i_0,...,i_{M.dims-1}}) = M.data + M.step[0]*i_0 + M.step[1]*i_1 + ... + M.step[M.dims-1]*i_{M.dims-1}
 
-In the case of 2-dimensional array the above formula is reduced to:
+In the case of 2-dimensional array, the above formula is reduced to:
 
 .. math::
 
     addr(M_{i,j}) = M.data + M.step[0]*i + M.step[1]*j
 
-Note that ``M.step[i] >= M.step[i+1]`` (in fact, ``M.step[i] >= M.step[i+1]*M.size[i+1]`` ), that is, 2-dimensional matrices are stored row-by-row, 3-dimensional matrices are stored plane-by-plane etc. ``M.step[M.dims-1]`` is minimal and always equal to the element size ``M.elemSize()`` .
+Note that ``M.step[i] >= M.step[i+1]`` (in fact, ``M.step[i] >= M.step[i+1]*M.size[i+1]`` ), that is, 2-dimensional matrices are stored row-by-row, 3-dimensional matrices are stored plane-by-plane, and so on. ``M.step[M.dims-1]`` is minimal and always equal to the element size ``M.elemSize()`` .
 
-That is, the data layout in ``Mat`` is fully compatible with ``CvMat``,``IplImage`` and ``CvMatND`` types from OpenCV 1.x, as well as with majority of dense array types from the standard toolkits and SDKs, such as Numpy (ndarray), Win32 (independent device bitmaps) etc, i.e. any other array that uses "steps", a.k.a. "strides", to compute position of a pixel. Because of such compatibility, it is possible to make a ``Mat`` header for user-allocated data and process it in-place using OpenCV functions.
+So, the data layout in ``Mat`` is fully compatible with ``CvMat``,``IplImage`` and ``CvMatND`` types from OpenCV 1.x, as well as with the majority of dense array types from the standard toolkits and SDKs, such as Numpy (ndarray), Win32 (independent device bitmaps), and others, that is any other array that uses "steps", a.k.a. "strides", to compute the position of a pixel. Due to this compatibility, it is possible to make a ``Mat`` header for user-allocated data and process it in-place using OpenCV functions.
 
-There are many different ways to create ``Mat`` object. Here are the some popular ones:
+There are many different ways to create a ``Mat`` object. Here are some popular ones:
 
 *
     
-    using ``create(nrows, ncols, type)``     method or
-        the similar constructor ``Mat(nrows, ncols, type[, fillValue])``     constructor.
-        A new array of the specified size and specifed type will be allocated. ``type``     has the same meaning as in
-    :func:`cvCreateMat`     method,
-        e.g. ``CV_8UC1``     means 8-bit single-channel array, ``CV_32FC2``     means 2-channel (i.e. complex) floating-point array etc:
+    Use the ``create(nrows, ncols, type)``     method or
+        the similar ``Mat(nrows, ncols, type[, fillValue])``     constructor.
+        A new array of the specified size and specifed type is allocated. ``type``     has the same meaning as in
+    :func:`cvCreateMat`     method.
+        For example, ``CV_8UC1``     means a 8-bit single-channel array, ``CV_32FC2``     means a 2-channel (complex) floating-point array, and so on:
 
     ::
 
-        // make 7x7 complex matrix filled with 1+3j.
+        // make a 7x7 complex matrix filled with 1+3j.
         Mat M(7,7,CV_32FC2,Scalar(1,3));
-        // and now turn M to 100x60 15-channel 8-bit matrix.
+        // and now turn M to a 100x60 15-channel 8-bit matrix.
         // The old content will be deallocated
         M.create(100,60,CV_8UC(15));
 
     ..
 
-    As noted in the introduction of this chapter, ``create()``     will only allocate a new array when the current array shape
-        or type are different from the specified.
+    As noted in the introduction to this chapter, ``create()``      allocates only a new array when the current array shape
+        or type are different from the specified ones.
 
 *
     
-    similarly to above, you can create a multi-dimensional array:
+    Similarly to above, create a multi-dimensional array:
 
     ::
 
-        // create 100x100x100 8-bit array
+        // create a 100x100x100 8-bit array
         int sz[] = {100, 100, 100};
         Mat bigCube(3, sz, CV_8U, Scalar::all(0));
 
     ..
 
-    note that it is pass number of dimensions =1 to the ``Mat``     constructor, but the created array will be 2-dimensional, with the number of columns set to 1. That's why ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty)
+    Note that it passes the number of dimensions =1 to the ``Mat``     constructor, but the created array will be 2-dimensional with the number of columns set to 1. That is why ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
 
 *
     
-    by using a copy constructor or assignment operator, where on the right side it can
-          be a array or expression, see below. Again, as noted in the introduction,
+    Use a copy constructor or assignment operator, where on the right side it can
+          be an array or expression (see below). Again, as noted in the introduction,
           array assignment is O(1) operation because it only copies the header
           and increases the reference counter. ``Mat::clone()``     method can be used to get a full
           (a.k.a. deep) copy of the array when you need it.
 
 *
     
-    by constructing a header for a part of another array. It can be a single row, single column,
+    Construct a header for a part of another array. It can be a single row, single column,
           several rows, several columns, rectangular region in the array (called a minor in algebra) or
           a diagonal. Such operations are also O(1), because the new header will reference the same data.
-          You can actually modify a part of the array using this feature, e.g.
+          You can actually modify a part of the array using this feature, for example:
 
     ::
 
@@ -760,7 +761,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
 
     ..
 
-    Thanks to the additional ``datastart``     and ``dataend``     members, it is possible to compute the relative sub-array position in the main *"container"* array using ``locateROI()``:
+    Thanks to the additional ``datastart``     and ``dataend``     members, it is possible to compute a relative sub-array position in the main *"container"* array using ``locateROI()``:
 
     ::
 
@@ -776,16 +777,16 @@ There are many different ways to create ``Mat`` object. Here are the some popula
 
     ..
 
-    As in the case of whole matrices, if you need a deep copy, use ``clone()``     method
+    As in the case of whole matrices, if you need a deep copy, use the ``clone()``     method
           of the extracted sub-matrices.
 
 *
     
-    by making a header for user-allocated-data. It can be useful for
+    Make a header for user-allocated data. It can be useful to do the following:
 
     #.
-        processing "foreign" data using OpenCV (e.g. when you implement
-                a DirectShow filter or a processing module for gstreamer etc.), e.g.
+        Process "foreign" data using OpenCV (for example, when you implement
+                a DirectShow filter or a processing module for ``gstreamer``, and so on). For example:
 
         ::
 
@@ -799,7 +800,7 @@ There are many different ways to create ``Mat`` object. Here are the some popula
         ..
 
     #.
-        for quick initialization of small matrices and/or super-fast element access
+        Quickly initialize small matrices and/or get a super-fast element access.
 
         ::
 

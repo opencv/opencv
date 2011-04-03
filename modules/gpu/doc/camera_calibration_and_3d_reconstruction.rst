@@ -146,7 +146,9 @@ This class computes stereo correspondence using the belief propagation algorithm
 
 The class implements Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006]. It can compute own data cost (using a truncated linear model) or use a user-provided data cost.
 
-**Note:** ``StereoBeliefPropagation`` requires a lot of memory for message storage:
+**Note:**
+
+ ``StereoBeliefPropagation`` requires a lot of memory for message storage:
 
 .. math::
 
