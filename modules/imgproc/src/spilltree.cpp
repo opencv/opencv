@@ -57,15 +57,20 @@ struct CvSpillTreeNode
 };
 
 struct CvSpillTree
-{
+{     
   CvSpillTreeNode* root;
   CvMat** refmat; // leaf ref matrix
-  bool* cache; // visited or not
   int total; // total leaves
   int naive; // under this value, we perform naive search
   int type; // mat type
   double rho; // under this value, it is a spill tree
   double tau; // the overlapping buffer ratio
+};
+
+struct CvResult
+{
+  int index;  
+  double distance;
 };
 
 // find the farthest node in the "list" from "node"
@@ -88,7 +93,7 @@ icvFarthestNode( CvSpillTreeNode* node,
     }
   return result;
 }
-
+   
 // clone a new tree node
 static inline CvSpillTreeNode*
 icvCloneSpillTreeNode( CvSpillTreeNode* node )
@@ -261,7 +266,6 @@ icvCreateSpillTree( const CvMat* raw_data,
   tr->root = (CvSpillTreeNode*)cvAlloc( sizeof(CvSpillTreeNode) );
   memset(tr->root, 0, sizeof(CvSpillTreeNode));
   tr->refmat = (CvMat**)cvAlloc( sizeof(CvMat*)*n );
-  tr->cache = (bool*)cvAlloc( sizeof(bool)*n );
   tr->total = n;
   tr->naive = naive;
   tr->rho = rho;
@@ -299,26 +303,26 @@ icvCreateSpillTree( const CvMat* raw_data,
 }
 
 static void
-icvSpillTreeNodeHeapify( CvSpillTreeNode** heap,
+icvSpillTreeNodeHeapify( CvResult * heap,
 			 int i,
 			 const int k )
 {
-  if ( heap[i] == NULL )
+  if ( heap[i].index == -1 )
     return;
   int l, r, largest = i;
-  CvSpillTreeNode* inp;
+  CvResult inp;
   do {
     i = largest;
     r = (i+1)<<1;
     l = r-1;
-    if (( l < k )&&( heap[l] == NULL ))
+    if (( l < k )&&( heap[l].index == -1 ))
       largest = l;
-    else if (( r < k )&&( heap[r] == NULL ))
+    else if (( r < k )&&( heap[r].index == -1 ))
       largest = r;
 	else {
-      if (( l < k )&&( heap[l]->mp > heap[i]->mp ))
+      if (( l < k )&&( heap[l].distance > heap[i].distance ))
         largest = l;
-      if (( r < k )&&( heap[r]->mp > heap[largest]->mp ))
+      if (( r < k )&&( heap[r].distance > heap[largest].distance ))
         largest = r;
     }
     if ( largest != i )
@@ -329,15 +333,17 @@ icvSpillTreeNodeHeapify( CvSpillTreeNode** heap,
 static void
 icvSpillTreeDFSearch( CvSpillTree* tr,
 		      CvSpillTreeNode* node,
-		      CvSpillTreeNode** heap,
+		      CvResult* heap,
 		      int* es,
 		      const CvMat* desc,
 		      const int k,
-		      const int emax )
+		      const int emax,
+                      bool * cache)
 {
   if ((emax > 0)&&( *es >= emax ))
     return;
   double dist, p=0;
+  double distance;
   while ( node->spill )
     {
       // defeatist search
@@ -358,13 +364,16 @@ icvSpillTreeDFSearch( CvSpillTree* tr,
       CvSpillTreeNode* it = node->lc;
       for ( int i = 0; i < node->cc; i++ )
         {
-          if ( !tr->cache[it->i] )
+          if ( !cache[it->i] )
           {
-	    it->mp = cvNorm( it->center, desc );
-            tr->cache[it->i] = true;
-	    if (( heap[0] == NULL)||( it->mp < heap[0]->mp ))
+	    distance = cvNorm( it->center, desc );
+            cache[it->i] = true;
+	    if (( heap[0].index == -1)||( distance < heap[0].distance ))
 	      {
-                heap[0] = it;
+                CvResult  current_result;
+                current_result.index = it->i;
+                current_result.distance = distance;
+                heap[0] = current_result;
 	        icvSpillTreeNodeHeapify( heap, 0, k );
 		(*es)++;
 	      }
@@ -375,17 +384,17 @@ icvSpillTreeDFSearch( CvSpillTree* tr,
     }
   dist = cvNorm( node->center, desc );
   // impossible case, skip
-  if (( heap[0] != NULL )&&( dist-node->r > heap[0]->mp ))
+  if (( heap[0].index != -1 )&&( dist-node->r > heap[0].distance ))
     return;
   p = cvDotProduct( node->u, desc );
   // guided dfs
   if ( p < node->mp )
     {
-      icvSpillTreeDFSearch( tr, node->lc, heap, es, desc, k, emax );
-      icvSpillTreeDFSearch( tr, node->rc, heap, es, desc, k, emax );
+      icvSpillTreeDFSearch( tr, node->lc, heap, es, desc, k, emax, cache );
+      icvSpillTreeDFSearch( tr, node->rc, heap, es, desc, k, emax, cache );
     } else {
-      icvSpillTreeDFSearch( tr, node->rc, heap, es, desc, k, emax );
-      icvSpillTreeDFSearch( tr, node->lc, heap, es, desc, k, emax );
+    icvSpillTreeDFSearch( tr, node->rc, heap, es, desc, k, emax, cache );
+    icvSpillTreeDFSearch( tr, node->lc, heap, es, desc, k, emax, cache );
     }
 }
 
@@ -398,16 +407,21 @@ icvFindSpillTreeFeatures( CvSpillTree* tr,
 			  const int emax )
 {
   assert( desc->type == tr->type );
-  CvSpillTreeNode** heap = (CvSpillTreeNode**)cvAlloc( k*sizeof(heap[0]) );
+  CvResult* heap = (CvResult*)cvAlloc( k*sizeof(heap[0]) );
+  bool* cache = (bool*)cvAlloc( sizeof(bool)*tr->total );
   for ( int j = 0; j < desc->rows; j++ )
     {
       CvMat _desc = cvMat( 1, desc->cols, desc->type, _dispatch_mat_ptr(desc, j*desc->cols) );
-      for ( int i = 0; i < k; i++ )
-	heap[i] = NULL;
-      memset( tr->cache, 0, sizeof(bool)*tr->total );
+      for ( int i = 0; i < k; i++ ) {
+        CvResult current;
+        current.index=-1;
+        current.distance=-1;
+	heap[i] = current;
+      }
+      memset( cache, 0, sizeof(bool)*tr->total );
       int es = 0;
-      icvSpillTreeDFSearch( tr, tr->root, heap, &es, &_desc, k, emax );
-      CvSpillTreeNode* inp;
+      icvSpillTreeDFSearch( tr, tr->root, heap, &es, &_desc, k, emax, cache );
+      CvResult inp;
       for ( int i = k-1; i > 0; i-- )
 	{
 	  CV_SWAP( heap[i], heap[0], inp );
@@ -416,14 +430,15 @@ icvFindSpillTreeFeatures( CvSpillTree* tr,
       int* rs = results->data.i+j*results->cols;
       double* dt = dist->data.db+j*dist->cols;
       for ( int i = 0; i < k; i++, rs++, dt++ )
-	if ( heap[i] != NULL )
+	if ( heap[i].index != -1 )
 	  {
-	    *rs = heap[i]->i;
-	    *dt = heap[i]->mp;
+	    *rs = heap[i].index;
+	    *dt = heap[i].distance;
 	  } else
 	    *rs = -1;
     }
   cvFree( &heap );
+  cvFree( &cache );
 }
 
 static void
@@ -453,7 +468,6 @@ icvReleaseSpillTree( CvSpillTree** tr )
   for ( int i = 0; i < (*tr)->total; i++ )
     cvReleaseMat( &((*tr)->refmat[i]) );
   cvFree( &((*tr)->refmat) );
-  cvFree( &((*tr)->cache) );
   icvDFSReleaseSpillTreeNode( (*tr)->root );
   cvFree( tr );
 }
