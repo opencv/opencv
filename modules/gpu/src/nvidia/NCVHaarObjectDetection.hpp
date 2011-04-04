@@ -112,7 +112,9 @@ struct HaarFeatureDescriptor32
 private:
 
 #define HaarFeatureDescriptor32_Interpret_MaskFlagTilted        0x80000000
-#define HaarFeatureDescriptor32_CreateCheck_MaxNumFeatures      0x7F
+#define HaarFeatureDescriptor32_Interpret_MaskFlagLeftNodeLeaf  0x40000000
+#define HaarFeatureDescriptor32_Interpret_MaskFlagRightNodeLeaf 0x20000000
+#define HaarFeatureDescriptor32_CreateCheck_MaxNumFeatures      0x1F
 #define HaarFeatureDescriptor32_NumFeatures_Shift               24
 #define HaarFeatureDescriptor32_CreateCheck_MaxFeatureOffset    0x00FFFFFF
 
@@ -120,7 +122,8 @@ private:
 
 public:
 
-    __host__ NCVStatus create(NcvBool bTilted, Ncv32u numFeatures, Ncv32u offsetFeatures)
+    __host__ NCVStatus create(NcvBool bTilted, NcvBool bLeftLeaf, NcvBool bRightLeaf,
+                              Ncv32u numFeatures, Ncv32u offsetFeatures)
     {
         if (numFeatures > HaarFeatureDescriptor32_CreateCheck_MaxNumFeatures)
         {
@@ -132,6 +135,8 @@ public:
         }
         this->desc = 0;
         this->desc |= (bTilted ? HaarFeatureDescriptor32_Interpret_MaskFlagTilted : 0);
+        this->desc |= (bLeftLeaf ? HaarFeatureDescriptor32_Interpret_MaskFlagLeftNodeLeaf : 0);
+        this->desc |= (bRightLeaf ? HaarFeatureDescriptor32_Interpret_MaskFlagRightNodeLeaf : 0);
         this->desc |= (numFeatures << HaarFeatureDescriptor32_NumFeatures_Shift);
         this->desc |= offsetFeatures;
         return NCV_SUCCESS;
@@ -142,9 +147,19 @@ public:
         return (this->desc & HaarFeatureDescriptor32_Interpret_MaskFlagTilted) != 0;
     }
 
+    __device__ __host__ NcvBool isLeftNodeLeaf(void)
+    {
+        return (this->desc & HaarFeatureDescriptor32_Interpret_MaskFlagLeftNodeLeaf) != 0;
+    }
+
+    __device__ __host__ NcvBool isRightNodeLeaf(void)
+    {
+        return (this->desc & HaarFeatureDescriptor32_Interpret_MaskFlagRightNodeLeaf) != 0;
+    }
+
     __device__ __host__ Ncv32u getNumFeatures(void)
     {
-        return (this->desc & ~HaarFeatureDescriptor32_Interpret_MaskFlagTilted) >> HaarFeatureDescriptor32_NumFeatures_Shift;
+        return (this->desc >> HaarFeatureDescriptor32_NumFeatures_Shift) & HaarFeatureDescriptor32_CreateCheck_MaxNumFeatures;
     }
 
     __device__ __host__ Ncv32u getFeaturesOffset(void)
@@ -158,32 +173,16 @@ struct HaarClassifierNodeDescriptor32
 {
     uint1 _ui1;
 
-#define HaarClassifierNodeDescriptor32_Interpret_MaskSwitch     (1 << 30)
-
     __host__ NCVStatus create(Ncv32f leafValue)
     {
-        if ((*(Ncv32u *)&leafValue) & HaarClassifierNodeDescriptor32_Interpret_MaskSwitch)
-        {
-            return NCV_HAAR_XML_LOADING_EXCEPTION;
-        }
         *(Ncv32f *)&this->_ui1 = leafValue;
         return NCV_SUCCESS;
     }
 
     __host__ NCVStatus create(Ncv32u offsetHaarClassifierNode)
     {
-        if (offsetHaarClassifierNode >= HaarClassifierNodeDescriptor32_Interpret_MaskSwitch)
-        {
-            return NCV_HAAR_XML_LOADING_EXCEPTION;
-        }
         this->_ui1.x = offsetHaarClassifierNode;
-        this->_ui1.x |= HaarClassifierNodeDescriptor32_Interpret_MaskSwitch;
         return NCV_SUCCESS;
-    }
-
-    __device__ __host__ NcvBool isLeaf(void)
-    {
-        return !(this->_ui1.x & HaarClassifierNodeDescriptor32_Interpret_MaskSwitch);
     }
 
     __host__ Ncv32f getLeafValueHost(void)
@@ -200,7 +199,7 @@ struct HaarClassifierNodeDescriptor32
 
     __device__ __host__ Ncv32u getNextNodeOffset(void)
     {
-        return (this->_ui1.x & ~HaarClassifierNodeDescriptor32_Interpret_MaskSwitch);
+        return this->_ui1.x;
     }
 };
 

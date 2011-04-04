@@ -444,10 +444,22 @@ __global__ void applyHaarClassifierAnchorParallel(Ncv32u *d_IImg, Ncv32u IImgStr
                     HaarClassifierNodeDescriptor32 nodeLeft = curNode.getLeftNodeDesc();
                     HaarClassifierNodeDescriptor32 nodeRight = curNode.getRightNodeDesc();
                     Ncv32f nodeThreshold = curNode.getThreshold();
-                    HaarClassifierNodeDescriptor32 nextNodeDescriptor;
-                    nextNodeDescriptor = (curNodeVal < scaleArea * pixelStdDev * nodeThreshold) ? nodeLeft : nodeRight;
 
-                    if (nextNodeDescriptor.isLeaf())
+                    HaarClassifierNodeDescriptor32 nextNodeDescriptor;
+                    NcvBool nextNodeIsLeaf;
+
+                    if (curNodeVal < scaleArea * pixelStdDev * nodeThreshold)
+                    {
+                        nextNodeDescriptor = nodeLeft;
+                        nextNodeIsLeaf = featuresDesc.isLeftNodeLeaf();
+                    }
+                    else
+                    {
+                        nextNodeDescriptor = nodeRight;
+                        nextNodeIsLeaf = featuresDesc.isRightNodeLeaf();
+                    }
+
+                    if (nextNodeIsLeaf)
                     {
                         Ncv32f tmpLeafValue = nextNodeDescriptor.getLeafValue();
                         curStageSum += tmpLeafValue;
@@ -572,10 +584,22 @@ __global__ void applyHaarClassifierClassifierParallel(Ncv32u *d_IImg, Ncv32u IIm
                     HaarClassifierNodeDescriptor32 nodeLeft = curNode.getLeftNodeDesc();
                     HaarClassifierNodeDescriptor32 nodeRight = curNode.getRightNodeDesc();
                     Ncv32f nodeThreshold = curNode.getThreshold();
-                    HaarClassifierNodeDescriptor32 nextNodeDescriptor;
-                    nextNodeDescriptor = (curNodeVal < scaleArea * pixelStdDev * nodeThreshold) ? nodeLeft : nodeRight;
 
-                    if (nextNodeDescriptor.isLeaf())
+                    HaarClassifierNodeDescriptor32 nextNodeDescriptor;
+                    NcvBool nextNodeIsLeaf;
+
+                    if (curNodeVal < scaleArea * pixelStdDev * nodeThreshold)
+                    {
+                        nextNodeDescriptor = nodeLeft;
+                        nextNodeIsLeaf = featuresDesc.isLeftNodeLeaf();
+                    }
+                    else
+                    {
+                        nextNodeDescriptor = nodeRight;
+                        nextNodeIsLeaf = featuresDesc.isRightNodeLeaf();
+                    }
+
+                    if (nextNodeIsLeaf)
                     {
                         Ncv32f tmpLeafValue = nextNodeDescriptor.getLeafValue();
                         curStageSum += tmpLeafValue;
@@ -2135,8 +2159,9 @@ NCVStatus ncvApplyHaarClassifierCascade_host(NCVMatrix<Ncv32u> &h_integralImage,
                         while (bMoreNodesToTraverse)
                         {
                             HaarClassifierNode128 curNode = h_HaarNodes.ptr()[curNodeOffset];
-                            Ncv32u curNodeFeaturesNum = curNode.getFeatureDesc().getNumFeatures();
-                            Ncv32u curNodeFeaturesOffs = curNode.getFeatureDesc().getFeaturesOffset();
+                            HaarFeatureDescriptor32 curFeatDesc = curNode.getFeatureDesc();
+                            Ncv32u curNodeFeaturesNum = curFeatDesc.getNumFeatures();
+                            Ncv32u curNodeFeaturesOffs = curFeatDesc.getFeaturesOffset();
 
                             Ncv32f curNodeVal = 0.f;
                             for (Ncv32u iRect=0; iRect<curNodeFeaturesNum; iRect++)
@@ -2161,19 +2186,22 @@ NCVStatus ncvApplyHaarClassifierCascade_host(NCVMatrix<Ncv32u> &h_integralImage,
                             HaarClassifierNodeDescriptor32 nodeLeft = curNode.getLeftNodeDesc();
                             HaarClassifierNodeDescriptor32 nodeRight = curNode.getRightNodeDesc();
                             Ncv32f nodeThreshold = curNode.getThreshold();
+
                             HaarClassifierNodeDescriptor32 nextNodeDescriptor;
+                            NcvBool nextNodeIsLeaf;
 
                             if (curNodeVal < scaleAreaPixels * h_weights.ptr()[i * h_weights.stride() + j] * nodeThreshold)
                             {
                                 nextNodeDescriptor = nodeLeft;
+                                nextNodeIsLeaf = curFeatDesc.isLeftNodeLeaf();
                             }
                             else
                             {
                                 nextNodeDescriptor = nodeRight;
+                                nextNodeIsLeaf = curFeatDesc.isRightNodeLeaf();
                             }
 
-                            NcvBool tmpIsLeaf = nextNodeDescriptor.isLeaf();
-                            if (tmpIsLeaf)
+                            if (nextNodeIsLeaf)
                             {
                                 Ncv32f tmpLeafValue = nextNodeDescriptor.getLeafValueHost();
                                 curStageSum += tmpLeafValue;

@@ -336,24 +336,24 @@ NCVStatus loadFromXML(const std::string &filename,
     haar.NumClassifierTotalNodes = 0;
     haar.NumFeatures = 0;
     haar.ClassifierSize.width = 0;
-    haar.ClassifierSize.height = 0;        
+    haar.ClassifierSize.height = 0;
     haar.bHasStumpsOnly = true;
     haar.bNeedsTiltedII = false;
     Ncv32u curMaxTreeDepth;
 
-    std::vector<char> xmlFileCont;   
+    std::vector<char> xmlFileCont;
 
     std::vector<HaarClassifierNode128> h_TmpClassifierNotRootNodes;
     haarStages.resize(0);
     haarClassifierNodes.resize(0);
-    haarFeatures.resize(0);    
+    haarFeatures.resize(0);
     
     Ptr<CvHaarClassifierCascade> oldCascade = (CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0);
     if (oldCascade.empty())
         return NCV_HAAR_XML_LOADING_EXCEPTION;
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                          
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     haar.ClassifierSize.width = oldCascade->orig_window_size.width;
     haar.ClassifierSize.height = oldCascade->orig_window_size.height;
 
@@ -366,53 +366,58 @@ NCVStatus loadFromXML(const std::string &filename,
         curStage.setStageThreshold(oldCascade->stage_classifier[s].threshold);
 
         int treesCount = oldCascade->stage_classifier[s].count;
-        for(int t = 0; t < treesCount; ++t) // bytrees
-        {                                
+        for(int t = 0; t < treesCount; ++t) // by trees
+        {
             Ncv32u nodeId = 0;
             CvHaarClassifier* tree = &oldCascade->stage_classifier[s].classifier[t];
 
             int nodesCount = tree->count;
-            for(int n = 0; n < nodesCount; ++n)  //by features             
-            {   
+            for(int n = 0; n < nodesCount; ++n)  //by features
+            {
                 CvHaarFeature* feature = &tree->haar_feature[n];
 
-                HaarClassifierNode128 curNode;                                        
+                HaarClassifierNode128 curNode;
                 curNode.setThreshold(tree->threshold[n]);
-                
+
+                NcvBool bIsLeftNodeLeaf = false;
+                NcvBool bIsRightNodeLeaf = false;
+
                 HaarClassifierNodeDescriptor32 nodeLeft;
                 if ( tree->left[n] <= 0 )
                 {   
                     Ncv32f leftVal = tree->alpha[-tree->left[n]];
                     ncvStat = nodeLeft.create(leftVal);
-                    ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);                    
+                    ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);
+                    bIsLeftNodeLeaf = true;
                 }
                 else
                 {   
-                    Ncv32u leftNodeOffset = tree->left[n];                        
+                    Ncv32u leftNodeOffset = tree->left[n];
                     nodeLeft.create((Ncv32u)(h_TmpClassifierNotRootNodes.size() + leftNodeOffset - 1));
                     haar.bHasStumpsOnly = false;
                 }
                 curNode.setLeftNodeDesc(nodeLeft);
-                
+
                 HaarClassifierNodeDescriptor32 nodeRight;
                 if ( tree->right[n] <= 0 )
-                {                                         
-                    Ncv32f rightVal = tree->alpha[-tree->right[n]];                        
+                {
+                    Ncv32f rightVal = tree->alpha[-tree->right[n]];
                     ncvStat = nodeRight.create(rightVal);
                     ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);
+                    bIsRightNodeLeaf = true;
                 }
                 else
-                {                                               
-                    Ncv32u rightNodeOffset = tree->right[n];                        
+                {
+                    Ncv32u rightNodeOffset = tree->right[n];
                     nodeRight.create((Ncv32u)(h_TmpClassifierNotRootNodes.size() + rightNodeOffset - 1));
                     haar.bHasStumpsOnly = false;
                 }
-                curNode.setRightNodeDesc(nodeRight);                    
+                curNode.setRightNodeDesc(nodeRight);
 
                 Ncv32u tiltedVal = feature->tilted;
-                haar.bNeedsTiltedII = (tiltedVal != 0);                
+                haar.bNeedsTiltedII = (tiltedVal != 0);
 
-                Ncv32u featureId = 0;                    
+                Ncv32u featureId = 0;
                 for(int l = 0; l < CV_HAAR_FEATURE_MAX; ++l) //by rects
                 {                        
                     Ncv32u rectX = feature->rect[l].r.x; 
@@ -435,7 +440,8 @@ NCVStatus loadFromXML(const std::string &filename,
                 }
 
                 HaarFeatureDescriptor32 tmpFeatureDesc;
-                ncvStat = tmpFeatureDesc.create(haar.bNeedsTiltedII, featureId, haarFeatures.size() - featureId);
+                ncvStat = tmpFeatureDesc.create(haar.bNeedsTiltedII, bIsLeftNodeLeaf, bIsRightNodeLeaf,
+                                                featureId, haarFeatures.size() - featureId);
                 ncvAssertReturn(NCV_SUCCESS == ncvStat, ncvStat);
                 curNode.setFeatureDesc(tmpFeatureDesc);
 
@@ -453,14 +459,14 @@ NCVStatus loadFromXML(const std::string &filename,
                 }
 
                 nodeId++;
-            }               
+            }
         }
 
         curStage.setNumClassifierRootNodes(treesCount);
-        haarStages.push_back(curStage);            
+        haarStages.push_back(curStage);
     }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     //fill in cascade stats
     haar.NumStages = haarStages.size();
@@ -472,8 +478,10 @@ NCVStatus loadFromXML(const std::string &filename,
     Ncv32u offsetRoot = haarClassifierNodes.size();
     for (Ncv32u i=0; i<haarClassifierNodes.size(); i++)
     {
+        HaarFeatureDescriptor32 featureDesc = haarClassifierNodes[i].getFeatureDesc();
+
         HaarClassifierNodeDescriptor32 nodeLeft = haarClassifierNodes[i].getLeftNodeDesc();
-        if (!nodeLeft.isLeaf())
+        if (!featureDesc.isLeftNodeLeaf())
         {
             Ncv32u newOffset = nodeLeft.getNextNodeOffset() + offsetRoot;
             nodeLeft.create(newOffset);
@@ -481,7 +489,7 @@ NCVStatus loadFromXML(const std::string &filename,
         haarClassifierNodes[i].setLeftNodeDesc(nodeLeft);
 
         HaarClassifierNodeDescriptor32 nodeRight = haarClassifierNodes[i].getRightNodeDesc();
-        if (!nodeRight.isLeaf())
+        if (!featureDesc.isRightNodeLeaf())
         {
             Ncv32u newOffset = nodeRight.getNextNodeOffset() + offsetRoot;
             nodeRight.create(newOffset);
@@ -490,8 +498,10 @@ NCVStatus loadFromXML(const std::string &filename,
     }
     for (Ncv32u i=0; i<h_TmpClassifierNotRootNodes.size(); i++)
     {
+        HaarFeatureDescriptor32 featureDesc = h_TmpClassifierNotRootNodes[i].getFeatureDesc();
+
         HaarClassifierNodeDescriptor32 nodeLeft = h_TmpClassifierNotRootNodes[i].getLeftNodeDesc();
-        if (!nodeLeft.isLeaf())
+        if (!featureDesc.isLeftNodeLeaf())
         {
             Ncv32u newOffset = nodeLeft.getNextNodeOffset() + offsetRoot;
             nodeLeft.create(newOffset);
@@ -499,7 +509,7 @@ NCVStatus loadFromXML(const std::string &filename,
         h_TmpClassifierNotRootNodes[i].setLeftNodeDesc(nodeLeft);
 
         HaarClassifierNodeDescriptor32 nodeRight = h_TmpClassifierNotRootNodes[i].getRightNodeDesc();
-        if (!nodeRight.isLeaf())
+        if (!featureDesc.isRightNodeLeaf())
         {
             Ncv32u newOffset = nodeRight.getNextNodeOffset() + offsetRoot;
             nodeRight.create(newOffset);
