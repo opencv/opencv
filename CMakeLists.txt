@@ -482,8 +482,10 @@ if(UNIX)
             endif()
         endif()
 
-        if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR ${CMAKE_SYSTEM_NAME} MATCHES "NetBSD")
+        if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR ${CMAKE_SYSTEM_NAME} MATCHES "NetBSD" AND NOT ANDROID)
             set(OPENCV_LINKER_LIBS m pthread)
+        elseif(ANDROID)
+            set(OPENCV_LINKER_LIBS dl m)
         else()
             set(OPENCV_LINKER_LIBS dl m pthread rt)
         endif()
@@ -506,6 +508,18 @@ endif()
 
 if(WITH_JASPER AND NOT JASPER_FOUND)
     set(JASPER_LIBRARIES libjasper)
+endif()
+
+if (ANDROID)
+  set(NativeCamera_DIR "${CMAKE_SOURCE_DIR}/android/native-camera/build")
+  FIND_PACKAGE(NativeCamera QUIET)
+  if(NativeCamera_FOUND)
+    set(HAVE_ANDROID_NATIVE_CAMERA TRUE)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${NativeCamera_LIBS} log)
+  else()
+    set(HAVE_ANDROID_NATIVE_CAMERA FALSE)
+    message("-- Could NOT find NativeCamera for Android")
+  endif()
 endif()
 
 #message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
@@ -895,7 +909,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
     # We need pthread's
     if(UNIX)
+      if(NOT ANDROID)
         set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -pthread")
+      endif()
     endif()
 
     if(OPENCV_WARNINGS_ARE_ERRORS)
@@ -1084,6 +1100,16 @@ set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${CM
 set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}\"")
 
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
+
+if (ANDROID)
+	if (NOT BUILD_SHARED_LIBS)
+	  set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} "${CMAKE_BINARY_DIR}/lib")
+	endif()
+
+	if( HAVE_ANDROID_NATIVE_CAMERA )
+    	set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} ${NativeCamera_LIB_DIR})
+	endif()
+endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
@@ -1367,6 +1393,9 @@ else()
 message(STATUS "    V4L/V4L2:                   ${HAVE_CAMV4L}/${HAVE_CAMV4L2}")
 endif()
 message(STATUS "    Xine:                       ${HAVE_XINE}")
+if(ANDROID)
+message(STATUS "    AndroidNativeCamera:        ${HAVE_ANDROID_NATIVE_CAMERA}")
+endif()
 endif() #if(UNIX AND NOT APPLE)
 
 if(APPLE)

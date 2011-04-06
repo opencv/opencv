@@ -204,9 +204,9 @@ public class Calibration extends Activity implements CalibrationCallback {
 
 		setFullscreen();
 		disableScreenTurnOff();
-		setContentView(R.layout.camera);
+		setContentView(R.layout.calib_camera);
 		mPreview = (NativePreviewer) findViewById(R.id.nativepreviewer);
-		mPreview.setPreviewSize(1000, 500);
+		mPreview.setPreviewSize(800, 400);
 		mPreview.setGrayscale(true);
 		LinearLayout glview_layout = (LinearLayout) findViewById(R.id.glview_layout);
 		glview = new GL2CameraViewer(getApplication(), false, 0, 0);

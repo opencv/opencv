@@ -1,10 +1,3 @@
-if(ANDROID)
-set(android_defs "-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT")
-define_3rdparty_module(jasper)
-set(android_defs "")
-else(ANDROID)
-
-
 # ----------------------------------------------------------------------------
 #  CMake file for libjasper. See root CMakeLists.txt
 #
@@ -62,5 +55,3 @@ if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${the_target}
 	    ARCHIVE DESTINATION share/opencv/3rdparty/lib COMPONENT main)
 endif()
-    
-endif(ANDROID)#!android

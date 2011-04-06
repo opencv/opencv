@@ -53,7 +53,13 @@ LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 # ====================================================================
 # Link libraries: e.g.   opencv_core220.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
-set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_gpu opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib opencv_flann)
+if(NOT ANDROID)
+	set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_gpu opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib opencv_flann)
+else()
+	#libraries order is very important because linker from Android NDK is one-pass linker
+	set(OPENCV_LIB_COMPONENTS opencv_calib3d opencv_objdetect opencv_features2d opencv_imgproc opencv_video  opencv_highgui opencv_ml opencv_legacy  opencv_flann opencv_core )
+endif()
+
 SET(OpenCV_LIBS "")
 foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
 	# CMake>=2.6 supports the notation "debug XXd optimized XX"
@@ -85,6 +91,9 @@ IF (NOT @OPENCV_BUILD_SHARED_LIB@)
     LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../3rdparty/lib)
     if(WIN32)
         LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
+    elseif(ANDROID)
+        LINK_DIRECTORIES(@CMAKE_BINARY_DIR@/3rdparty/lib)
+        LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/3rdparty/lib)
     else()
         LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../share/opencv/3rdparty/lib)
     endif()    

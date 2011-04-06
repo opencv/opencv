@@ -1,7 +1,3 @@
-if(ANDROID)
- configure_file("${CMAKE_SOURCE_DIR}/Android.mk.modules.in" "${CMAKE_CURRENT_BINARY_DIR}/Android.mk")
-endif()
-
 add_subdirectory(calib3d)
 add_subdirectory(core)
 add_subdirectory(features2d)
@@ -13,7 +9,9 @@ if(MSVC OR MINGW)
    endif()
 endif()
 
+if(NOT ANDROID)
 add_subdirectory(ts)
+endif()
 add_subdirectory(highgui)
 add_subdirectory(imgproc)
 add_subdirectory(legacy)
@@ -26,10 +24,10 @@ if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT)
 endif()
 
 add_subdirectory(video)
+add_subdirectory(traincascade)
+add_subdirectory(haartraining)
 
 if(NOT ANDROID)
-add_subdirectory(haartraining)
-add_subdirectory(traincascade)
 add_subdirectory(gpu)
 endif()
 

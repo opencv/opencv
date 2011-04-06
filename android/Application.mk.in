@@ -1,6 +1,0 @@
-APP_BUILD_SCRIPT := $(call my-dir)/Android.mk
-APP_PROJECT_PATH := $(call my-dir)
-# The ARMv7 is significanly faster due to the use of the hardware FPU
-APP_ABI := ${ARM_TARGETS}
-APP_MODULES      := png jpeg jasper zlib opencv_lapack opencv_core opencv_imgproc opencv_ml opencv_highgui opencv_features2d \
-    opencv_legacy opencv_objdetect opencv_calib3d opencv_video opencv_contrib opencv_flann 

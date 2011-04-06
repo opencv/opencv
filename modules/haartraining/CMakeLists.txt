@@ -39,6 +39,7 @@ set(cvhaartraining_lib_src
 
 add_library(opencv_haartraining_engine STATIC ${cvhaartraining_lib_src})
 
+if(NOT ANDROID)
 # -----------------------------------------------------------
 #  haartraining
 # -----------------------------------------------------------
@@ -75,3 +76,4 @@ set_target_properties(opencv_performance PROPERTIES
 install(TARGETS opencv_haartraining RUNTIME DESTINATION bin COMPONENT main)
 install(TARGETS opencv_createsamples RUNTIME DESTINATION bin COMPONENT main)
 install(TARGETS opencv_performance RUNTIME DESTINATION bin COMPONENT main)
+endif()

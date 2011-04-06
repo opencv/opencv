@@ -34,6 +34,10 @@ ELSE()
 	ENDIF()
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
+#if (ANDROID)
+  #SET(PCHSupport_FOUND FALSE)
+#endif()
+
 
 MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
 

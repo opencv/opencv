@@ -1,7 +1,3 @@
-if(ANDROID)
-define_3rdparty_module(jpeg)
-else()
-#endif()#android
 # ----------------------------------------------------------------------------
 #  CMake file for libjpeg. See root CMakeLists.txt
 #
@@ -52,5 +48,3 @@ if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${the_target}
 	    ARCHIVE DESTINATION share/opencv/3rdparty/lib COMPONENT main)
 endif()
-    
-endif()#android

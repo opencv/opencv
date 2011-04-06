@@ -1,5 +1,0 @@
-include android-opencv.mk
-include modules/Android.mk
-include 3rdparty/Android.mk
-#include zlib-android/Android.mk
-

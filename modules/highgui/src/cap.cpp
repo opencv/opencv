@@ -124,6 +124,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         CV_CAP_QT,
         CV_CAP_UNICAP,
         CV_CAP_OPENNI,
+        CV_CAP_ANDROID,
         -1
     };
 
@@ -143,7 +144,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         defined(HAVE_CAMV4L) || defined (HAVE_CAMV4L2) || defined(HAVE_GSTREAMER) || \
         defined(HAVE_DC1394_2) || defined(HAVE_DC1394) || defined(HAVE_CMU1394) || \
         defined(HAVE_GSTREAMER) || defined(HAVE_MIL) || defined(HAVE_QUICKTIME) || \
-        defined(HAVE_UNICAP) || defined(HAVE_PVAPI) || defined(HAVE_OPENNI)
+        defined(HAVE_UNICAP) || defined(HAVE_PVAPI) || defined(HAVE_OPENNI) || defined(HAVE_ANDROID_NATIVE_CAMERA)
         // local variable to memorize the captured device
         CvCapture *capture;
         #endif
@@ -250,7 +251,15 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
             return capture;
         break;
         #endif
-        
+
+		#ifdef HAVE_ANDROID_NATIVE_CAMERA
+        case CV_CAP_ANDROID:
+          capture = cvCreateCameraCapture_Android (index);
+        if (capture)
+            return capture;
+        break;
+        #endif
+
         }
     }
 

@@ -290,7 +290,9 @@ enum
 
 	CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 
-	CV_CAP_OPENNI   =900    // OpenNI (for Kinect)
+	CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
+
+	CV_CAP_ANDROID  =1000   // Android
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -385,6 +387,14 @@ enum
 {
     CV_CAP_OPENNI_VGA_30HZ     = 0,
     CV_CAP_OPENNI_SXGA_15HZ    = 1
+};
+
+//supported by Android camera output formats
+enum
+{
+  CV_CAP_ANDROID_COLOR_FRAME = 1, //TODO: check RGB or BGR?
+  CV_CAP_ANDROID_GREY_FRAME  = 0,
+  CV_CAP_ANDROID_YUV_FRAME   = 2
 };
 
 /* retrieve or set capture properties */

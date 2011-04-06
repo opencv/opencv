@@ -29,18 +29,6 @@ macro(define_opencv_module name)
 
     add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
 
-    if(PCHSupport_FOUND)
-        set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
-        if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-            if(${CMAKE_GENERATOR} MATCHES "Visual*")
-                set(${the_target}_pch "src/precomp.cpp")
-            endif()            
-            add_native_precompiled_header(${the_target} ${pch_header})
-        elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-            add_precompiled_header(${the_target} ${pch_header})
-        endif()
-    endif()
-
     # For dynamic link numbering convenions
     set_target_properties(${the_target} PROPERTIES
         VERSION ${OPENCV_VERSION}
@@ -55,6 +43,18 @@ macro(define_opencv_module name)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
         INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
         )
+
+    if(PCHSupport_FOUND)
+        set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
+        if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
+            if(${CMAKE_GENERATOR} MATCHES "Visual*")
+                set(${the_target}_pch "src/precomp.cpp")
+            endif()            
+            add_native_precompiled_header(${the_target} ${pch_header})
+        elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
+            add_precompiled_header(${the_target} ${pch_header})
+        endif()
+    endif()
 
     # Add the required libraries for linking:
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})

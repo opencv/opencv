@@ -3,7 +3,6 @@
 #   Some parts taken from version of Hartmut Seichter, HIT Lab NZ.
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
-if(NOT ANDROID)
 project(opencv_highgui)
 
 if(WITH_JPEG)
@@ -204,6 +203,11 @@ if(APPLE)
 	endif()
 endif(APPLE)
 
+if(HAVE_ANDROID_NATIVE_CAMERA)
+  set(highgui_srcs ${highgui_srcs} src/cap_android.cpp)
+  add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)
+endif()
+
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 
@@ -296,7 +300,6 @@ if( OPENNI_LIBRARY )
     target_link_libraries(${the_target} ${OPENNI_LIBRARY})
 endif()
 
-
 if(APPLE)
 	target_link_libraries(${the_target} "-lbz2 -framework Cocoa -framework QuartzCore")
 	if(WITH_CARBON)
@@ -318,24 +321,3 @@ install(TARGETS ${the_target}
 install(FILES ${highgui_ext_hdrs}
         DESTINATION include/opencv2/highgui
         COMPONENT main)
-        
-endif()
-
-if(ANDROID)
-set(high_gui_android_srcs src/bitstrm.cpp
-    src/cap.cpp 
-    src/grfmt_base.cpp 
-    src/grfmt_bmp.cpp 
-    src/grfmt_jpeg.cpp
-    src/grfmt_jpeg2000.cpp
-    src/grfmt_png.cpp 
-    src/grfmt_tiff.cpp 
-    src/loadsave.cpp 
-    src/precomp.cpp 
-    src/utils.cpp 
-    src/grfmt_sunras.cpp 
-    src/grfmt_pxm.cpp 
-    src/window.cpp
-    src/cap_images.cpp )
-define_android_manual(opencv_highgui "${high_gui_android_srcs}" "$(LOCAL_PATH)/src  $(OPENCV_INCLUDES)")	
-endif()

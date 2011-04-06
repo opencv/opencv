@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:background="@drawable/cameraback">
+	<!--<SurfaceView-->
+	<com.opencv.camera.NativePreviewer
+		android:id="@+id/nativepreviewer" android:layout_width="400dip"
+		android:layout_height="300dip" android:layout_alignParentLeft="true"
+		android:layout_margin="20dip" android:gravity="center_horizontal|center_vertical"
+		android:layout_marginRight="20dip" />
+	<LinearLayout android:id="@+id/glview_layout"
+		android:layout_width="400dip" android:layout_height="300dip"
+		android:layout_alignParentLeft="true" android:layout_margin="20dip"
+		android:gravity="center_horizontal|center_vertical"
+		android:layout_marginRight="20dip">
+	</LinearLayout>
+	<LinearLayout android:layout_width="wrap_content"
+		android:layout_height="fill_parent" android:orientation="vertical"
+		android:layout_margin="20dip" android:gravity="center_horizontal|center_vertical"
+		android:layout_alignParentRight="true">
+		<ImageButton android:src="@android:drawable/ic_menu_camera"
+			android:id="@+id/button_capture" android:layout_width="60dip"
+			android:layout_height="60dip" android:layout_marginBottom="10dip"></ImageButton>
+			<ImageButton android:src="@android:drawable/ic_menu_preferences"
+			android:id="@+id/button_camera_settings" android:layout_width="60dip"
+			android:layout_height="60dip" android:layout_marginBottom="10dip"></ImageButton>
+	</LinearLayout>
+</RelativeLayout>
