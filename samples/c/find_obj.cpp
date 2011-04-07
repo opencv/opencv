@@ -310,7 +310,6 @@ int main(int argc, char** argv)
     cvWaitKey(0);
 
     cvDestroyWindow("Object");
-    cvDestroyWindow("Object SURF");
     cvDestroyWindow("Object Correspond");
 
     return 0;
