@@ -629,7 +629,7 @@ However, if the object is deallocated in a different way, then the specialized m
 
 **Note**
 
-: The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for
+The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for
 :ref:`Mat` and other C++ OpenCV classes that operate on the reference counters.
 
 .. _Mat:
@@ -693,11 +693,9 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
 *
     
-    Use the ``create(nrows, ncols, type)``     method or
-        the similar ``Mat(nrows, ncols, type[, fillValue])``     constructor.
-        A new array of the specified size and specifed type is allocated. ``type``     has the same meaning as in
+    Use the ``create(nrows, ncols, type)``   method or the similar ``Mat(nrows, ncols, type[, fillValue])``     constructor. A new array of the specified size and specifed type is allocated. ``type``     has the same meaning as in
     :func:`cvCreateMat`     method.
-        For example, ``CV_8UC1``     means a 8-bit single-channel array, ``CV_32FC2``     means a 2-channel (complex) floating-point array, and so on:
+    For example, ``CV_8UC1``     means a 8-bit single-channel array, ``CV_32FC2``     means a 2-channel (complex) floating-point array, and so on:
 
     ::
 
@@ -709,8 +707,7 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    As noted in the introduction to this chapter, ``create()``      allocates only a new array when the current array shape
-        or type are different from the specified ones.
+    As noted in the introduction to this chapter, ``create()``      allocates only a new array when the current array shape or type are different from the specified ones.
 
 *
     
@@ -724,22 +721,15 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    Note that it passes the number of dimensions =1 to the ``Mat``     constructor, but the created array will be 2-dimensional with the number of columns set to 1. That is why ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
+    Note that it passes the number of dimensions =1 to the ``Mat``     constructor but the created array will be 2-dimensional with the number of columns set to 1. That is why ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
 
 *
     
-    Use a copy constructor or assignment operator, where on the right side it can
-          be an array or expression (see below). Again, as noted in the introduction,
-          array assignment is O(1) operation because it only copies the header
-          and increases the reference counter. ``Mat::clone()``     method can be used to get a full
-          (a.k.a. deep) copy of the array when you need it.
+    Use a copy constructor or assignment operator, where on the right side it can be an array or expression (see below). Again, as noted in the introduction, array assignment is O(1) operation because it only copies the header and increases the reference counter. ``Mat::clone()``     method can be used to get a full (a.k.a. deep) copy of the array when you need it.
 
 *
     
-    Construct a header for a part of another array. It can be a single row, single column,
-          several rows, several columns, rectangular region in the array (called a minor in algebra) or
-          a diagonal. Such operations are also O(1), because the new header will reference the same data.
-          You can actually modify a part of the array using this feature, for example:
+    Construct a header for a part of another array. It can be a single row, single column, several rows, several columns, rectangular region in the array (called a minor in algebra) or a diagonal. Such operations are also O(1), because the new header will reference the same data. You can actually modify a part of the array using this feature, for example:
 
     ::
 
@@ -777,16 +767,14 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    As in the case of whole matrices, if you need a deep copy, use the ``clone()``     method
-          of the extracted sub-matrices.
+    As in the case of whole matrices, if you need a deep copy, use the ``clone()``     method of the extracted sub-matrices.
 
 *
     
     Make a header for user-allocated data. It can be useful to do the following:
 
     #.
-        Process "foreign" data using OpenCV (for example, when you implement
-                a DirectShow filter or a processing module for ``gstreamer``, and so on). For example:
+        Process "foreign" data using OpenCV (for example, when you implement a DirectShow* filter or a processing module for ``gstreamer``, and so on). For example:
 
         ::
 
@@ -809,9 +797,9 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
         ..
 
-        partial yet very common cases of this "user-allocated data" case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
+        Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
-        Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` an ``Mat::operator IplImage()``. The operators do *not* copy the data.
+        Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` and ``Mat::operator IplImage()``. The operators do NOT copy the data.
 
     ::
 
@@ -825,7 +813,7 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
 *
     
-    by using MATLAB-style array initializers, ``zeros(), ones(), eye()``     , e.g.:
+    Use MATLAB-style array initializers, ``zeros(), ones(), eye()``     , for example:
 
     ::
 
@@ -836,32 +824,32 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
 *
     
-    by using comma-separated initializer:
+    Use a comma-separated initializer:
 
     ::
 
-        // create 3x3 double-precision identity matrix
+        // create a 3x3 double-precision identity matrix
         Mat M = (Mat_<double>(3,3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
 
     ..
 
-    here we first call constructor of ``Mat_``     class (that we describe further) with the proper parameters, and then we just put ``<<``     operator followed by comma-separated values that can be constants, variables, expressions etc. Also, note the extra parentheses that are needed to avoid compiler errors.
+    Here you first call a constructor of the ``Mat_``     class (that will be described further) with the proper parameters, and then you just put ``<<``     operator followed by comma-separated values that can be constants, variables, expressions, and so on. Also, note the extra parentheses required to avoid compilation errors.
 
-Once array is created, it will be automatically managed by using reference-counting mechanism (unless the array header is built on top of user-allocated data, in which case you should handle the data by yourself).
-The array data will be deallocated when no one points to it; if you want to release the data pointed by a array header before the array destructor is called, use ``Mat::release()`` .
+Once the array is created, it is automatically managed via a reference-counting mechanism. If the array header is built on top of user-allocated data, you should handle the data by yourself.
+The array data is deallocated when no one points to it. If you want to release the data pointed by a array header before the array destructor is called, use ``Mat::release()`` .
 
-The next important thing to learn about the array class is element access. Earlier it was shown how to compute address of each array element. Normally, it's not needed to use the formula directly in your code. If you know the array element type (which can be retrieved using the method ``Mat::type()`` ), you can access element
-:math:`M_{ij}` of 2-dimensional array as: ::
+The next important thing to learn about the array class is element access. This manual already described how to compute an address of each array element. Normally, it is not needed to use the formula directly in your code. If you know the array element type (which can be retrieved using the method ``Mat::type()`` ), you can access the element
+:math:`M_{ij}` of a 2-dimensional array as: ::
 
     M.at<double>(i,j) += 1.f;
 
 
-assuming that M is double-precision floating-point array. There are several variants of the method ``at`` for different number of dimensions.
+assuming that M is a double-precision floating-point array. There are several variants of the method ``at`` for a different number of dimensions.
 
-If you need to process a whole row of a 2d array, the most efficient way is to get the pointer to the row first, and then just use plain C operator ``[]`` : ::
+If you need to process a whole row of a 2D array, the most efficient way is to get the pointer to the row first, and then just use plain C operator ``[]`` : ::
 
     // compute sum of positive matrix elements
-    // (assuming that M is double-precision matrix)
+    // (assuming that M isa double-precision matrix)
     double sum=0;
     for(int i = 0; i < M.rows; i++)
     {
@@ -871,7 +859,7 @@ If you need to process a whole row of a 2d array, the most efficient way is to g
     }
 
 
-Some operations, like the above one, do not actually depend on the array shape, they just process elements of an array one by one (or elements from multiple arrays that have the same coordinates, e.g. array addition). Such operations are called element-wise and it makes sense to check whether all the input/output arrays are continuous, i.e. have no gaps in the end of each row, and if yes, process them as a single long row: ::
+Some operations, like the one above, do not actually depend on the array shape. They just process elements of an array one by one (or elements from multiple arrays that have the same coordinates, for example, array addition). Such operations are called element-wise. It makes sense to check whether all the input/output arrays are continuous, that is, have no gaps in the end of each row. If yes, process them as a single long row: ::
 
     // compute sum of positive matrix elements, optimized variant
     double sum=0;
@@ -889,7 +877,7 @@ Some operations, like the above one, do not actually depend on the array shape, 
     }
 
 
-in the case of continuous matrix the outer loop body will be executed just once, so the overhead will be smaller, which will be especially noticeable in the case of small matrices.
+In case of the continuous matrix, the outer loop body is executed just once. So, the overhead is smaller, which is especially noticeable in case of small matrices.
 
 Finally, there are STL-style iterators that are smart enough to skip gaps between successive rows: ::
 
@@ -932,7 +920,7 @@ for a scalar ( ``Scalar`` ),
     
 *
     comparison:
-    :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`. The result of comparison is 8-bit single channel mask, which elements are set to 255 (if the particular element or pair of elements satisfy the condition) and 0 otherwise.
+    :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`. The result of comparison is an 8-bit single channel mask whose elements are set to 255 (if the particular element or pair of elements satisfy the condition) or 0.
 
 *
     bitwise logical operations: ``A & B, A & s, A | B, A | s, A textasciicircum B, A textasciicircum s, ~ A`` *
@@ -945,7 +933,7 @@ for a scalar ( ``Scalar`` ),
     any function of matrix or matrices and scalars that returns a matrix or a scalar, such as
 
     :func:`norm`,    :func:`mean`,    :func:`sum`,    :func:`countNonZero`,    :func:`trace`,
-    :func:`determinant`,    :func:`repeat`     etc.
+    :func:`determinant`,    :func:`repeat`  , and others.
 
 *
     matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ref:`Mat`     description).
@@ -953,7 +941,7 @@ for a scalar ( ``Scalar`` ),
 *
     ``Mat_<destination_type>()`` constructors to cast the result to the proper type.
 
-Note, however, that comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve possible ambiguity.
+Note, however, that comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve a possible ambiguity.
 
 Below is the formal description of the ``Mat`` methods.
 
@@ -1003,35 +991,35 @@ Mat::Mat
 
 .. c:function:: (20) Mat::Mat(const Mat& m, const Range* ranges)
 
-    Various array constructors
+    Provides various array constructors.
 
-    :param ndims: The array dimensionality
+    :param ndims: Array dimensionality.
 
-    :param rows: The number of rows in 2D array
+    :param rows: The number of rows in a 2D array.
 
-    :param cols: The number of columns in 2D array
+    :param cols: The number of columns in a 2D array.
 
-    :param size: The 2D array size:  ``Size(cols, rows)`` . Note that in the  ``Size()``  constructor the number of rows and the number of columns go in the reverse order.
+    :param size: 2D array size:  ``Size(cols, rows)`` . Note that in the  ``Size()``  constructor, the number of rows and the number of columns go in the reverse order.
 
-    :param sizes: The array of integers, specifying the n-dimensional array shape
+    :param sizes: Array of integers specifying an n-dimensional array shape.
 
-    :param type: The array type, use  ``CV_8UC1, ..., CV_64FC4``  to create 1-4 channel matrices, or  ``CV_8UC(n), ..., CV_64FC(n)``  to create multi-channel (up to  ``CV_MAX_CN``  channels) matrices
+    :param type: Array type. Use  ``CV_8UC1, ..., CV_64FC4``  to create 1-4 channel matrices, or  ``CV_8UC(n), ..., CV_64FC(n)``  to create multi-channel (up to  ``CV_MAX_CN``  channels) matrices.
 
-    :param s: The optional value to initialize each matrix element with. To set all the matrix elements to the particular value after the construction, use the assignment operator  ``Mat::operator=(const Scalar& value)`` .
+    :param s: An optional value to initialize each matrix element with. To set all the matrix elements to the particular value after the construction, use the assignment operator  ``Mat::operator=(const Scalar& value)`` .
 
-    :param data: Pointer to the user data. Matrix constructors that take  ``data``  and  ``step``  parameters do not allocate matrix data. Instead, they just initialize the matrix header that points to the specified data, i.e. no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, user should take care of it.
+    :param data: Pointer to the user data. Matrix constructors that take  ``data``  and  ``step``  parameters do not allocate matrix data. Instead, they just initialize the matrix header that points to the specified data, which means that no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, so you should take care of it.
 
-    :param step: The  ``data``  buddy. This optional parameter specifies the number of bytes that each matrix row occupies. The value should include the padding bytes in the end of each row, if any. If the parameter is missing (set to  ``AUTO_STEP`` ), no padding is assumed and the actual step is calculated as  ``cols*elemSize()`` , see  :ref:`Mat::elemSize` ().
+    :param step: The number of bytes each matrix row occupies. The value should include the padding bytes in the end of each row, if any. If the parameter is missing (set to  ``AUTO_STEP`` ), no padding is assumed and the actual step is calculated as  ``cols*elemSize()`` . See  :ref:`Mat::elemSize` ().
 
-    :param steps: The array of  ``ndims-1``  steps in the case of multi-dimensional array (the last step is always set to the element size). If not specified, the matrix is assumed to be continuous.
+    :param steps: The array of  ``ndims-1``  steps in case of a multi-dimensional array (the last step is always set to the element size). If not specified, the matrix is assumed to be continuous.
 
-    :param m: The array that (in whole, a partly) is assigned to the constructed matrix. No data is copied by these constructors. Instead, the header pointing to  ``m``  data, or its sub-array, is constructed and the associated with it reference counter, if any, is incremented. That is, when you modify the matrix formed using such a constructor, you will also modify the corresponding elements of  ``m`` . If you want to have an independent copy of the sub-array, use  ``Mat::clone()`` .
+    :param m: The array that (in whole or partly) is assigned to the constructed matrix. No data is copied by these constructors. Instead, the header pointing to  ``m``  data, or its sub-array, is constructed and associated with it. The reference counter, if any, is incremented. That is, when you modify the matrix formed using such a constructor, you also modify the corresponding elements of  ``m`` . If you want to have an independent copy of the sub-array, use  ``Mat::clone()`` .
 
-    :param img: Pointer to the old-style  ``IplImage``  image structure. By default, the data is shared between the original image and the new matrix, but when  ``copyData``  is set, the full copy of the image data is created.
+    :param img: Pointer to the old-style  ``IplImage``  image structure. By default, the data is shared between the original image and the new matrix. But when  ``copyData``  is set, the full copy of the image data is created.
 
-    :param vec: STL vector, which elements will form the matrix. The matrix will have a single column and the number of rows equal to the number of vector elements. Type of the matrix will match the type of vector elements. The constructor can handle arbitrary types, for which there is properly declared  :ref:`DataType` , i.e. the vector elements must be primitive numbers or uni-type numerical tuples of numbers. Mixed-type structures are not supported, of course. Note that the corresponding constructor is explicit, meaning that STL vectors are not automatically converted to  ``Mat``  instances, you should write  ``Mat(vec)``  explicitly. Another obvious note: unless you copied the data into the matrix ( ``copyData=true`` ), no new elements should be added to the vector, because it can potentially yield vector data reallocation, and thus the matrix data pointer will become invalid.
+    :param vec: STL vector whose elements form the matrix. The matrix has a single column and the number of rows equal to the number of vector elements. Type of the matrix matches the type of vector elements. The constructor can handle arbitrary types, for which there is a properly declared  :ref:`DataType` . This means that the vector elements must be primitive numbers or uni-type numerical tuples of numbers. Mixed-type structures are not supported. Beware that the corresponding constructor is explicit. Meaning that STL vectors are not automatically converted to  ``Mat``  instances, you should write  ``Mat(vec)``  explicitly. Note that unless you copied the data into the matrix ( ``copyData=true`` ), no new elements should be added to the vector because it can potentially yield vector data reallocation, and, thus, the matrix data pointer will become invalid.
 
-    :param copyData: Specifies, whether the underlying data of the STL vector, or the old-style  ``CvMat``  or  ``IplImage``  should be copied to (true) or shared with (false) the newly constructed matrix. When the data is copied, the allocated buffer will be managed using  ``Mat`` 's reference counting mechanism. While when the data is shared, the reference counter will be NULL, and you should not deallocate the data until the matrix is not destructed.
+    :param copyData: Flag to specify whether the underlying data of the STL vector, or the old-style  ``CvMat``  or  ``IplImage``,  should be copied to (``true``) or shared with (``false``) the newly constructed matrix. When the data is copied, the allocated buffer will be managed using  ``Mat`` 's reference counting mechanism. While the data is shared, the reference counter is NULL, and you should not deallocate the data until the matrix is not destructed.
 
     :param rowRange: The range of the  ``m`` 's rows to take. As usual, the range start is inclusive and the range end is exclusive. Use  ``Range::all()``  to take all the rows.
 
@@ -1043,8 +1031,8 @@ Mat::Mat
 
     :param expr: Matrix expression. See  :ref:`MatrixExpressions`.
 
-These are various constructors that form a matrix. As noticed in the
-, often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is dereferenced, or be allocated with
+These are various constructors that form a matrix. As noticed in the ??
+, often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is de-referenced, or be allocated with
 :ref:`Mat::create` .
 
 .. index:: Mat::Mat
@@ -1053,7 +1041,7 @@ Mat::~Mat
 ------------
 .. cpp:function:: Mat::~Mat()
 
-    Matrix destructor
+    Provides a matrix destructor.
 
 The matrix destructor calls
 :ref:`Mat::release` .
@@ -1068,15 +1056,15 @@ Mat::operator =
 
 .. cpp:function:: Mat& operator = (const Scalar& s)
 
-    Matrix assignment operators
+    Provides matrix assignment operators.
 
-    :param m: The assigned, right-hand-side matrix. Matrix assignment is O(1) operation, that is, no data is copied. Instead, the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is dereferenced via  :ref:`Mat::release` .
+    :param m: The assigned, right-hand-side matrix. Matrix assignment is O(1) operation, that is, no data is copied. Instead, the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is de-referenced via  :ref:`Mat::release` .
 
-    :param expr: The assigned matrix expression object. As opposite to the first form of assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example,  ``C=A+B``  is expanded to  ``add(A, B, C)`` , and  :func:`add`  will take care of automatic  ``C``  reallocation.
+    :param expr: The assigned matrix expression object. As opposite to the first form of assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example,  ``C=A+B``  is expanded to  ``add(A, B, C)`` , and  :func:`add`  takes care of automatic  ``C``  reallocation.
 
-    :param s: The scalar, assigned to each matrix element. The matrix size or type is not changed.
+    :param s: The scalar assigned to each matrix element. The matrix size or type is not changed.
 
-These are the available assignment operators, and they all are very different, so, please, look at the operator parameters description.
+These are available assignment operators. Since they all are very different, make sure to read the operator parameters description.
 
 .. index:: Mat::operator MatExpr
 
@@ -1084,7 +1072,7 @@ Mat::operator MatExpr
 -------------------------
 .. cpp:function:: Mat::operator MatExpr_<Mat, Mat>() const
 
-    Mat-to-MatExpr cast operator
+    Provides a ``Mat`` -to- ``MatExpr`` cast operator.
 
 The cast operator should not be called explicitly. It is used internally by the
 :ref:`MatrixExpressions` engine.
@@ -1097,11 +1085,11 @@ Mat::row
 ------------
 .. cpp:function:: Mat Mat::row(int i) const
 
-    Makes a matrix header for the specified matrix row
+    Creates a matrix header for the specified matrix row.
 
-    :param i: the 0-based row index
+    :param i: A 0-based row index.
 
-The method makes a new header for the specified matrix row and returns it. This is O(1) operation, regardless of the matrix size. The underlying data of the new matrix will be shared with the original matrix. Here is the example of one of the classical basic matrix processing operations, axpy, used by LU and many other algorithms: ::
+The method makes a new header for the specified matrix row and returns it. This is an O(1) operation, regardless of the matrix size. The underlying data of the new matrix is shared with the original matrix. Here is the example of one of the classical basic matrix processing operations, ``axpy``, used by LU and many other algorithms: ::
 
     inline void matrix_axpy(Mat& A, int i, int j, double alpha)
     {
@@ -1109,15 +1097,16 @@ The method makes a new header for the specified matrix row and returns it. This 
     }
 
 
-**Important note**
-. In the current implementation the following code will not work as expected: ::
+**Warning**
+
+In the current implementation the following code does not work as expected: ::
 
     Mat A;
     ...
     A.row(i) = A.row(j); // will not work
 
 
-This is because ``A.row(i)`` forms a temporary header, which is further assigned another header. Remember, each of these operations is O(1), i.e. no data is copied. Thus, the above assignment will have absolutely no effect, while you may have expected j-th row being copied to i-th row. To achieve that, you should either turn this simple assignment into an expression, or use
+This is because ``A.row(i)`` forms a temporary header, which is further assigned to another header. Remember that each of these operations is O(1), that is, no data is copied. Thus, the above assignment will have absolutely no effect, while you may have expected the j-th row to be copied to the i-th row. To achieve that, you should either turn this simple assignment into an expression, or use
 :ref:`Mat::copyTo` method: ::
 
     Mat A;
@@ -1125,7 +1114,7 @@ This is because ``A.row(i)`` forms a temporary header, which is further assigned
     // works, but looks a bit obscure.
     A.row(i) = A.row(j) + 0;
 
-    // this is a bit longer, but the recommended method.
+    // this is a bit longe, but the recommended method.
     Mat Ai = A.row(i); M.row(j).copyTo(Ai);
 
 
@@ -1137,11 +1126,11 @@ Mat::col
 ------------
 .. cpp:function:: Mat Mat::col(int j) const
 
-    Makes a matrix header for the specified matrix column
+    Creates a matrix header for the specified matrix column.
 
-    :param j: the 0-based column index
+    :param j: A 0-based column index.
 
-The method makes a new header for the specified matrix column and returns it. This is O(1) operation, regardless of the matrix size. The underlying data of the new matrix will be shared with the original matrix. See also
+The method makes a new header for the specified matrix column and returns it. This is an O(1) operation, regardless of the matrix size. The underlying data of the new matrix is shared with the original matrix. See also the
 :ref:`Mat::row` description.
 
 .. index:: Mat::rowRange
@@ -1154,17 +1143,17 @@ Mat::rowRange
 
 .. cpp:function:: Mat Mat::rowRange(const Range& r) const
 
-    Makes a matrix header for the specified row span
+    Creates a matrix header for the specified row span.
 
-    :param startrow: the 0-based start index of the row span
+    :param startrow: A 0-based start index of the row span.
 
-    :param endrow: the 0-based ending index of the row span
+    :param endrow: A 0-based ending index of the row span.
 
-    :param r: The  :func:`Range`  structure containing both the start and the end indices
+    :param r: The  :func:`Range`  structure containing both the start and the end indices.
 
 The method makes a new header for the specified row span of the matrix. Similarly to
 :func:`Mat::row` and
-:func:`Mat::col` , this is O(1) operation.
+:func:`Mat::col` , this is an O(1) operation.
 
 .. index:: Mat::colRange
 
@@ -1176,17 +1165,17 @@ Mat::colRange
 
 .. cpp:function:: Mat Mat::colRange(const Range& r) const
 
-    Makes a matrix header for the specified row span
+    Creates a matrix header for the specified row span.
 
-    :param startcol: the 0-based start index of the column span
+    :param startcol: A 0-based start index of the column span.
 
-    :param endcol: the 0-based ending index of the column span
+    :param endcol: A 0-based ending index of the column span.
 
-    :param r: The  :func:`Range`  structure containing both the start and the end indices
+    :param r: The  :func:`Range`  structure containing both the start and the end indices.
 
 The method makes a new header for the specified column span of the matrix. Similarly to
 :func:`Mat::row` and
-:func:`Mat::col` , this is O(1) operation.
+:func:`Mat::col` , this is an O(1) operation.
 
 .. index:: Mat::diag
 
@@ -1198,21 +1187,21 @@ Mat::diag
 
 .. cpp:function:: static Mat Mat::diag(const Mat& matD)
 
-    Extracts diagonal from a matrix, or creates a diagonal matrix.
+    Extracts a diagonal from a matrix, or creates a diagonal matrix.
 
-    :param d: index of the diagonal, with the following meaning:
+    :param d: Index of the diagonal, with the following values:
 
         * **d=0** the main diagonal
 
-        * **d>0** a diagonal from the lower half, e.g.  ``d=1``  means the diagonal immediately below the main one
+        * **d>0** a diagonal from the lower half. For example,  ``d=1``  means the diagonal is set immediately below the main one.
 
-        * **d<0** a diagonal from the upper half, e.g.  ``d=1``  means the diagonal immediately above the main one
+        * **d<0** a diagonal from the upper half. For example,  ``d=1``  means the diagonal is set immediately above the main one.
 
-    :param matD: single-column matrix that will form the diagonal matrix.
+    :param matD: A single-column matrix that forms the diagonal matrix.
 
-The method makes a new header for the specified matrix diagonal. The new matrix will be represented as a single-column matrix. Similarly to
+The method makes a new header for the specified matrix diagonal. The new matrix is represented as a single-column matrix. Similarly to
 :func:`Mat::row` and
-:func:`Mat::col` , this is O(1) operation.
+:func:`Mat::col` , this is an O(1) operation.
 
 .. index:: Mat::clone
 
@@ -1222,9 +1211,9 @@ Mat::clone
 --------------
 .. cpp:function:: Mat Mat::clone() const
 
-    Creates full copy of the array and the underlying data.
+    Creates a full copy of the array and the underlying data.
 
-The method creates full copy of the array. The original ``step[]`` are not taken into the account. That is, the array copy will be a continuous array occupying ``total()*elemSize()`` bytes.
+The method creates a full copy of the array. The original ``step[]`` are not taken into account. That is, the array copy is a continuous array occupying ``total()*elemSize()`` bytes.
 
 .. index:: Mat::copyTo
 
@@ -1237,16 +1226,16 @@ Mat::copyTo
 
     Copies the matrix to another one.
 
-    :param m: The destination matrix. If it does not have a proper size or type before the operation, it will be reallocated
+    :param m: The destination matrix. If it does not have a proper size or type before the operation, it is reallocated.
 
-    :param mask: The operation mask. Its non-zero elements indicate, which matrix elements need to be copied
+    :param mask: The operation mask. Its non-zero elements indicate which matrix elements need to be copied.
 
 The method copies the matrix data to another matrix. Before copying the data, the method invokes ::
 
     m.create(this->size(), this->type);
 
 
-so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` will work as expected, i.e. will have no effect, the function does not handle the case of a partial overlap between the source and the destination matrices.
+so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
 When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all 0's before copying the data.
 
@@ -1258,17 +1247,17 @@ Mat::convertTo
 ------------------
 .. cpp:function:: void Mat::convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const
 
-    Converts array to another datatype with optional scaling.
+    Converts an array to another datatype with optional scaling.
 
-    :param m: The destination matrix. If it does not have a proper size or type before the operation, it will be reallocated
+    :param m: The destination matrix. If it does not have a proper size or type before the operation, it is reallocated.
 
-    :param rtype: The desired destination matrix type, or rather, the depth (since the number of channels will be the same with the source one). If  ``rtype``  is negative, the destination matrix will have the same type as the source.
+    :param rtype: The desired destination matrix type, or rather, the depth (since the number of channels are the same as the source has). If  ``rtype``  is negative, the destination matrix will have the same type as the source.
 
-    :param alpha: The optional scale factor
+    :param alpha: The optional scale factor.
 
-    :param beta: The optional delta, added to the scaled values.
+    :param beta: The optional delta added to the scaled values.
 
-The method converts source pixel values to the target datatype. ``saturate_cast<>`` is applied in the end to avoid possible overflows:
+The method converts source pixel values to the target datatype. ``saturate_cast<>`` is applied at the end to avoid possible overflows:
 
 .. math::
 
@@ -1280,13 +1269,13 @@ Mat::assignTo
 -----------------
 .. cpp:function:: void Mat::assignTo( Mat& m, int type=-1 ) const
 
-    Functional form of convertTo
+    Provides a functional form of ``convertTo``.
 
-    :param m: The destination array
+    :param m: The destination array.
 
-    :param type: The desired destination array depth (or -1 if it should be the same as the source one).
+    :param type: The desired destination array depth (or -1 if it should be the same as the source type).
 
-This is internal-use method called by the
+This is an internally used method called by the
 :ref:`MatrixExpressions` engine.
 
 .. index:: Mat::setTo
@@ -1297,9 +1286,9 @@ Mat::setTo
 
     Sets all or some of the array elements to the specified value.
 
-    :param s: Assigned scalar, which is converted to the actual array type
+    :param s: Assigned scalar converted to the actual array type.
 
-    :param mask: The operation mask of the same size as  ``*this`` This is the advanced variant of ``Mat::operator=(const Scalar& s)`` operator.
+    :param mask: Operation mask of the same size as  ``*this``. This is an advanced variant of the ``Mat::operator=(const Scalar& s)`` operator.
 
 .. index:: Mat::reshape
 
@@ -1315,15 +1304,14 @@ Mat::reshape
 
 The method makes a new matrix header for ``*this`` elements. The new matrix may have different size and/or different number of channels. Any combination is possible, as long as:
 
-#.
-    No extra elements is included into the new matrix and no elements are excluded. Consequently,
-         the product ``rows*cols*channels()``     must stay the same after the transformation.
+*
+    No extra elements is included into the new matrix and no elements are excluded. Consequently, the product ``rows*cols*channels()``     must stay the same after the transformation.
 
-#.
-    No data is copied, i.e. this is O(1) operation. Consequently, if you change the number of rows, or the operation changes elements' row indices in some other way, the matrix must be continuous. See
+*
+    No data is copied. That is, this is an O(1) operation. Consequently, if you change the number of rows, or the operation changes the indices of elements' row  in some other way, the matrix must be continuous. See
     :func:`Mat::isContinuous`     .
 
-Here is some small example. Assuming, there is a set of 3D points that are stored as STL vector, and you want to represent the points as ``3xN`` matrix. Here is how it can be done: ::
+For example, if there is a set of 3D points stored as an STL vector, and you want to represent the points as a ``3xN`` matrix, do the following: ::
 
     std::vector<Point3f> vec;
     ...
@@ -1332,7 +1320,7 @@ Here is some small example. Assuming, there is a set of 3D points that are store
                       reshape(1). // make Nx3 1-channel matrix out of Nx1 3-channel.
                                   // Also, an O(1) operation
                          t(); // finally, transpose the Nx3 matrix.
-                              // This involves copying of all the elements
+                              // This involves copying all the elements
 
 
 .. index:: Mat::t
@@ -1341,10 +1329,9 @@ Mat::t
 ----------
 .. cpp:function:: MatExpr Mat::t() const
 
-    Transposes the matrix
+    Transposes a matrix.
 
-The method performs matrix transposition by means of matrix expressions.
-It does not perform the actual transposition, but returns a temporary "matrix transposition" object that can be further used as a part of more complex matrix expression or be assigned to a matrix: ::
+The method performs matrix transposition by means of matrix expressions. It does not perform the actual transposition but returns a temporary "matrix transposition" object that can be further used as a part of more complex matrix expressions or be assigned to a matrix: ::
 
     Mat A1 = A + Mat::eye(A.size(), A.type)*lambda;
     Mat C = A1.t()*A1; // compute (A + lambda*I)^t * (A + lamda*I)
@@ -1356,17 +1343,17 @@ Mat::inv
 ------------
 .. cpp:function:: MatExpr Mat::inv(int method=DECOMP_LU) const
 
-    Inverses the matrix
+    Inverses a matrix.
 
-    :param method: The matrix inversion method, one of
+    :param method: The matrix inversion method. Possible values are the following:
 
-        * **DECOMP_LU** LU decomposition. The matrix must be non-singular
+        * **DECOMP_LU** LU decomposition. The matrix must be non-singular.
 
-        * **DECOMP_CHOLESKY** Cholesky  :math:`LL^T`  decomposition, for symmetrical positively defined matrices only. About twice faster than LU on big matrices.
+        * **DECOMP_CHOLESKY** Cholesky  :math:`LL^T`  decomposition, for symmetrical positively defined matrices only. This type is about twice faster than LU on big matrices.
 
-        * **DECOMP_SVD** SVD decomposition. The matrix can be a singular or even non-square, then the pseudo-inverse is computed
+        * **DECOMP_SVD** SVD decomposition.  If the matrix is singular or even non-square, the pseudo inversion is computed.
 
-The method performs matrix inversion by means of matrix expressions, i.e. a temporary "matrix inversion" object is returned by the method, and can further be used as a part of more complex matrix expression or be assigned to a matrix.
+The method performs matrix inversion by means of matrix expressions. This means that a temporary "matrix inversion" object is returned by the method and can further be used as a part of more complex matrix expression or be assigned to a matrix.
 
 .. index:: Mat::mul
 
@@ -1376,15 +1363,15 @@ Mat::mul
 
 .. cpp:function:: MatExpr Mat::mul(const MatExpr& m, double scale=1) const
 
-    Performs element-wise multiplication or division of the two matrices
+    Performs an element-wise multiplication or division of the two matrices.
 
-    :param m: Another matrix, of the same type and the same size as  ``*this`` , or a matrix expression
+    :param m: Another matrix of the same type and the same size as  ``*this`` , or a matrix expression.
 
-    :param scale: The optional scale factor
+    :param scale: Optional scale factor.
 
-The method returns a temporary object encoding per-element array multiplication, with optional scale. Note that this is not a matrix multiplication, which corresponds to a simpler "*" operator.
+The method returns a temporary object encoding per-element array multiplication, with optional scale. Note that this is not a matrix multiplication that corresponds to a simpler "*" operator.
 
-Here is a example: ::
+Here is an example: ::
 
     Mat C = A.mul(5/B); // equivalent to divide(A, B, C, 5)
 
@@ -1395,11 +1382,11 @@ Mat::cross
 --------------
 .. cpp:function:: Mat Mat::cross(const Mat& m) const
 
-    Computes cross-product of two 3-element vectors
+    Computes a cross-product of two 3-element vectors.
 
-    :param m: Another cross-product operand
+    :param m: Another cross-product operand.
 
-The method computes cross-product of the two 3-element vectors. The vectors must be 3-elements floating-point vectors of the same shape and the same size. The result will be another 3-element vector of the same shape and the same type as operands.
+The method computes a cross-product of two 3-element vectors. The vectors must be 3-elements floating-point vectors of the same shape and the same size. The result is another 3-element vector of the same shape and the same type as operands.
 
 .. index:: Mat::dot
 
@@ -1407,11 +1394,11 @@ Mat::dot
 ------------
 .. cpp:function:: double Mat::dot(const Mat& m) const
 
-    Computes dot-product of two vectors
+    Computes a dot-product of two vectors.
 
     :param m: Another dot-product operand.
 
-The method computes dot-product of the two matrices. If the matrices are not single-column or single-row vectors, the top-to-bottom left-to-right scan ordering is used to treat them as 1D vectors. The vectors must have the same size and the same type. If the matrices have more than one channel, the dot products from all the channels are summed together.
+The method computes a dot-product of two matrices. If the matrices are not single-column or single-row vectors, the top-to-bottom left-to-right scan ordering is used to treat them as 1D vectors. The vectors must have the same size and the same type. If the matrices have more than one channel, the dot products from all the channels are summed together.
 
 .. index:: Mat::zeros
 
@@ -1421,25 +1408,27 @@ Mat::zeros
 .. cpp:function:: static MatExpr Mat::zeros(Size size, int type)
 .. cpp:function:: static MatExpr Mat::zeros(int ndims, const int* sizes, int type)
 
-    Returns zero array of the specified size and type
+    Returns a zero array of the specified size and type.
 
-    :param ndims: The array dimensionality
+    :param ndims: Array dimensionality.
 
-    :param rows: The number of rows
+    :param rows: The number of rows.
 
-    :param cols: The number of columns
+    :param cols: The number of columns.
 
-    :param size: Alternative matrix size specification:  ``Size(cols, rows)``     :param sizes: The array of integers, specifying the array shape
+    :param size: Alternative matrix size specification:  ``Size(cols, rows)``     
+	
+	:param sizes: An array of integers specifying the array shape.
 
-    :param type: The created matrix type
+    :param type: Created matrix type.
 
-The method returns Matlab-style zero array initializer. It can be used to quickly form a constant array and use it as a function parameter, as a part of matrix expression, or as a matrix initializer. ::
+The method returns a Matlab-style zero array initializer. It can be used to quickly form a constant array and use it as a function parameter, as a part of matrix expression, or as a matrix initializer. ::
 
     Mat A;
     A = Mat::zeros(3, 3, CV_32F);
 
 
-Note that in the above sample a new matrix will be allocated only if ``A`` is not 3x3 floating-point matrix, otherwise the existing matrix ``A`` will be filled with 0's.
+Note that in the sample above a new matrix will be allocated only if ``A`` is not a 3x3 floating-point matrix. Otherwise, the existing matrix ``A`` will be filled with 0's.
 
 .. index:: Mat::ones
 
@@ -1449,25 +1438,27 @@ Mat::ones
 .. cpp:function:: static MatExpr Mat::ones(Size size, int type)
 .. cpp:function:: static MatExpr Mat::ones(int ndims, const int* sizes, int type)
 
-    Returns array of all 1's of the specified size and type
+    Returns an array of all 1's of the specified size and type.
 
-    :param ndims: The array dimensionality
+    :param ndims: Array dimensionality.
 
-    :param rows: The number of rows
+    :param rows: The number of rows.
 
-    :param cols: The number of columns
+    :param cols: The number of columns.
 
-    :param size: Alternative matrix size specification:  ``Size(cols, rows)``     :param sizes: The array of integers, specifying the array shape
+    :param size: Alternative matrix size specification:  ``Size(cols, rows)``     
+	
+	:param sizes: An array of integers specifying the array shape.
 
-    :param type: The created matrix type
+    :param type: Created matrix type.
 
-The method returns Matlab-style ones' array initializer, similarly to
-:func:`Mat::zeros` . Note that using this method you can initialize an array with arbitrary value, using the following Matlab idiom: ::
+The method returns a Matlab-style 1's array initializer, similarly to
+:func:`Mat::zeros` . Note that using this method you can initialize an array with an arbitrary value, using the following Matlab idiom: ::
 
     Mat A = Mat::ones(100, 100, CV_8U)*3; // make 100x100 matrix filled with 3.
 
 
-The above operation will not form 100x100 matrix of ones and then multiply it by 3. Instead, it will just remember the scale factor (3 in this case) and use it when actually invoking the matrix initializer.
+The above operation does not form a 100x100 matrix of 1's and then multiply it by 3. Instead, it will just remember the scale factor (3 in this case) and use it when actually invoking the matrix initializer.
 
 .. index:: Mat::eye
 
@@ -1476,15 +1467,17 @@ Mat::eye
 .. cpp:function:: static MatExpr Mat::eye(int rows, int cols, int type)
 .. cpp:function:: static MatExpr Mat::eye(Size size, int type)
 
-    Returns identity matrix of the specified size and type
+    Returns an identity matrix of the specified size and type.
 
-    :param rows: The number of rows
+    :param rows: The number of rows.
 
-    :param cols: The number of columns
+    :param cols: The number of columns.
 
-    :param size: Alternative matrix size specification:  ``Size(cols, rows)``     :param type: The created matrix type
+    :param size: Alternative matrix size specification:  ``Size(cols, rows)`` .     
+	
+	:param type: Created matrix type.
 
-The method returns Matlab-style identity matrix initializer, similarly to
+The method returns a Matlab-style identity matrix initializer, similarly to
 :func:`Mat::zeros` . Similarly to ``Mat::ones`` , you can use a scale operation to create a scaled identity matrix efficiently: ::
 
     // make a 4x4 diagonal matrix with 0.1's on the diagonal.
@@ -1503,33 +1496,35 @@ Mat::create
 
     Allocates new array data if needed.
 
-    :param ndims: The new array dimensionality
+    :param ndims: New array dimensionality.
 
-    :param rows: The new number of rows
+    :param rows: New number of rows.
 
-    :param cols: The new number of columns
+    :param cols: New number of columns.
 
-    :param size: Alternative new matrix size specification:  ``Size(cols, rows)``     :param sizes: The array of integers, specifying the new array shape
+    :param size: Alternative new matrix size specification:  ``Size(cols, rows)``     
+	
+	:param sizes: An array of integers specifying the new array shape.
 
-    :param type: The new matrix type
+    :param type: New matrix type.
 
 This is one of the key ``Mat`` methods. Most new-style OpenCV functions and methods that produce arrays call this method for each output array. The method uses the following algorithm:
 
 #.
-    if the current array shape and the type match the new ones, return immediately.
+    If the current array shape and the type match the new ones, return immediately.
 
 #.
-    otherwise, dereference the previous data by calling
+    Otherwise, de-reference the previous data by calling
     :func:`Mat::release` #.
     initialize the new header
 
 #.
-    allocate the new data of ``total()*elemSize()``     bytes
+    Allocate the new data of ``total()*elemSize()``     bytes.
 
 #.
-    allocate the new, associated with the data, reference counter and set it to 1.
+    Allocate the new, associated with the data, reference counter and set it to 1.
 
-Such a scheme makes the memory management robust and efficient at the same time, and also saves quite a bit of typing for the user, i.e. usually there is no need to explicitly allocate output arrays. That is, instead of writing: ::
+Such a scheme makes the memory management robust and efficient at the same time and helps avoid extra typing for you. This means that usually there is no need to explicitly allocate output arrays. That is, instead of writing: ::
 
     Mat color;
     ...
@@ -1545,7 +1540,7 @@ you can simply write: ::
     cvtColor(color, gray, CV_BGR2GRAY);
 
 
-because ``cvtColor`` , as well as most of OpenCV functions, calls Mat::create() for the output array internally.
+because ``cvtColor`` , as well as the most of OpenCV functions, calls ``Mat::create()`` for the output array internally.
 
 .. index:: Mat::addref
 
@@ -1555,10 +1550,10 @@ Mat::addref
 ---------------
 .. cpp:function:: void Mat::addref()
 
-    Increments the reference counter
+    Increments the reference counter.
 
-The method increments the reference counter, associated with the matrix data. If the matrix header points to an external data (see
-:func:`Mat::Mat` ), the reference counter is NULL, and the method has no effect in this case. Normally, the method should not be called explicitly, to avoid memory leaks. It is called implicitly by the matrix assignment operator. The reference counter increment is the atomic operation on the platforms that support it, thus it is safe to operate on the same matrices asynchronously in different threads.
+The method increments the reference counter associated with the matrix data. If the matrix header points to an external data set (see
+:func:`Mat::Mat` ), the reference counter is NULL, and the method has no effect in this case. Normally, to avoid memory leaks, the method should not be called explicitly. It is called implicitly by the matrix assignment operator. The reference counter increment is an atomic operation on the platforms that support it. Thus, it is safe to operate on the same matrices asynchronously in different threads.
 
 .. index:: Mat::release
 
@@ -1568,12 +1563,12 @@ Mat::release
 ----------------
 .. cpp:function:: void Mat::release()
 
-    Decrements the reference counter and deallocates the matrix if needed
+    Decrements the reference counter and deallocates the matrix if needed.
 
-The method decrements the reference counter, associated with the matrix data. When the reference counter reaches 0, the matrix data is deallocated and the data and the reference counter pointers are set to NULL's. If the matrix header points to an external data (see
+The method decrements the reference counter associated with the matrix data. When the reference counter reaches 0, the matrix data is deallocated and the data and the reference counter pointers are set to NULL's. If the matrix header points to an external data set (see
 :func:`Mat::Mat` ), the reference counter is NULL, and the method has no effect in this case.
 
-This method can be called manually to force the matrix data deallocation. But since this method is automatically called in the destructor, or by any other method that changes the data pointer, it is usually not needed. The reference counter decrement and check for 0 is the atomic operation on the platforms that support it, thus it is safe to operate on the same matrices asynchronously in different threads.
+This method can be called manually to force the matrix data deallocation. But since this method is automatically called in the destructor, or by any other method that changes the data pointer, it is usually not needed. The reference counter decrement and check for 0 is an atomic operation on the platforms that support it. Thus, it is safe to operate on the same matrices asynchronously in different threads.
 
 .. index:: Mat::resize
 
@@ -1583,11 +1578,11 @@ Mat::resize
 ---------------
 .. cpp:function:: void Mat::resize( size_t sz ) const
 
-    Changes the number of matrix rows
+    Changes the number of matrix rows.
 
-    :param sz: The new number of rows
+    :param sz: The new number of rows.
 
-The method changes the number of matrix rows. If the matrix is reallocated, the first ``min(Mat::rows, sz)`` rows are preserved. The method emulates the corresponding method of STL vector class.
+The method changes the number of matrix rows. If the matrix is reallocated, the first ``min(Mat::rows, sz)`` rows are preserved. The method emulates the corresponding method of the STL vector class.
 
 .. index:: Mat::push_back
 
@@ -1598,11 +1593,11 @@ Mat::push_back
 .. c:function:: template<typename T> void Mat::push_back(const T& elem)
 .. c:function:: template<typename T> void Mat::push_back(const Mat_<T>& elem)
 
-    Adds elements to the bottom of the matrix
+    Adds elements to the bottom of the matrix.
 
-    :param elem: The added element(s).
+    :param elem: Added element(s).
 
-The methods add one or more elements to the bottom of the matrix. They emulate the corresponding method of STL vector class. When ``elem`` is ``Mat`` , its type and the number of columns must be the same as in the container matrix.
+The methods add one or more elements to the bottom of the matrix. They emulate the corresponding method of the STL vector class. When ``elem`` is ``Mat`` , its type and the number of columns must be the same as in the container matrix.
 
 .. index:: Mat::pop_back
 
@@ -1614,7 +1609,7 @@ Mat::pop_back
 
     Removes elements from the bottom of the matrix.
 
-    :param nelems: The number of rows removed. If it is greater than the total number of rows, an exception is thrown.
+    :param nelems: The number of removed rows. If it is greater than the total number of rows, an exception is thrown.
 
 The method removes one or more rows from the bottom of the matrix.
 
@@ -1626,14 +1621,14 @@ Mat::locateROI
 ------------------
 .. cpp:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
 
-    Locates matrix header within a parent matrix
+    Locates the matrix header within a parent matrix.
 
-    :param wholeSize: The output parameter that will contain size of the whole matrix, which  ``*this``  is a part of.
+    :param wholeSize: An output parameter that contains the size of the whole matrix, which  ``*this``  is a part of.??
 
-    :param ofs: The output parameter that will contain offset of  ``*this``  inside the whole matrix
+    :param ofs: An output parameter that contains an offset of  ``*this``  inside the whole matrix.
 
 After you extracted a submatrix from a matrix using
-:func:`Mat::row`,:func:`Mat::col`,:func:`Mat::rowRange`,:func:`Mat::colRange` etc., the result submatrix will point just to the part of the original big matrix. However, each submatrix contains some information (represented by ``datastart`` and ``dataend`` fields), using which it is possible to reconstruct the original matrix size and the position of the extracted submatrix within the original matrix. The method ``locateROI`` does exactly that.
+:func:`Mat::row`,:func:`Mat::col`,:func:`Mat::rowRange`,:func:`Mat::colRange` , and others, the resultant submatrix will point just to the part of the original big matrix. However, each submatrix contains some information (represented by ``datastart`` and ``dataend`` fields) that helps reconstruct the original matrix size and the position of the extracted submatrix within the original matrix. The method ``locateROI`` does exactly that.
 
 .. index:: Mat::adjustROI
 
@@ -1643,31 +1638,31 @@ Mat::adjustROI
 ------------------
 .. cpp:function:: Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
 
-    Adjust submatrix size and position within the parent matrix
+    Adjusts a submatrix size and position within the parent matrix.
 
-    :param dtop: The shift of the top submatrix boundary upwards
+    :param dtop: The shift of the top submatrix boundary upwards.
 
-    :param dbottom: The shift of the bottom submatrix boundary downwards
+    :param dbottom: The shift of the bottom submatrix boundary downwards.
 
-    :param dleft: The shift of the left submatrix boundary to the left
+    :param dleft: The shift of the left submatrix boundary to the left.
 
-    :param dright: The shift of the right submatrix boundary to the right
+    :param dright: The shift of the right submatrix boundary to the right.
 
-The method is complimentary to the
-:func:`Mat::locateROI` . Indeed, the typical use of these functions is to determine the submatrix position within the parent matrix and then shift the position somehow. Typically it can be needed for filtering operations, when pixels outside of the ROI should be taken into account. When all the method's parameters are positive, it means that the ROI needs to grow in all directions by the specified amount, i.e. ::
+The method is complimentary to 
+:func:`Mat::locateROI` . Indeed, the typical use of these functions is to determine the submatrix position within the parent matrix and then shift the position somehow. Typically, it can be required for filtering operations when pixels outside of the ROI should be taken into account. When all the method parameters are positive, the ROI needs to grow in all directions by the specified amount, for example: ::
 
     A.adjustROI(2, 2, 2, 2);
 
 
-increases the matrix size by 4 elements in each direction and shifts it by 2 elements to the left and 2 elements up, which brings in all the necessary pixels for the filtering with 5x5 kernel.
+In this example, the matrix size is increased by 4 elements in each direction. The matrix is shifted by 2 elements to the left and 2 elements up, which brings in all the necessary pixels for the filtering with 5x5 kernel.
 
-It's user responsibility to make sure that adjustROI does not cross the parent matrix boundary. If it does, the function will signal an error.
+It is your responsibility to make sure ``adjustROI`` does not cross the parent matrix boundary. If it does, the function signals an error.
 
 The function is used internally by the OpenCV filtering functions, like
-:func:`filter2D` , morphological operations etc.
+:func:`filter2D` , morphological operations, and so on.
 
-See also
-:func:`copyMakeBorder` .
+See Also
+:func:`copyMakeBorder` 
 
 .. index:: Mat::operator()
 
@@ -1681,15 +1676,19 @@ Mat::operator()
 
 .. cpp:function:: Mat Mat::operator()( const Ranges* ranges ) const
 
-    Extracts a rectangular submatrix
+    Extracts a rectangular submatrix.
 
-    :param rowRange: The start and the end row of the extracted submatrix. The upper boundary is not included. To select all the rows, use  ``Range::all()``     :param colRange: The start and the end column of the extracted submatrix. The upper boundary is not included. To select all the columns, use  ``Range::all()``     :param roi: The extracted submatrix specified as a rectangle
+    :param rowRange: The start and the end row of the extracted submatrix. The upper boundary is not included. To select all the rows, use `Range::all()``.    
+	
+	:param colRange: The start and the end column of the extracted submatrix. The upper boundary is not included. To select all the columns, use  ``Range::all()`` .    
+	
+	:param roi: The extracted submatrix specified as a rectangle.
 
-    :param ranges: The array of selected ranges along each array dimension
+    :param ranges: The array of selected ranges along each array dimension.
 
 The operators make a new header for the specified sub-array of ``*this`` . They are the most generalized forms of
-:func:`Mat::row`,:func:`Mat::col`,:func:`Mat::rowRange` and
-:func:`Mat::colRange` . For example, ``A(Range(0, 10), Range::all())`` is equivalent to ``A.rowRange(0, 10)`` . Similarly to all of the above, the operators are O(1) operations, i.e. no matrix data is copied.
+:func:`Mat::row`,:func:`Mat::col`,:func:`Mat::rowRange`, and
+:func:`Mat::colRange` . For example, ``A(Range(0, 10), Range::all())`` is equivalent to ``A.rowRange(0, 10)`` . Similarly to all of the above, the operators are O(1) operations, that is, no matrix data is copied.
 
 .. index:: Mat::operator CvMat
 
@@ -1697,9 +1696,9 @@ Mat::operator CvMat
 -----------------------
 .. cpp:function:: Mat::operator CvMat(void) const
 
-    Creates CvMat header for the matrix
+    Creates the ``CvMat`` header for the matrix.
 
-The operator makes CvMat header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation, thus you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, e.g: ::
+The operator creates the ``CvMat`` header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation. Thus, you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, for example: ::
 
     Mat img(Size(320, 240), CV_8UC3);
     ...
@@ -1708,7 +1707,7 @@ The operator makes CvMat header for the matrix without copying the underlying da
     mycvOldFunc( &cvimg, ...);
 
 
-where ``mycvOldFunc`` is some function written to work with OpenCV 1.x data structures.
+where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structures.
 
 .. index:: Mat::operator IplImage
 
@@ -1716,9 +1715,9 @@ Mat::operator IplImage
 --------------------------
 .. cpp:function:: Mat::operator IplImage(void) const
 
-    Creates IplImage header for the matrix
+    Creates the ``IplImage`` header for the matrix.
 
-The operator makes IplImage header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
+The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
 
 .. index:: Mat::total
 
@@ -1730,7 +1729,7 @@ Mat::total
 
     Returns the total number of array elements.
 
-The method returns the number of array elements (e.g. number of pixels if the array represents an image).
+The method returns the number of array elements (a number of pixels if the array represents an image).
 
 .. index:: Mat::isContinuous
 
@@ -1740,13 +1739,13 @@ Mat::isContinuous
 ---------------------
 .. cpp:function:: bool Mat::isContinuous(void) const
 
-    Reports whether the matrix is continuous or not
+    Reports whether the matrix is continuous or not.
 
-The method returns true if the matrix elements are stored continuously, i.e. without gaps in the end of each row, and false otherwise. Obviously, ``1x1`` or ``1xN`` matrices are always continuous. Matrices created with
-:func:`Mat::create` are always continuous, but if you extract a part of the matrix using
-:func:`Mat::col`,:func:`Mat::diag` etc. or constructed a matrix header for externally allocated data, such matrices may no longer have this property.
+The method returns ``true`` if the matrix elements are stored continuously - without gaps in the end of each row. Otherwise, it returns ``false``. Obviously, ``1x1`` or ``1xN`` matrices are always continuous. Matrices created with
+:func:`Mat::create` are always continuous. But if you extract a part of the matrix using
+:func:`Mat::col`,:func:`Mat::diag` , and so on, or constructed a matrix header for externally allocated data, such matrices may no longer have this property.
 
-The continuity flag is stored as a bit in ``Mat::flags`` field, and is computed automatically when you construct a matrix header, thus the continuity check is very fast operation, though it could be, in theory, done as following: ::
+The continuity flag is stored as a bit in the ``Mat::flags`` field and is computed automatically when you construct a matrix header. Thus, the continuity check is a very fast operation, though it could be, in theory, done as following: ::
 
     // alternative implementation of Mat::isContinuous()
     bool myCheckMatContinuity(const Mat& m)
@@ -1756,7 +1755,7 @@ The continuity flag is stored as a bit in ``Mat::flags`` field, and is computed 
     }
 
 
-The method is used in a quite a few of OpenCV functions, and you are welcome to use it as well. The point is that element-wise operations (such as arithmetic and logical operations, math functions, alpha blending, color space transformations etc.) do not depend on the image geometry, and thus, if all the input and all the output arrays are continuous, the functions can process them as very long single-row vectors. Here is the example of how alpha-blending function can be implemented. ::
+The method is used in quite a few of OpenCV functions. The point is that element-wise operations (such as arithmetic and logical operations, math functions, alpha blending, color space transformations, and others) do not depend on the image geometry. Thus, if all the input and output arrays are continuous, the functions can process them as very long single-row vectors. Here is the example of how an alpha-blending function can be implemented. ::
 
     template<typename T>
     void alphaBlendRGBA(const Mat& src1, const Mat& src2, Mat& dst)
@@ -1802,7 +1801,7 @@ The method is used in a quite a few of OpenCV functions, and you are welcome to 
 
 This trick, while being very simple, can boost performance of a simple element-operation by 10-20 percents, especially if the image is rather small and the operation is quite simple.
 
-Also, note that we use another OpenCV idiom in this function - we call
+Also, note that there is another OpenCV idiom in this function: a call of
 :func:`Mat::create` for the destination array instead of checking that it already has the proper size and type. And while the newly allocated arrays are always continuous, we still check the destination array, because
 :func:`create` does not always allocate a new matrix.
 
@@ -1814,9 +1813,9 @@ Mat::elemSize
 -----------------
 .. cpp:function:: size_t Mat::elemSize(void) const
 
-    Returns matrix element size in bytes
+    Returns  the matrix element size in bytes.
 
-The method returns the matrix element size in bytes. For example, if the matrix type is ``CV_16SC3`` , the method will return ``3*sizeof(short)`` or 6.
+The method returns the matrix element size in bytes. For example, if the matrix type is ``CV_16SC3`` , the method returns ``3*sizeof(short)`` or 6.
 
 .. index:: Mat::elemSize1
 
@@ -1826,9 +1825,9 @@ Mat::elemSize1
 ------------------
 .. cpp:function:: size_t Mat::elemSize1(void) const
 
-    Returns size of each matrix element channel in bytes
+    Returns the size of each matrix element channel in bytes.
 
-The method returns the matrix element channel size in bytes, that is, it ignores the number of channels. For example, if the matrix type is ``CV_16SC3`` , the method will return ``sizeof(short)`` or 2.
+The method returns the matrix element channel size in bytes, that is, it ignores the number of channels. For example, if the matrix type is ``CV_16SC3`` , the method returns ``sizeof(short)`` or 2.
 
 .. index:: Mat::type
 
@@ -1838,9 +1837,9 @@ Mat::type
 -------------
 .. cpp:function:: int Mat::type(void) const
 
-    Returns matrix element type
+    Returns a matrix element type.
 
-The method returns the matrix element type, an id, compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array etc.
+The method returns a matrix element type. This is an id, compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array, and so on.
 
 .. index:: Mat::depth
 
@@ -1850,9 +1849,9 @@ Mat::depth
 --------------
 .. cpp:function:: int Mat::depth(void) const
 
-    Returns matrix element depth
+    Returns the matrix element depth.
 
-The method returns the matrix element depth id, i.e. the type of each individual channel. For example, for 16-bit signed 3-channel array the method will return ``CV_16S`` . The complete list of matrix types:
+The method returns the matrix element depth id (the type of each individual channel). For example, for a 16-bit signed 3-channel array, the method returns ``CV_16S`` . A complete list of matrix types:
 
 * ``CV_8U``     - 8-bit unsigned integers ( ``0..255``     )
 
@@ -1876,7 +1875,7 @@ Mat::channels
 -----------------
 .. cpp:function:: int Mat::channels(void) const
 
-    Returns matrix element depth
+    Returns a matrix element depth.
 
 The method returns the number of matrix channels.
 
@@ -1888,10 +1887,10 @@ Mat::step1
 --------------
 .. cpp:function:: size_t Mat::step1(void) const
 
-    Returns normalized step
+    Returns a normalized step.
 
-The method returns the matrix step, divided by
-:func:`Mat::elemSize1()` . It can be useful for fast access to arbitrary matrix element.
+The method returns a matrix step divided by
+:func:`Mat::elemSize1()` . It can be useful to quickly access an arbitrary matrix element.
 
 .. index:: Mat::size
 
@@ -1901,9 +1900,9 @@ Mat::size
 -------------
 .. cpp:function:: Size Mat::size(void) const
 
-    Returns the matrix size
+    Returns a matrix size.
 
-The method returns the matrix size: ``Size(cols, rows)`` .
+The method returns a matrix size: ``Size(cols, rows)`` .
 
 .. index:: Mat::empty
 
@@ -1913,9 +1912,9 @@ Mat::empty
 --------------
 .. cpp:function:: bool Mat::empty(void) const
 
-    Returns true if the array has no elemens
+    Returns ``true`` if the array has no elemens.
 
-The method returns true if ``Mat::total()`` is 0 or if ``Mat::data`` is NULL. Because of ``pop_back()`` and ``resize()`` methods ``M.total() == 0`` does not imply that ``M.data == NULL`` .
+The method returns ``true`` if ``Mat::total()`` is 0 or if ``Mat::data`` is NULL. Because of ``pop_back()`` and ``resize()`` methods ``M.total() == 0`` does not imply that ``M.data == NULL`` .
 
 .. index:: Mat::ptr
 
@@ -1931,12 +1930,12 @@ Mat::ptr
 
 .. c:function:: template<typename _Tp> const _Tp* Mat::ptr(int i=0) const
 
-    Return pointer to the specified matrix row
+    Returns a pointer to the specified matrix row.
 
-    :param i: The 0-based row index
+    :param i: A 0-based row index.
 
 The methods return ``uchar*`` or typed pointer to the specified matrix row. See the sample in
-:func:`Mat::isContinuous` () on how to use these methods.
+:func:`Mat::isContinuous` () to know how to use these methods.
 
 .. index:: Mat::at
 
@@ -1964,15 +1963,17 @@ Mat::at
 
 .. c:function:: template<typename T> const T& Mat::at(const int* idx) const
 
-    Return reference to the specified array element
+    Returns a reference to the specified array element.
 
-    :param i, j, k: Indices along the dimensions 0, 1 and 2, respectively
+    :param i, j, k: Indices along the dimensions 0, 1, and 2, respectively.
 
-    :param pt: The element position specified as  ``Point(j,i)``     :param idx: The array of  ``Mat::dims``  indices
+    :param pt: An element position specified as  ``Point(j,i)`` .    
+	
+	:param idx: An array of  ``Mat::dims``  indices.
 
-The template methods return reference to the specified array element. For the sake of higher performance the index range checks are only performed in Debug configuration.
+The template methods return a reference to the specified array element. For the sake of higher performance, the index range checks are only performed in the Debug configuration.
 
-Note that the variants with a single index (i) can be used to access elements of single-row or single-column 2-dimensional arrays. That is, if, for example, ``A`` is ``1 x N`` floating-point matrix and ``B`` is ``M x 1`` integer matrix, you can simply write ``A.at<float>(k+4)`` and ``B.at<int>(2*i+1)`` instead of ``A.at<float>(0,k+4)`` and ``B.at<int>(2*i+1,0)`` , respectively.
+Note that the variants with a single index (i) can be used to access elements of single-row or single-column 2-dimensional arrays. That is, if, for example, ``A`` is a ``1 x N`` floating-point matrix and ``B`` is an ``M x 1`` integer matrix, you can simply write ``A.at<float>(k+4)`` and ``B.at<int>(2*i+1)`` instead of ``A.at<float>(0,k+4)`` and ``B.at<int>(2*i+1,0)`` , respectively.
 
 Here is an example of initialization of a Hilbert matrix: ::
 
@@ -1990,7 +1991,7 @@ Mat::begin
 --------------
 .. c:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const
 
-    Return the matrix iterator, set to the first matrix element
+    Returns the matrix iterator and sets it to the first matrix element..
 
 The methods return the matrix read-only or read-write iterators. The use of matrix iterators is very similar to the use of bi-directional STL iterators. Here is the alpha blending function rewritten using the matrix iterators: ::
 
@@ -2032,7 +2033,7 @@ Mat::end
 ------------
 .. c:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end() template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
-    Return the matrix iterator, set to the after-last matrix element
+    Returns the matrix iterator and sets it to the after-last matrix element.
 
 The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
 
@@ -2051,17 +2052,17 @@ Template matrix class derived from
     };
 
 
-The class ``Mat_<_Tp>`` is a "thin" template wrapper on top of ``Mat`` class. It does not have any extra data fields, nor it or ``Mat`` have any virtual methods and thus references or pointers to these two classes can be freely converted one to another. But do it with care, e.g.: ::
+The class ``Mat_<_Tp>`` is a "thin" template wrapper on top of the ``Mat`` class. It does not have any extra data fields. Nor this class nor ``Mat`` has any virtual methods. Thus, references or pointers to these two classes can be freely but carefully converted one to another. For example: ::
 
-    // create 100x100 8-bit matrix
+    // create a 100x100 8-bit matrix
     Mat M(100,100,CV_8U);
-    // this will compile fine. no any data conversion will be done.
+    // this will be compiled fine. no any data conversion will be done.
     Mat_<float>& M1 = (Mat_<float>&)M;
-    // the program will likely crash at the statement below
+    // the program is likely to crash at the statement below
     M1(99,99) = 1.f;
 
 
-While ``Mat`` is sufficient in most cases, ``Mat_`` can be more convenient if you use a lot of element access operations and if you know matrix type at compile time. Note that ``Mat::at<_Tp>(int y, int x)`` and ``Mat_<_Tp>::operator ()(int y, int x)`` do absolutely the same and run at the same speed, but the latter is certainly shorter: ::
+While ``Mat`` is sufficient in most cases, ``Mat_`` can be more convenient if you use a lot of element access operations and if you know matrix type at the compilation time. Note that ``Mat::at<_Tp>(int y, int x)`` and ``Mat_<_Tp>::operator ()(int y, int x)`` do absolutely the same and run at the same speed, but the latter is certainly shorter: ::
 
     Mat_<double> M(20,20);
     for(int i = 0; i < M.rows; i++)
@@ -2072,10 +2073,9 @@ While ``Mat`` is sufficient in most cases, ``Mat_`` can be more convenient if yo
     cout << E.at<double>(0,0)/E.at<double>(M.rows-1,0);
 
 
-*How to use ``Mat_`` for multi-channel images/matrices?*
-This is simple - just pass ``Vec`` as ``Mat_`` parameter: ::
+To use ``Mat_`` for multi-channel images/matrices, pass ``Vec`` as a ``Mat_`` parameter: ::
 
-    // allocate 320x240 color image and fill it with green (in RGB space)
+    // allocate a 320x240 color image and fill it with green (in RGB space)
     Mat_<Vec3b> img(240, 320, Vec3b(0,255,0));
     // now draw a diagonal white line
     for(int i = 0; i < 100; i++)
@@ -2113,8 +2113,8 @@ n-ary multi-dimensional array iterator ::
     };
 
 
-The class is used for implementation of unary, binary and, generally, n-ary element-wise operations on multi-dimensional arrays. Some of the arguments of n-ary function may be continuous arrays, some may be not. It is possible to use conventional
-``MatIterator`` 's for each array, but it can be a big overhead to increment all of the iterators after each small operations. That's where ``NAryMatIterator`` can be used. Using it, you can iterate though several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same). On each iteration ``it.planes[0]``,``it.planes[1]`` , ... will be the slices of the corresponding matrices.
+The class is used for implementation of unary, binary, and, generally, n-ary element-wise operations on multi-dimensional arrays. Some of the arguments of  n-ary function may be continuous arrays, some may be not. It is possible to use conventional
+``MatIterator`` 's for each array but it can be a big overhead to increment all of the iterators after each small operations. In this case consider using ``NAryMatIterator`` . Using it, you can iterate though several matrices simultaneously as long as they have the same geometry (dimensionality and all the dimension sizes are the same). On each iteration ``it.planes[0]``,``it.planes[1]`` , ... will be the slices of the corresponding matrices.
 
 Here is an example of how you can compute a normalized and thresholded 3D color histogram: ::
 
@@ -2122,14 +2122,14 @@ Here is an example of how you can compute a normalized and thresholded 3D color 
     {
         const int histSize[] = {N, N, N};
 
-        // make sure that the histogram has proper size and type
+        // make sure that the histogram has a proper size and type
         hist.create(3, histSize, CV_32F);
 
         // and clear it
         hist = Scalar(0);
 
         // the loop below assumes that the image
-        // is 8-bit 3-channel, so let's check it.
+        // is a 8-bit 3-channel. check it.
         CV_Assert(image.type() == CV_8UC3);
         MatConstIterator_<Vec3b> it = image.begin<Vec3b>(),
                                  it_end = image.end<Vec3b>();
@@ -2196,8 +2196,8 @@ Sparse n-dimensional array. ::
         // if try1d is true and matrix is a single-column matrix (Nx1),
         // then the sparse matrix will be 1-dimensional.
         SparseMat(const Mat& m, bool try1d=false);
-        // converts old-style sparse matrix to the new-style.
-        // all the data is copied, so that "m" can be safely
+        // converts an old-style sparse matrix to the new style.
+        // all the data is copied so that "m" can be safely
         // deleted after the conversion
         SparseMat(const CvSparseMat* m);
         // destructor
@@ -2205,19 +2205,19 @@ Sparse n-dimensional array. ::
 
         ///////// assignment operations ///////////
 
-        // this is O(1) operation; no data is copied
+        // this is an O(1) operation; no data is copied
         SparseMat& operator = (const SparseMat& m);
         // (equivalent to the corresponding constructor with try1d=false)
         SparseMat& operator = (const Mat& m);
 
-        // creates full copy of the matrix
+        // creates a full copy of the matrix
         SparseMat clone() const;
 
         // copy all the data to the destination matrix.
         // the destination will be reallocated if needed.
         void copyTo( SparseMat& m ) const;
         // converts 1D or 2D sparse matrix to dense 2D matrix.
-        // If the sparse matrix is 1D, then the result will
+        // If the sparse matrix is 1D, the result will
         // be a single-column matrix.
         void copyTo( Mat& m ) const;
         // converts arbitrary sparse matrix to dense matrix.
@@ -2226,8 +2226,8 @@ Sparse n-dimensional array. ::
         // converts sparse matrix to dense matrix with optional type conversion and scaling.
         // When rtype=-1, the destination element type will be the same
         // as the sparse matrix element type.
-        // Otherwise rtype will specify the depth and
-        // the number of channels will remain the same is in the sparse matrix
+        // Otherwise, rtype will specify the depth and
+        // the number of channels will remain the same as in the sparse matrix
         void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
 
         // not used now
@@ -2241,7 +2241,7 @@ Sparse n-dimensional array. ::
         void clear();
         // manually increases reference counter to the header.
         void addref();
-        // decreses the header reference counter, when it reaches 0,
+        // decreses the header reference counter when it reaches 0.
         // the header and all the underlying data are deallocated.
         void release();
 
@@ -2279,16 +2279,16 @@ Sparse n-dimensional array. ::
         // n-D case
         size_t hash(const int* idx) const;
 
-        // low-level element-acccess functions,
-        // special variants for 1D, 2D, 3D cases and the generic one for n-D case.
+        // low-level element-access functions,
+        // special variants for 1D, 2D, 3D cases, and the generic one for n-D case.
         //
         // return pointer to the matrix element.
-        //  if the element is there (it's non-zero), the pointer to it is returned
-        //  if it's not there and createMissing=false, NULL pointer is returned
-        //  if it's not there and createMissing=true, then the new element
-        //    is created and initialized with 0. Pointer to it is returned
+        //  if the element is there (it is non-zero), the pointer to it is returned
+        //  if it is not there and createMissing=false, NULL pointer is returned
+        //  if it is not there and createMissing=true, the new element
+        //    is created and initialized with 0. Pointer to it is returned.
         //  If the optional hashval pointer is not NULL, the element hash value is
-        //  not computed, but *hashval is taken instead.
+        //  not computed but *hashval is taken instead.
         uchar* ptr(int i0, bool createMissing, size_t* hashval=0);
         uchar* ptr(int i0, int i1, bool createMissing, size_t* hashval=0);
         uchar* ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0);
@@ -2297,7 +2297,7 @@ Sparse n-dimensional array. ::
         // higher-level element access functions:
         // ref<_Tp>(i0,...[,hashval]) - equivalent to *(_Tp*)ptr(i0,...true[,hashval]).
         //    always return valid reference to the element.
-        //    If it's did not exist, it is created.
+        //    If it does not exist, it is created.
         // find<_Tp>(i0,...[,hashval]) - equivalent to (_const Tp*)ptr(i0,...false[,hashval]).
         //    return pointer to the element or NULL pointer if the element is not there.
         // value<_Tp>(i0,...[,hashval]) - equivalent to
@@ -2327,7 +2327,7 @@ Sparse n-dimensional array. ::
         template<typename _Tp> const _Tp* find(const int* idx, size_t* hashval=0) const;
 
         // erase the specified matrix element.
-        // When there is no such element, the methods do nothing
+        // when there is no such an element, the methods do nothing
         void erase(int i0, int i1, size_t* hashval=0);
         void erase(int i0, int i1, int i2, size_t* hashval=0);
         void erase(const int* idx, size_t* hashval=0);
@@ -2351,7 +2351,7 @@ Sparse n-dimensional array. ::
         template<typename _Tp> _Tp& value(Node* n);
         template<typename _Tp> const _Tp& value(const Node* n) const;
 
-        ////////////// some internal-use methods ///////////////
+        ////////////// some internally used methods ///////////////
         ...
 
         // pointer to the sparse matrix header
@@ -2360,10 +2360,10 @@ Sparse n-dimensional array. ::
 
 
 The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Such a sparse array can store elements of any type that
-:ref:`Mat` can store. "Sparse" means that only non-zero elements are stored (though, as a result of operations on a sparse matrix, some of its stored elements can actually become 0. It's up to the user to detect such elements and delete them using ``SparseMat::erase`` ). The non-zero elements are stored in a hash table that grows when it's filled enough, so that the search time is O(1) in average (regardless of whether element is there or not). Elements can be accessed using the following methods:
+:ref:`Mat` can store. *Sparse* means that only non-zero elements are stored (though, as a result of operations on a sparse matrix, some of its stored elements can actually become 0. It is up to you to detect such elements and delete them using ``SparseMat::erase`` ). The non-zero elements are stored in a hash table that grows when it is filled so that the search time is O(1) in average (regardless of whether element is there or not). Elements can be accessed using the following methods:
 
-#.
-    query operations ( ``SparseMat::ptr``     and the higher-level ``SparseMat::ref``,    ``SparseMat::value``     and ``SparseMat::find``     ), e.g.:
+*
+    Query operations ( ``SparseMat::ptr``     and the higher-level ``SparseMat::ref``,    ``SparseMat::value``     and ``SparseMat::find``     ), for example:
 
     ::
 
@@ -2380,8 +2380,8 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
 
     ..
 
-#.
-    sparse matrix iterators. They are similar to ``MatIterator``, but different from :ref:`NAryMatIterator`.     That is, the iteration loop is familiar to STL users:
+*
+    Sparse matrix iterators. They are similar to ``MatIterator`` but different from :ref:`NAryMatIterator`.     That is, the iteration loop is familiar to STL users:
 
     ::
 
@@ -2406,10 +2406,10 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
 
     ..
 
-    If you run this loop, you will notice that elements are enumerated in no any logical order (lexicographical etc.), they come in the same order as they stored in the hash table, i.e. semi-randomly. You may collect pointers to the nodes and sort them to get the proper ordering. Note, however, that pointers to the nodes may become invalid when you add more elements to the matrix; this is because of possible buffer reallocation.
+    If you run this loop, you will notice that elements are not enumerated in a logical order (lexicographical, and so on). They come in the same order as they are stored in the hash table (semi-randomly). You may collect pointers to the nodes and sort them to get the proper ordering. Note, however, that pointers to the nodes may become invalid when you add more elements to the matrix. This may happen due to possible buffer reallocation.
 
-#.
-    a combination of the above 2 methods when you need to process 2 or more sparse matrices simultaneously, e.g. this is how you can compute unnormalized cross-correlation of the 2 floating-point sparse matrices:
+*
+    Combination of the above 2 methods when you need to process 2 or more sparse matrices simultaneously. For example, this is how you can compute unnormalized cross-correlation of the 2 floating-point sparse matrices:
 
     ::
 
@@ -2417,7 +2417,7 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
             {
                 const SparseMat *_a = &a, *_b = &b;
                 // if b contains less elements than a,
-                // it's faster to iterate through b
+                // it is faster to iterate through b
                 if(_a->nzcount() > _b->nzcount())
                     std::swap(_a, _b);
                 SparseMatConstIterator_<float> it = _a->begin<float>(),
@@ -2428,9 +2428,9 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
                     // take the next element from the first matrix
                     float avalue = *it;
                     const Node* anode = it.node();
-                    // and try to find element with the same index in the second matrix.
+                    // and try to find an element with the same index in the second matrix.
                     // since the hash value depends only on the element index,
-                    // we reuse hashvalue stored in the node
+                    // reuse the hash value stored in the node
                     float bvalue = _b->value<float>(anode->idx,&anode->hashval);
                     ccorr += avalue*bvalue;
                 }
@@ -2475,7 +2475,7 @@ Template sparse n-dimensional array class derived from
         int channels() const;
 
         // more convenient element access operations.
-        // ref() is retained (but <_Tp> specification is not need anymore);
+        // ref() is retained (but <_Tp> specification is not needed anymore);
         // operator () is equivalent to SparseMat::value<_Tp>
         _Tp& ref(int i0, size_t* hashval=0);
         _Tp operator()(int i0, size_t* hashval=0) const;
@@ -2493,8 +2493,8 @@ Template sparse n-dimensional array class derived from
         SparseMatConstIterator_<_Tp> end() const;
     };
     
-``SparseMat_`` is a thin wrapper on top of :ref:`SparseMat` , made in the same way as ``Mat_`` .
-It simplifies notation of some operations, and that's it. ::
+``SparseMat_`` is a thin wrapper on top of :ref:`SparseMat`  created in the same way as ``Mat_`` .
+It simplifies notation of some operations. ::
 
     int sz[] = {10, 20, 30};
     SparseMat_<double> M(3, sz);

@@ -10,15 +10,15 @@ kmeans
 
 .. c:function:: double kmeans( const Mat\& samples, int clusterCount, Mat\& labels,               TermCriteria termcrit, int attempts,               int flags, Mat* centers )
 
-    Finds the centers of clusters and groups the input samples around the clusters.
+    Finds centers of clusters and groups input samples around the clusters.
 
-    :param samples: Floating-point matrix of input samples, one row per sample
+    :param samples: Floating-point matrix of input samples, one row per sample.
 
-    :param clusterCount: The number of clusters to split the set by
+    :param clusterCount: The number of clusters to split the set by.
 
-    :param labels: The input/output integer array that will store the cluster indices for every sample
+    :param labels: The input/output integer array that stores the cluster indices for every sample.
 
-    :param termcrit: Specifies maximum number of iterations and/or accuracy (distance the centers can move by between subsequent iterations)
+    :param termcrit: Specifies the maximum number of iterations and/or accuracy (distance the centers can move by between subsequent iterations)
 
     :param attempts: How many times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter)
 
