@@ -1520,7 +1520,7 @@ namespace cv
         // The cascade classifier class for object detection.
         class CV_EXPORTS CascadeClassifier_GPU
         {
-        public:            
+        public:
             CascadeClassifier_GPU();
             CascadeClassifier_GPU(const string& filename);
             ~CascadeClassifier_GPU();
@@ -1528,20 +1528,20 @@ namespace cv
             bool empty() const;
             bool load(const string& filename);
             void release();
-            
+
             /* returns number of detected objects */
             int detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size());
-                                    
+
             bool findLargestObject;
             bool visualizeInPlace;
 
             Size getClassifierSize() const;
         private:
-            
-            struct CascadeClassifierImpl;                        
-            CascadeClassifierImpl* impl;            
+
+            struct CascadeClassifierImpl;
+            CascadeClassifierImpl* impl;
         };
-        
+
         ////////////////////////////////// SURF //////////////////////////////////////////
 
         class CV_EXPORTS SURF_GPU : public CvSURFParams

@@ -1,50 +1,76 @@
 #pragma warning( disable : 4201 4408 4127 4100)
-#include <cstdio>
 
 #include "cvconfig.h"
-#if !defined(HAVE_CUDA)
-    int main( int argc, const char** argv ) { return printf("Please compile the library with CUDA support."), -1; }
-#else
-
-#include <cuda_runtime.h>
-#include "opencv2/opencv.hpp"
+#include <iostream>
+#include <iomanip>
+#include <opencv2/opencv.hpp>
+#include <opencv2/gpu/gpu.hpp>
 #include "NCVHaarObjectDetection.hpp"
 
+using namespace std;
 using namespace cv;
 
-const Size2i preferredVideoFrameSize(640, 480);
 
-std::string preferredClassifier = "haarcascade_frontalface_alt.xml";
-std::string wndTitle = "NVIDIA Computer Vision SDK :: Face Detection in Video Feed";
-
-
-void printSyntax(void)
+#if !defined(HAVE_CUDA)
+int main( int argc, const char** argv )
 {
-    printf("Syntax: FaceDetectionFeed.exe [-c cameranum | -v filename] classifier.xml\n");
+    cout << "Please compile the library with CUDA support" << endl;
+    return -1;
+}
+#else
+
+
+const Size2i preferredVideoFrameSize(640, 480);
+const string wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
+
+
+void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const ostringstream &ss)
+{
+    int fontFace = FONT_HERSHEY_DUPLEX;
+    double fontScale = 0.8;
+    int fontThickness = 2;
+    Size fontSize = cv::getTextSize("T[]", fontFace, fontScale, fontThickness, 0);
+
+    Point org;
+    org.x = 1;
+    org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
+    putText(img, ss.str(), org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss.str(), org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
-void imagePrintf(Mat& img, int lineOffsY, Scalar color, const char *format, ...)
-{    
-    int fontFace = CV_FONT_HERSHEY_PLAIN;
-    double fontScale = 1;       
-    
-    int baseline;
-    Size textSize = cv::getTextSize("T", fontFace, fontScale, 1, &baseline);
 
-    va_list arg_ptr;
-    va_start(arg_ptr, format);
+void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
+{
+    Scalar fontColorRed = CV_RGB(255,0,0);
+    Scalar fontColorNV  = CV_RGB(118,185,0);
 
-    char strBuf[4096];
-    vsprintf(&strBuf[0], format, arg_ptr);
+    ostringstream ss;
+    ss << "FPS = " << setprecision(1) << fixed << fps;
+    matPrint(canvas, 0, fontColorRed, ss);
+    ss.str("");
+    ss << "[" << canvas.cols << "x" << canvas.rows << "], " <<
+        (bGpu ? "GPU, " : "CPU, ") <<
+        (bLargestFace ? "OneFace, " : "MultiFace, ") <<
+        (bFilter ? "Filter:ON" : "Filter:OFF");
+    matPrint(canvas, 1, fontColorRed, ss);
 
-    Point org(1, 3 * textSize.height * (lineOffsY + 1) / 2);    
-    putText(img, &strBuf[0], org, fontFace, fontScale, color);
-    va_end(arg_ptr);    
+    if (bHelp)
+    {
+        matPrint(canvas, 2, fontColorNV, ostringstream("Space - switch GPU / CPU"));
+        matPrint(canvas, 3, fontColorNV, ostringstream("M - switch OneFace / MultiFace"));
+        matPrint(canvas, 4, fontColorNV, ostringstream("F - toggle rectangles Filter"));
+        matPrint(canvas, 5, fontColorNV, ostringstream("H - toggle hotkeys help"));
+    }
+    else
+    {
+        matPrint(canvas, 2, fontColorNV, ostringstream("H - toggle hotkeys help"));
+    }
 }
+
 
 NCVStatus process(Mat *srcdst,
                   Ncv32u width, Ncv32u height,
-                  NcvBool bShowAllHypotheses, NcvBool bLargestFace,
+                  NcvBool bFilterRects, NcvBool bLargestFace,
                   HaarClassifierCascadeDescriptor &haar,
                   NCVVector<HaarStage64> &d_haarStages, NCVVector<HaarClassifierNode128> &d_haarNodes,
                   NCVVector<HaarFeature64> &d_haarFeatures, NCVVector<HaarStage64> &h_haarStages,
@@ -87,7 +113,7 @@ NCVStatus process(Mat *srcdst,
         d_src, roi, d_rects, numDetections, haar, h_haarStages,
         d_haarStages, d_haarNodes, d_haarFeatures,
         haar.ClassifierSize,
-        bShowAllHypotheses ? 0 : 4,
+        (bFilterRects || bLargestFace) ? 4 : 0,
         1.2f, 1,
         (bLargestFace ? NCVPipeObjDet_FindLargestObject : 0)
         | NCVPipeObjDet_VisualizeInPlace,
@@ -111,80 +137,67 @@ NCVStatus process(Mat *srcdst,
     return NCV_SUCCESS;
 }
 
-int main( int argc, const char** argv )
+
+int main(int argc, const char** argv)
 {
+    cout << "OpenCV / NVIDIA Computer Vision" << endl;
+    cout << "Face Detection in video and live feed" << endl;
+    cout << "Syntax: exename <cascade_file> <image_or_video_or_cameraid>" << endl;
+    cout << "=========================================" << endl;
+
+    ncvAssertPrintReturn(cv::gpu::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without GPU support", -1);
+    ncvAssertPrintReturn(argc == 3, "Invalid number of arguments", -1);
+
+    string cascadeName = argv[1];
+    string inputName = argv[2];
+
     NCVStatus ncvStat;
-
-    printf("NVIDIA Computer Vision SDK\n");
-    printf("Face Detection in video and live feed\n");
-    printf("=========================================\n");
-    printf("  Esc   - Quit\n");
-    printf("  Space - Switch between NCV and OpenCV\n");
-    printf("  L     - Switch between FullSearch and LargestFace modes\n");
-    printf("  U     - Toggle unfiltered hypotheses visualization in FullSearch\n");
-	
-    VideoCapture capture;    
-    bool bQuit = false;
-
+    NcvBool bQuit = false;
+    VideoCapture capture;
     Size2i frameSize;
 
-    if (argc != 4 && argc != 1)
+    //open content source
+    Mat image = imread(inputName);
+    Mat frame;
+    if (!image.empty())
     {
-        printSyntax();
-        return -1;
-    }
-
-   if (argc == 1 || strcmp(argv[1], "-c") == 0)
-    {
-        // Camera input is specified
-        int camIdx = (argc == 3) ? atoi(argv[2]) : 0;
-        if(!capture.open(camIdx))        
-            return printf("Error opening camera\n"), -1;        
-            
-        capture.set(CV_CAP_PROP_FRAME_WIDTH, preferredVideoFrameSize.width);
-        capture.set(CV_CAP_PROP_FRAME_HEIGHT, preferredVideoFrameSize.height);
-        capture.set(CV_CAP_PROP_FPS, 25);
-        frameSize = preferredVideoFrameSize;
-    }
-    else if (strcmp(argv[1], "-v") == 0)
-    {
-        // Video file input (avi)
-        if(!capture.open(argv[2]))
-            return printf("Error opening video file\n"), -1;
-
-        frameSize.width  = (int)capture.get(CV_CAP_PROP_FRAME_WIDTH);
-        frameSize.height = (int)capture.get(CV_CAP_PROP_FRAME_HEIGHT);
+        frameSize.width = image.cols;
+        frameSize.height = image.rows;
     }
     else
-        return printSyntax(), -1;
+    {
+        if (!capture.open(inputName))
+        {
+            int camid = -1;
 
-    NcvBool bUseOpenCV = true;
-    NcvBool bLargestFace = false; //LargestFace=true is used usually during training
-    NcvBool bShowAllHypotheses = false;
+            istringstream ss(inputName);
+            int x = 0;
+            ss >> x;
+
+            ncvAssertPrintReturn(capture.open(camid) != 0, "Can't open source", -1);
+        }
+
+        capture >> frame;
+        ncvAssertPrintReturn(!frame.empty(), "Empty video source", -1);
+
+        frameSize.width = frame.cols;
+        frameSize.height = frame.rows;
+    }
+
+    NcvBool bUseGPU = true;
+    NcvBool bLargestObject = false;
+    NcvBool bFilterRects = true;
+    NcvBool bHelpScreen = false;
 
     CascadeClassifier classifierOpenCV;
-    std::string classifierFile;
-    if (argc == 1)
-    {
-        classifierFile = preferredClassifier;
-    }
-    else
-    {
-        classifierFile.assign(argv[3]);
-    }
-
-    if (!classifierOpenCV.load(classifierFile))
-    {
-        printf("Error (in OpenCV) opening classifier\n");
-        printSyntax();
-        return -1;
-    }
+    ncvAssertPrintReturn(classifierOpenCV.load(cascadeName) != 0, "Error (in OpenCV) opening classifier", -1);
 
     int devId;
     ncvAssertCUDAReturn(cudaGetDevice(&devId), -1);
     cudaDeviceProp devProp;
     ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), -1);
-    printf("Using GPU %d %s, arch=%d.%d\n", devId, devProp.name, devProp.major, devProp.minor);
+    cout << "Using GPU: " << devId << "(" << devProp.name <<
+            "), arch=" << devProp.major << "." << devProp.minor << endl;
 
     //==============================================================================
     //
@@ -199,7 +212,7 @@ int main( int argc, const char** argv )
     ncvAssertPrintReturn(cpuCascadeAllocator.isInitialized(), "Error creating cascade CPU allocator", -1);
 
     Ncv32u haarNumStages, haarNumNodes, haarNumFeatures;
-    ncvStat = ncvHaarGetClassifierSize(classifierFile, haarNumStages, haarNumNodes, haarNumFeatures);
+    ncvStat = ncvHaarGetClassifierSize(cascadeName, haarNumStages, haarNumNodes, haarNumFeatures);
     ncvAssertPrintReturn(ncvStat == NCV_SUCCESS, "Error reading classifier size (check the file)", -1);
 
     NCVVectorAlloc<HaarStage64> h_haarStages(cpuCascadeAllocator, haarNumStages);
@@ -210,7 +223,7 @@ int main( int argc, const char** argv )
     ncvAssertPrintReturn(h_haarFeatures.isMemAllocated(), "Error in cascade CPU allocator", -1);
 
     HaarClassifierCascadeDescriptor haar;
-    ncvStat = ncvHaarLoadFromFile_host(classifierFile, haar, h_haarStages, h_haarNodes, h_haarFeatures);
+    ncvStat = ncvHaarLoadFromFile_host(cascadeName, haar, h_haarStages, h_haarNodes, h_haarFeatures);
     ncvAssertPrintReturn(ncvStat == NCV_SUCCESS, "Error loading classifier", -1);
 
     NCVVectorAlloc<HaarStage64> d_haarStages(gpuCascadeAllocator, haarNumStages);
@@ -258,30 +271,25 @@ int main( int argc, const char** argv )
     //
     //==============================================================================
 
-	namedWindow(wndTitle, 1);
-    Mat frame, gray, frameDisp;
+    namedWindow(wndTitle, 1);
+    Mat gray, frameDisp;
 
     do
     {
-		// For camera and video file, capture the next image                
-        capture >> frame;
-        if (frame.empty())
-            break;
-
         Mat gray;
-        cvtColor(frame, gray, CV_BGR2GRAY);
+        cvtColor((image.empty() ? frame : image), gray, CV_BGR2GRAY);
 
         //
         // process
         //
 
         NcvSize32u minSize = haar.ClassifierSize;
-        if (bLargestFace)
+        if (bLargestObject)
         {
             Ncv32u ratioX = preferredVideoFrameSize.width / minSize.width;
             Ncv32u ratioY = preferredVideoFrameSize.height / minSize.height;
-            Ncv32u ratioSmallest = std::min(ratioX, ratioY);
-            ratioSmallest = std::max((Ncv32u)(ratioSmallest / 2.5f), (Ncv32u)1);
+            Ncv32u ratioSmallest = min(ratioX, ratioY);
+            ratioSmallest = max((Ncv32u)(ratioSmallest / 2.5f), (Ncv32u)1);
             minSize.width *= ratioSmallest;
             minSize.height *= ratioSmallest;
         }
@@ -289,10 +297,10 @@ int main( int argc, const char** argv )
         Ncv32f avgTime;
         NcvTimer timer = ncvStartTimer();
 
-        if (!bUseOpenCV)
+        if (bUseGPU)
         {
             ncvStat = process(&gray, frameSize.width, frameSize.height,
-                              bShowAllHypotheses, bLargestFace, haar,
+                              bFilterRects, bLargestObject, haar,
                               d_haarStages, d_haarNodes,
                               d_haarFeatures, h_haarStages,
                               gpuAllocator, cpuAllocator, devProp);
@@ -306,8 +314,8 @@ int main( int argc, const char** argv )
                 gray,
                 rectsOpenCV,
                 1.2f,
-                bShowAllHypotheses && !bLargestFace ? 0 : 4,
-                (bLargestFace ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
+                bFilterRects ? 4 : 0,
+                (bLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
                 | CV_HAAR_SCALE_IMAGE,
                 Size(minSize.width, minSize.height));
 
@@ -318,32 +326,41 @@ int main( int argc, const char** argv )
         avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
 
         cvtColor(gray, frameDisp, CV_GRAY2BGR);
+        displayState(frameDisp, bHelpScreen, bUseGPU, bLargestObject, bFilterRects, 1000.0f / avgTime);
+        imshow(wndTitle, frameDisp);
 
-        imagePrintf(frameDisp, 0, CV_RGB(255,  0,0), "Space - Switch NCV%s / OpenCV%s", bUseOpenCV?"":" (ON)", bUseOpenCV?" (ON)":"");
-        imagePrintf(frameDisp, 1, CV_RGB(255,  0,0), "L - Switch FullSearch%s / LargestFace%s modes", bLargestFace?"":" (ON)", bLargestFace?" (ON)":"");
-        imagePrintf(frameDisp, 2, CV_RGB(255,  0,0), "U - Toggle unfiltered hypotheses visualization in FullSearch %s", bShowAllHypotheses?"(ON)":"(OFF)");
-        imagePrintf(frameDisp, 3, CV_RGB(118,185,0), "   Running at %f FPS on %s", 1000.0f / avgTime, bUseOpenCV?"CPU":"GPU");
-
-        cv::imshow(wndTitle, frameDisp);
-
+        //handle input
         switch (cvWaitKey(3))
         {
         case ' ':
-            bUseOpenCV = !bUseOpenCV;
+            bUseGPU = !bUseGPU;
             break;
-        case 'L':
-        case 'l':
-            bLargestFace = !bLargestFace;
+        case 'm':
+        case 'M':
+            bLargestObject = !bLargestObject;
             break;
-        case 'U':
-        case 'u':
-            bShowAllHypotheses = !bShowAllHypotheses;
+        case 'f':
+        case 'F':
+            bFilterRects = !bFilterRects;
+            break;
+        case 'h':
+        case 'H':
+            bHelpScreen = !bHelpScreen;
             break;
         case 27:
             bQuit = true;
             break;
         }
 
+        // For camera and video file, capture the next image
+        if (capture.isOpened())
+        {
+            capture >> frame;
+            if (frame.empty())
+            {
+                break;
+            }
+        }
     } while (!bQuit);
 
     cvDestroyWindow(wndTitle.c_str());
@@ -351,5 +368,4 @@ int main( int argc, const char** argv )
     return 0;
 }
 
-
-#endif
+#endif //!defined(HAVE_CUDA)

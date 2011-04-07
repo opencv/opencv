@@ -1,17 +1,27 @@
 // WARNING: this sample is under construction! Use it on your own risk.
+#pragma warning(disable : 4100)
 
+#include "cvconfig.h"
+#include <iostream>
+#include <iomanip>
 #include <opencv2/contrib/contrib.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include <iostream>
-#include <iomanip>
-
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
+
+
+#if !defined(HAVE_CUDA)
+int main(int argc, const char **argv)
+{
+    cout << "Please compile the library with CUDA support" << endl;
+    return -1;
+}
+#else
 
 
 void help()
@@ -21,14 +31,8 @@ void help()
 }
 
 
-void DetectAndDraw(Mat& img, CascadeClassifier_GPU& cascade);
-
-
-String cascadeName = "../../data/haarcascades/haarcascade_frontalface_alt.xml";
-String nestedCascadeName = "../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
-
-
-template<class T> void convertAndResize(const T& src, T& gray, T& resized, double scale)
+template<class T>
+void convertAndResize(const T& src, T& gray, T& resized, double scale)
 {
     if (src.channels() == 3)
     {
@@ -54,15 +58,16 @@ template<class T> void convertAndResize(const T& src, T& gray, T& resized, doubl
 
 void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const ostringstream &ss)
 {
-    int fontFace = FONT_HERSHEY_PLAIN;
-    double fontScale = 1.5;
+    int fontFace = FONT_HERSHEY_DUPLEX;
+    double fontScale = 0.8;
     int fontThickness = 2;
     Size fontSize = cv::getTextSize("T[]", fontFace, fontScale, fontThickness, 0);
 
     Point org;
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
-    putText(img, ss.str(), org, fontFace, fontScale, fontColor, fontThickness);
+    putText(img, ss.str(), org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss.str(), org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
 
@@ -72,25 +77,26 @@ void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bF
     Scalar fontColorNV  = CV_RGB(118,185,0);
 
     ostringstream ss;
+    ss << "FPS = " << setprecision(1) << fixed << fps;
+    matPrint(canvas, 0, fontColorRed, ss);
+    ss.str("");
     ss << "[" << canvas.cols << "x" << canvas.rows << "], " <<
         (bGpu ? "GPU, " : "CPU, ") <<
         (bLargestFace ? "OneFace, " : "MultiFace, ") <<
-        (bFilter ? "Filter:ON, " : "Filter:OFF, ") <<
-        "FPS = " << setprecision(1) << fixed << fps;
-
-    matPrint(canvas, 0, fontColorRed, ss);
+        (bFilter ? "Filter:ON" : "Filter:OFF");
+    matPrint(canvas, 1, fontColorRed, ss);
 
     if (bHelp)
     {
-        matPrint(canvas, 1, fontColorNV, ostringstream("Space - switch GPU / CPU"));
-        matPrint(canvas, 2, fontColorNV, ostringstream("M - switch OneFace / MultiFace"));
-        matPrint(canvas, 3, fontColorNV, ostringstream("F - toggle rectangles Filter (only in MultiFace)"));
-        matPrint(canvas, 4, fontColorNV, ostringstream("H - toggle hotkeys help"));
-        matPrint(canvas, 5, fontColorNV, ostringstream("1/Q - increase/decrease scale"));
+        matPrint(canvas, 2, fontColorNV, ostringstream("Space - switch GPU / CPU"));
+        matPrint(canvas, 3, fontColorNV, ostringstream("M - switch OneFace / MultiFace"));
+        matPrint(canvas, 4, fontColorNV, ostringstream("F - toggle rectangles Filter"));
+        matPrint(canvas, 5, fontColorNV, ostringstream("H - toggle hotkeys help"));
+        matPrint(canvas, 6, fontColorNV, ostringstream("1/Q - increase/decrease scale"));
     }
     else
     {
-        matPrint(canvas, 1, fontColorNV, ostringstream("H - toggle hotkeys help"));
+        matPrint(canvas, 2, fontColorNV, ostringstream("H - toggle hotkeys help"));
     }
 }
 
@@ -130,8 +136,10 @@ int main(int argc, const char *argv[])
     {
         if (!capture.open(inputName))
         {
-            int camid = 0;
-            sscanf(inputName.c_str(), "%d", &camid);
+            int camid = -1;
+            istringstream iss(inputName);
+            iss >> camid;
+
             if (!capture.open(camid))
             {
                 cout << "Can't open source" << endl;
@@ -180,24 +188,26 @@ int main(int argc, const char *argv[])
             cascade_gpu.visualizeInPlace = true;
             cascade_gpu.findLargestObject = findLargestObject;
 
-            detections_num = cascade_gpu.detectMultiScale(resized_gpu, facesBuf_gpu, 1.2, filterRects ? 4 : 0);
+            detections_num = cascade_gpu.detectMultiScale(resized_gpu, facesBuf_gpu, 1.2,
+                                                          (filterRects || findLargestObject) ? 4 : 0);
             facesBuf_gpu.colRange(0, detections_num).download(faces_downloaded);
         }
         else
         {
             Size minSize = cascade_gpu.getClassifierSize();
-            cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2, filterRects ? 4 : 0, (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0) | CV_HAAR_SCALE_IMAGE, minSize);
+            cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2,
+                                         (filterRects || findLargestObject) ? 4 : 0,
+                                         (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
+                                            | CV_HAAR_SCALE_IMAGE,
+                                         minSize);
             detections_num = (int)facesBuf_cpu.size();
         }
 
-        if (!useGPU)
+        if (!useGPU && detections_num)
         {
-            if (detections_num)
+            for (int i = 0; i < detections_num; ++i)
             {
-                for (int i = 0; i < detections_num; ++i)
-                {
-                    rectangle(resized_cpu, facesBuf_cpu[i], Scalar(255));
-                }
+                rectangle(resized_cpu, facesBuf_cpu[i], Scalar(255));
             }
         }
 
@@ -265,3 +275,5 @@ int main(int argc, const char *argv[])
 
     return 0;
 }
+
+#endif //!defined(HAVE_CUDA)
