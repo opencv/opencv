@@ -82,6 +82,7 @@ void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int) { throw_nogpu(); }
 void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&) { throw_nogpu(); }
+void cv::gpu::downsample(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -1355,7 +1356,33 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     cufftSafeCall(cufftDestroy(planC2R));
 }
 
+////////////////////////////////////////////////////////////////////
+// downsample
 
+namespace cv { namespace gpu { namespace imgproc
+{
+    template <typename T>
+    void downsampleCaller(const PtrStep_<T> src, int rows, int cols, int k, PtrStep_<T> dst);
+}}}
+
+void cv::gpu::downsample(const GpuMat& src, GpuMat& dst, int k)
+{
+    CV_Assert(src.channels() == 1);    
+
+    dst.create((src.rows + k - 1) / k, (src.cols + k - 1) / k, src.type());
+
+    switch (src.depth())
+    {
+    case CV_8U:
+        imgproc::downsampleCaller((const PtrStep)src, dst.rows, dst.cols, k, (PtrStep)dst);
+        break;
+    case CV_32F:
+        imgproc::downsampleCaller((const PtrStepf)src, dst.rows, dst.cols, k, (PtrStepf)dst);
+        break;
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "bad image depth in downsample function");
+    }
+}
 
 #endif /* !defined (HAVE_CUDA) */
 

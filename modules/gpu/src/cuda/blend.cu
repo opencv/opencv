@@ -73,7 +73,7 @@ namespace cv { namespace gpu
         dim3 threads(16, 16);
         dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
         
-        blendLinearKernel<T><<<grid, threads>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
+        blendLinearKernel<<<grid, threads>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
         cudaSafeCall(cudaThreadSynchronize());
     }
 

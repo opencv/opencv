@@ -63,8 +63,8 @@ namespace cv { namespace gpu
                                const PtrStepf weights1, const PtrStepf weights2, PtrStep result);
 }}
 
-void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, 
-                          const GpuMat& weights1, const GpuMat& weights2, GpuMat& result)
+void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
+                          GpuMat& result)
 {
     CV_Assert(img1.size() == img2.size());
     CV_Assert(img1.type() == img2.type());
@@ -94,7 +94,7 @@ void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2,
                           (const PtrStepf)weights1, (const PtrStepf)weights2, (PtrStepf)result);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unsupported image depth in linear blending method");
+        CV_Error(CV_StsUnsupportedFormat, "bad image depth in linear blending function");
     }
 }
 

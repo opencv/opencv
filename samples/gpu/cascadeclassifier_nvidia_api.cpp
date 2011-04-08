@@ -5,7 +5,10 @@
 #include <iomanip>
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
+
+#ifdef HAVE_CUDA
 #include "NCVHaarObjectDetection.hpp"
+#endif
 
 using namespace std;
 using namespace cv;

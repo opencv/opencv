@@ -47,8 +47,9 @@ using namespace cv::gpu;
 
 TEST(blendLinear, accuracy_on_8U)
 {
-    Size size(607, 1021);
-    RNG rng(0);
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    Size size(200 + cvtest::randInt(rng) % 1000,
+              200 + cvtest::randInt(rng) % 1000);
     for (int cn = 1; cn <= 4; ++cn)
     {
         Mat img1 = cvtest::randomMat(rng, size, CV_MAKE_TYPE(CV_8U, cn), 0, 255, false);
@@ -66,14 +67,16 @@ TEST(blendLinear, accuracy_on_8U)
             }
         GpuMat d_result;
         blendLinear(GpuMat(img1), GpuMat(img2), GpuMat(weights1), GpuMat(weights2), d_result);
-        ASSERT_LE(cvtest::norm(result_gold, Mat(d_result), NORM_INF), 1) << ", cn=" << cn;
+        ASSERT_LE(cvtest::norm(result_gold, Mat(d_result), NORM_INF), 1) 
+            << "rows=" << size.height << ", cols=" << size.width << ", cn=" << cn;
     }
 }
 
 TEST(blendLinear, accuracy_on_32F)
 {
-    Size size(607, 1021);
-    RNG rng(0);
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    Size size(200 + cvtest::randInt(rng) % 1000,
+              200 + cvtest::randInt(rng) % 1000);
     for (int cn = 1; cn <= 4; ++cn)
     {
         Mat img1 = cvtest::randomMat(rng, size, CV_MAKE_TYPE(CV_32F, cn), 0, 1, false);
@@ -91,6 +94,7 @@ TEST(blendLinear, accuracy_on_32F)
             }
         GpuMat d_result;
         blendLinear(GpuMat(img1), GpuMat(img2), GpuMat(weights1), GpuMat(weights2), d_result);
-        ASSERT_LE(cvtest::norm(result_gold, Mat(d_result), NORM_INF), 1e-3) << ", cn=" << cn;
+        ASSERT_LE(cvtest::norm(result_gold, Mat(d_result), NORM_INF), 1e-3)
+            << "rows=" << size.height << ", cols=" << size.width << ", cn=" << cn;
     }
 }

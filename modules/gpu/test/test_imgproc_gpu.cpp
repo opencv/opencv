@@ -914,3 +914,53 @@ TEST(minEigen, accuracy) { CV_GpuCornerMinEigenValTest test; test.safe_run(); }
 TEST(columnSum, accuracy) { CV_GpuColumnSumTest test; test.safe_run(); }
 TEST(norm, accuracy) { CV_GpuNormTest test; test.safe_run(); }
 TEST(reprojectImageTo3D, accuracy) { CV_GpuReprojectImageTo3DTest test; test.safe_run(); }
+
+TEST(downsample, accuracy_on_8U)
+{
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    Size size(200 + cvtest::randInt(rng) % 1000, 200 + cvtest::randInt(rng) % 1000);
+    Mat src = cvtest::randomMat(rng, size, CV_8U, 0, 255, false);
+
+    for (int k = 2; k <= 5; ++k)
+    {
+        GpuMat d_dst;
+        downsample(GpuMat(src), d_dst, k);       
+
+        Size dst_gold_size((src.cols + k - 1) / k, (src.rows + k - 1) / k);
+        ASSERT_EQ(dst_gold_size.width, d_dst.cols) 
+            << "rows=" << size.height << ", cols=" << size.width << ", k=" << k;
+        ASSERT_EQ(dst_gold_size.height, d_dst.rows) 
+            << "rows=" << size.height << ", cols=" << size.width << ", k=" << k;
+
+        Mat dst = d_dst;
+        for (int y = 0; y < dst.rows; ++y)
+            for (int x = 0; x < dst.cols; ++x)
+                ASSERT_EQ(src.at<uchar>(y * k, x * k), dst.at<uchar>(y, x))
+                    << "rows=" << size.height << ", cols=" << size.width << ", k=" << k;
+    }
+}
+
+TEST(downsample, accuracy_on_32F)
+{
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    Size size(200 + cvtest::randInt(rng) % 1000, 200 + cvtest::randInt(rng) % 1000);
+    Mat src = cvtest::randomMat(rng, size, CV_32F, 0, 1, false);
+
+    for (int k = 2; k <= 5; ++k)
+    {
+        GpuMat d_dst;
+        downsample(GpuMat(src), d_dst, k);       
+
+        Size dst_gold_size((src.cols + k - 1) / k, (src.rows + k - 1) / k);
+        ASSERT_EQ(dst_gold_size.width, d_dst.cols) 
+            << "rows=" << size.height << ", cols=" << size.width << ", k=" << k;
+        ASSERT_EQ(dst_gold_size.height, d_dst.rows) 
+            << "rows=" << size.height << ", cols=" << size.width << ", k=" << k;
+
+        Mat dst = d_dst;
+        for (int y = 0; y < dst.rows; ++y)
+            for (int x = 0; x < dst.cols; ++x)
+                ASSERT_FLOAT_EQ(src.at<float>(y * k, x * k), dst.at<float>(y, x))
+                    << "rows=" << size.height << ", cols=" << size.width << ", k=" << k;
+    }
+}

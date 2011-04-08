@@ -883,5 +883,32 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall(cudaThreadSynchronize());
     }
 
+    /////////////////////////////////////////////////////////////////////////
+    // downsample
+
+    template <typename T>
+    __global__ void downsampleKernel(const PtrStep_<T> src, int rows, int cols, int k, PtrStep_<T> dst)
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+            dst.ptr(y)[x] = src.ptr(y * k)[x * k];
+    }
+
+
+    template <typename T>
+    void downsampleCaller(const PtrStep_<T> src, int rows, int cols, int k, PtrStep_<T> dst)
+    {
+        dim3 threads(16, 16);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        downsampleKernel<<<grid, threads>>>(src, rows, cols, k, dst);
+        cudaSafeCall(cudaThreadSynchronize());
+    }
+
+    template void downsampleCaller(const PtrStep src, int rows, int cols, int k, PtrStep dst);
+    template void downsampleCaller(const PtrStepf src, int rows, int cols, int k, PtrStepf dst);
+
 }}}
 
