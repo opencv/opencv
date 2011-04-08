@@ -95,16 +95,22 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
 	CvPoint *oppPointsOut = 0; 
     float *scoreOut = 0;
 	CvSeq* result_seq = 0;
+    int error = 0;
 
     cvConvertImage(image, image, CV_CVTIMG_SWAP_RB);
     // Getting maximum filter dimensions
-	getMaxFilterDims((const CvLSVMFilterObject**)(detector->filters), detector->num_components, detector->num_part_filters, &maxXBorder, &maxYBorder);
+	getMaxFilterDims((const CvLSVMFilterObject**)(detector->filters), detector->num_components, 
+                     detector->num_part_filters, &maxXBorder, &maxYBorder);
     // Create feature pyramid with nullable border
     H = createFeaturePyramidWithBorder(image, maxXBorder, maxYBorder);
     // Search object
-    searchObjectThresholdSomeComponents(H, (const CvLSVMFilterObject**)(detector->filters), detector->num_components, 
-		detector->num_part_filters, detector->b, detector->score_threshold, 
-                &points, &oppPoints, &score, &kPoints, numThreads);
+    error = searchObjectThresholdSomeComponents(H, (const CvLSVMFilterObject**)(detector->filters), 
+        detector->num_components, detector->num_part_filters, detector->b, detector->score_threshold, 
+        &points, &oppPoints, &score, &kPoints, numThreads);
+    if (error != LATENT_SVM_OK)
+    {
+        return NULL;
+    }
     // Clipping boxes
     clippingBoxes(image->width, image->height, points, kPoints);
     clippingBoxes(image->width, image->height, oppPoints, kPoints);

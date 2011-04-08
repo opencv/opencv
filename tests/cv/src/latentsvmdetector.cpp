@@ -43,6 +43,10 @@
 #include "cvtest.h"
 #include <string>
 
+#ifdef HAVE_TBB
+#include "tbb/task_scheduler_init.h"
+#endif
+
 using namespace cv;
 
 const int num_detections = 3;
@@ -75,27 +79,31 @@ bool CV_LatentSVMDetectorTest::isEqual(CvRect r1, CvRect r2)
 
 void CV_LatentSVMDetectorTest::run( int /* start_from */)
 {      
-    string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
-	string model_path = string(ts->get_data_path()) + "latentsvmdetector/cat.xml";
+    int numThreads = -1;
+#ifdef HAVE_TBB
+    numThreads = 2;
+    tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
+	init.initialize(numThreads);
+#endif
 
 	IplImage* image = cvLoadImage(img_path.c_str());
 	if (!image)
     {
-        ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
     }
 
 	CvLatentSvmDetector* detector = cvLoadLatentSvmDetector(model_path.c_str());
 	if (!detector)
 	{
-		ts->set_failed_test_info( CvTS::FAIL_INVALID_TEST_DATA );
+		ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
 		cvReleaseImage(&image);
 		return;
 	}
 
 	CvMemStorage* storage = cvCreateMemStorage(0);
     CvSeq* detections = 0;         
-	detections = cvLatentSvmDetectObjects(image, detector, storage);
+    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
 
 	if (detections->total != num_detections)
 	{
@@ -117,6 +125,9 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
 		}
 	}
 
+#ifdef HAVE_TBB
+    init.terminate();
+#endif
 	cvReleaseMemStorage( &storage );
 	cvReleaseLatentSvmDetector( &detector );
     cvReleaseImage( &image );

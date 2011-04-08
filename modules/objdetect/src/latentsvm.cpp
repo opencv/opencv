@@ -576,10 +576,21 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     for (i = 0; i < kComponents; i++)
     {
 #ifdef HAVE_TBB
-        searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
+        error = searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold,
             &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]), 
             &(scoreArr[i]), &(partsDisplacementArr[i]), numThreads);
+        if (error != LATENT_SVM_OK)
+        {
+            // Release allocated memory
+            free(pointsArr);
+            free(oppPointsArr);
+            free(scoreArr);
+            free(kPointsArr);
+            free(levelsArr);
+            free(partsDisplacementArr);
+            return LATENT_SVM_SEARCH_OBJECT_FAILED;
+        }
 #else
         searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold, 
