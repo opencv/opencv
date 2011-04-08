@@ -786,6 +786,11 @@ namespace cv
         //! computes the proximity map for the raster template and the image where the template is searched for
         CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
 
+        //! performs linear blending of two images
+        //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
+        CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, 
+                                    const GpuMat& weights1, const GpuMat& weights2, GpuMat& result);
+
 
         ////////////////////////////// Matrix reductions //////////////////////////////
 
