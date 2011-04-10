@@ -14,24 +14,23 @@ kmeans
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
-    :param clusterCount: The number of clusters to split the set by.
+    :param clusterCount: Number of clusters to split the set by.
 
-    :param labels: The input/output integer array that stores the cluster indices for every sample.
+    :param labels: Input/output integer array that stores the cluster indices for every sample.
 
-    :param termcrit: Specifies the maximum number of iterations and/or accuracy (distance the centers can move by between subsequent iterations)
+    :param termcrit: Flag to specify the maximum number of iterations and/or accuracy (distance the centers can move by between subsequent iterations??).
 
-    :param attempts: How many times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter)
+    :param attempts: Flag to specify how many times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
 
-    :param flags: It can take the following values:
+    :param flags: Flag that can take the following values:
 
-            * **KMEANS_RANDOM_CENTERS** Random initial centers are selected in each attempt
+            * **KMEANS_RANDOM_CENTERS** Select random initial centers in each attempt.
 
-            * **KMEANS_PP_CENTERS** Use kmeans++ center initialization by Arthur and Vassilvitskii
+            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii.
 
-            * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, the
-                function uses the user-supplied labels instaed of computing them from the initial centers. For the second and further attempts, the function will use the random or semi-random centers (use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method)
+            * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers (use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method).
 
-    :param centers: The output matrix of the cluster centers, one row per each cluster center
+    :param centers: Output matrix of the cluster centers, one row per each cluster center.
 
 The function ``kmeans`` implements a k-means algorithm that finds the
 centers of ``clusterCount`` clusters and groups the input samples
@@ -46,10 +45,10 @@ The function returns the compactness measure, which is computed as
 
     \sum _i  \| \texttt{samples} _i -  \texttt{centers} _{ \texttt{labels} _i} \| ^2
 
-after every attempt; the best (minimum) value is chosen and the
+after every attempt. The best (minimum) value is chosen and the
 corresponding labels and the compactness value are returned by the function.
-Basically, the user can use only the core of the function, set the number of
-attempts to 1, initialize labels each time using some custom algorithm and pass them with
+Basically, you can use only the core of the function, set the number of
+attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( ``flags`` = ``KMEANS_USE_INITIAL_LABELS`` ) flag, and then choose the best (most-compact) clustering.
 
 .. index:: partition
@@ -62,9 +61,11 @@ partition
 
     Splits an element set into equivalency classes.
 
-    :param vec: The set of elements stored as a vector
+    :param vec: Set of elements stored as a vector.
 
-    :param labels: The output vector of labels; will contain as many elements as  ``vec`` . Each label  ``labels[i]``  is 0-based cluster index of  ``vec[i]``     :param predicate: The equivalence predicate (i.e. pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` . The predicate returns true when the elements are certainly if the same class, and false if they may or may not be in the same class
+    :param labels: Output vector of labels. It contains as many elements as  ``vec`` . Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .   
+	
+	:param predicate: Equivalence predicate (pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` ). The predicate returns ``true`` when the elements are certainly in the same class, and returns ``false`` if they may or may not be in the same class.
 
 The generic function ``partition`` implements an
 :math:`O(N^2)` algorithm for

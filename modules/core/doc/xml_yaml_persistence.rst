@@ -11,7 +11,7 @@ FileStorage
 -----------
 .. c:type:: FileStorage
 
-The XML/YAML file storage class ::
+XML/YAML file storage class ::
 
     class FileStorage
     {
@@ -20,7 +20,7 @@ The XML/YAML file storage class ::
         enum { UNDEFINED=0, VALUE_EXPECTED=1, NAME_EXPECTED=2, INSIDE_MAP=4 };
         // the default constructor
         FileStorage();
-        // the constructor that opens the file for reading
+        // the constructor that opens a file for reading
         // (flags=FileStorage::READ) or writing (flags=FileStorage::WRITE)
         FileStorage(const string& filename, int flags);
         // wraps the already opened CvFileStorage*
@@ -39,7 +39,7 @@ The XML/YAML file storage class ::
         // returns the first top-level node
         FileNode getFirstTopLevelNode() const;
         // returns the root file node
-        // (it's the parent of the first top-level node)
+        // (it is the parent of the first top-level node)
         FileNode root(int streamidx=0) const;
         // returns the top-level node by name
         FileNode operator[](const string& nodename) const;
@@ -57,7 +57,7 @@ The XML/YAML file storage class ::
         void writeObj( const string& name, const void* obj );
 
         // returns the default object name from the filename
-        // (used by cvSave() with the default object name etc.)
+        // (used by cvSave() with the default object name, etc.)
         static string getDefaultObjectName(const string& filename);
 
         Ptr<CvFileStorage> fs;
@@ -74,7 +74,7 @@ FileNode
 --------
 .. c:type:: FileNode
 
-The XML/YAML file node class ::
+XML/YAML file node class ::
 
     class CV_EXPORTS FileNode
     {
@@ -124,7 +124,7 @@ FileNodeIterator
 ----------------
 .. c:type:: FileNodeIterator
 
-The XML/YAML file node iterator class ::
+XML/YAML file node iterator class ::
 
     class CV_EXPORTS FileNodeIterator
     {
