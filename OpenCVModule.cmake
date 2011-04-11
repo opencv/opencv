@@ -82,7 +82,7 @@ macro(define_opencv_module name)
         DESTINATION include/opencv2/${name}
         COMPONENT main)
         
-    if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
+    if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
         include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                             "${CMAKE_CURRENT_SOURCE_DIR}/test"
                             "${CMAKE_CURRENT_BINARY_DIR}")

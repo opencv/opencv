@@ -6,3 +6,7 @@
 
 #include "opencv2/ts/ts.hpp"
 #include "opencv2/core/core_c.h"
+
+#if ANDROID
+int wcscasecmp(const wchar_t* lhs, const wchar_t* rhs);
+#endif

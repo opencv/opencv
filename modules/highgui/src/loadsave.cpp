@@ -308,8 +308,8 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
-    char fnamebuf[L_tmpnam+1];
-    const char* filename = 0;
+    string filename = tempfile();
+    bool removeTempFile = false;
 
     ImageDecoder decoder = findDecoder(buf);
     if( decoder.empty() )
@@ -317,12 +317,10 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->setSource(buf) )
     {
-        filename = tmpnam(fnamebuf);
-        if(filename[0] == '\\')
-            filename++;
-        FILE* f = fopen( filename, "wb" );
+        FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
             return 0;
+        removeTempFile = true;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
         fwrite( &buf.data[0], 1, bufSize, f );
         fclose(f);
@@ -331,8 +329,8 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->readHeader() )
     {
-        if( filename )
-            remove(filename);
+        if( removeTempFile )
+            remove(filename.c_str());
         return 0;
     }
 
@@ -373,8 +371,8 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool code = decoder->readData( *data );
-    if( filename )
-        remove(filename);
+    if( removeTempFile )
+        remove(filename.c_str());
 
     if( !code )
     {
@@ -425,15 +423,12 @@ bool imencode( const string& ext, const Mat& image,
     }
     else
     {
-        char fnamebuf[L_tmpnam];
-        const char* filename = tmpnam(fnamebuf);
-        if(filename[0] == '\\')
-            filename++;
+        string filename = tempfile();
         code = encoder->setDestination(filename);
         CV_Assert( code );
         code = encoder->write(image, params);
         CV_Assert( code );
-        FILE* f = fopen( filename, "rb" );
+        FILE* f = fopen( filename.c_str(), "rb" );
         CV_Assert(f != 0);
         fseek( f, 0, SEEK_END );
         long pos = ftell(f);
@@ -441,7 +436,7 @@ bool imencode( const string& ext, const Mat& image,
         fseek( f, 0, SEEK_SET );
         buf.resize(fread( &buf[0], 1, buf.size(), f ));
         fclose(f);
-        remove(filename);
+        remove(filename.c_str());
     }
     return code;
 }

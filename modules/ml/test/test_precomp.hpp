@@ -74,7 +74,7 @@ protected:
     virtual int validate_test_results( int testCaseIdx );
 
     std::vector<float> test_resps1, test_resps2; // predicted responses for test data
-    char fname1[50], fname2[50];
+    std::string fname1, fname2;
 };
 
 #endif

@@ -153,7 +153,7 @@ install(FILES ${lib_hdrs}
 
 # Test files processing is in the separated directory to avoid 'Src' source 
 # filter creation in Visual Studio 
-if(BUILD_TESTS AND NOT ANDROID AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
+if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     set(the_test_target "opencv_test_${name}")   
     
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"

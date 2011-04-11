@@ -349,6 +349,23 @@ string format( const char* fmt, ... )
     return string(buf);
 }
 
+string tempfile( const char* suffix )
+{
+    char buf[L_tmpnam];
+    char* name = 0;
+#if ANDROID
+    strcpy(buf, "/sdcard/__opencv_temp_XXXXXX");
+    name = mktemp(buf);
+#else
+    name = tmpnam(buf);
+#endif
+    if (*name == '\\')
+        ++name;
+    if (suffix != 0)
+        return string(buf) + suffix;
+    return buf;
+}
+
 static CvErrorCallback customErrorCallback = 0;
 static void* customErrorCallbackData = 0;
 static bool breakOnError = false;

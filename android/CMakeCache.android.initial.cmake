@@ -25,7 +25,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" )
 set(OPENCV_BUILD_3RDPARTY_LIBS ON CACHE BOOL "" )
 
 #Build tests
-set(BUILD_TESTS OFF CACHE BOOL "" )
+#set(BUILD_TESTS OFF CACHE BOOL "" )
 
 #Choose the type of build, options are: None Debug Release RelWithDebInfo
 # MinSizeRel.

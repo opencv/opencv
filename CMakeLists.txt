@@ -511,6 +511,7 @@ if(WITH_JASPER AND NOT JASPER_FOUND)
 endif()
 
 if (ANDROID)
+  #android camera support
   set(NativeCamera_DIR "${CMAKE_SOURCE_DIR}/android/native-camera/build")
   FIND_PACKAGE(NativeCamera QUIET)
   if(NativeCamera_FOUND)
@@ -1107,7 +1108,7 @@ if (ANDROID)
 	endif()
 
 	if( HAVE_ANDROID_NATIVE_CAMERA )
-    	set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} ${NativeCamera_LIB_DIR})
+	  set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} ${NativeCamera_LIB_DIR})
 	endif()
 endif()
 

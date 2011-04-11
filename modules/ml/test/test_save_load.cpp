@@ -64,14 +64,12 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
             if( code == cvtest::TS::OK )
             {
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps1 );
-                tmpnam(fname1);
-                if(fname1[0] == '\\') fname1[0] = '_';
-                save( fname1 );
-                load( fname1);
+                fname1 = tempfile();
+                save( fname1.c_str() );
+                load( fname1.c_str() );
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps2 );
-                tmpnam(fname2);
-                if(fname2[0] == '\\') fname2[0] = '_';
-                save( fname2 );
+                fname2 = tempfile();
+                save( fname2.c_str() );
             }
             else
                 ts->printf( cvtest::TS::LOG, "model can not be trained" );
@@ -84,7 +82,7 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     int code = cvtest::TS::OK;
 
     // 1. compare files
-    ifstream f1( fname1 ), f2( fname2 );
+    ifstream f1( fname1.c_str() ), f2( fname2.c_str() );
     string s1, s2;
     int lineIdx = 0; 
     CV_Assert( f1.is_open() && f2.is_open() );
@@ -108,8 +106,8 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     f1.close();
     f2.close();
     // delete temporary files
-    remove( fname1 );
-    remove( fname2 );
+    remove( fname1.c_str() );
+    remove( fname2.c_str() );
 
     // 2. compare responses
     CV_Assert( test_resps1.size() == test_resps2.size() );

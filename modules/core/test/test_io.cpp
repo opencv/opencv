@@ -102,13 +102,9 @@ protected:
             
             cvClearMemStorage(storage);
             
-            char buf[L_tmpnam+16];
-            char* filename = tmpnam(buf);
-            strcat(filename, idx % 2 ? ".yml" : ".xml");
-            if(filename[0] == '\\')
-                filename++;
+            string filename = tempfile(idx % 2 ? ".yml" : ".xml");
             
-            FileStorage fs(filename, FileStorage::WRITE);
+            FileStorage fs(filename.c_str(), FileStorage::WRITE);
             
             int test_int = (int)cvtest::randInt(rng);
             double test_real = (cvtest::randInt(rng)%2?1:-1)*exp(cvtest::randReal(rng)*18-9);
@@ -185,9 +181,9 @@ protected:
             
             fs.release();
             
-            if(!fs.open(filename, FileStorage::READ))
+            if(!fs.open(filename.c_str(), FileStorage::READ))
             {
-                ts->printf( cvtest::TS::LOG, "filename %s can not be read\n", filename );
+                ts->printf( cvtest::TS::LOG, "filename %s can not be read\n", filename.c_str() );
                 ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
                 return;
             }
@@ -374,7 +370,7 @@ protected:
             }
             
             fs.release();
-            remove(filename);
+            remove(filename.c_str());
         }
     }
 };

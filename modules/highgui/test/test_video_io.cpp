@@ -68,9 +68,7 @@ struct TempDirHolder
 	string temp_folder;
 	TempDirHolder()
     {
-        char* p = tmpnam(0);
-        if(p[0] == '\\') p++;
-        temp_folder = string(p);
+        temp_folder = tempfile();
         exec_cmd("mkdir " + temp_folder);
     }	
 	~TempDirHolder() { exec_cmd("rm -rf " + temp_folder); }

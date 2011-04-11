@@ -23,10 +23,8 @@ protected:
     int checkPredictError(int test_num);
     int checkLoadSave();  
     
-    //string model_file_name1;
-    //string model_file_name2;
-    char model_file_name1[50];
-    char model_file_name2[50];
+    string model_file_name1;
+    string model_file_name2;
     string* datasets;
     string data_path;
     
@@ -162,19 +160,14 @@ int CV_GBTreesTest::TestSaveLoad()
     if (!gtb)
         return cvtest::TS::FAIL_GENERIC;
         
-    tmpnam(model_file_name1);
-    tmpnam(model_file_name2);
+    model_file_name1 = cv::tempfile();
+    model_file_name2 = cv::tempfile();
 
-    if(model_file_name1[0] == '\\')
-        model_file_name1[0] = '_';
-    if(model_file_name2[0] == '\\')
-        model_file_name2[0] = '_';
-
-    gtb->save(model_file_name1);
+    gtb->save(model_file_name1.c_str());
     gtb->calc_error(data, CV_TEST_ERROR, &test_resps1);
-    gtb->load(model_file_name1);
+    gtb->load(model_file_name1.c_str());
     gtb->calc_error(data, CV_TEST_ERROR, &test_resps2);
-    gtb->save(model_file_name2);
+    gtb->save(model_file_name2.c_str());
     
     return checkLoadSave();
     
@@ -187,7 +180,7 @@ int CV_GBTreesTest::checkLoadSave()
     int code = cvtest::TS::OK;
 
     // 1. compare files
-    ifstream f1( model_file_name1 ), f2( model_file_name2 );
+    ifstream f1( model_file_name1.c_str() ), f2( model_file_name2.c_str() );
     string s1, s2;
     int lineIdx = 0; 
     CV_Assert( f1.is_open() && f2.is_open() );
@@ -211,8 +204,8 @@ int CV_GBTreesTest::checkLoadSave()
     f1.close();
     f2.close();
     // delete temporary files
-    remove( model_file_name1 );
-    remove( model_file_name2 );
+    remove( model_file_name1.c_str() );
+    remove( model_file_name2.c_str() );
 
     // 2. compare responses
     CV_Assert( test_resps1.size() == test_resps2.size() );

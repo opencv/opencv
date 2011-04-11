@@ -502,13 +502,11 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
         //case 2: createIndex( data, AutotunedIndexParams() ); break; // possible linear index !
         default: assert(0);
     }
-    char filename[50];
-    tmpnam( filename );
-    if(filename[0] == '\\') filename[0] = '_';
+    string filename = tempfile();
     index->save( filename );
     
-    createIndex( data, SavedIndexParams(filename));
-    remove( filename );
+    createIndex( data, SavedIndexParams(filename.c_str()));
+    remove( filename.c_str() );
 }
 
 TEST(Features2d_LSH, regression) { CV_LSHTest test; test.safe_run(); }

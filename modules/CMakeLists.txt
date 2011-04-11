@@ -1,3 +1,7 @@
+if (ANDROID)
+  ADD_DEFINITIONS(-DGTEST_HAS_STD_WSTRING=0)
+endif()
+
 add_subdirectory(calib3d)
 add_subdirectory(core)
 add_subdirectory(features2d)
@@ -9,9 +13,7 @@ if(MSVC OR MINGW)
    endif()
 endif()
 
-if(NOT ANDROID)
 add_subdirectory(ts)
-endif()
 add_subdirectory(highgui)
 add_subdirectory(imgproc)
 add_subdirectory(legacy)
