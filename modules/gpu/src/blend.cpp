@@ -83,15 +83,12 @@ void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& 
     {
     case CV_8U:
         if (cn != 4)
-            blendLinearCaller(size.height, size.width, cn, (const PtrStep)img1, (const PtrStep)img2, 
-                              (const PtrStepf)weights1, (const PtrStepf)weights2, (PtrStep)result);
+            blendLinearCaller<uchar>(size.height, size.width, cn, img1, img2, weights1, weights2, result);
         else
-            blendLinearCaller8UC4(size.height, size.width, (const PtrStep)img1, (const PtrStep)img2, 
-                                  (const PtrStepf)weights1, (const PtrStepf)weights2, (PtrStep)result);
+            blendLinearCaller8UC4(size.height, size.width, img1, img2, weights1, weights2, result);
         break;
     case CV_32F:
-        blendLinearCaller(size.height, size.width, cn, (const PtrStepf)img1, (const PtrStepf)img2, 
-                          (const PtrStepf)weights1, (const PtrStepf)weights2, (PtrStepf)result);
+        blendLinearCaller<float>(size.height, size.width, cn, img1, img2, weights1, weights2, result);
         break;
     default:
         CV_Error(CV_StsUnsupportedFormat, "bad image depth in linear blending function");

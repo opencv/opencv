@@ -1374,10 +1374,10 @@ void cv::gpu::downsample(const GpuMat& src, GpuMat& dst, int k)
     switch (src.depth())
     {
     case CV_8U:
-        imgproc::downsampleCaller((const PtrStep)src, dst.rows, dst.cols, k, (PtrStep)dst);
+        imgproc::downsampleCaller<uchar>(src, dst.rows, dst.cols, k, dst);
         break;
     case CV_32F:
-        imgproc::downsampleCaller((const PtrStepf)src, dst.rows, dst.cols, k, (PtrStepf)dst);
+        imgproc::downsampleCaller<float>(src, dst.rows, dst.cols, k, dst);
         break;
     default:
         CV_Error(CV_StsUnsupportedFormat, "bad image depth in downsample function");
