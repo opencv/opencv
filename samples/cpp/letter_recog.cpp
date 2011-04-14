@@ -9,7 +9,7 @@
 void help()
 {
 	printf("\nThe sample demonstrates how to train Random Trees classifier\n"
-	"(or Boosting classifier, or MLP - see main()) using the provided dataset.\n"
+	"(or Boosting classifier, or MLP, or Knearest, or Nbayes - see main()) using the provided dataset.\n"
 	"\n"
 	"We use the sample database letter-recognition.data\n"
 	"from UCI Repository, here is the link:\n"
@@ -28,7 +28,7 @@ void help()
             "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
             "  [-save <output XML file for the classifier>] \\\n"
             "  [-load <XML file with the pre-trained classifier>] \\\n"
-            "  [-boost|-mlp] # to use boost/mlp classifier instead of default Random Trees\n" );
+            "  [-boost|-mlp|-knearest|-nbayes] # to use boost/mlp/knearest classifier instead of default Random Trees\n" );
 }
 
 // This function reads data and responses from the file <filename>
@@ -484,6 +484,147 @@ int build_mlp_classifier( char* data_filename,
     return 0;
 }
 
+static
+int build_knearest_classifier( char* data_filename, int K )
+{
+    const int var_count = 16;
+    CvMat* data = 0;
+    CvMat train_data;
+    CvMat* responses;
+
+    int ok = read_num_class_data( data_filename, 16, &data, &responses );
+    int nsamples_all = 0, ntrain_samples = 0;
+    int i, j;
+    double train_hr = 0, test_hr = 0;
+    CvANN_MLP mlp;
+
+    if( !ok )
+    {
+        printf( "Could not read the database %s\n", data_filename );
+        return -1;
+    }
+
+    printf( "The database %s is loaded.\n", data_filename );
+    nsamples_all = data->rows;
+    ntrain_samples = (int)(nsamples_all*0.8);
+
+    // 1. unroll the responses
+    printf( "Unrolling the responses...\n");
+    cvGetRows( data, &train_data, 0, ntrain_samples );
+
+    // 2. train classifier
+    CvMat* train_resp = cvCreateMat( ntrain_samples, 1, CV_32FC1);
+    for (int i = 0; i < ntrain_samples; i++)
+        train_resp->data.fl[i] = responses->data.fl[i];
+    CvKNearest knearest(&train_data, train_resp);
+
+    CvMat* nearests = cvCreateMat( (nsamples_all - ntrain_samples), K, CV_32FC1);
+    float _sample[var_count * (nsamples_all - ntrain_samples)];
+    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
+    float true_results[nsamples_all - ntrain_samples];
+    for (int j = ntrain_samples; j < nsamples_all; j++)
+    {
+        float *s = data->data.fl + j * var_count;
+        
+        for (int i = 0; i < var_count; i++)
+        {   
+            sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
+        }
+        true_results[j - ntrain_samples] = responses->data.fl[j];
+    }
+    CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
+	knearest.find_nearest(&sample, K, result, 0, nearests, 0);
+    int true_resp = 0;
+    int accuracy = 0;
+    for (int i = 0; i < nsamples_all - ntrain_samples; i++)
+    {
+        if (result->data.fl[i] == true_results[i])
+            true_resp++;
+        for(int k = 0; k < K; k++ )
+        {
+            if( nearests->data.fl[i * K + k] == true_results[i])
+            accuracy++;
+        }
+    }
+    
+    printf("true_resp = %f%%\tavg accuracy = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100, 
+                                                      (float)accuracy / (nsamples_all - ntrain_samples) / K * 100);
+    
+    cvReleaseMat( &train_resp );
+    cvReleaseMat( &nearests );
+    cvReleaseMat( &result );
+    cvReleaseMat( &data );
+    cvReleaseMat( &responses );
+
+    return 0;
+}
+
+static
+int build_nbayes_classifier( char* data_filename )
+{
+    const int var_count = 16;
+    CvMat* data = 0;
+    CvMat train_data;
+    CvMat* responses;
+
+    int ok = read_num_class_data( data_filename, 16, &data, &responses );
+    int nsamples_all = 0, ntrain_samples = 0;
+    int i, j;
+    double train_hr = 0, test_hr = 0;
+    CvANN_MLP mlp;
+
+    if( !ok )
+    {
+        printf( "Could not read the database %s\n", data_filename );
+        return -1;
+    }
+
+    printf( "The database %s is loaded.\n", data_filename );
+    nsamples_all = data->rows;
+    ntrain_samples = (int)(nsamples_all*0.5);
+
+    // 1. unroll the responses
+    printf( "Unrolling the responses...\n");
+    cvGetRows( data, &train_data, 0, ntrain_samples );
+
+    // 2. train classifier
+    CvMat* train_resp = cvCreateMat( ntrain_samples, 1, CV_32FC1);
+    for (int i = 0; i < ntrain_samples; i++)
+        train_resp->data.fl[i] = responses->data.fl[i];
+    CvNormalBayesClassifier nbayes(&train_data, train_resp);
+
+    float _sample[var_count * (nsamples_all - ntrain_samples)];
+    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
+    float true_results[nsamples_all - ntrain_samples];
+    for (int j = ntrain_samples; j < nsamples_all; j++)
+    {
+        float *s = data->data.fl + j * var_count;
+        
+        for (int i = 0; i < var_count; i++)
+        {   
+            sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
+        }
+        true_results[j - ntrain_samples] = responses->data.fl[j];
+    }
+    CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
+    (int)nbayes.predict(&sample, result);
+    int true_resp = 0;
+    int accuracy = 0;
+    for (int i = 0; i < nsamples_all - ntrain_samples; i++)
+    {
+        if (result->data.fl[i] == true_results[i])
+            true_resp++;
+    }
+    
+    printf("true_resp = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100);
+    
+    cvReleaseMat( &train_resp );
+    cvReleaseMat( &result );
+    cvReleaseMat( &data );
+    cvReleaseMat( &responses );
+
+    return 0;
+}
 
 int main( int argc, char *argv[] )
 {
@@ -519,6 +660,14 @@ int main( int argc, char *argv[] )
         {
             method = 2;
         }
+        else if ( strcmp(argv[i], "-knearest") == 0)
+	{
+	    method = 3;
+	}
+	else if ( strcmp(argv[i], "-nbayes") == 0)
+	{
+	    method = 4;
+	}
         else
             break;
     }
@@ -530,6 +679,10 @@ int main( int argc, char *argv[] )
         build_boost_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 2 ?
         build_mlp_classifier( data_filename, filename_to_save, filename_to_load ) :
+        method == 3 ?
+        build_knearest_classifier( data_filename, 10 ) :
+        method == 4 ?
+        build_nbayes_classifier( data_filename) :
         -1) < 0)
     {
     	help();

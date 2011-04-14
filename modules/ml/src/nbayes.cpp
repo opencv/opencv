@@ -277,63 +277,74 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
     return result;
 }
 
+struct predict_body {
+  predict_body(CvMat* _c, CvMat** _cov_rotate_mats, CvMat** _inv_eigen_values, CvMat** _avg,
+     const CvMat* _samples, const int* _vidx, CvMat* _cls_labels,
+     CvMat* _results, float* _value, int _var_count1
+  )
+  {
+    c = _c;
+    cov_rotate_mats = _cov_rotate_mats;
+    inv_eigen_values = _inv_eigen_values;
+    avg = _avg;
+    samples = _samples;
+    vidx = _vidx;
+    cls_labels = _cls_labels;
+    results = _results;
+    value = _value;
+    var_count1 = _var_count1;
+  }
+  
+  CvMat* c;
+  CvMat** cov_rotate_mats;
+  CvMat** inv_eigen_values;
+  CvMat** avg;
+  const CvMat* samples;
+  const int* vidx;
+  CvMat* cls_labels;
 
-float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) const
-{
-    float value = 0;
+  CvMat* results;
+  float* value;
+  int var_count1;
+  
+  void operator()( const cv::BlockedRange& range ) const
+  {
 
-    int i, j, cls = -1;
-    double opt = FLT_MAX;
-    int rtype = 0, rstep = 0;
-    
+    int cls = -1;
+    int rtype = 0, rstep = 0; 
     int nclasses = cls_labels->cols;
     int _var_count = avg[0]->cols;
-
-    if( !CV_IS_MAT(samples) || CV_MAT_TYPE(samples->type) != CV_32FC1 || samples->cols != var_all )
-        CV_Error( CV_StsBadArg,
-        "The input samples must be 32f matrix with the number of columns = var_all" );
-
-    if( samples->rows > 1 && !results )
-        CV_Error( CV_StsNullPtr,
-        "When the number of input samples is >1, the output vector of results must be passed" );
-
-    if( results )
+    
+    if (results)
     {
-        if( !CV_IS_MAT(results) || (CV_MAT_TYPE(results->type) != CV_32FC1 &&
-        CV_MAT_TYPE(results->type) != CV_32SC1) ||
-        (results->cols != 1 && results->rows != 1) ||
-        results->cols + results->rows - 1 != samples->rows )
-        CV_Error( CV_StsBadArg, "The output array must be integer or floating-point vector "
-        "with the number of elements = number of rows in the input matrix" );
-
         rtype = CV_MAT_TYPE(results->type);
         rstep = CV_IS_MAT_CONT(results->type) ? 1 : results->step/CV_ELEM_SIZE(rtype);
     }
-
-    const int* vidx = var_idx ? var_idx->data.i : 0;
-
-// allocate memory and initializing headers for calculating
-    cv::AutoBuffer<double> buffer(nclasses + var_count);
-    CvMat diff = cvMat( 1, var_count, CV_64FC1, &buffer[0] );
-
-    for( int k = 0; k < samples->rows; k++ )
+    // allocate memory and initializing headers for calculating
+    cv::AutoBuffer<double> buffer(nclasses + var_count1);
+    CvMat diff = cvMat( 1, var_count1, CV_64FC1, &buffer[0] );
+    
+    for(int k = range.begin(); k < range.end(); k += 1 )
     {
         int ival;
+        double opt = FLT_MAX;
 
-        for( i = 0; i < nclasses; i++ )
+        for(int i = 0; i < nclasses; i++ )
         {
+
             double cur = c->data.db[i];
             CvMat* u = cov_rotate_mats[i];
             CvMat* w = inv_eigen_values[i];
+
             const double* avg_data = avg[i]->data.db;
             const float* x = (const float*)(samples->data.ptr + samples->step*k);
 
             // cov = u w u'  -->  cov^(-1) = u w^(-1) u'
-            for( j = 0; j < _var_count; j++ )
+            for(int j = 0; j < _var_count; j++ )
                 diff.data.db[j] = avg_data[j] - x[vidx ? vidx[j] : j];
 
             cvGEMM( &diff, u, 1, 0, 0, &diff, CV_GEMM_B_T );
-            for( j = 0; j < _var_count; j++ )
+            for(int j = 0; j < _var_count; j++ )
             {
                 double d = diff.data.db[j];
                 cur += d*d*w->data.db[j];
@@ -356,17 +367,39 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) c
                 results->data.fl[k*rstep] = (float)ival;
         }
         if( k == 0 )
-            value = (float)ival;
-
-        /*if( _probs )
-        {
-            CV_CALL( cvConvertScale( &expo, &expo, -0.5 ));
-            CV_CALL( cvExp( &expo, &expo ));
-            if( _probs->cols == 1 )
-                CV_CALL( cvReshape( &expo, &expo, 1, nclasses ));
-            CV_CALL( cvConvertScale( &expo, _probs, 1./cvSum( &expo ).val[0] ));
-        }*/
+            *value = (float)ival;
     }
+  }
+};
+
+
+float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results ) const
+{
+    float value = 0;
+
+    if( !CV_IS_MAT(samples) || CV_MAT_TYPE(samples->type) != CV_32FC1 || samples->cols != var_all )
+        CV_Error( CV_StsBadArg,
+        "The input samples must be 32f matrix with the number of columns = var_all" );
+
+    if( samples->rows > 1 && !results )
+        CV_Error( CV_StsNullPtr,
+        "When the number of input samples is >1, the output vector of results must be passed" );
+
+    if( results )
+    {
+        if( !CV_IS_MAT(results) || (CV_MAT_TYPE(results->type) != CV_32FC1 &&
+        CV_MAT_TYPE(results->type) != CV_32SC1) ||
+        (results->cols != 1 && results->rows != 1) ||
+        results->cols + results->rows - 1 != samples->rows )
+        CV_Error( CV_StsBadArg, "The output array must be integer or floating-point vector "
+        "with the number of elements = number of rows in the input matrix" );
+    }
+
+    const int* vidx = var_idx ? var_idx->data.i : 0;
+
+    cv::parallel_for(cv::BlockedRange(0, samples->rows), predict_body(c, cov_rotate_mats, inv_eigen_values, avg, samples,
+                                                                      vidx, cls_labels, results, &value, var_count
+    ));
 
     return value;
 }
