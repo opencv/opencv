@@ -107,6 +107,10 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
 void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size patternSize, vector<Point2f>& centers)
 {
   centers.clear();
+  if(points.empty())
+  {
+    return;
+  }
 
   vector<Point2f> patternPoints;
   hierarchicalClustering(points, patternSize, patternPoints);
@@ -117,18 +121,30 @@ void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, c
 
   vector<Point2f> hull2f;
   convexHull(Mat(patternPoints), hull2f, false);
+  const size_t cornersCount = 6;
+  if(hull2f.size() < cornersCount)
+    return;
 
   vector<Point2f> corners;
   findCorners(hull2f, corners);
+  if(corners.size() != cornersCount)
+    return;
 
   vector<Point2f> outsideCorners;
   findOutsideCorners(corners, outsideCorners);
+  const size_t outsideCornersCount = 2;
+  if(outsideCorners.size() != outsideCornersCount)
+    return;
 
   vector<Point2f> sortedCorners;
   getSortedCorners(hull2f, corners, outsideCorners, sortedCorners);
+  if(sortedCorners.size() != cornersCount)
+    return;
 
   vector<Point2f> rectifiedPatternPoints;
   rectifyPatternPoints(patternSize, patternPoints, sortedCorners, rectifiedPatternPoints);
+  if(patternPoints.size() != rectifiedPatternPoints.size())
+    return;
 
   parsePatternPoints(patternSize, patternPoints, rectifiedPatternPoints, centers);
 }
