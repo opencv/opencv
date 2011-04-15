@@ -519,21 +519,21 @@ int build_knearest_classifier( char* data_filename, int K )
     CvKNearest knearest(&train_data, train_resp);
 
     CvMat* nearests = cvCreateMat( (nsamples_all - ntrain_samples), K, CV_32FC1);
-    float _sample[var_count * (nsamples_all - ntrain_samples)];
+    float* _sample = new float[var_count * (nsamples_all - ntrain_samples)];
     CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
-    float true_results[nsamples_all - ntrain_samples];
+    float* true_results = new float[nsamples_all - ntrain_samples];
     for (int j = ntrain_samples; j < nsamples_all; j++)
     {
         float *s = data->data.fl + j * var_count;
-        
+
         for (int i = 0; i < var_count; i++)
-        {   
+        {
             sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
         }
         true_results[j - ntrain_samples] = responses->data.fl[j];
     }
     CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
-	knearest.find_nearest(&sample, K, result, 0, nearests, 0);
+    knearest.find_nearest(&sample, K, result, 0, nearests, 0);
     int true_resp = 0;
     int accuracy = 0;
     for (int i = 0; i < nsamples_all - ntrain_samples; i++)
@@ -546,10 +546,12 @@ int build_knearest_classifier( char* data_filename, int K )
             accuracy++;
         }
     }
-    
+
     printf("true_resp = %f%%\tavg accuracy = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100, 
                                                       (float)accuracy / (nsamples_all - ntrain_samples) / K * 100);
-    
+
+    delete[] true_results;
+    delete[] _sample;
     cvReleaseMat( &train_resp );
     cvReleaseMat( &nearests );
     cvReleaseMat( &result );
@@ -593,15 +595,15 @@ int build_nbayes_classifier( char* data_filename )
         train_resp->data.fl[i] = responses->data.fl[i];
     CvNormalBayesClassifier nbayes(&train_data, train_resp);
 
-    float _sample[var_count * (nsamples_all - ntrain_samples)];
+    float* _sample = new float[var_count * (nsamples_all - ntrain_samples)];
     CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
-    float true_results[nsamples_all - ntrain_samples];
+    float* true_results = new float[nsamples_all - ntrain_samples];
     for (int j = ntrain_samples; j < nsamples_all; j++)
     {
         float *s = data->data.fl + j * var_count;
-        
+
         for (int i = 0; i < var_count; i++)
-        {   
+        {
             sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
         }
         true_results[j - ntrain_samples] = responses->data.fl[j];
@@ -615,9 +617,11 @@ int build_nbayes_classifier( char* data_filename )
         if (result->data.fl[i] == true_results[i])
             true_resp++;
     }
-    
+
     printf("true_resp = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100);
-    
+
+    delete[] true_results;
+    delete[] _sample;
     cvReleaseMat( &train_resp );
     cvReleaseMat( &result );
     cvReleaseMat( &data );
