@@ -560,7 +560,8 @@ CV_EXPORTS void drawChessboardCorners( Mat& image, Size patternSize,
                                        const vector<Point2f>& corners,
                                        bool patternWasFound );    
 
-enum { CALIB_CB_SYMMETRIC_GRID = 1, CALIB_CB_ASYMMETRIC_GRID = 2 };
+enum { CALIB_CB_SYMMETRIC_GRID = 1, CALIB_CB_ASYMMETRIC_GRID = 2,
+       CALIB_CB_CLUSTERING = 4, CALIB_CB_WHITE_CIRCLES = 8 };
 
 //! finds circles' grid pattern of the specified size in the image
 CV_EXPORTS_W bool findCirclesGrid( const Mat& image, Size patternSize,

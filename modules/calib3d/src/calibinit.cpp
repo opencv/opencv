@@ -1937,7 +1937,13 @@ void drawChessboardCorners( Mat& image, Size patternSize,
 bool findCirclesGrid( const Mat& image, Size patternSize,
                       vector<Point2f>& centers, int flags )
 {
-    Ptr<SimpleBlobDetector> detector = new SimpleBlobDetector();
+    SimpleBlobDetector::Params params;
+    if(flags & CALIB_CB_WHITE_CIRCLES)
+    {
+      params.filterByColor = true;
+      params.blobColor = 255;
+    }
+    Ptr<SimpleBlobDetector> detector = new SimpleBlobDetector(params);
     //Ptr<FeatureDetector> detector = new MserFeatureDetector();
     vector<KeyPoint> keypoints;
     detector->detect(image, keypoints);
@@ -1945,6 +1951,13 @@ bool findCirclesGrid( const Mat& image, Size patternSize,
     for (size_t i = 0; i < keypoints.size(); i++)
     {
       points.push_back (keypoints[i].pt);
+    }
+
+    if((flags & CALIB_CB_CLUSTERING) && (flags & CALIB_CB_ASYMMETRIC_GRID))
+    {
+      CirclesGridClusterFinder circlesGridClusterFinder;
+      circlesGridClusterFinder.findGrid(points, patternSize, centers);
+      return !centers.empty();
     }
 
     CirclesGridFinderParameters parameters;
