@@ -3946,7 +3946,7 @@ static double cppKMeans(const CvArr* _samples, int cluster_count, CvArr* _labels
         (labels.cols == 1 || labels.rows == 1) &&
         labels.cols + labels.rows - 1 == data.rows );
     return cv::kmeans(data, cluster_count, labels, termcrit, attempts,
-                                    flags, _centers ? &centers : 0 );
+                        flags, _centers ? cv::OutputArray(centers) : cv::OutputArray() );
 }
 
 #define cvKMeans2(samples, nclusters, labels, termcrit, attempts, flags, centers) \
@@ -4038,7 +4038,7 @@ void initcv()
   m = Py_InitModule(MODULESTR"", methods);
   d = PyModule_GetDict(m);
 
-  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev$"));
+  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
 
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);

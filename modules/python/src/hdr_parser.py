@@ -2,15 +2,15 @@ import os, sys, re
 
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
-"../core/include/opencv2/core/core.hpp",
-"../ml/include/opencv2/ml/ml.hpp",
-"../imgproc/include/opencv2/imgproc/imgproc.hpp",
-"../calib3d/include/opencv2/calib3d/calib3d.hpp",
-"../features2d/include/opencv2/features2d/features2d.hpp",
-"../video/include/opencv2/video/tracking.hpp",
-"../video/include/opencv2/video/background_segm.hpp",
-"../objdetect/include/opencv2/objdetect/objdetect.hpp",
-"../highgui/include/opencv2/highgui/highgui.hpp",
+"../../core/include/opencv2/core/core.hpp",
+"../../ml/include/opencv2/ml/ml.hpp",
+"../../imgproc/include/opencv2/imgproc/imgproc.hpp",
+"../../calib3d/include/opencv2/calib3d/calib3d.hpp",
+"../../features2d/include/opencv2/features2d/features2d.hpp",
+"../../video/include/opencv2/video/tracking.hpp",
+"../../video/include/opencv2/video/background_segm.hpp",
+"../../objdetect/include/opencv2/objdetect/objdetect.hpp",
+"../../highgui/include/opencv2/highgui/highgui.hpp",
 "opencv_extra_api.hpp",
 ]
 
@@ -192,7 +192,7 @@ class CppHeaderParser(object):
             arg_type += "*"
         
         arg_type = self.batch_replace(arg_type, [("std::", ""), ("cv::", "")])
-            
+    
         return arg_type, arg_name, modlist, argno
         
     def parse_enum(self, decl_str):
@@ -375,6 +375,22 @@ class CppHeaderParser(object):
                     if eqpos >= 0:
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
+                    if arg_type == "InputArray" or arg_type == "InputOutputArray":
+                        arg_type = "Mat"
+                    elif arg_type == "OutputArray":
+                        arg_type = "Mat"
+                        modlist.append("/O")
+                    elif arg_type == "InputArrayOfArrays" or arg_type == "InputOutputArrayOfArrays":
+                        arg_type = "vector_Mat"
+                    elif arg_type == "OutputArrayOfArrays":
+                        arg_type = "vector_Mat"
+                        modlist.append("/O")
+                    defval = self.batch_replace(defval, [("InputArrayOfArrays", "vector<Mat>"),
+                                                         ("InputOutputArrayOfArrays", "vector<Mat>"),
+                                                         ("OutputArrayOfArrays", "vector<Mat>"),
+                                                         ("InputArray", "Mat"),
+                                                         ("InputOutputArray", "Mat"),
+                                                         ("OutputArray", "Mat")]).strip()  
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
         
