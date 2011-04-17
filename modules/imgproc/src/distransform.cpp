@@ -850,21 +850,24 @@ cvDistTransform( const void* srcarr, void* dstarr,
     }
 }
 
-void cv::distanceTransform( const Mat& src, Mat& dst, Mat& labels,
+void cv::distanceTransform( const InputArray& _src, OutputArray _dst, OutputArray _labels,
                             int distanceType, int maskSize )
 {
-    dst.create(src.size(), CV_32F);
-    labels.create(src.size(), CV_32S);
-    CvMat _src = src, _dst = dst, _labels = labels;
-    cvDistTransform(&_src, &_dst, distanceType, maskSize, 0, &_labels);
+    Mat src = _src.getMat();
+    _dst.create(src.size(), CV_32F);
+    _labels.create(src.size(), CV_32S);
+    CvMat c_src = src, c_dst = _dst.getMat(), c_labels = _labels.getMat();
+    cvDistTransform(&c_src, &c_dst, distanceType, maskSize, 0, &c_labels);
 }
 
-void cv::distanceTransform( const Mat& src, Mat& dst,
+void cv::distanceTransform( const InputArray& _src, OutputArray _dst,
                             int distanceType, int maskSize )
 {
-    dst.create(src.size(), CV_32F);
-    CvMat _src = src, _dst = dst;
-    cvDistTransform(&_src, &_dst, distanceType, maskSize, 0, 0);
+    Mat src = _src.getMat();
+    _dst.create(src.size(), CV_32F);
+    Mat dst = _dst.getMat();
+    CvMat c_src = src, c_dst = _dst.getMat();
+    cvDistTransform(&c_src, &c_dst, distanceType, maskSize, 0, 0);
 }
 
 /* End of file. */

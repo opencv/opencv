@@ -1146,7 +1146,7 @@ cvSeqPush( CvSeq *seq, const void *element )
     }
 
     if( element )
-        CV_MEMCPY_AUTO( ptr, element, elem_size );
+        memcpy( ptr, element, elem_size );
     seq->first->prev->count++;
     seq->total++;
     seq->ptr = ptr + elem_size;
@@ -1171,7 +1171,7 @@ cvSeqPop( CvSeq *seq, void *element )
     seq->ptr = ptr = seq->ptr - elem_size;
 
     if( element )
-        CV_MEMCPY_AUTO( element, ptr, elem_size );
+        memcpy( element, ptr, elem_size );
     seq->ptr = ptr;
     seq->total--;
 
@@ -1208,7 +1208,7 @@ cvSeqPushFront( CvSeq *seq, const void *element )
     ptr = block->data -= elem_size;
 
     if( element )
-        CV_MEMCPY_AUTO( ptr, element, elem_size );
+        memcpy( ptr, element, elem_size );
     block->count++;
     block->start_index--;
     seq->total++;
@@ -1233,7 +1233,7 @@ cvSeqPopFront( CvSeq *seq, void *element )
     block = seq->first;
 
     if( element )
-        CV_MEMCPY_AUTO( element, block->data, elem_size );
+        memcpy( element, block->data, elem_size );
     block->data += elem_size;
     block->start_index++;
     seq->total--;
@@ -1708,7 +1708,7 @@ cvSeqRemoveSlice( CvSeq* seq, CvSlice slice )
 
             for( i = 0; i < count; i++ )
             {
-                CV_MEMCPY_AUTO( reader_to.ptr, reader_from.ptr, elem_size );
+                memcpy( reader_to.ptr, reader_from.ptr, elem_size );
                 CV_NEXT_SEQ_ELEM( elem_size, reader_to );
                 CV_NEXT_SEQ_ELEM( elem_size, reader_from );
             }
@@ -1726,7 +1726,7 @@ cvSeqRemoveSlice( CvSeq* seq, CvSlice slice )
                 CV_PREV_SEQ_ELEM( elem_size, reader_to );
                 CV_PREV_SEQ_ELEM( elem_size, reader_from );
 
-                CV_MEMCPY_AUTO( reader_to.ptr, reader_from.ptr, elem_size );
+                memcpy( reader_to.ptr, reader_from.ptr, elem_size );
             }
 
             cvSeqPopMulti( seq, 0, slice.end_index - slice.start_index, 1 );
@@ -1796,7 +1796,7 @@ cvSeqInsertSlice( CvSeq* seq, int index, const CvArr* from_arr )
 
         for( i = 0; i < index; i++ )
         {
-            CV_MEMCPY_AUTO( reader_to.ptr, reader_from.ptr, elem_size );
+            memcpy( reader_to.ptr, reader_from.ptr, elem_size );
             CV_NEXT_SEQ_ELEM( elem_size, reader_to );
             CV_NEXT_SEQ_ELEM( elem_size, reader_from );
         }
@@ -1814,7 +1814,7 @@ cvSeqInsertSlice( CvSeq* seq, int index, const CvArr* from_arr )
         {
             CV_PREV_SEQ_ELEM( elem_size, reader_to );
             CV_PREV_SEQ_ELEM( elem_size, reader_from );
-            CV_MEMCPY_AUTO( reader_to.ptr, reader_from.ptr, elem_size );
+            memcpy( reader_to.ptr, reader_from.ptr, elem_size );
         }
     }
 
@@ -1823,7 +1823,7 @@ cvSeqInsertSlice( CvSeq* seq, int index, const CvArr* from_arr )
 
     for( i = 0; i < from_total; i++ )
     {
-        CV_MEMCPY_AUTO( reader_to.ptr, reader_from.ptr, elem_size );
+        memcpy( reader_to.ptr, reader_from.ptr, elem_size );
         CV_NEXT_SEQ_ELEM( elem_size, reader_to );
         CV_NEXT_SEQ_ELEM( elem_size, reader_from );
     }
@@ -2525,7 +2525,7 @@ cvSetAdd( CvSet* set, CvSetElem* element, CvSetElem** inserted_element )
 
     id = free_elem->flags & CV_SET_ELEM_IDX_MASK;
     if( element )
-        CV_MEMCPY_INT( free_elem, element, (size_t)set->elem_size/sizeof(int) );
+        memcpy( free_elem, element, set->elem_size );
 
     free_elem->flags = id;
     set->active_count++;
@@ -2616,8 +2616,7 @@ cvGraphAddVtx( CvGraph* graph, const CvGraphVtx* _vertex, CvGraphVtx** _inserted
     if( vertex )
     {
         if( _vertex )
-            CV_MEMCPY_INT( vertex + 1, _vertex + 1,
-                (size_t)(graph->elem_size - sizeof(CvGraphVtx))/sizeof(int) );
+            memcpy( vertex + 1, _vertex + 1, graph->elem_size - sizeof(CvGraphVtx) );
         vertex->first = 0;
         index = vertex->flags;
     }
@@ -2784,17 +2783,17 @@ cvGraphAddEdgeByPtr( CvGraph* graph,
     edge->next[1] = end_vtx->first;
     start_vtx->first = end_vtx->first = edge;
 
-    delta = (graph->edges->elem_size - sizeof(*edge))/sizeof(int);
+    delta = graph->edges->elem_size - sizeof(*edge);
     if( _edge )
     {
         if( delta > 0 )
-            CV_MEMCPY_INT( edge + 1, _edge + 1, delta );
+            memcpy( edge + 1, _edge + 1, delta );
         edge->weight = _edge->weight;
     }
     else
     {
         if( delta > 0 )
-            CV_ZERO_INT( edge + 1, delta );
+            memset( edge + 1, 0, delta );
         edge->weight = 1.f;
     }
 
@@ -3548,14 +3547,14 @@ KDTree::KDTree()
     normType = NORM_L2;
 }
 
-KDTree::KDTree(const Mat& _points, bool _copyData)
+KDTree::KDTree(const InputArray& _points, bool _copyData)
 {
     maxDepth = -1;
     normType = NORM_L2;
     build(_points, _copyData);
 }
 
-KDTree::KDTree(const Mat& _points, const Mat& _labels, bool _copyData)
+KDTree::KDTree(const InputArray& _points, const InputArray& _labels, bool _copyData)
 {
     maxDepth = -1;
     normType = NORM_L2;
@@ -3638,14 +3637,15 @@ computeSums( const Mat& points, const size_t* ofs, int a, int b, double* sums )
 }
 
     
-void KDTree::build(const Mat& _points, bool _copyData)
+void KDTree::build(const InputArray& _points, bool _copyData)
 {
-    build(_points, Mat(), _copyData);
+    build(_points, InputArray(), _copyData);
 }
 
 
-void KDTree::build(const Mat& _points, const Mat& _labels, bool _copyData)
+void KDTree::build(const InputArray& __points, const InputArray& __labels, bool _copyData)
 {
+    Mat _points = __points.getMat(), _labels = __labels.getMat();
     CV_Assert(_points.type() == CV_32F && !_points.empty());
     vector<KDTree::Node>().swap(nodes);
 
@@ -3744,57 +3744,6 @@ void KDTree::build(const Mat& _points, const Mat& _labels, bool _copyData)
 }
 
 
-int KDTree::findNearest(const float* vec, int K, int emax,
-                         vector<int>* neighborsIdx,
-                         Mat* neighbors,
-                         vector<float>* dist,
-                         vector<int>* labels) const
-{
-    K = std::min(K, points.rows);
-    CV_Assert(K > 0);
-    if(neighborsIdx)
-        neighborsIdx->resize(K);
-    if(dist)
-        dist->resize(K);
-    if(labels)
-        labels->resize(K);
-    K = findNearest(vec, K, emax, neighborsIdx ? &(*neighborsIdx)[0] : 0,
-                    neighbors, dist ? &(*dist)[0] : 0, labels ? &(*labels)[0] : 0);
-    if(neighborsIdx)
-        neighborsIdx->resize(K);
-    if(dist)
-        dist->resize(K);
-    if(labels)
-        labels->resize(K);
-    return K;
-}
-    
-int KDTree::findNearest(const vector<float>& vec, int K, int emax,
-                        vector<int>* neighborsIdx,
-                        Mat* neighbors,
-                        vector<float>* dist,
-                        vector<int>* labels) const
-{
-    CV_Assert((int)vec.size() == points.cols);
-    K = std::min(K, points.rows);
-    CV_Assert(K > 0);
-    if(neighborsIdx)
-        neighborsIdx->resize(K);
-    if(dist)
-        dist->resize(K);
-    if(labels)
-        labels->resize(K);
-    K = findNearest(&vec[0], K, emax, neighborsIdx ? &(*neighborsIdx)[0] : 0,
-                    neighbors, dist ? &(*dist)[0] : 0, labels ? &(*labels)[0] : 0);
-    if(neighborsIdx)
-        neighborsIdx->resize(K);
-    if(dist)
-        dist->resize(K);
-    if(labels)
-        labels->resize(K);
-    return K;
-}    
-
 struct PQueueElem
 {
     PQueueElem() : dist(0), idx(0) {}
@@ -3804,11 +3753,14 @@ struct PQueueElem
 };
 
 
-int KDTree::findNearest(const float* vec, int K, int emax,
-                        int* _neighborsIdx, Mat* _neighbors,
-                        float* _dist, int* _labels) const
+int KDTree::findNearest(const InputArray& _vec, int K, int emax,
+                        OutputArray _neighborsIdx, OutputArray _neighbors,
+                        OutputArray _dist, OutputArray _labels) const
     
 {
+    Mat vecmat = _vec.getMat();
+    CV_Assert( vecmat.isContinuous() && vecmat.type() == CV_32F && vecmat.total() == (size_t)points.cols );
+    const float* vec = vecmat.ptr<float>();
     K = std::min(K, points.rows);
     int dims = points.cols;
 
@@ -3929,42 +3881,43 @@ int KDTree::findNearest(const float* vec, int K, int emax,
     }
 
     K = std::min(K, ncount);
-    if( _neighborsIdx )
+    if( _neighborsIdx.needed() )
     {
-        for( i = 0; i < K; i++ )
-            _neighborsIdx[i] = idx[i];
+        _neighborsIdx.create(K, 1, CV_32S, -1, true);
+        Mat nidx = _neighborsIdx.getMat();
+        Mat(nidx.size(), CV_32S, &idx[0]).copyTo(nidx);
     }
-    if( _dist )
-    {
-        for( i = 0; i < K; i++ )
-            _dist[i] = std::sqrt(dist[i]);
-    }
-    if( _labels )
-    {
-        for( i = 0; i < K; i++ )
-            _labels[i] = labels[idx[i]];
-    }
+    if( _dist.needed() )
+        sqrt(Mat(K, 1, CV_32F, dist), _dist);
 
-    if( _neighbors )
-        getPoints(idx, K, *_neighbors);
+    if( _neighbors.needed() || _labels.needed() )
+        getPoints(Mat(K, 1, CV_32S, idx), _neighbors, _labels);
     return K;
 }
 
 
-void KDTree::findOrthoRange(const float* L, const float* R,
-                            vector<int>* neighborsIdx,
-                            Mat* neighbors, vector<int>* _labels) const
+void KDTree::findOrthoRange(const InputArray& _lowerBound,
+                            const InputArray& _upperBound,
+                            OutputArray _neighborsIdx,
+                            OutputArray _neighbors,
+                            OutputArray _labels ) const
 {
     int dims = points.cols;
+    Mat lowerBound = _lowerBound.getMat(), upperBound = _upperBound.getMat();
+    CV_Assert( lowerBound.size == upperBound.size &&
+               lowerBound.isContinuous() &&
+               upperBound.isContinuous() &&
+               lowerBound.type() == upperBound.type() &&
+               lowerBound.type() == CV_32F &&
+               lowerBound.total() == (size_t)dims );
+    const float* L = lowerBound.ptr<float>();
+    const float* R = upperBound.ptr<float>();
     
-    CV_Assert( L && R );
-    
-    vector<int> _idx, *idx = neighborsIdx ? neighborsIdx : &_idx;
+    vector<int> idx;
     AutoBuffer<int> _stack(MAX_TREE_DEPTH*2 + 1);
     int* stack = _stack;
     int top = 0;
     
-    idx->clear();
     stack[top++] = 0;
 
     while( --top >= 0 )
@@ -3981,7 +3934,7 @@ void KDTree::findOrthoRange(const float* L, const float* R,
                 if( row[j] < L[j] || row[j] >= R[j] )
                     break;
             if( j == dims )
-                idx->push_back(i);
+                idx.push_back(i);
             continue;
         }
         if( L[n.idx] <= n.boundary )
@@ -3990,55 +3943,57 @@ void KDTree::findOrthoRange(const float* L, const float* R,
             stack[top++] = n.right;
     }
 
-    if( neighbors )
-        getPoints( &(*idx)[0], idx->size(), *neighbors, _labels );
-}
-
-    
-void KDTree::findOrthoRange(const vector<float>& L, const vector<float>& R,
-                            vector<int>* neighborsIdx, Mat* neighbors, vector<int>* _labels) const
-{
-    size_t dims = points.cols;
-    CV_Assert(L.size() == dims && R.size() == dims);
-    findOrthoRange(&L[0], &R[0], neighborsIdx, neighbors, _labels);
-}
-        
-    
-void KDTree::getPoints(const int* idx, size_t nidx, Mat& pts, vector<int>* _labels) const
-{
-    int dims = points.cols, n = (int)nidx;
-    pts.create( n, dims, points.type());
-    if(_labels)
-        _labels->resize(nidx);
-
-    for( int i = 0; i < n; i++ )
+    if( _neighborsIdx.needed() )
     {
-        int k = idx[i];
-        CV_Assert( (unsigned)k < (unsigned)points.rows );
-        const float* src = points.ptr<float>(k);
-        std::copy(src, src + dims, pts.ptr<float>(i));
-        if(_labels)
-            (*_labels)[i] = labels[k];
+        _neighborsIdx.create(idx.size(), 1, CV_32S, -1, true);
+        Mat nidx = _neighborsIdx.getMat();
+        Mat(nidx.size(), CV_32S, &idx[0]).copyTo(nidx);
     }
+    getPoints( idx, _neighbors, _labels );
 }
 
-
-void KDTree::getPoints(const vector<int>& idx, Mat& pts, vector<int>* _labels) const
-{
-    int dims = points.cols;
-    int i, nidx = (int)idx.size();
-    pts.create( nidx, dims, points.type());
     
-    if(_labels)
-        _labels->resize(nidx);
+void KDTree::getPoints(const InputArray& _idx, OutputArray _pts, OutputArray _labels) const
+{
+    Mat idxmat = _idx.getMat(), pts, labelsmat;
+    CV_Assert( idxmat.isContinuous() && idxmat.type() == CV_32S &&
+               (idxmat.cols == 1 || idxmat.rows == 1) );
+    const int* idx = idxmat.ptr<int>();
+    int* dstlabels = 0;
+    
+    int dims = points.cols;
+    int i, nidx = (int)idxmat.total();
+    if( nidx == 0 )
+    {
+        _pts.release();
+        _labels.release();
+        return;
+    }
+    
+    if( _pts.needed() )
+    {
+        _pts.create( nidx, dims, points.type());
+        pts = _pts.getMat();
+    }
+    
+    if(_labels.needed())
+    {
+        _labels.create(nidx, 1, CV_32S, -1, true);
+        labelsmat = _labels.getMat();
+        CV_Assert( labelsmat.isContinuous() );
+        dstlabels = labelsmat.ptr<int>();
+    }
+    const int* srclabels = !labels.empty() ? &labels[0] : 0;
     
     for( i = 0; i < nidx; i++ )
     {
         int k = idx[i];
         CV_Assert( (unsigned)k < (unsigned)points.rows );
         const float* src = points.ptr<float>(k);
-        std::copy(src, src + dims, pts.ptr<float>(i));
-        if(_labels) (*_labels)[i] = labels[k];
+        if( pts.data )
+            std::copy(src, src + dims, pts.ptr<float>(i));
+        if( dstlabels )
+            dstlabels[i] = srclabels ? srclabels[k] : k;
     }
 }
 
@@ -4047,7 +4002,7 @@ const float* KDTree::getPoint(int ptidx, int* label) const
 {
     CV_Assert( (unsigned)ptidx < (unsigned)points.rows);
     if(label)
-        *label = label[ptidx];
+        *label = labels[ptidx];
     return points.ptr<float>(ptidx);
 }
 

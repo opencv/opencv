@@ -78,7 +78,7 @@ bool CV_GpuMatOpSetToTest::testSetTo(cv::Mat& cpumat, gpu::GpuMat& gpumat, const
     cpumat.setTo(s, cpumask);
     gpumat.setTo(s, gpumask);
 
-    double ret = norm(cpumat, gpumat, NORM_INF);
+    double ret = norm(cpumat, (Mat)gpumat, NORM_INF);
 
     if (ret < std::numeric_limits<double>::epsilon())
         return true;

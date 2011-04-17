@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -42,118 +42,317 @@
 
 /* ////////////////////////////////////////////////////////////////////
 //
-//  Matrix arithmetic and logical operations: +, -, *, /, &, |, ^, ~, abs ...
+//  Arithmetic and logical operations: +, -, *, /, &, |, ^, ~, abs ...
 //
 // */
 
 #include "precomp.hpp"
 
-#ifdef HAVE_IPP
-#include "ippversion.h"
-#endif
-
 namespace cv
 {
 
-#if CV_SSE2
-
-enum { ARITHM_SIMD = CV_CPU_SSE2 };
-
-template<class Op8> struct VBinOp8
+#if ARITHM_USE_IPP
+struct IPPArithmInitializer
 {
-    int operator()(const uchar* src1, const uchar* src2, uchar* dst, int len) const
+    IPPArithmInitializer(void)
     {
-        int x = 0;
-        for( ; x <= len - 32; x += 32 )
-        {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
-            __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 16));
-            r0 = op(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
-            r1 = op(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 16)));
-            _mm_storeu_si128((__m128i*)(dst + x), r0);
-            _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
-        }
-        for( ; x <= len - 8; x += 8 )
-        {
-            __m128i r0 = _mm_loadl_epi64((const __m128i*)(src1 + x));
-            r0 = op(r0,_mm_loadl_epi64((const __m128i*)(src2 + x)));
-            _mm_storel_epi64((__m128i*)(dst + x), r0);
-        }
-        return x;
+        IppStatus status = ippStaticInit();
     }
-    Op8 op;
 };
 
-template<typename T, class Op16> struct VBinOp16
-{
-    int operator()(const T* src1, const T* src2, T* dst, int len) const
-    {
-        int x = 0;
-        for( ; x <= len - 16; x += 16 )
-        {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
-            __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-            r0 = op(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
-            r1 = op(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 8)));
-            _mm_storeu_si128((__m128i*)(dst + x), r0);
-            _mm_storeu_si128((__m128i*)(dst + x + 8), r1);
-        }
-        for( ; x <= len - 4; x += 4 )
-        {
-            __m128i r0 = _mm_loadl_epi64((const __m128i*)(src1 + x));
-            r0 = op(r0,_mm_loadl_epi64((const __m128i*)(src2 + x)));
-            _mm_storel_epi64((__m128i*)(dst + x), r0);
-        }
-        return x;
-    }
-    Op16 op;
-};
+IPPArithmInitializer ippArithmInitializer;
+#endif
 
-template<class Op32f> struct VBinOp32f
+struct NOP {};
+    
+template<typename T, class Op, class Op8>
+void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
-    int operator()(const float* src1, const float* src2, float* dst, int len) const
+    Op8 op8;
+    Op op;
+    
+    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
+                        src2 += step2/sizeof(src2[0]),
+                        dst += step/sizeof(dst[0]) )
     {
         int x = 0;
-        if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
-            for( ; x <= len - 8; x += 8 )
+        
+    #if CV_SSE2
+        if( USE_SSE2 )
+        {
+            for( ; x <= sz.width - 32; x += 32 )
             {
-                __m128 r0 = _mm_load_ps(src1 + x);
-                __m128 r1 = _mm_load_ps(src1 + x + 4);
-                r0 = op(r0,_mm_load_ps(src2 + x));
-                r1 = op(r1,_mm_load_ps(src2 + x + 4));
-                _mm_store_ps(dst + x, r0);
-                _mm_store_ps(dst + x + 4, r1);
+                __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 16));
+                r0 = op8(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
+                r1 = op8(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 16)));
+                _mm_storeu_si128((__m128i*)(dst + x), r0);
+                _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
+            }
+            for( ; x <= sz.width - 8; x += 8 )
+            {
+                __m128i r0 = _mm_loadl_epi64((const __m128i*)(src1 + x));
+                r0 = op8(r0,_mm_loadl_epi64((const __m128i*)(src2 + x)));
+                _mm_storel_epi64((__m128i*)(dst + x), r0);
+            }
+        }
+    #endif
+        
+        for( ; x <= sz.width - 4; x += 4 )
+        {
+            T v0 = op(src1[x], src2[x]);
+            T v1 = op(src1[x+1], src2[x+1]);
+            dst[x] = v0; dst[x+1] = v1;
+            v0 = op(src1[x+2], src2[x+2]);
+            v1 = op(src1[x+3], src2[x+3]);
+            dst[x+2] = v0; dst[x+3] = v1;
+        }
+        
+        for( ; x < sz.width; x++ )
+            dst[x] = op(src1[x], src2[x]);
+    }
+}
+
+template<typename T, class Op, class Op16>
+void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
+              T* dst, size_t step, Size sz)
+{
+    Op16 op16;
+    Op op;
+    
+    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
+        src2 += step2/sizeof(src2[0]),
+        dst += step/sizeof(dst[0]) )
+    {
+        int x = 0;
+        
+    #if CV_SSE2
+        if( USE_SSE2 )
+        {
+            for( ; x <= sz.width - 16; x += 16 )
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+                r0 = op16(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
+                r1 = op16(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 8)));
+                _mm_storeu_si128((__m128i*)(dst + x), r0);
+                _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
+            }
+            for( ; x <= sz.width - 4; x += 4 )
+            {
+                __m128i r0 = _mm_loadl_epi64((const __m128i*)(src1 + x));
+                r0 = op16(r0,_mm_loadl_epi64((const __m128i*)(src2 + x)));
+                _mm_storel_epi64((__m128i*)(dst + x), r0);
+            }
+        }
+        else
+    #endif
+        
+        for( ; x <= sz.width - 4; x += 4 )
+        {
+            T v0 = op(src1[x], src2[x]);
+            T v1 = op(src1[x+1], src2[x+1]);
+            dst[x] = v0; dst[x+1] = v1;
+            v0 = op(src1[x+2], src2[x+2]);
+            v1 = op(src1[x+3], src2[x+3]);
+            dst[x+2] = v0; dst[x+3] = v1;
+        }
+        
+        for( ; x < sz.width; x++ )
+            dst[x] = op(src1[x], src2[x]);
+    }
+}
+
+    
+template<class Op, class Op32>
+void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
+               int* dst, size_t step, Size sz)
+{
+    Op32 op32;
+    Op op;
+    
+    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
+        src2 += step2/sizeof(src2[0]),
+        dst += step/sizeof(dst[0]) )
+    {
+        int x = 0;
+        
+#if CV_SSE2
+        if( USE_SSE2 )
+        {
+            if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
+                for( ; x <= sz.width - 8; x += 8 )
+                {
+                    __m128i r0 = _mm_load_si128((const __m128i*)(src1 + x));
+                    __m128i r1 = _mm_load_si128((const __m128i*)(src1 + x + 4));
+                    r0 = op32(r0,_mm_load_si128((const __m128i*)(src2 + x)));
+                    r1 = op32(r1,_mm_load_si128((const __m128i*)(src2 + x + 4)));
+                    _mm_store_si128((__m128i*)(dst + x), r0);
+                    _mm_store_si128((__m128i*)(dst + x + 16), r1);
+                }
+            else
+                for( ; x <= sz.width - 8; x += 8 )
+                {
+                    __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 4));
+                    r0 = op32(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
+                    r1 = op32(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 4)));
+                    _mm_storeu_si128((__m128i*)(dst + x), r0);
+                    _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
+                }
+        }
+#endif
+        
+        for( ; x <= sz.width - 4; x += 4 )
+        {
+            int v0 = op(src1[x], src2[x]);
+            int v1 = op(src1[x+1], src2[x+1]);
+            dst[x] = v0; dst[x+1] = v1;
+            v0 = op(src1[x+2], src2[x+2]);
+            v1 = op(src1[x+3], src2[x+3]);
+            dst[x+2] = v0; dst[x+3] = v1;
+        }
+        
+        for( ; x < sz.width; x++ )
+            dst[x] = op(src1[x], src2[x]);
+    }
+}
+
+    
+template<class Op, class Op32>
+void vBinOp32f(const float* src1, size_t step1, const float* src2, size_t step2,
+               float* dst, size_t step, Size sz)
+{
+    Op32 op32;
+    Op op;
+    
+    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
+        src2 += step2/sizeof(src2[0]),
+        dst += step/sizeof(dst[0]) )
+    {
+        int x = 0;
+        
+    #if CV_SSE2
+        if( USE_SSE2 )
+        {
+            if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
+                for( ; x <= sz.width - 8; x += 8 )
+                {
+                    __m128 r0 = _mm_load_ps(src1 + x);
+                    __m128 r1 = _mm_load_ps(src1 + x + 4);
+                    r0 = op32(r0,_mm_load_ps(src2 + x));
+                    r1 = op32(r1,_mm_load_ps(src2 + x + 4));
+                    _mm_store_ps(dst + x, r0);
+                    _mm_store_ps(dst + x + 4, r1);
+                }
+            else
+                for( ; x <= sz.width - 8; x += 8 )
+                {
+                    __m128 r0 = _mm_loadu_ps(src1 + x);
+                    __m128 r1 = _mm_loadu_ps(src1 + x + 4);
+                    r0 = op32(r0,_mm_loadu_ps(src2 + x));
+                    r1 = op32(r1,_mm_loadu_ps(src2 + x + 4));
+                    _mm_storeu_ps(dst + x, r0);
+                    _mm_storeu_ps(dst + x + 4, r1);
+                }
+        }
+    #endif
+        for( ; x <= sz.width - 4; x += 4 )
+        {
+            float v0 = op(src1[x], src2[x]);
+            float v1 = op(src1[x+1], src2[x+1]);
+            dst[x] = v0; dst[x+1] = v1;
+            v0 = op(src1[x+2], src2[x+2]);
+            v1 = op(src1[x+3], src2[x+3]);
+            dst[x+2] = v0; dst[x+3] = v1;
+        }
+        
+        for( ; x < sz.width; x++ )
+            dst[x] = op(src1[x], src2[x]);
+    }
+}
+
+template<class Op, class Op64>
+void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step2,
+               double* dst, size_t step, Size sz)
+{
+    Op64 op64;
+    Op op;
+    
+    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
+        src2 += step2/sizeof(src2[0]),
+        dst += step/sizeof(dst[0]) )
+    {
+        int x = 0;
+        
+    #if CV_SSE2
+        if( USE_SSE2 && (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
+            for( ; x <= sz.width - 4; x += 4 )
+            {
+                __m128d r0 = _mm_load_pd(src1 + x);
+                __m128d r1 = _mm_load_pd(src1 + x + 2);
+                r0 = op64(r0,_mm_load_pd(src2 + x));
+                r1 = op64(r1,_mm_load_pd(src2 + x + 2));
+                _mm_store_pd(dst + x, r0);
+                _mm_store_pd(dst + x + 2, r1);
             }
         else
-            for( ; x <= len - 8; x += 8 )
-            {
-                __m128 r0 = _mm_loadu_ps(src1 + x);
-                __m128 r1 = _mm_loadu_ps(src1 + x + 4);
-                r0 = op(r0,_mm_loadu_ps(src2 + x));
-                r1 = op(r1,_mm_loadu_ps(src2 + x + 4));
-                _mm_storeu_ps(dst + x, r0);
-                _mm_storeu_ps(dst + x + 4, r1);
-            }
-        return x;
+    #endif
+        for( ; x <= sz.width - 4; x += 4 )
+        {
+            double v0 = op(src1[x], src2[x]);
+            double v1 = op(src1[x+1], src2[x+1]);
+            dst[x] = v0; dst[x+1] = v1;
+            v0 = op(src1[x+2], src2[x+2]);
+            v1 = op(src1[x+3], src2[x+3]);
+            dst[x+2] = v0; dst[x+3] = v1;
+        }
+        
+        for( ; x < sz.width; x++ )
+            dst[x] = op(src1[x], src2[x]);
     }
-    Op32f op;
-};
-
+}
+    
+#if CV_SSE2
+    
 struct _VAdd8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epu8(a,b); }};
 struct _VSub8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epu8(a,b); }};
 struct _VMin8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_min_epu8(a,b); }};
 struct _VMax8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_max_epu8(a,b); }};
-struct _VCmpGT8u { __m128i operator()(const __m128i& a, const __m128i& b) const
-{
-    __m128i delta = _mm_set1_epi32(0x80808080);
-    return _mm_cmpgt_epi8(_mm_xor_si128(a,delta),_mm_xor_si128(b,delta));
-}};
-struct _VCmpEQ8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_cmpeq_epi8(a,b); }};
 struct _VAbsDiff8u
 {
     __m128i operator()(const __m128i& a, const __m128i& b) const
     { return _mm_add_epi8(_mm_subs_epu8(a,b),_mm_subs_epu8(b,a)); }
 };
+
+struct _VAdd8s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epi8(a,b); }};
+struct _VSub8s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epi8(a,b); }};
+struct _VMin8s
+{
+    __m128i operator()(const __m128i& a, const __m128i& b) const
+    {
+        __m128i m = _mm_cmpgt_epi8(a, b);
+        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
+    }
+};
+struct _VMax8s
+{
+    __m128i operator()(const __m128i& a, const __m128i& b) const
+    {
+        __m128i m = _mm_cmpgt_epi8(b, a);
+        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
+    }
+};
+struct _VAbsDiff8s
+{
+    __m128i operator()(const __m128i& a, const __m128i& b) const
+    {
+        __m128i d = _mm_subs_epi8(a, b);
+        __m128i m = _mm_cmpgt_epi8(b, a);
+        return _mm_subs_epi8(_mm_xor_si128(d, m), m);
+    }
+};
+
 struct _VAdd16u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epu16(a,b); }};
 struct _VSub16u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epu16(a,b); }};
 struct _VMin16u
@@ -171,6 +370,7 @@ struct _VAbsDiff16u
     __m128i operator()(const __m128i& a, const __m128i& b) const
     { return _mm_add_epi16(_mm_subs_epu16(a,b),_mm_subs_epu16(b,a)); }
 };
+
 struct _VAdd16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epi16(a,b); }};
 struct _VSub16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epi16(a,b); }};
 struct _VMin16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_min_epi16(a,b); }};
@@ -183,6 +383,35 @@ struct _VAbsDiff16s
         return _mm_subs_epi16(M, m);
     }
 };
+
+struct _VAdd32s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_add_epi32(a,b); }};
+struct _VSub32s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_sub_epi32(a,b); }};
+struct _VMin32s
+{
+    __m128i operator()(const __m128i& a, const __m128i& b) const
+    {
+        __m128i m = _mm_cmpgt_epi32(a, b);
+        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
+    }
+};
+struct _VMax32s
+{
+    __m128i operator()(const __m128i& a, const __m128i& b) const
+    {
+        __m128i m = _mm_cmpgt_epi32(b, a);
+        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
+    }
+};
+struct _VAbsDiff32s
+{
+    __m128i operator()(const __m128i& a, const __m128i& b) const
+    {
+        __m128i d = _mm_sub_epi32(a, b);
+        __m128i m = _mm_cmpgt_epi32(b, a);
+        return _mm_sub_epi32(_mm_xor_si128(d, m), m);
+    }
+};    
+
 struct _VAdd32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_add_ps(a,b); }};
 struct _VSub32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_sub_ps(a,b); }};
 struct _VMin32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_min_ps(a,b); }};
@@ -196,336 +425,61 @@ struct _VAbsDiff32f
     }
 };
 
+struct _VAdd64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_add_pd(a,b); }};
+struct _VSub64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_sub_pd(a,b); }};
+struct _VMin64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_min_pd(a,b); }};
+struct _VMax64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_max_pd(a,b); }};
+    
+static int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
+struct _VAbsDiff64f
+{
+    __m128d operator()(const __m128d& a, const __m128d& b) const
+    {
+        return _mm_and_pd(_mm_sub_pd(a,b), *(const __m128d*)v64f_absmask);
+    }
+};    
+    
 struct _VAnd8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_and_si128(a,b); }};
 struct _VOr8u  { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_or_si128(a,b); }};
 struct _VXor8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_xor_si128(a,b); }};
-
-typedef VBinOp8<_VAdd8u> VAdd8u;
-typedef VBinOp8<_VSub8u> VSub8u;
-typedef VBinOp8<_VMin8u> VMin8u;
-typedef VBinOp8<_VMax8u> VMax8u;
-typedef VBinOp8<_VAbsDiff8u> VAbsDiff8u;
-typedef VBinOp8<_VCmpEQ8u> VCmpEQ8u;
-typedef VBinOp8<_VCmpGT8u> VCmpGT8u;
-
-typedef VBinOp16<ushort, _VAdd16u> VAdd16u;
-typedef VBinOp16<ushort, _VSub16u> VSub16u;
-typedef VBinOp16<ushort, _VMin16u> VMin16u;
-typedef VBinOp16<ushort, _VMax16u> VMax16u;
-typedef VBinOp16<ushort, _VAbsDiff16u> VAbsDiff16u;
-
-typedef VBinOp16<short, _VAdd16s> VAdd16s;
-typedef VBinOp16<short, _VSub16s> VSub16s;
-typedef VBinOp16<short, _VMin16s> VMin16s;
-typedef VBinOp16<short, _VMax16s> VMax16s;
-typedef VBinOp16<short, _VAbsDiff16s> VAbsDiff16s;
-
-typedef VBinOp32f<_VAdd32f> VAdd32f;
-typedef VBinOp32f<_VSub32f> VSub32f;
-typedef VBinOp32f<_VMin32f> VMin32f;
-typedef VBinOp32f<_VMax32f> VMax32f;
-typedef VBinOp32f<_VAbsDiff32f> VAbsDiff32f;
-
-typedef VBinOp8<_VAnd8u> VAnd8u;
-typedef VBinOp8<_VOr8u> VOr8u;
-typedef VBinOp8<_VXor8u> VXor8u;
-
-#else
-
-enum { ARITHM_SIMD = CV_CPU_NONE };
-
-typedef NoVec VAdd8u;
-typedef NoVec VSub8u;
-typedef NoVec VMin8u;
-typedef NoVec VMax8u;
-typedef NoVec VAbsDiff8u;
-typedef NoVec VCmpEQ8u;
-typedef NoVec VCmpGT8u;
-
-typedef NoVec VAdd16u;
-typedef NoVec VSub16u;
-typedef NoVec VMin16u;
-typedef NoVec VMax16u;
-typedef NoVec VAbsDiff16u;
-
-typedef NoVec VAdd16s;
-typedef NoVec VSub16s;
-typedef NoVec VMin16s;
-typedef NoVec VMax16s;
-typedef NoVec VAbsDiff16s;
-
-typedef NoVec VAdd32f;
-typedef NoVec VSub32f;
-typedef NoVec VMin32f;
-typedef NoVec VMax32f;
-typedef NoVec VAbsDiff32f;
-
-typedef NoVec VAnd8u;
-typedef NoVec VOr8u;
-typedef NoVec VXor8u;
-
+struct _VNot8u { __m128i operator()(const __m128i& a, const __m128i&) const { return _mm_andnot_si128(_mm_setzero_si128(),a); }};
+    
 #endif
 
-
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-struct IPPArithmInitializer
+#if CV_SSE2
+#define IF_SIMD(op) op
+#else
+#define IF_SIMD(op) NOP
+#endif
+    
+template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
+{ return CV_FAST_CAST_8U(a + b); }
+template<> inline uchar OpSub<uchar>::operator ()(uchar a, uchar b) const
+{ return CV_FAST_CAST_8U(a - b); }
+    
+template<typename T> struct OpAbsDiff
 {
-    IPPArithmInitializer(void)
-    {
-      IppStatus status = ippStaticInit();
-    }
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()(T a, T b) const { return (T)std::abs(a - b); }
 };
 
-IPPArithmInitializer ippArithmInitializer;
+template<> inline short OpAbsDiff<short>::operator ()(short a, short b) const
+{ return saturate_cast<short>(std::abs(a - b)); }
 
-struct ippAdd8u
+template<> inline schar OpAbsDiff<schar>::operator ()(schar a, schar b) const
+{ return saturate_cast<schar>(std::abs(a - b)); }
+    
+template<typename T, typename WT=T> struct OpAbsDiffS
 {
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsAdd_8u_Sfs(src1,src2,dst,len,0);
-        return len;
-    }
+    typedef T type1;
+    typedef WT type2;
+    typedef T rtype;
+    T operator()(T a, WT b) const { return saturate_cast<T>(std::abs(a - b)); }
 };
 
-struct ippAdd16u
-{
-    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
-    {
-        ippsAdd_16u_Sfs(src1,src2,dst,len,0);
-        return len;
-    }
-};
-
-struct ippAdd16s
-{
-    int operator()(const Ipp16s* src1, const Ipp16s* src2, Ipp16s* dst, int len) const
-    {
-        ippsAdd_16s_Sfs(src1,src2,dst,len,0);
-        return len;
-    }
-};
-
-struct ippAdd32s
-{
-    int operator()(const Ipp32s* src1, const Ipp32s* src2, Ipp32s* dst, int len) const
-    {
-        ippsAdd_32s_Sfs(src1,src2,dst,len,0);
-        return len;
-    }
-};
-
-struct ippAdd32f
-{
-    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
-    {
-        ippsAdd_32f(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippAdd64f
-{
-    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
-    {
-        ippsAdd_64f(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippSub8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsSub_8u_Sfs(src2,src1,dst,len,0);
-        return len;
-    }
-};
-
-struct ippSub16u
-{
-    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
-    {
-        ippsSub_16u_Sfs(src2,src1,dst,len,0);
-        return len;
-    }
-};
-
-struct ippSub16s
-{
-    int operator()(const Ipp16s* src1, const Ipp16s* src2, Ipp16s* dst, int len) const
-    {
-        ippsSub_16s_Sfs(src2,src1,dst,len,0);
-        return len;
-    }
-};
-
-struct ippSub32s
-{
-    int operator()(const Ipp32s* src1, const Ipp32s* src2, Ipp32s* dst, int len) const
-    {
-        ippsSub_32s_Sfs(src2,src1,dst,len,0);
-        return len;
-    }
-};
-
-struct ippSub32f
-{
-    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
-    {
-        ippsSub_32f(src2,src1,dst,len);
-        return len;
-    }
-};
-
-struct ippSub64f
-{
-    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
-    {
-        ippsSub_64f(src2,src1,dst,len);
-        return len;
-    }
-};
-
-struct ippMax8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsMaxEvery_8u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMax16u
-{
-    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
-    {
-        ippsMaxEvery_16u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMax32f
-{
-    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
-    {
-        ippsMaxEvery_32f(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMax64f
-{
-    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
-    {
-        ippsMaxEvery_64f(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMin8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsMinEvery_8u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMin16u
-{
-    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
-    {
-        ippsMinEvery_16u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMin32f
-{
-    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
-    {
-        ippsMinEvery_32f(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippMin64f
-{
-    int operator()(const Ipp64f* src1, const Ipp64f* src2, Ipp64f* dst, int len) const
-    {
-        ippsMinEvery_64f(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippAbsDiff8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        int step = len * sizeof(Ipp8u);
-        IppiSize roi = { len, 1 };
-        ippiAbsDiff_8u_C1R(src1,step,src2,step,dst,step,roi);
-        return len;
-    }
-};
-
-struct ippAbsDiff16u
-{
-    int operator()(const Ipp16u* src1, const Ipp16u* src2, Ipp16u* dst, int len) const
-    {
-        int step = len * sizeof(Ipp16u);
-        IppiSize roi = { len, 1 };
-        ippiAbsDiff_16u_C1R(src1,step,src2,step,dst,step,roi);
-        return len;
-    }
-};
-
-struct ippAbsDiff32f
-{
-    int operator()(const Ipp32f* src1, const Ipp32f* src2, Ipp32f* dst, int len) const
-    {
-        int step = len * sizeof(Ipp32f);
-        IppiSize roi = { len, 1 };
-        ippiAbsDiff_32f_C1R(src1,step,src2,step,dst,step,roi);
-        return len;
-    }
-};
-
-struct ippAnd8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsAnd_8u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippOr8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsOr_8u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-struct ippXor8u
-{
-    int operator()(const Ipp8u* src1, const Ipp8u* src2, Ipp8u* dst, int len) const
-    {
-        ippsXor_8u(src1,src2,dst,len);
-        return len;
-    }
-};
-
-#endif // defined(HAVE_IPP)
-
-
-/****************************************************************************************\
-*                                   logical operations                                   *
-\****************************************************************************************/
-
-template<typename T> struct AndOp
+template<typename T> struct OpAnd
 {
     typedef T type1;
     typedef T type2;
@@ -533,7 +487,7 @@ template<typename T> struct AndOp
     T operator()( T a, T b ) const { return a & b; }
 };
 
-template<typename T> struct OrOp
+template<typename T> struct OpOr
 {
     typedef T type1;
     typedef T type2;
@@ -541,7 +495,7 @@ template<typename T> struct OrOp
     T operator()( T a, T b ) const { return a | b; }
 };
 
-template<typename T> struct XorOp
+template<typename T> struct OpXor
 {
     typedef T type1;
     typedef T type2;
@@ -549,509 +503,890 @@ template<typename T> struct XorOp
     T operator()( T a, T b ) const { return a ^ b; }
 };
 
-template<class OPB, class OPI, class OPV> static void
-bitwiseOp_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat )
+template<typename T> struct OpNot
 {
-    OPB opb; OPI opi; OPV opv;
-    const uchar* src1 = srcmat1.data;
-    const uchar* src2 = srcmat2.data;
-    uchar* dst = dstmat.data;
-    size_t step1 = srcmat1.step, step2 = srcmat2.step, step = dstmat.step;
-    Size size = getContinuousSize( srcmat1, srcmat2, dstmat, (int)srcmat1.elemSize() );
-    bool useSIMD = checkHardwareSupport(ARITHM_SIMD);
-
-    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
-    {
-        int i = useSIMD ? opv(src1, src2, dst, size.width) : 0;
-
-        if( (((size_t)src1 | (size_t)src2 | (size_t)dst) & 3) == 0 )
-        {
-            for( ; i <= size.width - 16; i += 16 )
-            {
-                int t0 = opi(((const int*)(src1+i))[0], ((const int*)(src2+i))[0]);
-                int t1 = opi(((const int*)(src1+i))[1], ((const int*)(src2+i))[1]);
-
-                ((int*)(dst+i))[0] = t0;
-                ((int*)(dst+i))[1] = t1;
-
-                t0 = opi(((const int*)(src1+i))[2], ((const int*)(src2+i))[2]);
-                t1 = opi(((const int*)(src1+i))[3], ((const int*)(src2+i))[3]);
-
-                ((int*)(dst+i))[2] = t0;
-                ((int*)(dst+i))[3] = t1;
-            }
-
-            for( ; i <= size.width - 4; i += 4 )
-            {
-                int t = opi(*(const int*)(src1+i), *(const int*)(src2+i));
-                *(int*)(dst+i) = t;
-            }
-        }
-
-        for( ; i < size.width; i++ )
-            dst[i] = opb(src1[i], src2[i]);
-    }
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T ) const { return ~a; }
+};
+    
+static inline void fixSteps(Size sz, size_t elemSize, size_t& step1, size_t& step2, size_t& step)
+{
+    if( sz.height == 1 )
+        step1 = step2 = step = sz.width*elemSize;
+}
+    
+static void add8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz, 0),
+           (vBinOp8<uchar, OpAdd<uchar>, IF_SIMD(_VAdd8u)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
-
-template<class OPB, class OPI, class OPV> static void
-bitwiseSOp_( const Mat& srcmat, Mat& dstmat, const Scalar& _scalar )
+static void add8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, Size sz, void* )
 {
-    OPB opb; OPI opi; OPV opv;
-    const uchar* src0 = srcmat.data;
-    uchar* dst0 = dstmat.data;
-    size_t step1 = srcmat.step, step = dstmat.step;
-    Size size = getContinuousSize( srcmat, dstmat, (int)srcmat.elemSize() );
-    const int delta = 96;
-    uchar scalar[delta];
-    scalarToRawData(_scalar, scalar, srcmat.type(), (int)(delta/srcmat.elemSize1()) );
-    bool useSIMD = checkHardwareSupport(ARITHM_SIMD);
+    vBinOp8<schar, OpAdd<schar>, IF_SIMD(_VAdd8s)>(src1, step1, src2, step2, dst, step, sz);
+}
 
-    for( ; size.height--; src0 += step1, dst0 += step )
+static void add16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz, 0),
+            (vBinOp16<ushort, OpAdd<ushort>, IF_SIMD(_VAdd16u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void add16s( const short* src1, size_t step1,
+                    const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz, 0),
+           (vBinOp16<short, OpAdd<short>, IF_SIMD(_VAdd16s)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void add32s( const int* src1, size_t step1,
+                    const int* src2, size_t step2,
+                    int* dst, size_t step, Size sz, void* )
+{
+    vBinOp32s<OpAdd<int>, IF_SIMD(_VAdd32s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void add32f( const float* src1, size_t step1,
+                    const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAdd_32f_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz, 0),
+           (vBinOp32f<OpAdd<float>, IF_SIMD(_VAdd32f)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void add64f( const double* src1, size_t step1,
+                    const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz, void* )
+{
+    vBinOp64f<OpAdd<double>, IF_SIMD(_VAdd64f)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void sub8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (IppiSize&)sz, 0),
+           (vBinOp8<uchar, OpSub<uchar>, IF_SIMD(_VSub8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void sub8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, Size sz, void* )
+{
+    vBinOp8<schar, OpSub<schar>, IF_SIMD(_VSub8s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void sub16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (IppiSize&)sz, 0),
+           (vBinOp16<ushort, OpSub<ushort>, IF_SIMD(_VSub16u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void sub16s( const short* src1, size_t step1,
+                    const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (IppiSize&)sz, 0),
+           (vBinOp16<short, OpSub<short>, IF_SIMD(_VSub16s)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void sub32s( const int* src1, size_t step1,
+                    const int* src2, size_t step2,
+                    int* dst, size_t step, Size sz, void* )
+{
+    vBinOp32s<OpSub<int>, IF_SIMD(_VSub32s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void sub32f( const float* src1, size_t step1,
+                   const float* src2, size_t step2,
+                   float* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiSub_32f_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (IppiSize&)sz, 0),
+           (vBinOp32f<OpSub<float>, IF_SIMD(_VSub32f)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void sub64f( const double* src1, size_t step1,
+                    const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz, void* )
+{
+    vBinOp64f<OpSub<double>, IF_SIMD(_VSub64f)>(src1, step1, src2, step2, dst, step, sz);
+}    
+
+template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
+template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
+    
+static void max8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMaxEvery_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpMax<uchar>, IF_SIMD(_VMax8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void max8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, Size sz, void* )
+{
+    vBinOp8<schar, OpMax<schar>, IF_SIMD(_VMax8s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void max16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMaxEvery_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp16<ushort, OpMax<ushort>, IF_SIMD(_VMax16u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void max16s( const short* src1, size_t step1,
+                    const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMaxEvery_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp16<short, OpMax<short>, IF_SIMD(_VMax16s)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void max32s( const int* src1, size_t step1,
+                    const int* src2, size_t step2,
+                    int* dst, size_t step, Size sz, void* )
+{
+    vBinOp32s<OpMax<int>, IF_SIMD(_VMax32s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void max32f( const float* src1, size_t step1,
+                    const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMaxEvery_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp32f<OpMax<float>, IF_SIMD(_VMax32f)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void max64f( const double* src1, size_t step1,
+                    const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz, void* )
+{
+    vBinOp64f<OpMax<double>, IF_SIMD(_VMax64f)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void min8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMinEvery_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpMin<uchar>, IF_SIMD(_VMin8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void min8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, Size sz, void* )
+{
+    vBinOp8<schar, OpMin<schar>, IF_SIMD(_VMin8s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void min16u( const ushort* src1, size_t step1,
+                    const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMinEvery_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp16<ushort, OpMin<ushort>, IF_SIMD(_VMin16u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void min16s( const short* src1, size_t step1,
+                    const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMinEvery_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp16<short, OpMin<short>, IF_SIMD(_VMin16s)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void min32s( const int* src1, size_t step1,
+                    const int* src2, size_t step2,
+                    int* dst, size_t step, Size sz, void* )
+{
+    vBinOp32s<OpMin<int>, IF_SIMD(_VMin32s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void min32f( const float* src1, size_t step1,
+                    const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiMinEvery_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp32f<OpMin<float>, IF_SIMD(_VMin32f)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void min64f( const double* src1, size_t step1,
+                    const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz, void* )
+{
+    vBinOp64f<OpMin<double>, IF_SIMD(_VMin64f)>(src1, step1, src2, step2, dst, step, sz);
+}    
+
+static void absdiff8u( const uchar* src1, size_t step1,
+                       const uchar* src2, size_t step2,
+                       uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpAbsDiff<uchar>, IF_SIMD(_VAbsDiff8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void absdiff8s( const schar* src1, size_t step1,
+                       const schar* src2, size_t step2,
+                       schar* dst, size_t step, Size sz, void* )
+{
+    vBinOp8<schar, OpAbsDiff<schar>, IF_SIMD(_VAbsDiff8s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void absdiff16u( const ushort* src1, size_t step1,
+                        const ushort* src2, size_t step2,
+                        ushort* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp16<ushort, OpAbsDiff<ushort>, IF_SIMD(_VAbsDiff16u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void absdiff16s( const short* src1, size_t step1,
+                        const short* src2, size_t step2,
+                        short* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAbsDiff_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp16<short, OpAbsDiff<short>, IF_SIMD(_VAbsDiff16s)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void absdiff32s( const int* src1, size_t step1,
+                        const int* src2, size_t step2,
+                        int* dst, size_t step, Size sz, void* )
+{
+    vBinOp32s<OpAbsDiff<int>, IF_SIMD(_VAbsDiff32s)>(src1, step1, src2, step2, dst, step, sz);
+}
+
+static void absdiff32f( const float* src1, size_t step1,
+                        const float* src2, size_t step2,
+                        float* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp32f<OpAbsDiff<float>, IF_SIMD(_VAbsDiff32f)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void absdiff64f( const double* src1, size_t step1,
+                        const double* src2, size_t step2,
+                        double* dst, size_t step, Size sz, void* )
+{
+    vBinOp64f<OpAbsDiff<double>, IF_SIMD(_VAbsDiff64f)>(src1, step1, src2, step2, dst, step, sz);
+}    
+    
+
+static void and8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpAnd<uchar>, IF_SIMD(_VAnd8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void or8u( const uchar* src1, size_t step1,
+                  const uchar* src2, size_t step2,
+                  uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpOr<uchar>, IF_SIMD(_VOr8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+
+static void xor8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpXor<uchar>, IF_SIMD(_VXor8u)>(src1, step1, src2, step2, dst, step, sz)));
+}    
+
+static void not8u( const uchar* src1, size_t step1,
+                   const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* )
+{
+    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
+           ippiNot_8u_C1R(src1, (int)step1, dst, (IppiSize&)sz),
+           (vBinOp8<uchar, OpNot<uchar>, IF_SIMD(_VNot8u)>(src1, step1, src2, step2, dst, step, sz)));
+}
+    
+/****************************************************************************************\
+*                                   logical operations                                   *
+\****************************************************************************************/
+    
+static inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
+{
+    if( sc.dims > 2 || (sc.cols != 1 && sc.rows != 1) || !sc.isContinuous() )
+        return false;
+    int cn = CV_MAT_CN(atype);
+    if( akind == InputArray::MATX && sckind != InputArray::MATX )
+        return false;
+    return sc.size() == Size(1, 1) || sc.size() == Size(1, cn) || sc.size() == Size(cn, 1) ||
+        (sc.size() == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+}
+    
+static void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize )
+{
+    int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
+    size_t esz = CV_ELEM_SIZE(buftype);
+    getConvertFunc(sc.depth(), buftype)(sc.data, 0, 0, 0, scbuf, 0, Size(std::min(cn, scn), 1), 0);
+    // unroll the scalar
+    if( scn < cn )
     {
-        const uchar* src = (const uchar*)src0;
-        uchar* dst = dst0;
-        int i, len = size.width;
-
-        if( (((size_t)src|(size_t)dst) & 3) == 0 )
+        CV_Assert( scn == 1 );
+        size_t esz1 = CV_ELEM_SIZE1(buftype);
+        for( size_t i = esz1; i < esz; i++ )
+            scbuf[i] = scbuf[i - esz1];
+    }
+    for( size_t i = esz; i < blocksize*esz; i++ )
+        scbuf[i] = scbuf[i - esz];
+    
+}
+    
+void binary_op(const InputArray& _src1, const InputArray& _src2, OutputArray& _dst,
+               const InputArray& _mask, const BinaryFunc* tab, bool bitwise)
+{
+    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    bool haveMask = !_mask.empty(), haveScalar = false;
+    BinaryFunc func;
+    int c;
+    
+    if( src1.dims <= 2 && src2.dims <= 2 && kind1 == kind2 &&
+        src1.size() == src2.size() && src1.type() == src2.type() && !haveMask )
+    {
+        _dst.create(src1.size(), src1.type());
+        Mat dst = _dst.getMat();
+        if( bitwise )
         {
-            while( (len -= delta) >= 0 )
-            {
-                i = useSIMD ? opv(src, scalar, dst, delta) : 0;
-                for( ; i < delta; i += 16 )
-                {
-                    int t0 = opi(((const int*)(src+i))[0], ((const int*)(scalar+i))[0]);
-                    int t1 = opi(((const int*)(src+i))[1], ((const int*)(scalar+i))[1]);
-                    ((int*)(dst+i))[0] = t0;
-                    ((int*)(dst+i))[1] = t1;
-
-                    t0 = opi(((const int*)(src+i))[2], ((const int*)(scalar+i))[2]);
-                    t1 = opi(((const int*)(src+i))[3], ((const int*)(scalar+i))[3]);
-                    ((int*)(dst+i))[2] = t0;
-                    ((int*)(dst+i))[3] = t1;
-                }
-                src += delta;
-                dst += delta;
-            }
+            func = *tab;
+            c = (int)src1.elemSize();
         }
         else
         {
-            while( (len -= delta) >= 0 )
-            {
-                for( i = 0; i < delta; i += 4 )
-                {
-                    uchar t0 = opb(src[i], scalar[i]);
-                    uchar t1 = opb(src[i+1], scalar[i+1]);
-                    dst[i] = t0; dst[i+1] = t1;
-
-                    t0 = opb(src[i+2], scalar[i+2]);
-                    t1 = opb(src[i+3], scalar[i+3]);
-                    dst[i+2] = t0; dst[i+3] = t1;
-                }
-                src += delta;
-                dst += delta;
-            }
+            func = tab[src1.depth()];
+            c = src1.channels();
         }
-
-        for( len += delta, i = 0; i < len; i++ )
-            dst[i] = opb(src[i],scalar[i]);
-    }
-}
-
-
-static void
-binaryOp( const Mat& src1, const Mat& src2, Mat& dst, BinaryFunc func, int dsttype=-1 )
-{
-    if( dsttype == -1 )
-        dsttype = src1.type();
-    CV_Assert( src1.type() == src2.type() && func != 0 );
-
-    if( src1.dims > 2 || src2.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, dsttype);
-        const Mat* arrays[] = { &src1, &src2, &dst, 0 };
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func(it.planes[0], it.planes[1], it.planes[2]);
+            
+        Size sz = getContinuousSize(src1, src2, dst, c);
+        func(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, 0);
         return;
     }
-
-    CV_Assert( src1.size() == src2.size() );
-    dst.create( src1.size(), dsttype );
-    func( src1, src2, dst );
-}
-
-
-static void
-binaryMaskOp( const Mat& src1, const Mat& src2, Mat& dst,
-              const Mat& mask, BinaryFunc func )
-{
-    CV_Assert( src1.type() == src2.type() && func != 0 );
-
-    if( src1.dims > 2 || src2.dims > 2 )
+    
+    if( (kind1 == InputArray::MATX) + (kind2 == InputArray::MATX) == 1 ||
+        src1.size != src2.size || src1.type() != src2.type() )
     {
-        dst.create(src1.dims, src1.size, src1.type());
+        if( checkScalar(src1, src2.type(), kind1, kind2) )
+            // src1 is a scalar; swap it with src2
+            swap(src1, src2);
+        else if( !checkScalar(src2, src1.type(), kind2, kind1) )
+            CV_Error( CV_StsUnmatchedSizes,
+                      "The operation is neither 'array op array' (where arrays have the same size and type), "
+                      "nor 'array op scalar', nor 'scalar op array'" );
+        haveScalar = true;
+    }
+    
+    size_t esz = src1.elemSize();
+    size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    int cn = src1.channels();
+    BinaryFunc copymask = 0;
+    Mat mask;
+    
+    if( haveMask )
+    {
+        mask = _mask.getMat();
+        CV_Assert( (mask.type() == CV_8UC1 || mask.type() == CV_8SC1) );
+        CV_Assert( mask.size == src1.size );
+        copymask = getCopyMaskFunc(esz);
+    }
+    
+    AutoBuffer<uchar> _buf;
+    uchar *scbuf = 0, *maskbuf = 0;
+    
+    _dst.create(src1.dims, src1.size, src1.type());
+    Mat dst = _dst.getMat();
+    
+    if( bitwise )
+    {
+        func = *tab;
+        c = (int)esz;
+    }
+    else
+    {
+        func = tab[src1.depth()];
+        c = cn;
+    }
+    
+    if( !haveScalar )
+    {
         const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        Mat planes[4];
-        NAryMatIterator it(arrays, planes);
-
-        if( !mask.data )
-            for( int i = 0; i < it.nplanes; i++, ++it )
-                func(it.planes[0], it.planes[1], it.planes[2]);
-        else
-            for( int i = 0; i < it.nplanes; i++, ++it )
-                binaryMaskOp(it.planes[0], it.planes[1],
-                             it.planes[2], it.planes[3],
-                             func);
-        return;
-    }
-
-    CV_Assert( src1.size() == src2.size() );
-    dst.create( src1.size(), src1.type() );
-
-    if( !mask.data )
-        func(src1, src2, dst);
-    else
-    {
-        AutoBuffer<uchar> buf;
-        size_t esz = dst.elemSize(), buf_step = dst.cols*esz;
-        CopyMaskFunc copym_func = getCopyMaskFunc((int)esz);
-        int y, dy;
-
-        CV_Assert(mask.type() == CV_8UC1 && mask.size() == dst.size());
-        dy = std::min(std::max((int)(CV_MAX_LOCAL_SIZE/buf_step), 1), dst.rows);
-        buf.allocate( buf_step*dy );
-
-        for( y = 0; y < dst.rows; y += dy )
+        uchar* ptrs[4];
+        
+        NAryMatIterator it(arrays, ptrs);
+        size_t total = it.size, blocksize = total;
+        
+        if( haveMask )
         {
-            dy = std::min(dy, dst.rows - y);
-            Mat dstpart = dst.rowRange(y, y + dy);
-            Mat temp(dy, dst.cols, dst.type(), (uchar*)buf );
-            func( src1.rowRange(y, y + dy), src2.rowRange(y, y + dy), temp );
-            copym_func( temp, dstpart, mask.rowRange(y, y + dy) );
+            blocksize = std::min(blocksize, blocksize0);
+            _buf.allocate(blocksize*esz);
+            maskbuf = _buf;
         }
-    }
-}
-
-
-static void
-binarySMaskOp( const Mat& src1, const Scalar& s, Mat& dst,
-               const Mat& mask, BinarySFuncCn func )
-{
-    CV_Assert( func != 0 );
-
-    if( src1.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        if( !mask.data )
-            for( int i = 0; i < it.nplanes; i++, ++it )
-                func(it.planes[0], it.planes[1], s);
-        else
-            for( int i = 0; i < it.nplanes; i++, ++it )
-                binarySMaskOp(it.planes[0], s, it.planes[1],
-                              it.planes[2], func);
-        return;
-    }
-
-    dst.create( src1.size(), src1.type() );
-
-    if( !mask.data )
-        func(src1, dst, s);
-    else
-    {
-        AutoBuffer<uchar> buf;
-        size_t esz = dst.elemSize(), buf_step = dst.cols*esz;
-        CopyMaskFunc copym_func = getCopyMaskFunc((int)esz);
-        int y, dy;
-
-        CV_Assert(mask.type() == CV_8UC1 && mask.size() == dst.size());
-        dy = std::min(std::max((int)(CV_MAX_LOCAL_SIZE/buf_step), 1), dst.rows);
-        buf.allocate( buf_step*dy );
-
-        for( y = 0; y < dst.rows; y += dy )
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            dy = std::min(dy, dst.rows - y);
-            Mat dstpart = dst.rowRange(y, y + dy);
-            Mat temp(dy, dst.cols, dst.type(), (uchar*)buf);
-            func( src1.rowRange(y, y + dy), temp, s );
-            copym_func( temp, dstpart, mask.rowRange(y, y + dy) );
-        }
-    }
-}
-
-
-void bitwise_and(const Mat& a, const Mat& b, Mat& c, const Mat& mask)
-{
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    binaryMaskOp(a, b, c, mask, bitwiseOp_<AndOp<uchar>, AndOp<int>, ippAnd8u>);
-#else
-    binaryMaskOp(a, b, c, mask, bitwiseOp_<AndOp<uchar>, AndOp<int>, VAnd8u>);
-#endif
-}
-
-void bitwise_or(const Mat& a, const Mat& b, Mat& c, const Mat& mask)
-{
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    binaryMaskOp(a, b, c, mask, bitwiseOp_<OrOp<uchar>, OrOp<int>, ippOr8u>);
-#else
-    binaryMaskOp(a, b, c, mask, bitwiseOp_<OrOp<uchar>, OrOp<int>, VOr8u>);
-#endif
-}
-
-void bitwise_xor(const Mat& a, const Mat& b, Mat& c, const Mat& mask)
-{
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    binaryMaskOp(a, b, c, mask, bitwiseOp_<XorOp<uchar>, XorOp<int>, ippXor8u>);
-#else
-    binaryMaskOp(a, b, c, mask, bitwiseOp_<XorOp<uchar>, XorOp<int>, VXor8u>);
-#endif
-}
-
-void bitwise_and(const Mat& a, const Scalar& s, Mat& c, const Mat& mask)
-{
-    binarySMaskOp(a, s, c, mask,
-        bitwiseSOp_<AndOp<uchar>, AndOp<int>, VAnd8u>);
-}
-
-void bitwise_or(const Mat& a, const Scalar& s, Mat& c, const Mat& mask)
-{
-    binarySMaskOp(a, s, c, mask,
-        bitwiseSOp_<OrOp<uchar>, OrOp<int>, VOr8u>);
-}
-
-void bitwise_xor(const Mat& a, const Scalar& s, Mat& c, const Mat& mask)
-{
-    binarySMaskOp(a, s, c, mask,
-        bitwiseSOp_<XorOp<uchar>, XorOp<int>, VXor8u>);
-}
-
-
-void bitwise_not(const Mat& src, Mat& dst)
-{
-    if( src.dims > 2 )
-    {
-        dst.create(src.dims, src.size, src.type());
-        const Mat* arrays[] = { &src, &dst, 0 };
-        Mat planes[4];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            bitwise_not(it.planes[0], it.planes[1]);
-        return;
-    }
-
-    const uchar* sptr = src.data;
-    dst.create( src.size(), src.type() );
-    uchar* dptr = dst.data;
-    Size size = getContinuousSize( src, dst, (int)src.elemSize() );
-
-    for( ; size.height--; sptr += src.step, dptr += dst.step )
-    {
-        int i = 0;
-        if( (((size_t)sptr | (size_t)dptr) & 3) == 0 )
-        {
-            for( ; i <= size.width - 16; i += 16 )
+            for( size_t j = 0; j < total; j += blocksize )
             {
-                int t0 = ~((const int*)(sptr+i))[0];
-                int t1 = ~((const int*)(sptr+i))[1];
-
-                ((int*)(dptr+i))[0] = t0;
-                ((int*)(dptr+i))[1] = t1;
-
-                t0 = ~((const int*)(sptr+i))[2];
-                t1 = ~((const int*)(sptr+i))[3];
-
-                ((int*)(dptr+i))[2] = t0;
-                ((int*)(dptr+i))[3] = t1;
+                int bsz = (int)std::min(total - j, blocksize);
+                
+                func( ptrs[0], 0, ptrs[1], 0, haveMask ? maskbuf : ptrs[2], 0, Size(bsz*c, 1), 0 );                
+                if( haveMask )
+                {
+                    copymask( maskbuf, 0, ptrs[3], 0, ptrs[2], 0, Size(bsz, 1), &esz );
+                    ptrs[3] += bsz;
+                }
+                
+                bsz *= (int)esz;
+                ptrs[0] += bsz; ptrs[1] += bsz; ptrs[2] += bsz;
             }
-
-            for( ; i <= size.width - 4; i += 4 )
-                *(int*)(dptr+i) = ~*(const int*)(sptr+i);
         }
-
-        for( ; i < size.width; i++ )
+    }
+    else
+    {
+        const Mat* arrays[] = { &src1, &dst, &mask, 0 };
+        uchar* ptrs[3];
+        
+        NAryMatIterator it(arrays, ptrs);
+        size_t total = it.size, blocksize = std::min(total, blocksize0);
+        
+        _buf.allocate(blocksize*(haveMask ? 2 : 1)*esz + 32);
+        scbuf = _buf;
+        maskbuf = alignPtr(scbuf + blocksize*esz, 16);
+        
+        convertAndUnrollScalar( src2, src1.type(), scbuf, blocksize);
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            dptr[i] = (uchar)(~sptr[i]);
+            for( size_t j = 0; j < total; j += blocksize )
+            {
+                int bsz = (int)std::min(total - j, blocksize);
+                
+                func( ptrs[0], 0, scbuf, 0, haveMask ? maskbuf : ptrs[1], 0, Size(bsz*c, 1), 0 );
+                if( haveMask )
+                {
+                    copymask( maskbuf, 0, ptrs[2], 0, ptrs[1], 0, Size(bsz, 1), &esz );
+                    ptrs[2] += bsz;
+                }
+                
+                bsz *= (int)esz;
+                ptrs[0] += bsz; ptrs[1] += bsz;
+            }
         }
     }
 }
+    
+static BinaryFunc maxTab[] =
+{
+    (BinaryFunc)max8u, (BinaryFunc)max8s, (BinaryFunc)max16u, (BinaryFunc)max16s,
+    (BinaryFunc)max32s, (BinaryFunc)max32f, (BinaryFunc)max64f, 0
+};    
 
+static BinaryFunc minTab[] =
+{
+    (BinaryFunc)min8u, (BinaryFunc)min8s, (BinaryFunc)min16u, (BinaryFunc)min16s,
+    (BinaryFunc)min32s, (BinaryFunc)min32f, (BinaryFunc)min64f, 0
+};
+
+}
+    
+void cv::bitwise_and(const InputArray& a, const InputArray& b, OutputArray c, const InputArray& mask)
+{
+    BinaryFunc f = and8u;
+    binary_op(a, b, c, mask, &f, true);
+}
+
+void cv::bitwise_or(const InputArray& a, const InputArray& b, OutputArray c, const InputArray& mask)
+{
+    BinaryFunc f = or8u;
+    binary_op(a, b, c, mask, &f, true);
+}
+
+void cv::bitwise_xor(const InputArray& a, const InputArray& b, OutputArray c, const InputArray& mask)
+{
+    BinaryFunc f = xor8u;
+    binary_op(a, b, c, mask, &f, true);
+}
+
+void cv::bitwise_not(const InputArray& a, OutputArray c, const InputArray& mask)
+{
+    BinaryFunc f = not8u;
+    binary_op(a, a, c, mask, &f, true);
+}
+
+void cv::max( const InputArray& src1, const InputArray& src2, OutputArray dst )
+{
+    binary_op(src1, src2, dst, InputArray(), maxTab, false );
+}
+
+void cv::min( const InputArray& src1, const InputArray& src2, OutputArray dst )
+{
+    binary_op(src1, src2, dst, InputArray(), minTab, false );
+}
+
+void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    OutputArray _dst(dst);
+    binary_op(src1, src2, _dst, InputArray(), maxTab, false );
+}    
+    
+void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
+{
+    OutputArray _dst(dst);
+    binary_op(src1, src2, _dst, InputArray(), minTab, false );
+}
+    
+void cv::max(const Mat& src1, double src2, Mat& dst)
+{
+    OutputArray _dst(dst);
+    binary_op(src1, src2, _dst, InputArray(), maxTab, false );
+}    
+
+void cv::min(const Mat& src1, double src2, Mat& dst)
+{
+    OutputArray _dst(dst);
+    binary_op(src1, src2, _dst, InputArray(), minTab, false );
+}
+    
 /****************************************************************************************\
 *                                      add/subtract                                      *
 \****************************************************************************************/
 
-template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
-{ return CV_FAST_CAST_8U(a + b); }
-template<> inline uchar OpSub<uchar>::operator ()(uchar a, uchar b) const
-{ return CV_FAST_CAST_8U(a - b); }
+namespace cv
+{
 
+void arithm_op(const InputArray& _src1, const InputArray& _src2, OutputArray& _dst,
+               const InputArray& _mask, int dtype, BinaryFunc* tab, bool muldiv=false, void* usrdata=0)
+{
+    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    bool haveMask = !_mask.empty();
+    
+    if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 &&
+        src1.size() == src2.size() && src1.type() == src2.type() &&
+        !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == src1.depth())) ||
+                       (_dst.fixedType() && _dst.type() == _src1.type())) )
+    {
+        _dst.create(src1.size(), src1.type());
+        Mat dst = _dst.getMat();
+        Size sz = getContinuousSize(src1, src2, dst, src1.channels());
+        tab[src1.depth()](src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, usrdata);
+        return;
+    }
+    
+    bool haveScalar = false, swapped12 = false;
+    
+    if( (kind1 == InputArray::MATX) + (kind2 == InputArray::MATX) == 1 ||
+        src1.size != src2.size || src1.channels() != src2.channels() )
+    {
+        if( checkScalar(src1, src2.type(), kind1, kind2) )
+        {
+            // src1 is a scalar; swap it with src2
+            swap(src1, src2);
+            swapped12 = true;
+        }
+        else if( !checkScalar(src2, src1.type(), kind2, kind1) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The operation is neither 'array op array' (where arrays have the same size and the same number of channels), "
+                     "nor 'array op scalar', nor 'scalar op array'" );
+        haveScalar = true;
+    }
+    
+    int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth(), wtype;
+    BinaryFunc cvtsrc1 = 0, cvtsrc2 = 0, cvtdst = 0;
+    
+    if( dtype < 0 )
+    {
+        if( _dst.fixedType() )
+            dtype = _dst.type();
+        else
+        {
+            if( !haveScalar && src1.type() != src2.type() )
+                CV_Error(CV_StsBadArg,
+                     "When the input arrays in add/subtract/multiply/divide functions have different types, "
+                     "the output array type must be explicitly specified");
+            dtype = src1.type();
+        }
+    }
+    dtype = CV_MAT_DEPTH(dtype);
+    
+    if( depth1 == depth2 && dtype == depth1 )
+        wtype = dtype;
+    else if( !muldiv )
+    {
+        wtype = depth1 <= CV_8S && depth2 <= CV_8S ? CV_16S :
+                depth1 <= CV_32S && depth2 <= CV_32S ? CV_32S : std::max(depth1, depth2);
+        wtype = std::max(wtype, dtype);
+    
+        // when the result of addition should be converted to an integer type,
+        // and just one of the input arrays is floating-point, it makes sense to convert that input to integer type before the operation,
+        // instead of converting the other input to floating-point and then converting the operation result back to integers.
+        if( dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F) )
+            wtype = CV_32S;
+    }
+    else
+    {
+        wtype = std::max(depth1, std::max(depth2, CV_32F));
+        wtype = std::max(wtype, dtype);
+    }
+    
+    cvtsrc1 = depth1 == wtype ? 0 : getConvertFunc(depth1, wtype);
+    cvtsrc2 = depth2 == depth1 ? cvtsrc1 : depth2 == wtype ? 0 : getConvertFunc(depth2, wtype);
+    cvtdst = dtype == wtype ? 0 : getConvertFunc(wtype, dtype);
+    
+    dtype = CV_MAKETYPE(dtype, cn);
+    wtype = CV_MAKETYPE(wtype, cn);
+    
+    size_t esz1 = src1.elemSize(), esz2 = src2.elemSize();
+    size_t dsz = CV_ELEM_SIZE(dtype), wsz = CV_ELEM_SIZE(wtype);
+    size_t blocksize0 = (size_t)(BLOCK_SIZE + wsz-1)/wsz;
+    BinaryFunc copymask = 0;
+    Mat mask;
+    
+    if( haveMask )
+    {
+        mask = _mask.getMat();
+        CV_Assert( (mask.type() == CV_8UC1 || mask.type() == CV_8SC1) );
+        CV_Assert( mask.size == src1.size );
+        copymask = getCopyMaskFunc(dsz);
+    }
+    
+    AutoBuffer<uchar> _buf;
+    uchar *buf, *maskbuf = 0, *buf1 = 0, *buf2 = 0, *wbuf = 0;
+    size_t bufesz = (cvtsrc1 ? wsz : 0) + (cvtsrc2 || haveScalar ? wsz : 0) + (cvtdst ? wsz : 0) + (haveMask ? dsz : 0);
+    
+    _dst.create(src1.dims, src1.size, src1.type());
+    Mat dst = _dst.getMat();
+    BinaryFunc func = tab[CV_MAT_DEPTH(wtype)];
+    
+    if( !haveScalar )
+    {
+        const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
+        uchar* ptrs[4];
+        
+        NAryMatIterator it(arrays, ptrs);
+        size_t total = it.size, blocksize = total;
+        
+        if( haveMask || cvtsrc1 || cvtsrc2 || cvtdst )
+            blocksize = std::min(blocksize, blocksize0);
+
+        _buf.allocate(bufesz*blocksize + 64);
+        buf = _buf;
+        if( cvtsrc1 )
+            buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        if( cvtsrc2 )
+            buf2 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        wbuf = maskbuf = buf;
+        if( cvtdst )
+            buf = alignPtr(buf + blocksize*wsz, 16);
+        if( haveMask )
+            maskbuf = buf;
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        {
+            for( size_t j = 0; j < total; j += blocksize )
+            {
+                int bsz = (int)std::min(total - j, blocksize);
+                Size bszn(bsz*cn, 1);
+                const uchar *sptr1 = ptrs[0], *sptr2 = ptrs[1];
+                uchar* dptr = ptrs[2];
+                if( cvtsrc1 )
+                {
+                    cvtsrc1( sptr1, 0, 0, 0, buf1, 0, bszn, 0 );
+                    sptr1 = buf1;
+                }
+                if( ptrs[0] == ptrs[1] )
+                    sptr2 = sptr1;
+                else if( cvtsrc2 )
+                {
+                    cvtsrc2( sptr2, 0, 0, 0, buf2, 0, bszn, 0 );
+                    sptr2 = buf2;
+                }
+                
+                if( !haveMask && !cvtdst )
+                    func( sptr1, 0, sptr2, 0, dptr, 0, bszn, usrdata );
+                else
+                {
+                    func( sptr1, 0, sptr2, 0, wbuf, 0, bszn, usrdata );
+                    if( !haveMask )
+                        cvtdst( wbuf, 0, 0, 0, dptr, 0, bszn, 0 );
+                    else if( !cvtdst )
+                    {
+                        copymask( wbuf, 0, ptrs[3], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        ptrs[3] += bsz;
+                    }
+                    else
+                    {
+                        cvtdst( wbuf, 0, 0, 0, maskbuf, 0, bszn, 0 );
+                        copymask( maskbuf, 0, ptrs[3], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        ptrs[3] += bsz;
+                    }
+                }
+                ptrs[0] += bsz*esz1; ptrs[1] += bsz*esz2; ptrs[2] += bsz*dsz;
+            }
+        }
+    }
+    else
+    {
+        const Mat* arrays[] = { &src1, &dst, &mask, 0 };
+        uchar* ptrs[3];
+        
+        NAryMatIterator it(arrays, ptrs);
+        size_t total = it.size, blocksize = std::min(total, blocksize0);
+        
+        _buf.allocate(bufesz*blocksize + 64);
+        buf = _buf;
+        if( cvtsrc1 )
+            buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        buf2 = buf; buf = alignPtr(buf + blocksize*wsz, 16);
+        wbuf = maskbuf = buf;
+        if( cvtdst )
+            buf = alignPtr(buf + blocksize*wsz, 16);
+        if( haveMask )
+            maskbuf = buf;
+        
+        convertAndUnrollScalar( src2, wtype, buf2, blocksize);
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        {
+            for( size_t j = 0; j < total; j += blocksize )
+            {
+                int bsz = (int)std::min(total - j, blocksize);
+                Size bszn(bsz*cn, 1);
+                const uchar *sptr1 = ptrs[0];
+                const uchar* sptr2 = buf2;
+                uchar* dptr = ptrs[1];
+                
+                if( cvtsrc1 )
+                {
+                    cvtsrc1( sptr1, 0, 0, 0, buf1, 0, bszn, 0 );
+                    sptr1 = buf1;
+                }
+                
+                if( swapped12 )
+                    std::swap(sptr1, sptr2);
+                
+                if( !haveMask && !cvtdst )
+                    func( sptr1, 0, sptr2, 0, dptr, 0, bszn, usrdata );
+                else
+                {
+                    func( sptr1, 0, sptr2, 0, wbuf, 0, bszn, usrdata );
+                    if( !haveMask )
+                        cvtdst( wbuf, 0, 0, 0, dptr, 0, bszn, 0 );
+                    else if( !cvtdst )
+                    {
+                        copymask( wbuf, 0, ptrs[2], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        ptrs[2] += bsz;
+                    }
+                    else
+                    {
+                        cvtdst( wbuf, 0, 0, 0, maskbuf, 0, bszn, 0 );
+                        copymask( maskbuf, 0, ptrs[2], 0, dptr, 0, Size(bsz, 1), &dsz );
+                        ptrs[2] += bsz;
+                    }
+                }
+                ptrs[0] += bsz*esz1; ptrs[1] += bsz*dsz;
+            }
+        }
+    }
+}
+ 
 static BinaryFunc addTab[] =
 {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    binaryOpC1_<OpAdd<uchar>,  ippAdd8u>,
-    0,
-    binaryOpC1_<OpAdd<ushort>, ippAdd16u>,
-    binaryOpC1_<OpAdd<short>,  ippAdd16s>,
-    binaryOpC1_<OpAdd<int>,    ippAdd32s>,
-    binaryOpC1_<OpAdd<float>,  ippAdd32f>,
-    binaryOpC1_<OpAdd<double>, ippAdd64f>,
-    0
-#else
-    binaryOpC1_<OpAdd<uchar>,  VAdd8u>,
-    0,
-    binaryOpC1_<OpAdd<ushort>, VAdd16u>,
-    binaryOpC1_<OpAdd<short>,  VAdd16s>,
-    binaryOpC1_<OpAdd<int>,    NoVec>,
-    binaryOpC1_<OpAdd<float>,  VAdd32f>,
-    binaryOpC1_<OpAdd<double>, NoVec>,
-    0
-#endif
+    (BinaryFunc)add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
+    (BinaryFunc)add32s, (BinaryFunc)add32f, (BinaryFunc)add64f, 0
 };
-
+    
 static BinaryFunc subTab[] =
 {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    binaryOpC1_<OpSub<uchar>,  ippSub8u>,
-    0,
-    binaryOpC1_<OpSub<ushort>, ippSub16u>,
-    binaryOpC1_<OpSub<short>,  ippSub16s>,
-    binaryOpC1_<OpSub<int>,    ippSub32s>,
-    binaryOpC1_<OpSub<float>,  ippSub32f>,
-    binaryOpC1_<OpSub<double>, ippSub64f>,
-    0
-#else
-    binaryOpC1_<OpSub<uchar>,  VSub8u>,
-    0,
-    binaryOpC1_<OpSub<ushort>, VSub16u>,
-    binaryOpC1_<OpSub<short>,  VSub16s>,
-    binaryOpC1_<OpSub<int>,    NoVec>,
-    binaryOpC1_<OpSub<float>,  VSub32f>,
-    binaryOpC1_<OpSub<double>, NoVec>,
-    0
-#endif
+    (BinaryFunc)sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
+    (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
 };
 
-void add( const Mat& src1, const Mat& src2, Mat& dst )
+static BinaryFunc absdiffTab[] =
 {
-    int type = src1.type();
-    BinaryFunc func = addTab[CV_MAT_DEPTH(type)];
-    CV_Assert( type == src2.type() && func != 0 );
+    (BinaryFunc)absdiff8u, (BinaryFunc)absdiff8s, (BinaryFunc)absdiff16u,
+    (BinaryFunc)absdiff16s, (BinaryFunc)absdiff32s, (BinaryFunc)absdiff32f,
+    (BinaryFunc)absdiff64f, 0
+};    
 
-    if( src1.dims > 2 || src2.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &src2, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], it.planes[2] );
-        return;
-    }
-
-    Size size = src1.size();
-    CV_Assert( size == src2.size() );
-    dst.create( size, type );
-    func(src1, src2, dst);
+}
+    
+void cv::add( const InputArray& src1, const InputArray& src2, OutputArray dst,
+          const InputArray& mask, int dtype )
+{
+    arithm_op(src1, src2, dst, mask, dtype, addTab );
 }
 
-void subtract( const Mat& src1, const Mat& src2, Mat& dst )
+void cv::subtract( const InputArray& src1, const InputArray& src2, OutputArray dst,
+               const InputArray& mask, int dtype )
 {
-    int type = src1.type();
-    BinaryFunc func = subTab[CV_MAT_DEPTH(type)];
-    CV_Assert( type == src2.type() && func != 0 );
-
-    if( src1.dims > 2 || src2.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &src2, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], it.planes[2] );
-        return;
-    }
-
-    Size size = src1.size();
-    CV_Assert( size == src2.size() );
-    dst.create( size, type );
-    func(src1, src2, dst);
+    arithm_op(src1, src2, dst, mask, dtype, subTab );
 }
 
-void subtract(const Mat& a, const Scalar& s, Mat& c, const Mat& mask)
+void cv::absdiff( const InputArray& src1, const InputArray& src2, OutputArray dst )
 {
-    add(a, -s, c, mask);
-}
-
-void add(const Mat& src1, const Mat& src2, Mat& dst, const Mat& mask)
-{
-    binaryMaskOp(src1, src2, dst, mask, addTab[src1.depth()] );
-}
-
-void subtract(const Mat& src1, const Mat& src2, Mat& dst, const Mat& mask)
-{
-    binaryMaskOp(src1, src2, dst, mask, subTab[src1.depth()] );
-}
-
-void add(const Mat& src1, const Scalar& s, Mat& dst, const Mat& mask)
-{
-    static BinarySFuncCn addSTab[] =
-    {
-        binarySOpCn_<OpAdd<uchar, int, uchar> >,
-        0,
-        binarySOpCn_<OpAdd<ushort, int, ushort> >,
-        binarySOpCn_<OpAdd<short, int, short> >,
-        binarySOpCn_<OpAdd<int> >,
-        binarySOpCn_<OpAdd<float> >,
-        binarySOpCn_<OpAdd<double> >,
-        0
-    };
-    int depth = src1.depth();
-    binarySMaskOp(src1, s, dst, mask, addSTab[depth]);
-}
-
-void subtract(const Scalar& s, const Mat& src1, Mat& dst, const Mat& mask)
-{
-    static BinarySFuncCn rsubSTab[] =
-    {
-        binarySOpCn_<OpRSub<uchar, int, uchar> >,
-        0,
-        binarySOpCn_<OpRSub<ushort, int, ushort> >,
-        binarySOpCn_<OpRSub<short, int, short> >,
-        binarySOpCn_<OpRSub<int> >,
-        binarySOpCn_<OpRSub<float> >,
-        binarySOpCn_<OpRSub<double> >,
-        0
-    };
-    int depth = src1.depth();
-    binarySMaskOp(src1, s, dst, mask, rsubSTab[depth]);
-}
+    arithm_op(src1, src2, dst, InputArray(), -1, absdiffTab);
+}    
 
 /****************************************************************************************\
 *                                    multiply/divide                                     *
 \****************************************************************************************/
 
-template<typename T, typename WT> static void
-mul_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double _scale )
+namespace cv
 {
-    const T* src1 = (const T*)srcmat1.data;
-    const T* src2 = (const T*)srcmat2.data;
-    T* dst = (T*)dstmat.data;
-    size_t step1 = srcmat1.step/sizeof(src1[0]);
-    size_t step2 = srcmat2.step/sizeof(src2[0]);
-    size_t step = dstmat.step/sizeof(dst[0]);
-    Size size = getContinuousSize( srcmat1, srcmat2, dstmat, dstmat.channels() );
 
-    if( fabs(_scale - 1.) < DBL_EPSILON )
+template<typename T, typename WT> static void
+mul_( const T* src1, size_t step1, const T* src2, size_t step2,
+      T* dst, size_t step, Size size, WT scale )
+{
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+
+    if( scale == (WT)1. )
     {
-        for( ; size.height--; src1+=step1, src2+=step2, dst+=step )
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int i;
             for( i = 0; i <= size.width - 4; i += 4 )
@@ -1075,8 +1410,7 @@ mul_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double _scale )
     }
     else
     {
-        WT scale = (WT)_scale;
-        for( ; size.height--; src1+=step1, src2+=step2, dst+=step )
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int i;
             for( i = 0; i <= size.width - 4; i += 4 )
@@ -1096,56 +1430,15 @@ mul_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double _scale )
     }
 }
 
-typedef void (*MulDivFunc)( const Mat& src1, const Mat& src2,
-                            Mat& dst, double scale );
-
-void multiply(const Mat& src1, const Mat& src2, Mat& dst, double scale)
-{
-    static MulDivFunc tab[] =
-    {
-        mul_<uchar, float>,
-        0,
-        mul_<ushort, float>,
-        mul_<short, float>,
-        mul_<int, double>,
-        mul_<float, float>,
-        mul_<double, double>,
-        0
-    };
-
-    MulDivFunc func = tab[src1.depth()];
-    CV_Assert( src1.type() == src2.type() && func != 0 );
-
-    if( src1.dims > 2 || src2.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &src2, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], it.planes[2], scale );
-        return;
-    }
-
-    CV_Assert( src1.size() == src2.size() );
-    dst.create( src1.size(), src1.type() );
-    func( src1, src2, dst, scale );
-}
-
-
 template<typename T> static void
-div_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double scale )
+div_( const T* src1, size_t step1, const T* src2, size_t step2,
+      T* dst, size_t step, Size size, double scale )
 {
-    const T* src1 = (const T*)srcmat1.data;
-    const T* src2 = (const T*)srcmat2.data;
-    T* dst = (T*)dstmat.data;
-    size_t step1 = srcmat1.step/sizeof(src1[0]);
-    size_t step2 = srcmat2.step/sizeof(src2[0]);
-    size_t step = dstmat.step/sizeof(dst[0]);
-    Size size = getContinuousSize( srcmat1, srcmat2, dstmat, dstmat.channels() );
-
-    for( ; size.height--; src1+=step1, src2+=step2, dst+=step )
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+    
+    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
         int i = 0;
         for( ; i <= size.width - 4; i += 4 )
@@ -1157,12 +1450,12 @@ div_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double scale )
                 double d = scale/(a * b);
                 b *= d;
                 a *= d;
-
+                
                 T z0 = saturate_cast<T>(src2[i+1] * ((double)src1[i] * b));
                 T z1 = saturate_cast<T>(src2[i] * ((double)src1[i+1] * b));
                 T z2 = saturate_cast<T>(src2[i+3] * ((double)src1[i+2] * a));
                 T z3 = saturate_cast<T>(src2[i+2] * ((double)src1[i+3] * a));
-
+                
                 dst[i] = z0; dst[i+1] = z1;
                 dst[i+2] = z2; dst[i+3] = z3;
             }
@@ -1172,56 +1465,25 @@ div_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat, double scale )
                 T z1 = src2[i+1] != 0 ? saturate_cast<T>(src1[i+1]*scale/src2[i+1]) : 0;
                 T z2 = src2[i+2] != 0 ? saturate_cast<T>(src1[i+2]*scale/src2[i+2]) : 0;
                 T z3 = src2[i+3] != 0 ? saturate_cast<T>(src1[i+3]*scale/src2[i+3]) : 0;
-
+                
                 dst[i] = z0; dst[i+1] = z1;
                 dst[i+2] = z2; dst[i+3] = z3;
             }
         }
-
+        
         for( ; i < size.width; i++ )
             dst[i] = src2[i] != 0 ? saturate_cast<T>(src1[i]*scale/src2[i]) : 0;
     }
 }
 
-
-void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
-{
-    static MulDivFunc tab[] =
-    {
-        div_<uchar>, 0, div_<ushort>, div_<short>,
-        div_<int>, div_<float>, div_<double>, 0
-    };
-
-    MulDivFunc func = tab[src1.depth()];
-    CV_Assert( src1.type() == src2.type() && func != 0 );
-
-    if( src1.dims > 2 || src2.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &src2, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], it.planes[2], scale );
-        return;
-    }
-
-    CV_Assert( src1.size() == src2.size() );
-    dst.create( src1.size(), src1.type() );
-    func( src1, src2, dst, scale );
-}
-
 template<typename T> static void
-recip_( double scale, const Mat& srcmat2, Mat& dstmat )
+recip_( const T*, size_t, const T* src2, size_t step2,
+        T* dst, size_t step, Size size, double scale )
 {
-    const T* src2 = (const T*)srcmat2.data;
-    T* dst = (T*)dstmat.data;
-    size_t step2 = srcmat2.step/sizeof(src2[0]);
-    size_t step = dstmat.step/sizeof(dst[0]);
-    Size size = getContinuousSize( srcmat2, dstmat, dstmat.channels() );
-
-    for( ; size.height--; src2+=step2, dst+=step )
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+    
+    for( ; size.height--; src2 += step2, dst += step )
     {
         int i = 0;
         for( ; i <= size.width - 4; i += 4 )
@@ -1233,12 +1495,12 @@ recip_( double scale, const Mat& srcmat2, Mat& dstmat )
                 double d = scale/(a * b);
                 b *= d;
                 a *= d;
-
+                
                 T z0 = saturate_cast<T>(src2[i+1] * b);
                 T z1 = saturate_cast<T>(src2[i] * b);
                 T z2 = saturate_cast<T>(src2[i+3] * a);
                 T z3 = saturate_cast<T>(src2[i+2] * a);
-
+                
                 dst[i] = z0; dst[i+1] = z1;
                 dst[i+2] = z2; dst[i+3] = z3;
             }
@@ -1248,869 +1510,808 @@ recip_( double scale, const Mat& srcmat2, Mat& dstmat )
                 T z1 = src2[i+1] != 0 ? saturate_cast<T>(scale/src2[i+1]) : 0;
                 T z2 = src2[i+2] != 0 ? saturate_cast<T>(scale/src2[i+2]) : 0;
                 T z3 = src2[i+3] != 0 ? saturate_cast<T>(scale/src2[i+3]) : 0;
-
+                
                 dst[i] = z0; dst[i+1] = z1;
                 dst[i+2] = z2; dst[i+3] = z3;
             }
         }
-
+        
         for( ; i < size.width; i++ )
             dst[i] = src2[i] != 0 ? saturate_cast<T>(scale/src2[i]) : 0;
     }
 }
-
-typedef void (*RecipFunc)( double scale, const Mat& src, Mat& dst );
-
-void divide(double scale, const Mat& src, Mat& dst)
+    
+    
+static void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* scale)
 {
-    static RecipFunc tab[] =
-    {
-        recip_<uchar>,
-        0,
-        recip_<ushort>,
-        recip_<short>,
-        recip_<int>,
-        recip_<float>,
-        recip_<double>,
-        0
-    };
-
-    RecipFunc func = tab[src.depth()];
-    CV_Assert( func != 0 );
-
-    if( src.dims > 2 )
-    {
-        dst.create(src.dims, src.size, src.type());
-        const Mat* arrays[] = {&src, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( scale, it.planes[0], it.planes[1] );
-        return;
-    }
-
-    dst.create( src.size(), src.type() );
-    func( scale, src, dst );
+    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
 }
 
+static void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+                   schar* dst, size_t step, Size sz, void* scale)
+{
+    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+}
+
+static void mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, void* scale)
+{
+    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+}
+
+static void mul16s( const short* src1, size_t step1, const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, void* scale)
+{
+    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+}
+
+static void mul32s( const int* src1, size_t step1, const int* src2, size_t step2,
+                    int* dst, size_t step, Size sz, void* scale)
+{
+    mul_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+    
+static void mul32f( const float* src1, size_t step1, const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz, void* scale)
+{
+    mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
+}
+    
+static void mul64f( const double* src1, size_t step1, const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz, void* scale)
+{
+    mul_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+    
+static void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                   uchar* dst, size_t step, Size sz, void* scale)
+{
+    if( src1 )
+        div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+    else
+        recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+                  schar* dst, size_t step, Size sz, void* scale)
+{
+    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void div16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                    ushort* dst, size_t step, Size sz, void* scale)
+{
+    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void div16s( const short* src1, size_t step1, const short* src2, size_t step2,
+                    short* dst, size_t step, Size sz, void* scale)
+{
+    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void div32s( const int* src1, size_t step1, const int* src2, size_t step2,
+                    int* dst, size_t step, Size sz, void* scale)
+{
+    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void div32f( const float* src1, size_t step1, const float* src2, size_t step2,
+                    float* dst, size_t step, Size sz, void* scale)
+{
+    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void div64f( const double* src1, size_t step1, const double* src2, size_t step2,
+                    double* dst, size_t step, Size sz, void* scale)
+{
+    div_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                  uchar* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+                  schar* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                   ushort* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip16s( const short* src1, size_t step1, const short* src2, size_t step2,
+                   short* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip32s( const int* src1, size_t step1, const int* src2, size_t step2,
+                   int* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip32f( const float* src1, size_t step1, const float* src2, size_t step2,
+                   float* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+
+static void recip64f( const double* src1, size_t step1, const double* src2, size_t step2,
+                   double* dst, size_t step, Size sz, void* scale)
+{
+    recip_(src1, step1, src2, step2, dst, step, sz, *(const double*)scale);
+}
+    
+    
+static BinaryFunc mulTab[] =
+{
+    (BinaryFunc)mul8u, (BinaryFunc)mul8s, (BinaryFunc)mul16u,
+    (BinaryFunc)mul16s, (BinaryFunc)mul32s, (BinaryFunc)mul32f,
+    (BinaryFunc)mul64f, 0
+};
+
+static BinaryFunc divTab[] =
+{
+    (BinaryFunc)div8u, (BinaryFunc)div8s, (BinaryFunc)div16u,
+    (BinaryFunc)div16s, (BinaryFunc)div32s, (BinaryFunc)div32f,
+    (BinaryFunc)div64f, 0
+};
+
+static BinaryFunc recipTab[] =
+{
+    (BinaryFunc)recip8u, (BinaryFunc)recip8s, (BinaryFunc)recip16u,
+    (BinaryFunc)recip16s, (BinaryFunc)recip32s, (BinaryFunc)recip32f,
+    (BinaryFunc)recip64f, 0
+};
+
+    
+}
+    
+void cv::multiply(const InputArray& src1, const InputArray& src2,
+                  OutputArray dst, double scale, int dtype)
+{
+    arithm_op(src1, src2, dst, InputArray(), dtype, mulTab, true, &scale);
+}
+
+void cv::divide(const InputArray& src1, const InputArray& src2,
+                OutputArray dst, double scale, int dtype)
+{
+    arithm_op(src1, src2, dst, InputArray(), dtype, divTab, true, &scale);
+}
+
+void cv::divide(double scale, const InputArray& src2,
+                OutputArray dst, int dtype)
+{
+    arithm_op(src2, src2, dst, InputArray(), dtype, recipTab, true, &scale);
+}    
+    
 /****************************************************************************************\
 *                                      addWeighted                                       *
 \****************************************************************************************/
 
-template<typename T, typename WT> static void
-addWeighted_( const Mat& srcmat1, double _alpha, const Mat& srcmat2,
-              double _beta, double _gamma, Mat& dstmat )
+namespace cv
 {
-    const T* src1 = (const T*)srcmat1.data;
-    const T* src2 = (const T*)srcmat2.data;
-    T* dst = (T*)dstmat.data;
-    size_t step1 = srcmat1.step/sizeof(src1[0]);
-    size_t step2 = srcmat2.step/sizeof(src2[0]);
-    size_t step = dstmat.step/sizeof(dst[0]);
-    Size size = getContinuousSize( srcmat1, srcmat2, dstmat, dstmat.channels() );
-    WT alpha = (WT)_alpha, beta = (WT)_beta, gamma = (WT)_gamma;
 
-    for( ; size.height--; src1+=step1, src2+=step2, dst+=step )
+template<typename T, typename WT> static void
+addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
+              T* dst, size_t step, Size size, void* _scalars )
+{
+    const double* scalars = (const double*)_scalars;
+    WT alpha = (WT)scalars[0], beta = (WT)scalars[1], gamma = (WT)scalars[2];
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    step /= sizeof(dst[0]);
+
+    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
-        int i = 0;
-        for( ; i <= size.width - 4; i += 4 )
+        int x = 0;
+        for( ; x <= size.width - 4; x += 4 )
         {
-            T t0 = saturate_cast<T>(src1[i]*alpha + src2[i]*beta + gamma);
-            T t1 = saturate_cast<T>(src1[i+1]*alpha + src2[i+1]*beta + gamma);
-            dst[i] = t0; dst[i+1] = t1;
+            T t0 = saturate_cast<T>(src1[x]*alpha + src2[x]*beta + gamma);
+            T t1 = saturate_cast<T>(src1[x+1]*alpha + src2[x+1]*beta + gamma);
+            dst[x] = t0; dst[x+1] = t1;
 
-            t0 = saturate_cast<T>(src1[i+2]*alpha + src2[i+2]*beta + gamma);
-            t1 = saturate_cast<T>(src1[i+3]*alpha + src2[i+3]*beta + gamma);
-            dst[i+2] = t0; dst[i+3] = t1;
+            t0 = saturate_cast<T>(src1[x+2]*alpha + src2[x+2]*beta + gamma);
+            t1 = saturate_cast<T>(src1[x+3]*alpha + src2[x+3]*beta + gamma);
+            dst[x+2] = t0; dst[x+3] = t1;
         }
 
-        for( ; i < size.width; i++ )
-            dst[i] = saturate_cast<T>(src1[i]*alpha + src2[i]*beta + gamma);
+        for( ; x < size.width; x++ )
+            dst[x] = saturate_cast<T>(src1[x]*alpha + src2[x]*beta + gamma);
     }
 }
 
 
 static void
-addWeighted8u( const Mat& srcmat1, double alpha,
-               const Mat& srcmat2, double beta,
-               double gamma, Mat& dstmat )
+addWeighted8u( const uchar* src1, size_t step1,
+               const uchar* src2, size_t step2,
+               uchar* dst, size_t step, Size size,
+               void* _scalars )
 {
-    const int shift = 14;
-    if( srcmat1.rows*srcmat1.cols*srcmat1.channels() <= 256 ||
-        fabs(alpha) > 256 || fabs(beta) > 256 || fabs(gamma) > 256*256 )
+    const double* scalars = (const double*)_scalars;
+    float alpha = (float)scalars[0], beta = (float)scalars[1], gamma = (float)scalars[2];
+    
+    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
-        addWeighted_<uchar, float>(srcmat1, alpha, srcmat2, beta, gamma, dstmat);
-        return;
-    }
-    const uchar* src1 = srcmat1.data;
-    const uchar* src2 = srcmat2.data;
-    uchar* dst = dstmat.data;
-    size_t step1 = srcmat1.step;
-    size_t step2 = srcmat2.step;
-    size_t step = dstmat.step;
-    Size size = getContinuousSize( srcmat1, srcmat2, dstmat, dstmat.channels() );
-
-    int tab1[256], tab2[256];
-    double t = 0;
-    int j, t0, t1, t2, t3;
-
-    alpha *= 1 << shift;
-    gamma = gamma*(1 << shift) + (1 << (shift - 1));
-    beta *= 1 << shift;
-
-    for( j = 0; j < 256; j++ )
-    {
-        tab1[j] = cvRound(t);
-        tab2[j] = cvRound(gamma);
-        t += alpha;
-        gamma += beta;
-    }
-
-    t0 = (tab1[0] + tab2[0]) >> shift;
-    t1 = (tab1[0] + tab2[255]) >> shift;
-    t2 = (tab1[255] + tab2[0]) >> shift;
-    t3 = (tab1[255] + tab2[255]) >> shift;
-
-    if( (unsigned)(t0+256) < 768 && (unsigned)(t1+256) < 768 &&
-        (unsigned)(t2+256) < 768 && (unsigned)(t3+256) < 768 )
-    {
-        // use faster table-based convertion back to 8u
-        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        int x = 0;
+        
+#if CV_SSE2
+        if( USE_SSE2 )
         {
-            int i;
-
-            for( i = 0; i <= size.width - 4; i += 4 )
+            __m128 a4 = _mm_set1_ps(alpha), b4 = _mm_set1_ps(beta), g4 = _mm_set1_ps(gamma);
+            __m128i z = _mm_setzero_si128();
+            
+            for( ; x <= size.width - 8; x += 8 )
             {
-                t0 = CV_FAST_CAST_8U((tab1[src1[i]] + tab2[src2[i]]) >> shift);
-                t1 = CV_FAST_CAST_8U((tab1[src1[i+1]] + tab2[src2[i+1]]) >> shift);
-
-                dst[i] = (uchar)t0;
-                dst[i+1] = (uchar)t1;
-
-                t0 = CV_FAST_CAST_8U((tab1[src1[i+2]] + tab2[src2[i+2]]) >> shift);
-                t1 = CV_FAST_CAST_8U((tab1[src1[i+3]] + tab2[src2[i+3]]) >> shift);
-
-                dst[i+2] = (uchar)t0;
-                dst[i+3] = (uchar)t1;
-            }
-
-            for( ; i < size.width; i++ )
-            {
-                t0 = CV_FAST_CAST_8U((tab1[src1[i]] + tab2[src2[i]]) >> shift);
-                dst[i] = (uchar)t0;
+                __m128i u = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(src1 + x)), z);
+                __m128i v = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(src2 + x)), z);
+                
+                __m128 u0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(u, z));
+                __m128 u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(u, z));
+                __m128 v0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v, z));
+                __m128 v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v, z));
+                
+                u0 = _mm_add_ps(_mm_mul_ps(u0, a4), _mm_mul_ps(v0, b4));
+                u1 = _mm_add_ps(_mm_mul_ps(u1, a4), _mm_mul_ps(v1, b4));
+                u0 = _mm_add_ps(u0, g4); u1 = _mm_add_ps(u1, g4);
+                
+                u = _mm_packs_epi32(_mm_cvtps_epi32(u0), _mm_cvtps_epi32(u1));
+                u = _mm_packus_epi16(u, u);
+                
+                _mm_storel_epi64((__m128i*)(dst + x), u);
             }
         }
-    }
-    else
-    {
-        // use universal macro for convertion back to 8u
-        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
-        {
-            int i;
-
-            for( i = 0; i <= size.width - 4; i += 4 )
-            {
-                t0 = (tab1[src1[i]] + tab2[src2[i]]) >> shift;
-                t1 = (tab1[src1[i+1]] + tab2[src2[i+1]]) >> shift;
-
-                dst[i] = CV_CAST_8U( t0 );
-                dst[i+1] = CV_CAST_8U( t1 );
-
-                t0 = (tab1[src1[i+2]] + tab2[src2[i+2]]) >> shift;
-                t1 = (tab1[src1[i+3]] + tab2[src2[i+3]]) >> shift;
-
-                dst[i+2] = CV_CAST_8U( t0 );
-                dst[i+3] = CV_CAST_8U( t1 );
-            }
-
-            for( ; i < size.width; i++ )
-            {
-                t0 = (tab1[src1[i]] + tab2[src2[i]]) >> shift;
-                dst[i] = CV_CAST_8U( t0 );
-            }
-        }
-    }
-}
-
-typedef void (*AddWeightedFunc)( const Mat& src1, double alpha, const Mat& src2,
-                                 double beta, double gamma, Mat& dst );
-
-void addWeighted( const Mat& src1, double alpha, const Mat& src2,
-                  double beta, double gamma, Mat& dst )
-{
-    static AddWeightedFunc tab[] =
-    {
-        addWeighted8u,
-        0,
-        addWeighted_<ushort, float>,
-        addWeighted_<short, float>,
-        addWeighted_<int, double>,
-        addWeighted_<float, double>,
-        addWeighted_<double, double>,
-        0
-    };
-
-    AddWeightedFunc func = tab[src1.depth()];
-    CV_Assert( src1.type() == src2.type() && func != 0 );
-
-    if( src1.dims > 2 || src2.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &src2, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], alpha, it.planes[1], beta, gamma, it.planes[2] );
-        return;
-    }
-
-    CV_Assert( src1.size() == src2.size() );
-    dst.create( src1.size(), src1.type() );
-    func( src1, alpha, src2, beta, gamma, dst );
-}
-
-
-/****************************************************************************************\
-*                                      absdiff                                           *
-\****************************************************************************************/
-
-template<typename T> struct OpAbsDiff
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator()(T a, T b) { return (T)std::abs(a - b); }
-};
-
-template<> inline short OpAbsDiff<short>::operator ()(short a, short b)
-{ return saturate_cast<short>(std::abs(a - b)); }
-
-template<typename T, typename WT=T> struct OpAbsDiffS
-{
-    typedef T type1;
-    typedef WT type2;
-    typedef T rtype;
-    T operator()(T a, WT b) { return saturate_cast<T>(std::abs(a - b)); }
-};
-
-void absdiff( const Mat& src1, const Mat& src2, Mat& dst )
-{
-    static BinaryFunc tab[] =
-    {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-        binaryOpC1_<OpAbsDiff<uchar>,ippAbsDiff8u>,
-        0,
-        binaryOpC1_<OpAbsDiff<ushort>,ippAbsDiff16u>,
-        binaryOpC1_<OpAbsDiff<short>,VAbsDiff16s>,
-        binaryOpC1_<OpAbsDiff<int>,NoVec>,
-        binaryOpC1_<OpAbsDiff<float>,ippAbsDiff32f>,
-        binaryOpC1_<OpAbsDiff<double>,NoVec>,
-        0
-#else
-        binaryOpC1_<OpAbsDiff<uchar>,VAbsDiff8u>,
-        0,
-        binaryOpC1_<OpAbsDiff<ushort>,VAbsDiff16u>,
-        binaryOpC1_<OpAbsDiff<short>,VAbsDiff16s>,
-        binaryOpC1_<OpAbsDiff<int>,NoVec>,
-        binaryOpC1_<OpAbsDiff<float>,VAbsDiff32f>,
-        binaryOpC1_<OpAbsDiff<double>,NoVec>,
-        0
 #endif
-    };
+        for( ; x <= size.width - 4; x += 4 )
+        {
+            float t0, t1;
+            t0 = CV_8TO32F(src1[x])*alpha + CV_8TO32F(src2[x])*beta + gamma;
+            t1 = CV_8TO32F(src1[x+1])*alpha + CV_8TO32F(src2[x+1])*beta + gamma;
 
-    binaryOp(src1, src2, dst, tab[src1.depth()]);
-}
+            dst[x] = saturate_cast<uchar>(t0);
+            dst[x+1] = saturate_cast<uchar>(t1);
 
+            t0 = CV_8TO32F(src1[x+2])*alpha + CV_8TO32F(src2[x+2])*beta + gamma;
+            t1 = CV_8TO32F(src1[x+3])*alpha + CV_8TO32F(src2[x+3])*beta + gamma;
 
-void absdiff( const Mat& src1, const Scalar& s, Mat& dst )
-{
-    static BinarySFuncCn tab[] =
-    {
-        binarySOpCn_<OpAbsDiffS<uchar, int> >,
-        0,
-        binarySOpCn_<OpAbsDiffS<ushort, int> >,
-        binarySOpCn_<OpAbsDiffS<short, int> >,
-        binarySOpCn_<OpAbsDiffS<int> >,
-        binarySOpCn_<OpAbsDiffS<float> >,
-        binarySOpCn_<OpAbsDiffS<double> >,
-        0
-    };
+            dst[x+2] = saturate_cast<uchar>(t0);
+            dst[x+3] = saturate_cast<uchar>(t1);
+        }
 
-    BinarySFuncCn func = tab[src1.depth()];
-    CV_Assert(src1.channels() <= 4 && func != 0);
-
-    if( src1.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], s );
-        return;
+        for( ; x < size.width; x++ )
+        {
+            float t0 = CV_8TO32F(src1[x])*alpha + CV_8TO32F(src2[x])*beta + gamma;
+            dst[x] = saturate_cast<uchar>(t0);
+        }
     }
-
-    dst.create(src1.size(), src1.type());
-    func( src1, dst, s );
 }
 
-/****************************************************************************************\
-*                                      inRange[S]                                        *
-\****************************************************************************************/
-
-template<typename T, typename WT> struct InRangeC1
+static void addWeighted8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+                           schar* dst, size_t step, Size sz, void* scalars )
 {
-    typedef T xtype;
-    typedef WT btype;
-    uchar operator()(xtype x, btype a, btype b) const
-    { return (uchar)-(a <= x && x < b); }
+    addWeighted_<schar, float>(src1, step1, src2, step2, dst, step, sz, scalars);
+}
+
+static void addWeighted16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                            ushort* dst, size_t step, Size sz, void* scalars )
+{
+    addWeighted_<ushort, float>(src1, step1, src2, step2, dst, step, sz, scalars);
+}
+
+static void addWeighted16s( const short* src1, size_t step1, const short* src2, size_t step2,
+                            short* dst, size_t step, Size sz, void* scalars )
+{
+    addWeighted_<short, float>(src1, step1, src2, step2, dst, step, sz, scalars);
+}
+
+static void addWeighted32s( const int* src1, size_t step1, const int* src2, size_t step2,
+                            int* dst, size_t step, Size sz, void* scalars )
+{
+    addWeighted_<int, double>(src1, step1, src2, step2, dst, step, sz, scalars);
+}
+
+static void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2,
+                            float* dst, size_t step, Size sz, void* scalars )
+{
+    addWeighted_<float, double>(src1, step1, src2, step2, dst, step, sz, scalars);
+}
+
+static void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2,
+                            double* dst, size_t step, Size sz, void* scalars )
+{
+    addWeighted_<double, double>(src1, step1, src2, step2, dst, step, sz, scalars);
+}
+
+static BinaryFunc addWeightedTab[] =
+{
+    (BinaryFunc)addWeighted8u, (BinaryFunc)addWeighted8s, (BinaryFunc)addWeighted16u,
+    (BinaryFunc)addWeighted16s, (BinaryFunc)addWeighted32s, (BinaryFunc)addWeighted32f,
+    (BinaryFunc)addWeighted64f, 0
 };
-
-template<typename T, typename WT> struct InRangeC2
+    
+}
+    
+void cv::addWeighted( const InputArray& src1, double alpha, const InputArray& src2,
+                      double beta, double gamma, OutputArray dst, int dtype )
 {
-    typedef Vec<T,2> xtype;
-    typedef Vec<WT,2> btype;
-    uchar operator()(const xtype& x, const btype& a, const btype& b) const
-    {
-        return (uchar)-(a[0] <= x[0] && x[0] < b[0] &&
-                        a[1] <= x[1] && x[1] < b[1]);
-    }
-};
-
-template<typename T, typename WT> struct InRangeC3
-{
-    typedef Vec<T,3> xtype;
-    typedef Vec<WT,3> btype;
-    uchar operator()(const xtype& x, const btype& a, const btype& b) const
-    {
-        return (uchar)-(a[0] <= x[0] && x[0] < b[0] &&
-                        a[1] <= x[1] && x[1] < b[1] &&
-                        a[2] <= x[2] && x[2] < b[2]);
-    }
-};
-
-template<typename T, typename WT> struct InRangeC4
-{
-    typedef Vec<T,4> xtype;
-    typedef Vec<WT,4> btype;
-    uchar operator()(const xtype& x, const btype& a, const btype& b) const
-    {
-        return (uchar)-(a[0] <= x[0] && x[0] < b[0] &&
-                        a[1] <= x[1] && x[1] < b[1] &&
-                        a[2] <= x[2] && x[2] < b[2] &&
-                        a[3] <= x[3] && x[3] < b[3]);
-    }
-};
-
-template<class Op> static void
-inRange_( const Mat& srcmat1, const Mat& srcmat2, const Mat& srcmat3, Mat& dstmat )
-{
-    Op op;
-    uchar* dst = dstmat.data;
-    size_t dstep = dstmat.step;
-    Size size = getContinuousSize( srcmat1, srcmat2, srcmat3, dstmat );
-
-    for( int y = 0; y < size.height; y++, dst += dstep )
-    {
-        const typename Op::xtype* src1 = (const typename Op::xtype*)(srcmat1.data + srcmat1.step*y);
-        const typename Op::xtype* src2 = (const typename Op::xtype*)(srcmat2.data + srcmat2.step*y);
-        const typename Op::xtype* src3 = (const typename Op::xtype*)(srcmat3.data + srcmat3.step*y);
-        for( int x = 0; x < size.width; x++ )
-            dst[x] = op( src1[x], src2[x], src3[x] );
-    }
+    double scalars[] = {alpha, beta, gamma};
+    arithm_op(src1, src2, dst, InputArray(), dtype, addWeightedTab, true, scalars);
 }
 
-template<class Op> static void
-inRangeS_( const Mat& srcmat1, const Scalar& _a, const Scalar& _b, Mat& dstmat )
-{
-    Op op;
-    typedef typename Op::btype WT;
-    typedef typename DataType<WT>::channel_type WT1;
-    WT a, b;
-    uchar* dst = dstmat.data;
-    size_t dstep = dstmat.step;
-    Size size = getContinuousSize( srcmat1, dstmat );
-    int cn = srcmat1.channels();
-    scalarToRawData(_a, &a, CV_MAKETYPE(DataType<WT>::depth, cn));
-    scalarToRawData(_b, &b, CV_MAKETYPE(DataType<WT>::depth, cn));
-
-    for( int y = 0; y < size.height; y++, dst += dstep )
-    {
-        const typename Op::xtype* src1 = (const typename Op::xtype*)(srcmat1.data + srcmat1.step*y);
-        for( int x = 0; x < size.width; x++ )
-            dst[x] = op( src1[x], a, b );
-    }
-}
-
-typedef void (*InRangeFunc)( const Mat& src1, const Mat& src2, const Mat& src3, Mat& dst );
-typedef void (*InRangeSFunc)( const Mat& src1, const Scalar& a, const Scalar& b, Mat& dst );
-
-void inRange(const Mat& src, const Mat& lowerb,
-             const Mat& upperb, Mat& dst)
-{
-    static InRangeFunc tab[] =
-    {
-        inRange_<InRangeC1<uchar, uchar> >,
-        0,
-        inRange_<InRangeC1<ushort, ushort> >,
-        inRange_<InRangeC1<short, short> >,
-        inRange_<InRangeC1<int, int> >,
-        inRange_<InRangeC1<float, float> >,
-        inRange_<InRangeC1<double, double> >,
-        0,
-
-        inRange_<InRangeC2<uchar, uchar> >,
-        0,
-        inRange_<InRangeC2<ushort, ushort> >,
-        inRange_<InRangeC2<short, short> >,
-        inRange_<InRangeC2<int, int> >,
-        inRange_<InRangeC2<float, float> >,
-        inRange_<InRangeC2<double, double> >,
-        0,
-
-        inRange_<InRangeC3<uchar, uchar> >,
-        0,
-        inRange_<InRangeC3<ushort, ushort> >,
-        inRange_<InRangeC3<short, short> >,
-        inRange_<InRangeC3<int, int> >,
-        inRange_<InRangeC3<float, float> >,
-        inRange_<InRangeC3<double, double> >,
-        0,
-
-        inRange_<InRangeC4<uchar, uchar> >,
-        0,
-        inRange_<InRangeC4<ushort, ushort> >,
-        inRange_<InRangeC4<short, short> >,
-        inRange_<InRangeC4<int, int> >,
-        inRange_<InRangeC4<float, float> >,
-        inRange_<InRangeC4<double, double> >,
-        0
-    };
-
-    CV_Assert( src.type() == lowerb.type() && src.type() == upperb.type() && src.channels() <= 4 );
-
-    InRangeFunc func = tab[src.type()];
-    CV_Assert( func != 0 );
-
-    if( src.dims > 2 || lowerb.dims > 2 || upperb.dims > 2 )
-    {
-        dst.create(src.dims, src.size, CV_8U);
-        const Mat* arrays[] = {&src, &lowerb, &upperb, &dst, 0};
-        Mat planes[4];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], it.planes[2], it.planes[3] );
-        return;
-    }
-
-    CV_Assert( src.size() == lowerb.size() && src.size() == upperb.size() );
-    dst.create(src.size(), CV_8U);
-    func( src, lowerb, upperb, dst );
-}
-
-void inRange(const Mat& src, const Scalar& lowerb,
-             const Scalar& upperb, Mat& dst)
-{
-    static InRangeSFunc tab[] =
-    {
-        inRangeS_<InRangeC1<uchar, int> >,
-        0,
-        inRangeS_<InRangeC1<ushort, int> >,
-        inRangeS_<InRangeC1<short, int> >,
-        inRangeS_<InRangeC1<int, int> >,
-        inRangeS_<InRangeC1<float, float> >,
-        inRangeS_<InRangeC1<double, double> >,
-        0,
-
-        inRangeS_<InRangeC2<uchar, int> >,
-        0,
-        inRangeS_<InRangeC2<ushort, int> >,
-        inRangeS_<InRangeC2<short, int> >,
-        inRangeS_<InRangeC2<int, int> >,
-        inRangeS_<InRangeC2<float, float> >,
-        inRangeS_<InRangeC2<double, double> >,
-        0,
-
-        inRangeS_<InRangeC3<uchar, int> >,
-        0,
-        inRangeS_<InRangeC3<ushort, int> >,
-        inRangeS_<InRangeC3<short, int> >,
-        inRangeS_<InRangeC3<int, int> >,
-        inRangeS_<InRangeC3<float, float> >,
-        inRangeS_<InRangeC3<double, double> >,
-        0,
-
-        inRangeS_<InRangeC4<uchar, int> >,
-        0,
-        inRangeS_<InRangeC4<ushort, int> >,
-        inRangeS_<InRangeC4<short, int> >,
-        inRangeS_<InRangeC4<int, int> >,
-        inRangeS_<InRangeC4<float, float> >,
-        inRangeS_<InRangeC4<double, double> >,
-        0
-    };
-
-    CV_Assert( src.channels() <= 4 );
-
-    InRangeSFunc func = tab[src.type()];
-    CV_Assert( func != 0 );
-
-    if( src.dims > 2 )
-    {
-        dst.create(src.dims, src.size, CV_8U);
-        const Mat* arrays[] = {&src, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], lowerb, upperb, it.planes[1] );
-        return;
-    }
-
-    dst.create(src.size(), CV_8U);
-    func( src, lowerb, upperb, dst );
-}
-
+    
 /****************************************************************************************\
 *                                          compare                                       *
 \****************************************************************************************/
 
-template<typename T, typename WT=T> struct CmpEQ
+namespace cv
 {
-    typedef T type1;
-    typedef WT type2;
-    typedef uchar rtype;
-    uchar operator()(T a, WT b) const { return (uchar)-(a == b); }
-};
 
-template<typename T, typename WT=T> struct CmpGT
+template<typename T> static void
+cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
+     uchar* dst, size_t step, Size size, int code)
 {
-    typedef T type1;
-    typedef WT type2;
-    typedef uchar rtype;
-    uchar operator()(T a, WT b) const { return (uchar)-(a > b); }
-};
-
-template<typename T, typename WT=T> struct CmpGE
-{
-    typedef T type1;
-    typedef WT type2;
-    typedef uchar rtype;
-    uchar operator()(T a, WT b) const { return (uchar)-(a >= b); }
-};
-
-void compare( const Mat& src1, const Mat& src2, Mat& dst, int cmpOp )
-{
-    static BinaryFunc tab[][8] =
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    if( code == CMP_GE || code == CMP_LT )
     {
-        {
-            binaryOpC1_<CmpGT<uchar>,VCmpGT8u>,
-            0,
-            binaryOpC1_<CmpGT<ushort>,NoVec>,
-            binaryOpC1_<CmpGT<short>,NoVec>,
-            binaryOpC1_<CmpGT<int>,NoVec>,
-            binaryOpC1_<CmpGT<float>,NoVec>,
-            binaryOpC1_<CmpGT<double>,NoVec>,
-            0
-        },
-
-        {
-            binaryOpC1_<CmpEQ<uchar>,VCmpEQ8u>,
-            0,
-            binaryOpC1_<CmpEQ<ushort>,NoVec>,
-            binaryOpC1_<CmpEQ<ushort>,NoVec>, // same function as for ushort's
-            binaryOpC1_<CmpEQ<int>,NoVec>,
-            binaryOpC1_<CmpEQ<float>,NoVec>,
-            binaryOpC1_<CmpEQ<double>,NoVec>,
-            0
-        },
-    };
-
-    CV_Assert(src1.channels() == 1);
-
-    int depth = src1.depth();
-    const Mat *psrc1 = &src1, *psrc2 = &src2;
-    bool invflag = false;
-
-    switch( cmpOp )
-    {
-    case CMP_GT:
-    case CMP_EQ:
-        break;
-
-    case CMP_GE:
-        std::swap( psrc1, psrc2 );
-        invflag = true;
-        break;
-
-    case CMP_LT:
-        std::swap( psrc1, psrc2 );
-        break;
-
-    case CMP_LE:
-        invflag = true;
-        break;
-
-    case CMP_NE:
-        cmpOp = CMP_EQ;
-        invflag = true;
-        break;
-
-    default:
-        CV_Error(CV_StsBadArg, "Unknown comparison method");
+        std::swap(src1, src2);
+        std::swap(step1, step2);
+        code = code == CMP_GE ? CMP_LE : CMP_GT;
     }
-
-    BinaryFunc func = tab[cmpOp == CMP_EQ][depth];
-    binaryOp(*psrc1, *psrc2, dst, func, CV_8U);
-    if( invflag )
-        bitwise_not(dst, dst);
+    
+    if( code == CMP_GT || code == CMP_LE )
+    {
+        int m = code == CMP_GT ? 0 : 255;
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        {
+            int x = 0;
+            for( ; x <= size.width - 4; x += 4 )
+            {
+                int t0, t1;
+                t0 = -(src1[x] > src2[x]) ^ m;
+                t1 = -(src1[x+1] > src2[x+1]) ^ m;
+                dst[x] = (uchar)t0; dst[x+1] = (uchar)t1;
+                t0 = -(src1[x+2] > src2[x+2]) ^ m;
+                t1 = -(src1[x+3] > src2[x+3]) ^ m;
+                dst[x+2] = (uchar)t0; dst[x+3] = (uchar)t1;
+            }
+            
+            for( ; x < size.width; x++ )
+                dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
+        }
+    }
+    else if( code == CMP_EQ || code == CMP_NE )
+    {
+        int m = code == CMP_EQ ? 0 : 255;
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        {
+            int x = 0;
+            for( ; x <= size.width - 4; x += 4 )
+            {
+                int t0, t1;
+                t0 = -(src1[x] == src2[x]) ^ m;
+                t1 = -(src1[x+1] == src2[x+1]) ^ m;
+                dst[x] = (uchar)t0; dst[x+1] = (uchar)t1;
+                t0 = -(src1[x+2] == src2[x+2]) ^ m;
+                t1 = -(src1[x+3] == src2[x+3]) ^ m;
+                dst[x+2] = (uchar)t0; dst[x+3] = (uchar)t1;
+            }
+            
+            for( ; x < size.width; x++ )
+                dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
+        }
+    }
+}
+    
+    
+static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 }
 
-
-void compare( const Mat& src1, double value, Mat& dst, int cmpOp )
+static void cmp8s(const schar* src1, size_t step1, const schar* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
 {
-    static BinarySFuncC1 tab[][8] =
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+}
+
+static void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+}
+
+static void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+}
+
+static void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2,
+                   uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+}
+
+static void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+}
+
+static void cmp64f(const double* src1, size_t step1, const double* src2, size_t step2,
+                  uchar* dst, size_t step, Size size, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+}    
+    
+static BinaryFunc cmpTab[] =
+{
+    (BinaryFunc)cmp8u, (BinaryFunc)cmp8s, (BinaryFunc)cmp16u,
+    (BinaryFunc)cmp16s, (BinaryFunc)cmp32s, (BinaryFunc)cmp32f,
+    (BinaryFunc)cmp64f, 0
+};
+
+    
+static double getMinVal(int depth)
+{
+    static const double tab[] = {0, -128, 0, -32768, INT_MIN, -FLT_MAX, -DBL_MAX, 0};
+    return tab[depth];
+}
+
+static double getMaxVal(int depth)
+{
+    static const double tab[] = {255, 127, 65535, 32767, INT_MAX, FLT_MAX, DBL_MAX, 0};
+    return tab[depth];
+}    
+   
+}
+    
+void cv::compare(const InputArray& _src1, const InputArray& _src2, OutputArray _dst, int op)
+{
+    CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
+               op == CMP_NE || op == CMP_GE || op == CMP_GT );
+    
+    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    
+    if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
-        {
-            binarySOpC1_<CmpEQ<uchar, int> >,
-            0,
-            binarySOpC1_<CmpEQ<ushort, int> >,
-            binarySOpC1_<CmpEQ<short, int> >,
-            binarySOpC1_<CmpEQ<int> >,
-            binarySOpC1_<CmpEQ<float> >,
-            binarySOpC1_<CmpEQ<double> >,
-            0
-        },
-
-        {
-            binarySOpC1_<CmpGT<uchar, int> >,
-            0,
-            binarySOpC1_<CmpGT<ushort, int> >,
-            binarySOpC1_<CmpGT<short, int> >,
-            binarySOpC1_<CmpGT<int> >,
-            binarySOpC1_<CmpGT<float> >,
-            binarySOpC1_<CmpGT<double> >,
-            0
-        },
-
-        {
-            binarySOpC1_<CmpGE<uchar, int> >,
-            0,
-            binarySOpC1_<CmpGE<ushort, int> >,
-            binarySOpC1_<CmpGE<short, int> >,
-            binarySOpC1_<CmpGE<int> >,
-            binarySOpC1_<CmpGE<float> >,
-            binarySOpC1_<CmpGE<double> >,
-            0
-        },
-    };
-
-    int depth = src1.depth();
-    bool invflag = false;
-
-    switch( cmpOp )
-    {
-    case CMP_GT:
-    case CMP_EQ:
-    case CMP_GE:
-        break;
-
-    case CMP_LT:
-        invflag = true;
-        cmpOp = CMP_GE;
-        break;
-
-    case CMP_LE:
-        invflag = true;
-        cmpOp = CMP_GT;
-        break;
-
-    case CMP_NE:
-        invflag = true;
-        cmpOp = CMP_EQ;
-        break;
-
-    default:
-        CV_Error(CV_StsBadArg, "Unknown comparison method");
-    }
-
-    BinarySFuncC1 func = tab[cmpOp == CMP_EQ ? 0 : cmpOp == CMP_GT ? 1 : 2][depth];
-    CV_Assert( func != 0 );
-
-    if( src1.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, CV_8UC(src1.channels()));
-        const Mat* arrays[] = {&src1, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-        {
-            func( it.planes[0], it.planes[1], value );
-            if( invflag )
-                bitwise_not(it.planes[1], it.planes[1]);
-        }
+        _dst.create(src1.size(), CV_8UC1);
+        Mat dst = _dst.getMat();
+        Size sz = getContinuousSize(src1, src2, dst, src1.channels());
+        cmpTab[src1.depth()](src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, &op);
         return;
     }
+    
+    bool haveScalar = false;
+    
+    if( (kind1 == InputArray::MATX) + (kind2 == InputArray::MATX) == 1 ||
+        src1.size != src2.size || src1.type() != src2.type() )
+    {
+        if( checkScalar(src1, src2.type(), kind1, kind2) )
+        {
+            // src1 is a scalar; swap it with src2
+            swap(src1, src2);
+            op = op == CMP_LT ? CMP_GT : op == CMP_LE ? CMP_GE :
+                op == CMP_GE ? CMP_LE : op == CMP_GT ? CMP_LT : op;
+        }
+        else if( !checkScalar(src2, src1.type(), kind2, kind1) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The operation is neither 'array op array' (where arrays have the same size and the same type), "
+                     "nor 'array op scalar', nor 'scalar op array'" );
+        haveScalar = true;
+    }
+    
+    int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
+    if( cn != 1 )
+        CV_Error( CV_StsUnsupportedFormat, "compare() can only process single-channel arrays" );
+        
+    size_t esz = src1.elemSize();
+    size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
+    
+    _dst.create(src1.dims, src1.size, CV_8U);
+    Mat dst = _dst.getMat();
+    BinaryFunc func = cmpTab[depth1];
+    
+    if( !haveScalar )
+    {
+        const Mat* arrays[] = { &src1, &src2, &dst, 0 };
+        uchar* ptrs[3];
+        
+        NAryMatIterator it(arrays, ptrs);
+        size_t total = it.size;
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func( ptrs[0], 0, ptrs[1], 0, ptrs[2], 0, Size((int)total, 1), &op );
+    }
+    else
+    {
+        const Mat* arrays[] = { &src1, &dst, 0 };
+        uchar* ptrs[2];
+        
+        NAryMatIterator it(arrays, ptrs);
+        size_t total = it.size, blocksize = std::min(total, blocksize0);
+        
+        AutoBuffer<uchar> _buf(blocksize*esz);
+        uchar *buf = _buf;
 
-    dst.create(src1.rows, src1.cols, CV_8UC(src1.channels()));
-    func( src1, dst, value );
-    if( invflag )
-        bitwise_not(dst, dst);
+        if( depth1 > CV_32S )
+            convertAndUnrollScalar( src2, depth1, buf, blocksize );
+        else
+        {
+            double fval=0;
+            getConvertFunc(depth2, CV_64F)(src2.data, 0, 0, 0, (uchar*)&fval, 0, Size(1,1), 0);
+            if( fval < getMinVal(depth1) )
+            {
+                dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
+                return;
+            }
+            
+            if( fval > getMaxVal(depth1) )
+            {
+                dst = Scalar::all(op == CMP_LT || op == CMP_LE || op == CMP_NE ? 255 : 0);
+                return;
+            }
+            
+            int ival = cvRound(fval);
+            if( fval != ival )
+            {
+                if( op == CMP_LT || op == CMP_GE )
+                    ival = cvCeil(fval);
+                else if( op == CMP_LE || op == CMP_GT )
+                    ival = cvFloor(fval);
+                else
+                {
+                    dst = Scalar::all(op == CMP_NE ? 255 : 0);
+                    return;
+                }
+            }
+            convertAndUnrollScalar(Mat(1, 1, CV_32S, &ival), depth1, buf, blocksize);
+        }
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        {
+            for( size_t j = 0; j < total; j += blocksize )
+            {
+                int bsz = (int)std::min(total - j, blocksize);
+                func( ptrs[0], 0, buf, 0, ptrs[1], 0, Size(bsz, 1), &op);
+                ptrs[0] += bsz*esz;
+                ptrs[1] += bsz;
+            }
+        }
+    }
 }
-
+    
 /****************************************************************************************\
-*                                       min/max                                          *
+*                                        inRange                                         *
 \****************************************************************************************/
 
-template<typename T> struct MinOp
+namespace cv
 {
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(T a, T b) const { return std::min(a, b); }
-};
 
-template<typename T> struct MaxOp
+template<typename T> static void
+inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
+         const T* src3, size_t step3, uchar* dst, size_t step,
+         Size size)
 {
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(T a, T b) const { return std::max(a, b); }
-};
-
-template<> inline uchar MinOp<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
-template<> inline uchar MaxOp<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
-
-void min( const Mat& src1, const Mat& src2, Mat& dst )
-{
-    static BinaryFunc tab[] =
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    step3 /= sizeof(src3[0]);
+    
+    for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
     {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-        binaryOpC1_<MinOp<uchar>,ippMin8u>,
-        0,
-        binaryOpC1_<MinOp<ushort>,ippMin16u>,
-        binaryOpC1_<MinOp<short>,VMin16s>,
-        binaryOpC1_<MinOp<int>,NoVec>,
-        binaryOpC1_<MinOp<float>,ippMin32f>,
-        binaryOpC1_<MinOp<double>,ippMin64f>,
-        0
-#else
-        binaryOpC1_<MinOp<uchar>,VMin8u>,
-        0,
-        binaryOpC1_<MinOp<ushort>,VMin16u>,
-        binaryOpC1_<MinOp<short>,VMin16s>,
-        binaryOpC1_<MinOp<int>,NoVec>,
-        binaryOpC1_<MinOp<float>,VMin32f>,
-        binaryOpC1_<MinOp<double>,NoVec>,
-        0
-#endif
-    };
-
-    binaryOp(src1, src2, dst, tab[src1.depth()]);
-}
-
-void max( const Mat& src1, const Mat& src2, Mat& dst )
-{
-    static BinaryFunc tab[] =
-    {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-        binaryOpC1_<MaxOp<uchar>,ippMax8u>,
-        0,
-        binaryOpC1_<MaxOp<ushort>,ippMax16u>,
-        binaryOpC1_<MaxOp<short>,VMax16s>,
-        binaryOpC1_<MaxOp<int>,NoVec>,
-        binaryOpC1_<MaxOp<float>,ippMax32f>,
-        binaryOpC1_<MaxOp<double>,ippMax64f>,
-        0
-#else
-        binaryOpC1_<MaxOp<uchar>,VMax8u>,
-        0,
-        binaryOpC1_<MaxOp<ushort>,VMax16u>,
-        binaryOpC1_<MaxOp<short>,VMax16s>,
-        binaryOpC1_<MaxOp<int>,NoVec>,
-        binaryOpC1_<MaxOp<float>,VMax32f>,
-        binaryOpC1_<MaxOp<double>,NoVec>,
-        0
-#endif
-    };
-
-    binaryOp(src1, src2, dst, tab[src1.depth()]);
-}
-
-void min( const Mat& src1, double value, Mat& dst )
-{
-    static BinarySFuncC1 tab[] =
-    {
-        binarySOpC1_<MinOp<uchar> >,
-        0,
-        binarySOpC1_<MinOp<ushort> >,
-        binarySOpC1_<MinOp<short> >,
-        binarySOpC1_<MinOp<int> >,
-        binarySOpC1_<MinOp<float> >,
-        binarySOpC1_<MinOp<double> >,
-        0
-    };
-
-    BinarySFuncC1 func = tab[src1.depth()];
-    CV_Assert(func != 0);
-
-    if( src1.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], value );
-        return;
+        int x = 0;
+        for( ; x <= size.width - 4; x += 4 )
+        {
+            int t0, t1;
+            t0 = src2[x] <= src1[x] && src1[x] <= src3[x];
+            t1 = src2[x+1] <= src1[x+1] && src1[x+1] <= src3[x+1];
+            dst[x] = (uchar)-t0; dst[x+1] = (uchar)-t1;
+            t0 = src2[x+2] <= src1[x+2] && src1[x+2] <= src3[x+2];
+            t1 = src2[x+3] <= src1[x+3] && src1[x+3] <= src3[x+3];
+            dst[x+2] = (uchar)-t0; dst[x+3] = (uchar)-t1;
+        }
+            
+        for( ; x < size.width; x++ )
+            dst[x] = (uchar)-(src2[x] <= src1[x] && src1[x] <= src3[x]);
     }
-
-    dst.create(src1.size(), src1.type());
-
-    return func( src1, dst, value );
 }
 
-void max( const Mat& src1, double value, Mat& dst )
+    
+static void inRange8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                      const uchar* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    static BinarySFuncC1 tab[] =
-    {
-        binarySOpC1_<MaxOp<uchar> >,
-        0,
-        binarySOpC1_<MaxOp<ushort> >,
-        binarySOpC1_<MaxOp<short> >,
-        binarySOpC1_<MaxOp<int> >,
-        binarySOpC1_<MaxOp<float> >,
-        binarySOpC1_<MaxOp<double> >,
-        0
-    };
-
-    BinarySFuncC1 func = tab[src1.depth()];
-    CV_Assert(func != 0);
-
-    if( src1.dims > 2 )
-    {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], it.planes[1], value );
-        return;
-    }
-
-    dst.create(src1.size(), src1.type());
-
-    return func( src1, dst, value );
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
-} // namespace cv
+static void inRange8s(const schar* src1, size_t step1, const schar* src2, size_t step2,
+                      const schar* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                       const ushort* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange16s(const short* src1, size_t step1, const short* src2, size_t step2,
+                       const short* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange32s(const int* src1, size_t step1, const int* src2, size_t step2,
+                       const int* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange32f(const float* src1, size_t step1, const float* src2, size_t step2,
+                       const float* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange64f(const double* src1, size_t step1, const double* src2, size_t step2,
+                       const double* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}    
+
+static void inRangeReduce(const uchar* src, uchar* dst, size_t len, int cn)
+{
+    int k = cn % 4 ? cn % 4 : 4;
+    size_t i, j;
+    if( k == 1 )
+        for( i = j = 0; i < len; i++, j += cn )
+            dst[i] = src[j];
+    else if( k == 2 )
+        for( i = j = 0; i < len; i++, j += cn )
+            dst[i] = src[j] & src[j+1];
+    else if( k == 3 )
+        for( i = j = 0; i < len; i++, j += cn )
+            dst[i] = src[j] & src[j+1] & src[j+2];
+    else
+        for( i = j = 0; i < len; i++, j += cn )
+            dst[i] = src[j] & src[j+1] & src[j+2] & src[j+3];
+    
+    for( ; k < cn; k += 4 )
+    {
+        for( i = 0, j = k; i < len; i++, j += cn )
+            dst[i] &= src[j] & src[j+1] & src[j+2] & src[j+3];
+    }
+}
+    
+typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                             const uchar* src3, size_t step3, uchar* dst, size_t step, Size sz );
+
+static InRangeFunc inRangeTab[] =
+{
+    (InRangeFunc)inRange8u, (InRangeFunc)inRange8s, (InRangeFunc)inRange16u,
+    (InRangeFunc)inRange16s, (InRangeFunc)inRange32s, (InRangeFunc)inRange32f,
+    (InRangeFunc)inRange64f, 0
+};
+    
+}
+
+void cv::inRange(const InputArray& _src, const InputArray& _lowerb,
+                 const InputArray& _upperb, OutputArray _dst)
+{
+    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
+    
+    bool lbScalar = false, ubScalar = false;
+    
+    if( (lkind == InputArray::MATX && skind != InputArray::MATX) ||
+        src.size != lb.size || src.type() != lb.type() )
+    {
+        if( !checkScalar(lb, src.type(), lkind, skind) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The lower bounary is neither an array of the same size and same type as src, nor a scalar");
+        lbScalar = true;
+    }
+    
+    if( (ukind == InputArray::MATX && skind != InputArray::MATX) ||
+        src.size != ub.size || src.type() != ub.type() )
+    {
+        if( !checkScalar(ub, src.type(), ukind, skind) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The upper bounary is neither an array of the same size and same type as src, nor a scalar");
+        ubScalar = true;
+    }
+    
+    CV_Assert( ((int)lbScalar ^ (int)ubScalar) == 0 );
+    
+    int cn = src.channels(), depth = src.depth();
+    
+    size_t esz = src.elemSize();
+    size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
+    
+    _dst.create(src.dims, src.size, CV_8U);
+    Mat dst = _dst.getMat();
+    InRangeFunc func = inRangeTab[depth];
+    
+    const Mat* arrays_sc[] = { &src, &dst, 0 };
+    const Mat* arrays_nosc[] = { &src, &dst, &lb, &ub, 0 };
+    uchar* ptrs[4];
+    
+    NAryMatIterator it(lbScalar && ubScalar ? arrays_sc : arrays_nosc, ptrs);
+    size_t total = it.size, blocksize = std::min(total, blocksize0);
+    
+    AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
+    uchar *buf = _buf, *mbuf = buf, *lbuf = 0, *ubuf = 0;
+    buf = alignPtr(buf + blocksize*cn, 16);
+    
+    if( lbScalar && ubScalar )
+    {
+        lbuf = buf;
+        ubuf = buf = alignPtr(buf + blocksize*esz, 16);
+        
+        CV_Assert( lb.type() == ub.type() );
+        int scdepth = lb.depth();
+        
+        if( scdepth != depth && depth < CV_32S )
+        {
+            int* ilbuf = (int*)alignPtr(buf + blocksize*esz, 16);
+            int* iubuf = ilbuf + cn;
+            
+            BinaryFunc sccvtfunc = getConvertFunc(scdepth, CV_32S);
+            sccvtfunc(lb.data, 0, 0, 0, (uchar*)ilbuf, 0, Size(cn, 1), 0);
+            sccvtfunc(ub.data, 0, 0, 0, (uchar*)iubuf, 0, Size(cn, 1), 0);
+            int minval = getMinVal(depth), maxval = getMaxVal(depth);
+            
+            for( int k = 0; k < cn; k++ )
+            {
+                if( ilbuf[k] > iubuf[k] || ilbuf[k] > maxval || iubuf[k] < minval )
+                    ilbuf[k] = minval+1, iubuf[k] = minval;
+            }
+            lb = Mat(cn, 1, CV_32S, ilbuf);
+            ub = Mat(cn, 1, CV_32S, iubuf);
+        }
+        
+        convertAndUnrollScalar( lb, src.type(), lbuf, blocksize );
+        convertAndUnrollScalar( ub, src.type(), ubuf, blocksize );
+    }
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( size_t j = 0; j < total; j += blocksize )
+        {
+            int bsz = (int)std::min(total - j, blocksize);
+            size_t delta = bsz*esz;
+            uchar *lptr = lbuf, *uptr = ubuf;
+            if( !lbScalar )
+            {
+                lptr = ptrs[2];
+                ptrs[2] += delta;
+            }
+            if( !ubScalar )
+            {
+                int idx = !lbScalar ? 3 : 2;
+                uptr = ptrs[idx];
+                ptrs[idx] += delta;
+            }
+            func( ptrs[0], 0, lptr, 0, uptr, 0, cn == 1 ? ptrs[1] : mbuf, 0, Size(bsz*cn, 1));
+            if( cn > 1 )
+                inRangeReduce(mbuf, ptrs[1], bsz, cn);
+            ptrs[0] += delta;
+            ptrs[1] += bsz;
+        }
+    }
+}
 
 /****************************************************************************************\
 *                                Earlier API: cvAdd etc.                                 *
@@ -2168,7 +2369,7 @@ cvAndS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
     CV_Assert( src.size == dst.size && src.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::bitwise_and( src, s, dst, mask );
+    cv::bitwise_and( src, (const cv::Scalar&)s, dst, mask );
 }
 
 
@@ -2179,7 +2380,7 @@ cvOrS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
     CV_Assert( src.size == dst.size && src.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::bitwise_or( src, s, dst, mask );
+    cv::bitwise_or( src, (const cv::Scalar&)s, dst, mask );
 }
 
 
@@ -2190,7 +2391,7 @@ cvXorS( const CvArr* srcarr, CvScalar s, CvArr* dstarr, const CvArr* maskarr )
     CV_Assert( src.size == dst.size && src.type() == dst.type() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::bitwise_xor( src, s, dst, mask );
+    cv::bitwise_xor( src, (const cv::Scalar&)s, dst, mask );
 }
 
 
@@ -2198,10 +2399,10 @@ CV_IMPL void cvAdd( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, c
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::add( src1, src2, dst, mask );
+    cv::add( src1, src2, dst, mask, dst.type() );
 }
 
 
@@ -2209,10 +2410,10 @@ CV_IMPL void cvSub( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr, c
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::subtract( src1, src2, dst, mask );
+    cv::subtract( src1, src2, dst, mask, dst.type() );
 }
 
 
@@ -2220,10 +2421,10 @@ CV_IMPL void cvAddS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const 
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::add( src1, value, dst, mask );
+    cv::add( src1, (const cv::Scalar&)value, dst, mask, dst.type() );
 }
 
 
@@ -2231,10 +2432,10 @@ CV_IMPL void cvSubRS( const CvArr* srcarr1, CvScalar value, CvArr* dstarr, const
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
+    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
-    cv::subtract( value, src1, dst, mask );
+    cv::subtract( (const cv::Scalar&)value, src1, dst, mask, dst.type() );
 }
 
 
@@ -2243,8 +2444,8 @@ CV_IMPL void cvMul( const CvArr* srcarr1, const CvArr* srcarr2,
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-    cv::multiply( src1, src2, dst, scale );
+    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
+    cv::multiply( src1, src2, dst, scale, dst.type() );
 }
 
 
@@ -2253,12 +2454,12 @@ CV_IMPL void cvDiv( const CvArr* srcarr1, const CvArr* srcarr2,
 {
     cv::Mat src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr), mask;
-    CV_Assert( src2.size == dst.size && src2.type() == dst.type() );
+    CV_Assert( src2.size == dst.size && src2.channels() == dst.channels() );
 
     if( srcarr1 )
-        cv::divide( cv::cvarrToMat(srcarr1), src2, dst, scale );
+        cv::divide( cv::cvarrToMat(srcarr1), src2, dst, scale, dst.type() );
     else
-        cv::divide( scale, src2, dst );
+        cv::divide( scale, src2, dst, dst.type() );
 }
 
 
@@ -2269,8 +2470,8 @@ cvAddWeighted( const CvArr* srcarr1, double alpha,
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
         dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-    cv::addWeighted( src1, alpha, src2, beta, gamma, dst );
+    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
+    cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
 }
 
 
@@ -2290,7 +2491,7 @@ cvAbsDiffS( const CvArr* srcarr1, CvArr* dstarr, CvScalar scalar )
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
     CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
 
-    cv::absdiff( src1, scalar, dst );
+    cv::absdiff( src1, (const cv::Scalar&)scalar, dst );
 }
 
 
@@ -2311,7 +2512,7 @@ cvInRangeS( const void* srcarr1, CvScalar lowerb, CvScalar upperb, void* dstarr 
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
     CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
-    cv::inRange( src1, lowerb, upperb, dst );
+    cv::inRange( src1, (const cv::Scalar&)lowerb, (const cv::Scalar&)upperb, dst );
 }
 
 
@@ -2373,6 +2574,5 @@ cvMaxS( const void* srcarr1, double value, void* dstarr )
 
     cv::max( src1, value, dst );
 }
-
 
 /* End of file. */

@@ -344,7 +344,7 @@ protected:
             ts->printf(cvtest::TS::LOG, "Tesing %s\n", names[i]);
 
 	        cv::Mat cpuRes;
-            cv::morphologyEx(img, cpuRes, ops[i], kernel);
+            cv::morphologyEx(img, cpuRes, ops[i], (Mat)kernel);
 
 	        GpuMat gpuRes;
             cv::gpu::morphologyEx(GpuMat(img), gpuRes, ops[i], kernel);

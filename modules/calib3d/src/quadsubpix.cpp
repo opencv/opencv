@@ -223,9 +223,15 @@ int segment_hist_max(const Mat& hist, int& low_thresh, int& high_thresh)
         return 1;
     }
 }
+ 
+}
     
-bool find4QuadCornerSubpix(const Mat& img, std::vector<Point2f>& corners, Size region_size)
+bool cv::find4QuadCornerSubpix(const InputArray& _img, InputOutputArray _corners, Size region_size)
 {
+    Mat img = _img.getMat(), cornersM = _corners.getMat();
+    int ncorners = cornersM.checkVector(2, CV_32F);
+    CV_Assert( ncorners >= 0 );
+    Point2f* corners = cornersM.ptr<Point2f>();
     const int nbins = 256;
     float ranges[] = {0, 256};
     const float* _ranges = ranges;
@@ -238,7 +244,7 @@ bool find4QuadCornerSubpix(const Mat& img, std::vector<Point2f>& corners, Size r
     
     
     Mat black_comp, white_comp;
-    for(size_t i = 0; i < corners.size(); i++)
+    for(int i = 0; i < ncorners; i++)
     {        
         int channels = 0;
         Rect roi(cvRound(corners[i].x - region_size.width), cvRound(corners[i].y - region_size.height),
@@ -362,5 +368,3 @@ bool find4QuadCornerSubpix(const Mat& img, std::vector<Point2f>& corners, Size r
     
     return true;
 }
-    
-}; // namespace std

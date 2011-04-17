@@ -2298,10 +2298,17 @@ inline Point LineIterator::pos() const
 /////////////////////////////// AutoBuffer ////////////////////////////////////////
 
 template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer()
-: ptr(buf), size(fixed_size) {}
+{
+    ptr = alignPtr(buf, 16);
+    size = fixed_size;
+}
 
 template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
-: ptr(buf), size(fixed_size) { allocate(_size); }
+{
+    ptr = alignPtr(buf, 16);
+    size = fixed_size;
+    allocate(_size);
+}
 
 template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::~AutoBuffer()
 { deallocate(); }
@@ -2320,10 +2327,11 @@ template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size
 
 template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::deallocate()
 {
-    if( ptr != buf )
+    _Tp* buf0 = alignPtr(buf, 16);
+    if( ptr != buf0 )
     {
         cv::deallocate<_Tp>(ptr, size);
-        ptr = buf;
+        ptr = buf0;
         size = fixed_size;
     }
 }
@@ -3550,7 +3558,6 @@ template<typename _Tp> static inline std::ostream& operator << (std::ostream& ou
     return out;
 }
     
-#if 0
 template<typename _Tp> struct AlgorithmParamType {};
 template<> struct AlgorithmParamType<int> { enum { type = CV_PARAM_TYPE_INT }; };
 template<> struct AlgorithmParamType<double> { enum { type = CV_PARAM_TYPE_REAL }; };
@@ -3594,7 +3601,6 @@ template<typename _Tp> void Algorithm::setParamRange(int propId, const _Tp& minV
 {
     setParamRange_(propId, AlgorithmParamType<_Tp>::type, &minVal, &maxVal);
 }
-#endif
     
 }
 

@@ -375,10 +375,10 @@ void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM )
     CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
     Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
     kmeans( _bgdSamples, GMM::componentsCount, bgdLabels,
-            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType, 0 );
+            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
     Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
     kmeans( _fgdSamples, GMM::componentsCount, fgdLabels,
-            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType, 0 );
+            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
 
     bgdGMM.initLearning();
     for( int i = 0; i < (int)bgdSamples.size(); i++ )
@@ -521,10 +521,15 @@ void estimateSegmentation( GCGraph<double>& graph, Mat& mask )
     }
 }
 
-void cv::grabCut( const Mat& img, Mat& mask, Rect rect,
-             Mat& bgdModel, Mat& fgdModel,
-             int iterCount, int mode )
+void cv::grabCut( const InputArray& _img, InputOutputArray _mask, Rect rect,
+                  InputOutputArray _bgdModel, InputOutputArray _fgdModel,
+                  int iterCount, int mode )
 {
+    Mat img = _img.getMat();
+    Mat& mask = _mask.getMatRef();
+    Mat& bgdModel = _bgdModel.getMatRef();
+    Mat& fgdModel = _fgdModel.getMatRef();
+    
     if( img.empty() )
         CV_Error( CV_StsBadArg, "image is empty" );
     if( img.type() != CV_8UC3 )

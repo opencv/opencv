@@ -827,3 +827,4 @@ TEST(Core_DCT, accuracy) { CxCore_DCTTest test; test.safe_run(); }
 TEST(Core_DFT, accuracy) { CxCore_DFTTest test; test.safe_run(); }
 TEST(Core_MulSpectrums, accuracy) { CxCore_MulSpectrumsTest test; test.safe_run(); }
 
+

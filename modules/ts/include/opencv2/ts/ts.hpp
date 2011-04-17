@@ -24,20 +24,6 @@ using cv::Rect;
 
 class CV_EXPORTS TS;
     
-enum
-{
-    TYPE_MASK_8U = 1 << CV_8U,
-    TYPE_MASK_8S = 1 << CV_8S,
-    TYPE_MASK_16U = 1 << CV_16U,
-    TYPE_MASK_16S = 1 << CV_16S,
-    TYPE_MASK_32S = 1 << CV_32S,
-    TYPE_MASK_32F = 1 << CV_32F,
-    TYPE_MASK_64F = 1 << CV_64F,
-    TYPE_MASK_ALL = (TYPE_MASK_64F<<1)-1,
-    TYPE_MASK_ALL_BUT_8S = TYPE_MASK_ALL & ~TYPE_MASK_8S,
-    TYPE_MASK_FLT = TYPE_MASK_32F + TYPE_MASK_64F
-};
-
 CV_EXPORTS int64 readSeed(const char* str);
     
 CV_EXPORTS void randUni( RNG& rng, Mat& a, const Scalar& param1, const Scalar& param2 );

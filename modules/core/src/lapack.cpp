@@ -212,6 +212,8 @@ bool Cholesky(double* A, int m, double* b, int n)
 {
     return CholImpl(A, m, b, n);
 }
+
+}
     
 /****************************************************************************************\
 *                                 Determinant of the matrix                              *
@@ -222,8 +224,9 @@ bool Cholesky(double* A, int m, double* b, int n)
                    m(0,1)*((double)m(1,0)*m(2,2) - (double)m(1,2)*m(2,0)) +  \
                    m(0,2)*((double)m(1,0)*m(2,1) - (double)m(1,1)*m(2,0)))
 
-double determinant( const Mat& mat )
+double cv::determinant( const InputArray& _mat )
 {
+    Mat mat = _mat.getMat();
     double result = 0;
     int type = mat.type(), rows = mat.rows;
     size_t step = mat.step;
@@ -325,13 +328,16 @@ double determinant( const Mat& mat )
 #define Df( y, x ) ((float*)(dstdata + y*dststep))[x]
 #define Dd( y, x ) ((double*)(dstdata + y*dststep))[x]
 
-double invert( const Mat& src, Mat& dst, int method )
+double cv::invert( const InputArray& _src, OutputArray _dst, int method )
 {
     double result = 0;
+    Mat src = _src.getMat();
     int type = src.type();
 
     CV_Assert( method == DECOMP_LU || method == DECOMP_CHOLESKY || method == DECOMP_SVD );
-
+    _dst.create( src.cols, src.rows, type );
+    Mat dst = _dst.getMat();
+    
     if( method == DECOMP_SVD )
     {
         int n = std::min(src.rows, src.cols);
@@ -346,8 +352,7 @@ double invert( const Mat& src, Mat& dst, int method )
     }
 
     CV_Assert( src.rows == src.cols && (type == CV_32F || type == CV_64F));
-    dst.create( src.rows, src.cols, type );
-
+    
     if( src.rows <= 3 )
     {
         uchar* srcdata = src.data;
@@ -572,9 +577,10 @@ double invert( const Mat& src, Mat& dst, int method )
 *                              Solving a linear system                                   *
 \****************************************************************************************/
 
-bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
+bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray _dst, int method )
 {
     bool result = true;
+    Mat src = _src.getMat(), _src2 = _src2arg.getMat();
     int type = src.type();
     bool is_normal = (method & DECOMP_NORMAL) != 0;
 
@@ -588,7 +594,8 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
     if( (method == DECOMP_LU || method == DECOMP_CHOLESKY) &&
         src.rows <= 3 && src.rows == src.cols && _src2.cols == 1 )
     {
-        dst.create( src.cols, _src2.cols, src.type() );
+        _dst.create( src.cols, _src2.cols, src.type() );
+        Mat dst = _dst.getMat();
         
         #define bf(y) ((float*)(bdata + y*src2step))[0]
         #define bd(y) ((double*)(bdata + y*src2step))[0]
@@ -729,7 +736,8 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
     char N[] = {'N', '\0'}, L[] = {'L', '\0'};
 
     Mat src2 = _src2;
-    dst.create( src.cols, src2.cols, src.type() );
+    _dst.create( src.cols, src2.cols, src.type() );
+    Mat dst = _dst.getMat();
         
     if( m <= n )
         is_normal = false;
@@ -905,6 +913,9 @@ bool solve( const Mat& src, const Mat& _src2, Mat& dst, int method )
 
 /////////////////// finding eigenvalues and eigenvectors of a symmetric matrix ///////////////
 
+namespace cv
+{
+
 template<typename Real> static inline Real hypot(Real a, Real b)
 {
     a = std::abs(a);
@@ -1077,9 +1088,10 @@ template<typename Real> bool jacobi(const Mat& _S0, Mat& _e, Mat& matE, bool com
 }
     
     
-static bool eigen( const Mat& src, Mat& evals, Mat& evects, bool computeEvects,
+static bool eigen( const InputArray& _src, OutputArray _evals, OutputArray _evects, bool computeEvects,
                    int lowindex, int highindex )
 {
+    Mat src = _src.getMat();
     int type = src.type();
     integer n = src.rows;
 
@@ -1094,9 +1106,14 @@ static bool eigen( const Mat& src, Mat& evals, Mat& evects, bool computeEvects,
     CV_Assert( src.rows == src.cols );
     CV_Assert (type == CV_32F || type == CV_64F);
 
-    // allow for 1xn eigenvalue matrix too
-    if( !(evals.rows == 1 && evals.cols == n && evals.type() == type) )
-        evals.create(n, 1, type);
+    _evals.create(n, 1, type, -1, true);
+    Mat evals = _evals.getMat(), evects;
+    
+    if( computeEvects )
+    {
+        _evects.create(n, n, type);
+        evects = _evects.getMat();
+    }
     
     if( n <= 20 )
     {
@@ -1122,10 +1139,7 @@ static bool eigen( const Mat& src, Mat& evals, Mat& evects, bool computeEvects,
     lda = (int)(src.step/elem_size);
     
     if( computeEvects )
-    {
-        evects.create(n, n, type);
         ldv = (int)(evects.step/elem_size);
-    }
 
     bool copy_evals = !evals.isContinuous();
 
@@ -1211,19 +1225,21 @@ static bool eigen( const Mat& src, Mat& evals, Mat& evects, bool computeEvects,
     return result;
 }
 
-bool eigen( const Mat& src, Mat& evals, int lowindex, int highindex )
+}
+    
+bool cv::eigen( const InputArray& src, OutputArray evals, int lowindex, int highindex )
 {
-    Mat evects;
-    return eigen(src, evals, evects, false, lowindex, highindex);
+    return eigen(src, evals, OutputArray(), false, lowindex, highindex);
 }
 
-bool eigen( const Mat& src, Mat& evals, Mat& evects, int lowindex,
-            int highindex )
+bool cv::eigen( const InputArray& src, OutputArray evals, OutputArray evects,
+                int lowindex, int highindex )
 {
     return eigen(src, evals, evects, true, lowindex, highindex);
 }
 
-
+namespace cv
+{
 
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */
 template<typename T1, typename T2, typename T3> static void
@@ -1316,29 +1332,33 @@ SVBkSb( int m, int n, const T* w, int incw,
 }
 
 
-static void _SVDcompute( const Mat& a, Mat& w, Mat* u, Mat* vt, int flags )
+static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
+                         OutputArray _u, OutputArray _vt, int flags )
 {
+    Mat a = _aarr.getMat(), u, vt;
     integer m = a.rows, n = a.cols, mn = std::max(m, n), nm = std::min(m, n);
     int type = a.type(), elem_size = (int)a.elemSize();
-    bool compute_uv = u && vt;
+    bool compute_uv = _u.needed() || _vt.needed();
     
     if( flags & SVD::NO_UV )
     {
-        if(u) u->release();
-        if(vt) vt->release();
-        u = vt = 0;
+        _u.release();
+        _vt.release();
         compute_uv = false;
     }
     
     if( compute_uv )
     {
-        u->create( (int)m, (int)((flags & SVD::FULL_UV) ? m : nm), type );
-        vt->create( (int)((flags & SVD::FULL_UV) ? n : nm), n, type );
+        _u.create( (int)m, (int)((flags & SVD::FULL_UV) ? m : nm), type );
+        _vt.create( (int)((flags & SVD::FULL_UV) ? n : nm), n, type );
+        u = _u.getMat();
+        vt = _vt.getMat();
     }
     
-    w.create(nm, 1, type);
+    _w.create(nm, 1, type, -1, true);
     
-    Mat _a = a;
+    Mat _a = a, w = _w.getMat();
+    CV_Assert( w.isContinuous() );
     int a_ofs = 0, work_ofs=0, iwork_ofs=0, buf_size = 0;
     bool temp_a = false;
     double u1=0, v1=0, work1=0;
@@ -1353,7 +1373,7 @@ static void _SVDcompute( const Mat& a, Mat& w, Mat* u, Mat* vt, int flags )
     {
         if( mode[0] == 'N' || mode[0] == 'A' )
             temp_a = true;
-        else if( compute_uv && (a.size() == vt->size() || a.size() == u->size()) && mode[0] == 'S' )
+        else if( compute_uv && (a.size() == vt.size() || a.size() == u.size()) && mode[0] == 'S' )
             mode[0] = 'O';
     }
     
@@ -1396,59 +1416,67 @@ static void _SVDcompute( const Mat& a, Mat& w, Mat* u, Mat* vt, int flags )
     
     if( !(flags & SVD::MODIFY_A) && !temp_a )
     {
-        if( compute_uv && a.size() == vt->size() )
+        if( compute_uv && a.size() == vt.size() )
         {
-            a.copyTo(*vt);
-            _a = *vt;
+            a.copyTo(vt);
+            _a = vt;
         }
-        else if( compute_uv && a.size() == u->size() )
+        else if( compute_uv && a.size() == u.size() )
         {
-            a.copyTo(*u);
-            _a = *u;
+            a.copyTo(u);
+            _a = u;
         }
     }
     
     if( compute_uv )
     {
-        ldv = (int)(vt->step ? vt->step/elem_size : vt->cols);
-        ldu = (int)(u->step ? u->step/elem_size : u->cols);
+        ldv = (int)(vt.step ? vt.step/elem_size : vt.cols);
+        ldu = (int)(u.step ? u.step/elem_size : u.cols);
     }
     
     lda = (int)(_a.step ? _a.step/elem_size : _a.cols);
     if( type == CV_32F )
     {
-        sgesdd_(mode, &n, &m, (float*)_a.data, &lda, (float*)w.data,
-                vt ? (float*)vt->data : (float*)&v1, &ldv, u ? (float*)u->data : (float*)&u1, &ldu,
-                (float*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
+        sgesdd_(mode, &n, &m, _a.ptr<float>(), &lda, w.ptr<float>(),
+                vt.data ? vt.ptr<float>() : (float*)&v1, &ldv,
+                u.data ? u.ptr<float>() : (float*)&u1, &ldu,
+                (float*)(buffer + work_ofs), &lwork,
+                (integer*)(buffer + iwork_ofs), &info );
     }
     else
     {
-        dgesdd_(mode, &n, &m, (double*)_a.data, &lda, (double*)w.data,
-                vt ? (double*)vt->data : &v1, &ldv, u ? (double*)u->data : &u1, &ldu,
-                (double*)(buffer + work_ofs), &lwork, (integer*)(buffer + iwork_ofs), &info );
+        dgesdd_(mode, &n, &m, _a.ptr<double>(), &lda, w.ptr<double>(),
+                vt.data ? vt.ptr<double>() : &v1, &ldv,
+                u.data ? u.ptr<double>() : &u1, &ldu,
+                (double*)(buffer + work_ofs), &lwork,
+                (integer*)(buffer + iwork_ofs), &info );
     }
     CV_Assert(info >= 0);
     if(info != 0)
     {
-        *u = Scalar(0.);
-        *vt = Scalar(0.);
+        if( u.data )
+            u = Scalar(0.);
+        if( vt.data )
+            vt = Scalar(0.);
         w = Scalar(0.);
     }
 }       
     
     
-void SVD::compute( const Mat& a, Mat& w, Mat& u, Mat& vt, int flags )
+void SVD::compute( const InputArray& a, OutputArray w, OutputArray u, OutputArray vt, int flags )
 {
-    _SVDcompute(a, w, &u, &vt, flags);
+    _SVDcompute(a, w, u, vt, flags);
 }
 
-void SVD::compute( const Mat& a, Mat& w, int flags )
+void SVD::compute( const InputArray& a, OutputArray w, int flags )
 {
-    _SVDcompute(a, w, 0, 0, flags);
+    _SVDcompute(a, w, OutputArray(), OutputArray(), flags);
 }
     
-void SVD::backSubst( const Mat& w, const Mat& u, const Mat& vt, const Mat& rhs, Mat& dst )
+void SVD::backSubst( const InputArray& _w, const InputArray& _u, const InputArray& _vt,
+                     const InputArray& _rhs, OutputArray _dst )
 {
+    Mat w = _w.getMat(), u = _u.getMat(), vt = _vt.getMat(), rhs = _rhs.getMat();
     int type = w.type(), esz = (int)w.elemSize();
     int m = u.rows, n = vt.cols, nb = rhs.data ? rhs.cols : m;
     AutoBuffer<double> buffer(nb);
@@ -1456,7 +1484,8 @@ void SVD::backSubst( const Mat& w, const Mat& u, const Mat& vt, const Mat& rhs, 
     
     CV_Assert( rhs.data == 0 || (rhs.type() == type && rhs.rows == m) );
     
-    dst.create( n, nb, type );
+    _dst.create( n, nb, type );
+    Mat dst = _dst.getMat();
     if( type == CV_32F )
         SVBkSb(m, n, (float*)w.data, 1, (float*)u.data, (int)(u.step/esz), false,
                (float*)vt.data, (int)(vt.step/esz), true, (float*)rhs.data, (int)(rhs.step/esz),
@@ -1470,14 +1499,14 @@ void SVD::backSubst( const Mat& w, const Mat& u, const Mat& vt, const Mat& rhs, 
 }
 
     
-SVD& SVD::operator ()(const Mat& a, int flags)
+SVD& SVD::operator ()(const InputArray& a, int flags)
 {
-    _SVDcompute(a, w, &u, &vt, flags);
+    _SVDcompute(a, w, u, vt, flags);
     return *this;
 }
 
 
-void SVD::backSubst( const Mat& rhs, Mat& dst ) const
+void SVD::backSubst( const InputArray& rhs, OutputArray dst ) const
 {
     backSubst( w, u, vt, rhs, dst );
 }

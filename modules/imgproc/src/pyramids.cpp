@@ -399,11 +399,15 @@ pyrUp_( const Mat& _src, Mat& _dst )
 
 typedef void (*PyrFunc)(const Mat&, Mat&);
 
-void pyrDown( const Mat& _src, Mat& _dst, const Size& _dsz )
+}
+    
+void cv::pyrDown( const InputArray& _src, OutputArray _dst, const Size& _dsz )
 {
-    Size dsz = _dsz == Size() ? Size((_src.cols + 1)/2, (_src.rows + 1)/2) : _dsz;
-    _dst.create( dsz, _src.type() );
-    int depth = _src.depth();
+    Mat src = _src.getMat();
+    Size dsz = _dsz == Size() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
+    _dst.create( dsz, src.type() );
+    Mat dst = _dst.getMat();
+    int depth = src.depth();
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrDown_<FixPtCast<uchar, 8>, PyrDownVec_32s8u>;
@@ -416,14 +420,16 @@ void pyrDown( const Mat& _src, Mat& _dst, const Size& _dsz )
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( _src, _dst );
+    func( src, dst );
 }
 
-void pyrUp( const Mat& _src, Mat& _dst, const Size& _dsz )
+void cv::pyrUp( const InputArray& _src, OutputArray _dst, const Size& _dsz )
 {
-    Size dsz = _dsz == Size() ? Size(_src.cols*2, _src.rows*2) : _dsz;
-    _dst.create( dsz, _src.type() );
-    int depth = _src.depth();
+    Mat src = _src.getMat();
+    Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
+    _dst.create( dsz, src.type() );
+    Mat dst = _dst.getMat();
+    int depth = src.depth();
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrUp_<FixPtCast<uchar, 6>, NoVec<int, uchar> >;
@@ -436,17 +442,16 @@ void pyrUp( const Mat& _src, Mat& _dst, const Size& _dsz )
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( _src, _dst );
+    func( src, dst );
 }
 
-void buildPyramid( const Mat& _src, vector<Mat>& _dst, int maxlevel )
+void cv::buildPyramid( const InputArray& _src, OutputArrayOfArrays _dst, int maxlevel )
 {
-    _dst.resize( maxlevel + 1 );
-    _dst[0] = _src;
+    Mat src = _src.getMat();
+    _dst.create( maxlevel + 1, 1, 0 );
+    _dst.getMatRef(0) = src;
     for( int i = 1; i <= maxlevel; i++ )
-        pyrDown( _dst[i-1], _dst[i] );
-}
-
+        pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i) );
 }
 
 CV_IMPL void cvPyrDown( const void* srcarr, void* dstarr, int _filter )

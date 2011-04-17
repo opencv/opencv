@@ -355,8 +355,6 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
     float result = 0.f;
     const int max_blk_count = 128, max_buf_sz = 1 << 12;
 
-    int i, count, count_scale, blk_count0, blk_count = 0, buf_sz, k1;
-
     if( !samples )
         CV_Error( CV_StsError, "The search tree must be constructed first using train method" );
 
@@ -395,15 +393,15 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
             "The distances from the neighbors (if present) must be floating-point matrix of <num_samples> x <k> size" );
     }
 
-    count = _samples->rows;
-    count_scale = k*2;
-    blk_count0 = MIN( count, max_blk_count );
-    buf_sz = MIN( blk_count0 * count_scale, max_buf_sz );
+    int count = _samples->rows;
+    int count_scale = k*2;
+    int blk_count0 = MIN( count, max_blk_count );
+    int buf_sz = MIN( blk_count0 * count_scale, max_buf_sz );
     blk_count0 = MAX( buf_sz/count_scale, 1 );
     blk_count0 += blk_count0 % 2;
     blk_count0 = MIN( blk_count0, count );
     buf_sz = blk_count0 * count_scale + k;
-    k1 = get_sample_count();
+    int k1 = get_sample_count();
     k1 = MIN( k1, k );
 
     cv::parallel_for(cv::BlockedRange(0, count), P1(this, buf_sz, k, _samples, _neighbors, k1,

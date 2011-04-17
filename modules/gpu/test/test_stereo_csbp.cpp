@@ -67,7 +67,7 @@ struct CV_GpuStereoCSBPTest : public cvtest::BaseTest
 
         disp.convertTo(disp, img_template.type());
 
-        double norm = cv::norm(disp, img_template, cv::NORM_INF);
+        double norm = cv::norm((cv::Mat)disp, img_template, cv::NORM_INF);
         if (norm >= 0.5)
         {
             ts->printf(cvtest::TS::LOG, "\nConstantSpaceStereoBP norm = %f\n", norm);

@@ -722,10 +722,10 @@ icvGetNodePtr( CvSparseMat* mat, const int* idx, int* _type,
         node->hashval = hashval;
         node->next = (CvSparseNode*)mat->hashtable[tabidx];
         mat->hashtable[tabidx] = node;
-        CV_MEMCPY_INT( CV_NODE_IDX(mat,node), idx, mat->dims );
+        memcpy(CV_NODE_IDX(mat,node), idx, mat->dims*sizeof(idx[0]));
         ptr = (uchar*)CV_NODE_VAL(mat,node);
         if( create_node > 0 )
-            CV_ZERO_CHAR( ptr, CV_ELEM_SIZE(mat->type));
+            memset( ptr, 0, CV_ELEM_SIZE(mat->type));
     }
 
     if( _type )
@@ -1512,7 +1512,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
         do
         {
             offset -= pix_size;
-            CV_MEMCPY_AUTO( (char*)data + offset, data, pix_size );
+            memcpy((char*)data + offset, data, pix_size);
         }
         while( offset > pix_size );
     }
@@ -2358,7 +2358,7 @@ cvClearND( CvArr* arr, const int* idx )
         uchar* ptr;
         ptr = cvPtrND( arr, idx, &type );
         if( ptr )
-            CV_ZERO_CHAR( ptr, CV_ELEM_SIZE(type) );
+            memset( ptr, 0, CV_ELEM_SIZE(type) );
     }
     else
         icvDeleteNode( (CvSparseMat*)arr, idx, 0 );

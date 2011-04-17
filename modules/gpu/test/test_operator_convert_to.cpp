@@ -92,7 +92,7 @@ void CV_GpuMatOpConvertToTest::run(int /* start_from */)
                 cpumatsrc.convertTo(cpumatdst, dst_type, 0.5, 3.0);
                 gpumatsrc.convertTo(gpumatdst, dst_type, 0.5, 3.0);
 
-                double r = norm(cpumatdst, gpumatdst, NORM_INF);
+                double r = norm(cpumatdst, (Mat)gpumatdst, NORM_INF);
                 if (r > 1)
                 {
                     ts->printf(cvtest::TS::LOG,

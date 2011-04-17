@@ -608,21 +608,6 @@ template<typename _Tp> inline MatIterator_<_Tp> Mat::end()
     return it;
 }
 
-    
-template<typename _Tp> inline void Mat::copyTo(vector<_Tp>& v) const
-{
-    int n = checkVector(DataType<_Tp>::channels);
-    if( empty() || n == 0 )
-    {
-        v.clear();
-        return;
-    }
-    CV_Assert( n > 0 );
-    v.resize(n);
-    Mat temp(dims, size.p, DataType<_Tp>::type, &v[0]);
-    convertTo(temp, DataType<_Tp>::type);
-}    
-    
 template<typename _Tp> inline Mat::operator vector<_Tp>() const
 {
     vector<_Tp> v;
@@ -726,10 +711,12 @@ static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMod
 ///////////////////////////////////////////// SVD //////////////////////////////////////////////////////
 
 inline SVD::SVD() {}
-inline SVD::SVD( const Mat& m, int flags ) { operator ()(m, flags); }
-inline void SVD::solveZ( const Mat& m, Mat& dst )
+inline SVD::SVD( const InputArray& m, int flags ) { operator ()(m, flags); }
+inline void SVD::solveZ( const InputArray& m, OutputArray _dst )
 {
     SVD svd(m);
+    _dst.create(svd.vt.cols, 1, svd.vt.type());
+    Mat dst = _dst.getMat();
     svd.vt.row(svd.vt.rows-1).reshape(1,svd.vt.cols).copyTo(dst);
 }
 
@@ -1075,6 +1062,22 @@ process( const Mat_<T1>& m1, const Mat_<T2>& m2, Mat_<T3>& m3, Op op )
     }
 }
 
+    
+/////////////////////////////// Input/Output Arrays /////////////////////////////////
+    
+template<typename _Tp> InputArray::InputArray(const vector<_Tp>& vec)
+    : flags(STD_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
+
+template<typename _Tp> InputArray::InputArray(const vector<vector<_Tp> >& vec)
+    : flags(STD_VECTOR_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
+
+template<typename _Tp, int m, int n> InputArray::InputArray(const Matx<_Tp, m, n>& mtx)
+    : flags(MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m) {}
+
+template<typename _Tp> OutputArray::OutputArray(vector<_Tp>& vec) : InputArray(vec) {}
+template<typename _Tp> OutputArray::OutputArray(vector<vector<_Tp> >& vec) : InputArray(vec) {}
+template<typename _Tp, int m, int n> OutputArray::OutputArray(Matx<_Tp, m, n>& mtx) : InputArray(mtx) {}
+    
 //////////////////////////////////// Matrix Expressions /////////////////////////////////////////
 
 class CV_EXPORTS MatOp
@@ -1113,6 +1116,9 @@ public:
     virtual void transpose(const MatExpr& expr, MatExpr& res) const;
     virtual void matmul(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const;
     virtual void invert(const MatExpr& expr, int method, MatExpr& res) const;
+    
+    virtual Size size(const MatExpr& expr) const;
+    virtual int type(const MatExpr& expr) const;
 };
 
     
@@ -1151,6 +1157,9 @@ public:
     MatExpr inv(int method = DECOMP_LU) const;
     MatExpr mul(const MatExpr& e, double scale=1) const;
     MatExpr mul(const Mat& m, double scale=1) const;
+    
+    Size size() const;
+    int type() const;
     
     const MatOp* op;
     int flags;

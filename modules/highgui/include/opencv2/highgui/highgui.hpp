@@ -66,7 +66,9 @@ CV_EXPORTS_W double getWindowProperty(const string& winname, int prop_id);//YV
 
 //Only for Qt
 //------------------------
-CV_EXPORTS CvFont fontQt(const string& nameFont, int pointSize CV_DEFAULT(-1), Scalar color CV_DEFAULT(Scalar::all(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
+CV_EXPORTS CvFont fontQt(const string& nameFont, int pointSize CV_DEFAULT(-1),
+                         Scalar color CV_DEFAULT(Scalar::all(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),
+                         int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
 CV_EXPORTS void addText( const Mat& img, const string& text, Point org, CvFont font);
 
 CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
@@ -81,10 +83,12 @@ CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char
 CV_EXPORTS  void stopLoop();
 
 typedef void (CV_CDECL *ButtonCallback)(int state, void* userdata);
-CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change , void* userdata CV_DEFAULT(NULL), int type CV_DEFAULT(CV_PUSH_BUTTON), bool initial_button_state CV_DEFAULT(0));
+CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
+                             void* userdata CV_DEFAULT(NULL), int type CV_DEFAULT(CV_PUSH_BUTTON),
+                             bool initial_button_state CV_DEFAULT(0));
 //-------------------------
 
-CV_EXPORTS_W void imshow( const string& winname, const Mat& mat );
+CV_EXPORTS_W void imshow( const string& winname, const InputArray& mat );
 
 typedef void (CV_CDECL *TrackbarCallback)(int pos, void* userdata);
 
@@ -102,12 +106,12 @@ typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
 CV_EXPORTS void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
     
 CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
-CV_EXPORTS_W bool imwrite( const string& filename, const Mat& img,
+CV_EXPORTS_W bool imwrite( const string& filename, const InputArray& img,
               const vector<int>& params=vector<int>());
-CV_EXPORTS_W Mat imdecode( const Mat& buf, int flags );
-CV_EXPORTS_W bool imencode( const string& ext, const Mat& img,
-                          CV_OUT vector<uchar>& buf,
-                          const vector<int>& params=vector<int>());
+CV_EXPORTS_W Mat imdecode( const InputArray& buf, int flags );
+CV_EXPORTS_W bool imencode( const string& ext, const InputArray& img,
+                            vector<uchar>& buf,
+                            const vector<int>& params=vector<int>());
 
 CV_EXPORTS_W int waitKey(int delay=0);
 

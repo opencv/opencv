@@ -70,7 +70,7 @@ struct CV_AsyncStereoBMTest : public cvtest::BaseTest
 
         stream.waitForCompletion();
         disp.convertTo(disp, img_reference.type());
-        double norm = cv::norm(disp, img_reference, cv::NORM_INF);
+        double norm = cv::norm((Mat)disp, img_reference, cv::NORM_INF);
 
         if (norm >= 100)
         {

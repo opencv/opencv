@@ -233,10 +233,11 @@ cv::crossCorr( const Mat& img, const Mat& templ, Mat& corr,
     icvCrossCorr( &_img, &_templ, &_corr, anchor, delta, borderType );
 }*/
 
+}
 
 /*****************************************************************************************/
 
-void matchTemplate( const Mat& _img, const Mat& _templ, Mat& result, int method )
+void cv::matchTemplate( const InputArray& _img, const InputArray& _templ, OutputArray _result, int method )
 {
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
     
@@ -246,17 +247,19 @@ void matchTemplate( const Mat& _img, const Mat& _templ, Mat& result, int method 
                     method == CV_TM_SQDIFF_NORMED ||
                     method == CV_TM_CCOEFF_NORMED;
 
-    Mat img = _img, templ = _templ;
+    Mat img = _img.getMat(), templ = _templ.getMat();
     if( img.rows < templ.rows || img.cols < templ.cols )
         std::swap(img, templ);
     
     CV_Assert( (img.depth() == CV_8U || img.depth() == CV_32F) &&
                img.type() == templ.type() );
 
+    Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
+    _result.create(corrSize, CV_32F);
+    Mat result = _result.getMat();
+    
     int cn = img.channels();
-    crossCorr( img, templ, result,
-               Size(img.cols - templ.cols + 1, img.rows - templ.rows + 1),
-               CV_32F, Point(0,0), 0, 0);
+    crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
 
     if( method == CV_TM_CCORR )
         return;
@@ -366,8 +369,6 @@ void matchTemplate( const Mat& _img, const Mat& _templ, Mat& result, int method 
             rrow[j] = (float)num;
         }
     }
-}
-
 }
 
 

@@ -1138,22 +1138,25 @@ icvDistC( const float *x, const float *y, void *user_param )
 }
 
 
-namespace cv
+float cv::EMD( const InputArray& _signature1, const InputArray& _signature2,
+               int distType, const InputArray& _cost,
+               float* lowerBound, OutputArray _flow )
 {
+    Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
+    Mat cost = _cost.getMat(), flow;
     
-float EMD( const Mat& signature1, const Mat& signature2,
-           int distType, const Mat& cost, float* lowerBound, Mat* flow )
-{
-    CvMat _signature1 = signature1;
-    CvMat _signature2 = signature2;
-    CvMat _cost = cost, _flow;
-    if( flow )
-        _flow = *flow;
+    CvMat _csignature1 = signature1;
+    CvMat _csignature2 = signature2;
+    CvMat _ccost = cost, _cflow;
+    if( _flow.needed() )
+    {
+        _flow.create((int)signature1.total(), (int)signature2.total(), CV_32F);
+        flow = _flow.getMat();
+        _cflow = flow;
+    }
     
-    return cvCalcEMD2( &_signature1, &_signature2, distType, 0, cost.empty() ? 0 : &_cost,
-                       flow ? &_flow : 0, lowerBound, 0 );
-}
-
+    return cvCalcEMD2( &_csignature1, &_csignature2, distType, 0, cost.empty() ? 0 : &_ccost,
+                       _flow.needed() ? &_cflow : 0, lowerBound, 0 );
 }
 
 /* End of file. */

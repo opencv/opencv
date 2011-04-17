@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -683,9 +683,10 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
     GEMMStore(c_data, c_step, d_buf, d_buf_step, d_data, d_step, d_size, alpha, beta, flags);
 }
 
+}
 
-void gemm( const Mat& matA, const Mat& matB, double alpha,
-           const Mat& matC, double beta, Mat& D, int flags )
+void cv::gemm( const InputArray& matA, const InputArray& matB, double alpha,
+           const InputArray& matC, double beta, OutputArray matD, int flags )
 {
     const int block_lin_size = 128;
     const int block_size = block_lin_size * block_lin_size;
@@ -693,8 +694,7 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
     static double zero[] = {0,0,0,0};
     static float zerof[] = {0,0,0,0};
 
-    Mat A = matA, B = matB;
-    const Mat* C = matC.data && beta != 0 ? &matC : 0;
+    Mat A = matA.getMat(), B = matB.getMat(), C = beta != 0 ? matC.getMat() : Mat();
     Size a_size = A.size(), d_size;
     int i, len = 0, type = A.type();
 
@@ -724,19 +724,20 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
         break;
     }
 
-    if( C )
+    if( C.data )
     {
-        CV_Assert( C->type() == type &&
-            (((flags&GEMM_3_T) == 0 && C->rows == d_size.height && C->cols == d_size.width) ||
-             ((flags&GEMM_3_T) != 0 && C->rows == d_size.width && C->cols == d_size.height)));
-        if( (flags & GEMM_3_T) != 0 && C->data == D.data )
-        {
-            transpose( D, D );
-            flags &= ~GEMM_3_T;
-        }
+        CV_Assert( C.type() == type &&
+            (((flags&GEMM_3_T) == 0 && C.rows == d_size.height && C.cols == d_size.width) ||
+             ((flags&GEMM_3_T) != 0 && C.rows == d_size.width && C.cols == d_size.height)));
     }
 
-    D.create( d_size.height, d_size.width, type );
+    matD.create( d_size.height, d_size.width, type );
+    Mat D = matD.getMat();
+    if( (flags & GEMM_3_T) != 0 && C.data == D.data )
+    {
+        transpose( C, C );
+        flags &= ~GEMM_3_T;
+    }
 
     if( flags == 0 && 2 <= len && len <= 4 && (len == d_size.width || len == d_size.height) )
     {
@@ -745,11 +746,11 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
             float* d = (float*)D.data;
             const float *a = (const float*)A.data,
                         *b = (const float*)B.data,
-                        *c = (const float*)(C ? C->data : 0);
+                        *c = (const float*)C.data;
             size_t d_step = D.step/sizeof(d[0]),
                 a_step = A.step/sizeof(a[0]),
                 b_step = B.step/sizeof(b[0]),
-                c_step = C ? C->step/sizeof(c[0]) : 0;
+                c_step = C.data ? C.step/sizeof(c[0]) : 0;
 
             if( !c )
                 c = zerof;
@@ -873,11 +874,11 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
             double* d = (double*)D.data;
             const double *a = (const double*)A.data,
                          *b = (const double*)B.data,
-                         *c = (const double*)(C ? C->data : 0);
+                         *c = (const double*)C.data;
             size_t d_step = D.step/sizeof(d[0]),
                 a_step = A.step/sizeof(a[0]),
                 b_step = B.step/sizeof(b[0]),
-                c_step = C ? C->step/sizeof(c[0]) : 0;
+                c_step = C.data ? C.step/sizeof(c[0]) : 0;
             if( !c )
                 c = zero;
 
@@ -1002,8 +1003,8 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
     GEMMBlockMulFunc blockMulFunc;
     GEMMStoreFunc storeFunc;
     Mat *matD = &D, tmat;
-    const uchar* Cdata = C ? C->data : 0;
-    size_t Cstep = C ? (size_t)C->step : 0;
+    const uchar* Cdata = C.data;
+    size_t Cstep = C.data ? (size_t)C.step : 0;
     AutoBuffer<uchar> buf;
 
     if( type == CV_32FC1 )
@@ -1140,15 +1141,15 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
         else
             b_step0 = elem_size, b_step1 = b_step;
 
-        if( !C )
+        if( !C.data )
         {
             c_step0 = c_step1 = 0;
             flags &= ~GEMM_3_T;
         }
         else if( !(flags & GEMM_3_T) )
-            c_step0 = C->step, c_step1 = elem_size;
+            c_step0 = C.step, c_step1 = elem_size;
         else
-            c_step0 = elem_size, c_step1 = C->step;
+            c_step0 = elem_size, c_step1 = C.step;
 
         dm0 = std::min( block_lin_size, d_size.height );
         dn0 = std::min( block_lin_size, d_size.width );
@@ -1265,130 +1266,69 @@ void gemm( const Mat& matA, const Mat& matB, double alpha,
 *                                        Transform                                       *
 \****************************************************************************************/
 
-template<typename T, typename WT> static void
-transformC1_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
+namespace cv
 {
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
 
-    for( y = 0; y < size.height; y++ )
+template<typename T, typename WT> static void
+transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
+{
+    int x;
+    
+    if( scn == 2 && dcn == 2 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-        const WT* _m = m;
-
-        for( k = 0; k < dst_cn; k++, dst++, _m += 2 )
-            for( x = 0; x < size.width; x++ )
-                dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x] + _m[1]);
+        for( x = 0; x < len*2; x += 2 )
+        {
+            WT v0 = src[x], v1 = src[x+1];
+            T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]);
+            T t1 = saturate_cast<T>(m[3]*v0 + m[4]*v1 + m[5]);
+            dst[x] = t0; dst[x+1] = t1;
+        }
     }
-}
-
-template<typename T, typename WT> static void
-transformC2_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
-{
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
-
-    for( y = 0; y < size.height; y++ )
+    else if( scn == 3 && dcn == 3 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        if( dst_cn == 2 )
-            for( x = 0; x < size.width*2; x += 2 )
-            {
-                WT v0 = src[x], v1 = src[x+1];
-                T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]);
-                T t1 = saturate_cast<T>(m[3]*v0 + m[4]*v1 + m[5]);
-                dst[x] = t0; dst[x+1] = t1;
-            }
-        else
+        for( x = 0; x < len*3; x += 3 )
+        {
+            WT v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+            T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
+            T t1 = saturate_cast<T>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
+            T t2 = saturate_cast<T>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
+            dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
+        }
+    }
+    else if( scn == 3 && dcn == 1 )
+    {
+        for( x = 0; x < len; x++, src += 3 )
+            dst[x] = saturate_cast<T>(m[0]*src[0] + m[1]*src[1] + m[2]*src[2] + m[3]);
+    }
+    else if( scn == 4 && dcn == 4 )
+    {
+        for( x = 0; x < len*4; x += 4 )
+        {
+            WT v0 = src[x], v1 = src[x+1], v2 = src[x+2], v3 = src[x+3];
+            T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]*v3 + m[4]);
+            T t1 = saturate_cast<T>(m[5]*v0 + m[6]*v1 + m[7]*v2 + m[8]*v3 + m[9]);
+            dst[x] = t0; dst[x+1] = t1;
+            t0 = saturate_cast<T>(m[10]*v0 + m[11]*v1 + m[12]*v2 + m[13]*v3 + m[14]);
+            t1 = saturate_cast<T>(m[15]*v0 + m[16]*v1 + m[17]*v2 + m[18]*v3 + m[19]);
+            dst[x+2] = t0; dst[x+3] = t1;
+        }
+    }
+    else
+    {
+        for( x = 0; x < len; x++, src += scn, dst += dcn )
         {
             const WT* _m = m;
-            for( k = 0; k < dst_cn; k++, dst++, _m += 3 )
-                for( x = 0; x < size.width; x++ )
-                    dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x*2] +
-                        _m[1]*src[x*2+1] + _m[2]);
+            int j, k;
+            for( j = 0; j < dcn; j++, _m += scn + 1 )
+            {
+                WT s = _m[scn];
+                for( k = 0; k < scn; k++ )
+                    s += _m[k]*src[k];
+                dst[j] = saturate_cast<T>(s);
+            }
         }
     }
 }
-
-template<typename T, typename WT> static void
-transformC3_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
-{
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        if( dst_cn == 3 )
-            for( x = 0; x < size.width*3; x += 3 )
-            {
-                WT v0 = src[x], v1 = src[x+1], v2 = src[x+2];
-                T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
-                T t1 = saturate_cast<T>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
-                T t2 = saturate_cast<T>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
-                dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
-            }
-        else if( dst_cn == 1 )
-            for( x = 0; x < size.width; x++, src += 3 )
-                dst[x] = saturate_cast<T>(m[0]*src[0] + m[1]*src[1] + m[2]*src[2] + m[3]);
-        else
-        {
-            const WT* _m = m;
-            for( k = 0; k < dst_cn; k++, dst++, _m += 4 )
-                for( x = 0; x < size.width; x++ )
-                    dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x*3] +
-                        _m[1]*src[x*3+1] + _m[2]*src[x*3+2] + _m[3]);
-        }
-    }
-}
-
-
-template<typename T, typename WT> static void
-transformC4_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
-{
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        if( dst_cn == 4 )
-            for( x = 0; x < size.width*4; x += 4 )
-            {
-                WT v0 = src[x], v1 = src[x+1], v2 = src[x+2], v3 = src[x+3];
-                T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]*v3 + m[4]);
-                T t1 = saturate_cast<T>(m[5]*v0 + m[6]*v1 + m[7]*v2 + m[8]*v3 + m[9]);
-                dst[x] = t0; dst[x+1] = t1;
-                t0 = saturate_cast<T>(m[10]*v0 + m[11]*v1 + m[12]*v2 + m[13]*v3 + m[14]);
-                t1 = saturate_cast<T>(m[15]*v0 + m[16]*v1 + m[17]*v2 + m[18]*v3 + m[19]);
-                dst[x+2] = t0; dst[x+3] = t1;
-            }
-        else
-        {
-            const WT* _m = m;
-            for( k = 0; k < dst_cn; k++, dst++, _m += 5 )
-                for( x = 0; x < size.width; x++ )
-                    dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x*4] + _m[1]*src[x*4+1] +
-                                            _m[2]*src[x*4+2] + _m[3]*src[x*4+3] + _m[4]);
-        }
-    }
-}
-
 
 #if CV_SSE2
 
@@ -1411,19 +1351,16 @@ load4x4Matrix( const float* m, __m128& m0, __m128& m1, __m128& m2, __m128& m3, _
     m4 = _mm_setr_ps(m[4], m[9], m[14], m[19]);
 }
 
-template<> void
-transformC3_<uchar, float>( const Mat& srcmat, Mat& dstmat, Mat& tmat )
+#endif
+    
+static void
+transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn )
 {
-    typedef uchar T;
-    typedef float WT;
+#if CV_SSE2
     const int BITS = 10, SCALE = 1 << BITS;
     const float MAX_M = (float)(1 << (15 - BITS));
-    Size size = getContinuousSize( srcmat, dstmat );
-    const float* m = (const float*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
 
-    if( checkHardwareSupport(CV_CPU_SSE2) && dst_cn == 3 &&
+    if( USE_SSE2 && scn == 3 && dcn == 3 &&
         std::abs(m[0]) < MAX_M && std::abs(m[1]) < MAX_M && std::abs(m[2]) < MAX_M && std::abs(m[3]) < MAX_M*256 &&
         std::abs(m[4]) < MAX_M && std::abs(m[5]) < MAX_M && std::abs(m[6]) < MAX_M && std::abs(m[7]) < MAX_M*256 &&
         std::abs(m[8]) < MAX_M && std::abs(m[9]) < MAX_M && std::abs(m[10]) < MAX_M && std::abs(m[11]) < MAX_M*256 )
@@ -1441,238 +1378,182 @@ transformC3_<uchar, float>( const Mat& srcmat, Mat& dstmat, Mat& tmat )
         __m128i m1 = _mm_setr_epi16(0, m10, m11, m12, m10, m11, m12, 0);
         __m128i m2 = _mm_setr_epi16(0, m20, m21, m22, m20, m21, m22, 0);
         __m128i m3 = _mm_setr_epi32(m03, m13, m23, 0);
-
-        for( y = 0; y < size.height; y++ )
+        int x = 0;
+        
+        for( ; x <= (len - 8)*3; x += 8*3 )
         {
-            const T* src = (const T*)(srcmat.data + srcmat.step*y);
-            T* dst = (T*)(dstmat.data + dstmat.step*y);
-            int x = 0;
+            __m128i z = _mm_setzero_si128(), t0, t1, t2, r0, r1;
+            __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + x));
+            __m128i v1 = _mm_loadl_epi64((const __m128i*)(src + x + 8));
+            __m128i v2 = _mm_loadl_epi64((const __m128i*)(src + x + 16)), v3;
+            v0 = _mm_unpacklo_epi8(v0, z); // b0 g0 r0 b1 g1 r1 b2 g2
+            v1 = _mm_unpacklo_epi8(v1, z); // r2 b3 g3 r3 b4 g4 r4 b5
+            v2 = _mm_unpacklo_epi8(v2, z); // g5 r5 b6 g6 r6 b7 g7 r7
 
-            for( ; x <= (size.width - 8)*3; x += 8*3 )
-            {
-                __m128i z = _mm_setzero_si128(), t0, t1, t2, r0, r1;
-                __m128i v0 = _mm_loadl_epi64((const __m128i*)(src + x));
-                __m128i v1 = _mm_loadl_epi64((const __m128i*)(src + x + 8));
-                __m128i v2 = _mm_loadl_epi64((const __m128i*)(src + x + 16)), v3;
-                v0 = _mm_unpacklo_epi8(v0, z); // b0 g0 r0 b1 g1 r1 b2 g2
-                v1 = _mm_unpacklo_epi8(v1, z); // r2 b3 g3 r3 b4 g4 r4 b5
-                v2 = _mm_unpacklo_epi8(v2, z); // g5 r5 b6 g6 r6 b7 g7 r7
+            v3 = _mm_srli_si128(v2, 2); // ? b6 g6 r6 b7 g7 r7 0
+            v2 = _mm_or_si128(_mm_slli_si128(v2, 10), _mm_srli_si128(v1, 6)); // ? b4 g4 r4 b5 g5 r5 ?
+            v1 = _mm_or_si128(_mm_slli_si128(v1, 6), _mm_srli_si128(v0, 10)); // ? b2 g2 r2 b3 g3 r3 ?
+            v0 = _mm_slli_si128(v0, 2); // 0 b0 g0 r0 b1 g1 r1 ?
 
-                v3 = _mm_srli_si128(v2, 2); // ? b6 g6 r6 b7 g7 r7 0
-                v2 = _mm_or_si128(_mm_slli_si128(v2, 10), _mm_srli_si128(v1, 6)); // ? b4 g4 r4 b5 g5 r5 ?
-                v1 = _mm_or_si128(_mm_slli_si128(v1, 6), _mm_srli_si128(v0, 10)); // ? b2 g2 r2 b3 g3 r3 ?
-                v0 = _mm_slli_si128(v0, 2); // 0 b0 g0 r0 b1 g1 r1 ?
+            // process pixels 0 & 1
+            t0 = _mm_madd_epi16(v0, m0); // a0 b0 a1 b1
+            t1 = _mm_madd_epi16(v0, m1); // c0 d0 c1 d1
+            t2 = _mm_madd_epi16(v0, m2); // e0 f0 e1 f1
+            v0 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
+            t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
+            t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
+            t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
+            r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v0, t1), _mm_unpackhi_epi64(v0,t1)), m3); // B0 G0 R0 0
+            r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B1 G1 R1 0
+            r0 = _mm_srai_epi32(r0, BITS);
+            r1 = _mm_srai_epi32(r1, BITS);
+            v0 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B0 G0 R0 B1 G1 R1 0
 
-                // process pixels 0 & 1
-                t0 = _mm_madd_epi16(v0, m0); // a0 b0 a1 b1
-                t1 = _mm_madd_epi16(v0, m1); // c0 d0 c1 d1
-                t2 = _mm_madd_epi16(v0, m2); // e0 f0 e1 f1
-                v0 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
-                t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
-                t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
-                t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
-                r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v0, t1), _mm_unpackhi_epi64(v0,t1)), m3); // B0 G0 R0 0
-                r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B1 G1 R1 0
-                r0 = _mm_srai_epi32(r0, BITS);
-                r1 = _mm_srai_epi32(r1, BITS);
-                v0 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B0 G0 R0 B1 G1 R1 0
+            // process pixels 2 & 3
+            t0 = _mm_madd_epi16(v1, m0); // a0 b0 a1 b1
+            t1 = _mm_madd_epi16(v1, m1); // c0 d0 c1 d1
+            t2 = _mm_madd_epi16(v1, m2); // e0 f0 e1 f1
+            v1 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
+            t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
+            t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
+            t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
+            r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v1, t1), _mm_unpackhi_epi64(v1,t1)), m3); // B2 G2 R2 0
+            r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B3 G3 R3 0
+            r0 = _mm_srai_epi32(r0, BITS);
+            r1 = _mm_srai_epi32(r1, BITS);
+            v1 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B2 G2 R2 B3 G3 R3 0
 
-                // process pixels 2 & 3
-                t0 = _mm_madd_epi16(v1, m0); // a0 b0 a1 b1
-                t1 = _mm_madd_epi16(v1, m1); // c0 d0 c1 d1
-                t2 = _mm_madd_epi16(v1, m2); // e0 f0 e1 f1
-                v1 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
-                t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
-                t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
-                t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
-                r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v1, t1), _mm_unpackhi_epi64(v1,t1)), m3); // B2 G2 R2 0
-                r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B3 G3 R3 0
-                r0 = _mm_srai_epi32(r0, BITS);
-                r1 = _mm_srai_epi32(r1, BITS);
-                v1 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B2 G2 R2 B3 G3 R3 0
+            // process pixels 4 & 5
+            t0 = _mm_madd_epi16(v2, m0); // a0 b0 a1 b1
+            t1 = _mm_madd_epi16(v2, m1); // c0 d0 c1 d1
+            t2 = _mm_madd_epi16(v2, m2); // e0 f0 e1 f1
+            v2 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
+            t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
+            t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
+            t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
+            r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v2, t1), _mm_unpackhi_epi64(v2,t1)), m3); // B4 G4 R4 0
+            r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B5 G5 R5 0
+            r0 = _mm_srai_epi32(r0, BITS);
+            r1 = _mm_srai_epi32(r1, BITS);
+            v2 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B4 G4 R4 B5 G5 R5 0
 
-                // process pixels 4 & 5
-                t0 = _mm_madd_epi16(v2, m0); // a0 b0 a1 b1
-                t1 = _mm_madd_epi16(v2, m1); // c0 d0 c1 d1
-                t2 = _mm_madd_epi16(v2, m2); // e0 f0 e1 f1
-                v2 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
-                t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
-                t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
-                t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
-                r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v2, t1), _mm_unpackhi_epi64(v2,t1)), m3); // B4 G4 R4 0
-                r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B5 G5 R5 0
-                r0 = _mm_srai_epi32(r0, BITS);
-                r1 = _mm_srai_epi32(r1, BITS);
-                v2 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B4 G4 R4 B5 G5 R5 0
+            // process pixels 6 & 7
+            t0 = _mm_madd_epi16(v3, m0); // a0 b0 a1 b1
+            t1 = _mm_madd_epi16(v3, m1); // c0 d0 c1 d1
+            t2 = _mm_madd_epi16(v3, m2); // e0 f0 e1 f1
+            v3 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
+            t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
+            t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
+            t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
+            r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v3, t1), _mm_unpackhi_epi64(v3,t1)), m3); // B6 G6 R6 0
+            r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B7 G7 R7 0
+            r0 = _mm_srai_epi32(r0, BITS);
+            r1 = _mm_srai_epi32(r1, BITS);
+            v3 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B6 G6 R6 B7 G7 R7 0
 
-                // process pixels 6 & 7
-                t0 = _mm_madd_epi16(v3, m0); // a0 b0 a1 b1
-                t1 = _mm_madd_epi16(v3, m1); // c0 d0 c1 d1
-                t2 = _mm_madd_epi16(v3, m2); // e0 f0 e1 f1
-                v3 = _mm_unpacklo_epi32(t0, t1); // a0 c0 b0 d0
-                t0 = _mm_unpackhi_epi32(t0, t1); // a1 b1 c1 d1
-                t1 = _mm_unpacklo_epi32(t2, z);  // e0 0 f0 0
-                t2 = _mm_unpackhi_epi32(t2, z);  // e1 0 f1 0
-                r0 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(v3, t1), _mm_unpackhi_epi64(v3,t1)), m3); // B6 G6 R6 0
-                r1 = _mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi64(t0, t2), _mm_unpackhi_epi64(t0,t2)), m3); // B7 G7 R7 0
-                r0 = _mm_srai_epi32(r0, BITS);
-                r1 = _mm_srai_epi32(r1, BITS);
-                v3 = _mm_packus_epi16(_mm_packs_epi32(_mm_slli_si128(r0, 4), r1), z); // 0 B6 G6 R6 B7 G7 R7 0
+            v0 = _mm_or_si128(_mm_srli_si128(v0, 1), _mm_slli_si128(v1, 5));
+            v1 = _mm_or_si128(_mm_srli_si128(v1, 3), _mm_slli_si128(v2, 3));
+            v2 = _mm_or_si128(_mm_srli_si128(v2, 5), _mm_slli_si128(v3, 1));
+            _mm_storel_epi64((__m128i*)(dst + x), v0);
+            _mm_storel_epi64((__m128i*)(dst + x + 8), v1);
+            _mm_storel_epi64((__m128i*)(dst + x + 16), v2);
+        }
 
-                v0 = _mm_or_si128(_mm_srli_si128(v0, 1), _mm_slli_si128(v1, 5));
-                v1 = _mm_or_si128(_mm_srli_si128(v1, 3), _mm_slli_si128(v2, 3));
-                v2 = _mm_or_si128(_mm_srli_si128(v2, 5), _mm_slli_si128(v3, 1));
-                _mm_storel_epi64((__m128i*)(dst + x), v0);
-                _mm_storel_epi64((__m128i*)(dst + x + 8), v1);
-                _mm_storel_epi64((__m128i*)(dst + x + 16), v2);
-            }
-
-            for( ; x < size.width*3; x += 3 )
-            {
-                int v0 = src[x], v1 = src[x+1], v2 = src[x+2];
-                uchar t0 = saturate_cast<uchar>((m00*v0 + m01*v1 + m02*v2 + m03)>>BITS);
-                uchar t1 = saturate_cast<uchar>((m10*v0 + m11*v1 + m12*v2 + m13)>>BITS);
-                uchar t2 = saturate_cast<uchar>((m20*v0 + m21*v1 + m22*v2 + m23)>>BITS);
-                dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
-            }
+        for( ; x < len*3; x += 3 )
+        {
+            int v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+            uchar t0 = saturate_cast<uchar>((m00*v0 + m01*v1 + m02*v2 + m03)>>BITS);
+            uchar t1 = saturate_cast<uchar>((m10*v0 + m11*v1 + m12*v2 + m13)>>BITS);
+            uchar t2 = saturate_cast<uchar>((m20*v0 + m21*v1 + m22*v2 + m23)>>BITS);
+            dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
         }
         return;
     }
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        if( dst_cn == 1 )
-            for( x = 0; x < size.width; x++, src += 3 )
-                dst[x] = saturate_cast<T>(m[0]*CV_8TO32F(src[0]) +
-                        m[1]*CV_8TO32F(src[1]) + m[2]*CV_8TO32F(src[2]) + m[3]);
-        else
-        {
-            const WT* _m = m;
-            for( k = 0; k < dst_cn; k++, dst++, _m += 4 )
-                for( x = 0; x < size.width; x++ )
-                    dst[x*dst_cn] = saturate_cast<T>(_m[0]*CV_8TO32F(src[x*3]) +
-                        _m[1]*CV_8TO32F(src[x*3+1]) + _m[2]*CV_8TO32F(src[x*3+2]) + _m[3]);
-        }
-    }
+#endif
+    
+    transform_(src, dst, m, len, scn, dcn);
 }
 
-template<> void
-transformC3_<ushort, float>( const Mat& srcmat, Mat& dstmat, Mat& tmat )
+static void
+transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn )
 {
-    typedef ushort T;
-    typedef float WT;
-    Size size = getContinuousSize( srcmat, dstmat );
-    const float* m = (const float*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
-
-    if( checkHardwareSupport(CV_CPU_SSE2) && dst_cn == 3 )
+#if CV_SSE2    
+    if( USE_SSE2 && scn == 3 && dcn == 3 )
     {
         __m128 m0, m1, m2, m3;
         __m128i delta = _mm_setr_epi16(0,-32768,-32768,-32768,-32768,-32768,-32768,0);
         load3x3Matrix(m, m0, m1, m2, m3);
         m3 = _mm_sub_ps(m3, _mm_setr_ps(32768.f, 32768.f, 32768.f, 0.f));
 
-        for( y = 0; y < size.height; y++ )
+        int x = 0;
+        for( ; x <= (len - 4)*3; x += 4*3 )
         {
-            const T* src = (const T*)(srcmat.data + srcmat.step*y);
-            T* dst = (T*)(dstmat.data + dstmat.step*y);
-            int x = 0;
+            __m128i z = _mm_setzero_si128();
+            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + x)), v1;
+            __m128i v2 = _mm_loadl_epi64((const __m128i*)(src + x + 8)), v3;
+            v1 = _mm_unpacklo_epi16(_mm_srli_si128(v0, 6), z); // b1 g1 r1
+            v3 = _mm_unpacklo_epi16(_mm_srli_si128(v2, 2), z); // b3 g3 r3
+            v2 = _mm_or_si128(_mm_srli_si128(v0, 12), _mm_slli_si128(v2, 4));
+            v0 = _mm_unpacklo_epi16(v0, z); // b0 g0 r0
+            v2 = _mm_unpacklo_epi16(v2, z); // b2 g2 r2
+            __m128 x0 = _mm_cvtepi32_ps(v0), x1 = _mm_cvtepi32_ps(v1);
+            __m128 x2 = _mm_cvtepi32_ps(v2), x3 = _mm_cvtepi32_ps(v3);
+            __m128 y0 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
+                        _mm_mul_ps(m0, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(0,0,0,0))),
+                        _mm_mul_ps(m1, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(1,1,1,1)))),
+                        _mm_mul_ps(m2, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(2,2,2,2)))), m3);
+            __m128 y1 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
+                        _mm_mul_ps(m0, _mm_shuffle_ps(x1,x1,_MM_SHUFFLE(0,0,0,0))),
+                        _mm_mul_ps(m1, _mm_shuffle_ps(x1,x1,_MM_SHUFFLE(1,1,1,1)))),
+                        _mm_mul_ps(m2, _mm_shuffle_ps(x1,x1,_MM_SHUFFLE(2,2,2,2)))), m3);
+            __m128 y2 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
+                        _mm_mul_ps(m0, _mm_shuffle_ps(x2,x2,_MM_SHUFFLE(0,0,0,0))),
+                        _mm_mul_ps(m1, _mm_shuffle_ps(x2,x2,_MM_SHUFFLE(1,1,1,1)))),
+                        _mm_mul_ps(m2, _mm_shuffle_ps(x2,x2,_MM_SHUFFLE(2,2,2,2)))), m3);
+            __m128 y3 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
+                        _mm_mul_ps(m0, _mm_shuffle_ps(x3,x3,_MM_SHUFFLE(0,0,0,0))),
+                        _mm_mul_ps(m1, _mm_shuffle_ps(x3,x3,_MM_SHUFFLE(1,1,1,1)))),
+                        _mm_mul_ps(m2, _mm_shuffle_ps(x3,x3,_MM_SHUFFLE(2,2,2,2)))), m3);
+            v0 = _mm_cvtps_epi32(y0); v1 = _mm_cvtps_epi32(y1);
+            v2 = _mm_cvtps_epi32(y2); v3 = _mm_cvtps_epi32(y3);
 
-            for( ; x <= (size.width - 4)*3; x += 4*3 )
-            {
-                __m128i z = _mm_setzero_si128();
-                __m128i v0 = _mm_loadu_si128((const __m128i*)(src + x)), v1;
-                __m128i v2 = _mm_loadl_epi64((const __m128i*)(src + x + 8)), v3;
-                v1 = _mm_unpacklo_epi16(_mm_srli_si128(v0, 6), z); // b1 g1 r1
-                v3 = _mm_unpacklo_epi16(_mm_srli_si128(v2, 2), z); // b3 g3 r3
-                v2 = _mm_or_si128(_mm_srli_si128(v0, 12), _mm_slli_si128(v2, 4));
-                v0 = _mm_unpacklo_epi16(v0, z); // b0 g0 r0
-                v2 = _mm_unpacklo_epi16(v2, z); // b2 g2 r2
-                __m128 x0 = _mm_cvtepi32_ps(v0), x1 = _mm_cvtepi32_ps(v1);
-                __m128 x2 = _mm_cvtepi32_ps(v2), x3 = _mm_cvtepi32_ps(v3);
-                __m128 y0 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
-                            _mm_mul_ps(m0, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(0,0,0,0))),
-                            _mm_mul_ps(m1, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(1,1,1,1)))),
-                            _mm_mul_ps(m2, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(2,2,2,2)))), m3);
-                __m128 y1 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
-                            _mm_mul_ps(m0, _mm_shuffle_ps(x1,x1,_MM_SHUFFLE(0,0,0,0))),
-                            _mm_mul_ps(m1, _mm_shuffle_ps(x1,x1,_MM_SHUFFLE(1,1,1,1)))),
-                            _mm_mul_ps(m2, _mm_shuffle_ps(x1,x1,_MM_SHUFFLE(2,2,2,2)))), m3);
-                __m128 y2 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
-                            _mm_mul_ps(m0, _mm_shuffle_ps(x2,x2,_MM_SHUFFLE(0,0,0,0))),
-                            _mm_mul_ps(m1, _mm_shuffle_ps(x2,x2,_MM_SHUFFLE(1,1,1,1)))),
-                            _mm_mul_ps(m2, _mm_shuffle_ps(x2,x2,_MM_SHUFFLE(2,2,2,2)))), m3);
-                __m128 y3 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
-                            _mm_mul_ps(m0, _mm_shuffle_ps(x3,x3,_MM_SHUFFLE(0,0,0,0))),
-                            _mm_mul_ps(m1, _mm_shuffle_ps(x3,x3,_MM_SHUFFLE(1,1,1,1)))),
-                            _mm_mul_ps(m2, _mm_shuffle_ps(x3,x3,_MM_SHUFFLE(2,2,2,2)))), m3);
-                v0 = _mm_cvtps_epi32(y0); v1 = _mm_cvtps_epi32(y1);
-                v2 = _mm_cvtps_epi32(y2); v3 = _mm_cvtps_epi32(y3);
+            v0 = _mm_add_epi16(_mm_packs_epi32(_mm_slli_si128(v0,4), v1), delta); // 0 b0 g0 r0 b1 g1 r1 0
+            v2 = _mm_add_epi16(_mm_packs_epi32(_mm_slli_si128(v2,4), v3), delta); // 0 b2 g2 r2 b3 g3 r3 0
+            v1 = _mm_or_si128(_mm_srli_si128(v0,2), _mm_slli_si128(v2,10)); // b0 g0 r0 b1 g1 r1 b2 g2
+            v2 = _mm_srli_si128(v2, 6); // r2 b3 g3 r3 0 0 0 0
+            _mm_storeu_si128((__m128i*)(dst + x), v1);
+            _mm_storel_epi64((__m128i*)(dst + x + 8), v2);
+        }
 
-                v0 = _mm_add_epi16(_mm_packs_epi32(_mm_slli_si128(v0,4), v1), delta); // 0 b0 g0 r0 b1 g1 r1 0
-                v2 = _mm_add_epi16(_mm_packs_epi32(_mm_slli_si128(v2,4), v3), delta); // 0 b2 g2 r2 b3 g3 r3 0
-                v1 = _mm_or_si128(_mm_srli_si128(v0,2), _mm_slli_si128(v2,10)); // b0 g0 r0 b1 g1 r1 b2 g2
-                v2 = _mm_srli_si128(v2, 6); // r2 b3 g3 r3 0 0 0 0
-                _mm_storeu_si128((__m128i*)(dst + x), v1);
-                _mm_storel_epi64((__m128i*)(dst + x + 8), v2);
-            }
-
-            for( ; x < size.width*3; x += 3 )
-            {
-                WT v0 = src[x], v1 = src[x+1], v2 = src[x+2];
-                T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
-                T t1 = saturate_cast<T>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
-                T t2 = saturate_cast<T>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
-                dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
-            }
+        for( ; x < len*3; x += 3 )
+        {
+            float v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+            ushort t0 = saturate_cast<ushort>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
+            ushort t1 = saturate_cast<ushort>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
+            ushort t2 = saturate_cast<ushort>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
+            dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
         }
         return;
     }
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        if( dst_cn == 1 )
-            for( x = 0; x < size.width; x++, src += 3 )
-                dst[x] = saturate_cast<T>(m[0]*src[0] + m[1]*src[1] + m[2]*src[2] + m[3]);
-        else
-        {
-            const WT* _m = m;
-            for( k = 0; k < dst_cn; k++, dst++, _m += 4 )
-                for( x = 0; x < size.width; x++ )
-                    dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x*3] + _m[1]*src[x*3+1] + _m[2]*src[x*3+2] + _m[3]);
-        }
-    }
+#endif
+    
+    transform_(src, dst, m, len, scn, dcn);
 }
-
-template<> void
-transformC3_<float, float>( const Mat& srcmat, Mat& dstmat, Mat& tmat )
+    
+    
+static void
+transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
-    typedef float T;
-    typedef float WT;
-    Size size = getContinuousSize( srcmat, dstmat );
-    const float* m = (const float*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
-
-    if( checkHardwareSupport(CV_CPU_SSE2) && dst_cn == 3 )
+#if CV_SSE2
+    if( USE_SSE2 )
     {
-        __m128 m0, m1, m2, m3;
-        load3x3Matrix(m, m0, m1, m2, m3);
-
-        for( y = 0; y < size.height; y++ )
+        int x = 0;
+        if( scn == 3 && dcn == 3 )
         {
-            const T* src = (const T*)(srcmat.data + srcmat.step*y);
-            T* dst = (T*)(dstmat.data + dstmat.step*y);
-            int x = 0;
+            __m128 m0, m1, m2, m3;
+            load3x3Matrix(m, m0, m1, m2, m3);
 
-            for( ; x < (size.width - 1)*3; x += 3 )
+            for( ; x < (len - 1)*3; x += 3 )
             {
                 __m128 x0 = _mm_loadu_ps(src + x);
                 __m128 y0 = _mm_add_ps(_mm_add_ps(_mm_add_ps(
@@ -1683,119 +1564,82 @@ transformC3_<float, float>( const Mat& srcmat, Mat& dstmat, Mat& tmat )
                 _mm_store_ss(dst + x + 2, _mm_movehl_ps(y0,y0));
             }
 
-            for( ; x < size.width*3; x += 3 )
+            for( ; x < len*3; x += 3 )
             {
-                WT v0 = src[x], v1 = src[x+1], v2 = src[x+2];
-                T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
-                T t1 = saturate_cast<T>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
-                T t2 = saturate_cast<T>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
+                float v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+                float t0 = saturate_cast<float>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
+                float t1 = saturate_cast<float>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
+                float t2 = saturate_cast<float>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
                 dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
             }
+            return;
         }
-        return;
-    }
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        if( dst_cn == 1 )
-            for( x = 0; x < size.width; x++, src += 3 )
-                dst[x] = saturate_cast<T>(m[0]*src[0] + m[1]*src[1] + m[2]*src[2] + m[3]);
-        else
+        
+        if( scn == 4 && dcn == 4 )
         {
-            const WT* _m = m;
-            for( k = 0; k < dst_cn; k++, dst++, _m += 4 )
-                for( x = 0; x < size.width; x++ )
-                    dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x*3] + _m[1]*src[x*3+1] + _m[2]*src[x*3+2] + _m[3]);
-        }
-    }
-}
-
-
-template<> void
-transformC4_<float, float>( const Mat& srcmat, Mat& dstmat, Mat& tmat )
-{
-    typedef float T;
-    typedef float WT;
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int dst_cn = dstmat.channels();
-    int x, y, k;
-
-    if( checkHardwareSupport(CV_CPU_SSE2) && dst_cn == 4 )
-    {
-        __m128 m0, m1, m2, m3, m4;
-        load4x4Matrix(m, m0, m1, m2, m3, m4);
-
-        for( y = 0; y < size.height; y++ )
-        {
-            const T* src = (const T*)(srcmat.data + srcmat.step*y);
-            T* dst = (T*)(dstmat.data + dstmat.step*y);
-            for( x = 0; x < size.width*4; x += 4 )
+            __m128 m0, m1, m2, m3, m4;
+            load4x4Matrix(m, m0, m1, m2, m3, m4);
+        
+            for( ; x < len*4; x += 4 )
             {
                 __m128 x0 = _mm_loadu_ps(src + x);
                 __m128 y0 = _mm_add_ps(_mm_add_ps(_mm_add_ps(_mm_add_ps(
-                            _mm_mul_ps(m0, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(0,0,0,0))),
-                            _mm_mul_ps(m1, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(1,1,1,1)))),
-                            _mm_mul_ps(m2, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(2,2,2,2)))),
-                            _mm_mul_ps(m3, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(3,3,3,3)))), m4);
+                                    _mm_mul_ps(m0, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(0,0,0,0))),
+                                    _mm_mul_ps(m1, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(1,1,1,1)))),
+                                    _mm_mul_ps(m2, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(2,2,2,2)))),
+                                    _mm_mul_ps(m3, _mm_shuffle_ps(x0,x0,_MM_SHUFFLE(3,3,3,3)))), m4);
                 _mm_storeu_ps(dst + x, y0);
             }
+            return;
         }
-        return;
     }
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-        const WT* _m = m;
-        for( k = 0; k < dst_cn; k++, dst++, _m += 5 )
-            for( x = 0; x < size.width; x++ )
-                dst[x*dst_cn] = saturate_cast<T>(_m[0]*src[x*4] + _m[1]*src[x*4+1] +
-                                                 _m[2]*src[x*4+2] + _m[3]*src[x*4+3] + _m[4]);
-    }
-}
-
 #endif
 
+    transform_(src, dst, m, len, scn, dcn);
+}
 
-template<typename T, typename WT> static void
-diagtransC2_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
+
+static void
+transform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int dcn)
 {
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int x, y;
+    transform_(src, dst, m, len, scn, dcn);
+}
 
-    for( y = 0; y < size.height; y++ )
+static void
+transform_16s(const short* src, short* dst, const float* m, int len, int scn, int dcn)
+{
+    transform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+transform_32s(const int* src, int* dst, const double* m, int len, int scn, int dcn)
+{
+    transform_(src, dst, m, len, scn, dcn);
+}
+    
+static void
+transform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
+{
+    transform_(src, dst, m, len, scn, dcn);
+}    
+    
+template<typename T, typename WT> static void
+diagtransform_( const T* src, T* dst, const WT* m, int len, int cn, int )
+{
+    int x;
+    
+    if( cn == 2 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( x = 0; x < size.width*2; x += 2 )
+        for( x = 0; x < len*2; x += 2 )
         {
             T t0 = saturate_cast<T>(m[0]*src[x] + m[2]);
             T t1 = saturate_cast<T>(m[4]*src[x+1] + m[5]);
             dst[x] = t0; dst[x+1] = t1;
         }
     }
-}
-
-template<typename T, typename WT> static void
-diagtransC3_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
-{
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int x, y;
-
-    for( y = 0; y < size.height; y++ )
+    else if( cn == 3 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( x = 0; x < size.width*3; x += 3 )
+        for( x = 0; x < len*3; x += 3 )
         {
             T t0 = saturate_cast<T>(m[0]*src[x] + m[3]);
             T t1 = saturate_cast<T>(m[5]*src[x+1] + m[7]);
@@ -1803,21 +1647,9 @@ diagtransC3_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
             dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
         }
     }
-}
-
-template<typename T, typename WT> static void
-diagtransC4_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
-{
-    Size size = getContinuousSize( srcmat, dstmat );
-    const WT* m = (const WT*)tmat.data;
-    int x, y;
-
-    for( y = 0; y < size.height; y++ )
+    else if( cn == 4 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( x = 0; x < size.width*4; x += 4 )
+        for( x = 0; x < len*4; x += 4 )
         {
             T t0 = saturate_cast<T>(m[0]*src[x] + m[4]);
             T t1 = saturate_cast<T>(m[6]*src[x+1] + m[9]);
@@ -1827,49 +1659,108 @@ diagtransC4_( const Mat& srcmat, Mat& dstmat, Mat& tmat )
             dst[x+2] = t0; dst[x+3] = t1;
         }
     }
+    else
+    {
+        for( x = 0; x < len; x++, src += cn, dst += cn )
+        {
+            const WT* _m = m;
+            for( int j = 0; j < cn; j++, _m += cn + 1 )
+                dst[j] = src[j]*_m[j] + _m[cn];
+        }
+    }
 }
 
-typedef void (*TransformFunc)( const Mat &src, Mat& dst, Mat& M );
-
-void transform( const Mat& src, Mat& dst, const Mat& _m )
+static void
+diagtransform_8u(const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn)
 {
-    static TransformFunc tab[2][32] =
-    {
-        {transformC1_<uchar, float>, 0, transformC1_<ushort, float>, transformC1_<short,float>,
-        transformC1_<int, double>, transformC1_<float, float>, transformC1_<double, double>, 0,
-        transformC2_<uchar, float>, 0, transformC2_<ushort, float>, transformC2_<short,float>,
-        transformC2_<int, double>, transformC2_<float, float>, transformC2_<double, double>, 0,
-        transformC3_<uchar, float>, 0, transformC3_<ushort, float>, transformC3_<short,float>,
-        transformC3_<int, double>, transformC3_<float, float>, transformC3_<double, double>, 0,
-        transformC4_<uchar, float>, 0, transformC4_<ushort, float>, transformC4_<short,float>,
-        transformC4_<int, double>, transformC4_<float, float>, transformC4_<double, double>, 0},
+    diagtransform_(src, dst, m, len, scn, dcn);
+}    
+    
+static void
+diagtransform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}
 
-        {0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, diagtransC2_<ushort, float>, diagtransC2_<short,float>,
-        diagtransC2_<int, double>, diagtransC2_<float, float>, diagtransC2_<double, double>, 0,
-        0, 0, diagtransC3_<ushort, float>, diagtransC3_<short,float>,
-        diagtransC3_<int, double>, diagtransC3_<float, float>, diagtransC3_<double, double>, 0,
-        0, 0, diagtransC4_<ushort, float>, diagtransC4_<short,float>,
-        diagtransC4_<int, double>, diagtransC4_<float, float>, diagtransC4_<double, double>, 0}
-    };
+static void
+diagtransform_16u(const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}    
+    
+static void
+diagtransform_16s(const short* src, short* dst, const float* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}
 
-    int type = src.type(), depth = src.depth(), scn = src.channels(), dcn = _m.rows;
+static void
+diagtransform_32s(const int* src, int* dst, const double* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+diagtransform_32f(const float* src, float* dst, const float* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}    
+    
+static void
+diagtransform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}    
+    
+    
+typedef void (*TransformFunc)( const uchar* src, uchar* dst, const uchar* m, int, int, int );
+    
+static TransformFunc transformTab[] =
+{
+    (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
+    (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
+    (TransformFunc)transform_64f, 0
+};
+
+static TransformFunc diagTransformTab[] =
+{
+    (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
+    (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
+    (TransformFunc)diagtransform_64f, 0
+};
+    
+}
+    
+void cv::transform( const InputArray& _src, OutputArray _dst, const InputArray& _mtx )
+{
+    Mat src = _src.getMat(), m = _mtx.getMat();
+    int depth = src.depth(), scn = src.channels(), dcn = m.rows;
+    CV_Assert( scn == m.cols || scn + 1 == m.cols );
     bool isDiag = false;
-    CV_Assert( (scn == _m.cols || scn + 1 == _m.cols) && scn <= 4 && dcn <= 4 );
-
-    double mbuf[20] = {0};
-    Mat m = _m;
-
-    dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
-    Size size = getContinuousSize( src, dst );
+    
+    _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
+    Mat dst = _dst.getMat();
 
     int mtype = depth == CV_32S || depth == CV_64F ? CV_64F : CV_32F;
-    if( !_m.isContinuous() || _m.type() != mtype || _m.cols != scn + 1 )
+    AutoBuffer<double> _mbuf;
+    double* mbuf = _mbuf;
+    
+    if( !m.isContinuous() || m.type() != mtype || m.cols != scn + 1 )
     {
-        m = Mat(dcn, scn + 1, mtype, mbuf);
-        Mat tmat_part = m.colRange(0, _m.cols);
-        _m.convertTo(tmat_part, mtype);
+        _mbuf.allocate(dcn*(scn+1));
+        Mat tmp(dcn, scn+1, mtype, (double*)_mbuf);
+        memset(tmp.data, 0, tmp.total()*tmp.elemSize());
+        if( m.cols == scn+1 )
+            m.convertTo(tmp, mtype);
+        else
+        {
+            Mat tmppart = tmp.colRange(0, m.cols);
+            m.convertTo(tmppart, mtype);
+        }
+        m = tmp;
     }
+    else
+        mbuf = (double*)m.data;
 
     if( scn == dcn )
     {
@@ -1880,10 +1771,10 @@ void transform( const Mat& src, Mat& dst, const Mat& _m )
         {
             double alpha, beta;
             if( mtype == CV_32F )
-                alpha = ((float*)m.data)[0], beta = ((float*)m.data)[1];
+                alpha = m.at<float>(0), beta = m.at<float>(1);
             else
-                alpha = ((double*)m.data)[0], beta = ((double*)m.data)[1];
-            src.convertTo( dst, dst.type(), alpha, beta );
+                alpha = m.at<double>(0), beta = m.at<double>(1);
+            src.convertTo(dst, dst.type(), alpha, beta);
             return;
         }
 
@@ -1891,279 +1782,306 @@ void transform( const Mat& src, Mat& dst, const Mat& _m )
         {
             for( j = 0; isDiag && j < scn; j++ )
             {
-                double v = mtype == CV_32F ? ((float*)m.data)[i*(scn+1)+j] :
-                    ((double*)m.data)[i*(scn+1)+j];
+                double v = mtype == CV_32F ? m.at<float>(i, j) : m.at<double>(i, j);
                 if( i != j && fabs(v) > eps )
                     isDiag = false;
             }
         }
-
-        if( isDiag && depth == CV_8U )
-        {
-            Mat lut(1, 256, CV_8UC(scn));
-            for( i = 0; i < scn; i++ )
-            {
-                uchar* data = lut.data + i;
-                double val, delta;
-                if( mtype == CV_32F )
-                {
-                    val = ((float*)m.data)[i*(scn+1) + scn];
-                    delta = ((float*)m.data)[i*(scn+1) + i];
-                }
-                else
-                {
-                    val = ((double*)m.data)[i*(scn+1) + scn];
-                    delta = ((double*)m.data)[i*(scn+1) + i];
-                }
-                for( j = 0; j < 256; j++, val += delta )
-                {
-                    int ival = cvRound(val);
-                    data[j*scn] = CV_CAST_8U(ival);
-                }
-            }
-            LUT( src, lut, dst );
-            return;
-        }
     }
 
-    TransformFunc func = tab[isDiag][type];
+    TransformFunc func = isDiag ? diagTransformTab[depth] : transformTab[depth];
     CV_Assert( func != 0 );
-    func( src, dst, m );
+    
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    size_t i, total = it.size;
+    
+    for( i = 0; i < it.nplanes; i++, ++it )
+        func( ptrs[0], ptrs[1], (uchar*)mbuf, (int)total, scn, dcn );
 }
-
 
 /****************************************************************************************\
 *                                  Perspective Transform                                 *
 \****************************************************************************************/
 
-template<typename T> static void
-perspectiveTransform2_( const Mat& srcmat, Mat& dstmat, const double* mat )
+namespace cv
 {
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
 
-    for( int i = 0; i < size.height; i++ )
+template<typename T> static void
+perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, int dcn )
+{
+    const double eps = FLT_EPSILON;
+    int i;
+    
+    if( scn == 2 && dcn == 2 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*i);
-        T* dst = (T*)(dstmat.data + dstmat.step*i);
-
-        for( int j = 0; j < size.width; j += 2 )
+        for( i = 0; i < len*2; i += 2 )
         {
-            T x = src[j], y = src[j + 1];
-            double w = x*mat[6] + y*mat[7] + mat[8];
+            T x = src[i], y = src[i + 1];
+            double w = x*m[6] + y*m[7] + m[8];
 
-            if( fabs(w) > FLT_EPSILON )
+            if( fabs(w) > eps )
             {
                 w = 1./w;
-                dst[j] = (T)((x*mat[0] + y*mat[1] + mat[2])*w);
-                dst[j+1] = (T)((x*mat[3] + y*mat[4] + mat[5])*w);
+                dst[i] = (T)((x*m[0] + y*m[1] + m[2])*w);
+                dst[i+1] = (T)((x*m[3] + y*m[4] + m[5])*w);
             }
             else
-                dst[j] = dst[j+1] = (T)0;
+                dst[i] = dst[i+1] = (T)0;
         }
     }
-}
-
-template<typename T> static void
-perspectiveTransform3_( const Mat& srcmat, Mat& dstmat, const double* mat )
-{
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
-
-    for( int i = 0; i < size.height; i++ )
+    else if( scn == 3 && dcn == 3 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*i);
-        T* dst = (T*)(dstmat.data + dstmat.step*i);
-
-        for( int j = 0; j < size.width; j += 3 )
+        for( i = 0; i < len*3; i += 3 )
         {
-            T x = src[j], y = src[j + 1], z = src[j + 2];
-            double w = x*mat[12] + y*mat[13] + z*mat[14] + mat[15];
-
-            if( fabs(w) > FLT_EPSILON )
+            T x = src[i], y = src[i + 1], z = src[i + 2];
+            double w = x*m[12] + y*m[13] + z*m[14] + m[15];
+            
+            if( fabs(w) > eps )
             {
                 w = 1./w;
-                dst[j] = (T)((x*mat[0] + y*mat[1] + z*mat[2] + mat[3]) * w);
-                dst[j+1] = (T)((x*mat[4] + y*mat[5] + z*mat[6] + mat[7]) * w);
-                dst[j+2] = (T)((x*mat[8] + y*mat[9] + z*mat[10] + mat[11]) * w);
+                dst[i] = (T)((x*m[0] + y*m[1] + z*m[2] + m[3]) * w);
+                dst[i+1] = (T)((x*m[4] + y*m[5] + z*m[6] + m[7]) * w);
+                dst[i+2] = (T)((x*m[8] + y*m[9] + z*m[10] + m[11]) * w);
             }
             else
-                dst[j] = dst[j+1] = dst[j+2] = (T)0;
+                dst[i] = dst[i+1] = dst[i+2] = (T)0;
         }
     }
-}
-
-template<typename T> static void
-perspectiveTransform23_( const Mat& srcmat, Mat& dstmat, const double* mat )
-{
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
-
-    for( int i = 0; i < size.height; i++ )
+    else if( scn == 3 && dcn == 2 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*i);
-        T* dst = (T*)(dstmat.data + dstmat.step*i);
-
-        for( int j = 0; j < size.width; j++, src += 3, dst += 2 )
+        for( i = 0; i < len; i++, src += 3, dst += 2 )
         {
             T x = src[0], y = src[1], z = src[2];
-            double w = x*mat[8] + y*mat[9] + z*mat[10] + mat[11];
-
-            if( fabs(w) > FLT_EPSILON )
+            double w = x*m[8] + y*m[9] + z*m[10] + m[11];
+            
+            if( fabs(w) > eps )
             {
                 w = 1./w;
-                dst[0] = (T)((x*mat[0] + y*mat[1] + z*mat[2] + mat[3])*w);
-                dst[1] = (T)((x*mat[4] + y*mat[5] + z*mat[6] + mat[7])*w);
+                dst[0] = (T)((x*m[0] + y*m[1] + z*m[2] + m[3])*w);
+                dst[1] = (T)((x*m[4] + y*m[5] + z*m[6] + m[7])*w);
             }
             else
                 dst[0] = dst[1] = (T)0;
         }
     }
+    else
+    {
+        for( i = 0; i < len; i++, src += scn, dst += dcn )
+        {
+            const double* _m = m + dcn*(scn + 1);
+            double w = _m[scn];
+            int j, k;
+            for( k = 0; k < scn; k++ )
+                w += _m[k]*src[k];
+            if( fabs(w) > eps )
+            {
+                _m = m;
+                for( j = 0; j < dcn; j++, _m += scn + 1 )
+                {
+                    double s = _m[scn];
+                    for( k = 0; k < scn; k++ )
+                        s += _m[k]*src[k];
+                    dst[j] = (T)(s*w);
+                }
+            }
+            else
+                for( j = 0; j < dcn; j++ )
+                    dst[j] = 0;
+        }
+    }
 }
 
-typedef void (*PerspectiveTransformFunc)(const Mat& src, Mat& dst, const double* mat );
-
-void perspectiveTransform( const Mat& src, Mat& dst, const Mat& _m )
+    
+static void
+perspectiveTransform_32f(const float* src, float* dst, const double* m, int len, int scn, int dcn)
 {
-    int depth = src.depth(), scn = src.channels(), dcn = _m.rows-1;
-    CV_Assert( (depth == CV_32F || depth == CV_64F) && scn+1 == _m.cols && scn <= 4 &&
-        ((scn == 2 && dcn == 2) || (scn == 3 && dcn == 3) || (scn == 2 && dcn == 3)));
+    perspectiveTransform_(src, dst, m, len, scn, dcn);
+}
 
-    double mbuf[16] = {0};
-    Mat tmat;
-    const double* m = (const double*)_m.data;
-
-    dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
-
-    if( !_m.isContinuous() || _m.type() != CV_64F )
+static void
+perspectiveTransform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
+{
+    perspectiveTransform_(src, dst, m, len, scn, dcn);
+}
+    
+}
+    
+void cv::perspectiveTransform( const InputArray& _src, OutputArray _dst, const InputArray& _mtx )
+{
+    Mat src = _src.getMat(), m = _mtx.getMat();
+    int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
+    CV_Assert( scn + 1 == m.cols && (depth == CV_32F || depth == CV_64F));
+    
+    _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
+    Mat dst = _dst.getMat();
+    
+    const int mtype = CV_64F;
+    AutoBuffer<double> _mbuf;
+    double* mbuf = _mbuf;
+    
+    if( !m.isContinuous() || m.type() != mtype )
     {
-        tmat = Mat(dcn + 1, scn + 1, CV_64F, mbuf);
-        _m.convertTo(tmat, CV_64F);
-        m = (const double*)tmat.data;
-    }
-
-    PerspectiveTransformFunc func = 0;
-    if( scn == 2 && dcn == 2 )
-    {
-        if(depth == CV_32F)
-            func = perspectiveTransform2_<float>;
-        else
-            func = perspectiveTransform2_<double>;
-    }
-    else if( scn == 2 && dcn == 3 )
-    {
-        if(depth == CV_32F)
-            func = perspectiveTransform23_<float>;
-        else
-            func = perspectiveTransform23_<double>;
-    }
-    else if( scn == 3 && dcn == 3 )
-    {
-        if(depth == CV_32F)
-            func = perspectiveTransform3_<float>;
-        else
-            func = perspectiveTransform3_<double>;
+        _mbuf.allocate((dcn+1)*(scn+1));
+        Mat tmp(dcn+1, scn+1, mtype, (double*)_mbuf);
+        m.convertTo(tmp, mtype);
+        m = tmp;
     }
     else
-        CV_Error( CV_StsNotImplemented, "Only 2->2, 2->3 and 3->3 perspective transformation is implemented" );
-    func( src, dst, m );
-}
+        mbuf = (double*)m.data;
+    
+    TransformFunc func = depth == CV_32F ?
+        (TransformFunc)perspectiveTransform_32f :
+        (TransformFunc)perspectiveTransform_64f;
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    size_t i, total = it.size;
+    
+    for( i = 0; i < it.nplanes; i++, ++it )
+        func( ptrs[0], ptrs[1], (uchar*)mbuf, (int)total, scn, dcn );
+}    
 
 /****************************************************************************************\
 *                                       ScaleAdd                                         *
 \****************************************************************************************/
 
-void scaleAdd( const Mat& src1, double alpha, const Mat& src2, Mat& dst )
+namespace cv
 {
-    if( src1.dims > 2 || src2.dims > 2 )
+
+static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
+                         int len, float* _alpha)
+{
+    float alpha = *_alpha;
+    int i = 0;
+#if CV_SSE2
+    if( USE_SSE2 )
     {
-        dst.create(src1.dims, src1.size, src1.type());
-        const Mat* arrays[] = {&src1, &src2, &dst, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            scaleAdd( it.planes[0], alpha, it.planes[1], it.planes[2] );
-        return;
+        __m128 a4 = _mm_set1_ps(alpha);
+        if( (((size_t)src1|(size_t)src2|(size_t)dst) & 15) == 0 )
+            for( ; i <= len - 8; i += 8 )
+            {
+                __m128 x0, x1, y0, y1, t0, t1;
+                x0 = _mm_load_ps(src1 + i); x1 = _mm_load_ps(src1 + i + 4);
+                y0 = _mm_load_ps(src2 + i); y1 = _mm_load_ps(src2 + i + 4);
+                t0 = _mm_add_ps(_mm_mul_ps(x0, a4), y0);
+                t1 = _mm_add_ps(_mm_mul_ps(x1, a4), y1);
+                _mm_store_ps(dst + i, t0);
+                _mm_store_ps(dst + i + 4, t1);
+            }
+        else
+            for( ; i <= len - 8; i += 8 )
+            {
+                __m128 x0, x1, y0, y1, t0, t1;
+                x0 = _mm_loadu_ps(src1 + i); x1 = _mm_loadu_ps(src1 + i + 4);
+                y0 = _mm_loadu_ps(src2 + i); y1 = _mm_loadu_ps(src2 + i + 4);
+                t0 = _mm_add_ps(_mm_mul_ps(x0, a4), y0);
+                t1 = _mm_add_ps(_mm_mul_ps(x1, a4), y1);
+                _mm_storeu_ps(dst + i, t0);
+                _mm_storeu_ps(dst + i + 4, t1);
+            }
     }
+    else
+#endif
+    for( ; i <= len - 4; i += 4 )
+    {
+        float t0, t1;
+        t0 = src1[i]*alpha + src2[i];
+        t1 = src1[i+1]*alpha + src2[i+1];
+        dst[i] = t0; dst[i+1] = t1;
+        t0 = src1[i+2]*alpha + src2[i+2];
+        t1 = src1[i+3]*alpha + src2[i+3];
+        dst[i+2] = t0; dst[i+3] = t1;
+    }
+    for( ; i < len; i++ )
+        dst[i] = src1[i]*alpha + src2[i];
+}
+
     
-    int type = src1.type(), depth = CV_MAT_DEPTH(type);
-    CV_Assert( src1.size() == src2.size() && type == src2.type() );
-    dst.create( src1.size(), type );
-    Size size = getContinuousSize( src1, src2, dst, src1.channels() );
-
-    if( depth == CV_32F )
+static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
+                         int len, double* _alpha)
+{
+    double alpha = *_alpha;
+    int i = 0;
+#if CV_SSE2
+    if( USE_SSE2 && (((size_t)src1|(size_t)src2|(size_t)dst) & 15) == 0 )
     {
-        const float *s1 = (const float*)src1.data, *s2 = (const float*)src2.data;
-        float* d = (float*)dst.data;
-        size_t step1 = src1.step/sizeof(s1[0]), step2 = src2.step/sizeof(s2[0]);
-        size_t step = dst.step/sizeof(d[0]);
-
-        if( size.width == 1 )
+        __m128d a2 = _mm_set1_pd(alpha);
+        for( ; i <= len - 4; i += 4 )
         {
-            for( ; size.height--; s1 += step1, s2 += step2, d += step )
-                d[0] = (float)(s1[0]*alpha + s2[0]);
-            return;
-        }
-
-        for( ; size.height--; s1 += step1, s2 += step2, d += step )
-        {
-            int i;
-            for( i = 0; i <= size.width - 4; i += 4 )
-            {
-                float t0 = (float)(s1[i]*alpha + s2[i]);
-                float t1 = (float)(s1[i+1]*alpha + s2[i+1]);
-                d[i] = t0;
-                d[i+1] = t1;
-                t0 = (float)(s1[i+2]*alpha + s2[i+2]);
-                t1 = (float)(s1[i+3]*alpha + s2[i+3]);
-                d[i+2] = t0;
-                d[i+3] = t1;
-            }
-
-            for( ; i < size.width; i++ )
-                d[i] = (float)(s1[i]*alpha + s2[i]);
-        }
-    }
-    else if( depth == CV_64F )
-    {
-        const double *s1 = (const double*)src1.data, *s2 = (const double*)src2.data;
-        double* d = (double*)dst.data;
-        size_t step1 = src1.step/sizeof(s1[0]), step2 = src2.step/sizeof(s2[0]);
-        size_t step = dst.step/sizeof(d[0]);
-
-        if( size.width == 1 )
-        {
-            for( ; size.height--; s1 += step1, s2 += step2, d += step )
-                d[0] = s1[0]*alpha + s2[0];
-            return;
-        }
-
-        for( ; size.height--; s1 += step1, s2 += step2, d += step )
-        {
-            int i;
-            for( i = 0; i <= size.width - 4; i += 4 )
-            {
-                double t0 = s1[i]*alpha + s2[i];
-                double t1 = s1[i+1]*alpha + s2[i+1];
-                d[i] = t0;
-                d[i+1] = t1;
-                t0 = s1[i+2]*alpha + s2[i+2];
-                t1 = s1[i+3]*alpha + s2[i+3];
-                d[i+2] = t0;
-                d[i+3] = t1;
-            }
-
-            for( ; i < size.width; i++ )
-                d[i] = s1[i]*alpha + s2[i];
+            __m128d x0, x1, y0, y1, t0, t1;
+            x0 = _mm_load_pd(src1 + i); x1 = _mm_load_pd(src1 + i + 2);
+            y0 = _mm_load_pd(src2 + i); y1 = _mm_load_pd(src2 + i + 2);
+            t0 = _mm_add_pd(_mm_mul_pd(x0, a2), y0);
+            t1 = _mm_add_pd(_mm_mul_pd(x1, a2), y1);
+            _mm_store_pd(dst + i, t0);
+            _mm_store_pd(dst + i + 2, t1);
         }
     }
     else
-        addWeighted(src1, alpha, src2, 1, 0, dst);
+#endif
+    for( ; i <= len - 4; i += 4 )
+    {
+        double t0, t1;
+        t0 = src1[i]*alpha + src2[i];
+        t1 = src1[i+1]*alpha + src2[i+1];
+        dst[i] = t0; dst[i+1] = t1;
+        t0 = src1[i+2]*alpha + src2[i+2];
+        t1 = src1[i+3]*alpha + src2[i+3];
+        dst[i+2] = t0; dst[i+3] = t1;
+    }
+    for( ; i < len; i++ )
+        dst[i] = src1[i]*alpha + src2[i];
+}
+
+typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, int len, const void* alpha);
+
+}
+    
+void cv::scaleAdd( const InputArray& _src1, double alpha, const InputArray& _src2, OutputArray _dst )
+{
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    int depth = src1.depth(), cn = src1.channels();
+    
+    CV_Assert( src1.type() == src2.type() );
+    if( depth < CV_32F )
+    {
+        addWeighted(_src1, alpha, _src2, 1, 0, _dst, depth);
+        return;
+    }
+    
+    _dst.create(src1.dims, src1.size, src1.type());
+    Mat dst = _dst.getMat();
+    
+    float falpha = (float)alpha;
+    void* palpha = depth == CV_32F ? (void*)&falpha : (void*)&alpha;
+    
+    ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f; 
+    
+    if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
+    {
+        size_t len = src1.total()*cn;
+        func(src1.data, src2.data, dst.data, (int)len, palpha);
+        return;
+    }
+    
+    const Mat* arrays[] = {&src1, &src2, &dst, 0};
+    uchar* ptrs[3];
+    NAryMatIterator it(arrays, ptrs);
+    size_t i, len = it.size*cn;
+    
+    for( i = 0; i < it.nplanes; i++, ++it )
+        func( ptrs[0], ptrs[1], ptrs[2], (int)len, palpha );
 }
 
 /****************************************************************************************\
 *                                 Covariation Matrix                                     *
 \****************************************************************************************/
 
-void calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int flags, int ctype )
+void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int flags, int ctype )
 {
     CV_Assert( data && nsamples > 0 );
     Size size = data[0].size();
@@ -2202,30 +2120,37 @@ void calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int
         _mean = mean.reshape(1, size.height);
 }
 
-void calcCovarMatrix( const Mat& data, Mat& covar, Mat& _mean, int flags, int ctype )
+void cv::calcCovarMatrix( const InputArray& _data, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
 {
+    Mat data = _data.getMat(), mean;
     CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
     bool takeRows = (flags & CV_COVAR_ROWS) != 0;
     int type = data.type();
     int nsamples = takeRows ? data.rows : data.cols;
     CV_Assert( nsamples > 0 );
     Size size = takeRows ? Size(data.cols, 1) : Size(1, data.rows);
-    Mat mean = _mean;
-    ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
 
     if( (flags & CV_COVAR_USE_AVG) != 0 )
     {
+        mean = _mean.getMat();
+        ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), mean.depth()), CV_32F);
         CV_Assert( mean.size() == size );
         if( mean.type() != ctype )
-            _mean.convertTo(mean, ctype);
+        {
+            _mean.create(mean.size(), ctype);
+            Mat tmp = _mean.getMat();
+            mean.convertTo(tmp, ctype);
+            mean = tmp;
+        }
     }
     else
     {
-        reduce( data, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, ctype );
-        mean = _mean;
+        ctype = std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), CV_32F);
+        reduce( _data, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, ctype );
+        mean = _mean.getMat();
     }
 
-    mulTransposed( data, covar, ((flags & CV_COVAR_NORMAL) == 0) ^ takeRows,
+    mulTransposed( data, _covar, ((flags & CV_COVAR_NORMAL) == 0) ^ takeRows,
         mean, (flags & CV_COVAR_SCALE) != 0 ? 1./nsamples : 1, ctype );
 }
 
@@ -2233,8 +2158,9 @@ void calcCovarMatrix( const Mat& data, Mat& covar, Mat& _mean, int flags, int ct
 *                                        Mahalanobis                                     *
 \****************************************************************************************/
 
-double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
+double cv::Mahalanobis( const InputArray& _v1, const InputArray& _v2, const InputArray& _icovar )
 {
+    Mat v1 = _v1.getMat(), v2 = _v2.getMat(), icovar = _icovar.getMat(); 
     int type = v1.type(), depth = v1.depth();
     Size sz = v1.size();
     int i, j, len = sz.width*sz.height*v1.channels();
@@ -2313,14 +2239,17 @@ double Mahalanobis( const Mat& v1, const Mat& v2, const Mat& icovar )
     return std::sqrt(result);
 }
 
-double Mahalonobis(const Mat& v1, const Mat& v2, const Mat& icovar)
+double cv::Mahalonobis( const InputArray& _v1, const InputArray& _v2, const InputArray& _icovar )
 {
-    return Mahalanobis(v1, v2, icovar);
+    return Mahalanobis(_v1, _v2, _icovar);
 }
     
 /****************************************************************************************\
-*                                        cvMulTransposed                                 *
+*                                        MulTransposed                                   *
 \****************************************************************************************/
+
+namespace cv
+{
 
 template<typename sT, typename dT> static void
 MulTransposedR( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scale )
@@ -2515,12 +2444,14 @@ MulTransposedL( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
 
 typedef void (*MulTransposedFunc)(const Mat& src, Mat& dst, const Mat& delta, double scale);
 
-void mulTransposed( const Mat& src, Mat& dst, bool ata,
-                    const Mat& _delta, double scale, int dtype )
+}
+    
+void cv::mulTransposed( const InputArray& _src, OutputArray _dst, bool ata,
+                        const InputArray& _delta, double scale, int dtype )
 {
+    Mat src = _src.getMat(), delta = _delta.getMat();
     const int gemm_level = 100; // boundary above which GEMM is faster.
     int stype = src.type();
-    Mat delta = _delta;
     dtype = std::max(std::max(CV_MAT_DEPTH(dtype >= 0 ? dtype : stype), delta.depth()), CV_32F);
     CV_Assert( src.channels() == 1 );
 
@@ -2530,11 +2461,12 @@ void mulTransposed( const Mat& src, Mat& dst, bool ata,
             (delta.rows == src.rows || delta.rows == 1) &&
             (delta.cols == src.cols || delta.cols == 1));
         if( delta.type() != dtype )
-            _delta.convertTo(delta, dtype);
+            delta.convertTo(delta, dtype);
     }
 
     int dsize = ata ? src.cols : src.rows;
-    dst.create( dsize, dsize, dtype );
+    _dst.create( dsize, dsize, dtype );
+    Mat dst = _dst.getMat();
 
     if( src.data == dst.data || (stype == dtype &&
         (dst.cols >= gemm_level && dst.rows >= gemm_level &&
@@ -2633,260 +2565,165 @@ void mulTransposed( const Mat& src, Mat& dst, bool ata,
 *                                      Dot Product                                       *
 \****************************************************************************************/
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-
-static double ippDotProd8u(const Mat& srcmat1, const Mat& srcmat2)
+namespace cv
 {
-    int      nchan  = srcmat1.channels();
-    Ipp64f   sum[4] = { 0.0 };
-    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
 
-    switch(nchan)
-    {
-        case 1:
-            ippiDotProd_8u64f_C1R((const Ipp8u*)srcmat1.data, (int)srcmat1.step,
-                                  (const Ipp8u*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 3:
-            ippiDotProd_8u64f_C3R((const Ipp8u*)srcmat1.data, (int)srcmat1.step,
-                                  (const Ipp8u*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 4:
-            ippiDotProd_8u64f_C4R((const Ipp8u*)srcmat1.data, (int)srcmat1.step,
-                                  (const Ipp8u*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-    }
-
-    for(int c = 1; c < nchan; c++)
-    {
-        sum[0] += sum[c];
-    }
-
-    return sum[0];
-} // ippDotProd8u()
-
-
-static double ippDotProd16u(const Mat& srcmat1, const Mat& srcmat2)
+template<typename T> double
+dotProd_(const T* src1, const T* src2, int len)
 {
-    int      nchan  = srcmat1.channels();
-    Ipp64f   sum[4] = { 0.0 };
-    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
-
-    switch(nchan)
-    {
-        case 1:
-            ippiDotProd_16u64f_C1R((const Ipp16u*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp16u*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 3:
-            ippiDotProd_16u64f_C3R((const Ipp16u*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp16u*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 4:
-            ippiDotProd_16u64f_C4R((const Ipp16u*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp16u*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-    }
-
-    for(int c = 1; c < nchan; c++)
-    {
-        sum[0] += sum[c];
-    }
-
-    return sum[0];
-} // ippDotProd16u()
-
-
-static double ippDotProd16s(const Mat& srcmat1, const Mat& srcmat2)
-{
-    int      nchan  = srcmat1.channels();
-    Ipp64f   sum[4] = { 0.0 };
-    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
-
-    switch(nchan)
-    {
-        case 1:
-            ippiDotProd_16s64f_C1R((const Ipp16s*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp16s*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 3:
-            ippiDotProd_16s64f_C3R((const Ipp16s*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp16s*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 4:
-            ippiDotProd_16s64f_C4R((const Ipp16s*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp16s*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-    }
-
-    for(int c = 1; c < nchan; c++)
-    {
-        sum[0] += sum[c];
-    }
-
-    return sum[0];
-} // ippDotProd16s()
-
-
-static double ippDotProd32s(const Mat& srcmat1, const Mat& srcmat2)
-{
-    int      nchan  = srcmat1.channels();
-    Ipp64f   sum[4] = { 0.0 };
-    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
-
-    switch(nchan)
-    {
-        case 1:
-            ippiDotProd_32s64f_C1R((const Ipp32s*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp32s*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 3:
-            ippiDotProd_32s64f_C3R((const Ipp32s*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp32s*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-
-        case 4:
-            ippiDotProd_32s64f_C4R((const Ipp32s*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp32s*)srcmat2.data, (int)srcmat2.step, roi, sum);
-            break;
-    }
-
-    for(int c = 1; c < nchan; c++)
-    {
-        sum[0] += sum[c];
-    }
-
-    return sum[0];
-} // ippDotProd32s()
-
-
-static double ippDotProd32f(const Mat& srcmat1, const Mat& srcmat2)
-{
-    int      nchan  = srcmat1.channels();
-    Ipp64f   sum[4] = { 0.0 };
-    IppiSize roi    = { srcmat1.cols, srcmat1.rows };
-
-    switch(nchan)
-    {
-        case 1:
-            ippiDotProd_32f64f_C1R((const Ipp32f*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp32f*)srcmat2.data, (int)srcmat2.step, roi, sum, ippAlgHintAccurate);
-            break;
-
-        case 3:
-            ippiDotProd_32f64f_C3R((const Ipp32f*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp32f*)srcmat2.data, (int)srcmat2.step, roi, sum, ippAlgHintAccurate);
-            break;
-
-        case 4:
-            ippiDotProd_32f64f_C4R((const Ipp32f*)srcmat1.data, (int)srcmat1.step,
-                                   (const Ipp32f*)srcmat2.data, (int)srcmat2.step, roi, sum, ippAlgHintAccurate);
-            break;
-    }
-
-    for(int c = 1; c < nchan; c++)
-    {
-        sum[0] += sum[c];
-    }
-
-    return sum[0];
-} // ippDotProd32f()
-
-#endif
-
-template<typename T, typename WT, typename ST> static double
-dotprod_( const Mat& srcmat1, const Mat& srcmat2 )
-{
-    const T* src1 = (const T*)srcmat1.data;
-    const T* src2 = (const T*)srcmat2.data;
-
-    size_t step1 = srcmat1.step/sizeof(src1[0]);
-    size_t step2 = srcmat2.step/sizeof(src2[0]);
-
-    ST sum = 0;
-    Size size = getContinuousSize( srcmat1, srcmat2, srcmat1.channels() );
-
-    if( size.width == 1 )
-    {
-        WT t = 0;
-        for( ; size.height--; src1 += step1, src2 += step2 )
-            t += (WT)src1[0]*src2[0];
-
-        sum += t;
-    }
-    else
-    {
-        for( ; size.height--; src1 += step1, src2 += step2 )
-        {
-            int i;
-            WT t = 0;
-            for( i = 0; i <= size.width - 4; i += 4 )
-            {
-                sum += (WT)src1[i  ]*src2[i  ] +
-                       (WT)src1[i+1]*src2[i+1] +
-                       (WT)src1[i+2]*src2[i+2] +
-                       (WT)src1[i+3]*src2[i+3];
-            }
-
-            for( ; i < size.width; i++ )
-                t += (WT)src1[i]*src2[i];
-
-            sum += t;
-        }
-    }
-
-    return (double)sum;
+    int i = 0;
+    double result = 0;
+    for( ; i <= len - 4; i += 4 )
+        result += (double)src1[i]*src2[i] + (double)src1[i+1]*src2[i+1] +
+            (double)src1[i+2]*src2[i+2] + (double)src1[i+3]*src2[i+3];
+    for( ; i < len; i++ )
+        result += (double)src1[i]*src2[i];
+    
+    return result;
 }
 
-typedef double (*DotProductFunc)(const Mat& src1, const Mat& src2);
 
-double Mat::dot(const Mat& mat) const
+static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    static DotProductFunc ipptab[] =
+    double r = 0;
+#if ARITHM_USE_IPP
+    ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                          src2, (int)(len*sizeof(src2[0])),
+                          ippiSize(len, 1), &r);
+#else
+    int i = 0;
+    
+#if CV_SSE2
+    if( USE_SSE2 )
     {
-        dotprod_<uchar, int, int64>,
-        0,
-        dotprod_<ushort, double, double>,
-        dotprod_<short, double, double>,
-        dotprod_<int, double, double>,
-        ippDotProd32f,
-        dotprod_<double, double, double>,
-        0
-    };
-#endif
-
-    static DotProductFunc tab[] =
-    {
-        dotprod_<uchar, int, int64>,
-        0,
-        dotprod_<ushort, double, double>,
-        dotprod_<short, double, double>,
-        dotprod_<int, double, double>,
-        dotprod_<float, double, double>,
-        dotprod_<double, double, double>,
-        0
-    };
-
-    DotProductFunc func = tab[depth()];
-
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if((*this).channels() != 2)
-    {
-        func = ipptab[depth()];
+        int j, len0 = len & -4, blockSize0 = (1 << 15), blockSize;
+        __m128i z = _mm_setzero_si128();
+        while( i < len0 )
+        {
+            blockSize = std::min(len0 - j, blockSize0);
+            __m128i s = _mm_setzero_si128();
+            for( j = 0; j <= blockSize - 16; j += 16 )
+            {
+                __m128i b0 = _mm_loadu_si128((const __m128i*)(src1 + j));
+                __m128i b1 = _mm_loadu_si128((const __m128i*)(src2 + j));
+                __m128i s0, s1, s2, s3;
+                s0 = _mm_unpacklo_epi8(b0, z);
+                s2 = _mm_unpackhi_epi8(b0, z);
+                s1 = _mm_unpacklo_epi8(b1, z);
+                s3 = _mm_unpackhi_epi8(b1, z);
+                s0 = _mm_madd_epi16(s0, s1);
+                s1 = _mm_madd_epi16(s2, s3);
+                s = _mm_add_epi32(s, s0);
+                s = _mm_add_epi32(s, s2);
+            }
+            
+            for( ; j < blockSize; j += 4 )
+            {
+                __m128i s0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src1 + j)), z);
+                __m128i s1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src2 + j)), z);
+                s0 = _mm_madd_epi16(s0, s1);
+                s = _mm_add_epi32(s, s0);
+            }
+            CV_DECL_ALIGNED(16) int buf[4];
+            _mm_store_si128((__m128i*)buf, s);
+            r += buf[0] + buf[1] + buf[2] + buf[3];
+            
+            src1 += blockSize;
+            src2 += blockSize;
+            i += blockSize;
+        }
     }
 #endif
+    return r + dotProd_(src1, src2, len - i);
+#endif
+}
 
-    CV_Assert( mat.type() == type() && mat.size() == size() && func != 0 );
 
-    return func( *this, mat );
+static double dotProd_8s(const schar* src1, const schar* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
+{
+    double r = 0;
+    IF_IPP(ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                                  src2, (int)(len*sizeof(src2[0])),
+                                  ippiSize(len, 1), &r),
+           r = dotProd_(src1, src2, len));
+    return r;
+}
+
+static double dotProd_16s(const short* src1, const short* src2, int len)
+{
+    double r = 0;
+    IF_IPP(ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                                  src2, (int)(len*sizeof(src2[0])),
+                                  ippiSize(len, 1), &r),
+           r = dotProd_(src1, src2, len));
+    return r;
+}
+
+static double dotProd_32s(const int* src1, const int* src2, int len)
+{
+    double r = 0;
+    IF_IPP(ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])),
+                                  src2, (int)(len*sizeof(src2[0])),
+                                  ippiSize(len, 1), &r),
+           r = dotProd_(src1, src2, len));
+    return r;
+}
+
+static double dotProd_32f(const float* src1, const float* src2, int len)
+{
+    double r = 0;
+    IF_IPP(ippsDotProd_32f64f(src1, src2, len, &r),
+           r = dotProd_(src1, src2, len));
+    return r;
+}
+
+static double dotProd_64f(const double* src1, const double* src2, int len)
+{
+    double r = 0;
+    IF_IPP(ippsDotProd_64f(src1, src2, len, &r),
+           r = dotProd_(src1, src2, len));
+    return r;
+}
+
+
+typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
+    
+static DotProdFunc dotProdTab[] =
+{
+    (DotProdFunc)dotProd_8u, (DotProdFunc)dotProd_8s, (DotProdFunc)dotProd_16u,
+    (DotProdFunc)dotProd_16s, (DotProdFunc)dotProd_32s, (DotProdFunc)dotProd_32f,
+    (DotProdFunc)dotProd_64f, 0
+};
+
+double Mat::dot(const InputArray& _mat) const
+{
+    Mat mat = _mat.getMat();
+    int cn = channels();
+    DotProdFunc func = dotProdTab[depth()];
+    CV_Assert( mat.type() == type() && mat.size == size && func != 0 );
+
+    if( isContinuous() && mat.isContinuous() )
+    {
+        size_t len = total()*cn;
+        if( len == (size_t)(int)len )
+            return func(data, mat.data, len);
+    }
+    
+    const Mat* arrays[] = {this, &mat, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)(it.size*cn);
+    double r = 0;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        r += func( ptrs[0], ptrs[1], len );
+    
+    return r;
 }
 
 /****************************************************************************************\
@@ -2895,13 +2732,14 @@ double Mat::dot(const Mat& mat) const
 
 PCA::PCA() {}
 
-PCA::PCA(const Mat& data, const Mat& mean, int flags, int maxComponents)
+PCA::PCA(const InputArray& data, const InputArray& mean, int flags, int maxComponents)
 {
     operator()(data, mean, flags, maxComponents);
 }
 
-PCA& PCA::operator()(const Mat& data, const Mat& _mean, int flags, int maxComponents)
+PCA& PCA::operator()(const InputArray& _data, const InputArray& __mean, int flags, int maxComponents)
 {
+    Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
     int i, len, in_count;
     Size mean_sz;
@@ -2984,8 +2822,9 @@ PCA& PCA::operator()(const Mat& data, const Mat& _mean, int flags, int maxCompon
 }
 
 
-void PCA::project(const Mat& data, Mat& result) const
+void PCA::project(const InputArray& _data, OutputArray result) const
 {
+    Mat data = _data.getMat();
     CV_Assert( mean.data && eigenvectors.data &&
         ((mean.rows == 1 && mean.cols == data.cols) || (mean.cols == 1 && mean.rows == data.rows)));
     Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
@@ -3006,15 +2845,16 @@ void PCA::project(const Mat& data, Mat& result) const
         gemm( eigenvectors, tmp_data, 1, Mat(), 0, result, 0 );
 }
 
-Mat PCA::project(const Mat& data) const
+Mat PCA::project(const InputArray& data) const
 {
     Mat result;
     project(data, result);
     return result;
 }
 
-void PCA::backProject(const Mat& data, Mat& result) const
+void PCA::backProject(const InputArray& _data, OutputArray result) const
 {
+    Mat data = _data.getMat();
     CV_Assert( mean.data && eigenvectors.data &&
         ((mean.rows == 1 && eigenvectors.rows == data.cols) ||
          (mean.cols == 1 && eigenvectors.rows == data.rows)));
@@ -3033,7 +2873,7 @@ void PCA::backProject(const Mat& data, Mat& result) const
     }
 }
 
-Mat PCA::backProject(const Mat& data) const
+Mat PCA::backProject(const InputArray& data) const
 {
     Mat result;
     backProject(data, result);

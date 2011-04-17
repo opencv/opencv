@@ -45,555 +45,406 @@
 namespace cv
 {
 
-inline float sqr(uchar a) { return CV_8TO32F_SQR(a); }
-inline float sqr(float a) { return a*a; }
+template<typename T, typename AT> void
+acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
+{
+    int i = 0;
     
-inline double sqr(double a) { return a*a; }
+    if( !mask )
+    {
+        len *= cn;
+        for( ; i <= len - 4; i += 4 )
+        {
+            AT t0, t1;
+            t0 = src[i] + dst[i];
+            t1 = src[i+1] + dst[i+1];
+            dst[i] = t0; dst[i+1] = t1;
+            
+            t0 = src[i+2] + dst[i+2];
+            t1 = src[i+3] + dst[i+3];
+            dst[i+2] = t0; dst[i+3] = t1;
+        }
+        
+        for( ; i < len; i++ )
+            dst[i] += src[i];
+    }
+    else if( cn == 1 )
+    {
+        for( ; i < len; i++ )
+        {
+            if( mask[i] )
+                dst[i] += src[i];
+        }
+    }
+    else if( cn == 3 )
+    {
+        for( ; i < len; i++, src += 3, dst += 3 )
+        {
+            if( mask[i] )
+            {
+                AT t0 = src[0] + dst[0];
+                AT t1 = src[1] + dst[1];
+                AT t2 = src[2] + dst[2];
+                
+                dst[0] = t0; dst[1] = t1; dst[2] = t2;
+            }
+        }
+    }
+    else
+    {
+        for( ; i < len; i++, src += cn, dst += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    dst[k] += src[k];
+            }
+    }
+}
+
     
-inline Vec3f sqr(const Vec3b& a)
+template<typename T, typename AT> void
+accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
-    return Vec3f(CV_8TO32F_SQR(a[0]), CV_8TO32F_SQR(a[1]), CV_8TO32F_SQR(a[2]));
-}
-inline Vec3f sqr(const Vec3f& a)
-{
-    return Vec3f(a[0]*a[0], a[1]*a[1], a[2]*a[2]);
-}
-inline Vec3d sqr(const Vec3d& a)
-{
-    return Vec3d(a[0]*a[0], a[1]*a[1], a[2]*a[2]);
-}   
-inline float multiply(uchar a, uchar b) { return CV_8TO32F(a)*CV_8TO32F(b); }
-inline float multiply(float a, float b) { return a*b; }
-inline double multiply(double a, double b) { return a*b; }    
-inline Vec3f multiply(const Vec3b& a, const Vec3b& b)
-{
-    return Vec3f(
-        CV_8TO32F(a[0])*CV_8TO32F(b[0]),
-        CV_8TO32F(a[1])*CV_8TO32F(b[1]),
-        CV_8TO32F(a[2])*CV_8TO32F(b[2]));
-}
-inline Vec3f multiply(const Vec3f& a, const Vec3f& b)
-{
-    return Vec3f(a[0]*b[0], a[1]*b[1], a[2]*b[2]);
-}
-inline Vec3d multiply(const Vec3d& a, const Vec3d& b)
-{
-    return Vec3d(a[0]*b[0], a[1]*b[1], a[2]*b[2]);
-}
+    int i = 0;
     
-inline float addw(uchar a, float alpha, float b, float beta)
-{
-    return b*beta + CV_8TO32F(a)*alpha;
+    if( !mask )
+    {
+        len *= cn;
+        for( ; i <= len - 4; i += 4 )
+        {
+            AT t0, t1;
+            t0 = (AT)src[i]*src[i] + dst[i];
+            t1 = (AT)src[i+1]*src[i+1] + dst[i+1];
+            dst[i] = t0; dst[i+1] = t1;
+            
+            t0 = (AT)src[i+2]*src[i+2] + dst[i+2];
+            t1 = (AT)src[i+3]*src[i+3] + dst[i+3];
+            dst[i+2] = t0; dst[i+3] = t1;
+        }
+        
+        for( ; i < len; i++ )
+            dst[i] += (AT)src[i]*src[i];
+    }
+    else if( cn == 1 )
+    {
+        for( ; i < len; i++ )
+        {
+            if( mask[i] )
+                dst[i] += (AT)src[i]*src[i];
+        }
+    }
+    else if( cn == 3 )
+    {
+        for( ; i < len; i++, src += 3, dst += 3 )
+        {
+            if( mask[i] )
+            {
+                AT t0 = (AT)src[0]*src[0] + dst[0];
+                AT t1 = (AT)src[1]*src[1] + dst[1];
+                AT t2 = (AT)src[2]*src[2] + dst[2];
+                
+                dst[0] = t0; dst[1] = t1; dst[2] = t2;
+            }
+        }
+    }
+    else
+    {
+        for( ; i < len; i++, src += cn, dst += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    dst[k] += (AT)src[k]*src[k];
+            }
+    }
 }
-inline float addw(float a, float alpha, float b, float beta)
-{
-    return b*beta + a*alpha;
-}
-inline double addw(uchar a, double alpha, double b, double beta)
-{
-    return b*beta + CV_8TO32F(a)*alpha;
-}
-inline double addw(float a, double alpha, double b, double beta)
-{
-    return b*beta + a*alpha;
-}
-inline double addw(double a, double alpha, double b, double beta)
-{
-    return b*beta + a*alpha;
-}
+   
     
-inline Vec3f addw(const Vec3b& a, float alpha, const Vec3f& b, float beta)
+template<typename T, typename AT> void
+accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int cn )
 {
-    return Vec3f(b[0]*beta + CV_8TO32F(a[0])*alpha,
-                 b[1]*beta + CV_8TO32F(a[1])*alpha,
-                 b[2]*beta + CV_8TO32F(a[2])*alpha);
+    int i = 0;
+    
+    if( !mask )
+    {
+        len *= cn;
+        for( ; i <= len - 4; i += 4 )
+        {
+            AT t0, t1;
+            t0 = (AT)src1[i]*src2[i] + dst[i];
+            t1 = (AT)src1[i+1]*src2[i+1] + dst[i+1];
+            dst[i] = t0; dst[i+1] = t1;
+            
+            t0 = (AT)src1[i+2]*src2[i+2] + dst[i+2];
+            t1 = (AT)src1[i+3]*src2[i+3] + dst[i+3];
+            dst[i+2] = t0; dst[i+3] = t1;
+        }
+        
+        for( ; i < len; i++ )
+            dst[i] += (AT)src1[i]*src2[i];
+    }
+    else if( cn == 1 )
+    {
+        for( ; i < len; i++ )
+        {
+            if( mask[i] )
+                dst[i] += (AT)src1[i]*src2[i];
+        }
+    }
+    else if( cn == 3 )
+    {
+        for( ; i < len; i++, src1 += 3, src2 += 3, dst += 3 )
+        {
+            if( mask[i] )
+            {
+                AT t0 = (AT)src1[0]*src2[0] + dst[0];
+                AT t1 = (AT)src1[1]*src2[1] + dst[1];
+                AT t2 = (AT)src1[2]*src2[2] + dst[2];
+                
+                dst[0] = t0; dst[1] = t1; dst[2] = t2;
+            }
+        }
+    }
+    else
+    {
+        for( ; i < len; i++, src1 += cn, src2 += cn, dst += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    dst[k] += (AT)src1[k]*src2[k];
+            }
+    }
 }
-inline Vec3f addw(const Vec3f& a, float alpha, const Vec3f& b, float beta)
+
+    
+template<typename T, typename AT> void
+accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
 {
-    return Vec3f(b[0]*beta + a[0]*alpha, b[1]*beta + a[1]*alpha, b[2]*beta + a[2]*alpha);
+    AT a = (AT)alpha, b = 1 - a;
+    int i = 0;
+    
+    if( !mask )
+    {
+        len *= cn;
+        for( ; i <= len - 4; i += 4 )
+        {
+            AT t0, t1;
+            t0 = src[i]*a + dst[i]*b;
+            t1 = src[i+1]*a + dst[i+1]*b;
+            dst[i] = t0; dst[i+1] = t1;
+            
+            t0 = src[i+2]*a + dst[i+2]*b;
+            t1 = src[i+3]*a + dst[i+3]*b;
+            dst[i+2] = t0; dst[i+3] = t1;
+        }
+        
+        for( ; i < len; i++ )
+            dst[i] = src[i]*a + dst[i]*b;
+    }
+    else if( cn == 1 )
+    {
+        for( ; i < len; i++ )
+        {
+            if( mask[i] )
+                dst[i] = src[i]*a + dst[i]*b;
+        }
+    }
+    else if( cn == 3 )
+    {
+        for( ; i < len; i++, src += 3, dst += 3 )
+        {
+            if( mask[i] )
+            {
+                AT t0 = src[0]*a + dst[0]*b;
+                AT t1 = src[1]*a + dst[1]*b;
+                AT t2 = src[2]*a + dst[2]*b;
+                
+                dst[0] = t0; dst[1] = t1; dst[2] = t2;
+            }
+        }
+    }
+    else
+    {
+        for( ; i < len; i++, src += cn, dst += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    dst[k] += src[k]*a + dst[k]*b;
+            }
+    }
 }
-inline Vec3d addw(const Vec3b& a, double alpha, const Vec3d& b, double beta)
+
+
+#define DEF_ACC_FUNCS(suffix, type, acctype) \
+static void acc_##suffix(const type* src, acctype* dst, \
+                         const uchar* mask, int len, int cn) \
+{ acc_(src, dst, mask, len, cn); } \
+\
+static void accSqr_##suffix(const type* src, acctype* dst, \
+                            const uchar* mask, int len, int cn) \
+{ accSqr_(src, dst, mask, len, cn); } \
+\
+static void accProd_##suffix(const type* src1, const type* src2, \
+                             acctype* dst, const uchar* mask, int len, int cn) \
+{ accProd_(src1, src2, dst, mask, len, cn); } \
+\
+static void accW_##suffix(const type* src, acctype* dst, \
+                          const uchar* mask, int len, int cn, double alpha) \
+{ accW_(src, dst, mask, len, cn, alpha); }
+
+
+DEF_ACC_FUNCS(8u32f, uchar, float)
+DEF_ACC_FUNCS(8u64f, uchar, double)
+DEF_ACC_FUNCS(16u32f, ushort, float)
+DEF_ACC_FUNCS(16u64f, ushort, double)
+DEF_ACC_FUNCS(32f, float, float)
+DEF_ACC_FUNCS(32f64f, float, double)
+DEF_ACC_FUNCS(64f, double, double)
+    
+    
+typedef void (*AccFunc)(const uchar*, uchar*, const uchar*, int, int);
+typedef void (*AccProdFunc)(const uchar*, const uchar*, uchar*, const uchar*, int, int);
+typedef void (*AccWFunc)(const uchar*, uchar*, const uchar*, int, int, double);
+
+static AccFunc accTab[] =
 {
-    return Vec3d(b[0]*beta + CV_8TO32F(a[0])*alpha,
-                 b[1]*beta + CV_8TO32F(a[1])*alpha,
-                 b[2]*beta + CV_8TO32F(a[2])*alpha);
-}
-inline Vec3d addw(const Vec3f& a, double alpha, const Vec3d& b, double beta)
+    (AccFunc)acc_8u32f, (AccFunc)acc_8u64f,
+    (AccFunc)acc_16u32f, (AccFunc)acc_16u64f,
+    (AccFunc)acc_32f, (AccFunc)acc_32f64f,
+    (AccFunc)acc_64f
+};
+
+static AccFunc accSqrTab[] =
 {
-    return Vec3d(b[0]*beta + a[0]*alpha, b[1]*beta + a[1]*alpha, b[2]*beta + a[2]*alpha);
-}
-inline Vec3d addw(const Vec3d& a, double alpha, const Vec3d& b, double beta)
+    (AccFunc)accSqr_8u32f, (AccFunc)accSqr_8u64f,
+    (AccFunc)accSqr_16u32f, (AccFunc)accSqr_16u64f,
+    (AccFunc)accSqr_32f, (AccFunc)accSqr_32f64f,
+    (AccFunc)accSqr_64f
+};
+
+static AccProdFunc accProdTab[] =
 {
-    return Vec3d(b[0]*beta + a[0]*alpha, b[1]*beta + a[1]*alpha, b[2]*beta + a[2]*alpha);
+    (AccProdFunc)accProd_8u32f, (AccProdFunc)accProd_8u64f,
+    (AccProdFunc)accProd_16u32f, (AccProdFunc)accProd_16u64f,
+    (AccProdFunc)accProd_32f, (AccProdFunc)accProd_32f64f,
+    (AccProdFunc)accProd_64f
+};
+
+static AccWFunc accWTab[] =
+{
+    (AccWFunc)accW_8u32f, (AccWFunc)accW_8u64f,
+    (AccWFunc)accW_16u32f, (AccWFunc)accW_16u64f,
+    (AccWFunc)accW_32f, (AccWFunc)accW_32f64f,
+    (AccWFunc)accW_64f
+};
+
+inline int getAccTabIdx(int sdepth, int ddepth)
+{
+    return sdepth == CV_8U && ddepth == CV_32F ? 0 :
+           sdepth == CV_8U && ddepth == CV_64F ? 1 :
+           sdepth == CV_16U && ddepth == CV_32F ? 2 :
+           sdepth == CV_16U && ddepth == CV_64F ? 3 :
+           sdepth == CV_32F && ddepth == CV_32F ? 4 :
+           sdepth == CV_32F && ddepth == CV_64F ? 5 :
+           sdepth == CV_64F && ddepth == CV_64F ? 6 : -1;
 }    
-
-template<typename T, typename AT> void
-acc_( const Mat& _src, Mat& _dst )
-{
-    Size size = _src.size();
-    size.width *= _src.channels();
-
-    if( _src.isContinuous() && _dst.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src = (const T*)(_src.data + _src.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-
-        for( j = 0; j <= size.width - 4; j += 4 )
-        {
-            AT t0 = dst[j] + src[j], t1 = dst[j+1] + src[j+1];
-            dst[j] = t0; dst[j+1] = t1;
-            t0 = dst[j+2] + src[j+2]; t1 = dst[j+3] + src[j+3];
-            dst[j+2] = t0; dst[j+3] = t1;
-        }
-
-        for( ; j < size.width; j++ )
-            dst[j] += src[j];
-    }
-}
-
-
-template<typename T, typename AT> void
-accSqr_( const Mat& _src, Mat& _dst )
-{
-    Size size = _src.size();
-    size.width *= _src.channels();
-
-    if( _src.isContinuous() && _dst.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src = (const T*)(_src.data + _src.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-
-        for( j = 0; j <= size.width - 4; j += 4 )
-        {
-            AT t0 = dst[j] + sqr(src[j]), t1 = dst[j+1] + sqr(src[j+1]);
-            dst[j] = t0; dst[j+1] = t1;
-            t0 = dst[j+2] + sqr(src[j+2]); t1 = dst[j+3] + sqr(src[j+3]);
-            dst[j+2] = t0; dst[j+3] = t1;
-        }
-
-        for( ; j < size.width; j++ )
-            dst[j] += sqr(src[j]);
-    }
-}
-
-
-template<typename T, typename AT> void
-accProd_( const Mat& _src1, const Mat& _src2, Mat& _dst )
-{
-    Size size = _src1.size();
-    size.width *= _src1.channels();
-
-    if( _src1.isContinuous() && _src2.isContinuous() && _dst.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src1 = (const T*)(_src1.data + _src1.step*i);
-        const T* src2 = (const T*)(_src2.data + _src2.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-
-        for( j = 0; j <= size.width - 4; j += 4 )
-        {
-            AT t0, t1;
-            t0 = dst[j] + multiply(src1[j], src2[j]);
-            t1 = dst[j+1] + multiply(src1[j+1], src2[j+1]);
-            dst[j] = t0; dst[j+1] = t1;
-            t0 = dst[j+2] + multiply(src1[j+2], src2[j+2]);
-            t1 = dst[j+3] + multiply(src1[j+3], src2[j+3]);
-            dst[j+2] = t0; dst[j+3] = t1;
-        }
-
-        for( ; j < size.width; j++ )
-            dst[j] += multiply(src1[j], src2[j]);
-    }
-}
-
-
-template<typename T, typename AT> void
-accW_( const Mat& _src, Mat& _dst, double _alpha )
-{
-    AT alpha = (AT)_alpha, beta = (AT)(1 - _alpha);
-    Size size = _src.size();
-    size.width *= _src.channels();
-
-    if( _src.isContinuous() && _dst.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src = (const T*)(_src.data + _src.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-
-        for( j = 0; j <= size.width - 4; j += 4 )
-        {
-            AT t0, t1;
-            t0 = addw(src[j], alpha, dst[j], beta);
-            t1 = addw(src[j+1], alpha, dst[j+1], beta);
-            dst[j] = t0; dst[j+1] = t1;
-            t0 = addw(src[j+2], alpha, dst[j+2], beta);
-            t1 = addw(src[j+3], alpha, dst[j+3], beta);
-            dst[j+2] = t0; dst[j+3] = t1;
-        }
-
-        for( ; j < size.width; j++ )
-            dst[j] = addw(src[j], alpha, dst[j], beta);
-    }
-}
-
-
-template<typename T, typename AT> void
-accMask_( const Mat& _src, Mat& _dst, const Mat& _mask )
-{
-    Size size = _src.size();
-
-    if( _src.isContinuous() && _dst.isContinuous() && _mask.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src = (const T*)(_src.data + _src.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-        const uchar* mask = _mask.data + _mask.step*i;
-
-        for( j = 0; j < size.width; j++ )
-            if( mask[j] )
-                dst[j] += src[j];
-    }
-}
-
-
-template<typename T, typename AT> void
-accSqrMask_( const Mat& _src, Mat& _dst, const Mat& _mask )
-{
-    Size size = _src.size();
-
-    if( _src.isContinuous() && _dst.isContinuous() && _mask.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src = (const T*)(_src.data + _src.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-        const uchar* mask = _mask.data + _mask.step*i;
-
-        for( j = 0; j < size.width; j++ )
-            if( mask[j] )
-                dst[j] += sqr(src[j]);
-    }
-}
-
-
-template<typename T, typename AT> void
-accProdMask_( const Mat& _src1, const Mat& _src2, Mat& _dst, const Mat& _mask )
-{
-    Size size = _src1.size();
-
-    if( _src1.isContinuous() && _src2.isContinuous() &&
-        _dst.isContinuous() && _mask.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src1 = (const T*)(_src1.data + _src1.step*i);
-        const T* src2 = (const T*)(_src2.data + _src2.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-        const uchar* mask = _mask.data + _mask.step*i;
-
-        for( j = 0; j < size.width; j++ )
-            if( mask[j] )
-                dst[j] += multiply(src1[j], src2[j]);
-    }
-}
-
-
-template<typename T, typename AT> void
-accWMask_( const Mat& _src, Mat& _dst, double _alpha, const Mat& _mask )
-{
-    typedef typename DataType<AT>::channel_type AT1;
-    AT1 alpha = (AT1)_alpha, beta = (AT1)(1 - _alpha);
-    Size size = _src.size();
-
-    if( _src.isContinuous() && _dst.isContinuous() && _mask.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    int i, j;
-    for( i = 0; i < size.height; i++ )
-    {
-        const T* src = (const T*)(_src.data + _src.step*i);
-        AT* dst = (AT*)(_dst.data + _dst.step*i);
-        const uchar* mask = _mask.data + _mask.step*i;
-
-        for( j = 0; j < size.width; j++ )
-            if( mask[j] )
-                dst[j] = addw(src[j], alpha, dst[j], beta);
-    }
-}
-
-
-typedef void (*AccFunc)(const Mat&, Mat&);
-typedef void (*AccMaskFunc)(const Mat&, Mat&, const Mat&);
-typedef void (*AccProdFunc)(const Mat&, const Mat&, Mat&);
-typedef void (*AccProdMaskFunc)(const Mat&, const Mat&, Mat&, const Mat&);
-typedef void (*AccWFunc)(const Mat&, Mat&, double);
-typedef void (*AccWMaskFunc)(const Mat&, Mat&, double, const Mat&);
-
-void accumulate( const Mat& src, Mat& dst, const Mat& mask )
-{
-    CV_Assert( dst.size() == src.size() && dst.channels() == src.channels() );
-
-    if( !mask.data )
-    {
-        AccFunc func = 0;
-        if( src.depth() == CV_8U && dst.depth() == CV_32F )
-            func = acc_<uchar, float>;
-        else if( src.depth() == CV_8U && dst.depth() == CV_64F )
-            func = acc_<uchar, double>;
-        else if( src.depth() == CV_32F && dst.depth() == CV_32F )
-            func = acc_<float, float>;
-        else if( src.depth() == CV_32F && dst.depth() == CV_64F )
-            func = acc_<float, double>;
-        else if( src.depth() == CV_64F && dst.depth() == CV_64F )
-            func = acc_<double, double>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src, dst );
-    }
-    else
-    {
-        CV_Assert( mask.size() == src.size() && mask.type() == CV_8UC1 );
-
-        AccMaskFunc func = 0;
-        if( src.type() == CV_8UC1 && dst.type() == CV_32FC1 )
-            func = accMask_<uchar, float>;
-        else if( src.type() == CV_8UC3 && dst.type() == CV_32FC3 )
-            func = accMask_<Vec3b, Vec3f>;
-        else if( src.type() == CV_8UC1 && dst.type() == CV_64FC1 )
-            func = accMask_<uchar, double>;
-        else if( src.type() == CV_8UC3 && dst.type() == CV_64FC3 )
-            func = accMask_<Vec3b, Vec3d>;
-        else if( src.type() == CV_32FC1 && dst.type() == CV_32FC1 )
-            func = accMask_<float, float>;
-        else if( src.type() == CV_32FC3 && dst.type() == CV_32FC3 )
-            func = accMask_<Vec3f, Vec3f>;
-        else if( src.type() == CV_32FC1 && dst.type() == CV_64FC1 )
-            func = accMask_<float, double>;
-        else if( src.type() == CV_32FC3 && dst.type() == CV_64FC3 )
-            func = accMask_<Vec3f, Vec3d>;
-        else if( src.type() == CV_64FC1 && dst.type() == CV_64FC1 )
-            func = accMask_<double, double>;
-        else if( src.type() == CV_64FC3 && dst.type() == CV_64FC3 )
-            func = accMask_<Vec3d, Vec3d>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src, dst, mask );
-    }
-}
-
-
-void accumulateSquare( const Mat& src, Mat& dst, const Mat& mask )
-{
-    CV_Assert( dst.size() == src.size() && dst.channels() == src.channels() );
     
-    if( !mask.data )
-    {
-        AccFunc func = 0;
-        if( src.depth() == CV_8U && dst.depth() == CV_32F )
-            func = accSqr_<uchar, float>;
-        else if( src.depth() == CV_8U && dst.depth() == CV_64F )
-            func = accSqr_<uchar, double>;
-        else if( src.depth() == CV_32F && dst.depth() == CV_32F )
-            func = accSqr_<float, float>;
-        else if( src.depth() == CV_32F && dst.depth() == CV_64F )
-            func = accSqr_<float, double>;
-        else if( src.depth() == CV_64F && dst.depth() == CV_64F )
-            func = accSqr_<double, double>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src, dst );
-    }
-    else
-    {
-        CV_Assert( mask.size() == src.size() && mask.type() == CV_8UC1 );
-
-        AccMaskFunc func = 0;
-        if( src.type() == CV_8UC1 && dst.type() == CV_32FC1 )
-            func = accSqrMask_<uchar, float>;
-        else if( src.type() == CV_8UC3 && dst.type() == CV_32FC3 )
-            func = accSqrMask_<Vec3b, Vec3f>;
-        else if( src.type() == CV_8UC1 && dst.type() == CV_64FC1 )
-            func = accSqrMask_<uchar, double>;
-        else if( src.type() == CV_8UC3 && dst.type() == CV_64FC3 )
-            func = accSqrMask_<Vec3b, Vec3d>;
-        else if( src.type() == CV_32FC1 && dst.type() == CV_32FC1 )
-            func = accSqrMask_<float, float>;
-        else if( src.type() == CV_32FC3 && dst.type() == CV_32FC3 )
-            func = accSqrMask_<Vec3f, Vec3f>;
-        else if( src.type() == CV_32FC1 && dst.type() == CV_64FC1 )
-            func = accSqrMask_<float, double>;
-        else if( src.type() == CV_32FC3 && dst.type() == CV_64FC3 )
-            func = accSqrMask_<Vec3f, Vec3d>;
-        else if( src.type() == CV_64FC1 && dst.type() == CV_64FC1 )
-            func = accSqrMask_<double, double>;
-        else if( src.type() == CV_64FC3 && dst.type() == CV_64FC3 )
-            func = accSqrMask_<Vec3d, Vec3d>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src, dst, mask );
-    }
 }
-
-
-void accumulateProduct( const Mat& src1, const Mat& src2, Mat& dst, const Mat& mask )
-{
-    CV_Assert( dst.size() == src1.size() && dst.channels() == src1.channels() &&
-               src1.size() == src2.size() && src1.type() == src2.type() );
     
-    if( !mask.data )
-    {
-        AccProdFunc func = 0;
-        if( src1.depth() == CV_8U && dst.depth() == CV_32F )
-            func = accProd_<uchar, float>;
-        else if( src1.depth() == CV_8U && dst.depth() == CV_64F )
-            func = accProd_<uchar, double>;
-        else if( src1.depth() == CV_32F && dst.depth() == CV_32F )
-            func = accProd_<float, float>;
-        else if( src1.depth() == CV_32F && dst.depth() == CV_64F )
-            func = accProd_<float, double>;
-        else if( src1.depth() == CV_64F && dst.depth() == CV_64F )
-            func = accProd_<double, double>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src1, src2, dst );
-    }
-    else
-    {
-        CV_Assert( mask.size() == src1.size() && mask.type() == CV_8UC1 );
-
-        AccProdMaskFunc func = 0;
-        if( src1.type() == CV_8UC1 && dst.type() == CV_32FC1 )
-            func = accProdMask_<uchar, float>;
-        else if( src1.type() == CV_8UC3 && dst.type() == CV_32FC3 )
-            func = accProdMask_<Vec3b, Vec3f>;
-        else if( src1.type() == CV_8UC1 && dst.type() == CV_64FC1 )
-            func = accProdMask_<uchar, double>;
-        else if( src1.type() == CV_8UC3 && dst.type() == CV_64FC3 )
-            func = accProdMask_<Vec3b, Vec3d>;
-        else if( src1.type() == CV_32FC1 && dst.type() == CV_32FC1 )
-            func = accProdMask_<float, float>;
-        else if( src1.type() == CV_32FC3 && dst.type() == CV_32FC3 )
-            func = accProdMask_<Vec3f, Vec3f>;
-        else if( src1.type() == CV_32FC1 && dst.type() == CV_64FC1 )
-            func = accProdMask_<float, double>;
-        else if( src1.type() == CV_32FC3 && dst.type() == CV_64FC3 )
-            func = accProdMask_<Vec3f, Vec3d>;
-        else if( src1.type() == CV_64FC1 && dst.type() == CV_64FC1 )
-            func = accProdMask_<double, double>;
-        else if( src1.type() == CV_64FC3 && dst.type() == CV_64FC3 )
-            func = accProdMask_<Vec3d, Vec3d>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src1, src2, dst, mask );
-    }
-}
-
-
-void accumulateWeighted( const Mat& src, Mat& dst, double alpha, const Mat& mask )
+void cv::accumulate( const InputArray& _src, InputOutputArray _dst, const InputArray& _mask )
 {
-    CV_Assert( dst.size() == src.size() && dst.channels() == src.channels() );
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
     
-    if( !mask.data )
-    {
-        AccWFunc func = 0;
-        if( src.depth() == CV_8U && dst.depth() == CV_32F )
-            func = accW_<uchar, float>;
-        else if( src.depth() == CV_8U && dst.depth() == CV_64F )
-            func = accW_<uchar, double>;
-        else if( src.depth() == CV_32F && dst.depth() == CV_32F )
-            func = accW_<float, float>;
-        else if( src.depth() == CV_32F && dst.depth() == CV_64F )
-            func = accW_<float, double>;
-        else if( src.depth() == CV_64F && dst.depth() == CV_64F )
-            func = accW_<double, double>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src, dst, alpha );
-    }
-    else
-    {
-        CV_Assert( mask.size() == src.size() && mask.type() == CV_8UC1 );
-
-        AccWMaskFunc func = 0;
-        if( src.type() == CV_8UC1 && dst.type() == CV_32FC1 )
-            func = accWMask_<uchar, float>;
-        else if( src.type() == CV_8UC3 && dst.type() == CV_32FC3 )
-            func = accWMask_<Vec3b, Vec3f>;
-        else if( src.type() == CV_8UC1 && dst.type() == CV_64FC1 )
-            func = accWMask_<uchar, double>;
-        else if( src.type() == CV_8UC3 && dst.type() == CV_64FC3 )
-            func = accWMask_<Vec3b, Vec3d>;
-        else if( src.type() == CV_32FC1 && dst.type() == CV_32FC1 )
-            func = accWMask_<float, float>;
-        else if( src.type() == CV_32FC3 && dst.type() == CV_32FC3 )
-            func = accWMask_<Vec3f, Vec3f>;
-        else if( src.type() == CV_32FC1 && dst.type() == CV_64FC1 )
-            func = accWMask_<float, double>;
-        else if( src.type() == CV_32FC3 && dst.type() == CV_64FC3 )
-            func = accWMask_<Vec3f, Vec3d>;
-        else if( src.type() == CV_64FC1 && dst.type() == CV_64FC1 )
-            func = accWMask_<double, double>;
-        else if( src.type() == CV_64FC3 && dst.type() == CV_64FC3 )
-            func = accWMask_<Vec3d, Vec3d>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-
-        func( src, dst, alpha, mask );
-    }
+    CV_Assert( dst.size == src.size && dst.channels() == cn );
+    
+    if( !mask.empty() )
+        CV_Assert( mask.size == src.size && mask.type() == CV_8U );
+    
+    int fidx = getAccTabIdx(sdepth, ddepth);
+    AccFunc func = fidx >= 0 ? accTab[fidx] : 0;
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &dst, &mask, 0};
+    uchar* ptrs[3];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        func(ptrs[0], ptrs[1], ptrs[2], len, cn);
 }
 
+
+void cv::accumulateSquare( const InputArray& _src, InputOutputArray _dst, const InputArray& _mask )
+{
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    
+    CV_Assert( dst.size == src.size && dst.channels() == cn );
+    
+    if( !mask.empty() )
+        CV_Assert( mask.size == src.size && mask.type() == CV_8U );
+    
+    int fidx = getAccTabIdx(sdepth, ddepth);
+    AccFunc func = fidx >= 0 ? accSqrTab[fidx] : 0;
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &dst, &mask, 0};
+    uchar* ptrs[3];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        func(ptrs[0], ptrs[1], ptrs[2], len, cn);
+}
+
+void cv::accumulateProduct( const InputArray& _src1, const InputArray& _src2,
+                            InputOutputArray _dst, const InputArray& _mask )
+{
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+    int sdepth = src1.depth(), ddepth = dst.depth(), cn = src1.channels();
+    
+    CV_Assert( src2.size && src1.size && src2.type() == src1.type() );
+    CV_Assert( dst.size == src1.size && dst.channels() == cn );
+    
+    if( !mask.empty() )
+        CV_Assert( mask.size == src1.size && mask.type() == CV_8U );
+    
+    int fidx = getAccTabIdx(sdepth, ddepth);
+    AccProdFunc func = fidx >= 0 ? accProdTab[fidx] : 0;
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src1, &src2, &dst, &mask, 0};
+    uchar* ptrs[4];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, cn);
+}
+
+
+void cv::accumulateWeighted( const InputArray& _src, CV_IN_OUT InputOutputArray _dst,
+                             double alpha, const InputArray& _mask )
+{
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
+    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    
+    CV_Assert( dst.size == src.size && dst.channels() == cn );
+    
+    if( !mask.empty() )
+        CV_Assert( mask.size == src.size && mask.type() == CV_8U );
+    
+    int fidx = getAccTabIdx(sdepth, ddepth);
+    AccWFunc func = fidx >= 0 ? accWTab[fidx] : 0;
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &dst, &mask, 0};
+    uchar* ptrs[3];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        func(ptrs[0], ptrs[1], ptrs[2], len, cn, alpha);
 }
 
 

@@ -67,80 +67,58 @@ namespace cv
 \***************************************************************************************/
 
 template<typename T> static void
-RandBits_( Mat& _arr, uint64* state, const void* _param )
+randBits_( T* arr, int len, uint64* state, const Vec2i* p, bool small_flag )
 {
     uint64 temp = *state;
-    const int* param = (const int*)_param;
-    int small_flag = (param[12]|param[13]|param[14]|param[15]) <= 255;
-    Size size = getContinuousSize(_arr,_arr.channels());
+    int i;
 
-    for( int y = 0; y < size.height; y++ )
+    if( !small_flag )
     {
-        T* arr = (T*)(_arr.data + _arr.step*y);
-        int i, k = 3;
-        const int* p = param;
-
-        if( !small_flag )
+        for( i = 0; i <= len - 4; i += 4 )
         {
-            for( i = 0; i <= size.width - 4; i += 4 )
-            {
-                int t0, t1;
+            int t0, t1;
 
-                temp = RNG_NEXT(temp);
-                t0 = ((int)temp & p[i + 12]) + p[i];
-                temp = RNG_NEXT(temp);
-                t1 = ((int)temp & p[i + 13]) + p[i+1];
-                arr[i] = saturate_cast<T>(t0);
-                arr[i+1] = saturate_cast<T>(t1);
-
-                temp = RNG_NEXT(temp);
-                t0 = ((int)temp & p[i + 14]) + p[i+2];
-                temp = RNG_NEXT(temp);
-                t1 = ((int)temp & p[i + 15]) + p[i+3];
-                arr[i+2] = saturate_cast<T>(t0);
-                arr[i+3] = saturate_cast<T>(t1);
-
-                if( !--k )
-                {
-                    k = 3;
-                    p -= 12;
-                }
-            }
-        }
-        else
-        {
-            for( i = 0; i <= size.width - 4; i += 4 )
-            {
-                int t0, t1, t;
-
-                temp = RNG_NEXT(temp);
-                t = (int)temp;
-                t0 = (t & p[i + 12]) + p[i];
-                t1 = ((t >> 8) & p[i + 13]) + p[i+1];
-                arr[i] = saturate_cast<T>(t0);
-                arr[i+1] = saturate_cast<T>(t1);
-
-                t0 = ((t >> 16) & p[i + 14]) + p[i + 2];
-                t1 = ((t >> 24) & p[i + 15]) + p[i + 3];
-                arr[i+2] = saturate_cast<T>(t0);
-                arr[i+3] = saturate_cast<T>(t1);
-
-                if( !--k )
-                {
-                    k = 3;
-                    p -= 12;
-                }
-            }
-        }
-
-        for( ; i < size.width; i++ )
-        {
-            int t0;
             temp = RNG_NEXT(temp);
-
-            t0 = ((int)temp & p[i + 12]) + p[i];
+            t0 = ((int)temp & p[i][0]) + p[i][1];
+            temp = RNG_NEXT(temp);
+            t1 = ((int)temp & p[i+1][0]) + p[i+1][1];
             arr[i] = saturate_cast<T>(t0);
+            arr[i+1] = saturate_cast<T>(t1);
+
+            temp = RNG_NEXT(temp);
+            t0 = ((int)temp & p[i+2][0]) + p[i+2][1];
+            temp = RNG_NEXT(temp);
+            t1 = ((int)temp & p[i+3][0]) + p[i+3][1];
+            arr[i+2] = saturate_cast<T>(t0);
+            arr[i+3] = saturate_cast<T>(t1);
         }
+    }
+    else
+    {
+        for( i = 0; i <= len - 4; i += 4 )
+        {
+            int t0, t1, t;
+            temp = RNG_NEXT(temp);
+            t = (int)temp;
+            t0 = (t & p[i][0]) + p[i][1];
+            t1 = ((t >> 8) & p[i+1][0]) + p[i+1][1];
+            arr[i] = saturate_cast<T>(t0);
+            arr[i+1] = saturate_cast<T>(t1);
+
+            t0 = ((t >> 16) & p[i+2][0]) + p[i+2][1];
+            t1 = ((t >> 24) & p[i+3][0]) + p[i+3][1];
+            arr[i+2] = saturate_cast<T>(t0);
+            arr[i+3] = saturate_cast<T>(t1);
+        }
+    }
+
+    for( ; i < len; i++ )
+    {
+        int t0;
+        temp = RNG_NEXT(temp);
+
+        t0 = ((int)temp & p[i][0]) + p[i][1];
+        arr[i] = saturate_cast<T>(t0);
     }
 
     *state = temp;
@@ -155,124 +133,96 @@ struct DivStruct
 };
 
 template<typename T> static void
-Randi_( Mat& _arr, uint64* state, const void* _param )
+randi_( T* arr, int len, uint64* state, const DivStruct* p )
 {
     uint64 temp = *state;
-    const int* param = (const int*)_param;
-    Size size = getContinuousSize(_arr,_arr.channels());
-    int i, k, cn = _arr.channels();
-    DivStruct ds[12];
-    
-    for( k = 0; k < cn; k++ )
+    int i = 0;
+    unsigned t0, t1, v0, v1;
+
+    for( i = 0; i <= len - 4; i += 4 )
     {
-        ds[k].delta = param[k];
-        ds[k].d = (unsigned)(param[k+12] - param[k]);
-        int l = 0;
-        while(((uint64)1 << l) < ds[k].d)
-            l++;
-        ds[k].M = (unsigned)(((uint64)1 << 32)*(((uint64)1 << l) - ds[k].d)/ds[k].d) + 1;
-        ds[k].sh1 = min(l, 1);
-        ds[k].sh2 = max(l - 1, 0);
+        temp = RNG_NEXT(temp);
+        t0 = (unsigned)temp;
+        temp = RNG_NEXT(temp);
+        t1 = (unsigned)temp;
+        v0 = (unsigned)(((uint64)t0 * p[i].M) >> 32);
+        v1 = (unsigned)(((uint64)t1 * p[i+1].M) >> 32);
+        v0 = (v0 + ((t0 - v0) >> p[i].sh1)) >> p[i].sh2;
+        v1 = (v1 + ((t1 - v1) >> p[i+1].sh1)) >> p[i+1].sh2;
+        v0 = t0 - v0*p[i].d + p[i].delta;
+        v1 = t1 - v1*p[i+1].d + p[i+1].delta;
+        arr[i] = saturate_cast<T>((int)v0);
+        arr[i+1] = saturate_cast<T>((int)v1);
+        
+        temp = RNG_NEXT(temp);
+        t0 = (unsigned)temp;
+        temp = RNG_NEXT(temp);
+        t1 = (unsigned)temp;
+        v0 = (unsigned)(((uint64)t0 * p[i+2].M) >> 32);
+        v1 = (unsigned)(((uint64)t1 * p[i+3].M) >> 32);
+        v0 = (v0 + ((t0 - v0) >> p[i+2].sh1)) >> p[i+2].sh2;
+        v1 = (v1 + ((t1 - v1) >> p[i+3].sh1)) >> p[i+3].sh2;
+        v0 = t0 - v0*p[i+2].d + p[i+2].delta;
+        v1 = t1 - v1*p[i+3].d + p[i+3].delta;
+        arr[i+2] = saturate_cast<T>((int)v0);
+        arr[i+3] = saturate_cast<T>((int)v1);
     }
-    
-    for( ; k < 12; k++ )
-        ds[k] = ds[k - cn];
 
-    for( int y = 0; y < size.height; y++ )
+    for( ; i < len; i++ )
     {
-        T* arr = (T*)(_arr.data + _arr.step*y);
-        const DivStruct* p = ds;
-        unsigned t0, t1, v0, v1;
-
-        for( i = 0, k = 3; i <= size.width - 4; i += 4 )
-        {
-            temp = RNG_NEXT(temp);
-            t0 = (unsigned)temp;
-            temp = RNG_NEXT(temp);
-            t1 = (unsigned)temp;
-            v0 = (unsigned)(((uint64)t0 * p[i].M) >> 32);
-            v1 = (unsigned)(((uint64)t1 * p[i+1].M) >> 32);
-            v0 = (v0 + ((t0 - v0) >> p[i].sh1)) >> p[i].sh2;
-            v1 = (v1 + ((t1 - v1) >> p[i+1].sh1)) >> p[i+1].sh2;
-            v0 = t0 - v0*p[i].d + p[i].delta;
-            v1 = t1 - v1*p[i+1].d + p[i+1].delta;
-            arr[i] = saturate_cast<T>((int)v0);
-            arr[i+1] = saturate_cast<T>((int)v1);
-            
-            temp = RNG_NEXT(temp);
-            t0 = (unsigned)temp;
-            temp = RNG_NEXT(temp);
-            t1 = (unsigned)temp;
-            v0 = (unsigned)(((uint64)t0 * p[i+2].M) >> 32);
-            v1 = (unsigned)(((uint64)t1 * p[i+3].M) >> 32);
-            v0 = (v0 + ((t0 - v0) >> p[i+2].sh1)) >> p[i+2].sh2;
-            v1 = (v1 + ((t1 - v1) >> p[i+3].sh1)) >> p[i+3].sh2;
-            v0 = t0 - v0*p[i+2].d + p[i+2].delta;
-            v1 = t1 - v1*p[i+3].d + p[i+3].delta;
-            arr[i+2] = saturate_cast<T>((int)v0);
-            arr[i+3] = saturate_cast<T>((int)v1);
-
-            if( !--k )
-            {
-                k = 3;
-                p -= 12;
-            }
-        }
-
-        for( ; i < size.width; i++ )
-        {
-            temp = RNG_NEXT(temp);
-            t0 = (unsigned)temp;
-            v0 = (unsigned)(((uint64)t0 * p[i].M) >> 32);
-            v0 = (v0 + ((t0 - v0) >> p[i].sh1)) >> p[i].sh2;
-            v0 = t0 - v0*p[i].d + p[i].delta;
-            arr[i] = saturate_cast<T>((int)v0);
-        }
+        temp = RNG_NEXT(temp);
+        t0 = (unsigned)temp;
+        v0 = (unsigned)(((uint64)t0 * p[i].M) >> 32);
+        v0 = (v0 + ((t0 - v0) >> p[i].sh1)) >> p[i].sh2;
+        v0 = t0 - v0*p[i].d + p[i].delta;
+        arr[i] = saturate_cast<T>((int)v0);
     }
 
     *state = temp;
 }
 
+    
+#define DEF_RANDI_FUNC(suffix, type) \
+static void randBits_##suffix(type* arr, int len, uint64* state, \
+                              const Vec2i* p, bool small_flag) \
+{ randBits_(arr, len, state, p, small_flag); } \
+\
+static void randi_##suffix(type* arr, int len, uint64* state, \
+                           const DivStruct* p, bool ) \
+{ randi_(arr, len, state, p); }
 
-static void Randf_( Mat& _arr, uint64* state, const void* _param )
+DEF_RANDI_FUNC(8u, uchar)
+DEF_RANDI_FUNC(8s, schar)
+DEF_RANDI_FUNC(16u, ushort)
+DEF_RANDI_FUNC(16s, short)
+DEF_RANDI_FUNC(32s, int)
+    
+static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool )
 {
     uint64 temp = *state;
-    const float* param = (const float*)_param;
-    Size size = getContinuousSize(_arr,_arr.channels());
+    int i;
 
-    for( int y = 0; y < size.height; y++ )
+    for( i = 0; i <= len - 4; i += 4 )
     {
-        float* arr = (float*)(_arr.data + _arr.step*y);
-        int i, k = 3;
-        const float* p = param;
-        for( i = 0; i <= size.width - 4; i += 4 )
-        {
-            float f0, f1;
+        float f0, f1;
 
-            temp = RNG_NEXT(temp);
-            f0 = (int)temp*p[i+12] + p[i];
-            temp = RNG_NEXT(temp);
-            f1 = (int)temp*p[i+13] + p[i+1];
-            arr[i] = f0; arr[i+1] = f1;
+        temp = RNG_NEXT(temp);
+        f0 = (int)temp*p[i][0] + p[i][1];
+        temp = RNG_NEXT(temp);
+        f1 = (int)temp*p[i+1][0] + p[i+1][1];
+        arr[i] = f0; arr[i+1] = f1;
 
-            temp = RNG_NEXT(temp);
-            f0 = (int)temp*p[i+14] + p[i+2];
-            temp = RNG_NEXT(temp);
-            f1 = (int)temp*p[i+15] + p[i+3];
-            arr[i+2] = f0; arr[i+3] = f1;
+        temp = RNG_NEXT(temp);
+        f0 = (int)temp*p[i+2][0] + p[i+2][1];
+        temp = RNG_NEXT(temp);
+        f1 = (int)temp*p[i+3][0] + p[i+3][1];
+        arr[i+2] = f0; arr[i+3] = f1;
+    }
 
-            if( !--k )
-            {
-                k = 3;
-                p -= 12;
-            }
-        }
-
-        for( ; i < size.width; i++ )
-        {
-            temp = RNG_NEXT(temp);
-            arr[i] = (int)temp*p[i+12] + p[i];
-        }
+    for( ; i < len; i++ )
+    {
+        temp = RNG_NEXT(temp);
+        arr[i] = (int)temp*p[i][0] + p[i][1];
     }
 
     *state = temp;
@@ -280,65 +230,65 @@ static void Randf_( Mat& _arr, uint64* state, const void* _param )
 
 
 static void
-Randd_( Mat& _arr, uint64* state, const void* _param )
+randf_64f( double* arr, int len, uint64* state, const Vec2d* p, bool )
 {
     uint64 temp = *state;
-    const double* param = (const double*)_param;
-    Size size = getContinuousSize(_arr,_arr.channels());
     int64 v = 0;
+    int i;
 
-    for( int y = 0; y < size.height; y++ )
+    for( i = 0; i <= len - 4; i += 4 )
     {
-        double* arr = (double*)(_arr.data + _arr.step*y);
-        int i, k = 3;
-        const double* p = param;
-        
-        for( i = 0; i <= size.width - 4; i += 4 )
-        {
-            double f0, f1;
+        double f0, f1;
 
-            temp = RNG_NEXT(temp);
-            v = (temp >> 32)|(temp << 32);
-            f0 = v*p[i+12] + p[i];
-            temp = RNG_NEXT(temp);
-            v = (temp >> 32)|(temp << 32);
-            f1 = v*p[i+13] + p[i+1];
-            arr[i] = f0; arr[i+1] = f1;
+        temp = RNG_NEXT(temp);
+        v = (temp >> 32)|(temp << 32);
+        f0 = v*p[i][0] + p[i][1];
+        temp = RNG_NEXT(temp);
+        v = (temp >> 32)|(temp << 32);
+        f1 = v*p[i+1][0] + p[i+1][1];
+        arr[i] = f0; arr[i+1] = f1;
 
-            temp = RNG_NEXT(temp);
-            v = (temp >> 32)|(temp << 32);
-            f0 = v*p[i+14] + p[i+2];
-            temp = RNG_NEXT(temp);
-            v = (temp >> 32)|(temp << 32);
-            f1 = v*p[i+15] + p[i+3];
-            arr[i+2] = f0; arr[i+3] = f1;
+        temp = RNG_NEXT(temp);
+        v = (temp >> 32)|(temp << 32);
+        f0 = v*p[i+2][0] + p[i+2][1];
+        temp = RNG_NEXT(temp);
+        v = (temp >> 32)|(temp << 32);
+        f1 = v*p[i+3][0] + p[i+3][1];
+        arr[i+2] = f0; arr[i+3] = f1;
+    }
 
-            if( !--k )
-            {
-                k = 3;
-                p -= 12;
-            }
-        }
-
-        for( ; i < size.width; i++ )
-        {
-            temp = RNG_NEXT(temp);
-            v = (temp >> 32)|(temp << 32);
-            arr[i] = v*p[i+12] + p[i];
-        }
+    for( ; i < len; i++ )
+    {
+        temp = RNG_NEXT(temp);
+        v = (temp >> 32)|(temp << 32);
+        arr[i] = v*p[i][0] + p[i][1];
     }
 
     *state = temp;
 }
 
-   
+typedef void (*RandFunc)(uchar* arr, int len, uint64* state, const void* p, bool small_flag);    
+
+    
+static RandFunc randTab[][8] =
+{
+    {
+        (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u, (RandFunc)randi_16s,
+        (RandFunc)randi_32s, (RandFunc)randf_32f, (RandFunc)randf_64f, 0
+    },
+    {
+        (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u, (RandFunc)randBits_16s,
+        (RandFunc)randBits_32s, 0, 0, 0
+    }
+};    
+    
 /*
    The code below implements the algorithm described in
    "The Ziggurat Method for Generating Random Variables"
    by Marsaglia and Tsang, Journal of Statistical Software.
 */
 static void
-Randn_0_1_32f_C1R( float* arr, int len, uint64* state )
+randn_0_1_32f( float* arr, int len, uint64* state )
 {
     const float r = 3.442620f; // The start of the right tail
     const float rng_flt = 2.3283064365386962890625e-10f; // 2^-32
@@ -416,115 +366,163 @@ Randn_0_1_32f_C1R( float* arr, int len, uint64* state )
 double RNG::gaussian(double sigma)
 {
     float temp;
-    Randn_0_1_32f_C1R( &temp, 1, &state );
+    randn_0_1_32f( &temp, 1, &state );
     return temp*sigma;
 }
-    
 
+    
 template<typename T, typename PT> static void
-Randn_( Mat& _arr, uint64* state, const void* _param )
+randnScale_( const float* src, T* dst, int len, int cn, const PT* mean, const PT* stddev, bool stdmtx )
 {
-    const int RAND_BUF_SIZE = 96;
-    float buffer[RAND_BUF_SIZE];
-    int pidx[RAND_BUF_SIZE];    
-    const PT* param = (const PT*)_param;
-    Size size = getContinuousSize(_arr, _arr.channels());
-    
-    int i, n = std::min(size.width, RAND_BUF_SIZE);
-    for( i = 0; i < 12; i++ )
-        pidx[i] = i;
-    for( ; i < n; i++ )
-        pidx[i] = pidx[i - 12];
-
-    for( int y = 0; y < size.height; y++ )
+    int i, j, k;
+    if( !stdmtx )
     {
-        T* arr = (T*)(_arr.data + _arr.step*y);
-        int len = RAND_BUF_SIZE;
-        for( i = 0; i < size.width; i += RAND_BUF_SIZE )
+        if( cn == 1 )
         {
-            if( i + len > size.width )
-                len = size.width - i;
-
-            Randn_0_1_32f_C1R( buffer, len, state );
-
-            for( int j = 0; j < len; j++ )
-                arr[i+j] = saturate_cast<T>(buffer[j]*param[pidx[j]+12] + param[pidx[j]]);
+            PT b = mean[0], a = stddev[0];
+            for( i = 0; i < len; i++ )
+                dst[i] = saturate_cast<T>(src[i]*a + b);
+        }
+        else
+        {
+            for( i = 0; i < len; i++, src += cn, dst += cn )
+                for( k = 0; k < cn; k++ )
+                    dst[k] = saturate_cast<T>(src[k]*stddev[k] + mean[k]);
+        }
+    }
+    else
+    {
+        for( i = 0; i < len; i++, src += cn, dst += cn )
+        {
+            for( j = 0; j < cn; j++ )
+            {
+                PT s = mean[j];
+                for( k = 0; k < cn; k++ )
+                    s += src[k]*stddev[j*cn + k];
+                dst[j] = saturate_cast<T>(s);
+            }
         }
     }
 }
-
-
-typedef void (*RandFunc)(Mat& dst, uint64* state, const void* param);
-
-void RNG::fill( Mat& mat, int disttype, const Scalar& param1, const Scalar& param2 )
-{
-    static RandFunc rngtab[3][8] =
-    {
-        {
-        RandBits_<uchar>, 
-        RandBits_<schar>,
-        RandBits_<ushort>,
-        RandBits_<short>,
-        RandBits_<int>, 0, 0, 0},
-
-        {Randi_<uchar>,
-        Randi_<schar>,
-        Randi_<ushort>,
-        Randi_<short>,
-        Randi_<int>,
-        Randf_, Randd_, 0},
-
-        {Randn_<uchar,float>,
-        Randn_<schar,float>,
-        Randn_<ushort,float>,
-        Randn_<short,float>,
-        Randn_<int,float>,
-        Randn_<float,float>,
-        Randn_<double,double>, 0}
-    };
     
-    int depth = mat.depth(), channels = mat.channels();
-    double dparam[2][12];
-    float fparam[2][12];
-    int iparam[2][12];
-    void* param = dparam;
-    int i, fast_int_mode = 0;
-    RandFunc func = 0;
+static void randnScale_8u( const float* src, uchar* dst, int len, int cn,
+                            const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
 
-    CV_Assert( channels <= 4 );
+static void randnScale_8s( const float* src, schar* dst, int len, int cn,
+                            const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_16u( const float* src, ushort* dst, int len, int cn,
+                             const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_16s( const float* src, short* dst, int len, int cn,
+                             const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_32s( const float* src, int* dst, int len, int cn,
+                             const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_32f( const float* src, float* dst, int len, int cn,
+                             const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_64f( const float* src, double* dst, int len, int cn,
+                             const double* mean, const double* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+typedef void (*RandnScaleFunc)(const float* src, uchar* dst, int len, int cn,
+                               const uchar*, const uchar*, bool);
+
+static RandnScaleFunc randnScaleTab[] =
+{
+    (RandnScaleFunc)randnScale_8u, (RandnScaleFunc)randnScale_8s, (RandnScaleFunc)randnScale_16u,
+    (RandnScaleFunc)randnScale_16s, (RandnScaleFunc)randnScale_32s, (RandnScaleFunc)randnScale_32f,
+    (RandnScaleFunc)randnScale_64f, 0 
+};
+    
+void RNG::fill( InputOutputArray _mat, int disttype, const InputArray& _param1arg, const InputArray& _param2arg )
+{
+    Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
+    int depth = mat.depth(), cn = mat.channels();
+    AutoBuffer<double> _parambuf;
+    int j, k, fast_int_mode = 0, smallFlag = 1;
+    RandFunc func = 0;
+    RandnScaleFunc scaleFunc = 0;
+    
+    CV_Assert(_param1.channels() == 1 && (_param1.rows == 1 || _param1.cols == 1) &&
+              (_param1.rows + _param1.cols - 1 == cn ||
+               (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4)));
+    CV_Assert( _param2.channels() == 1 &&
+               (((_param2.rows == 1 || _param2.cols == 1) && 
+                (_param2.rows + _param2.cols - 1 == cn ||
+                (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4))) ||
+                (_param2.rows == cn && _param2.cols == cn && disttype == NORMAL)));
+    
+    Vec2i* ip = 0;
+    Vec2d* dp = 0;
+    Vec2f* fp = 0;
+    DivStruct* ds = 0;
+    uchar* mean = 0;
+    uchar* stddev = 0;
+    bool stdmtx = false;
 
     if( disttype == UNIFORM )
     {
+        _parambuf.allocate(cn*8);
+        double* parambuf = _parambuf;
+        const double* p1 = (const double*)_param1.data;
+        const double* p2 = (const double*)_param2.data;
+        
+        if( !_param1.isContinuous() || _param1.type() != CV_64F )
+        {
+            Mat tmp(_param1.size(), CV_64F, parambuf);
+            _param1.convertTo(tmp, CV_64F);
+            p1 = parambuf;
+        }
+        
+        if( !_param2.isContinuous() || _param2.type() != CV_64F )
+        {
+            Mat tmp(_param2.size(), CV_64F, parambuf + cn);
+            _param2.convertTo(tmp, CV_64F);
+            p2 = parambuf + cn;
+        }
+        
         if( depth <= CV_32S )
         {
-            for( i = 0, fast_int_mode = 1; i < channels; i++ )
+            ip = (Vec2i*)(parambuf + cn*2);
+            for( j = 0, fast_int_mode = 1; j < cn; j++ )
             {
-                double a = min(param1.val[i], param2.val[i]);
-                double b = max(param1.val[i], param2.val[i]);
-                int t0 = iparam[0][i] = cvCeil(a);
-                int t1 = iparam[1][i] = cvFloor(b);
+                double a = min(p1[j], p2[j]);
+                double b = max(p1[j], p2[j]);
+                ip[j][1] = cvCeil(a);
+                int idiff = ip[j][0] = cvFloor(b) - ip[j][1] - 1;
                 double diff = b - a;
 
-                fast_int_mode &= diff <= 4294967296. && ((t1-t0) & (t1-t0-1)) == 0;
+                fast_int_mode &= diff <= 4294967296. && (idiff & (idiff+1)) == 0;
+                if( fast_int_mode )
+                    smallFlag &= idiff <= 255;
             }
             
-            if( fast_int_mode )
+            if( !fast_int_mode )
             {
-                for( i = 0; i < channels; i++ )
-                    iparam[1][i] = iparam[1][i] > iparam[0][i] ? iparam[1][i] - iparam[0][i] - 1 : 0;
-            }
-                
-            for( ; i < 12; i++ )
-            {
-                int t0 = iparam[0][i - channels];
-                int t1 = iparam[1][i - channels];
-                
-                iparam[0][i] = t0;
-                iparam[1][i] = t1;
+                ds = (DivStruct*)(ip + cn);
+                for( j = 0; j < cn; j++ )
+                {
+                    ds[j].delta = ip[j][1];
+                    unsigned d = ds[j].d = (unsigned)(ip[j][0]+1);
+                    int l = 0;
+                    while(((uint64)1 << l) < d)
+                        l++;
+                    ds[j].M = (unsigned)(((uint64)1 << 32)*(((uint64)1 << l) - d)/d) + 1;
+                    ds[j].sh1 = min(l, 1);
+                    ds[j].sh2 = max(l - 1, 0);
+                }            
             }
             
-            func = rngtab[!fast_int_mode][depth];
-            param = iparam;
+            func = randTab[fast_int_mode][depth];
         }
         else
         {
@@ -536,70 +534,128 @@ void RNG::fill( Mat& mat, int disttype, const Scalar& param1, const Scalar& para
             // so that a signed 32/64-bit integer X is transformed to
             // the range [param1.val[i], param2.val[i]) using
             // dparam[1][i]*X + dparam[0][i]
-            for( i = 0; i < channels; i++ )
+            if( depth == CV_32F )
             {
-                double t0 = param1.val[i];
-                double t1 = param2.val[i];
-                dparam[0][i] = (t1 + t0)*0.5;
-                dparam[1][i] = (t1 - t0)*scale;
+                fp = (Vec2f*)(parambuf + cn*2);
+                for( j = 0; j < cn; j++ )
+                {
+                    fp[j][0] = (float)((p2[j] - p1[j])*scale);
+                    fp[j][1] = (float)((p2[j] + p1[j])*0.5);
+                }
+            }
+            else
+            {
+                dp = (Vec2d*)(parambuf + cn*2);
+                for( j = 0; j < cn; j++ )
+                {
+                    dp[j][0] = ((p2[j] - p1[j])*scale);
+                    dp[j][1] = ((p2[j] + p1[j])*0.5);
+                }
             }
             
-            func = rngtab[1][depth];
-            param = dparam;
+            func = randTab[0][depth];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
         }
+        CV_Assert( func != 0 );
     }
     else if( disttype == CV_RAND_NORMAL )
     {
-        for( i = 0; i < channels; i++ )
+        _parambuf.allocate(_param1.total() + _param2.total());
+        double* parambuf = _parambuf;
+        
+        int ptype = depth == CV_64F ? CV_64F : CV_32F;
+        if( _param1.isContinuous() && _param1.type() == ptype )
+            mean = _param1.data;
+        else
         {
-            double t0 = param1.val[i];
-            double t1 = param2.val[i];
-
-            dparam[0][i] = t0;
-            dparam[1][i] = t1;
+            Mat tmp(_param1.size(), ptype, parambuf);
+            _param1.convertTo(tmp, ptype);
+            mean = (uchar*)parambuf;
         }
-
-        func = rngtab[2][depth];
-        param = dparam;
+        
+        if( _param2.isContinuous() && _param2.type() == ptype )
+            stddev = _param2.data;
+        else
+        {
+            Mat tmp(_param2.size(), ptype, parambuf + cn);
+            _param2.convertTo(tmp, ptype);
+            stddev = (uchar*)(parambuf + cn);
+        }
+        
+        stdmtx = _param2.rows == cn && _param2.cols == cn;
+        scaleFunc = randnScaleTab[depth];
+        CV_Assert( scaleFunc != 0 );
     }
     else
         CV_Error( CV_StsBadArg, "Unknown distribution type" );
 
-    if( param == dparam )
-    {
-        for( i = channels; i < 12; i++ )
-        {
-            double t0 = dparam[0][i - channels];
-            double t1 = dparam[1][i - channels];
-
-            dparam[0][i] = t0;
-            dparam[1][i] = t1;
-        }
-
-        if( depth != CV_64F )
-        {
-            for( i = 0; i < 12; i++ )
-            {
-                fparam[0][i] = (float)dparam[0][i];
-                fparam[1][i] = (float)dparam[1][i];
-            }
-            param = fparam;
-        }
-    }
-
-    CV_Assert( func != 0);
+    const Mat* arrays[] = {&mat, 0};
+    uchar* ptr;
+    NAryMatIterator it(arrays, &ptr);
+    int total = (int)it.size, blockSize = std::min((BLOCK_SIZE + cn - 1)/cn, total);
+    size_t esz = mat.elemSize();
+    AutoBuffer<double> buf;
+    uchar* param = 0;
+    float* nbuf = 0;
     
-    if( mat.dims > 2 )
+    if( disttype == UNIFORM )
     {
-        const Mat* arrays[] = {&mat, 0};
-        Mat planes[1];
-        NAryMatIterator it(arrays, planes);
+        buf.allocate(blockSize*cn*4);
+        param = (uchar*)(double*)buf;
         
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func( it.planes[0], &state, param );
+        if( ip )
+        {
+            if( ds )
+            {
+                DivStruct* p = (DivStruct*)param;
+                for( j = 0; j < blockSize*cn; j += cn )
+                    for( k = 0; k < cn; k++ )
+                        p[j + k] = ds[k];
+            }
+            else
+            {
+                Vec2i* p = (Vec2i*)param;
+                for( j = 0; j < blockSize*cn; j += cn )
+                    for( k = 0; k < cn; k++ )
+                        p[j + k] = ip[k];
+            }
+        }
+        else if( fp )
+        {
+            Vec2f* p = (Vec2f*)param;
+            for( j = 0; j < blockSize*cn; j += cn )
+                for( k = 0; k < cn; k++ )
+                    p[j + k] = fp[k];
+        }
+        else
+        {
+            Vec2d* p = (Vec2d*)param;
+            for( j = 0; j < blockSize*cn; j += cn )
+                for( k = 0; k < cn; k++ )
+                    p[j + k] = dp[k];
+        }
     }
     else
-        func( mat, &state, param );
+    {
+        buf.allocate((blockSize*cn+1)/2);
+        nbuf = (float*)(double*)buf;
+    }
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int len = std::min(total - j, blockSize);
+            
+            if( disttype == CV_RAND_UNI )
+                func( ptr, len*cn, &state, param, smallFlag != 0 );
+            else
+            {
+                randn_0_1_32f(nbuf, len*cn, &state);
+                scaleFunc(nbuf, ptr, len, cn, mean, stddev, stdmtx);
+            }
+            ptr += len*esz;
+        }
+    }
 }
 
 #ifdef WIN32
@@ -657,16 +713,21 @@ RNG& theRNG()
 
 #endif
 
-void randu(CV_OUT Mat& dst, const Scalar& low, const Scalar& high)
+}
+    
+void cv::randu(InputOutputArray dst, const InputArray& low, const InputArray& high)
 {
     theRNG().fill(dst, RNG::UNIFORM, low, high);
 }
 
-void randn(CV_OUT Mat& dst, const Scalar& mean, const Scalar& stddev)
+void cv::randn(InputOutputArray dst, const InputArray& mean, const InputArray& stddev)
 {
     theRNG().fill(dst, RNG::NORMAL, mean, stddev);
 }    
-    
+ 
+namespace cv
+{
+
 template<typename T> static void
 randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
 {
@@ -697,7 +758,9 @@ randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
 
 typedef void (*RandShuffleFunc)( Mat& dst, RNG& rng, double iterFactor );
 
-void randShuffle( Mat& dst, double iterFactor, RNG* _rng )
+}
+    
+void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
 {
     RandShuffleFunc tab[] =
     {
@@ -719,14 +782,13 @@ void randShuffle( Mat& dst, double iterFactor, RNG* _rng )
         0, 0, 0, 0, 0, 0, 0,
         randShuffle_<Vec<int,8> > // 32
     };
-
+    
+    Mat dst = _dst.getMat();
     RNG& rng = _rng ? *_rng : theRNG();
     CV_Assert( dst.elemSize() <= 32 );
     RandShuffleFunc func = tab[dst.elemSize()];
     CV_Assert( func != 0 );
     func( dst, rng, iterFactor );
-}
-
 }
 
 CV_IMPL void
@@ -736,7 +798,7 @@ cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar para
     // !!! this will only work for current 64-bit MWC RNG !!!
     cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
     rng.fill(mat, disttype == CV_RAND_NORMAL ?
-        cv::RNG::NORMAL : cv::RNG::UNIFORM, param1, param2 );
+        cv::RNG::NORMAL : cv::RNG::UNIFORM, (cv::Scalar&)param1, (cv::Scalar&)param2 );
 }
 
 CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )

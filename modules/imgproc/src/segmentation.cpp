@@ -303,10 +303,10 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
 }
 
 
-void cv::watershed( const Mat& src, Mat& markers )
+void cv::watershed( const InputArray& src, InputOutputArray markers )
 {
-    CvMat _src = src, _markers = markers;
-    cvWatershed( &_src, &_markers );
+    CvMat c_src = src.getMat(), c_markers = markers.getMat();
+    cvWatershed( &c_src, &c_markers );
 }
 
 
@@ -523,14 +523,16 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     }
 }
 
-void cv::pyrMeanShiftFiltering( const Mat& src, Mat& dst,
+void cv::pyrMeanShiftFiltering( const InputArray& _src, OutputArray _dst,
                                 double sp, double sr, int maxLevel,
                                 TermCriteria termcrit )
 {
+    Mat src = _src.getMat();
+    
     if( src.empty() )
         return;
 
-    dst.create( src.size(), src.type() );
-    CvMat _src = src, _dst = dst;
-    cvPyrMeanShiftFiltering( &_src, &_dst, sp, sr, maxLevel, termcrit );
+    _dst.create( src.size(), src.type() );
+    CvMat c_src = src, c_dst = _dst.getMat();
+    cvPyrMeanShiftFiltering( &c_src, &c_dst, sp, sr, maxLevel, termcrit );
 }

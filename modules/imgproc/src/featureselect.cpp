@@ -50,13 +50,16 @@ template<typename T> struct greaterThanPtr
     bool operator()(const T* a, const T* b) const { return *a > *b; }
 };
 
-void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,
-                          int maxCorners, double qualityLevel, double minDistance,
-                          const Mat& mask, int blockSize,
-                          bool useHarrisDetector, double harrisK )
+}
+    
+void cv::goodFeaturesToTrack( const InputArray& _image, OutputArray _corners,
+                              int maxCorners, double qualityLevel, double minDistance,
+                              const InputArray& _mask, int blockSize,
+                              bool useHarrisDetector, double harrisK )
 {
+    Mat image = _image.getMat(), mask = _mask.getMat();
+    
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
-
     CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) );
 
     Mat eig, tmp;
@@ -90,7 +93,7 @@ void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,
     }
 
     sort( tmpCorners, greaterThanPtr<float>() );
-    corners.clear();
+    vector<Point2f> corners;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 
     if(minDistance >= 1)
@@ -182,7 +185,10 @@ void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,
                 break;
         }
     }
-/*
+    
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+
+    /*
     for( i = 0; i < total; i++ )
     {
         int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
@@ -208,8 +214,6 @@ void goodFeaturesToTrack( const Mat& image, vector<Point2f>& corners,
             break;
     }
 */
-}
-    
 }
 
 CV_IMPL void

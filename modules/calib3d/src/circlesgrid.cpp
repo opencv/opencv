@@ -280,9 +280,9 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const cv::Size &patternSize,
 
   Mat homography = findHomography(Mat(sortedCorners), Mat(idealPoints), 0);
   Mat rectifiedPointsMat;
-  transform(Mat(patternPoints), rectifiedPointsMat, homography);
+  transform(patternPoints, rectifiedPointsMat, homography);
   rectifiedPatternPoints.clear();
-  convertPointsHomogeneous(rectifiedPointsMat, rectifiedPatternPoints);
+  convertPointsFromHomogeneous(rectifiedPointsMat, rectifiedPatternPoints);
 }
 
 void CirclesGridClusterFinder::parsePatternPoints(const cv::Size &patternSize, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
@@ -727,7 +727,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const vector<Point2f>&
   Mat dstKeypointsMat;
   transform(Mat(srcKeypoints), dstKeypointsMat, H);
   vector<Point2f> dstKeypoints;
-  convertPointsHomogeneous(dstKeypointsMat, dstKeypoints);
+  convertPointsFromHomogeneous(dstKeypointsMat, dstKeypoints);
 
   warpedKeypoints.clear();
   for (size_t i = 0; i < dstKeypoints.size(); i++)
@@ -969,7 +969,7 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
   Mat centers;
   const int clustersCount = 4;
   kmeans(Mat(samples).reshape(1, 0), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
-         KMEANS_RANDOM_CENTERS, &centers);
+         KMEANS_RANDOM_CENTERS, centers);
   assert( centers.type() == CV_32FC1 );
 
   vector<int> basisIndices;

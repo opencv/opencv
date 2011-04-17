@@ -2618,13 +2618,15 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
     }
 }
 
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                   The main function                                  // 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
+void cv::cvtColor( const InputArray& _src, OutputArray _dst, int code, int dcn )
 {
+    Mat src = _src.getMat(), dst;
     Size sz = src.size();
     int scn = src.channels(), depth = src.depth(), bidx;
     
@@ -2638,7 +2640,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
             bidx = code == CV_BGR2BGRA || code == CV_BGRA2BGR ? 0 : 2;
             
-            dst.create( sz, CV_MAKETYPE(depth, dcn));
+            _dst.create( sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+            
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, RGB2RGB<uchar>(scn, dcn, bidx));
             else if( depth == CV_16U )
@@ -2650,7 +2654,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
         case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
         case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
             CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
-            dst.create(sz, CV_8UC2);
+            _dst.create(sz, CV_8UC2);
+            dst = _dst.getMat();
         
             CvtColorLoop(src, dst, RGB2RGB5x5(scn,
                       code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
@@ -2664,7 +2669,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
         case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
             if(dcn <= 0) dcn = 3;
             CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
             
             CvtColorLoop(src, dst, RGB5x52RGB(dcn,
                       code == CV_BGR5652BGR || code == CV_BGR5552BGR ||
@@ -2676,7 +2682,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
                     
         case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
             CV_Assert( scn == 3 || scn == 4 );
-            dst.create(sz, CV_MAKETYPE(depth, 1));
+            _dst.create(sz, CV_MAKETYPE(depth, 1));
+            dst = _dst.getMat();
+            
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
             
             if( depth == CV_8U )
@@ -2689,14 +2697,17 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
         
         case CV_BGR5652GRAY: case CV_BGR5552GRAY:
             CV_Assert( scn == 2 && depth == CV_8U );
-            dst.create(sz, CV_8UC1);
+            _dst.create(sz, CV_8UC1);
+            dst = _dst.getMat();
+            
             CvtColorLoop(src, dst, RGB5x52Gray(code == CV_BGR5652GRAY ? 6 : 5));
             break;
         
         case CV_GRAY2BGR: case CV_GRAY2BGRA:
             if( dcn <= 0 ) dcn = 3;
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
             
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, Gray2RGB<uchar>(dcn));
@@ -2708,7 +2719,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             
         case CV_GRAY2BGR565: case CV_GRAY2BGR555:
             CV_Assert( scn == 1 && depth == CV_8U );
-            dst.create(sz, CV_8UC2);
+            _dst.create(sz, CV_8UC2);
+            dst = _dst.getMat();
             
             CvtColorLoop(src, dst, Gray2RGB5x5(code == CV_GRAY2BGR565 ? 6 : 5));
             break;
@@ -2723,7 +2735,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             const float* coeffs_f = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_f;
             const int* coeffs_i = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_i;
                 
-            dst.create(sz, CV_MAKETYPE(depth, 3));
+            _dst.create(sz, CV_MAKETYPE(depth, 3));
+            dst = _dst.getMat();
             
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, RGB2YCrCb_i<uchar>(scn, bidx, coeffs_i));
@@ -2745,7 +2758,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_f;
             const int* coeffs_i = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? 0 : yuv_i;
             
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
             
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, YCrCb2RGB_i<uchar>(dcn, bidx, coeffs_i));
@@ -2760,7 +2774,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             bidx = code == CV_BGR2XYZ ? 0 : 2;
             
-            dst.create(sz, CV_MAKETYPE(depth, 3));
+            _dst.create(sz, CV_MAKETYPE(depth, 3));
+            dst = _dst.getMat();
             
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, RGB2XYZ_i<uchar>(scn, bidx, 0));
@@ -2775,7 +2790,8 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             CV_Assert( scn == 3 && (dcn == 3 || dcn == 4) );
             bidx = code == CV_XYZ2BGR ? 0 : 2;
             
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
             
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, XYZ2RGB_i<uchar>(dcn, bidx, 0));
@@ -2794,8 +2810,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
                 code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 255;
             
-            dst.create(sz, CV_MAKETYPE(depth, 3));
-            
+            _dst.create(sz, CV_MAKETYPE(depth, 3));
+            dst = _dst.getMat();
+                
             if( code == CV_BGR2HSV || code == CV_RGB2HSV ||
                 code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL )
             {
@@ -2824,8 +2841,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
                 code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
             
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
-            
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+                
             if( code == CV_HSV2BGR || code == CV_HSV2RGB ||
                 code == CV_HSV2BGR_FULL || code == CV_HSV2RGB_FULL )
             {
@@ -2853,8 +2871,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             bool srgb = code == CV_BGR2Lab || code == CV_RGB2Lab ||
                         code == CV_BGR2Luv || code == CV_RGB2Luv;
             
-            dst.create(sz, CV_MAKETYPE(depth, 3));
-            
+            _dst.create(sz, CV_MAKETYPE(depth, 3));
+            dst = _dst.getMat();
+                
             if( code == CV_BGR2Lab || code == CV_RGB2Lab ||
                 code == CV_LBGR2Lab || code == CV_LRGB2Lab )
             {
@@ -2883,8 +2902,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
             bool srgb = code == CV_Lab2BGR || code == CV_Lab2RGB ||
                     code == CV_Luv2BGR || code == CV_Luv2RGB;
             
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
-            
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
+                
             if( code == CV_Lab2BGR || code == CV_Lab2RGB ||
                 code == CV_Lab2LBGR || code == CV_Lab2LRGB )
             {
@@ -2906,7 +2926,10 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
         case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
             if(dcn <= 0) dcn = 1;
             CV_Assert( scn == 1 && dcn == 1 && depth == CV_8U );
-            dst.create(sz, depth);
+            
+            _dst.create(sz, depth);
+            dst = _dst.getMat();
+            
             Bayer2Gray_8u(src, dst, code);
             break;    
             
@@ -2914,7 +2937,9 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
             if(dcn <= 0) dcn = 3;
             CV_Assert( scn == 1 && dcn == 3 && depth == CV_8U );
-            dst.create(sz, CV_MAKETYPE(depth, dcn));
+            
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
+            dst = _dst.getMat();
             
             if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
                 code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
@@ -2925,8 +2950,6 @@ void cvtColor( const Mat& src, Mat& dst, int code, int dcn )
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
-}
-
 }
     
 CV_IMPL void

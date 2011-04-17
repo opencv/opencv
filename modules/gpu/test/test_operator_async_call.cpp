@@ -74,7 +74,7 @@ struct CV_AsyncGpuMatTest : public cvtest::BaseTest
         Mat cpu_gold0(100, 100, CV_8UC1, Scalar::all(255));
         Mat cpu_gold1(100, 100, CV_8UC1, Scalar::all(128));
 
-        if (norm(cpudst0, cpu_gold0, NORM_INF) > 0 || norm(cpudst1, cpu_gold1, NORM_INF) > 0)
+        if (norm((Mat)cpudst0, cpu_gold0, NORM_INF) > 0 || norm((Mat)cpudst1, cpu_gold1, NORM_INF) > 0)
             ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
         else
             ts->set_failed_test_info(cvtest::TS::OK);

@@ -1228,7 +1228,7 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
 
     __BEGIN__;
 
-    int i, ivcount, ovcount, l_count, total = 0, max_iter, buf_sz, dcount0, dcount=0;
+    int i, ivcount, ovcount, l_count, total = 0, max_iter, buf_sz, dcount0;
     double *buf_ptr;
     double prev_E = DBL_MAX*0.5, epsilon;
     double dw_plus, dw_minus, dw_min, dw_max;
@@ -1294,10 +1294,7 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
     */
     for( iter = 0; iter < max_iter; iter++ )
     {
-        int n1, n2, si, j, k;
-        double* w;
-        CvMat _w, _dEdw, hdr1, hdr2, ghdr1, ghdr2, _df;
-        CvMat *x1, *x2, *grad1, *grad2, *temp;
+        int n1, n2, j, k;
         double E = 0;
 
         // first, iterate through all the samples and compute dEdw

@@ -249,7 +249,7 @@ struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         // Everything is fine with interpolation for left top subimage
-        CHECK(cv::norm(block_hists, descriptors.rowRange(0, 1)) == 0.f, cvtest::TS::FAIL_INVALID_OUTPUT);
+        CHECK(cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)) == 0.f, cvtest::TS::FAIL_INVALID_OUTPUT);
 
         img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive2.png");
         CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);

@@ -1449,27 +1449,25 @@ static void CCSIDFT_64f( const double* src, double* dst, int n, int nf, int* fac
     CCSIDFT( src, dst, n, nf, factors, itab, wave, tab_size, spec, buf, flags, scale);
 }
     
+}
+    
 
-void dft( const Mat& src0, Mat& dst, int flags, int nonzero_rows )
+void cv::dft( const InputArray& _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
-    static DFTFunc dft_tbl[6];
-    static int inittab = 0;
-
-    if( !inittab )
+    static DFTFunc dft_tbl[6] =
     {
-        dft_tbl[0] = (DFTFunc)DFT_32f;
-        dft_tbl[1] = (DFTFunc)RealDFT_32f;
-        dft_tbl[2] = (DFTFunc)CCSIDFT_32f;
-        dft_tbl[3] = (DFTFunc)DFT_64f;
-        dft_tbl[4] = (DFTFunc)RealDFT_64f;
-        dft_tbl[5] = (DFTFunc)CCSIDFT_64f;
-        inittab = 1;
-    }
+        (DFTFunc)DFT_32f,
+        (DFTFunc)RealDFT_32f,
+        (DFTFunc)CCSIDFT_32f,
+        (DFTFunc)DFT_64f,
+        (DFTFunc)RealDFT_64f,
+        (DFTFunc)CCSIDFT_64f
+    };
 
     AutoBuffer<uchar> buf;
     void *spec = 0;
     
-    Mat src = src0;
+    Mat src0 = _src0.getMat(), src = src0;
     int prev_len = 0, stage = 0;
     bool inv = (flags & DFT_INVERSE) != 0;
     int nf = 0, real_transform = src.channels() == 1 || (inv && (flags & DFT_REAL_OUTPUT)!=0);
@@ -1485,11 +1483,13 @@ void dft( const Mat& src0, Mat& dst, int flags, int nonzero_rows )
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
-        dst.create( src.size(), CV_MAKETYPE(depth, 2) );
+        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
-        dst.create( src.size(), depth );
+        _dst.create( src.size(), depth );
     else
-        dst.create( src.size(), type );
+        _dst.create( src.size(), type );
+    
+    Mat dst = _dst.getMat();
 
     if( !real_transform )
         elem_size = complex_elem_size;
@@ -1840,14 +1840,15 @@ void dft( const Mat& src0, Mat& dst, int flags, int nonzero_rows )
 }
 
 
-void idft( const Mat& src, Mat& dst, int flags, int nonzero_rows )
+void cv::idft( const InputArray& src, OutputArray dst, int flags, int nonzero_rows )
 {
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
-void mulSpectrums( const Mat& srcA, const Mat& srcB,
-                   Mat& dst, int flags, bool conjB )
+void cv::mulSpectrums( const InputArray& _srcA, const InputArray& _srcB,
+                       OutputArray _dst, int flags, bool conjB )
 {
+    Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;
     int j, k;
@@ -1855,7 +1856,8 @@ void mulSpectrums( const Mat& srcA, const Mat& srcB,
     CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
-    dst.create( srcA.rows, srcA.cols, type );
+    _dst.create( srcA.rows, srcA.cols, type );
+    Mat dst = _dst.getMat();
     
     bool is_1d = (flags & DFT_ROWS) || (rows == 1 || (cols == 1 &&
              srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
@@ -2007,6 +2009,9 @@ void mulSpectrums( const Mat& srcA, const Mat& srcB,
 /****************************************************************************************\
                                Discrete Cosine Transform
 \****************************************************************************************/
+
+namespace cv
+{
 
 /* DCT is calculated using DFT, as described here:
    http://www.ece.utexas.edu/~bevans/courses/ee381k/lectures/09_DCT/lecture9/:
@@ -2210,23 +2215,21 @@ static void IDCT_64f(const double* src, int src_step, double* dft_src, double* d
     IDCT(src, src_step, dft_src, dft_dst, dst, dst_step,
          n, nf, factors, itab, dft_wave, dct_wave, spec, buf);
 }    
+
+}
     
-void dct( const Mat& src0, Mat& dst, int flags )
+void cv::dct( const InputArray& _src0, OutputArray _dst, int flags )
 {
-    static DCTFunc dct_tbl[4];
-    static int inittab = 0;
-    
-    if( !inittab )
+    static DCTFunc dct_tbl[4] =
     {
-        dct_tbl[0] = (DCTFunc)DCT_32f;
-        dct_tbl[1] = (DCTFunc)IDCT_32f;
-        dct_tbl[2] = (DCTFunc)DCT_64f;
-        dct_tbl[3] = (DCTFunc)IDCT_64f;
-        inittab = 1;
-    }
+        (DCTFunc)DCT_32f,
+        (DCTFunc)IDCT_32f,
+        (DCTFunc)DCT_64f,
+        (DCTFunc)IDCT_64f
+    };
 
     bool inv = (flags & DCT_INVERSE) != 0;
-    Mat src = src0;
+    Mat src0 = _src0.getMat(), src = src0;
     int type = src.type(), depth = src.depth();
     void /* *spec_dft = 0, */ *spec = 0;
 
@@ -2242,7 +2245,8 @@ void dct( const Mat& src0, Mat& dst, int flags )
     AutoBuffer<uchar> buf;
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
-    dst.create( src.rows, src.cols, type );
+    _dst.create( src.rows, src.cols, type );
+    Mat dst = _dst.getMat();
 
     DCTFunc dct_func = dct_tbl[inv + (depth == CV_64F)*2];
 
@@ -2369,10 +2373,13 @@ void dct( const Mat& src0, Mat& dst, int flags )
 }
 
 
-void idct( const Mat& src, Mat& dst, int flags )
+void cv::idct( const InputArray& src, OutputArray dst, int flags )
 {
     dct( src, dst, flags | DCT_INVERSE );
 }
+
+namespace cv
+{
 
 static const int optimalDFTSizeTab[] = {
 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 25, 27, 30, 32, 36, 40, 45, 48, 
@@ -2555,8 +2562,9 @@ static const int optimalDFTSizeTab[] = {
 2097152000, 2099520000, 2109375000, 2123366400, 2125764000
 };
 
-int
-getOptimalDFTSize( int size0 )
+}
+    
+int cv::getOptimalDFTSize( int size0 )
 {
     int a = 0, b = sizeof(optimalDFTSizeTab)/sizeof(optimalDFTSizeTab[0]) - 1;
     if( (unsigned)size0 >= (unsigned)optimalDFTSizeTab[b] )
@@ -2572,8 +2580,6 @@ getOptimalDFTSize( int size0 )
     }
 
     return optimalDFTSizeTab[b];
-}
-
 }
 
 CV_IMPL void

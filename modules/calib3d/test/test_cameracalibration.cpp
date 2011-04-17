@@ -1244,8 +1244,13 @@ void CV_ProjectPointsTest_CPP::project( const Mat& objectPoints, const Mat& rvec
 									   const Mat& cameraMatrix, const Mat& distCoeffs, vector<Point2f>& imagePoints,
 									   Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist, double aspectRatio)
 {
-	projectPoints( objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints,
-		dpdrot, dpdt, dpdf, dpdc, dpddist, aspectRatio );
+    Mat J;
+	projectPoints( objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints, J, aspectRatio);
+    J.colRange(0, 3).copyTo(dpdrot);
+    J.colRange(3, 6).copyTo(dpdt);
+    J.colRange(6, 8).copyTo(dpdf);
+    J.colRange(8, 10).copyTo(dpdc);
+    J.colRange(10, J.cols).copyTo(dpddist);
 }
 
 ///////////////////////////////// Stereo Calibration /////////////////////////////////////
@@ -1696,7 +1701,7 @@ void CV_StereoCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat&
 										 Rect* validPixROI1, Rect* validPixROI2, int flags )
 {
 	stereoRectify( cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
-				imageSize, R, T, R1, R2, P1, P2, Q, alpha, newImageSize,validPixROI1, validPixROI2, flags );
+				imageSize, R, T, R1, R2, P1, P2, Q, flags, alpha, newImageSize,validPixROI1, validPixROI2 );
 }
 
 bool CV_StereoCalibrationTest_CPP::rectifyUncalibrated( const Mat& points1,

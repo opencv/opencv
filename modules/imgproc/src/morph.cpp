@@ -821,10 +821,12 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
     vector<uchar*> ptrs;
     VecOp vecOp;
 };
+    
+}
 
 /////////////////////////////////// External Interface /////////////////////////////////////
 
-Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int anchor)
+cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksize, int anchor)
 {
     int depth = CV_MAT_DEPTH(type);
     if( anchor < 0 )
@@ -865,7 +867,7 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
     return Ptr<BaseRowFilter>(0);
 }
 
-Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
+cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
 {
     int depth = CV_MAT_DEPTH(type);
     if( anchor < 0 )
@@ -907,8 +909,9 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
 }
 
 
-Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point anchor)
+cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, const InputArray& _kernel, Point anchor)
 {
+    Mat kernel = _kernel.getMat();
     int depth = CV_MAT_DEPTH(type);
     anchor = normalizeAnchor(anchor, kernel.size());
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
@@ -940,10 +943,11 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
 }
 
 
-Ptr<FilterEngine> createMorphologyFilter( int op, int type, const Mat& kernel,
+cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, const InputArray& _kernel,
          Point anchor, int _rowBorderType, int _columnBorderType,
          const Scalar& _borderValue )
 {
+    Mat kernel = _kernel.getMat();
     anchor = normalizeAnchor(anchor, kernel.size());
 
     Ptr<BaseRowFilter> rowFilter;
@@ -978,7 +982,7 @@ Ptr<FilterEngine> createMorphologyFilter( int op, int type, const Mat& kernel,
 }
 
 
-Mat getStructuringElement(int shape, Size ksize, Point anchor)
+cv::Mat cv::getStructuringElement(int shape, Size ksize, Point anchor)
 {
     int i, j;
     int r = 0, c = 0;
@@ -1031,31 +1035,36 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
     return elem;
 }
 
-static void morphOp( int op, const Mat& src, Mat& dst, const Mat& _kernel,
+namespace cv
+{
+
+static void morphOp( int op, const InputArray& _src, OutputArray& _dst,
+                     const InputArray& _kernel,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-    Mat kernel;
-    Size ksize = _kernel.data ? _kernel.size() : Size(3,3);
+    Mat src = _src.getMat(), kernel = _kernel.getMat();
+    Size ksize = kernel.data ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
 
     CV_Assert( anchor.inside(Rect(0, 0, ksize.width, ksize.height)) );
 
-    if( iterations == 0 || _kernel.rows*_kernel.cols == 1 )
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+    
+    if( iterations == 0 || kernel.rows*kernel.cols == 1 )
     {
         src.copyTo(dst);
         return;
     }
 
-    dst.create( src.size(), src.type() );
-
-    if( !_kernel.data )
+    if( !kernel.data )
     {
         kernel = getStructuringElement(MORPH_RECT, Size(1+iterations*2,1+iterations*2));
         anchor = Point(iterations, iterations);
         iterations = 1;
     }
-    else if( iterations > 1 && countNonZero(_kernel) == _kernel.rows*_kernel.cols )
+    else if( iterations > 1 && countNonZero(kernel) == kernel.rows*kernel.cols )
     {
         anchor = Point(anchor.x*iterations, anchor.y*iterations);
         kernel = getStructuringElement(MORPH_RECT,
@@ -1064,8 +1073,6 @@ static void morphOp( int op, const Mat& src, Mat& dst, const Mat& _kernel,
                 anchor);
         iterations = 1;
     }
-    else
-        kernel = _kernel;
 
     Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(),
         kernel, anchor, borderType, borderType, borderValue );
@@ -1074,29 +1081,36 @@ static void morphOp( int op, const Mat& src, Mat& dst, const Mat& _kernel,
     for( int i = 1; i < iterations; i++ )
         f->apply( dst, dst );
 }
+    
+template<> void Ptr<IplConvKernel>::delete_obj()
+{ cvReleaseStructuringElement(&obj); }
 
+}
 
-void erode( const Mat& src, Mat& dst, const Mat& kernel,
-            Point anchor, int iterations,
-            int borderType, const Scalar& borderValue )
+void cv::erode( const InputArray& src, OutputArray dst, const InputArray& kernel,
+                Point anchor, int iterations,
+                int borderType, const Scalar& borderValue )
 {
     morphOp( MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
 
 
-void dilate( const Mat& src, Mat& dst, const Mat& kernel,
-             Point anchor, int iterations,
-             int borderType, const Scalar& borderValue )
+void cv::dilate( const InputArray& src, OutputArray dst, const InputArray& kernel,
+                 Point anchor, int iterations,
+                 int borderType, const Scalar& borderValue )
 {
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
 
 
-void morphologyEx( const Mat& src, Mat& dst, int op, const Mat& kernel,
-                   Point anchor, int iterations, int borderType,
-                   const Scalar& borderValue )
+void cv::morphologyEx( const InputArray& _src, OutputArray _dst, int op,
+                       const InputArray& kernel, Point anchor, int iterations,
+                       int borderType, const Scalar& borderValue )
 {
-    Mat temp;
+    Mat src = _src.getMat(), temp;
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
+    
     switch( op )
     {
     case MORPH_ERODE:
@@ -1135,13 +1149,6 @@ void morphologyEx( const Mat& src, Mat& dst, int op, const Mat& kernel,
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
     }
-}
-
-    
-template<> void Ptr<IplConvKernel>::delete_obj()
-{ cvReleaseStructuringElement(&obj); }
-
-
 }
 
 CV_IMPL IplConvKernel *

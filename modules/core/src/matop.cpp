@@ -208,9 +208,11 @@ static inline bool isIdentity(const MatExpr& e) { return e.op == &g_MatOp_Identi
 static inline bool isAddEx(const MatExpr& e) { return e.op == &g_MatOp_AddEx; }
 static inline bool isScaled(const MatExpr& e) { return isAddEx(e) && (!e.b.data || e.beta == 0) && e.s == Scalar(); }
 static inline bool isBin(const MatExpr& e, char c) { return e.op == &g_MatOp_Bin && e.flags == c; }
+static inline bool isCmp(const MatExpr& e) { return e.op == &g_MatOp_Cmp; }
 static inline bool isReciprocal(const MatExpr& e) { return isBin(e,'/') && (!e.b.data || e.beta == 0); }
 static inline bool isT(const MatExpr& e) { return e.op == &g_MatOp_T; }
 static inline bool isInv(const MatExpr& e) { return e.op == &g_MatOp_Invert; }
+static inline bool isSolve(const MatExpr& e) { return e.op == &g_MatOp_Solve; }
 static inline bool isGEMM(const MatExpr& e) { return e.op == &g_MatOp_GEMM; }
 static inline bool isMatProd(const MatExpr& e) { return e.op == &g_MatOp_GEMM && (!e.c.data || e.beta == 0); }
 static inline bool isInitializer(const MatExpr& e) { return e.op == &g_MatOp_Initializer; }
@@ -571,7 +573,18 @@ void MatOp::invert(const MatExpr& expr, int method, MatExpr& res) const
     expr.op->assign(expr, m);
     MatOp_Invert::makeExpr(res, method, m);
 }
+    
+    
+Size MatOp::size(const MatExpr& expr) const
+{
+    return !expr.a.empty() ? expr.a.size() : expr.b.empty() ? expr.b.size() : expr.c.size();
+}
 
+int MatOp::type(const MatExpr& expr) const
+{
+    return !expr.a.empty() ? expr.a.type() : expr.b.empty() ? expr.b.type() : expr.c.type();
+}    
+    
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 MatExpr::MatExpr(const Mat& m) : op(&g_MatOp_Identity), flags(0), a(m), b(Mat()), c(Mat()), alpha(1), beta(0), s(Scalar())
@@ -1142,6 +1155,30 @@ MatExpr abs(const MatExpr& e)
 }
 
     
+Size MatExpr::size() const
+{
+    if( isT(*this) || isInv(*this) )
+        return Size(a.rows, a.cols);
+    if( isGEMM(*this) )
+        return Size(b.cols, a.rows);
+    if( isSolve(*this) )
+        return Size(b.cols, a.cols);
+    if( isInitializer(*this) )
+        return a.size();
+    return op ? op->size(*this) : Size();
+}
+    
+    
+int MatExpr::type() const
+{
+    if( isInitializer(*this) )
+        return a.type();
+    if( isCmp(*this) )
+        return CV_8U;
+    return op ? op->type(*this) : -1;
+}
+    
+    
 /////////////////////////////////////////////////////////////////////////////////////////////////////
     
 void MatOp_Identity::assign(const MatExpr& e, Mat& m, int type) const
@@ -1552,10 +1589,10 @@ MatExpr Mat::inv(int method) const
 }
     
 
-MatExpr Mat::mul(const Mat& m, double scale) const
+MatExpr Mat::mul(const InputArray& m, double scale) const
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, '*', *this, m, scale);
+    MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);
     return e;
 }
     

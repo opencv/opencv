@@ -106,7 +106,7 @@ struct CV_GpuStereoBMTest : public cvtest::BaseTest
         bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
         disp.convertTo(disp, img_reference.type());
-        double norm = cv::norm(disp, img_reference, cv::NORM_INF);
+        double norm = cv::norm((Mat)disp, img_reference, cv::NORM_INF);
 
         //cv::imwrite(std::string(ts->get_data_path()) + "stereobm/aloe-disp.png", disp);
 

@@ -297,36 +297,47 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         calcEigenValsVecs( cov, eigenv );
 }
 
+}
 
-void cornerMinEigenVal( const Mat& src, Mat& dst, int blockSize, int ksize, int borderType )
+void cv::cornerMinEigenVal( const InputArray& _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    dst.create( src.size(), CV_32F );
+    Mat src = _src.getMat();
+    _dst.create( src.size(), CV_32F );
+    Mat dst = _dst.getMat();
     cornerEigenValsVecs( src, dst, blockSize, ksize, MINEIGENVAL, 0, borderType );
 }
 
 
-void cornerHarris( const Mat& src, Mat& dst, int blockSize, int ksize, double k, int borderType )
+void cv::cornerHarris( const InputArray& _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
-    dst.create( src.size(), CV_32F );
+    Mat src = _src.getMat();
+    _dst.create( src.size(), CV_32F );
+    Mat dst = _dst.getMat();
     cornerEigenValsVecs( src, dst, blockSize, ksize, HARRIS, k, borderType );
 }
 
 
-void cornerEigenValsAndVecs( const Mat& src, Mat& dst, int blockSize, int ksize, int borderType )
+void cv::cornerEigenValsAndVecs( const InputArray& _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    if( dst.rows != src.rows || dst.cols*dst.channels() != src.cols*6 || dst.depth() != CV_32F )
-        dst.create( src.size(), CV_32FC(6) );
+    Mat src = _src.getMat();
+    Size dsz = _dst.size();
+    int dtype = _dst.type();
+    
+    if( dsz.height != src.rows || dsz.width*CV_MAT_CN(dtype) != src.cols*6 || CV_MAT_DEPTH(dtype) != CV_32F )
+        _dst.create( src.size(), CV_32FC(6) );
+    Mat dst = _dst.getMat();
     cornerEigenValsVecs( src, dst, blockSize, ksize, EIGENVALSVECS, 0, borderType );
 }
 
 
-void preCornerDetect( const Mat& src, Mat& dst, int ksize, int borderType )
+void cv::preCornerDetect( const InputArray& _src, OutputArray _dst, int ksize, int borderType )
 {
-    Mat Dx, Dy, D2x, D2y, Dxy;
+    Mat Dx, Dy, D2x, D2y, Dxy, src = _src.getMat();
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
-    dst.create( src.size(), CV_32F );
-
+    _dst.create( src.size(), CV_32F );
+    Mat dst = _dst.getMat();
+    
     Sobel( src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
     Sobel( src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
     Sobel( src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
@@ -356,9 +367,6 @@ void preCornerDetect( const Mat& src, Mat& dst, int ksize, int borderType )
             dstdata[j] = (float)(factor*(dx*dx*d2ydata[j] + dy*dy*d2xdata[j] - 2*dx*dy*dxydata[j]));
         }
     }
-}
-
-
 }
 
 CV_IMPL void

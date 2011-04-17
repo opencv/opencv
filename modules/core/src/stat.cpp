@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -59,691 +59,658 @@ template<typename T> static inline Scalar rawToScalar(const T& v)
 *                                        sum                                             *
 \****************************************************************************************/
 
-template<typename T, typename WT, typename ST, int BLOCK_SIZE>
-static Scalar sumBlock_( const Mat& srcmat )
-{
-    assert( DataType<T>::type == srcmat.type() );
-    Size size = getContinuousSize( srcmat );
-    ST s0 = 0;
-    WT s = 0;
-    int y, remaining = BLOCK_SIZE;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        int x = 0;
-        while( x < size.width )
-        {
-            int limit = std::min( remaining, size.width - x );
-            remaining -= limit;
-            limit += x;
-            for( ; x <= limit - 4; x += 4 )
-            {
-                s += src[x];
-                s += src[x+1];
-                s += src[x+2];
-                s += src[x+3];
-            }
-            for( ; x < limit; x++ )
-                s += src[x];
-            if( remaining == 0 || (x == size.width && y == size.height-1) )
-            {
-                s0 += s;
-                s = 0;
-                remaining = BLOCK_SIZE;
-            }
-        }
-    }
-    return rawToScalar(s0);
-}
-
 template<typename T, typename ST>
-static Scalar sum_( const Mat& srcmat )
+static size_t sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
-    assert( DataType<T>::type == srcmat.type() );
-    Size size = getContinuousSize( srcmat );
-    ST s = 0;
-
-    for( int y = 0; y < size.height; y++ )
+    const T* src = src0;
+    if( !mask )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
+        int i;
+        int k = cn % 4;
+        if( k == 1 )
         {
-            s += src[x];
-            s += src[x+1];
-            s += src[x+2];
-            s += src[x+3];
+            ST s0 = dst[0];
+            for( i = 0; i <= len - 4; i += 4, src += cn*4 )
+                s0 += src[0] + src[cn] + src[cn*2] + src[cn*3];
+            for( ; i < len; i++, src += cn )
+                s0 += src[0];
+            dst[0] = s0;
         }
-        for( ; x < size.width; x++ )
-            s += src[x];
-    }
-    return rawToScalar(s);
-}
-
-typedef Scalar (*SumFunc)(const Mat& src);
-
-Scalar sum( const Mat& m )
-{
-    static SumFunc tab[]=
-    {
-        sumBlock_<uchar, unsigned, double, 1<<24>,
-        sumBlock_<schar, int, double, 1<<24>,
-        sumBlock_<ushort, unsigned, double, 1<<16>,
-        sumBlock_<short, int, double, 1<<16>,
-        sum_<int, double>,
-        sum_<float, double>,
-        sum_<double, double>, 0,
-
-        sumBlock_<Vec<uchar, 2>, Vec<int, 2>, Vec<double, 2>, 1<<23>,
-        sumBlock_<Vec<schar, 2>, Vec<int, 2>, Vec<double, 2>, 1<<24>,
-        sumBlock_<Vec<ushort, 2>, Vec<int, 2>, Vec<double, 2>, 1<<15>,
-        sumBlock_<Vec<short, 2>, Vec<int, 2>, Vec<double, 2>, 1<<16>,
-        sum_<Vec<int, 2>, Vec<double, 2> >,
-        sum_<Vec<float, 2>, Vec<double, 2> >,
-        sum_<Vec<double, 2>, Vec<double, 2> >, 0,
-
-        sumBlock_<Vec<uchar, 3>, Vec<int, 3>, Vec<double, 3>, 1<<23>,
-        sumBlock_<Vec<schar, 3>, Vec<int, 3>, Vec<double, 3>, 1<<24>,
-        sumBlock_<Vec<ushort, 3>, Vec<int, 3>, Vec<double, 3>, 1<<15>,
-        sumBlock_<Vec<short, 3>, Vec<int, 3>, Vec<double, 3>, 1<<16>,
-        sum_<Vec<int, 3>, Vec<double, 3> >,
-        sum_<Vec<float, 3>, Vec<double, 3> >,
-        sum_<Vec<double, 3>, Vec<double, 3> >, 0,
-
-        sumBlock_<Vec<uchar, 4>, Vec<int, 4>, Vec<double, 4>, 1<<23>,
-        sumBlock_<Vec<schar, 4>, Vec<int, 4>, Vec<double, 4>, 1<<24>,
-        sumBlock_<Vec<ushort, 4>, Vec<int, 4>, Vec<double, 4>, 1<<15>,
-        sumBlock_<Vec<short, 4>, Vec<int, 4>, Vec<double, 4>, 1<<16>,
-        sum_<Vec<int, 4>, Vec<double, 4> >,
-        sum_<Vec<float, 4>, Vec<double, 4> >,
-        sum_<Vec<double, 4>, Vec<double, 4> >, 0
-    };
-
-    CV_Assert( m.channels() <= 4 );
-
-    SumFunc func = tab[m.type()];
-    CV_Assert( func != 0 );
-
-    if( m.dims > 2 )
-    {
-        const Mat* arrays[] = {&m, 0};
-        Mat planes[1];
-        NAryMatIterator it(arrays, planes);
-        Scalar s;
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            s += func(it.planes[0]);
-        return s;
-    }
-    
-    return func(m);
-}
-
-/****************************************************************************************\
-*                                     countNonZero                                       *
-\****************************************************************************************/
-
-template<typename T>
-static int countNonZero_( const Mat& srcmat )
-{
-    //assert( DataType<T>::type == srcmat.type() );
-    const T* src = (const T*)srcmat.data;
-    size_t step = srcmat.step/sizeof(src[0]);
-    Size size = getContinuousSize( srcmat );
-    int nz = 0;
-
-    for( ; size.height--; src += step )
-    {
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
-            nz += (src[x] != 0) + (src[x+1] != 0) + (src[x+2] != 0) + (src[x+3] != 0);
-        for( ; x < size.width; x++ )
-            nz += src[x] != 0;
-    }
-    return nz;
-}
-
-typedef int (*CountNonZeroFunc)(const Mat& src);
-
-int countNonZero( const Mat& m )
-{
-    static CountNonZeroFunc tab[] =
-    {
-        countNonZero_<uchar>, countNonZero_<uchar>, countNonZero_<ushort>,
-        countNonZero_<ushort>, countNonZero_<int>, countNonZero_<float>,
-        countNonZero_<double>, 0
-    };
-    
-    CountNonZeroFunc func = tab[m.depth()];
-    CV_Assert( m.channels() == 1 && func != 0 );
-    
-    if( m.dims > 2 )
-    {
-        const Mat* arrays[] = {&m, 0};
-        Mat planes[1];
-        NAryMatIterator it(arrays, planes);
-        int nz = 0;
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            nz += func(it.planes[0]);
-        return nz;
-    }
-    
-    return func(m);
-}
-
-
-/****************************************************************************************\
-*                                         mean                                           *
-\****************************************************************************************/
-
-template<typename T, typename WT, typename ST, int BLOCK_SIZE>
-static Scalar meanBlock_( const Mat& srcmat, const Mat& maskmat )
-{
-    assert( DataType<T>::type == srcmat.type() &&
-        CV_8U == maskmat.type() && srcmat.size() == maskmat.size() );
-    Size size = getContinuousSize( srcmat, maskmat );
-    ST s0 = 0;
-    WT s = 0;
-    int y, remaining = BLOCK_SIZE, pix = 0;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        int x = 0;
-        while( x < size.width )
+        else if( k == 2 )
         {
-            int limit = std::min( remaining, size.width - x );
-            remaining -= limit;
-            limit += x;
-            for( ; x < limit; x++ )
-                if( mask[x] )
-                    s += src[x], pix++;
-            if( remaining == 0 || (x == size.width && y == size.height-1) )
+            ST s0 = dst[0], s1 = dst[1];
+            for( i = 0; i < len; i++, src += cn )
             {
-                s0 += s;
-                s = 0;
-                remaining = BLOCK_SIZE;
+                s0 += src[0];
+                s1 += src[1];
             }
+            dst[0] = s0;
+            dst[1] = s1;
         }
-    }
-    return rawToScalar(s0)*(1./std::max(pix, 1));
-}
-
-
-template<typename T, typename ST>
-static Scalar mean_( const Mat& srcmat, const Mat& maskmat )
-{
-    assert( DataType<T>::type == srcmat.type() &&
-        CV_8U == maskmat.type() && srcmat.size() == maskmat.size() );
-    Size size = getContinuousSize( srcmat, maskmat );
-    ST s = 0;
-    int y, pix = 0;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        for( int x = 0; x < size.width; x++ )
-            if( mask[x] )
-                s += src[x], pix++;
-    }
-    return rawToScalar(s)*(1./std::max(pix, 1));
-}
-
-typedef Scalar (*MeanMaskFunc)(const Mat& src, const Mat& mask);
-
-Scalar mean(const Mat& m)
-{
-    return sum(m)*(1./m.total());
-}
-
-Scalar mean( const Mat& m, const Mat& mask )
-{
-    static MeanMaskFunc tab[]=
-    {
-        meanBlock_<uchar, int, double, 1<<23>, 0,
-        meanBlock_<ushort, int, double, 1<<15>,
-        meanBlock_<short, int, double, 1<<16>,
-        mean_<int, double>,
-        mean_<float, double>,
-        mean_<double, double>, 0,
-
-        meanBlock_<Vec<uchar, 2>, Vec<int, 2>, Vec<double, 2>, 1<<23>, 0,
-        meanBlock_<Vec<ushort, 2>, Vec<int, 2>, Vec<double, 2>, 1<<15>,
-        meanBlock_<Vec<short, 2>, Vec<int, 2>, Vec<double, 2>, 1<<16>,
-        mean_<Vec<int, 2>, Vec<double, 2> >,
-        mean_<Vec<float, 2>, Vec<double, 2> >,
-        mean_<Vec<double, 2>, Vec<double, 2> >, 0,
-
-        meanBlock_<Vec<uchar, 3>, Vec<int, 3>, Vec<double, 3>, 1<<23>, 0,
-        meanBlock_<Vec<ushort, 3>, Vec<int, 3>, Vec<double, 3>, 1<<15>,
-        meanBlock_<Vec<short, 3>, Vec<int, 3>, Vec<double, 3>, 1<<16>,
-        mean_<Vec<int, 3>, Vec<double, 3> >,
-        mean_<Vec<float, 3>, Vec<double, 3> >,
-        mean_<Vec<double, 3>, Vec<double, 3> >, 0,
-
-        meanBlock_<Vec<uchar, 4>, Vec<int, 4>, Vec<double, 4>, 1<<23>, 0,
-        meanBlock_<Vec<ushort, 4>, Vec<int, 4>, Vec<double, 4>, 1<<15>,
-        meanBlock_<Vec<short, 4>, Vec<int, 4>, Vec<double, 4>, 1<<16>,
-        mean_<Vec<int, 4>, Vec<double, 4> >,
-        mean_<Vec<float, 4>, Vec<double, 4> >,
-        mean_<Vec<double, 4>, Vec<double, 4> >, 0
-    };
-    
-    if( !mask.data )
-        return mean(m);
-
-    CV_Assert( m.channels() <= 4 && mask.type() == CV_8U );
-
-    MeanMaskFunc func = tab[m.type()];
-    CV_Assert( func != 0 );
-    
-    if( m.dims > 2 )
-    {
-        const Mat* arrays[] = {&m, &mask, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        double total = 0;
-        Scalar s;
-        for( int i = 0; i < it.nplanes; i++, ++it )
+        else if( k == 3 )
         {
-            int n = countNonZero(it.planes[1]);
-            s += mean(it.planes[0], it.planes[1])*(double)n;
-            total += n;
-        }
-        return (s * 1./std::max(total, 1.));
-    }
-    
-    CV_Assert( m.size() == mask.size() );
-    return func( m, mask );
-}
-
-/****************************************************************************************\
-*                                       meanStdDev                                       *
-\****************************************************************************************/
-
-template<typename T, typename SqT> struct SqrC1
-{
-    typedef T type1;
-    typedef SqT rtype;
-    rtype operator()(type1 x) const { return (SqT)x*x; }
-};
-
-template<typename T, typename SqT> struct SqrC2
-{
-    typedef Vec<T, 2> type1;
-    typedef Vec<SqT, 2> rtype;
-    rtype operator()(const type1& x) const { return rtype((SqT)x[0]*x[0], (SqT)x[1]*x[1]); }
-};
-
-template<typename T, typename SqT> struct SqrC3
-{
-    typedef Vec<T, 3> type1;
-    typedef Vec<SqT, 3> rtype;
-    rtype operator()(const type1& x) const
-    { return rtype((SqT)x[0]*x[0], (SqT)x[1]*x[1], (SqT)x[2]*x[2]); }
-};
-
-template<typename T, typename SqT> struct SqrC4
-{
-    typedef Vec<T, 4> type1;
-    typedef Vec<SqT, 4> rtype;
-    rtype operator()(const type1& x) const
-    { return rtype((SqT)x[0]*x[0], (SqT)x[1]*x[1], (SqT)x[2]*x[2], (SqT)x[3]*x[3]); }
-};
-
-template<> inline double SqrC1<uchar, double>::operator()(uchar x) const
-{ return CV_SQR_8U(x); }
-
-template<> inline Vec<double, 2> SqrC2<uchar, double>::operator()(const Vec<uchar, 2>& x) const
-{ return Vec<double, 2>(CV_SQR_8U(x[0]), CV_SQR_8U(x[1])); }
-
-template<> inline Vec<double, 3> SqrC3<uchar, double>::operator() (const Vec<uchar, 3>& x) const
-{ return Vec<double, 3>(CV_SQR_8U(x[0]), CV_SQR_8U(x[1]), CV_SQR_8U(x[2])); }
-
-template<> inline Vec<double, 4> SqrC4<uchar, double>::operator() (const Vec<uchar, 4>& x) const
-{ return Vec<double, 4>(CV_SQR_8U(x[0]), CV_SQR_8U(x[1]), CV_SQR_8U(x[2]), CV_SQR_8U(x[3])); }
-
-
-template<class SqrOp> static void
-meanStdDev_( const Mat& srcmat, Scalar& _sum, Scalar& _sqsum )
-{
-    SqrOp sqr;
-    typedef typename SqrOp::type1 T;
-    typedef typename SqrOp::rtype ST;
-    typedef typename DataType<ST>::channel_type ST1;
-    
-    assert( DataType<T>::type == srcmat.type() );
-    Size size = getContinuousSize( srcmat );
-    ST s = 0, sq = 0;
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        for( int x = 0; x < size.width; x++ )
-        {
-            T v = src[x];
-            s += v;
-            sq += sqr(v);
-        }
-    }
-    _sum = rawToScalar(s);
-    _sqsum = rawToScalar(sq);
-}
-
-template<class SqrOp> static void
-meanStdDevMask_( const Mat& srcmat, const Mat& maskmat,
-                 Scalar& _sum, Scalar& _sqsum, int& _nz )
-{
-    SqrOp sqr;
-    typedef typename SqrOp::type1 T;
-    typedef typename SqrOp::rtype ST;
-    typedef typename DataType<ST>::channel_type ST1;
-
-    assert( DataType<T>::type == srcmat.type() &&
-            CV_8U == maskmat.type() &&
-            srcmat.size() == maskmat.size() );
-    Size size = getContinuousSize( srcmat, maskmat );
-    ST s = 0, sq = 0;
-    int pix = 0;
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        for( int x = 0; x < size.width; x++ )
-            if( mask[x] )
+            ST s0 = dst[0], s1 = dst[1], s2 = dst[2];
+            for( i = 0; i < len; i++, src += cn )
             {
-                T v = src[x];
-                s += v;
-                sq += sqr(v);
-                pix++;
+                s0 += src[0];
+                s1 += src[1];
+                s2 += src[2];
             }
-    }
-    _sum = rawToScalar(s);
-    _sqsum = rawToScalar(sq);
-    _nz = pix;
-}
-
-typedef void (*MeanStdDevFunc)(const Mat& src, Scalar& s, Scalar& sq);
-
-typedef void (*MeanStdDevMaskFunc)(const Mat& src, const Mat& mask,
-                                   Scalar& s, Scalar& sq, int& nz);
-
-void meanStdDev( const Mat& m, Scalar& mean, Scalar& stddev, const Mat& mask )
-{
-    static MeanStdDevFunc tab[]=
-    {
-        meanStdDev_<SqrC1<uchar, double> >, 0,
-        meanStdDev_<SqrC1<ushort, double> >,
-        meanStdDev_<SqrC1<short, double> >,
-        meanStdDev_<SqrC1<int, double> >,
-        meanStdDev_<SqrC1<float, double> >,
-        meanStdDev_<SqrC1<double, double> >, 0,
-
-        meanStdDev_<SqrC2<uchar, double> >, 0,
-        meanStdDev_<SqrC2<ushort, double> >,
-        meanStdDev_<SqrC2<short, double> >,
-        meanStdDev_<SqrC2<int, double> >,
-        meanStdDev_<SqrC2<float, double> >,
-        meanStdDev_<SqrC2<double, double> >, 0,
-
-        meanStdDev_<SqrC3<uchar, double> >, 0,
-        meanStdDev_<SqrC3<ushort, double> >,
-        meanStdDev_<SqrC3<short, double> >,
-        meanStdDev_<SqrC3<int, double> >,
-        meanStdDev_<SqrC3<float, double> >,
-        meanStdDev_<SqrC3<double, double> >, 0,
-
-        meanStdDev_<SqrC4<uchar, double> >, 0,
-        meanStdDev_<SqrC4<ushort, double> >,
-        meanStdDev_<SqrC4<short, double> >,
-        meanStdDev_<SqrC4<int, double> >,
-        meanStdDev_<SqrC4<float, double> >,
-        meanStdDev_<SqrC4<double, double> >, 0
-    };
-
-    static MeanStdDevMaskFunc mtab[]=
-    {
-        meanStdDevMask_<SqrC1<uchar, double> >, 0,
-        meanStdDevMask_<SqrC1<ushort, double> >,
-        meanStdDevMask_<SqrC1<short, double> >,
-        meanStdDevMask_<SqrC1<int, double> >,
-        meanStdDevMask_<SqrC1<float, double> >,
-        meanStdDevMask_<SqrC1<double, double> >, 0,
-
-        meanStdDevMask_<SqrC2<uchar, double> >, 0,
-        meanStdDevMask_<SqrC2<ushort, double> >,
-        meanStdDevMask_<SqrC2<short, double> >,
-        meanStdDevMask_<SqrC2<int, double> >,
-        meanStdDevMask_<SqrC2<float, double> >,
-        meanStdDevMask_<SqrC2<double, double> >, 0,
-
-        meanStdDevMask_<SqrC3<uchar, double> >, 0,
-        meanStdDevMask_<SqrC3<ushort, double> >,
-        meanStdDevMask_<SqrC3<short, double> >,
-        meanStdDevMask_<SqrC3<int, double> >,
-        meanStdDevMask_<SqrC3<float, double> >,
-        meanStdDevMask_<SqrC3<double, double> >, 0,
-
-        meanStdDevMask_<SqrC4<uchar, double> >, 0,
-        meanStdDevMask_<SqrC4<ushort, double> >,
-        meanStdDevMask_<SqrC4<short, double> >,
-        meanStdDevMask_<SqrC4<int, double> >,
-        meanStdDevMask_<SqrC4<float, double> >,
-        meanStdDevMask_<SqrC4<double, double> >, 0
-    };
-
-    CV_Assert( m.channels() <= 4 && (mask.empty() || mask.type() == CV_8U) );
-    
-    Scalar sum, sqsum;
-    int total = 0;
-    MeanStdDevFunc func = tab[m.type()];
-    MeanStdDevMaskFunc mfunc = mtab[m.type()];
-    CV_Assert( func != 0 && mfunc != 0 );
-    
-    if( m.dims > 2 )
-    {
-        const Mat* arrays[] = {&m, &mask, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        int nz = (int)planes[0].total();
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-        {
-            Scalar s, sq;
-            
-            if( mask.empty() )
-                func(it.planes[0], s, sq);
-            else
-                mfunc(it.planes[0], it.planes[1], s, sq, nz);
-            
-            total += nz;
-            sum += s;
-            sqsum += sq;
+            dst[0] = s0;
+            dst[1] = s1;
+            dst[2] = s2;
         }
+        
+        for( ; k < cn; k += 4 )
+        {
+            src = src0 + k;
+            ST s0 = dst[k], s1 = dst[k+1], s2 = dst[k+2], s3 = dst[k+3];
+            for( i = 0; i < len; i++, src += cn )
+            {
+                s0 += src[0]; s1 += src[1];
+                s2 += src[2]; s3 += src[3];
+            }
+            dst[k] = s0;
+            dst[k+1] = s1;
+            dst[k+2] = s2;
+            dst[k+3] = s3;
+        }
+        return len;
+    }
+    
+    int i, nzm = 0;
+    if( cn == 1 )
+    {
+        ST s = dst[0];
+        for( i = 0; i < len; i++ )
+            if( mask[i] )
+            {
+                s += src[i];
+                nzm++;
+            }
+        dst[0] = s;
+    }
+    else if( cn == 3 )
+    {
+        ST s0 = dst[0], s1 = dst[1], s2 = dst[2];
+        for( i = 0; i < len; i++, src += 3 )
+            if( mask[i] )
+            {
+                s0 += src[0];
+                s1 += src[1];
+                s2 += src[2];
+                nzm++;
+            }
+        dst[0] = s0;
+        dst[1] = s1;
+        dst[2] = s2;
     }
     else
     {
-        if( mask.data )
+        for( i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
+                int k = 0;
+                for( ; k <= cn - 4; k += 4 )
+                {
+                    ST s0, s1;
+                    s0 = dst[k] + src[k];
+                    s1 = dst[k+1] + src[k+1];
+                    dst[k] = s0; dst[k+1] = s1;
+                    s0 = dst[k+2] + src[k+2];
+                    s1 = dst[k+3] + src[k+3];
+                    dst[k+2] = s0; dst[k+3] = s1;
+                }
+                for( ; k < cn; k++ )
+                    dst[k] += src[k];
+                nzm++;
+            }
+    }
+    return nzm;
+}
+
+    
+static int sum8u( const uchar* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum8s( const schar* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum16u( const ushort* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum16s( const short* src, const uchar* mask, int* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+typedef int (*SumFunc)(const uchar*, const uchar* mask, uchar*, int, int);
+
+static SumFunc sumTab[] =
+{
+    (SumFunc)sum8u, (SumFunc)sum8s, (SumFunc)sum16u, (SumFunc)sum16s,
+    (SumFunc)sum32s, (SumFunc)sum32f, (SumFunc)sum64f, 0
+};
+
+        
+template<typename T>
+static int countNonZero_(const T* src, int len )
+{
+    int i, nz = 0;
+    for( i = 0; i <= len - 4; i += 4 )
+        nz += (src[i] != 0) + (src[i+1] != 0) + (src[i+2] != 0) + (src[i+3] != 0);
+    for( ; i < len; i++ )
+        nz += src[i] != 0;
+    return nz;
+}
+
+static int countNonZero8u( const uchar* src, int len )
+{ return countNonZero_(src, len); }
+
+static int countNonZero16u( const ushort* src, int len )
+{ return countNonZero_(src, len); }
+
+static int countNonZero32s( const int* src, int len )
+{ return countNonZero_(src, len); }
+
+static int countNonZero32f( const float* src, int len )
+{ return countNonZero_(src, len); }
+
+static int countNonZero64f( const double* src, int len )
+{ return countNonZero_(src, len); }
+
+typedef int (*CountNonZeroFunc)(const uchar*, int);
+    
+static CountNonZeroFunc countNonZeroTab[] =
+{
+    (CountNonZeroFunc)countNonZero8u, (CountNonZeroFunc)countNonZero8u,
+    (CountNonZeroFunc)countNonZero16u, (CountNonZeroFunc)countNonZero16u,
+    (CountNonZeroFunc)countNonZero32s, (CountNonZeroFunc)countNonZero32f,
+    (CountNonZeroFunc)countNonZero64f, 0
+};
+
+    
+template<typename T, typename ST, typename SQT>
+static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int len, int cn )
+{
+    const T* src = src0;
+    
+    if( !mask )
+    {
+        int i;
+        int k = cn % 4;
+        
+        if( k == 1 )
         {
-            CV_Assert( mask.size() == m.size() ); 
-            mfunc( m, mask, sum, sqsum, total );
+            ST s0 = sum[0];
+            SQT sq0 = sqsum[0];
+            for( i = 0; i < len; i++, src += cn )
+            {
+                T v = src[0];
+                s0 += v; sq0 += (SQT)v*v;
+            }
+            sum[0] = s0;
+            sqsum[0] = sq0;
         }
-        else
+        else if( k == 2 )
         {
-            func( m, sum, sqsum );
-            total = (int)m.total();
+            ST s0 = sum[0], s1 = sum[1];
+            SQT sq0 = sqsum[0], sq1 = sqsum[1];
+            for( i = 0; i < len; i++, src += cn )
+            {
+                T v0 = src[0], v1 = src[1];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+            }
+            sum[0] = s0; sum[1] = s1;
+            sqsum[0] = sq0; sqsum[1] = sq1;
+        }
+        else if( k == 3 )
+        {
+            ST s0 = sum[0], s1 = sum[1], s2 = sum[2];
+            SQT sq0 = sqsum[0], sq1 = sqsum[1], sq2 = sqsum[2];
+            for( i = 0; i < len; i++, src += cn )
+            {
+                T v0 = src[0], v1 = src[1], v2 = src[2];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+                s2 += v2; sq2 += (SQT)v2*v2;
+            }
+            sum[0] = s0; sum[1] = s1; sum[2] = s2;
+            sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2;
+        }
+        
+        for( ; k < cn; k += 4 )
+        {
+            src = src0 + k;
+            ST s0 = sum[k], s1 = sum[k+1], s2 = sum[k+2], s3 = sum[k+3];
+            SQT sq0 = sqsum[k], sq1 = sqsum[k+1], sq2 = sqsum[k+2], sq3 = sqsum[k+3];
+            for( i = 0; i < len; i++, src += cn )
+            {
+                T v0, v1;
+                v0 = src[0], v1 = src[1];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+                v0 = src[2], v1 = src[3];
+                s2 += v0; sq2 += (SQT)v0*v0;
+                s3 += v1; sq3 += (SQT)v1*v1;
+            }
+            sum[k] = s0; sum[k+1] = s1;
+            sum[k+2] = s2; sum[k+3] = s3;
+            sqsum[k] = sq0; sqsum[k+1] = sq1;
+            sqsum[k+2] = sq2; sqsum[k+3] = sq3;
+        }
+        return len;
+    }
+    
+    int i, nzm = 0;
+
+    if( cn == 1 )
+    {
+        ST s0 = sum[0];
+        SQT sq0 = sqsum[0];
+        for( i = 0; i < len; i++ )
+            if( mask[i] )
+            {
+                T v = src[i];
+                s0 += v; sq0 += (SQT)v*v;
+                nzm++;
+            }
+        sum[0] = s0;
+        sqsum[0] = sq0;
+    }
+    else if( cn == 3 )
+    {
+        ST s0 = sum[0], s1 = sum[1], s2 = sum[2];
+        SQT sq0 = sqsum[0], sq1 = sqsum[1], sq2 = sqsum[2];
+        for( i = 0; i < len; i++, src += 3 )
+            if( mask[i] )
+            {
+                T v0 = src[0], v1 = src[1], v2 = src[2];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+                s2 += v2; sq2 += (SQT)v2*v2;
+                nzm++;
+            }
+        sum[0] = s0; sum[1] = s1; sum[2] = s2;
+        sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2;
+    }
+    else
+    {
+        for( i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    T v = src[k];
+                    ST s = sum[k] + v;
+                    SQT sq = sqsum[k] + (SQT)v*v;
+                    sum[k] = s; sqsum[k] = sq;
+                }
+                nzm++;
+            }
+    }
+    return nzm;
+}    
+
+
+static int sqsum8u( const uchar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum8s( const schar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum16u( const ushort* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum16s( const short* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum32s( const int* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum32f( const float* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum64f( const double* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, int);
+
+static SumSqrFunc sumSqrTab[] =
+{
+    (SumSqrFunc)sqsum8u, (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
+    (SumSqrFunc)sqsum32s, (SumSqrFunc)sqsum32f, (SumSqrFunc)sqsum64f, 0
+};
+
+}
+    
+cv::Scalar cv::sum( const InputArray& _src )
+{
+    Mat src = _src.getMat();
+    int k, cn = src.channels(), depth = src.depth();
+    SumFunc func = sumTab[depth];
+    
+    CV_Assert( cn <= 4 && func != 0 );
+    
+    const Mat* arrays[] = {&src, 0};
+    uchar* ptrs[1];
+    NAryMatIterator it(arrays, ptrs);
+    Scalar s;
+    int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
+    int j, count = 0;
+    AutoBuffer<int> _buf;
+    int* buf = (int*)&s[0];
+    size_t esz = 0;
+    bool blockSum = depth < CV_32S;
+    
+    if( blockSum )
+    {
+        intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
+        blockSize = std::min(blockSize, intSumBlockSize);
+        _buf.allocate(cn);
+        buf = _buf;
+    
+        for( k = 0; k < cn; k++ )
+            buf[k] = 0;
+        esz = src.elemSize();
+    }
+        
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int bsz = std::min(total - j, blockSize);
+            func( ptrs[0], 0, (uchar*)buf, bsz, cn );
+            count += bsz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            {
+                for( k = 0; k < cn; k++ )
+                {
+                    s[k] += buf[k];
+                    buf[k] = 0;
+                }
+                count = 0;
+            }
+            ptrs[0] += bsz*esz;
+        }
+    }
+    return s;
+}
+
+int cv::countNonZero( const InputArray& _src )
+{
+    Mat src = _src.getMat();
+    CountNonZeroFunc func = countNonZeroTab[src.depth()];
+    
+    CV_Assert( src.channels() == 1 && func != 0 );
+    
+    const Mat* arrays[] = {&src, 0};
+    uchar* ptrs[1];
+    NAryMatIterator it(arrays, ptrs);
+    int total = (int)it.size, nz = 0;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        nz += func( ptrs[0], total );
+    
+    return nz;
+}    
+    
+cv::Scalar cv::mean( const InputArray& _src, const InputArray& _mask )
+{
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    if( !mask.empty() )
+        CV_Assert( mask.type() == CV_8U );
+    
+    int k, cn = src.channels(), depth = src.depth();
+    SumFunc func = sumTab[depth];
+    
+    CV_Assert( cn <= 4 && func != 0 );
+    
+    const Mat* arrays[] = {&src, &mask, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    Scalar s;
+    int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
+    int j, count = 0;
+    AutoBuffer<int> _buf;
+    int* buf = (int*)&s[0];
+    bool blockSum = depth <= CV_16S;
+    size_t esz = 0, nz0 = 0;
+    
+    if( blockSum )
+    {
+        intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
+        blockSize = std::min(blockSize, intSumBlockSize);
+        _buf.allocate(cn);
+        buf = _buf;
+        
+        for( k = 0; k < cn; k++ )
+            buf[k] = 0;
+        esz = src.elemSize();
+    }
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int bsz = std::min(total - j, blockSize);
+            int nz = func( ptrs[0], ptrs[1], (uchar*)buf, bsz, cn );
+            count += nz;
+            nz0 += nz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            {
+                for( k = 0; k < cn; k++ )
+                {
+                    s[k] += buf[k];
+                    buf[k] = 0;
+                }
+                count = 0;
+            }
+            ptrs[0] += bsz*esz;
+            if( ptrs[1] )
+                ptrs[1] += bsz;
+        }
+    }
+    return s*(nz0 ? 1./nz0 : 0);
+}    
+
+    
+void cv::meanStdDev( const InputArray& _src, OutputArray _mean, OutputArray _sdv, const InputArray& _mask )
+{
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    if( !mask.empty() )
+        CV_Assert( mask.type() == CV_8U );
+    
+    int k, cn = src.channels(), depth = src.depth();
+    SumSqrFunc func = sumSqrTab[depth];
+    
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &mask, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    int total = it.size, blockSize = total, intSumBlockSize = 0;
+    int j, count = 0, nz0 = 0;
+    AutoBuffer<double> _buf(cn*4);
+    double *s = (double*)_buf, *sq = s + cn;
+    int *sbuf = (int*)s, *sqbuf = (int*)sq;
+    bool blockSum = depth <= CV_16S, blockSqSum = depth <= CV_8S;
+    size_t esz = 0;
+    
+    for( k = 0; k < cn; k++ )
+        s[k] = sq[k] = 0;
+    
+    if( blockSum )
+    {
+        intSumBlockSize = 1 << 15;
+        blockSize = std::min(blockSize, intSumBlockSize);
+        sbuf = (int*)(sq + cn);
+        if( blockSqSum )
+            sqbuf = sbuf + cn;
+        for( k = 0; k < cn; k++ )
+            sbuf[k] = sqbuf[k] = 0;
+        esz = src.elemSize();
+    }
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int bsz = std::min(total - j, blockSize);
+            int nz = func( ptrs[0], ptrs[1], (uchar*)sbuf, (uchar*)sqbuf, bsz, cn );
+            count += nz;
+            nz0 += nz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            {
+                for( k = 0; k < cn; k++ )
+                {
+                    s[k] += sbuf[k];
+                    sbuf[k] = 0;
+                }
+                if( blockSqSum )
+                {
+                    for( k = 0; k < cn; k++ )
+                    {
+                        sq[k] += sqbuf[k];
+                        sqbuf[k] = 0;
+                    }
+                }
+                count = 0;
+            }
+            ptrs[0] += bsz*esz;
+            if( ptrs[1] )
+                ptrs[1] += bsz;
         }
     }
     
-    double scale = 1./std::max(total, 1);
-    for( int k = 0; k < 4; k++ )
+    double scale = nz0 ? 1./nz0 : 0.;
+    for( int k = 0; k < cn; k++ )
     {
-        mean[k] = sum[k]*scale;
-        stddev[k] = std::sqrt(std::max(sqsum[k]*scale - mean[k]*mean[k], 0.));
+        s[k] *= scale;
+        sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
+    }
+    
+    for( j = 0; j < 2; j++ )
+    {
+        const double* sptr = j == 0 ? s : sq;
+        OutputArray& _dst = j == 0 ? _mean : _sdv;
+        if( !_dst.needed() )
+            continue;
+
+        if( !_dst.fixedSize() )
+            _dst.create(cn, 1, CV_64F, -1, true);
+        Mat dst = _dst.getMat();
+        int dcn = (int)dst.total();
+        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
+                  (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
+        double* dptr = dst.ptr<double>();
+        for( k = 0; k < cn; k++ )
+            dptr[k] = sptr[k];
+        for( ; k < dcn; k++ )
+            dptr[k] = 0;
     }
 }
-
 
 /****************************************************************************************\
 *                                       minMaxLoc                                        *
 \****************************************************************************************/
 
-template<typename T, typename WT> static void
-minMaxIndx_( const Mat& srcmat, double* _minVal, double* _maxVal,
-             size_t startIdx, size_t* _minIdx, size_t* _maxIdx )
+namespace cv
 {
-    assert( DataType<T>::type == srcmat.type() );
-    const T* src = (const T*)srcmat.data;
-    size_t step = srcmat.step/sizeof(src[0]);
-    WT minVal = saturate_cast<WT>(*_minVal), maxVal = saturate_cast<WT>(*_maxVal);
-    size_t minIdx = *_minIdx, maxIdx = *_maxIdx;
-    Size size = getContinuousSize( srcmat );
 
-    for( ; size.height--; src += step, startIdx += size.width )
+template<typename T, typename WT> static void
+minMaxIdx_( const T* src, const uchar* mask, WT* _minVal, WT* _maxVal,
+            size_t* _minIdx, size_t* _maxIdx, int len, size_t startIdx )
+{
+    WT minVal = *_minVal, maxVal = *_maxVal;
+    size_t minIdx = *_minIdx, maxIdx = *_maxIdx;
+    
+    if( !mask )
     {
-        for( int x = 0; x < size.width; x++ )
+        for( int i = 0; i < len; i++ )
         {
-            T val = src[x];
+            T val = src[i];
             if( val < minVal )
             {
                 minVal = val;
-                minIdx = startIdx + x;
+                minIdx = startIdx + i;
             }
             if( val > maxVal )
             {
                 maxVal = val;
-                maxIdx = startIdx + x;
+                maxIdx = startIdx + i;
             }
         }
-    }
-
-    *_minIdx = minIdx;
-    *_maxIdx = maxIdx;
-    *_minVal = minVal;
-    *_maxVal = maxVal;
-}
-
-
-template<typename T, typename WT> static void
-minMaxIndxMask_( const Mat& srcmat, const Mat& maskmat,
-                 double* _minVal, double* _maxVal,
-                 size_t startIdx, size_t* _minIdx, size_t* _maxIdx )
-{
-    assert( DataType<T>::type == srcmat.type() &&
-        CV_8U == maskmat.type() &&
-        srcmat.size() == maskmat.size() );
-    const T* src = (const T*)srcmat.data;
-    const uchar* mask = maskmat.data;
-    size_t step = srcmat.step/sizeof(src[0]);
-    size_t maskstep = maskmat.step;
-    WT minVal = saturate_cast<WT>(*_minVal), maxVal = saturate_cast<WT>(*_maxVal);
-    size_t minIdx = *_minIdx, maxIdx = *_maxIdx;
-    Size size = getContinuousSize( srcmat, maskmat );
-
-    for( ; size.height--; src += step, mask += maskstep, startIdx += size.width )
-    {
-        for( int x = 0; x < size.width; x++ )
-        {
-            T val = src[x];
-            int m = mask[x];
-            
-            if( val < minVal && m )
-            {
-                minVal = val;
-                minIdx = startIdx + x;
-            }
-            if( val > maxVal && m )
-            {
-                maxVal = val;
-                maxIdx = startIdx + x;
-            }
-        }
-    }
-
-    *_minIdx = minIdx;
-    *_maxIdx = maxIdx;
-    *_minVal = minVal;
-    *_maxVal = maxVal;
-}
-
-typedef void (*MinMaxIndxFunc)(const Mat&, double*, double*, size_t, size_t*, size_t*);
-
-typedef void (*MinMaxIndxMaskFunc)(const Mat&, const Mat&, double*, double*,
-                                   size_t, size_t*, size_t*);
-
-void minMaxLoc( const Mat& img, double* minVal, double* maxVal,
-                Point* minLoc, Point* maxLoc, const Mat& mask )
-{
-    CV_Assert(img.dims <= 2);
-    
-    static MinMaxIndxFunc tab[] =
-    {
-        minMaxIndx_<uchar, int>, 0, minMaxIndx_<ushort, int>, minMaxIndx_<short, int>,
-        minMaxIndx_<int, int>, minMaxIndx_<float, float>, minMaxIndx_<double, double>, 0
-    };
-    static MinMaxIndxMaskFunc tabm[] =
-    {
-        minMaxIndxMask_<uchar, int>, 0, minMaxIndxMask_<ushort, int>, minMaxIndxMask_<short, int>,
-        minMaxIndxMask_<int, int>, minMaxIndxMask_<float, float>, minMaxIndxMask_<double, double>, 0
-    };
-
-    int depth = img.depth();
-    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
-    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
-    size_t minidx = 0, maxidx = 0, startidx = 1;
-
-    CV_Assert( img.channels() == 1 );
-
-    if( !mask.data )
-    {
-        MinMaxIndxFunc func = tab[depth];
-        CV_Assert( func != 0 );
-        func( img, &minval, &maxval, startidx, &minidx, &maxidx );
     }
     else
     {
-        CV_Assert( img.size() == mask.size() && mask.type() == CV_8U );
-        MinMaxIndxMaskFunc func = tabm[depth];
-        CV_Assert( func != 0 );
-        func( img, mask, &minval, &maxval, startidx, &minidx, &maxidx );
+        for( int i = 0; i < len; i++ )
+        {
+            T val = src[i];
+            if( mask[i] && val < minVal )
+            {
+                minVal = val;
+                minIdx = startIdx + i;
+            }
+            if( mask[i] && val > maxVal )
+            {
+                maxVal = val;
+                maxIdx = startIdx + i;
+            }
+        }
     }
 
-    if( minidx == 0 )
-        minVal = maxVal = 0;
-    
-    if( minVal )
-        *minVal = minval;
-    if( maxVal )
-        *maxVal = maxval;
-    if( minLoc )
-    {
-        if( minidx > 0 )
-        {
-            minidx--;
-            minLoc->y = minidx/img.cols;
-            minLoc->x = minidx - minLoc->y*img.cols;
-        }
-        else
-            minLoc->x = minLoc->y = -1;
-    }
-    if( maxLoc )
-    {
-        if( maxidx > 0 )
-        {
-            maxidx--;
-            maxLoc->y = maxidx/img.cols;
-            maxLoc->x = maxidx - maxLoc->y*img.cols;
-        }
-        else
-            maxLoc->x = maxLoc->y = -1;
-    }
+    *_minIdx = minIdx;
+    *_maxIdx = maxIdx;
+    *_minVal = minVal;
+    *_maxVal = maxVal;
 }
 
+static void minMaxIdx_8u(const uchar* src, const uchar* mask, int* minval, int* maxval,
+                         size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* maxval,
+                         size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_16u(const ushort* src, const uchar* mask, int* minval, int* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_16s(const short* src, const uchar* mask, int* minval, int* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_32s(const int* src, const uchar* mask, int* minval, int* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_32f(const float* src, const uchar* mask, float* minval, float* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, double* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }    
+    
+typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, size_t*, int, size_t);
+
+static MinMaxIdxFunc minmaxTab[] =
+{
+    (MinMaxIdxFunc)minMaxIdx_8u, (MinMaxIdxFunc)minMaxIdx_8s, (MinMaxIdxFunc)minMaxIdx_16u,
+    (MinMaxIdxFunc)minMaxIdx_16s, (MinMaxIdxFunc)minMaxIdx_32s, (MinMaxIdxFunc)minMaxIdx_32f, 
+    (MinMaxIdxFunc)minMaxIdx_64f, 0
+};
+    
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
@@ -763,712 +730,482 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
             idx[i] = -1;
     }
 }
+    
+}
 
-void minMaxIdx(const Mat& a, double* minVal,
-                double* maxVal, int* minIdx, int* maxIdx,
-                const Mat& mask)
+void cv::minMaxIdx(const InputArray& _src, double* minVal,
+                   double* maxVal, int* minIdx, int* maxIdx,
+                   const InputArray& _mask)
 {
-    if( a.dims <= 2 )
-    {
-        Point minLoc, maxLoc;
-        minMaxLoc(a, minVal, maxVal, &minLoc, &maxLoc, mask);
-        if( minIdx )
-            minIdx[0] = minLoc.y, minIdx[1] = minLoc.x;
-        if( maxIdx )
-            maxIdx[0] = maxLoc.y, maxIdx[1] = maxLoc.x;
-        return;
-    }
-
-    static MinMaxIndxFunc tab[] =
-    {
-        minMaxIndx_<uchar, int>, 0, minMaxIndx_<ushort, int>, minMaxIndx_<short, int>,
-        minMaxIndx_<int, int>, minMaxIndx_<float, float>, minMaxIndx_<double, double>, 0
-    };
-    static MinMaxIndxMaskFunc tabm[] =
-    {
-        minMaxIndxMask_<uchar, int>, 0, minMaxIndxMask_<ushort, int>, minMaxIndxMask_<short, int>,
-        minMaxIndxMask_<int, int>, minMaxIndxMask_<float, float>, minMaxIndxMask_<double, double>, 0
-    };
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    int depth = src.depth();
     
-    const Mat* arrays[] = {&a, &mask, 0};
-    Mat planes[2];
-    NAryMatIterator it(arrays, planes);
+    CV_Assert( src.channels() == 1 && (mask.empty() || mask.type() == CV_8U) );
+    MinMaxIdxFunc func = minmaxTab[depth];
+    CV_Assert( func != 0 );
     
-    int depth = a.depth();
-    double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
-    double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
+    const Mat* arrays[] = {&src, &mask, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    
     size_t minidx = 0, maxidx = 0;
-    size_t startidx = 1, planeSize = planes[0].total();
-    MinMaxIndxFunc func = 0;
-    MinMaxIndxMaskFunc mfunc = 0;
+    int iminval = INT_MAX, imaxval = INT_MIN;
+    float fminval = FLT_MAX, fmaxval = -FLT_MAX;
+    double dminval = DBL_MAX, dmaxval = -DBL_MAX;
+    size_t startidx = 1;
+    int *minval = &iminval, *maxval = &imaxval;
+    int planeSize = (int)it.size;
     
-    if( mask.empty() )
-        func = tab[depth];
-    else
-        mfunc = tabm[depth];
-    CV_Assert( func != 0 || mfunc != 0 );
+    if( depth == CV_32F )
+        minval = (int*)&fminval, maxval = (int*)&fmaxval;
+    else if( depth == CV_64F )
+        minval = (int*)&dminval, maxval = (int*)&dmaxval;
     
-    for( int i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
-    {
-        if( func )
-            func( planes[0], &minval, &maxval, startidx, &minidx, &maxidx );
-        else
-            mfunc( planes[0], planes[1], &minval, &maxval, startidx, &minidx, &maxidx );
-    }
+    for( size_t i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
+        func( ptrs[0], ptrs[1], minval, maxval, &minidx, &maxidx, planeSize, startidx );
     
     if( minidx == 0 )
-        minVal = maxVal = 0;
+        dminval = dmaxval = 0;
+    else if( depth == CV_32F )
+        dminval = fminval, dmaxval = fmaxval;
+    else if( depth <= CV_32S )
+        dminval = iminval, dmaxval = imaxval;
     
     if( minVal )
-        *minVal = minval;
+        *minVal = dminval;
     if( maxVal )
-        *maxVal = maxval;
+        *maxVal = dmaxval;
+    
     if( minIdx )
-        ofs2idx(a, minidx, minIdx);
+        ofs2idx(src, minidx, minIdx);
     if( maxIdx )
-        ofs2idx(a, maxidx, maxIdx);
+        ofs2idx(src, maxidx, maxIdx);
 }    
+        
+void cv::minMaxLoc( const InputArray& _img, double* minVal, double* maxVal,
+                Point* minLoc, Point* maxLoc, const InputArray& mask )
+{
+    Mat img = _img.getMat();
+    CV_Assert(img.dims <= 2);
+    
+    minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
+    if( minLoc )
+        std::swap(minLoc->x, minLoc->y);
+    if( maxLoc )
+        std::swap(maxLoc->x, maxLoc->y);
+}
     
 /****************************************************************************************\
 *                                         norm                                           *
 \****************************************************************************************/
 
-template<typename T, typename WT=T> struct OpAbs
+namespace cv
 {
-    typedef T type1;
-    typedef WT rtype;
-    rtype operator()(type1 x) const { return (WT)std::abs(x); }
+
+template<typename T, typename ST> int
+normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
+{
+    ST result = *_result;
+    if( !mask )
+    {
+        len *= cn;
+        for( int i = 0; i < len; i++ )
+            result = std::max(result, std::abs(src[i]));
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    result = std::max(result, std::abs(src[k]));
+            }
+    }
+    *_result = result;
+    return 0;
+}
+    
+template<typename T, typename ST> int
+normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
+{
+    ST result = *_result;
+    if( !mask )
+    {
+        len *= cn;
+        for( int i = 0; i < len; i++ )
+            result += std::abs(src[i]);
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    result += std::abs(src[k]);
+            }
+    }
+    *_result = result;
+    return 0;
+}
+
+template<typename T, typename ST> int
+normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn)
+{
+    ST result = *_result;
+    if( !mask )
+    {
+        len *= cn;
+        for( int i = 0; i < len; i++ )
+        {
+            T v = src[i];
+            result += (ST)v*v;
+        }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    T v = src[k];
+                    result += (ST)v*v;
+                }
+            }
+    }
+    *_result = result;
+    return 0;
+}    
+    
+template<typename T, typename ST> int
+normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
+{
+    ST result = *_result;
+    if( !mask )
+    {
+        len *= cn;
+        for( int i = 0; i < len; i++ )
+            result = std::max(result, std::abs(src1[i] - src2[i]));
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    result = std::max(result, std::abs(src1[k] - src2[k]));
+            }
+    }
+    *_result = result;
+    return 0;
+}
+
+template<typename T, typename ST> int
+normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
+{
+    ST result = *_result;
+    if( !mask )
+    {
+        len *= cn;
+        for( int i = 0; i < len; i++ )
+            result += std::abs(src1[i] - src2[i]);
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                    result += std::abs(src1[k] - src2[k]);
+            }
+    }
+    *_result = result;
+    return 0;
+}
+
+template<typename T, typename ST> int
+normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
+{
+    ST result = *_result;
+    if( !mask )
+    {
+        len *= cn;
+        for( int i = 0; i < len; i++ )
+        {
+            ST v = src1[i] - src2[i];
+            result += v*v;
+        }
+    }
+    else
+    {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
+            if( mask[i] )
+            {
+                for( int k = 0; k < cn; k++ )
+                {
+                    ST v = src1[k] - src2[k];
+                    result += v*v;
+                }
+            }
+    }
+    *_result = result;
+    return 0;
+}    
+
+
+#define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
+static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, size_t len, int cn) \
+{ return norm##L##_(src, mask, r, len, cn); } \
+static int normDiff##L##_##suffix(const type* src1, const type* src2, \
+                               const uchar* mask, ntype* r, size_t len, int cn) \
+{ return normDiff##L##_(src1, src2, mask, r, len, cn); }
+    
+#define CV_DEF_NORM_ALL(suffix, type, inftype, l1type, l2type) \
+CV_DEF_NORM_FUNC(Inf, suffix, type, inftype) \
+CV_DEF_NORM_FUNC(L1, suffix, type, l1type) \
+CV_DEF_NORM_FUNC(L2, suffix, type, l2type)
+
+CV_DEF_NORM_ALL(8u, uchar, int, int, int)
+CV_DEF_NORM_ALL(8s, schar, int, int, int)
+CV_DEF_NORM_ALL(16u, ushort, int, int, double)
+CV_DEF_NORM_ALL(16s, short, int, int, double)
+CV_DEF_NORM_ALL(32s, int, int, double, double)
+CV_DEF_NORM_ALL(32f, float, float, double, double)
+CV_DEF_NORM_ALL(64f, double, double, double, double)
+
+    
+typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
+typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);    
+
+static NormFunc normTab[3][8] =
+{
+    {
+        (NormFunc)normInf_8u, (NormFunc)normInf_8s, (NormFunc)normInf_16u, (NormFunc)normInf_16s,
+        (NormFunc)normInf_32s, (NormFunc)normInf_32f, (NormFunc)normInf_64f, 0
+    },
+    {
+        (NormFunc)normL1_8u, (NormFunc)normL1_8s, (NormFunc)normL1_16u, (NormFunc)normL1_16s,
+        (NormFunc)normL1_32s, (NormFunc)normL1_32f, (NormFunc)normL1_64f, 0
+    },
+    {
+        (NormFunc)normL2_8u, (NormFunc)normL2_8s, (NormFunc)normL2_16u, (NormFunc)normL2_16s,
+        (NormFunc)normL2_32s, (NormFunc)normL2_32f, (NormFunc)normL2_64f, 0
+    }
 };
 
-template<> inline uchar OpAbs<uchar, uchar>::operator()(uchar x) const { return x; }
-template<> inline ushort OpAbs<ushort, ushort>::operator()(ushort x) const { return x; }
-
-template<class ElemFunc, class UpdateFunc, class GlobUpdateFunc, int BLOCK_SIZE>
-static double normBlock_( const Mat& srcmat )
+static NormDiffFunc normDiffTab[3][8] =
 {
-    ElemFunc f;
-    UpdateFunc update;
-    GlobUpdateFunc globUpdate;
-    typedef typename ElemFunc::type1 T;
-    typedef typename UpdateFunc::rtype WT;
-    typedef typename GlobUpdateFunc::rtype ST;
-    
-    assert( DataType<T>::depth == srcmat.depth() );
-    Size size = getContinuousSize( srcmat, srcmat.channels() );
-    ST s0 = 0; // luckily, 0 is the correct starting value for both + and max update operations
-    WT s = 0;
-    int y, remaining = BLOCK_SIZE;
-
-    for( y = 0; y < size.height; y++ )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        int x = 0;
-        while( x < size.width )
-        {
-            int limit = std::min( remaining, size.width - x );
-            remaining -= limit;
-            limit += x;
-            for( ; x <= limit - 4; x += 4 )
-            {
-                s = update(s, (WT)f(src[x]));
-                s = update(s, (WT)f(src[x+1]));
-                s = update(s, (WT)f(src[x+2]));
-                s = update(s, (WT)f(src[x+3]));
-            }
-            for( ; x < limit; x++ )
-                s = update(s, (WT)f(src[x]));
-            if( remaining == 0 || (x == size.width && y == size.height-1) )
-            {
-                s0 = globUpdate(s0, (ST)s);
-                s = 0;
-                remaining = BLOCK_SIZE;
-            }
-        }
+        (NormDiffFunc)normDiffInf_8u, (NormDiffFunc)normDiffInf_8s,
+        (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
+        (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)normDiffInf_32f,
+        (NormDiffFunc)normDiffInf_64f, 0
+    },
+    {
+        (NormDiffFunc)normDiffL1_8u, (NormDiffFunc)normDiffL1_8s,
+        (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
+        (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)normDiffL1_32f,
+        (NormDiffFunc)normDiffL1_64f, 0
+    },
+    {
+        (NormDiffFunc)normDiffL2_8u, (NormDiffFunc)normDiffL2_8s,
+        (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
+        (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)normDiffL2_32f,
+        (NormDiffFunc)normDiffL2_64f, 0
     }
-    return s0;
+};
+
 }
-
-template<class ElemFunc, class UpdateFunc>
-static double norm_( const Mat& srcmat )
-{
-    ElemFunc f;
-    UpdateFunc update;
-    typedef typename ElemFunc::type1 T;
-    typedef typename UpdateFunc::rtype ST;
     
-    assert( DataType<T>::depth == srcmat.depth() );
-    Size size = getContinuousSize( srcmat, srcmat.channels() );
-    ST s = 0;
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            s = update(s, (ST)f(src[x]));
-            s = update(s, (ST)f(src[x+1]));
-            s = update(s, (ST)f(src[x+2]));
-            s = update(s, (ST)f(src[x+3]));
-        }
-        for( ; x < size.width; x++ )
-            s = update(s, (ST)f(src[x]));
-    }
-    return s;
-}
-
-template<class ElemFunc, class UpdateFunc, class GlobUpdateFunc, int BLOCK_SIZE>
-static double normMaskBlock_( const Mat& srcmat, const Mat& maskmat )
+double cv::norm( const InputArray& _src, int normType, const InputArray& _mask )
 {
-    ElemFunc f;
-    UpdateFunc update;
-    GlobUpdateFunc globUpdate;
-    typedef typename ElemFunc::type1 T;
-    typedef typename UpdateFunc::rtype WT;
-    typedef typename GlobUpdateFunc::rtype ST;
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    int depth = src.depth(), cn = src.channels();
     
-    assert( DataType<T>::depth == srcmat.depth() );
-    Size size = getContinuousSize( srcmat, maskmat );
-    ST s0 = 0;
-    WT s = 0;
-    int y, remaining = BLOCK_SIZE;
-    int cn = srcmat.channels();
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        int x = 0;
-        while( x < size.width )
-        {
-            int limit = std::min( remaining, size.width - x );
-            remaining -= limit;
-            limit += x;
-            int x0 = x;
-            for( int c = 0; c < cn; c++ )
-            {
-                for( x = x0; x <= limit - 4; x += 4 )
-                {
-                    if( mask[x] )
-                        s = update(s, (WT)f(src[x*cn + c]));
-                    if( mask[x+1] )
-                        s = update(s, (WT)f(src[(x+1)*cn + c]));
-                    if( mask[x+2] )
-                        s = update(s, (WT)f(src[(x+2)*cn + c]));
-                    if( mask[x+3] )
-                        s = update(s, (WT)f(src[(x+3)*cn + c]));
-                }
-                for( ; x < limit; x++ )
-                {
-                    if( mask[x] )
-                        s = update(s, (WT)f(src[x*cn + c]));
-                }
-            }
-            if( remaining == 0 || (x == size.width && y == size.height-1) )
-            {
-                s0 = globUpdate(s0, (ST)s);
-                s = 0;
-                remaining = BLOCK_SIZE;
-            }
-        }
-    }
-    return s0;
-}
-
-template<class ElemFunc, class UpdateFunc>
-static double normMask_( const Mat& srcmat, const Mat& maskmat )
-{
-    ElemFunc f;
-    UpdateFunc update;
-    typedef typename ElemFunc::type1 T;
-    typedef typename UpdateFunc::rtype ST;
-    
-    assert( DataType<T>::depth == srcmat.depth() );
-    Size size = getContinuousSize( srcmat, maskmat );
-    ST s = 0;
-    int cn = srcmat.channels();
-    
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        for( int c = 0; c < cn; c++ )
-        {
-            int x = 0;
-            for( ; x <= size.width - 4; x += 4 )
-            {
-                if( mask[x] )
-                    s = update(s, (ST)f(src[x*cn + c]));
-                if( mask[x+1] )
-                    s = update(s, (ST)f(src[(x+1)*cn + c]));
-                if( mask[x+2] )
-                    s = update(s, (ST)f(src[(x+2)*cn + c]));
-                if( mask[x+3] )
-                    s = update(s, (ST)f(src[(x+3)*cn + c]));
-            }
-            for( ; x < size.width; x++ )
-            {
-                if( mask[x] )
-                    s = update(s, (ST)f(src[x*cn + c]));
-            }
-        }
-    }
-    return s;
-}
-
-template<typename T, class ElemFunc, class UpdateFunc, class GlobUpdateFunc, int BLOCK_SIZE>
-static double normDiffBlock_( const Mat& srcmat1, const Mat& srcmat2 )
-{
-    ElemFunc f;
-    UpdateFunc update;
-    GlobUpdateFunc globUpdate;
-    typedef typename UpdateFunc::rtype WT;
-    typedef typename GlobUpdateFunc::rtype ST;
-    
-    assert( DataType<T>::depth == srcmat1.depth() );
-    Size size = getContinuousSize( srcmat1, srcmat2, srcmat1.channels() );
-    ST s0 = 0;
-    WT s = 0;
-    int y, remaining = BLOCK_SIZE;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src1 = (const T*)(srcmat1.data + srcmat1.step*y);
-        const T* src2 = (const T*)(srcmat2.data + srcmat2.step*y);
-        int x = 0;
-        while( x < size.width )
-        {
-            int limit = std::min( remaining, size.width - x );
-            remaining -= limit;
-            limit += x;
-            for( ; x <= limit - 4; x += 4 )
-            {
-                s = update(s, (WT)f(src1[x] - src2[x]));
-                s = update(s, (WT)f(src1[x+1] - src2[x+1]));
-                s = update(s, (WT)f(src1[x+2] - src2[x+2]));
-                s = update(s, (WT)f(src1[x+3] - src2[x+3]));
-            }
-            for( ; x < limit; x++ )
-                s = update(s, (WT)f(src1[x] - src2[x]));
-            if( remaining == 0 || (x == size.width && y == size.height-1) )
-            {
-                s0 = globUpdate(s0, (ST)s);
-                s = 0;
-                remaining = BLOCK_SIZE;
-            }
-        }
-    }
-    return s0;
-}
-
-template<typename T, class ElemFunc, class UpdateFunc>
-static double normDiff_( const Mat& srcmat1, const Mat& srcmat2 )
-{
-    ElemFunc f;
-    UpdateFunc update;
-    typedef typename UpdateFunc::rtype ST;
-    
-    assert( DataType<T>::depth == srcmat1.depth() );
-    Size size = getContinuousSize( srcmat1, srcmat2, srcmat1.channels() );
-    ST s = 0;
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src1 = (const T*)(srcmat1.data + srcmat1.step*y);
-        const T* src2 = (const T*)(srcmat2.data + srcmat2.step*y);
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            s = update(s, (ST)f(src1[x] - src2[x]));
-            s = update(s, (ST)f(src1[x+1] - src2[x+1]));
-            s = update(s, (ST)f(src1[x+2] - src2[x+2]));
-            s = update(s, (ST)f(src1[x+3] - src2[x+3]));
-        }
-        for( ; x < size.width; x++ )
-            s = update(s, (ST)f(src1[x] - src2[x]));
-    }
-    return s;
-}
-
-template<typename T, class ElemFunc, class UpdateFunc, class GlobUpdateFunc, int BLOCK_SIZE>
-static double normDiffMaskBlock_( const Mat& srcmat1, const Mat& srcmat2, const Mat& maskmat )
-{
-    ElemFunc f;
-    UpdateFunc update;
-    GlobUpdateFunc globUpdate;
-    typedef typename UpdateFunc::rtype WT;
-    typedef typename GlobUpdateFunc::rtype ST;
-    
-    assert( DataType<T>::depth == srcmat1.depth() );
-    Size size = getContinuousSize( srcmat1, srcmat2, maskmat );
-    ST s0 = 0;
-    WT s = 0;
-    int y, remaining = BLOCK_SIZE;
-    int cn = srcmat1.channels();
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* src1 = (const T*)(srcmat1.data + srcmat1.step*y);
-        const T* src2 = (const T*)(srcmat2.data + srcmat2.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        int x = 0;
-        while( x < size.width )
-        {
-            int limit = std::min( remaining, size.width - x );
-            remaining -= limit;
-            limit += x;
-            int x0 = x;
-            for( int c = 0; c < cn; c++ )
-            {
-                for( x = x0; x <= limit - 4; x += 4 )
-                {
-                    if( mask[x] )
-                        s = update(s, (WT)f(src1[x*cn + c] - src2[x*cn + c]));
-                    if( mask[x+1] )
-                        s = update(s, (WT)f(src1[(x+1)*cn + c] - src2[(x+1)*cn + c]));
-                    if( mask[x+2] )
-                        s = update(s, (WT)f(src1[(x+2)*cn + c] - src2[(x+2)*cn + c]));
-                    if( mask[x+3] )
-                        s = update(s, (WT)f(src1[(x+3)*cn + c] - src2[(x+3)*cn + c]));
-                }
-                for( ; x < limit; x++ )
-                    if( mask[x] )
-                        s = update(s, (WT)f(src1[x*cn + c] - src2[x*cn + c]));
-            }
-            if( remaining == 0 || (x == size.width && y == size.height-1) )
-            {
-                s0 = globUpdate(s0, (ST)s);
-                s = 0;
-                remaining = BLOCK_SIZE;
-            }
-        }
-    }
-    return s0;
-}
-
-template<typename T, class ElemFunc, class UpdateFunc>
-static double normDiffMask_( const Mat& srcmat1, const Mat& srcmat2, const Mat& maskmat )
-{
-    ElemFunc f;
-    UpdateFunc update;
-    typedef typename UpdateFunc::rtype ST;
-    
-    assert( DataType<T>::depth == srcmat1.depth() );
-    Size size = getContinuousSize( srcmat1, srcmat2, maskmat );
-    ST s = 0;
-    int cn = srcmat1.channels();
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src1 = (const T*)(srcmat1.data + srcmat1.step*y);
-        const T* src2 = (const T*)(srcmat2.data + srcmat2.step*y);
-        const uchar* mask = maskmat.data + maskmat.step*y;
-        for( int c = 0; c < cn; c++ )
-        {
-            int x = 0;
-            for( ; x <= size.width - 4; x += 4 )
-            {
-                if( mask[x] )
-                    s = update(s, (ST)f(src1[x*cn + c] - src2[x*cn + c]));
-                if( mask[x+1] )
-                    s = update(s, (ST)f(src1[(x+1)*cn + c] - src2[(x+1)*cn + c]));
-                if( mask[x+2] )
-                    s = update(s, (ST)f(src1[(x+2)*cn + c] - src2[(x+2)*cn + c]));
-                if( mask[x+3] )
-                    s = update(s, (ST)f(src1[(x+3)*cn + c] - src2[(x+3)*cn + c]));
-            }
-            for( ; x < size.width; x++ )
-                if( mask[x] )
-                    s = update(s, (ST)f(src1[x*cn + c] - src2[x*cn + c]));
-        }
-    }
-    return s;
-}
-
-typedef double (*NormFunc)(const Mat& src);
-typedef double (*NormDiffFunc)(const Mat& src1, const Mat& src2);
-typedef double (*NormMaskFunc)(const Mat& src1, const Mat& mask);
-typedef double (*NormDiffMaskFunc)(const Mat& src1, const Mat& src2, const Mat& mask);
-
-double norm( const Mat& a, int normType )
-{
-    static NormFunc tab[3][8] =
-    {
-        {
-            norm_<OpAbs<uchar>, OpMax<int> >,
-            norm_<OpAbs<schar>, OpMax<int> >,
-            norm_<OpAbs<ushort>, OpMax<int> >,
-            norm_<OpAbs<short, int>, OpMax<int> >,
-            norm_<OpAbs<int>, OpMax<int> >,
-            norm_<OpAbs<float>, OpMax<float> >,
-            norm_<OpAbs<double>, OpMax<double> >
-        },
-        
-        { 
-            normBlock_<OpAbs<uchar>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normBlock_<OpAbs<schar>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normBlock_<OpAbs<ushort>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normBlock_<OpAbs<short, int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            norm_<OpAbs<int>, OpAdd<double> >,
-            norm_<OpAbs<float>, OpAdd<double> >,
-            norm_<OpAbs<double>, OpAdd<double> >
-        },
-
-        { 
-            normBlock_<SqrC1<uchar, unsigned>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normBlock_<SqrC1<schar, unsigned>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            norm_<SqrC1<ushort, double>, OpAdd<double> >,
-            norm_<SqrC1<short, double>, OpAdd<double> >,
-            norm_<SqrC1<int, double>, OpAdd<double> >,
-            norm_<SqrC1<float, double>, OpAdd<double> >,
-            norm_<SqrC1<double, double>, OpAdd<double> >
-        }
-    };
-
     normType &= 7;
-    CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
-    NormFunc func = tab[normType >> 1][a.depth()];
-    CV_Assert(func != 0);
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     
-    double r = 0;
-    if( a.dims > 2 )
+    if( depth == CV_32F && src.isContinuous() && mask.empty() )
     {
-        const Mat* arrays[] = {&a, 0};
-        Mat planes[1];
-        NAryMatIterator it(arrays, planes);
-    
-        for( int i = 0; i < it.nplanes; i++, ++it )
+        size_t len = src.total()*cn;
+        if( len == (size_t)(int)len )
         {
-            double n = func(it.planes[0]);
-            if( normType == NORM_INF )
-                r = std::max(r, n);
-            else
-                r += n;
-        }
-    }
-    else
-        r = func(a);
-    
-    return normType == NORM_L2 ? std::sqrt(r) : r;
-}
-
-
-double norm( const Mat& a, int normType, const Mat& mask )
-{
-    static NormMaskFunc tab[3][8] =
-    {
-        {
-            normMask_<OpAbs<uchar>, OpMax<int> >,
-            normMask_<OpAbs<schar>, OpMax<int> >,
-            normMask_<OpAbs<ushort>, OpMax<int> >,
-            normMask_<OpAbs<short, int>, OpMax<int> >,
-            normMask_<OpAbs<int>, OpMax<int> >,
-            normMask_<OpAbs<float>, OpMax<float> >,
-            normMask_<OpAbs<double>, OpMax<double> >
-        },
-        
-        { 
-            normMaskBlock_<OpAbs<uchar>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normMaskBlock_<OpAbs<schar>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normMaskBlock_<OpAbs<ushort>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normMaskBlock_<OpAbs<short, int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normMask_<OpAbs<int>, OpAdd<double> >,
-            normMask_<OpAbs<float>, OpAdd<double> >,
-            normMask_<OpAbs<double>, OpAdd<double> >
-        },
-
-        { 
-            normMaskBlock_<SqrC1<uchar, unsigned>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normMaskBlock_<SqrC1<schar, unsigned>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normMask_<SqrC1<ushort, double>, OpAdd<double> >,
-            normMask_<SqrC1<short, double>, OpAdd<double> >,
-            normMask_<SqrC1<int, double>, OpAdd<double> >,
-            normMask_<SqrC1<float, double>, OpAdd<double> >,
-            normMask_<SqrC1<double, double>, OpAdd<double> >
-        }
-    };
-
-    if( !mask.data )
-        return norm(a, normType);
-
-    normType &= 7;
-    CV_Assert((normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) && mask.type() == CV_8U);
-    NormMaskFunc func = tab[normType >> 1][a.depth()];
-    CV_Assert(func != 0);
-    
-    double r = 0;
-    if( a.dims > 2 )
-    {
-        const Mat* arrays[] = {&a, &mask, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-        {
-            double n = func(it.planes[0], it.planes[1]);
-            if( normType == NORM_INF )
-                r = std::max(r, n);
-            else
-                r += n;
-        }
-    }
-    else
-    {
-        CV_Assert( a.size() == mask.size() );
-        r = func(a, mask);
-    }
-    
-    return normType == NORM_L2 ? std::sqrt(r) : r;
-}
-
-
-double norm( const Mat& a, const Mat& b, int normType )
-{
-    static NormDiffFunc tab[3][8] =
-    {
-        {
-            normDiff_<uchar, OpAbs<int>, OpMax<int> >,
-            normDiff_<schar, OpAbs<int>, OpMax<int> >,
-            normDiff_<ushort, OpAbs<int>, OpMax<int> >,
-            normDiff_<short, OpAbs<int>, OpMax<int> >,
-            normDiff_<int, OpAbs<int>, OpMax<int> >,
-            normDiff_<float, OpAbs<float>, OpMax<float> >,
-            normDiff_<double, OpAbs<double>, OpMax<double> >
-        },
-        
-        { 
-            normDiffBlock_<uchar, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normDiffBlock_<schar, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normDiffBlock_<ushort, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiffBlock_<short, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiff_<int, OpAbs<int>, OpAdd<double> >,
-            normDiff_<float, OpAbs<float>, OpAdd<double> >,
-            normDiff_<double, OpAbs<double>, OpAdd<double> >
-        },
-
-        { 
-            normDiffBlock_<uchar, SqrC1<int, int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiffBlock_<schar, SqrC1<int, int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiff_<ushort, SqrC1<int, double>, OpAdd<double> >,
-            normDiff_<short, SqrC1<int, double>, OpAdd<double> >,
-            normDiff_<int, SqrC1<int, double>, OpAdd<double> >,
-            normDiff_<float, SqrC1<float, double>, OpAdd<double> >,
-            normDiff_<double, SqrC1<double, double>, OpAdd<double> >
-        }
-    };
-    
-    CV_Assert( a.type() == b.type() );
-    bool isRelative = (normType & NORM_RELATIVE) != 0;
-    normType &= 7;
-    CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
-    NormDiffFunc func = tab[normType >> 1][a.depth()];
-    CV_Assert(func != 0);
-    
-    double r = 0.;
-    if( a.dims > 2 )
-    {
-        const Mat* arrays[] = {&a, &b, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-        {
-            double n = func(it.planes[0], it.planes[1]);
-                
-            if( normType == NORM_INF )
-                r = std::max(r, n);
-            else
-                r += n;
-        }
-    }
-    else
-    {
-        CV_Assert( a.size() == b.size() );
-        r = func( a, b );
-    }
-    if( normType == NORM_L2 )
-        r = std::sqrt(r);
-    if( isRelative )
-        r /= norm(b, normType);
-    return r;
-}
-
-double norm( const Mat& a, const Mat& b, int normType, const Mat& mask )
-{
-    static NormDiffMaskFunc tab[3][8] =
-    {
-        {
-            normDiffMask_<uchar, OpAbs<int>, OpMax<int> >,
-            normDiffMask_<schar, OpAbs<int>, OpMax<int> >,
-            normDiffMask_<ushort, OpAbs<int>, OpMax<int> >,
-            normDiffMask_<short, OpAbs<int>, OpMax<int> >,
-            normDiffMask_<int, OpAbs<int>, OpMax<int> >,
-            normDiffMask_<float, OpAbs<float>, OpMax<float> >,
-            normDiffMask_<double, OpAbs<double>, OpMax<double> >
-        },
-        
-        { 
-            normDiffMaskBlock_<uchar, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normDiffMaskBlock_<schar, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<24>,
-            normDiffMaskBlock_<ushort, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiffMaskBlock_<short, OpAbs<int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiffMask_<int, OpAbs<int>, OpAdd<double> >,
-            normDiffMask_<float, OpAbs<float>, OpAdd<double> >,
-            normDiffMask_<double, OpAbs<double>, OpAdd<double> >
-        },
-
-        { 
-            normDiffMaskBlock_<uchar, SqrC1<int, int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiffMaskBlock_<schar, SqrC1<int, int>, OpAdd<unsigned>, OpAdd<double>, 1<<16>,
-            normDiffMask_<ushort, SqrC1<int, double>, OpAdd<double> >,
-            normDiffMask_<short, SqrC1<int, double>, OpAdd<double> >,
-            normDiffMask_<int, SqrC1<int, double>, OpAdd<double> >,
-            normDiffMask_<float, SqrC1<float, double>, OpAdd<double> >,
-            normDiffMask_<double, SqrC1<double, double>, OpAdd<double> >
-        }
-    };
-    
-    if( !mask.data )
-        return norm(a, b, normType);
-
-    CV_Assert( a.type() == b.type() && mask.type() == CV_8U);
-    bool isRelative = (normType & NORM_RELATIVE) != 0;
-    normType &= 7;
-    CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
-
-    NormDiffMaskFunc func = tab[normType >> 1][a.depth()];
-    CV_Assert(func != 0);
-    
-    double r = 0.;
-    if( a.dims > 2 )
-    {
-        const Mat* arrays[] = {&a, &b, &mask, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-        {
-            double n = func(it.planes[0], it.planes[1], it.planes[2]);
+            const float* data = src.ptr<float>();
             
-            if( normType == NORM_INF )
-                r = std::max(r, n);
-            else
-                r += n;
+            if( normType == NORM_L2 )
+            {
+                double result = 0;
+                normL2_32f(data, 0, &result, (int)len, 1);
+                return std::sqrt(result);
+            }
+            if( normType == NORM_L1 )
+            {
+                double result = 0;
+                normL1_32f(data, 0, &result, (int)len, 1);
+                return result;
+            }
+            {
+                float result = 0;
+                normInf_32f(data, 0, &result, (int)len, 1);
+                return result;
+            }
         }
     }
-    else
+    
+    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    
+    NormFunc func = normTab[normType >> 1][depth];
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &mask, 0};
+    uchar* ptrs[2];
+    double result = 0;
+    NAryMatIterator it(arrays, ptrs);
+    int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
+    bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
+                    (normType == NORM_L2 && depth <= CV_8S);
+    int isum = 0;
+    int *ibuf = (int*)&result;
+    size_t esz = 0;
+    
+    if( blockSum )
     {
-        CV_Assert( a.size() == b.size() && a.size() == mask.size() );
-        r = func( a, b, mask );
+        intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+        blockSize = std::min(blockSize, intSumBlockSize);
+        ibuf = &isum;
+        esz = src.elemSize();
     }
     
-    if( normType == NORM_L2 )
-        r = std::sqrt(r);
-    if( isRelative )
-        r /= std::max(norm(b, normType, mask), DBL_EPSILON);
-    return r;
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int bsz = std::min(total - j, blockSize);
+            func( ptrs[0], ptrs[1], (uchar*)ibuf, bsz, cn );
+            count += bsz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            {
+                result += isum;
+                isum = 0;
+                count = 0;
+            }
+            ptrs[0] += bsz*esz;
+            if( ptrs[1] )
+                ptrs[1] += bsz;
+        }
+    }
+    
+    if( normType == NORM_INF )
+    {
+        if( depth == CV_64F )
+            ;
+        else if( depth == CV_32F )
+            result = (float&)result;
+        else
+            result = (int&)result;
+    }
+    else if( normType == NORM_L2 )
+        result = std::sqrt(result);
+    
+    return result;
 }
 
+    
+double cv::norm( const InputArray& _src1, const InputArray& _src2, int normType, const InputArray& _mask )
+{
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    int depth = src1.depth(), cn = src1.channels();
+    
+    CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
+    
+    normType &= 7;
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+    
+    if( src1.depth() == CV_32F && src1.isContinuous() && src2.isContinuous() && mask.empty() )
+    {
+        size_t len = src1.total()*src1.channels();
+        if( len == (size_t)(int)len )
+        {
+            const float* data1 = src1.ptr<float>();
+            const float* data2 = src2.ptr<float>();
+            
+            if( normType == NORM_L2 )
+            {
+                double result = 0;
+                normDiffL2_32f(data1, data2, 0, &result, (int)len, 1);
+                return std::sqrt(result);
+            }
+            if( normType == NORM_L1 )
+            {
+                double result = 0;
+                normDiffL1_32f(data1, data2, 0, &result, (int)len, 1);
+                return result;
+            }
+            {
+                float result = 0;
+                normDiffInf_32f(data1, data2, 0, &result, (int)len, 1);
+                return result;
+            }
+        }
+    }
+    
+    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    
+    NormDiffFunc func = normDiffTab[normType >> 1][depth];
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src1, &src2, &mask, 0};
+    uchar* ptrs[3];
+    double result = 0;
+    NAryMatIterator it(arrays, ptrs);
+    int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
+    bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
+    (normType == NORM_L2 && depth <= CV_8S);
+    int isum = 0;
+    int *ibuf = (int*)&result;
+    size_t esz = 0;
+    
+    if( blockSum )
+    {
+        intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
+        blockSize = std::min(blockSize, intSumBlockSize);
+        ibuf = &isum;
+        esz = src1.elemSize();
+    }
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
+        {
+            int bsz = std::min(total - j, blockSize);
+            func( ptrs[0], ptrs[1], ptrs[2], (uchar*)ibuf, bsz, cn );
+            count += bsz;
+            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            {
+                result += isum;
+                isum = 0;
+                count = 0;
+            }
+            ptrs[0] += bsz*esz;
+            ptrs[1] += bsz*esz;
+            if( ptrs[2] )
+                ptrs[2] += bsz;
+        }
+    }
+    
+    if( normType == NORM_INF )
+    {
+        if( depth == CV_64F )
+            ;
+        else if( depth == CV_32F )
+            result = (float&)result;
+        else
+            result = (int&)result;
+    }
+    else if( normType == NORM_L2 )
+        result = std::sqrt(result);
+    
+    return result;
 }
 
 

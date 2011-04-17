@@ -281,7 +281,6 @@ void CV_KDTreeTest_CPP::createModel( const Mat& data )
 int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
 {
     Mat res1( data.size(), data.type() ),
-        res2( data.size(), data.type() ),
         res3( data.size(), data.type() );
     Mat idxs( 1, data.rows, CV_32SC1 );
     for( int pi = 0; pi < data.rows; pi++ )
@@ -292,14 +291,11 @@ int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
         for( int di = 0; di < data.cols; di++ )
             res1.at<float>(pi, di) = point[di];
     }
-    // 2nd way
-    tr->getPoints( idxs.ptr<int>(0), data.rows, res2 );
 
     // 3d way
     tr->getPoints( idxs, res3 );
 
     if( norm( res1, data, NORM_L1) != 0 ||
-        norm( res2, data, NORM_L1) != 0 ||
         norm( res3, data, NORM_L1) != 0)
         return cvtest::TS::FAIL_BAD_ACCURACY;
     return cvtest::TS::OK;
@@ -309,7 +305,7 @@ int CV_KDTreeTest_CPP::checkFindBoxed()
 {
     vector<float> min( dims, minValue), max(dims, maxValue);
     vector<int> indices;
-    tr->findOrthoRange( &min[0], &max[0], &indices );
+    tr->findOrthoRange( min, max, indices );
     // TODO check indices
     if( (int)indices.size() != featuresCount)
         return cvtest::TS::FAIL_BAD_ACCURACY;
@@ -326,11 +322,12 @@ int CV_KDTreeTest_CPP::findNeighbors( Mat& points, Mat& neighbors )
     for( int pi = 0; pi < points.rows; pi++ )
     {
         // 1st way
-        tr->findNearest( points.ptr<float>(pi), neighbors.cols, emax, neighbors.ptr<int>(pi) );
+        Mat nrow = neighbors.row(pi);
+        tr->findNearest( points.row(pi), neighbors.cols, emax, nrow );
 
         // 2nd way
         vector<int> neighborsIdx2( neighbors2.cols, 0 );
-        tr->findNearest( points.ptr<float>(pi), neighbors2.cols, emax, &neighborsIdx2 );
+        tr->findNearest( points.row(pi), neighbors2.cols, emax, neighborsIdx2 );
         vector<int>::const_iterator it2 = neighborsIdx2.begin();
         for( j = 0; it2 != neighborsIdx2.end(); ++it2, j++ )
             neighbors2.at<int>(pi,j) = *it2;

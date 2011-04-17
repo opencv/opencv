@@ -46,30 +46,16 @@
                                     Base Image Filter
 \****************************************************************************************/
 
-namespace cv
-{
-
-BaseRowFilter::BaseRowFilter() { ksize = anchor = -1; }
-BaseRowFilter::~BaseRowFilter() {}
-
-BaseColumnFilter::BaseColumnFilter() { ksize = anchor = -1; }
-BaseColumnFilter::~BaseColumnFilter() {}
-void BaseColumnFilter::reset() {}
-
-BaseFilter::BaseFilter() { ksize = Size(-1,-1); anchor = Point(-1,-1); }
-BaseFilter::~BaseFilter() {}
-void BaseFilter::reset() {}
-
 /*
  Various border types, image boundaries are denoted with '|'
  
-    * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
-    * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
-    * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
-    * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg        
-    * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
-*/
-int borderInterpolate( int p, int len, int borderType )
+ * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
+ * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
+ * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
+ * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg        
+ * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
+ */
+int cv::borderInterpolate( int p, int len, int borderType )
 {
     if( (unsigned)p < (unsigned)len )
         ;
@@ -103,6 +89,20 @@ int borderInterpolate( int p, int len, int borderType )
     return p;
 }
 
+
+namespace cv
+{
+
+BaseRowFilter::BaseRowFilter() { ksize = anchor = -1; }
+BaseRowFilter::~BaseRowFilter() {}
+
+BaseColumnFilter::BaseColumnFilter() { ksize = anchor = -1; }
+BaseColumnFilter::~BaseColumnFilter() {}
+void BaseColumnFilter::reset() {}
+
+BaseFilter::BaseFilter() { ksize = Size(-1,-1); anchor = Point(-1,-1); }
+BaseFilter::~BaseFilter() {}
+void BaseFilter::reset() {}
 
 FilterEngine::FilterEngine()
 {
@@ -454,13 +454,15 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
              dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step );
 }
 
+}
 
 /****************************************************************************************\
 *                                 Separable linear filter                                *
 \****************************************************************************************/
 
-int getKernelType(const Mat& _kernel, Point anchor)
+int cv::getKernelType(const InputArray& __kernel, Point anchor)
 {
+    Mat _kernel = __kernel.getMat();
     CV_Assert( _kernel.channels() == 1 );
     int i, sz = _kernel.rows*_kernel.cols;
 
@@ -494,6 +496,9 @@ int getKernelType(const Mat& _kernel, Point anchor)
     return type;
 }
 
+
+namespace cv
+{
 
 struct RowNoVec
 {
@@ -2527,10 +2532,13 @@ template<typename ST, typename DT> struct FixedPtCastEx
     int SHIFT, DELTA;
 };
 
-Ptr<BaseRowFilter> getLinearRowFilter( int srcType, int bufType,
-                                          const Mat& kernel, int anchor,
-                                          int symmetryType )
+}
+    
+cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
+                                                   const InputArray& _kernel, int anchor,
+                                                   int symmetryType )
 {
+    Mat kernel = _kernel.getMat();
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(bufType);
     int cn = CV_MAT_CN(srcType);
     CV_Assert( cn == CV_MAT_CN(bufType) &&
@@ -2577,11 +2585,12 @@ Ptr<BaseRowFilter> getLinearRowFilter( int srcType, int bufType,
 }
 
 
-Ptr<BaseColumnFilter> getLinearColumnFilter( int bufType, int dstType,
-                                             const Mat& kernel, int anchor,
+cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstType,
+                                             const InputArray& _kernel, int anchor,
                                              int symmetryType, double delta, 
                                              int bits )
 {
+    Mat kernel = _kernel.getMat();
     int sdepth = CV_MAT_DEPTH(bufType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(dstType);
     CV_Assert( cn == CV_MAT_CN(bufType) &&
@@ -2672,13 +2681,14 @@ Ptr<BaseColumnFilter> getLinearColumnFilter( int bufType, int dstType,
 }
 
 
-Ptr<FilterEngine> createSeparableLinearFilter(
+cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     int _srcType, int _dstType,
-    const Mat& _rowKernel, const Mat& _columnKernel,
+    const InputArray& __rowKernel, const InputArray& __columnKernel,
     Point _anchor, double _delta,
     int _rowBorderType, int _columnBorderType,
     const Scalar& _borderValue )
 {
+    Mat _rowKernel = __rowKernel.getMat(), _columnKernel = __columnKernel.getMat();
     _srcType = CV_MAT_TYPE(_srcType);
     _dstType = CV_MAT_TYPE(_dstType);
     int sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
@@ -2741,6 +2751,9 @@ Ptr<FilterEngine> createSeparableLinearFilter(
 /****************************************************************************************\
 *                               Non-separable linear filter                              *
 \****************************************************************************************/
+
+namespace cv
+{
 
 void preprocess2DKernel( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs )
 {
@@ -2868,11 +2881,13 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
     VecOp vecOp;
 };
 
+}
 
-Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,
-                                const Mat& _kernel, Point anchor,
+cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
+                                const InputArray& __kernel, Point anchor,
                                 double delta, int bits)
 {
+    Mat _kernel = __kernel.getMat();
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(srcType), kdepth = _kernel.depth();
     CV_Assert( cn == CV_MAT_CN(dstType) && ddepth >= sdepth );
@@ -2946,11 +2961,13 @@ Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,
 }
 
 
-Ptr<FilterEngine> createLinearFilter( int _srcType, int _dstType, const Mat& _kernel,
-                         Point _anchor, double _delta,
-                         int _rowBorderType, int _columnBorderType,
-                         const Scalar& _borderValue )
+cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
+                                              const InputArray& __kernel,
+                                              Point _anchor, double _delta,
+                                              int _rowBorderType, int _columnBorderType,
+                                              const Scalar& _borderValue )
 {
+    Mat _kernel = __kernel.getMat();
     _srcType = CV_MAT_TYPE(_srcType);
     _dstType = CV_MAT_TYPE(_dstType);    
     int cn = CV_MAT_CN(_srcType);
@@ -2977,10 +2994,12 @@ Ptr<FilterEngine> createLinearFilter( int _srcType, int _dstType, const Mat& _ke
 }
 
 
-void filter2D( const Mat& src, Mat& dst, int ddepth,
-               const Mat& kernel, Point anchor,
-               double delta, int borderType )
+void cv::filter2D( const InputArray& _src, OutputArray _dst, int ddepth,
+                   const InputArray& _kernel, Point anchor,
+                   double delta, int borderType )
 {
+    Mat src = _src.getMat(), kernel = _kernel.getMat();
+    
     if( ddepth < 0 )
         ddepth = src.depth();
 
@@ -2991,7 +3010,8 @@ void filter2D( const Mat& src, Mat& dst, int ddepth,
     int dft_filter_size = 50;
 #endif
 
-    dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
+    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
+    Mat dst = _dst.getMat();
     anchor = normalizeAnchor(anchor, kernel.size());
 
     if( kernel.cols*kernel.rows >= dft_filter_size )
@@ -3015,20 +3035,21 @@ void filter2D( const Mat& src, Mat& dst, int ddepth,
 }
 
 
-void sepFilter2D( const Mat& src, Mat& dst, int ddepth,
-                  const Mat& kernelX, const Mat& kernelY, Point anchor,
-                  double delta, int borderType )
+void cv::sepFilter2D( const InputArray& _src, OutputArray _dst, int ddepth,
+                      const InputArray& _kernelX, const InputArray& _kernelY, Point anchor,
+                      double delta, int borderType )
 {
+    Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
+    
     if( ddepth < 0 )
         ddepth = src.depth();
 
-    dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
+    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
+    Mat dst = _dst.getMat();
 
     Ptr<FilterEngine> f = createSeparableLinearFilter(src.type(),
         dst.type(), kernelX, kernelY, anchor, delta, borderType & ~BORDER_ISOLATED );
     f->apply(src, dst, Rect(0,0,-1,-1), Point(), (borderType & BORDER_ISOLATED) != 0 );
-}
-
 }
 
 

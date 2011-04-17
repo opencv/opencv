@@ -170,12 +170,14 @@ struct IPPInitializer
 IPPInitializer ippInitializer;
 #else
 volatile bool useOptimizedFlag = false;
+volatile bool USE_SSE2 = false;
 #endif
 
 void setUseOptimized( bool flag )
 {
     useOptimizedFlag = flag;
     currentFeatures = flag ? &featuresEnabled : &featuresDisabled;
+    USE_SSE2 = currentFeatures->have[CV_CPU_SSE2];
 }
 
 bool useOptimized(void)

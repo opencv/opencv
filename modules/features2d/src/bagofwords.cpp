@@ -113,7 +113,7 @@ BOWKMeansTrainer::~BOWKMeansTrainer()
 Mat BOWKMeansTrainer::cluster( const Mat& descriptors ) const
 {
     Mat labels, vocabulary;
-    kmeans( descriptors, clusterCount, labels, termcrit, attempts, flags, &vocabulary );
+    kmeans( descriptors, clusterCount, labels, termcrit, attempts, flags, vocabulary );
     return vocabulary;
 }
 

@@ -442,38 +442,40 @@ cvSegmentMotion( const CvArr* mhiimg, CvArr* segmask, CvMemStorage* storage,
 }
 
 
-void cv::updateMotionHistory( const Mat& silhouette, Mat& mhi,
+void cv::updateMotionHistory( const InputArray& _silhouette, InputOutputArray _mhi,
                               double timestamp, double duration )
 {
-    CvMat _silhouette = silhouette, _mhi = mhi;
-    cvUpdateMotionHistory( &_silhouette, &_mhi, timestamp, duration );
+    CvMat c_silhouette = _silhouette.getMat(), c_mhi = _mhi.getMat();
+    cvUpdateMotionHistory( &c_silhouette, &c_mhi, timestamp, duration );
 }
 
-void cv::calcMotionGradient( const Mat& mhi, Mat& mask,
-                             Mat& orientation,
+void cv::calcMotionGradient( const InputArray& _mhi, OutputArray _mask,
+                             OutputArray _orientation,
                              double delta1, double delta2,
                              int aperture_size )
 {
-    mask.create(mhi.size(), CV_8U);
-    orientation.create(mhi.size(), CV_32F);
-    CvMat _mhi = mhi, _mask = mask, _orientation = orientation;
-    cvCalcMotionGradient(&_mhi, &_mask, &_orientation, delta1, delta2, aperture_size);
+    Mat mhi = _mhi.getMat();
+    _mask.create(mhi.size(), CV_8U);
+    _orientation.create(mhi.size(), CV_32F);
+    CvMat c_mhi = mhi, c_mask = _mask.getMat(), c_orientation = _orientation.getMat();
+    cvCalcMotionGradient(&c_mhi, &c_mask, &c_orientation, delta1, delta2, aperture_size);
 }
 
-double cv::calcGlobalOrientation( const Mat& orientation, const Mat& mask,
-                                  const Mat& mhi, double timestamp,
+double cv::calcGlobalOrientation( const InputArray& _orientation, const InputArray& _mask,
+                                  const InputArray& _mhi, double timestamp,
                                   double duration )
 {
-    CvMat _orientation = orientation, _mask = mask, _mhi = mhi;
-    return cvCalcGlobalOrientation(&_orientation, &_mask, &_mhi, timestamp, duration);
+    CvMat c_orientation = _orientation.getMat(), c_mask = _mask.getMat(), c_mhi = _mhi.getMat();
+    return cvCalcGlobalOrientation(&c_orientation, &c_mask, &c_mhi, timestamp, duration);
 }
 
-void cv::segmentMotion(const Mat& mhi, Mat& segmask,
+void cv::segmentMotion(const InputArray& _mhi, OutputArray _segmask,
                        vector<Rect>& boundingRects,
                        double timestamp, double segThresh)
 {
-    segmask.create(mhi.size(), CV_32F);
-    CvMat c_mhi = mhi, c_segmask = segmask;
+    Mat mhi = _mhi.getMat();
+    _segmask.create(mhi.size(), CV_32F);
+    CvMat c_mhi = mhi, c_segmask = _segmask.getMat();
     Ptr<CvMemStorage> storage = cvCreateMemStorage();
     Seq<CvConnectedComp> comps = cvSegmentMotion(&c_mhi, &c_segmask, storage, timestamp, segThresh);
     Seq<CvConnectedComp>::const_iterator it(comps);

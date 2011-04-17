@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -47,7 +47,7 @@ namespace cv
 {
 
 static const int MAX_BLOCK_SIZE = 1024;
-typedef CvStatus (CV_STDCALL * MathFunc)(const void* src, void* dst, int len);
+typedef void (*MathFunc)(const void* src, void* dst, int len);
 
 float fastAtan2( float y, float x )
 {
@@ -61,16 +61,13 @@ float fastAtan2( float y, float x )
 	return (float)(y >= 0 ? 90 - a : 270 - a);
 }
 
-static CvStatus CV_STDCALL FastAtan2_32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees=true )
+static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees=true )
 {
-    if( !Y || !X || !angle || len < 0 )
-        return CV_BADFACTOR_ERR;
-	
 	int i = 0;
 	float scale = angleInDegrees ? (float)(180/CV_PI) : 1.f;
 
 #if CV_SSE2
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {
         Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
         __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
@@ -120,8 +117,6 @@ static CvStatus CV_STDCALL FastAtan2_32f(const float *Y, const float *X, float *
         }
         angle[i] = a*scale;
 	}
-
-    return CV_OK;
 }
 
 
@@ -166,13 +161,12 @@ float  cubeRoot( float value )
     return v.f;
 }
 
-static CvStatus CV_STDCALL
-Magnitude_32f(const float* x, const float* y, float* mag, int len)
+static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
     int i = 0;
     
 #if CV_SSE
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {
         for( ; i <= len - 8; i += 8 )
         {
@@ -191,17 +185,14 @@ Magnitude_32f(const float* x, const float* y, float* mag, int len)
         float x0 = x[i], y0 = y[i];
         mag[i] = std::sqrt(x0*x0 + y0*y0);
     }
-
-    return CV_OK;
 }
 
-static CvStatus CV_STDCALL
-Magnitude_64f(const double* x, const double* y, double* mag, int len)
+static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
     int i = 0;
     
 #if CV_SSE2   
-    if( checkHardwareSupport(CV_CPU_SSE2) )
+    if( USE_SSE2 )
     {
         for( ; i <= len - 4; i += 4 )
         {
@@ -220,17 +211,15 @@ Magnitude_64f(const double* x, const double* y, double* mag, int len)
         double x0 = x[i], y0 = y[i];
         mag[i] = std::sqrt(x0*x0 + y0*y0);
     }
-    
-    return CV_OK;
 }
 
     
-static CvStatus CV_STDCALL InvSqrt_32f(const float* src, float* dst, int len)
+static void InvSqrt_32f(const float* src, float* dst, int len)
 {
     int i = 0;
     
 #if CV_SSE   
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {    
         __m128 _0_5 = _mm_set1_ps(0.5f), _1_5 = _mm_set1_ps(1.5f);
         if( (((size_t)src|(size_t)dst) & 15) == 0 )
@@ -258,24 +247,22 @@ static CvStatus CV_STDCALL InvSqrt_32f(const float* src, float* dst, int len)
     
     for( ; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
-    return CV_OK;
 }
 
     
-static CvStatus CV_STDCALL InvSqrt_64f(const double* src, double* dst, int len)
+static void InvSqrt_64f(const double* src, double* dst, int len)
 {
     for( int i = 0; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
-    return CV_OK;
 }    
     
     
-static CvStatus CV_STDCALL Sqrt_32f(const float* src, float* dst, int len)
+static void Sqrt_32f(const float* src, float* dst, int len)
 {
     int i = 0;
     
 #if CV_SSE    
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {
         if( (((size_t)src|(size_t)dst) & 15) == 0 )
             for( ; i <= len - 8; i += 8 )
@@ -296,17 +283,15 @@ static CvStatus CV_STDCALL Sqrt_32f(const float* src, float* dst, int len)
     
     for( ; i < len; i++ )
         dst[i] = std::sqrt(src[i]);
-    
-    return CV_OK;
 }
 
     
-static CvStatus CV_STDCALL Sqrt_64f(const double* src, double* dst, int len)
+static void Sqrt_64f(const double* src, double* dst, int len)
 {
     int i = 0;
     
 #if CV_SSE2    
-    if( checkHardwareSupport(CV_CPU_SSE2) )
+    if( USE_SSE2 )
     {
         if( (((size_t)src|(size_t)dst) & 15) == 0 )
             for( ; i <= len - 4; i += 4 )
@@ -327,7 +312,6 @@ static CvStatus CV_STDCALL Sqrt_64f(const double* src, double* dst, int len)
     
     for( ; i < len; i++ )
         dst[i] = std::sqrt(src[i]);
-    return CV_OK;
 }
 
 
@@ -335,172 +319,151 @@ static CvStatus CV_STDCALL Sqrt_64f(const double* src, double* dst, int len)
 *                                  Cartezian -> Polar                                    *
 \****************************************************************************************/
 
-void magnitude( const Mat& X, const Mat& Y, Mat& Mag )
+void magnitude( const InputArray& src1, const InputArray& src2, OutputArray dst )
 {
-	if( X.dims > 2 )
-    {
-        Mag.create(X.dims, X.size, X.type());
-        const Mat* arrays[] = {&X, &Y, &Mag, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            magnitude( it.planes[0], it.planes[1], it.planes[2] );
-        return;
-    }
-    
+    Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
-	CV_Assert( X.size() == Y.size() && type == Y.type() && (depth == CV_32F || depth == CV_64F));
-    Mag.create( X.size(), type );
-
-    Size size = getContinuousSize( X, Y, Mag, cn );
-
-    if( depth == CV_32F )
-    {
-        const float *x = (const float*)X.data, *y = (const float*)Y.data;
-        float *mag = (float*)Mag.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t mstep = Mag.step/sizeof(mag[0]);
-
-        for( ; size.height--; x += xstep, y += ystep, mag += mstep )
-            Magnitude_32f( x, y, mag, size.width );
-    }
-    else
-    {
-        const double *x = (const double*)X.data, *y = (const double*)Y.data;
-        double *mag = (double*)Mag.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t mstep = Mag.step/sizeof(mag[0]);
-
-        for( ; size.height--; x += xstep, y += ystep, mag += mstep )
-            Magnitude_64f( x, y, mag, size.width );
-    }
-}
-
-void phase( const Mat& X, const Mat& Y, Mat& Angle, bool angleInDegrees )
-{
-    if( X.dims > 2 )
-    {
-        Angle.create(X.dims, X.size, X.type());
-        const Mat* arrays[] = {&X, &Y, &Angle, 0};
-        Mat planes[3];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            phase( it.planes[0], it.planes[1], it.planes[2], angleInDegrees );
-        return;
-    }
+	CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
+    dst.create(X.dims, X.size, X.type());
+    Mat Mag = dst.getMat();
     
-    float buf[2][MAX_BLOCK_SIZE];
-    int i, j, type = X.type(), depth = X.depth(), cn = X.channels();
-
-    CV_Assert( X.size() == Y.size() && type == Y.type() && (depth == CV_32F || depth == CV_64F));
-    Angle.create( X.size(), type );
-
-    Size size = getContinuousSize( X, Y, Angle, cn );
-
-    if( depth == CV_32F )
+    const Mat* arrays[] = {&X, &Y, &Mag, 0};
+    uchar* ptrs[3];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size*cn;
+        
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        const float *x = (const float*)X.data, *y = (const float*)Y.data;
-        float *angle = (float*)Angle.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t astep = Angle.step/sizeof(angle[0]);
-
-        for( ; size.height--; x += xstep, y += ystep, angle += astep )
-            FastAtan2_32f( y, x, angle, size.width, angleInDegrees );
-    }
-    else
-    {
-        const double *x = (const double*)X.data, *y = (const double*)Y.data;
-        double *angle = (double*)Angle.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t astep = Angle.step/sizeof(angle[0]);
-
-        for( ; size.height--; x += xstep, y += ystep, angle += astep )
+        if( depth == CV_32F )
         {
-            for( i = 0; i < size.width; i += MAX_BLOCK_SIZE )
-            {
-                int block_size = std::min(MAX_BLOCK_SIZE, size.width - i);
-                for( j = 0; j < block_size; j++ )
-                {
-                    buf[0][j] = (float)x[i + j];
-                    buf[1][j] = (float)y[i + j];
-                }
-                FastAtan2_32f( buf[1], buf[0], buf[0], block_size, angleInDegrees );
-                for( j = 0; j < block_size; j++ )
-					angle[i + j] = buf[0][j];
-            }
+            const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
+            float *mag = (float*)ptrs[2];
+            Magnitude_32f( x, y, mag, len );
+        }
+        else
+        {
+            const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
+            double *mag = (double*)ptrs[2];
+            Magnitude_64f( x, y, mag, len );
         }
     }
 }
 
-void cartToPolar( const Mat& X, const Mat& Y, Mat& Mag, Mat& Angle, bool angleInDegrees )
+    
+void phase( const InputArray& src1, const InputArray& src2, OutputArray dst, bool angleInDegrees )
 {
-    if( X.dims > 2 )
+    Mat X = src1.getMat(), Y = src2.getMat();
+    int type = X.type(), depth = X.depth(), cn = X.channels();
+    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
+    dst.create( X.dims, X.size, type );
+    Mat Angle = dst.getMat();
+    
+    const Mat* arrays[] = {&X, &Y, &Angle, 0};
+    uchar* ptrs[3];
+    NAryMatIterator it(arrays, ptrs);
+    cv::AutoBuffer<float> _buf;
+    float* buf[2] = {0, 0};
+    int j, k, total = (int)(it.size*cn), blockSize = total;
+    size_t esz1 = X.elemSize1();
+    
+    if( depth == CV_64F )
     {
-        Mag.create(X.dims, X.size, X.type());
-        Angle.create(X.dims, X.size, X.type());
-        const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
-        Mat planes[4];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            cartToPolar( it.planes[0], it.planes[1], it.planes[2], it.planes[3], angleInDegrees );
-        return;
+        blockSize = std::min(blockSize, ((BLOCK_SIZE+cn-1)/cn)*cn);
+        _buf.allocate(blockSize*2);
+        buf[0] = _buf;
+        buf[1] = buf[0] + blockSize;
     }
     
-    float buf[2][MAX_BLOCK_SIZE];
-    int i, j, type = X.type(), depth = X.depth(), cn = X.channels();
-
-    CV_Assert( X.size() == Y.size() && type == Y.type() && (depth == CV_32F || depth == CV_64F));
-    Mag.create( X.size(), type );
-    Angle.create( X.size(), type );
-
-    Size size = getContinuousSize( X, Y, Mag, Angle, cn );
-    bool inplace = Mag.data == X.data || Mag.data == Y.data;
-
-    if( depth == CV_32F )
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        const float *x = (const float*)X.data, *y = (const float*)Y.data;
-        float *mag = (float*)Mag.data, *angle = (float*)Angle.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t mstep = Mag.step/sizeof(mag[0]), astep = Angle.step/sizeof(angle[0]);
-
-        for( ; size.height--; x += xstep, y += ystep, mag += mstep, angle += astep )
+        for( j = 0; j < total; j += blockSize )
         {
-            for( i = 0; i < size.width; i += MAX_BLOCK_SIZE )
+            int len = std::min(total - j, blockSize);
+            if( depth == CV_32F )
             {
-                int block_size = std::min(MAX_BLOCK_SIZE, size.width - i);
-                Magnitude_32f( x + i, y + i, inplace ? buf[0] : mag + i, block_size );
-                FastAtan2_32f( y + i, x + i, angle + i, block_size, angleInDegrees );
-                if( inplace )
-                    for( j = 0; j < block_size; j++ )
-                        mag[i + j] = buf[0][j];
+                const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
+                float *angle = (float*)ptrs[2];
+                FastAtan2_32f( y, x, angle, len, angleInDegrees );
             }
+            else
+            {
+                const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
+                double *angle = (double*)ptrs[2];
+                for( k = 0; k < len; k++ )
+                {
+                    buf[0][k] = (float)x[k];
+                    buf[1][k] = (float)y[k];
+                }
+                    
+                FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
+                for( k = 0; k < len; k++ )
+					angle[k] = buf[0][k];
+            }
+            ptrs[0] += len*esz1;
+            ptrs[1] += len*esz1;
+            ptrs[2] += len*esz1;
         }
     }
-    else
+}
+ 
+    
+void cartToPolar( const InputArray& src1, const InputArray& src2,
+                  OutputArray dst1, OutputArray dst2, bool angleInDegrees )
+{
+    Mat X = src1.getMat(), Y = src2.getMat();
+    int type = X.type(), depth = X.depth(), cn = X.channels();
+    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
+    dst1.create( X.dims, X.size, type );
+    dst2.create( X.dims, X.size, type );
+    Mat Mag = dst1.getMat(), Angle = dst2.getMat();
+    
+    const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
+    uchar* ptrs[4];
+    NAryMatIterator it(arrays, ptrs);
+    cv::AutoBuffer<float> _buf;
+    float* buf[2] = {0, 0};
+    int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
+    size_t esz1 = X.elemSize1();
+    
+    if( depth == CV_64F )
     {
-        const double *x = (const double*)X.data, *y = (const double*)Y.data;
-        double *mag = (double*)Mag.data, *angle = (double*)Angle.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t mstep = Mag.step/sizeof(mag[0]), astep = Angle.step/sizeof(angle[0]);
-
-        for( ; size.height--; x += xstep, y += ystep, mag += mstep, angle += astep )
+        _buf.allocate(blockSize*2);
+        buf[0] = _buf;
+        buf[1] = buf[0] + blockSize;
+    }
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( j = 0; j < total; j += blockSize )
         {
-            for( i = 0; i < size.width; i += MAX_BLOCK_SIZE )
+            int len = std::min(total - j, blockSize);
+            if( depth == CV_32F )
             {
-                int block_size = std::min(MAX_BLOCK_SIZE, size.width - i);
-                for( j = 0; j < block_size; j++ )
-                {
-                    buf[0][j] = (float)x[i + j];
-                    buf[1][j] = (float)y[i + j];
-                }
-                FastAtan2_32f( buf[1], buf[0], buf[0], block_size, angleInDegrees );
-                Magnitude_64f( x + i, y + i, mag + i, block_size );
-				for( j = 0; j < block_size; j++ )
-					angle[i + j] = buf[0][j];
+                const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
+                float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
+                Magnitude_32f( x, y, mag, len );
+                FastAtan2_32f( y, x, angle, len, angleInDegrees );
             }
+            else
+            {
+                const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
+                double *angle = (double*)ptrs[3];
+                
+                Magnitude_64f(x, y, (double*)ptrs[2], len);
+                for( k = 0; k < len; k++ )
+                {
+                    buf[0][k] = (float)x[k];
+                    buf[1][k] = (float)y[k];
+                }
+                
+                FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
+                for( k = 0; k < len; k++ )
+					angle[k] = buf[0][k];
+            }
+            ptrs[0] += len*esz1;
+            ptrs[1] += len*esz1;
+            ptrs[2] += len*esz1;
+            ptrs[3] += len*esz1;
         }
     }
 }
@@ -510,9 +473,8 @@ void cartToPolar( const Mat& X, const Mat& Y, Mat& Mag, Mat& Angle, bool angleIn
 *                                  Polar -> Cartezian                                    *
 \****************************************************************************************/
 
-static CvStatus CV_STDCALL
-SinCos_32f( const float *angle,float *sinval, float* cosval,
-            int len, int angle_in_degrees )
+static void SinCos_32f( const float *angle, float *sinval, float* cosval,
+                        int len, int angle_in_degrees )
 {
     const int N = 64;
 
@@ -588,81 +550,80 @@ SinCos_32f( const float *angle,float *sinval, float* cosval,
         sinval[i] = (float)sin_val;
         cosval[i] = (float)cos_val;
     }
-
-    return CV_OK;
 }
 
 
-void polarToCart( const Mat& Mag, const Mat& Angle, Mat& X, Mat& Y, bool angleInDegrees )
+void polarToCart( const InputArray& src1, const InputArray& src2,
+                  OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
-    if( Mag.dims > 2 )
+    Mat Mag = src1.getMat(), Angle = src2.getMat();
+    int type = Angle.type(), depth = Angle.depth(), cn = Angle.channels();
+    if( !Mag.empty() )
+        CV_Assert( Angle.size == Mag.size && type == Mag.type() && (depth == CV_32F || depth == CV_64F));
+    dst1.create( Angle.dims, Angle.size, type );
+    dst2.create( Angle.dims, Angle.size, type );
+    Mat X = dst1.getMat(), Y = dst2.getMat();
+    
+    const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
+    uchar* ptrs[4];
+    NAryMatIterator it(arrays, ptrs);
+    cv::AutoBuffer<float> _buf;
+    float* buf[2] = {0, 0};
+    int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
+    size_t esz1 = Angle.elemSize1();
+    
+    if( depth == CV_64F )
     {
-        X.create(Mag.dims, Mag.size, Mag.type());
-        Y.create(Mag.dims, Mag.size, Mag.type());
-        const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
-        Mat planes[4];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            polarToCart( it.planes[0], it.planes[1], it.planes[2], it.planes[3], angleInDegrees );
-        return;
+        _buf.allocate(blockSize*2);
+        buf[0] = _buf;
+        buf[1] = buf[0] + blockSize;
     }
     
-    int i, j, type = Angle.type(), depth = Angle.depth();
-    Size size;
-
-    CV_Assert( depth == CV_32F || depth == CV_64F );
-    X.create( Angle.size(), type );
-    Y.create( Angle.size(), type );
-
-    if( Mag.data )
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        CV_Assert( Mag.size() == Angle.size() && Mag.type() == Angle.type() );
-        size = getContinuousSize( Mag, Angle, X, Y, Angle.channels() );
-    }
-    else
-        size = getContinuousSize( Angle, X, Y, Angle.channels() );
-
-    if( depth == CV_32F )
-    {
-        float *x = (float*)X.data, *y = (float*)Y.data;
-        const float *mag = (const float*)Mag.data, *angle = (const float*)Angle.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t mstep = Mag.step/sizeof(mag[0]), astep = Angle.step/sizeof(angle[0]);
-        float x_tmp[MAX_BLOCK_SIZE];
-        float y_tmp[MAX_BLOCK_SIZE];
-
-        for( ; size.height--; x += xstep, y += ystep, mag += mstep, angle += astep )
+        for( j = 0; j < total; j += blockSize )
         {
-            for( i = 0; i < size.width; i += MAX_BLOCK_SIZE )
+            int len = std::min(total - j, blockSize);
+            if( depth == CV_32F )
             {
-                int block_size = std::min(MAX_BLOCK_SIZE, size.width - i);
-                SinCos_32f( angle + i, y_tmp, x_tmp, block_size, angleInDegrees );
-                for( j = 0; j < block_size; j++ )
-                {
-                    float m = mag ? mag[i + j] : 1.f;
-                    float t0 = x_tmp[j]*m, t1 = y_tmp[j]*m;
-                    x[i + j] = t0; y[i + j] = t1;
-                }
+                const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
+                float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
+                
+                SinCos_32f( angle, y, x, len, angleInDegrees );
+                if( mag )
+                    for( k = 0; k < len; k++ )
+                    {
+                        float m = mag[k];
+                        x[k] *= m; y[k] *= m;
+                    }
             }
-        }
-    }
-    else
-    {
-        double *x = (double*)X.data, *y = (double*)Y.data;
-        const double *mag = (const double*)Mag.data, *angle = (const double*)Angle.data;
-        size_t xstep = X.step/sizeof(x[0]), ystep = Y.step/sizeof(y[0]);
-        size_t mstep = Mag.step/sizeof(mag[0]), astep = Angle.step/sizeof(angle[0]);
-        double ascale = angleInDegrees ? CV_PI/180. : 1;
-
-        for( ; size.height--; x += xstep, y += ystep, mag += mstep, angle += astep )
-        {
-            for( j = 0; j < size.width; j++ )
+            else
             {
-                double alpha = angle[j]*ascale, m = mag ? mag[j] : 1.;
-                double a = cos(alpha), b = sin(alpha);
-                x[j] = m*a; y[j] = m*b;
+                const double *mag = (const double*)ptrs[0], *angle = (const double*)ptrs[1];
+                double *x = (double*)ptrs[2], *y = (double*)ptrs[3];
+                
+                for( k = 0; k < len; k++ )
+                    buf[0][k] = (float)angle[k];
+                
+                SinCos_32f( buf[0], buf[1], buf[0], len, angleInDegrees );
+                if( mag )
+                    for( k = 0; k < len; k++ )
+                    {
+                        double m = mag[k];
+                        x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
+                    }
+                else
+                    for( k = 0; k < len; k++ )
+                    {
+                        x[k] = buf[0][k]; y[k] = buf[1][k];
+                    }
             }
+            
+            if( ptrs[0] )
+                ptrs[0] += len*esz1;
+            ptrs[1] += len*esz1;
+            ptrs[2] += len*esz1;
+            ptrs[3] += len*esz1;
         }
     }
 }
@@ -772,7 +733,7 @@ static const double exp_prescale = 1.4426950408889634073599246810019 * (1 << EXP
 static const double exp_postscale = 1./(1 << EXPTAB_SCALE);
 static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) < 3000
 
-static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
+static void Exp_32f( const float *_x, float *y, int n )
 {
     static const float
         A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
@@ -789,7 +750,7 @@ static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
     Cv32suf buf[4];
 
 #if CV_SSE2
-    if( n >= 8 && checkHardwareSupport(CV_CPU_SSE) )
+    if( n >= 8 && USE_SSE2 )
     {
         static const __m128d prescale2 = _mm_set1_pd(exp_prescale);
         static const __m128 postscale4 = _mm_set1_ps((float)exp_postscale);
@@ -969,12 +930,10 @@ static CvStatus CV_STDCALL Exp_32f( const float *_x, float *y, int n )
         
         y[i] = (float)(buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0));
     }
-    
-    return CV_OK;
 }
     
 
-static CvStatus CV_STDCALL Exp_64f( const double *_x, double *y, int n )
+static void Exp_64f( const double *_x, double *y, int n )
 {
     static const double
     A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
@@ -992,7 +951,7 @@ static CvStatus CV_STDCALL Exp_64f( const double *_x, double *y, int n )
     const Cv64suf* x = (const Cv64suf*)_x;
     
 #if CV_SSE2
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {
         static const __m128d prescale2 = _mm_set1_pd(exp_prescale);
         static const __m128d postscale2 = _mm_set1_pd(exp_postscale);
@@ -1145,8 +1104,6 @@ static CvStatus CV_STDCALL Exp_64f( const double *_x, double *y, int n )
         
         y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
     }
-    
-    return CV_OK;
 }
 
 #undef EXPTAB_SCALE
@@ -1160,32 +1117,28 @@ static CvStatus CV_STDCALL Exp_64f( const double *_x, double *y, int n )
 
 #endif
 
-void exp( const Mat& src, Mat& dst )
+void exp( const InputArray& _src, OutputArray _dst )
 {
-    if( src.dims > 2 )
-    {
-        dst.create(src.dims, src.size, src.type());
-        const Mat* arrays[] = {&src, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            exp( it.planes[0], it.planes[1] );
-        return;
-    }
+    Mat src = _src.getMat();
+    int type = src.type(), depth = src.depth(), cn = src.channels();
     
-    int depth = src.depth();
-    dst.create( src.size(), src.type() );
-    Size size = getContinuousSize( src, dst, src.channels() );
-
-    if( depth == CV_32F )
-        for( int y = 0; y < size.height; y++ )
-            Exp_32f( src.ptr<float>(y), dst.ptr<float>(y), size.width );
-    else if( depth == CV_64F )
-        for( int y = 0; y < size.height; y++ )
-            Exp_64f( src.ptr<double>(y), dst.ptr<double>(y), size.width );
-    else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
+    
+    CV_Assert( depth == CV_32F || depth == CV_64F );
+    
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)(it.size*cn);
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        if( depth == CV_32F )
+            Exp_32f( (const float*)ptrs[0], (float*)ptrs[1], len );
+        else
+            Exp_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+    }
 }
 
 
@@ -1464,7 +1417,7 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
 #define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
 static const double ln_2 = 0.69314718055994530941723212145818;
 
-static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
+static void Log_32f( const float *_x, float *y, int n )
 {
     static const float shift[] = { 0, -1.f/512 };
     static const float
@@ -1480,7 +1433,7 @@ static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
     const int* x = (const int*)_x;
 
 #if CV_SSE2
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {
         static const __m128d ln2_2 = _mm_set1_pd(ln_2);
         static const __m128 _1_4 = _mm_set1_ps(1.f);
@@ -1610,12 +1563,10 @@ static CvStatus CV_STDCALL Log_32f( const float *_x, float *y, int n )
 
         y[i] = (float)y0;
     }
-
-    return CV_OK;
 }
 
 
-static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
+static void Log_64f( const double *x, double *y, int n )
 {
     static const double shift[] = { 0, -1./512 };
     static const double
@@ -1638,7 +1589,7 @@ static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
     DBLINT *X = (DBLINT *) x;
 
 #if CV_SSE2
-    if( checkHardwareSupport(CV_CPU_SSE) )
+    if( USE_SSE2 )
     {
         static const __m128d ln2_2 = _mm_set1_pd(ln_2);
         static const __m128d _1_2 = _mm_set1_pd(1.);
@@ -1802,8 +1753,6 @@ static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
         y0 += LOGPOLY( x0, h0 == 510 );
         y[i] = y0;
     }
-
-    return CV_OK;
 }
 
 #else
@@ -1813,46 +1762,39 @@ static CvStatus CV_STDCALL Log_64f( const double *x, double *y, int n )
 
 #endif
 
-void log( const Mat& src, Mat& dst )
+void log( const InputArray& _src, OutputArray _dst )
 {
-    if( src.dims > 2 )
-    {
-        dst.create(src.dims, src.size, src.type());
-        const Mat* arrays[] = {&src, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            log( it.planes[0], it.planes[1] );
-        return;
-    }
+    Mat src = _src.getMat();
+    int type = src.type(), depth = src.depth(), cn = src.channels();
     
-    int depth = src.depth();
-    dst.create( src.size(), src.type() );
-    Size size = getContinuousSize( src, dst, src.channels() );
-
-    if( depth == CV_32F )
-        for( int y = 0; y < size.height; y++ )
-            Log_32f( src.ptr<float>(y), dst.ptr<float>(y), size.width );
-    else if( depth == CV_64F )
-        for( int y = 0; y < size.height; y++ )
-            Log_64f( src.ptr<double>(y), dst.ptr<double>(y), size.width );
-    else
-        CV_Error( CV_StsUnsupportedFormat, "" );
-}
-
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
+    
+    CV_Assert( depth == CV_32F || depth == CV_64F );
+    
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)(it.size*cn);
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        if( depth == CV_32F )
+            Log_32f( (const float*)ptrs[0], (float*)ptrs[1], len );
+        else
+            Log_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+    }
+}    
 
 /****************************************************************************************\
 *                                    P O W E R                                           *
 \****************************************************************************************/
 
 template<typename T, typename WT>
-static CvStatus CV_STDCALL
-IPow( const void* _src, void* _dst, int len, int power )
+static void
+iPow_( const T* src, T* dst, int len, int power )
 {
     int i;
-    const T* src = (const T*)_src;
-    T* dst = (T*)_dst;
     for( i = 0; i < len; i++ )
     {
         WT a = 1, b = src[i];
@@ -1868,53 +1810,86 @@ IPow( const void* _src, void* _dst, int len, int power )
         a *= b;
         dst[i] = saturate_cast<T>(a);
     }
-    return CV_OK;
 }
 
-typedef CvStatus (CV_STDCALL * IPowFunc)( const void* src, void* dst, int len, int power );
-
-void pow( const Mat& _src, double power, Mat& dst )
-{
-    if( _src.dims > 2 )
-    {
-        dst.create(_src.dims, _src.size, _src.type());
-        const Mat* arrays[] = {&_src, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            pow( it.planes[0], power, it.planes[1] );
-        return;
-    }
     
-    int ipower = cvRound( power ), i, j;
-    bool is_ipower = 0;
-    int depth = _src.depth();
-    const Mat* src = &_src;
+void iPow8u(const uchar* src, uchar* dst, int len, int power)
+{
+    iPow_<uchar, int>(src, dst, len, power);
+}
 
-    dst.create( _src.size(), _src.type() );
+void iPow8s(const schar* src, schar* dst, int len, int power)
+{
+    iPow_<schar, int>(src, dst, len, power);
+}
+    
+void iPow16u(const ushort* src, ushort* dst, int len, int power)
+{
+    iPow_<ushort, int>(src, dst, len, power);
+}
 
+void iPow16s(const short* src, short* dst, int len, int power)
+{
+    iPow_<short, int>(src, dst, len, power);
+}
+    
+void iPow32s(const int* src, int* dst, int len, int power)
+{
+    iPow_<int, int>(src, dst, len, power);
+}
+
+void iPow32f(const float* src, float* dst, int len, int power)
+{
+    iPow_<float, float>(src, dst, len, power);
+}
+
+void iPow64f(const double* src, double* dst, int len, int power)
+{
+    iPow_<double, double>(src, dst, len, power);
+}
+
+    
+typedef void (*IPowFunc)( const uchar* src, uchar* dst, int len, int power );
+    
+static IPowFunc ipowTab[] =
+{
+    (IPowFunc)iPow8u, (IPowFunc)iPow8s, (IPowFunc)iPow16u, (IPowFunc)iPow16s,
+    (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
+};
+
+    
+void pow( const InputArray& _src, double power, OutputArray _dst )
+{
+    Mat src = _src.getMat();
+    int type = src.type(), depth = src.depth(), cn = src.channels();
+    
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
+    
+    int ipower = cvRound(power);
+    bool is_ipower = false;
+    
     if( fabs(ipower - power) < DBL_EPSILON )
     {
         if( ipower < 0 )
         {
-            divide( 1., _src, dst );
+            divide( 1., src, dst );
             if( ipower == -1 )
                 return;
             ipower = -ipower;
-            src = &dst;
+            src = dst;
         }
-
+        
         switch( ipower )
         {
         case 0:
             dst = Scalar::all(1);
             return;
         case 1:
-            src->copyTo(dst);
+            src.copyTo(dst);
             return;
         case 2:
-            multiply(*src, *src, dst);
+            multiply(src, src, dst);
             return;
         default:
             is_ipower = true;
@@ -1922,87 +1897,84 @@ void pow( const Mat& _src, double power, Mat& dst )
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
-
-    Size size = getContinuousSize( *src, dst, src->channels() );
-
+    
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)(it.size*cn);
+    
     if( is_ipower )
     {
-        static IPowFunc tab[] =
-        {
-            IPow<uchar, int>, 0, IPow<ushort, int>, IPow<short, int>, IPow<int, int>,
-            IPow<float, float>, IPow<double, double>, 0
-        };
-
-        IPowFunc func = tab[depth];
+        IPowFunc func = ipowTab[depth];
         CV_Assert( func != 0 );
-        for( i = 0; i < size.height; i++ )
-            func( src->data + src->step*i, dst.data + dst.step*i, size.width, ipower );
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func( ptrs[0], ptrs[1], len, ipower );
     }
     else if( fabs(fabs(power) - 0.5) < DBL_EPSILON )
     {
         MathFunc func = power < 0 ?
             (depth == CV_32F ? (MathFunc)InvSqrt_32f : (MathFunc)InvSqrt_64f) :
             (depth == CV_32F ? (MathFunc)Sqrt_32f : (MathFunc)Sqrt_64f);
-
-        for( i = 0; i < size.height; i++ )
-            func( src->data + src->step*i, dst.data + dst.step*i, size.width );
-    }
-    else if( depth == CV_32F )
-    {
-        const float *x = (const float*)src->data;
-        float *y = (float*)dst.data;
-        size_t xstep = src->step/sizeof(x[0]), ystep = dst.step/sizeof(y[0]);
-        float p = (float)power;
-
-        for( ; size.height--; x += xstep, y += ystep )
-        {
-            for( i = 0; i < size.width; i += MAX_BLOCK_SIZE )
-            {
-                int block_size = std::min(MAX_BLOCK_SIZE, size.width - i);
-                Log_32f(x + i, y + i, block_size);
-                for( j = 0; j < block_size; j++ )
-                    y[i + j] *= p;
-                Exp_32f(y + i, y + i, block_size);
-            }
-        }
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func( ptrs[0], ptrs[1], len );
     }
     else
     {
-        const double *x = (const double*)src->data;
-        double *y = (double*)dst.data;
-        size_t xstep = src->step/sizeof(x[0]), ystep = dst.step/sizeof(y[0]);
-
-        for( ; size.height--; x += xstep, y += ystep )
+        int j, k, blockSize = std::min(len, ((BLOCK_SIZE + cn-1)/cn)*cn);
+        size_t esz1 = src.elemSize1();
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            for( i = 0; i < size.width; i += MAX_BLOCK_SIZE )
+            for( j = 0; j < len; j += blockSize )
             {
-                int block_size = std::min(MAX_BLOCK_SIZE, size.width - i);
-                Log_64f(x + i, y + i, block_size);
-                for( j = 0; j < block_size; j++ )
-                    y[i + j] *= power;
-                Exp_64f(y + i, y + i, block_size);
+                int bsz = std::min(len - j, blockSize);
+                if( depth == CV_32F )
+                {
+                    const float* x = (const float*)ptrs[0];
+                    float* y = (float*)ptrs[1];
+                    
+                    Log_32f(x, y, bsz);
+                    for( k = 0; k < bsz; k++ )
+                        y[k] = (float)(y[k]*power);
+                    Exp_32f(y, y, bsz);
+                }
+                else
+                {
+                    const double* x = (const double*)ptrs[0];
+                    double* y = (double*)ptrs[1];
+                    
+                    Log_64f(x, y, bsz);
+                    for( k = 0; k < bsz; k++ )
+                        y[k] *= power;
+                    Exp_64f(y, y, bsz);
+                }
+                ptrs[0] += bsz*esz1;
+                ptrs[1] += bsz*esz1;
             }
         }
     }
 }
 
-void sqrt(const Mat& a, Mat& b)
+void sqrt(const InputArray& a, OutputArray b)
 {
     pow(a, 0.5, b);
 }
 
 /************************** CheckArray for NaN's, Inf's *********************************/
 
-bool checkRange(const Mat& src, bool quiet, Point* pt,
+bool checkRange(const InputArray& _src, bool quiet, Point* pt,
                 double minVal, double maxVal)
 {
+    Mat src = _src.getMat();
     if( src.dims > 2 )
     {
         const Mat* arrays[] = {&src, 0};
         Mat planes[1];
         NAryMatIterator it(arrays, planes);
         
-        for( int i = 0; i < it.nplanes; i++, ++it )
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
             if( !checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
             {
@@ -2218,61 +2190,46 @@ CV_IMPL int cvCheckArr( const CvArr* arr, int flags,
     this copyright notice and the above warranty information.
   -----------------------------------------------------------------------
 */
-CV_IMPL int
-cvSolveCubic( const CvMat* coeffs, CvMat* roots )
-{
-    int n = 0;
 
+int cv::solveCubic( const InputArray& _coeffs, OutputArray _roots )
+{
+    const int n0 = 3;
+    Mat coeffs = _coeffs.getMat();
+    int ctype = coeffs.type();
+    
+    CV_Assert( ctype == CV_32F || ctype == CV_64F );
+    CV_Assert( (coeffs.size() == Size(n0, 1) ||
+                coeffs.size() == Size(n0+1, 1) ||
+                coeffs.size() == Size(1, n0) ||
+                coeffs.size() == Size(1, n0+1)) );
+    
+    _roots.create(n0, 1, ctype, -1, true, DEPTH_MASK_FLT);
+    Mat roots = _roots.getMat();
+    
+    int i = -1, n = 0;
     double a0 = 1., a1, a2, a3;
     double x0 = 0., x1 = 0., x2 = 0.;
-    size_t step = 1;
-    int coeff_count;
-
-    if( !CV_IS_MAT(coeffs) )
-        CV_Error( !coeffs ? CV_StsNullPtr : CV_StsBadArg, "Input parameter is not a valid matrix" );
-
-    if( !CV_IS_MAT(roots) )
-        CV_Error( !roots ? CV_StsNullPtr : CV_StsBadArg, "Output parameter is not a valid matrix" );
-
-    if( (CV_MAT_TYPE(coeffs->type) != CV_32FC1 && CV_MAT_TYPE(coeffs->type) != CV_64FC1) ||
-        (CV_MAT_TYPE(roots->type) != CV_32FC1 && CV_MAT_TYPE(roots->type) != CV_64FC1) )
-        CV_Error( CV_StsUnsupportedFormat,
-        "Both matrices should be floating-point (single or double precision)" );
-
-    coeff_count = coeffs->rows + coeffs->cols - 1;
-
-    if( (coeffs->rows != 1 && coeffs->cols != 1) || (coeff_count != 3 && coeff_count != 4) )
-        CV_Error( CV_StsBadSize,
-        "The matrix of coefficients must be 1-dimensional vector of 3 or 4 elements" );
-
-    if( (roots->rows != 1 && roots->cols != 1) ||
-        roots->rows + roots->cols - 1 != 3 )
-        CV_Error( CV_StsBadSize,
-        "The matrix of roots must be 1-dimensional vector of 3 elements" );
-
-    if( CV_MAT_TYPE(coeffs->type) == CV_32FC1 )
+    int ncoeffs = coeffs.rows + coeffs.cols - 1;
+    
+    if( ctype == CV_32FC1 )
     {
-        const float* c = coeffs->data.fl;
-        if( coeffs->rows > 1 )
-            step = coeffs->step/sizeof(c[0]);
-        if( coeff_count == 4 )
-            a0 = c[0], c += step;
-        a1 = c[0];
-        a2 = c[step];
-        a3 = c[step*2];
+        if( ncoeffs == 4 )
+            a0 = coeffs.at<float>(++i);
+        
+        a1 = coeffs.at<float>(i+1);
+        a2 = coeffs.at<float>(i+2);
+        a3 = coeffs.at<float>(i+3);
     }
     else
     {
-        const double* c = coeffs->data.db;
-        if( coeffs->rows > 1 )
-            step = coeffs->step/sizeof(c[0]);
-        if( coeff_count == 4 )
-            a0 = c[0], c += step;
-        a1 = c[0];
-        a2 = c[step];
-        a3 = c[step*2];
+        if( ncoeffs == 4 )
+            a0 = coeffs.at<double>(++i);
+        
+        a1 = coeffs.at<double>(i+1);
+        a2 = coeffs.at<double>(i+2);
+        a3 = coeffs.at<double>(i+3);
     }
-
+    
     if( a0 == 0 )
     {
         if( a1 == 0 )
@@ -2315,12 +2272,12 @@ cvSolveCubic( const CvMat* coeffs, CvMat* roots )
         a1 *= a0;
         a2 *= a0;
         a3 *= a0;
-
+        
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (2 * a1 * a1 * a1 - 9 * a1 * a2 + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
         double d = Qcubed - R * R;
-
+        
         if( d >= 0 )
         {
             double theta = acos(R / sqrt(Qcubed));
@@ -2344,72 +2301,43 @@ cvSolveCubic( const CvMat* coeffs, CvMat* roots )
             n = 1;
         }
     }
-
-    step = 1;
-
-    if( CV_MAT_TYPE(roots->type) == CV_32FC1 )
+    
+    if( roots.type() == CV_32FC1 )
     {
-        float* r = roots->data.fl;
-        if( roots->rows > 1 )
-            step = roots->step/sizeof(r[0]);
-        r[0] = (float)x0;
-        r[step] = (float)x1;
-        r[step*2] = (float)x2;
+        roots.at<float>(0) = (float)x0;
+        roots.at<float>(1) = (float)x1;
+        roots.at<float>(2) = (float)x2;
     }
     else
     {
-        double* r = roots->data.db;
-        if( roots->rows > 1 )
-            step = roots->step/sizeof(r[0]);
-        r[0] = x0;
-        r[step] = x1;
-        r[step*2] = x2;
+        roots.at<double>(0) = x0;
+        roots.at<double>(1) = x1;
+        roots.at<double>(2) = x2;
     }
-
+    
     return n;
-}
-
-
-int cv::solveCubic( const Mat& coeffs, Mat& roots )
-{
-    CV_Assert( coeffs.dims <= 2 );
-    const int n = 3;
-    if( ((roots.rows != 1 || roots.cols != n) &&
-        (roots.rows != n || roots.cols != 1)) ||
-        (roots.type() != CV_32F && roots.type() != CV_64F) )
-        roots.create(n, 1, CV_64F);
-
-    CvMat _coeffs = coeffs, _roots = roots;
-    int nroots = cvSolveCubic( &_coeffs, &_roots);
-    if( nroots == 0 )
-        roots = Mat();
-    else if( roots.rows > 1 )
-        roots = roots.rowRange(0, nroots);
-    else
-        roots = roots.colRange(0, nroots);
-    return nroots;
 }
 
 /* finds complex roots of a polynomial using Durand-Kerner method:
    http://en.wikipedia.org/wiki/Durand%E2%80%93Kerner_method */
-double cv::solvePoly( const Mat& coeffs0, Mat& roots0, int maxIters )
+double cv::solvePoly( const InputArray& _coeffs0, OutputArray _roots0, int maxIters )
 {
     typedef Complex<double> C;
 
     double maxDiff = 0;
-    int iter, i, j, n;
+    int iter, i, j;
+    Mat coeffs0 = _coeffs0.getMat();
+    int ctype = _coeffs0.type();
+    int cdepth = CV_MAT_DEPTH(ctype);
+    
+    CV_Assert( CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2 );
+    CV_Assert( coeffs0.rows == 1 || coeffs0.cols == 1 );
+    
+    int n = coeffs0.cols + coeffs0.rows - 2;
 
-    CV_Assert( coeffs0.dims <= 2 &&
-               (coeffs0.cols == 1 || coeffs0.rows == 1) &&
-               (coeffs0.depth() == CV_32F || coeffs0.depth() == CV_64F) &&
-               coeffs0.channels() <= 2 );
-    n = coeffs0.cols + coeffs0.rows - 2;
-
-    if( ((roots0.rows != 1 || roots0.cols != n) &&
-        (roots0.rows != n || roots0.cols != 1)) ||
-        (roots0.type() != CV_32FC2 && roots0.type() != CV_64FC2) )
-        roots0.create( n, 1, CV_64FC2 );
-
+    _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, DEPTH_MASK_FLT);    
+    Mat roots0 = _roots0.getMat();
+    
     AutoBuffer<C> buf(n*2+2);
     C *coeffs = buf, *roots = coeffs + n + 1;
     Mat coeffs1(coeffs0.size(), CV_MAKETYPE(CV_64F, coeffs0.channels()), coeffs0.channels() == 2 ? coeffs : roots);
@@ -2460,6 +2388,16 @@ double cv::solvePoly( const Mat& coeffs0, Mat& roots0, int maxIters )
 
     Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.type());
     return maxDiff;
+}
+
+
+CV_IMPL int
+cvSolveCubic( const CvMat* coeffs, CvMat* roots )
+{
+    cv::Mat _coeffs = cv::cvarrToMat(coeffs), _roots = cv::cvarrToMat(roots), _roots0 = _roots;
+    int nroots = cv::solveCubic(_coeffs, _roots);
+    CV_Assert( _roots.data == _roots0.data ); // check that the array of roots was not reallocated
+    return nroots;
 }
 
 

@@ -197,7 +197,9 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
 };
 
 
-Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anchor)
+}
+    
+cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksize, int anchor)
 {
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
     CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(srcType) );
@@ -232,8 +234,8 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
 }
 
 
-Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize,
-                                         int anchor, double scale)
+cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(int sumType, int dstType, int ksize,
+                                                     int anchor, double scale)
 {
     int sdepth = CV_MAT_DEPTH(sumType), ddepth = CV_MAT_DEPTH(dstType);
     CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(dstType) );
@@ -272,7 +274,7 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize,
 }
 
 
-Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksize,
+cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ksize,
                     Point anchor, bool normalize, int borderType )
 {
     int sdepth = CV_MAT_DEPTH(srcType);
@@ -292,14 +294,16 @@ Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksize,
 }
 
 
-void boxFilter( const Mat& src, Mat& dst, int ddepth,
+void cv::boxFilter( const InputArray& _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+    Mat src = _src.getMat();
     int sdepth = src.depth(), cn = src.channels();
     if( ddepth < 0 )
         ddepth = sdepth;
-    dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
+    _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
+    Mat dst = _dst.getMat();
     if( borderType != BORDER_CONSTANT && normalize )
     {
         if( src.rows == 1 )
@@ -312,7 +316,7 @@ void boxFilter( const Mat& src, Mat& dst, int ddepth,
     f->apply( src, dst );
 }
 
-void blur( const Mat& src, CV_OUT Mat& dst,
+void cv::blur( const InputArray& src, OutputArray dst,
            Size ksize, Point anchor, int borderType )
 {
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
@@ -322,7 +326,7 @@ void blur( const Mat& src, CV_OUT Mat& dst,
                                      Gaussian Blur
 \****************************************************************************************/
 
-Mat getGaussianKernel( int n, double sigma, int ktype )
+cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 {
     const int SMALL_GAUSSIAN_SIZE = 7;
     static const float small_gaussian_tab[][SMALL_GAUSSIAN_SIZE] =
@@ -375,7 +379,7 @@ Mat getGaussianKernel( int n, double sigma, int ktype )
 }
 
 
-Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,
+cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
                                         double sigma1, double sigma2,
                                         int borderType )
 {
@@ -406,17 +410,20 @@ Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,
 }
 
 
-void GaussianBlur( const Mat& src, Mat& dst, Size ksize,
+void cv::GaussianBlur( const InputArray& _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
+    Mat src = _src.getMat();
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+    
     if( ksize.width == 1 && ksize.height == 1 )
     {
         src.copyTo(dst);
         return;
     }
 
-    dst.create( src.size(), src.type() );
     if( borderType != BORDER_CONSTANT )
     {
         if( src.rows == 1 )
@@ -432,6 +439,9 @@ void GaussianBlur( const Mat& src, Mat& dst, Size ksize,
 /****************************************************************************************\
                                       Median Filter
 \****************************************************************************************/
+
+namespace cv
+{
 
 #if _MSC_VER >= 1200
 #pragma warning( disable: 4244 )
@@ -1207,9 +1217,14 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     }
 }
 
-
-void medianBlur( const Mat& src0, Mat& dst, int ksize )
+}
+    
+void cv::medianBlur( const InputArray& _src0, OutputArray _dst, int ksize )
 {
+    Mat src0 = _src0.getMat();
+    _dst.create( src0.size(), src0.type() );
+    Mat dst = _dst.getMat();
+    
     if( ksize <= 1 )
     {
         src0.copyTo(dst);
@@ -1225,8 +1240,7 @@ void medianBlur( const Mat& src0, Mat& dst, int ksize )
             && src0.depth() > CV_8U
 #endif
         );
-
-    dst.create( src0.size(), src0.type() );
+    
     Mat src;
     if( useSortNet )
     {
@@ -1265,6 +1279,9 @@ void medianBlur( const Mat& src0, Mat& dst, int ksize )
 /****************************************************************************************\
                                    Bilateral Filtering
 \****************************************************************************************/
+
+namespace cv
+{
 
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
@@ -1497,12 +1514,16 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     }
 }
 
+}
 
-void bilateralFilter( const Mat& src, Mat& dst, int d,
+void cv::bilateralFilter( const InputArray& _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
                       int borderType )
 {
-    dst.create( src.size(), src.type() );
+    Mat src = _src.getMat();
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+    
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else if( src.depth() == CV_32F )
@@ -1510,8 +1531,6 @@ void bilateralFilter( const Mat& src, Mat& dst, int d,
     else
         CV_Error( CV_StsUnsupportedFormat,
         "Bilateral filtering is only implemented for 8u and 32f images" );
-}
-
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

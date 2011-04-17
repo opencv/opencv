@@ -106,7 +106,7 @@ bool CV_GpuMatOpCopyToTest::compare_matrix(cv::Mat & cpumat, gpu::GpuMat & gpuma
     cv::waitKey(0);
 #endif
 
-    double ret = norm(cmat, gmat);
+    double ret = norm(cmat, (Mat)gmat);
 
     if (ret < 1.0)
         return true;

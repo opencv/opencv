@@ -235,7 +235,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
 
 static void
 Line( Mat& img, Point pt1, Point pt2,
-      const void* color, int connectivity = 8 )
+      const void* _color, int connectivity = 8 )
 {
     if( connectivity == 0 )
         connectivity = 8;
@@ -245,10 +245,21 @@ Line( Mat& img, Point pt1, Point pt2,
     LineIterator iterator(img, pt1, pt2, connectivity, true);
     int i, count = iterator.count;
     int pix_size = (int)img.elemSize();
+    const uchar* color = (const uchar*)_color;
 
     for( i = 0; i < count; i++, ++iterator )
     {
-        CV_MEMCPY_AUTO( *iterator, color, pix_size );
+        uchar* ptr = *iterator;
+        if( pix_size == 1 )
+            ptr[0] = color[0];
+        else if( pix_size == 3 )
+        {
+            ptr[0] = color[0];
+            ptr[1] = color[1];
+            ptr[2] = color[2];
+        }
+        else
+            memcpy( *iterator, color, pix_size );
     }
 }
 
@@ -1317,7 +1328,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
         center.y >= radius && center.y < size.height - radius;
 
     #define ICV_PUT_POINT( ptr, x )     \
-        CV_MEMCPY_CHAR( ptr + (x)*pix_size, color, pix_size );
+        memcpy( ptr + (x)*pix_size, color, pix_size );
 
     while( dx >= dy )
     {

@@ -561,22 +561,24 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     }
 }
 
+}
 
-void calcOpticalFlowFarneback( const Mat& prev0, const Mat& next0,
-                               Mat& flow0, double pyr_scale, int levels, int winsize,
+void cv::calcOpticalFlowFarneback( const InputArray& _prev0, const InputArray& _next0,
+                               OutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
+    Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;
     const Mat* img[2] = { &prev0, &next0 };
-    Mat fimg;
 
     int i, k;
     double scale;
-    Mat prevFlow, flow;
+    Mat prevFlow, flow, fimg;
 
     CV_Assert( prev0.size() == next0.size() && prev0.channels() == next0.channels() &&
         prev0.channels() == 1 && pyr_scale < 1 );
-    flow0.create( prev0.size(), CV_32FC2 );
+    _flow0.create( prev0.size(), CV_32FC2 );
+    Mat flow0 = _flow0.getMat();
 
     for( k = 0, scale = 1; k < levels; k++ )
     {
@@ -643,7 +645,6 @@ void calcOpticalFlowFarneback( const Mat& prev0, const Mat& next0,
     }
 }
 
-}
 
 CV_IMPL void cvCalcOpticalFlowFarneback(
             const CvArr* _prev, const CvArr* _next,

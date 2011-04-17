@@ -195,13 +195,17 @@ static void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, Size srcro
         memcpy(dst + (i + srcroi.height)*dststep, constBuf, dstroi.width);
 }
 
+}
     
-void copyMakeBorder( const Mat& src, Mat& dst, int top, int bottom,
-                    int left, int right, int borderType, const Scalar& value )
+void cv::copyMakeBorder( const InputArray& _src, OutputArray _dst, int top, int bottom,
+                         int left, int right, int borderType, const Scalar& value )
 {
+    Mat src = _src.getMat();
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
     
-    dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
+    _dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
+    Mat dst = _dst.getMat();
+    
     if( borderType != BORDER_CONSTANT )
         copyMakeBorder_8u( src.data, src.step, src.size(),
                            dst.data, dst.step, dst.size(),
@@ -214,8 +218,6 @@ void copyMakeBorder( const Mat& src, Mat& dst, int top, int bottom,
                                 dst.data, dst.step, dst.size(),
                                 top, left, (int)src.elemSize(), (uchar*)buf );
     }
-}
-    
 }
 
 

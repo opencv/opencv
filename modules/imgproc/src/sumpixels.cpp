@@ -45,28 +45,17 @@
 namespace cv
 {
 
-template<typename QT> inline QT sqr(uchar a) { return a*a; }
-template<typename QT> inline QT sqr(float a) { return a*a; }
-template<typename QT> inline QT sqr(double a) { return a*a; }
-template<> inline double sqr(uchar a) { return CV_8TO32F_SQR(a); }
-
-
 template<typename T, typename ST, typename QT>
-void integral_( const Mat& _src, Mat& _sum, Mat& _sqsum, Mat& _tilted )
+void integral_( const T* src, size_t srcstep, ST* sum, size_t sumstep,
+                QT* sqsum, size_t sqsumstep, ST* tilted, size_t tiltedstep,
+                Size size, int cn )
 {
-    int cn = _src.channels();
-    Size size = _src.size();
     int x, y, k;
 
-    const T* src = (const T*)_src.data;
-    ST* sum = (ST*)_sum.data;
-    ST* tilted = (ST*)_tilted.data;
-    QT* sqsum = (QT*)_sqsum.data;
-
-    int srcstep = (int)(_src.step/sizeof(T));
-    int sumstep = (int)(_sum.step/sizeof(ST));
-    int tiltedstep = (int)(_tilted.step/sizeof(ST));
-    int sqsumstep = (int)(_sqsum.step/sizeof(QT));
+    srcstep /= sizeof(T);
+    sumstep /= sizeof(ST);
+    tiltedstep /= sizeof(ST);
+    sqsumstep /= sizeof(QT);
 
     size.width *= cn;
 
@@ -113,7 +102,7 @@ void integral_( const Mat& _src, Mat& _sum, Mat& _sqsum, Mat& _tilted )
                 {
                     T it = src[x];
                     s += it;
-                    sq += sqr<QT>(it);
+                    sq += (QT)it*it;
                     ST t = sum[x - sumstep] + s;
                     QT tq = sqsum[x - sqsumstep] + sq;
                     sum[x] = t;
@@ -128,45 +117,55 @@ void integral_( const Mat& _src, Mat& _sum, Mat& _sqsum, Mat& _tilted )
         ST* buf = _buf;
         ST s;
         QT sq;
-        for( k = 0; k < cn; k++, src++, sum++, tilted++, sqsum++, buf++ )
+        for( k = 0; k < cn; k++, src++, sum++, tilted++, buf++ )
         {
             sum[-cn] = tilted[-cn] = 0;
-            sqsum[-cn] = 0;
 
             for( x = 0, s = 0, sq = 0; x < size.width; x += cn )
             {
                 T it = src[x];
                 buf[x] = tilted[x] = it;
                 s += it;
-                sq += sqr<QT>(it);
+                sq += (QT)it*it;
                 sum[x] = s;
-                sqsum[x] = sq;
+                if( sqsum )
+                    sqsum[x] = sq;
             }
 
             if( size.width == cn )
                 buf[cn] = 0;
+            
+            if( sqsum )
+            {
+                sqsum[-cn] = 0;
+                sqsum++;
+            }
         }
 
         for( y = 1; y < size.height; y++ )
         {
             src += srcstep - cn;
             sum += sumstep - cn;
-            sqsum += sqsumstep - cn;
             tilted += tiltedstep - cn;
             buf += -cn;
+            
+            if( sqsum )
+                sqsum += sqsumstep - cn;
 
-            for( k = 0; k < cn; k++, src++, sum++, sqsum++, tilted++, buf++ )
+            for( k = 0; k < cn; k++, src++, sum++, tilted++, buf++ )
             {
                 T it = src[0];
                 ST t0 = s = it;
-                QT tq0 = sq = sqr<QT>(it);
+                QT tq0 = sq = (QT)it*it;
 
                 sum[-cn] = 0;
-                sqsum[-cn] = 0;
+                if( sqsum )
+                    sqsum[-cn] = 0;
                 tilted[-cn] = tilted[-tiltedstep];
 
                 sum[0] = sum[-sumstep] + t0;
-                sqsum[0] = sqsum[-sqsumstep] + tq0;
+                if( sqsum )
+                    sqsum[0] = sqsum[-sqsumstep] + tq0;
                 tilted[0] = tilted[-tiltedstep] + t0 + buf[cn];
 
                 for( x = cn; x < size.width - cn; x += cn )
@@ -174,11 +173,12 @@ void integral_( const Mat& _src, Mat& _sum, Mat& _sqsum, Mat& _tilted )
                     ST t1 = buf[x];
                     buf[x - cn] = t1 + t0;
                     t0 = it = src[x];
-                    tq0 = sqr<QT>(it);
+                    tq0 = (QT)it*it;
                     s += t0;
                     sq += tq0;
                     sum[x] = sum[x - sumstep] + s;
-                    sqsum[x] = sqsum[x - sqsumstep] + sq;
+                    if( sqsum )
+                        sqsum[x] = sqsum[x - sqsumstep] + sq;
                     t1 += buf[x + cn] + t0 + tilted[x - tiltedstep - cn];
                     tilted[x] = t1;
                 }
@@ -188,79 +188,96 @@ void integral_( const Mat& _src, Mat& _sum, Mat& _sqsum, Mat& _tilted )
                     ST t1 = buf[x];
                     buf[x - cn] = t1 + t0;
                     t0 = it = src[x];
-                    tq0 = sqr<QT>(it);
+                    tq0 = (QT)it*it;
                     s += t0;
                     sq += tq0;
                     sum[x] = sum[x - sumstep] + s;
-                    sqsum[x] = sqsum[x - sqsumstep] + sq;
+                    if( sqsum )
+                        sqsum[x] = sqsum[x - sqsumstep] + sq;
                     tilted[x] = t0 + t1 + tilted[x - tiltedstep - cn];
                     buf[x] = t0;
                 }
+                
+                if( sqsum )
+                    sqsum++;
             }
         }
     }
 }
 
-typedef void (*IntegralFunc)(const Mat& _src, Mat& _sum, Mat& _sqsum, Mat& _tilted );
+    
+#define DEF_INTEGRAL_FUNC(suffix, T, ST, QT) \
+void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, QT* sqsum, size_t sqsumstep, \
+                        ST* tilted, size_t tiltedstep, Size size, int cn ) \
+{ integral_(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn); }
 
-static void
-integral( const Mat& src, Mat& sum, Mat* _sqsum, Mat* _tilted, int sdepth )
+DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
+DEF_INTEGRAL_FUNC(8u32f, uchar, float, double)
+DEF_INTEGRAL_FUNC(8u64f, uchar, double, double)
+DEF_INTEGRAL_FUNC(32f, float, float, float)
+DEF_INTEGRAL_FUNC(32f64f, float, double, double)
+DEF_INTEGRAL_FUNC(64f, double, double, double)
+    
+typedef void (*IntegralFunc)(const uchar* src, size_t srcstep, uchar* sum, size_t sumstep,
+                             uchar* sqsum, size_t sqsumstep, uchar* tilted, size_t tstep,
+                             Size size, int cn );
+
+}
+
+
+void cv::integral( const InputArray& _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth )
 {
+    Mat src = _src.getMat(), sum, sqsum, tilted;
     int depth = src.depth(), cn = src.channels();
     Size isize(src.cols + 1, src.rows+1);
-    Mat sqsum, tilted;
 
     if( sdepth <= 0 )
         sdepth = depth == CV_8U ? CV_32S : CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth);
-    sum.create( isize, CV_MAKETYPE(sdepth, cn) );
+    _sum.create( isize, CV_MAKETYPE(sdepth, cn) );
+    sum = _sum.getMat();
     
-    if( _tilted )
-        _tilted->create( isize, CV_MAKETYPE(sdepth, cn) );
-    else
-        _tilted = &tilted;
+    if( _tilted.needed() )
+    {
+        _tilted.create( isize, CV_MAKETYPE(sdepth, cn) );
+        tilted = _tilted.getMat();
+    }
     
-    if( !_sqsum )
-        _sqsum = &sqsum;
+    if( _sqsum.needed() )
+    {
+        _sqsum.create( isize, CV_MAKETYPE(CV_64F, cn) );
+        sqsum = _sqsum.getMat();
+    }
     
-    if( _sqsum != &sqsum || _tilted->data )
-        _sqsum->create( isize, CV_MAKETYPE(CV_64F, cn) );
-
     IntegralFunc func = 0;
 
     if( depth == CV_8U && sdepth == CV_32S )
-        func = integral_<uchar, int, double>;
+        func = (IntegralFunc)integral_8u32s;
     else if( depth == CV_8U && sdepth == CV_32F )
-        func = integral_<uchar, float, double>;
+        func = (IntegralFunc)integral_8u32f;
     else if( depth == CV_8U && sdepth == CV_64F )
-        func = integral_<uchar, double, double>;
+        func = (IntegralFunc)integral_8u64f;
     else if( depth == CV_32F && sdepth == CV_32F )
-        func = integral_<float, float, double>;
+        func = (IntegralFunc)integral_32f;
     else if( depth == CV_32F && sdepth == CV_64F )
-        func = integral_<float, double, double>;
+        func = (IntegralFunc)integral_32f64f;
     else if( depth == CV_64F && sdepth == CV_64F )
-        func = integral_<double, double, double>;
+        func = (IntegralFunc)integral_64f;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( src, sum, *_sqsum, *_tilted );
+    func( src.data, src.step, sum.data, sum.step, sqsum.data, sqsum.step,
+          tilted.data, tilted.step, src.size(), cn );
 }
-
-void integral( const Mat& src, Mat& sum, int sdepth )
+    
+void cv::integral( const InputArray& src, OutputArray sum, int sdepth )
 {
-    integral( src, sum, 0, 0, sdepth );
+    integral( src, sum, OutputArray(), OutputArray(), sdepth );
 }
 
-void integral( const Mat& src, Mat& sum, Mat& sqsum, int sdepth )
+void cv::integral( const InputArray& src, OutputArray sum, OutputArray sqsum, int sdepth )
 {
-    integral( src, sum, &sqsum, 0, sdepth );
-}
-
-void integral( const Mat& src, Mat& sum, Mat& sqsum, Mat& tilted, int sdepth )
-{
-    integral( src, sum, &sqsum, &tilted, sdepth );
-}
-
+    integral( src, sum, sqsum, OutputArray(), sdepth );
 }
 
 
@@ -283,7 +300,8 @@ cvIntegral( const CvArr* image, CvArr* sumImage,
         tilted0 = tilted = cv::cvarrToMat(tiltedSumImage);
         ptilted = &tilted;
     }
-    cv::integral( src, sum, psqsum, ptilted, sum.depth() );
+    cv::integral( src, sum, psqsum ? cv::OutputArray(*psqsum) : cv::OutputArray(),
+                  ptilted ? cv::OutputArray(*ptilted) : cv::OutputArray(), sum.depth() );
 
     CV_Assert( sum.data == sum0.data && sqsum.data == sqsum0.data && tilted.data == tilted0.data );
 }

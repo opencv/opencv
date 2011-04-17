@@ -59,7 +59,7 @@ namespace cv
 {
     
 BackgroundSubtractor::~BackgroundSubtractor() {}
-void BackgroundSubtractor::operator()(const Mat&, Mat&, double)
+void BackgroundSubtractor::operator()(const InputArray&, OutputArray, double)
 {
 }
 
@@ -381,15 +381,17 @@ static void process8uC3( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fg
     }
 }
 
-void BackgroundSubtractorMOG::operator()(const Mat& image, Mat& fgmask, double learningRate)
+void BackgroundSubtractorMOG::operator()(const InputArray& _image, OutputArray _fgmask, double learningRate)
 {
+    Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
     
     if( needToInitialize )
         initialize(image.size(), image.type());
     
     CV_Assert( image.depth() == CV_8U );
-    fgmask.create( image.size(), CV_8U );
+    _fgmask.create( image.size(), CV_8U );
+    Mat fgmask = _fgmask.getMat();
     
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( nframes, history );

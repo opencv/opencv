@@ -65,74 +65,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CV_MEMCPY_CHAR( dst, src, len )                 \
-{                                                       \
-    size_t _icv_memcpy_i_, _icv_memcpy_len_ = (len);    \
-    char* _icv_memcpy_dst_ = (char*)(dst);              \
-    const char* _icv_memcpy_src_ = (const char*)(src);  \
-                                                        \
-    for( _icv_memcpy_i_ = 0; _icv_memcpy_i_ < _icv_memcpy_len_; _icv_memcpy_i_++ )  \
-        _icv_memcpy_dst_[_icv_memcpy_i_] = _icv_memcpy_src_[_icv_memcpy_i_];        \
-}
-
-
-#define CV_MEMCPY_INT( dst, src, len )                  \
-{                                                       \
-    size_t _icv_memcpy_i_, _icv_memcpy_len_ = (len);    \
-    int* _icv_memcpy_dst_ = (int*)(dst);                \
-    const int* _icv_memcpy_src_ = (const int*)(src);    \
-    assert( ((size_t)_icv_memcpy_src_&(sizeof(int)-1)) == 0 && \
-    ((size_t)_icv_memcpy_dst_&(sizeof(int)-1)) == 0 );  \
-                                                        \
-    for(_icv_memcpy_i_=0;_icv_memcpy_i_<_icv_memcpy_len_;_icv_memcpy_i_++)  \
-        _icv_memcpy_dst_[_icv_memcpy_i_] = _icv_memcpy_src_[_icv_memcpy_i_];\
-}
-
-
-#define CV_MEMCPY_AUTO( dst, src, len )                                             \
-{                                                                                   \
-    size_t _icv_memcpy_i_, _icv_memcpy_len_ = (len);                                \
-    char* _icv_memcpy_dst_ = (char*)(dst);                                          \
-    const char* _icv_memcpy_src_ = (const char*)(src);                              \
-    if( (_icv_memcpy_len_ & (sizeof(int)-1)) == 0 )                                 \
-    {                                                                               \
-        assert( ((size_t)_icv_memcpy_src_&(sizeof(int)-1)) == 0 &&                  \
-                ((size_t)_icv_memcpy_dst_&(sizeof(int)-1)) == 0 );                  \
-        for( _icv_memcpy_i_ = 0; _icv_memcpy_i_ < _icv_memcpy_len_;                 \
-            _icv_memcpy_i_+=sizeof(int) )                                           \
-        {                                                                           \
-            *(int*)(_icv_memcpy_dst_+_icv_memcpy_i_) =                              \
-            *(const int*)(_icv_memcpy_src_+_icv_memcpy_i_);                         \
-        }                                                                           \
-    }                                                                               \
-    else                                                                            \
-    {                                                                               \
-        for(_icv_memcpy_i_ = 0; _icv_memcpy_i_ < _icv_memcpy_len_; _icv_memcpy_i_++)\
-            _icv_memcpy_dst_[_icv_memcpy_i_] = _icv_memcpy_src_[_icv_memcpy_i_];    \
-    }                                                                               \
-}
-
-
-#define CV_ZERO_CHAR( dst, len )                        \
-{                                                       \
-    size_t _icv_memcpy_i_, _icv_memcpy_len_ = (len);    \
-    char* _icv_memcpy_dst_ = (char*)(dst);              \
-                                                        \
-    for( _icv_memcpy_i_ = 0; _icv_memcpy_i_ < _icv_memcpy_len_; _icv_memcpy_i_++ )  \
-        _icv_memcpy_dst_[_icv_memcpy_i_] = '\0';        \
-}
-
-
-#define CV_ZERO_INT( dst, len )                                                     \
-{                                                                                   \
-    size_t _icv_memcpy_i_, _icv_memcpy_len_ = (len);                                \
-    int* _icv_memcpy_dst_ = (int*)(dst);                                            \
-    assert( ((size_t)_icv_memcpy_dst_&(sizeof(int)-1)) == 0 );                      \
-                                                                                    \
-    for(_icv_memcpy_i_=0;_icv_memcpy_i_<_icv_memcpy_len_;_icv_memcpy_i_++)          \
-        _icv_memcpy_dst_[_icv_memcpy_i_] = 0;                                       \
-}
-
 namespace cv
 {
 
@@ -150,23 +82,11 @@ extern const uchar g_Saturate8u[];
 #define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
 #define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
 
-typedef void (*CopyMaskFunc)(const Mat& src, Mat& dst, const Mat& mask);
-
-extern CopyMaskFunc g_copyMaskFuncTab[];
-
-static inline CopyMaskFunc getCopyMaskFunc(int esz)
-{
-    CV_Assert( (unsigned)esz <= 32U );
-    CopyMaskFunc func = g_copyMaskFuncTab[esz];
-    CV_Assert( func != 0 );
-    return func;
-}
 
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
 void deleteThreadRNGData();
 #endif
-
     
 template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
 {
@@ -190,22 +110,6 @@ template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
     typedef T2 type2;
     typedef T3 rtype;
     T3 operator ()(T1 a, T2 b) const { return saturate_cast<T3>(b - a); }
-};
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpMul
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(T1 a, T2 b) const { return saturate_cast<T3>(a * b); }
-};
-
-template<typename T1, typename T2=T1, typename T3=T1> struct OpDiv
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(T1 a, T2 b) const { return saturate_cast<T3>(a / b); }
 };
 
 template<typename T> struct OpMin
@@ -261,155 +165,35 @@ inline Size getContinuousSize( const Mat& m1, const Mat& m2,
 
 struct NoVec
 {
-    int operator()(const void*, const void*, void*, int) const { return 0; }
+    size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
+
+extern volatile bool USE_SSE2;
+
+typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
+                           const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, Size sz,
+                           void*);
+
+BinaryFunc getConvertFunc(int sdepth, int ddepth);
+BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);  
+BinaryFunc getCopyMaskFunc(size_t esz);
+
+enum { BLOCK_SIZE = 1024 };
+
+#ifdef HAVE_IPP
+static inline IppiSize ippiSize(int width, int height) { IppiSize sz={width, height}; return sz; }
+static inline IppiSize ippiSize(Size _sz) { reIppiSize sz={_sz.width, _sz.height}; return sz; }
+#endif
     
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#define ARITHM_USE_IPP 1
+#define IF_IPP(then_call, else_call) then_call
+#else
+#define ARITHM_USE_IPP 0
+#define IF_IPP(then_call, else_call) else_call
+#endif    
     
-template<class Op, class VecOp> static void
-binaryOpC1_( const Mat& srcmat1, const Mat& srcmat2, Mat& dstmat )
-{
-    Op op; VecOp vecOp;
-    typedef typename Op::type1 T1;
-    typedef typename Op::type2 T2;
-    typedef typename Op::rtype DT;
-
-    const T1* src1 = (const T1*)srcmat1.data;
-    const T2* src2 = (const T2*)srcmat2.data;
-    DT* dst = (DT*)dstmat.data;
-    size_t step1 = srcmat1.step/sizeof(src1[0]);
-    size_t step2 = srcmat2.step/sizeof(src2[0]);
-    size_t step  = dstmat.step/sizeof(dst[0]);
-    Size size = getContinuousSize( srcmat1, srcmat2, dstmat, dstmat.channels() );
-
-    if( size.width == 1 )
-    {
-        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
-            dst[0] = op( src1[0], src2[0] );
-        return;
-    }
-
-    for( ; size.height--; src1 += step1, src2 += step2, dst += step )
-    {
-        int x;
-        x = vecOp(src1, src2, dst, size.width);
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            DT f0, f1;
-            f0 = op( src1[x], src2[x] );
-            f1 = op( src1[x+1], src2[x+1] );
-            dst[x] = f0;
-            dst[x+1] = f1;
-            f0 = op(src1[x+2], src2[x+2]);
-            f1 = op(src1[x+3], src2[x+3]);
-            dst[x+2] = f0;
-            dst[x+3] = f1;
-        }
-
-        for( ; x < size.width; x++ )
-            dst[x] = op( src1[x], src2[x] );
-    }
-}
-
-typedef void (*BinaryFunc)(const Mat& src1, const Mat& src2, Mat& dst);
-
-template<class Op> static void
-binarySOpCn_( const Mat& srcmat, Mat& dstmat, const Scalar& _scalar )
-{
-    Op op;
-    typedef typename Op::type1 T;
-    typedef typename Op::type2 WT;
-    typedef typename Op::rtype DT;
-    const T* src0 = (const T*)srcmat.data;
-    DT* dst0 = (DT*)dstmat.data;
-    size_t step1 = srcmat.step/sizeof(src0[0]);
-    size_t step = dstmat.step/sizeof(dst0[0]);
-    int cn = dstmat.channels();
-    Size size = getContinuousSize( srcmat, dstmat, cn );
-    WT scalar[12];
-    scalarToRawData(_scalar, scalar, CV_MAKETYPE(DataType<WT>::depth,cn), 12);
-
-    for( ; size.height--; src0 += step1, dst0 += step )
-    {
-        int i, len = size.width;
-        const T* src = src0;
-        T* dst = dst0;
-
-        for( ; (len -= 12) >= 0; dst += 12, src += 12 )
-        {
-            DT t0 = op(src[0], scalar[0]);
-            DT t1 = op(src[1], scalar[1]);
-            dst[0] = t0; dst[1] = t1;
-
-            t0 = op(src[2], scalar[2]);
-            t1 = op(src[3], scalar[3]);
-            dst[2] = t0; dst[3] = t1;
-
-            t0 = op(src[4], scalar[4]);
-            t1 = op(src[5], scalar[5]);
-            dst[4] = t0; dst[5] = t1;
-
-            t0 = op(src[6], scalar[6]);
-            t1 = op(src[7], scalar[7]);
-            dst[6] = t0; dst[7] = t1;
-
-            t0 = op(src[8], scalar[8]);
-            t1 = op(src[9], scalar[9]);
-            dst[8] = t0; dst[9] = t1;
-
-            t0 = op(src[10], scalar[10]);
-            t1 = op(src[11], scalar[11]);
-            dst[10] = t0; dst[11] = t1;
-        }
-
-        for( (len) += 12, i = 0; i < (len); i++ )
-            dst[i] = op((WT)src[i], scalar[i]);
-    }
-}
-
-template<class Op> static void
-binarySOpC1_( const Mat& srcmat, Mat& dstmat, double _scalar )
-{
-    Op op;
-    typedef typename Op::type1 T;
-    typedef typename Op::type2 WT;
-    typedef typename Op::rtype DT;
-    WT scalar = saturate_cast<WT>(_scalar);
-    const T* src = (const T*)srcmat.data;
-    DT* dst = (DT*)dstmat.data;
-    size_t step1 = srcmat.step/sizeof(src[0]);
-    size_t step = dstmat.step/sizeof(dst[0]);
-    Size size = srcmat.size();
-
-    size.width *= srcmat.channels();
-    if( srcmat.isContinuous() && dstmat.isContinuous() )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-
-    for( ; size.height--; src += step1, dst += step )
-    {
-        int x;
-        for( x = 0; x <= size.width - 4; x += 4 )
-        {
-            DT f0 = op( src[x], scalar );
-            DT f1 = op( src[x+1], scalar );
-            dst[x] = f0;
-            dst[x+1] = f1;
-            f0 = op( src[x+2], scalar );
-            f1 = op( src[x+3], scalar );
-            dst[x+2] = f0;
-            dst[x+3] = f1;
-        }
-
-        for( ; x < size.width; x++ )
-            dst[x] = op( src[x], scalar );
-    }
-}
-
-typedef void (*BinarySFuncCn)(const Mat& src1, Mat& dst, const Scalar& scalar);
-typedef void (*BinarySFuncC1)(const Mat& src1, Mat& dst, double scalar);
-
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/

@@ -126,41 +126,38 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 	}
 }
 
-namespace cv
-{
-
-void namedWindow( const string& winname, int flags )
+void cv::namedWindow( const string& winname, int flags )
 {
     cvNamedWindow( winname.c_str(), flags );
 }
 
-void destroyWindow( const string& winname )
+void cv::destroyWindow( const string& winname )
 {
     cvDestroyWindow( winname.c_str() );
 }
 
-void setWindowProperty(const string& winname, int prop_id, double prop_value)
+void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
 	cvSetWindowProperty( winname.c_str(),prop_id,prop_value);
 }
 
-double getWindowProperty(const string& winname, int prop_id)
+double cv::getWindowProperty(const string& winname, int prop_id)
 {
 	return  cvGetWindowProperty(winname.c_str(),prop_id);
 }
 
-void imshow( const string& winname, const Mat& img )
+void cv::imshow( const string& winname, const InputArray& img )
 {
-    CvMat _img = img;
-    cvShowImage( winname.c_str(), &_img );
+    CvMat c_img = img.getMat();
+    cvShowImage( winname.c_str(), &c_img );
 }
 
-int waitKey(int delay)
+int cv::waitKey(int delay)
 {
     return cvWaitKey(delay);
 }
 
-int createTrackbar(const string& trackbarName, const string& winName,
+int cv::createTrackbar(const string& trackbarName, const string& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)
 {
@@ -168,82 +165,80 @@ int createTrackbar(const string& trackbarName, const string& winName,
                              value, count, callback, userdata);
 }
 
-void setTrackbarPos( const string& trackbarName, const string& winName, int value )
+void cv::setTrackbarPos( const string& trackbarName, const string& winName, int value )
 {
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
 }
 
-int getTrackbarPos( const string& trackbarName, const string& winName )
+int cv::getTrackbarPos( const string& trackbarName, const string& winName )
 {
 	return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
 }
     
-void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param)
+void cv::setMouseCallback( const string& windowName, MouseCallback onMouse, void* param)
 {
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
 }
     
-int startWindowThread()
+int cv::startWindowThread()
 {
     return cvStartWindowThread();
 }
 
 #if defined (HAVE_QT)
 
-CvFont fontQt(const string& nameFont, int pointSize, Scalar color, int weight,  int style, int spacing)
+CvFont cv::fontQt(const string& nameFont, int pointSize, Scalar color, int weight,  int style, int spacing)
 {
 return cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
 }
 
-void addText( const Mat& img, const string& text, Point org, CvFont font)
+void cv::addText( const Mat& img, const string& text, Point org, CvFont font)
 {
 	CvMat _img = img;
 	cvAddText( &_img, text.c_str(), org,&font);
 }
 
-void displayStatusBar(const string& name,  const string& text, int delayms)
+void cv::displayStatusBar(const string& name,  const string& text, int delayms)
 {
 	cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
 }
 
-void createOpenGLCallback(const string& name,  OpenGLCallback callback, void* param)
+void cv::createOpenGLCallback(const string& name,  OpenGLCallback callback, void* param)
 {
 	cvCreateOpenGLCallback(name.c_str(),callback, param);
 }
 
-void displayOverlay(const string& name,  const string& text, int delayms)
+void cv::displayOverlay(const string& name,  const string& text, int delayms)
 {
 	cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
 }
 
-int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+int cv::startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
 	return cvStartLoop(pt2Func, argc, argv);
 }
 
-void stopLoop()
+void cv::stopLoop()
 {
 	cvStopLoop();
 }
 
-void saveWindowParameters(const string& windowName)
+void cv::saveWindowParameters(const string& windowName)
 {
 	cvSaveWindowParameters(windowName.c_str());
 }
 
-void loadWindowParameters(const string& windowName)
+void cv::loadWindowParameters(const string& windowName)
 {
 	cvLoadWindowParameters(windowName.c_str());
 }
 
-int createButton(const string& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
+int cv::createButton(const string& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
 {
 	return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
 #endif
-
-}
 
 #if   defined WIN32 || defined _WIN32         // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp

@@ -169,12 +169,15 @@ double CV_UpdateMHITest::get_success_error_level( int /*test_case_idx*/, int /*i
 
 void CV_UpdateMHITest::run_func()
 {
-    cvUpdateMotionHistory( test_array[INPUT][0], test_array[INPUT_OUTPUT][0], timestamp, duration );
+    CvMat m = test_mat[INPUT_OUTPUT][0];
+    cv::updateMotionHistory( test_mat[INPUT][0], test_mat[INPUT_OUTPUT][0], timestamp, duration);
+    m = test_mat[INPUT_OUTPUT][0];
 }
 
 
 void CV_UpdateMHITest::prepare_to_validation( int /*test_case_idx*/ )
 {
+    CvMat m0 = test_mat[REF_INPUT_OUTPUT][0];
     test_updateMHI( test_mat[INPUT][0], test_mat[REF_INPUT_OUTPUT][0], timestamp, duration );
 }
 
@@ -290,8 +293,10 @@ double CV_MHIGradientTest::get_success_error_level( int /*test_case_idx*/, int /
 
 void CV_MHIGradientTest::run_func()
 {
-    cvCalcMotionGradient( test_array[INPUT][0], test_array[OUTPUT][0],
-                          test_array[OUTPUT][1], delta1, delta2, aperture_size );
+    cv::calcMotionGradient(test_mat[INPUT][0], test_mat[OUTPUT][0],
+                           test_mat[OUTPUT][1], delta1, delta2, aperture_size );
+    //cvCalcMotionGradient( test_array[INPUT][0], test_array[OUTPUT][0],
+    //                      test_array[OUTPUT][1], delta1, delta2, aperture_size );
 }
 
 
@@ -453,8 +458,10 @@ double CV_MHIGlobalOrientTest::get_success_error_level( int /*test_case_idx*/, i
 
 void CV_MHIGlobalOrientTest::run_func()
 {
-    angle = cvCalcGlobalOrientation( test_array[INPUT][2], test_array[INPUT][1],
-                                     test_array[INPUT][0], timestamp, duration );
+    //angle = cvCalcGlobalOrientation( test_array[INPUT][2], test_array[INPUT][1],
+    //                                 test_array[INPUT][0], timestamp, duration );
+    angle = cv::calcGlobalOrientation(test_mat[INPUT][2], test_mat[INPUT][1],
+                                      test_mat[INPUT][0], timestamp, duration );
 }
 
 

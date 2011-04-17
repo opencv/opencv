@@ -819,8 +819,49 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
 typedef cv::Point_<short> Point2s;
 
-void filterSpeckles( Mat& img, double _newval, int maxSpeckleSize, double _maxDiff, Mat& _buf )
+void StereoSGBM::operator ()( const InputArray& _left, const InputArray& _right,
+                             OutputArray _disp )
 {
+    Mat left = _left.getMat(), right = _right.getMat();
+    CV_Assert( left.size() == right.size() && left.type() == right.type() &&
+              left.depth() == DataType<PixType>::depth );
+    
+    _disp.create( left.size(), CV_16S );
+    Mat disp = _disp.getMat();
+    
+    computeDisparitySGBM( left, right, disp, *this, buffer );
+    medianBlur(disp, disp, 3);
+    
+    if( speckleWindowSize > 0 )
+        filterSpeckles(disp, (minDisparity - 1)*DISP_SCALE, speckleWindowSize, DISP_SCALE*speckleRange, buffer);
+}
+
+
+Rect getValidDisparityROI( Rect roi1, Rect roi2,
+                          int minDisparity,
+                          int numberOfDisparities,
+                          int SADWindowSize )
+{
+    int SW2 = SADWindowSize/2;
+    int minD = minDisparity, maxD = minDisparity + numberOfDisparities - 1;
+    
+    int xmin = max(roi1.x, roi2.x + maxD) + SW2;
+    int xmax = min(roi1.x + roi1.width, roi2.x + roi2.width - minD) - SW2;
+    int ymin = max(roi1.y, roi2.y) + SW2;
+    int ymax = min(roi1.y + roi1.height, roi2.y + roi2.height) - SW2;
+    
+    Rect r(xmin, ymin, xmax - xmin, ymax - ymin);
+    
+    return r.width > 0 && r.height > 0 ? r : Rect();
+}    
+    
+}
+    
+void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
+                         double _maxDiff, InputOutputArray __buf )
+{
+    Mat img = _img.getMat();
+    Mat temp, &_buf = __buf.needed() ? __buf.getMatRef() : temp;
     CV_Assert( img.type() == CV_16SC1 );
     
     int newVal = cvRound(_newval);
@@ -916,44 +957,11 @@ void filterSpeckles( Mat& img, double _newval, int maxSpeckleSize, double _maxDi
         }
     }
 }    
-
-
-void StereoSGBM::operator ()( const Mat& left, const Mat& right, Mat& disp )
+    
+void cv::validateDisparity( InputOutputArray _disp, const InputArray& _cost, int minDisparity,
+                            int numberOfDisparities, int disp12MaxDiff )
 {
-    CV_Assert( left.size() == right.size() && left.type() == right.type() &&
-              left.depth() == DataType<PixType>::depth );
-    
-    disp.create( left.size(), CV_16S );
-    
-    computeDisparitySGBM( left, right, disp, *this, buffer );
-    medianBlur(disp, disp, 3);
-    
-    if( speckleWindowSize > 0 )
-        filterSpeckles(disp, (minDisparity - 1)*DISP_SCALE, speckleWindowSize, DISP_SCALE*speckleRange, buffer);
-}
-    
-    
-Rect getValidDisparityROI( Rect roi1, Rect roi2,
-                           int minDisparity,
-                           int numberOfDisparities,
-                           int SADWindowSize )
-{
-    int SW2 = SADWindowSize/2;
-    int minD = minDisparity, maxD = minDisparity + numberOfDisparities - 1;
-    
-    int xmin = max(roi1.x, roi2.x + maxD) + SW2;
-    int xmax = min(roi1.x + roi1.width, roi2.x + roi2.width - minD) - SW2;
-    int ymin = max(roi1.y, roi2.y) + SW2;
-    int ymax = min(roi1.y + roi1.height, roi2.y + roi2.height) - SW2;
-    
-    Rect r(xmin, ymin, xmax - xmin, ymax - ymin);
-    
-    return r.width > 0 && r.height > 0 ? r : Rect();
-}
-    
-    
-void validateDisparity( Mat& disp, const Mat& cost, int minDisparity, int numberOfDisparities, int disp12MaxDiff )
-{
+    Mat disp = _disp.getMat(), cost = _cost.getMat();
     int cols = disp.cols, rows = disp.rows;
     int minD = minDisparity, maxD = minDisparity + numberOfDisparities;
     int x, minX1 = max(maxD, 0), maxX1 = cols + min(minD, 0);
@@ -1029,8 +1037,6 @@ void validateDisparity( Mat& disp, const Mat& cost, int minDisparity, int number
                 dptr[x] = (short)INVALID_DISP_SCALED;
         }
     }
-}
-    
 }
 
 CvRect cvGetValidDisparityROI( CvRect roi1, CvRect roi2, int minDisparity,

@@ -868,13 +868,15 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 }
 
 
-void cv::getRectSubPix( const Mat& image, Size patchSize, Point2f center,
-                        Mat& patch, int patchType )
+void cv::getRectSubPix( const InputArray& _image, Size patchSize, Point2f center,
+                        OutputArray _patch, int patchType )
 {
-    patch.create(patchSize, patchType < 0 ? image.type() :
+    Mat image = _image.getMat();
+    _patch.create(patchSize, patchType < 0 ? image.type() :
         CV_MAKETYPE(CV_MAT_DEPTH(patchType),image.channels()));
-    CvMat _image = image, _patch = patch;
-    cvGetRectSubPix(&_image, &_patch, center);
+    Mat patch = _patch.getMat();
+    CvMat _cimage = image, _cpatch = patch;
+    cvGetRectSubPix(&_cimage, &_cpatch, center);
 }
 
 /* End of file. */

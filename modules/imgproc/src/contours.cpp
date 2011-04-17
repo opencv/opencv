@@ -1469,37 +1469,40 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return count;
 }
 
-namespace cv
+void cv::findContours( const InputOutputArray _image, OutputArrayOfArrays _contours,
+                   OutputArray _hierarchy, int mode, int method, Point offset )
 {
-static void
-_findContours( Mat& image, vector<vector<Point> >& contours,
-               vector<Vec4i>* hierarchy, int mode, int method, Point offset )
-{
+    Mat image = _image.getMat();
     MemStorage storage(cvCreateMemStorage());
-    CvMat _image = image;
-    CvSeq* _contours = 0;
-    if( hierarchy )
-        hierarchy->clear();
-    cvFindContours(&_image, storage, &_contours, sizeof(CvContour), mode, method, offset);
-    if( !_contours )
+    CvMat _cimage = image;
+    CvSeq* _ccontours = 0;
+    if( _hierarchy.needed() )
+        _hierarchy.clear();
+    cvFindContours(&_cimage, storage, &_ccontours, sizeof(CvContour), mode, method, offset);
+    if( !_ccontours )
     {
-        contours.clear();
+        _contours.clear();
         return;
     }
-    Seq<CvSeq*> all_contours(cvTreeToNodeSeq( _contours, sizeof(CvSeq), storage ));
+    Seq<CvSeq*> all_contours(cvTreeToNodeSeq( _ccontours, sizeof(CvSeq), storage ));
     size_t i, total = all_contours.size();
-    contours.resize(total);
+    _contours.create(total, 1, 0, -1, true);
     SeqIterator<CvSeq*> it = all_contours.begin();
     for( i = 0; i < total; i++, ++it )
     {
         CvSeq* c = *it;
         ((CvContour*)c)->color = (int)i;
-        Seq<Point>(c).copyTo(contours[i]);
+        _contours.create(c->total, 1, CV_32SC2, i, true);
+        Mat ci = _contours.getMat(i);
+        CV_Assert( ci.isContinuous() );
+        cvCvtSeqToArray(c, ci.data);
     }
 
-    if( hierarchy )
+    if( _hierarchy.needed() )
     {
-        hierarchy->resize(total);
+        _hierarchy.create(1, total, CV_32SC4, -1, true);
+        Vec4i* hierarchy = _hierarchy.getMat().ptr<Vec4i>();
+        
         it = all_contours.begin();
         for( i = 0; i < total; i++, ++it )
         {
@@ -1508,62 +1511,57 @@ _findContours( Mat& image, vector<vector<Point> >& contours,
             int h_prev = c->h_prev ? ((CvContour*)c->h_prev)->color : -1;
             int v_next = c->v_next ? ((CvContour*)c->v_next)->color : -1;
             int v_prev = c->v_prev ? ((CvContour*)c->v_prev)->color : -1;
-            (*hierarchy)[i] = Vec4i(h_next, h_prev, v_next, v_prev);
+            hierarchy[i] = Vec4i(h_next, h_prev, v_next, v_prev);
         }
     }
 }
-}
 
-void cv::findContours( Mat& image, vector<vector<Point> >& contours,
-                   vector<Vec4i>& hierarchy, int mode, int method, Point offset )
+void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
+                       int mode, int method, Point offset)
 {
-    _findContours(image, contours, &hierarchy, mode, method, offset);
-}
-
-void cv::findContours( Mat& image, vector<vector<Point> >& contours,
-                   int mode, int method, Point offset)
-{
-    _findContours(image, contours, 0, mode, method, offset);
+    findContours(_image, _contours, OutputArrayOfArrays(), mode, method, offset);
 }
 
 namespace cv
 {
 
-static void addChildContour(const vector<vector<Point> >& contours,
-                            const vector<Vec4i>& hierarchy,
+static void addChildContour(const InputArrayOfArrays& contours,
+                            size_t ncontours,
+                            const Vec4i* hierarchy,
                             int i, vector<CvSeq>& seq,
                             vector<CvSeqBlock>& block)
 {
-    size_t count = contours.size();
     for( ; i >= 0; i = hierarchy[i][0] )
     {
-        const vector<Point>& ci = contours[i];
+        Mat ci = contours.getMat(i);
         cvMakeSeqHeaderForArray(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
-                                !ci.empty() ? (void*)&ci[0] : 0, (int)ci.size(),
+                                !ci.empty() ? (void*)ci.data : 0, (int)ci.total(),
                                 &seq[i], &block[i] );
         
         int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
             v_next = hierarchy[i][2], v_prev = hierarchy[i][3];
-        seq[i].h_next = (size_t)h_next < count ? &seq[h_next] : 0;
-        seq[i].h_prev = (size_t)h_prev < count ? &seq[h_prev] : 0;
-        seq[i].v_next = (size_t)v_next < count ? &seq[v_next] : 0;
-        seq[i].v_prev = (size_t)v_prev < count ? &seq[v_prev] : 0;
+        seq[i].h_next = (size_t)h_next < ncontours ? &seq[h_next] : 0;
+        seq[i].h_prev = (size_t)h_prev < ncontours ? &seq[h_prev] : 0;
+        seq[i].v_next = (size_t)v_next < ncontours ? &seq[v_next] : 0;
+        seq[i].v_prev = (size_t)v_prev < ncontours ? &seq[v_prev] : 0;
         
         if( v_next >= 0 )
-            addChildContour(contours, hierarchy, v_next, seq, block);
+            addChildContour(contours, ncontours, hierarchy, v_next, seq, block);
     }
 }
     
 }
 
-void cv::drawContours( Mat& image, const vector<vector<Point> >& contours,
+void cv::drawContours( InputOutputArray _image, const InputArrayOfArrays& _contours,
                    int contourIdx, const Scalar& color, int thickness,
-                   int lineType, const vector<Vec4i>& hierarchy,
+                   int lineType, const InputArray& _hierarchy,
                    int maxLevel, Point offset )
 {
-    CvMat _image = image;
+    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
+    CvMat _cimage = image;
 
-    size_t i = 0, first = 0, last = contours.size();
+    size_t ncontours = _contours.total();
+    size_t i = 0, first = 0, last = ncontours;
     vector<CvSeq> seq;
     vector<CvSeqBlock> block;
 
@@ -1585,9 +1583,13 @@ void cv::drawContours( Mat& image, const vector<vector<Point> >& contours,
     
     for( i = first; i < last; i++ )
     {
-        const vector<Point>& ci = contours[i];
-        cvMakeSeqHeaderForArray(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
-            !ci.empty() ? (void*)&ci[0] : 0, (int)ci.size(), &seq[i], &block[i] );
+        Mat ci = _contours.getMat(i);
+        if( ci.empty() )
+            continue;
+        int npoints = ci.checkVector(2, CV_32S);
+        CV_Assert( npoints > 0 );
+        cvMakeSeqHeaderForArray( CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
+                                 ci.data, npoints, &seq[i], &block[i] );
     }
 
     if( hierarchy.empty() || maxLevel == 0 )
@@ -1599,13 +1601,15 @@ void cv::drawContours( Mat& image, const vector<vector<Point> >& contours,
     else
     {
         size_t count = last - first;
-        CV_Assert(hierarchy.size() == contours.size());
-        if( count == contours.size() )
+        CV_Assert(hierarchy.total() == ncontours && hierarchy.type() == CV_32SC4 );
+        const Vec4i* h = hierarchy.ptr<Vec4i>();
+        
+        if( count == ncontours )
         {
             for( i = first; i < last; i++ )
             {
-                int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
-                    v_next = hierarchy[i][2], v_prev = hierarchy[i][3];
+                int h_next = h[i][0], h_prev = h[i][1],
+                    v_next = h[i][2], v_prev = h[i][3];
                 seq[i].h_next = (size_t)h_next < count ? &seq[h_next] : 0;
                 seq[i].h_prev = (size_t)h_prev < count ? &seq[h_prev] : 0;
                 seq[i].v_next = (size_t)v_next < count ? &seq[v_next] : 0;
@@ -1614,85 +1618,88 @@ void cv::drawContours( Mat& image, const vector<vector<Point> >& contours,
         }
         else
         {
-            int child = hierarchy[first][2];
+            int child = h[first][2];
             if( child >= 0 )
             {
-                addChildContour(contours, hierarchy, child, seq, block);
+                addChildContour(_contours, ncontours, h, child, seq, block);
                 seq[first].v_next = &seq[child];
             }
         }
     }
 
-    cvDrawContours( &_image, &seq[first], color, color, contourIdx >= 0 ?
+    cvDrawContours( &_cimage, &seq[first], color, color, contourIdx >= 0 ?
                    -maxLevel : maxLevel, thickness, lineType, offset );
 }
 
 
-void cv::approxPolyDP( const Mat& curve, vector<Point>& approxCurve,
+void cv::approxPolyDP( const InputArray& _curve, OutputArray _approxCurve,
                        double epsilon, bool closed )
 {
-    CV_Assert(curve.checkVector(2, CV_32S) >= 0);
-    CvMat _curve = curve;
+    Mat curve = _curve.getMat();
+    int npoints = curve.checkVector(2), depth = curve.depth();
+    CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F));
+    CvMat _ccurve = curve;
     MemStorage storage(cvCreateMemStorage());
-    Seq<Point> seq(cvApproxPoly(&_curve, sizeof(CvContour), storage, CV_POLY_APPROX_DP, epsilon, closed));
-    seq.copyTo(approxCurve);
+    CvSeq* result = cvApproxPoly(&_ccurve, sizeof(CvContour), storage, CV_POLY_APPROX_DP, epsilon, closed);
+    if( result->total > 0 )
+    {
+        _approxCurve.create(result->total, 1, CV_MAKETYPE(curve.depth(), 2), -1, true);
+        cvCvtSeqToArray(result, _approxCurve.getMat().data );
+    }
 }
 
-void cv::approxPolyDP( const Mat& curve, vector<Point2f>& approxCurve,
-                       double epsilon, bool closed )
-{
-    CV_Assert(curve.checkVector(2, CV_32F) >= 0);
-    CvMat _curve = curve;
-    MemStorage storage(cvCreateMemStorage());
-    Seq<Point2f> seq(cvApproxPoly(&_curve, sizeof(CvContour), storage, CV_POLY_APPROX_DP, epsilon, closed));
-    seq.copyTo(approxCurve);
-}
 
-double cv::arcLength( const Mat& curve, bool closed )
+double cv::arcLength( const InputArray& _curve, bool closed )
 {
+    Mat curve = _curve.getMat();
     CV_Assert(curve.checkVector(2) >= 0 && (curve.depth() == CV_32F || curve.depth() == CV_32S));
-    CvMat _curve = curve;
-    return cvArcLength(&_curve, CV_WHOLE_SEQ, closed);
+    CvMat _ccurve = curve;
+    return cvArcLength(&_ccurve, CV_WHOLE_SEQ, closed);
 }
 
 
-cv::Rect cv::boundingRect( const Mat& points )
+cv::Rect cv::boundingRect( const InputArray& _points )
 {
+    Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _points = points;
-    return cvBoundingRect(&_points, 0);
+    CvMat _cpoints = points;
+    return cvBoundingRect(&_cpoints, 0);
 }
 
 
-double cv::contourArea( const Mat& contour, bool oriented )
+double cv::contourArea( const InputArray& _contour, bool oriented )
 {
+    Mat contour = _contour.getMat();
     CV_Assert(contour.checkVector(2) >= 0 && (contour.depth() == CV_32F || contour.depth() == CV_32S));
-    CvMat _contour = contour;
-    return cvContourArea(&_contour, CV_WHOLE_SEQ, oriented);
+    CvMat _ccontour = contour;
+    return cvContourArea(&_ccontour, CV_WHOLE_SEQ, oriented);
 }
 
 
-cv::RotatedRect cv::minAreaRect( const Mat& points )
+cv::RotatedRect cv::minAreaRect( const InputArray& _points )
 {
+    Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _points = points;
-    return cvMinAreaRect2(&_points, 0);
+    CvMat _cpoints = points;
+    return cvMinAreaRect2(&_cpoints, 0);
 }
 
 
-void cv::minEnclosingCircle( const Mat& points,
+void cv::minEnclosingCircle( const InputArray& _points,
                              Point2f& center, float& radius )
 {
+    Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _points = points;
-    cvMinEnclosingCircle( &_points, (CvPoint2D32f*)&center, &radius );
+    CvMat _cpoints = points;
+    cvMinEnclosingCircle( &_cpoints, (CvPoint2D32f*)&center, &radius );
 }
 
 
-double cv::matchShapes( const Mat& contour1,
-                        const Mat& contour2,
+double cv::matchShapes( const InputArray& _contour1,
+                        const InputArray& _contour2,
                         int method, double parameter )
 {
+    Mat contour1 = _contour1.getMat(), contour2 = _contour2.getMat();
     CV_Assert(contour1.checkVector(2) >= 0 && contour2.checkVector(2) >= 0 &&
               (contour1.depth() == CV_32F || contour1.depth() == CV_32S) &&
               contour1.depth() == contour2.depth());
@@ -1702,79 +1709,68 @@ double cv::matchShapes( const Mat& contour1,
 }
 
 
-void cv::convexHull( const Mat& points, vector<int>& hull, bool clockwise )
+void cv::convexHull( const InputArray& _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
-    int nelems = points.checkVector(2);
-    CV_Assert(nelems >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
-    hull.resize(nelems);
-    CvMat _points = Mat(points), _hull=Mat(hull);
-    cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 0);
-    hull.resize(_hull.cols + _hull.rows - 1);
+    Mat points = _points.getMat();
+    int nelems = points.checkVector(2), depth = points.depth();
+    CV_Assert(nelems >= 0 && (depth == CV_32F || depth == CV_32S));
+    
+    if( nelems == 0 )
+    {
+        _hull.release();
+        return;
+    }
+    
+    returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32S;
+    Mat hull(nelems, 1, returnPoints ? CV_MAKETYPE(depth, 2) : CV_32S);
+    CvMat _cpoints = points, _chull = hull;
+    cvConvexHull2(&_cpoints, &_chull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, returnPoints);
+    _hull.create(_chull.rows, 1, hull.type(), -1, true);
+    Mat dhull = _hull.getMat(), shull(dhull.size(), dhull.type(), hull.data);
+    shull.copyTo(dhull);
 }
 
-
-void cv::convexHull( const Mat& points,
-                     vector<Point>& hull, bool clockwise )
+bool cv::isContourConvex( const InputArray& _contour )
 {
-    int nelems = points.checkVector(2, CV_32S);
-    CV_Assert(nelems >= 0);
-    hull.resize(nelems);
-    CvMat _points = Mat(points), _hull=Mat(hull);
-    cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 1);
-    hull.resize(_hull.cols + _hull.rows - 1);
-}
-
-
-void cv::convexHull( const Mat& points,
-                     vector<Point2f>& hull, bool clockwise )
-{
-    int nelems = points.checkVector(2, CV_32F);
-    CV_Assert(nelems >= 0);
-    hull.resize(nelems);
-    CvMat _points = Mat(points), _hull=Mat(hull);
-    cvConvexHull2(&_points, &_hull, clockwise ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE, 1);
-    hull.resize(_hull.cols + _hull.rows - 1);
-}
-
-bool cv::isContourConvex( const Mat& contour )
-{
+    Mat contour = _contour.getMat();
     CV_Assert(contour.checkVector(2) >= 0 &&
               (contour.depth() == CV_32F || contour.depth() == CV_32S));
     CvMat c = Mat(contour);
     return cvCheckContourConvexity(&c) > 0;
 }
 
-cv::RotatedRect cv::fitEllipse( const Mat& points )
+cv::RotatedRect cv::fitEllipse( const InputArray& _points )
 {
+    Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 &&
               (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _points = points;
-    return cvFitEllipse2(&_points);
+    CvMat _cpoints = points;
+    return cvFitEllipse2(&_cpoints);
 }
 
 
-void cv::fitLine( const Mat& points, Vec4f& line, int distType,
+void cv::fitLine( const InputArray& _points, OutputArray _line, int distType,
                   double param, double reps, double aeps )
 {
-    CV_Assert(points.checkVector(2) >= 0 &&
-              (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _points = points;
-    cvFitLine(&_points, distType, param, reps, aeps, &line[0]);
+    Mat points = _points.getMat();
+    bool is3d = points.checkVector(3) >= 0, is2d = is3d ? false : points.checkVector(2) >= 0;
+    
+    CV_Assert((is2d || is3d) && (points.depth() == CV_32F || points.depth() == CV_32S));
+    CvMat _cpoints = points;
+    float line[6];
+    cvFitLine(&_cpoints, distType, param, reps, aeps, &line[0]);
+    
+    _line.create(is2d ? 4 : 6, 1, CV_32F, -1, true);
+    Mat l = _line.getMat();
+    CV_Assert( l.isContinuous() );
+    memcpy( l.data, line, (is2d ? 4 : 6)*sizeof(line[0]) );
 }
 
 
-void cv::fitLine( const Mat& points, Vec6f& line, int distType,
-                  double param, double reps, double aeps )
-{
-    CV_Assert(points.checkVector(3) >= 0 &&
-              (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _points = points;
-    cvFitLine(&_points, distType, param, reps, aeps, &line[0]);
-}
-
-double cv::pointPolygonTest( const Mat& contour,
+double cv::pointPolygonTest( const InputArray& _contour,
                              Point2f pt, bool measureDist )
 {
+    Mat contour = _contour.getMat();
     CV_Assert(contour.checkVector(2) >= 0 &&
               (contour.depth() == CV_32F || contour.depth() == CV_32S));
     CvMat c = Mat(contour);

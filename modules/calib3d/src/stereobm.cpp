@@ -920,10 +920,13 @@ void StereoBM::init(int _preset, int _ndisparities, int _SADWindowSize)
     state->SADWindowSize = _SADWindowSize;
 }
 
-void StereoBM::operator()( const Mat& left, const Mat& right, Mat& disparity, int disptype )
+void StereoBM::operator()( const InputArray& _left, const InputArray& _right,
+                           OutputArray _disparity, int disptype )
 {
+    Mat left = _left.getMat(), right = _right.getMat();
     CV_Assert( disptype == CV_16S || disptype == CV_32F );
-    disparity.create(left.size(), disptype);
+    _disparity.create(left.size(), disptype);
+    Mat disparity = _disparity.getMat();
     
     findStereoCorrespondenceBM(left, right, disparity, state);
 }

@@ -71,7 +71,7 @@ int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & TYPE_MASK_ALL) != 0);
+    CV_Assert((typeMask & DEPTH_MASK_ALL) != 0);
     for(;;)
     {
         depth = rng.uniform(CV_8U, CV_64F+1);

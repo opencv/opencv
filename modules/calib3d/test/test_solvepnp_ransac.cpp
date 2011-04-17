@@ -104,8 +104,8 @@ protected:
                 Mat rvec, tvec;
                 vector<int> inliers;
 
-                solvePnPRansac(Mat(points), Mat(points1), intrinsics, dist_coeffs, rvec, tvec,
-                                false, 1000, 2.0, -1, &inliers);
+                solvePnPRansac(points, points1, intrinsics, dist_coeffs, rvec, tvec,
+                                false, 1000, 2.0, -1, inliers);
 
                 bool isTestSuccess = inliers.size() == 475;
 

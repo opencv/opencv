@@ -475,20 +475,24 @@ getThreshVal_Otsu_8u( const Mat& _src )
     return max_val;
 }
 
-
-double threshold( const Mat& _src, Mat& _dst, double thresh, double maxval, int type )
+}
+    
+double cv::threshold( const InputArray& _src, OutputArray _dst, double thresh, double maxval, int type )
 {
+    Mat src = _src.getMat();
     bool use_otsu = (type & THRESH_OTSU) != 0;
     type &= THRESH_MASK;
 
     if( use_otsu )
     {
-        CV_Assert( _src.type() == CV_8UC1 );
-        thresh = getThreshVal_Otsu_8u(_src);
+        CV_Assert( src.type() == CV_8UC1 );
+        thresh = getThreshVal_Otsu_8u(src);
     }
   
-    _dst.create( _src.size(), _src.type() );
-    if( _src.depth() == CV_8U )
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+    
+    if( src.depth() == CV_8U )
     {
         int ithresh = cvFloor(thresh);
         thresh = ithresh;
@@ -506,16 +510,16 @@ double threshold( const Mat& _src, Mat& _dst, double thresh, double maxval, int 
                 int v = type == THRESH_BINARY ? (ithresh >= 255 ? 0 : imaxval) :
                         type == THRESH_BINARY_INV ? (ithresh >= 255 ? imaxval : 0) :
                         type == THRESH_TRUNC ? imaxval : 0;
-                _dst = Scalar::all(v);
+                dst = Scalar::all(v);
             }
             else
-                _src.copyTo(_dst);
+                src.copyTo(dst);
         }
         else
-            thresh_8u( _src, _dst, (uchar)ithresh, (uchar)imaxval, type );
+            thresh_8u( src, dst, (uchar)ithresh, (uchar)imaxval, type );
     }
-    else if( _src.depth() == CV_32F )
-        thresh_32f( _src, _dst, (float)thresh, (float)maxval, type );
+    else if( src.depth() == CV_32F )
+        thresh_32f( src, dst, (float)thresh, (float)maxval, type );
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
@@ -523,31 +527,33 @@ double threshold( const Mat& _src, Mat& _dst, double thresh, double maxval, int 
 }
 
 
-void adaptiveThreshold( const Mat& _src, Mat& _dst, double maxValue,
-                        int method, int type, int blockSize, double delta )
+void cv::adaptiveThreshold( const InputArray& _src, OutputArray _dst, double maxValue,
+                            int method, int type, int blockSize, double delta )
 {
-    CV_Assert( _src.type() == CV_8UC1 );
+    Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
     CV_Assert( blockSize % 2 == 1 && blockSize > 1 );
-    Size size = _src.size();
+    Size size = src.size();
 
-    _dst.create( size, _src.type() );
+    _dst.create( size, src.type() );
+    Mat dst = _dst.getMat();
 
     if( maxValue < 0 )
     {
-        _dst = Scalar(0);
+        dst = Scalar(0);
         return;
     }
     
-    Mat _mean;
+    Mat mean;
 
-    if( _src.data != _dst.data )
-        _mean = _dst;
+    if( src.data != dst.data )
+        mean = dst;
 
     if( method == ADAPTIVE_THRESH_MEAN_C )
-        boxFilter( _src, _mean, _src.type(), Size(blockSize, blockSize),
+        boxFilter( src, mean, src.type(), Size(blockSize, blockSize),
                    Point(-1,-1), true, BORDER_REPLICATE );
     else if( method == ADAPTIVE_THRESH_GAUSSIAN_C )
-        GaussianBlur( _src, _mean, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE );
+        GaussianBlur( src, mean, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE );
     else
         CV_Error( CV_StsBadFlag, "Unknown/unsupported adaptive threshold method" );
 
@@ -565,7 +571,7 @@ void adaptiveThreshold( const Mat& _src, Mat& _dst, double maxValue,
     else
         CV_Error( CV_StsBadFlag, "Unknown/unsupported threshold type" );
 
-    if( _src.isContinuous() && _mean.isContinuous() && _dst.isContinuous() )
+    if( src.isContinuous() && mean.isContinuous() && dst.isContinuous() )
     {
         size.width *= size.height;
         size.height = 1;
@@ -573,15 +579,13 @@ void adaptiveThreshold( const Mat& _src, Mat& _dst, double maxValue,
 
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* src = _src.data + _src.step*i;
-        const uchar* mean = _mean.data + _mean.step*i;
-        uchar* dst = _dst.data + _dst.step*i;
+        const uchar* sdata = src.data + src.step*i;
+        const uchar* mdata = mean.data + mean.step*i;
+        uchar* ddata = dst.data + dst.step*i;
 
         for( j = 0; j < size.width; j++ )
-            dst[j] = tab[src[j] - mean[j] + 255];
+            ddata[j] = tab[sdata[j] - mdata[j] + 255];
     }
-}
-
 }
 
 CV_IMPL double

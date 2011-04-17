@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -46,252 +46,251 @@ namespace cv
 {
 
 /****************************************************************************************\
-*                                       split                                            *
+*                                       split & merge                                    *
 \****************************************************************************************/
 
 template<typename T> static void
-splitC2_( const Mat& srcmat, Mat* dstmat )
+split_( const T* src, T** dst, int len, int cn )
 {
-    Size size = getContinuousSize( srcmat, dstmat[0], dstmat[1] );
-    for( int y = 0; y < size.height; y++ )
+    int k = cn % 4 ? cn % 4 : 4;
+    int i, j;
+    if( k == 1 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst0 = (T*)(dstmat[0].data + dstmat[0].step*y);
-        T* dst1 = (T*)(dstmat[1].data + dstmat[1].step*y);
-
-        for( int x = 0; x < size.width; x++ )
+        T* dst0 = dst[0];
+        for( i = j = 0; i < len; i++, j += cn )
+            dst0[i] = src[j];
+    }
+    else if( k == 2 )
+    {
+        T *dst0 = dst[0], *dst1 = dst[1];
+        for( i = j = 0; i < len; i++, j += cn )
         {
-            T t0 = src[x*2], t1 = src[x*2+1];
-            dst0[x] = t0; dst1[x] = t1;
+            dst0[i] = src[j];
+            dst1[i] = src[j+1];
+        }
+    }
+    else if( k == 3 )
+    {
+        T *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
+        for( i = j = 0; i < len; i++, j += cn )
+        {
+            dst0[i] = src[j];
+            dst1[i] = src[j+1];
+            dst2[i] = src[j+2];
+        }
+    }
+    else
+    {
+        T *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
+        for( i = j = 0; i < len; i++, j += cn )
+        {
+            dst0[i] = src[j]; dst1[i] = src[j+1];
+            dst2[i] = src[j+2]; dst3[i] = src[j+3];
+        }
+    }
+    
+    for( ; k < cn; k += 4 )
+    {
+        T *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
+        for( i = 0, j = k; i < len; i++, j += cn )
+        {
+            dst0[i] = src[j]; dst1[i] = src[j+1];
+            dst2[i] = src[j+2]; dst3[i] = src[j+3];
         }
     }
 }
-
+    
 template<typename T> static void
-splitC3_( const Mat& srcmat, Mat* dstmat )
+merge_( const T** src, T* dst, int len, int cn )
 {
-    Size size = getContinuousSize( srcmat, dstmat[0], dstmat[1], dstmat[2] );
-    for( int y = 0; y < size.height; y++ )
+    int k = cn % 4 ? cn % 4 : 4;
+    int i, j;
+    if( k == 1 )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst0 = (T*)(dstmat[0].data + dstmat[0].step*y);
-        T* dst1 = (T*)(dstmat[1].data + dstmat[1].step*y);
-        T* dst2 = (T*)(dstmat[2].data + dstmat[2].step*y);
-
-        for( int x = 0; x < size.width; x++ )
+        const T* src0 = src[0];
+        for( i = j = 0; i < len; i++, j += cn )
+            dst[j] = src0[i];
+    }
+    else if( k == 2 )
+    {
+        const T *src0 = src[0], *src1 = src[1];
+        for( i = j = 0; i < len; i++, j += cn )
         {
-            T t0 = src[x*3], t1 = src[x*3+1], t2 = src[x*3+2];
-            dst0[x] = t0; dst1[x] = t1; dst2[x] = t2;
+            dst[j] = src0[i];
+            dst[j+1] = src1[i];
+        }
+    }
+    else if( k == 3 )
+    {
+        const T *src0 = src[0], *src1 = src[1], *src2 = src[2];
+        for( i = j = 0; i < len; i++, j += cn )
+        {
+            dst[j] = src0[i];
+            dst[j+1] = src1[i];
+            dst[j+2] = src2[i];
+        }
+    }
+    else
+    {
+        const T *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
+        for( i = j = 0; i < len; i++, j += cn )
+        {
+            dst[j] = src0[i]; dst[j+1] = src1[i];
+            dst[j+2] = src2[i]; dst[j+3] = src3[i];
+        }
+    }
+    
+    for( ; k < cn; k += 4 )
+    {
+        const T *src0 = src[k], *src1 = src[k+1], *src2 = src[k+2], *src3 = src[k+3];
+        for( i = 0, j = k; i < len; i++, j += cn )
+        {
+            dst[j] = src0[i]; dst[j+1] = src1[i];
+            dst[j+2] = src2[i]; dst[j+3] = src3[i];
         }
     }
 }
 
-template<typename T> static void
-splitC4_( const Mat& srcmat, Mat* dstmat )
+static void split8u(const uchar* src, uchar** dst, int len, int cn )
 {
-    Size size = getContinuousSize( srcmat, dstmat[0], dstmat[1], dstmat[2], dstmat[3] );
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        T* dst0 = (T*)(dstmat[0].data + dstmat[0].step*y);
-        T* dst1 = (T*)(dstmat[1].data + dstmat[1].step*y);
-        T* dst2 = (T*)(dstmat[2].data + dstmat[2].step*y);
-        T* dst3 = (T*)(dstmat[3].data + dstmat[3].step*y);
-
-        for( int x = 0; x < size.width; x++ )
-        {
-            T t0 = src[x*4], t1 = src[x*4+1];
-            dst0[x] = t0; dst1[x] = t1;
-            t0 = src[x*4+2]; t1 = src[x*4+3];
-            dst2[x] = t0; dst3[x] = t1;
-        }
-    }
+    split_(src, dst, len, cn);
 }
 
-typedef void (*SplitFunc)(const Mat& src, Mat* dst);
-
-void split(const Mat& src, Mat* mv)
+static void split16u(const ushort* src, ushort** dst, int len, int cn )
 {
-    static SplitFunc tab[] =
-    {
-        splitC2_<uchar>, splitC2_<ushort>, splitC2_<int>, 0, splitC2_<int64>,
-        splitC3_<uchar>, splitC3_<ushort>, splitC3_<int>, 0, splitC3_<int64>,
-        splitC4_<uchar>, splitC4_<ushort>, splitC4_<int>, 0, splitC4_<int64>
-    };
+    split_(src, dst, len, cn);
+}
 
-    int i, depth = src.depth(), cn = src.channels();
+static void split32s(const int* src, int** dst, int len, int cn )
+{
+    split_(src, dst, len, cn);
+}
+    
+static void split64s(const int64* src, int64** dst, int len, int cn )
+{
+    split_(src, dst, len, cn);
+}
 
+static void merge8u(const uchar** src, uchar* dst, int len, int cn )
+{
+    merge_(src, dst, len, cn);
+}
+
+static void merge16u(const ushort** src, ushort* dst, int len, int cn )
+{
+    merge_(src, dst, len, cn);
+}
+
+static void merge32s(const int** src, int* dst, int len, int cn )
+{
+    merge_(src, dst, len, cn);
+}
+
+static void merge64s(const int64** src, int64* dst, int len, int cn )
+{
+    merge_(src, dst, len, cn);
+}    
+
+typedef void (*SplitFunc)(const uchar* src, uchar** dst, int len, int cn);
+typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
+
+static SplitFunc splitTab[] =
+{
+    (SplitFunc)split8u, (SplitFunc)split8u, (SplitFunc)split16u, (SplitFunc)split16u,
+    (SplitFunc)split32s, (SplitFunc)split32s, (SplitFunc)split64s, 0
+};
+
+static MergeFunc mergeTab[] =
+{
+    (MergeFunc)merge8u, (MergeFunc)merge8u, (MergeFunc)merge16u, (MergeFunc)merge16u,
+    (MergeFunc)merge32s, (MergeFunc)merge32s, (MergeFunc)merge64s, 0
+};
+  
+}
+    
+void cv::split(const Mat& src, Mat* mv)
+{
+    int k, depth = src.depth(), cn = src.channels();
     if( cn == 1 )
     {
         src.copyTo(mv[0]);
         return;
     }
 
-    for( i = 0; i < cn; i++ )
-        mv[i].create(src.dims, src.size, depth);
-
-    if( cn <= 4 )
+    SplitFunc func = splitTab[depth];
+    CV_Assert( func != 0 );
+    
+    int esz = src.elemSize(), esz1 = src.elemSize1();
+    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
+    const Mat** arrays = (const Mat**)(uchar*)_buf;
+    uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
+    
+    arrays[0] = &src;
+    for( k = 0; k < cn; k++ )
     {
-        SplitFunc func = tab[(cn-2)*5 + (src.elemSize1()>>1)];
-        CV_Assert( func != 0 );
-        
-        if( src.dims > 2 )
-        {
-            const Mat* arrays[5];
-            Mat planes[5];
-            arrays[0] = &src;
-            for( i = 0; i < cn; i++ )
-                arrays[i+1] = &mv[i];
-            NAryMatIterator it(arrays, planes, cn+1);
-            
-            for( int i = 0; i < it.nplanes; i++, ++it )
-                func( it.planes[0], &it.planes[1] );
-        }
-        else
-            func( src, mv );
+        mv[k].create(src.dims, src.size, depth);
+        arrays[k+1] = &mv[k];
     }
-    else
+    
+    NAryMatIterator it(arrays, ptrs, cn+1);
+    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        AutoBuffer<int> pairs(cn*2);
-
-        for( i = 0; i < cn; i++ )
+        for( int j = 0; j < total; j += blocksize )
         {
-            pairs[i*2] = i;
-            pairs[i*2+1] = 0;
+            int bsz = std::min(total - j, blocksize);
+            func( ptrs[0], &ptrs[1], bsz, cn );
+            
+            if( j + blocksize < total )
+            {
+                ptrs[0] += bsz*esz;
+                for( k = 0; k < cn; k++ )
+                    ptrs[k+1] += bsz*esz1;
+            }
         }
-        mixChannels( &src, 1, mv, cn, &pairs[0], cn );
     }
 }
     
-void split(const Mat& m, vector<Mat>& mv)
+void cv::split(const Mat& m, vector<Mat>& mv)
 {
     mv.resize(!m.empty() ? m.channels() : 0);
     if(!m.empty())
         split(m, &mv[0]);
 }
-
-/****************************************************************************************\
-*                                       merge                                            *
-\****************************************************************************************/
-
-// input vector is made non-const to make sure that we do not copy Mat on each access
-template<typename T> static void
-mergeC2_( const Mat* srcmat, Mat& dstmat )
+    
+void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
-    Size size = getContinuousSize( srcmat[0], srcmat[1], dstmat );
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src0 = (const T*)(srcmat[0].data + srcmat[0].step*y);
-        const T* src1 = (const T*)(srcmat[1].data + srcmat[1].step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( int x = 0; x < size.width; x++ )
-        {
-            T t0 = src0[x], t1 = src1[x];
-            dst[x*2] = t0; dst[x*2+1] = t1;
-        }
-    }
-}
-
-template<typename T> static void
-mergeC3_( const Mat* srcmat, Mat& dstmat )
-{
-    Size size = getContinuousSize( srcmat[0], srcmat[1], srcmat[2], dstmat );
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src0 = (const T*)(srcmat[0].data + srcmat[0].step*y);
-        const T* src1 = (const T*)(srcmat[1].data + srcmat[1].step*y);
-        const T* src2 = (const T*)(srcmat[2].data + srcmat[2].step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( int x = 0; x < size.width; x++ )
-        {
-            T t0 = src0[x], t1 = src1[x], t2 = src2[x];
-            dst[x*3] = t0; dst[x*3+1] = t1; dst[x*3+2] = t2;
-        }
-    }
-}
-
-template<typename T> static void
-mergeC4_( const Mat* srcmat, Mat& dstmat )
-{
-    Size size = getContinuousSize( srcmat[0], srcmat[1], srcmat[2], srcmat[3], dstmat );
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src0 = (const T*)(srcmat[0].data + srcmat[0].step*y);
-        const T* src1 = (const T*)(srcmat[1].data + srcmat[1].step*y);
-        const T* src2 = (const T*)(srcmat[2].data + srcmat[2].step*y);
-        const T* src3 = (const T*)(srcmat[3].data + srcmat[3].step*y);
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( int x = 0; x < size.width; x++ )
-        {
-            T t0 = src0[x], t1 = src1[x];
-            dst[x*4] = t0; dst[x*4+1] = t1;
-            t0 = src2[x]; t1 = src3[x];
-            dst[x*4+2] = t0; dst[x*4+3] = t1;
-        }
-    }
-}
-
-typedef void (*MergeFunc)(const Mat* src, Mat& dst);
-
-void merge(const Mat* mv, size_t _n, Mat& dst)
-{
-    static MergeFunc tab[] =
-    {
-        mergeC2_<uchar>, mergeC2_<ushort>, mergeC2_<int>, 0, mergeC2_<int64>,
-        mergeC3_<uchar>, mergeC3_<ushort>, mergeC3_<int>, 0, mergeC3_<int64>,
-        mergeC4_<uchar>, mergeC4_<ushort>, mergeC4_<int>, 0, mergeC4_<int64>
-    };
-
-    CV_Assert( mv && _n > 0 );
+    CV_Assert( mv && n > 0 );
     
     int depth = mv[0].depth();
     bool allch1 = true;
-    int i, total = 0, n = (int)_n;
+    int k, cn = 0;
+    size_t i;
     
     for( i = 0; i < n; i++ )
     {
         CV_Assert(mv[i].size == mv[0].size && mv[i].depth() == depth);
         allch1 = allch1 && mv[i].channels() == 1;
-        total += mv[i].channels();
+        cn += mv[i].channels();
     }
-
-    CV_Assert( 0 < total && total <= CV_CN_MAX );
-
-    if( total == 1 )
+    
+    CV_Assert( 0 < cn && cn <= CV_CN_MAX );
+    _dst.create(mv[0].dims, mv[0].size, CV_MAKETYPE(depth, cn));
+    Mat dst = _dst.getMat();
+    
+    if( n == 1 )
     {
         mv[0].copyTo(dst);
         return;
     }
-
-    dst.create(mv[0].dims, mv[0].size, CV_MAKETYPE(depth, total));
-
-    if( allch1 && total <= 4 )
+    
+    if( !allch1 )
     {
-        MergeFunc func = tab[(total-2)*5 + (CV_ELEM_SIZE(depth)>>1)];
-        CV_Assert( func != 0 );
-        if( mv[0].dims > 2 )
-        {
-            const Mat* arrays[5];
-            Mat planes[5];
-            arrays[total] = &dst;
-            for( i = 0; i < total; i++ )
-                arrays[i] = &mv[i];
-            NAryMatIterator it(arrays, planes, total+1);
-            
-            for( i = 0; i < it.nplanes; i++, ++it )
-                func( &it.planes[0], it.planes[total] );
-        }
-        else
-            func( mv, dst );
-    }
-    else
-    {
-        AutoBuffer<int> pairs(total*2);
-        int j, k, ni=0;
-
+        AutoBuffer<int> pairs(cn*2);
+        int j, ni=0;
+        
         for( i = 0, j = 0; i < n; i++, j += ni )
         {
             ni = mv[i].channels();
@@ -301,104 +300,148 @@ void merge(const Mat* mv, size_t _n, Mat& dst)
                 pairs[(j+k)*2+1] = j + k;
             }
         }
-        mixChannels( mv, n, &dst, 1, &pairs[0], total );
+        mixChannels( mv, n, &dst, 1, &pairs[0], cn );
+        return;
+    }
+        
+    size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
+    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
+    const Mat** arrays = (const Mat**)(uchar*)_buf;
+    uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
+    
+    arrays[0] = &dst;
+    for( k = 0; k < cn; k++ )
+        arrays[k+1] = &mv[k];
+    
+    NAryMatIterator it(arrays, ptrs, cn+1);
+    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    MergeFunc func = mergeTab[depth];
+    
+    for( i = 0; i < it.nplanes; i++, ++it )
+    {
+        for( int j = 0; j < total; j += blocksize )
+        {
+            int bsz = std::min(total - j, blocksize);
+            func( (const uchar**)&ptrs[1], ptrs[0], bsz, cn );
+            
+            if( j + blocksize < total )
+            {
+                ptrs[0] += bsz*esz;
+                for( int k = 0; k < cn; k++ )
+                    ptrs[k+1] += bsz*esz1;
+            }
+        }
     }
 }
 
-void merge(const vector<Mat>& mv, Mat& dst)
+void cv::merge(const vector<Mat>& mv, OutputArray _dst)
 {
-    merge(!mv.empty() ? &mv[0] : 0, mv.size(), dst);
-}
+    merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
+}    
 
 /****************************************************************************************\
 *                       Generalized split/merge: mixing channels                         *
 \****************************************************************************************/
 
-template<typename T> static void
-mixChannels_( const void** _src, const int* sdelta0,
-              const int* sdelta1, void** _dst,
-              const int* ddelta0, const int* ddelta1,
-              int n, Size size )
+namespace cv
 {
-    const T** src = (const T**)_src;
-    T** dst = (T**)_dst;
-    int i, k;
-    int block_size0 = n == 1 ? size.width : 1024;
 
-    for( ; size.height--; )
+template<typename T> static void
+mixChannels_( const T** src, const int* sdelta,
+              T** dst, const int* ddelta,
+              int len, int npairs )
+{
+    int i, k;
+    for( k = 0; k < npairs; k++ )
     {
-        int remaining = size.width;
-        for( ; remaining > 0; )
+        const T* s = src[k];
+        T* d = dst[k];
+        int ds = sdelta[k], dd = ddelta[k];
+        if( s )
         {
-            int block_size = MIN( remaining, block_size0 );
-            for( k = 0; k < n; k++ )
+            for( i = 0; i <= len - 2; i += 2, s += ds*2, d += dd*2 )
             {
-                const T* s = src[k];
-                T* d = dst[k];
-                int ds = sdelta1[k], dd = ddelta1[k];
-                if( s )
-                {
-                    for( i = 0; i <= block_size - 2; i += 2, s += ds*2, d += dd*2 )
-                    {
-                        T t0 = s[0], t1 = s[ds];
-                        d[0] = t0; d[dd] = t1;
-                    }
-                    if( i < block_size )
-                        d[0] = s[0], s += ds, d += dd;
-                    src[k] = s;
-                }
-                else
-                {
-                    for( i=0; i <= block_size-2; i+=2, d+=dd*2 )
-                        d[0] = d[dd] = 0;
-                    if( i < block_size )
-                        d[0] = 0, d += dd;
-                }
-                dst[k] = d;
+                T t0 = s[0], t1 = s[ds];
+                d[0] = t0; d[dd] = t1;
             }
-            remaining -= block_size;
+            if( i < len )
+                d[0] = s[0];
         }
-        for( k = 0; k < n; k++ )
-            src[k] += sdelta0[k], dst[k] += ddelta0[k];
+        else
+        {
+            for( i = 0; i <= len - 2; i += 2, d += dd*2 )
+                d[0] = d[dd] = 0;
+            if( i < len )
+                d[0] = 0;
+        }
     }
 }
 
-typedef void (*MixChannelsFunc)( const void** src, const int* sdelta0,
-        const int* sdelta1, void** dst, const int* ddelta0, const int* ddelta1, int n, Size size );
+    
+static void mixChannels8u( const uchar** src, const int* sdelta,
+                           uchar** dst, const int* ddelta,
+                           int len, int npairs )
+{
+    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+}
 
-void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
+static void mixChannels16u( const ushort** src, const int* sdelta,
+                            ushort** dst, const int* ddelta,
+                            int len, int npairs )
+{
+    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+}
+
+static void mixChannels32s( const int** src, const int* sdelta,
+                            int** dst, const int* ddelta,
+                            int len, int npairs )
+{
+    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+}
+    
+static void mixChannels64s( const int64** src, const int* sdelta,
+                            int64** dst, const int* ddelta,
+                            int len, int npairs )
+{
+    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+}
+    
+typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
+        uchar** dst, const int* ddelta, int len, int npairs );
+
+static MixChannelsFunc mixchTab[] =
+{
+    (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels16u,
+    (MixChannelsFunc)mixChannels16u, (MixChannelsFunc)mixChannels32s, (MixChannelsFunc)mixChannels32s,
+    (MixChannelsFunc)mixChannels64s, 0 
+};
+    
+}
+    
+void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
     
-    if( src[0].dims > 2 )
-    {
-        size_t k, m = nsrcs, n = ndsts;
-        CV_Assert( n > 0 && m > 0 );
-        AutoBuffer<const Mat*> v(m + n);
-        AutoBuffer<Mat> planes(m + n);
-        for( k = 0; k < m; k++ )
-            v[k] = &src[k];
-        for( k = 0; k < n; k++ )
-            v[m + k] = &dst[k];
-        NAryMatIterator it(v, planes, m + n);
-        
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            mixChannels( &it.planes[0], m, &it.planes[m], n, fromTo, npairs );
-        return;
-    }
+    size_t i, j, k, esz1 = dst[0].elemSize1();
+    int depth = dst[0].depth();
+
+    AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6));
+    const Mat** arrays = (const Mat**)(uchar*)buf;
+    uchar** ptrs = (uchar**)(arrays + nsrcs + ndsts);
+    const uchar** srcs = (const uchar**)(ptrs + nsrcs + ndsts + 1);
+    uchar** dsts = (uchar**)(srcs + npairs);
+    int* tab = (int*)(dsts + npairs);
+    int *sdelta = (int*)(tab + npairs*4), *ddelta = sdelta + npairs;
     
-    size_t i, j;
-    int depth = dst[0].depth(), esz1 = (int)dst[0].elemSize1();
-    Size size = dst[0].size();
-
-    AutoBuffer<uchar> buf(npairs*(sizeof(void*)*2 + sizeof(int)*4));
-    void** srcs = (void**)(uchar*)buf;
-    void** dsts = srcs + npairs;
-    int *s0 = (int*)(dsts + npairs), *s1 = s0 + npairs, *d0 = s1 + npairs, *d1 = d0 + npairs;
-    bool isContinuous = true;
-
+    for( i = 0; i < nsrcs; i++ )
+        arrays[i] = &src[i];
+    for( i = 0; i < ndsts; i++ )
+        arrays[i + nsrcs] = &dst[i];
+    ptrs[nsrcs + ndsts] = 0;
+    
     for( i = 0; i < npairs; i++ )
     {
         int i0 = fromTo[i*2], i1 = fromTo[i*2+1];
@@ -407,48 +450,54 @@ void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const in
             for( j = 0; j < nsrcs; i0 -= src[j].channels(), j++ )
                 if( i0 < src[j].channels() )
                     break;
-            CV_Assert(j < nsrcs && src[j].size() == size && src[j].depth() == depth);
-            isContinuous = isContinuous && src[j].isContinuous();
-            srcs[i] = src[j].data + i0*esz1;
-            s1[i] = src[j].channels(); s0[i] = (int)src[j].step/esz1 - size.width*src[j].channels();
+            CV_Assert(j < nsrcs && src[j].depth() == depth);
+            tab[i*4] = j; tab[i*4+1] = i0*esz1;
+            sdelta[i] = src[j].channels();
         }
         else
         {
-            srcs[i] = 0; s1[i] = s0[i] = 0;
+            tab[i*4] = nsrcs + ndsts; tab[i*4+1] = 0;
+            sdelta[i] = 0;
         }
         
         for( j = 0; j < ndsts; i1 -= dst[j].channels(), j++ )
             if( i1 < dst[j].channels() )
                 break;
-        CV_Assert(i1 >= 0 && j < ndsts && dst[j].size() == size && dst[j].depth() == depth);
-        isContinuous = isContinuous && dst[j].isContinuous();
-        dsts[i] = dst[j].data + i1*esz1;
-        d1[i] = dst[j].channels(); d0[i] = (int)dst[j].step/esz1 - size.width*dst[j].channels();
+        CV_Assert(i1 >= 0 && j < ndsts && dst[j].depth() == depth);
+        tab[i*4+2] = j + nsrcs; tab[i*4+3] = i1*esz1;
+        ddelta[i] = dst[j].channels();
     }
 
-    MixChannelsFunc func = 0;
-    if( esz1 == 1 )
-        func = mixChannels_<uchar>;
-    else if( esz1 == 2 )
-        func = mixChannels_<ushort>;
-    else if( esz1 == 4 )    
-        func = mixChannels_<int>;
-    else if( esz1 == 8 )    
-        func = mixChannels_<int64>;
-    else
-        CV_Error( CV_StsUnsupportedFormat, "" );    
-
-    if( isContinuous )
+    NAryMatIterator it(arrays, ptrs, nsrcs + ndsts);
+    int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
+    MixChannelsFunc func = mixchTab[depth];
+    
+    for( i = 0; i < it.nplanes; i++, ++it )
     {
-        size.width *= size.height;
-        size.height = 1;
+        for( k = 0; k < npairs; k++ )
+        {
+            srcs[k] = ptrs[tab[k*4]] + tab[k*4+1];
+            dsts[k] = ptrs[tab[k*4+2]] + tab[k*4+3];
+        }
+        
+        for( int j = 0; j < total; j += blocksize )
+        {
+            int bsz = std::min(total - j, blocksize);
+            func( srcs, sdelta, dsts, ddelta, bsz, (int)npairs );
+            
+            if( j + blocksize < total )
+                for( k = 0; k < npairs; k++ )
+                {
+                    srcs[k] += blocksize*sdelta[k]*esz1;
+                    dsts[k] += blocksize*ddelta[k]*esz1;
+                }
+        }
     }
-    func( (const void**)srcs, s0, s1, dsts, d0, d1, (int)npairs, size );
 }
 
 
-void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
-                 const int* fromTo, int npairs)
+void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
+                 const int* fromTo, size_t npairs)
 {
     mixChannels(!src.empty() ? &src[0] : 0, src.size(),
                 !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
@@ -458,145 +507,74 @@ void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
 *                                convertScale[Abs]                                       *
 \****************************************************************************************/
 
-template<typename sT, typename dT> struct OpCvt
+namespace cv
 {
-    typedef sT type1;
-    typedef dT rtype;
-    rtype operator()(type1 x) const { return saturate_cast<rtype>(x); }
-};
 
-template<typename sT, typename dT, int _fbits> struct OpCvtFixPt
+template<typename T, typename DT, typename WT> static void
+cvtScaleAbs_( const T* src, size_t sstep,
+              DT* dst, size_t dstep, Size size,
+              WT scale, WT shift )
 {
-    typedef sT type1;
-    typedef dT rtype;
-    enum { fbits = _fbits };
-    rtype operator()(type1 x) const
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+    
+    for( ; size.height--; src += sstep, dst += dstep )
     {
-        return saturate_cast<rtype>((x + (1<<(fbits-1)))>>fbits);
-    }
-};
-
-template<typename sT, typename dT> struct OpCvtAbs
-{
-    typedef sT type1;
-    typedef dT rtype;
-    rtype operator()(type1 x) const { return saturate_cast<rtype>(std::abs(x)); }
-};
-
-template<typename sT, typename dT, int _fbits> struct OpCvtAbsFixPt
-{
-    typedef sT type1;
-    typedef dT rtype;
-    enum { fbits = _fbits };
-
-    rtype operator()(type1 x) const
-    {
-        return saturate_cast<rtype>((std::abs(x) + (1<<(fbits-1)))>>fbits);
-    }
-};
-
-template<class Op> static void
-cvtScaleLUT_( const Mat& srcmat, Mat& dstmat, double scale, double shift )
-{
-    Op op;
-    typedef typename Op::rtype DT;
-    DT lut[256];
-    int i, sdepth = srcmat.depth(), ddepth = dstmat.depth();
-    double val = shift;
-
-    for( i = 0; i < 128; i++, val += scale )
-        lut[i] = op(val);
-
-    if( sdepth == CV_8S )
-        val = shift*2 - val;
-
-    for( ; i < 256; i++, val += scale )
-        lut[i] = op(val);
-
-    Mat _srcmat = srcmat;
-    if( sdepth == CV_8S )
-        _srcmat = Mat(srcmat.size(), CV_8UC(srcmat.channels()), srcmat.data, srcmat.step);
-    LUT(_srcmat, Mat(1, 256, ddepth, lut), dstmat);
-}
-
-template<typename T, class Op> static void
-cvtScale_( const Mat& srcmat, Mat& dstmat, double _scale, double _shift )
-{
-    Op op;
-    typedef typename Op::type1 WT;
-    typedef typename Op::rtype DT;
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
-    WT scale = saturate_cast<WT>(_scale), shift = saturate_cast<WT>(_shift);
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        DT* dst = (DT*)(dstmat.data + dstmat.step*y);
         int x = 0;
-
         for( ; x <= size.width - 4; x += 4 )
         {
             DT t0, t1;
-            t0 = op(src[x]*scale + shift);
-            t1 = op(src[x+1]*scale + shift);
+            t0 = saturate_cast<DT>(std::abs(src[x]*scale + shift));
+            t1 = saturate_cast<DT>(std::abs(src[x+1]*scale + shift));
             dst[x] = t0; dst[x+1] = t1;
-            t0 = op(src[x+2]*scale + shift);
-            t1 = op(src[x+3]*scale + shift);
+            t0 = saturate_cast<DT>(std::abs(src[x+2]*scale + shift));
+            t1 = saturate_cast<DT>(std::abs(src[x+3]*scale + shift));
+            dst[x+2] = t0; dst[x+3] = t1;
+        }
+        
+        for( ; x < size.width; x++ )
+            dst[x] = saturate_cast<DT>(std::abs(src[x]*scale + shift));
+    }
+}    
+    
+template<typename T, typename DT, typename WT> static void
+cvtScale_( const T* src, size_t sstep,
+           DT* dst, size_t dstep, Size size,
+           WT scale, WT shift )
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+    
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        int x = 0;
+        for( ; x <= size.width - 4; x += 4 )
+        {
+            DT t0, t1;
+            t0 = saturate_cast<DT>(src[x]*scale + shift);
+            t1 = saturate_cast<DT>(src[x+1]*scale + shift);
+            dst[x] = t0; dst[x+1] = t1;
+            t0 = saturate_cast<DT>(src[x+2]*scale + shift);
+            t1 = saturate_cast<DT>(src[x+3]*scale + shift);
             dst[x+2] = t0; dst[x+3] = t1;
         }
 
         for( ; x < size.width; x++ )
-            dst[x] = op(src[x]*scale + shift);
+            dst[x] = saturate_cast<DT>(src[x]*scale + shift);
     }
 }
 
-template<typename T, class OpFixPt, class Op, int MAX_SHIFT> static void
-cvtScaleInt_( const Mat& srcmat, Mat& dstmat, double _scale, double _shift )
-{
-    if( std::abs(_scale) > 1 || std::abs(_shift) > MAX_SHIFT )
-    {
-        cvtScale_<T, Op>(srcmat, dstmat, _scale, _shift);
-        return;
-    }
-    OpFixPt op;
-    typedef typename OpFixPt::rtype DT;
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
-    int scale = saturate_cast<int>(_scale*(1<<OpFixPt::fbits)),
-        shift = saturate_cast<int>(_shift*(1<<OpFixPt::fbits));
-
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        DT* dst = (DT*)(dstmat.data + dstmat.step*y);
-        int x = 0;
-
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            DT t0, t1;
-            t0 = op(src[x]*scale + shift);
-            t1 = op(src[x+1]*scale + shift);
-            dst[x] = t0; dst[x+1] = t1;
-            t0 = op(src[x+2]*scale + shift);
-            t1 = op(src[x+3]*scale + shift);
-            dst[x+2] = t0; dst[x+3] = t1;
-        }
-
-        for( ; x < size.width; x++ )
-            dst[x] = op(src[x]*scale + shift);
-    }
-}
 
 template<typename T, typename DT> static void
-cvt_( const Mat& srcmat, Mat& dstmat )
+cvt_( const T* src, size_t sstep,
+      DT* dst, size_t dstep, Size size )
 {
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
-
-    for( int y = 0; y < size.height; y++ )
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+    
+    for( ; size.height--; src += sstep, dst += dstep )
     {
-        const T* src = (const T*)(srcmat.data + srcmat.step*y);
-        DT* dst = (DT*)(dstmat.data + dstmat.step*y);
         int x = 0;
-
         for( ; x <= size.width - 4; x += 4 )
         {
             DT t0, t1;
@@ -607,322 +585,447 @@ cvt_( const Mat& srcmat, Mat& dstmat )
             t1 = saturate_cast<DT>(src[x+3]);
             dst[x+2] = t0; dst[x+3] = t1;
         }
-
+        
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(src[x]);
     }
 }
 
-static const int FBITS = 15;
-#define ICV_SCALE(x) CV_DESCALE((x), FBITS)
-
-typedef void (*CvtFunc)( const Mat& src, Mat& dst );
-typedef void (*CvtScaleFunc)( const Mat& src, Mat& dst, double scale, double shift );
-
-void convertScaleAbs( const Mat& src0, Mat& dst, double scale, double shift )
+template<typename T> static void
+cpy_( const T* src, size_t sstep, T* dst, size_t dstep, Size size )
 {
-    static CvtScaleFunc tab[] =
-    {
-        cvtScaleLUT_<OpCvtAbs<double, uchar> >,
-        cvtScaleLUT_<OpCvtAbs<double, uchar> >,
-        cvtScaleInt_<ushort, OpCvtAbsFixPt<int, uchar, FBITS>, OpCvtAbs<float, uchar>, 0>,
-        cvtScaleInt_<short, OpCvtAbsFixPt<int, uchar, FBITS>, OpCvtAbs<float, uchar>, 1<<15>,
-        cvtScale_<int, OpCvtAbs<double, uchar> >,
-        cvtScale_<float, OpCvtAbs<float, uchar> >,
-        cvtScale_<double, OpCvtAbs<double, uchar> >, 0
-    };
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+    
+    for( ; size.height--; src += sstep, dst += dstep )
+        memcpy(dst, src, size.width*sizeof(src[0]));
+}
+    
+#define DEF_CVT_SCALE_ABS_FUNC(suffix, tfunc, stype, dtype, wtype) \
+static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+                         dtype* dst, size_t dstep, Size size, double* scale) \
+{ \
+    tfunc(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
+}
 
-    Mat src = src0;
-    dst.create( src.dims, src.size, CV_8UC(src.channels()) );
-    CvtScaleFunc func = tab[src.depth()];
+#define DEF_CVT_SCALE_FUNC(suffix, stype, dtype, wtype) \
+static void cvtScale##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+dtype* dst, size_t dstep, Size size, double* scale) \
+{ \
+    cvtScale_(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
+}
+    
+    
+#define DEF_CVT_FUNC(suffix, stype, dtype) \
+static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+                         dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    cvt_(src, sstep, dst, dstep, size); \
+}
+
+#define DEF_CPY_FUNC(suffix, stype) \
+static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+stype* dst, size_t dstep, Size size, double*) \
+{ \
+    cpy_(src, sstep, dst, dstep, size); \
+}
+    
+    
+DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float);    
+
+DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float);
+DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float);
+DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float);
+DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float);
+DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float);
+DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float);
+DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float);    
+
+DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float);
+DEF_CVT_SCALE_FUNC(8s,     schar, schar, float);
+DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float);
+DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float);
+DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float);
+DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float);
+DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float);    
+
+DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float);
+DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float);
+DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float);
+DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float);
+DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float);
+DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float);
+DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float);    
+
+DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float);
+DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float);
+DEF_CVT_SCALE_FUNC(16u16s, ushort, short, float);
+DEF_CVT_SCALE_FUNC(16s,    short, short, float);
+DEF_CVT_SCALE_FUNC(32s16s, int, short, float);
+DEF_CVT_SCALE_FUNC(32f16s, float, short, float);
+DEF_CVT_SCALE_FUNC(64f16s, double, short, float);
+    
+DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float);
+DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float);
+DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float);
+DEF_CVT_SCALE_FUNC(16s32s, short, int, float);
+DEF_CVT_SCALE_FUNC(32s,    int, int, double);
+DEF_CVT_SCALE_FUNC(32f32s, float, int, float);
+DEF_CVT_SCALE_FUNC(64f32s, double, int, double);
+
+DEF_CVT_SCALE_FUNC(8u32f,  uchar, float, float);
+DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float);
+DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float);
+DEF_CVT_SCALE_FUNC(16s32f, short, float, float);
+DEF_CVT_SCALE_FUNC(32s32f, int, float, double);
+DEF_CVT_SCALE_FUNC(32f,    float, float, float);
+DEF_CVT_SCALE_FUNC(64f32f, double, float, double);
+
+DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double);
+DEF_CVT_SCALE_FUNC(8s64f,  schar, double, double);
+DEF_CVT_SCALE_FUNC(16u64f, ushort, double, double);
+DEF_CVT_SCALE_FUNC(16s64f, short, double, double);
+DEF_CVT_SCALE_FUNC(32s64f, int, double, double);
+DEF_CVT_SCALE_FUNC(32f64f, float, double, double);
+DEF_CVT_SCALE_FUNC(64f,    double, double, double);
+
+DEF_CPY_FUNC(8u,     uchar);
+DEF_CVT_FUNC(8s8u,   schar, uchar);
+DEF_CVT_FUNC(16u8u,  ushort, uchar);
+DEF_CVT_FUNC(16s8u,  short, uchar);
+DEF_CVT_FUNC(32s8u,  int, uchar);
+DEF_CVT_FUNC(32f8u,  float, uchar);
+DEF_CVT_FUNC(64f8u,  double, uchar);
+
+DEF_CVT_FUNC(8u8s,   uchar, schar);
+DEF_CVT_FUNC(16u8s,  ushort, schar);
+DEF_CVT_FUNC(16s8s,  short, schar);
+DEF_CVT_FUNC(32s8s,  int, schar);
+DEF_CVT_FUNC(32f8s,  float, schar);
+DEF_CVT_FUNC(64f8s,  double, schar);
+
+DEF_CVT_FUNC(8u16u,  uchar, ushort);
+DEF_CVT_FUNC(8s16u,  schar, ushort);
+DEF_CPY_FUNC(16u,    ushort);
+DEF_CVT_FUNC(16s16u, short, ushort);
+DEF_CVT_FUNC(32s16u, int, ushort);
+DEF_CVT_FUNC(32f16u, float, ushort);
+DEF_CVT_FUNC(64f16u, double, ushort);
+
+DEF_CVT_FUNC(8u16s,  uchar, short);
+DEF_CVT_FUNC(8s16s,  schar, short);
+DEF_CVT_FUNC(16u16s, ushort, short);
+DEF_CVT_FUNC(32s16s, int, short);
+DEF_CVT_FUNC(32f16s, float, short);
+DEF_CVT_FUNC(64f16s, double, short);
+
+DEF_CVT_FUNC(8u32s,  uchar, int);
+DEF_CVT_FUNC(8s32s,  schar, int);
+DEF_CVT_FUNC(16u32s, ushort, int);
+DEF_CVT_FUNC(16s32s, short, int);
+DEF_CPY_FUNC(32s,    int);
+DEF_CVT_FUNC(32f32s, float, int);
+DEF_CVT_FUNC(64f32s, double, int);
+
+DEF_CVT_FUNC(8u32f,  uchar, float);
+DEF_CVT_FUNC(8s32f,  schar, float);
+DEF_CVT_FUNC(16u32f, ushort, float);
+DEF_CVT_FUNC(16s32f, short, float);
+DEF_CVT_FUNC(32s32f, int, float);
+DEF_CVT_FUNC(64f32f, double, float);
+
+DEF_CVT_FUNC(8u64f,  uchar, double);
+DEF_CVT_FUNC(8s64f,  schar, double);
+DEF_CVT_FUNC(16u64f, ushort, double);
+DEF_CVT_FUNC(16s64f, short, double);
+DEF_CVT_FUNC(32s64f, int, double);
+DEF_CVT_FUNC(32f64f, float, double);
+DEF_CPY_FUNC(64s,    int64);
+    
+static BinaryFunc cvtScaleAbsTab[] =
+{
+    (BinaryFunc)cvtScaleAbs8u, (BinaryFunc)cvtScaleAbs8s8u, (BinaryFunc)cvtScaleAbs16u8u,
+    (BinaryFunc)cvtScaleAbs16s8u, (BinaryFunc)cvtScaleAbs32s8u, (BinaryFunc)cvtScaleAbs32f8u,
+    (BinaryFunc)cvtScaleAbs64f8u, 0
+};
+
+static BinaryFunc cvtScaleTab[][8] =
+{
+    {
+        (BinaryFunc)cvtScale8u, (BinaryFunc)cvtScale8s8u, (BinaryFunc)cvtScale16u8u,
+        (BinaryFunc)cvtScale16s8u, (BinaryFunc)cvtScale32s8u, (BinaryFunc)cvtScale32f8u,
+        (BinaryFunc)cvtScale64f8u, 0
+    },
+    {
+        (BinaryFunc)cvtScale8u8s, (BinaryFunc)cvtScale8s, (BinaryFunc)cvtScale16u8s,
+        (BinaryFunc)cvtScale16s8s, (BinaryFunc)cvtScale32s8s, (BinaryFunc)cvtScale32f8s,
+        (BinaryFunc)cvtScale64f8s, 0
+    },
+    {
+        (BinaryFunc)cvtScale8u16u, (BinaryFunc)cvtScale8s16u, (BinaryFunc)cvtScale16u,
+        (BinaryFunc)cvtScale16s16u, (BinaryFunc)cvtScale32s16u, (BinaryFunc)cvtScale32f16u,
+        (BinaryFunc)cvtScale64f16u, 0
+    },
+    {
+        (BinaryFunc)cvtScale8u16s, (BinaryFunc)cvtScale8s16s, (BinaryFunc)cvtScale16u16s,
+        (BinaryFunc)cvtScale16s, (BinaryFunc)cvtScale32s16s, (BinaryFunc)cvtScale32f16s,
+        (BinaryFunc)cvtScale64f16s, 0
+    },
+    {
+        (BinaryFunc)cvtScale8u32s, (BinaryFunc)cvtScale8s32s, (BinaryFunc)cvtScale16u32s,
+        (BinaryFunc)cvtScale16s32s, (BinaryFunc)cvtScale32s, (BinaryFunc)cvtScale32f32s,
+        (BinaryFunc)cvtScale64f32s, 0
+    },
+    {
+        (BinaryFunc)cvtScale8u32f, (BinaryFunc)cvtScale8s32f, (BinaryFunc)cvtScale16u32f,
+        (BinaryFunc)cvtScale16s32f, (BinaryFunc)cvtScale32s32f, (BinaryFunc)cvtScale32f,
+        (BinaryFunc)cvtScale64f32f, 0
+    },
+    {
+        (BinaryFunc)cvtScale8u64f, (BinaryFunc)cvtScale8s64f, (BinaryFunc)cvtScale16u64f,
+        (BinaryFunc)cvtScale16s64f, (BinaryFunc)cvtScale32s64f, (BinaryFunc)cvtScale32f64f,
+        (BinaryFunc)cvtScale64f, 0
+    },
+    {
+        0, 0, 0, 0, 0, 0, 0, 0
+    }
+};
+
+static BinaryFunc cvtTab[][8] =
+{
+    {
+        (BinaryFunc)cvt8u, (BinaryFunc)cvt8s8u, (BinaryFunc)cvt16u8u,
+        (BinaryFunc)cvt16s8u, (BinaryFunc)cvt32s8u, (BinaryFunc)cvt32f8u,
+        (BinaryFunc)cvt64f8u, 0
+    },
+    {
+        (BinaryFunc)cvt8u8s, (BinaryFunc)cvt8u, (BinaryFunc)cvt16u8s,
+        (BinaryFunc)cvt16s8s, (BinaryFunc)cvt32s8s, (BinaryFunc)cvt32f8s,
+        (BinaryFunc)cvt64f8s, 0
+    },
+    {
+        (BinaryFunc)cvt8u16u, (BinaryFunc)cvt8s16u, (BinaryFunc)cvt16u,
+        (BinaryFunc)cvt16s16u, (BinaryFunc)cvt32s16u, (BinaryFunc)cvt32f16u,
+        (BinaryFunc)cvt64f16u, 0
+    },
+    {
+        (BinaryFunc)cvt8u16s, (BinaryFunc)cvt8s16s, (BinaryFunc)cvt16u16s,
+        (BinaryFunc)cvt16u, (BinaryFunc)cvt32s16s, (BinaryFunc)cvt32f16s,
+        (BinaryFunc)cvt64f16s, 0
+    },
+    {
+        (BinaryFunc)cvt8u32s, (BinaryFunc)cvt8s32s, (BinaryFunc)cvt16u32s,
+        (BinaryFunc)cvt16s32s, (BinaryFunc)cvt32s, (BinaryFunc)cvt32f32s,
+        (BinaryFunc)cvt64f32s, 0
+    },
+    {
+        (BinaryFunc)cvt8u32f, (BinaryFunc)cvt8s32f, (BinaryFunc)cvt16u32f,
+        (BinaryFunc)cvt16s32f, (BinaryFunc)cvt32s32f, (BinaryFunc)cvt32s,
+        (BinaryFunc)cvt64f32f, 0
+    },
+    {
+        (BinaryFunc)cvt8u64f, (BinaryFunc)cvt8s64f, (BinaryFunc)cvt16u64f,
+        (BinaryFunc)cvt16s64f, (BinaryFunc)cvt32s64f, (BinaryFunc)cvt32f64f,
+        (BinaryFunc)cvt64s, 0
+    },
+    {
+        0, 0, 0, 0, 0, 0, 0, 0
+    }
+};
+  
+BinaryFunc getConvertFunc(int sdepth, int ddepth)
+{
+    return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
+}
+
+BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
+{
+    return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
+}    
+    
+}
+    
+void cv::convertScaleAbs( const InputArray& _src, OutputArray _dst, double alpha, double beta )
+{
+    Mat src = _src.getMat();
+    int cn = src.channels();
+    double scale[] = {alpha, beta};
+    _dst.create( src.dims, src.size, CV_8UC(cn) );
+    Mat dst = _dst.getMat();
+    BinaryFunc func = cvtScaleAbsTab[src.depth()];
     CV_Assert( func != 0 );
     
     if( src.dims <= 2 )
     {
-        func( src, dst, scale, shift );
+        Size sz = getContinuousSize(src, dst, cn);
+        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
     }
     else
     {
         const Mat* arrays[] = {&src, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        Size sz((int)it.size*cn, 1);
         
-        for( int i = 0; i < it.nplanes; i++, ++it )
-            func(it.planes[0], it.planes[1], scale, shift);
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func( ptrs[0], 0, 0, 0, ptrs[1], 0, sz, scale );
     }
 }
 
-
-void Mat::convertTo(Mat& dst, int _type, double alpha, double beta) const
+void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
-    static CvtFunc tab[8][8] =
-    {
-        {0, cvt_<uchar, schar>, cvt_<uchar, ushort>, cvt_<uchar, short>,
-        cvt_<uchar, int>, cvt_<uchar, float>, cvt_<uchar, double>, 0},
-
-        {cvt_<schar, uchar>, 0, cvt_<schar, ushort>, cvt_<schar, short>,
-        cvt_<schar, int>, cvt_<schar, float>, cvt_<schar, double>, 0},
-
-        {cvt_<ushort, uchar>, cvt_<ushort, schar>, 0, cvt_<ushort, short>,
-        cvt_<ushort, int>, cvt_<ushort, float>, cvt_<ushort, double>, 0},
-
-        {cvt_<short, uchar>, cvt_<short, schar>, cvt_<short, ushort>, 0,
-        cvt_<short, int>, cvt_<short, float>, cvt_<short, double>, 0},
-
-        {cvt_<int, uchar>, cvt_<int, schar>, cvt_<int, ushort>,
-        cvt_<int, short>, 0, cvt_<int, float>, cvt_<int, double>, 0},
-
-        {cvt_<float, uchar>, cvt_<float, schar>, cvt_<float, ushort>,
-        cvt_<float, short>, cvt_<float, int>, 0, cvt_<float, double>, 0},
-
-        {cvt_<double, uchar>, cvt_<double, schar>, cvt_<double, ushort>,
-        cvt_<double, short>, cvt_<double, int>, cvt_<double, float>, 0, 0},
-
-        {0,0,0,0,0,0,0,0}
-    };
-
-    static CvtScaleFunc stab[8][8] =
-    {
-        {
-            cvtScaleLUT_<OpCvt<double, uchar> >,
-            cvtScaleLUT_<OpCvt<double, schar> >,
-            cvtScaleLUT_<OpCvt<double, ushort> >,
-            cvtScaleLUT_<OpCvt<double, short> >,
-            cvtScaleLUT_<OpCvt<double, int> >,
-            cvtScaleLUT_<OpCvt<double, float> >,
-            cvtScaleLUT_<OpCvt<double, double> >, 0
-        },
-
-        {
-            // this is copy of the above section,
-            // since cvScaleLUT handles both 8u->? and 8s->? cases
-            cvtScaleLUT_<OpCvt<double, uchar> >,
-            cvtScaleLUT_<OpCvt<double, schar> >,
-            cvtScaleLUT_<OpCvt<double, ushort> >,
-            cvtScaleLUT_<OpCvt<double, short> >,
-            cvtScaleLUT_<OpCvt<double, int> >,
-            cvtScaleLUT_<OpCvt<double, float> >,
-            cvtScaleLUT_<OpCvt<double, double> >, 0,
-        },
-
-        {
-            cvtScaleInt_<ushort, OpCvtFixPt<int, uchar, FBITS>, OpCvt<float, uchar>, 0>,
-            cvtScaleInt_<ushort, OpCvtFixPt<int, schar, FBITS>, OpCvt<float, schar>, 0>,
-            cvtScaleInt_<ushort, OpCvtFixPt<int, ushort, FBITS>, OpCvt<float, ushort>, 0>,
-            cvtScaleInt_<ushort, OpCvtFixPt<int, short, FBITS>, OpCvt<float, short>, 0>,
-            cvtScale_<ushort, OpCvt<double, int> >,
-            cvtScale_<ushort, OpCvt<double, float> >,
-            cvtScale_<ushort, OpCvt<double, double> >, 0,
-        },
-
-        {
-            cvtScaleInt_<short, OpCvtFixPt<int, uchar, FBITS>, OpCvt<float, uchar>, 1<<15>,
-            cvtScaleInt_<short, OpCvtFixPt<int, schar, FBITS>, OpCvt<float, schar>, 1<<15>,
-            cvtScaleInt_<short, OpCvtFixPt<int, ushort, FBITS>, OpCvt<float, ushort>, 1<<15>,
-            cvtScaleInt_<short, OpCvtFixPt<int, short, FBITS>, OpCvt<float, short>, 1<<15>,
-            cvtScale_<short, OpCvt<double, int> >,
-            cvtScale_<short, OpCvt<double, float> >,
-            cvtScale_<short, OpCvt<double, double> >, 0,
-        },
-
-        {
-            cvtScale_<int, OpCvt<float, uchar> >,
-            cvtScale_<int, OpCvt<float, schar> >,
-            cvtScale_<int, OpCvt<double, ushort> >,
-            cvtScale_<int, OpCvt<double, short> >,
-            cvtScale_<int, OpCvt<double, int> >,
-            cvtScale_<int, OpCvt<double, float> >,
-            cvtScale_<int, OpCvt<double, double> >, 0,
-        },
-
-        {
-            cvtScale_<float, OpCvt<float, uchar> >,
-            cvtScale_<float, OpCvt<float, schar> >,
-            cvtScale_<float, OpCvt<float, ushort> >,
-            cvtScale_<float, OpCvt<float, short> >,
-            cvtScale_<float, OpCvt<float, int> >,
-            cvtScale_<float, OpCvt<float, float> >,
-            cvtScale_<float, OpCvt<double, double> >, 0,
-        },
-
-        {
-            cvtScale_<double, OpCvt<double, uchar> >,
-            cvtScale_<double, OpCvt<double, schar> >,
-            cvtScale_<double, OpCvt<double, ushort> >,
-            cvtScale_<double, OpCvt<double, short> >,
-            cvtScale_<double, OpCvt<double, int> >,
-            cvtScale_<double, OpCvt<double, float> >,
-            cvtScale_<double, OpCvt<double, double> >, 0,
-        }
-    };
-
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
-        _type = type();
+        _type = _dst.fixedType() ? _dst.type() : type();
     else
         _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), channels());
 
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(_type);
     if( sdepth == ddepth && noScale )
     {
-        copyTo(dst);
+        copyTo(_dst);
         return;
     }
 
-    Mat temp;
-    const Mat* psrc = this;
-    if( sdepth != ddepth && data == dst.data )
-        psrc = &(temp = *this);
+    Mat src = *this;
         
-    CvtFunc func = 0;
-    CvtScaleFunc scaleFunc = 0;
-    
-    if( noScale )
-    {
-        func = tab[sdepth][ddepth];
-        CV_Assert( func != 0 );
-    }
-    else
-    {
-        scaleFunc = stab[sdepth][ddepth];
-        CV_Assert( scaleFunc != 0 );
-    }
+    BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
+    double scale[] = {alpha, beta};
+    int cn = channels();
+    CV_Assert( func != 0 );
     
     if( dims <= 2 )
     {
-        dst.create( size(), _type );
-        if( func )
-            func( *psrc, dst );
-        else
-            scaleFunc( *psrc, dst, alpha, beta );
+        _dst.create( size(), _type );
+        Mat dst = _dst.getMat();
+        Size sz = getContinuousSize(src, dst, cn);
+        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
     }
     else
     {
-        dst.create( dims, size, _type );
-        const Mat* arrays[] = {psrc, &dst, 0};
-        Mat planes[2];
-        NAryMatIterator it(arrays, planes);
+        _dst.create( dims, size, _type );
+        Mat dst = _dst.getMat();
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        Size sz((int)(it.size*cn), 1);
         
-        for( int i = 0; i < it.nplanes; i++, ++it )
-        {
-            if( func )
-                func(it.planes[0], it.planes[1]);
-            else
-                scaleFunc(it.planes[0], it.planes[1], alpha, beta);
-        }
-    }    
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func(ptrs[0], 0, 0, 0, ptrs[1], 0, sz, scale);
+    }
 }
 
 /****************************************************************************************\
 *                                    LUT Transform                                       *
 \****************************************************************************************/
 
-template<typename T> static void
-LUT8u( const Mat& srcmat, Mat& dstmat, const Mat& lut )
+namespace cv
 {
-    int cn = lut.channels();
-    int max_block_size = (1 << 10)*cn;
-    const T* _lut = (const T*)lut.data;
-    T lutp[4][256];
-    int y, i, k;
-    Size size = getContinuousSize( srcmat, dstmat, srcmat.channels() );
 
+template<typename T> static void
+LUT8u_( const uchar* src, const T* lut, T* dst, int len, int cn )
+{
     if( cn == 1 )
     {
-        for( y = 0; y < size.height; y++ )
-        {
-            const uchar* src = srcmat.data + srcmat.step*y;
-            T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-            for( i = 0; i < size.width; i++ )
-                dst[i] = _lut[src[i]];
-        }
-        return;
+        for( int i = 0; i < len; i++ )
+            dst[i] = lut[src[i]];
     }
-
-    if( size.width*size.height < 256 )
+    else
     {
-        for( y = 0; y < size.height; y++ )
-        {
-            const uchar* src = srcmat.data + srcmat.step*y;
-            T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-            for( k = 0; k < cn; k++ )
-                for( i = 0; i < size.width; i += cn )
-                    dst[i+k] = _lut[src[i+k]*cn+k];
-        }
-        return;
-    }
-
-    /* repack the lut to planar layout */
-    for( k = 0; k < cn; k++ )
-        for( i = 0; i < 256; i++ )
-            lutp[k][i] = _lut[i*cn+k];
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const uchar* src = srcmat.data + srcmat.step*y;
-        T* dst = (T*)(dstmat.data + dstmat.step*y);
-
-        for( i = 0; i < size.width; )
-        {
-            int j, limit = std::min(size.width, i + max_block_size);
-            for( k = 0; k < cn; k++, src++, dst++ )
-            {
-                const T* lut = lutp[k];
-                for( j = i; j <= limit - cn*2; j += cn*2 )
-                {
-                    T t0 = lut[src[j]];
-                    T t1 = lut[src[j+cn]];
-                    dst[j] = t0; dst[j+cn] = t1;
-                }
-
-                for( ; j < limit; j += cn )
-                    dst[j] = lut[src[j]];
-            }
-            src -= cn;
-            dst -= cn;
-            i = limit;
-        }
+        for( int i = 0; i < len*cn; i += cn )
+            for( int k = 0; k < cn; k++ )
+                dst[i+k] = lut[src[i+k]*cn+k];
     }
 }
 
-typedef void (*LUTFunc)( const Mat& src, Mat& dst, const Mat& lut );
-
-void LUT( const Mat& src, const Mat& lut, Mat& dst )
+static void LUT8u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn )
 {
-    int cn = src.channels(), esz1 = (int)lut.elemSize1();
+    LUT8u_( src, lut, dst, len, cn );
+}
+
+static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn )
+{
+    LUT8u_( src, lut, dst, len, cn );
+}
+
+static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn )
+{
+    LUT8u_( src, lut, dst, len, cn );
+}
+
+static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, int cn )
+{
+    LUT8u_( src, lut, dst, len, cn );
+}
+
+static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn )
+{
+    LUT8u_( src, lut, dst, len, cn );
+}
+
+static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn )
+{
+    LUT8u_( src, lut, dst, len, cn );
+}
+
+static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len, int cn )
+{
+    LUT8u_( src, lut, dst, len, cn );
+}    
+    
+typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn );
+    
+static LUTFunc lutTab[] =
+{
+    (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
+    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
+};
+
+}
+    
+void cv::LUT( const InputArray& _src, const InputArray& _lut, OutputArray _dst, int interpolation )
+{
+    Mat src = _src.getMat(), lut = _lut.getMat();
+    CV_Assert( interpolation == 0 );
+    int cn = src.channels();
 
     CV_Assert( (lut.channels() == cn || lut.channels() == 1) &&
-        lut.rows*lut.cols == 256 && lut.isContinuous() &&
+        lut.total() == 256 && lut.isContinuous() &&
         (src.depth() == CV_8U || src.depth() == CV_8S) );
-    dst.create( src.size(), CV_MAKETYPE(lut.depth(), cn));
+    _dst.create( src.dims, src.size, CV_MAKETYPE(lut.depth(), cn));
+    Mat dst = _dst.getMat();
 
-    LUTFunc func = 0;
-    if( esz1 == 1 )
-        func = LUT8u<uchar>;
-    else if( esz1 == 2 )
-        func = LUT8u<ushort>;
-    else if( esz1 == 4 )
-        func = LUT8u<int>;
-    else if( esz1 == 8 )
-        func = LUT8u<int64>;
-    else    
-        CV_Error(CV_StsUnsupportedFormat, "");
-    func( src, dst, lut );
+    LUTFunc func = lutTab[src.depth()];
+    CV_Assert( func != 0 );
+    
+    const Mat* arrays[] = {&src, &dst, 0};
+    uchar* ptrs[2];
+    NAryMatIterator it(arrays, ptrs);
+    int len = (int)it.size;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        func(ptrs[0], lut.data, ptrs[1], len, cn);
 }
 
 
-void normalize( const Mat& src, Mat& dst, double a, double b,
-                int norm_type, int rtype, const Mat& mask )
+void cv::normalize( const InputArray& _src, OutputArray _dst, double a, double b,
+                    int norm_type, int rtype, const InputArray& _mask )
 {
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
         double smin = 0, smax = 0;
         double dmin = MIN( a, b ), dmax = MAX( a, b );
-        minMaxLoc( src, &smin, &smax, 0, 0, mask );
+        minMaxLoc( _src, &smin, &smax, 0, 0, mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         shift = dmin - smin*scale;
     }
@@ -935,6 +1038,12 @@ void normalize( const Mat& src, Mat& dst, double a, double b,
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
     
+    if( rtype < 0 )
+        rtype = _dst.fixedType() ? _dst.depth() : src.depth();
+    
+    _dst.create(src.dims, src.size, CV_MAKETYPE(rtype, src.channels()));
+    Mat dst = _dst.getMat();
+    
     if( !mask.data )
         src.convertTo( dst, rtype, scale, shift );
     else
@@ -943,8 +1052,6 @@ void normalize( const Mat& src, Mat& dst, double a, double b,
         src.convertTo( temp, rtype, scale, shift );
         temp.copyTo( dst, mask );
     }
-}
-
 }
 
 CV_IMPL void

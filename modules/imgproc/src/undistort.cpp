@@ -42,12 +42,10 @@
 
 #include "precomp.hpp"
 
-namespace cv
-{
-
-Mat getDefaultNewCameraMatrix( const Mat& cameraMatrix, Size imgsize,
+cv::Mat cv::getDefaultNewCameraMatrix( const InputArray& _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
 {
+    Mat cameraMatrix = _cameraMatrix.getMat();
     if( !centerPrincipalPoint && cameraMatrix.type() == CV_64F )
         return cameraMatrix;
     
@@ -61,35 +59,42 @@ Mat getDefaultNewCameraMatrix( const Mat& cameraMatrix, Size imgsize,
     return newCameraMatrix;
 }
 
-void initUndistortRectifyMap( const Mat& _cameraMatrix, const Mat& _distCoeffs,
-                              const Mat& matR, const Mat& _newCameraMatrix,
-                              Size size, int m1type, Mat& map1, Mat& map2 )
+void cv::initUndistortRectifyMap( const InputArray& _cameraMatrix, const InputArray& _distCoeffs,
+                              const InputArray& _matR, const InputArray& _newCameraMatrix,
+                              Size size, int m1type, OutputArray _map1, OutputArray _map2 )
 {
+    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+    Mat matR = _matR.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
+    
     if( m1type <= 0 )
         m1type = CV_16SC2;
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32FC1 || m1type == CV_32FC2 );
-    map1.create( size, m1type );
+    _map1.create( size, m1type );
+    Mat map1 = _map1.getMat(), map2;
     if( m1type != CV_32FC2 )
-        map2.create( size, m1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
+    {
+        _map2.create( size, m1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
+        map2 = _map2.getMat();
+    }
     else
-        map2.release();
+        _map2.release();
 
-    Mat_<double> R = Mat_<double>::eye(3, 3), distCoeffs;
-    Mat_<double> A = Mat_<double>(_cameraMatrix), Ar;
+    Mat_<double> R = Mat_<double>::eye(3, 3);
+    Mat_<double> A = Mat_<double>(cameraMatrix), Ar;
 
-    if( _newCameraMatrix.data )
-        Ar = Mat_<double>(_newCameraMatrix);
+    if( newCameraMatrix.data )
+        Ar = Mat_<double>(newCameraMatrix);
     else
         Ar = getDefaultNewCameraMatrix( A, size, true );
 
     if( matR.data )
         R = Mat_<double>(matR);
 
-    if( _distCoeffs.data )
-        distCoeffs = Mat_<double>(_distCoeffs);
+    if( distCoeffs.data )
+        distCoeffs = Mat_<double>(distCoeffs);
     else
     {
-        distCoeffs.create(8, 1);
+        distCoeffs.create(8, 1, CV_64F);
         distCoeffs = 0.;
     }
 
@@ -156,28 +161,33 @@ void initUndistortRectifyMap( const Mat& _cameraMatrix, const Mat& _distCoeffs,
 }
 
 
-void undistort( const Mat& src, Mat& dst, const Mat& _cameraMatrix,
-                const Mat& _distCoeffs, const Mat& _newCameraMatrix )
+void cv::undistort( const InputArray& _src, OutputArray _dst, const InputArray& _cameraMatrix,
+                    const InputArray& _distCoeffs, const InputArray& _newCameraMatrix )
 {
-    dst.create( src.size(), src.type() );
+    Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
+    Mat distCoeffs = _distCoeffs.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
+    
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+    
     CV_Assert( dst.data != src.data );
 
     int stripe_size0 = std::min(std::max(1, (1 << 12) / std::max(src.cols, 1)), src.rows);
     Mat map1(stripe_size0, src.cols, CV_16SC2), map2(stripe_size0, src.cols, CV_16UC1);
 
-    Mat_<double> A, distCoeffs, Ar, I = Mat_<double>::eye(3,3);
+    Mat_<double> A, Ar, I = Mat_<double>::eye(3,3);
 
-    _cameraMatrix.convertTo(A, CV_64F);
-    if( _distCoeffs.data )
-        distCoeffs = Mat_<double>(_distCoeffs);
+    cameraMatrix.convertTo(A, CV_64F);
+    if( distCoeffs.data )
+        distCoeffs = Mat_<double>(distCoeffs);
     else
     {
-        distCoeffs.create(5, 1);
+        distCoeffs.create(5, 1, CV_64F);
         distCoeffs = 0.;
     }
 
-    if( _newCameraMatrix.data )
-        _newCameraMatrix.convertTo(Ar, CV_64F);
+    if( newCameraMatrix.data )
+        newCameraMatrix.convertTo(Ar, CV_64F);
     else
         A.copyTo(Ar);
 
@@ -194,8 +204,6 @@ void undistort( const Mat& src, Mat& dst, const Mat& _cameraMatrix,
                                  map1_part.type(), map1_part, map2_part );
         remap( src, dst_part, map1_part, map2_part, INTER_LINEAR, BORDER_CONSTANT );
     }
-}
-
 }
 
 
@@ -373,48 +381,34 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
 }
 
 
-namespace cv
+void cv::undistortPoints( const InputArray& _src, OutputArray _dst,
+                          const InputArray& _cameraMatrix,
+                          const InputArray& _distCoeffs,
+                          const InputArray& _Rmat,
+                          const InputArray& _Pmat )
 {
+    Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
+    Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
     
-void undistortPoints( const Mat& src, Mat& dst,
-                          const Mat& cameraMatrix, const Mat& distCoeffs,
-                          const Mat& R, const Mat& P )
-{
     CV_Assert( src.isContinuous() && (src.depth() == CV_32F || src.depth() == CV_64F) &&
               ((src.rows == 1 && src.channels() == 2) || src.cols*src.channels() == 2));
     
-    dst.create(src.size(), src.type());
-    CvMat _src = src, _dst = dst, _cameraMatrix = cameraMatrix;
-    CvMat matR, matP, _distCoeffs, *pR=0, *pP=0, *pD=0;
-    if( R.data )
-        pR = &(matR = R);
-    if( P.data )
-        pP = &(matP = P);
-    if( distCoeffs.data )
-        pD = &(_distCoeffs = distCoeffs);
-    cvUndistortPoints(&_src, &_dst, &_cameraMatrix, pD, pR, pP);
-}
-
-void undistortPoints( const Mat& src, std::vector<Point2f>& dst,
-                      const Mat& cameraMatrix, const Mat& distCoeffs,
-                      const Mat& R, const Mat& P )
-{
-    size_t sz = src.cols*src.rows*src.channels()/2;
-    CV_Assert( src.isContinuous() && src.depth() == CV_32F &&
-               ((src.rows == 1 && src.channels() == 2) || src.cols*src.channels() == 2));
+    _dst.create(src.size(), src.type(), -1, true);
+    Mat dst = _dst.getMat();
     
-    dst.resize(sz);
-    CvMat _src = src, _dst = Mat(dst), _cameraMatrix = cameraMatrix;
-    CvMat matR, matP, _distCoeffs, *pR=0, *pP=0, *pD=0;
+    CvMat _csrc = src, _cdst = dst, _ccameraMatrix = cameraMatrix;
+    CvMat matR, matP, _cdistCoeffs, *pR=0, *pP=0, *pD=0;
     if( R.data )
         pR = &(matR = R);
     if( P.data )
         pP = &(matP = P);
     if( distCoeffs.data )
-        pD = &(_distCoeffs = distCoeffs);
-    cvUndistortPoints(&_src, &_dst, &_cameraMatrix, pD, pR, pP);
+        pD = &(_cdistCoeffs = distCoeffs);
+    cvUndistortPoints(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP);
 }
 
+namespace cv
+{
 
 static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int projType)
 {
@@ -492,11 +486,13 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
     return i < maxiter ? Point2f((float)q[0], (float)q[1]) : Point2f(-FLT_MAX, -FLT_MAX);
 }
 
+}
     
-float initWideAngleProjMap( const Mat& cameraMatrix0, const Mat& distCoeffs0,
+float cv::initWideAngleProjMap( const InputArray& _cameraMatrix0, const InputArray& _distCoeffs0,
                             Size imageSize, int destImageWidth, int m1type,
-                            Mat& map1, Mat& map2, int projType, double _alpha )
+                            OutputArray _map1, OutputArray _map2, int projType, double _alpha )
 {
+    Mat cameraMatrix0 = _cameraMatrix0.getMat(), distCoeffs0 = _distCoeffs0.getMat();
     double k[8] = {0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
     Mat distCoeffs(distCoeffs0.rows, distCoeffs0.cols, CV_MAKETYPE(CV_64F,distCoeffs0.channels()), k);
     Mat cameraMatrix(3,3,CV_64F,M);
@@ -562,15 +558,15 @@ float initWideAngleProjMap( const Mat& cameraMatrix0, const Mat& distCoeffs0,
     
     if(m1type == CV_32FC2)
     {
+        _map1.create(mapxy.size(), mapxy.type());
+        Mat map1 = _map1.getMat();
         mapxy.copyTo(map1);
-        map2.release();
+        _map2.release();
     }
     else
-        convertMaps(mapxy, Mat(), map1, map2, m1type, false);
+        convertMaps(mapxy, Mat(), _map1, _map2, m1type, false);
     
     return scale;
-}
-
 }
 
 /*  End of file  */
