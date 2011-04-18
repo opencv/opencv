@@ -1188,11 +1188,15 @@ void OutputArray::create(int dims, const int* size, int type, int i, bool alloca
     {
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
-        if( allocateVector && dims == 2 && m.dims == 2 &&
-            m.type() == type && m.rows == size[1] && m.cols == size[0] && m.isContinuous())
-            return;
-        if( !m.isContinuous() )
-            m.release();
+        if( allocateVector )
+        {
+            if( !m.isContinuous() )
+                m.release();
+            
+            if( dims == 2 && m.dims == 2 && m.data &&
+                m.type() == type && m.rows == size[1] && m.cols == size[0] )
+                return;
+        }
         m.create(dims, size, type);
         return;
     }
@@ -1310,11 +1314,15 @@ void OutputArray::create(int dims, const int* size, int type, int i, bool alloca
         CV_Assert( i < (int)v.size() );
         Mat& m = v[i];
         
-        if( allocateVector && dims == 2 && m.dims == 2 &&
-            m.type() == type && m.rows == size[1] && m.cols == size[0] && m.isContinuous())
-            return;
-        if(!m.isContinuous())
-            m.release();
+        if( allocateVector )
+        {
+            if( !m.isContinuous() )
+                m.release();
+            
+            if( dims == 2 && m.dims == 2 && m.data &&
+                m.type() == type && m.rows == size[1] && m.cols == size[0] )
+                return;
+        }
         m.create(dims, size, type);
     }
 }
