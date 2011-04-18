@@ -170,8 +170,9 @@ struct IPPInitializer
 IPPInitializer ippInitializer;
 #else
 volatile bool useOptimizedFlag = false;
-volatile bool USE_SSE2 = false;
 #endif
+
+volatile bool USE_SSE2 = false;
 
 void setUseOptimized( bool flag )
 {

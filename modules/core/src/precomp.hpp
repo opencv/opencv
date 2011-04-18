@@ -87,7 +87,7 @@ extern const uchar g_Saturate8u[];
 void deleteThreadAllocData();
 void deleteThreadRNGData();
 #endif
-    
+
 template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
 {
     typedef T1 type1;
@@ -176,24 +176,24 @@ typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                            void*);
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);  
+BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 enum { BLOCK_SIZE = 1024 };
 
 #ifdef HAVE_IPP
-static inline IppiSize ippiSize(int width, int height) { IppiSize sz={width, height}; return sz; }
-static inline IppiSize ippiSize(Size _sz) { reIppiSize sz={_sz.width, _sz.height}; return sz; }
+static inline IppiSize ippiSize(int width, int height) { IppiSize sz = { width, height}; return sz; }
+static inline IppiSize ippiSize(Size _sz)              { IppiSize sz = { _sz.width, _sz.height}; return sz; }
 #endif
-    
+
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
 #define ARITHM_USE_IPP 1
 #define IF_IPP(then_call, else_call) then_call
 #else
 #define ARITHM_USE_IPP 0
 #define IF_IPP(then_call, else_call) else_call
-#endif    
-    
+#endif
+
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/

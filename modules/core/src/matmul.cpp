@@ -646,8 +646,8 @@ static void GEMMBlockMul_64fc( const Complexd* a_data, size_t a_step,
 {
     GEMMBlockMul(a_data, a_step, b_data, b_step, d_data, d_step, a_size, d_size, flags);
 }
-    
-    
+
+
 static void GEMMStore_32f( const float* c_data, size_t c_step,
           const double* d_buf, size_t d_buf_step,
           float* d_data, size_t d_step, Size d_size,
@@ -664,7 +664,7 @@ static void GEMMStore_64f( const double* c_data, size_t c_step,
 {
     GEMMStore(c_data, c_step, d_buf, d_buf_step, d_data, d_step, d_size, alpha, beta, flags);
 }
-    
+
 
 static void GEMMStore_32fc( const Complexf* c_data, size_t c_step,
                           const Complexd* d_buf, size_t d_buf_step,
@@ -1130,7 +1130,7 @@ void cv::gemm( const InputArray& matA, const InputArray& matB, double alpha,
         int dm0, dn0, dk0;
         size_t a_step0, a_step1, b_step0, b_step1, c_step0, c_step1;
         int work_elem_size = elem_size << (CV_MAT_DEPTH(type) == CV_32F ? 1 : 0);
-        
+
         if( !is_a_t )
             a_step0 = A.step, a_step1 = elem_size;
         else
@@ -1273,7 +1273,7 @@ template<typename T, typename WT> static void
 transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
 {
     int x;
-    
+
     if( scn == 2 && dcn == 2 )
     {
         for( x = 0; x < len*2; x += 2 )
@@ -1352,7 +1352,7 @@ load4x4Matrix( const float* m, __m128& m0, __m128& m1, __m128& m2, __m128& m3, _
 }
 
 #endif
-    
+
 static void
 transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn )
 {
@@ -1379,7 +1379,7 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
         __m128i m2 = _mm_setr_epi16(0, m20, m21, m22, m20, m21, m22, 0);
         __m128i m3 = _mm_setr_epi32(m03, m13, m23, 0);
         int x = 0;
-        
+
         for( ; x <= (len - 8)*3; x += 8*3 )
         {
             __m128i z = _mm_setzero_si128(), t0, t1, t2, r0, r1;
@@ -1470,14 +1470,14 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
         return;
     }
 #endif
-    
+
     transform_(src, dst, m, len, scn, dcn);
 }
 
 static void
 transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SSE2    
+#if CV_SSE2
     if( USE_SSE2 && scn == 3 && dcn == 3 )
     {
         __m128 m0, m1, m2, m3;
@@ -1536,11 +1536,11 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
         return;
     }
 #endif
-    
+
     transform_(src, dst, m, len, scn, dcn);
 }
-    
-    
+
+
 static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
@@ -1574,12 +1574,12 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
             }
             return;
         }
-        
+
         if( scn == 4 && dcn == 4 )
         {
             __m128 m0, m1, m2, m3, m4;
             load4x4Matrix(m, m0, m1, m2, m3, m4);
-        
+
             for( ; x < len*4; x += 4 )
             {
                 __m128 x0 = _mm_loadu_ps(src + x);
@@ -1616,18 +1616,18 @@ transform_32s(const int* src, int* dst, const double* m, int len, int scn, int d
 {
     transform_(src, dst, m, len, scn, dcn);
 }
-    
+
 static void
 transform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
 {
     transform_(src, dst, m, len, scn, dcn);
-}    
-    
+}
+
 template<typename T, typename WT> static void
 diagtransform_( const T* src, T* dst, const WT* m, int len, int cn, int )
 {
     int x;
-    
+
     if( cn == 2 )
     {
         for( x = 0; x < len*2; x += 2 )
@@ -1674,8 +1674,8 @@ static void
 diagtransform_8u(const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
-}    
-    
+}
+
 static void
 diagtransform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int dcn)
 {
@@ -1686,8 +1686,8 @@ static void
 diagtransform_16u(const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
-}    
-    
+}
+
 static void
 diagtransform_16s(const short* src, short* dst, const float* m, int len, int scn, int dcn)
 {
@@ -1704,17 +1704,17 @@ static void
 diagtransform_32f(const float* src, float* dst, const float* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
-}    
-    
+}
+
 static void
 diagtransform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
-}    
-    
-    
+}
+
+
 typedef void (*TransformFunc)( const uchar* src, uchar* dst, const uchar* m, int, int, int );
-    
+
 static TransformFunc transformTab[] =
 {
     (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
@@ -1728,23 +1728,23 @@ static TransformFunc diagTransformTab[] =
     (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
     (TransformFunc)diagtransform_64f, 0
 };
-    
+
 }
-    
+
 void cv::transform( const InputArray& _src, OutputArray _dst, const InputArray& _mtx )
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows;
     CV_Assert( scn == m.cols || scn + 1 == m.cols );
     bool isDiag = false;
-    
+
     _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
     Mat dst = _dst.getMat();
 
     int mtype = depth == CV_32S || depth == CV_64F ? CV_64F : CV_32F;
     AutoBuffer<double> _mbuf;
     double* mbuf = _mbuf;
-    
+
     if( !m.isContinuous() || m.type() != mtype || m.cols != scn + 1 )
     {
         _mbuf.allocate(dcn*(scn+1));
@@ -1791,12 +1791,12 @@ void cv::transform( const InputArray& _src, OutputArray _dst, const InputArray& 
 
     TransformFunc func = isDiag ? diagTransformTab[depth] : transformTab[depth];
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     size_t i, total = it.size;
-    
+
     for( i = 0; i < it.nplanes; i++, ++it )
         func( ptrs[0], ptrs[1], (uchar*)mbuf, (int)total, scn, dcn );
 }
@@ -1813,7 +1813,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
 {
     const double eps = FLT_EPSILON;
     int i;
-    
+
     if( scn == 2 && dcn == 2 )
     {
         for( i = 0; i < len*2; i += 2 )
@@ -1837,7 +1837,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
         {
             T x = src[i], y = src[i + 1], z = src[i + 2];
             double w = x*m[12] + y*m[13] + z*m[14] + m[15];
-            
+
             if( fabs(w) > eps )
             {
                 w = 1./w;
@@ -1855,7 +1855,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
         {
             T x = src[0], y = src[1], z = src[2];
             double w = x*m[8] + y*m[9] + z*m[10] + m[11];
-            
+
             if( fabs(w) > eps )
             {
                 w = 1./w;
@@ -1893,7 +1893,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
     }
 }
 
-    
+
 static void
 perspectiveTransform_32f(const float* src, float* dst, const double* m, int len, int scn, int dcn)
 {
@@ -1905,22 +1905,22 @@ perspectiveTransform_64f(const double* src, double* dst, const double* m, int le
 {
     perspectiveTransform_(src, dst, m, len, scn, dcn);
 }
-    
+
 }
-    
+
 void cv::perspectiveTransform( const InputArray& _src, OutputArray _dst, const InputArray& _mtx )
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
     CV_Assert( scn + 1 == m.cols && (depth == CV_32F || depth == CV_64F));
-    
+
     _dst.create( src.size(), CV_MAKETYPE(depth, dcn) );
     Mat dst = _dst.getMat();
-    
+
     const int mtype = CV_64F;
     AutoBuffer<double> _mbuf;
     double* mbuf = _mbuf;
-    
+
     if( !m.isContinuous() || m.type() != mtype )
     {
         _mbuf.allocate((dcn+1)*(scn+1));
@@ -1930,20 +1930,20 @@ void cv::perspectiveTransform( const InputArray& _src, OutputArray _dst, const I
     }
     else
         mbuf = (double*)m.data;
-    
+
     TransformFunc func = depth == CV_32F ?
         (TransformFunc)perspectiveTransform_32f :
         (TransformFunc)perspectiveTransform_64f;
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     size_t i, total = it.size;
-    
+
     for( i = 0; i < it.nplanes; i++, ++it )
         func( ptrs[0], ptrs[1], (uchar*)mbuf, (int)total, scn, dcn );
-}    
+}
 
 /****************************************************************************************\
 *                                       ScaleAdd                                         *
@@ -2000,7 +2000,7 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
         dst[i] = src1[i]*alpha + src2[i];
 }
 
-    
+
 static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
                          int len, double* _alpha)
 {
@@ -2040,39 +2040,39 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
 typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, int len, const void* alpha);
 
 }
-    
+
 void cv::scaleAdd( const InputArray& _src1, double alpha, const InputArray& _src2, OutputArray _dst )
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     int depth = src1.depth(), cn = src1.channels();
-    
+
     CV_Assert( src1.type() == src2.type() );
     if( depth < CV_32F )
     {
         addWeighted(_src1, alpha, _src2, 1, 0, _dst, depth);
         return;
     }
-    
+
     _dst.create(src1.dims, src1.size, src1.type());
     Mat dst = _dst.getMat();
-    
+
     float falpha = (float)alpha;
     void* palpha = depth == CV_32F ? (void*)&falpha : (void*)&alpha;
-    
+
     ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f; 
-    
+
     if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
     {
         size_t len = src1.total()*cn;
         func(src1.data, src2.data, dst.data, (int)len, palpha);
         return;
     }
-    
+
     const Mat* arrays[] = {&src1, &src2, &dst, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
     size_t i, len = it.size*cn;
-    
+
     for( i = 0; i < it.nplanes; i++, ++it )
         func( ptrs[0], ptrs[1], ptrs[2], (int)len, palpha );
 }
@@ -2243,7 +2243,7 @@ double cv::Mahalonobis( const InputArray& _v1, const InputArray& _v2, const Inpu
 {
     return Mahalanobis(_v1, _v2, _icovar);
 }
-    
+
 /****************************************************************************************\
 *                                        MulTransposed                                   *
 \****************************************************************************************/
@@ -2445,7 +2445,7 @@ MulTransposedL( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
 typedef void (*MulTransposedFunc)(const Mat& src, Mat& dst, const Mat& delta, double scale);
 
 }
-    
+
 void cv::mulTransposed( const InputArray& _src, OutputArray _dst, bool ata,
                         const InputArray& _delta, double scale, int dtype )
 {
@@ -2578,7 +2578,7 @@ dotProd_(const T* src1, const T* src2, int len)
             (double)src1[i+2]*src2[i+2] + (double)src1[i+3]*src2[i+3];
     for( ; i < len; i++ )
         result += (double)src1[i]*src2[i];
-    
+
     return result;
 }
 
@@ -2590,9 +2590,10 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
                           src2, (int)(len*sizeof(src2[0])),
                           ippiSize(len, 1), &r);
+    return r;
 #else
     int i = 0;
-    
+
 #if CV_SSE2
     if( USE_SSE2 )
     {
@@ -2616,7 +2617,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
                 s = _mm_add_epi32(s, s0);
                 s = _mm_add_epi32(s, s2);
             }
-            
+
             for( ; j < blockSize; j += 4 )
             {
                 __m128i s0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src1 + j)), z);
@@ -2627,7 +2628,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
             CV_DECL_ALIGNED(16) int buf[4];
             _mm_store_si128((__m128i*)buf, s);
             r += buf[0] + buf[1] + buf[2] + buf[3];
-            
+
             src1 += blockSize;
             src2 += blockSize;
             i += blockSize;
@@ -2692,7 +2693,7 @@ static double dotProd_64f(const double* src1, const double* src2, int len)
 
 
 typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
-    
+
 static DotProdFunc dotProdTab[] =
 {
     (DotProdFunc)dotProd_8u, (DotProdFunc)dotProd_8s, (DotProdFunc)dotProd_16u,
@@ -2713,16 +2714,16 @@ double Mat::dot(const InputArray& _mat) const
         if( len == (size_t)(int)len )
             return func(data, mat.data, len);
     }
-    
+
     const Mat* arrays[] = {this, &mat, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
     double r = 0;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         r += func( ptrs[0], ptrs[1], len );
-    
+
     return r;
 }
 
@@ -3027,12 +3028,12 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
     evects = pca.eigenvectors;
     int ecount0 = evals0.cols + evals0.rows - 1;
     int ecount = evals.cols + evals.rows - 1;
-    
+
     CV_Assert( (evals0.cols == 1 || evals0.rows == 1) &&
                 ecount0 <= ecount &&
                 evects0.cols == evects.cols &&
                 evects0.rows == ecount0 );
-    
+
     cv::Mat temp = evals0;
     if( evals.rows == 1 )
         evals.colRange(0, ecount0).convertTo(temp, evals0.type());
