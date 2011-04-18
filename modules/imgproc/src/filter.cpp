@@ -460,9 +460,9 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
 *                                 Separable linear filter                                *
 \****************************************************************************************/
 
-int cv::getKernelType(const InputArray& __kernel, Point anchor)
+int cv::getKernelType(const InputArray& filter_kernel, Point anchor)
 {
-    Mat _kernel = __kernel.getMat();
+    Mat _kernel = filter_kernel.getMat();
     CV_Assert( _kernel.channels() == 1 );
     int i, sz = _kernel.rows*_kernel.cols;
 
@@ -2884,10 +2884,10 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
 }
 
 cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
-                                const InputArray& __kernel, Point anchor,
+                                const InputArray& filter_kernel, Point anchor,
                                 double delta, int bits)
 {
-    Mat _kernel = __kernel.getMat();
+    Mat _kernel = filter_kernel.getMat();
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(srcType), kdepth = _kernel.depth();
     CV_Assert( cn == CV_MAT_CN(dstType) && ddepth >= sdepth );
@@ -2962,12 +2962,12 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
 
 
 cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
-                                              const InputArray& __kernel,
+                                              const InputArray& filter_kernel,
                                               Point _anchor, double _delta,
                                               int _rowBorderType, int _columnBorderType,
                                               const Scalar& _borderValue )
 {
-    Mat _kernel = __kernel.getMat();
+    Mat _kernel = filter_kernel.getMat();
     _srcType = CV_MAT_TYPE(_srcType);
     _dstType = CV_MAT_TYPE(_dstType);    
     int cn = CV_MAT_CN(_srcType);
