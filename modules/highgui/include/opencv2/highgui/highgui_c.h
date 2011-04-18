@@ -392,9 +392,8 @@ enum
 //supported by Android camera output formats
 enum
 {
-  CV_CAP_ANDROID_COLOR_FRAME = 1, //TODO: check RGB or BGR?
-  CV_CAP_ANDROID_GREY_FRAME  = 0,
-  CV_CAP_ANDROID_YUV_FRAME   = 2
+  CV_CAP_ANDROID_COLOR_FRAME = 0, //BGR
+  CV_CAP_ANDROID_GREY_FRAME  = 1  //Y
 };
 
 /* retrieve or set capture properties */
