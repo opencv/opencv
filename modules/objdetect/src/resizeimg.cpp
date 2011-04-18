@@ -4,8 +4,9 @@
 #include <assert.h>
 #include <math.h>
 
-IplImage * resize_opencv (IplImage * img, float scale){
-    IplImage * imgTmp;
+IplImage* resize_opencv(IplImage* img, float scale)
+{
+    IplImage* imgTmp;
 
     int W, H, tW, tH;
 
@@ -14,14 +15,10 @@ IplImage * resize_opencv (IplImage * img, float scale){
 
     tW = (int)(((float)W) * scale + 0.5);
     tH = (int)(((float)H) * scale + 0.5);
-    
+
     imgTmp = cvCreateImage(cvSize(tW , tH), img->depth, img->nChannels);
-    cvResize(
-       img,
-       imgTmp,
-       CV_INTER_AREA
-    );
-    
+    cvResize(img, imgTmp, CV_INTER_AREA);
+
     return imgTmp;
 }
 
@@ -42,7 +39,7 @@ IplImage * resize_opencv (IplImage * img, float scale){
 //    int i;
 //    for(i = 0; i < n; i++){
 //        dst[ofs[i].di] += ofs[i].alpha * src[ofs[i].si];
-//    }  
+//    }
 //}
 //
 //int round(float val){

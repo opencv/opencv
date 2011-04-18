@@ -156,7 +156,7 @@ icvResizeHaarPattern( const int src[][5], CvSurfHF* dst, int n, int oldSize, int
  * Calculate the determinant and trace of the Hessian for a layer of the
  * scale-space pyramid
  */
-CV_INLINE void 
+CV_INLINE void
 icvCalcLayerDetAndTrace( const CvMat* sum, int size, int sampleStep, CvMat *det, CvMat *trace )
 {
     const int NX=3, NY=3, NXY=4;
@@ -184,7 +184,7 @@ icvCalcLayerDetAndTrace( const CvMat* sum, int size, int sampleStep, CvMat *det,
     /* Ignore pixels where some of the kernel is outside the image */
     margin = (size/2)/sampleStep;
 
-    for( i=0; i<samples_i; i++ )
+    for( i = 0; i < samples_i; i++ )
     {
         sum_ptr = sum->data.i + (i*sampleStep)*sum->cols;
         det_ptr = det->data.fl + (i+margin)*det->cols + margin;
@@ -275,9 +275,9 @@ icvFindMaximaInLayer( const CvMat *sum, const CvMat* mask_sum, const CvSURFParam
     CvSurfHF Dm;
     int i, j, size, margin, layer_rows, layer_cols;
     float *det_ptr, *trace_ptr;
- 
+
     size = sizes[layer];
-    
+
     /* The integral image 'sum' is one pixel bigger than the source image */
     layer_rows = (sum->rows-1)/sampleStep;
     layer_cols = (sum->cols-1)/sampleStep;
@@ -287,7 +287,7 @@ icvFindMaximaInLayer( const CvMat *sum, const CvMat* mask_sum, const CvSURFParam
 
     if( mask_sum )
        icvResizeHaarPattern( dm, &Dm, NM, 9, size, mask_sum->cols );
-    
+
     for( i = margin; i < layer_rows-margin; i++ )
     {
         det_ptr = dets[layer]->data.fl + i*dets[layer]->cols;
@@ -309,13 +309,13 @@ icvFindMaximaInLayer( const CvMat *sum, const CvMat* mask_sum, const CvSURFParam
                 const float *det1 = dets[layer-1]->data.fl + i*c + j;
                 const float *det2 = dets[layer]->data.fl   + i*c + j;
                 const float *det3 = dets[layer+1]->data.fl + i*c + j;
-                float N9[3][9] = { { det1[-c-1], det1[-c], det1[-c+1],          
+                float N9[3][9] = { { det1[-c-1], det1[-c], det1[-c+1],
                                      det1[-1]  , det1[0] , det1[1],
                                      det1[c-1] , det1[c] , det1[c+1]  },
-                                   { det2[-c-1], det2[-c], det2[-c+1],       
+                                   { det2[-c-1], det2[-c], det2[-c+1],
                                      det2[-1]  , det2[0] , det2[1],
                                      det2[c-1] , det2[c] , det2[c+1]  },
-                                   { det3[-c-1], det3[-c], det3[-c+1],       
+                                   { det3[-c-1], det3[-c], det3[-c+1],
                                      det3[-1]  , det3[0] , det3[1],
                                      det3[c-1] , det3[c] , det3[c+1]  } };
 
@@ -343,7 +343,7 @@ icvFindMaximaInLayer( const CvMat *sum, const CvMat* mask_sum, const CvSURFParam
                     double center_i = sum_i + (double)(size-1)/2;
                     double center_j = sum_j + (double)(size-1)/2;
 
-                    CvSURFPoint point = cvSURFPoint( cvPoint2D32f(center_j,center_i), 
+                    CvSURFPoint point = cvSURFPoint( cvPoint2D32f(center_j,center_i),
                                                      CV_SIGN(trace_ptr[j]), sizes[layer], 0, val0 );
 
                     /* Interpolate maxima location within the 3x3x3 neighbourhood  */
@@ -352,14 +352,14 @@ icvFindMaximaInLayer( const CvMat *sum, const CvMat* mask_sum, const CvSURFParam
 
                     /* Sometimes the interpolation step gives a negative size etc. */
                     if( interp_ok  )
-                    {   
+                    {
                         /*printf( "KeyPoint %f %f %d\n", point.pt.x, point.pt.y, point.size );*/
                     #ifdef HAVE_TBB
                         static tbb::mutex m;
                         tbb::mutex::scoped_lock lock(m);
-                    #endif                        
+                    #endif
                         cvSeqPush( points, &point );
-                    }    
+                    }
                 }
             }
         }
@@ -381,13 +381,13 @@ struct SURFBuildInvoker
         dets = _dets;
         traces = _traces;
     }
-   
+
     void operator()(const BlockedRange& range) const
-    { 
+    {
         for( int i=range.begin(); i<range.end(); i++ )
             icvCalcLayerDetAndTrace( sum, sizes[i], sampleSteps[i], dets[i], traces[i] );
     }
-    
+
     const CvMat *sum;
     const int *sizes;
     const int *sampleSteps;
@@ -422,7 +422,7 @@ struct SURFFindInvoker
             icvFindMaximaInLayer( sum, mask_sum, params, dets, traces, sizes, layer, 
                                   sampleSteps[layer], points );
         }
-    }    
+    }
 
     const CvMat *sum;
     const CvMat *mask_sum;
@@ -440,7 +440,7 @@ struct SURFFindInvoker
 
 
 /* Wavelet size at first layer of first octave. */ 
-const int HAAR_SIZE0 = 9;    
+const int HAAR_SIZE0 = 9;
 
 /* Wavelet size increment between layers. This should be an even number,
  such that the wavelet sizes in an octave are either all even or all odd.
@@ -468,7 +468,7 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
     cv::AutoBuffer<int> sampleSteps(nTotalLayers);
     cv::AutoBuffer<int> middleIndices(nMiddleLayers);
     int octave, layer, step, index, middleIndex;
- 
+
     /* Allocate space and calculate properties of each layer */
     index = 0;
     middleIndex = 0;
@@ -514,17 +514,17 @@ namespace cv
 {
 
 /* Methods to free data allocated in SURFInvoker constructor */
-template<> inline void Ptr<float>::delete_obj(){ cvFree(&obj); }
-template<> inline void Ptr<CvPoint>::delete_obj(){ cvFree(&obj); }
+template<> inline void Ptr<float>::delete_obj()   { cvFree(&obj); }
+template<> inline void Ptr<CvPoint>::delete_obj() { cvFree(&obj); }
 
 struct SURFInvoker
 {
     enum { ORI_RADIUS = 6, ORI_WIN = 60, PATCH_SZ = 20 };
-    
-    static const int ORI_SEARCH_INC;
+
+    static const int   ORI_SEARCH_INC;
     static const float ORI_SIGMA;
     static const float DESC_SIGMA;
-    
+
     SURFInvoker( const CvSURFParams* _params,
                  CvSeq* _keypoints, CvSeq* _descriptors,
                  const CvMat* _img, const CvMat* _sum )
@@ -537,7 +537,7 @@ struct SURFInvoker
 
         /* Simple bound for number of grid points in circle of radius ORI_RADIUS */
         const int nOriSampleBound = (2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
-        
+
         /* Allocate arrays */
         apt = (CvPoint*)cvAlloc(nOriSampleBound*sizeof(CvPoint));
         aptw = (float*)cvAlloc(nOriSampleBound*sizeof(float));
@@ -567,13 +567,14 @@ struct SURFInvoker
                 DW[i*PATCH_SZ+j] = G_desc.at<float>(i,0) * G_desc.at<float>(j,0);
         }
     }
+
     void operator()(const BlockedRange& range) const
     {
         /* X and Y gradient wavelet data */
         const int NX=2, NY=2;
         const int dx_s[NX][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
         const int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
-        
+
         const int descriptor_size = params->extended ? 128 : 64;
         /* Optimisation is better using nOriSampleBound than nOriSamples for 
          array lengths.  Maybe because it is a constant known at compile time */
@@ -586,7 +587,7 @@ struct SURFInvoker
         CvMat matY = cvMat(1, nOriSampleBound, CV_32F, Y);
         CvMat _angle = cvMat(1, nOriSampleBound, CV_32F, angle);
         CvMat _patch = cvMat(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
-        
+
         int k, k1 = range.begin(), k2 = range.end();
         int maxSize = 0;
         for( k = k1; k < k2; k++ )
@@ -649,7 +650,7 @@ struct SURFInvoker
             }
             matX.cols = matY.cols = _angle.cols = nangle;
             cvCartToPolar( &matX, &matY, 0, &_angle, 1 );
-            
+
             float bestx = 0, besty = 0, descriptor_mod = 0;
             for( i = 0; i < 360; i += ORI_SEARCH_INC )
             {
@@ -682,7 +683,7 @@ struct SURFInvoker
             CvMat win = cvMat(win_size, win_size, CV_8U, winbuf->data.ptr);
             float sin_dir = sin(descriptor_dir);
             float cos_dir = cos(descriptor_dir) ;
-            
+
             /* Subpixel interpolation version (slower). Subpixel not required since
              the pixels will all get averaged when we scale down to 20 pixels */
             /*
@@ -798,17 +799,17 @@ struct SURFInvoker
     const CvMat* sum;
     CvSeq* keypoints;
     CvSeq* descriptors;
-    
+
     /* Pre-calculated values */
     int nOriSamples;
-    cv::Ptr<CvPoint> apt; 
-    cv::Ptr<float> aptw;    
+    cv::Ptr<CvPoint> apt;
+    cv::Ptr<float> aptw;
     cv::Ptr<float> DW;
 };
-     
-const int SURFInvoker::ORI_SEARCH_INC = 5;  
-const float SURFInvoker::ORI_SIGMA = 2.5f;
-const float SURFInvoker::DESC_SIGMA = 3.3f;
+
+const int   SURFInvoker::ORI_SEARCH_INC = 5;
+const float SURFInvoker::ORI_SIGMA      = 2.5f;
+const float SURFInvoker::DESC_SIGMA     = 3.3f;
 }
 
 
@@ -870,9 +871,9 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
         cvSeqPushMulti( descriptors, 0, N );
     }
 
-     
-	if ( N > 0 )
-    cv::parallel_for(cv::BlockedRange(0, N),
+
+    if ( N > 0 )
+        cv::parallel_for(cv::BlockedRange(0, N),
                      cv::SURFInvoker(&params, keypoints, descriptors, img, sum) );
 
 

@@ -123,7 +123,7 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
 {
     if( !objName.empty() )
         fs << objName;
-    
+
     fs << "{" CV_TYPE_NAME_HOG_DESCRIPTOR
     << "winSize" << winSize
     << "blockSize" << blockSize
@@ -139,7 +139,7 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
         fs << "SVMDetector" << "[:" << svmDetector << "]";
     fs << "}";
 }
-    
+
 bool HOGDescriptor::load(const String& filename, const String& objname)
 {
     FileStorage fs(filename, FileStorage::READ);
@@ -167,12 +167,12 @@ void HOGDescriptor::copyTo(HOGDescriptor& c) const
     c.gammaCorrection = gammaCorrection;
     c.svmDetector = svmDetector;
 }
-    
+
 void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                                     Size paddingTL, Size paddingBR) const
 {
     CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
-    
+
     Size gradsize(img.cols + paddingTL.width + paddingBR.width,
                   img.rows + paddingTL.height + paddingBR.height);
     grad.create(gradsize, CV_32FC2);  // <magnitude*(1-alpha), magnitude*alpha>
@@ -221,13 +221,13 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 #ifdef HAVE_IPP
     Mat lutimg(img.rows,img.cols,CV_MAKETYPE(CV_32F,cn));
     Mat hidxs(1, width, CV_32F);
-    Ipp32f *pHidxs = (Ipp32f*)hidxs.data;
-    Ipp32f *pAngles = (Ipp32f*)Angle.data;
+    Ipp32f* pHidxs  = (Ipp32f*)hidxs.data;
+    Ipp32f* pAngles = (Ipp32f*)Angle.data;
 
     IppiSize roiSize;
     roiSize.width = img.cols;
     roiSize.height = img.rows;
-    
+
     for( y = 0; y < roiSize.height; y++ )
     {
        const uchar* imgPtr = img.data + y*img.step;
@@ -238,22 +238,22 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
           imglutPtr[x] = lut[imgPtr[x]];
        }
     }
-    
+
 #endif
     for( y = 0; y < gradsize.height; y++ )
     {
 #ifdef HAVE_IPP
-        const float* imgPtr = (float*)(lutimg.data + lutimg.step*ymap[y]);
+        const float* imgPtr  = (float*)(lutimg.data + lutimg.step*ymap[y]);
         const float* prevPtr = (float*)(lutimg.data + lutimg.step*ymap[y-1]);
         const float* nextPtr = (float*)(lutimg.data + lutimg.step*ymap[y+1]);
 #else
-        const uchar* imgPtr = img.data + img.step*ymap[y];
+        const uchar* imgPtr  = img.data + img.step*ymap[y];
         const uchar* prevPtr = img.data + img.step*ymap[y-1];
         const uchar* nextPtr = img.data + img.step*ymap[y+1];
 #endif
         float* gradPtr = (float*)grad.ptr(y);
         uchar* qanglePtr = (uchar*)qangle.ptr(y);
-        
+
         if( cn == 1 )
         {
             for( x = 0; x < width; x++ )
@@ -281,18 +281,18 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                 dx0 = p2[2] - p0[2];
                 dy0 = nextPtr[x1+2] - prevPtr[x1+2];
                 mag0 = dx0*dx0 + dy0*dy0;
-                
+
                 dx = p2[1] - p0[1];
                 dy = nextPtr[x1+1] - prevPtr[x1+1];
                 mag = dx*dx + dy*dy;
-                
+
                 if( mag0 < mag )
                 {
                     dx0 = dx;
                     dy0 = dy;
                     mag0 = mag;
                 }
-                
+
                 dx = p2[0] - p0[0];
                 dy = nextPtr[x1] - prevPtr[x1];
                 mag = dx*dx + dy*dy;
@@ -303,18 +303,18 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                 dx0 = lut[p2[2]] - lut[p0[2]];
                 dy0 = lut[nextPtr[x1+2]] - lut[prevPtr[x1+2]];
                 mag0 = dx0*dx0 + dy0*dy0;
-                
+
                 dx = lut[p2[1]] - lut[p0[1]];
                 dy = lut[nextPtr[x1+1]] - lut[prevPtr[x1+1]];
                 mag = dx*dx + dy*dy;
-                
+
                 if( mag0 < mag )
                 {
                     dx0 = dx;
                     dy0 = dy;
                     mag0 = mag;
                 }
-                
+
                 dx = lut[p2[0]] - lut[p0[0]];
                 dy = lut[nextPtr[x1]] - lut[prevPtr[x1]];
                 mag = dx*dx + dy*dy;
@@ -334,10 +334,10 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         ippsCartToPolar_32f((const Ipp32f*)Dx.data, (const Ipp32f*)Dy.data, (Ipp32f*)Mag.data, pAngles, width);
         for( x = 0; x < width; x++ )
         {
-           if(pAngles[x] < 0.f) pAngles[x]+=(Ipp32f)(CV_PI*2.);
+           if(pAngles[x] < 0.f)
+             pAngles[x] += (Ipp32f)(CV_PI*2.);
         }
 
-         
         ippsNormalize_32f(pAngles, pAngles, width, 0.5f/angleScale, 1.f/angleScale);
         ippsFloor_32f(pAngles,(Ipp32f*)hidxs.data,width);
         ippsSub_32f_I((Ipp32f*)hidxs.data,pAngles,width);
@@ -369,7 +369,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
             hidx++;
             hidx &= hidx < _nbins ? -1 : 0;
             qanglePtr[x*2+1] = (uchar)hidx;
-                    }
+        }
     }
 }
 
@@ -405,7 +405,7 @@ struct HOGCache
 
     const float* getBlock(Point pt, float* buf);
     virtual void normalizeBlockHistogram(float* histogram) const;
-    
+
     vector<PixData> pixData;
     vector<BlockData> blockData;
 
@@ -525,7 +525,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
             int icellX1 = icellX0 + 1, icellY1 = icellY0 + 1;
             cellX -= icellX0;
             cellY -= icellY0;
-            
+
             if( (unsigned)icellX0 < (unsigned)ncells.width &&
                 (unsigned)icellX1 < (unsigned)ncells.width )
             {
@@ -626,7 +626,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
 
     CV_Assert( (unsigned)pt.x <= (unsigned)(grad.cols - blockSize.width) &&
                (unsigned)pt.y <= (unsigned)(grad.rows - blockSize.height) );
-    
+
     if( useCache )
     {
         CV_Assert( pt.x % cacheStride.width == 0 &&
@@ -658,7 +658,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
     for( k = 0; k < blockHistogramSize; k++ )
         blockHist[k] = 0.f;
 #endif
-    
+
     const PixData* _pixData = &pixData[0];
 
     for( k = 0; k < C1; k++ )
@@ -681,13 +681,13 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         float w, t0, t1, a0 = a[0], a1 = a[1];
         const uchar* h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         float* hist = blockHist + pk.histOfs[0];
         w = pk.gradWeight*pk.histWeights[0];
         t0 = hist[h0] + a0*w;
         t1 = hist[h1] + a1*w;
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[1];
         w = pk.gradWeight*pk.histWeights[1];
         t0 = hist[h0] + a0*w;
@@ -702,13 +702,13 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         float w, t0, t1, a0 = a[0], a1 = a[1];
         const uchar* h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         float* hist = blockHist + pk.histOfs[0];
         w = pk.gradWeight*pk.histWeights[0];
         t0 = hist[h0] + a0*w;
         t1 = hist[h1] + a1*w;
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[1];
         w = pk.gradWeight*pk.histWeights[1];
         t0 = hist[h0] + a0*w;
@@ -750,7 +750,7 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
     for( i = 0; i < sz; i++ )
         sum += hist[i]*hist[i];
 #endif
-    
+
     float scale = 1.f/(std::sqrt(sum)+sz*0.1f), thresh = (float)descriptor->L2HysThreshold;
 #ifdef HAVE_IPP
     ippsMulC_32f_I(scale,hist,sz);
@@ -772,8 +772,8 @@ void HOGCache::normalizeBlockHistogram(float* _hist) const
         hist[i] *= scale;
 #endif
 }
-    
-    
+
+
 Size HOGCache::windowsInImage(Size imageSize, Size winStride) const
 {
     return Size((imageSize.width - winSize.width)/winStride.width + 1,
@@ -801,7 +801,7 @@ void HOGDescriptor::compute(const Mat& img, vector<float>& descriptors,
     padding.width = (int)alignSize(std::max(padding.width, 0), cacheStride.width);
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(img.cols + padding.width*2, img.rows + padding.height*2);
-    
+
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
 
     if( !nwindows )
@@ -858,7 +858,7 @@ void HOGDescriptor::detect(const Mat& img,
     hits.clear();
     if( svmDetector.empty() )
         return;
-    
+
     if( winStride == Size() )
         winStride = cellSize;
     Size cacheStride(gcd(winStride.width, blockStride.width),
@@ -867,7 +867,7 @@ void HOGDescriptor::detect(const Mat& img,
     padding.width = (int)alignSize(std::max(padding.width, 0), cacheStride.width);
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(img.cols + padding.width*2, img.rows + padding.height*2);
-    
+
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
 
     if( !nwindows )
@@ -927,7 +927,7 @@ void HOGDescriptor::detect(const Mat& img,
     }
 }
 
-    
+
 struct HOGInvoker
 {
     HOGInvoker( const HOGDescriptor* _hog, const Mat& _img,
@@ -942,7 +942,7 @@ struct HOGInvoker
         levelScale = _levelScale;
         vec = _vec;
     }
-    
+
     void operator()( const BlockedRange& range ) const
     {
         int i, i1 = range.begin(), i2 = range.end();
@@ -950,7 +950,7 @@ struct HOGInvoker
         Size maxSz(cvCeil(img.cols/minScale), cvCeil(img.rows/minScale));
         Mat smallerImgBuf(maxSz, img.type());
         vector<Point> locations;
-        
+
         for( i = i1; i < i2; i++ )
         {
             double scale = levelScale[i];
@@ -968,7 +968,7 @@ struct HOGInvoker
                                     scaledWinSize.width, scaledWinSize.height));
         }
     }
-    
+
     const HOGDescriptor* hog;
     Mat img;
     double hitThreshold;
@@ -1001,22 +1001,22 @@ void HOGDescriptor::detectMultiScale(
     levelScale.resize(levels);
 
     ConcurrentRectVector allCandidates;
-    
+
     parallel_for(BlockedRange(0, (int)levelScale.size()),
                  HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates));
-    
+
     foundLocations.resize(allCandidates.size());
     std::copy(allCandidates.begin(), allCandidates.end(), foundLocations.begin());
 
     groupRectangles(foundLocations, groupThreshold, 0.2);
 }
 
-    
+
 typedef RTTIImpl<HOGDescriptor> HOGRTTI;
 
 CvType hog_type( CV_TYPE_NAME_HOG_DESCRIPTOR, HOGRTTI::isInstance,
                  HOGRTTI::release, HOGRTTI::read, HOGRTTI::write, HOGRTTI::clone);
-    
+
 vector<float> HOGDescriptor::getDefaultPeopleDetector()
 {
     static const float detector[] = {

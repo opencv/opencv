@@ -10,14 +10,15 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-static inline int sign(float r){
+static inline int sign(float r)
+{
     if(r >  0.0001f) return  1;
     if(r < -0.0001f) return -1;
     return 0;
 }
 
 /*
-// Getting feature map for the selected subimage  
+// Getting feature map for the selected subimage
 //
 // API
 // int getFeatureMaps(const IplImage * image, const int k, featureMap **map);
@@ -29,7 +30,7 @@ static inline int sign(float r){
 // RESULT
 // Error status
 */
-int getFeatureMaps_dp(const IplImage * image,const int k, CvLSVMFeatureMap **map)
+int getFeatureMaps_dp(const IplImage* image,const int k, CvLSVMFeatureMap **map)
 {
     int sizeX, sizeY;
     int p, px, strsz;
