@@ -845,7 +845,7 @@ class FunctionTests(OpenCVTests):
                     self.assertEqual(cv.Sum(M)[0], r * c)
 
     def test_Threshold(self):
-        """ directed test for bug 2790622 """
+	#""" directed test for bug 2790622 """
         src = self.get_sample("samples/c/lena.jpg", 0)
         results = set()
         for i in range(10):
@@ -963,7 +963,7 @@ class AreaTests(OpenCVTests):
             rvec[1,0] = 1
             rvec[2,0] = 1
             cv.Rodrigues2(rvec, m[:3,:3])
-            print m
+	    #print m
 
         else:
             print "SKIPPING test_numpy - numpy support not built"
@@ -1039,11 +1039,11 @@ class AreaTests(OpenCVTests):
         cvm = cv.CreateMat(20, 10, cv.CV_32FC1)
 
     def test_depths(self):
-        """ Make sure that the depth enums are unique """
+	#""" Make sure that the depth enums are unique """
         self.assert_(len(self.depths) == len(set(self.depths)))
 
     def test_leak(self):
-        """ If CreateImage is not releasing image storage, then the loop below should use ~4GB of memory. """
+	#""" If CreateImage is not releasing image storage, then the loop below should use ~4GB of memory. """
         for i in range(64000):
             a = cv.CreateImage((1024,1024), cv.IPL_DEPTH_8U, 1)
         for i in range(64000):
@@ -1768,7 +1768,7 @@ class AreaTests(OpenCVTests):
         #self.snap(img)
 
     def test_create(self):
-        """ CvCreateImage, CvCreateMat and the header-only form """
+	#""" CvCreateImage, CvCreateMat and the header-only form """
         for (w,h) in [ (320,400), (640,480), (1024, 768) ]:
             data = "z" * (w * h)
 
@@ -2084,7 +2084,7 @@ class AreaTests(OpenCVTests):
         print mat
 
     def test_rand_PutText(self):
-        """ Test for bug 2829336 """
+	#""" Test for bug 2829336 """
         mat = cv.CreateMat( 64, 64, cv.CV_8UC1)
         font = cv.InitFont(cv.CV_FONT_HERSHEY_SIMPLEX, 1, 1)
         cv.PutText(mat, chr(127), (20, 20), font, 255)
@@ -2145,32 +2145,33 @@ class NewTests(OpenCVTests):
 if __name__ == '__main__':
     print "testing", cv.__version__
     random.seed(0)
-    optlist, args = getopt.getopt(sys.argv[1:], 'l:rd')
-    loops = 1
-    shuffle = 0
-    doc_frags = False
-    for o,a in optlist:
-        if o == '-l':
-            loops = int(a)
-        if o == '-r':
-            shuffle = 1
-        if o == '-d':
-            doc_frags = True
-
-    cases = [PreliminaryTests, FunctionTests, AreaTests]
-    if doc_frags:
-        cases += [DocumentFragmentTests]
-    everything = [(tc, t) for tc in cases for t in unittest.TestLoader().getTestCaseNames(tc) ]
-    if len(args) == 0:
-        # cases = [NewTests]
-        args = everything
-    else:
-        args = [(tc, t) for (tc, t) in everything if t in args]
-
-    suite = unittest.TestSuite()
-    for l in range(loops):
-        if shuffle:
-            random.shuffle(args)
-        for tc,t in args:
-            suite.addTest(tc(t))
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    unittest.main()
+#    optlist, args = getopt.getopt(sys.argv[1:], 'l:rd')
+#    loops = 1
+#    shuffle = 0
+#    doc_frags = False
+#    for o,a in optlist:
+#        if o == '-l':
+#            loops = int(a)
+#        if o == '-r':
+#            shuffle = 1
+#        if o == '-d':
+#            doc_frags = True
+#
+#    cases = [PreliminaryTests, FunctionTests, AreaTests]
+#    if doc_frags:
+#        cases += [DocumentFragmentTests]
+#    everything = [(tc, t) for tc in cases for t in unittest.TestLoader().getTestCaseNames(tc) ]
+#    if len(args) == 0:
+#        # cases = [NewTests]
+#        args = everything
+#    else:
+#        args = [(tc, t) for (tc, t) in everything if t in args]
+#
+#    suite = unittest.TestSuite()
+#    for l in range(loops):
+#        if shuffle:
+#            random.shuffle(args)
+#        for tc,t in args:
+#            suite.addTest(tc(t))
+#	    unittest.TextTestRunner(verbosity=2).run(suite)
