@@ -2271,7 +2271,7 @@ void cv::inRange(const InputArray& _src, const InputArray& _lowerb,
             BinaryFunc sccvtfunc = getConvertFunc(scdepth, CV_32S);
             sccvtfunc(lb.data, 0, 0, 0, (uchar*)ilbuf, 0, Size(cn, 1), 0);
             sccvtfunc(ub.data, 0, 0, 0, (uchar*)iubuf, 0, Size(cn, 1), 0);
-            int minval = getMinVal(depth), maxval = getMaxVal(depth);
+            int minval = cvRound(getMinVal(depth)), maxval = cvRound(getMaxVal(depth));
             
             for( int k = 0; k < cn; k++ )
             {

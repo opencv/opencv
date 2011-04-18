@@ -230,7 +230,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
     stereoRectify(cameraMatrix[0], distCoeffs[0],
                   cameraMatrix[1], distCoeffs[1],
                   imageSize, R, T, R1, R2, P1, P2, Q,
-                  1, imageSize, &validRoi[0], &validRoi[1]);
+                  CALIB_ZERO_DISPARITY, 1, imageSize, &validRoi[0], &validRoi[1]);
         
     fs.open("extrinsics.yml", CV_STORAGE_WRITE);
     if( fs.isOpened() )

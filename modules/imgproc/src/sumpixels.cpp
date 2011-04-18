@@ -46,16 +46,16 @@ namespace cv
 {
 
 template<typename T, typename ST, typename QT>
-void integral_( const T* src, size_t srcstep, ST* sum, size_t sumstep,
-                QT* sqsum, size_t sqsumstep, ST* tilted, size_t tiltedstep,
+void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
+                QT* sqsum, size_t _sqsumstep, ST* tilted, size_t _tiltedstep,
                 Size size, int cn )
 {
     int x, y, k;
 
-    srcstep /= sizeof(T);
-    sumstep /= sizeof(ST);
-    tiltedstep /= sizeof(ST);
-    sqsumstep /= sizeof(QT);
+    int srcstep = (int)(_srcstep/sizeof(T));
+    int sumstep = (int)(_sumstep/sizeof(ST));
+    int tiltedstep = (int)(_tiltedstep/sizeof(ST));
+    int sqsumstep = (int)(_sqsumstep/sizeof(QT));
 
     size.width *= cn;
 

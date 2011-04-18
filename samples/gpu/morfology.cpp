@@ -41,7 +41,7 @@ void OpenClose(int, void*)
 		cv::gpu::morphologyEx(src, dst, CV_MOP_OPEN, element);
     else
         cv::gpu::morphologyEx(src, dst, CV_MOP_CLOSE, element);
-    imshow("Open/Close",dst);
+    imshow("Open/Close",(Mat)dst);
 }
 
 // callback function for erode/dilate trackbar
@@ -54,7 +54,7 @@ void ErodeDilate(int, void*)
         cv::gpu::erode(src, dst, element);
     else
         cv::gpu::dilate(src, dst, element);
-    imshow("Erode/Dilate",dst);
+    imshow("Erode/Dilate",(Mat)dst);
 }
 
 

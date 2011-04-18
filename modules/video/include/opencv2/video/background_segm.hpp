@@ -400,7 +400,7 @@ public:
 };	
 
 
-class BackgroundSubtractorMOG2 : public BackgroundSubtractor
+class CV_EXPORTS BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
     //! the default constructor

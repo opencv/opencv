@@ -1509,7 +1509,7 @@ cvTsCalcBackProject( IplImage** images, IplImage* dst, CvHistogram* hist, int* c
 }
 
 
-int CV_CalcBackProjectTest::validate_test_results( int test_case_idx )
+int CV_CalcBackProjectTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
 

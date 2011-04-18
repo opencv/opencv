@@ -629,12 +629,12 @@ int CV_WarpPerspectiveTest::prepare_test_case( int test_case_idx )
 
     s[0] = Point2f(0,0);
     d[0] = Point2f(0,0);
-    s[1] = Point2f(src.cols-1,0);
-    d[1] = Point2f(dst.cols-1,0);
-    s[2] = Point2f(src.cols-1,src.rows-1);
-    d[2] = Point2f(dst.cols-1,dst.rows-1);
-    s[3] = Point2f(0,src.rows-1);
-    d[3] = Point2f(0,dst.rows-1);
+    s[1] = Point2f(src.cols-1.f,0);
+    d[1] = Point2f(dst.cols-1.f,0);
+    s[2] = Point2f(src.cols-1.f,src.rows-1.f);
+    d[2] = Point2f(dst.cols-1.f,dst.rows-1.f);
+    s[3] = Point2f(0,src.rows-1.f);
+    d[3] = Point2f(0,dst.rows-1.f);
 
     float buf[16];
     Mat tmp( 1, 16, CV_32FC1, buf );

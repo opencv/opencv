@@ -182,7 +182,7 @@ int main(int ac, char ** av)
 
             if (matches.size() > 5)
             {
-                Mat H = findHomography(Mat(train_pts), Mat(query_pts), match_mask, RANSAC, 4);
+                Mat H = findHomography(train_pts, query_pts, RANSAC, 4, match_mask);
                 if (countNonZero(Mat(match_mask)) > 15)
                 {
                     H_prev = H;

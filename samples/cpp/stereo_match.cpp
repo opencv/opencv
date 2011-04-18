@@ -178,7 +178,7 @@ int main(int argc, char** argv)
         fs["R"] >> R;
         fs["T"] >> T;
         
-        stereoRectify( M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, -1, img_size, &roi1, &roi2 );
+        stereoRectify( M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2 );
         
         Mat map11, map12, map21, map22;
         initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);

@@ -115,7 +115,7 @@ static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len,
             a = (y >= 0 ? CV_PI*0.5 : CV_PI*1.5) -
                 x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + (float)DBL_EPSILON);
         }
-        angle[i] = a*scale;
+        angle[i] = (float)(a*scale);
 	}
 }
 

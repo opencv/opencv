@@ -1665,7 +1665,7 @@ diagtransform_( const T* src, T* dst, const WT* m, int len, int cn, int )
         {
             const WT* _m = m;
             for( int j = 0; j < cn; j++, _m += cn + 1 )
-                dst[j] = src[j]*_m[j] + _m[cn];
+                dst[j] = saturate_cast<T>(src[j]*_m[j] + _m[cn]);
         }
     }
 }
@@ -2600,7 +2600,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
         __m128i z = _mm_setzero_si128();
         while( i < len0 )
         {
-            blockSize = std::min(len0 - j, blockSize0);
+            blockSize = std::min(len0 - i, blockSize0);
             __m128i s = _mm_setzero_si128();
             for( j = 0; j <= blockSize - 16; j += 16 )
             {

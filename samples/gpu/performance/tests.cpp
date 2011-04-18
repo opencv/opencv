@@ -815,7 +815,7 @@ TEST(solvePnPRansac)
 
         CPU_ON;
         solvePnPRansac(object, image, camera_mat, Mat(), rvec, tvec, false, num_iters, 
-                       max_dist, int(num_points * 0.05), &inliers_cpu);
+                       max_dist, int(num_points * 0.05), inliers_cpu);
         CPU_OFF;
 
         GPU_ON;

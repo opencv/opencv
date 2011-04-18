@@ -3558,7 +3558,7 @@ template<typename _Tp> static inline std::ostream& operator << (std::ostream& ou
     return out;
 }
     
-template<typename _Tp> struct AlgorithmParamType {};
+/*template<typename _Tp> struct AlgorithmParamType {};
 template<> struct AlgorithmParamType<int> { enum { type = CV_PARAM_TYPE_INT }; };
 template<> struct AlgorithmParamType<double> { enum { type = CV_PARAM_TYPE_REAL }; };
 template<> struct AlgorithmParamType<string> { enum { type = CV_PARAM_TYPE_STRING }; };
@@ -3600,7 +3600,7 @@ template<typename _Tp> void Algorithm::addParam(int propId, _Tp& value, bool rea
 template<typename _Tp> void Algorithm::setParamRange(int propId, const _Tp& minVal, const _Tp& maxVal)
 {
     setParamRange_(propId, AlgorithmParamType<_Tp>::type, &minVal, &maxVal);
-}
+}*/
     
 }
 
