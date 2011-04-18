@@ -363,9 +363,10 @@ string tempfile( const char* suffix )
 #endif
     if (*name == '\\')
         ++name;
+    string n(name);
     if (suffix != 0)
-        return string(buf) + suffix;
-    return buf;
+        n += (n[n.size()-1] == '.' && suffix[0] == '.' ? suffix + 1 : suffix);
+    return n;
 }
 
 static CvErrorCallback customErrorCallback = 0;
