@@ -1,0 +1,56 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                                    %
+%                                        C++                                         %
+%                                                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ifCpp
+\section{Camera calibration}
+The goal of this tutorial is to learn how to calibrate a camera given a set of chessboard images. 
+
+\texttt{Test data}: use images in your data/chess folder. 
+
+Compile opencv with samples by setting BUILD\_EXAMPLES to ON in cmake configuration. 
+
+Go to bin folder and use \texttt{imagelist\_creator} to create an xml/yaml list of your images. Then, run \texttt{calibration} sample to get camera parameters. Use square size equal to 3cm. 
+
+\section{Pose estimation}
+Now, let us write a code that detects a chessboard in a new image and finds its distance from the camera. You can apply the same method to any object with knwon 3d geometry that you can detect in an image.
+
+\texttt{Test data}: use chess\_test*.jpg images from your data folder.
+
+Create an empty console project. Load a test image:
+\begin{lstlisting}
+Mat img = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+\end{lstlisting}
+
+Detect a chessboard in this image using findChessboard function. 
+\begin{lstlisting}
+bool found = findChessboardCorners( img, boardSize, ptvec, CV_CALIB_CB_ADAPTIVE_THRESH );
+\end{lstlisting}
+
+Now, write a function that generates a \texttt{vector<Point3f>} array of 3d coordinates of a chessboard in any coordinate system. For simplicity, let us choose a system such that one of the chessboard corners is in the origin and the board is in the plane \(z = 0\).
+
+Read camera parameters from xml/yaml file:
+\begin{lstlisting}
+FileStorage fs(filename, FileStorage::READ);
+Mat intrinsics, distortion;
+fs["camera_matrix"] >> intrinsics;
+fs["distortion_coefficients"] >> distortion;
+\end{lstlisting}
+
+Now we are ready to find chessboard pose by running solvePnP:
+\begin{lstlisting}
+vector<Point3f> boardPoints;
+// fill the array
+...
+
+solvePnP(Mat(boardPoints), Mat(foundBoardCorners), cameraMatrix,
+                     distCoeffs, rvec, tvec, false);
+\end{lstlisting}
+
+Calculate reprojection error like it is done in \texttt{calibration} sample (see textttt{opencv/samples/cpp/calibration.cpp}, function \texttt{computeReprojectionErrors}). 
+
+How to calculate the distance from the camera origin to any of the corners? 
+\fi
